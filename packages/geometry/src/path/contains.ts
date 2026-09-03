@@ -1,3 +1,4 @@
+import { EPS_POINT } from '@leathercad/core';
 import { solveCubic } from '../polynomial.js';
 import * as Seg from '../segment/index.js';
 import { closestPointOnSegment, type Vec2 } from '../vec2.js';
@@ -204,22 +205,76 @@ export function isPointOnPath(p: Path, point: Vec2, tolerance: number): boolean 
   return p.segments.some((s) => distanceToSegment(s, point) <= tolerance);
 }
 
+/**
+ * Shortest distance from a point to a segment.
+ *
+ * Exact for lines and arcs. Cubics are bracketed by a coarse sweep and then
+ * narrowed by ternary search on the squared distance, which is unimodal
+ * within a bracket.
+ *
+ * Sampling alone is not good enough even for hit testing: 64 samples on an
+ * 8 mm quarter arc leave gaps of 0.2 mm, so the answer carries 0.1 mm of
+ * error — larger than a stitch hole.
+ */
 function distanceToSegment(s: Seg.Segment, point: Vec2): number {
-  // Exact for a line. Sampling its endpoints would miss a click in the middle
-  // of a long one entirely.
-  if (s.kind === 'line') {
-    const closest = closestPointOnSegment(point, s.a, s.b);
-    return Math.hypot(closest.x - point.x, closest.y - point.y);
-  }
+  switch (s.kind) {
+    case 'line': {
+      const closest = closestPointOnSegment(point, s.a, s.b);
+      return Math.hypot(closest.x - point.x, closest.y - point.y);
+    }
 
-  // Sampling is adequate for curves: the caller supplies a pick tolerance
-  // derived from a ~10 px radius, orders of magnitude above the sampling
-  // error at any usable zoom.
-  const samples = 64;
-  let best = Number.POSITIVE_INFINITY;
-  for (let i = 0; i <= samples; i++) {
-    const p = Seg.pointAt(s, i / samples);
-    best = Math.min(best, Math.hypot(p.x - point.x, p.y - point.y));
+    case 'arc': {
+      const toPoint = { x: point.x - s.centre.x, y: point.y - s.centre.y };
+      const radial = Math.hypot(toPoint.x, toPoint.y);
+
+      // Degenerate arc: it is just its centre.
+      if (radial <= EPS_POINT) return Math.abs(s.radius);
+
+      // If the point projects onto the swept part of the circle, the nearest
+      // point is radially outward and the distance is exact.
+      if (Seg.ArcOps.containsAngle(s, Math.atan2(toPoint.y, toPoint.x))) {
+        return Math.abs(radial - s.radius);
+      }
+
+      // Otherwise it is one of the two endpoints.
+      const start = Seg.start(s);
+      const end = Seg.end(s);
+      return Math.min(
+        Math.hypot(start.x - point.x, start.y - point.y),
+        Math.hypot(end.x - point.x, end.y - point.y),
+      );
+    }
+
+    case 'cubic': {
+      const squaredAt = (t: number): number => {
+        const p = Seg.CubicOps.pointAt(s, t);
+        const dx = p.x - point.x;
+        const dy = p.y - point.y;
+        return dx * dx + dy * dy;
+      };
+
+      const coarse = 32;
+      let bestIndex = 0;
+      let bestValue = Number.POSITIVE_INFINITY;
+      for (let i = 0; i <= coarse; i++) {
+        const value = squaredAt(i / coarse);
+        if (value < bestValue) {
+          bestValue = value;
+          bestIndex = i;
+        }
+      }
+
+      let low = Math.max(0, (bestIndex - 1) / coarse);
+      let high = Math.min(1, (bestIndex + 1) / coarse);
+      for (let i = 0; i < 40; i++) {
+        const third = (high - low) / 3;
+        const a = low + third;
+        const b = high - third;
+        if (squaredAt(a) < squaredAt(b)) high = b;
+        else low = a;
+      }
+
+      return Math.sqrt(squaredAt((low + high) / 2));
+    }
   }
-  return best;
 }

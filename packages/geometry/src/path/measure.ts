@@ -46,12 +46,17 @@ export class PathMeasure {
     const samples: Sample[] = [];
     let cumulative = 0;
 
-    if (path.segments.length > 0) {
-      samples.push({ segmentIndex: 0, t: 0, distance: 0 });
-    }
-
     for (let index = 0; index < path.segments.length; index++) {
       const segment = path.segments[index]!;
+
+      // Every segment needs its own t=0 entry, not just the first. Without
+      // one, a distance falling inside segment k brackets between the last
+      // sample of k−1 and the first of k, which straddles a boundary where t
+      // resets — and the straddle guard below then snaps it to the segment
+      // start. For a line, which needs only one step, that collapsed the
+      // whole edge onto its first corner.
+      samples.push({ segmentIndex: index, t: 0, distance: cumulative });
+
       const steps = stepsFor(segment, tolerance);
       for (let step = 1; step <= steps; step++) {
         const t0 = (step - 1) / steps;

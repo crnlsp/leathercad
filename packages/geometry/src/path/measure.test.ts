@@ -111,6 +111,62 @@ describe('pointAtDistance', () => {
     expect(dist(before, after)).toBeLessThan(0.01);
   });
 
+  it('walks the interior of every edge, not just the corners', () => {
+    // Regression. Only the first segment was seeded with a t=0 sample, so a
+    // distance inside any later segment bracketed across a boundary where t
+    // resets and got snapped to that segment's start. A line needs just one
+    // step, so every straight edge after the first collapsed onto its corner.
+    //
+    // The corner-only test below passed throughout, and so did the segment
+    // index check — the index was right while the position was wrong.
+    const m = new P.PathMeasure(square);
+    const expected: ReadonlyArray<readonly [number, ReturnType<typeof vec>]> = [
+      [5, vec(5, 0)],
+      [12.5, vec(10, 2.5)],
+      [15, vec(10, 5)],
+      [25, vec(5, 10)],
+      [32.5, vec(0, 7.5)],
+      [35, vec(0, 5)],
+    ];
+    for (const [distance, point] of expected) {
+      expect(dist(m.pointAtDistance(distance), point)).toBeLessThan(1e-9);
+    }
+  });
+
+  it('spaces points evenly around a multi-segment outline of lines and arcs', () => {
+    // The product's headline feature in miniature: a 105 x 75 card-holder
+    // outline with 8 mm corners, stitched at a 3.85 mm iron pitch. Every gap
+    // must be the same, and every hole must sit on the outline.
+    const w = 105;
+    const h = 75;
+    const r = 8;
+    const outline = P.closed([
+      line(vec(r, 0), vec(w - r, 0)),
+      arc(vec(w - r, r), r, -Math.PI / 2, Math.PI / 2),
+      line(vec(w, r), vec(w, h - r)),
+      arc(vec(w - r, h - r), r, 0, Math.PI / 2),
+      line(vec(w - r, h), vec(r, h)),
+      arc(vec(r, h - r), r, Math.PI / 2, Math.PI / 2),
+      line(vec(0, h - r), vec(0, r)),
+      arc(vec(r, r), r, Math.PI, Math.PI / 2),
+    ]);
+
+    const m = new P.PathMeasure(outline);
+    const total = m.totalLength();
+    const count = Math.round(total / 3.85);
+    const pitch = total / count;
+    const holes = Array.from({ length: count }, (_, i) => m.pointAtDistance(pitch * i));
+
+    for (const hole of holes) {
+      expect(P.isPointOnPath(outline, hole, 0.001)).toBe(true);
+    }
+
+    const chords = holes.map((p, i) => dist(p, holes[(i + 1) % holes.length]!));
+    // Chords run a little under the pitch on the curved corners, never over.
+    expect(Math.min(...chords)).toBeGreaterThan(pitch * 0.98);
+    expect(Math.max(...chords)).toBeLessThanOrEqual(pitch + 1e-9);
+  });
+
   it('lands exactly on each corner of a square', () => {
     const m = new P.PathMeasure(square);
     for (const [distance, expected] of [
