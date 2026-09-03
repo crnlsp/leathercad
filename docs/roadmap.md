@@ -217,8 +217,20 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   coefficient with a test guarding it against drift.
   `transform` returns `Segment[]` because a non-uniform scale turns an arc into an ellipse, which
   the union deliberately cannot represent.
-- **1.4** `Path`: construction, the shared-endpoint invariant, `validatePath`, length, area,
-  winding, `containsPoint`.
+- **1.4** ✅ **Done.** `Path` with the shared-endpoint invariant and a `validate` that reports the
+  size of each gap, plus length, exact bbox, reverse, transform, signed area, orientation,
+  winding number and `containsPoint`. Also `polynomial.ts` (linear/quadratic/cubic real roots),
+  needed for exact ray casting and again for intersections in 1.10. 209 tests in geometry.
+  Nothing here flattens: arc areas are closed-form and cubic areas use three-point
+  Gauss-Legendre, which is *exact* for the degree-5 integrand rather than an approximation.
+  `containsPoint` defaults to the non-zero fill rule, matching SVG and PDF, so screen, export and
+  geometry cannot disagree.
+  Three findings, all regression-tested: a ray cast through a full circle's seam fell into a crack
+  in the half-open sweep window and reported the circle's own centre as outside (ray casting now
+  detects grazing hits and re-casts with a nudged ray); `solveQuadratic` tested the discriminant
+  against exactly zero, so near-tangencies produced two garbage-precision roots; and the
+  float-equality lint rule was flagging `.length === 0`, burying real signal — it now excludes
+  integer counts, verified against a probe file.
 - **1.5** Flattening with tolerance; determinism tests.
 - **1.6** `PathMeasure`: arc-length LUT, `pointAtDistance`, `tangentAtDistance`.
 - **1.7** `shapes`: line, polyline, rect, rounded rect with four independent radii, circle, ellipse,

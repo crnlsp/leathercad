@@ -13,6 +13,8 @@
  * See docs/geometry.md.
  */
 
+export * as PathOps from './path/index.js';
+export * as PolynomialOps from './polynomial.js';
 export * as SegmentOps from './segment/index.js';
 export * as Vec2Ops from './vec2.js';
 export * as MatOps from './mat2x3.js';
@@ -30,6 +32,11 @@ export type {
 } from './segment/index.js';
 
 export { arc, cubic, line, quadraticToCubic } from './segment/index.js';
+
+export type { FillRule, Orientation, Path } from './path/index.js';
+export { closed, open, path, polyline } from './path/index.js';
+
+export { solveCubic, solveLinear, solveQuadratic } from './polynomial.js';
 
 export {
   ARC_CUBIC_ERROR_COEFFICIENT,

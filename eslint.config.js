@@ -15,7 +15,13 @@ const PURE_LAYER_RULES = {
   'no-restricted-syntax': [
     'error',
     {
-      selector: 'BinaryExpression[operator=/^[!=]==?$/] > Literal[raw=/^-?[0-9]/]',
+      // Integer counts are safe to compare exactly, so `.length === 0` and any
+      // modulo result are excluded — flagging them buries the real signal.
+      // Everything else compared against a numeric literal is suspect.
+      selector:
+        'BinaryExpression[operator=/^[!=]==?$/]:not(' +
+        ':has(MemberExpression[property.name="length"])' +
+        '):not(:has(BinaryExpression[operator="%"])) > Literal[raw=/^-?[0-9]/]',
       message:
         'No float equality. Use approxEq() and the epsilons from @leathercad/core. ' +
         'See CLAUDE.md invariant 7.',
