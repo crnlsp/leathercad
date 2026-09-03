@@ -59,6 +59,23 @@ export function length(s: Segment): Mm {
   }
 }
 
+/**
+ * Length of the portion between two parameters.
+ *
+ * Exact for lines and arcs, where length is linear in `t`; by adaptive
+ * quadrature for cubics, where it is not.
+ */
+export function lengthBetween(s: Segment, t0: number, t1: number): Mm {
+  switch (s.kind) {
+    case 'line':
+      return LineOps.lengthBetween(s, t0, t1);
+    case 'arc':
+      return ArcOps.lengthBetween(s, t0, t1);
+    case 'cubic':
+      return CubicOps.lengthBetween(s, t0, t1);
+  }
+}
+
 /** Exact bounds — never the control-point hull. */
 export function bbox(s: Segment): Rect {
   switch (s.kind) {

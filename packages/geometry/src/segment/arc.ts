@@ -47,6 +47,11 @@ export function length(s: ArcSegment): Mm {
   return Math.abs(s.sweepAngle) * s.radius;
 }
 
+/** Length of the portion between two parameters. Exact: arc length is linear in t. */
+export function lengthBetween(s: ArcSegment, t0: number, t1: number): Mm {
+  return Math.abs(s.sweepAngle) * s.radius * Math.abs(t1 - t0);
+}
+
 /**
  * True when `angle` lies on the arc, in any 2π representative.
  *

@@ -30,3 +30,6 @@ export {
   flattenToPolyline,
   maxAngleStepForSagitta,
 } from './flatten.js';
+
+export type { PathLocation } from './measure.js';
+export { PathMeasure, measure } from './measure.js';

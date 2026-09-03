@@ -21,6 +21,11 @@ export function length(s: LineSegment): Mm {
   return dist(s.a, s.b);
 }
 
+/** Length of the portion between two parameters. Linear, so exact. */
+export function lengthBetween(s: LineSegment, t0: number, t1: number): Mm {
+  return length(s) * Math.abs(t1 - t0);
+}
+
 export function bbox(s: LineSegment): Rect {
   return fromCorners(s.a, s.b);
 }

@@ -252,7 +252,15 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   requirement tightened exponentially while the chord–polygon gap only shrank fourfold — a 2000 mm
   curve drove it to the depth cap and sixteen million nodes. Replaced with adaptive
   Gauss-Legendre, which subdivides only near cusps; the CI suite went from timing out to 3.5 s.
-- **1.6** `PathMeasure`: arc-length LUT, `pointAtDistance`, `tangentAtDistance`.
+- **1.6** ✅ **Done.** `PathMeasure` with an exact cumulative arc-length table, `locate`,
+  `pointAtDistance`, `tangentAtDistance` and `normalAtDistance`; plus `lengthBetween` on all three
+  segment kinds (exact for lines and arcs, adaptive quadrature for cubics). Linear interpolation
+  between table entries is refined by two Newton steps against the true speed, because
+  first-order interpolation shows up as visibly uneven stitch spacing where the speed varies.
+  Verified against an independent dense Simpson integration of |B'(t)|: points land at the true
+  arc distance to within 1e-4 mm. The first attempt asserted that chords between arc-equidistant
+  points are equal — they are not, they shorten wherever curvature rises, so that was the wrong
+  property.
 - **1.7** `shapes`: line, polyline, rect, rounded rect with four independent radii, circle, ellipse,
   arc through three points.
 - **1.8** `distributeAlongPath`: `exact-pitch` and `fit-whole`, with the full property set from

@@ -122,7 +122,24 @@ function quadratureLength(s: CubicSegment, t0: number, t1: number): number {
  * the depth stays in single figures.
  */
 export function length(s: CubicSegment, tolerance: Mm = EPS_LENGTH): Mm {
-  return adaptiveLength(s, 0, 1, quadratureLength(s, 0, 1), tolerance, 0);
+  return lengthBetween(s, 0, 1, tolerance);
+}
+
+/**
+ * Length of the portion between two parameters.
+ *
+ * The building block for arc-length parameterisation: `t` is not proportional
+ * to distance on a cubic, so answering "where is the point 3.85 mm along this"
+ * needs partial lengths, not just the total.
+ */
+export function lengthBetween(
+  s: CubicSegment,
+  t0: number,
+  t1: number,
+  tolerance: Mm = EPS_LENGTH,
+): Mm {
+  if (t1 < t0) return lengthBetween(s, t1, t0, tolerance);
+  return adaptiveLength(s, t0, t1, quadratureLength(s, t0, t1), tolerance, 0);
 }
 
 function adaptiveLength(
