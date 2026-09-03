@@ -1,0 +1,120 @@
+# LeatherCAD
+
+Desktop application for designing leathercraft patterns that print at exact 1:1 scale.
+Electron + TypeScript, Linux first, Apache-2.0.
+
+**The product promise: a line drawn as 100 mm measures 100 mm on paper.** Every rule below exists to
+protect that.
+
+## Invariants
+
+Violating any of these is a bug, even if tests pass.
+
+1. **Millimetres are the source of truth.** Pixels exist only inside `packages/render` and
+   `packages/editor/viewport.ts`. Nothing else converts between them.
+2. **Y is up.** The flip to screen coordinates happens in exactly two files:
+   `render/canvas2d/*` and `export/svg/*`. PDF and DXF are Y-up already and need no flip.
+3. **`packages/geometry` is pure.** No DOM, no canvas, no colour, no file formats, no state, no
+   randomness, no clock. It may import only `packages/core`.
+4. **Derived geometry is never persisted.** Files store parameters; evaluation recomputes paths and
+   stitch holes on load. See `docs/file-format.md` §3.3.
+5. **Only commands mutate the document.** Tools dispatch; React components read. No component and no
+   tool writes to the document store directly.
+6. **Never print through the webview.** No `window.print()`, no CSS `@page`. PDFs are generated as
+   vector content by `packages/export/pdf`. See `docs/printing.md` §2.
+7. **No float equality.** Use `approxEq` and the epsilons from `packages/core/epsilon.ts`. Never
+   define a local epsilon.
+8. **Quantise user input** to 1e-4 mm via `quantise()` before storing it.
+9. **A shipped format migration is immutable.** Never edit one, never delete one.
+10. **Geometry and domain functions need property tests**, not only examples. See `docs/testing.md`
+    §3.
+
+## Commands
+
+```bash
+pnpm dev              # run the app
+pnpm test             # unit + property + golden + export + snapshot  (< 1 min)
+pnpm test:visual      # pixel diffs, pinned container
+pnpm test:e2e         # Playwright + Electron
+pnpm typecheck        # tsc --noEmit, whole workspace
+pnpm lint
+pnpm depcruise        # layering violations — must pass
+pnpm bench --compare  # against tools/bench-baseline.json
+```
+
+## Layout
+
+Dependencies point downward only; `pnpm depcruise` enforces it.
+
+```
+core       ids, Result, epsilons, quantise
+geometry   PURE mm maths: Vec2, Segment, Path, offset, intersect, distribute   → core
+domain     Part, Feature, derivation graph, stitching, validation              → geometry
+document   Document, Command, undo/redo, selection                            → domain
+persist    .lcp container, zod schemas, migrations                            → domain
+render     DisplayList, canvas2d + svg backends                               → domain
+editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
+export     ExportScene, svg/pdf/dxf writers                                   → domain, render
+print      paginate, registration, calibration                                → export
+ui         React panels and dialogs                                           → editor
+cli        `lcad` — used by slash commands and CI                             → everything but ui
+apps/desktop  Electron main/preload/renderer — the ONLY package importing Electron
+```
+
+Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run headless.
+
+## Conventions
+
+- Tests are co-located: `src/foo.ts` beside `src/foo.test.ts`.
+- Cross-package imports go through a package's `index.ts`, never into its internals.
+- Clipper2 is imported in exactly one file: `geometry/internal/clipper.ts`.
+- Ids are ULIDs from `core/id.ts` with an injectable entropy source. Never `Math.random()` directly.
+- Nothing in a serialisation path calls `Date.now()` — take a clock as a parameter.
+- Fonts are vendored in `assets/fonts/`. Never use a system font: it breaks PDF output and snapshot
+  determinism.
+- Stroke widths are **screen-constant** on canvas and **true millimetres** in export.
+- Every new dependency needs an ADR in `docs/adr/`.
+
+## Terminology
+
+Use `docs/glossary.md`. Two that are routinely confused:
+
+- **Pitch** — the nominal centre-to-centre spacing of a pricking iron (3.85 mm).
+- **Spacing** — the *achieved* distance after distributing holes along a path, usually slightly
+  different from pitch.
+
+## Working here
+
+Work proceeds in **vertical slices** from `docs/roadmap.md`. Each slice ends with the app running,
+tests green, and something demonstrable. Do not build across layers without a working result.
+
+For geometry and domain work, **write the tests first** — the test is the specification, and
+plausible-but-wrong geometry is this project's characteristic failure mode.
+
+Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
+
+| Working on | Read |
+|---|---|
+| `packages/geometry` | `docs/geometry.md`, especially §12 (definition of done) |
+| `packages/domain` | `docs/domain-model.md`, `docs/glossary.md` |
+| `packages/persist` | `docs/file-format.md` |
+| `packages/export`, `packages/print` | `docs/printing.md` |
+| Anything structural | `docs/architecture.md` |
+| Tests | `docs/testing.md` |
+
+Run `/geo-check` and `/arch-check` before considering a slice done. If a change invalidates
+something in this file or in `docs/`, update it in the same commit.
+
+## Do not
+
+- Do not add a coordinate in pixels to any model type.
+- Do not store computed paths, hole positions, lengths, or bounding boxes in the file.
+- Do not scale content to fit a page. Add a page instead.
+- Do not use `window.print()` or any browser print path.
+- Do not put the document into Zustand, Redux, or React state. It has its own store.
+- Do not put viewport, selection, or tool state into the persisted document.
+- Do not write geometry code without a property test.
+- Do not edit a shipped migration.
+- Do not import Clipper outside `geometry/internal/clipper.ts`.
+- Do not claim print accuracy is verified without a physical measurement recorded in
+  `docs/print-verification-log.md`.

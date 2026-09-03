@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+out/
+build/
+release/
+*.tsbuildinfo
+.vite/
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+**/__snapshots__/*.actual.*
+**/*.actual.png
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local config and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Claude Code local overrides (project settings ARE committed)
+.claude/settings.local.json
