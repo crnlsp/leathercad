@@ -3,7 +3,7 @@ import { EPS_LENGTH, type Mm } from '@leathercad/core';
 import { apply, type Mat2x3 } from '../mat2x3.js';
 import { rootsInUnitInterval, solveQuadratic } from '../polynomial.js';
 import { fromPoints, type Rect } from '../rect.js';
-import { add, dist, lerp, scale, sub, tryNormalise, vec, ZERO, type Vec2 } from '../vec2.js';
+import { add, lerp, scale, sub, tryNormalise, vec, ZERO, type Vec2 } from '../vec2.js';
 import { cubic, type CubicSegment } from './types.js';
 
 export function pointAt(s: CubicSegment, t: number): Vec2 {
@@ -72,39 +72,77 @@ export function transform(s: CubicSegment, m: Mat2x3): CubicSegment {
   return cubic(apply(m, s.p0), apply(m, s.p1), apply(m, s.p2), apply(m, s.p3));
 }
 
-const MAX_LENGTH_DEPTH = 24;
-
 /**
- * Arc length, by recursive subdivision.
+ * Eight-point Gauss-Legendre nodes and weights on [-1, 1].
  *
- * The control polygon bounds the curve from above and the chord from below, so
- * their gap bounds the error. Subdividing halves that gap quadratically.
- * Preferred over Gauss-Legendre quadrature here because it stays accurate on
- * curves with cusps, which quadrature handles poorly and which offsetting
- * produces routinely.
+ * Eight points integrate a degree-15 polynomial exactly. The speed |B'(t)| is
+ * not polynomial — it is the square root of a quartic — but it is smooth
+ * wherever the curve has no cusp, and there the error falls off extremely
+ * fast with subdivision.
  */
-export function length(s: CubicSegment, tolerance: Mm = EPS_LENGTH): Mm {
-  return lengthOf(s.p0, s.p1, s.p2, s.p3, tolerance, 0);
+const GAUSS_NODES_8 = [
+  -0.9602898564975363, -0.7966664774136267, -0.525532409916329, -0.1834346424956498,
+  0.1834346424956498, 0.525532409916329, 0.7966664774136267, 0.9602898564975363,
+] as const;
+
+const GAUSS_WEIGHTS_8 = [
+  0.1012285362903763, 0.2223810344533745, 0.3137066458778873, 0.362683783378362, 0.362683783378362,
+  0.3137066458778873, 0.2223810344533745, 0.1012285362903763,
+] as const;
+
+const MAX_LENGTH_DEPTH = 16;
+
+/** Gauss-Legendre estimate of arc length over a parameter interval. */
+function quadratureLength(s: CubicSegment, t0: number, t1: number): number {
+  const half = (t1 - t0) / 2;
+  const mid = (t0 + t1) / 2;
+
+  let total = 0;
+  for (let i = 0; i < GAUSS_NODES_8.length; i++) {
+    const velocity = derivativeAt(s, mid + half * GAUSS_NODES_8[i]!);
+    total += GAUSS_WEIGHTS_8[i]! * Math.hypot(velocity.x, velocity.y);
+  }
+  return total * half;
 }
 
-function lengthOf(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, tolerance: Mm, depth: number): Mm {
-  const chord = dist(p0, p3);
-  const polygon = dist(p0, p1) + dist(p1, p2) + dist(p2, p3);
+/**
+ * Arc length, by adaptive Gauss-Legendre quadrature.
+ *
+ * Each interval is estimated once whole and once as two halves; when the two
+ * agree the estimate has converged, and otherwise the interval is split. That
+ * subdivides only where the curve misbehaves — near a cusp — and leaves smooth
+ * spans at two or three evaluations.
+ *
+ * This replaced a chord-versus-control-polygon subdivision, which was correct
+ * but pathologically slow: it halved the tolerance at every level, so the
+ * flatness requirement tightened exponentially while the gap only shrank
+ * fourfold. A 2000 mm curve at a 1e-7 tolerance drove it to the depth cap,
+ * visiting sixteen million nodes and taking longer than a CI test timeout.
+ * Halving is safe *here* because the quadrature error falls off so fast that
+ * the depth stays in single figures.
+ */
+export function length(s: CubicSegment, tolerance: Mm = EPS_LENGTH): Mm {
+  return adaptiveLength(s, 0, 1, quadratureLength(s, 0, 1), tolerance, 0);
+}
 
-  if (polygon - chord <= tolerance || depth >= MAX_LENGTH_DEPTH) {
-    return (polygon + chord) / 2;
-  }
+function adaptiveLength(
+  s: CubicSegment,
+  t0: number,
+  t1: number,
+  whole: number,
+  tolerance: Mm,
+  depth: number,
+): Mm {
+  const mid = (t0 + t1) / 2;
+  const left = quadratureLength(s, t0, mid);
+  const right = quadratureLength(s, mid, t1);
+  const split = left + right;
 
-  const p01 = lerp(p0, p1, 0.5);
-  const p12 = lerp(p1, p2, 0.5);
-  const p23 = lerp(p2, p3, 0.5);
-  const p012 = lerp(p01, p12, 0.5);
-  const p123 = lerp(p12, p23, 0.5);
-  const mid = lerp(p012, p123, 0.5);
+  if (depth >= MAX_LENGTH_DEPTH || Math.abs(split - whole) <= tolerance) return split;
 
   return (
-    lengthOf(p0, p01, p012, mid, tolerance / 2, depth + 1) +
-    lengthOf(mid, p123, p23, p3, tolerance / 2, depth + 1)
+    adaptiveLength(s, t0, mid, left, tolerance / 2, depth + 1) +
+    adaptiveLength(s, mid, t1, right, tolerance / 2, depth + 1)
   );
 }
 

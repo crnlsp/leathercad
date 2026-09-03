@@ -247,6 +247,11 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   accuracy at a root of zero or at a double root, and kept restating the solver's own tolerance.
   Test generators are now constrained to realistic coefficient magnitudes, and `vitest.setup.ts`
   pins the fast-check seed in CI so failures reproduce.
+  A fourth bug surfaced only in CI, where the seed is fixed and 300 cases run: cubic `length` was
+  pathologically slow. It halved the tolerance at every recursion level, so the flatness
+  requirement tightened exponentially while the chord–polygon gap only shrank fourfold — a 2000 mm
+  curve drove it to the depth cap and sixteen million nodes. Replaced with adaptive
+  Gauss-Legendre, which subdivides only near cusps; the CI suite went from timing out to 3.5 s.
 - **1.6** `PathMeasure`: arc-length LUT, `pointAtDistance`, `tangentAtDistance`.
 - **1.7** `shapes`: line, polyline, rect, rounded rect with four independent radii, circle, ellipse,
   arc through three points.
