@@ -13,6 +13,7 @@
  * See docs/geometry.md.
  */
 
+export * as SegmentOps from './segment/index.js';
 export * as Vec2Ops from './vec2.js';
 export * as MatOps from './mat2x3.js';
 export * as RectOps from './rect.js';
@@ -20,6 +21,22 @@ export * as RectOps from './rect.js';
 export type { Vec2 } from './vec2.js';
 export type { Mat2x3 } from './mat2x3.js';
 export type { Rect } from './rect.js';
+export type {
+  ArcSegment,
+  CubicSegment,
+  LineSegment,
+  Segment,
+  SegmentKind,
+} from './segment/index.js';
+
+export { arc, cubic, line, quadraticToCubic } from './segment/index.js';
+
+export {
+  ARC_CUBIC_ERROR_COEFFICIENT,
+  EXPORT_TOLERANCE_MM,
+  SCREEN_TOLERANCE_MM,
+  maxArcStepForTolerance,
+} from './tolerance.js';
 
 // The handful of names common enough to be worth importing directly.
 export {

@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 
 import type { Mat2x3 } from '../src/mat2x3.js';
+import type { ArcSegment, CubicSegment, LineSegment, Segment } from '../src/segment/types.js';
 import type { Vec2 } from '../src/vec2.js';
 
 /**
@@ -72,3 +73,56 @@ export const arbRigidTransform: fc.Arbitrary<Mat2x3> = fc
     const m = mirrored ? -1 : 1;
     return { a: cos, b: sin, c: -sin * m, d: cos * m, e: offset.x, f: offset.y };
   });
+
+/** A radius that is positive and not vanishingly small. */
+export const arbRadius: fc.Arbitrary<number> = fc.oneof(
+  { weight: 3, arbitrary: fc.double({ min: 0.1, max: 500, noNaN: true }) },
+  { weight: 1, arbitrary: fc.constantFrom(0.1, 1, 3.85, 8, 100, 500) },
+);
+
+/** Includes the full turn and both half turns, where naive arc code breaks. */
+export const arbSweep: fc.Arbitrary<number> = fc.oneof(
+  { weight: 3, arbitrary: fc.double({ min: -Math.PI * 2, max: Math.PI * 2, noNaN: true }) },
+  {
+    weight: 2,
+    arbitrary: fc.constantFrom(
+      Math.PI * 2,
+      -Math.PI * 2,
+      Math.PI,
+      -Math.PI,
+      Math.PI / 2,
+      -Math.PI / 2,
+    ),
+  },
+);
+
+export const arbLineSegment: fc.Arbitrary<LineSegment> = fc
+  .tuple(arbVec2, arbVec2)
+  .map(([a, b]) => ({ kind: 'line' as const, a, b }));
+
+export const arbArcSegment: fc.Arbitrary<ArcSegment> = fc
+  .tuple(arbVec2, arbRadius, arbAngle, arbSweep)
+  .map(([centre, radius, startAngle, sweepAngle]) => ({
+    kind: 'arc' as const,
+    centre,
+    radius,
+    startAngle,
+    sweepAngle,
+  }));
+
+export const arbCubicSegment: fc.Arbitrary<CubicSegment> = fc
+  .tuple(arbVec2, arbVec2, arbVec2, arbVec2)
+  .map(([p0, p1, p2, p3]) => ({ kind: 'cubic' as const, p0, p1, p2, p3 }));
+
+export const arbSegment: fc.Arbitrary<Segment> = fc.oneof(
+  arbLineSegment,
+  arbArcSegment,
+  arbCubicSegment,
+);
+
+/** Segments with real extent, for properties that a degenerate one cannot satisfy. */
+export const arbNonDegenerateSegment: fc.Arbitrary<Segment> = fc.oneof(
+  arbLineSegment.filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 0.01),
+  arbArcSegment.filter((s) => Math.abs(s.sweepAngle) * s.radius > 0.01),
+  arbCubicSegment.filter((s) => Math.hypot(s.p3.x - s.p0.x, s.p3.y - s.p0.y) > 0.01),
+);

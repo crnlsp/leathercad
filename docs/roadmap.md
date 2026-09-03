@@ -206,8 +206,17 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   A property test caught `intersects` and `intersection` disagreeing for rects separated by 5e-324:
   one was tolerant, the other exact. Both now share an epsilon, and a touching intersection
   collapses to a degenerate rect rather than inverting.
-- **1.3** `Segment` union: line, arc, cubic. `pointAt`, `tangentAt`, `length`, `split`, `reverse`,
-  `transform`, and **exact** `bbox`.
+- **1.3** ✅ **Done.** `Segment` union: line, arc, cubic, with `pointAt`, `tangentAt`, `length`,
+  `split`, `reverse`, `transform`, `toCubics` and **exact** `bbox`. 143 tests in geometry.
+  Two departures from what this doc originally specified, both now reflected in
+  [geometry.md](geometry.md): arcs carry a signed `sweepAngle` instead of `endAngle` + `ccw` (the
+  pair cannot distinguish a zero-length arc from a full circle), and `toCubics` derives its
+  subdivision from a tolerance rather than fixing it at a quarter turn — a quarter turn leaves
+  0.027 mm of error at a 100 mm radius, five times the export budget, and PDF has no arc primitive
+  so every exported arc takes that path. New `geometry/tolerance.ts` holds the measured error
+  coefficient with a test guarding it against drift.
+  `transform` returns `Segment[]` because a non-uniform scale turns an arc into an ellipse, which
+  the union deliberately cannot represent.
 - **1.4** `Path`: construction, the shared-endpoint invariant, `validatePath`, length, area,
   winding, `containsPoint`.
 - **1.5** Flattening with tolerance; determinism tests.

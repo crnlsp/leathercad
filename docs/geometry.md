@@ -147,7 +147,7 @@ A discriminated union — three cases, deliberately not more:
 export type Segment =
   | { kind: 'line';  a: Vec2; b: Vec2 }
   | { kind: 'arc';   centre: Vec2; radius: number;
-                     startAngle: number; endAngle: number; ccw: boolean }
+                     startAngle: number; sweepAngle: number }
   | { kind: 'cubic'; p0: Vec2; p1: Vec2; p2: Vec2; p3: Vec2 };
 ```
 
@@ -156,6 +156,11 @@ Decisions embedded here:
 - **Arcs use centre parameterisation**, not SVG's endpoint parameterisation. Centre form makes
   every arc computation — point-at-angle, tangent, length, intersection, offset — direct. Endpoint
   form is converted on import and export only.
+- **The sweep is one signed angle**, not a start/end pair plus a direction flag. With `endAngle`
+  and `ccw` you cannot distinguish a zero-length arc from a full circle when the two angles are
+  equal, and every consumer has to normalise before it can do anything. A signed `sweepAngle` says
+  direction and extent in one number, makes `reverse` a sign flip, and makes "is this angle on the
+  arc" a subtraction with no special cases.
 - **Quadratic Béziers are converted to cubics on ingest.** A fourth case would double the surface
   area of every algorithm in exchange for nothing; the cubic representation of a quadratic is exact.
 - **Ellipses and elliptical arcs are represented as cubics**, not as a fourth segment kind. Exact
@@ -252,6 +257,14 @@ Tolerances:
 | Export and print | 0.005 mm (600 dpi is 42 µm, so this is invisible) |
 | Offsetting | 0.005 mm |
 | Hit testing | derived from the 10 px pick radius via the viewport |
+
+**Arc to cubic is not free.** PDF has no arc primitive, so every arc in an exported pattern is
+converted to Béziers. With the standard `4/3·tan(θ/4)` handle, the maximum radial error is
+`≈ 1.81e-5 · radius · θ⁶` (measured, accurate to 0.5% across 10°–90°). A fixed quarter-turn
+subdivision therefore leaves 0.027 mm of error at a 100 mm radius — five times the export budget.
+`toCubics` derives its step from the tolerance instead; because the error goes as θ⁶, one extra
+split takes that same arc to 0.0004 mm. The coefficient lives in `geometry/tolerance.ts` with a
+test that guards it against drift.
 
 Recursion depth is capped (32) with an assertion, so a degenerate curve cannot hang the app.
 
