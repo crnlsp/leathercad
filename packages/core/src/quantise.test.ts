@@ -24,7 +24,9 @@ describe('quantise', () => {
   });
 
   it('preserves ordering', () => {
-    fc.assert(fc.property(inRange, inRange, (a, b) => (a <= b ? quantise(a) <= quantise(b) : true)));
+    fc.assert(
+      fc.property(inRange, inRange, (a, b) => (a <= b ? quantise(a) <= quantise(b) : true)),
+    );
   });
 
   it('lands on a multiple of the quantum', () => {

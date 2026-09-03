@@ -93,10 +93,14 @@ describe('createIdFactory', () => {
 
   it('produces distinct ids across a range of clock values', () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 2 ** 40 }), fc.integer({ min: 0, max: 255 }), (ms, b) => {
-        const next = createIdFactory(fixedSource(ms, b));
-        return next() !== next();
-      }),
+      fc.property(
+        fc.integer({ min: 0, max: 2 ** 40 }),
+        fc.integer({ min: 0, max: 255 }),
+        (ms, b) => {
+          const next = createIdFactory(fixedSource(ms, b));
+          return next() !== next();
+        },
+      ),
     );
   });
 

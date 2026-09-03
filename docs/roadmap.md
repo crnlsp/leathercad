@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Design — no implementation yet
+**Status:** In progress — Phase 0 complete, Phase 1 (geometry core) under way
 **Last updated:** 2026-09-03
 
 ---
@@ -198,7 +198,14 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   overflows on the first increment (now rolls the timestamp forward instead of throwing), and an
   exact-epsilon boundary cannot be tested as `approxEq(1, 1 + EPS)` because `(1 + 1e-7) − 1` is not
   `1e-7` — measure from zero.
-- **1.2** `Vec2`, `Mat2x3`, `Rect`. Property tests for transform invertibility and composition.
+- **1.2** ✅ **Done.** `Vec2`, `Mat2x3`, `Rect` plus shared fast-check arbitraries in
+  `packages/geometry/test/arbitraries.ts`. 93 tests. `compose(first, second)` takes its arguments
+  in chronological order, not matrix order — the reverse is a reliable source of mirrored output.
+  `isSimilarity` is the predicate that will decide whether an arc survives a transform as an arc
+  (docs/geometry.md §4.2).
+  A property test caught `intersects` and `intersection` disagreeing for rects separated by 5e-324:
+  one was tolerant, the other exact. Both now share an epsilon, and a touching intersection
+  collapses to a degenerate rect rather than inverting.
 - **1.3** `Segment` union: line, arc, cubic. `pointAt`, `tangentAt`, `length`, `split`, `reverse`,
   `transform`, and **exact** `bbox`.
 - **1.4** `Path`: construction, the shared-endpoint invariant, `validatePath`, length, area,
