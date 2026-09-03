@@ -231,7 +231,22 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   against exactly zero, so near-tangencies produced two garbage-precision roots; and the
   float-equality lint rule was flagging `.length === 0`, burying real signal — it now excludes
   integer counts, verified against a probe file.
-- **1.5** Flattening with tolerance; determinism tests.
+- **1.5** ✅ **Done.** Adaptive flattening: arcs by the sagitta bound, cubics by the Sederberg
+  flatness test, with `flattenSegment`, `flattenPath` and `flattenToPolyline`. Determinism is
+  asserted directly, since golden fixtures and byte-stable saves depend on it.
+  Three genuine bugs surfaced while stabilising the property tests, all regression-tested:
+  `solveCubic` used an **absolute** discriminant threshold, misclassifying small-coefficient
+  cubics — and curve parameters live in [0, 1], so small coefficients are the norm; catastrophic
+  cancellation in that discriminant made it invent a spurious root that Newton polished into
+  something plausible, now rejected by a two-part certificate (relative residual, or a Newton step
+  small against Cauchy's bound); and `cubic.ts` had **inlined** the textbook quadratic formula for
+  its exact-bbox derivative roots, so for control points 0 → −2000 → −2000 → 0 the extremum at
+  t = 0.5 was lost to cancellation and the bounding box collapsed from 1500 mm wide to nothing.
+  Also: the residual-based property tests were replaced with ground-truth ones (build a polynomial
+  from known roots, assert the solver returns exactly those). A residual bound cannot express
+  accuracy at a root of zero or at a double root, and kept restating the solver's own tolerance.
+  Test generators are now constrained to realistic coefficient magnitudes, and `vitest.setup.ts`
+  pins the fast-check seed in CI so failures reproduce.
 - **1.6** `PathMeasure`: arc-length LUT, `pointAtDistance`, `tangentAtDistance`.
 - **1.7** `shapes`: line, polyline, rect, rounded rect with four independent radii, circle, ellipse,
   arc through three points.

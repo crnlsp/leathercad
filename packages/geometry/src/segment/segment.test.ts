@@ -162,6 +162,18 @@ describe('bbox', () => {
     expect(closeTo(box.maxY, 7.5, 1e-9)).toBe(true);
   });
 
+  it('finds the extremum of a curve that doubles back', () => {
+    // Regression: fast-check shrank to control points 0 → −2000 → −2000 → 0.
+    // The derivative's quadratic is (−4e-10, 4000, −2000), where the textbook
+    // root formula subtracts 4000 from 4000 and loses the extremum at t = 0.5
+    // entirely — the box collapsed from 1500 mm wide to zero. cubic.ts had
+    // inlined that formula instead of using the stable solver.
+    const s = cubic(vec(0, 0), vec(-2000, 0), vec(-1999.9999999997938, 0), vec(0, 0));
+    const box = Seg.bbox(s);
+    expect(closeTo(box.minX, -1500, 1e-6)).toBe(true);
+    expect(closeTo(box.maxX, 0, 1e-9)).toBe(true);
+  });
+
   it('bounds a full circle by its radius', () => {
     const box = Seg.bbox(arc(vec(5, 5), 3, 0, Math.PI * 2));
     expect(closeTo(box.minX, 2, 1e-9)).toBe(true);

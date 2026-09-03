@@ -4,5 +4,6 @@ export default defineConfig({
   test: {
     name: 'platform',
     include: ['src/**/*.test.ts'],
+    setupFiles: ['../../vitest.setup.ts'],
   },
 });

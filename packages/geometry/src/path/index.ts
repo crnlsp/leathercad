@@ -23,3 +23,10 @@ export { area, isCounterClockwise, orientation, signedArea, withOrientation } fr
 
 export type { FillRule } from './contains.js';
 export { containsPoint, isPointOnPath, windingNumber } from './contains.js';
+
+export {
+  flattenPath,
+  flattenSegment,
+  flattenToPolyline,
+  maxAngleStepForSagitta,
+} from './flatten.js';

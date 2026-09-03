@@ -62,33 +62,45 @@ export function solveCubic(a: number, b: number, c: number, d: number): number[]
   const q = (2 * bn * bn * bn) / 27 - (bn * cn) / 3 + dn;
 
   const roots: number[] = [];
+  const discriminant = (q * q) / 4 + (p * p * p) / 27;
 
-  if (Math.abs(p) < COEFFICIENT_EPS && Math.abs(q) < COEFFICIENT_EPS) {
-    roots.push(shift);
+  // The threshold has to scale with the terms that formed the discriminant.
+  // An absolute one misclassifies small-coefficient cubics: with
+  // −0.0005·t³ + 1e-9 the discriminant is 1e-12, which an absolute 1e-12 cut
+  // reads as "repeated root", returning two wrong roots — one of which
+  // polishes to a spurious zero. Small coefficients are ordinary here, since
+  // curve parameters live in [0, 1].
+  const discriminantScale = Math.max(
+    Math.abs((q * q) / 4),
+    Math.abs((p * p * p) / 27),
+    Number.MIN_VALUE,
+  );
+  const threshold = discriminantScale * 1e-12;
+
+  if (discriminant > threshold) {
+    const root = Math.sqrt(discriminant);
+    roots.push(Math.cbrt(-q / 2 + root) + Math.cbrt(-q / 2 - root) + shift);
+  } else if (discriminant < -threshold) {
+    // Three distinct real roots. p is necessarily negative here.
+    const magnitude = 2 * Math.sqrt(-p / 3);
+    const argument = Math.acos(clamp((3 * q) / (p * magnitude), -1, 1)) / 3;
+    const third = (2 * Math.PI) / 3;
+    roots.push(
+      magnitude * Math.cos(argument) + shift,
+      magnitude * Math.cos(argument - third) + shift,
+      magnitude * Math.cos(argument - 2 * third) + shift,
+    );
   } else {
-    const discriminant = (q * q) / 4 + (p * p * p) / 27;
-
-    if (discriminant > COEFFICIENT_EPS) {
-      const root = Math.sqrt(discriminant);
-      roots.push(Math.cbrt(-q / 2 + root) + Math.cbrt(-q / 2 - root) + shift);
-    } else if (discriminant < -COEFFICIENT_EPS) {
-      // Three distinct real roots. p is necessarily negative here.
-      const magnitude = 2 * Math.sqrt(-p / 3);
-      const argument = Math.acos(clamp((3 * q) / (p * magnitude), -1, 1)) / 3;
-      const third = (2 * Math.PI) / 3;
-      roots.push(
-        magnitude * Math.cos(argument) + shift,
-        magnitude * Math.cos(argument - third) + shift,
-        magnitude * Math.cos(argument - 2 * third) + shift,
-      );
-    } else {
-      // Repeated root: a double and a single.
-      const single = Math.cbrt(-q / 2);
-      roots.push(2 * single + shift, -single + shift);
-    }
+    // Repeated root: a double and a single. Covers p = q = 0 correctly too,
+    // where both collapse to `shift` and dedupe leaves one.
+    const single = Math.cbrt(-q / 2);
+    roots.push(2 * single + shift, -single + shift);
   }
 
-  const polished = roots.map((t) => polishCubicRoot(a, b, c, d, t));
+  const polished = roots
+    .map((t) => polishCubicRoot(a, b, c, d, t))
+    .filter((t) => isGenuineCubicRoot(a, b, c, d, t));
+
   return dedupe(polished.sort((x, y) => x - y));
 }
 
@@ -111,6 +123,56 @@ function polishCubicRoot(a: number, b: number, c: number, d: number, t: number):
     root -= step;
   }
   return root;
+}
+
+/** Cauchy's bound: every real root lies within ±this. */
+function rootScaleOf(a: number, b: number, c: number, d: number): number {
+  return 1 + Math.max(Math.abs(b), Math.abs(c), Math.abs(d)) / Math.abs(a);
+}
+
+/**
+ * Rejects candidates that are not actually roots.
+ *
+ * The depressed-cubic route can invent them. When one root dwarfs the others,
+ * `q²/4 + p³/27` is the difference of two nearly equal huge numbers and the
+ * cancellation destroys its sign, so a cubic with one real root is classified
+ * as having a repeated one — and the extra value that branch produces gets
+ * polished by Newton into something convincing. Ray casting would count it as
+ * a crossing.
+ *
+ * Two certificates, either of which suffices:
+ *
+ * 1. A residual tiny next to the terms that produced it. This settles ordinary
+ *    roots and double roots, where the derivative vanishes and no step-based
+ *    test can work.
+ * 2. A Newton step tiny next to the **root scale** rather than next to the
+ *    candidate itself. This is what settles roots at or near zero. A cubic
+ *    with roots at 0 and 738000 resolves the small one to about 7e-11, whose
+ *    residual is the same order as its own terms — a relative residual test
+ *    throws away a perfectly good root, while the step correctly reads as
+ *    converged against a scale of 738000.
+ *
+ * A spurious root satisfies neither: its residual matches its terms, and
+ * Newton still wants to move it a long way relative to the root scale.
+ */
+function isGenuineCubicRoot(a: number, b: number, c: number, d: number, t: number): boolean {
+  const residual = Math.abs(((a * t + b) * t + c) * t + d);
+  const termScale = Math.max(
+    Math.abs(a * t * t * t),
+    Math.abs(b * t * t),
+    Math.abs(c * t),
+    Math.abs(d),
+  );
+  if (residual <= termScale * 1e-9) return true;
+
+  const slope = (3 * a * t + 2 * b) * t + c;
+  const step = residual / slope;
+  // A vanishing slope gives Infinity or NaN, which is the answer: at a
+  // stationary point the step says nothing, and the residual test above has
+  // already had its chance.
+  if (!Number.isFinite(step)) return false;
+
+  return Math.abs(step) <= rootScaleOf(a, b, c, d) * 1e-9;
 }
 
 function dedupe(sorted: number[]): number[] {

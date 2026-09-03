@@ -1,6 +1,7 @@
-import { EPS_LENGTH, approxZero, type Mm } from '@leathercad/core';
+import { EPS_LENGTH, type Mm } from '@leathercad/core';
 
 import { apply, type Mat2x3 } from '../mat2x3.js';
+import { rootsInUnitInterval, solveQuadratic } from '../polynomial.js';
 import { fromPoints, type Rect } from '../rect.js';
 import { add, dist, lerp, scale, sub, tryNormalise, vec, ZERO, type Vec2 } from '../vec2.js';
 import { cubic, type CubicSegment } from './types.js';
@@ -128,32 +129,20 @@ export function bbox(s: CubicSegment): Rect {
   return fromPoints(points) ?? fromPoints([s.p0])!;
 }
 
-/** Roots of the derivative in the open interval (0, 1), for one axis. */
+/**
+ * Roots of the derivative in the open interval (0, 1), for one axis.
+ *
+ * Delegates the quadratic to `solveQuadratic` rather than inlining the
+ * textbook formula. That is not tidiness: with control points like
+ * 0 → −2000 → −2000 → 0 the quadratic coefficients become (−4e-10, 4000,
+ * −2000), where `(−b + √disc)` subtracts two values of 4000 and destroys the
+ * root at t = 0.5 — losing the extremum and shrinking the bounding box from
+ * 1500 mm wide to nothing.
+ */
 function derivativeRoots(v0: number, v1: number, v2: number, v3: number): number[] {
   const a = v1 - v0;
   const b = v2 - v1;
   const c = v3 - v2;
 
-  const qa = a - 2 * b + c;
-  const qb = 2 * (b - a);
-  const qc = a;
-
-  const roots: number[] = [];
-  const keep = (t: number): void => {
-    if (t > 0 && t < 1) roots.push(t);
-  };
-
-  if (approxZero(qa, 1e-12)) {
-    // Degenerates to a line; one root unless the derivative is constant.
-    if (!approxZero(qb, 1e-12)) keep(-qc / qb);
-    return roots;
-  }
-
-  const discriminant = qb * qb - 4 * qa * qc;
-  if (discriminant < 0) return roots;
-
-  const root = Math.sqrt(discriminant);
-  keep((-qb + root) / (2 * qa));
-  keep((-qb - root) / (2 * qa));
-  return roots;
+  return rootsInUnitInterval(solveQuadratic(a - 2 * b + c, 2 * (b - a), a));
 }
