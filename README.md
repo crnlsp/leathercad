@@ -9,8 +9,9 @@ you can glue to card and cut.
 
 Electron + TypeScript. Linux first. Apache-2.0.
 
-> **Status: planning.** The architecture and roadmap are written; no implementation yet.
-> Start at [`docs/roadmap.md`](docs/roadmap.md) §4, slice 0.1.
+> **Status: early scaffolding.** The Electron shell runs and the platform boundary is wired, but
+> there is nothing to draw with yet. Next up is the geometry core —
+> [`docs/roadmap.md`](docs/roadmap.md) §4, slice 1.1.
 
 ## Why not a general vector editor
 
@@ -51,7 +52,12 @@ Then:
 
 ```bash
 pnpm install
+pnpm dev        # launches the app
+```
+
+```bash
 pnpm check      # typecheck + lint + layering + tests
+pnpm test:e2e   # builds, then Playwright drives the real Electron app
 ```
 
 Individual checks: `pnpm typecheck`, `pnpm lint`, `pnpm depcruise`, `pnpm test`.

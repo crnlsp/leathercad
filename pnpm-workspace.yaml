@@ -1,6 +1,23 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+
+# pnpm blocks dependency install scripts by default. Only packages that
+# genuinely need one to function are allowed here, and each needs a reason.
+# Treat additions to this list as a security decision, not a formality.
+allowBuilds:
+  # Installs the platform-native esbuild binary used by Vite.
+  esbuild: true
+
+  # Declined on purpose. Electron 44's package.json has no scripts field at
+  # all — it ships an `install-electron` bin instead, which the postinstall in
+  # apps/desktop/package.json invokes. pnpm still prompts about it, so this
+  # records the answer. Setting it true would grant a permission that does
+  # nothing.
+  electron: false
+
+# pnpm gates very recent releases behind a minimum release age. These were
+# reviewed and accepted; see ADR 0004.
 minimumReleaseAgeExclude:
   - '@vitest/coverage-v8@5.0.0'
   - '@vitest/mocker@5.0.0'

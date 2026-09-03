@@ -1,0 +1,27 @@
+{
+  "name": "@leathercad/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Electron shell for LeatherCAD",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "postinstall": "install-electron",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@leathercad/platform": "workspace:*",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^44.1.1",
+    "electron-vite": "^5.0.0",
+    "vite": "^8.2.2"
+  }
+}

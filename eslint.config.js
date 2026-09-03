@@ -76,6 +76,15 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
 
   {
+    // TypeScript already reports undefined identifiers, and does it better —
+    // it knows about DOM vs Node lib sets per tsconfig. Leaving no-undef on for
+    // .ts files only produces false positives on `window`, `document` and
+    // friends. It stays on for plain .js/.cjs, which tsc never sees.
+    files: ['**/*.{ts,tsx,mts,cts}'],
+    rules: { 'no-undef': 'off' },
+  },
+
+  {
     rules: {
       eqeqeq: ['error', 'always'],
       'no-console': ['warn', { allow: ['warn', 'error'] }],

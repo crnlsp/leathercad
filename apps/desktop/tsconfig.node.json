@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist/node",
+    "rootDir": ".",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/shared/**/*.ts",
+    "electron.vite.config.ts"
+  ],
+  "references": [{ "path": "../../packages/platform" }]
+}

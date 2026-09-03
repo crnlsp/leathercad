@@ -128,11 +128,16 @@ Strict, one-directional dependency graph. An arrow means "may import".
                                        ▼
                                 ┌──────────────┐
                                 │     core     │  ids, result types, epsilons, assertions
-                                └──────────────┘
+                                └──────▲───────┘
+                                       │
+                                ┌──────┴───────┐
+                                │   platform   │  PlatformHost — the OS boundary (§5).
+                                └──────────────┘  Implemented by apps/desktop, faked in tests.
 
-     export  ──depends on──▶ domain, geometry, render(display-list types only)
-     print   ──depends on──▶ export
-     cli     ──depends on──▶ everything except ui/editor/desktop
+     export   ──depends on──▶ domain, geometry, render(display-list types only)
+     print    ──depends on──▶ export
+     ui, cli  ──depend on───▶ platform, for file and dialog access
+     cli      ──depends on──▶ everything except ui/editor/desktop
 ```
 
 ### The rules, enforced by dependency-cruiser in CI
@@ -145,6 +150,7 @@ Strict, one-directional dependency graph. An arrow means "may import".
 5. `export` and `print` must not import `editor` or `ui` — so both are runnable headless, from
    tests and from the CLI.
 6. No package may import Electron except `apps/desktop`.
+7. `platform` may import only `core`. It declares the OS boundary; it never implements it.
 
 Rule 6 is what keeps the Tauri escape hatch open. Rule 1 is what keeps the geometry engine testable
 and correct.

@@ -1,0 +1,107 @@
+/*
+ * Slice 0.2 shell styling. Intentionally minimal — the editor's visual design
+ * is a later exercise, once there is an editor.
+ */
+
+:root {
+  --bg: #1b1d21;
+  --bg-raised: #22252a;
+  --border: #32363d;
+  --text: #e6e8ea;
+  --text-dim: #8b929b;
+  --accent: #c9a227; /* veg-tan */
+  --error: #e5675f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font:
+    13px/1.5 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  overflow: hidden;
+}
+
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+}
+
+.app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.app-subtitle {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.canvas-host {
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.canvas-host canvas {
+  display: block;
+}
+
+.app-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 14px;
+  background: var(--bg-raised);
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.app-status code {
+  font-family: ui-monospace, 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+}
+
+.app-status .sep {
+  margin: 0 6px;
+  opacity: 0.5;
+}
+
+.status-error {
+  color: var(--error);
+}
+
+.status-right {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

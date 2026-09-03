@@ -42,6 +42,10 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Electron needs a display. xvfb is preinstalled on ubuntu-latest.
+      - name: E2E
+        run: xvfb-run -a pnpm test:e2e
+
       # Coverage thresholds gate on packages/geometry and packages/domain,
       # which arrive in slice 1.1. Enable this step then.
       # - name: Coverage

@@ -175,12 +175,15 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   [architecture.md](architecture.md) §2, CI workflow, and `packages/core` as a placeholder.
   `pnpm check` is green, and the layer rules were verified to actually reject a node-builtin import
   from `geometry`, a relative cross-package import, and a `geometry → document` edge.
-- **0.2** Electron shell: window opens, React renders, a DPR-aware canvas is mounted and sized,
-  `PlatformHost` is defined with its Electron implementation and its in-memory fake. Playwright
-  launches the app and asserts the window title.
-  Also here: add `apps` back to the `depcruise` script (it was dropped in 0.1 because
-  dependency-cruiser errors on a missing directory), and implement the `dev`, `build` and
-  `test:e2e` script placeholders.
+- **0.2** ✅ **Done (2026-09-03).** Electron 44 shell with React 19: window opens, a DPR-aware
+  canvas is mounted and resized via `ResizeObserver` plus a `matchMedia` DPR watch, and
+  `PlatformHost` lives in a new `packages/platform` with its Electron implementation (atomic writes
+  via `rename`) and `InMemoryPlatformHost` for tests. `contextIsolation`/`sandbox` on,
+  `nodeIntegration` off, CSP set, navigation denied. Five Playwright specs drive the real app.
+  `apps` is back in `depcruise`; `dev`, `build` and `test:e2e` are implemented.
+  Notes for later: Electron 44 has no `postinstall` — it ships an `install-electron` bin, wired
+  from `apps/desktop`'s own postinstall. `app.setPath('userData', …)` is required or config lands
+  in `~/.config/@leathercad/desktop`.
 - **0.3** ✅ **Done (2026-09-03).** ADRs 0001 (record decisions), 0002 (Electron over Tauri),
   0003 (TypeScript geometry core), 0004 (pnpm workspaces), 0005 (TypeScript 5.9 pin).
 

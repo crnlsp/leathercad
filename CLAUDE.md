@@ -32,8 +32,11 @@ Violating any of these is a bug, even if tests pass.
 ## Commands
 
 ```bash
+pnpm dev              # run the app (electron-vite, with HMR)
 pnpm check            # typecheck + lint + depcruise + test — run this before calling a slice done
 pnpm test             # unit + property + golden + export + snapshot
+pnpm test:e2e         # builds, then Playwright drives the real Electron app
+pnpm build
 pnpm typecheck        # tsc --build
 pnpm lint
 pnpm format           # prettier; markdown is deliberately excluded
@@ -41,8 +44,12 @@ pnpm depcruise        # layering violations — must pass
 ```
 
 Not yet implemented. Each exits with a pointer to the roadmap slice that adds it — implement it
-there, don't stub it out earlier: `pnpm dev`, `pnpm build` (slice 0.2), `pnpm test:e2e` (0.2),
-`pnpm test:visual` (2.3), `pnpm bench` (1.9).
+there, don't stub it out earlier: `pnpm test:visual` (slice 2.3), `pnpm bench` (1.9).
+
+**pnpm is not on PATH** unless you have run `sudo pacman -S pnpm`. A bootstrap copy lives at
+`~/.local/share/pnpm-bootstrap/node_modules/.bin`; prefix commands with
+`export PATH="$HOME/.local/share/pnpm-bootstrap/node_modules/.bin:$PATH"` until then. pnpm 11
+re-invokes itself from PATH before running scripts, so a bare path to the binary is not enough.
 
 ## Layout
 
@@ -50,6 +57,7 @@ Dependencies point downward only; `pnpm depcruise` enforces it.
 
 ```
 core       ids, Result, epsilons, quantise
+platform   PlatformHost — the OS boundary (files, dialogs, printing)          → core
 geometry   PURE mm maths: Vec2, Segment, Path, offset, intersect, distribute   → core
 domain     Part, Feature, derivation graph, stitching, validation              → geometry
 document   Document, Command, undo/redo, selection                            → domain

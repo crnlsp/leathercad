@@ -11,6 +11,9 @@
 /** @type {Record<string, string[]>} */
 const LAYERS = {
   core: [],
+  // The OS boundary (PlatformHost). A port, not an adapter: apps/desktop
+  // supplies the Electron implementation. See ADR 0002 and architecture.md §5.
+  platform: ['core'],
   geometry: ['core'],
   domain: ['core', 'geometry'],
   document: ['core', 'geometry', 'domain'],
@@ -19,8 +22,29 @@ const LAYERS = {
   export: ['core', 'geometry', 'domain', 'render'],
   print: ['core', 'geometry', 'domain', 'render', 'export'],
   editor: ['core', 'geometry', 'domain', 'document', 'render'],
-  ui: ['core', 'geometry', 'domain', 'document', 'persist', 'render', 'editor', 'export', 'print'],
-  cli: ['core', 'geometry', 'domain', 'document', 'persist', 'render', 'export', 'print'],
+  ui: [
+    'core',
+    'platform',
+    'geometry',
+    'domain',
+    'document',
+    'persist',
+    'render',
+    'editor',
+    'export',
+    'print',
+  ],
+  cli: [
+    'core',
+    'platform',
+    'geometry',
+    'domain',
+    'document',
+    'persist',
+    'render',
+    'export',
+    'print',
+  ],
 };
 
 const layerRules = Object.entries(LAYERS).map(([pkg, allowed]) => ({
@@ -130,9 +154,12 @@ module.exports = {
 
     {
       name: 'no-dev-deps-in-src',
-      comment: 'Production source must not depend on devDependencies.',
+      comment:
+        'Library source must not depend on devDependencies. Scoped to packages/ deliberately: ' +
+        'in apps/desktop, electron is correctly a devDependency because the packager bundles the ' +
+        'runtime rather than npm shipping it, so the distinction does not apply there.',
       severity: 'error',
-      from: { path: '^(packages|apps)/[^/]+/src/', pathNot: '\\.(test|bench)\\.ts$' },
+      from: { path: '^packages/[^/]+/src/', pathNot: '\\.(test|bench)\\.ts$' },
       to: { dependencyTypes: ['npm-dev'], pathNot: 'node_modules/@types/' },
     },
 
@@ -145,7 +172,9 @@ module.exports = {
         pathNot: [
           '\\.d\\.ts$',
           '(^|/)\\.[^/]+\\.(js|cjs|mjs|ts)$',
-          '(^|/)(eslint|vitest|prettier)\\.config\\.(js|ts|cjs|mjs)$',
+          // Any *.config.{js,ts,cjs,mjs}: eslint, vitest, prettier,
+          // electron.vite, playwright. Tooling reads these; nothing imports them.
+          '\\.config\\.(js|ts|cjs|mjs)$',
           '(^|/)index\\.ts$',
         ],
       },
