@@ -1,0 +1,43 @@
+{
+  "name": "leathercad",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Desktop application for designing leathercraft patterns that print at exact 1:1 scale",
+  "license": "Apache-2.0",
+  "author": "cornelisp",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --build --force",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "depcruise": "depcruise packages --config .dependency-cruiser.cjs",
+    "depcruise:graph": "depcruise packages --config .dependency-cruiser.cjs --output-type dot | dot -T svg > dependency-graph.svg",
+    "check": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test",
+    "dev": "node -e \"console.error('Not implemented until slice 0.2 (Electron shell). See docs/roadmap.md'); process.exit(1)\"",
+    "build": "node -e \"console.error('Not implemented until slice 0.2 (Electron shell). See docs/roadmap.md'); process.exit(1)\"",
+    "test:visual": "node -e \"console.error('Not implemented until slice 2.3 (Canvas2D backend). See docs/testing.md'); process.exit(1)\"",
+    "test:e2e": "node -e \"console.error('Not implemented until slice 0.2 (Electron shell). See docs/testing.md'); process.exit(1)\"",
+    "bench": "node -e \"console.error('Not implemented until slice 1.9 (offsetting). See docs/testing.md'); process.exit(1)\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^5.0.0",
+    "dependency-cruiser": "^18.2.0",
+    "eslint": "^10.9.1",
+    "fast-check": "^4.9.0",
+    "prettier": "^3.9.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0"
+  }
+}

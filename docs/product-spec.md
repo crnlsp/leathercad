@@ -28,6 +28,29 @@ the printed page.** Every architectural decision in these documents serves that.
   ~5% of the effort. See §6.
 - Not collaborative, not cloud-backed, not a web app.
 
+## 2a. Relationship to Leathercrafto
+
+[Leathercrafto](https://github.com/cornelisp/Leathercrafto) is a separate application by the same
+author: a keyboard-driven browser for a folder of existing pattern PDFs, which prints them at 1:1.
+
+**LeatherCAD is a separate application, not a successor and not a component of it.** The two are not
+merged and share no code. Where their concerns overlap — 1:1 PDF output, calibration, tiled
+printing — LeatherCAD reimplements them rather than depending on the other project, because
+LeatherCAD generates its own vector geometry while Leathercrafto re-lays-out someone else's PDF.
+Those turn out to be different problems.
+
+Two things carry over as *technique* rather than code:
+
+- The approach to defeating "fit to page" and generating exact-scale output, already proven there.
+- Its `calibrationScale` test, which rasterises the output PDF with `pdftoppm` and verifies scale in
+  pixels. Adopt this in `packages/print` — it is a stronger check than parsing the PDF's own
+  numbers, because it measures what a renderer actually produces.
+
+A deliberate difference in emphasis: **LeatherCAD's UI must be clearer and more responsive.** The
+editor is a direct-manipulation canvas that users will sit in front of for hours, not a browser they
+dip into. Where the two projects would diverge on interface decisions, LeatherCAD favours clarity
+and immediate feedback over keyboard density.
+
 ## 3. Users and their actual workflow
 
 The target user is a hobbyist or small-shop leatherworker who currently designs patterns in

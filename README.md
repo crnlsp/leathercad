@@ -36,6 +36,34 @@ themselves.
 
 [`CLAUDE.md`](CLAUDE.md) holds the invariants that must not be violated.
 
+## Development
+
+Requires **Node 22.12+** and **pnpm 11+**.
+
+pnpm is not bundled with Node, and Arch's `nodejs-lts-jod` package does not ship corepack. Install
+it system-wide:
+
+```bash
+sudo pacman -S pnpm
+```
+
+Then:
+
+```bash
+pnpm install
+pnpm check      # typecheck + lint + layering + tests
+```
+
+Individual checks: `pnpm typecheck`, `pnpm lint`, `pnpm depcruise`, `pnpm test`.
+
+`pnpm depcruise` enforces the package layering from
+[`docs/architecture.md`](docs/architecture.md) §2. A violation fails the build — that is deliberate,
+and the rules are documented inline in `.dependency-cruiser.cjs`.
+
+Scripts for the app itself (`pnpm dev`, `pnpm build`, `pnpm test:e2e`, `pnpm test:visual`,
+`pnpm bench`) exit with a pointer to the roadmap slice that implements them. They are placeholders
+until then rather than silent no-ops.
+
 ## The promise
 
 A line drawn as 100 mm measures 100 mm on paper. Every architectural decision in the documents above

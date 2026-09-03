@@ -32,15 +32,17 @@ Violating any of these is a bug, even if tests pass.
 ## Commands
 
 ```bash
-pnpm dev              # run the app
-pnpm test             # unit + property + golden + export + snapshot  (< 1 min)
-pnpm test:visual      # pixel diffs, pinned container
-pnpm test:e2e         # Playwright + Electron
-pnpm typecheck        # tsc --noEmit, whole workspace
+pnpm check            # typecheck + lint + depcruise + test — run this before calling a slice done
+pnpm test             # unit + property + golden + export + snapshot
+pnpm typecheck        # tsc --build
 pnpm lint
+pnpm format           # prettier; markdown is deliberately excluded
 pnpm depcruise        # layering violations — must pass
-pnpm bench --compare  # against tools/bench-baseline.json
 ```
+
+Not yet implemented. Each exits with a pointer to the roadmap slice that adds it — implement it
+there, don't stub it out earlier: `pnpm dev`, `pnpm build` (slice 0.2), `pnpm test:e2e` (0.2),
+`pnpm test:visual` (2.3), `pnpm bench` (1.9).
 
 ## Layout
 

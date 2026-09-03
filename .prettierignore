@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+coverage/
+pnpm-lock.yaml
+LICENSE
+*.svg
+fixtures/golden/
+**/__snapshots__/
+
+# Markdown is hand-formatted. Prettier reflows fenced code blocks, which
+# destroys the deliberate alignment in the docs' illustrative snippets, and
+# prose gains nothing from it. Code formatting still applies everywhere else.
+*.md
