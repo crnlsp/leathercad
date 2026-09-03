@@ -190,8 +190,14 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 ### Phase 1 — Geometry core
 *Pure, headless, heavily tested. The foundation everything else stands on.*
 
-- **1.1** `core`: ids (ULID with injectable entropy), `Result`, epsilon module, `approxEq`,
-  `quantise`, assertions.
+- **1.1** ✅ **Done.** `core`: epsilons + `approxEq`/`approxLte`/`approxCmp`, `quantise` (0.1 µm
+  grid, −0 normalised), `assertFinite`/`invariant`, `Result`, and a ULID factory with injectable
+  clock and entropy. The real clock lives in `packages/platform` as `systemIdSource`, which keeps
+  `core` free of `Date.now` so the lint ban stays absolute.
+  Two things the property tests caught: with all-bits-set entropy the ULID random component
+  overflows on the first increment (now rolls the timestamp forward instead of throwing), and an
+  exact-epsilon boundary cannot be tested as `approxEq(1, 1 + EPS)` because `(1 + 1e-7) − 1` is not
+  `1e-7` — measure from zero.
 - **1.2** `Vec2`, `Mat2x3`, `Rect`. Property tests for transform invertibility and composition.
 - **1.3** `Segment` union: line, arc, cubic. `pointAt`, `tangentAt`, `length`, `split`, `reverse`,
   `transform`, and **exact** `bbox`.
