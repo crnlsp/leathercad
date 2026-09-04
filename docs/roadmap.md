@@ -418,7 +418,24 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   Delete, Escape. Hit testing works entirely in millimetres, with the pick radius converted from
   pixels through the viewport, so picking feels identical at any zoom — asserted directly.
   A drag threshold stops a one-pixel wobble on a click from writing a spurious undo entry.
-- **3.3** Snap engine: spatial index, priority order, px-derived tolerance, overlay glyphs.
+- **3.3** ✅ **Done.** Snap engine: endpoint, midpoint, centre, intersection, on-path and grid,
+  with a per-kind overlay glyph so a user can see which one they are about to commit to — a corner
+  and the edge running through it are a fraction of a millimetre apart on screen and very different
+  in the file.
+  Priority first, distance second. The order is a product decision, not an implementation detail: a
+  user aiming at a corner means the corner, so an endpoint beats the edge through it however much
+  closer the edge happens to be.
+  Endpoints, midpoints, centres and crossings are a fixed point set per revision, so they are
+  bucketed once into a 20 mm grid rather than rescanned on every pointer move; on-path and grid are
+  continuous and computed on demand. A property test checks the index returns exactly what a
+  brute-force scan does, since an index that changes the answer is worse than none.
+  Tolerance arrives in millimetres — the caller converts its pixel radius through the viewport, the
+  same rule `hitTest` follows, so the feel is identical at any zoom.
+  Crossings are the first consumer of `intersectPaths` from 1.10. Excluding the dragged feature is
+  not an optimisation: snapping a shape to its own corner would pin it in place.
+  A fixture caught something worth keeping: two lines crossing at (10,10) also meet at *both* their
+  midpoints, so the test asserting `intersection` legitimately got `midpoint`. The fixture moved;
+  the priority order did not.
 - **3.4** ✅ **Done → M2.** Drag to draw, shift constrains to a square, live millimetre
   dimensions in the overlay, Escape abandons. Creates a real `cut-contour` on a new part, not a
   generic path. Per-corner radii and exact numeric entry arrived with the property panel (3.8).

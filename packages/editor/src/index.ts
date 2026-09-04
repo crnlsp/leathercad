@@ -12,5 +12,8 @@ export { ToolManager } from './tool.js';
 
 export { featuresWithin, hitTest } from './hitTest.js';
 
+export type { SnapCandidate, SnapIndex, SnapIndexOptions, SnapKind, SnapOptions } from './snap.js';
+export { buildSnapIndex, snap, snapGlyph } from './snap.js';
+
 export { createRectangleTool } from './tools/rectangleTool.js';
 export { createSelectTool } from './tools/selectTool.js';
