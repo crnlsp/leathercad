@@ -337,8 +337,25 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   setting. `clipper2-wasm` is the faithful build, but the renderer's CSP is `script-src 'self'`
   with no `'wasm-unsafe-eval'`, so Chromium refuses to compile *any* WebAssembly there — a
   100-byte module fails exactly as a 220 KB one does. See ADR 0008.
-- **1.10** `intersectSegments` / `intersectPaths`: analytic for line and arc, flatten-and-refine for
-  cubics.
+- **1.10** ✅ **Done.** `intersectSegments`, `intersectPaths` and `selfIntersections`. Analytic for
+  line/line, line/arc and arc/arc; anything with a cubic is located on the flattened polylines and
+  polished by two-dimensional Newton on the true parametric forms, so the returned point sits on
+  both curves rather than on their approximations — which is what makes the result usable for
+  trimming and not only for detection.
+  Collinear overlaps return the overlap endpoints, the only finite answer that loses nothing.
+  On a path the integer part of each parameter is the segment index, so `2.5` is halfway along the
+  third segment. `selfIntersections` skips neighbours, including the first and last of a closed
+  path, since reporting a shared vertex would make every path self-intersecting.
+  Three bugs the tests caught. Newton was fed `tangentAt`, which returns a **unit** tangent, where
+  it needed the actual derivative — on a 20 mm line those differ by a factor of twenty, so every
+  step overshot and no cubic intersection ever converged. The parallel test compared a cross
+  product, an area, against a length epsilon: dividing by both lengths gives the sine of the angle,
+  which is scale-invariant and stable under a rigid transform. And segments and paths de-duplicated
+  differently, so the same geometry could report different crossing counts at the two levels.
+  A boundary that cannot be fixed, only chosen: whether two segments 1e-9 radians apart are parallel
+  is undecidable in doubles, and a rigid transform perturbs the last bit enough to change the
+  answer. The transform property excludes pairs within a millionth of parallel and an example test
+  pins what the epsilon decides, so changing it is a deliberate act.
 
 ### Phase 2 — Document and first working canvas
 *Ends at M1.*
