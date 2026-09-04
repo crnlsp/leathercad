@@ -1,0 +1,49 @@
+#!/bin/sh
+# Pre-push gate.
+#
+# Installed by `pnpm install`, whose `prepare` script points core.hooksPath at
+# this directory. Two jobs: keep direct pushes off main, and keep un-checked
+# code off the remote.
+#
+# `git push --no-verify` skips both. That is deliberate: on a solo repository
+# the hook exists to stop the accident, not to police the author. GitHub
+# cannot enforce this server-side while the repository is private on a free
+# plan — see docs/superpowers/specs/2026-09-04-ci-gate-and-hardening-design.md.
+
+set -e
+
+# pnpm 11 re-invokes itself from PATH, so a bare path to the binary is not
+# enough. See CLAUDE.md § Commands.
+if ! command -v pnpm >/dev/null 2>&1; then
+  PATH="$HOME/.local/share/pnpm-bootstrap/node_modules/.bin:$PATH"
+  export PATH
+fi
+
+# git supplies "<local ref> <local sha> <remote ref> <remote sha>" per ref on
+# stdin. Reading that catches `git push origin HEAD:main` too, which looking at
+# the checked-out branch would miss.
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in
+  refs/heads/main)
+    echo "pre-push: refusing to push directly to main." >&2
+    echo "" >&2
+    echo "  Work lands on a slice branch through a pull request, merged when" >&2
+    echo "  CI is green. See docs/roadmap.md § 2.4." >&2
+    echo "" >&2
+    echo "    git switch -c slice/<number>-<name>" >&2
+    echo "    gh pr create --fill" >&2
+    echo "" >&2
+    echo "  Override with --no-verify if you mean it." >&2
+    exit 1
+    ;;
+  esac
+done
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-push: pnpm is not on PATH and no bootstrap copy was found." >&2
+  echo "  See CLAUDE.md § Commands. Override with --no-verify." >&2
+  exit 1
+fi
+
+echo "pre-push: running pnpm check"
+pnpm check

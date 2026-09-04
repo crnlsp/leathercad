@@ -147,6 +147,22 @@ What does not:
 One branch per slice, named `slice/3.4-rectangle-tool`. Merge when acceptance criteria pass and CI
 is green. Commit messages name the slice and its user-visible effect, not the files touched.
 
+```
+git switch -c slice/3.4-rectangle-tool
+... build the slice, commit ...
+git push -u origin HEAD          # the hook runs pnpm check
+gh pr create --fill              # three CI jobs run
+gh pr merge --squash             # once they are green
+```
+
+A `pre-push` hook enforces this: it refuses a push to `main` and runs `pnpm check` on slice
+branches. `pnpm install` installs it, by pointing `core.hooksPath` at `.githooks/`.
+
+The enforcement is client-side and `--no-verify` defeats it. That is the available option, not the
+preferred one: GitHub's branch protection and rulesets both require a public repository or a paid
+plan, and this one is private on the free plan. Revisit at slice 8.6, which ships the contribution
+guide and the v1.0.0 release.
+
 ## 3. Milestones
 
 Five moments where the project becomes meaningfully more real. Everything else is scaffolding

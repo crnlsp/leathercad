@@ -1,0 +1,29 @@
+version: 2
+
+updates:
+  # The higher-value half: action majors drift silently otherwise, because
+  # nothing else in the repository watches them.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: chore(ci)
+
+  # Dependabot proposes; the human decides. The repository's own policies still
+  # apply on top — minimumReleaseAge in pnpm-workspace.yaml, and an ADR for any
+  # genuinely new dependency (CLAUDE.md § Conventions). These PRs go through
+  # the same three CI jobs as any other.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    versioning-strategy: increase
+    groups:
+      dependencies:
+        patterns: ['*']
+    commit-message:
+      prefix: chore(deps)

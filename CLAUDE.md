@@ -33,7 +33,7 @@ Violating any of these is a bug, even if tests pass.
 
 ```bash
 pnpm dev              # run the app (electron-vite, with HMR)
-pnpm check            # typecheck + lint + depcruise + test — run this before calling a slice done
+pnpm check            # typecheck + lint + format:check + depcruise + test — before a slice is done
 pnpm test             # unit + property + golden + export + snapshot
 pnpm test:e2e         # builds, then Playwright drives the real Electron app
 pnpm build
@@ -45,6 +45,9 @@ pnpm depcruise        # layering violations — must pass
 
 Not yet implemented. Each exits with a pointer to the roadmap slice that adds it — implement it
 there, don't stub it out earlier: `pnpm test:visual` (slice 2.3), `pnpm bench` (1.9).
+
+Work lands on a slice branch through a pull request, never by pushing to `main`. `pnpm install`
+installs a `pre-push` hook that enforces both halves of that. See `docs/roadmap.md` §2.4.
 
 **pnpm is not on PATH** unless you have run `sudo pacman -S pnpm`. A bootstrap copy lives at
 `~/.local/share/pnpm-bootstrap/node_modules/.bin`; prefix commands with

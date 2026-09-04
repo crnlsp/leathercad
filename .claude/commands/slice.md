@@ -21,4 +21,8 @@ the specification, and writing it afterwards lets a plausible implementation qui
 contract.
 
 Finish by running `pnpm check`, reporting the real output, walking the `geometry-review` checklist
-if the pure layers were touched, updating `docs/roadmap.md`, and committing.
+if the pure layers were touched, and updating `docs/roadmap.md`.
+
+Then land it the way `docs/roadmap.md` §2.4 says: commit on the slice branch, push it — the
+pre-push hook runs `pnpm check` again — and open the pull request with `gh pr create --fill`. Do not
+merge it; report the run and let the human decide.

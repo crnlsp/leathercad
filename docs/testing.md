@@ -253,6 +253,17 @@ principles:
 - **Assert that the preview and the print use the same pagination** by deep-equality on the
   `Page[]`, so the two can never drift.
 
+The strongest of these checks rasterise the PDF with poppler and measure the result in pixels,
+which is stronger than parsing our own numbers back out: it proves the file means what we think,
+according to an independent implementation. `pdftoppm` is therefore a soft requirement — absent it,
+those tests skip and everything else still runs, so a contributor without poppler is not met with a
+wall of failures.
+
+That skip must never happen silently in CI, where a broken install step would delete the strongest
+print checks in the suite and still report green. CI sets **`LEATHERCAD_REQUIRE_POPPLER=1`**, which
+turns a missing `pdftoppm` into a hard failure. Set it locally to prove the rasterised tests are
+really running.
+
 ## 7. What is deliberately *not* tested heavily
 
 - React component internals. Tested through the few E2E flows, not in isolation.
@@ -280,15 +291,28 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
+Three jobs, run in parallel on every pull request, so one run reports every failure rather than
+only the first:
+
 ```
-pnpm typecheck                  # tsc --noEmit across the workspace
-pnpm lint                       # eslint, including the custom geometry rules
-pnpm depcruise                  # layering violations — fails the build
-pnpm test                       # unit, property, golden, export, snapshot
-pnpm test:visual                # pixel diffs, in the pinned container
-pnpm test:e2e                   # Playwright + Electron
-pnpm bench --compare            # against the committed baseline
+static   pnpm typecheck         # tsc --build across the workspace
+         pnpm lint              # eslint, including the custom geometry rules
+         pnpm format:check      # prettier; markdown is excluded
+         pnpm depcruise         # layering violations — fails the build
+
+test     pnpm test:coverage     # unit, property, golden, export, snapshot,
+                                # and the coverage thresholds in one pass
+                                # LEATHERCAD_REQUIRE_POPPLER=1
+
+e2e      pnpm test:e2e          # Playwright + Electron, under xvfb
+                                # uploads playwright-report/ on failure
 ```
+
+`pnpm check` runs the `static` and `test` work locally and is what the pre-push hook invokes, so a
+green `pnpm check` predicts a green CI for everything but E2E.
+
+Still to come, each with the slice that adds it: `pnpm test:visual` (2.3, pixel diffs in the pinned
+container) and `pnpm bench --compare` (1.9, against the committed baseline).
 
 Nightly: property tests at `numRuns: 10000` with a random seed, reporting any new shrunk
 counterexample as an issue.

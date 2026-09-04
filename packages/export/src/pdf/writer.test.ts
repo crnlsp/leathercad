@@ -131,12 +131,24 @@ const PX_PER_MM = DPI / 25.4;
  * The rasterised checks are the strongest ones here, so CI installs
  * poppler-utils to make sure they run. A contributor without it still gets
  * every other test rather than a wall of failures.
+ *
+ * That skip is right on a laptop and wrong in CI: if the install step ever
+ * breaks, the checks that prove a 100 mm line measures 100 mm would stop
+ * running and the build would still report green. CI therefore sets
+ * LEATHERCAD_REQUIRE_POPPLER, which turns the absence into a failure.
  */
 const HAS_POPPLER = ((): boolean => {
   try {
     execFileSync('pdftoppm', ['-v'], { stdio: 'ignore' });
     return true;
   } catch {
+    if (process.env['LEATHERCAD_REQUIRE_POPPLER'] !== undefined) {
+      throw new Error(
+        'LEATHERCAD_REQUIRE_POPPLER is set but pdftoppm was not found, so the ' +
+          'rasterised print measurements cannot run. Install poppler-utils, or ' +
+          'unset the variable to skip them.',
+      );
+    }
     return false;
   }
 })();
