@@ -14,6 +14,27 @@ test.afterAll(async () => {
   await app?.close();
 });
 
+/**
+ * A dedicated app instance with an empty document.
+ *
+ * The read-only checks above happily share one window, but anything that
+ * draws leaves parts behind. Sharing an instance across those made the tests
+ * depend on the order they happened to run in — which is exactly the kind of
+ * failure that wastes an afternoon.
+ */
+async function withFreshApp(
+  body: (window: Awaited<ReturnType<ElectronApplication['firstWindow']>>) => Promise<void>,
+): Promise<void> {
+  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await body(window);
+  } finally {
+    await instance.close();
+  }
+}
+
 test('opens a window titled LeatherCAD', async () => {
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
@@ -96,37 +117,100 @@ test('reports cursor position in millimetres', async () => {
 test('draws a rectangle, moves it, and reverses both with undo', async () => {
   // The functional loop end to end: a drag makes a real cut contour, the
   // select tool moves it as one undoable step, and undo walks back through
-  // both. This is the guard that the tools are wired to the document at all.
-  const window = await app.firstWindow();
-  const box = await window.getByTestId('editor-canvas').boundingBox();
-  expect(box).not.toBeNull();
+  // both.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    expect(box).not.toBeNull();
 
-  const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
-    await window.mouse.move(box!.x + x1, box!.y + y1);
+    const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
+      await window.mouse.move(box!.x + x1, box!.y + y1);
+      await window.mouse.down();
+      await window.mouse.move(box!.x + (x1 + x2) / 2, box!.y + (y1 + y2) / 2, { steps: 4 });
+      await window.mouse.move(box!.x + x2, box!.y + y2, { steps: 4 });
+      await window.mouse.up();
+    };
+
+    await window.getByTestId('tool-rectangle').click();
+    await drag(140, 140, 340, 260);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+
+    await window.getByTestId('tool-select').click();
+    await drag(140, 140, 220, 220);
+    await expect(window.getByTestId('undo')).toBeEnabled();
+
+    // One undo reverses the whole move, not each intermediate position.
+    await window.getByTestId('undo').click();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    await window.getByTestId('undo').click();
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+
+    await window.getByTestId('redo').click();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+  });
+});
+
+test('draw roughly, then type exact millimetres', async () => {
+  // The reason to build this rather than use a vector editor: a panel is
+  // 105 mm because it was typed, not because it was dragged carefully.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    expect(box).not.toBeNull();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
     await window.mouse.down();
-    await window.mouse.move(box!.x + (x1 + x2) / 2, box!.y + (y1 + y2) / 2, { steps: 4 });
-    await window.mouse.move(box!.x + x2, box!.y + y2, { steps: 4 });
+    await window.mouse.move(box!.x + 330, box!.y + 270, { steps: 5 });
     await window.mouse.up();
-  };
 
-  await window.getByTestId('tool-rectangle').click();
-  await drag(140, 140, 340, 260);
-  await expect(window.getByTestId('part-count')).toHaveText('1');
-  await expect(window.getByTestId('selected-count')).toHaveText('1');
+    const panel = window.getByTestId('property-panel');
+    await expect(panel).toBeVisible();
 
-  await window.getByTestId('tool-select').click();
-  await drag(140, 140, 220, 220);
-  await expect(window.getByTestId('undo')).toBeEnabled();
+    const setField = async (label: string, value: string): Promise<void> => {
+      const input = panel.locator('label', { hasText: new RegExp(`^${label}`) }).locator('input');
+      await input.fill(value);
+      await input.press('Enter');
+    };
 
-  // One undo reverses the whole move, not each intermediate pointer position.
-  await window.getByTestId('undo').click();
-  await expect(window.getByTestId('part-count')).toHaveText('1');
+    await setField('X', '0');
+    await setField('Y', '0');
+    await setField('Width', '105');
+    await setField('Height', '75');
+    for (const corner of ['↖', '↗', '↙', '↘']) await setField(corner, '8');
 
-  await window.getByTestId('undo').click();
-  await expect(window.getByTestId('part-count')).toHaveText('0');
+    // 2(105-16) + 2(75-16) + 2·pi·8 = 346.2655, computed by the geometry
+    // engine rather than by the panel.
+    await expect(panel.locator('.readout').first()).toContainText('346.27 mm');
+    await expect(panel.locator('.readout').nth(1)).toContainText('78.20 cm²');
 
-  await window.getByTestId('redo').click();
-  await expect(window.getByTestId('part-count')).toHaveText('1');
+    // Typing is undoable like anything else.
+    await window.getByTestId('undo').click();
+    await expect(panel.locator('.readout').first()).not.toContainText('346.27 mm');
+  });
+});
+
+test('the parts list selects what the canvas cannot reach', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 320, box!.y + 250, { steps: 4 });
+    await window.mouse.up();
+
+    await expect(window.getByTestId('parts-list')).toContainText('Panel');
+
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('editor-canvas').click({ position: { x: 600, y: 450 } });
+    await expect(window.getByTestId('selected-count')).toHaveText('0');
+
+    await window
+      .getByTestId('parts-list')
+      .getByRole('button', { name: /Outline/ })
+      .click();
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+  });
 });
 
 test('denies in-page navigation away from the app', async () => {

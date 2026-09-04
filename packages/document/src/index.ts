@@ -21,6 +21,8 @@ export {
   rectanglePart,
   renameFeature,
   setFeatureVisible,
+  setPartName,
+  setPartQuantity,
   setShape,
   translateFeatures,
 } from './commands.js';

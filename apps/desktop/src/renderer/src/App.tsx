@@ -4,6 +4,8 @@ import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
+import { PartsList } from './PartsList.js';
+import { PropertyPanel } from './PropertyPanel.js';
 import { getPlatformHost } from './platformBridge.js';
 
 const TOOLS = [
@@ -102,7 +104,19 @@ export function App() {
         </span>
       </header>
 
-      <CanvasHost store={store} toolId={toolId} nextId={nextId} onStatus={handleStatus} />
+      <div className="workspace">
+        <PartsList
+          store={store}
+          project={storeState.document.project}
+          selected={storeState.selection.features}
+        />
+        <CanvasHost store={store} toolId={toolId} nextId={nextId} onStatus={handleStatus} />
+        <PropertyPanel
+          store={store}
+          project={storeState.document.project}
+          selected={storeState.selection.features}
+        />
+      </div>
 
       <footer className="app-status" data-testid="status-bar">
         {bridgeError !== null ? (

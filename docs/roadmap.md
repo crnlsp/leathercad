@@ -324,15 +324,23 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   pixels through the viewport, so picking feels identical at any zoom — asserted directly.
   A drag threshold stops a one-pixel wobble on a click from writing a spurious undo entry.
 - **3.3** Snap engine: spatial index, priority order, px-derived tolerance, overlay glyphs.
-- **3.4** 🟡 **Mostly done.** Drag to draw, shift constrains to a square, live millimetre
+- **3.4** ✅ **Done → M2.** Drag to draw, shift constrains to a square, live millimetre
   dimensions in the overlay, Escape abandons. Creates a real `cut-contour` on a new part, not a
-  generic path. Still to add: per-corner radii and numeric entry during the drag — both need the
-  property panel (3.8), which is next.
+  generic path. Per-corner radii and exact numeric entry arrived with the property panel (3.8).
 - **3.5** Line and polyline tools; angle constraint on Shift.
 - **3.6** Circle and arc tools.
 - **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
   arc-under-non-uniform-scale rule from [geometry.md](geometry.md) §4.2.
-- **3.8** Property panel with exact mm fields, driven by the selection.
+- **3.8** ✅ **Done.** Property panel with exact millimetre fields for position, size and all four
+  corner radii, plus part name and quantity, and measured perimeter and area. Also a parts list for
+  selecting what the canvas cannot reach. Entry commits on Enter or blur, reverts on Escape,
+  steps with the arrow keys, and quantises to the storage grid before it reaches the document
+  (CLAUDE.md invariant 8).
+  One bug worth remembering: `commit()` ran **twice** for a single edit, because Enter committed
+  and then blurred, and the blur handler committed again from the same render's closure where the
+  draft state was still set. Two identical commands meant two history entries, so the first press
+  of Undo appeared to do nothing. The draft is now mirrored in a ref so the second call sees it
+  already consumed.
 - **3.9** Vertex editing: add, remove, move, corner ↔ smooth.
 - **3.10** Guides, alignment, and distribution.
 

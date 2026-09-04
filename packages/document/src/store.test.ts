@@ -9,6 +9,8 @@ import {
   rectShape,
   rectanglePart,
   renameFeature,
+  setPartName,
+  setPartQuantity,
   setShape,
   translateFeatures,
 } from './commands.js';
@@ -254,6 +256,46 @@ describe('deleteFeatures', () => {
     const store = new DocumentStore(docWithRect());
     store.dispatch(deleteFeatures(['feat-1']));
     expect(store.getState().document.project.parts).toHaveLength(0);
+  });
+});
+
+describe('part commands', () => {
+  it('renames a part', () => {
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(setPartName('part-1', 'Card holder'));
+    expect(store.getState().document.project.parts[0]!.name).toBe('Card holder');
+  });
+
+  it('refuses a quantity below one', () => {
+    // A part you cut zero of is a part you should delete instead.
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(setPartQuantity('part-1', 0));
+    expect(store.getState().document.project.parts[0]!.quantity).toBe(1);
+    store.dispatch(setPartQuantity('part-1', -5));
+    expect(store.getState().document.project.parts[0]!.quantity).toBe(1);
+  });
+
+  it('rounds a fractional quantity', () => {
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(setPartQuantity('part-1', 2.6));
+    expect(store.getState().document.project.parts[0]!.quantity).toBe(3);
+  });
+});
+
+describe('setShape', () => {
+  it('replaces the parameters, leaving the feature identity intact', () => {
+    const store = new DocumentStore(docWithRect());
+    const before = store.getState().document.project.parts[0]!.features[0]!;
+
+    store.dispatch(setShape('feat-1', rectShape({ x: 0, y: 0 }, 105, 75, 8)));
+
+    const after = store.getState().document.project.parts[0]!.features[0]!;
+    expect(after.id).toBe(before.id);
+    expect(after.kind).toBe('cut-contour');
+    if (after.source.kind === 'shape' && after.source.shape.type === 'rect') {
+      expect(after.source.shape.width).toBe(105);
+      expect(after.source.shape.radii).toEqual(uniformRadii(8));
+    }
   });
 });
 

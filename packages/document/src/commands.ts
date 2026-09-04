@@ -162,6 +162,22 @@ export function rectShape(
   return { type: 'rect', origin, width, height, radii: Shapes.uniformRadii(radius) };
 }
 
+export function setPartName(id: PartId, name: string): Command {
+  return command('Rename part', (document) => ({
+    project: mapPart(document.project, id, (part) => ({ ...part, name })),
+  }));
+}
+
+export function setPartQuantity(id: PartId, quantity: number): Command {
+  return command('Set quantity', (document) => ({
+    project: mapPart(document.project, id, (part) => ({
+      ...part,
+      // A part you cut zero of is a part you should delete instead.
+      quantity: Math.max(1, Math.round(quantity)),
+    })),
+  }));
+}
+
 function mapPart(project: Project, id: PartId, update: (part: Part) => Part): Project {
   return {
     ...project,
