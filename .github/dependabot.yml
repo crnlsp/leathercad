@@ -27,3 +27,22 @@ updates:
         patterns: ['*']
     commit-message:
       prefix: chore(deps)
+    # Two constraints Dependabot cannot infer from package.json. Both were
+    # learned from PR #3, which grouped a TypeScript 7 major together with a
+    # routine bump and so held the whole group hostage to a change that
+    # overrules an ADR.
+    ignore:
+      # ADR 0005 pins TypeScript to an exact 5.9.x on purpose, so the
+      # constraint is visible rather than silently satisfied by a resolver.
+      # Patches within 5.9 are still welcome; anything further is a decision
+      # that belongs in an ADR, not in an automated PR.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+      # @types/node describes the Node we actually run — engines says >=22.12
+      # and CI uses 22. A newer major describes APIs that are not there, and
+      # the type errors it produces are real, not spurious.
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major

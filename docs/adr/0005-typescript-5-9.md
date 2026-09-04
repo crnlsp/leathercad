@@ -24,6 +24,10 @@ rather than silently satisfied by a resolver.
 - No TypeScript 6 or 7 language features. None are needed for this codebase today.
 - The pin must be revisited. Upgrade when `typescript-eslint` widens its peer range, verify
   `pnpm lint` still enforces every rule in `eslint.config.js`, and supersede this ADR.
+- `.github/dependabot.yml` ignores major and minor TypeScript updates, so this decision is enforced
+  rather than merely written down. Dependabot proposed exactly the upgrade rejected below on
+  2026-09-04 (PR #3); CI caught it, because `@types/node` came with it and the Node type
+  definitions stopped resolving. Patches within 5.9 are still proposed.
 
 ## Alternatives rejected
 
