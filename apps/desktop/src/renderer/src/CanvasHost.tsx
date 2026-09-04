@@ -1,40 +1,46 @@
-import { Viewport } from '@leathercad/editor';
-import { RectOps, type Vec2 } from '@leathercad/geometry';
+import { type DocumentStore } from '@leathercad/document';
+import { evaluate } from '@leathercad/domain';
+import { PathOps, RectOps, type Vec2 } from '@leathercad/geometry';
+import {
+  ToolManager,
+  Viewport,
+  createRectangleTool,
+  createSelectTool,
+  type PointerInput,
+} from '@leathercad/editor';
 import {
   DEFAULT_GRID_STYLE,
   DEFAULT_RULER_STYLE,
+  buildDisplayList,
   clearCanvas,
   renderDisplayList,
   renderGrid,
   renderRulers,
-  type DisplayList,
 } from '@leathercad/render';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface CanvasStatus {
   readonly cursorMm: Vec2 | null;
   readonly scale: number;
-  readonly dpr: number;
 }
 
 /**
  * The drawing surface.
  *
- * Owns a `Viewport` and paints through the render package. React manages the
- * host element and nothing else — no reconciliation happens in the draw path,
- * because a CAD canvas repaints on every pointer move and a virtual DOM diff
- * per frame would be wasted work.
- *
- * Painting is scheduled through one requestAnimationFrame with a dirty flag,
- * so a burst of wheel events coalesces into a single repaint.
+ * Owns the viewport and the tool manager; the document is owned by the store
+ * and reached only through dispatched commands. React manages the host element
+ * and nothing else — no reconciliation happens in the draw path, because a CAD
+ * canvas repaints on every pointer move.
  */
 export function CanvasHost({
-  scene,
-  initialBounds,
+  store,
+  toolId,
+  nextId,
   onStatus,
 }: {
-  scene: DisplayList;
-  initialBounds: { minX: number; minY: number; maxX: number; maxY: number };
+  store: DocumentStore;
+  toolId: string;
+  nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,11 +49,36 @@ export function CanvasHost({
   const dirtyRef = useRef(true);
   const frameRef = useRef(0);
   const hasFittedRef = useRef(false);
+  const panningRef = useRef<{ x: number; y: number } | null>(null);
   const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
 
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
   }, []);
+
+  const tools = useMemo(() => [createSelectTool(), createRectangleTool(nextId)], [nextId]);
+
+  const managerRef = useRef<ToolManager | null>(null);
+  if (managerRef.current === null) {
+    managerRef.current = new ToolManager(
+      {
+        viewport: viewportRef.current,
+        store,
+        dispatch: (command) => store.dispatch(command),
+        invalidate,
+      },
+      tools[0]!,
+      tools,
+    );
+  }
+
+  useEffect(() => {
+    managerRef.current?.activate(toolId);
+    invalidate();
+  }, [toolId, invalidate]);
+
+  // Any change to the document or selection means a repaint.
+  useEffect(() => store.subscribe(invalidate), [store, invalidate]);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -56,22 +87,27 @@ export function CanvasHost({
 
     const viewport = viewportRef.current;
     const view = viewport.toView();
+    const { document, selection } = store.getState();
 
-    // Layer order matters: the wipe happens once, up front, and each layer
-    // afterwards only adds to what is already there.
+    // Layer order matters: the wipe happens once, and each layer afterwards
+    // only adds to what is already there.
     clearCanvas(context, view, '#101215');
     renderGrid(context, view, DEFAULT_GRID_STYLE);
-    renderDisplayList(context, scene, view);
+    renderDisplayList(
+      context,
+      buildDisplayList(evaluate(document.project), { selected: selection.features }),
+      view,
+    );
+    // The tool overlay is ephemeral feedback and never touches the document.
+    renderDisplayList(context, managerRef.current?.overlay() ?? { items: [] }, view);
     renderRulers(context, view, {
       ...DEFAULT_RULER_STYLE,
       thicknessPx: DEFAULT_RULER_STYLE.thicknessPx * viewport.dpr,
       leftThicknessPx: DEFAULT_RULER_STYLE.leftThicknessPx * viewport.dpr,
       fontPx: DEFAULT_RULER_STYLE.fontPx * viewport.dpr,
     });
-  }, [scene]);
+  }, [store]);
 
-  // One rAF loop driven by a dirty flag. A burst of wheel events therefore
-  // costs one repaint, not one per event.
   useEffect(() => {
     const tick = (): void => {
       if (dirtyRef.current) {
@@ -84,7 +120,6 @@ export function CanvasHost({
     return () => cancelAnimationFrame(frameRef.current);
   }, [paint]);
 
-  // Keep the backing store matched to the CSS box and the device pixel ratio.
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -99,25 +134,16 @@ export function CanvasHost({
       canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-
       viewportRef.current.resize(canvas.width, canvas.height, dpr);
 
-      // Frame the content once, when the canvas first has a size.
       if (!hasFittedRef.current) {
         hasFittedRef.current = true;
-        viewportRef.current.fitTo(
-          RectOps.fromCorners(
-            { x: initialBounds.minX, y: initialBounds.minY },
-            { x: initialBounds.maxX, y: initialBounds.maxY },
-          ),
-          60 * dpr,
-        );
+        viewportRef.current.centreMm = { x: 60, y: 40 };
+        viewportRef.current.scale = 3 * dpr;
       }
-      // Paint straight away rather than waiting for the next animation frame.
-      // requestAnimationFrame does not run while a window is unshown or
-      // occluded, which leaves the very first frame blank — visible as a flash
-      // on launch, and as a canvas that never paints at all under a headless
-      // display server.
+
+      // Paint straight away: requestAnimationFrame does not run while a window
+      // is unshown or occluded, which would leave the first frame blank.
       dirtyRef.current = false;
       paint();
     };
@@ -126,11 +152,54 @@ export function CanvasHost({
     observer.observe(container);
     resize();
     return () => observer.disconnect();
-  }, [initialBounds, invalidate, paint]);
+  }, [paint]);
 
   useEffect(() => {
-    onStatus?.({ cursorMm, scale: viewportRef.current.scale, dpr: viewportRef.current.dpr });
+    onStatus?.({ cursorMm, scale: viewportRef.current.scale });
   }, [cursorMm, onStatus]);
+
+  // Keyboard goes to the window: the canvas is not focusable and Escape or
+  // Delete should work wherever the pointer happens to be.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      const target = event.target;
+      // Never steal keys from a text field.
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+
+      if (event.ctrlKey && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) store.redo();
+        else store.undo();
+        return;
+      }
+
+      managerRef.current?.key({
+        key: event.key,
+        shiftKey: event.shiftKey,
+        ctrlKey: event.ctrlKey,
+      });
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [store]);
+
+  const toInput = useCallback((event: React.PointerEvent<HTMLCanvasElement>): PointerInput => {
+    const viewport = viewportRef.current;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const atPx = {
+      x: (event.clientX - rect.left) * viewport.dpr,
+      y: (event.clientY - rect.top) * viewport.dpr,
+    };
+    return {
+      at: viewport.toWorld(atPx),
+      atPx,
+      button: event.button,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+    };
+  }, []);
 
   const handleWheel = useCallback(
     (event: React.WheelEvent<HTMLCanvasElement>) => {
@@ -140,8 +209,6 @@ export function CanvasHost({
         x: (event.clientX - rect.left) * viewport.dpr,
         y: (event.clientY - rect.top) * viewport.dpr,
       };
-      // Exponential in the wheel delta, so zooming feels the same whether the
-      // input reports small continuous steps or large notched ones.
       viewport.zoomAt(anchor, Math.exp(-event.deltaY * 0.0015));
       setCursorMm(viewport.toWorld(anchor));
       invalidate();
@@ -149,62 +216,81 @@ export function CanvasHost({
     [invalidate],
   );
 
-  const draggingRef = useRef<{ x: number; y: number } | null>(null);
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>) => {
+      event.currentTarget.setPointerCapture(event.pointerId);
 
-  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    // Middle button or space-free left drag pans. Left drag becomes the select
-    // tool in slice 3.2.
-    event.currentTarget.setPointerCapture(event.pointerId);
-    draggingRef.current = { x: event.clientX, y: event.clientY };
-  }, []);
+      // Middle button pans, so the left button belongs to the active tool.
+      if (event.button === 1 || event.altKey) {
+        panningRef.current = { x: event.clientX, y: event.clientY };
+        return;
+      }
+      managerRef.current?.pointerDown(toInput(event));
+    },
+    [toInput],
+  );
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLCanvasElement>) => {
       const viewport = viewportRef.current;
+      const panning = panningRef.current;
+
+      if (panning !== null) {
+        viewport.panByPx(
+          (event.clientX - panning.x) * viewport.dpr,
+          (event.clientY - panning.y) * viewport.dpr,
+        );
+        panningRef.current = { x: event.clientX, y: event.clientY };
+        invalidate();
+      } else {
+        managerRef.current?.pointerMove(toInput(event));
+      }
+
       const rect = event.currentTarget.getBoundingClientRect();
       setCursorMm(viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top));
-
-      const dragging = draggingRef.current;
-      if (dragging !== null) {
-        viewport.panByPx(
-          (event.clientX - dragging.x) * viewport.dpr,
-          (event.clientY - dragging.y) * viewport.dpr,
-        );
-        draggingRef.current = { x: event.clientX, y: event.clientY };
-      }
-      invalidate();
     },
-    [invalidate],
+    [invalidate, toInput],
   );
 
-  const endDrag = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    draggingRef.current = null;
-  }, []);
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>) => {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      if (panningRef.current !== null) {
+        panningRef.current = null;
+        return;
+      }
+      managerRef.current?.pointerUp(toInput(event));
+    },
+    [toInput],
+  );
 
   const handleDoubleClick = useCallback(() => {
+    const resolved = evaluate(store.getState().document.project);
+    const boxes = resolved.parts
+      .flatMap((part) => part.features)
+      .flatMap((entry) => (entry.ok ? [PathOps.bbox(entry.path)] : []))
+      .filter((box): box is NonNullable<typeof box> => box !== null);
+
     viewportRef.current.fitTo(
-      RectOps.fromCorners(
-        { x: initialBounds.minX, y: initialBounds.minY },
-        { x: initialBounds.maxX, y: initialBounds.maxY },
-      ),
+      RectOps.unionAll(boxes) ?? RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
       60 * viewportRef.current.dpr,
     );
     invalidate();
-  }, [initialBounds, invalidate]);
+  }, [store, invalidate]);
 
   return (
     <div className="canvas-host" ref={containerRef}>
       <canvas
         ref={canvasRef}
         data-testid="editor-canvas"
+        style={{ cursor: managerRef.current?.activeTool.cursor ?? 'default' }}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onPointerLeave={() => setCursorMm(null)}
         onDoubleClick={handleDoubleClick}
       />

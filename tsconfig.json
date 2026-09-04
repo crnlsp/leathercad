@@ -1,20 +1,13 @@
 {
   "files": [],
   "references": [
-    {
-      "path": "./packages/core"
-    },
-    {
-      "path": "./packages/platform"
-    },
-    {
-      "path": "./packages/geometry"
-    },
-    {
-      "path": "./packages/render"
-    },
-    {
-      "path": "./apps/desktop"
-    }
+    { "path": "./packages/core" },
+    { "path": "./packages/platform" },
+    { "path": "./packages/geometry" },
+    { "path": "./packages/domain" },
+    { "path": "./packages/document" },
+    { "path": "./packages/render" },
+    { "path": "./packages/editor" },
+    { "path": "./apps/desktop" }
   ]
 }

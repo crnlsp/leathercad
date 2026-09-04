@@ -6,5 +6,21 @@
     "lib": ["ES2023", "DOM"]
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../core" }, { "path": "../geometry" }, { "path": "../render" }]
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../geometry"
+    },
+    {
+      "path": "../domain"
+    },
+    {
+      "path": "../document"
+    },
+    {
+      "path": "../render"
+    }
+  ]
 }

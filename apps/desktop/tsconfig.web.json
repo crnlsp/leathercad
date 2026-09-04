@@ -10,13 +10,19 @@
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
   "references": [
     {
-      "path": "../../packages/platform"
-    },
-    {
       "path": "../../packages/core"
     },
     {
+      "path": "../../packages/platform"
+    },
+    {
       "path": "../../packages/geometry"
+    },
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/document"
     },
     {
       "path": "../../packages/render"

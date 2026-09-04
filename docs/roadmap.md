@@ -276,8 +276,12 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 ### Phase 2 — Document and first working canvas
 *Ends at M1.*
 
-- **2.1** `Document` type, `Command`, `DocumentStore`, undo/redo with transactions, selection model.
-  Includes the universal `undo(apply(c, d)) === d` property test.
+- **2.1** ✅ **Done.** `Document`, `Command`, `DocumentStore` with undo/redo, transactions and a
+  selection model. History is snapshots with structural sharing, not hand-written inverses, so one
+  property test covers every command that will ever exist — verified over all of them.
+  Transactions collapse a drag into one undo step; without that, dragging a rectangle would need
+  three hundred presses of undo. Untouched parts stay identical by reference, which is what makes
+  the evaluation cache in `domain` sound.
 - **2.2** ✅ **Done.** `Viewport` in `packages/editor`: mm ↔ px, zoom about the cursor, pan,
   DPR handling, fit-to-content, and `pickToleranceMm` for turning a pixel pick radius into a
   millimetre tolerance. A property test pins the one behaviour that matters — the millimetre point
@@ -311,12 +315,19 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 ### Phase 3 — Editing
 *Ends at M2.*
 
-- **3.1** Tool framework: the `Tool` interface, tool manager, `ToolContext`, cursors, Escape
-  semantics, keyboard routing.
-- **3.2** Select tool: click, shift-click, rubber band, mm-space hit testing, selection overlay,
-  delete.
+- **3.1** ✅ **Done.** `Tool`, `ToolContext`, `ToolManager`. The context deliberately has no way to
+  write to the document — tools dispatch commands and nothing else. Every tool carries an explicit
+  state discriminant and returns to `idle` on Escape, and `onDeactivate` must leave no transaction
+  open.
+- **3.2** ✅ **Done.** Click, shift-click to toggle, rubber band (contained only), move by drag,
+  Delete, Escape. Hit testing works entirely in millimetres, with the pick radius converted from
+  pixels through the viewport, so picking feels identical at any zoom — asserted directly.
+  A drag threshold stops a one-pixel wobble on a click from writing a spurious undo entry.
 - **3.3** Snap engine: spatial index, priority order, px-derived tolerance, overlay glyphs.
-- **3.4** Rectangle tool with per-corner radii and numeric entry. **→ M2**
+- **3.4** 🟡 **Mostly done.** Drag to draw, shift constrains to a square, live millimetre
+  dimensions in the overlay, Escape abandons. Creates a real `cut-contour` on a new part, not a
+  generic path. Still to add: per-corner radii and numeric entry during the drag — both need the
+  property panel (3.8), which is next.
 - **3.5** Line and polyline tools; angle constraint on Shift.
 - **3.6** Circle and arc tools.
 - **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
@@ -328,8 +339,16 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 ### Phase 4 — The leathercraft domain
 *Ends at M3. The phase that makes this a leathercraft application rather than a drawing program.*
 
-- **4.1** `Part` and `Feature` types; layer roles and their style table; the resolved-document
-  shape.
+- **4.1** ✅ **Done.** `Part`, `Feature` (cut contour, stitch line, fold line, marking line),
+  `GeometrySource` (`path` and `shape`), layer roles, and `evaluate` producing a resolved document.
+  Derived geometry is never persisted — the file holds parameters and evaluation recomputes, so an
+  improved shape constructor improves every existing file.
+  Memoised on **object identity**: immutable updates with structural sharing make an unchanged
+  feature literally the same object between revisions, which is a perfect cache key with no hashing
+  and no invalidation logic to get wrong. Errors are per feature, so one bad number does not blank
+  the canvas.
+  Still to come in 4.2: the derivation graph (`offset`, `mirror`), which is where the product value
+  is and which needs Clipper (1.9).
 - **4.2** The derivation graph: topological evaluation, per-node memoisation, per-node errors, cycle
   rejection at command time.
 - **4.3** `CutContour` from shapes; part creation and the parts panel.

@@ -122,3 +122,48 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.tool {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tool:hover:not(:disabled) {
+  color: var(--text);
+  border-color: #444b55;
+}
+
+.tool.active {
+  background: #2c313a;
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tool kbd {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #14161a;
+  color: var(--text-dim);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+}

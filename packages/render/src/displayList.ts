@@ -1,14 +1,5 @@
+import type { LayerRole } from '@leathercad/domain';
 import type { Path, Vec2 } from '@leathercad/geometry';
-
-/**
- * The semantic category a piece of geometry belongs to.
- *
- * Fixed by the domain, not user-managed. It drives screen style here, and will
- * drive export layer names and validation rules later — one enum, three
- * tables. See docs/domain-model.md §5.
- */
-export type LayerRole =
-  'cut' | 'stitch' | 'stitch-holes' | 'fold' | 'mark' | 'hardware' | 'annotation' | 'construction';
 
 export interface Stroke {
   readonly colour: string;

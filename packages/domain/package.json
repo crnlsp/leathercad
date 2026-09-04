@@ -1,5 +1,5 @@
 {
-  "name": "@leathercad/editor",
+  "name": "@leathercad/domain",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,9 +13,6 @@
   },
   "dependencies": {
     "@leathercad/core": "workspace:*",
-    "@leathercad/document": "workspace:*",
-    "@leathercad/domain": "workspace:*",
-    "@leathercad/geometry": "workspace:*",
-    "@leathercad/render": "workspace:*"
+    "@leathercad/geometry": "workspace:*"
   }
 }

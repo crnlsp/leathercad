@@ -1,0 +1,142 @@
+import { deleteFeatures, translateFeatures } from '@leathercad/document';
+import { evaluate } from '@leathercad/domain';
+import { RectOps, Shapes } from '@leathercad/geometry';
+import { pathItem, type DisplayList } from '@leathercad/render';
+
+import { featuresWithin, hitTest } from '../hitTest.js';
+import type { Tool, ToolContext } from '../tool.js';
+
+type State =
+  | { readonly kind: 'idle' }
+  /** Pressed on a feature; becomes a move once the pointer actually travels. */
+  | { readonly kind: 'maybe-move'; readonly startMm: { x: number; y: number } }
+  | { readonly kind: 'moving'; readonly startMm: { x: number; y: number } }
+  | {
+      readonly kind: 'band';
+      readonly startMm: { x: number; y: number };
+      readonly currentMm: { x: number; y: number };
+    };
+
+/**
+ * The distance a pointer must travel before a press becomes a drag.
+ *
+ * Without it, a click that wobbles by one pixel registers as a move and puts a
+ * spurious entry in the undo history.
+ */
+const DRAG_THRESHOLD_PX = 3;
+
+export function createSelectTool(): Tool {
+  let state: State = { kind: 'idle' };
+
+  const reset = (ctx: ToolContext): void => {
+    if (ctx.store.inTransaction) ctx.store.rollback();
+    state = { kind: 'idle' };
+    ctx.invalidate();
+  };
+
+  return {
+    id: 'select',
+    label: 'Select',
+    cursor: 'default',
+
+    onPointerDown(ctx, event) {
+      if (event.button !== 0) return;
+
+      const resolved = evaluate(ctx.store.getState().document.project);
+      const hit = hitTest(resolved, event.at, ctx.viewport.pickToleranceMm());
+
+      if (hit === null) {
+        if (!event.shiftKey) ctx.store.clearSelection();
+        state = { kind: 'band', startMm: event.at, currentMm: event.at };
+        ctx.invalidate();
+        return;
+      }
+
+      const selection = ctx.store.getState().selection;
+      if (event.shiftKey) {
+        const next = new Set(selection.features);
+        if (next.has(hit)) next.delete(hit);
+        else next.add(hit);
+        ctx.store.select(next);
+      } else if (!selection.features.has(hit)) {
+        ctx.store.select([hit]);
+      }
+
+      state = { kind: 'maybe-move', startMm: event.at };
+      ctx.invalidate();
+    },
+
+    onPointerMove(ctx, event) {
+      if (state.kind === 'band') {
+        state = { ...state, currentMm: event.at };
+        ctx.invalidate();
+        return;
+      }
+
+      if (state.kind === 'maybe-move') {
+        const travelled = Math.hypot(event.at.x - state.startMm.x, event.at.y - state.startMm.y);
+        if (travelled < ctx.viewport.pxToMm(DRAG_THRESHOLD_PX)) return;
+        ctx.store.begin('Move');
+        state = { kind: 'moving', startMm: state.startMm };
+      }
+
+      if (state.kind === 'moving') {
+        ctx.store.preview(
+          translateFeatures(ctx.store.getState().selection.features, {
+            x: event.at.x - state.startMm.x,
+            y: event.at.y - state.startMm.y,
+          }),
+        );
+        ctx.invalidate();
+      }
+    },
+
+    onPointerUp(ctx, event) {
+      if (state.kind === 'band') {
+        const band = RectOps.fromCorners(state.startMm, event.at);
+        const found = featuresWithin(evaluate(ctx.store.getState().document.project), band);
+        const existing = event.shiftKey ? [...ctx.store.getState().selection.features] : [];
+        ctx.store.select([...existing, ...found]);
+      } else if (state.kind === 'moving') {
+        ctx.store.commit();
+      }
+
+      state = { kind: 'idle' };
+      ctx.invalidate();
+    },
+
+    onKey(ctx, event) {
+      if (event.key === 'Escape') {
+        reset(ctx);
+        ctx.store.clearSelection();
+        return;
+      }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        const selected = ctx.store.getState().selection.features;
+        if (selected.size === 0) return;
+        ctx.dispatch(deleteFeatures(selected));
+        ctx.store.clearSelection();
+      }
+    },
+
+    buildOverlay(): DisplayList {
+      if (state.kind !== 'band') return { items: [] };
+
+      const band = RectOps.fromCorners(state.startMm, state.currentMm);
+      return {
+        items: [
+          pathItem(
+            'construction',
+            Shapes.rect({ x: band.minX, y: band.minY }, RectOps.width(band), RectOps.height(band)),
+            { colour: '#7f8794', widthPx: 1, dashPx: [3, 3] },
+          ),
+        ],
+      };
+    },
+
+    onDeactivate(ctx) {
+      reset(ctx);
+    },
+  };
+}

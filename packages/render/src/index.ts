@@ -9,7 +9,7 @@
 export type { ViewportView } from './view.js';
 export { mmToPixels, pixelsToMm, screenToWorld, visibleBoundsMm, worldToScreen } from './view.js';
 
-export type { DisplayItem, DisplayList, LayerRole, Stroke } from './displayList.js';
+export type { DisplayItem, DisplayList, Stroke } from './displayList.js';
 export { ROLE_STROKES, displayListBounds, dotsItem, pathItem, textItem } from './displayList.js';
 
 export type { Canvas2DLike, RenderOptions } from './canvas2d/backend.js';
@@ -24,3 +24,6 @@ export {
   renderGrid,
   renderRulers,
 } from './canvas2d/grid.js';
+
+export type { BuildOptions } from './buildDisplayList.js';
+export { buildDisplayList } from './buildDisplayList.js';

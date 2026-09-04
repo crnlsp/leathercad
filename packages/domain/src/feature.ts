@@ -1,0 +1,154 @@
+import type { Mm, Ulid } from '@leathercad/core';
+import type { CornerRadii, Path, Vec2 } from '@leathercad/geometry';
+
+import type { LayerRole } from './layerRole.js';
+
+export type FeatureId = Ulid;
+export type PartId = Ulid;
+
+/**
+ * A parametric primitive.
+ *
+ * Stored as parameters rather than as a path, because the user edits it by
+ * typing 105, not by dragging control points — and because regenerating it
+ * means an improved shape constructor improves every existing file. The path
+ * itself is produced on evaluation and never persisted.
+ *
+ * Lives here rather than in `packages/geometry` deliberately: if parametric
+ * shapes were geometry types, every algorithm in the engine would need a case
+ * for each one. See docs/geometry.md §4.6.
+ */
+export type ParametricShape =
+  | {
+      readonly type: 'rect';
+      readonly origin: Vec2;
+      readonly width: Mm;
+      readonly height: Mm;
+      readonly radii: CornerRadii;
+    }
+  | { readonly type: 'circle'; readonly centre: Vec2; readonly radius: Mm };
+
+/**
+ * Where a feature's geometry comes from.
+ *
+ * The `offset` and `mirror` cases are the heart of the product — a stitch line
+ * is not a copy of the cut line, it is the *relationship* "3.5 mm inside the
+ * edge", so changing the outline updates it. Both arrive with the derivation
+ * graph in slice 4.2; `offset` additionally needs Clipper (slice 1.9).
+ *
+ * See docs/domain-model.md §4.
+ */
+export type GeometrySource =
+  /** Drawn freehand. The only kind persisted as coordinates. */
+  | { readonly kind: 'path'; readonly path: Path }
+  | { readonly kind: 'shape'; readonly shape: ParametricShape };
+
+export interface FeatureBase {
+  readonly id: FeatureId;
+  readonly name: string;
+  readonly visible: boolean;
+  readonly locked: boolean;
+  readonly source: GeometrySource;
+}
+
+/** The outline actually cut from the leather. */
+export interface CutContour extends FeatureBase {
+  readonly kind: 'cut-contour';
+  /**
+   * A part has exactly one outer contour; inner ones are windows, card slots
+   * and cut-outs.
+   */
+  readonly role: 'outer' | 'inner';
+}
+
+/** Where the thread runs, normally set in 3-4 mm from the edge. */
+export interface StitchLine extends FeatureBase {
+  readonly kind: 'stitch-line';
+}
+
+/** Where the leather bends rather than being cut. */
+export interface FoldLine extends FeatureBase {
+  readonly kind: 'fold-line';
+  readonly direction: 'mountain' | 'valley';
+  /**
+   * Stored now though nothing consumes it yet: it costs nothing, and it is
+   * what makes thickness compensation an additive change rather than a
+   * migration. See docs/domain-model.md §3.4.
+   */
+  readonly materialThicknessMm?: Mm;
+}
+
+/** A printed guide — glue areas, alignment, logo placement. Never cut. */
+export interface MarkingLine extends FeatureBase {
+  readonly kind: 'marking-line';
+  readonly purpose: 'glue-area' | 'alignment' | 'logo' | 'skive' | 'other';
+}
+
+export type Feature = CutContour | StitchLine | FoldLine | MarkingLine;
+export type FeatureKind = Feature['kind'];
+
+/** One physical piece of leather to be cut out. */
+export interface Part {
+  readonly id: PartId;
+  readonly name: string;
+  readonly quantity: number;
+  readonly features: readonly Feature[];
+}
+
+export interface ProjectSettings {
+  readonly gridSpacingMm: Mm;
+  readonly defaultStitchInsetMm: Mm;
+  readonly defaultIronPitchMm: Mm;
+}
+
+export const DEFAULT_SETTINGS: ProjectSettings = {
+  gridSpacingMm: 1,
+  defaultStitchInsetMm: 3.5,
+  defaultIronPitchMm: 3.85,
+};
+
+export interface Project {
+  readonly id: Ulid;
+  readonly name: string;
+  readonly settings: ProjectSettings;
+  readonly parts: readonly Part[];
+}
+
+/** The layer role a feature kind belongs to. One kind, one role, always. */
+export function roleOf(feature: Feature): LayerRole {
+  switch (feature.kind) {
+    case 'cut-contour':
+      return 'cut';
+    case 'stitch-line':
+      return 'stitch';
+    case 'fold-line':
+      return 'fold';
+    case 'marking-line':
+      return 'mark';
+  }
+}
+
+export function isCutContour(feature: Feature): feature is CutContour {
+  return feature.kind === 'cut-contour';
+}
+
+/** Every feature in the project, with the part it belongs to. */
+export function* eachFeature(project: Project): Generator<{ part: Part; feature: Feature }> {
+  for (const part of project.parts) {
+    for (const feature of part.features) yield { part, feature };
+  }
+}
+
+export function findFeature(
+  project: Project,
+  id: FeatureId,
+): { part: Part; feature: Feature } | null {
+  for (const entry of eachFeature(project)) {
+    if (entry.feature.id === id) return entry;
+  }
+  return null;
+}
+
+export function findPart(project: Project, id: PartId): Part | null {
+  return project.parts.find((p) => p.id === id) ?? null;
+}

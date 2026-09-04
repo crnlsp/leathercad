@@ -93,6 +93,42 @@ test('reports cursor position in millimetres', async () => {
   await expect(window.getByTestId('cursor-readout')).toContainText('mm');
 });
 
+test('draws a rectangle, moves it, and reverses both with undo', async () => {
+  // The functional loop end to end: a drag makes a real cut contour, the
+  // select tool moves it as one undoable step, and undo walks back through
+  // both. This is the guard that the tools are wired to the document at all.
+  const window = await app.firstWindow();
+  const box = await window.getByTestId('editor-canvas').boundingBox();
+  expect(box).not.toBeNull();
+
+  const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
+    await window.mouse.move(box!.x + x1, box!.y + y1);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + (x1 + x2) / 2, box!.y + (y1 + y2) / 2, { steps: 4 });
+    await window.mouse.move(box!.x + x2, box!.y + y2, { steps: 4 });
+    await window.mouse.up();
+  };
+
+  await window.getByTestId('tool-rectangle').click();
+  await drag(140, 140, 340, 260);
+  await expect(window.getByTestId('part-count')).toHaveText('1');
+  await expect(window.getByTestId('selected-count')).toHaveText('1');
+
+  await window.getByTestId('tool-select').click();
+  await drag(140, 140, 220, 220);
+  await expect(window.getByTestId('undo')).toBeEnabled();
+
+  // One undo reverses the whole move, not each intermediate pointer position.
+  await window.getByTestId('undo').click();
+  await expect(window.getByTestId('part-count')).toHaveText('1');
+
+  await window.getByTestId('undo').click();
+  await expect(window.getByTestId('part-count')).toHaveText('0');
+
+  await window.getByTestId('redo').click();
+  await expect(window.getByTestId('part-count')).toHaveText('1');
+});
+
 test('denies in-page navigation away from the app', async () => {
   const window = await app.firstWindow();
 

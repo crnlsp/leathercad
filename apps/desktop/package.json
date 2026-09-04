@@ -16,6 +16,9 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@leathercad/core": "workspace:*",
+    "@leathercad/document": "workspace:*",
+    "@leathercad/domain": "workspace:*",
     "@leathercad/editor": "workspace:*",
     "@leathercad/geometry": "workspace:*",
     "@leathercad/platform": "workspace:*",

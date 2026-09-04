@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@leathercad/core": "workspace:*",
+    "@leathercad/domain": "workspace:*",
     "@leathercad/geometry": "workspace:*"
   }
 }
