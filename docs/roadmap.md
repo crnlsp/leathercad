@@ -277,11 +277,22 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   arc distance to within 1e-4 mm. The first attempt asserted that chords between arc-equidistant
   points are equal — they are not, they shorten wherever curvature rises, so that was the wrong
   property.
-- **1.7** 🟡 **Partly done.** `rect`, `roundedRect` with four independent radii, and `circle`.
+- **1.7** ✅ **Done.** `rect`, `roundedRect` with four independent radii, and `circle`.
   Radii are clamped proportionally so competing corners keep their ratio rather than being
   silently made symmetric, and a zero radius emits no arc so a square corner is genuinely square.
-  Verified against the analytic perimeter and area. Still to add: `polyline` helpers, ellipse,
-  arc-through-three-points, regular polygon.
+  Verified against the analytic perimeter and area.
+  Completed later in the phase-closing pass: `line` and `polyline` as path constructors, `ellipse`,
+  `arcThroughPoints` and `regularPolygon`, so the constructor list in [geometry.md](geometry.md)
+  §4.6 is now real rather than aspirational.
+  The ellipse is the affine image of a unit circle, converted to cubics at a tolerance divided by
+  the larger radius and then transformed — an affine map takes cubics to cubics exactly. The usual
+  fixed four Béziers carry 0.027 % radial error, which is 0.027 mm on a 100 mm ellipse: five times
+  the export tolerance and visible on a cut line.
+  `arcThroughPoints` falls back to a straight line for collinear points, where the circle has
+  infinite radius, and throws for coincident ones, where there is no circle at all — two different
+  degeneracies that deserve two different answers. fast-check found the boundary between them:
+  given collinear points with the middle one *outside* the span, no path from `a` to `c` reaches it
+  without doubling back, so the endpoints win and the middle point is dropped.
 - **1.8** ✅ **Done.** `distributeAlongPath` in `geometry/ops/`, with both modes and the property
   set from [testing.md](testing.md) §3.2. Distances are computed as `start + k × pitch` from the
   index, never by repeated addition — the same drift lesson the tick generator in 2.5 records, and
