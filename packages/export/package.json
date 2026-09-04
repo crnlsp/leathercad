@@ -1,0 +1,20 @@
+{
+  "name": "@leathercad/export",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@leathercad/core": "workspace:*",
+    "@leathercad/domain": "workspace:*",
+    "@leathercad/geometry": "workspace:*",
+    "pdf-lib": "^1.17.1"
+  }
+}

@@ -361,3 +361,24 @@ body {
 .dirty {
   color: var(--accent);
 }
+
+.project-name {
+  width: 150px;
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.project-name:hover {
+  border-color: var(--border);
+}
+
+.project-name:focus {
+  border-color: var(--accent);
+  background: #14161a;
+  outline: none;
+}

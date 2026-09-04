@@ -11,6 +11,7 @@ import {
   renameFeature,
   setPartName,
   setPartQuantity,
+  setProjectName,
   setShape,
   translateFeatures,
 } from './commands.js';
@@ -281,6 +282,14 @@ describe('deleteFeatures', () => {
     const store = new DocumentStore(docWithRect());
     store.dispatch(deleteFeatures(['feat-1']));
     expect(store.getState().document.project.parts).toHaveLength(0);
+  });
+});
+
+describe('setProjectName', () => {
+  it('renames the project, which the file name and PDF footer both use', () => {
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(setProjectName('Bifold wallet'));
+    expect(store.getState().document.project.name).toBe('Bifold wallet');
   });
 });
 

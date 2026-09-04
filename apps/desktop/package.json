@@ -20,6 +20,7 @@
     "@leathercad/document": "workspace:*",
     "@leathercad/domain": "workspace:*",
     "@leathercad/editor": "workspace:*",
+    "@leathercad/export": "workspace:*",
     "@leathercad/geometry": "workspace:*",
     "@leathercad/persist": "workspace:*",
     "@leathercad/platform": "workspace:*",

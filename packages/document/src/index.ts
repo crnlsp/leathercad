@@ -23,6 +23,7 @@ export {
   setFeatureVisible,
   setPartName,
   setPartQuantity,
+  setProjectName,
   setShape,
   translateFeatures,
 } from './commands.js';

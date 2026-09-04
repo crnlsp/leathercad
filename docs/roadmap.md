@@ -393,24 +393,46 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 
 ### Phase 6 — Export
 
-- **6.1** `ExportScene` and the export presets built on layer roles.
+- **6.1** ✅ **Done.** `ExportScene`: styled geometry in millimetres, all black and distinguished
+  by line style. Widths are **true millimetres** here, unlike on screen where they are constant in
+  pixels — a cut line printed at 0.25 mm is 0.25 mm on the page. Black because a mono printer
+  renders blue and green as indistinguishable greys, and a template exists to be photocopied.
 - **6.2** SVG writer: mm units, layer groups, the single Y-flip, with the accuracy tests from
   [printing.md](printing.md) §14.
-- **6.3** PDF writer with `pdf-lib`: exact points, no scaling transform, verified by parsing the
-  output back with `pdfjs-dist`.
+- **6.3** ✅ **Done.** PDF writer on `pdf-lib`, using raw content-stream operators rather than its
+  SVG helper, which assumes a Y flip we do not want — PDF is Y-up like the model, so this is the
+  one output path with no axis flip at all.
+  Verified by **rasterising with poppler and measuring pixels**, which is stronger than parsing our
+  own numbers back: it renders through an independent implementation and measures what a printer
+  would be sent. At 254 dpi (10 px/mm) the 50 mm square measures 50.10 × 50.00 mm and the 100 mm
+  ruler 100.10 mm, the excess being the 0.2 mm stroke measured outer edge to outer edge.
+  Arcs go through the tolerance-driven `toCubics` from slice 1.3, since PDF has no arc primitive —
+  the path that made that subdivision tolerance-driven in the first place.
 - **6.4** Export dialog: preset, layers, paper, bounds.
 
 ### Phase 7 — Printing
 *Ends at M5. The payoff.*
 
-- **7.1** `paginate()`: paper sizes, margins, overlap, centred tile grid. Pure and exhaustively
-  tested before anything renders.
+- **7.1** 🟡 **Partly done — as part packing, not tiling.** At the user's direction, overflow moves
+  whole parts to the next A4 sheet rather than splitting one drawing across sheets to be taped
+  together: "in leathercraft most people dont print on something bigger then a4 sometimes you need
+  multiple pages". Shelf packing, tallest first. A part too large for one sheet is reported by name
+  with the paper that would fit it — never scaled, never clipped.
+  Tiling proper (overlap, registration marks, assembly sheet) remains future work, and is the only
+  way to print a part bigger than the paper.
 - **7.2** Registration marks, overlap bands, tile labels, edge arrows, assembly sheet.
-- **7.3** The calibration block: 50 mm verification square and 100 mm ruler on every page.
+- **7.3** ✅ **Done.** 50 mm verification square and 100 mm ruler on every page, plus the printed
+  instruction to print at 100%. With `/PrintScaling /None` in the catalog that makes three
+  independent defences, which matters because the application deliberately never drives a printer.
+  A raster test caught the square overlapping the content area — it ran from 18 mm to 68 mm above
+  the page bottom while patterns began at 36 mm, so a part could have been printed straight over
+  the thing that proves the scale is right.
 - **7.4** On-screen print preview using the same `paginate()` and the Canvas2D backend, with the
   deep-equality test binding them together.
 - **7.5** Printer calibration wizard and per-printer correction factors, with the ±2 % guard.
-- **7.6** Linux print submission via CUPS with scaling disabled, and the `xdg-open` fallback.
+- **7.6** ❌ **Explicitly deferred.** The user does not want the application to handle printers:
+  "I dont want this app to handle the printer... for now only pdf good quality". Export opens the
+  file in the system viewer and stops there. Revisit only if asked.
 - **7.7** **Print the calibration target, measure it with a steel rule, record the result.** **→ M5**
 
 ### Phase 8 — v1.0

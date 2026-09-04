@@ -36,6 +36,7 @@
     "dependency-cruiser": "^18.2.0",
     "eslint": "^10.9.1",
     "fast-check": "^4.9.0",
+    "pdfjs-dist": "^6.3.289",
     "prettier": "^3.9.6",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.69.0",

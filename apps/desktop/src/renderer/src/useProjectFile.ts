@@ -1,4 +1,6 @@
 import type { DocumentStore } from '@leathercad/document';
+import { evaluate } from '@leathercad/domain';
+import { buildExportScene, describeOversized, exportPdf } from '@leathercad/export';
 import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
@@ -10,6 +12,7 @@ export interface ProjectFileState {
 }
 
 const FILTERS = [{ name: 'LeatherCAD project', extensions: [LCP_EXTENSION] }];
+const PDF_FILTERS = [{ name: 'PDF', extensions: ['pdf'] }];
 
 /**
  * Save and open, over the platform boundary.
@@ -26,6 +29,7 @@ export function useProjectFile(
   state: ProjectFileState;
   save: (forcePrompt?: boolean) => Promise<void>;
   open: () => Promise<void>;
+  exportPdfFile: () => Promise<void>;
   markSaved: () => void;
   savedDocument: React.MutableRefObject<unknown>;
 } {
@@ -100,5 +104,52 @@ export function useProjectFile(
     }
   }, [host, store]);
 
-  return { state, save, open, markSaved, savedDocument };
+  /**
+   * Writes a print-ready PDF and opens it in the system viewer.
+   *
+   * The application deliberately never drives a printer — the user prints
+   * from an ordinary viewer — so handing them the open file is where our
+   * responsibility ends.
+   */
+  const exportPdfFile = useCallback(async () => {
+    try {
+      const platform = host();
+      const project = store.getState().document.project;
+
+      const suggested = (project.name || 'Untitled').replace(/\.[^.]+$/, '');
+      const target = await platform.showSaveDialog({
+        title: 'Export PDF',
+        defaultPath: `${suggested}.pdf`,
+        filters: PDF_FILTERS,
+      });
+      if (target === null) return;
+
+      const scene = buildExportScene(evaluate(project), project.name);
+      const { bytes, pagination } = await exportPdf(scene, {
+        applicationVersion: appVersion,
+        now: () => new Date(),
+      });
+
+      await platform.writeFile(target.endsWith('.pdf') ? target : `${target}.pdf`, bytes);
+
+      // Oversized parts are reported, never scaled down or clipped. Silently
+      // shrinking a template is the one failure this application exists to
+      // prevent.
+      const problems = pagination.oversized.map(describeOversized);
+      setState((previous) => ({
+        ...previous,
+        error: problems.length === 0 ? null : problems.join(' '),
+        savedAt: new Date().toLocaleTimeString(),
+      }));
+
+      await platform.openInExternalViewer(target.endsWith('.pdf') ? target : `${target}.pdf`);
+    } catch (error) {
+      setState((previous) => ({
+        ...previous,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  }, [appVersion, host, store]);
+
+  return { state, save, open, exportPdfFile, markSaved, savedDocument };
 }

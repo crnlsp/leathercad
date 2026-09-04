@@ -162,6 +162,12 @@ export function rectShape(
   return { type: 'rect', origin, width, height, radii: Shapes.uniformRadii(radius) };
 }
 
+export function setProjectName(name: string): Command {
+  return command('Rename project', (document) => ({
+    project: { ...document.project, name },
+  }));
+}
+
 export function setPartName(id: PartId, name: string): Command {
   return command('Rename part', (document) => ({
     project: mapPart(document.project, id, (part) => ({ ...part, name })),

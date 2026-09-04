@@ -1,5 +1,5 @@
 import { createIdFactory } from '@leathercad/core';
-import { DocumentStore, emptyDocument } from '@leathercad/document';
+import { DocumentStore, emptyDocument, setProjectName } from '@leathercad/document';
 import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -58,6 +58,9 @@ export function App() {
         } else if (key === 'o') {
           event.preventDefault();
           void file.open();
+        } else if (key === 'e') {
+          event.preventDefault();
+          void file.exportPdfFile();
         }
         return;
       }
@@ -80,6 +83,15 @@ export function App() {
     <div className="app">
       <header className="app-header">
         <h1>LeatherCAD</h1>
+
+        <input
+          className="project-name"
+          data-testid="project-name"
+          value={storeState.document.project.name}
+          placeholder="Untitled"
+          title="Project name — used for the file name and the PDF footer"
+          onChange={(event) => store.dispatch(setProjectName(event.target.value))}
+        />
 
         <div className="toolbar" role="toolbar" aria-label="Tools">
           {TOOLS.map((tool) => (
@@ -115,6 +127,15 @@ export function App() {
             title="Save (Ctrl+S)"
           >
             Save{dirty ? ' •' : ''}
+          </button>
+          <button
+            type="button"
+            className="tool"
+            data-testid="export-pdf"
+            onClick={() => void file.exportPdfFile()}
+            title="Export a print-ready PDF at 1:1 (Ctrl+E)"
+          >
+            Export PDF
           </button>
         </div>
 

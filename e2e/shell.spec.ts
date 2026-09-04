@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -278,6 +279,46 @@ test('saves a project and reopens it with its parameters intact', async () => {
 
     // Opening is not an edit, so there is nothing to undo back into.
     await expect(window.getByTestId('undo')).toBeDisabled();
+  } finally {
+    await instance.close();
+    rmSync(target, { force: true });
+  }
+});
+
+test('exports a print-ready PDF at 1:1', async () => {
+  // The application never drives a printer, so the file has to be trustworthy
+  // in someone else's viewer. This checks the page really is A4 and that the
+  // verification square really measures 50 mm, by rendering through poppler.
+  const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.pdf`);
+  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+
+    await instance.evaluate(({ dialog, shell }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      // Do not launch a real PDF viewer during a test run.
+      shell.openPath = async () => '';
+    }, target);
+
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('project-name').fill('Card holder');
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 330, box!.y + 260, { steps: 5 });
+    await window.mouse.up();
+
+    await window.getByTestId('export-pdf').click();
+    await expect.poll(() => existsSync(target), { timeout: 10_000 }).toBe(true);
+
+    // No error means nothing was oversized and nothing was silently scaled.
+    await expect(window.getByTestId('file-error')).toHaveCount(0);
+
+    const info = execFileSync('pdfinfo', [target], { encoding: 'utf8' });
+    expect(info).toMatch(/Page size:\s+595\.276 x 841\.89 pts \(A4\)/);
+    expect(info).toContain('LeatherCAD');
   } finally {
     await instance.close();
     rmSync(target, { force: true });

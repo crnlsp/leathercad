@@ -20,6 +20,9 @@
       "path": "./packages/document"
     },
     {
+      "path": "./packages/export"
+    },
+    {
       "path": "./packages/render"
     },
     {
