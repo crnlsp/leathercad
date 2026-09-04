@@ -340,8 +340,13 @@ init through this pure layer — returns a wrong round-join offset. A 100 mm squ
 10 mm comes back with an area of 12000 mm² where the true value is 14314 mm², which is below even a
 bevel join's 14200 mm², so no join setting explains it. `ArcTolerance` has no effect at all.
 
+`clipper2-wasm`, the faithful build, cannot run here at all: the renderer's CSP is `script-src
+'self'` with no `'wasm-unsafe-eval'`, so Chromium refuses to compile any WebAssembly in it. See
+ADR 0008 for both investigations and the numbers behind them.
+
 Tier 1 covers every shape the product is actually built from, needs no dependency, and produces
-better output — arcs stay arcs. Tier 2 remains the plan for the general case.
+better output — arcs stay arcs. **Tier 2 is slice 3.11**, to be built immediately before the
+polyline tool (3.5), which is the first way a user can draw an outline Tier 1 cannot offset.
 
 **Tier 1's scope: convex closed paths of lines and arcs.** It rejects, rather than guesses at:
 
