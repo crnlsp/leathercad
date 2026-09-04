@@ -108,11 +108,14 @@ uniform values with a pool of "interesting" ones: 0, ±1, ±0.1, ±100, and valu
 
 **Stitch distribution**
 - All holes lie on the source path within tolerance
-- Consecutive spacings sum to the usable path length
+- Under `fit-whole`, consecutive spacings sum to the usable path length. Not under `exact-pitch`,
+  where the leftover at the end is the whole point of the mode
 - Under `fit-whole`, every spacing equals `actualPitch` within `EPS_LENGTH`
 - Under `fit-whole` on a closed path, `holeCount === intervalCount` — the last hole never lands on
   the first
-- `actualPitch` is within one interval's worth of nominal pitch
+- `actualPitch` is within one interval's worth of nominal pitch — precisely, the achieved and
+  nominal interval counts differ by at most a half. Holds once the run is at least half a pitch
+  long; below that the clamp to a single interval deviates further, deliberately
 - Hole count is monotonically non-increasing as pitch increases
 
 **Document and commands**
@@ -308,8 +311,11 @@ e2e      pnpm test:e2e          # Playwright + Electron, under xvfb
                                 # uploads playwright-report/ on failure
 ```
 
-`pnpm check` runs the `static` and `test` work locally and is what the pre-push hook invokes, so a
-green `pnpm check` predicts a green CI for everything but E2E.
+`pnpm check` runs the `static` and `test` work locally — including `test:coverage`, not plain
+`test` — and is what the pre-push hook invokes, so a green `pnpm check` predicts a green CI for
+everything but E2E. It runs the coverage build deliberately: slice 1.8 shipped a property test that
+passed uninstrumented and timed out under coverage in CI, which is precisely the divergence this
+closes.
 
 Still to come, each with the slice that adds it: `pnpm test:visual` (2.3, pixel diffs in the pinned
 container) and `pnpm bench --compare` (1.9, against the committed baseline).

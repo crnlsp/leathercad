@@ -22,7 +22,7 @@
     "format:check": "prettier --check .",
     "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
     "depcruise:graph": "depcruise packages apps --config .dependency-cruiser.cjs --output-type dot | dot -T svg > dependency-graph.svg",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm depcruise && pnpm test",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm depcruise && pnpm test:coverage",
     "dev": "pnpm --filter @leathercad/desktop dev",
     "build": "pnpm --filter @leathercad/desktop build",
     "test:e2e": "pnpm build && playwright test",

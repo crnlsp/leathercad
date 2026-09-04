@@ -33,7 +33,7 @@ Violating any of these is a bug, even if tests pass.
 
 ```bash
 pnpm dev              # run the app (electron-vite, with HMR)
-pnpm check            # typecheck + lint + format:check + depcruise + test — before a slice is done
+pnpm check            # typecheck + lint + format:check + depcruise + test:coverage — before a slice is done
 pnpm test             # unit + property + golden + export + snapshot
 pnpm test:e2e         # builds, then Playwright drives the real Electron app
 pnpm build

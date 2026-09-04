@@ -402,8 +402,15 @@ export function distributeAlongPath(
     endOffsetMm?: number;
     closed: boolean;
   },
-): { distance: number; point: Vec2; tangent: Vec2 }[];
+): {
+  points: readonly { distance: Mm; point: Vec2; tangent: Vec2 }[];
+  actualPitch: Mm;
+};
 ```
+
+The achieved pitch comes back with the points rather than being left for the caller to infer.
+Under `fit-whole` it is the only way to know what was actually achieved, and recomputing it from
+consecutive distances would be a second implementation of the same arithmetic.
 
 - **`exact-pitch`** — step by exactly `pitchMm` from the start; whatever remains at the end is left
   over. Correct for an open run where the user cares about matching a specific iron exactly.
@@ -413,7 +420,12 @@ export function distributeAlongPath(
   by more than a few percent.
 
 For a closed path, the last hole must not coincide with the first — `n` intervals produce `n` holes,
-not `n + 1`.
+not `n + 1`. `startOffsetMm` shifts the phase of the first hole; `endOffsetMm` has no meaning on a
+closed path and is rejected rather than ignored.
+
+Two roundings are pinned by tests rather than left to chance. A run shorter than half a pitch would
+round to zero intervals, so `n` is clamped to one and gets a hole at each end — which also keeps the
+division safe. A run of exactly two and a half pitches is a tie, and rounds up.
 
 Corner handling is *not* here. It is a domain policy that works by splitting the path at corner
 vertices and calling this function once per run. See [domain-model.md](domain-model.md) §6.

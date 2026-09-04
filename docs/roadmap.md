@@ -282,8 +282,23 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   silently made symmetric, and a zero radius emits no arc so a square corner is genuinely square.
   Verified against the analytic perimeter and area. Still to add: `polyline` helpers, ellipse,
   arc-through-three-points, regular polygon.
-- **1.8** `distributeAlongPath`: `exact-pitch` and `fit-whole`, with the full property set from
-  [testing.md](testing.md) §3.2.
+- **1.8** ✅ **Done.** `distributeAlongPath` in `geometry/ops/`, with both modes and the property
+  set from [testing.md](testing.md) §3.2. Distances are computed as `start + k × pitch` from the
+  index, never by repeated addition — the same drift lesson the tick generator in 2.5 records, and
+  it matters more here, where a wallet has hundreds of holes.
+  Two roundings needed deciding rather than discovering. A run shorter than half a pitch rounds to
+  zero intervals under `fit-whole`, so `n` is clamped to one: a short run gets a hole at each end
+  rather than none, and the division is always safe. fast-check found that boundary — a 3.85 mm run
+  at a 7.7000000154 mm pitch — while disproving the half-interval property as stated; the property
+  now carries the precondition and the shrunk case is a named regression test.
+  `endOffsetMm` is rejected on a closed path rather than ignored, because a caller passing one has
+  misunderstood the model and silence would let them keep doing so.
+  The property generators are independent, so a 10 m path could pair with a 0.1 mm pitch: a hundred
+  thousand points, built and compared a thousand times. That passed locally and timed out under
+  coverage instrumentation in CI. The properties now bound their own work and a single example test
+  covers the six-figure count, which took the suite from 53 s to 14 s. `pnpm check` runs
+  `test:coverage` from this slice on, because running plain `test` locally is what let the
+  divergence through.
 - **1.9** Clipper2 integration behind `internal/clipper.ts`; `offsetPath` Tier 2 (flatten and clip).
   The heaviest property-test slice in the project.
 - **1.10** `intersectSegments` / `intersectPaths`: analytic for line and arc, flatten-and-refine for

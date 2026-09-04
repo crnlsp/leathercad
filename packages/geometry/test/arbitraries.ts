@@ -2,6 +2,7 @@ import fc from 'fast-check';
 
 import type { Mat2x3 } from '../src/mat2x3.js';
 import type { ArcSegment, CubicSegment, LineSegment, Segment } from '../src/segment/types.js';
+import { length as pathLength, polyline, type Path } from '../src/path/index.js';
 import type { Vec2 } from '../src/vec2.js';
 
 /**
@@ -125,4 +126,31 @@ export const arbNonDegenerateSegment: fc.Arbitrary<Segment> = fc.oneof(
   arbLineSegment.filter((s) => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 0.01),
   arbArcSegment.filter((s) => Math.abs(s.sweepAngle) * s.radius > 0.01),
   arbCubicSegment.filter((s) => Math.hypot(s.p3.x - s.p0.x, s.p3.y - s.p0.y) > 0.01),
+);
+
+/**
+ * Paths for distribution and measurement properties.
+ *
+ * Polylines rather than mixed segment kinds: distribution works purely in
+ * arc-length space, so what varies here is total length and vertex spacing,
+ * not curvature. `PathMeasure` is where arcs and cubics need exercising, and
+ * `measure.test.ts` does that.
+ *
+ * Filtered to a length a pricking iron could plausibly walk. A path shorter
+ * than a fraction of a millimetre makes every spacing property vacuous.
+ */
+export const arbOpenPath: fc.Arbitrary<Path> = fc
+  .array(arbVec2, { minLength: 2, maxLength: 8 })
+  .map((points) => polyline(points, false))
+  .filter((p) => pathLength(p) > 1);
+
+export const arbClosedPath: fc.Arbitrary<Path> = fc
+  .array(arbVec2, { minLength: 3, maxLength: 8 })
+  .map((points) => polyline(points, true))
+  .filter((p) => pathLength(p) > 1);
+
+/** Pitches a real iron comes in, plus awkward ones. */
+export const arbPitch: fc.Arbitrary<number> = fc.oneof(
+  fc.constantFrom(2, 2.7, 3, 3.85, 4, 5, 6),
+  fc.double({ min: 0.1, max: 50, noNaN: true, noDefaultInfinity: true }),
 );

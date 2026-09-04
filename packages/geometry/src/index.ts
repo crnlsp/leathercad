@@ -42,6 +42,9 @@ export { circle, rect, roundedRect, uniformRadii } from './shapes.js';
 
 export { solveCubic, solveLinear, solveQuadratic } from './polynomial.js';
 
+export type { DistributedPoint, Distribution, DistributeOptions } from './ops/distribute.js';
+export { distributeAlongPath } from './ops/distribute.js';
+
 export {
   ARC_CUBIC_ERROR_COEFFICIENT,
   EXPORT_TOLERANCE_MM,
