@@ -8,5 +8,21 @@
     "types": ["vite/client"]
   },
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
-  "references": [{ "path": "../../packages/platform" }]
+  "references": [
+    {
+      "path": "../../packages/platform"
+    },
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/geometry"
+    },
+    {
+      "path": "../../packages/render"
+    },
+    {
+      "path": "../../packages/editor"
+    }
+  ]
 }

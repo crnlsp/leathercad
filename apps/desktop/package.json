@@ -16,7 +16,10 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@leathercad/editor": "workspace:*",
+    "@leathercad/geometry": "workspace:*",
     "@leathercad/platform": "workspace:*",
+    "@leathercad/render": "workspace:*",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.1.1",

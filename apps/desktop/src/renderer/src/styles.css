@@ -72,6 +72,23 @@ body {
 
 .canvas-host canvas {
   display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.canvas-host canvas:active {
+  cursor: grabbing;
+}
+
+.app-hint {
+  margin-left: auto;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.app-status b {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .app-status {

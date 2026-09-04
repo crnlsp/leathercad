@@ -51,9 +51,18 @@ importers:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
     devDependencies:
+      '@leathercad/editor':
+        specifier: workspace:*
+        version: link:../../packages/editor
+      '@leathercad/geometry':
+        specifier: workspace:*
+        version: link:../../packages/geometry
       '@leathercad/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      '@leathercad/render':
+        specifier: workspace:*
+        version: link:../../packages/render
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.18
@@ -75,6 +84,18 @@ importers:
 
   packages/core: {}
 
+  packages/editor:
+    dependencies:
+      '@leathercad/core':
+        specifier: workspace:*
+        version: link:../core
+      '@leathercad/geometry':
+        specifier: workspace:*
+        version: link:../geometry
+      '@leathercad/render':
+        specifier: workspace:*
+        version: link:../render
+
   packages/geometry:
     dependencies:
       '@leathercad/core':
@@ -86,6 +107,15 @@ importers:
       '@leathercad/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/render:
+    dependencies:
+      '@leathercad/core':
+        specifier: workspace:*
+        version: link:../core
+      '@leathercad/geometry':
+        specifier: workspace:*
+        version: link:../geometry
 
 packages:
 

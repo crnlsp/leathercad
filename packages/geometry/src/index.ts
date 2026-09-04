@@ -14,6 +14,7 @@
  */
 
 export * as PathOps from './path/index.js';
+export * as Shapes from './shapes.js';
 export * as PolynomialOps from './polynomial.js';
 export * as SegmentOps from './segment/index.js';
 export * as Vec2Ops from './vec2.js';
@@ -35,6 +36,9 @@ export { arc, cubic, line, quadraticToCubic } from './segment/index.js';
 
 export type { FillRule, Orientation, Path } from './path/index.js';
 export { closed, open, path, polyline } from './path/index.js';
+
+export type { CornerRadii } from './shapes.js';
+export { circle, rect, roundedRect, uniformRadii } from './shapes.js';
 
 export { solveCubic, solveLinear, solveQuadratic } from './polynomial.js';
 
