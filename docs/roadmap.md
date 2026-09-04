@@ -393,8 +393,19 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   Two defects the screenshot caught that the tests did not: `renderDisplayList` was clearing the
   canvas and silently erasing the grid beneath it — clearing is now its own `clearCanvas` step —
   and the left ruler was too narrow for its labels, so "-160" was drawn off-canvas.
-- **2.6** SVG backend for the same `DisplayList`, which unlocks SVG-snapshot testing for everything
-  after this point.
+- **2.6** ✅ **Done.** SVG backend for the same `DisplayList`, which unlocks SVG-snapshot testing
+  for everything after this point — deterministic, diffable in review, no image tooling. Closes
+  Phase 2.
+  It mirrors the Canvas2D backend deliberately, including the awkward parts: geometry is emitted in
+  **millimetres** inside a group carrying the world transform, so arcs stay arc commands and a
+  snapshot diff reads in the units the user typed; stroke widths and dashes are divided by the
+  scale; and text is a second, screen-space pass, because the world transform flips Y and text
+  drawn through it comes out mirrored.
+  Coordinates are rounded to four decimals — 0.1 µm, finer than the storage grid. Without that the
+  last bit of a float differs between platforms and every snapshot churns for no reason. Negative
+  zero, which the flip produces freely, is normalised for the same reason.
+  A full-turn arc is split in half: its endpoints coincide, and an SVG arc command between two
+  identical points draws nothing at all.
 
 ### Phase 3 — Editing
 *Ends at M2.*

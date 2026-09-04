@@ -27,3 +27,6 @@ export {
 
 export type { BuildOptions } from './buildDisplayList.js';
 export { buildDisplayList } from './buildDisplayList.js';
+
+export type { SvgOptions } from './svg/backend.js';
+export { renderToSvgString } from './svg/backend.js';

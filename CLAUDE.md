@@ -12,8 +12,10 @@ Violating any of these is a bug, even if tests pass.
 
 1. **Millimetres are the source of truth.** Pixels exist only inside `packages/render` and
    `packages/editor/viewport.ts`. Nothing else converts between them.
-2. **Y is up.** The flip to screen coordinates happens in exactly two files:
-   `render/canvas2d/*` and `export/svg/*`. PDF and DXF are Y-up already and need no flip.
+2. **Y is up.** The screen flip is defined in exactly one place — `worldToScreen` in
+   `render/view.ts` — and applied by the two screen backends, `render/canvas2d/*` and
+   `render/svg/*`, which never derive a flip of their own. `export/svg/*` has its own, because a
+   file has no viewport. PDF and DXF are Y-up already and need no flip.
 3. **`packages/geometry` is pure.** No DOM, no canvas, no colour, no file formats, no state, no
    randomness, no clock. It may import only `packages/core`.
 4. **Derived geometry is never persisted.** Files store parameters; evaluation recomputes paths and
