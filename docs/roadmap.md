@@ -299,8 +299,21 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   covers the six-figure count, which took the suite from 53 s to 14 s. `pnpm check` runs
   `test:coverage` from this slice on, because running plain `test` locally is what let the
   divergence through.
-- **1.9** Clipper2 integration behind `internal/clipper.ts`; `offsetPath` Tier 2 (flatten and clip).
-  The heaviest property-test slice in the project.
+- **1.9** 🟡 **Partly done — Tier 1 analytic, not Tier 2.** `offsetPath` offsets convex closed paths
+  of lines and arcs exactly: a line to a parallel line, an arc to a concentric one. A rounded
+  rectangle's stitch line is another rounded rectangle, not a polyline approximation of one, and
+  there is no tolerance parameter because nothing is approximated. No dependency, so no ADR.
+  **Tier 2 was attempted first, as planned, and abandoned.** `clipper2-js` is the only pure-JS
+  Clipper2 binding — the WASM ones force an async init through the purest layer in the codebase —
+  and its round joins are wrong: a 100 mm square offset by 10 mm returns an area of 12000 mm²
+  against a true 14314 mm², below even a bevel join's 14200 mm², with `ArcTolerance` having no
+  effect. Two hours of that is recorded here so nobody repeats it. The work sits unmerged on
+  `slice/1.9-clipper-offset`, including a drafted ADR 0008.
+  One trap worth keeping: `clipper2-js` needs the ring closed explicitly, the first vertex repeated,
+  even under `EndType.Polygon`. Given an unclosed ring it does not fail — it offsets as though there
+  were a spike at the last vertex and returns a self-intersecting ring whose *bounds look correct*
+  and whose area is quietly wrong.
+  Still to come for Tier 2, and with it non-convex shapes, open paths and cubics.
 - **1.10** `intersectSegments` / `intersectPaths`: analytic for line and arc, flatten-and-refine for
   cubics.
 

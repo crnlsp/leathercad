@@ -333,9 +333,31 @@ rectangle. Detect self-intersection afterwards; if any is found, fall through to
 and return the result as a polyline `Path`. Clipper2 handles the self-intersection removal, which is
 precisely the part that is hard to get right.
 
-**Build Tier 2 first.** It is correct in all cases and is what the MVP ships. Tier 1 is an
-optimisation for output quality and file cleanliness, added once the behaviour is pinned down by
-tests.
+**Tier 1 was built first, against the original plan.** The intent was Tier 2 first, on the grounds
+that it is correct in all cases. It was attempted in slice 1.9 and abandoned: `clipper2-js` — the
+only pure-JavaScript Clipper2 binding, and the only one that does not force an async WebAssembly
+init through this pure layer — returns a wrong round-join offset. A 100 mm square offset outward by
+10 mm comes back with an area of 12000 mm² where the true value is 14314 mm², which is below even a
+bevel join's 14200 mm², so no join setting explains it. `ArcTolerance` has no effect at all.
+
+Tier 1 covers every shape the product is actually built from, needs no dependency, and produces
+better output — arcs stay arcs. Tier 2 remains the plan for the general case.
+
+**Tier 1's scope: convex closed paths of lines and arcs.** It rejects, rather than guesses at:
+
+- **open paths**, whose parallel curve needs end handling this tier does not define;
+- **cubics**, which have no exact offset — the offset of a cubic is not a cubic;
+- **non-convex paths**, where the offset can self-intersect globally even though every individual
+  join is correct. Detecting and pruning that is precisely what Clipper is for.
+
+There is no tolerance parameter, because nothing is approximated. A line offsets to a parallel line
+and an arc to a concentric one with radius `r ∓ d`; corners are either tangent already, bridged with
+an exact arc, or trimmed at an exact intersection.
+
+A radius offset to exactly zero is a **corner, not a collapse** — the arc has shrunk to the point
+its neighbours already meet at, and it is dropped. Offsetting a rounded rectangle outward and back
+must return the sharp rectangle it started as. Only a negative radius means the ring has closed over
+itself.
 
 ### 6.3 Clipper2 integration rules
 

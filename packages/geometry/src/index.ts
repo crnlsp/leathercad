@@ -42,6 +42,9 @@ export { circle, rect, roundedRect, uniformRadii } from './shapes.js';
 
 export { solveCubic, solveLinear, solveQuadratic } from './polynomial.js';
 
+export type { OffsetOptions } from './ops/offset.js';
+export { offsetPath } from './ops/offset.js';
+
 export type { DistributedPoint, Distribution, DistributeOptions } from './ops/distribute.js';
 export { distributeAlongPath } from './ops/distribute.js';
 
