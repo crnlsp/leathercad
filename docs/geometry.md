@@ -344,9 +344,14 @@ bevel join's 14200 mm², so no join setting explains it. `ArcTolerance` has no e
 'self'` with no `'wasm-unsafe-eval'`, so Chromium refuses to compile any WebAssembly in it. See
 ADR 0008 for both investigations and the numbers behind them.
 
-Tier 1 covers every shape the product is actually built from, needs no dependency, and produces
-better output — arcs stay arcs. **Tier 2 is slice 3.11**, to be built immediately before the
-polyline tool (3.5), which is the first way a user can draw an outline Tier 1 cannot offset.
+**Tier 2 will be written here, not bought.** After two rejected bindings the decision is to stop
+shopping: it is slice 9.11, alongside boolean operations, which share the same hard part. Nothing
+before it needs it — Tier 1 handles every convex outline of lines and arcs, which is every shape the
+drawing tools produce that a leatherworker actually cuts. A concave outline can be drawn, measured,
+saved and printed; only deriving an offset from one is refused, with a validation error naming the
+shape rather than a wrong answer.
+
+Tier 1 needs no dependency and produces better output anyway — arcs stay arcs.
 
 **Tier 1's scope: convex closed paths of lines and arcs.** It rejects, rather than guesses at:
 
@@ -364,17 +369,21 @@ its neighbours already meet at, and it is dropped. Offsetting a rounded rectangl
 must return the sharp rectangle it started as. Only a negative radius means the ring has closed over
 itself.
 
-### 6.3 Clipper2 integration rules
+### 6.3 If robust offsetting is ever built here
 
-- Wrapped behind `geometry/internal/clipper.ts`. **No other file imports Clipper.** The public API
-  is `offsetPath` and `booleanOp`, so the dependency can be replaced without touching callers.
-- Clipper works in integers. Use the same scale as quantisation: **1 Clipper unit = 1e-4 mm**.
-  Conversion is exact for already-quantised coordinates.
-- Clipper's join types map directly onto ours (`Round`, `Miter`, `Square`).
-- Clipper's arc tolerance for round joins must be set from our flatten tolerance, not left at its
-  default.
-- Verify the licence of whichever binding is chosen (Clipper2 itself is BSL-1.0, which is
-  permissive and compatible with Apache-2.0). Record it in an ADR.
+Rules kept from the rejected integration work, because they will apply to our own implementation
+just as they did to a library's:
+
+- Work in integers at the quantisation scale — **1 unit = 1e-4 mm**. Conversion is exact for
+  coordinates that have already been quantised (CLAUDE.md invariant 8), so the round trip introduces
+  no error of its own.
+- Whatever computes it, the entry point stays `offsetPath`, returning `Path[]`. Callers already
+  handle zero, one and several results, so a better implementation is a drop-in.
+- Arc tolerance for round joins comes from our flatten tolerance. Never a library's default, and
+  never a constant chosen because it looked reasonable.
+- **A correct bounding box proves nothing.** Every wrong result from the rejected binding had the
+  right bounds and the wrong area, because a self-intersecting ring loses area to the shoelace sum
+  while still spanning the same extent. Test the area.
 
 ### 6.4 Offset direction
 
@@ -505,8 +514,6 @@ packages/geometry/src/
 │   ├── distribute.ts
 │   ├── trim.ts
 │   └── fillet.ts            # corner rounding, post-MVP
-└── internal/
-    └── clipper.ts           # the ONLY file that imports Clipper2
 ```
 
 Tests are co-located (`vec2.test.ts` beside `vec2.ts`), with golden fixtures under

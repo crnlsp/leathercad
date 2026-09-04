@@ -1,6 +1,6 @@
-# 8. No Clipper binding yet
+# 8. No Clipper binding
 
-**Status:** Rejected — both candidates, for now
+**Status:** Accepted — no Clipper binding, and no further search
 **Date:** 2026-09-04
 
 ## Context
@@ -20,11 +20,19 @@ revision, so it must stay synchronous. **Determinism is load-bearing** ([testing
 
 ## Decision
 
-**Neither binding is adopted.** Tier 2 is deferred to slice 3.11, to be built immediately before
-the polyline tool (3.5) — the first slice that lets a user draw a shape Tier 1 cannot offset.
+**No Clipper binding, and no further search for one.** Both candidates were tried and both failed,
+for unrelated reasons — one computes wrong answers, the other cannot run in this application at
+all. A third would be a third investigation, and the cost of those has already exceeded what the
+capability is worth today.
 
-Nothing the application can currently draw needs Tier 2. The rectangle tool is the only drawing
-tool that exists, and Tier 1 offsets every shape it produces exactly, keeping arcs as arcs.
+**Robust offsetting will be written here instead**, as slice 9.11, alongside boolean operations,
+which share its hard part. `pnpm depcruise` now refuses a Clipper import from anywhere rather than
+merely confining it to one file.
+
+Nothing before it needs it. Analytic offsetting (Tier 1, slice 1.9) handles every convex outline of
+lines and arcs, which is every shape the drawing tools produce that a leatherworker actually cuts. A
+concave outline can be drawn, measured, saved and printed; only deriving an offset from one is
+refused, and refused with a validation error naming the shape rather than a wrong answer.
 
 ## Alternatives rejected
 
@@ -79,7 +87,11 @@ is the hard part of the problem, and the reason to buy rather than build.
 - The abandoned Tier 2 work — the wrapper, the property suite, and the original form of this ADR
   proposing clipper2-js — is on the branch `slice/1.9-clipper-offset`. It is unmerged and its tests
   do not pass.
-- The `clipper-isolated` rule in `.dependency-cruiser.cjs` stays. It costs nothing while no Clipper
-  exists and is the reason a binding can be swapped in later by touching one file.
-- Revisit at slice 3.11, when the shapes that need it are known. That is a better position to judge
-  the trade-off from than guessing now.
+- The `.dependency-cruiser.cjs` rule is now `no-clipper` and forbids the import from anywhere, so
+  this decision is enforced rather than remembered.
+- **A correct bounding box proves nothing.** Every wrong result here had the right bounds and the
+  wrong area: a self-intersecting ring loses area to the shoelace sum while still spanning the same
+  extent. Whatever eventually implements this, its tests measure area. That mistake was made twice
+  in one session — once by the library, once by me reading its output.
+- The branch `slice/1.9-clipper-offset` can be deleted whenever convenient. Nothing on it is worth
+  keeping now that this decision is final; what mattered is recorded above.

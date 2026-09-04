@@ -310,7 +310,7 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   covers the six-figure count, which took the suite from 53 s to 14 s. `pnpm check` runs
   `test:coverage` from this slice on, because running plain `test` locally is what let the
   divergence through.
-- **1.9** ✅ **Done — analytic offsetting. Tier 2 moved to 3.11.** `offsetPath` offsets convex closed paths
+- **1.9** ✅ **Done — analytic offsetting. Tier 2 moved to 9.11.** `offsetPath` offsets convex closed paths
   of lines and arcs exactly: a line to a parallel line, an arc to a concentric one. A rounded
   rectangle's stitch line is another rounded rectangle, not a polyline approximation of one, and
   there is no tolerance parameter because nothing is approximated. No dependency, so no ADR.
@@ -324,12 +324,10 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   even under `EndType.Polygon`. Given an unclosed ring it does not fail — it offsets as though there
   were a spike at the last vertex and returns a self-intersecting ring whose *bounds look correct*
   and whose area is quietly wrong.
-  **Tier 2 is now slice 3.11**, placed where it is first needed rather than left open here. Nothing
-  the application can draw today requires it: the rectangle tool is the only drawing tool that
-  exists, and Tier 1 offsets every shape it produces exactly. The polyline tool (3.5) is the first
-  way to draw an outline Tier 1 cannot handle.
-  Two routes to Tier 2 were investigated and both are closed for now, which is why it is deferred
-  rather than merely unfinished. `clipper2-js` computes offsets wrongly across joins and shapes:
+  **Tier 2 is now slice 9.11, and will be written here rather than bought.** Two bindings were
+  investigated and both failed, for unrelated reasons; after that the decision is to stop shopping.
+  Nothing before it needs it — Tier 1 offsets every convex outline of lines and arcs exactly, which
+  is every shape the drawing tools produce that a leatherworker actually cuts. `clipper2-js` computes offsets wrongly across joins and shapes:
   with a correctly closed ring it returns a pinwheel that visits each source vertex between offset
   corners, so the area comes out under the truth every time — square/miter 12150 against 14400,
   square/round 12000 against 14314, hexagon/miter 8837 against 9841, hexagon/round 7995 against
@@ -439,19 +437,10 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 - **3.4** ✅ **Done → M2.** Drag to draw, shift constrains to a square, live millimetre
   dimensions in the overlay, Escape abandons. Creates a real `cut-contour` on a new part, not a
   generic path. Per-corner radii and exact numeric entry arrived with the property panel (3.8).
-- **3.11** **Robust offsetting (Tier 2).** Build this *before* 3.5. The number is high because
-  slice numbers are identifiers used in commit messages, and Phase 3's finished work sits at 3.1,
-  3.2, 3.4 and 3.8 — renumbering to insert one would rewrite history that already refers to them.
-  Tier 1 (1.9) offsets convex paths of lines and arcs exactly, which covers every shape the
-  rectangle tool can make. A polyline tool is the first way to draw a concave outline, where an
-  inward offset can cross itself and the overlapping loops have to be found and removed. Seam
-  allowance (4.9) needs the same machinery outward.
-  Decide the route when the shapes are known: revisit `clipper2-js` (broken as of 1.2.4, see ADR
-  0008), take `clipper2-wasm` and pay for it with a CSP relaxation plus async initialisation
-  through the pure layer, or extend the analytic tier with self-intersection pruning —
-  [geometry.md](geometry.md) §6.1 explains why that last one is a project rather than a slice.
-- **3.5** Line and polyline tools; angle constraint on Shift. **Needs 3.11 first**: this is the
-  slice that lets a user draw a shape Tier 1 offsetting cannot handle.
+- **3.5** Line and polyline tools; angle constraint on Shift. This is the first way to draw a
+  concave outline, which analytic offsetting rejects — deriving a stitch line from one reports a
+  validation error naming the shape until 9.11 lands. Drawing, measuring, saving and printing such
+  a shape all work.
 - **3.6** Circle and arc tools.
 - **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
   arc-under-non-uniform-scale rule from [geometry.md](geometry.md) §4.2.
@@ -580,12 +569,23 @@ Ordered by expected value, not by difficulty:
    over it.
 3. **Hardware library** — snaps, rivets, D-rings, zips, magnets, with real dimensions.
 4. **DXF export** — R12 for CNC and laser users.
-5. **Boolean operations** — the Clipper dependency is already there; this is UX work.
+5. **Boolean operations** — no longer UX work on top of a dependency, since there is no Clipper.
+   Shares its hard part with robust offsetting below: finding and removing the loops an operation
+   creates. Build the two together.
 6. **Seam pairing and hole-count parity validation** — catches a genuinely expensive mistake.
 7. **Parameterised templates** — "card slot, width 95 mm".
 8. **Windows and macOS** — packaging plus per-platform print verification.
 9. **Nesting on a hide** — hard, and needs boolean operations first.
 10. **Constraint solver** — only if real use proves the derivation graph insufficient.
+11. **Robust offsetting, written here** — the general case analytic offsetting rejects: a concave
+    outline whose inward offset crosses itself, where the overlapping loops have to be found and
+    removed. [geometry.md](geometry.md) §6.1 explains why that is the hard part.
+    Two third-party bindings were tried and rejected in slice 1.9 (ADR 0008), and the decision after
+    that is to write it rather than shop for it again. It shares its machinery with boolean
+    operations above; build the two together.
+    Deferred this far on purpose: nothing before it needs it. Analytic offsetting handles every
+    convex outline of lines and arcs, which is every shape the drawing tools produce that a
+    leatherworker actually cuts.
 
 ## 5. Timeline
 

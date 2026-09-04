@@ -82,7 +82,8 @@ Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run head
 
 - Tests are co-located: `src/foo.ts` beside `src/foo.test.ts`.
 - Cross-package imports go through a package's `index.ts`, never into its internals.
-- Clipper2 is imported in exactly one file: `geometry/internal/clipper.ts`.
+- No Clipper binding, anywhere. Both were tried and rejected; robust offsetting is ours to write
+  when something needs it. See ADR 0008.
 - Ids are ULIDs from `core/id.ts` with an injectable entropy source. Never `Math.random()` directly.
 - Nothing in a serialisation path calls `Date.now()` — take a clock as a parameter.
 - Fonts are vendored in `assets/fonts/`. Never use a system font: it breaks PDF output and snapshot
@@ -130,6 +131,6 @@ something in this file or in `docs/`, update it in the same commit.
 - Do not put viewport, selection, or tool state into the persisted document.
 - Do not write geometry code without a property test.
 - Do not edit a shipped migration.
-- Do not import Clipper outside `geometry/internal/clipper.ts`.
+- Do not add a Clipper binding. `pnpm depcruise` refuses one.
 - Do not claim print accuracy is verified without a physical measurement recorded in
   `docs/print-verification-log.md`.

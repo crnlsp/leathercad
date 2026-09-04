@@ -93,12 +93,13 @@ module.exports = {
     },
 
     {
-      name: 'clipper-isolated',
+      name: 'no-clipper',
       comment:
-        'Clipper2 is an implementation detail of offsetPath and booleanOp. Importing it elsewhere ' +
-        'would make the dependency unswappable. See docs/geometry.md §6.3.',
+        'No Clipper binding, anywhere. Both candidates were tried and rejected in slice 1.9: ' +
+        'clipper2-js computes offsets wrongly, and clipper2-wasm cannot compile under the ' +
+        "renderer's CSP. Robust offsetting will be written here instead. See ADR 0008.",
       severity: 'error',
-      from: { pathNot: '^packages/geometry/src/internal/clipper\\.ts$' },
+      from: {},
       to: { path: 'clipper' },
     },
 
