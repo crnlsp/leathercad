@@ -73,6 +73,17 @@ describe('intersectSegments', () => {
       expect(intersectSegments(a, b)).toHaveLength(2);
     });
 
+    it('regression: near-parallel segments of very different lengths agree either way round', () => {
+      // fast-check shrank to this. The short segment lies within EPS_POINT of
+      // the long one's line, but extrapolating the short one's slope across
+      // the long one's 100 mm crosses the epsilon — so measuring from only one
+      // side made the answer depend on argument order.
+      const a = line(vec(0, -6.270522301690856e-9), vec(6.6900215979801265, 0));
+      const b = line(vec(-99.99999999999987, 0), vec(0, 0));
+
+      expect(intersectSegments(a, b)).toHaveLength(intersectSegments(b, a).length);
+    });
+
     it('does not invent a crossing between near-parallel lines that miss', () => {
       // The determinant is tiny but the segments genuinely do not meet.
       const a = line(vec(0, 0), vec(1000, 0));

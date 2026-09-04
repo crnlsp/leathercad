@@ -8,7 +8,7 @@ import type {
   Project,
 } from '@leathercad/domain';
 import { DEFAULT_SETTINGS } from '@leathercad/domain';
-import { MatOps, PathOps, Shapes, type Vec2 } from '@leathercad/geometry';
+import { MatOps, PathOps, Shapes, type Path, type Vec2 } from '@leathercad/geometry';
 
 import { command, type Command, type Document } from './document.js';
 
@@ -129,6 +129,40 @@ function translateFeature(
 }
 
 /** Convenience for the rectangle tool: a new part holding one cut contour. */
+/**
+ * A part holding one freehand path.
+ *
+ * A **closed** path becomes a `cut-contour`: an outline with an inside is
+ * something to cut out. An **open** one becomes a `marking-line`, because a
+ * line with two ends is not an outline, and calling it one would put a part in
+ * the list that can never be cut. Drawn paths are the only geometry persisted
+ * as coordinates rather than parameters (docs/file-format.md §3.3).
+ */
+export function pathPart(partId: PartId, featureId: FeatureId, name: string, path: Path): Part {
+  const source = { kind: 'path', path } as const;
+  const feature: Feature = path.closed
+    ? {
+        id: featureId,
+        kind: 'cut-contour',
+        role: 'outer',
+        name: 'Outline',
+        visible: true,
+        locked: false,
+        source,
+      }
+    : {
+        id: featureId,
+        kind: 'marking-line',
+        purpose: 'alignment',
+        name: 'Line',
+        visible: true,
+        locked: false,
+        source,
+      };
+
+  return { id: partId, name, quantity: 1, features: [feature] };
+}
+
 export function rectanglePart(
   partId: PartId,
   featureId: FeatureId,

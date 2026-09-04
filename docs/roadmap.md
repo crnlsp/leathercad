@@ -437,10 +437,19 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 - **3.4** ✅ **Done → M2.** Drag to draw, shift constrains to a square, live millimetre
   dimensions in the overlay, Escape abandons. Creates a real `cut-contour` on a new part, not a
   generic path. Per-corner radii and exact numeric entry arrived with the property panel (3.8).
-- **3.5** Line and polyline tools; angle constraint on Shift. This is the first way to draw a
-  concave outline, which analytic offsetting rejects — deriving a stitch line from one reports a
-  validation error naming the shape until 9.11 lands. Drawing, measuring, saving and printing such
-  a shape all work.
+- **3.5** ✅ **Done.** Line and polyline tools. Click to place, Enter or a second click to finish,
+  Backspace to drop the last point, Escape to abandon, Shift to constrain the segment to 15°.
+  Clicking back on the first point closes the shape — but only from three points, since two enclose
+  nothing.
+  A line is a polyline that finishes itself, not a second implementation: two copies of the same
+  rubber-banding would drift apart.
+  What a drawn run *becomes* is a product decision, not a formality. A closed run is a `cut-contour`
+  — an outline with an inside is something to cut out. An open one is a `marking-line`, because a
+  line with two ends is not an outline, and calling it one would leave a part in the list that can
+  never be cut. Drawn paths are the only geometry persisted as coordinates rather than parameters.
+  This is also the first way to draw a concave outline, which analytic offsetting rejects: deriving
+  a stitch line from one reports a validation error naming the shape until 9.11 lands. Drawing,
+  measuring, saving and printing such a shape all work.
 - **3.6** Circle and arc tools.
 - **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
   arc-under-non-uniform-scale rule from [geometry.md](geometry.md) §4.2.

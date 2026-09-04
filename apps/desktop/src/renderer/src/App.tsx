@@ -12,6 +12,8 @@ import { getPlatformHost } from './platformBridge.js';
 const TOOLS = [
   { id: 'select', label: 'Select', key: 'V' },
   { id: 'rectangle', label: 'Rectangle', key: 'R' },
+  { id: 'line', label: 'Line', key: 'L' },
+  { id: 'polyline', label: 'Polyline', key: 'P' },
 ] as const;
 
 function fileName(path: string): string {

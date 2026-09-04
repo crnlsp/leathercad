@@ -4,6 +4,8 @@ import { PathOps, RectOps, type Vec2 } from '@leathercad/geometry';
 import {
   ToolManager,
   Viewport,
+  createLineTool,
+  createPolylineTool,
   createRectangleTool,
   createSelectTool,
   type PointerInput,
@@ -56,7 +58,15 @@ export function CanvasHost({
     dirtyRef.current = true;
   }, []);
 
-  const tools = useMemo(() => [createSelectTool(), createRectangleTool(nextId)], [nextId]);
+  const tools = useMemo(
+    () => [
+      createSelectTool(),
+      createRectangleTool(nextId),
+      createLineTool(nextId),
+      createPolylineTool(nextId),
+    ],
+    [nextId],
+  );
 
   const managerRef = useRef<ToolManager | null>(null);
   if (managerRef.current === null) {

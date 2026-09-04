@@ -132,11 +132,15 @@ function lineLine(a: LineSegment, b: LineSegment): Intersection[] {
     return [{ point: pointAt(a, clamp01(tA)), tA: clamp01(tA), tB: clamp01(tB) }];
   }
 
-  // Parallel. Collinear only if b's start also lies on a's line; otherwise the
-  // two never meet however close the determinant came to zero. Dividing by the
-  // length turns the cross product into the perpendicular distance, which is
-  // what EPS_POINT actually measures.
-  if (!approxZero(cross(toB, r) / lengthR, EPS_POINT)) return [];
+  // Parallel. Collinear only if each segment lies on the other's line —
+  // *both* distances, not one. Measuring only b's start against a's line is
+  // asymmetric: with segments of very different lengths, the deviation
+  // extrapolated along the longer one crosses the epsilon while the shorter
+  // one does not, and intersectSegments(a, b) then disagrees with
+  // intersectSegments(b, a). fast-check found the pair.
+  const offA = Math.abs(cross(toB, r) / lengthR);
+  const offB = Math.abs(cross(sub(a.a, b.a), s) / lengthS);
+  if (!approxZero(Math.max(offA, offB), EPS_POINT)) return [];
 
   // Project both spans onto a and intersect the intervals.
   const lengthSq = lenSq(r);

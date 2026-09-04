@@ -17,6 +17,7 @@ export {
   deleteFeatures,
   emptyDocument,
   emptyProject,
+  pathPart,
   rectShape,
   rectanglePart,
   renameFeature,
