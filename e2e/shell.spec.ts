@@ -65,22 +65,23 @@ test('draws the pattern rather than leaving the canvas blank', async () => {
   const canvas = window.getByTestId('editor-canvas');
   await expect(canvas).toBeVisible();
 
-  const distinctColours = await canvas.evaluate((element) => {
-    const c = element as HTMLCanvasElement;
-    const context = c.getContext('2d');
-    if (context === null) return 0;
-    const { data } = context.getImageData(0, 0, c.width, c.height);
-    const seen = new Set<string>();
-    // Sample sparsely; we only need to know the surface is not one flat colour.
-    for (let i = 0; i < data.length; i += 4 * 97) {
-      seen.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
-    }
-    return seen.size;
-  });
+  const countColours = async (): Promise<number> =>
+    canvas.evaluate((element) => {
+      const c = element as HTMLCanvasElement;
+      const context = c.getContext('2d');
+      if (context === null) return 0;
+      const { data } = context.getImageData(0, 0, c.width, c.height);
+      const seen = new Set<string>();
+      // Sample sparsely; we only need to know the surface is not one flat colour.
+      for (let i = 0; i < data.length; i += 4 * 97) {
+        seen.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
+      }
+      return seen.size;
+    });
 
   // Background, grid, rulers, cut line, stitch line and holes are all
-  // different colours; a blank canvas would report one.
-  expect(distinctColours).toBeGreaterThan(4);
+  // different colours; a blank canvas reports one.
+  await expect.poll(countColours, { timeout: 10_000 }).toBeGreaterThan(4);
 });
 
 test('reports cursor position in millimetres', async () => {

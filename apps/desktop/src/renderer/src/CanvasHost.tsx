@@ -113,14 +113,20 @@ export function CanvasHost({
           60 * dpr,
         );
       }
-      invalidate();
+      // Paint straight away rather than waiting for the next animation frame.
+      // requestAnimationFrame does not run while a window is unshown or
+      // occluded, which leaves the very first frame blank — visible as a flash
+      // on launch, and as a canvas that never paints at all under a headless
+      // display server.
+      dirtyRef.current = false;
+      paint();
     };
 
     const observer = new ResizeObserver(resize);
     observer.observe(container);
     resize();
     return () => observer.disconnect();
-  }, [initialBounds, invalidate]);
+  }, [initialBounds, invalidate, paint]);
 
   useEffect(() => {
     onStatus?.({ cursorMm, scale: viewportRef.current.scale, dpr: viewportRef.current.dpr });
