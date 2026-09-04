@@ -1,4 +1,6 @@
-import { resolve } from 'node:path';
+import { existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
@@ -211,6 +213,75 @@ test('the parts list selects what the canvas cannot reach', async () => {
       .click();
     await expect(window.getByTestId('selected-count')).toHaveText('1');
   });
+});
+
+test('saves a project and reopens it with its parameters intact', async () => {
+  // The point of a native format rather than exporting to PDF: a saved
+  // pattern comes back as an editable 105 x 75 rectangle with named parts,
+  // not as anonymous curves.
+  const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.lcp`);
+  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+
+    // Native dialogs cannot be driven from a test, so answer them directly.
+    await instance.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+    }, target);
+
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 330, box!.y + 270, { steps: 5 });
+    await window.mouse.up();
+
+    const panel = window.getByTestId('property-panel');
+    const setField = async (label: string, value: string): Promise<void> => {
+      const input = panel.locator('label', { hasText: new RegExp(`^${label}`) }).locator('input');
+      await input.fill(value);
+      await input.press('Enter');
+    };
+    await setField('Width', '105');
+    await setField('Height', '75');
+    for (const corner of ['↖', '↗', '↙', '↘']) await setField(corner, '8');
+    await window.getByTestId('part-name').fill('Card holder');
+
+    // The dot marks unsaved changes.
+    await expect(window.getByTestId('save')).toContainText('•');
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('save')).not.toContainText('•');
+    expect(existsSync(target)).toBe(true);
+
+    // Throw the work away, then get it back from disk.
+    await window.getByTestId('tool-select').click();
+    await window
+      .getByTestId('parts-list')
+      .getByRole('button', { name: /Outline/ })
+      .click();
+    await window.keyboard.press('Delete');
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+
+    await window.getByTestId('open').click();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('parts-list')).toContainText('Card holder');
+
+    // Reopened as parameters, so the geometry recomputes to the same numbers.
+    await window
+      .getByTestId('parts-list')
+      .getByRole('button', { name: /Outline/ })
+      .click();
+    await expect(panel.locator('.readout').first()).toContainText('346.27 mm');
+
+    // Opening is not an edit, so there is nothing to undo back into.
+    await expect(window.getByTestId('undo')).toBeDisabled();
+  } finally {
+    await instance.close();
+    rmSync(target, { force: true });
+  }
 });
 
 test('denies in-page navigation away from the app', async () => {

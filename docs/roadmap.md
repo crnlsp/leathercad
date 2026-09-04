@@ -375,9 +375,19 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 ### Phase 5 — Persistence
 *Ends at M4.*
 
-- **5.1** The `.lcp` ZIP container, zod schemas, save and open, atomic write via `rename`.
-- **5.2** `formatVersion` 1, the migration runner, `fixtures/format/v1.lcp`, and the round-trip and
-  byte-stability property tests. **→ M4**
+- **5.1** ✅ **Done.** `.lcp` ZIP container (uncompressed `mimetype` first, so `file(1)` identifies
+  it), zod schemas, save and open wired through `PlatformHost`, atomic write via `rename` in the
+  main process. Stores parameters only — a saved rectangle is `width: 105`, not a list of segments.
+  Byte-identical across saves of an unchanged document: keys are sorted, numbers bounded to six
+  decimals, and archive entry timestamps pinned to the ZIP epoch. The real save time lives in the
+  manifest, where it is readable, and comes from an injected clock.
+  Load errors name the field — `parts[0].features[0].source.width: expected number` — because a
+  user's project is hours of their work and "invalid file" tells them to give up.
+- **5.2** 🟡 **Partly done.** `formatVersion` 1, the migration runner, and the round-trip plus
+  byte-stability tests are in. A file from a newer version is refused rather than guessed at.
+  Still to add before this counts as **M4**: the committed `fixtures/format/v1.lcp` corpus, and
+  unknown-field preservation so a file touched by a newer build is not quietly damaged by an older
+  one.
 - **5.3** Autosave, crash recovery, recent files, unsaved-changes handling.
 - **5.4** Sample projects shipped in `fixtures/projects/`.
 

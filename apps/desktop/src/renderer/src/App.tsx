@@ -4,6 +4,7 @@ import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
+import { useProjectFile } from './useProjectFile.js';
 import { PartsList } from './PartsList.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { getPlatformHost } from './platformBridge.js';
@@ -12,6 +13,10 @@ const TOOLS = [
   { id: 'select', label: 'Select', key: 'V' },
   { id: 'rectangle', label: 'Rectangle', key: 'R' },
 ] as const;
+
+function fileName(path: string): string {
+  return path.split('/').pop() ?? path;
+}
 
 export function App() {
   const [version, setVersion] = useState<string | null>(null);
@@ -27,6 +32,9 @@ export function App() {
   const [storeState, setStoreState] = useState(() => store.getState());
   useEffect(() => store.subscribe(() => setStoreState(store.getState())), [store]);
 
+  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0');
+  const dirty = file.savedDocument.current !== storeState.document;
+
   useEffect(() => {
     void (async () => {
       try {
@@ -39,13 +47,27 @@ export function App() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (event.ctrlKey || event.metaKey) return;
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+
+      if (event.ctrlKey || event.metaKey) {
+        const key = event.key.toLowerCase();
+        if (key === 's') {
+          event.preventDefault();
+          void file.save(event.shiftKey);
+        } else if (key === 'o') {
+          event.preventDefault();
+          void file.open();
+        }
+        return;
+      }
+
       const match = TOOLS.find((tool) => tool.key.toLowerCase() === event.key.toLowerCase());
       if (match !== undefined) setToolId(match.id);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [file]);
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
 
@@ -73,6 +95,27 @@ export function App() {
               <kbd>{tool.key}</kbd>
             </button>
           ))}
+        </div>
+
+        <div className="toolbar">
+          <button
+            type="button"
+            className="tool"
+            data-testid="open"
+            onClick={() => void file.open()}
+            title="Open a project (Ctrl+O)"
+          >
+            Open
+          </button>
+          <button
+            type="button"
+            className="tool"
+            data-testid="save"
+            onClick={() => void file.save()}
+            title="Save (Ctrl+S)"
+          >
+            Save{dirty ? ' •' : ''}
+          </button>
         </div>
 
         <div className="toolbar">
@@ -119,9 +162,9 @@ export function App() {
       </div>
 
       <footer className="app-status" data-testid="status-bar">
-        {bridgeError !== null ? (
-          <span className="status-error" data-testid="bridge-error">
-            Platform bridge failed: {bridgeError}
+        {bridgeError !== null || file.state.error !== null ? (
+          <span className="status-error" data-testid="file-error">
+            {bridgeError ?? file.state.error}
           </span>
         ) : (
           <span data-testid="bridge-ok">
@@ -132,6 +175,13 @@ export function App() {
             <b>{featureCount}</b> features
             <span className="sep">·</span>
             <b data-testid="selected-count">{storeState.selection.features.size}</b> selected
+            {file.state.path !== null && (
+              <>
+                <span className="sep">·</span>
+                <span data-testid="file-path">{fileName(file.state.path)}</span>
+                {dirty && <span className="dirty"> unsaved</span>}
+              </>
+            )}
           </span>
         )}
 

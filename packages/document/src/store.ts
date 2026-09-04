@@ -156,6 +156,21 @@ export class DocumentStore {
   }
 
   /**
+   * Replaces the document and discards all history.
+   *
+   * Opening a file is not an edit, so there is nothing meaningful to undo back
+   * into — the previous project is a different document, and letting Ctrl+Z
+   * walk from one into the other would be worse than useless.
+   */
+  reset(document: Document, label = 'Open'): void {
+    this.transaction = null;
+    this.past = [];
+    this.future = [];
+    this.present = { document, selection: EMPTY_SELECTION, label };
+    this.emit();
+  }
+
+  /**
    * Selection changes do not enter history on their own — an accidental click
    * should not consume an undo — but the selection at each step is remembered,
    * so undoing a delete brings back what was deleted, still selected.

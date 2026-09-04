@@ -357,3 +357,7 @@ body {
   border-color: var(--error);
   color: var(--error);
 }
+
+.dirty {
+  color: var(--accent);
+}

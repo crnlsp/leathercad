@@ -236,6 +236,31 @@ describe('selection', () => {
   });
 });
 
+describe('reset', () => {
+  it('replaces the document and discards history', () => {
+    // Opening a file is not an edit. Letting Ctrl+Z walk from the newly
+    // opened project back into the previous one would be worse than useless.
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(renameFeature('feat-1', 'Changed'));
+    expect(store.getState().canUndo).toBe(true);
+
+    store.reset(emptyDocument('other'));
+
+    expect(store.getState().canUndo).toBe(false);
+    expect(store.getState().canRedo).toBe(false);
+    expect(store.getState().document.project.parts).toHaveLength(0);
+    expect(store.getState().selection.features.size).toBe(0);
+  });
+
+  it('abandons an open transaction', () => {
+    const store = new DocumentStore(docWithRect());
+    store.begin('Move');
+    store.preview(translateFeatures(['feat-1'], { x: 10, y: 0 }));
+    store.reset(emptyDocument('other'));
+    expect(store.inTransaction).toBe(false);
+  });
+});
+
 describe('subscribe', () => {
   it('notifies on change and stops after unsubscribe', () => {
     const store = new DocumentStore(docWithRect());

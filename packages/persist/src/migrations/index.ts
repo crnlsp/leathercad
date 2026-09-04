@@ -1,0 +1,56 @@
+/**
+ * The migration chain.
+ *
+ * Three rules, and they are not negotiable (docs/file-format.md §4.2):
+ *
+ * 1. A shipped migration is **immutable**. If one was wrong, write another
+ *    after it. Editing one changes the meaning of files already on disk.
+ * 2. Never delete a migration. The chain must reach back to version 1 forever.
+ * 3. Every version bump commits a fixture under `fixtures/format/`, and a test
+ *    that opens it. That corpus is the only thing proving the chain still
+ *    works.
+ *
+ * Migrations run on **raw JSON, before validation** — validating first would
+ * reject old files by definition.
+ */
+export interface Migration {
+  readonly from: number;
+  readonly to: number;
+  migrate(document: unknown): unknown;
+}
+
+export const MIGRATIONS: readonly Migration[] = [
+  // Version 1 is the first shipped format; nothing precedes it.
+  //
+  // When adding version 2, append:
+  //   { from: 1, to: 2, migrate: (doc) => ... }
+];
+
+export const CURRENT_FORMAT_VERSION = 1;
+
+export class NewerFormatError extends Error {
+  constructor(readonly fileVersion: number) {
+    super(
+      `This file was saved by a newer version of LeatherCAD (format ${fileVersion}; ` +
+        `this build understands up to ${CURRENT_FORMAT_VERSION}).`,
+    );
+    this.name = 'NewerFormatError';
+  }
+}
+
+/**
+ * Walks a document forward to the current version.
+ *
+ * A file from the future is **refused, not guessed at**. Silently dropping
+ * fields we do not recognise would hand the user back a quietly damaged
+ * project.
+ */
+export function migrate(document: unknown, fileVersion: number): unknown {
+  if (fileVersion > CURRENT_FORMAT_VERSION) throw new NewerFormatError(fileVersion);
+
+  let current = document;
+  for (const migration of MIGRATIONS) {
+    if (migration.from >= fileVersion) current = migration.migrate(current);
+  }
+  return current;
+}

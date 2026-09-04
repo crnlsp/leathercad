@@ -21,6 +21,7 @@
     "@leathercad/domain": "workspace:*",
     "@leathercad/editor": "workspace:*",
     "@leathercad/geometry": "workspace:*",
+    "@leathercad/persist": "workspace:*",
     "@leathercad/platform": "workspace:*",
     "@leathercad/render": "workspace:*",
     "@types/react": "^19.2.0",
