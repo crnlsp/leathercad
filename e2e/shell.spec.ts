@@ -26,13 +26,16 @@ test.afterAll(async () => {
  * failure that wastes an afternoon.
  */
 async function withFreshApp(
-  body: (window: Awaited<ReturnType<ElectronApplication['firstWindow']>>) => Promise<void>,
+  body: (
+    window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
+    instance: ElectronApplication,
+  ) => Promise<void>,
 ): Promise<void> {
   const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
   try {
     const window = await instance.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await body(window);
+    await body(window, instance);
   } finally {
     await instance.close();
   }
@@ -338,4 +341,92 @@ test('denies in-page navigation away from the app', async () => {
   await window.waitForTimeout(300);
 
   expect(window.url()).toBe(before);
+});
+
+test('the tool palette holds modes and nothing else', async () => {
+  await withFreshApp(async (window) => {
+    const rail = window.getByTestId('tool-rail');
+    await expect(rail).toBeVisible();
+
+    // A mode stays on once chosen. An action would not, and an action in a
+    // mode palette is the thing this layout exists to prevent.
+    await window.getByTestId('tool-line').click();
+    await expect(window.getByTestId('tool-line')).toHaveClass(/active/);
+
+    // Undo is an action: it belongs to the document, not the rail.
+    await expect(rail.getByTestId('undo')).toHaveCount(0);
+    await expect(rail.getByTestId('save')).toHaveCount(0);
+  });
+});
+
+test('history sits apart from the file actions', async () => {
+  await withFreshApp(async (window) => {
+    await expect(window.getByTestId('history-group').getByTestId('undo')).toBeVisible();
+    await expect(window.getByTestId('history-group').getByTestId('save')).toHaveCount(0);
+  });
+});
+
+test('the options strip takes no room until a tool has options', async () => {
+  await withFreshApp(async (window) => {
+    // No tool has options yet, so the strip must not occupy space. An empty
+    // bar above the canvas is exactly the noise this layout removes.
+    await expect(window.getByTestId('tool-options')).toHaveCount(0);
+  });
+});
+
+test('the canvas fills the column it shares with the options strip', async () => {
+  // The strip renders nothing today, so the canvas must take the whole column.
+  // A canvas that collapses to its intrinsic 150px still passes a width-only
+  // check while every drag below it silently misses.
+  const window = await app.firstWindow();
+
+  const { host, column } = await window.evaluate(() => {
+    const height = (selector: string): number =>
+      document.querySelector(selector)?.getBoundingClientRect().height ?? 0;
+    return { host: height('.canvas-host'), column: height('.canvas-column') };
+  });
+
+  expect(column).toBeGreaterThan(400);
+  expect(host).toBe(column);
+});
+
+test('the workspace narrows instead of pushing the properties panel off screen', async () => {
+  // The canvas is a fixed-size element, so the column holding it will refuse to
+  // shrink below that size unless told otherwise — and a panel the user cannot
+  // reach is worse than the wrapping header this layout replaced.
+  await withFreshApp(async (window, instance) => {
+    await instance.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(1024, 813);
+    });
+
+    await expect
+      .poll(async () =>
+        window.evaluate(() => {
+          const panel = document.querySelector('[data-testid="property-panel"]');
+          return Math.round(panel?.getBoundingClientRect().right ?? 0);
+        }),
+      )
+      .toBeLessThanOrEqual(1024);
+  });
+});
+
+test('the header stays one row when the window narrows', async () => {
+  // A header that wrapped to two lines at 1280 is what prompted the whole
+  // layout. The hint is the least important thing in the row, so it is the
+  // thing that gives — the controls must not fold.
+  await withFreshApp(async (window, instance) => {
+    const headerHeight = async (): Promise<number> =>
+      window.evaluate(() =>
+        Math.round(document.querySelector('.app-header')?.getBoundingClientRect().height ?? 0),
+      );
+
+    const wide = await headerHeight();
+    expect(wide).toBeGreaterThan(0);
+
+    await instance.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(1024, 813);
+    });
+
+    await expect.poll(headerHeight).toBe(wide);
+  });
 });

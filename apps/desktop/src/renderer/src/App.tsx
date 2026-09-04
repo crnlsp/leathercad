@@ -7,14 +7,10 @@ import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
 import { useProjectFile } from './useProjectFile.js';
 import { PartsList } from './PartsList.js';
 import { PropertyPanel } from './PropertyPanel.js';
+import { ToolOptions } from './ToolOptions.js';
+import { ToolPalette } from './ToolPalette.js';
 import { getPlatformHost } from './platformBridge.js';
-
-const TOOLS = [
-  { id: 'select', label: 'Select', key: 'V' },
-  { id: 'rectangle', label: 'Rectangle', key: 'R' },
-  { id: 'line', label: 'Line', key: 'L' },
-  { id: 'polyline', label: 'Polyline', key: 'P' },
-] as const;
+import { ALL_TOOLS } from './tools.js';
 
 function fileName(path: string): string {
   return path.split('/').pop() ?? path;
@@ -67,7 +63,7 @@ export function App() {
         return;
       }
 
-      const match = TOOLS.find((tool) => tool.key.toLowerCase() === event.key.toLowerCase());
+      const match = ALL_TOOLS.find((tool) => tool.key.toLowerCase() === event.key.toLowerCase());
       if (match !== undefined) setToolId(match.id);
     };
     window.addEventListener('keydown', onKey);
@@ -95,20 +91,28 @@ export function App() {
           onChange={(event) => store.dispatch(setProjectName(event.target.value))}
         />
 
-        <div className="toolbar" role="toolbar" aria-label="Tools">
-          {TOOLS.map((tool) => (
-            <button
-              key={tool.id}
-              type="button"
-              className={tool.id === toolId ? 'tool active' : 'tool'}
-              data-testid={`tool-${tool.id}`}
-              onClick={() => setToolId(tool.id)}
-              title={`${tool.label} (${tool.key})`}
-            >
-              {tool.label}
-              <kbd>{tool.key}</kbd>
-            </button>
-          ))}
+        <div className="toolbar history" data-testid="history-group">
+          <button
+            type="button"
+            className="tool"
+            data-testid="undo"
+            disabled={!storeState.canUndo}
+            onClick={() => store.undo()}
+            title={
+              storeState.undoLabel === null ? 'Nothing to undo' : `Undo ${storeState.undoLabel}`
+            }
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            className="tool"
+            data-testid="redo"
+            disabled={!storeState.canRedo}
+            onClick={() => store.redo()}
+          >
+            Redo
+          </button>
         </div>
 
         <div className="toolbar">
@@ -141,42 +145,24 @@ export function App() {
           </button>
         </div>
 
-        <div className="toolbar">
-          <button
-            type="button"
-            className="tool"
-            data-testid="undo"
-            disabled={!storeState.canUndo}
-            onClick={() => store.undo()}
-            title={
-              storeState.undoLabel === null ? 'Nothing to undo' : `Undo ${storeState.undoLabel}`
-            }
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            className="tool"
-            data-testid="redo"
-            disabled={!storeState.canRedo}
-            onClick={() => store.redo()}
-          >
-            Redo
-          </button>
-        </div>
-
         <span className="app-hint">
           drag to draw · middle-drag or alt-drag to pan · scroll to zoom · Del removes
         </span>
       </header>
 
       <div className="workspace">
-        <PartsList
-          store={store}
-          project={storeState.document.project}
-          selected={storeState.selection.features}
-        />
-        <CanvasHost store={store} toolId={toolId} nextId={nextId} onStatus={handleStatus} />
+        <div className="left-column">
+          <ToolPalette activeId={toolId} onSelect={setToolId} />
+          <PartsList
+            store={store}
+            project={storeState.document.project}
+            selected={storeState.selection.features}
+          />
+        </div>
+        <div className="canvas-column">
+          <ToolOptions toolId={toolId} />
+          <CanvasHost store={store} toolId={toolId} nextId={nextId} onStatus={handleStatus} />
+        </div>
         <PropertyPanel
           store={store}
           project={storeState.document.project}

@@ -37,6 +37,10 @@ body {
 
 .app {
   display: grid;
+  /* minmax(0, …), not 1fr: a bare auto column grows to the widest row's
+     min-content and drags every other row out with it, which is how one
+     stubborn header pushed the properties panel past the window edge. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
   height: 100%;
 }
@@ -45,6 +49,73 @@ body {
   display: grid;
   grid-template-columns: 200px 1fr 240px;
   min-height: 0;
+}
+
+/* The mode scope and the parts list share the left column; the column owns the
+   edge so the two do not draw a border each. */
+.left-column {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail-group + .rail-group {
+  margin-top: 12px;
+}
+
+.rail-heading {
+  margin: 0 0 2px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rail .tool {
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* The strip is only sometimes there, so the canvas cannot depend on landing in
+   a particular grid row — it takes whatever height the strip leaves. */
+.canvas-column {
+  display: flex;
+  flex-direction: column;
+  /* The canvas is a fixed-size element, so this column's automatic minimum is
+     the canvas's current width — which would stop the workspace shrinking and
+     push the properties panel off screen. .canvas-host escaped that only
+     because it clips its own overflow. */
+  min-width: 0;
+  min-height: 0;
+}
+
+.canvas-column > .canvas-host {
+  flex: 1;
+}
+
+.tool-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
 }
 
 .app-header {
@@ -86,10 +157,18 @@ body {
   cursor: grabbing;
 }
 
+/* The hint is the least important thing in the header, so it is the one that
+   gives when the window narrows. Without this the controls fold instead, and a
+   two-line header is what the whole layout exists to remove. */
 .app-hint {
+  flex: 0 1 auto;
+  min-width: 0;
   margin-left: auto;
+  overflow: hidden;
   color: var(--text-dim);
   font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .app-status b {
@@ -131,8 +210,17 @@ body {
 
 .toolbar {
   display: flex;
+  flex: none;
   gap: 4px;
   align-items: center;
+}
+
+/* Undo and redo are history, not persistence. The header reads identity, then
+   history, then file — and the rule keeps the two groups from blurring. */
+.toolbar.history {
+  margin-right: 6px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
 }
 
 .tool {
@@ -146,6 +234,7 @@ body {
   color: var(--text-dim);
   font: inherit;
   font-size: 12px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -184,9 +273,8 @@ body {
   border-left: 1px solid var(--border);
 }
 
-.workspace > .panel:first-child {
+.left-column > .panel {
   border-left: none;
-  border-right: 1px solid var(--border);
 }
 
 .panel h2 {

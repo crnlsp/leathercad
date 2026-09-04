@@ -450,6 +450,17 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   This is also the first way to draw a concave outline, which analytic offsetting rejects: deriving
   a stitch line from one reports a validation error naming the shape until 9.11 lands. Drawing,
   measuring, saving and printing such a shape all work.
+- **3.5a** ✅ **Done.** Tool palette and window chrome. Built before 3.6 rather than after 3.10,
+  because the header already wrapped to two lines and Phase 3 still adds six tools — placing them
+  into a cramped bar would only mean moving all of them again. Modes move to a grouped left rail
+  (Select alone, then Draw; Modify and Measure appear as their slices land, since an empty heading
+  is noise), history separates from the file actions in the header, and a strip above the canvas is
+  reserved for the active tool's settings — rendering nothing until a tool has one. Three scopes,
+  three homes: document in the header, mode in the rail, selection in the properties panel.
+  See [the design](superpowers/specs/2026-09-04-tool-palette-design.md).
+  Driving the app at 1024 px found two shrink failures the suite could not: a column wrapping the
+  fixed-size canvas would not narrow, and the header's min-content width dragged every other row
+  out with it. Both are now asserted.
 - **3.6** Circle and arc tools.
 - **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
   arc-under-non-uniform-scale rule from [geometry.md](geometry.md) §4.2.

@@ -1,7 +1,7 @@
 # Tool palette and window chrome — design
 
 Date: 2026-09-04
-Status: approved, not yet implemented
+Status: implemented (slice 3.5a)
 Build before: slice 3.6 (circle and arc tools)
 
 ## Problem
