@@ -508,6 +508,15 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   already consumed.
 - **3.9** Vertex editing: add, remove, move, corner ↔ smooth.
 - **3.10** Guides, alignment, and distribution.
+- **3.11** Isolate a tool's overlay from the draw loop. `buildOverlay` runs inside the paint, so
+  anything it throws stops the canvas painting entirely — grid, rulers and every feature, not just
+  the offending preview. Slice 3.6b hit this: the instant after the arc tool's first click the
+  cursor still sits on the point just placed, and a zero-length rubber band threw. Every assertion
+  stayed green; one screenshot showed a blank grid. That tool now guards its own constructors, but
+  the next one will have to remember to, which is the wrong place for the rule to live.
+  Catch per tool, draw the rest of the frame, and surface the failure somewhere a developer sees it
+  — a silently swallowed overlay error is its own trap. Worth a test that a deliberately throwing
+  tool leaves the grid and rulers intact.
 
 ### Phase 4 — The leathercraft domain
 *Ends at M3. The phase that makes this a leathercraft application rather than a drawing program.*
