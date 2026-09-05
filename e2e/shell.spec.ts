@@ -430,3 +430,47 @@ test('the header stays one row when the window narrows', async () => {
     await expect.poll(headerHeight).toBe(wide);
   });
 });
+
+test('draws a circle from its centre and retypes the diameter', async () => {
+  // Centre-out, not corner-to-corner: a hole or a strap end is positioned by
+  // where its middle goes, and the record stores a centre and a radius.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    expect(box).not.toBeNull();
+
+    await window.getByTestId('tool-circle').click();
+    await window.mouse.move(box!.x + 300, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 380, box!.y + 300, { steps: 5 });
+    await window.mouse.up();
+
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+
+    const panel = window.getByTestId('property-panel');
+    const diameter = panel.locator('label', { hasText: /^Diameter/ }).locator('input');
+    await diameter.fill('40');
+    await diameter.press('Enter');
+
+    // pi x 40 = 125.66 mm, computed by the geometry engine rather than the panel.
+    await expect(panel.locator('.readout').first()).toContainText('125.66 mm');
+  });
+});
+
+test('C selects the circle tool and a click alone draws nothing', async () => {
+  await withFreshApp(async (window) => {
+    // Wait for the rail before pressing: keyboard.press waits for nothing, and
+    // the shortcut listener does not exist until React has mounted.
+    await expect(window.getByTestId('tool-rail')).toBeVisible();
+
+    await window.keyboard.press('c');
+    await expect(window.getByTestId('tool-circle')).toHaveClass(/active/);
+
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.mouse.move(box!.x + 200, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.up();
+
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+  });
+});

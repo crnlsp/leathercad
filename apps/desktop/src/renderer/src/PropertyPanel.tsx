@@ -6,12 +6,12 @@ import {
   setPartQuantity,
   setShape,
 } from '@leathercad/document';
-import type { CornerRadii } from '@leathercad/geometry';
-import type { Feature, Part, ParametricShape, Project } from '@leathercad/domain';
+import type { Feature, Part, Project } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
 import { evaluate } from '@leathercad/domain';
 
 import { NumberField } from './NumberField.js';
+import { ShapeEditor } from './shapeEditors/index.js';
 
 /**
  * Exact numeric editing for whatever is selected.
@@ -89,8 +89,8 @@ export function PropertyPanel({
           </span>
         </label>
 
-        {source.kind === 'shape' && source.shape.type === 'rect' ? (
-          <RectFields
+        {source.kind === 'shape' ? (
+          <ShapeEditor
             shape={source.shape}
             onChange={(shape) => store.dispatch(setShape(feature.id, shape))}
           />
@@ -134,84 +134,6 @@ export function PropertyPanel({
         Delete
       </button>
     </aside>
-  );
-}
-
-function RectFields({
-  shape,
-  onChange,
-}: {
-  shape: Extract<ParametricShape, { type: 'rect' }>;
-  onChange: (shape: ParametricShape) => void;
-}) {
-  const setRadius = (corner: keyof CornerRadii, value: number): void => {
-    onChange({ ...shape, radii: { ...shape.radii, [corner]: value } });
-  };
-
-  return (
-    <>
-      <div className="field-pair">
-        <NumberField
-          label="X"
-          value={shape.origin.x}
-          onCommit={(x) => onChange({ ...shape, origin: { ...shape.origin, x } })}
-        />
-        <NumberField
-          label="Y"
-          value={shape.origin.y}
-          onCommit={(y) => onChange({ ...shape, origin: { ...shape.origin, y } })}
-        />
-      </div>
-      <div className="field-pair">
-        <NumberField
-          label="Width"
-          value={shape.width}
-          min={0.01}
-          onCommit={(width) => onChange({ ...shape, width })}
-        />
-        <NumberField
-          label="Height"
-          value={shape.height}
-          min={0.01}
-          onCommit={(height) => onChange({ ...shape, height })}
-        />
-      </div>
-
-      <div className="panel-heading small">Corner radii</div>
-      {/* Laid out to match the corners on screen: top row above, bottom below. */}
-      <div className="field-pair">
-        <NumberField
-          label="↖"
-          value={shape.radii.topLeft}
-          min={0}
-          step={0.5}
-          onCommit={(v) => setRadius('topLeft', v)}
-        />
-        <NumberField
-          label="↗"
-          value={shape.radii.topRight}
-          min={0}
-          step={0.5}
-          onCommit={(v) => setRadius('topRight', v)}
-        />
-      </div>
-      <div className="field-pair">
-        <NumberField
-          label="↙"
-          value={shape.radii.bottomLeft}
-          min={0}
-          step={0.5}
-          onCommit={(v) => setRadius('bottomLeft', v)}
-        />
-        <NumberField
-          label="↘"
-          value={shape.radii.bottomRight}
-          min={0}
-          step={0.5}
-          onCommit={(v) => setRadius('bottomRight', v)}
-        />
-      </div>
-    </>
   );
 }
 

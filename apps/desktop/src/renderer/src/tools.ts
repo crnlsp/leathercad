@@ -29,12 +29,13 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
     label: 'Draw',
     tools: [
       { id: 'rectangle', label: 'Rectangle', key: 'R' },
+      { id: 'circle', label: 'Circle', key: 'C' },
       { id: 'line', label: 'Line', key: 'L' },
       { id: 'polyline', label: 'Polyline', key: 'P' },
     ],
   },
-  // Filled by slices 3.6 (circle, arc), 3.7 (move, rotate, scale) and 3.9
-  // (vertex). Reserved keys: C, A, M, T, S, N, G.
+  // Filled by slices 3.6b (arc), 3.7 (move, rotate, scale) and 3.9 (vertex).
+  // Reserved keys: A, M, T, S, N, G.
   { label: 'Modify', tools: [] },
 ];
 

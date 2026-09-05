@@ -461,7 +461,21 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   Driving the app at 1024 px found two shrink failures the suite could not: a column wrapping the
   fixed-size canvas would not narrow, and the header's min-content width dragged every other row
   out with it. Both are now asserted.
-- **3.6** Circle and arc tools.
+- **3.6** ✅ **Done.** Circle tool. Drag out from the centre — a hole, a rivet and a strap end are
+  all positioned by where their middle goes, and the record already stored a centre and a radius, so
+  the gesture and the parameters agree. No Shift constraint: a circle is already uniform.
+  The panel asks for a **diameter** and stores a radius, quantising after halving, because the
+  diameter is the number stamped on a punch. `circle` was already a `ParametricShape` with a schema
+  and an evaluator, so this slice touches no persistence at all — which is why it was split from the
+  arc.
+  Also the property-panel refactor: one editor per shape under `shapeEditors/`, dispatched by a
+  single switch whose `never` check makes a shape without an editor a **compile error**. Verified by
+  adding a throwaway variant and watching the build stop. `shapePart` now states the closed/open
+  rule once for parametric shapes, mirroring `pathPart`.
+  See [the design](superpowers/specs/2026-09-04-circle-and-arc-tools-design.md).
+- **3.6b** Arc tool: three points — start, end, then the bulge — stored as parameters, with Shift
+  constraining each point to 15° as the polyline does. Owns the `arc` shape variant and every
+  schema change, including the first `fixtures/format/` baseline.
 - **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
   arc-under-non-uniform-scale rule from [geometry.md](geometry.md) §4.2.
 - **3.8** ✅ **Done.** Property panel with exact millimetre fields for position, size and all four

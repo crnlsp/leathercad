@@ -14,6 +14,7 @@ export { DocumentStore } from './store.js';
 export {
   addFeature,
   addPart,
+  circleShape,
   deleteFeatures,
   emptyDocument,
   emptyProject,
@@ -26,5 +27,6 @@ export {
   setPartQuantity,
   setProjectName,
   setShape,
+  shapePart,
   translateFeatures,
 } from './commands.js';

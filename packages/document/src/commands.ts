@@ -119,16 +119,76 @@ function translateFeature(
     };
   }
 
-  const shape = feature.source.shape;
-  const moved: ParametricShape =
-    shape.type === 'rect'
-      ? { ...shape, origin: { x: shape.origin.x + deltaMm.x, y: shape.origin.y + deltaMm.y } }
-      : { ...shape, centre: { x: shape.centre.x + deltaMm.x, y: shape.centre.y + deltaMm.y } };
-
-  return { ...feature, source: { kind: 'shape', shape: moved } };
+  return {
+    ...feature,
+    source: { kind: 'shape', shape: translateShape(feature.source.shape, deltaMm) },
+  };
 }
 
-/** Convenience for the rectangle tool: a new part holding one cut contour. */
+/**
+ * Moves a parametric shape by changing the parameter that locates it.
+ *
+ * A switch rather than "rect uses origin, everything else uses centre": that
+ * shortcut silently does the wrong thing the first time a shape is located by
+ * neither. Here the compiler stops on the new variant instead.
+ */
+function translateShape(shape: ParametricShape, deltaMm: Vec2): ParametricShape {
+  switch (shape.type) {
+    case 'rect':
+      return { ...shape, origin: { x: shape.origin.x + deltaMm.x, y: shape.origin.y + deltaMm.y } };
+    case 'circle':
+      return { ...shape, centre: { x: shape.centre.x + deltaMm.x, y: shape.centre.y + deltaMm.y } };
+  }
+}
+
+/**
+ * A part holding one parametric shape.
+ *
+ * The closed/open rule is the same product decision `pathPart` makes for drawn
+ * geometry, stated once here for parametric shapes: a shape enclosing an area
+ * is something to cut out, so it becomes a `cut-contour`; one with two ends is
+ * a `marking-line`, because filing it as an outline would put a part in the
+ * list that can never be cut.
+ */
+export function shapePart(
+  partId: PartId,
+  featureId: FeatureId,
+  name: string,
+  shape: ParametricShape,
+): Part {
+  const source = { kind: 'shape', shape } as const;
+  const feature: Feature = enclosesArea(shape)
+    ? {
+        id: featureId,
+        kind: 'cut-contour',
+        role: 'outer',
+        name: 'Outline',
+        visible: true,
+        locked: false,
+        source,
+      }
+    : {
+        id: featureId,
+        kind: 'marking-line',
+        purpose: 'alignment',
+        name: 'Line',
+        visible: true,
+        locked: false,
+        source,
+      };
+
+  return { id: partId, name, quantity: 1, features: [feature] };
+}
+
+/** Whether a shape bounds an inside. Every new shape must answer this. */
+function enclosesArea(shape: ParametricShape): boolean {
+  switch (shape.type) {
+    case 'rect':
+    case 'circle':
+      return true;
+  }
+}
+
 /**
  * A part holding one freehand path.
  *
@@ -163,28 +223,19 @@ export function pathPart(partId: PartId, featureId: FeatureId, name: string, pat
   return { id: partId, name, quantity: 1, features: [feature] };
 }
 
+/**
+ * A part holding one rectangle.
+ *
+ * Kept as a named helper because the rectangle tool and a good deal of the test
+ * suite read better for it; the behaviour is `shapePart`'s, stated once.
+ */
 export function rectanglePart(
   partId: PartId,
   featureId: FeatureId,
   name: string,
   shape: Extract<ParametricShape, { type: 'rect' }>,
 ): Part {
-  return {
-    id: partId,
-    name,
-    quantity: 1,
-    features: [
-      {
-        id: featureId,
-        kind: 'cut-contour',
-        role: 'outer',
-        name: 'Outline',
-        visible: true,
-        locked: false,
-        source: { kind: 'shape', shape },
-      },
-    ],
-  };
+  return shapePart(partId, featureId, name, shape);
 }
 
 export function rectShape(
@@ -194,6 +245,17 @@ export function rectShape(
   radius = 0,
 ): Extract<ParametricShape, { type: 'rect' }> {
   return { type: 'rect', origin, width, height, radii: Shapes.uniformRadii(radius) };
+}
+
+/**
+ * The record stores a radius. The property panel asks for a diameter, because
+ * that is the number on a punch — the conversion belongs there, not here.
+ */
+export function circleShape(
+  centre: Vec2,
+  radius: number,
+): Extract<ParametricShape, { type: 'circle' }> {
+  return { type: 'circle', centre, radius };
 }
 
 export function setProjectName(name: string): Command {

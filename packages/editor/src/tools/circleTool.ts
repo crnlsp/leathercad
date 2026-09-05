@@ -1,0 +1,105 @@
+import { addPart, circleShape, shapePart } from '@leathercad/document';
+import { Shapes, type Vec2 } from '@leathercad/geometry';
+import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+
+import type { Tool, ToolContext } from '../tool.js';
+
+/**
+ * Draws a circle by dragging out from its centre.
+ *
+ * Centre-out rather than corner-to-corner like the rectangle: a hole, a rivet
+ * and a strap end are all positioned by where their middle goes, and the
+ * record stores a centre and a radius, so the gesture and the parameters agree.
+ *
+ * No Shift constraint. A circle is already uniform, so there is nothing for it
+ * to hold square.
+ */
+type State =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'dragging'; readonly centreMm: Vec2; readonly currentMm: Vec2 };
+
+/** Below this a drag is a misclick, and a zero-radius part cannot be selected to delete. */
+const MIN_RADIUS_MM = 0.01;
+
+export function createCircleTool(nextId: () => string): Tool {
+  let state: State = { kind: 'idle' };
+
+  const reset = (ctx: ToolContext): void => {
+    state = { kind: 'idle' };
+    ctx.invalidate();
+  };
+
+  return {
+    id: 'circle',
+    label: 'Circle',
+    cursor: 'crosshair',
+
+    onPointerDown(ctx, event) {
+      if (event.button !== 0) return;
+      state = { kind: 'dragging', centreMm: event.at, currentMm: event.at };
+      ctx.invalidate();
+    },
+
+    onPointerMove(ctx, event) {
+      if (state.kind !== 'dragging') return;
+      state = { ...state, currentMm: event.at };
+      ctx.invalidate();
+    },
+
+    onPointerUp(ctx, event) {
+      if (state.kind !== 'dragging') return;
+
+      // Read the state out before resetting: `reset` reassigns the closure
+      // variable, and the narrowing survives the call because the assignment
+      // happens in another function.
+      const centreMm = state.centreMm;
+      const radius = distance(centreMm, event.at);
+      reset(ctx);
+
+      if (radius < MIN_RADIUS_MM) return;
+
+      const featureId = nextId();
+      ctx.dispatch(addPart(shapePart(nextId(), featureId, 'Panel', circleShape(centreMm, radius))));
+      ctx.store.select([featureId]);
+    },
+
+    onKey(ctx, event) {
+      if (event.key === 'Escape') reset(ctx);
+    },
+
+    buildOverlay(): DisplayList {
+      if (state.kind !== 'dragging') return { items: [] };
+
+      const { centreMm, currentMm } = state;
+      const radius = distance(centreMm, currentMm);
+      if (radius < MIN_RADIUS_MM) return { items: [] };
+
+      return {
+        items: [
+          pathItem('construction', Shapes.circle(centreMm, radius), {
+            colour: '#ffcc44',
+            widthPx: 1,
+            dashPx: [4, 3],
+          }),
+          // Diameter, not radius: it is the number on a punch, and it is what
+          // the property panel will ask for once this is committed.
+          textItem(
+            'annotation',
+            { x: centreMm.x, y: centreMm.y - radius - 3 },
+            `⌀ ${(radius * 2).toFixed(1)} mm`,
+            12,
+            '#ffcc44',
+          ),
+        ],
+      };
+    },
+
+    onDeactivate(ctx) {
+      reset(ctx);
+    },
+  };
+}
+
+function distance(a: Vec2, b: Vec2): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
