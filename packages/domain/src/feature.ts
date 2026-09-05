@@ -1,4 +1,4 @@
-import type { Mm, Ulid } from '@leathercad/core';
+import type { Mm, Radians, Ulid } from '@leathercad/core';
 import type { CornerRadii, Path, Vec2 } from '@leathercad/geometry';
 
 import type { LayerRole } from './layerRole.js';
@@ -26,7 +26,19 @@ export type ParametricShape =
       readonly height: Mm;
       readonly radii: CornerRadii;
     }
-  | { readonly type: 'circle'; readonly centre: Vec2; readonly radius: Mm };
+  | { readonly type: 'circle'; readonly centre: Vec2; readonly radius: Mm }
+  /**
+   * Mirrors `ArcSegment` field for field, including the **sweep** rather than
+   * an end angle: an end angle alone does not say which way round the circle
+   * the arc travelled, and for a three-point arc that is the whole question.
+   */
+  | {
+      readonly type: 'arc';
+      readonly centre: Vec2;
+      readonly radius: Mm;
+      readonly startAngle: Radians;
+      readonly sweepAngle: Radians;
+    };
 
 /**
  * Where a feature's geometry comes from.

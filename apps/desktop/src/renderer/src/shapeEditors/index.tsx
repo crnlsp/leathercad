@@ -1,5 +1,6 @@
 import type { ParametricShape } from '@leathercad/domain';
 
+import { ArcEditor } from './ArcEditor.js';
 import { CircleEditor } from './CircleEditor.js';
 import { RectEditor } from './RectEditor.js';
 
@@ -29,6 +30,8 @@ export function ShapeEditor({
       return <RectEditor shape={shape} onChange={onChange} />;
     case 'circle':
       return <CircleEditor shape={shape} onChange={onChange} />;
+    case 'arc':
+      return <ArcEditor shape={shape} onChange={onChange} />;
     default:
       return assertNever(shape);
   }

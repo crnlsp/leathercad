@@ -4,6 +4,7 @@ import { PathOps, RectOps, type Vec2 } from '@leathercad/geometry';
 import {
   ToolManager,
   Viewport,
+  createArcTool,
   createCircleTool,
   createLineTool,
   createPolylineTool,
@@ -64,6 +65,7 @@ export function CanvasHost({
       createSelectTool(),
       createRectangleTool(nextId),
       createCircleTool(nextId),
+      createArcTool(nextId),
       createLineTool(nextId),
       createPolylineTool(nextId),
     ],

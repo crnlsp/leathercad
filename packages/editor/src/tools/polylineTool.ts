@@ -3,6 +3,7 @@ import { dist, polyline, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import type { Tool, ToolContext } from '../tool.js';
+import { constrainToAngleStep } from './angleConstraint.js';
 
 type State =
   | { readonly kind: 'idle' }
@@ -13,9 +14,6 @@ type State =
       /** Where the cursor is now — the rubber segment's far end. */
       readonly cursor: Vec2;
     };
-
-/** Shift snaps to 15° — fine enough for a 30° gusset, coarse enough to feel. */
-const ANGLE_STEP = Math.PI / 12;
 
 /** How near the first point a click must land to close the shape, in pixels. */
 const CLOSE_RADIUS_PX = 10;
@@ -159,14 +157,5 @@ function polylineLike(
 
 /** Shift snaps the new segment's direction to a multiple of 15°. */
 function constrain(points: readonly Vec2[], at: Vec2, shift: boolean): Vec2 {
-  const from = points[points.length - 1];
-  if (!shift || from === undefined) return at;
-
-  const dx = at.x - from.x;
-  const dy = at.y - from.y;
-  const run = Math.hypot(dx, dy);
-  if (run === 0) return at;
-
-  const snapped = Math.round(Math.atan2(dy, dx) / ANGLE_STEP) * ANGLE_STEP;
-  return { x: from.x + Math.cos(snapped) * run, y: from.y + Math.sin(snapped) * run };
+  return constrainToAngleStep(points[points.length - 1], at, shift);
 }

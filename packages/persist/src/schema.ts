@@ -39,6 +39,16 @@ const parametricShape = z.discriminatedUnion('type', [
     radii: cornerRadii,
   }),
   z.object({ type: z.literal('circle'), centre: vec2, radius: nonNegativeMm }),
+  // Mirrors the arc *segment* below, deliberately: the parametric record and
+  // the geometry it evaluates to carry the same four numbers, so neither can
+  // drift into meaning something the other does not.
+  z.object({
+    type: z.literal('arc'),
+    centre: vec2,
+    radius: nonNegativeMm,
+    startAngle: z.number().finite(),
+    sweepAngle: z.number().finite(),
+  }),
 ]);
 
 const segment = z.discriminatedUnion('kind', [

@@ -14,6 +14,7 @@ export { DocumentStore } from './store.js';
 export {
   addFeature,
   addPart,
+  arcShape,
   circleShape,
   deleteFeatures,
   emptyDocument,

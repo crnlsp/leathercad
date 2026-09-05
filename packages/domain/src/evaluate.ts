@@ -1,4 +1,4 @@
-import { Shapes, type Path } from '@leathercad/geometry';
+import { PathOps, Shapes, arc, type Path } from '@leathercad/geometry';
 
 import type { Feature, GeometrySource, ParametricShape, Part, Project } from './feature.js';
 import { roleOf } from './feature.js';
@@ -89,6 +89,10 @@ function pathForShape(shape: ParametricShape): Path {
       return Shapes.roundedRect(shape.origin, shape.width, shape.height, shape.radii);
     case 'circle':
       return Shapes.circle(shape.centre, shape.radius);
+    case 'arc':
+      // Open: an arc has two ends, so it is a run to mark, not an outline to
+      // cut. `shapePart` files it as a marking-line for the same reason.
+      return PathOps.open([arc(shape.centre, shape.radius, shape.startAngle, shape.sweepAngle)]);
   }
 }
 

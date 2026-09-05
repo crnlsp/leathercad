@@ -473,9 +473,27 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   adding a throwaway variant and watching the build stop. `shapePart` now states the closed/open
   rule once for parametric shapes, mirroring `pathPart`.
   See [the design](superpowers/specs/2026-09-04-circle-and-arc-tools-design.md).
-- **3.6b** Arc tool: three points — start, end, then the bulge — stored as parameters, with Shift
-  constraining each point to 15° as the polyline does. Owns the `arc` shape variant and every
-  schema change, including the first `fixtures/format/` baseline.
+- **3.6b** ✅ **Done.** Arc tool: click start, click end, then bend it through a third point. Stored
+  as parameters — centre, radius, start angle and **sweep** — so it can be retyped as exactly 40 mm
+  and so 3.7 resizes it through [geometry.md](geometry.md) §4.2 rule 1 rather than converting it to
+  cubics. Sweep rather than an end angle because an end angle alone does not say which way round the
+  circle the arc went, which is the whole question a three-point gesture answers.
+  No new geometry: `arcThroughPoints` already solves the circumcentre and returns a segment holding
+  those four numbers, and it already owns what "degenerate" means — it throws on coincident points
+  and returns a *straight* segment for collinear ones, so the tool declines anything that is not an
+  arc rather than forming a second opinion about collinearity.
+  An arc has two ends, so it is a `marking-line`, not a cut contour. Shift constrains each point to
+  15°, sharing one `constrainToAngleStep` with the polyline so the key cannot come to mean two
+  things.
+  The format stays at **version 1**, with the variant added in place: nothing has shipped, so there
+  was no compatibility to protect. That latitude ends at the first release — file-format §4.2 rule 1
+  applies from then on. `fixtures/format/v1.lcp` is the corpus this creates, written by the current
+  writer and holding one of every shape; regenerate with `UPDATE_FIXTURES=1`.
+  Two gotchas worth not rediscovering. **`stableJson` rounds every number to six decimals**, which
+  is sub-quantum for millimetres but is 3e-4 mm at a 300 mm radius for an *angle* — recorded in
+  `lcp.test.ts`, and the reason the fixture uses a round number of radians. And **an overlay that
+  throws stops the whole draw loop**: a zero-length rubber band the instant after the first click
+  blanked the grid and rulers, which no assertion caught and one screenshot did.
 - **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
   arc-under-non-uniform-scale rule from [geometry.md](geometry.md) §4.2.
 - **3.8** ✅ **Done.** Property panel with exact millimetre fields for position, size and all four

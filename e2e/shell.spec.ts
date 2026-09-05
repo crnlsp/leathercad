@@ -474,3 +474,50 @@ test('C selects the circle tool and a click alone draws nothing', async () => {
     await expect(window.getByTestId('part-count')).toHaveText('0');
   });
 });
+
+test('draws an arc through three points and saves its parameters', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    expect(box).not.toBeNull();
+
+    await window.getByTestId('tool-arc').click();
+
+    // Start, end, then the bulge — the arc bends through the third click.
+    await window.mouse.click(box!.x + 250, box!.y + 400);
+    await window.mouse.click(box!.x + 450, box!.y + 400);
+    await window.mouse.move(box!.x + 350, box!.y + 300);
+    await window.mouse.click(box!.x + 350, box!.y + 300);
+
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    // Two ends, so it is a run to mark rather than an outline to cut.
+    const panel = window.getByTestId('property-panel');
+    await expect(panel).toContainText('Marking line');
+    await expect(panel.locator('label', { hasText: /^Radius/ })).toBeVisible();
+    await expect(panel.locator('label', { hasText: /^Sweep/ })).toBeVisible();
+
+    const radius = panel.locator('label', { hasText: /^Radius/ }).locator('input');
+    await radius.fill('30');
+    await radius.press('Enter');
+
+    await window.getByTestId('undo').click();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await window.getByTestId('undo').click();
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+  });
+});
+
+test('three points in a line make no arc', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-arc').click();
+    await window.mouse.click(box!.x + 250, box!.y + 400);
+    await window.mouse.click(box!.x + 450, box!.y + 400);
+    await window.mouse.click(box!.x + 350, box!.y + 400);
+
+    // An infinite radius is not an arc, and a zero-area part could never be
+    // selected to delete.
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+  });
+});

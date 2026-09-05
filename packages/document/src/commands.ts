@@ -137,6 +137,8 @@ function translateShape(shape: ParametricShape, deltaMm: Vec2): ParametricShape 
     case 'rect':
       return { ...shape, origin: { x: shape.origin.x + deltaMm.x, y: shape.origin.y + deltaMm.y } };
     case 'circle':
+    case 'arc':
+      // The angles are unchanged by a translation; only the centre moves.
       return { ...shape, centre: { x: shape.centre.x + deltaMm.x, y: shape.centre.y + deltaMm.y } };
   }
 }
@@ -186,6 +188,9 @@ function enclosesArea(shape: ParametricShape): boolean {
     case 'rect':
     case 'circle':
       return true;
+    case 'arc':
+      // Two ends, so there is nothing inside it to cut out.
+      return false;
   }
 }
 
@@ -251,6 +256,15 @@ export function rectShape(
  * The record stores a radius. The property panel asks for a diameter, because
  * that is the number on a punch — the conversion belongs there, not here.
  */
+export function arcShape(
+  centre: Vec2,
+  radius: number,
+  startAngle: number,
+  sweepAngle: number,
+): Extract<ParametricShape, { type: 'arc' }> {
+  return { type: 'arc', centre, radius, startAngle, sweepAngle };
+}
+
 export function circleShape(
   centre: Vec2,
   radius: number,

@@ -15,6 +15,7 @@ export { featuresWithin, hitTest } from './hitTest.js';
 export type { SnapCandidate, SnapIndex, SnapIndexOptions, SnapKind, SnapOptions } from './snap.js';
 export { buildSnapIndex, snap, snapGlyph } from './snap.js';
 
+export { createArcTool } from './tools/arcTool.js';
 export { createCircleTool } from './tools/circleTool.js';
 export { createLineTool, createPolylineTool } from './tools/polylineTool.js';
 export { createRectangleTool } from './tools/rectangleTool.js';

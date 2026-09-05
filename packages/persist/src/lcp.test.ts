@@ -234,3 +234,56 @@ describe('rejecting bad input', () => {
     expect(() => loadProject(archive(project))).toThrow(/quantity/);
   });
 });
+
+describe('arcs', () => {
+  it('round-trips an arbitrary angle to within the serialiser’s six decimals', () => {
+    // Real arcs come from three clicked points, so their angles are arbitrary
+    // floats rather than round numbers. `stableJson` rounds every number to
+    // six decimals; on an angle that is 1e-6 rad, which is 3e-4 mm at a 300 mm
+    // radius — larger than the 1e-4 mm storage quantum, and far below anything
+    // that can be cut, marked or measured in leather. Recorded here so the
+    // limit is a known property of the format rather than a surprise.
+    const project: Project = {
+      id: 'p',
+      name: 'Arc',
+      settings: DEFAULT_SETTINGS,
+      parts: [
+        {
+          id: 'part-1',
+          name: 'Curve',
+          quantity: 1,
+          features: [
+            {
+              id: 'feat-1',
+              kind: 'marking-line',
+              purpose: 'alignment',
+              name: 'Line',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'shape',
+                shape: {
+                  type: 'arc',
+                  centre: { x: 3, y: 4 },
+                  radius: 18,
+                  startAngle: Math.PI / 7,
+                  sweepAngle: Math.PI / 3,
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const loaded = loadProject(saveProject(project, options));
+    const source = loaded.project.parts[0]?.features[0]?.source;
+    const shape = source?.kind === 'shape' ? source.shape : null;
+
+    expect(shape?.type).toBe('arc');
+    if (shape?.type !== 'arc') return;
+    expect(shape.startAngle).toBeCloseTo(Math.PI / 7, 6);
+    expect(shape.sweepAngle).toBeCloseTo(Math.PI / 3, 6);
+    expect(shape.radius).toBe(18);
+  });
+});

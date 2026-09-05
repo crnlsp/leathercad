@@ -1,7 +1,7 @@
 # Circle and arc tools (slice 3.6) — design
 
 Date: 2026-09-04
-Status: approved, not yet implemented
+Status: implemented (3.6 circle, 3.6b arc)
 Follows: slice 3.5a (tool palette), which reserved C and A in the Draw group
 
 ## Goal
