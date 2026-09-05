@@ -120,6 +120,16 @@ export function createSelectTool(): Tool {
       }
     },
 
+    /**
+     * While a move is in progress, the moving features snap to everything
+     * except themselves. Without this a dragged panel catches its own corner
+     * the instant it leaves it, and cannot be moved at all.
+     */
+    snapExclusions(ctx) {
+      if (state.kind !== 'moving') return [];
+      return [...ctx.store.getState().selection.features];
+    },
+
     buildOverlay(): DisplayList {
       if (state.kind !== 'band') return { items: [] };
 

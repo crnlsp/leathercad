@@ -688,3 +688,36 @@ test('deleting an outline takes its stitch line and holes with it', async () => 
     await expect(window.getByTestId('part-count')).toHaveText('1');
   });
 });
+
+test("a second panel starts exactly on the first panel's corner", async () => {
+  // Snapping is what makes a drawn point trustworthy. Without it a corner
+  // dropped "on" another corner is a fraction of a millimetre away, which is
+  // invisible on screen and wrong on leather.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const panel = window.getByTestId('property-panel');
+    const numberIn = async (label: string): Promise<number> =>
+      Number(await panel.getByLabel(label).inputValue());
+
+    const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
+      await window.mouse.move(box!.x + x1, box!.y + y1);
+      await window.mouse.down();
+      await window.mouse.move(box!.x + x2, box!.y + y2, { steps: 4 });
+      await window.mouse.up();
+    };
+
+    await window.getByTestId('tool-rectangle').click();
+    await drag(140, 140, 340, 260);
+    const firstX = await numberIn('X');
+
+    // Start the second panel three pixels off the first one's lower-left
+    // corner — close enough to mean it, far enough to miss by hand — and drag
+    // away from it, so that corner stays this rectangle's origin and the two
+    // X readings are the same number rather than a sum of two rounded ones.
+    await window.getByTestId('tool-rectangle').click();
+    await drag(137, 263, 250, 340);
+
+    await expect(window.getByTestId('part-count')).toHaveText('2');
+    expect(await numberIn('X')).toBeCloseTo(firstX, 3);
+  });
+});

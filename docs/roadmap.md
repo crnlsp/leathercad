@@ -434,6 +434,36 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   A fixture caught something worth keeping: two lines crossing at (10,10) also meet at *both* their
   midpoints, so the test asserting `intersection` legitimately got `midpoint`. The fixture moved;
   the priority order did not.
+- **3.3b** ✅ **Done.** Wiring the snap engine to the tools, which 3.3 built and nothing used.
+  `buildSnapIndex` had **zero callers outside its own tests** for four slices — the engine was
+  complete, property-tested and dead, while M2 claimed the app snapped and it did not. Found while
+  designing 4.7, because a fold line placed by eyeball is a pattern that gets cut wrong.
+  Snapping happens in **`ToolManager`**, once, before any tool sees the event. A tool therefore
+  cannot forget to snap and a tool written later inherits it without knowing it exists — the
+  alternative, snapping in each tool, is four copies today and a missing one every time a tool is
+  added. Tools that *move* geometry declare `snapExclusions`; the select tool returns its dragged
+  selection, because a shape that catches its own corner cannot be moved at all.
+  The index is rebuilt when the project **object** changes, reusing the identity-as-cache-key trick
+  from 4.1 — structural sharing means a new object is exactly the case where geometry could have
+  moved.
+  **Ctrl suspends snapping**, for a point wanted near geometry rather than on it. Not Alt: Alt
+  already pans, and one key meaning two things is how a modifier stops being learnable.
+  Two things only running the app caught, both invisible to every assertion.
+  **A hovering pointer asks for no repaint.** `handlePointerMove` invalidates only when panning and
+  otherwise leaves it to the tool, and an idle tool has nothing to redraw — so the glyph was
+  computed correctly and never painted. The manager now asks for a repaint when the caught snap
+  *changes*, which is also the cheapest correct rule.
+  **The glyph was the selection colour.** `#ffd166` against a selection drawn `#ffcc44`: the marker
+  disappeared into the very outline it was pointing at, which is the one thing it exists not to do.
+  Magenta is the only hue no layer role uses.
+  And the **status readout showed the raw cursor**, not the snapped point — 61.50 while a click
+  would commit 62.5. Not a rounding difference; the wrong number, in the place the user looks to
+  check exactly this.
+  **Grid snapping is deliberately off.** The grid on screen is adaptive to zoom
+  (`niceTickStepMm`), so snapping to it would make the same drag land on 90 mm at one magnification
+  and 90.0 at another — the one property a 1:1 tool cannot have. `settings.gridSpacingMm` exists but
+  nothing draws it, and snapping to an invisible grid is worse than not snapping. Turning it on
+  means reconciling those two first.
 - **3.4** ✅ **Done → M2.** Drag to draw, shift constrains to a square, live millimetre
   dimensions in the overlay, Escape abandons. Creates a real `cut-contour` on a new part, not a
   generic path. Per-corner radii and exact numeric entry arrived with the property panel (3.8).

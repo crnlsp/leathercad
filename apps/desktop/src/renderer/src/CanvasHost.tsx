@@ -257,6 +257,9 @@ export function CanvasHost({
       const viewport = viewportRef.current;
       const panning = panningRef.current;
 
+      const rect = event.currentTarget.getBoundingClientRect();
+      const raw = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
+
       if (panning !== null) {
         viewport.panByPx(
           (event.clientX - panning.x) * viewport.dpr,
@@ -264,12 +267,15 @@ export function CanvasHost({
         );
         panningRef.current = { x: event.clientX, y: event.clientY };
         invalidate();
-      } else {
-        managerRef.current?.pointerMove(toInput(event));
+        setCursorMm(raw);
+        return;
       }
 
-      const rect = event.currentTarget.getBoundingClientRect();
-      setCursorMm(viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top));
+      managerRef.current?.pointerMove(toInput(event));
+      // The snapped point when there is one: the readout has to agree with
+      // what a click would commit, or it is telling the user the wrong number
+      // at exactly the moment they are relying on it.
+      setCursorMm(managerRef.current?.snapPoint() ?? raw);
     },
     [invalidate, toInput],
   );

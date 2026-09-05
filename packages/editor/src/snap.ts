@@ -297,5 +297,14 @@ export function snapGlyph(
   }
 }
 
-/** Distinct from every layer role, so a snap marker is never mistaken for geometry. */
-const SNAP_COLOUR = '#ffd166';
+/**
+ * Distinct from every layer role, so a snap marker is never mistaken for
+ * geometry — and distinct from the **selection** colour, which is the case
+ * that actually bites: the glyph was `#ffd166` against a selection drawn
+ * `#ffcc44`, so the marker vanished into the very outline it was pointing at.
+ * A glyph exists to say which target is about to be committed to, and one that
+ * cannot be picked out from the highlight says nothing.
+ *
+ * Magenta is the only hue no layer role uses.
+ */
+const SNAP_COLOUR = '#e86bff';

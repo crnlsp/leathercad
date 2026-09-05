@@ -1,7 +1,10 @@
+import { approxEq } from '@leathercad/core';
 import type { Vec2 } from '@leathercad/geometry';
 import type { Command, DocumentStore } from '@leathercad/document';
+import { evaluate, type FeatureId, type Project, type ResolvedProject } from '@leathercad/domain';
 import type { DisplayList } from '@leathercad/render';
 
+import { buildSnapIndex, snap, snapGlyph, type SnapCandidate, type SnapIndex } from './snap.js';
 import type { Viewport } from './viewport.js';
 
 /** A pointer event, already converted to millimetres. */
@@ -59,6 +62,14 @@ export interface Tool {
   buildOverlay?(ctx: ToolContext): DisplayList;
 
   /**
+   * Features this tool is currently moving, which must not snap to themselves.
+   *
+   * Snapping a shape to its own corner would pin it in place — the reason
+   * `SnapOptions.exclude` exists. A tool that moves nothing omits this.
+   */
+  snapExclusions?(ctx: ToolContext): readonly FeatureId[];
+
+  /**
    * Something the user needs to read, for as long as it is true.
    *
    * Drawn in the status bar rather than on the canvas: canvas text sits at the
@@ -72,9 +83,42 @@ export interface Tool {
   onDeactivate?(ctx: ToolContext): void;
 }
 
-/** Routes input to the active tool. */
+/** Shared because a tool that moves nothing asks for this on every event. */
+const NOTHING_EXCLUDED: readonly FeatureId[] = [];
+
+/**
+ * Whether two snap results would draw the same glyph.
+ *
+ * Only used to decide whether a repaint is owed, so a difference smaller than
+ * `approxEq`'s epsilon is correctly treated as no change: it could not be seen.
+ */
+function sameSnap(a: SnapCandidate | null, b: SnapCandidate | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.kind === b.kind && approxEq(a.point.x, b.point.x) && approxEq(a.point.y, b.point.y);
+}
+
+/**
+ * Routes input to the active tool.
+ *
+ * Every pointer position is **snapped here**, once, before any tool sees it.
+ * A tool therefore cannot forget to snap, and one arriving later inherits it
+ * without knowing it exists — which is the only way the behaviour stays
+ * consistent across a growing set of tools.
+ */
 export class ToolManager {
   private active: Tool;
+
+  /** The snap the last pointer event caught, for the overlay glyph. */
+  private caught: SnapCandidate | null = null;
+
+  /**
+   * The snap index, and the project it was built from.
+   *
+   * Rebuilt when the project object changes — which, with immutable updates and
+   * structural sharing, is exactly when the geometry could have moved. The same
+   * identity-as-cache-key trick `evaluate` uses.
+   */
+  private index: { project: Project; resolved: ResolvedProject; index: SnapIndex } | null = null;
 
   constructor(
     private readonly context: ToolContext,
@@ -93,6 +137,17 @@ export class ToolManager {
     return this.active.notice?.(this.context) ?? null;
   }
 
+  /**
+   * Where a click would actually land, when a snap has been caught.
+   *
+   * The readout has to show this rather than the raw cursor: a status bar
+   * reading 61.50 while the point about to be committed is 62.5 is not a
+   * rounding difference, it is the wrong number.
+   */
+  snapPoint(): Vec2 | null {
+    return this.caught?.point ?? null;
+  }
+
   get available(): readonly Tool[] {
     return this.tools;
   }
@@ -105,19 +160,65 @@ export class ToolManager {
     // would survive into the next tool.
     this.active.onDeactivate?.(this.context);
     this.active = next;
+    // A glyph left over from the previous tool would advertise a snap the new
+    // one has not been offered.
+    this.caught = null;
     this.context.invalidate();
   }
 
   pointerDown(event: PointerInput): void {
-    this.active.onPointerDown?.(this.context, event);
+    this.active.onPointerDown?.(this.context, this.snapped(event));
   }
 
   pointerMove(event: PointerInput): void {
-    this.active.onPointerMove?.(this.context, event);
+    this.active.onPointerMove?.(this.context, this.snapped(event));
   }
 
   pointerUp(event: PointerInput): void {
-    this.active.onPointerUp?.(this.context, event);
+    this.active.onPointerUp?.(this.context, this.snapped(event));
+  }
+
+  /**
+   * The event with its position moved onto the nearest snap target.
+   *
+   * **Ctrl suspends it**, for the times a point is wanted near geometry rather
+   * than on it. Alt is not available — it already pans.
+   *
+   * Grid snapping is deliberately left off. The grid on screen is adaptive to
+   * zoom, so snapping to it would make the same drag land on 90 mm at one
+   * magnification and 90.0 at another; `settings.gridSpacingMm` exists but
+   * nothing draws it, and snapping to a grid the user cannot see is worse than
+   * not snapping. Turning it on means reconciling those two first.
+   */
+  private snapped(event: PointerInput): PointerInput {
+    const before = this.caught;
+    this.caught = event.ctrlKey ? null : this.findSnap(event);
+
+    // A hovering pointer changes no document, and an idle tool asks for no
+    // repaint — so without this the glyph is computed and never drawn until
+    // the canvas happens to be dirtied by something else.
+    if (!sameSnap(before, this.caught)) this.context.invalidate();
+
+    return this.caught === null ? event : { ...event, at: this.caught.point };
+  }
+
+  private findSnap(event: PointerInput): SnapCandidate | null {
+    const { resolved, index } = this.snapIndex();
+    return snap(index, resolved, event.at, {
+      // A pick radius in pixels, so the feel is identical at any zoom — the
+      // same rule `hitTest` follows. See CLAUDE.md invariant 1.
+      toleranceMm: this.context.viewport.pickToleranceMm(),
+      exclude: this.active.snapExclusions?.(this.context) ?? NOTHING_EXCLUDED,
+    });
+  }
+
+  private snapIndex(): { resolved: ResolvedProject; index: SnapIndex } {
+    const project = this.context.store.getState().document.project;
+    if (this.index === null || this.index.project !== project) {
+      const resolved = evaluate(project);
+      this.index = { project, resolved, index: buildSnapIndex(resolved) };
+    }
+    return this.index;
   }
 
   key(event: KeyInput): void {
@@ -125,6 +226,13 @@ export class ToolManager {
   }
 
   overlay(): DisplayList {
-    return this.active.buildOverlay?.(this.context) ?? { items: [] };
+    const items = this.active.buildOverlay?.(this.context).items ?? [];
+    if (this.caught === null) return { items };
+
+    // The glyph rides on top of the tool's own feedback: which kind of snap is
+    // about to be committed to matters more than a rubber band, because a
+    // corner and the edge through it are a fraction of a millimetre apart on
+    // screen and very different in the file.
+    return { items: [...items, ...snapGlyph(this.caught, this.context.viewport.scale)] };
   }
 }
