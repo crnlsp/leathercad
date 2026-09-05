@@ -1,11 +1,14 @@
-import type { Ulid } from '@leathercad/core';
+import type { Mm, Ulid } from '@leathercad/core';
 import type {
+  Derivation,
   Feature,
   FeatureId,
   ParametricShape,
+  GeometrySource,
   Part,
   PartId,
   Project,
+  Run,
 } from '@leathercad/domain';
 import { DEFAULT_SETTINGS, transformShape } from '@leathercad/domain';
 import { MatOps, PathOps, Shapes, type Mat2x3, type Path, type Vec2 } from '@leathercad/geometry';
@@ -37,11 +40,17 @@ export function addFeature(partId: PartId, feature: Feature): Command {
 }
 
 export function deleteFeatures(ids: Iterable<FeatureId>): Command {
-  const targets = new Set(ids);
-  const label = targets.size === 1 ? 'Delete feature' : `Delete ${targets.size} features`;
+  const requested = new Set(ids);
+  const label = requested.size === 1 ? 'Delete feature' : `Delete ${requested.size} features`;
 
   return command(label, (document) => {
-    if (targets.size === 0) return document;
+    if (requested.size === 0) return document;
+
+    // A stitch line without its outline has no geometry and no meaning, so it
+    // goes too — as part of the same command, so one undo brings everything
+    // back. Leaving dependents behind in a permanent error state fills a
+    // document with rubble that cannot be removed.
+    const targets = withDependents(document.project, requested);
 
     // Parts left empty by the deletion go too: an invisible part with nothing
     // in it is clutter in the parts list and cannot be selected to remove.
@@ -169,6 +178,12 @@ function transformFeature(feature: Feature, matrix: Mat2x3): Feature {
     };
   }
 
+  // A derived feature has no geometry of its own to move: it follows the one
+  // it is built from, and moving that moves this. Transforming it here would
+  // detach it from its source, which is exactly what the derivation exists to
+  // prevent.
+  if (feature.source.kind === 'derived') return feature;
+
   const result = transformShape(feature.source.shape, matrix);
   // Refused: left exactly as it was, rather than converted behind the user's
   // back. `refusedTransforms` is how the reason reaches them.
@@ -214,6 +229,27 @@ export function shapePart(
       };
 
   return { id: partId, name, quantity: 1, features: [feature] };
+}
+
+/** The requested features, plus everything derived from them, transitively. */
+function withDependents(project: Project, requested: ReadonlySet<FeatureId>): Set<FeatureId> {
+  const doomed = new Set(requested);
+  const all = project.parts.flatMap((part) => part.features);
+
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const feature of all) {
+      if (doomed.has(feature.id)) continue;
+      const source = feature.source;
+      if (source.kind === 'derived' && doomed.has(source.sourceId)) {
+        doomed.add(feature.id);
+        grew = true;
+      }
+    }
+  }
+
+  return doomed;
 }
 
 /** Whether a shape bounds an inside. Every new shape must answer this. */
@@ -305,6 +341,103 @@ export function circleShape(
   radius: number,
 ): Extract<ParametricShape, { type: 'circle' }> {
   return { type: 'circle', centre, radius };
+}
+
+/**
+ * A stitch line that follows a cut contour, inset from its edge.
+ *
+ * The inset is a *relationship*, not a copy: change the outline and this
+ * follows. That is the whole point, and it is why there is no command to
+ * create a detached stitch line from a path.
+ */
+export function addStitchLine(
+  partId: PartId,
+  featureId: FeatureId,
+  sourceId: FeatureId,
+  distanceMm: Mm,
+  run: Run = { kind: 'whole' },
+): Command {
+  return addDerived(partId, sourceId, {
+    id: featureId,
+    kind: 'stitch-line',
+    name: 'Stitch line',
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'derived',
+      sourceId,
+      op: { type: 'offset', distanceMm, side: 'inward', run },
+    },
+  });
+}
+
+/** Holes along a stitch line, at the pitch of a pricking iron. */
+export function addStitchHoles(
+  partId: PartId,
+  featureId: FeatureId,
+  sourceId: FeatureId,
+  op: Extract<Derivation, { type: 'stitch-holes' }>,
+): Command {
+  return addDerived(partId, sourceId, {
+    id: featureId,
+    kind: 'stitch-hole-set',
+    name: 'Stitch holes',
+    visible: true,
+    locked: false,
+    source: { kind: 'derived', sourceId, op },
+  });
+}
+
+/** Changes what a derived feature does — the inset, the pitch, the run. */
+export function setDerivation(id: FeatureId, op: Derivation): Command {
+  return command('Edit derivation', (document) => ({
+    project: mapFeature(document.project, id, (feature) =>
+      feature.source.kind === 'derived'
+        ? { ...feature, source: { ...feature.source, op } }
+        : feature,
+    ),
+  }));
+}
+
+/**
+ * Adds a derived feature, unless doing so would close a loop.
+ *
+ * The check is here rather than in evaluation so the document is never in a
+ * cyclic state at all. Evaluation keeps its own guard, but that one should be
+ * unreachable — and unreachable is where the next bug lives.
+ */
+function addDerived(partId: PartId, sourceId: FeatureId, feature: Feature): Command {
+  return command(`Add ${feature.name}`, (document) => {
+    if (wouldCycle(document.project, feature.id, sourceId)) return document;
+
+    return {
+      project: mapPart(document.project, partId, (part) => ({
+        ...part,
+        features: [...part.features, feature],
+      })),
+    };
+  });
+}
+
+/** Whether following `sourceId` upstream comes back to `featureId`. */
+function wouldCycle(project: Project, featureId: FeatureId, sourceId: FeatureId): boolean {
+  const byId = new Map<FeatureId, Feature>();
+  for (const part of project.parts) {
+    for (const feature of part.features) byId.set(feature.id, feature);
+  }
+
+  let at: FeatureId | undefined = sourceId;
+  const seen = new Set<FeatureId>();
+  while (at !== undefined) {
+    if (at === featureId) return true;
+    if (seen.has(at)) return true;
+    seen.add(at);
+
+    const source: GeometrySource | undefined = byId.get(at)?.source;
+    at = source?.kind === 'derived' ? source.sourceId : undefined;
+  }
+
+  return false;
 }
 
 export function setProjectName(name: string): Command {

@@ -52,6 +52,7 @@ export { solveCubic, solveLinear, solveQuadratic } from './polynomial.js';
 
 export type { Intersection } from './ops/intersect.js';
 export { intersectPaths, intersectSegments, selfIntersections } from './ops/intersect.js';
+export { subPath } from './ops/subPath.js';
 
 export type { OffsetOptions } from './ops/offset.js';
 export { offsetPath } from './ops/offset.js';

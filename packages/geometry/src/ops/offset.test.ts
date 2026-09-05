@@ -1,11 +1,12 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { area, polyline, signedArea, type Path } from '../path/index.js';
-import { line } from '../segment/index.js';
+import { area, bbox, length, polyline, signedArea, type Path } from '../path/index.js';
+import { cubic } from '../segment/index.js';
 import { circle, roundedRect } from '../shapes.js';
 import { vec } from '../vec2.js';
 
+import { selfIntersections } from './intersect.js';
 import { offsetPath } from './offset.js';
 
 const RUNS = { numRuns: 1000 };
@@ -92,22 +93,60 @@ describe('offsetPath', () => {
       expect(offsetPath(p, 0, ROUND)).toEqual([p]);
     });
 
-    it('rejects an open path', () => {
-      expect(() => offsetPath(polyline([vec(0, 0), vec(100, 0)]), 5, ROUND)).toThrow(/closed/i);
+    it('offsets an open path, leaving its ends open', () => {
+      // Replaced "rejects an open path" in slice 4.2a. A stitch line on three
+      // sides of a pocket is an open offset, and it is the most common seam in
+      // leatherwork — refusing it refused the normal case. A stitch line has
+      // ends, so there is no cap policy to invent.
+      const run = polyline([vec(0, 0), vec(100, 0), vec(100, 50)], false);
+      const [offsetRun] = offsetPath(run, 3.5, ROUND);
+
+      expect(offsetRun).toBeDefined();
+      expect(offsetRun!.closed).toBe(false);
+      // Both edges lose 3.5 mm at the inside corner where they are trimmed.
+      expect(length(offsetRun!)).toBeCloseTo(length(run) - 3.5 * 2, 6);
     });
 
-    it('rejects a non-convex path, which needs Tier 2', () => {
+    it('bridges the outside of a corner on an open path', () => {
+      const run = polyline([vec(0, 0), vec(100, 0), vec(100, 50)], false);
+      const [outside] = offsetPath(run, -3.5, ROUND);
+
+      expect(outside).toBeDefined();
+      expect(outside!.segments.some((s) => s.kind === 'arc')).toBe(true);
+    });
+
+    it('offsets a single open segment, which has no joins at all', () => {
+      const [moved] = offsetPath(polyline([vec(0, 0), vec(100, 0)], false), 3.5, ROUND);
+
+      expect(moved).toBeDefined();
+      expect(length(moved!)).toBeCloseTo(100, 9);
+    });
+
+    it('offsets a dart rather than refusing it for being non-convex', () => {
+      // Replaced the old "rejects a non-convex path" test in slice 4.2a. That
+      // assertion encoded a defect: the engine asked whether concavity *could*
+      // cause a problem, when it can check whether it *did*. The rejection is
+      // now based on the result, not the input. See the design, section 6.2.
       const dart = polyline(
         [vec(0, 0), vec(100, 0), vec(50, 30), vec(100, 100), vec(0, 100)],
         true,
       );
 
-      expect(() => offsetPath(dart, 5, ROUND)).toThrow(/convex/i);
+      const [inset] = offsetPath(dart, 2, ROUND);
+
+      expect(inset).toBeDefined();
+      expect(selfIntersections(inset!)).toHaveLength(0);
     });
 
     it('rejects a cubic, which has no analytic offset', () => {
-      const p = { segments: [line(vec(0, 0), vec(10, 0))], closed: true } as Path;
-      expect(() => offsetPath(p, 1, ROUND)).toThrow();
+      // This test used to hold a *line* and passed only because the convexity
+      // gate rejected a single-segment path for having no turn. With that gate
+      // gone the test was vacuous, so it now holds the cubic its name claims.
+      const p = {
+        segments: [cubic(vec(0, 0), vec(3, 10), vec(7, 10), vec(10, 0))],
+        closed: true,
+      } as Path;
+      expect(() => offsetPath(p, 1, ROUND)).toThrow(/cubic/i);
     });
 
     it('rejects a non-finite distance', () => {
@@ -176,6 +215,95 @@ describe('offsetPath', () => {
           expect(offsetPath(p, d, ROUND)).toEqual(offsetPath(p, d, ROUND));
         }),
         RUNS,
+      );
+    });
+  });
+
+  describe('corners smaller than the inset', () => {
+    it('insets a rounded rectangle past its corner radius, giving sharp corners', () => {
+      // A 3 mm corner inset by 3.5 mm. The corner arc is consumed; the two
+      // neighbouring edges still meet, so the result is a sharp rectangle —
+      // not a collapse. Wallet corners are routinely 3-5 mm and stitch insets
+      // 3.5-4 mm, so this is the ordinary case, not an exotic one.
+      const [inset] = offsetPath(roundedRect(vec(0, 0), 105, 75, 3), 3.5, ROUND);
+
+      expect(inset).toBeDefined();
+      const box = bbox(inset!);
+      expect(box!.maxX - box!.minX).toBeCloseTo(98, 9);
+      expect(box!.maxY - box!.minY).toBeCloseTo(68, 9);
+      expect(inset!.segments).toHaveLength(4);
+    });
+
+    it('still collapses when the inset genuinely exceeds the shape', () => {
+      // Unchanged behaviour: 100 x 60 inset by 31 has nowhere to go.
+      expect(offsetPath(roundedRect(vec(0, 0), 100, 60, 10), 31, ROUND)).toEqual([]);
+    });
+  });
+
+  describe('concave paths', () => {
+    it('offsets a concave outline whose result does not self-intersect', () => {
+      // A thumb scoop: a gentle concave notch in a pocket. Inset 3.5 mm it
+      // produces an ordinary curve, so refusing it for being non-convex
+      // refuses valid work.
+      const scooped = polyline(
+        [vec(0, 0), vec(95, 0), vec(95, 60), vec(60, 60), vec(47, 48), vec(34, 60), vec(0, 60)],
+        true,
+      );
+
+      const [inset] = offsetPath(scooped, 3.5, ROUND);
+
+      expect(inset).toBeDefined();
+      expect(selfIntersections(inset!)).toHaveLength(0);
+    });
+
+    it('rejects a concave outline when the inset folds the result over itself', () => {
+      // A deep narrow notch inset further than it is wide has no simple
+      // answer. Rejecting is correct; pruning the loops is slice 9.11.
+      const notched = polyline(
+        [vec(0, 0), vec(100, 0), vec(100, 60), vec(52, 60), vec(50, 10), vec(48, 60), vec(0, 60)],
+        true,
+      );
+
+      expect(offsetPath(notched, 8, ROUND)).toEqual([]);
+    });
+  });
+
+  describe('offset properties', () => {
+    it('never produces a self-intersecting result', () => {
+      fc.assert(
+        fc.property(
+          fc.double({ min: 20, max: 200, noNaN: true }),
+          fc.double({ min: 20, max: 200, noNaN: true }),
+          fc.double({ min: 0, max: 15, noNaN: true }),
+          fc.double({ min: 0.5, max: 8, noNaN: true }),
+          (w, h, r, d) => {
+            const [inset] = offsetPath(roundedRect(vec(0, 0), w, h, r), d, ROUND);
+            if (inset === undefined) return; // a legitimate collapse
+            expect(selfIntersections(inset)).toHaveLength(0);
+          },
+        ),
+        { numRuns: 300 },
+      );
+    });
+
+    it('shrinks a rounded rectangle by twice the inset in each direction', () => {
+      fc.assert(
+        fc.property(
+          fc.double({ min: 40, max: 200, noNaN: true }),
+          fc.double({ min: 40, max: 200, noNaN: true }),
+          fc.double({ min: 0, max: 15, noNaN: true }),
+          fc.double({ min: 0.5, max: 8, noNaN: true }),
+          (w, h, r, d) => {
+            const [inset] = offsetPath(roundedRect(vec(0, 0), w, h, r), d, ROUND);
+            if (inset === undefined) return;
+            const box = bbox(inset)!;
+            // Holds whether or not the corner arcs survived the inset — which
+            // is the whole point of the Case A fix.
+            expect(box.maxX - box.minX).toBeCloseTo(w - 2 * d, 6);
+            expect(box.maxY - box.minY).toBeCloseTo(h - 2 * d, 6);
+          },
+        ),
+        { numRuns: 300 },
       );
     });
   });

@@ -14,6 +14,130 @@ import { uniformRadii } from '@leathercad/geometry';
  * changes — which, once something has shipped, is never (docs/file-format.md
  * §4.2 rule 1).
  */
+/**
+ * The project behind `fixtures/format/v2.lcp`.
+ *
+ * Version 2's addition is the derivation chain, so the fixture holds one: a
+ * panel, the stitch line that follows it, and the holes that follow that. The
+ * chain is what a v2 reader must be able to reconstruct, and the holes
+ * themselves are *not* in the file — evaluation recomputes them.
+ */
+export function fixtureProjectV2(): Project {
+  return {
+    id: 'fixture-v2',
+    name: 'Format baseline v2',
+    settings: DEFAULT_SETTINGS,
+    parts: [
+      {
+        id: 'part-panel',
+        name: 'Panel',
+        quantity: 1,
+        features: [
+          {
+            id: 'cut-1',
+            kind: 'cut-contour',
+            role: 'outer',
+            name: 'Outline',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'shape',
+              shape: {
+                type: 'rect',
+                origin: { x: 0, y: 0 },
+                width: 105,
+                height: 75,
+                radii: uniformRadii(8),
+                rotation: 0,
+              },
+            },
+          },
+          {
+            id: 'stitch-1',
+            kind: 'stitch-line',
+            name: 'Stitch line',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'cut-1',
+              op: {
+                type: 'offset',
+                distanceMm: 3.5,
+                side: 'inward',
+                run: { kind: 'whole' },
+              },
+            },
+          },
+          {
+            id: 'holes-1',
+            kind: 'stitch-hole-set',
+            name: 'Stitch holes',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'stitch-1',
+              op: {
+                type: 'stitch-holes',
+                pitchMm: 3.85,
+                mode: 'fit-whole',
+                corners: 'hole-at-corner',
+                ironLabel: 'KS Blade 3.85 mm',
+              },
+            },
+          },
+        ],
+      },
+      {
+        id: 'part-pocket',
+        name: 'Pocket',
+        quantity: 2,
+        features: [
+          {
+            id: 'cut-2',
+            kind: 'cut-contour',
+            role: 'outer',
+            name: 'Outline',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'shape',
+              shape: {
+                type: 'rect',
+                origin: { x: 0, y: 0 },
+                width: 95,
+                height: 60,
+                radii: uniformRadii(4),
+                rotation: 0,
+              },
+            },
+          },
+          {
+            id: 'stitch-2',
+            kind: 'stitch-line',
+            name: 'Stitch line',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'cut-2',
+              op: {
+                // Three sides: the top edge of a pocket is left open. This is
+                // the ordinary seam, and it is why runs exist.
+                type: 'offset',
+                distanceMm: 3.5,
+                side: 'inward',
+                run: { kind: 'between', fromAnchor: 0, toAnchor: 3 },
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export function fixtureProject(): Project {
   return {
     id: 'fixture-project',

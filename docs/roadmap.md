@@ -559,14 +559,44 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   the canvas.
   Still to come in 4.2: the derivation graph (`offset`, `mirror`), which is where the product value
   is and which needs Clipper (1.9).
-- **4.2** The derivation graph: topological evaluation, per-node memoisation, per-node errors, cycle
-  rejection at command time.
+- **4.2** ✅ **Done.** Derived features. `GeometrySource` gained one variant — `derived`, with one
+  source id and one operation — and that is the whole structural change. The chain is two links deep
+  and each node has a single source, so resolution is recursive and memoised rather than scheduled;
+  a topological pass would be machinery without a job. Cycles are refused at command time, so the
+  document is never in a cyclic state, and evaluation keeps a second guard that should now be
+  unreachable.
+  **Memoisation on object identity needed a second key.** Structural sharing makes an unchanged
+  feature the same object, which is what makes identity a good cache key — and is exactly what
+  breaks a *derived* one: widening a panel replaces the cut contour and leaves the stitch line
+  following it untouched, so it served geometry for the old outline. An entry now records the source
+  path it was built from. The unit tests missed this by building a fresh project each time, which
+  never shares an object; the app caught it in a second.
+  Deleting a source cascades to everything derived from it, in the same command, so one undo brings
+  all of it back. An orphaned stitch line has no geometry and no meaning.
 - **4.3** `CutContour` from shapes; part creation and the parts panel.
-- **4.4** **Derived `StitchLine`** — offset inward, live-linked, with the inset editable in the
-  property panel.
-- **4.5** **`StitchHoleSet`** — pitch, iron presets, `fit-whole` and `exact-pitch`, batched
-  rendering, and the count/pitch report. **→ M3**
-- **4.6** Corner policy `hole-at-corner`: split at corners, distribute per run, per-run reporting.
+- **4.4** ✅ **Done.** Derived `StitchLine` — inset inward, live-linked, editable in the panel. Also
+  **partial runs**, which the design added after walking the real cases: a pocket is stitched on
+  three sides and open at the top, so a stitch line that could only be a closed loop could not
+  express the most common seam in leatherwork.
+  A run names **anchors**, not segment indices. `roundedRect` emits eight segments with 8 mm corners
+  and four with none, so an index-based run would silently move to different edges the first time
+  someone changed a radius — and silent wrongness on a pattern about to be cut is the worst failure
+  this can produce. A rectangle has four corners whatever its radii.
+- **4.5** ✅ **Done → M3.** `StitchHoleSet` — pitch, iron presets, `fit-whole` and `exact-pitch`,
+  batched rendering, and the count and achieved-spacing report. Holes carry **no ids**: identity
+  would create an obligation to preserve it across regeneration, which happens whenever the count
+  changes, and there is no correct answer to which of the old 84 is this one of the new 86. They are
+  addressed positionally, and suppression — when it comes — belongs on the set as a list of
+  ordinals, because a parameter survives regeneration by definition.
+  The **pitch value** is persisted rather than a preset id, so a file opens identically on a machine
+  that has never heard of the author's irons.
+  Gotcha worth keeping: the achieved spacing is the perimeter over the count, not the sum of each
+  run's own intervals. Counting per run misses the gap that spans each corner and reads about 3%
+  high — 3.96 mm where the ring is 3.83.
+- **4.6** ✅ **Done.** Corner policy `hole-at-corner`: split at corners, distribute per run, per-run
+  reporting. The shared hole where two runs meet is emitted once — a doubled corner hole is
+  invisible until someone punches it, and a property test over 200 shapes asserts no two holes come
+  closer than half the pitch.
 - **4.7** Fold lines, marking lines, hardware holes.
 - **4.8** Mirror, at feature and part level.
 - **4.9** Seam allowance: derive a cut contour outward from a stitch line (the reverse direction).

@@ -1,6 +1,6 @@
 import type { Mm } from '@leathercad/core';
 import type { LayerRole, Part, ResolvedProject } from '@leathercad/domain';
-import { PathOps, RectOps, type Path, type Rect } from '@leathercad/geometry';
+import { PathOps, RectOps, Shapes, type Path, type Rect } from '@leathercad/geometry';
 
 /**
  * How a layer role is drawn on paper.
@@ -30,6 +30,18 @@ export const PRINT_STYLES: Readonly<Record<LayerRole, PrintStyle>> = {
   annotation: { widthMm: 0.1, dashMm: [], grey: 0.35 },
   construction: { widthMm: 0.1, dashMm: [1, 1], grey: 0.6 },
 };
+
+/**
+ * How big a stitch hole is drawn on the template.
+ *
+ * A marker, not the hole itself: the awl makes the hole, and what the paper
+ * has to carry is where its centre goes. One millimetre is small enough to
+ * mark a centre precisely and large enough to survive a photocopier.
+ *
+ * Not a stored parameter. It is a property of the printed template rather than
+ * of the design, and nothing in the workflow yet asks to change it.
+ */
+export const STITCH_HOLE_MARKER_DIAMETER_MM = 1;
 
 export interface ExportPath {
   readonly role: LayerRole;
@@ -71,6 +83,22 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
 
     for (const entry of resolvedPart.features) {
       if (!entry.ok || !entry.feature.visible) continue;
+
+      // A hole is a mark to punch through, so it prints as a circle at a true
+      // millimetre size — not as a screen dot, which would come out whatever
+      // size the renderer felt like. Its path is the stitch line the holes sit
+      // on, and that line draws itself.
+      if (entry.holes !== undefined) {
+        for (const hole of entry.holes.holes) {
+          paths.push({
+            role: entry.role,
+            path: Shapes.circle(hole.point, STITCH_HOLE_MARKER_DIAMETER_MM / 2),
+            style: PRINT_STYLES[entry.role],
+          });
+        }
+        continue;
+      }
+
       paths.push({ role: entry.role, path: entry.path, style: PRINT_STYLES[entry.role] });
     }
 

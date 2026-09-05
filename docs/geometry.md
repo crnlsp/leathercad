@@ -346,28 +346,36 @@ ADR 0008 for both investigations and the numbers behind them.
 
 **Tier 2 will be written here, not bought.** After two rejected bindings the decision is to stop
 shopping: it is slice 9.11, alongside boolean operations, which share the same hard part. Nothing
-before it needs it — Tier 1 handles every convex outline of lines and arcs, which is every shape the
-drawing tools produce that a leatherworker actually cuts. A concave outline can be drawn, measured,
-saved and printed; only deriving an offset from one is refused, with a validation error naming the
-shape rather than a wrong answer.
+before it needs it — Tier 1 handles outlines of lines and arcs including concave corners, which is
+every shape the drawing tools produce that a leatherworker actually cuts. Only an offset that
+folds over itself is refused, with a validation error naming the shape rather than a wrong answer.
 
 Tier 1 needs no dependency and produces better output anyway — arcs stay arcs.
 
-**Tier 1's scope: convex closed paths of lines and arcs.** It rejects, rather than guesses at:
+**Tier 1's scope: paths of lines and arcs, open or closed, concave corners included.** Each corner
+is judged on its own turn — where the offsets lean apart the gap is bridged with an arc, and where
+they overlap they are trimmed to their intersection. An open path's ends simply end: a stitch line
+along three sides of a pocket is an open offset, and it is the most common seam in leatherwork.
+It rejects, rather than guesses at:
 
-- **open paths**, whose parallel curve needs end handling this tier does not define;
 - **cubics**, which have no exact offset — the offset of a cubic is not a cubic;
-- **non-convex paths**, where the offset can self-intersect globally even though every individual
-  join is correct. Detecting and pruning that is precisely what Clipper is for.
+- **overlaps where either side is an arc**, which the line-line intersection this tier uses cannot
+  solve;
+- **a result that self-intersects.** This replaced an input convexity test in slice 4.2a. Asking
+  whether the input was convex refused an ordinary thumb scoop for what concavity *could* do
+  elsewhere; asking whether the output folded over itself answers the question actually being asked.
+  *Pruning* those loops — computing the correct remaining outline — is still Tier 2's job.
 
 There is no tolerance parameter, because nothing is approximated. A line offsets to a parallel line
 and an arc to a concentric one with radius `r ∓ d`; corners are either tangent already, bridged with
 an exact arc, or trimmed at an exact intersection.
 
-A radius offset to exactly zero is a **corner, not a collapse** — the arc has shrunk to the point
-its neighbours already meet at, and it is dropped. Offsetting a rounded rectangle outward and back
-must return the sharp rectangle it started as. Only a negative radius means the ring has closed over
-itself.
+A corner arc consumed by the offset is a **corner, not a collapse** — it is dropped, and its
+neighbours are trimmed to where they meet. Offsetting a rounded rectangle outward and back must
+return the sharp rectangle it started as, and insetting a 3 mm corner by 3.5 mm must give a sharp
+one. That second case used to abandon the whole path, which meant roughly half of realistic wallet
+panels could not be given a stitch line at all. Only a segment cut past its own end means the ring
+has closed over itself.
 
 ### 6.3 If robust offsetting is ever built here
 

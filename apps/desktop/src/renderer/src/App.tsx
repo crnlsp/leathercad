@@ -167,6 +167,7 @@ export function App() {
           store={store}
           project={storeState.document.project}
           selected={storeState.selection.features}
+          nextId={nextId}
         />
       </div>
 

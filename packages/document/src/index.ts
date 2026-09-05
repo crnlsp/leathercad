@@ -15,6 +15,8 @@ export { DocumentStore } from './store.js';
 export {
   addFeature,
   addPart,
+  addStitchHoles,
+  addStitchLine,
   arcShape,
   circleShape,
   deleteFeatures,
@@ -28,6 +30,7 @@ export {
   setPartName,
   setPartQuantity,
   setProjectName,
+  setDerivation,
   setShape,
   shapePart,
   refusedTransforms,

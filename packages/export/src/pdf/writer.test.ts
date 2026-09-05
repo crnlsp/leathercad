@@ -14,6 +14,62 @@ import { exportPdf } from './writer.js';
 
 const FIXED_NOW = (): Date => new Date('2026-09-04T12:00:00.000Z');
 
+/** A panel, its derived stitch line, and the holes along it. */
+function projectWithStitching(
+  widthMm: number,
+  heightMm: number,
+  insetMm: number,
+  pitchMm: number,
+): Project {
+  const base = projectWithRect(widthMm, heightMm);
+  const part = base.parts[0]!;
+
+  return {
+    ...base,
+    parts: [
+      {
+        ...part,
+        features: [
+          ...part.features,
+          {
+            id: 'stitch-1',
+            kind: 'stitch-line',
+            name: 'Stitch line',
+            // Hidden so the measurement sees only the holes. The dashed line
+            // runs through the same pixels they sit on, and its 2 mm dashes
+            // are close enough in size to a hole marker to be mistaken for
+            // one. A hidden feature still derives; it just does not print.
+            visible: false,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'feat-1',
+              op: { type: 'offset', distanceMm: insetMm, side: 'inward', run: { kind: 'whole' } },
+            },
+          },
+          {
+            id: 'holes-1',
+            kind: 'stitch-hole-set',
+            name: 'Stitch holes',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'stitch-1',
+              op: {
+                type: 'stitch-holes',
+                pitchMm,
+                mode: 'fit-whole',
+                corners: 'hole-at-corner',
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function projectWithRect(widthMm: number, heightMm: number, radius = 0): Project {
   return {
     id: 'p',
@@ -230,6 +286,71 @@ function contentRows(): [number, number] {
 }
 
 /** Bounding box of dark pixels within a horizontal band of the image. */
+/**
+ * The x centres of the hole markers along one stitch run.
+ *
+ * Finds the row crossing the most holes, then projects a thin band around it
+ * onto the columns: a hole is a circle *outline*, so a single row crosses it
+ * twice and at a different width depending on where it cuts. Collapsing a band
+ * into columns makes each hole one contiguous cluster whatever its height,
+ * and the cluster's middle is its centre.
+ */
+function holeCentresAlongRow(image: Gray): number[] {
+  const bandHalf = Math.round(0.4 * PX_PER_MM);
+  let best: number[] = [];
+
+  for (let y = bandHalf; y < image.height - bandHalf; y++) {
+    const centres = clusterCentres(image, y - bandHalf, y + bandHalf);
+    // Evenness is what identifies a stitch run. Without it the densest band on
+    // the page is the footer text, which is also a row of millimetre-wide
+    // marks — just not equally spaced ones.
+    if (centres.length > best.length && evenlySpaced(centres)) best = centres;
+  }
+
+  return best;
+}
+
+function evenlySpaced(centres: readonly number[]): boolean {
+  if (centres.length < 8) return false;
+
+  const gaps: number[] = [];
+  for (let i = 1; i < centres.length; i++) gaps.push(centres[i]! - centres[i - 1]!);
+
+  const sorted = [...gaps].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)]!;
+
+  return gaps.every((gap) => Math.abs(gap - median) < 0.15 * PX_PER_MM);
+}
+
+/** Contiguous dark columns in a row band, as centres, ignoring thin strokes. */
+function clusterCentres(image: Gray, fromRow: number, toRow: number): number[] {
+  const centres: number[] = [];
+  let runStart = -1;
+
+  for (let x = 0; x <= image.width; x++) {
+    let dark = false;
+    if (x < image.width) {
+      for (let y = fromRow; y <= toRow && !dark; y++) {
+        if (image.pixels[y * image.width + x]! < 128) dark = true;
+      }
+    }
+
+    if (dark && runStart < 0) runStart = x;
+    if (!dark && runStart >= 0) {
+      const width = x - runStart;
+      // A 1 mm hole marker. The outline is a 0.25 mm stroke and the stitch
+      // line a dashed 0.15 mm one — both far narrower, and a long horizontal
+      // edge is far wider.
+      if (width > 0.5 * PX_PER_MM && width < 2 * PX_PER_MM) {
+        centres.push(runStart + width / 2);
+      }
+      runStart = -1;
+    }
+  }
+
+  return centres;
+}
+
 function darkBounds(image: Gray, fromRow: number, toRow: number, fromColumn = 0) {
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
@@ -314,6 +435,29 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     const widthMm = (bounds.maxX - bounds.minX) / PX_PER_MM;
     expect(widthMm).toBeGreaterThan(179.8);
     expect(widthMm).toBeLessThan(180.4);
+  });
+
+  it('prints stitch holes at the pitch they were generated for', async () => {
+    // The measurement that matters for stitching: it is not enough that the
+    // model says 3.85 mm, the holes have to land 3.85 mm apart on the paper.
+    // Rasterising asks an independent renderer what a printer would be sent.
+    const project = projectWithStitching(100, 60, 3.5, 4);
+    const image = render(await pdfFor(project));
+
+    // A horizontal band through the middle of the bottom stitch run, clear of
+    // the outline and of the corner holes at either end.
+    const holes = holeCentresAlongRow(image);
+    expect(holes.length).toBeGreaterThan(15);
+
+    const gaps: number[] = [];
+    for (let i = 1; i < holes.length; i++) gaps.push((holes[i]! - holes[i - 1]!) / PX_PER_MM);
+
+    const mean = gaps.reduce((total, gap) => total + gap, 0) / gaps.length;
+    // The run divides evenly at close to the nominal pitch, and every gap is
+    // within a tenth of a millimetre of its neighbours.
+    expect(mean).toBeGreaterThan(3.7);
+    expect(mean).toBeLessThan(4.1);
+    for (const gap of gaps) expect(Math.abs(gap - mean)).toBeLessThan(0.1);
   });
 
   it('renders a rounded corner as an arc, not a mitre', async () => {

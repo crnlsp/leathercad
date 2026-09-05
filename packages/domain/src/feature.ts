@@ -51,6 +51,52 @@ export type ParametricShape =
     };
 
 /**
+ * How a derived feature is built from the one it follows.
+ *
+ * One source, one operation. The chain in this product is two links deep —
+ * cut contour, stitch line, holes — so this is a linked list, not a graph, and
+ * there is deliberately no array of sources reserved "for later". A genuinely
+ * two-input derivation is a new variant, and adding it then costs less than
+ * carrying the generality now.
+ */
+export type Derivation =
+  | {
+      readonly type: 'offset';
+      readonly distanceMm: Mm;
+      readonly side: 'inward' | 'outward';
+      readonly run: Run;
+    }
+  | {
+      readonly type: 'stitch-holes';
+      /**
+       * Nominal, from the iron. The **value** is stored rather than a preset
+       * id, so a file opens identically on a machine that has never heard of
+       * the author's iron library. The achieved spacing is derived.
+       */
+      readonly pitchMm: Mm;
+      readonly mode: 'fit-whole' | 'exact-pitch';
+      readonly corners: 'continuous' | 'hole-at-corner';
+      readonly startOffsetMm?: Mm;
+      readonly endOffsetMm?: Mm;
+      /** Cosmetic, so the panel can say "KS Blade 3.85". Never read as geometry. */
+      readonly ironLabel?: string;
+    };
+
+/**
+ * Which part of the source is used.
+ *
+ * Anchors, not segment indices. `roundedRect` emits a variable number of
+ * segments — a zero radius omits the corner arc — so an index-based run would
+ * silently move to different edges when a radius changed, and silent wrongness
+ * on a pattern about to be cut from leather is the worst failure this can
+ * produce. Anchors are defined by the shape's parameters, so a rectangle has
+ * four corners whatever its radii.
+ */
+export type Run =
+  | { readonly kind: 'whole' }
+  | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number };
+
+/**
  * Where a feature's geometry comes from.
  *
  * The `offset` and `mirror` cases are the heart of the product — a stitch line
@@ -63,7 +109,9 @@ export type ParametricShape =
 export type GeometrySource =
   /** Drawn freehand. The only kind persisted as coordinates. */
   | { readonly kind: 'path'; readonly path: Path }
-  | { readonly kind: 'shape'; readonly shape: ParametricShape };
+  | { readonly kind: 'shape'; readonly shape: ParametricShape }
+  /** Built from another feature, and rebuilt whenever that one changes. */
+  | { readonly kind: 'derived'; readonly sourceId: FeatureId; readonly op: Derivation };
 
 export interface FeatureBase {
   readonly id: FeatureId;
@@ -100,13 +148,23 @@ export interface FoldLine extends FeatureBase {
   readonly materialThicknessMm?: Mm;
 }
 
+/**
+ * Where the awl goes.
+ *
+ * Derived from a stitch line and never persisted as points: the file holds the
+ * pitch and the policy, and evaluation recomputes the hundreds of holes.
+ */
+export interface StitchHoleSet extends FeatureBase {
+  readonly kind: 'stitch-hole-set';
+}
+
 /** A printed guide — glue areas, alignment, logo placement. Never cut. */
 export interface MarkingLine extends FeatureBase {
   readonly kind: 'marking-line';
   readonly purpose: 'glue-area' | 'alignment' | 'logo' | 'skive' | 'other';
 }
 
-export type Feature = CutContour | StitchLine | FoldLine | MarkingLine;
+export type Feature = CutContour | StitchLine | StitchHoleSet | FoldLine | MarkingLine;
 export type FeatureKind = Feature['kind'];
 
 /** One physical piece of leather to be cut out. */
@@ -143,6 +201,8 @@ export function roleOf(feature: Feature): LayerRole {
       return 'cut';
     case 'stitch-line':
       return 'stitch';
+    case 'stitch-hole-set':
+      return 'stitch-holes';
     case 'fold-line':
       return 'fold';
     case 'marking-line':

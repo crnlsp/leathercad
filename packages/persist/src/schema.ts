@@ -78,9 +78,42 @@ const segment = z.discriminatedUnion('kind', [
 
 const path = z.object({ segments: z.array(segment), closed: z.boolean() });
 
+/**
+ * What a derived feature does to the one it follows.
+ *
+ * The stitch pitch is stored as a **value**, not as an iron preset id: a file
+ * must open identically on a machine that has never heard of the author's iron
+ * library. `ironLabel` rides along purely so the panel can name it.
+ */
+const derivation = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('offset'),
+    distanceMm: mm,
+    side: z.enum(['inward', 'outward']),
+    run: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('whole') }),
+      z.object({
+        kind: z.literal('between'),
+        fromAnchor: z.number().int().nonnegative(),
+        toAnchor: z.number().int().nonnegative(),
+      }),
+    ]),
+  }),
+  z.object({
+    type: z.literal('stitch-holes'),
+    pitchMm: nonNegativeMm,
+    mode: z.enum(['fit-whole', 'exact-pitch']),
+    corners: z.enum(['continuous', 'hole-at-corner']),
+    startOffsetMm: nonNegativeMm.optional(),
+    endOffsetMm: nonNegativeMm.optional(),
+    ironLabel: z.string().optional(),
+  }),
+]);
+
 const geometrySource = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('path'), path }),
   z.object({ kind: z.literal('shape'), shape: parametricShape }),
+  z.object({ kind: z.literal('derived'), sourceId: z.string().min(1), op: derivation }),
 ]);
 
 const featureBase = {
@@ -94,6 +127,7 @@ const featureBase = {
 const feature = z.discriminatedUnion('kind', [
   z.object({ ...featureBase, kind: z.literal('cut-contour'), role: z.enum(['outer', 'inner']) }),
   z.object({ ...featureBase, kind: z.literal('stitch-line') }),
+  z.object({ ...featureBase, kind: z.literal('stitch-hole-set') }),
   z.object({
     ...featureBase,
     kind: z.literal('fold-line'),

@@ -13,6 +13,8 @@
  * Migrations run on **raw JSON, before validation** — validating first would
  * reject old files by definition.
  */
+import { v1ToV2 } from './v1_to_v2.js';
+
 export interface Migration {
   readonly from: number;
   readonly to: number;
@@ -21,12 +23,10 @@ export interface Migration {
 
 export const MIGRATIONS: readonly Migration[] = [
   // Version 1 is the first shipped format; nothing precedes it.
-  //
-  // When adding version 2, append:
-  //   { from: 1, to: 2, migrate: (doc) => ... }
+  { from: 1, to: 2, migrate: v1ToV2 },
 ];
 
-export const CURRENT_FORMAT_VERSION = 1;
+export const CURRENT_FORMAT_VERSION = 2;
 
 export class NewerFormatError extends Error {
   constructor(readonly fileVersion: number) {

@@ -20,7 +20,9 @@ export type {
   FoldLine,
   GeometrySource,
   MarkingLine,
+  Derivation,
   ParametricShape,
+  Run,
   Part,
   PartId,
   Project,
@@ -40,3 +42,8 @@ export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.
 export { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
 
 export { transformShape } from './transformShape.js';
+
+export { anchorsOf, cornerDistances } from './anchors.js';
+
+export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
+export { distributeHoles, splitAtCorners } from './stitch.js';

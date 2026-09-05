@@ -1,17 +1,18 @@
 import {
   type DocumentStore,
+  addStitchHoles,
+  addStitchLine,
   deleteFeatures,
   renameFeature,
   setPartName,
   setPartQuantity,
-  setShape,
 } from '@leathercad/document';
 import type { Feature, Part, Project } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
 import { evaluate } from '@leathercad/domain';
 
 import { NumberField } from './NumberField.js';
-import { ShapeEditor } from './shapeEditors/index.js';
+import { FeatureEditor } from './featureEditors/index.js';
 
 /**
  * Exact numeric editing for whatever is selected.
@@ -23,10 +24,12 @@ export function PropertyPanel({
   store,
   project,
   selected,
+  nextId,
 }: {
   store: DocumentStore;
   project: Project;
   selected: ReadonlySet<string>;
+  nextId: () => string;
 }) {
   const found = findSelected(project, selected);
 
@@ -44,7 +47,6 @@ export function PropertyPanel({
   }
 
   const { part, feature } = found;
-  const source = feature.source;
   const resolved = evaluate(project)
     .parts.flatMap((p) => p.features)
     .find((entry) => entry.feature.id === feature.id);
@@ -89,16 +91,11 @@ export function PropertyPanel({
           </span>
         </label>
 
-        {source.kind === 'shape' ? (
-          <ShapeEditor
-            shape={source.shape}
-            onChange={(shape) => store.dispatch(setShape(feature.id, shape))}
-          />
-        ) : (
-          <p className="panel-empty">
-            Freehand geometry has no parameters to edit yet — vertex editing is slice 3.9.
-          </p>
-        )}
+        <FeatureEditor
+          store={store}
+          feature={feature}
+          holes={resolved?.ok === true ? resolved.holes : undefined}
+        />
       </section>
 
       {resolved?.ok === true && (
@@ -122,6 +119,8 @@ export function PropertyPanel({
         </section>
       )}
 
+      <DeriveActions store={store} part={part} feature={feature} nextId={nextId} />
+
       <button
         type="button"
         className="tool danger"
@@ -135,6 +134,75 @@ export function PropertyPanel({
       </button>
     </aside>
   );
+}
+
+/** The inset most leatherwork uses, and the one the settings default to. */
+const DEFAULT_STITCH_INSET_MM = 3.5;
+
+/**
+ * What can be derived from what is selected.
+ *
+ * Actions, not modes: each one fires once and finishes, so by the tool
+ * palette's own rule they belong here in the selection scope rather than in
+ * the mode rail. They appear only where they mean something — you cannot put
+ * holes on an outline, only on the stitch line that follows it.
+ */
+function DeriveActions({
+  store,
+  part,
+  feature,
+  nextId,
+}: {
+  store: DocumentStore;
+  part: Part;
+  feature: Feature;
+  nextId: () => string;
+}) {
+  if (feature.kind === 'cut-contour') {
+    return (
+      <button
+        type="button"
+        className="tool"
+        data-testid="add-stitch-line"
+        title="A stitch line that follows this outline, and keeps following it"
+        onClick={() => {
+          const id = nextId();
+          store.dispatch(addStitchLine(part.id, id, feature.id, DEFAULT_STITCH_INSET_MM));
+          store.select([id]);
+        }}
+      >
+        Add stitch line
+      </button>
+    );
+  }
+
+  if (feature.kind === 'stitch-line') {
+    return (
+      <button
+        type="button"
+        className="tool"
+        data-testid="add-stitch-holes"
+        title="Holes along this line, at the pitch of your iron"
+        onClick={() => {
+          const id = nextId();
+          store.dispatch(
+            addStitchHoles(part.id, id, feature.id, {
+              type: 'stitch-holes',
+              pitchMm: 3.85,
+              mode: 'fit-whole',
+              corners: 'hole-at-corner',
+              ironLabel: 'KS Blade 3.85 mm',
+            }),
+          );
+          store.select([id]);
+        }}
+      >
+        Add holes
+      </button>
+    );
+  }
+
+  return null;
 }
 
 function findSelected(
@@ -160,5 +228,7 @@ function labelFor(feature: Feature): string {
       return 'Fold line';
     case 'marking-line':
       return 'Marking line';
+    case 'stitch-hole-set':
+      return 'Stitch holes';
   }
 }

@@ -156,12 +156,12 @@ mark the file dirty, and every save would produce a diff. Session state stays ou
 ### 4.1 The runner
 
 ```ts
-const CURRENT_FORMAT_VERSION = 1;
+const CURRENT_FORMAT_VERSION = 2;
 
 type Migration = { from: number; to: number; migrate(doc: unknown): unknown };
 
 const migrations: Migration[] = [
-  // { from: 1, to: 2, migrate: v1_to_v2 },
+  { from: 1, to: 2, migrate: v1_to_v2 },   // derived features
 ];
 
 function loadDocument(raw: unknown, fileVersion: number): Project {
@@ -179,7 +179,10 @@ function loadDocument(raw: unknown, fileVersion: number): Project {
    avoidable by spending an hour now. (Risk R10 in [architecture.md](architecture.md).)
 2. **A shipped migration is immutable.** Never edit one; if it was wrong, write another after it.
 3. **Never delete a migration.** The chain must reach back to version 1 forever.
-4. **Every version bump commits a fixture.** `fixtures/format/v<N>.lcp`, a real file saved by that
+4. **Every version bump commits a fixture.** `fixtures/format/v1.lcp` is a real file from the v1
+   writer and is **never regenerated** — rewriting it would delete the only proof that an old file
+   still opens. Only the current version's fixture is regenerated, with
+   `UPDATE_FIXTURES=1 pnpm test packages/persist`. `fixtures/format/v<N>.lcp`, a real file saved by that
    version, with a test that opens it and asserts the resulting document. That corpus is the only
    thing that proves the chain still works, and it costs one file per bump.
 5. **Migrations run on raw JSON**, before zod validation. Validating first would reject old files by
