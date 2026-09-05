@@ -35,6 +35,17 @@ async function withFreshApp(
   try {
     const window = await instance.firstWindow();
     await window.waitForLoadState('domcontentloaded');
+
+    // `domcontentloaded` only means the markup parsed. The canvas element
+    // exists on the first render, but its pointer handlers are attached in an
+    // effect — so a drag started too early lands on nothing and the test fails
+    // with an empty document rather than a useful message.
+    //
+    // The version arrives from the main process through an effect, so a
+    // non-empty one proves React mounted, effects ran, and the platform bridge
+    // answered. It is the earliest honest signal that the app is interactive.
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+
     await body(window, instance);
   } finally {
     await instance.close();
@@ -519,5 +530,102 @@ test('three points in a line make no arc', async () => {
     // An infinite radius is not an arc, and a zero-area part could never be
     // selected to delete.
     await expect(window.getByTestId('part-count')).toHaveText('0');
+  });
+});
+
+test('rotates a rectangle and it stays a rectangle', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 300, box!.y + 380);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 520, box!.y + 500, { steps: 5 });
+    await window.mouse.up();
+
+    const panel = window.getByTestId('property-panel');
+    const width = await panel
+      .locator('label', { hasText: /^Width/ })
+      .locator('input')
+      .inputValue();
+
+    await window.getByTestId('tool-rotate').click();
+    await window.mouse.move(box!.x + 600, box!.y + 440);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 560, box!.y + 300, { steps: 6 });
+    await window.mouse.up();
+
+    // Still parametric, still the same size: a rotation resizes nothing, and
+    // the panel can still be typed into.
+    const turn = panel.locator('label', { hasText: /^Turn/ }).locator('input');
+    await expect(turn).toBeVisible();
+    expect(Number(await turn.inputValue())).not.toBe(0);
+    expect(
+      await panel
+        .locator('label', { hasText: /^Width/ })
+        .locator('input')
+        .inputValue(),
+    ).toBe(width);
+
+    // And it can be typed exactly, which is the whole point of staying parametric.
+    await turn.fill('30');
+    await turn.press('Enter');
+    await expect(turn).toHaveValue('30');
+  });
+});
+
+test('refuses to squash a circle, and says why on screen', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-circle').click();
+    await window.mouse.move(box!.x + 400, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 480, box!.y + 300, { steps: 5 });
+    await window.mouse.up();
+
+    const panel = window.getByTestId('property-panel');
+    const diameter = panel.locator('label', { hasText: /^Diameter/ }).locator('input');
+    const before = await diameter.inputValue();
+
+    // Drag one axis only. An ellipse is not representable, so nothing happens
+    // — and the reason has to be readable while the drag is still going on.
+    await window.getByTestId('tool-scale').click();
+    await window.mouse.move(box!.x + 480, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 620, box!.y + 300, { steps: 6 });
+
+    await expect(window.getByTestId('tool-notice')).toContainText(/ellipse/i);
+    await window.mouse.up();
+
+    await expect(diameter).toHaveValue(before);
+  });
+});
+
+test('scales a circle evenly when Shift holds the aspect', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-circle').click();
+    await window.mouse.move(box!.x + 400, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 480, box!.y + 300, { steps: 5 });
+    await window.mouse.up();
+
+    const diameter = window
+      .getByTestId('property-panel')
+      .locator('label', { hasText: /^Diameter/ })
+      .locator('input');
+    const before = Number(await diameter.inputValue());
+
+    await window.getByTestId('tool-scale').click();
+    await window.keyboard.down('Shift');
+    await window.mouse.move(box!.x + 480, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 560, box!.y + 300, { steps: 6 });
+    await window.mouse.up();
+    await window.keyboard.up('Shift');
+
+    expect(Number(await diameter.inputValue())).toBeGreaterThan(before);
   });
 });

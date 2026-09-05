@@ -1,4 +1,5 @@
-import { PathOps, Shapes, arc, type Path } from '@leathercad/geometry';
+import { EPS_ANGLE, approxZero } from '@leathercad/core';
+import { MatOps, PathOps, Shapes, arc, type Path } from '@leathercad/geometry';
 
 import type { Feature, GeometrySource, ParametricShape, Part, Project } from './feature.js';
 import { roleOf } from './feature.js';
@@ -85,8 +86,20 @@ function pathFor(source: GeometrySource): Path {
 
 function pathForShape(shape: ParametricShape): Path {
   switch (shape.type) {
-    case 'rect':
-      return Shapes.roundedRect(shape.origin, shape.width, shape.height, shape.radii);
+    case 'rect': {
+      const path = Shapes.roundedRect(shape.origin, shape.width, shape.height, shape.radii);
+      if (approxZero(shape.rotation, EPS_ANGLE)) return path;
+
+      // About the rectangle's own centre, so turning it does not also walk it
+      // across the page. A rotation is a similarity, so PathOps.transform keeps
+      // the corner arcs as arcs — the corners of a turned panel are still
+      // round, not elliptical (geometry.md 4.2 rule 1).
+      const centre = {
+        x: shape.origin.x + shape.width / 2,
+        y: shape.origin.y + shape.height / 2,
+      };
+      return PathOps.transform(path, MatOps.fromRotationAround(centre, shape.rotation));
+    }
     case 'circle':
       return Shapes.circle(shape.centre, shape.radius);
     case 'arc':

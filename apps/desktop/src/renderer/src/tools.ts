@@ -35,9 +35,17 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       { id: 'polyline', label: 'Polyline', key: 'P' },
     ],
   },
-  // Filled by slices 3.7 (move, rotate, scale) and 3.9 (vertex).
-  // Reserved keys: M, T, S, N, G.
-  { label: 'Modify', tools: [] },
+  {
+    label: 'Modify',
+    tools: [
+      // Move is not here on purpose. The select tool already moves a selection
+      // by dragging it, and a second mode that did the same thing would teach
+      // the user that modes are not distinct — the opposite of what this
+      // palette exists to say. Reserved keys remaining: M, N, G.
+      { id: 'rotate', label: 'Rotate', key: 'T' },
+      { id: 'scale', label: 'Scale', key: 'S' },
+    ],
+  },
 ];
 
 export const ALL_TOOLS: readonly ToolEntry[] = TOOL_GROUPS.flatMap((g) => g.tools);

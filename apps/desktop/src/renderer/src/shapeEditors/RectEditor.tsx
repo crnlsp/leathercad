@@ -40,6 +40,15 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
         />
       </div>
 
+      <NumberField
+        label="Turn"
+        value={(shape.rotation * 180) / Math.PI}
+        suffix="°"
+        step={5}
+        precision={1}
+        onCommit={(deg) => onChange({ ...shape, rotation: (deg * Math.PI) / 180 })}
+      />
+
       <div className="panel-heading small">Corner radii</div>
       {/* Laid out to match the corners on screen: top row above, bottom below. */}
       <div className="field-pair">

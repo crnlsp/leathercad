@@ -19,4 +19,7 @@ export { createArcTool } from './tools/arcTool.js';
 export { createCircleTool } from './tools/circleTool.js';
 export { createLineTool, createPolylineTool } from './tools/polylineTool.js';
 export { createRectangleTool } from './tools/rectangleTool.js';
+export { createRotateTool } from './tools/rotateTool.js';
+export { createScaleTool } from './tools/scaleTool.js';
 export { createSelectTool } from './tools/selectTool.js';
+export { selectionPivot } from './tools/selectionPivot.js';

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
+import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
 import { loadProject, readManifest, saveProject } from './lcp.js';
@@ -52,6 +53,30 @@ describe('the format baseline fixture', () => {
     const loaded = loadProject(readFileSync(FIXTURE));
 
     expect(loaded.project).toEqual(fixtureProject());
+  });
+
+  it('opens a rectangle written before `rotation` existed, as unrotated', () => {
+    // This file predates slice 3.7. The schema defaults `rotation` to 0, and
+    // that is the only thing keeping older projects readable — which is why
+    // this fixture must NOT be regenerated: rewriting it with the current
+    // writer would add the field and quietly delete this test's subject.
+    const raw = JSON.parse(
+      strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE)))['document.json']!),
+    ) as { parts: { features: { source: { shape?: Record<string, unknown> } }[] }[] };
+
+    const storedRect = raw.parts
+      .flatMap((part) => part.features)
+      .map((feature) => feature.source.shape)
+      .find((shape) => shape?.['type'] === 'rect');
+
+    expect(storedRect).toBeDefined();
+    expect(storedRect).not.toHaveProperty('rotation');
+
+    const loaded = loadProject(readFileSync(FIXTURE));
+    const source = loaded.project.parts[0]?.features[0]?.source;
+    expect(source?.kind === 'shape' && source.shape.type === 'rect' && source.shape.rotation).toBe(
+      0,
+    );
   });
 
   it('still holds an arc, a circle and a rectangle after a load', () => {

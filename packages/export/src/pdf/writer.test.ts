@@ -40,6 +40,7 @@ function projectWithRect(widthMm: number, heightMm: number, radius = 0): Project
                 width: widthMm,
                 height: heightMm,
                 radii: uniformRadii(radius),
+                rotation: 0,
               },
             },
           },

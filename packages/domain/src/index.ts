@@ -38,3 +38,5 @@ export {
 
 export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.js';
 export { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
+
+export { transformShape } from './transformShape.js';

@@ -171,7 +171,11 @@ export function App() {
       </div>
 
       <footer className="app-status" data-testid="status-bar">
-        {bridgeError !== null || file.state.error !== null ? (
+        {status?.notice !== null && status?.notice !== undefined ? (
+          <span className="status-error" data-testid="tool-notice">
+            {status.notice}
+          </span>
+        ) : bridgeError !== null || file.state.error !== null ? (
           <span className="status-error" data-testid="file-error">
             {bridgeError ?? file.state.error}
           </span>

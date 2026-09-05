@@ -40,6 +40,7 @@ export function fixtureProject(): Project {
                 width: 105,
                 height: 75,
                 radii: uniformRadii(8),
+                rotation: 0,
               },
             },
           },

@@ -9,6 +9,8 @@ import {
   createLineTool,
   createPolylineTool,
   createRectangleTool,
+  createRotateTool,
+  createScaleTool,
   createSelectTool,
   type PointerInput,
 } from '@leathercad/editor';
@@ -26,6 +28,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 export interface CanvasStatus {
   readonly cursorMm: Vec2 | null;
   readonly scale: number;
+  /** The active tool's message, shown in the status bar. */
+  readonly notice: string | null;
 }
 
 /**
@@ -55,6 +59,7 @@ export function CanvasHost({
   const hasFittedRef = useRef(false);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
   const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
@@ -68,6 +73,8 @@ export function CanvasHost({
       createArcTool(nextId),
       createLineTool(nextId),
       createPolylineTool(nextId),
+      createRotateTool(),
+      createScaleTool(),
     ],
     [nextId],
   );
@@ -114,6 +121,7 @@ export function CanvasHost({
     );
     // The tool overlay is ephemeral feedback and never touches the document.
     renderDisplayList(context, managerRef.current?.overlay() ?? { items: [] }, view);
+    setNotice(managerRef.current?.notice() ?? null);
     renderRulers(context, view, {
       ...DEFAULT_RULER_STYLE,
       thicknessPx: DEFAULT_RULER_STYLE.thicknessPx * viewport.dpr,
@@ -169,8 +177,8 @@ export function CanvasHost({
   }, [paint]);
 
   useEffect(() => {
-    onStatus?.({ cursorMm, scale: viewportRef.current.scale });
-  }, [cursorMm, onStatus]);
+    onStatus?.({ cursorMm, scale: viewportRef.current.scale, notice });
+  }, [cursorMm, notice, onStatus]);
 
   // Keyboard goes to the window: the canvas is not focusable and Escape or
   // Delete should work wherever the pointer happens to be.

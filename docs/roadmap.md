@@ -494,8 +494,36 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   `lcp.test.ts`, and the reason the fixture uses a round number of radians. And **an overlay that
   throws stops the whole draw loop**: a zero-length rubber band the instant after the first click
   blanked the grid and rulers, which no assertion caught and one screenshot did.
-- **3.7** Move, rotate, scale: handles plus an exact numeric transform dialog. Includes the
-  arc-under-non-uniform-scale rule from [geometry.md](geometry.md) §4.2.
+- **3.7** ✅ **Done.** Rotate and scale, about the selection's own centre, and the rule that governs
+  every parametric transform from here on:
+  **a transformation that cannot preserve a shape's semantic representation must not silently demote
+  it to another representation.** A circle under a non-uniform scale would become an ellipse, which
+  the `Segment` union cannot hold — so it is refused, with the reason in the status bar, and the
+  record is left exactly as it was. [geometry.md](geometry.md) §4.2 rule 1 said parametric shapes
+  resize through their parameters; it did not say what happens when the parameters cannot express
+  the result, and this is that answer.
+  `transformShape` delegates the arc case to `SegmentOps.ArcOps.transform` rather than restating it,
+  because §4.2 requires that decision to live in one place. Two things it already gets right and a
+  reimplementation would not: the new start angle comes from applying the matrix to the *start
+  direction* rather than extracting a rotation, so mirrors need no special case; and a mirror
+  **negates the sweep**, since an arc that bent one way bends the other.
+  **`rect` gained a `rotation`.** It was axis-aligned by construction, which made a turned rectangle
+  as unrepresentable as a squashed arc — and turning a strap is not exotic. `domain-model.md` already
+  gives `ellipse` and `polygon` a rotation and never gave one to `rect`, which read as an oversight.
+  No geometry changed: the evaluator builds the axis-aligned rounded rectangle and turns it about its
+  own centre, and because a rotation is a similarity the corner arcs stay arcs.
+  The format stays at version 1 with `rotation` **defaulting to zero**, so `fixtures/format/v1.lcp` —
+  written before the field existed — still opens. That fixture now earns its keep twice, as the
+  baseline *and* as a real backward-compatibility test, so it must not be regenerated.
+  **No Move mode.** The select tool already moves a selection by dragging it, and a second mode doing
+  the same thing would teach the user that modes are not distinct — the opposite of what the palette
+  exists to say. Reserved keys remaining: M, N, G.
+  See [the design](superpowers/specs/2026-09-05-transforms-design.md).
+- **3.12** "Convert to drawn path": the explicit, opt-in escape hatch for a shape the user *wants*
+  flattened — a circle they need to squash into an ellipse, an arc they want to reshape freely. It
+  must say plainly that the shape stops being editable as a circle or an arc, because that is the
+  whole cost. Until it exists, 3.7 refuses those transforms rather than performing them quietly,
+  which is the right default but not a complete answer.
 - **3.8** ✅ **Done.** Property panel with exact millimetre fields for position, size and all four
   corner radii, plus part name and quantity, and measured perimeter and area. Also a parts list for
   selecting what the canvas cannot reach. Entry commits on Enter or blur, reverts on Escape,

@@ -25,6 +25,16 @@ export type ParametricShape =
       readonly width: Mm;
       readonly height: Mm;
       readonly radii: CornerRadii;
+      /**
+       * Turn about the rectangle's own centre. Zero for an unrotated panel.
+       *
+       * `rect` had no angle until slice 3.7, which made a rotated rectangle as
+       * unrepresentable as a non-uniformly scaled arc — and rotating a strap is
+       * not an exotic thing to want. `domain-model.md` already gives `ellipse`
+       * and `polygon` a rotation and never gives one to `rect`, which reads as
+       * an oversight rather than a decision.
+       */
+      readonly rotation: Radians;
     }
   | { readonly type: 'circle'; readonly centre: Vec2; readonly radius: Mm }
   /**

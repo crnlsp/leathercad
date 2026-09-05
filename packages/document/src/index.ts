@@ -5,6 +5,7 @@
  * See CLAUDE.md invariant 5.
  */
 
+export type { RefusedTransform } from './commands.js';
 export type { Command, Document, Selection } from './document.js';
 export { EMPTY_SELECTION, command, isSelected, selectionOf, toggleSelected } from './document.js';
 
@@ -29,5 +30,7 @@ export {
   setProjectName,
   setShape,
   shapePart,
+  refusedTransforms,
+  transformFeatures,
   translateFeatures,
 } from './commands.js';

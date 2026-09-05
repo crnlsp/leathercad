@@ -37,6 +37,9 @@ const parametricShape = z.discriminatedUnion('type', [
     width: mm,
     height: mm,
     radii: cornerRadii,
+    // Defaulted, so `fixtures/format/v1.lcp` — written before slice 3.7 added
+    // this — still opens and reads as an unrotated panel.
+    rotation: z.number().finite().default(0),
   }),
   z.object({ type: z.literal('circle'), centre: vec2, radius: nonNegativeMm }),
   // Mirrors the arc *segment* below, deliberately: the parametric record and

@@ -7,8 +7,8 @@ import type {
   PartId,
   Project,
 } from '@leathercad/domain';
-import { DEFAULT_SETTINGS } from '@leathercad/domain';
-import { MatOps, PathOps, Shapes, type Path, type Vec2 } from '@leathercad/geometry';
+import { DEFAULT_SETTINGS, transformShape } from '@leathercad/domain';
+import { MatOps, PathOps, Shapes, type Mat2x3, type Path, type Vec2 } from '@leathercad/geometry';
 
 import { command, type Command, type Document } from './document.js';
 
@@ -81,16 +81,34 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
 /**
  * Moves features by a millimetre delta.
  *
- * A parametric shape moves by its parameters, so a rectangle stays a
- * rectangle; a freehand path has its points transformed. Transforming a
- * shape's generated path instead would quietly demote it to a polyline and
- * lose the ability to edit its width by typing a number.
+ * The translation case of `transformFeatures`, kept because moving is the
+ * common thing and a matrix is a poor way to ask for it.
  */
 export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Command {
-  const targets = new Set(ids);
-  const matrix = MatOps.fromTranslation(deltaMm);
+  return transformFeatures(ids, MatOps.fromTranslation(deltaMm), 'Move');
+}
 
-  return command('Move', (document) => {
+/**
+ * Applies a transform to features.
+ *
+ * A parametric shape transforms **through its parameters** so it stays
+ * parametric — a rectangle stays a rectangle you can retype the width of. A
+ * drawn path has its points transformed, since it has no parameters to protect.
+ *
+ * A shape whose representation cannot survive the transform — a circle under a
+ * non-uniform scale, which would become an ellipse — is **left exactly as it
+ * was**, and the rest of the selection still moves. Nothing is silently demoted
+ * to another representation; see `transformShape` for the rule. Ask
+ * `refusedTransforms` first if you need to tell the user why.
+ */
+export function transformFeatures(
+  ids: Iterable<FeatureId>,
+  matrix: Mat2x3,
+  label = 'Transform',
+): Command {
+  const targets = new Set(ids);
+
+  return command(label, (document) => {
     if (targets.size === 0) return document;
 
     return {
@@ -99,7 +117,7 @@ export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Comm
         parts: document.project.parts.map((part) => ({
           ...part,
           features: part.features.map((feature) =>
-            targets.has(feature.id) ? translateFeature(feature, deltaMm, matrix) : feature,
+            targets.has(feature.id) ? transformFeature(feature, matrix) : feature,
           ),
         })),
       },
@@ -107,11 +125,43 @@ export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Comm
   });
 }
 
-function translateFeature(
-  feature: Feature,
-  deltaMm: Vec2,
-  matrix: ReturnType<typeof MatOps.fromTranslation>,
-): Feature {
+/** A feature that would refuse the transform, with the reason to show. */
+export interface RefusedTransform {
+  readonly featureId: FeatureId;
+  readonly featureName: string;
+  readonly reason: string;
+}
+
+/**
+ * Which features would refuse `matrix`, and why — without applying anything.
+ *
+ * The tool asks this to decide whether to explain itself; the command uses the
+ * same `transformShape` underneath, so the answer cannot disagree with what
+ * actually happens.
+ */
+export function refusedTransforms(
+  project: Project,
+  ids: Iterable<FeatureId>,
+  matrix: Mat2x3,
+): RefusedTransform[] {
+  const targets = new Set(ids);
+  const refused: RefusedTransform[] = [];
+
+  for (const part of project.parts) {
+    for (const feature of part.features) {
+      if (!targets.has(feature.id) || feature.source.kind !== 'shape') continue;
+
+      const result = transformShape(feature.source.shape, matrix);
+      if (!result.ok) {
+        refused.push({ featureId: feature.id, featureName: feature.name, reason: result.error });
+      }
+    }
+  }
+
+  return refused;
+}
+
+function transformFeature(feature: Feature, matrix: Mat2x3): Feature {
   if (feature.source.kind === 'path') {
     return {
       ...feature,
@@ -119,28 +169,12 @@ function translateFeature(
     };
   }
 
-  return {
-    ...feature,
-    source: { kind: 'shape', shape: translateShape(feature.source.shape, deltaMm) },
-  };
-}
+  const result = transformShape(feature.source.shape, matrix);
+  // Refused: left exactly as it was, rather than converted behind the user's
+  // back. `refusedTransforms` is how the reason reaches them.
+  if (!result.ok) return feature;
 
-/**
- * Moves a parametric shape by changing the parameter that locates it.
- *
- * A switch rather than "rect uses origin, everything else uses centre": that
- * shortcut silently does the wrong thing the first time a shape is located by
- * neither. Here the compiler stops on the new variant instead.
- */
-function translateShape(shape: ParametricShape, deltaMm: Vec2): ParametricShape {
-  switch (shape.type) {
-    case 'rect':
-      return { ...shape, origin: { x: shape.origin.x + deltaMm.x, y: shape.origin.y + deltaMm.y } };
-    case 'circle':
-    case 'arc':
-      // The angles are unchanged by a translation; only the centre moves.
-      return { ...shape, centre: { x: shape.centre.x + deltaMm.x, y: shape.centre.y + deltaMm.y } };
-  }
+  return { ...feature, source: { kind: 'shape', shape: result.value } };
 }
 
 /**
@@ -248,8 +282,9 @@ export function rectShape(
   width: number,
   height: number,
   radius = 0,
+  rotation = 0,
 ): Extract<ParametricShape, { type: 'rect' }> {
-  return { type: 'rect', origin, width, height, radii: Shapes.uniformRadii(radius) };
+  return { type: 'rect', origin, width, height, radii: Shapes.uniformRadii(radius), rotation };
 }
 
 /**

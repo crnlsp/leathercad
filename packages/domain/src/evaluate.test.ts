@@ -21,6 +21,7 @@ function rectFeature(id: string, width: number, height: number, radius = 0): Cut
         width,
         height,
         radii: uniformRadii(radius),
+        rotation: 0,
       },
     },
   };
@@ -87,6 +88,7 @@ describe('evaluate', () => {
           width: Number.NaN,
           height: 10,
           radii: uniformRadii(0),
+          rotation: 0,
         },
       },
     };

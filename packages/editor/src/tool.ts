@@ -58,6 +58,16 @@ export interface Tool {
   /** Ephemeral feedback — rubber bands, previews. Never in the document. */
   buildOverlay?(ctx: ToolContext): DisplayList;
 
+  /**
+   * Something the user needs to read, for as long as it is true.
+   *
+   * Drawn in the status bar rather than on the canvas: canvas text sits at the
+   * geometry it describes, which is exactly where it gets clipped by the edge
+   * or hidden under the shape. A sentence explaining why nothing is moving has
+   * to be readable, so it goes somewhere with room for it.
+   */
+  notice?(ctx: ToolContext): string | null;
+
   /** Called when the tool is swapped out; must leave no transaction open. */
   onDeactivate?(ctx: ToolContext): void;
 }
@@ -76,6 +86,11 @@ export class ToolManager {
 
   get activeTool(): Tool {
     return this.active;
+  }
+
+  /** The active tool's message, if it has one right now. */
+  notice(): string | null {
+    return this.active.notice?.(this.context) ?? null;
   }
 
   get available(): readonly Tool[] {
