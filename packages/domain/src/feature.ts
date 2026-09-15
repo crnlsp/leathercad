@@ -164,7 +164,36 @@ export interface MarkingLine extends FeatureBase {
   readonly purpose: 'glue-area' | 'alignment' | 'logo' | 'skive' | 'other';
 }
 
-export type Feature = CutContour | StitchLine | StitchHoleSet | FoldLine | MarkingLine;
+/**
+ * A hole punched for hardware — a rivet, a snap, a screw, an eyelet.
+ *
+ * **Its geometry lives in `source`, as a `circle` shape.** `docs/domain-model.md`
+ * §3.6 sketched it with its own `centre` and `diameterMm`, but that sketch
+ * predates `GeometrySource`, and following it would make this the only feature
+ * whose position is not in `source` — so `transformFeatures`, `translateFeatures`,
+ * hit-testing, rendering and the mirror arriving in 4.8 would each need a case
+ * for it. As a circle it inherits all of them, and the derived placement this
+ * will eventually want ("12 mm in from that edge") is a new `Derivation` on the
+ * same feature rather than a migration.
+ *
+ * The record holds the circle's **radius**; the panel asks for a diameter,
+ * because that is the number stamped on the punch. One number, one spelling.
+ *
+ * Kept distinct from an inner `CutContour` because the semantics differ: these
+ * are punched rather than cut, and they are reported separately.
+ */
+export interface HardwareHole extends FeatureBase {
+  readonly kind: 'hardware-hole';
+  /**
+   * What the hole is *for*. Not what size it is — that is the radius, and it
+   * stays independent because this application does not know what hole a
+   * given snap needs until the hardware library lands in v1.1.
+   */
+  readonly hardwareType: 'rivet' | 'snap' | 'screw' | 'eyelet' | 'other';
+}
+
+export type Feature =
+  CutContour | StitchLine | StitchHoleSet | FoldLine | MarkingLine | HardwareHole;
 export type FeatureKind = Feature['kind'];
 
 /** One physical piece of leather to be cut out. */
@@ -207,6 +236,8 @@ export function roleOf(feature: Feature): LayerRole {
       return 'fold';
     case 'marking-line':
       return 'mark';
+    case 'hardware-hole':
+      return 'hardware';
   }
 }
 

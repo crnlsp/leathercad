@@ -288,3 +288,36 @@ describe('arcs', () => {
     expect(shape.radius).toBe(18);
   });
 });
+
+describe('a fold line', () => {
+  it('keeps a changed direction and a set thickness across a save and load', () => {
+    // Valley is the default, so a round trip of a valley fold proves nothing
+    // about whether a *change* is kept. Mountain, with a thickness, does.
+    const project = sampleProject();
+    const [part] = project.parts;
+    const changed = {
+      ...project,
+      parts: [
+        {
+          ...part!,
+          features: part!.features.map((f) =>
+            f.kind === 'fold-line'
+              ? { ...f, direction: 'mountain' as const, materialThicknessMm: 1.2 }
+              : f,
+          ),
+        },
+      ],
+    };
+
+    expect(loadProject(saveProject(changed, options)).project).toEqual(changed);
+  });
+
+  it('comes back with no thickness at all when none was set, rather than a zero', () => {
+    const loaded = loadProject(saveProject(sampleProject(), options)).project;
+    const fold = loaded.parts[0]!.features.find((f) => f.kind === 'fold-line')!;
+
+    // `toEqual` treats a missing key and an `undefined` one as the same, so the
+    // absence is asserted directly: the panel shows blank only if the key is gone.
+    expect(Object.keys(fold)).not.toContain('materialThicknessMm');
+  });
+});

@@ -14,6 +14,7 @@
  * reject old files by definition.
  */
 import { v1ToV2 } from './v1_to_v2.js';
+import { v2ToV3 } from './v2_to_v3.js';
 
 export interface Migration {
   readonly from: number;
@@ -24,9 +25,10 @@ export interface Migration {
 export const MIGRATIONS: readonly Migration[] = [
   // Version 1 is the first shipped format; nothing precedes it.
   { from: 1, to: 2, migrate: v1ToV2 },
+  { from: 2, to: 3, migrate: v2ToV3 },
 ];
 
-export const CURRENT_FORMAT_VERSION = 2;
+export const CURRENT_FORMAT_VERSION = 3;
 
 export class NewerFormatError extends Error {
   constructor(readonly fileVersion: number) {

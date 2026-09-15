@@ -139,6 +139,13 @@ const feature = z.discriminatedUnion('kind', [
     kind: z.literal('marking-line'),
     purpose: z.enum(['glue-area', 'alignment', 'logo', 'skive', 'other']),
   }),
+  // The hole's position and size are its `circle` source, not fields here —
+  // so this variant adds a kind, not a second way to hold a position.
+  z.object({
+    ...featureBase,
+    kind: z.literal('hardware-hole'),
+    hardwareType: z.enum(['rivet', 'snap', 'screw', 'eyelet', 'other']),
+  }),
 ]);
 
 const part = z.object({

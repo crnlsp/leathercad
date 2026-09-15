@@ -6,12 +6,15 @@ import {
   Viewport,
   createArcTool,
   createCircleTool,
+  createHardwareTool,
   createLineTool,
   createPolylineTool,
   createRectangleTool,
   createRotateTool,
   createScaleTool,
   createSelectTool,
+  type DrawAs,
+  type HardwareOptions,
   type PointerInput,
 } from '@leathercad/editor';
 import {
@@ -43,11 +46,15 @@ export interface CanvasStatus {
 export function CanvasHost({
   store,
   toolId,
+  drawAs,
+  hardware,
   nextId,
   onStatus,
 }: {
   store: DocumentStore;
   toolId: string;
+  drawAs: DrawAs;
+  hardware: HardwareOptions;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
 }) {
@@ -65,6 +72,14 @@ export function CanvasHost({
     dirtyRef.current = true;
   }, []);
 
+  // Settings the tools read at the moment they act. Refs rather than props
+  // because the ToolContext below is built once and must not be rebuilt — a
+  // new manager mid-drag would lose the half-drawn shape.
+  const drawAsRef = useRef(drawAs);
+  drawAsRef.current = drawAs;
+  const hardwareRef = useRef(hardware);
+  hardwareRef.current = hardware;
+
   const tools = useMemo(
     () => [
       createSelectTool(),
@@ -73,6 +88,7 @@ export function CanvasHost({
       createArcTool(nextId),
       createLineTool(nextId),
       createPolylineTool(nextId),
+      createHardwareTool(nextId, () => hardwareRef.current),
       createRotateTool(),
       createScaleTool(),
     ],
@@ -87,6 +103,7 @@ export function CanvasHost({
         store,
         dispatch: (command) => store.dispatch(command),
         invalidate,
+        drawAs: () => drawAsRef.current,
       },
       tools[0]!,
       tools,

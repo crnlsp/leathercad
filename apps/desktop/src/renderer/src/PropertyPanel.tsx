@@ -230,5 +230,7 @@ function labelFor(feature: Feature): string {
       return 'Marking line';
     case 'stitch-hole-set':
       return 'Stitch holes';
+    case 'hardware-hole':
+      return 'Hardware hole';
   }
 }

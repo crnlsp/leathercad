@@ -164,12 +164,22 @@ exports.
 ```ts
 interface HardwareHole extends FeatureBase {
   kind: 'hardware-hole';
-  centre: Vec2;
-  diameterMm: number;
   hardwareType: 'rivet' | 'snap' | 'screw' | 'eyelet' | 'other';
   hardwareRefId?: string;          // v1.1 — link to the hardware library
 }
 ```
+
+**The hole's position and size are its `source`**, as a `circle` shape — not `centre` and
+`diameterMm` fields, which is how this was sketched before `GeometrySource` existed. Slice 4.7
+corrected it: those fields would have made `HardwareHole` the only feature whose position is not in
+`source`, so `transformFeatures`, `translateFeatures`, hit-testing, rendering and the mirror in 4.8
+would each need a case for it. As a circle it inherits all of them, `CircleEditor` already edits it,
+and the derived placement it will eventually want — "12 mm in from that edge" — is a new
+`Derivation` on the same feature rather than a migration.
+
+The record therefore holds a **radius**, like every other circle. The panel and the tool ask for a
+diameter, because that is the number stamped on the punch, and halve it *before* quantising so the
+stored radius lands on the 1e-4 mm grid (§8 of `CLAUDE.md`).
 
 Kept distinct from an inner `CutContour` because the semantics differ: hardware holes are punched,
 not cut; they export on the cut layer but are reported separately ("6 × 4 mm rivet holes"); and they

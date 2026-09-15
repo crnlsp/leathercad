@@ -3,6 +3,8 @@ import { DocumentStore, emptyDocument, setProjectName } from '@leathercad/docume
 import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { DEFAULT_HARDWARE, type DrawAs, type HardwareOptions } from '@leathercad/editor';
+
 import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
 import { useProjectFile } from './useProjectFile.js';
 import { PartsList } from './PartsList.js';
@@ -21,6 +23,11 @@ export function App() {
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
   const [toolId, setToolId] = useState<string>('rectangle');
+  // What a drawn line becomes, and what the hardware tool punches. Owned
+  // here because both outlive the tool they configure: switching to the arc
+  // tool and back must not silently put the user back on 'Cut'.
+  const [drawAs, setDrawAs] = useState<DrawAs>('cut');
+  const [hardware, setHardware] = useState<HardwareOptions>(DEFAULT_HARDWARE);
 
   const nextId = useMemo(() => createIdFactory(systemIdSource), []);
   const store = useMemo(() => new DocumentStore(emptyDocument(nextId(), 'Untitled')), [nextId]);
@@ -160,8 +167,21 @@ export function App() {
           />
         </div>
         <div className="canvas-column">
-          <ToolOptions toolId={toolId} />
-          <CanvasHost store={store} toolId={toolId} nextId={nextId} onStatus={handleStatus} />
+          <ToolOptions
+            toolId={toolId}
+            drawAs={drawAs}
+            onDrawAs={setDrawAs}
+            hardware={hardware}
+            onHardware={setHardware}
+          />
+          <CanvasHost
+            store={store}
+            toolId={toolId}
+            nextId={nextId}
+            onStatus={handleStatus}
+            drawAs={drawAs}
+            hardware={hardware}
+          />
         </div>
         <PropertyPanel
           store={store}
@@ -172,21 +192,20 @@ export function App() {
       </div>
 
       <footer className="app-status" data-testid="status-bar">
-        {status?.notice !== null && status?.notice !== undefined ? (
-          <span className="status-error" data-testid="tool-notice">
-            {status.notice}
-          </span>
-        ) : bridgeError !== null || file.state.error !== null ? (
-          <span className="status-error" data-testid="file-error">
-            {bridgeError ?? file.state.error}
-          </span>
-        ) : (
-          <span data-testid="bridge-ok">
+        {/*
+          The counts stay put whatever else is being said. A notice used to
+          replace them, which was harmless while every notice was a momentary
+          refusal — but "select a part first" stands for as long as it is true,
+          and hiding how many parts exist while telling the user to pick one is
+          the wrong way round.
+        */}
+        <span className="status-left">
+          <span data-testid="status-counts">
             v<span data-testid="app-version">{version ?? '…'}</span>
             <span className="sep">·</span>
             <b data-testid="part-count">{storeState.document.project.parts.length}</b> parts
             <span className="sep">·</span>
-            <b>{featureCount}</b> features
+            <b data-testid="feature-count">{featureCount}</b> features
             <span className="sep">·</span>
             <b data-testid="selected-count">{storeState.selection.features.size}</b> selected
             {file.state.path !== null && (
@@ -197,7 +216,16 @@ export function App() {
               </>
             )}
           </span>
-        )}
+          {status?.notice !== null && status?.notice !== undefined ? (
+            <span className="status-error" data-testid="tool-notice">
+              {status.notice}
+            </span>
+          ) : bridgeError !== null || file.state.error !== null ? (
+            <span className="status-error" data-testid="file-error">
+              {bridgeError ?? file.state.error}
+            </span>
+          ) : null}
+        </span>
 
         <span className="status-right" data-testid="cursor-readout">
           {status === null || status.cursorMm === null

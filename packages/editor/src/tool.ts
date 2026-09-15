@@ -39,6 +39,15 @@ export interface ToolContext {
   dispatch(command: Command): void;
   /** Marks the canvas as needing a repaint. */
   invalidate(): void;
+  /**
+   * What the next drawn thing becomes — a cut contour, a fold line, a marking
+   * line. A function rather than a value because the context is built once and
+   * the setting changes underneath it.
+   *
+   * Absent means `'cut'`, so a caller that does not care — every test harness
+   * written before the setting existed — keeps the behaviour it had.
+   */
+  readonly drawAs?: () => 'cut' | 'fold' | 'mark';
 }
 
 /**

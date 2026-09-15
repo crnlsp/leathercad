@@ -377,28 +377,52 @@ test('history sits apart from the file actions', async () => {
   });
 });
 
-test('the options strip takes no room until a tool has options', async () => {
+test('the options strip appears only for a tool that has options', async () => {
   await withFreshApp(async (window) => {
-    // No tool has options yet, so the strip must not occupy space. An empty
-    // bar above the canvas is exactly the noise this layout removes.
+    // Select has nothing to configure, so the strip must not occupy space. An
+    // empty bar above the canvas is exactly the noise this layout removes.
+    await window.getByTestId('tool-select').click();
     await expect(window.getByTestId('tool-options')).toHaveCount(0);
+
+    // A draw tool does have something to say: what the next line becomes.
+    await window.getByTestId('tool-rectangle').click();
+    await expect(window.getByTestId('tool-options')).toHaveCount(1);
+    await expect(window.getByTestId('draw-as-cut')).toHaveAttribute('aria-pressed', 'true');
+
+    // And the hardware tool asks a different question entirely.
+    await window.getByTestId('tool-hardware').click();
+    await expect(window.getByTestId('hardware-diameter')).toHaveValue('4');
   });
 });
 
-test('the canvas fills the column it shares with the options strip', async () => {
-  // The strip renders nothing today, so the canvas must take the whole column.
+test('the canvas takes every pixel the options strip is not using', async () => {
   // A canvas that collapses to its intrinsic 150px still passes a width-only
-  // check while every drag below it silently misses.
-  const window = await app.firstWindow();
+  // check while every drag below it silently misses. With a tool that has
+  // options the strip takes a band and the canvas takes the rest; with one
+  // that has none the canvas takes all of it.
+  await withFreshApp(async (window) => {
+    const heights = async (): Promise<{ host: number; column: number; strip: number }> =>
+      window.evaluate(() => {
+        const height = (selector: string): number =>
+          document.querySelector(selector)?.getBoundingClientRect().height ?? 0;
+        return {
+          host: height('.canvas-host'),
+          column: height('.canvas-column'),
+          strip: height('.tool-options'),
+        };
+      });
 
-  const { host, column } = await window.evaluate(() => {
-    const height = (selector: string): number =>
-      document.querySelector(selector)?.getBoundingClientRect().height ?? 0;
-    return { host: height('.canvas-host'), column: height('.canvas-column') };
+    await window.getByTestId('tool-rectangle').click();
+    const withStrip = await heights();
+    expect(withStrip.column).toBeGreaterThan(400);
+    expect(withStrip.strip).toBeGreaterThan(0);
+    expect(withStrip.host).toBe(withStrip.column - withStrip.strip);
+
+    await window.getByTestId('tool-select').click();
+    const without = await heights();
+    expect(without.strip).toBe(0);
+    expect(without.host).toBe(without.column);
   });
-
-  expect(column).toBeGreaterThan(400);
-  expect(host).toBe(column);
 });
 
 test('the workspace narrows instead of pushing the properties panel off screen', async () => {
@@ -719,5 +743,112 @@ test("a second panel starts exactly on the first panel's corner", async () => {
 
     await expect(window.getByTestId('part-count')).toHaveText('2');
     expect(await numberIn('X')).toBeCloseTo(firstX, 3);
+  });
+});
+
+test('a fold line joins the panel it is drawn on', async () => {
+  // The reason 4.7 exists: a wallet body that folds needs to say where, and
+  // that mark belongs to the panel — not to a "part" of its own that could
+  // never be cut.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
+      await window.mouse.move(box!.x + x1, box!.y + y1);
+      await window.mouse.down();
+      await window.mouse.move(box!.x + x2, box!.y + y2, { steps: 4 });
+      await window.mouse.up();
+    };
+    const click = async (x: number, y: number): Promise<void> => {
+      await window.mouse.move(box!.x + x, box!.y + y);
+      await window.mouse.down();
+      await window.mouse.up();
+    };
+
+    await window.getByTestId('tool-rectangle').click();
+    await drag(160, 160, 460, 340);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    // The panel is selected from having just been drawn, so the fold has a home.
+    await window.getByTestId('tool-line').click();
+    await window.getByTestId('draw-as-fold').click();
+    // Wait for the mode to actually be on: clicking and drawing in the same
+    // breath races React, and a draw that lands while the mode is still Cut
+    // makes a part and fails the assertion for the wrong reason.
+    await expect(window.getByTestId('draw-as-fold')).toHaveAttribute('aria-pressed', 'true');
+
+    // The line tool places a point per click and finishes at the second — it
+    // is not a drag, and snapping puts each end on the panel edge it is aimed
+    // at rather than near it.
+    await click(310, 161);
+    await click(310, 339);
+
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expect(window.getByTestId('parts-list')).toContainText('Fold (valley)');
+
+    // The new fold is selected. Its thickness is not set, and the field says
+    // so rather than claiming 0 mm; set it, then clear it again.
+    const thickness = window.getByTestId('property-panel').getByLabel('Thickness');
+    await expect(thickness).toHaveValue('');
+    await expect(thickness).toHaveAttribute('placeholder', 'not set');
+    await thickness.fill('1.2');
+    await thickness.press('Enter');
+    await expect(thickness).toHaveValue('1.2');
+    await thickness.fill('');
+    await thickness.press('Enter');
+    await expect(thickness).toHaveValue('');
+  });
+});
+
+test('drawing a fold line with nothing selected changes nothing, and says why', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-line').click();
+    await window.getByTestId('draw-as-fold').click();
+    // Wait for the mode to actually be on: clicking and drawing in the same
+    // breath races React, and a draw that lands while the mode is still Cut
+    // makes a part and fails the assertion for the wrong reason.
+    await expect(window.getByTestId('draw-as-fold')).toHaveAttribute('aria-pressed', 'true');
+
+    // Two clicks: a finished line, with nowhere to put it.
+    await window.mouse.move(box!.x + 200, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.up();
+    await window.mouse.move(box!.x + 300, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.up();
+
+    // Refused rather than guessed at: a fold line on the wrong panel is
+    // invisible until the leather is cut. The message and the counts share the
+    // status bar — any notice used to replace the counts, which hid "0 parts"
+    // at exactly the moment it was the point.
+    await expect(window.getByTestId('tool-notice')).toContainText('Select a part');
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expect(window.getByTestId('parts-list')).toContainText('No parts yet');
+  });
+});
+
+test('places a rivet hole on the selected panel, named for what it is', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 160, box!.y + 160);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 460, box!.y + 340, { steps: 4 });
+    await window.mouse.up();
+
+    await window.getByTestId('tool-hardware').click();
+    await window.mouse.move(box!.x + 300, box!.y + 250);
+    await window.mouse.down();
+    await window.mouse.up();
+
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('parts-list')).toContainText('Rivet 4 mm');
+
+    // A 4 mm punch makes a 4 mm hole, and the panel says so in the units the
+    // punch is stamped in.
+    await expect(window.getByTestId('property-panel').getByLabel('Diameter')).toHaveValue('4');
   });
 });

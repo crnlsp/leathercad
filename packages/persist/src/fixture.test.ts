@@ -5,11 +5,12 @@ import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
 import { loadProject, readManifest, saveProject } from './lcp.js';
-import { fixtureProject, fixtureProjectV2 } from './makeFixture.js';
+import { fixtureProject, fixtureProjectV2, fixtureProjectV3 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
 const FIXTURE = resolve(import.meta.dirname, '../../../fixtures/format/v1.lcp');
 const FIXTURE_V2 = resolve(import.meta.dirname, '../../../fixtures/format/v2.lcp');
+const FIXTURE_V3 = resolve(import.meta.dirname, '../../../fixtures/format/v3.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -33,11 +34,12 @@ const OPTIONS = {
 describe('the format baseline fixture', () => {
   if (process.env.UPDATE_FIXTURES === '1') {
     it('regenerates the current version from the current writer', () => {
-      // v1 is deliberately not regenerated: it is a real old file, and
-      // rewriting it would delete the only proof that one still opens.
-      mkdirSync(dirname(FIXTURE_V2), { recursive: true });
-      writeFileSync(FIXTURE_V2, saveProject(fixtureProjectV2(), OPTIONS));
-      expect(existsSync(FIXTURE_V2)).toBe(true);
+      // Only the *current* version's fixture is ever regenerated. v1 and v2
+      // are real old files, and rewriting either would delete the only proof
+      // that a file from that version still opens.
+      mkdirSync(dirname(FIXTURE_V3), { recursive: true });
+      writeFileSync(FIXTURE_V3, saveProject(fixtureProjectV3(), OPTIONS));
+      expect(existsSync(FIXTURE_V3)).toBe(true);
     });
   }
 
@@ -91,11 +93,38 @@ describe('the format baseline fixture', () => {
     );
   });
 
-  it('holds a derivation chain at the current version', () => {
-    const loaded = loadProject(readFileSync(FIXTURE_V2));
+  it('still opens a version 2 file, now that the chain has grown a second link', () => {
+    // v2 stopped being the current version when hardware holes arrived. It is
+    // an old file now, and like v1 it must never be regenerated — it is the
+    // only proof that a file written before `hardware-hole` existed still
+    // loads, through a migration that has to be a no-op and had better be one.
+    expect(readManifest(readFileSync(FIXTURE_V2)).formatVersion).toBe(2);
+    expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(2);
+    expect(loadProject(readFileSync(FIXTURE_V2)).project).toEqual(fixtureProjectV2());
+  });
 
-    expect(readManifest(readFileSync(FIXTURE_V2)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
-    expect(loaded.project).toEqual(fixtureProjectV2());
+  it('holds a derivation chain and a hardware hole at the current version', () => {
+    const loaded = loadProject(readFileSync(FIXTURE_V3));
+
+    expect(readManifest(readFileSync(FIXTURE_V3)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+    expect(loaded.project).toEqual(fixtureProjectV3());
+  });
+
+  it('brings a 4 mm hole back as a 4 mm hole', () => {
+    const loaded = loadProject(readFileSync(FIXTURE_V3));
+    const hole = loaded.project.parts
+      .flatMap((part) => part.features)
+      .find((feature) => feature.kind === 'hardware-hole');
+
+    // `stableJson` rounds every number to six decimals on the way out, which
+    // is sub-quantum for millimetres — but a punch size is the number the user
+    // is going to reach for a tool by, so it is worth pinning exactly.
+    expect(hole?.source.kind === 'shape' && hole.source.shape.type === 'circle').toBe(true);
+    expect(
+      hole?.source.kind === 'shape' && hole.source.shape.type === 'circle'
+        ? hole.source.shape.radius * 2
+        : null,
+    ).toBe(4);
   });
 
   it('keeps a partial run through a save and reopen', () => {

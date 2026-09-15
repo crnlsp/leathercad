@@ -33,6 +33,9 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       { id: 'arc', label: 'Arc', key: 'A' },
       { id: 'line', label: 'Line', key: 'L' },
       { id: 'polyline', label: 'Polyline', key: 'P' },
+      // Hardware is its own mode rather than a "draw as" option, because it is
+      // the only one placed by a click at a chosen size rather than drawn.
+      { id: 'hardware', label: 'Hardware', key: 'H' },
     ],
   },
   {

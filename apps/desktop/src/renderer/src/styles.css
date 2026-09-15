@@ -208,6 +208,21 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Counts first, then whatever the status bar has to say beside them. The
+   message is the part allowed to shrink: a long notice should lose its tail,
+   never push the counts or the cursor readout off the bar. */
+.status-left {
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.status-left .status-error {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .toolbar {
   display: flex;
   flex: none;

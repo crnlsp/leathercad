@@ -1,6 +1,8 @@
-import { addPart, rectShape, rectanglePart } from '@leathercad/document';
+import { rectShape } from '@leathercad/document';
 import { Shapes } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+
+import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 
@@ -63,20 +65,14 @@ export function createRectangleTool(nextId: () => string): Tool {
       if (Math.abs(width) < 0.01 || Math.abs(height) < 0.01) return;
 
       const origin = { x: Math.min(startMm.x, end.x), y: Math.min(startMm.y, end.y) };
-      const featureId = nextId();
 
-      ctx.dispatch(
-        addPart(
-          rectanglePart(
-            nextId(),
-            featureId,
-            'Panel',
-            rectShape(origin, Math.abs(width), Math.abs(height)),
-          ),
-        ),
-      );
-      ctx.store.select([featureId]);
+      commitDrawn(ctx, nextId, 'Panel', {
+        kind: 'shape',
+        shape: rectShape(origin, Math.abs(width), Math.abs(height)),
+      });
     },
+
+    notice: drawTargetNotice,
 
     onKey(ctx, event) {
       if (event.key === 'Escape') reset(ctx);

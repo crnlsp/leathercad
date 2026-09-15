@@ -19,6 +19,7 @@ export type {
   FeatureKind,
   FoldLine,
   GeometrySource,
+  HardwareHole,
   MarkingLine,
   Derivation,
   ParametricShape,

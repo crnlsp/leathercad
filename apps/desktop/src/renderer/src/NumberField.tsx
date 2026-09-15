@@ -11,11 +11,18 @@ import { useRef, useState } from 'react';
  *
  * Typing an exact number is not a convenience here — it is the primary way to
  * work. Mouse precision is the fallback.
+ *
+ * **An empty field is an answer only when the caller says so.** Pass `onClear`
+ * and a `null` value renders blank with the `placeholder`, and clearing the
+ * field calls `onClear`. Without it an empty draft is a typo and reverts, as it
+ * always has — so every existing field behaves exactly as before.
  */
 export function NumberField({
   label,
   value,
   onCommit,
+  onClear,
+  placeholder,
   min,
   step = 1,
   suffix = 'mm',
@@ -23,8 +30,10 @@ export function NumberField({
   precision = 2,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   onCommit: (value: number) => void;
+  onClear?: () => void;
+  placeholder?: string;
   min?: number;
   step?: number;
   suffix?: string;
@@ -41,7 +50,7 @@ export function NumberField({
   // entries, which made the first press of Undo appear to do nothing.
   const [draft, setDraft] = useState<string | null>(null);
   const draftRef = useRef<string | null>(null);
-  const shown = draft ?? formatMm(value, precision);
+  const shown = draft ?? (value === null ? '' : formatMm(value, precision));
 
   const updateDraft = (next: string | null): void => {
     draftRef.current = next;
@@ -51,8 +60,16 @@ export function NumberField({
   const commit = (): void => {
     const pending = draftRef.current;
     if (pending === null) return;
-    const parsed = Number.parseFloat(pending.replace(',', '.'));
     updateDraft(null);
+
+    if (pending.trim() === '') {
+      // Only a field that allows it treats blank as a value; and clearing one
+      // that is already blank is not an edit, so it writes no history.
+      if (onClear !== undefined && value !== null) onClear();
+      return;
+    }
+
+    const parsed = Number.parseFloat(pending.replace(',', '.'));
     if (!Number.isFinite(parsed)) return;
 
     const clamped = min !== undefined ? Math.max(min, parsed) : parsed;
@@ -68,6 +85,7 @@ export function NumberField({
           type="text"
           inputMode="decimal"
           value={shown}
+          placeholder={placeholder}
           disabled={disabled}
           step={step}
           onChange={(event) => updateDraft(event.target.value)}
@@ -83,8 +101,11 @@ export function NumberField({
               event.preventDefault();
               const delta =
                 (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? step * 10 : step);
+              // A blank field steps from its minimum, or from zero: there is no
+              // current number to step from, and inventing one would be worse.
+              const current = value ?? min ?? 0;
               const next = quantise(
-                (draft === null ? value : Number.parseFloat(draft) || value) + delta,
+                (draft === null ? current : Number.parseFloat(draft) || current) + delta,
               );
               setDraft(null);
               onCommit(min !== undefined ? Math.max(min, next) : next);

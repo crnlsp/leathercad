@@ -627,7 +627,44 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   reporting. The shared hole where two runs meet is emitted once — a doubled corner hole is
   invisible until someone punches it, and a property test over 200 shapes asserts no two holes come
   closer than half the pitch.
-- **4.7** Fold lines, marking lines, hardware holes.
+- **4.7** ✅ **Done.** Fold lines, marking lines, hardware holes — the features that make a pattern
+  something you *assemble* rather than only cut. Design in
+  [2026-09-05-fold-mark-hardware-design.md](superpowers/specs/2026-09-05-fold-mark-hardware-design.md).
+  **Depended on 3.3b**, which was written first: these three features *are* their position, and a
+  drawn path has no numeric editor until 3.9, so without snapping every one of them would have been
+  placed by eye and been uncorrectable.
+  **A hardware hole carries its geometry as a `circle` shape in `source`**, not as the `centre` and
+  `diameterMm` fields `domain-model.md` §3.6 sketched before `GeometrySource` existed. Those fields
+  would have made it the only feature whose position is not in `source`, so every transform,
+  hit-test and the 4.8 mirror would need a case for it; as a circle it inherits all of them and
+  `CircleEditor` already edits it. §3.6 was corrected in the same commit.
+  **The kind is a tool setting, not a tool.** A fold line can be drawn as a line, an arc or a
+  polyline — kind is orthogonal to primitive, so one "Draw as" selector serves five tools where a
+  tool per combination would be fifteen buttons for three ideas. Hardware is its own tool because it
+  is the only one *placed* at a chosen size rather than drawn.
+  **A fold or marking line joins the selected part, or is refused** with the reason in the status
+  bar. Not guessed at by containment: a fold line silently attached to the wrong panel is invisible
+  until the leather is cut.
+  Two gotchas. **Halve before quantising** — the stored number is the radius, so quantising the
+  typed diameter first puts it on a 5e-5 grid whenever the last digit is odd. And **the parts list
+  is where mountain and valley are told apart**: `ROLE_STROKES` is keyed by layer role so both draw
+  dash-dot green, and per-feature styling for one flag is not worth it — the default *name* carries
+  it instead ("Fold (valley)", "Glue area", "Rivet 4 mm").
+  Format **version 3**, with an identity `v2_to_v3` and `fixtures/format/v3.lcp`. v1 and v2 are now
+  both old files and neither is ever regenerated.
+  One interaction found by CI and not by the machine it was written on: **the status bar used to
+  show a notice *instead of* the part and feature counts.** Harmless while every notice was a
+  momentary refusal, but 4.7 brought the first one that *persists* — it stands for as long as fold
+  mode is on with nothing selected, which is exactly what `Tool.notice` is specified to do — so
+  "0 parts" vanished at the moment it was the point. The counts now stay and the notice sits beside
+  them. The E2E test that caught it had asserted both, and passed locally only by winning the race
+  before React had the notice.
+  **Fold thickness is blank when not set**, not `0`: 0 mm reads as a claim that the leather has no
+  thickness. `NumberField` gained an opt-in `onClear` for it — without one an empty draft still
+  reverts as a typo, so no other field changed.
+  Rows of holes — a belt's adjustment holes — are deliberately **not** here: a row is a set
+  distributed along a path at a pitch, which is what `StitchHoleSet` already is, and building it as
+  repeated single holes would be the wrong shape to fix later.
 - **4.8** Mirror, at feature and part level.
 - **4.9** Seam allowance: derive a cut contour outward from a stitch line (the reverse direction).
 - **4.10** Measurements: linear, aligned, radial, with anchors that follow their geometry.

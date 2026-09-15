@@ -222,3 +222,48 @@ export function fixtureProject(): Project {
     ],
   };
 }
+
+/**
+ * The project behind `fixtures/format/v3.lcp`.
+ *
+ * Everything version 2 held, plus the hardware hole that is the reason the
+ * version moved. Built *from* `fixtureProjectV2` rather than restated, so
+ * "one of every persisted kind" cannot drift between the two — a kind added
+ * to the v2 baseline is automatically in this one.
+ *
+ * Note the hole's geometry: a `circle` shape, a variant version 2 already
+ * understood. The format grew by a feature kind, not by a new way of holding
+ * a position, which is why `v2_to_v3` is an identity.
+ */
+export function fixtureProjectV3(): Project {
+  const previous = fixtureProjectV2();
+  const [panel, ...rest] = previous.parts;
+
+  return {
+    ...previous,
+    id: 'fixture-v3',
+    name: 'Format baseline v3',
+    parts: [
+      {
+        ...panel!,
+        features: [
+          ...panel!.features,
+          {
+            id: 'hardware-1',
+            kind: 'hardware-hole',
+            hardwareType: 'rivet',
+            name: 'Rivet 4 mm',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'shape',
+              // A 4 mm punch: the record holds the radius.
+              shape: { type: 'circle', centre: { x: 12, y: 12 }, radius: 2 },
+            },
+          },
+        ],
+      },
+      ...rest,
+    ],
+  };
+}

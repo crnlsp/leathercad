@@ -3,6 +3,9 @@ import type {
   Derivation,
   Feature,
   FeatureId,
+  FoldLine,
+  HardwareHole,
+  MarkingLine,
   ParametricShape,
   GeometrySource,
   Part,
@@ -323,10 +326,6 @@ export function rectShape(
   return { type: 'rect', origin, width, height, radii: Shapes.uniformRadii(radius), rotation };
 }
 
-/**
- * The record stores a radius. The property panel asks for a diameter, because
- * that is the number on a punch — the conversion belongs there, not here.
- */
 export function arcShape(
   centre: Vec2,
   radius: number,
@@ -336,6 +335,10 @@ export function arcShape(
   return { type: 'arc', centre, radius, startAngle, sweepAngle };
 }
 
+/**
+ * The record stores a radius. The property panel asks for a diameter, because
+ * that is the number on a punch — the conversion belongs there, not here.
+ */
 export function circleShape(
   centre: Vec2,
   radius: number,
@@ -487,4 +490,151 @@ function mapFeature(
         : part,
     ),
   };
+}
+
+/**
+ * Where the leather bends rather than being cut.
+ *
+ * The name carries the direction because the canvas cannot: `ROLE_STROKES` is
+ * keyed by layer role, so a mountain and a valley both draw dash-dot green, and
+ * a cardholder with three folds needs them told apart somewhere. The parts list
+ * is that somewhere. It is a default, not a derived label — renaming still
+ * works.
+ */
+export function addFoldLine(
+  partId: PartId,
+  featureId: FeatureId,
+  source: GeometrySource,
+  direction: FoldLine['direction'] = 'valley',
+): Command {
+  return addFeature(partId, {
+    id: featureId,
+    kind: 'fold-line',
+    direction,
+    name: `Fold (${direction})`,
+    visible: true,
+    locked: false,
+    source,
+  });
+}
+
+/** A printed guide — glue areas, alignment, logo placement. Never cut. */
+export function addMarkingLine(
+  partId: PartId,
+  featureId: FeatureId,
+  source: GeometrySource,
+  purpose: MarkingLine['purpose'] = 'alignment',
+): Command {
+  return addFeature(partId, {
+    id: featureId,
+    kind: 'marking-line',
+    purpose,
+    name: MARKING_NAMES[purpose],
+    visible: true,
+    locked: false,
+    source,
+  });
+}
+
+const MARKING_NAMES: Readonly<Record<MarkingLine['purpose'], string>> = {
+  'glue-area': 'Glue area',
+  alignment: 'Alignment',
+  logo: 'Logo',
+  skive: 'Skive',
+  other: 'Marking line',
+};
+
+/**
+ * A hole punched for hardware.
+ *
+ * Takes a **radius**, like every other circle in the model. The panel and the
+ * tool ask the user for a diameter and halve it before they get here, because
+ * the punch is stamped with a diameter and the record holds one number.
+ */
+export function addHardwareHole(
+  partId: PartId,
+  featureId: FeatureId,
+  centre: Vec2,
+  radiusMm: Mm,
+  hardwareType: HardwareHole['hardwareType'] = 'rivet',
+): Command {
+  return addFeature(partId, {
+    id: featureId,
+    kind: 'hardware-hole',
+    hardwareType,
+    name: `${HARDWARE_NAMES[hardwareType]} ${formatMm(radiusMm * 2)} mm`,
+    visible: true,
+    locked: false,
+    source: { kind: 'shape', shape: circleShape(centre, radiusMm) },
+  });
+}
+
+const HARDWARE_NAMES: Readonly<Record<HardwareHole['hardwareType'], string>> = {
+  rivet: 'Rivet',
+  snap: 'Snap',
+  screw: 'Screw',
+  eyelet: 'Eyelet',
+  other: 'Hole',
+};
+
+/** "4" rather than "4.00", and "2.5" rather than "2.50". */
+function formatMm(value: Mm): string {
+  return String(Number(value.toFixed(2)));
+}
+
+/**
+ * Changes a feature's own parameters — the ones that are not its geometry.
+ *
+ * A fold's direction, a marking line's purpose, a hole's hardware type: each is
+ * a single field on a single kind, and each would otherwise be its own
+ * near-identical command. The `kind` is passed so the update cannot be applied
+ * to the wrong variant, and the label is passed so undo says what happened
+ * rather than "Edit feature".
+ */
+function setFeatureField<K extends Feature['kind']>(
+  id: FeatureId,
+  kind: K,
+  label: string,
+  update: (feature: Extract<Feature, { kind: K }>) => Extract<Feature, { kind: K }>,
+): Command {
+  return command(label, (document) => ({
+    project: mapFeature(document.project, id, (feature) =>
+      feature.kind === kind ? update(feature as Extract<Feature, { kind: K }>) : feature,
+    ),
+  }));
+}
+
+export function setFoldDirection(id: FeatureId, direction: FoldLine['direction']): Command {
+  return setFeatureField(id, 'fold-line', 'Change fold direction', (fold) => ({
+    ...fold,
+    direction,
+  }));
+}
+
+/** Undefined means "inherit from the part" — see `FoldLineEditor`. */
+export function setFoldThickness(id: FeatureId, materialThicknessMm: Mm | undefined): Command {
+  return setFeatureField(id, 'fold-line', 'Change fold thickness', (fold) => {
+    if (materialThicknessMm === undefined) {
+      const { materialThicknessMm: _dropped, ...rest } = fold;
+      return rest;
+    }
+    return { ...fold, materialThicknessMm };
+  });
+}
+
+export function setMarkingPurpose(id: FeatureId, purpose: MarkingLine['purpose']): Command {
+  return setFeatureField(id, 'marking-line', 'Change marking purpose', (mark) => ({
+    ...mark,
+    purpose,
+  }));
+}
+
+export function setHardwareType(
+  id: FeatureId,
+  hardwareType: HardwareHole['hardwareType'],
+): Command {
+  return setFeatureField(id, 'hardware-hole', 'Change hardware type', (hole) => ({
+    ...hole,
+    hardwareType,
+  }));
 }

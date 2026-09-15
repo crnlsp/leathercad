@@ -1,6 +1,8 @@
-import { addPart, arcShape, shapePart } from '@leathercad/document';
+import { arcShape } from '@leathercad/document';
 import { Shapes, type Path, type Segment, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+
+import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 import { constrainToAngleStep } from './angleConstraint.js';
@@ -59,9 +61,7 @@ export function createArcTool(nextId: () => string): Tool {
       const shape = solve(start, bulge, end);
       if (shape === null) return;
 
-      const featureId = nextId();
-      ctx.dispatch(addPart(shapePart(nextId(), featureId, 'Line', shape)));
-      ctx.store.select([featureId]);
+      commitDrawn(ctx, nextId, 'Line', { kind: 'shape', shape });
     },
 
     onPointerMove(ctx, event) {
@@ -69,6 +69,8 @@ export function createArcTool(nextId: () => string): Tool {
       state = state.kind === 'placing' ? { ...state, cursor: at } : { kind: 'idle', cursor: at };
       ctx.invalidate();
     },
+
+    notice: drawTargetNotice,
 
     onKey(ctx, event) {
       if (event.key === 'Escape') {

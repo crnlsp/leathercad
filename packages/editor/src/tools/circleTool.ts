@@ -1,6 +1,8 @@
-import { addPart, circleShape, shapePart } from '@leathercad/document';
+import { circleShape } from '@leathercad/document';
 import { Shapes, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+
+import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 
@@ -58,10 +60,10 @@ export function createCircleTool(nextId: () => string): Tool {
 
       if (radius < MIN_RADIUS_MM) return;
 
-      const featureId = nextId();
-      ctx.dispatch(addPart(shapePart(nextId(), featureId, 'Panel', circleShape(centreMm, radius))));
-      ctx.store.select([featureId]);
+      commitDrawn(ctx, nextId, 'Panel', { kind: 'shape', shape: circleShape(centreMm, radius) });
     },
+
+    notice: drawTargetNotice,
 
     onKey(ctx, event) {
       if (event.key === 'Escape') reset(ctx);

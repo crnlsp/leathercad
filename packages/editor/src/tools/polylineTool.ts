@@ -1,6 +1,7 @@
-import { addPart, pathPart } from '@leathercad/document';
 import { dist, polyline, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+
+import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 import { constrainToAngleStep } from './angleConstraint.js';
@@ -52,11 +53,10 @@ function polylineLike(
     if (points.length < 2) return;
     if (closed && points.length < 3) return;
 
-    const featureId = nextId();
-    ctx.dispatch(
-      addPart(pathPart(nextId(), featureId, closed ? 'Panel' : 'Line', polyline(points, closed))),
-    );
-    ctx.store.select([featureId]);
+    commitDrawn(ctx, nextId, closed ? 'Panel' : 'Line', {
+      kind: 'path',
+      path: polyline(points, closed),
+    });
   };
 
   return {
@@ -99,6 +99,8 @@ function polylineLike(
       state = { ...state, cursor: constrain(state.points, event.at, event.shiftKey) };
       ctx.invalidate();
     },
+
+    notice: drawTargetNotice,
 
     onKey(ctx, event) {
       if (state.kind !== 'drawing') return;
