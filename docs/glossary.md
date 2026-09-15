@@ -34,8 +34,15 @@ cut edge. In this codebase it is modelled as a *derivation direction*: a cut con
 outward from a stitch line by the allowance distance. (The inverse derivation — stitch line inward
 from cut contour — is called a **stitch inset** and is the more common workflow.)
 
-**Cut line / cut contour** — The outline actually cut from the leather. A part has exactly one
-outer cut contour and any number of inner ones (windows, card slots, cut-outs).
+**Stitch margin** — The distance between the stitch line and the cut edge, whichever of the two the
+maker dimensions. The same number is the stitch inset seen from the edge and the seam allowance seen
+from the stitching. One project default serves both (`settings.defaultStitchInsetMm`).
+
+**Cut line / cut contour** — The outline actually cut from the leather. A part has at most one outer
+cut contour, and should have exactly one, plus any number of inner ones.
+
+**Cut-out** — An inner cut contour: a card-slot window, a hardware cut-out. The part's material lies
+*outside* it, so "inward" from a cut-out points away from the hole.
 
 **Fold line** — Where the leather bends rather than being cut. Carries a fold direction (mountain
 or valley) and, later, a bend allowance, because leather with thickness does not fold on a
@@ -64,16 +71,54 @@ allowance" sometimes means the burnishing margin rather than the seam allowance;
 **Part** (or **pattern part**) — One physical piece of leather to be cut out. The unit of naming,
 quantity, mirroring, and placement.
 
-**Feature** — Any semantic piece of geometry belonging to a part: a cut contour, stitch line, fold
-line, marking line, hardware hole, stitch hole set, or measurement. The discriminated union at the
-centre of the domain model.
+**Feature** — Any semantic piece of a part: a cut contour, stitch line, fold line, marking line,
+hardware hole or stitch hole set — or an **annotation**. The discriminated union at the centre of the
+domain model.
+
+**Annotation** — A feature with no geometry source of its own: a measurement or a text label. It
+belongs to a part and resolves after the geometry it refers to.
 
 **Layer role** — The semantic category of a feature (`cut`, `stitch`, `fold`, `mark`, `hardware`,
 `annotation`). Drives screen style, export layer name, and validation rules. Not a user-managed
 layer stack — the roles are fixed by the domain.
 
-**Derivation** — A one-way dependency from one feature to another (stitch line derived from cut
-contour; holes derived from stitch line). Forms a DAG. See [domain-model.md](domain-model.md) §4.
+**Derivation** — A one-way dependency in which one feature's geometry is *built* from another's
+(stitch line derived from cut contour; holes derived from stitch line; a mirrored counterpart). See
+[domain-model.md](domain-model.md) §4.
+
+**Reference** — A dependency in which a feature *points at* another's geometry without being built
+from it: the ends of a measurement.
+
+**Reference graph** — Derivations and references together. Always acyclic, and every edge always
+resolves ([ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md)).
+
+**Freeze** — On deleting a source, keeping a derived dependent as drawn geometry, from its last
+resolved shape, instead of deleting it. Only ever the user's explicit choice.
+
+**Re-point** — Changing which feature a derived feature follows, keeping the relationship's
+parameters. How an outline is replaced without losing its stitching.
+
+**Anchor** — A durable landmark on a feature, such as a rectangle's corner, addressed as
+`(featureId, index)`. Carried through derivations. Never a segment index
+([ADR 0010](adr/0010-anchors-address-geometry.md)).
+
+**Flip** — Reflecting selected geometry in place. Leaves no relationship behind.
+
+**Mirror** (linked mirror) — A counterpart derived from its original by a reflection. It follows the
+original, and has the same kind, role and hole count ([ADR 0012](adr/0012-mirror-is-a-derivation.md)).
+
+**Structural invariant** — Something the document never violates, in memory or on disk. Commands
+refuse to break it, giving a reason; the loader refuses files that break it.
+
+**Design rule** — A condition that is legal but probably wrong for leather. Reported as a diagnostic,
+never enforced ([ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md)).
+
+**Diagnostic** — One entry in the single list of problems: an evaluation failure or a broken design
+rule, with a stable code. Every surface that shows problems reads that list.
+
+**Document text / overlay text** — Text that can reach paper (measurement values, labels, captions),
+sized in millimetres and set in the vendored typeface; versus a tool's on-screen readout, sized in
+pixels and never exported ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)).
 
 **Evaluation** — Walking the derivation DAG to turn the stored, parameter-only document into a
 `ResolvedDocument` with concrete geometry. Derived geometry is *never persisted*.

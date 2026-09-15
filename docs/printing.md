@@ -72,24 +72,39 @@ runs headless — from tests, and from the CLI.
 ## 4. `ExportScene`
 
 ```ts
-interface ExportScene {
-  boundsMm: Rect;                  // exact bbox of all included content
-  items: ExportItem[];
-  metadata: { projectName: string; partNames: string[]; generatedUtc: string };
+interface ExportScene {                // built (slice 6.1); text arrives in 4.11
+  projectName: string;
+  parts: ExportPart[];                 // the paginator places whole parts (slice 7.1)
 }
 
-type ExportItem =
-  | { kind: 'path';  layer: LayerRole; path: Path; style: ExportStyle; partId?: PartId }
-  | { kind: 'point'; layer: LayerRole; centre: Vec2; shape: HoleShape;
-      sizeMm: number; angleRad?: number; partId?: PartId }
-  | { kind: 'text';  layer: LayerRole; at: Vec2; text: string;
-      heightMm: number; angleRad: number; anchor: TextAnchor };
+interface ExportPart {
+  id: PartId;
+  name: string;                        // the caption, generated: "Card holder — cut 2"
+  quantity: number;
+  paths: ExportPath[];                 // stitch holes included, as true-size circles
+  texts: ExportText[];                 // 4.11
+  boundsMm: Rect;                      // in the part's own coordinates
+}
 
-interface ExportStyle {
-  strokeWidthMm: number;           // TRUE millimetres, not screen pixels
-  dashMm?: number[];
-  colour: string;                  // hex; monochrome output resolves this to black
-  fill: boolean;
+interface ExportPath {
+  role: LayerRole;
+  path: Path;
+  style: PrintStyle;
+}
+
+// Laid out once by packages/typography and written as filled glyph outlines.
+// No font is embedded in any export (ADR 0011).
+interface ExportText {                 // 4.11
+  role: LayerRole;
+  source: string;                      // the string itself, for tests and diagnostics
+  glyphs: readonly Path[];             // filled outlines, in millimetres
+  sizeMm: Mm;
+}
+
+interface PrintStyle {
+  widthMm: Mm;                         // TRUE millimetres, not screen pixels
+  dashMm: readonly number[];           // empty is solid
+  grey: number;                        // 0 is black, 1 is white; printed templates are black
 }
 ```
 
@@ -102,6 +117,14 @@ cut 0.25 mm, stitch 0.15 mm dashed 2-2, fold 0.15 mm dash-dot, mark 0.10 mm, ann
 **Which items are included is an export preset**, resolved from layer roles
 ([domain-model.md](domain-model.md) §5) — "template print", "laser cut", "stitch guide". The user
 chooses an intent; the preset chooses the roles.
+
+**Text on paper is outlines, not a font.** Every string printed — part captions, measurement values,
+text labels, the footer, the verification labels — is laid out once in millimetres and written as
+filled glyph paths from the vendored typeface. Nothing then depends on a viewer's or a cutter
+program's font handling. It also retires pdf-lib's standard Helvetica, which cannot encode Polish
+letters such as `ł` and `ę`: with it, exporting a part named "Przegroda główna" throws. The on-screen
+canvas draws the same layout with the font itself. See
+[ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md).
 
 ## 5. Pagination
 

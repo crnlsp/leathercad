@@ -29,6 +29,12 @@ restating it — §4.2 requires the decision to live in one place.
 | **circle** | `centre` moves | `centre` rotates only — a circle has no orientation | `radius × \|s\|` | `centre` mirrors | **refused** |
 | **arc** | `centre` moves | `centre` rotates, `startAngle += θ` | `centre` scales, `radius × \|s\|` | `startAngle` from the transformed start direction, `sweepAngle` negates | **refused** |
 
+> **Defect in the rect mirror row, found 2026-09-15.** As implemented, a reflection keeps the
+> rectangle's origin and changes its rotation, which is a rotation about the rectangle's own centre,
+> not a reflection: a panel mirrored across x = 0 stays where it was, with its rounded corners
+> diagonally opposite. The round-trip property below could not catch it, because a wrong mapping
+> still inverts. Fixed in slice 3.7b; see [ADR 0012](../../adr/0012-mirror-is-a-derivation.md).
+
 Two details that are easy to get wrong and are already right in `ArcOps.transform`:
 
 - The new start angle comes from **applying the matrix to the start direction**, not from pulling a

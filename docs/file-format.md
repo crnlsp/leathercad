@@ -66,60 +66,53 @@ ordering.
 
 ### 3.1 Shape
 
+Format version 3, as the writer emits it (key order shown for reading; the writer sorts keys):
+
 ```jsonc
 {
   "id": "01JBQ8…",
   "name": "Bifold Wallet",
-  "settings": {
-    "gridSpacingMm": 1,
-    "gridMajorEvery": 10,
-    "defaultStitchInsetMm": 3.5,
-    "defaultIronPresetId": "iron-3.85",
-    "page": { "size": "A4", "orientation": "portrait",
-              "marginsMm": { "top": 10, "right": 10, "bottom": 10, "left": 10 },
-              "overlapMm": 10 }
-  },
-  "ironPresets": [ { "id": "iron-3.85", "name": "3.85 mm", "pitchMm": 3.85 } ],
-  "materials":  [ { "id": "mat-veg32", "name": "Veg tan 3.2 mm", "thicknessMm": 3.2,
-                    "displayColour": "#c9a227" } ],
-  "guides":     [ { "id": "g1", "origin": { "x": 0, "y": 0 }, "angleRad": 0 } ],
+  "settings": { "gridSpacingMm": 1, "defaultStitchInsetMm": 3.5, "defaultIronPitchMm": 3.85 },
   "parts": [
     {
       "id": "01JBQ9…",
       "name": "Outer panel",
       "quantity": 1,
-      "materialId": "mat-veg32",
-      "grainDirectionRad": 0,
-      "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "e": 20, "f": 20 },
       "features": [
         {
-          "id": "01JBQA…", "kind": "cut-contour", "name": "Outline",
-          "visible": true, "locked": false, "role": "outer",
+          "id": "01JBQA…", "kind": "cut-contour", "role": "outer", "name": "Outline",
+          "visible": true, "locked": false,
           "source": { "kind": "shape",
                       "shape": { "type": "rect", "origin": { "x": 0, "y": 0 },
-                                 "w": 190, "h": 95, "radii": [8, 8, 8, 8] } }
+                                 "width": 190, "height": 95, "rotation": 0,
+                                 "radii": { "topLeft": 8, "topRight": 8,
+                                            "bottomLeft": 8, "bottomRight": 8 } } }
         },
         {
-          "id": "01JBQB…", "kind": "stitch-line", "name": "Perimeter stitch",
+          "id": "01JBQB…", "kind": "stitch-line", "name": "Stitch line",
           "visible": true, "locked": false,
-          "source": { "kind": "offset", "fromId": "01JBQA…", "distanceMm": 3.5,
-                      "side": "inward", "join": "round", "miterLimit": 4 }
+          "source": { "kind": "derived", "sourceId": "01JBQA…",
+                      "op": { "type": "offset", "distanceMm": 3.5, "side": "inward",
+                              "run": { "kind": "whole" } } }
         },
         {
-          "id": "01JBQC…", "kind": "stitch-hole-set", "name": "Perimeter holes",
+          "id": "01JBQC…", "kind": "stitch-hole-set", "name": "Stitch holes",
           "visible": true, "locked": false,
-          "stitchLineId": "01JBQB…",
-          "pitchMm": 3.85, "ironPresetId": "iron-3.85",
-          "distribution": "fit-whole",
-          "cornerPolicy": { "kind": "hole-at-corner", "cornerAngleThresholdDeg": 30 },
-          "startOffsetMm": 0, "endOffsetMm": 0,
-          "hole": { "shape": "round", "diameterMm": 1 }
+          "source": { "kind": "derived", "sourceId": "01JBQB…",
+                      "op": { "type": "stitch-holes", "pitchMm": 3.85, "mode": "fit-whole",
+                              "corners": "hole-at-corner", "ironLabel": "KS Blade 3.85 mm" } }
         }
       ]
     }
   ]
 }
 ```
+
+**Planned in Phase 4** ([reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md)
+§6), each with its own version bump and identity migration: `frozenFrom` on features and empty parts
+(4.2b), the `mirror` op (4.8), and the `measurement` and `text-label` annotation kinds, which carry no
+`source` (4.10, 4.11). Page setup, materials, guides and a per-part placement transform are not in the
+format.
 
 Note what that wallet panel *does not* contain: a single coordinate of the stitch line, and not one
 of its ~120 hole positions. Three parameter blocks regenerate all of it.

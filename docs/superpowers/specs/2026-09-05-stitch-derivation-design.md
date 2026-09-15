@@ -1,7 +1,8 @@
 # The derivation chain: cut contour to stitch holes (Stage 1) — design
 
 Date: 2026-09-05
-Status: approved, not yet implemented
+Status: implemented (M3). Deletion semantics superseded by ADR 0009; see the
+[Phase 4 reconciliation](2026-09-15-phase-4-reconciliation-design.md)
 Delivers: **M3** — "change a rectangle's width; its stitch line and 120 holes update live"
 
 ## Why this slice exists
@@ -170,7 +171,9 @@ adjacency structure, no source arrays reserved "for later".
   yields one clear message on the dependent ("the cut line it follows could not be built") rather
   than repeating the root cause down the chain. One problem, one entry in the panel.
 
-- **Deleting a source — cascade, as one undoable step.** An orphaned stitch line has no geometry and
+- **Deleting a source — cascade, as one undoable step.** *(Superseded by
+  [ADR 0009](../../adr/0009-explicit-resolution-when-deleting-a-source.md): once seam allowance makes
+  an outline derivable, a cascade deletes a part's own cut line. A delete with dependents now asks.)* An orphaned stitch line has no geometry and
   no meaning. Deleting a cut contour deletes its stitch line and that line's holes, the UI reports
   how many features went, and one undo restores all of them. Leaving dependents in a permanent error
   state produces documents full of undeletable rubble.

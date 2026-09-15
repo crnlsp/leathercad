@@ -95,7 +95,9 @@ Deliberately **not** used: Redux (wrong model for a CAD document), a CSS framewo
 hand-written token set, three.js (no 3D), Storybook (high upkeep for a canvas-centric app).
 
 **Fonts must be vendored**, not taken from the system. Text metrics affect both PDF output and
-visual-regression snapshots; a system font makes both non-reproducible.
+visual-regression snapshots; a system font makes both non-reproducible. How: one typeface, laid out
+once in millimetres, drawn with the font on screen and as glyph outlines on paper
+([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)).
 
 ## 2. Layering
 
@@ -134,7 +136,9 @@ Strict, one-directional dependency graph. An arrow means "may import".
                                 │   platform   │  PlatformHost — the OS boundary (§5).
                                 └──────────────┘  Implemented by apps/desktop, faked in tests.
 
-     export   ──depends on──▶ domain, geometry, render(display-list types only)
+     typography ─depends on─▶ core, geometry   (pure: glyph metrics, outlines, layout in mm — 4.11)
+     render   ──depends on──▶ typography, for document text
+     export   ──depends on──▶ domain, geometry, render(display-list types only), typography
      print    ──depends on──▶ export
      ui, cli  ──depend on───▶ platform, for file and dialog access
      cli      ──depends on──▶ everything except ui/editor/desktop
@@ -151,6 +155,8 @@ Strict, one-directional dependency graph. An arrow means "may import".
    tests and from the CLI.
 6. No package may import Electron except `apps/desktop`.
 7. `platform` may import only `core`. It declares the OS boundary; it never implements it.
+8. `typography` may import only `core` and `geometry`, and parses no font at run time: its glyph data
+   is generated and committed ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)).
 
 Rule 6 is what keeps the Tauri escape hatch open. Rule 1 is what keeps the geometry engine testable
 and correct.
@@ -159,10 +165,13 @@ and correct.
 
 ```
    Document (stored, parameters only)
-        │  evaluate()  — walks the derivation DAG, memoised
+        │  evaluate()  — resolves the reference graph, memoised
         ▼
-   ResolvedDocument (concrete Paths and point sets, per-node errors)
-        │  buildDisplayList()  — applies layer-role styles
+   ResolvedDocument (concrete Paths and point sets, typed per-feature failures)
+        │                          │  validate()  — design rules over the resolved project
+        │                          ▼
+        │                     Diagnostic[] ──▶ problems panel, badges, canvas markers
+        │  buildDisplayList()  — layer-role styles; document text laid out by typography, in mm
         ▼
    DisplayList
         │
@@ -170,7 +179,7 @@ and correct.
         └──▶ SVG backend       ──▶ snapshot tests, quick export
 
    ResolvedDocument
-        │  buildExportScene()
+        │  buildExportScene()  — document text as glyph outlines
         ▼
    ExportScene ──▶ Paginator ──▶ Page[] ──▶ PDF / SVG / DXF writers
                                    └──────▶ Canvas2D backend (print preview)
@@ -359,19 +368,24 @@ Separately: **angle constraint** (Shift → 15° increments) and **numeric entry
 
 ### 6.5 Selection
 
-Hierarchical, with drill-down:
+Two levels now, a third with vertex editing:
 
 ```ts
 type Selection = {
-  parts: ReadonlySet<PartId>;
-  features: ReadonlySet<FeatureId>;
-  vertices: ReadonlySet<VertexRef>;   // { featureId, segmentIndex, end }
+  parts: ReadonlySet<PartId>;        // from the parts panel (slice 4.3)
+  features: ReadonlySet<FeatureId>;  // from the canvas and the parts panel
+  // vertices arrive with slice 3.9, addressed by vertex id — never by segment index,
+  // which renumbers when a vertex is inserted (ADR 0010)
 };
 ```
 
-Click selects a part. Double-click enters the part and selects features. Double-click again enters
-path editing and selects vertices. Escape walks back out. This is the standard model and it scales
-to complex documents without new concepts.
+A canvas click selects a feature; clicking a part's heading in the parts panel selects the part. The
+**target part** for anything that joins a part is the selected part, or the one part the selected
+features belong to — and selection only ever chooses *where* something goes, never *what* is created
+([Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) §3.8).
+
+The drill-down sketched here originally — click for a part, double-click for its features, again for
+vertices — waits until real documents show that flat feature picking on the canvas is not enough.
 
 ### 6.6 Guides and alignment
 

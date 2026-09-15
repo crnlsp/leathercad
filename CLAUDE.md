@@ -116,6 +116,7 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | `packages/persist` | `docs/file-format.md` |
 | `packages/export`, `packages/print` | `docs/printing.md` |
 | Anything structural | `docs/architecture.md` |
+| The rest of Phase 4 | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
 | Tests | `docs/testing.md` |
 
 Run `/geo-check` and `/arch-check` before considering a slice done. If a change invalidates

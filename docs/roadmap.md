@@ -554,6 +554,12 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   must say plainly that the shape stops being editable as a circle or an arc, because that is the
   whole cost. Until it exists, 3.7 refuses those transforms rather than performing them quietly,
   which is the right default but not a complete answer.
+- **3.7b** Reflections through `transformShape`. Reflecting a rectangle keeps its origin and changes
+  its rotation, so it stays where it was with its rounded corners diagonally opposite — measured:
+  a 10 × 5 panel mirrored across x = 0 lands at x ∈ [0, 10] instead of [−10, 0]. The 3.7 round trip
+  could not catch it, because a wrong mapping still inverts. Recompute the origin from the reflected
+  centre, permute the radii, and property-test against transforming the evaluated path. Adds a
+  *Flip* command. The prerequisite of mirror (4.8); see [ADR 0012](adr/0012-mirror-is-a-derivation.md).
 - **3.8** ✅ **Done.** Property panel with exact millimetre fields for position, size and all four
   corner radii, plus part name and quantity, and measured perimeter and area. Also a parts list for
   selecting what the canvas cannot reach. Entry commits on Enter or blur, reverts on Escape,
@@ -579,6 +585,12 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 ### Phase 4 — The leathercraft domain
 *Ends at M3. The phase that makes this a leathercraft application rather than a drawing program.*
 
+**The remaining work was reconciled as one design before any of it was built:** the
+[Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) and ADRs
+0009–0013. Slice numbers stay stable identifiers, but the build order follows the dependencies
+instead: **4.2b → 4.12a → 4.11 → 4.4b → 3.7b → 4.3 → 4.8 → 4.9 → 4.10 → 4.12**, then a close-out
+that walks one scenario through the whole phase.
+
 - **4.1** ✅ **Done.** `Part`, `Feature` (cut contour, stitch line, fold line, marking line),
   `GeometrySource` (`path` and `shape`), layer roles, and `evaluate` producing a resolved document.
   Derived geometry is never persisted — the file holds parameters and evaluation recomputes, so an
@@ -603,7 +615,21 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   never shares an object; the app caught it in a second.
   Deleting a source cascades to everything derived from it, in the same command, so one undo brings
   all of it back. An orphaned stitch line has no geometry and no meaning.
-- **4.3** `CutContour` from shapes; part creation and the parts panel.
+- **4.2b** Reference graph and deletion. Derivations and references (measurement ends) as one acyclic
+  graph, with the derivation compatibility table enforced by commands and by the loader. **Deleting
+  something others depend on asks** — delete the chain, freeze, or cancel — rather than cascading or
+  baking silently ([ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md)). Any derived
+  feature can be re-pointed (*Follows*); parts are removed only by deleting the part; every refusal
+  is explained by a query that shares the command's check. **Supersedes the cascade recorded under
+  4.2.**
+- **4.3** Parts panel and cut-outs. Part selection beside feature selection; the parts panel as a
+  dependency tree (*Outline ▸ Stitch line ▸ Holes*); delete and duplicate a part, re-pointing the
+  derivations inside it; visibility, and a lock that commands honour rather than only picking.
+  Drawing modes regrouped so each has one fixed result: *Outline* and *Stitch + allowance* always
+  make a new part, *Cut-out*, *Stitch*, *Fold* and *Marking* join the selected part, and an open path
+  in an outline mode is refused rather than filed as a marking line. "Inward" resolved against the
+  part's material, so a stitch line round a cut-out runs outside it. Defaults read from project
+  settings. See the reconciliation §3.1 and §3.8.
 - **4.4** ✅ **Done.** Derived `StitchLine` — inset inward, live-linked, editable in the panel. Also
   **partial runs**, which the design added after walking the real cases: a pocket is stitched on
   three sides and open at the top, so a stitch line that could only be a closed loop could not
@@ -665,11 +691,33 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   Rows of holes — a belt's adjustment holes — are deliberately **not** here: a row is a set
   distributed along a path at a pitch, which is what `StitchHoleSet` already is, and building it as
   repeated single holes would be the wrong shape to fix later.
-- **4.8** Mirror, at feature and part level.
-- **4.9** Seam allowance: derive a cut contour outward from a stitch line (the reverse direction).
-- **4.10** Measurements: linear, aligned, radial, with anchors that follow their geometry.
-- **4.11** Text labels with the vendored font.
-- **4.12** Validation engine and the problems panel, with zoom-to-problem.
+- **4.4b** Anchors carried through derivations. An offset reports which corner produced which, a hole
+  set exposes its line's anchors, and an anchor with no image fails with `ANCHOR_MISSING` instead of
+  moving ([ADR 0010](adr/0010-anchors-address-geometry.md)). The prerequisite for mirror, seam
+  allowance and measurements naming the corners of derived geometry.
+- **4.8** Mirror as a derivation ([ADR 0012](adr/0012-mirror-is-a-derivation.md)): a linked
+  counterpart of a feature or a whole part, same kind and role, with hole counts equal by
+  construction. Moved and rotated through its axis and glide; never scaled. Offset-derived features
+  refuse to move on their own instead of silently staying put. No part transform.
+- **4.9** Seam allowance: a closed stitch line with its outline derived outward. *Stitch + allowance*
+  makes the new part in one step, and one stitch margin (`settings.defaultStitchInsetMm`) serves both
+  directions. Deleting such a part's stitch line is the case ADR 0009 exists for.
+- **4.10** Measurements — horizontal, vertical, aligned and radial — as annotations whose ends
+  reference anchors, centres or extents, never segment indices or free points
+  ([ADR 0010](adr/0010-anchors-address-geometry.md)). Values are generated and set through the
+  typography of 4.11.
+- **4.11** Typography ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)): one vendored
+  OFL typeface, a pure `packages/typography` laying text out once in millimetres, the font on screen
+  and outlines on paper. Helvetica leaves the PDF writer, which **fixes export failing on Polish
+  names** — pdf-lib's standard fonts cannot encode `ł` or `ę`, verified. Part captions on the canvas;
+  free text labels. **Built third**, because that export failure is live.
+- **4.12a** The diagnostic channel ([ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md)):
+  typed evaluation failures, `OFFSET_SPLIT` instead of silently dropped offset pieces, `validate()`
+  with the stitch and offset rules, a problems panel, and failed features drawn as warnings instead
+  of vanishing. **Built second**, so every later slice lands with its own diagnostics.
+- **4.12** Validation complete: zoom-to-problem, part and feature badges, a warning at export, and an
+  audit test that every rule names a documented invariant and every structural invariant has both a
+  refusal test and a loader test. The catalogue is `domain-model.md` §8.
 
 ### Phase 5 — Persistence
 *Ends at M4.*

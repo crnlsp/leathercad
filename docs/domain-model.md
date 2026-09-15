@@ -1,8 +1,10 @@
 # Domain Model
 
 **Package:** `packages/domain`
-**Status:** Design — no implementation yet
-**Last updated:** 2026-09-03
+**Status:** Built through slice 4.7. The rest of Phase 4 is designed in the
+[Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md). Each section
+says which parts are **built**, **designed** (Phase 4, not yet built) or **later**.
+**Last updated:** 2026-09-15
 
 ---
 
@@ -11,267 +13,281 @@
 A generic vector editor stores *"a black closed path"*. This application stores *"the cut contour of
 the outer panel"*, and that difference is the product.
 
-Once geometry carries meaning, four things follow automatically that a vector editor cannot do:
+Once geometry carries meaning, four things follow that a vector editor cannot do:
 
-- **Appearance** — a cut line draws solid, a stitch line dashed, a fold line dash-dot. The user
-  never picks a stroke style.
-- **Behaviour** — a stitch line can be *derived* from a cut contour, because the relationship
-  "3.5 mm inside the edge" is meaningful. Two anonymous paths have no such relationship.
-- **Export** — a laser-cutting export emits cut contours and hardware holes and drops everything
-  else. A template print emits all of it. The user picks an intent, not a set of layers.
-- **Validation** — "these stitch holes fall outside their part" is only checkable if the software
-  knows which path is a part boundary and which is a hole set.
+- **Appearance.** A cut line draws solid, a stitch line dashed, a fold line dash-dot. The user never
+  picks a stroke style.
+- **Behaviour.** A stitch line can be *derived* from a cut contour, because "3.5 mm inside the edge"
+  is a meaningful relationship. Two anonymous paths have no such relationship.
+- **Export.** A laser-cutting export emits cut contours and hardware holes and drops everything else.
+  A template print emits all of it. The user picks an intent, not a set of layers.
+- **Validation.** "These stitch holes fall outside their part" is checkable only if the software knows
+  which path is a part's edge and which is a hole set.
 
 Everything below serves those four.
 
 ## 2. Entity overview
 
 ```
-Project
-├── settings          (grid, default iron, page setup, default stitch inset)
-├── ironPresets[]     (named pitch values)
-├── materials[]       (name, thickness, colour for display)
-├── guides[]
+Project                                     built
+├── settings          grid, default stitch margin, default iron pitch
 └── parts[]
-     └── Part
-          ├── name, quantity, materialId, grainDirection, notes
-          ├── transform        (placement in the workspace)
+     └── Part         name, quantity         built
           └── features[]
-               ├── CutContour
-               ├── StitchLine
-               ├── StitchHoleSet
-               ├── FoldLine
-               ├── MarkingLine
-               ├── HardwareHole
-               ├── Measurement
-               └── TextLabel
+               ├── CutContour                built   (outer, and cut-outs: designed 4.3)
+               ├── StitchLine                built   (drawn roots: designed 4.9)
+               ├── StitchHoleSet             built
+               ├── FoldLine                  built
+               ├── MarkingLine               built
+               ├── HardwareHole              built
+               ├── Measurement               designed, 4.10 — an annotation
+               └── TextLabel                 designed, 4.11 — an annotation
 ```
+
+**Later:** materials with thickness, grain direction and notes on a part, persisted guides, shipped
+iron presets as document data. **Not planned for Phase 4:** a per-part placement transform. A part
+is placed by its features' own geometry ([ADR 0012](adr/0012-mirror-is-a-derivation.md)).
 
 ## 3. Features
 
-The discriminated union at the centre of the model. Every feature has a stable id, a name, a
-visibility flag, a lock flag, and a `kind`.
+A discriminated union. Every feature has a stable ULID, a name, a visibility flag and a lock flag.
 
 ```ts
-type FeatureId = string;   // ULID — sortable, stable, collision-free
-
 interface FeatureBase {
-  id: FeatureId;
-  kind: FeatureKind;
-  name: string;
-  visible: boolean;
-  locked: boolean;
+  readonly id: FeatureId;
+  readonly name: string;
+  readonly visible: boolean;
+  readonly locked: boolean;           // S7: no command changes it until it is unlocked
+  readonly frozenFrom?: string;       // designed, 4.2b: set when a delete froze it (ADR 0009)
+}
+
+/** Features with geometry of their own: everything except annotations. */
+interface GeometricFeature extends FeatureBase {
+  readonly source: GeometrySource;    // §4
 }
 ```
 
-### 3.1 `CutContour`
+**Annotations** (designed) are features without a geometry source: a measurement and a text label.
+They belong to a part and resolve after the geometry they refer to (§3.7, §3.8).
 
-The outline actually cut from leather. A part has exactly one `role: 'outer'` contour and any
-number of `role: 'inner'` contours (card-slot windows, hardware cut-outs, thumb scoops).
+### 3.1 `CutContour` — built
 
 ```ts
-interface CutContour extends FeatureBase {
+interface CutContour extends GeometricFeature {
   kind: 'cut-contour';
   role: 'outer' | 'inner';
-  source: GeometrySource;      // see §4
-  // invariant: the resolved path must be closed
 }
 ```
 
-Winding is normalised on evaluation: outer contours counter-clockwise, inner clockwise. This is what
-lets "inward" and "outward" offsets have an unambiguous meaning.
+The outline actually cut from leather. Inner contours are **cut-outs**: card-slot windows, hardware
+cut-outs.
 
-### 3.2 `StitchLine`
+- A part has **at most one** outer contour (structural, S5), and **should** have exactly one
+  (design rule DR1, `PART_HAS_NO_OUTER_CONTOUR`).
+- Outer contours and cut-outs **enclose an area** (structural, S6). Drawing an open path as one is
+  refused, not reinterpreted.
+- **Winding is not normalised.** Reversing a path would renumber its anchors (§4.6). "Inward" and
+  "outward" are resolved against the part's material instead (§4.3).
+
+### 3.2 `StitchLine` — built
+
+```ts
+interface StitchLine extends GeometricFeature {
+  kind: 'stitch-line';
+}
+```
 
 Where the thread runs. Open or closed.
 
+- **Built:** derived inward from a cut contour, whole or as a partial run between anchors.
+- **Designed (4.9):** drawn directly on a part, and as the source of a seam-allowance outline.
+
+### 3.3 `StitchHoleSet` — built
+
 ```ts
-interface StitchLine extends FeatureBase {
-  kind: 'stitch-line';
-  source: GeometrySource;
-  threadPathLength?: never;    // derived at evaluation, never stored
+interface StitchHoleSet extends GeometricFeature {
+  kind: 'stitch-hole-set';            // source is always `derived` with a `stitch-holes` op
 }
 ```
 
-Usually derived (`kind: 'offset'` source) from a cut contour by the **stitch inset** — typically
-3–4 mm. Occasionally drawn directly, when the user wants stitching that does not follow an edge.
-
-### 3.3 `StitchHoleSet`
-
-The discrete holes. **Always derived from a stitch line** — a hole set with hand-placed holes is a
-different thing and is not in scope.
+Always derived from a stitch line. A hand-placed hole set is a different thing and is not in scope.
+The parameters live in the op (§4):
 
 ```ts
-interface StitchHoleSet extends FeatureBase {
-  kind: 'stitch-hole-set';
-  stitchLineId: FeatureId;
-
-  pitchMm: number;                 // nominal, from an iron preset or typed
-  ironPresetId?: string;
-
-  distribution: 'fit-whole' | 'exact-pitch';
-  cornerPolicy: CornerPolicy;      // see §6
-  startOffsetMm: number;           // inset from the start of an open line
-  endOffsetMm: number;
-
-  hole: {
-    shape: 'round' | 'slot' | 'diamond';
-    diameterMm: number;            // round: diameter; slot/diamond: width
-    lengthMm?: number;             // slot/diamond only
-    angleDeg?: number;             // slot/diamond, relative to the local tangent; typically 20–30
-  };
-}
+{ type: 'stitch-holes';
+  pitchMm: Mm;                        // nominal, from the iron: the value, not a preset id
+  mode: 'fit-whole' | 'exact-pitch';
+  corners: 'continuous' | 'hole-at-corner';
+  startOffsetMm?: Mm; endOffsetMm?: Mm;
+  ironLabel?: string }                // cosmetic, never read as geometry
 ```
 
-Evaluates to `{ centre: Vec2, tangent: Vec2, index: number }[]` plus a report:
-`{ count, actualPitchMm, nominalPitchMm, deviationPercent, runs }`.
+Evaluates to holes `{ point, tangent, runIndex, ordinal }` and a report: the count, the achieved
+spacing, and per-run length, count and spacing. **Holes have no ids.** They are addressed by
+position, because there is no correct answer to which of the old 84 holes is this one of the new 86.
 
-The report is not decoration. "How many holes?" and "did my 3.85 mm iron actually come out at
-3.85 mm?" are questions the user asks on every project.
+**Later:** slot and diamond hole shapes, and suppressing individual holes, expressed as a list of
+ordinals on the set.
 
-### 3.4 `FoldLine`
+### 3.4 `FoldLine` — built
 
 ```ts
-interface FoldLine extends FeatureBase {
+interface FoldLine extends GeometricFeature {
   kind: 'fold-line';
-  source: GeometrySource;
   direction: 'mountain' | 'valley';
-  materialThicknessMm?: number;    // overrides the part's material
-  bendAllowanceMm?: number;        // v1.1 — computed, not typed, once thickness math lands
+  materialThicknessMm?: Mm;           // stored now; consumed by thickness compensation (v1.1)
 }
 ```
 
-`direction` and `materialThicknessMm` are stored in the MVP even though nothing consumes them yet.
-They cost nothing now and they are what makes thickness compensation (v1.1) an additive change
-rather than a migration.
+Named for its direction on creation ("Fold (valley)"), because both directions draw identically.
 
-### 3.5 `MarkingLine`
+### 3.5 `MarkingLine` — built
 
 ```ts
-interface MarkingLine extends FeatureBase {
+interface MarkingLine extends GeometricFeature {
   kind: 'marking-line';
-  source: GeometrySource;
   purpose: 'glue-area' | 'alignment' | 'logo' | 'skive' | 'other';
-  label?: string;
 }
 ```
 
-Never cut, never stitched. Printed on the template as a light guide, and excluded from cutting
-exports.
+Never cut, never stitched. Printed as a light guide and left out of cutting exports.
 
-### 3.6 `HardwareHole`
+### 3.6 `HardwareHole` — built
 
 ```ts
-interface HardwareHole extends FeatureBase {
+interface HardwareHole extends GeometricFeature {
   kind: 'hardware-hole';
   hardwareType: 'rivet' | 'snap' | 'screw' | 'eyelet' | 'other';
-  hardwareRefId?: string;          // v1.1 — link to the hardware library
 }
 ```
 
-**The hole's position and size are its `source`**, as a `circle` shape — not `centre` and
-`diameterMm` fields, which is how this was sketched before `GeometrySource` existed. Slice 4.7
-corrected it: those fields would have made `HardwareHole` the only feature whose position is not in
-`source`, so `transformFeatures`, `translateFeatures`, hit-testing, rendering and the mirror in 4.8
-would each need a case for it. As a circle it inherits all of them, `CircleEditor` already edits it,
-and the derived placement it will eventually want — "12 mm in from that edge" — is a new
-`Derivation` on the same feature rather than a migration.
+**The hole's position and size are its `source`**, as a `circle` shape, not fields of its own. Slice
+4.7 corrected the earlier sketch: separate `centre` and `diameterMm` fields would have made it the
+only feature whose position is not in `source`, so transforms, hit-testing, rendering and mirroring
+would each need a case for it. The record holds a radius; the panel and the tool ask for a diameter
+and halve it before quantising.
 
-The record therefore holds a **radius**, like every other circle. The panel and the tool ask for a
-diameter, because that is the number stamped on the punch, and halve it *before* quantising so the
-stored radius lands on the 1e-4 mm grid (§8 of `CLAUDE.md`).
+Kept distinct from a cut-out because a hardware hole is punched rather than cut, and is reported
+separately.
 
-Kept distinct from an inner `CutContour` because the semantics differ: hardware holes are punched,
-not cut; they export on the cut layer but are reported separately ("6 × 4 mm rivet holes"); and they
-have a natural parametric UI (diameter, not a path).
+**Later:** `hardwareRefId`, a link into the hardware library (v1.1).
 
-### 3.7 `Measurement`
+### 3.7 `Measurement` — designed, 4.10
 
 ```ts
 interface Measurement extends FeatureBase {
   kind: 'measurement';
-  type: 'linear' | 'aligned' | 'radial' | 'angular';
-  anchorA: MeasureAnchor;
-  anchorB?: MeasureAnchor;
-  offsetMm: number;                // how far the dimension line sits from the geometry
-  precision: number;               // decimal places, default 1
+  type: 'horizontal' | 'vertical' | 'aligned' | 'radial';
+  a: MeasureRef;
+  b?: MeasureRef;                     // absent for radial
+  offsetMm: Mm;                       // how far the dimension line sits from the geometry
+  precision: 0 | 1 | 2;
 }
 
-type MeasureAnchor =
-  | { kind: 'point'; at: Vec2 }
-  | { kind: 'vertex'; featureId: FeatureId; segmentIndex: number; end: 'start' | 'end' }
-  | { kind: 'feature-extent'; featureId: FeatureId; axis: 'x' | 'y' };
+type MeasureRef =
+  | { kind: 'anchor'; featureId: FeatureId; anchor: number }
+  | { kind: 'centre'; featureId: FeatureId }
+  | { kind: 'extent'; featureId: FeatureId; side: 'left' | 'right' | 'bottom' | 'top' };
 ```
 
-Anchors reference geometry rather than caching coordinates, so a measurement **updates when the
-thing it measures changes**. A dimension that silently goes stale is worse than no dimension.
+- **An annotation.** It has no geometry source; its ends are **references** in the graph (§4.2).
+- **Every end references geometry.** No segment indices (S9) and no free points, because a dimension
+  that silently goes stale is worse than no dimension.
+- **The value is generated**, never stored.
+- A missing anchor fails the measurement (E4). It never attaches to a neighbouring corner.
 
-### 3.8 `TextLabel`
+**Later:** angular measurements.
 
-Part names, project name, "cut 2", grain arrows. Printed on the template. Uses a vendored font so
-that screen, PDF, and SVG agree and snapshots are reproducible.
+### 3.8 `TextLabel` — designed, 4.11
 
-## 4. Geometry sources and the derivation graph
+```ts
+interface TextLabel extends FeatureBase {
+  kind: 'text-label';
+  text: string;
+  at: Vec2;
+  sizeMm: Mm;
+  rotationRad: Radians;
+}
+```
 
-**This is the most important section in the document.**
+Free text printed on the template: "fold before stitching", a logo position note.
 
-Every feature that owns a path gets its geometry from a `GeometrySource`:
+**Text that restates a model value is never a label.** Part captions ("Card holder — cut 2") and
+measurement values are generated from the model, so they cannot disagree with it. All document text
+is set in the vendored typeface and sized in millimetres
+([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)).
+
+## 4. Geometry sources, derivations and the reference graph
+
+**The most important section in the document.**
 
 ```ts
 type GeometrySource =
-  // Drawn directly. The only kind that is persisted as coordinates.
-  | { kind: 'path'; path: Path }
+  | { kind: 'path'; path: Path }                                        // drawn; the only coordinates stored
+  | { kind: 'shape'; shape: ParametricShape }                           // parameters; the path is generated
+  | { kind: 'derived'; sourceId: FeatureId; op: Derivation };           // built from one other feature
 
-  // A parametric primitive. Stored as parameters; the path is generated.
-  | { kind: 'shape'; shape: ParametricShape }
+type Derivation =
+  | { type: 'offset'; distanceMm: Mm; side: 'inward' | 'outward'; run: Run }          // built
+  | { type: 'stitch-holes'; pitchMm: Mm; mode: …; corners: …; … }                     // built
+  | { type: 'mirror'; axis: { origin: Vec2; angleRad: Radians }; glideMm: Mm };       // designed, 4.8
 
-  // Derived from another feature by offsetting.
-  | { kind: 'offset'; fromId: FeatureId; distanceMm: number;
-      side: 'inward' | 'outward'; join: 'round' | 'miter' | 'bevel'; miterLimit: number }
-
-  // Derived by mirroring another feature.
-  | { kind: 'mirror'; fromId: FeatureId; axis: { origin: Vec2; angleRad: number } }
-
-  // Derived by copying with a transform (arrays, rotated copies).
-  | { kind: 'transform'; fromId: FeatureId; matrix: Mat2x3 }
-
-  // v1.2 — boolean combination.
-  | { kind: 'boolean'; op: 'union' | 'difference' | 'intersection';
-      aId: FeatureId; bIds: FeatureId[] };
+type Run =
+  | { kind: 'whole' }
+  | { kind: 'between'; fromAnchor: number; toAnchor: number };
 
 type ParametricShape =
-  | { type: 'rect'; origin: Vec2; w: number; h: number; radii: [number, number, number, number] }
-  | { type: 'circle'; centre: Vec2; r: number }
-  | { type: 'ellipse'; centre: Vec2; rx: number; ry: number; rotationRad: number }
-  | { type: 'polygon'; centre: Vec2; r: number; n: number; rotationRad: number };
+  | { type: 'rect'; origin: Vec2; width: Mm; height: Mm; radii: CornerRadii; rotation: Radians }
+  | { type: 'circle'; centre: Vec2; radius: Mm }
+  | { type: 'arc'; centre: Vec2; radius: Mm; startAngle: Radians; sweepAngle: Radians };
 ```
+
+**One derived source, many ops.** An earlier sketch gave offset, mirror, transform and boolean a
+geometry-source kind each. The code has one `derived` kind carrying a typed op, and new derivations
+arrive as ops (the stitch derivation design, §2). **One source per derivation.** A genuinely
+two-input derivation, such as a boolean, would be a new variant when it is needed.
+
+**Later:** `ellipse` and `polygon` shapes; boolean derivations (v1.2).
 
 ### 4.1 Why parametric shapes live here and not in `geometry`
 
-A rounded rectangle is a *domain* concept — "the user's panel is 105 × 75 with 8 mm corners" — and
-the user edits it by typing 105, not by dragging control points. `packages/geometry` provides
-`shapes.roundedRect(...)` as a pure constructor; `packages/domain` stores the parameters and calls
-it. Keeping the parameters out of the geometry engine is what stops the engine growing a special
-case per product feature.
+A rounded rectangle is a *domain* concept: "the user's panel is 105 × 75 with 8 mm corners", edited
+by typing 105, not by dragging control points. `packages/geometry` provides `roundedRect(...)` as a
+pure constructor; `packages/domain` stores the parameters and calls it. Keeping parameters out of
+the geometry engine stops the engine growing a special case per product feature.
 
-### 4.2 The graph
+### 4.2 The reference graph
 
-Derivation edges form a **directed acyclic graph**. A representative card-holder panel:
+Two kinds of edge, in one graph:
+
+- **derives**: the target's geometry is built from the source (every `derived` source);
+- **references**: the target points at the source's geometry without being built from it
+  (measurement ends).
+
+Its structural invariants hold in memory and on disk. Commands refuse to break them, giving a
+reason, and the loader refuses files that break them, naming the feature:
+
+- **S2.** Every edge resolves to an existing feature.
+- **S3.** The graph is acyclic, across both kinds of edge.
+- **S4.** Every *derives* edge appears in this table:
+
+| Target | Op | Source | Conditions |
+|---|---|---|---|
+| Stitch line | offset, inward | Cut contour (outer or cut-out) | Whole run or partial run |
+| Outer cut contour | offset, outward | Stitch line | Source closed; whole run only |
+| Stitch hole set | stitch holes | Stitch line | |
+| The same kind | mirror | The same kind | A cut contour keeps its role |
+
+A representative card-holder panel:
 
 ```
-   ┌─────────────────────┐
-   │ CutContour (outer)  │  shape: rect 105×75, radii 8
-   └──────────┬──────────┘
-              │ offset inward 3.5 mm, round joins
-              ▼
-   ┌─────────────────────┐
-   │     StitchLine      │
-   └──────────┬──────────┘
-              │ pitch 3.85, fit-whole, hole-at-corner
-              ▼
-   ┌─────────────────────┐
-   │   StitchHoleSet     │
-   └─────────────────────┘
+   CutContour (outer)   shape: rect 105 × 75, radii 8
+          │ derives: offset inward 3.5 mm
+          ▼
+   StitchLine
+          │ derives: stitch holes, pitch 3.85, fit-whole, hole-at-corner
+          ▼
+   StitchHoleSet
 ```
 
 Change the rectangle to 110 × 75 and all three update. That single behaviour is the biggest daily
@@ -279,220 +295,316 @@ time-saver in the product.
 
 ### 4.3 Both directions matter
 
-Leatherworkers genuinely work both ways, and the graph supports both because it is direction-neutral:
+A stitch line and its outline are related by one number, the **stitch margin**. Either end can be
+the one the maker dimensions:
 
-- **Stitch inset** (common): draw the outline, derive the stitch line inward 3.5 mm.
-- **Seam allowance** (the reverse): draw the stitch line — the functional dimension, e.g. "the
-  pocket opening must be exactly 95 mm" — and derive the cut contour outward by the allowance.
+- **Stitch inset** (the common case): draw the outline, derive the stitch line inward.
+- **Seam allowance** (designed, 4.9): draw the stitch line ("the pocket opening must be exactly
+  95 mm"), derive the outline outward.
 
-Seam allowance is therefore **not a property**. It is a derivation direction. Modelling it as a
-number hanging off a contour would force one workflow on everyone and would not survive contact with
-real projects.
+Seam allowance is **not a property**. It is a derivation direction. As a number hanging off a
+contour it would force one workflow on everyone.
 
-### 4.4 Evaluation
+**"Inward" means into the part's material.** For an outer contour the material is inside the path;
+for a cut-out it is outside. A stitch line around a card-slot window therefore runs outside the
+window. The direction is resolved from the contour's role, not its winding (designed, 4.3).
+
+One project default, `settings.defaultStitchInsetMm`, serves both directions. The panel calls it the
+*stitch margin*.
+
+### 4.4 Evaluation — built, with typed failures designed in 4.12a
 
 ```ts
 function evaluate(project: Project): ResolvedProject;
 
 type ResolvedFeature =
-  | { ok: true;  id: FeatureId; geometry: ResolvedGeometry; report?: FeatureReport }
-  | { ok: false; id: FeatureId; error: EvaluationError };
+  | { ok: true;  feature: Feature; role: LayerRole; path: Path; holes?: StitchHoles }
+  | { ok: false; feature: Feature; failure: EvaluationFailure };      // typed from 4.12a; a string today
+
+interface EvaluationFailure {
+  code: DiagnosticCode;               // OFFSET_COLLAPSED, SOURCE_FAILED, ANCHOR_MISSING, …
+  message: string;
+  at?: Vec2;
+}
 ```
 
-Rules:
+1. **Recursive, not scheduled.** A derived feature resolves its source first. Cycles cannot exist
+   (S3). Evaluation keeps a defensive guard, which should be unreachable.
+2. **Memoised on object identity.** Immutable updates with structural sharing make an unchanged
+   feature the same object between revisions. A derived feature's cache entry also records the
+   source path it was built from, because a stitch line can be identical while its outline changed.
+3. **Failures are per feature** (E1). One bad number never blanks the canvas. A failed source is
+   reported once, at its root (E3), and its dependents fail with `SOURCE_FAILED`.
+4. **Nothing is dropped without a diagnostic** (E2). An offset that splits keeps its largest piece
+   and reports `OFFSET_SPLIT`, saying how many were left out.
+5. **Derived geometry is never persisted** (S8). The file stores parameters; evaluation regenerates
+   paths on load, so an improved offset silently improves every existing file.
+6. **Deterministic.** Same project in, same resolved geometry out.
 
-1. **Topological order.** Cycles are rejected at *command* time, not at evaluation time — the
-   command that would create a cycle fails and the UI explains why. Evaluation can then assume a
-   DAG.
-2. **Memoised per node**, keyed on a hash of the node's own parameters plus the resolved hashes of
-   its inputs. Editing one part does not re-evaluate the others.
-3. **Errors are per-node.** An offset that collapses produces a failed node, not a blank canvas. The
-   part still renders; the broken feature shows in the problems panel and draws as a warning
-   outline.
-4. **Derived geometry is never persisted.** The file stores parameters; evaluation regenerates
-   paths on load. This keeps files small, keeps them free of stale data, and means an improved
-   offset algorithm silently improves every existing file.
-5. **Deterministic.** Same project in, same resolved geometry out, always. Golden tests depend on
-   this.
+### 4.5 Deleting a feature others depend on — designed, 4.2b
 
-### 4.5 Deleting a node with dependents
+[ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md). **A delete never changes a feature
+the user did not name without first showing them, and never leaves a reference dangling.**
 
-Three options, and the choice matters for how the app feels:
+- **Nothing depends on it:** deleted at once, one undo step.
+- **Something outside the selection depends on it:** the user is shown every dependent, grouped by
+  part and chain, and chooses:
+  - **delete them too**;
+  - **keep them, frozen**: each direct derived dependent keeps its last geometry as drawn geometry
+    and records `frozenFrom`;
+  - **cancel**.
 
-- **Block** the delete — safe, annoying.
-- **Cascade** — deletes work the user did not ask to lose.
-- **Bake** — convert each dependent's source from `{kind:'offset', fromId}` to `{kind:'path', path}`
-  using its last resolved geometry, then delete.
+  Dependents with no drawn form — references and stitch hole sets — are listed as deleted either
+  way.
+- **Re-pointing** keeps a relationship while replacing its source: every derived feature can be
+  pointed at another compatible source (*Follows*).
+- **Parts are removed only by deleting the part.** An emptied part stays, and is reported as
+  `EMPTY_PART`.
 
-**Bake is the right default.** The user loses the parametric link, which the UI states clearly, but
-loses no geometry. Offer "delete with dependents" as an explicit alternative.
+`planDelete(project, ids)` is the one pure function that answers "what would this delete"; the
+dialog reads it and the command enforces it.
 
-## 5. Layer roles
+*Superseded:* this section previously named "bake" the default, and the M3 implementation
+cascades. Both change without telling the user; see the ADR.
 
-Fixed by the domain, not user-managed. Each feature kind maps to exactly one role, and the role
-drives three separate tables.
+### 4.6 Anchors — built for roots, designed through derivations in 4.4b
+
+[ADR 0010](adr/0010-anchors-address-geometry.md). **A place on a feature is an anchor:
+`(featureId, anchor index)`. Nothing addresses geometry by segment index** (S9).
+
+| Feature | Anchors | Stable under |
+|---|---|---|
+| `rect` shape | Its 4 corners | Width, height, radius, rotation: always 4 |
+| Drawn path | Its corners, in order | Moving a point; **not** inserting one. Vertex ids come before slice 3.9 |
+| `circle`, `arc` | None | Everything |
+| Derived (designed) | The source's anchors, mapped by the derivation | Whatever the source is stable under |
+
+How a derivation maps anchors:
+
+- an **offset** maps each source corner to the corner it produced;
+- a **mirror** maps each anchor through its transform;
+- a **hole set** exposes its stitch line's anchors.
+
+The mapping comes from the code that built the geometry, never from searching for the nearest point.
+**An anchor with no image is missing** (E4): anything that names it fails with `ANCHOR_MISSING`.
+
+### 4.7 Duplicate, flip and mirror — designed, 3.7b, 4.3, 4.8
+
+| Operation | Result | Relationship afterwards |
+|---|---|---|
+| **Duplicate part** | A new part beside the original | None. Derivations inside the part re-point to the copies; derivations to other parts keep pointing there |
+| **Flip** | The selected geometry, reflected in place | None |
+| **Mirror** | A new feature or part, reflected | Linked ([ADR 0012](adr/0012-mirror-is-a-derivation.md)) |
+
+- A mirror keeps kind and role. Mirroring a part mirrors every feature in it, so the counterpart's
+  hole count equals the original's by construction.
+- **Gestures on derived features are never silently ignored** (X3). A mirror-derived feature moves
+  and rotates through its axis and glide, and refuses to scale. An offset-derived feature or a hole
+  set refuses to move on its own ("it follows its outline").
+- **Flip depends on 3.7b.** Reflecting a rectangle through `transformShape` today keeps the origin
+  and changes the rotation, which leaves the rectangle in place with its rounded corners diagonally
+  opposite.
+
+## 5. Layer roles — built
+
+Fixed by the domain, not managed by the user. Each feature kind maps to exactly one role, and the
+role drives three tables.
 
 | Role | Feature kinds | Screen style | Export layer | In cut export? |
 |---|---|---|---|---|
-| `cut` | `CutContour` | solid, 1 px, black | `cut` | yes |
-| `stitch` | `StitchLine` | dashed 2-2, blue | `stitch` | no |
-| `stitch-holes` | `StitchHoleSet` | filled dots, blue | `stitch-holes` | optional |
+| `cut` | `CutContour` | solid | `cut` | yes |
+| `stitch` | `StitchLine` | dashed, blue | `stitch` | no |
+| `stitch-holes` | `StitchHoleSet` | dots on screen; true-size marks on paper | `stitch-holes` | optional |
 | `fold` | `FoldLine` | dash-dot, green | `fold` | no |
 | `mark` | `MarkingLine` | solid, light grey | `mark` | no |
-| `hardware` | `HardwareHole` | solid circle, orange | `hardware` | yes |
+| `hardware` | `HardwareHole` | circle at true size, orange | `hardware` | yes |
 | `annotation` | `Measurement`, `TextLabel` | grey, thin | `annotation` | no |
 
-Export *presets* are then just role sets:
+Export presets are role sets: **template print** (everything), **laser or CNC cut** (`cut` and
+`hardware`, plus `stitch-holes` if lasered), **stitch guide** (`stitch` and `stitch-holes`).
 
-- **Template print** — everything.
-- **Laser / CNC cut** — `cut` + `hardware` (+ `stitch-holes` if the user wants them lasered).
-- **Stitch guide only** — `stitch` + `stitch-holes`.
-
-Users can still toggle individual features' visibility, but they never manage a layer stack. One
-less concept.
+Users toggle individual features' visibility; they never manage a layer stack.
 
 ## 6. Stitch hole distribution — the craft detail
 
-Where most of the domain-specific value sits. The geometry layer distributes points along a path
-([geometry.md](geometry.md) §9); the domain layer decides *what the runs are*.
+The geometry layer distributes points along a path ([geometry.md](geometry.md) §9). The domain
+decides *what the runs are*.
 
-### 6.1 Corner policy
+### 6.1 Corner policy — built
 
-```ts
-type CornerPolicy =
-  | { kind: 'continuous' }
-  | { kind: 'hole-at-corner'; cornerAngleThresholdDeg: number }   // default 30
-  | { kind: 'hole-at-corner-radius-aware';
-      cornerAngleThresholdDeg: number; maxRadiusMm: number };     // default 2
-```
+- **`continuous`** treats the whole path as one run. Right for shapes made of generous radii.
+- **`hole-at-corner`** splits the line at every anchor and distributes each run independently, so a
+  hole lands exactly on every corner. The shared hole where two runs meet is emitted once. Each run
+  reports its own spacing.
 
-**`continuous`** treats the whole path as one arc-length run. Correct for shapes made of generous
-radii, where there is no visual corner.
-
-**`hole-at-corner`** is what most makers want on a square or tightly-radiused corner: a hole lands
-*exactly* on the corner, because a corner without a hole looks wrong and stitches badly. Implemented
-by splitting the path at every vertex whose turn angle exceeds the threshold, then running
-`fit-whole` independently on each resulting run. Each run gets its own `actualPitch`, so the report
-must list per-run values, not one global number.
-
-**`hole-at-corner-radius-aware`** is the refinement: an 8 mm radius is a smooth curve and should
-flow continuously; a 1 mm radius is visually a corner and should get a hole. Split only where the
-turn is sharp *and* the local radius is below `maxRadiusMm`. This is the policy that should
-eventually become the default; ship the simpler two first and add it once real projects show what
-the threshold should be.
+**Later:** a configurable corner-angle threshold, and a radius-aware policy that flows round a large
+radius but puts a hole on a tight one. It should become the default once real projects show where
+the threshold belongs.
 
 ### 6.2 Iron presets
 
-Shipped defaults, editable and extensible by the user:
-
-| Name | Pitch (mm) | ≈ SPI |
-|---|---|---|
-| 2.7 mm | 2.7 | 9.4 |
-| 3.0 mm | 3.0 | 8.5 |
-| 3.38 mm | 3.38 | 7.5 |
-| 3.85 mm | 3.85 | 6.6 |
-| 4.0 mm | 4.0 | 6.4 |
-| 5.0 mm | 5.0 | 5.1 |
-
-Stored as mm. SPI is shown as a hint only — the model never stores inches.
+Application configuration, not document data: the **pitch value** is what a hole set stores, so a
+file opens identically on a machine that has never heard of the author's irons. SPI is shown as a
+hint; the model never stores inches.
 
 ### 6.3 What the report must surface
 
-- Hole count per run and in total
-- Achieved pitch per run, and the deviation from nominal
-- A **warning above 5 % deviation** — at that point the user should adjust the shape or accept
-  visibly uneven stitching
-- Total stitch line length, for estimating thread (rule of thumb: 4–5× the seam length)
+- Hole count per run and in total.
+- Achieved spacing per run and overall, beside the nominal pitch.
+- **Two levels of deviation** (DR4). Info above 5 %: the seam is visibly uneven. Warning above 25 %:
+  holes crowd and can tear out between each other. Both are advice; the geometry is exactly what was
+  asked for.
+- Total stitch line length, for estimating thread (roughly 4–5 × the seam length).
 
-## 7. Assembly and seams — designed now, built in v1.2
+## 7. Assembly and seams — designed for, built in v1.2
 
 Two parts stitched together must have **the same number of holes** along their mating edges. Getting
-this wrong is discovered when the leather is already cut, which is exactly the class of error
-software should prevent.
+it wrong is discovered once the leather is cut.
 
 ```ts
 interface Seam {
   id: string;
   name: string;
-  a: { partId: PartId; holeSetId: FeatureId; range?: [number, number] };
-  b: { partId: PartId; holeSetId: FeatureId; range?: [number, number] };
+  a: { partId: PartId; holeSetId: FeatureId; run?: Run };
+  b: { partId: PartId; holeSetId: FeatureId; run?: Run };
   alignment: 'same-direction' | 'reversed';
 }
 ```
 
-The MVP does not build the seam UI, but it must not make it impossible: hole indices are stable and
-exposed in the evaluation output, and hole sets are addressable by id. That is enough for v1.2 to
-add pairing without a migration.
+Phase 4 keeps this possible without a migration: hole sets are addressable by id, runs by anchors,
+holes by position, and a mirrored part's hole count equals its original's by construction.
 
-## 8. Validation
+## 8. Invariants and diagnostics
 
-A pure function over the resolved project. Runs after every evaluation and feeds a problems panel.
+[ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md). Everything the feature set keeps
+true, in one place. Each entry says what enforces it and the slice it lands in.
+
+### 8.1 Three categories
+
+- **Structural invariants** are never violated. Commands refuse with a reason, through a pure query
+  sharing the command's check, and the loader refuses files. They never appear as diagnostics.
+- **Evaluation outcomes** are how a feature fails to resolve. Each is typed, and each is a
+  diagnostic.
+- **Design rules** are legal states that are probably wrong for leather. `validate(resolved)` reports
+  them, and never blocks editing.
+
+### 8.2 Structural invariants
+
+| Id | Invariant | Enforced by | Lands in |
+|---|---|---|---|
+| S1 | Feature and part ids are unique | Loader; id generation | built |
+| S2 | Every reference resolves to an existing feature | Commands (ADR 0009); loader | 4.2b |
+| S3 | The reference graph is acyclic | Commands; loader | built for derivations; references 4.10 |
+| S4 | Every derivation appears in the compatibility table (§4.2) | Commands; loader | 4.2b |
+| S5 | A part has at most one outer contour | Commands; loader | 4.3 |
+| S6 | Outer contours and cut-outs enclose an area | Drawing modes; loader | 4.3 |
+| S7 | A locked feature changes only by being unlocked | Commands | 4.3 |
+| S8 | Derived geometry is never persisted | File format | built |
+| S9 | Nothing addresses geometry by segment index | Model types | built for runs; 4.10 |
+| S10 | Quantities, distances, pitches and text sizes are positive | Schema; commands | built; extended per slice |
+
+### 8.3 Evaluation outcomes
+
+| Id | Invariant | Lands in |
+|---|---|---|
+| E1 | Every feature resolves or fails with a typed failure | 4.12a |
+| E2 | Nothing is silently dropped from what is drawn or printed: not a piece of a split offset, not an unrenderable character | 4.12a |
+| E3 | A failure is reported once, at its root; dependents report `SOURCE_FAILED` | built as strings; typed 4.12a |
+| E4 | A missing anchor fails; it never re-targets | 4.4b |
+
+### 8.4 Design rules
+
+| Id | The domain invariant a rule protects |
+|---|---|
+| DR1 | A part is a piece of leather with one edge |
+| DR2 | Everything in a part lies on its material: inside the outline, outside every cut-out |
+| DR3 | A cut path is unambiguous |
+| DR4 | Stitching is regular enough to sew |
+| DR5 | Printed text is legible |
+| DR6 | A part disappears only when someone deletes it |
+
+### 8.5 Interaction invariants
+
+| Id | Invariant | Lands in |
+|---|---|---|
+| X1 | No command fails silently: every refusal has a reason, from the same check that refuses | 4.2b onward |
+| X2 | No delete changes a feature the user did not name without showing it first | 4.2b |
+| X3 | Derived features are never silently detached, converted or ignored | 4.2b, 4.8 |
+| X4 | Selection chooses where something goes, never what is created | 4.3 |
+| X5 | Text that can reach paper is set in millimetres, in the vendored typeface, laid out once | 4.11 |
+| X6 | Text that restates a model value is generated, never stored | 4.10, 4.11 |
+| X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
+| X8 | Defaults come from project settings | 4.3 |
+
+### 8.6 Diagnostics
 
 ```ts
-function validate(resolved: ResolvedProject): Diagnostic[];
-
 interface Diagnostic {
+  code: DiagnosticCode;               // stable string
   severity: 'error' | 'warning' | 'info';
-  code: string;                    // stable, e.g. 'HOLES_OUTSIDE_PART'
   message: string;
-  partId?: PartId;
+  partId: PartId;
   featureId?: FeatureId;
-  location?: Vec2;                 // for "zoom to problem"
+  related?: readonly FeatureId[];
+  at?: Vec2;                          // zoom-to-problem; otherwise the feature's bounds
 }
 ```
 
-### MVP rules
+| Code | Severity | Category | Protects | Lands in |
+|---|---|---|---|---|
+| `OFFSET_COLLAPSED` | error | outcome | E1 | 4.12a |
+| `OFFSET_SPLIT` | warning | outcome | E2 | 4.12a |
+| `SOURCE_FAILED` | error | outcome | E3 | 4.12a |
+| `ANCHOR_MISSING` | error | outcome | E4 | 4.4b |
+| `TEXT_GLYPH_MISSING` | warning | outcome | E2 | 4.11 |
+| `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | 4.12a |
+| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | 4.12a; cut-outs 4.3 |
+| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm) | rule | DR2 | 4.12a; cut-outs 4.3 |
+| `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | 4.3 |
+| `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | 4.3 |
+| `HOLE_SPACING_UNEVEN` | info (above 5 %) | rule | DR4 | 4.12a |
+| `HOLE_SPACING_DEVIATION` | warning (above 25 %) | rule | DR4 | 4.12a |
+| `HOLE_COUNT_TOO_LOW` | warning (under 2 on a run) | rule | DR4 | 4.12a |
+| `TEXT_TOO_SMALL_TO_PRINT` | warning (under 1.5 mm) | rule | DR5 | 4.11 |
+| `EMPTY_PART` | info | rule | DR6 | 4.2b |
 
-| Code | Severity | Meaning |
-|---|---|---|
-| `CONTOUR_NOT_CLOSED` | error | A cut contour must be closed |
-| `CONTOUR_SELF_INTERSECTS` | error | Self-intersecting outline; the cut path is ambiguous |
-| `OFFSET_COLLAPSED` | error | The offset produced nothing — inset exceeds the shape's inradius |
-| `OFFSET_SPLIT` | warning | The offset produced disjoint pieces; probably not intended |
-| `HOLES_OUTSIDE_PART` | error | Stitch holes fall outside their part's outer contour |
-| `HOLE_TOO_CLOSE_TO_EDGE` | warning | Hole centre nearer the cut edge than 1.5 mm — it will tear |
-| `HOLE_SPACING_DEVIATION` | warning | Achieved pitch differs from nominal by more than 5 % |
-| `HOLE_COUNT_TOO_LOW` | warning | Fewer than 2 holes on a run |
-| `PART_HAS_NO_OUTER_CONTOUR` | error | A part must have exactly one outer contour |
-| `PART_HAS_MULTIPLE_OUTER` | error | Same |
-| `EMPTY_PART` | info | A part with no features |
-| `BROKEN_DERIVATION` | error | A feature references a deleted or failed source |
+**Retired** from the earlier list, because the states they described are now unrepresentable rather
+than reportable: `PART_HAS_MULTIPLE_OUTER` (S5), `CONTOUR_NOT_CLOSED` (S6), `BROKEN_DERIVATION` (S2
+for a deleted source, `SOURCE_FAILED` for a failed one). `HOLES_OUTSIDE_PART` became `OUTSIDE_PART`.
 
-### v1.2 rules
+**v1.2:** `SEAM_HOLE_COUNT_MISMATCH`, `PARTS_OVERLAP_ON_SHEET`.
 
-`SEAM_HOLE_COUNT_MISMATCH`, `INNER_CONTOUR_OUTSIDE_OUTER`, `PARTS_OVERLAP_ON_SHEET`,
-`FOLD_LINE_NOT_ON_PART`.
-
-Diagnostic codes are stable strings so tests, docs, and the UI can reference them without
-duplicating message text.
+An audit test holds the catalogue to this section: every code names an invariant, and every
+structural invariant has a command-refusal test and a loader test.
 
 ## 9. Templates
 
-**MVP:** save a part to a user library, insert a library part into a project. A copy — no live link
-to the library. Stored as `.lcp`-shaped JSON in the user config directory.
+**MVP:** save a part to a user library, insert a library part into a project. A copy, with no live
+link to the library, stored as `.lcp`-shaped JSON in the user config directory. Inserting re-points
+the part's internal derivations to the copies, exactly as duplicating does (§4.7).
 
-**v1.2:** parameterised templates. A template exposes named parameters (`cardWidth`, `stitchInset`)
-bound to fields in its shapes and derivations; inserting one prompts for values. This is a natural
-extension of the derivation graph — a parameter is just a named scalar that graph nodes read instead
-of a literal — but it needs the graph to be settled first, which is why it waits.
+**v1.2:** parameterised templates, whose named parameters (`cardWidth`, `stitchMargin`) are read by
+shapes and derivations instead of literals.
 
-**Not planned:** a template *instance* that live-updates when the library template changes. That
-sounds appealing and creates a hard versioning problem for very little real benefit.
+**Not planned:** a template instance that live-updates when the library template changes.
 
 ## 10. What the MVP builds
 
-| Concept | MVP | Later |
+| Concept | Status | Later |
 |---|---|---|
-| `CutContour`, `StitchLine`, `StitchHoleSet`, `FoldLine`, `MarkingLine`, `HardwareHole` | ✅ | |
-| `Measurement` (linear, aligned, radial) | ✅ | angular |
-| `TextLabel` | ✅ | |
-| `GeometrySource`: `path`, `shape`, `offset`, `mirror`, `transform` | ✅ | `boolean` (v1.2) |
-| Evaluation DAG with memoisation and per-node errors | ✅ | |
-| Layer roles and export presets | ✅ | |
-| Corner policies `continuous` and `hole-at-corner` | ✅ | radius-aware (v1.1) |
-| Iron presets | ✅ | user-shareable preset files |
-| Validation (the 12 MVP codes) | ✅ | seam and layout rules (v1.2) |
-| Templates as copies | ✅ | parameterised templates (v1.2) |
-| `Seam` / assembly | design only | v1.2 |
-| Material thickness compensation | fields stored | v1.1 |
-| Hardware library | `hardwareType` enum only | v1.1 |
+| `CutContour`, `StitchLine`, `StitchHoleSet`, `FoldLine`, `MarkingLine`, `HardwareHole` | Built | |
+| Cut-outs, drawn stitch lines, drawing modes | Designed: 4.3, 4.9 | |
+| `Measurement` (horizontal, vertical, aligned, radial) | Designed: 4.10 | Angular |
+| `TextLabel`, generated captions | Designed: 4.11 | |
+| Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes` | Built | |
+| Op: `mirror` | Designed: 4.8 | Boolean (v1.2) |
+| Reference graph, explicit deletion, re-pointing | Designed: 4.2b | |
+| Anchors through derivations | Designed: 4.4b | Vertex ids before 3.9 |
+| Evaluation with memoisation and per-feature failures | Built; typed 4.12a | |
+| Layer roles and export presets | Built | |
+| Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (v1.1) |
+| Validation, the §8.6 catalogue | Designed: 4.12a–4.12 | Seam and layout rules (v1.2) |
+| Templates as copies | Later: 8.1 | Parameterised (v1.2) |
+| `Seam` and assembly | Design only | v1.2 |
+| Material thickness compensation | Fields stored | v1.1 |
+| Hardware library | `hardwareType` only | v1.1 |

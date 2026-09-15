@@ -139,6 +139,12 @@ returns the owning part, so this is a lookup and not a new concept.
 Refusing beats guessing. A fold line silently attached to the wrong panel is invisible until the
 leather is cut, which is the failure mode this project spends its effort avoiding.
 
+> **Revised by the [Phase 4 reconciliation](2026-09-15-phase-4-reconciliation-design.md) §3.8.**
+> *Cut* still always makes a new part. Cut-outs arrive as a mode of their own that joins the
+> selected part, seam allowance as a mode that makes a part, and an open path drawn in an outline
+> mode is refused instead of being filed as a marking line — so that no mode ever means something
+> different depending on what happens to be selected.
+
 **Why `'cut'` still makes a new part** rather than an inner contour on the selected one: inner
 contours — card-slot windows, thumb scoops — are slice 4.3's business, and giving `'cut'` a
 selection-dependent meaning here would change existing behaviour in a slice that is not about cut
