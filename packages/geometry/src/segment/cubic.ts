@@ -1,9 +1,9 @@
-import { EPS_LENGTH, type Mm } from '@leathercad/core';
+import { EPS_LENGTH, EPS_PARAM, approxEq, type Mm } from '@leathercad/core';
 
 import { apply, type Mat2x3 } from '../mat2x3.js';
 import { rootsInUnitInterval, solveQuadratic } from '../polynomial.js';
 import { fromPoints, type Rect } from '../rect.js';
-import { add, lerp, scale, sub, tryNormalise, vec, ZERO, type Vec2 } from '../vec2.js';
+import { add, dot, lerp, negate, scale, sub, tryNormalise, vec, ZERO, type Vec2 } from '../vec2.js';
 import { cubic, type CubicSegment } from './types.js';
 
 export function pointAt(s: CubicSegment, t: number): Vec2 {
@@ -37,16 +37,57 @@ function secondDerivativeAt(s: CubicSegment, t: number): Vec2 {
  * Unit direction of travel.
  *
  * The derivative vanishes wherever control points coincide — at `t = 0` when
- * `p0 === p1`, which is extremely common in curves produced by offsetting. The
- * curve still has a direction there, so fall back to the second derivative and
- * then to the chord rather than returning zero.
+ * `p0 === p1`, which is extremely common in curves produced by offsetting —
+ * and at any `t` where the curve doubles back on itself. The curve still has a
+ * direction there, so fall back to the second derivative and then to the
+ * chord rather than returning zero.
+ *
+ * **Which direction, at a cusp.** Where `B'(t) = 0` the curve reverses, and
+ * the two one-sided limits of the unit tangent are exact negations: it arrives
+ * along `-B̂''` and leaves along `+B̂''`. This returns the **outgoing**
+ * direction — the way a traveller walking the segment faces just after `t` —
+ * which makes the tangent right-continuous on `[0, 1)`. At `t = 1` there is no
+ * "just after", so the incoming direction `-B̂''` is the only real branch;
+ * without that sign the end tangent of every curve with `p2 === p3` comes back
+ * exactly 180° wrong, still unit length and still on the tangent line.
+ *
+ * **That choice is made only where the derivative is exactly zero.** Where it
+ * is merely too short to normalise — approaching a `p2 === p3` end its length
+ * falls off as `6(1-t)|p2 - p1|` and slips under `EPS_POINT` while the curve
+ * still travels straight ahead — it is untrustworthy in *length*, not in
+ * *direction*, so the fallback is turned to agree with it. `1 - t` is exact in
+ * floating point for `t` in `[0.5, 1]`, so that sign holds right up to the last
+ * representable parameter.
+ *
+ * Not decided by how close `t` is to an end. A band of `EPS_PARAM` at `t = 1`
+ * was tried: the derivative drops under `EPS_POINT` at
+ * `1 - t ≈ 1e-7 / (6|p2 - p1|)`, past the band for any control leg under about
+ * 17 mm, and every `t` in that window came back reversed.
+ *
+ * Deliberately a sign test against zero rather than an epsilon: an epsilon here
+ * would be a band again, in different units. At a true cusp whose position is
+ * not exactly representable the derivative is rounding noise, and either
+ * one-sided direction may come back — both are real.
+ *
+ * A consequence worth stating, because a property test tripped over it:
+ * `tangentAt` is **not** antisymmetric under `reverse` at a cusp. Reversal
+ * swaps incoming and outgoing, which are already negations of each other, so
+ * the same vector comes back both ways. No single-valued tangent can do
+ * better — the choice is between a defined direction and an antisymmetric
+ * one, and offsetting and stitch distribution both need it defined.
  */
 export function tangentAt(s: CubicSegment, t: number): Vec2 {
   const first = tryNormalise(derivativeAt(s, t));
   if (first !== null) return first;
 
   const second = tryNormalise(secondDerivativeAt(s, t));
-  if (second !== null) return second;
+  if (second !== null) {
+    const travel = dot(derivativeAt(s, t), second);
+    if (travel < 0) return negate(second);
+    if (travel > 0) return second;
+    // Exactly stationary: there is no direction of travel to read a sign from.
+    return approxEq(t, 1, EPS_PARAM) ? negate(second) : second;
+  }
 
   return tryNormalise(sub(s.p3, s.p0)) ?? ZERO;
 }

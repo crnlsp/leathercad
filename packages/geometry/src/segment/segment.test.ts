@@ -12,11 +12,21 @@ import {
 import { IDENTITY, apply, fromScale } from '../mat2x3.js';
 import { EXPORT_TOLERANCE_MM } from '../tolerance.js';
 import { containsPoint, expand } from '../rect.js';
-import { dist, equals as vecEquals, len, vec } from '../vec2.js';
+import { dist, equals as vecEquals, len, tryNormalise, vec } from '../vec2.js';
 import * as Seg from './index.js';
 import { arc, cubic, line, quadraticToCubic } from './types.js';
 
 const closeTo = (a: number, b: number, eps = 1e-6): boolean => Math.abs(a - b) <= eps;
+
+/**
+ * True unless the segment has a cusp at `t`.
+ *
+ * Phrased as the exact branch `CubicOps.tangentAt` takes rather than as a
+ * threshold of its own, so the two cannot drift apart. Lines and arcs with
+ * real extent are regular everywhere.
+ */
+const isRegularAt = (s: Seg.Segment, t: number): boolean =>
+  !Seg.isCubic(s) || tryNormalise(Seg.CubicOps.derivativeAt(s, t)) !== null;
 
 /** Points sampled along a segment, for bounds and monotonicity checks. */
 function sample(s: Seg.Segment, count = 64) {
@@ -69,9 +79,15 @@ describe('reverse', () => {
     );
   });
 
-  it('flips the tangent', () => {
+  it('flips the tangent wherever the segment is regular', () => {
+    // Regular only. At a cusp the curve doubles back, so the incoming and
+    // outgoing directions are already exact negations of each other; reversal
+    // swaps the two and the tangent comes back unchanged. No single-valued
+    // tangent can be antisymmetric there — see `tangentAt`'s contract and
+    // 'is not antisymmetric under reversal at an interior cusp' below.
     fc.assert(
       fc.property(arbNonDegenerateSegment, (s) => {
+        fc.pre(isRegularAt(s, 0.5));
         const forward = Seg.tangentAt(s, 0.5);
         const backward = Seg.tangentAt(Seg.reverse(s), 0.5);
         return closeTo(forward.x, -backward.x, 1e-5) && closeTo(forward.y, -backward.y, 1e-5);
@@ -261,6 +277,141 @@ describe('tangentAt', () => {
     const s = cubic(vec(0, 0), vec(0, 0), vec(10, 0), vec(10, 0));
     expect(closeTo(len(Seg.tangentAt(s, 0)), 1, 1e-9)).toBe(true);
     expect(closeTo(len(Seg.tangentAt(s, 1)), 1, 1e-9)).toBe(true);
+
+    // Unit length is not the interesting half. This curve runs left to right,
+    // so both ends must point along +x; a fallback that picks the wrong sign
+    // is still a unit vector and still on the tangent line, and 180° wrong.
+    expect(vecEquals(Seg.tangentAt(s, 0), vec(1, 0), 1e-12)).toBe(true);
+    expect(vecEquals(Seg.tangentAt(s, 1), vec(1, 0), 1e-12)).toBe(true);
+  });
+
+  it('points forward at the end when the last two control points coincide', () => {
+    // The mirror of the case above, and just as common: reversing a curve
+    // whose `p0 === p1` produces one whose `p2 === p3`. B'(1) vanishes, and
+    // B''(1) = 6(p1 - p2) points *backwards* along the curve — at t = 1 there
+    // is no "just after", so the incoming branch is the only real one.
+    const s = cubic(vec(0, 0), vec(3, 1), vec(6, 6), vec(6, 6));
+    const expected = tryNormalise(vec(3, 5))!;
+    expect(vecEquals(Seg.tangentAt(s, 1), expected, 1e-12)).toBe(true);
+  });
+
+  it('still points forward a hair short of the end', () => {
+    // Approaching a `p2 === p3` end the speed falls off as 6(1-t)|p2 - p1| and
+    // slips under EPS_POINT while still pointing straight ahead, so `t` values
+    // that are not cusps land in the second-derivative fallback. Arc-length
+    // inversion reaches here, and `distribute` places stitch holes on what it
+    // returns.
+    //
+    // The gaps are not arbitrary. An earlier fix treated only the last
+    // EPS_PARAM of the range as "the end", but for this curve — a 5.83 mm
+    // control leg, nothing unusual — the derivative is already under EPS_POINT
+    // at 2.86e-9 from the end. Every gap from 1.5e-9 to 2.8e-9 came back
+    // exactly reversed, measured, while 1e-9 and 3e-9 either side were fine.
+    const s = cubic(vec(0, 0), vec(3, 1), vec(6, 6), vec(6, 6));
+    const expected = tryNormalise(vec(3, 5))!;
+    // Loosely: the second derivative a hair off the endpoint tilts by about
+    // 1e-10 rad, and what is under test is a 180° flip, not the last bits.
+    for (const gap of [1e-15, 1e-12, 1e-10, 1e-9, 1.5e-9, 2e-9, 2.8e-9, 3e-9, 1e-8, 1e-6]) {
+      expect(vecEquals(Seg.tangentAt(s, 1 - gap), expected, 1e-6)).toBe(true);
+    }
+  });
+
+  // Control legs of the size leather patterns actually have. Kept within a
+  // 40 mm square on purpose: the reversed window only exists for legs shorter
+  // than about 17 mm, and a generator reaching ±500 mm would almost never
+  // produce one.
+  const arbNearPoint = fc.record({
+    x: fc.double({ min: -20, max: 20, noNaN: true }),
+    y: fc.double({ min: -20, max: 20, noNaN: true }),
+  });
+  // Log-uniform, so every decade from the last representable step up to where
+  // the derivative is comfortably normalisable gets the same attention. A
+  // uniform draw would spend nearly all of it near 1e-6.
+  const arbGap = fc.double({ min: -15, max: -6, noNaN: true }).map((e) => 10 ** e);
+
+  it('points the way the curve travels however close to a stationary end', () => {
+    // The property the example above is one instance of: the tangent points
+    // from p1 towards p2, never back, however close t is to 1.
+    fc.assert(
+      fc.property(arbNearPoint, arbNearPoint, arbNearPoint, arbGap, (p0, p1, p2, gap) => {
+        const leg = vec(p2.x - p1.x, p2.y - p1.y);
+        fc.pre(len(leg) > 0.5);
+        const along = tryNormalise(leg)!;
+        const tangent = Seg.tangentAt(cubic(p0, p1, p2, p2), 1 - gap);
+        return tangent.x * along.x + tangent.y * along.y > 0.999;
+      }),
+    );
+  });
+
+  it('points the way the curve travels however close to a stationary start', () => {
+    // The mirror, including t = 0 exactly, where the derivative is exactly
+    // zero and there is no sign to read — so the outgoing rule decides.
+    fc.assert(
+      fc.property(
+        arbNearPoint,
+        arbNearPoint,
+        arbNearPoint,
+        fc.oneof(fc.constant(0), arbGap),
+        (p1, p2, p3, gap) => {
+          const leg = vec(p2.x - p1.x, p2.y - p1.y);
+          fc.pre(len(leg) > 0.5);
+          const along = tryNormalise(leg)!;
+          const tangent = Seg.tangentAt(cubic(p1, p1, p2, p3), gap);
+          return tangent.x * along.x + tangent.y * along.y > 0.999;
+        },
+      ),
+    );
+  });
+
+  it("the end tangent is the reversed segment's start tangent, negated", () => {
+    // The endpoints are where a cusp cannot be ambiguous: doubling back needs
+    // an incoming *and* an outgoing branch, and an endpoint has only one. So
+    // this holds even when the derivative vanishes, which is exactly the case
+    // a fixed-step finite difference cannot check — a step long enough to
+    // escape the noise floor is long enough to cross a turning point.
+    fc.assert(
+      fc.property(arbNonDegenerateSegment, (s) => {
+        const ending = Seg.tangentAt(s, 1);
+        const starting = Seg.tangentAt(Seg.reverse(s), 0);
+        return closeTo(ending.x, -starting.x, 1e-5) && closeTo(ending.y, -starting.y, 1e-5);
+      }),
+    );
+  });
+
+  it('is not antisymmetric under reversal at an interior cusp', () => {
+    // fast-check seed 564826848, run 20466. B'(0.5) is
+    // 0.75*(0,0) + 1.5*(1,0) + 0.75*(-2,0) = (0,0) exactly: the curve runs out
+    // to x = 0.25, stops dead and comes back, so incoming is +x and outgoing
+    // is -x. `tangentAt` reports the outgoing direction.
+    const s = cubic(vec(0, 0), vec(0, 0), vec(1, 0), vec(-1, 0));
+    expect(vecEquals(Seg.CubicOps.derivativeAt(s, 0.5), vec(0, 0))).toBe(true);
+    expect(vecEquals(Seg.tangentAt(s, 0.5), vec(-1, 0), 1e-12)).toBe(true);
+
+    // Reversal swaps incoming and outgoing, and those are already negations
+    // of each other, so the outgoing direction is the same vector both ways.
+    // Asserted rather than merely excluded from 'flips the tangent', so the
+    // contract cannot drift back to returning a degenerate vector here.
+    expect(vecEquals(Seg.tangentAt(Seg.reverse(s), 0.5), vec(-1, 0), 1e-12)).toBe(true);
+  });
+
+  it('gives the tangent line direction at a cusp that is not collinear', () => {
+    // B'(0.5) vanishes exactly when p3 = p0 + p1 - p2. Off the x axis the
+    // second derivative is the only thing that recovers the tangent line: the
+    // chord (-1,1) is nowhere near it.
+    const s = cubic(vec(0, 0), vec(1, 2), vec(2, 1), vec(-1, 1));
+    expect(vecEquals(Seg.CubicOps.derivativeAt(s, 0.5), vec(0, 0))).toBe(true);
+
+    const expected = tryNormalise(vec(-12, -6))!;
+    expect(vecEquals(Seg.tangentAt(s, 0.5), expected, 1e-12)).toBe(true);
+
+    // Independently: the outgoing direction sampled off the curve itself.
+    // Normalised by hand — a cusp leaves so little displacement that
+    // `tryNormalise` would call the step degenerate and give back null.
+    const at = Seg.pointAt(s, 0.5);
+    const after = Seg.pointAt(s, 0.5 + 1e-3);
+    const step = vec(after.x - at.x, after.y - at.y);
+    const sampled = vec(step.x / len(step), step.y / len(step));
+    expect(vecEquals(sampled, expected, 1e-3)).toBe(true);
   });
 
   it('follows the sweep direction on an arc', () => {

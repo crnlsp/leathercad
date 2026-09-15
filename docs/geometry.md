@@ -180,6 +180,31 @@ reverse(seg): Segment;
 transform(seg, m): Segment;
 ```
 
+**`tangentAt` at a cusp.** A cubic's derivative vanishes wherever control points coincide — at
+`t = 0` when `p0 === p1`, at `t = 1` when `p2 === p3`, both routine in offset output — and at any
+`t` where the curve doubles back. The curve still has a direction there, so `tangentAt` falls back
+to the second derivative and then to the chord. Getting the fallback's sign wrong is invisible to a
+unit-length check and leaves the tangent 180° out, which `offset` turns into a join bridged the
+wrong way round.
+
+**The sign comes from the first derivative wherever it is not exactly zero.** A derivative too short
+for `EPS_POINT` to normalise is too short to trust for its *length*, not its *direction*, so the
+fallback is turned to agree with it. Only where the derivative is exactly zero is there nothing to
+read, and there `tangentAt` returns the **outgoing** direction — the way a traveller faces just after
+`t` — except at `t = 1`, where there is no "just after" and the incoming direction is the only one.
+
+It is not decided by how close `t` is to an end. An earlier fix did that with a band of `EPS_PARAM`,
+but near a stationary end the derivative drops under `EPS_POINT` at `1 − t ≈ 1e-7 / (6 |p2 − p1|)`,
+which is past `EPS_PARAM` for any control leg shorter than about 17 mm — so every `t` in between
+came back reversed. A band sized to fit would just be the same mistake with a different number.
+
+The consequence, which is a genuine limit rather than an implementation gap: `tangentAt` is **not**
+antisymmetric under `reverse` at an interior cusp. Reversal swaps the incoming and outgoing
+directions, which are already exact negations of each other, so the same vector comes back both
+ways. No single-valued tangent can be both defined and antisymmetric there, and offsetting and
+stitch distribution need it defined. Property tests asserting the flip must exclude interior cusps —
+the endpoints are safe, because doubling back needs both branches and an endpoint has only one.
+
 ### 4.4 Paths
 
 ```ts

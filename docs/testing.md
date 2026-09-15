@@ -151,7 +151,12 @@ named test. It is a living checklist; the `geometry-review` skill walks it.
 - Two identical consecutive points in a polyline
 - Cubic with all four control points coincident
 - Cubic with collinear control points (it is a line)
-- Cubic with a cusp (`p1` and `p2` crossing)
+- Cubic with a cusp (`p1` and `p2` crossing) — the tangent there is the *outgoing* direction, and
+  is deliberately not antisymmetric under `reverse`; see [geometry.md](geometry.md) §4.3
+- Cubic whose first two or last two control points coincide — the derivative vanishes at the
+  endpoint and the fallback has to pick a sign, which unit-length assertions cannot see. Test
+  *just short of* the end too, log-uniformly down to 1e-15: the derivative is non-zero there but
+  too short to normalise, and that window is where a fix keyed on distance from `t = 1` failed
 - Arc with zero radius; arc with zero sweep; arc with exactly 360° sweep
 - Arc with sweep of exactly 180° (the ambiguous case for endpoint parameterisation)
 - Path with a single segment; empty path; closed path of one segment
