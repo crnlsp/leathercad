@@ -122,6 +122,8 @@ const featureBase = {
   visible: z.boolean(),
   locked: z.boolean(),
   source: geometrySource,
+  // Version 4: the name of what a feature followed before a delete froze it.
+  frozenFrom: z.string().optional(),
 };
 
 const feature = z.discriminatedUnion('kind', [

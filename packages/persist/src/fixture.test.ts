@@ -5,12 +5,18 @@ import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
 import { loadProject, readManifest, saveProject } from './lcp.js';
-import { fixtureProject, fixtureProjectV2, fixtureProjectV3 } from './makeFixture.js';
+import {
+  fixtureProject,
+  fixtureProjectV2,
+  fixtureProjectV3,
+  fixtureProjectV4,
+} from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
 const FIXTURE = resolve(import.meta.dirname, '../../../fixtures/format/v1.lcp');
 const FIXTURE_V2 = resolve(import.meta.dirname, '../../../fixtures/format/v2.lcp');
 const FIXTURE_V3 = resolve(import.meta.dirname, '../../../fixtures/format/v3.lcp');
+const FIXTURE_V4 = resolve(import.meta.dirname, '../../../fixtures/format/v4.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -34,12 +40,12 @@ const OPTIONS = {
 describe('the format baseline fixture', () => {
   if (process.env.UPDATE_FIXTURES === '1') {
     it('regenerates the current version from the current writer', () => {
-      // Only the *current* version's fixture is ever regenerated. v1 and v2
-      // are real old files, and rewriting either would delete the only proof
-      // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V3), { recursive: true });
-      writeFileSync(FIXTURE_V3, saveProject(fixtureProjectV3(), OPTIONS));
-      expect(existsSync(FIXTURE_V3)).toBe(true);
+      // Only the *current* version's fixture is ever regenerated. v1, v2 and
+      // v3 are real old files, and rewriting any of them would delete the only
+      // proof that a file from that version still opens.
+      mkdirSync(dirname(FIXTURE_V4), { recursive: true });
+      writeFileSync(FIXTURE_V4, saveProject(fixtureProjectV4(), OPTIONS));
+      expect(existsSync(FIXTURE_V4)).toBe(true);
     });
   }
 
@@ -103,11 +109,23 @@ describe('the format baseline fixture', () => {
     expect(loadProject(readFileSync(FIXTURE_V2)).project).toEqual(fixtureProjectV2());
   });
 
-  it('holds a derivation chain and a hardware hole at the current version', () => {
-    const loaded = loadProject(readFileSync(FIXTURE_V3));
+  it('still opens a version 3 file, now that features can be frozen', () => {
+    // v3 stopped being current when `frozenFrom` arrived (slice 4.2b). Like v1
+    // and v2 it is an old file now, never regenerated, proving a file written
+    // before frozen features existed still loads through an identity migration.
+    expect(readManifest(readFileSync(FIXTURE_V3)).formatVersion).toBe(3);
+    expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(3);
+    expect(loadProject(readFileSync(FIXTURE_V3)).project).toEqual(fixtureProjectV3());
+  });
 
-    expect(readManifest(readFileSync(FIXTURE_V3)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
-    expect(loaded.project).toEqual(fixtureProjectV3());
+  it('holds a frozen feature at the current version', () => {
+    const loaded = loadProject(readFileSync(FIXTURE_V4));
+
+    expect(readManifest(readFileSync(FIXTURE_V4)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+    expect(loaded.project).toEqual(fixtureProjectV4());
+    expect(loaded.project.parts[0]!.features.find((f) => f.id === 'frozen-1')?.frozenFrom).toBe(
+      'Outline',
+    );
   });
 
   it('brings a 4 mm hole back as a 4 mm hole', () => {

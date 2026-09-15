@@ -114,10 +114,24 @@ describe('cycles', () => {
 });
 
 describe('deleting a source', () => {
-  it('takes its dependents with it, as one undoable step', () => {
+  // ADR 0009. The M3 cascade these tests used to pin down is gone: once seam
+  // allowance makes an outline derivable, a silent cascade deletes a part's own
+  // cut line. The full behaviour is in deletion.test.ts; these keep the chain's
+  // own cases honest under the explicit resolution.
+
+  it('changes nothing until told what to do with the dependents', () => {
     const store = storeWithChain();
+    const before = store.getState().document;
 
     store.dispatch(deleteFeatures(['cut-1']));
+
+    expect(store.getState().document).toBe(before);
+  });
+
+  it('takes its dependents with it when told to, as one undoable step', () => {
+    const store = storeWithChain();
+
+    store.dispatch(deleteFeatures(['cut-1'], 'delete-dependents'));
     expect(featureIds(store)).toHaveLength(0);
 
     store.undo();
@@ -128,7 +142,7 @@ describe('deleting a source', () => {
     const store = storeWithChain();
 
     // Deleting the stitch line takes the holes but leaves the outline.
-    store.dispatch(deleteFeatures(['stitch-1']));
+    store.dispatch(deleteFeatures(['stitch-1'], 'delete-dependents'));
 
     expect(featureIds(store)).toEqual(['cut-1']);
   });
@@ -139,7 +153,7 @@ describe('deleting a source', () => {
       addPart(shapePart('part-2', 'cut-2', 'Other', rectShape({ x: 0, y: 0 }, 50, 50))),
     );
 
-    store.dispatch(deleteFeatures(['cut-1']));
+    store.dispatch(deleteFeatures(['cut-1'], 'delete-dependents'));
 
     expect(featureIds(store)).toEqual(['cut-2']);
   });

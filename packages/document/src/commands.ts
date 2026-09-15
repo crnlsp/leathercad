@@ -3,6 +3,7 @@ import type {
   Derivation,
   Feature,
   FeatureId,
+  FeatureKind,
   FoldLine,
   HardwareHole,
   MarkingLine,
@@ -13,7 +14,14 @@ import type {
   Project,
   Run,
 } from '@leathercad/domain';
-import { DEFAULT_SETTINGS, transformShape } from '@leathercad/domain';
+import {
+  DEFAULT_SETTINGS,
+  dependentsOf,
+  derivationRefusal,
+  evaluate,
+  followRefusal,
+  transformShape,
+} from '@leathercad/domain';
 import { MatOps, PathOps, Shapes, type Mat2x3, type Path, type Vec2 } from '@leathercad/geometry';
 
 import { command, type Command, type Document } from './document.js';
@@ -33,39 +41,51 @@ export function addPart(part: Part): Command {
   }));
 }
 
+/**
+ * Adds a feature to a part.
+ *
+ * A derived feature the reference graph would not allow — a missing source, a
+ * loop, a pairing the compatibility table forbids — is refused and the document
+ * left exactly as it was (S2–S4). The UI asks `derivationRefusal` for the reason.
+ */
 export function addFeature(partId: PartId, feature: Feature): Command {
-  return command(`Add ${feature.name}`, (document) => ({
-    project: mapPart(document.project, partId, (part) => ({
-      ...part,
-      features: [...part.features, feature],
-    })),
-  }));
+  return command(`Add ${feature.name}`, (document) => {
+    if (derivationRefusal(document.project, feature) !== null) return document;
+    return {
+      project: mapPart(document.project, partId, (part) => ({
+        ...part,
+        features: [...part.features, feature],
+      })),
+    };
+  });
 }
 
-export function deleteFeatures(ids: Iterable<FeatureId>): Command {
-  const requested = new Set(ids);
-  const label = requested.size === 1 ? 'Delete feature' : `Delete ${requested.size} features`;
+/**
+ * Deletes features — never a feature the user did not name without being told
+ * what to do with it (ADR 0009).
+ *
+ * With nothing depending on `ids`, it deletes. With dependents and no
+ * `resolution`, it **refuses**, returning the document unchanged so the store
+ * records nothing; the dialog reads `planDelete` and asks. `'delete-dependents'`
+ * takes the whole chain; `'freeze-dependents'` keeps each direct dependent as
+ * drawn geometry, deleting only what has no drawn form.
+ *
+ * Parts are never removed here, however empty they become: a part carries a
+ * name and a quantity the user gave it, and goes only through `deletePart`.
+ */
+export function deleteFeatures(ids: Iterable<FeatureId>, resolution?: DeleteResolution): Command {
+  const requested = [...new Set(ids)];
 
-  return command(label, (document) => {
-    if (requested.size === 0) return document;
-
-    // A stitch line without its outline has no geometry and no meaning, so it
-    // goes too — as part of the same command, so one undo brings everything
-    // back. Leaving dependents behind in a permanent error state fills a
-    // document with rubble that cannot be removed.
-    const targets = withDependents(document.project, requested);
-
-    // Parts left empty by the deletion go too: an invisible part with nothing
-    // in it is clutter in the parts list and cannot be selected to remove.
-    const parts = document.project.parts
-      .map((part) => ({
-        ...part,
-        features: part.features.filter((feature) => !targets.has(feature.id)),
-      }))
-      .filter((part) => part.features.length > 0);
-
-    return { project: { ...document.project, parts } };
-  });
+  return {
+    label: requested.length === 1 ? 'Delete feature' : `Delete ${requested.length} features`,
+    labelFor: (document) => deleteLabel(document.project, requested, resolution),
+    apply: (document) => {
+      if (requested.length === 0) return document;
+      const outcome = resolveDelete(document.project, requested, resolution);
+      if (outcome === null || outcome.gone.size === 0) return document;
+      return { project: applyOutcome(document.project, outcome) };
+    },
+  };
 }
 
 export function renameFeature(id: FeatureId, name: string): Command {
@@ -159,9 +179,30 @@ export function refusedTransforms(
   const targets = new Set(ids);
   const refused: RefusedTransform[] = [];
 
+  const byId = new Map(
+    project.parts.flatMap((part) => part.features).map((f) => [f.id, f] as const),
+  );
+
   for (const part of project.parts) {
     for (const feature of part.features) {
-      if (!targets.has(feature.id) || feature.source.kind !== 'shape') continue;
+      if (!targets.has(feature.id)) continue;
+
+      if (feature.source.kind === 'derived') {
+        // A derived feature has no geometry of its own to move. Moved with what
+        // it follows, it follows; moved alone, nothing happens — and the user is
+        // told why rather than left watching it not move (X3).
+        if (!movesWithItsSource(byId, feature, targets)) {
+          const root = rootOf(byId, feature);
+          refused.push({
+            featureId: feature.id,
+            featureName: feature.name,
+            reason: `${feature.name} follows ${root.name}, so it moves when ${root.name} does. Move ${root.name} instead.`,
+          });
+        }
+        continue;
+      }
+
+      if (feature.source.kind !== 'shape') continue;
 
       const result = transformShape(feature.source.shape, matrix);
       if (!result.ok) {
@@ -232,27 +273,6 @@ export function shapePart(
       };
 
   return { id: partId, name, quantity: 1, features: [feature] };
-}
-
-/** The requested features, plus everything derived from them, transitively. */
-function withDependents(project: Project, requested: ReadonlySet<FeatureId>): Set<FeatureId> {
-  const doomed = new Set(requested);
-  const all = project.parts.flatMap((part) => part.features);
-
-  let grew = true;
-  while (grew) {
-    grew = false;
-    for (const feature of all) {
-      if (doomed.has(feature.id)) continue;
-      const source = feature.source;
-      if (source.kind === 'derived' && doomed.has(source.sourceId)) {
-        doomed.add(feature.id);
-        grew = true;
-      }
-    }
-  }
-
-  return doomed;
 }
 
 /** Whether a shape bounds an inside. Every new shape must answer this. */
@@ -403,44 +423,14 @@ export function setDerivation(id: FeatureId, op: Derivation): Command {
 }
 
 /**
- * Adds a derived feature, unless doing so would close a loop.
+ * Adds a derived feature, unless the reference graph would not allow it.
  *
  * The check is here rather than in evaluation so the document is never in a
- * cyclic state at all. Evaluation keeps its own guard, but that one should be
- * unreachable — and unreachable is where the next bug lives.
+ * cyclic or incompatible state at all. Evaluation keeps its own cycle guard,
+ * which should be unreachable — and unreachable is where the next bug lives.
  */
-function addDerived(partId: PartId, sourceId: FeatureId, feature: Feature): Command {
-  return command(`Add ${feature.name}`, (document) => {
-    if (wouldCycle(document.project, feature.id, sourceId)) return document;
-
-    return {
-      project: mapPart(document.project, partId, (part) => ({
-        ...part,
-        features: [...part.features, feature],
-      })),
-    };
-  });
-}
-
-/** Whether following `sourceId` upstream comes back to `featureId`. */
-function wouldCycle(project: Project, featureId: FeatureId, sourceId: FeatureId): boolean {
-  const byId = new Map<FeatureId, Feature>();
-  for (const part of project.parts) {
-    for (const feature of part.features) byId.set(feature.id, feature);
-  }
-
-  let at: FeatureId | undefined = sourceId;
-  const seen = new Set<FeatureId>();
-  while (at !== undefined) {
-    if (at === featureId) return true;
-    if (seen.has(at)) return true;
-    seen.add(at);
-
-    const source: GeometrySource | undefined = byId.get(at)?.source;
-    at = source?.kind === 'derived' ? source.sourceId : undefined;
-  }
-
-  return false;
+function addDerived(partId: PartId, _sourceId: FeatureId, feature: Feature): Command {
+  return addFeature(partId, feature);
 }
 
 export function setProjectName(name: string): Command {
@@ -637,4 +627,261 @@ export function setHardwareType(
     ...hole,
     hardwareType,
   }));
+}
+
+/** What to do with the features that depend on the ones being deleted. */
+export type DeleteResolution = 'delete-dependents' | 'freeze-dependents';
+
+export interface PlannedDependent {
+  readonly featureId: FeatureId;
+  readonly name: string;
+  readonly kind: FeatureKind;
+  readonly partId: PartId;
+  readonly partName: string;
+  /** Follows one of the deleted features itself, rather than through another. */
+  readonly direct: boolean;
+  /**
+   * Could be kept as drawn geometry. Only a direct dependent that has a drawn
+   * form and currently resolves: a hole set exists only as holes along a line,
+   * and a feature that fails to build has no geometry to keep.
+   */
+  readonly freezable: boolean;
+}
+
+export interface DeletePlan {
+  /** The requested features that exist, in document order. */
+  readonly requested: readonly FeatureId[];
+  readonly dependents: readonly PlannedDependent[];
+}
+
+/**
+ * What deleting `ids` would touch — the one answer the dialog and the command
+ * share (ADR 0009). Pure.
+ */
+export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePlan {
+  const wanted = new Set(ids);
+  const entries = project.parts.flatMap((part) =>
+    part.features.map((feature) => ({ part, feature })),
+  );
+  const requested = entries.filter((e) => wanted.has(e.feature.id)).map((e) => e.feature.id);
+  const requestedSet = new Set(requested);
+
+  const dependentIds = dependentsOf(project, requested);
+  if (dependentIds.length === 0) return { requested, dependents: [] };
+
+  const resolved = new Map(
+    evaluate(project)
+      .parts.flatMap((part) => part.features)
+      .map((entry) => [entry.feature.id, entry] as const),
+  );
+
+  const dependents = dependentIds.map((id): PlannedDependent => {
+    const { part, feature } = entries.find((e) => e.feature.id === id)!;
+    const direct = feature.source.kind === 'derived' && requestedSet.has(feature.source.sourceId);
+    return {
+      featureId: id,
+      name: feature.name,
+      kind: feature.kind,
+      partId: part.id,
+      partName: part.name,
+      direct,
+      freezable: direct && feature.kind !== 'stitch-hole-set' && resolved.get(id)?.ok === true,
+    };
+  });
+
+  return { requested, dependents };
+}
+
+/**
+ * Deletes a part and its features.
+ *
+ * Planned exactly like `deleteFeatures`: anything outside the part that depends
+ * on its features needs a resolution first. An empty part simply goes.
+ */
+export function deletePart(partId: PartId, resolution?: DeleteResolution): Command {
+  return {
+    label: 'Delete part',
+    labelFor: (document) => {
+      const part = document.project.parts.find((p) => p.id === partId);
+      if (part === undefined) return 'Delete part';
+      const ids = part.features.map((f) => f.id);
+      return deleteLabel(document.project, ids, resolution, part.name);
+    },
+    apply: (document) => {
+      const part = document.project.parts.find((p) => p.id === partId);
+      if (part === undefined) return document;
+
+      const outcome = resolveDelete(
+        document.project,
+        part.features.map((f) => f.id),
+        resolution,
+      );
+      if (outcome === null) return document;
+
+      const project = applyOutcome(document.project, outcome);
+      return { project: { ...project, parts: project.parts.filter((p) => p.id !== partId) } };
+    },
+  };
+}
+
+/**
+ * Makes a derived feature follow a different source, keeping its parameters.
+ *
+ * How an outline is replaced without losing the stitching that followed it.
+ * Refuses — changing nothing — whatever `followRefusal` refuses.
+ */
+export function setSource(id: FeatureId, sourceId: FeatureId): Command {
+  return {
+    label: 'Follow another feature',
+    labelFor: (document) => {
+      const source = document.project.parts
+        .flatMap((p) => p.features)
+        .find((f) => f.id === sourceId);
+      return source === undefined ? 'Follow another feature' : `Follow ${source.name}`;
+    },
+    apply: (document) => {
+      if (followRefusal(document.project, id, sourceId) !== null) return document;
+      return {
+        project: mapFeature(document.project, id, (feature) =>
+          feature.source.kind === 'derived'
+            ? { ...feature, source: { ...feature.source, sourceId } }
+            : feature,
+        ),
+      };
+    },
+  };
+}
+
+interface DeleteOutcome {
+  /** Every feature that goes, requested or not. */
+  readonly gone: ReadonlySet<FeatureId>;
+  /** Features kept as drawn geometry, by id. */
+  readonly frozen: ReadonlyMap<FeatureId, Feature>;
+  readonly requestedCount: number;
+}
+
+/**
+ * What a delete actually does, or null when it must be refused.
+ *
+ * Shared by the command and its undo label, so the menu cannot describe a
+ * different delete from the one that happened.
+ */
+function resolveDelete(
+  project: Project,
+  ids: readonly FeatureId[],
+  resolution: DeleteResolution | undefined,
+): DeleteOutcome | null {
+  const plan = planDelete(project, ids);
+  const gone = new Set(plan.requested);
+  const frozen = new Map<FeatureId, Feature>();
+
+  if (plan.dependents.length === 0) return { gone, frozen, requestedCount: plan.requested.length };
+  if (resolution === undefined) return null;
+
+  if (resolution === 'delete-dependents') {
+    for (const dependent of plan.dependents) gone.add(dependent.featureId);
+    return { gone, frozen, requestedCount: plan.requested.length };
+  }
+
+  const byId = new Map(
+    project.parts.flatMap((part) => part.features).map((f) => [f.id, f] as const),
+  );
+  const resolved = new Map(
+    evaluate(project)
+      .parts.flatMap((part) => part.features)
+      .map((entry) => [entry.feature.id, entry] as const),
+  );
+
+  for (const dependent of plan.dependents) {
+    if (!dependent.direct) continue;
+    const feature = byId.get(dependent.featureId)!;
+    const entry = resolved.get(dependent.featureId);
+    if (dependent.freezable && entry?.ok === true && feature.source.kind === 'derived') {
+      const followed = byId.get(feature.source.sourceId);
+      frozen.set(feature.id, {
+        ...feature,
+        source: { kind: 'path', path: entry.path },
+        frozenFrom: followed?.name ?? 'a deleted feature',
+      });
+    } else {
+      gone.add(dependent.featureId);
+    }
+  }
+
+  // Whatever still follows something that is going — and not through a frozen
+  // feature, which no longer follows anything — goes with it.
+  const afterFreeze = applyOutcome(project, { gone: new Set(), frozen, requestedCount: 0 });
+  for (const id of dependentsOf(afterFreeze, gone)) gone.add(id);
+
+  return { gone, frozen, requestedCount: plan.requested.length };
+}
+
+/** Removes and freezes features, leaving untouched parts identical by reference. */
+function applyOutcome(project: Project, outcome: DeleteOutcome): Project {
+  return {
+    ...project,
+    parts: project.parts.map((part) =>
+      part.features.some((f) => outcome.gone.has(f.id) || outcome.frozen.has(f.id))
+        ? {
+            ...part,
+            features: part.features
+              .filter((f) => !outcome.gone.has(f.id))
+              .map((f) => outcome.frozen.get(f.id) ?? f),
+          }
+        : part,
+    ),
+  };
+}
+
+function deleteLabel(
+  project: Project,
+  ids: readonly FeatureId[],
+  resolution: DeleteResolution | undefined,
+  partName?: string,
+): string {
+  const names = project.parts.flatMap((p) => p.features).filter((f) => ids.includes(f.id));
+  const what =
+    partName ?? (names.length === 1 ? names[0]!.name : `${String(names.length)} features`);
+
+  const outcome = resolveDelete(project, ids, resolution);
+  if (outcome === null) return `Delete ${what}`;
+
+  const deleted = outcome.gone.size - outcome.requestedCount;
+  const kept = outcome.frozen.size;
+  const dependents = (n: number): string => `${String(n)} dependent${n === 1 ? '' : 's'}`;
+
+  if (kept > 0 && deleted > 0)
+    return `Delete ${what} and ${dependents(deleted)}, keep ${String(kept)} frozen`;
+  if (kept > 0) return `Delete ${what}, keep ${String(kept)} frozen`;
+  if (deleted > 0) return `Delete ${what} and ${dependents(deleted)}`;
+  return `Delete ${what}`;
+}
+
+/** Whether anything upstream of `feature` is among the features being moved. */
+function movesWithItsSource(
+  byId: ReadonlyMap<FeatureId, Feature>,
+  feature: Feature,
+  targets: ReadonlySet<FeatureId>,
+): boolean {
+  const seen = new Set<FeatureId>();
+  let at: Feature | undefined = feature;
+  while (at !== undefined && at.source.kind === 'derived' && !seen.has(at.id)) {
+    seen.add(at.id);
+    if (targets.has(at.source.sourceId)) return true;
+    at = byId.get(at.source.sourceId);
+  }
+  return false;
+}
+
+/** The feature at the top of a derivation chain: the one that owns geometry. */
+function rootOf(byId: ReadonlyMap<FeatureId, Feature>, feature: Feature): Feature {
+  const seen = new Set<FeatureId>();
+  let at = feature;
+  while (at.source.kind === 'derived' && !seen.has(at.id)) {
+    seen.add(at.id);
+    const next = byId.get(at.source.sourceId);
+    if (next === undefined) return at;
+    at = next;
+  }
+  return at;
 }

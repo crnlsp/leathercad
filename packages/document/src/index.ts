@@ -5,7 +5,12 @@
  * See CLAUDE.md invariant 5.
  */
 
-export type { RefusedTransform } from './commands.js';
+export type {
+  DeletePlan,
+  DeleteResolution,
+  PlannedDependent,
+  RefusedTransform,
+} from './commands.js';
 export type { Command, Document, Selection } from './document.js';
 export { EMPTY_SELECTION, command, isSelected, selectionOf, toggleSelected } from './document.js';
 
@@ -23,6 +28,9 @@ export {
   arcShape,
   circleShape,
   deleteFeatures,
+  deletePart,
+  planDelete,
+  setSource,
   setFoldDirection,
   setFoldThickness,
   setHardwareType,

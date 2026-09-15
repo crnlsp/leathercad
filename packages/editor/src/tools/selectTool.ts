@@ -1,6 +1,6 @@
-import { deleteFeatures, translateFeatures } from '@leathercad/document';
+import { deleteFeatures, refusedTransforms, translateFeatures } from '@leathercad/document';
 import { evaluate } from '@leathercad/domain';
-import { RectOps, Shapes } from '@leathercad/geometry';
+import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
 import { pathItem, type DisplayList } from '@leathercad/render';
 
 import { featuresWithin, hitTest } from '../hitTest.js';
@@ -10,7 +10,12 @@ type State =
   | { readonly kind: 'idle' }
   /** Pressed on a feature; becomes a move once the pointer actually travels. */
   | { readonly kind: 'maybe-move'; readonly startMm: { x: number; y: number } }
-  | { readonly kind: 'moving'; readonly startMm: { x: number; y: number } }
+  | {
+      readonly kind: 'moving';
+      readonly startMm: { x: number; y: number };
+      /** Why part of the selection is not moving, while it is not (X3). */
+      readonly refusal: string | null;
+    }
   | {
       readonly kind: 'band';
       readonly startMm: { x: number; y: number };
@@ -77,16 +82,23 @@ export function createSelectTool(): Tool {
         const travelled = Math.hypot(event.at.x - state.startMm.x, event.at.y - state.startMm.y);
         if (travelled < ctx.viewport.pxToMm(DRAG_THRESHOLD_PX)) return;
         ctx.store.begin('Move');
-        state = { kind: 'moving', startMm: state.startMm };
+        state = { kind: 'moving', startMm: state.startMm, refusal: null };
       }
 
       if (state.kind === 'moving') {
-        ctx.store.preview(
-          translateFeatures(ctx.store.getState().selection.features, {
-            x: event.at.x - state.startMm.x,
-            y: event.at.y - state.startMm.y,
-          }),
+        const delta = { x: event.at.x - state.startMm.x, y: event.at.y - state.startMm.y };
+        const { document, selection } = ctx.store.getState();
+
+        // The same check the command makes, asked first so the user is told why
+        // a stitch line dragged on its own stays where it is.
+        const refused = refusedTransforms(
+          document.project,
+          selection.features,
+          MatOps.fromTranslation(delta),
         );
+        state = { ...state, refusal: refused[0]?.reason ?? null };
+
+        ctx.store.preview(translateFeatures(selection.features, delta));
         ctx.invalidate();
       }
     },
@@ -113,10 +125,19 @@ export function createSelectTool(): Tool {
       }
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        const selected = ctx.store.getState().selection.features;
-        if (selected.size === 0) return;
+        const selected = [...ctx.store.getState().selection.features];
+        if (selected.length === 0) return;
+
+        if (ctx.requestDelete !== undefined) {
+          ctx.requestDelete(selected);
+          return;
+        }
+
+        // Without an app to ask, a delete with dependents is refused. Keep the
+        // selection in that case: nothing was deleted, so nothing should vanish.
+        const before = ctx.store.getState().document;
         ctx.dispatch(deleteFeatures(selected));
-        ctx.store.clearSelection();
+        if (ctx.store.getState().document !== before) ctx.store.clearSelection();
       }
     },
 
@@ -128,6 +149,10 @@ export function createSelectTool(): Tool {
     snapExclusions(ctx) {
       if (state.kind !== 'moving') return [];
       return [...ctx.store.getState().selection.features];
+    },
+
+    notice() {
+      return state.kind === 'moving' ? state.refusal : null;
     },
 
     buildOverlay(): DisplayList {

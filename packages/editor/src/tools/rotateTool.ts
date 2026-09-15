@@ -1,4 +1,4 @@
-import { transformFeatures } from '@leathercad/document';
+import { refusedTransforms, transformFeatures } from '@leathercad/document';
 import { MatOps, type Vec2 } from '@leathercad/geometry';
 import { textItem, type DisplayList } from '@leathercad/render';
 
@@ -24,6 +24,8 @@ type State =
       readonly pivot: Vec2;
       readonly from: number;
       readonly angle: number;
+      /** Why part of the selection is not turning, while it is not (X3). */
+      readonly refusal: string | null;
     };
 
 export function createRotateTool(): Tool {
@@ -48,7 +50,7 @@ export function createRotateTool(): Tool {
       if (pivot === null) return;
 
       ctx.store.begin('Rotate');
-      state = { kind: 'turning', pivot, from: angleFrom(pivot, event.at), angle: 0 };
+      state = { kind: 'turning', pivot, from: angleFrom(pivot, event.at), angle: 0, refusal: null };
       ctx.invalidate();
     },
 
@@ -57,15 +59,12 @@ export function createRotateTool(): Tool {
 
       const swept = angleFrom(state.pivot, event.at) - state.from;
       const angle = event.shiftKey ? Math.round(swept / ANGLE_STEP) * ANGLE_STEP : swept;
-      state = { ...state, angle };
+      const matrix = MatOps.fromRotationAround(state.pivot, angle);
+      const { document, selection } = ctx.store.getState();
+      const refused = refusedTransforms(document.project, selection.features, matrix);
+      state = { ...state, angle, refusal: refused[0]?.reason ?? null };
 
-      ctx.store.preview(
-        transformFeatures(
-          ctx.store.getState().selection.features,
-          MatOps.fromRotationAround(state.pivot, angle),
-          'Rotate',
-        ),
-      );
+      ctx.store.preview(transformFeatures(selection.features, matrix, 'Rotate'));
       ctx.invalidate();
     },
 
@@ -78,6 +77,10 @@ export function createRotateTool(): Tool {
 
     onKey(ctx, event) {
       if (event.key === 'Escape') reset(ctx);
+    },
+
+    notice() {
+      return state.kind === 'turning' ? state.refusal : null;
     },
 
     buildOverlay(): DisplayList {

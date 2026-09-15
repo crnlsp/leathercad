@@ -278,7 +278,8 @@ test('saves a project and reopens it with its parameters intact', async () => {
       .getByRole('button', { name: /Outline/ })
       .click();
     await window.keyboard.press('Delete');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    // The emptied part stays until it is removed on purpose (ADR 0009).
+    await expect(window.getByTestId('feature-count')).toHaveText('0');
 
     await window.getByTestId('open').click();
     await expect(window.getByTestId('part-count')).toHaveText('1');
@@ -688,28 +689,100 @@ test('a stitch line and its holes follow the panel width', async () => {
   });
 });
 
-test('deleting an outline takes its stitch line and holes with it', async () => {
+/** A panel with a stitch line and holes, the outline selected. */
+async function panelWithChain(window: Awaited<ReturnType<ElectronApplication['firstWindow']>>) {
+  const box = await window.getByTestId('editor-canvas').boundingBox();
+
+  await window.getByTestId('tool-rectangle').click();
+  await window.mouse.move(box!.x + 250, box!.y + 250);
+  await window.mouse.down();
+  await window.mouse.move(box!.x + 550, box!.y + 450, { steps: 5 });
+  await window.mouse.up();
+
+  const panel = window.getByTestId('property-panel');
+  await panel.getByTestId('add-stitch-line').click();
+  // A derived feature says what it follows, and it can be changed.
+  await expect(panel.getByTestId('follows')).toContainText('Outline');
+  await panel.getByTestId('add-stitch-holes').click();
+  await expect(window.getByTestId('feature-count')).toHaveText('3');
+
+  await window.getByTestId('parts-list').getByText('Outline').click();
+  return panel;
+}
+
+test('deleting an outline asks what to do with what follows it', async () => {
+  // ADR 0009: never a silent cascade. The dialog names the dependents, and the
+  // document does not change until a choice is made.
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+    await panel.getByTestId('delete-feature').click();
+
+    const dialog = window.getByTestId('delete-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Stitch line');
+    await expect(dialog).toContainText('Stitch holes');
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+
+    await dialog.getByTestId('delete-all').click();
+    await expect(dialog).toHaveCount(0);
+
+    // All three go in one step; the part stays, empty, until removed on purpose.
+    await expect(window.getByTestId('feature-count')).toHaveText('0');
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await window.getByTestId('undo').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+  });
+});
+
+test('keeping a stitch line frozen leaves it in place, still carrying its holes', async () => {
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+    await panel.getByTestId('delete-feature').click();
+    await window.getByTestId('delete-dialog').getByTestId('delete-freeze').click();
+
+    // The outline goes; the stitch line stays as drawn geometry, and its holes
+    // still follow it.
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+    await expect(panel.getByTestId('frozen-note')).toContainText('Frozen from Outline');
+
+    await window.getByTestId('undo').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+  });
+});
+
+test('cancelling a delete changes nothing', async () => {
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+    await panel.getByTestId('delete-feature').click();
+    await expect(window.getByTestId('delete-dialog')).toBeVisible();
+
+    // Focus starts on Cancel, and Escape cancels.
+    await window.keyboard.press('Escape');
+
+    await expect(window.getByTestId('delete-dialog')).toHaveCount(0);
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expect(window.getByTestId('parts-list')).toContainText('Outline');
+  });
+});
+
+test('an emptied part stays until it is removed on purpose', async () => {
   await withFreshApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
-
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 250, box!.y + 250);
     await window.mouse.down();
-    await window.mouse.move(box!.x + 550, box!.y + 450, { steps: 5 });
+    await window.mouse.move(box!.x + 450, box!.y + 400, { steps: 5 });
     await window.mouse.up();
 
-    const panel = window.getByTestId('property-panel');
-    await panel.getByTestId('add-stitch-line').click();
-    await panel.getByTestId('add-stitch-holes').click();
-
-    await window.getByTestId('parts-list').getByText('Outline').click();
-    await panel.getByTestId('delete-feature').click();
-
-    // An orphaned stitch line has no geometry and no meaning, so all three go
-    // — and one undo brings all three back.
-    await expect(window.getByTestId('part-count')).toHaveText('0');
-    await window.getByTestId('undo').click();
+    // Nothing depends on a lone outline, so it goes at once — but its part stays.
+    await window.getByTestId('property-panel').getByTestId('delete-feature').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('0');
     await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('parts-list')).toContainText('Empty');
+
+    await window.getByTestId('remove-empty-part').click();
+    await expect(window.getByTestId('part-count')).toHaveText('0');
   });
 });
 

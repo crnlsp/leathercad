@@ -48,6 +48,15 @@ export interface ToolContext {
    * written before the setting existed — keeps the behaviour it had.
    */
   readonly drawAs?: () => 'cut' | 'fold' | 'mark';
+  /**
+   * Asks the application to delete these features.
+   *
+   * A tool cannot show a dialog, and a delete with dependents needs one
+   * (ADR 0009), so the app decides: at once when nothing depends on them,
+   * otherwise by asking. Absent means dispatch `deleteFeatures` directly, which
+   * refuses — changing nothing — when there are dependents.
+   */
+  readonly requestDelete?: (ids: readonly FeatureId[]) => void;
 }
 
 /**

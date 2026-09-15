@@ -119,6 +119,13 @@ export interface FeatureBase {
   readonly visible: boolean;
   readonly locked: boolean;
   readonly source: GeometrySource;
+  /**
+   * The name of what this feature followed, if a delete froze it into drawn
+   * geometry (ADR 0009). Kept as a name rather than an id because the feature
+   * it names is gone — the panel still has to be able to say "Frozen from
+   * Outline". Absent on anything that was never frozen.
+   */
+  readonly frozenFrom?: string;
 }
 
 /** The outline actually cut from the leather. */

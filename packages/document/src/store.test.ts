@@ -106,7 +106,8 @@ describe('undo', () => {
   it('reports what will be undone', () => {
     const store = new DocumentStore(docWithRect());
     store.dispatch(deleteFeatures(['feat-1']));
-    expect(store.getState().undoLabel).toBe('Delete feature');
+    // Names what went, so the undo menu says what it will bring back.
+    expect(store.getState().undoLabel).toBe('Delete Outline');
   });
 
   it('a no-op command earns no history entry', () => {
@@ -278,10 +279,13 @@ describe('subscribe', () => {
 });
 
 describe('deleteFeatures', () => {
-  it('removes a part left with no features', () => {
+  it('keeps a part left with no features', () => {
+    // ADR 0009: a part carries a name and a quantity the user gave it, so it
+    // goes only when the part itself is deleted, never as a side effect.
     const store = new DocumentStore(docWithRect());
     store.dispatch(deleteFeatures(['feat-1']));
-    expect(store.getState().document.project.parts).toHaveLength(0);
+    expect(store.getState().document.project.parts).toHaveLength(1);
+    expect(store.getState().document.project.parts[0]!.features).toEqual([]);
   });
 });
 

@@ -2,14 +2,14 @@ import {
   type DocumentStore,
   addStitchHoles,
   addStitchLine,
-  deleteFeatures,
   renameFeature,
+  setSource,
   setPartName,
   setPartQuantity,
 } from '@leathercad/document';
 import type { Feature, Part, Project } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
-import { evaluate } from '@leathercad/domain';
+import { evaluate, followRefusal } from '@leathercad/domain';
 
 import { NumberField } from './NumberField.js';
 import { FeatureEditor } from './featureEditors/index.js';
@@ -25,11 +25,14 @@ export function PropertyPanel({
   project,
   selected,
   nextId,
+  requestDelete,
 }: {
   store: DocumentStore;
   project: Project;
   selected: ReadonlySet<string>;
   nextId: () => string;
+  /** Deletes at once, or asks about dependents first (ADR 0009). */
+  requestDelete: (ids: readonly string[]) => void;
 }) {
   const found = findSelected(project, selected);
 
@@ -91,6 +94,16 @@ export function PropertyPanel({
           </span>
         </label>
 
+        {feature.frozenFrom !== undefined && (
+          <p className="panel-note" data-testid="frozen-note">
+            Frozen from {feature.frozenFrom}: drawn geometry now, no longer following it.
+          </p>
+        )}
+
+        {feature.source.kind === 'derived' && (
+          <FollowsField store={store} project={project} feature={feature} />
+        )}
+
         <FeatureEditor
           store={store}
           feature={feature}
@@ -125,10 +138,7 @@ export function PropertyPanel({
         type="button"
         className="tool danger"
         data-testid="delete-feature"
-        onClick={() => {
-          store.dispatch(deleteFeatures([feature.id]));
-          store.clearSelection();
-        }}
+        onClick={() => requestDelete([feature.id])}
       >
         Delete
       </button>
@@ -233,4 +243,52 @@ function labelFor(feature: Feature): string {
     case 'hardware-hole':
       return 'Hardware hole';
   }
+}
+
+/**
+ * Which feature a derived feature follows, and what it could follow instead.
+ *
+ * Re-pointing is how a relationship survives replacing its source (ADR 0009).
+ * Only sources the graph would accept are offered — the same `followRefusal`
+ * the command enforces — so the list never promises what the command refuses.
+ */
+function FollowsField({
+  store,
+  project,
+  feature,
+}: {
+  store: DocumentStore;
+  project: Project;
+  feature: Feature;
+}) {
+  if (feature.source.kind !== 'derived') return null;
+  const current = feature.source.sourceId;
+
+  const options = project.parts.flatMap((part) =>
+    part.features
+      .filter(
+        (candidate) =>
+          candidate.id === current ||
+          (candidate.id !== feature.id &&
+            followRefusal(project, feature.id, candidate.id) === null),
+      )
+      .map((candidate) => ({ id: candidate.id, label: `${part.name} › ${candidate.name}` })),
+  );
+
+  return (
+    <label className="field">
+      <span className="field-label">Follows</span>
+      <select
+        data-testid="follows"
+        value={current}
+        onChange={(event) => store.dispatch(setSource(feature.id, event.target.value))}
+      >
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }

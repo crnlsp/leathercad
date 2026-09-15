@@ -66,7 +66,7 @@ ordering.
 
 ### 3.1 Shape
 
-Format version 3, as the writer emits it (key order shown for reading; the writer sorts keys):
+Format version 4, as the writer emits it (key order shown for reading; the writer sorts keys):
 
 ```jsonc
 {
@@ -109,8 +109,8 @@ Format version 3, as the writer emits it (key order shown for reading; the write
 ```
 
 **Planned in Phase 4** ([reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md)
-§6), each with its own version bump and identity migration: `frozenFrom` on features and empty parts
-(4.2b), the `mirror` op (4.8), and the `measurement` and `text-label` annotation kinds, which carry no
+§6), each with its own version bump and identity migration: `frozenFrom` on features (4.2b, now
+format version 4), the `mirror` op (4.8), and the `measurement` and `text-label` annotation kinds, which carry no
 `source` (4.10, 4.11). Page setup, materials, guides and a per-part placement transform are not in the
 format.
 
@@ -149,12 +149,14 @@ mark the file dirty, and every save would produce a diff. Session state stays ou
 ### 4.1 The runner
 
 ```ts
-const CURRENT_FORMAT_VERSION = 2;
+const CURRENT_FORMAT_VERSION = 4;
 
 type Migration = { from: number; to: number; migrate(doc: unknown): unknown };
 
 const migrations: Migration[] = [
   { from: 1, to: 2, migrate: v1_to_v2 },   // derived features
+  { from: 2, to: 3, migrate: v2_to_v3 },   // hardware holes
+  { from: 3, to: 4, migrate: v3_to_v4 },   // frozen features
 ];
 
 function loadDocument(raw: unknown, fileVersion: number): Project {
@@ -202,6 +204,12 @@ did not change, only their interpretation. This is a real, ongoing dividend of �
 
 `zod` schemas mirror the domain types and run at the load boundary — the one place untrusted data
 enters the system.
+
+After the schema, the **reference graph** is checked (`domain-model.md` §8.2, S1–S4): a feature
+following one that does not exist, a loop, a derivation the compatibility table does not allow, or a
+repeated id refuses the file, naming the feature. A file can satisfy the schema and break the graph,
+and everything past the loader assumes a sound graph
+([ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md)).
 
 - Parse failures produce a **path-qualified message** (`parts[2].features[0].source.distanceMm:
   expected number, got string`), not "invalid file".

@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type Project } from '@leathercad/domain';
-import { uniformRadii } from '@leathercad/geometry';
+import { polyline, uniformRadii } from '@leathercad/geometry';
 
 /**
  * The project behind `fixtures/format/v1.lcp`.
@@ -259,6 +259,53 @@ export function fixtureProjectV3(): Project {
               kind: 'shape',
               // A 4 mm punch: the record holds the radius.
               shape: { type: 'circle', centre: { x: 12, y: 12 }, radius: 2 },
+            },
+          },
+        ],
+      },
+      ...rest,
+    ],
+  };
+}
+
+/**
+ * The project behind `fixtures/format/v4.lcp`.
+ *
+ * Everything version 3 held, plus a frozen stitch line: the reason the version
+ * moved (slice 4.2b, ADR 0009). Built from `fixtureProjectV3` so "one of every
+ * persisted kind" cannot drift between versions.
+ */
+export function fixtureProjectV4(): Project {
+  const previous = fixtureProjectV3();
+  const [panel, ...rest] = previous.parts;
+
+  return {
+    ...previous,
+    id: 'fixture-v4',
+    name: 'Format baseline v4',
+    parts: [
+      {
+        ...panel!,
+        features: [
+          ...panel!.features,
+          {
+            id: 'frozen-1',
+            kind: 'stitch-line',
+            name: 'Stitch line',
+            visible: true,
+            locked: false,
+            frozenFrom: 'Outline',
+            source: {
+              kind: 'path',
+              path: polyline(
+                [
+                  { x: 10, y: 10 },
+                  { x: 95, y: 10 },
+                  { x: 95, y: 65 },
+                  { x: 10, y: 65 },
+                ],
+                true,
+              ),
             },
           },
         ],

@@ -208,6 +208,7 @@ Tools never mutate the document. React components never mutate the document. Onl
 ```ts
 type Command = {
   readonly label: string;                     // shown in the undo menu
+  labelFor?(doc: Document): string;           // optional: names what it acts on, read before apply
   apply(doc: Document): Document;             // pure
 };
 ```

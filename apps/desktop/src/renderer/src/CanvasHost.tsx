@@ -48,6 +48,7 @@ export function CanvasHost({
   toolId,
   drawAs,
   hardware,
+  requestDelete,
   nextId,
   onStatus,
 }: {
@@ -55,6 +56,7 @@ export function CanvasHost({
   toolId: string;
   drawAs: DrawAs;
   hardware: HardwareOptions;
+  requestDelete: (ids: readonly string[]) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
 }) {
@@ -79,6 +81,8 @@ export function CanvasHost({
   drawAsRef.current = drawAs;
   const hardwareRef = useRef(hardware);
   hardwareRef.current = hardware;
+  const requestDeleteRef = useRef(requestDelete);
+  requestDeleteRef.current = requestDelete;
 
   const tools = useMemo(
     () => [
@@ -104,6 +108,7 @@ export function CanvasHost({
         dispatch: (command) => store.dispatch(command),
         invalidate,
         drawAs: () => drawAsRef.current,
+        requestDelete: (ids) => requestDeleteRef.current(ids),
       },
       tools[0]!,
       tools,

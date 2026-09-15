@@ -485,3 +485,94 @@ body {
   background: #14161a;
   outline: none;
 }
+
+/* The delete dialog (ADR 0009). Modal, centred, and quiet: the choice is the
+   content, so nothing else competes with it. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 45%);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.dialog h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.dialog p {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.dialog ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.dialog-part {
+  font-weight: 600;
+}
+
+.dialog-note {
+  color: var(--text-dim);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.panel-note {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.empty-part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* A destructive action reads as one, wherever it appears: the panel's Delete
+   and the dialog's Delete all both use it. */
+.tool.danger {
+  color: var(--error);
+}
+
+.tool.danger:hover:not(:disabled) {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* Focus has to be visible. The delete dialog deliberately starts on Cancel, and
+   a user who cannot see that has no reason to trust what Enter will do. Inside
+   the dialog it shows even after a mouse click opened it, which :focus-visible
+   alone would not guarantee. */
+.tool:focus-visible,
+.dialog .tool:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}

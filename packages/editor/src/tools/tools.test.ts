@@ -1,4 +1,11 @@
-import { DocumentStore, emptyDocument } from '@leathercad/document';
+import {
+  addPart,
+  addStitchLine,
+  DocumentStore,
+  emptyDocument,
+  rectShape,
+  shapePart,
+} from '@leathercad/document';
 import { evaluate } from '@leathercad/domain';
 import type { Vec2 } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
@@ -284,9 +291,10 @@ describe('select tool', () => {
     tool.onPointerUp?.(ctx, pointer({ x: 50, y: 0 }));
     tool.onKey?.(ctx, { key: 'Delete', shiftKey: false, ctrlKey: false });
 
-    expect(store.getState().document.project.parts).toHaveLength(0);
+    // The feature goes; its part stays until it is removed on purpose (ADR 0009).
+    expect(store.getState().document.project.parts[0]!.features).toHaveLength(0);
     store.undo();
-    expect(store.getState().document.project.parts).toHaveLength(1);
+    expect(store.getState().document.project.parts[0]!.features).toHaveLength(1);
   });
 
   it('Delete with nothing selected does nothing', () => {
@@ -363,5 +371,66 @@ describe('hit tolerance', () => {
     tool.onPointerDown?.(ctx, pointer({ x: 50, y: 2 }));
     tool.onPointerUp?.(ctx, pointer({ x: 50, y: 2 }));
     expect(store.getState().selection.features.size).toBe(0);
+  });
+});
+
+describe('select tool and derived features', () => {
+  /** A 100 × 60 panel with a stitch line 5 mm inside it. */
+  function withChain(): { ctx: ToolContext; store: DocumentStore } {
+    const { ctx, store } = harness();
+    store.dispatch(
+      addPart(shapePart('part-1', 'cut-1', 'Panel', rectShape({ x: 0, y: 0 }, 100, 60))),
+    );
+    store.dispatch(addStitchLine('part-1', 'stitch-1', 'cut-1', 5));
+    return { ctx, store };
+  }
+
+  it('hands a delete to the app, so the app can ask about dependents', () => {
+    const { ctx, store } = withChain();
+    const asked: (readonly string[])[] = [];
+    const withHandler: ToolContext = { ...ctx, requestDelete: (ids) => asked.push(ids) };
+    store.select(['cut-1']);
+    const before = store.getState().document;
+
+    createSelectTool().onKey?.(withHandler, { key: 'Delete', shiftKey: false, ctrlKey: false });
+
+    expect(asked).toEqual([['cut-1']]);
+    expect(store.getState().document).toBe(before);
+  });
+
+  it('keeps the selection when a delete is refused for want of a decision', () => {
+    const { ctx, store } = withChain();
+    store.select(['cut-1']);
+
+    createSelectTool().onKey?.(ctx, { key: 'Delete', shiftKey: false, ctrlKey: false });
+
+    expect([...store.getState().selection.features]).toEqual(['cut-1']);
+    expect(store.getState().document.project.parts[0]!.features).toHaveLength(2);
+  });
+
+  it('explains why a stitch line dragged on its own stays put', () => {
+    const { ctx, store } = withChain();
+    const tool = createSelectTool();
+
+    // On the stitch line's bottom edge, 5 mm from the outline's.
+    tool.onPointerDown?.(ctx, pointer({ x: 50, y: 5 }));
+    tool.onPointerMove?.(ctx, pointer({ x: 70, y: 5 }));
+
+    expect(tool.notice?.(ctx)).toMatch(/follows Outline/);
+
+    tool.onPointerUp?.(ctx, pointer({ x: 70, y: 5 }));
+    expect(store.getState().document.project.parts[0]!.features[1]!.source.kind).toBe('derived');
+    expect(tool.notice?.(ctx)).toBeNull();
+  });
+
+  it('says nothing when the stitch line moves with its outline', () => {
+    const { ctx, store } = withChain();
+    const tool = createSelectTool();
+    store.select(['cut-1', 'stitch-1']);
+
+    tool.onPointerDown?.(ctx, pointer({ x: 50, y: 0 }));
+    tool.onPointerMove?.(ctx, pointer({ x: 70, y: 0 }));
+
+    expect(tool.notice?.(ctx)).toBeNull();
   });
 });

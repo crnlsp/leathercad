@@ -615,13 +615,28 @@ that walks one scenario through the whole phase.
   never shares an object; the app caught it in a second.
   Deleting a source cascades to everything derived from it, in the same command, so one undo brings
   all of it back. An orphaned stitch line has no geometry and no meaning.
-- **4.2b** Reference graph and deletion. Derivations and references (measurement ends) as one acyclic
+- **4.2b** ✅ **Done.** Reference graph and deletion. Derivations and references (measurement ends) as one acyclic
   graph, with the derivation compatibility table enforced by commands and by the loader. **Deleting
   something others depend on asks** — delete the chain, freeze, or cancel — rather than cascading or
   baking silently ([ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md)). Any derived
   feature can be re-pointed (*Follows*); parts are removed only by deleting the part; every refusal
   is explained by a query that shares the command's check. **Supersedes the cascade recorded under
-  4.2.**
+  4.2.** Design in
+  [2026-09-15-reference-graph-and-deletion-design.md](superpowers/specs/2026-09-15-reference-graph-and-deletion-design.md).
+  Four gotchas worth not rediscovering.
+  **An undo label that names what it deletes cannot be fixed when the command is created**, because
+  the command has not seen the document yet. `Command` gained an optional `labelFor(document)`, which
+  the store reads from the document the command is about to change. Setting the label inside
+  `apply` would also have worked, and would have been a side effect hiding in a pure function.
+  **Freezing has to recompute what is still reachable afterwards.** The holes on a frozen stitch line
+  are no longer dependents of the deleted outline, because the stitch line stops following it; taking
+  dependents from the graph as it was would delete them.
+  **`followRefusal` checks the whole project after the re-point**, not only the feature. Re-pointing
+  one feature can break another downstream — a seam allowance needs its source closed — and a
+  property test holds the query to "yes means the graph is still sound".
+  **Two E2E tests assumed deleting a lone outline removed its part.** The part now stays, marked
+  empty, until *Remove*. Format **version 4** (`frozenFrom`), with `fixtures/format/v4.lcp`; v3 is now
+  an old file.
 - **4.3** Parts panel and cut-outs. Part selection beside feature selection; the parts panel as a
   dependency tree (*Outline ▸ Stitch line ▸ Holes*); delete and duplicate a part, re-pointing the
   derivations inside it; visibility, and a lock that commands honour rather than only picking.

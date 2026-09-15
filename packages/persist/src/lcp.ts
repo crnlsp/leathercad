@@ -1,6 +1,8 @@
 import type { Project } from '@leathercad/domain';
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 
+import { graphProblems } from '@leathercad/domain';
+
 import { CURRENT_FORMAT_VERSION, migrate } from './migrations/index.js';
 import { ManifestSchema, ProjectSchema, type Manifest } from './schema.js';
 
@@ -103,6 +105,17 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
   const result = ProjectSchema.safeParse(migrated);
   if (!result.success) {
     throw new InvalidProjectFileError(`document.json is not valid: ${describe(result.error)}`);
+  }
+
+  // The schema checks the shape of the file; this checks its reference graph
+  // (S1–S4). A file can satisfy one and break the other, and everything past
+  // this point assumes a sound graph — so a broken one is refused here, naming
+  // the feature, rather than found later as a stitch line following nothing.
+  const problems = graphProblems(result.data as Project);
+  if (problems.length > 0) {
+    throw new InvalidProjectFileError(
+      `document.json is not valid: ${problems.map((problem) => problem.message).join(' ')}`,
+    );
   }
 
   return { project: result.data as Project, manifest };

@@ -46,5 +46,8 @@ export { transformShape } from './transformShape.js';
 
 export { anchorsOf, cornerDistances } from './anchors.js';
 
+export type { GraphProblem, GraphProblemCode } from './graph.js';
+export { dependentsOf, derivationRefusal, followRefusal, graphProblems } from './graph.js';
+
 export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
 export { distributeHoles, splitAtCorners } from './stitch.js';

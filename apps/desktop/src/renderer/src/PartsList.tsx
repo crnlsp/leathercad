@@ -11,10 +11,13 @@ export function PartsList({
   store,
   project,
   selected,
+  onRemovePart,
 }: {
   store: DocumentStore;
   project: Project;
   selected: ReadonlySet<string>;
+  /** Removes a part, asking first if anything outside it depends on it. */
+  onRemovePart: (partId: string) => void;
 }) {
   if (project.parts.length === 0) {
     return (
@@ -34,6 +37,21 @@ export function PartsList({
             {part.name}
             {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
           </div>
+          {part.features.length === 0 && (
+            // A part is removed only on purpose (ADR 0009), so an emptied one
+            // stays — named, and with the way to remove it right here.
+            <div className="empty-part">
+              <span className="panel-empty">Empty</span>
+              <button
+                type="button"
+                className="tool"
+                data-testid="remove-empty-part"
+                onClick={() => onRemovePart(part.id)}
+              >
+                Remove
+              </button>
+            </div>
+          )}
           {part.features.map((feature) => (
             <button
               key={feature.id}

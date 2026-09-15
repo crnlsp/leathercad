@@ -70,13 +70,17 @@ export class DocumentStore {
     const next = command.apply(this.present.document);
     if (next === this.present.document) return; // A no-op earns no history.
 
+    // Read from the document the command was applied to, while it still holds
+    // the names of what the command removed.
+    const label = command.labelFor?.(this.present.document) ?? command.label;
+
     this.past.push(this.present);
     if (this.past.length > DocumentStore.HISTORY_LIMIT) this.past.shift();
     this.future = [];
     this.present = {
       document: next,
       selection: this.present.selection,
-      label: command.label,
+      label,
     };
     this.emit();
   }

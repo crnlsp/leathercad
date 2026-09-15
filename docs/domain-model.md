@@ -58,7 +58,7 @@ interface FeatureBase {
   readonly name: string;
   readonly visible: boolean;
   readonly locked: boolean;           // S7: no command changes it until it is unlocked
-  readonly frozenFrom?: string;       // designed, 4.2b: set when a delete froze it (ADR 0009)
+  readonly frozenFrom?: string;       // 4.2b: set when a delete froze it (ADR 0009)
 }
 
 /** Features with geometry of their own: everything except annotations. */
@@ -341,7 +341,7 @@ interface EvaluationFailure {
    paths on load, so an improved offset silently improves every existing file.
 6. **Deterministic.** Same project in, same resolved geometry out.
 
-### 4.5 Deleting a feature others depend on — designed, 4.2b
+### 4.5 Deleting a feature others depend on — built, 4.2b
 
 [ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md). **A delete never changes a feature
 the user did not name without first showing them, and never leaves a reference dangling.**
@@ -566,7 +566,7 @@ interface Diagnostic {
 | `HOLE_SPACING_DEVIATION` | warning (above 25 %) | rule | DR4 | 4.12a |
 | `HOLE_COUNT_TOO_LOW` | warning (under 2 on a run) | rule | DR4 | 4.12a |
 | `TEXT_TOO_SMALL_TO_PRINT` | warning (under 1.5 mm) | rule | DR5 | 4.11 |
-| `EMPTY_PART` | info | rule | DR6 | 4.2b |
+| `EMPTY_PART` | info | rule | DR6 | 4.12a (parts are kept since 4.2b) |
 
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
 than reportable: `PART_HAS_MULTIPLE_OUTER` (S5), `CONTOUR_NOT_CLOSED` (S6), `BROKEN_DERIVATION` (S2
@@ -598,7 +598,7 @@ shapes and derivations instead of literals.
 | `TextLabel`, generated captions | Designed: 4.11 | |
 | Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes` | Built | |
 | Op: `mirror` | Designed: 4.8 | Boolean (v1.2) |
-| Reference graph, explicit deletion, re-pointing | Designed: 4.2b | |
+| Reference graph, explicit deletion, re-pointing | Built: 4.2b | References with 4.10 |
 | Anchors through derivations | Designed: 4.4b | Vertex ids before 3.9 |
 | Evaluation with memoisation and per-feature failures | Built; typed 4.12a | |
 | Layer roles and export presets | Built | |

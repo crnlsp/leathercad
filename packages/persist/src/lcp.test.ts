@@ -321,3 +321,88 @@ describe('a fold line', () => {
     expect(Object.keys(fold)).not.toContain('materialThicknessMm');
   });
 });
+
+describe('loading a project whose reference graph is broken', () => {
+  type AnyFeature = Project['parts'][number]['features'][number];
+
+  function withFeatures(extra: AnyFeature[]): Uint8Array {
+    const project = sampleProject();
+    const [part] = project.parts;
+    return saveProject(
+      { ...project, parts: [{ ...part!, features: [...part!.features, ...extra] }] },
+      options,
+    );
+  }
+
+  const stitchFrom = (id: string, name: string, sourceId: string): AnyFeature => ({
+    id,
+    kind: 'stitch-line',
+    name,
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'derived',
+      sourceId,
+      op: { type: 'offset', distanceMm: 3.5, side: 'inward', run: { kind: 'whole' } },
+    },
+  });
+
+  // Every case below satisfies the schema. What breaks is the graph, and the
+  // loader is the only thing between a hand-edited or corrupted file and a
+  // document the rest of the code assumes is sound (S2–S4).
+
+  it('refuses a feature that follows something that does not exist, naming it', () => {
+    const bytes = withFeatures([stitchFrom('s1', 'Orphan stitch', 'nowhere')]);
+    expect(() => loadProject(bytes)).toThrow(InvalidProjectFileError);
+    expect(() => loadProject(bytes)).toThrow(/Orphan stitch.*does not exist/);
+  });
+
+  it('refuses a loop', () => {
+    const bytes = withFeatures([stitchFrom('a', 'Loop A', 'b'), stitchFrom('b', 'Loop B', 'a')]);
+    expect(() => loadProject(bytes)).toThrow(/leads back to itself/);
+  });
+
+  it('refuses a derivation the compatibility table does not allow', () => {
+    const bytes = withFeatures([
+      {
+        id: 'h',
+        kind: 'stitch-hole-set',
+        name: 'Holes on an outline',
+        visible: true,
+        locked: false,
+        source: {
+          kind: 'derived',
+          sourceId: 'feat-1',
+          op: { type: 'stitch-holes', pitchMm: 3.85, mode: 'fit-whole', corners: 'hole-at-corner' },
+        },
+      },
+    ]);
+    expect(() => loadProject(bytes)).toThrow(/Holes on an outline.*stitch line/);
+  });
+
+  it('refuses two features sharing an id', () => {
+    const outline = sampleProject().parts[0]!.features[0]!;
+    const bytes = withFeatures([{ ...outline, name: 'Copy' }]);
+    expect(() => loadProject(bytes)).toThrow(/share the id feat-1/);
+  });
+});
+
+describe('a frozen feature', () => {
+  it('keeps what it was frozen from across a save and load', () => {
+    const project = sampleProject();
+    const [part] = project.parts;
+    const frozen = {
+      ...project,
+      parts: [
+        {
+          ...part!,
+          features: part!.features.map((f) =>
+            f.kind === 'fold-line' ? { ...f, frozenFrom: 'Outline' } : f,
+          ),
+        },
+      ],
+    };
+
+    expect(loadProject(saveProject(frozen, options)).project).toEqual(frozen);
+  });
+});

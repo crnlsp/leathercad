@@ -1,11 +1,21 @@
 import { createIdFactory } from '@leathercad/core';
-import { DocumentStore, emptyDocument, setProjectName } from '@leathercad/document';
+import {
+  DocumentStore,
+  deleteFeatures,
+  deletePart,
+  emptyDocument,
+  planDelete,
+  setProjectName,
+  type DeleteResolution,
+} from '@leathercad/document';
+import type { Project } from '@leathercad/domain';
 import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { DEFAULT_HARDWARE, type DrawAs, type HardwareOptions } from '@leathercad/editor';
 
 import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
+import { DeleteDialog } from './DeleteDialog.js';
 import { useProjectFile } from './useProjectFile.js';
 import { PartsList } from './PartsList.js';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -78,6 +88,55 @@ export function App() {
   }, [file]);
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
+
+  // A delete waiting on a decision about what follows it (ADR 0009). Null when
+  // no dialog is open.
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+
+  /**
+   * The one way anything asks to delete features: the panel's button and the
+   * Delete key both come here. At once when nothing depends on them; otherwise
+   * the dialog asks.
+   */
+  const requestDelete = useCallback(
+    (ids: readonly string[]) => {
+      const plan = planDelete(store.getState().document.project, ids);
+      if (plan.requested.length === 0) return;
+      if (plan.dependents.length === 0) {
+        store.dispatch(deleteFeatures(ids));
+        store.clearSelection();
+        return;
+      }
+      setPendingDelete({ ids });
+    },
+    [store],
+  );
+
+  const requestDeletePart = useCallback(
+    (partId: string) => {
+      const part = store.getState().document.project.parts.find((p) => p.id === partId);
+      if (part === undefined) return;
+      const ids = part.features.map((f) => f.id);
+      if (planDelete(store.getState().document.project, ids).dependents.length === 0) {
+        store.dispatch(deletePart(partId));
+        store.clearSelection();
+        return;
+      }
+      setPendingDelete({ ids, partId });
+    },
+    [store],
+  );
+
+  const resolvePendingDelete = (resolution: DeleteResolution): void => {
+    if (pendingDelete === null) return;
+    store.dispatch(
+      pendingDelete.partId === undefined
+        ? deleteFeatures(pendingDelete.ids, resolution)
+        : deletePart(pendingDelete.partId, resolution),
+    );
+    store.clearSelection();
+    setPendingDelete(null);
+  };
 
   const featureCount = storeState.document.project.parts.reduce(
     (total, part) => total + part.features.length,
@@ -164,6 +223,7 @@ export function App() {
             store={store}
             project={storeState.document.project}
             selected={storeState.selection.features}
+            onRemovePart={requestDeletePart}
           />
         </div>
         <div className="canvas-column">
@@ -181,6 +241,7 @@ export function App() {
             onStatus={handleStatus}
             drawAs={drawAs}
             hardware={hardware}
+            requestDelete={requestDelete}
           />
         </div>
         <PropertyPanel
@@ -188,6 +249,7 @@ export function App() {
           project={storeState.document.project}
           selected={storeState.selection.features}
           nextId={nextId}
+          requestDelete={requestDelete}
         />
       </div>
 
@@ -233,6 +295,32 @@ export function App() {
             : `${status.cursorMm.x.toFixed(2)} , ${status.cursorMm.y.toFixed(2)} mm`}
         </span>
       </footer>
+
+      {pendingDelete !== null && (
+        <DeleteDialog
+          what={describeDelete(storeState.document.project, pendingDelete)}
+          plan={planDelete(storeState.document.project, pendingDelete.ids)}
+          onResolve={resolvePendingDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   );
+}
+
+interface PendingDelete {
+  readonly ids: readonly string[];
+  /** Present when the whole part is being deleted, not only its features. */
+  readonly partId?: string;
+}
+
+/** "Outline", "3 features" or the part's name, for the dialog's question. */
+function describeDelete(project: Project, pending: PendingDelete): string {
+  if (pending.partId !== undefined) {
+    return project.parts.find((part) => part.id === pending.partId)?.name ?? 'this part';
+  }
+  const named = project.parts
+    .flatMap((part) => part.features)
+    .filter((f) => pending.ids.includes(f.id));
+  return named.length === 1 ? named[0]!.name : `${String(named.length)} features`;
 }

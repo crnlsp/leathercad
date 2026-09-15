@@ -44,6 +44,15 @@ export function toggleSelected(selection: Selection, id: FeatureId): Selection {
 export interface Command {
   /** Shown in the undo menu, so phrase it as the user's action. */
   readonly label: string;
+  /**
+   * A label naming what the command acts on, read from the document it is
+   * about to be applied to — "Delete Outline and 2 dependents" rather than
+   * "Delete feature". Optional; `label` is used when absent.
+   *
+   * A function of the document rather than a label set during `apply`, so a
+   * command stays a pure description and no call has a hidden side effect.
+   */
+  labelFor?(document: Document): string;
   apply(document: Document): Document;
 }
 
