@@ -35,7 +35,7 @@ Verified against `main` at `43c7bbc`, by probe or by reading the code. Not infer
 | # | Defect | Evidence |
 |---|---|---|
 | D1 | **PDF export fails for Polish names.** pdf-lib's standard Helvetica is WinAnsi-encoded. `page.drawText` throws on `ł`, `ę` and `Ł`, and `exportPdf` draws the part name and the project name with it. | Probe; `export/src/pdf/writer.ts` (`drawPage`, `drawFooter`) |
-| D2 | **Flipping a rectangle is wrong.** A reflection keeps the origin and changes the rotation, so the rectangle stays in place with its rounded corners diagonally opposite. | Probe: expected x ∈ [−10, 0], arc centre (−2, 3); got x ∈ [0, 10], arc centre (8, 2) |
+| D2 ✅ | **Flipping a rectangle is wrong.** A reflection keeps the origin and changes the rotation, so the rectangle stays in place with its rounded corners diagonally opposite. | Probe: expected x ∈ [−10, 0], arc centre (−2, 3); got x ∈ [0, 10], arc centre (8, 2). **Fixed in 3.7b**, judged against transforming the evaluated path |
 | D3 | **An offset that splits drops pieces silently.** | `evaluate.ts`: `const [result] = offsetPath(...)` |
 | D4 | **A failed feature vanishes from the canvas.** | `buildDisplayList` skips `!entry.ok` |
 | D5 | **Two refusals are silent.** Creating a derivation that would close a cycle, and moving a derived feature. | `addDerived` returns the document unchanged; `transformFeature` returns a derived feature unchanged |
@@ -375,7 +375,7 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 | 3 | **4.11a** Typography ✅ | Vendored typeface · `packages/typography` · millimetre text items · outlines in SVG and PDF · Helvetica removed (D1) · part captions on canvas | — |
 | 3b | **4.11b** Text labels ✅ | The `text-label` feature kind, its editor, format bump and fixture | 4.11a |
 | 4 | **4.4b** Anchors through derivations | Offset corner correspondence · hole sets expose their line's anchors · `ANCHOR_MISSING` | 4.12a |
-| 5 | **3.7b** Reflections | `transformShape` reflects correctly (D2), property-tested against transforming the evaluated path · a Flip command | — |
+| 5 | **3.7b** Reflections ✅ | `transformShape` reflects correctly (D2), property-tested against transforming the evaluated path · a Flip command | — |
 | 6 | **4.3** Parts panel and cut-outs | Part selection · dependency tree · delete and duplicate part · visibility and lock (D8) · drawing modes (§3.8) · material-relative inward (D6) · defaults from settings (D7) · part rules · loader checks S5–S6 | 4.2b, 4.12a |
 | 7 | **4.8** Mirror | The mirror op · mirror a feature or a part · placement by axis and glide · scaling refused | 4.2b, 4.4b, 3.7b, 4.3 |
 | 8 | **4.9** Seam allowance | *Stitch + allowance* mode · outward offsets · stitch margin | 4.2b, 4.4b, 4.3 |

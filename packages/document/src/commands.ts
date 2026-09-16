@@ -25,7 +25,15 @@ import {
   transformShape,
   transformTextSource,
 } from '@leathercad/domain';
-import { MatOps, PathOps, Shapes, type Mat2x3, type Path, type Vec2 } from '@leathercad/geometry';
+import {
+  MatOps,
+  PathOps,
+  RectOps,
+  Shapes,
+  type Mat2x3,
+  type Path,
+  type Vec2,
+} from '@leathercad/geometry';
 
 import { command, type Command, type Document } from './document.js';
 
@@ -159,6 +167,105 @@ export function transformFeatures(
       },
     };
   });
+}
+
+/**
+ * Which way a flip mirrors.
+ *
+ * Named for what the user sees happen, as every drawing tool names it:
+ * `horizontal` swaps left and right, across a vertical axis.
+ */
+export type FlipAxis = 'horizontal' | 'vertical';
+
+/**
+ * Mirrors the selection about its own centre.
+ *
+ * About the centre rather than a chosen axis, because that is the flip a
+ * person means when they flip one piece: it stays where it is and faces the
+ * other way. Mirroring a feature *to* somewhere — a linked counterpart across
+ * a fold — is a derivation, and that is slice 4.8 (ADR 0012), not this.
+ *
+ * Nothing moves if the selection has no geometry to measure, and whatever
+ * cannot survive a mirror refuses through the usual path: a derived feature
+ * follows its source, and a label would read backwards.
+ */
+export function flipFeatures(ids: Iterable<FeatureId>, axis: FlipAxis): Command {
+  const targets = [...new Set(ids)];
+
+  return {
+    label: axis === 'horizontal' ? 'Flip horizontal' : 'Flip vertical',
+    apply: (document) => {
+      const centre = centreOf(document.project, targets);
+      if (centre === null) return document;
+
+      const next = transformFeatures(targets, mirrorAbout(centre, axis)).apply(document);
+
+      // A flip everything refused is a no-op, and a no-op earns no history:
+      // "Flip horizontal" in the undo menu with nothing behind it is worse
+      // than no entry at all.
+      return movedAnything(document.project, next.project) ? next : document;
+    },
+  };
+}
+
+/**
+ * Why flipping this selection would refuse, or `null`.
+ *
+ * The same check the command makes, asked first — the pattern every refusal
+ * here follows (X1). The panel disables its Flip buttons with this and shows
+ * the reason, rather than offering a gesture that quietly does nothing.
+ */
+export function flipRefusal(
+  project: Project,
+  ids: Iterable<FeatureId>,
+  axis: FlipAxis,
+): Problem | null {
+  const targets = [...new Set(ids)];
+  const centre = centreOf(project, targets);
+  if (centre === null) return null;
+
+  return refusedTransforms(project, targets, mirrorAbout(centre, axis))[0]?.problem ?? null;
+}
+
+/** Whether any feature actually changed — by identity, so it is exact. */
+function movedAnything(before: Project, after: Project): boolean {
+  const was = new Map<FeatureId, Feature>();
+  for (const part of before.parts) {
+    for (const feature of part.features) was.set(feature.id, feature);
+  }
+
+  for (const part of after.parts) {
+    for (const feature of part.features) {
+      if (was.get(feature.id) !== feature) return true;
+    }
+  }
+  return false;
+}
+
+/** A reflection about a line through `centre`, along one of the axes. */
+function mirrorAbout(centre: Vec2, axis: FlipAxis): Mat2x3 {
+  return MatOps.composeAll(
+    MatOps.fromTranslation({ x: -centre.x, y: -centre.y }),
+    axis === 'horizontal' ? MatOps.fromScale(-1, 1) : MatOps.fromScale(1, -1),
+    MatOps.fromTranslation(centre),
+  );
+}
+
+/** The centre of everything named that actually resolved to geometry. */
+function centreOf(project: Project, ids: readonly FeatureId[]): Vec2 | null {
+  const wanted = new Set(ids);
+  const boxes = [];
+
+  for (const part of evaluate(project).parts) {
+    for (const entry of part.features) {
+      if (!entry.ok || !wanted.has(entry.feature.id)) continue;
+      const box = PathOps.bbox(entry.path);
+      if (box !== null) boxes.push(box);
+    }
+  }
+
+  const bounds = RectOps.unionAll(boxes);
+  return bounds === null ? null : RectOps.centre(bounds);
 }
 
 /** A feature that would refuse the transform, and the problem that refuses it. */

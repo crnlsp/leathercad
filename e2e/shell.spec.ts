@@ -1088,3 +1088,82 @@ test('placing a label with no part selected changes nothing, and says why', asyn
     await expect(window.getByTestId('part-count')).toHaveText('0');
   });
 });
+
+test('flipping a panel mirrors it, rather than turning it round', async () => {
+  // Slice 3.7b, defect D2. Before the fix a reflection kept the origin and
+  // changed the rotation, so the panel stayed put with its rounded corners
+  // diagonally opposite — which looks almost right until it is cut.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 250);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 550, box!.y + 420, { steps: 5 });
+    await window.mouse.up();
+
+    const panel = window.getByTestId('property-panel');
+    const field = (label: string) =>
+      panel.locator('label', { hasText: new RegExp(`^${label}`) }).locator('input');
+    const set = async (label: string, value: string): Promise<void> => {
+      const input = field(label);
+      await input.fill(value);
+      await input.press('Enter');
+    };
+
+    await set('X', '10');
+    await set('Y', '20');
+    await set('Width', '100');
+    await set('Height', '60');
+    // One rounded corner, so the flip has something to carry across.
+    await set('↙', '8');
+
+    await window.getByTestId('flip-horizontal').click();
+
+    // The piece stays on its own footprint. Either spelling: a field the user
+    // typed keeps their text until the model gives it a new number.
+    await expect(field('X')).toHaveValue(/^10(\.00)?$/);
+    await expect(field('Y')).toHaveValue(/^20(\.00)?$/);
+    // ...lying the way it was...
+    await expect(field('Turn')).toHaveValue(/^0(\.00)?$/);
+    // ...with the rounded corner now on the other side, adjacent rather than
+    // diagonally opposite.
+    await expect(field('↙')).toHaveValue(/^0(\.00)?$/);
+    await expect(field('↘')).toHaveValue(/^8(\.00)?$/);
+
+    // And one Undo puts it back.
+    await window.getByTestId('undo').click();
+    await expect(field('↙')).toHaveValue(/^8(\.00)?$/);
+    await expect(field('↘')).toHaveValue(/^0(\.00)?$/);
+  });
+});
+
+test('a label cannot be flipped, and the button says why', async () => {
+  // Slice 3.7b keeps this a deliberate restriction: a mirror is a similarity,
+  // so without refusing it the words would come out rotated rather than
+  // reflected. What a mirrored label should mean is 4.8's question.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 250);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 520, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+
+    await window.getByTestId('tool-text').click();
+    await expect(window.getByTestId('tool-text')).toHaveClass(/active/);
+    await window.mouse.move(box!.x + 300, box!.y + 320);
+    await window.mouse.down();
+    await window.mouse.up();
+
+    const panel = window.getByTestId('property-panel');
+    await expect(panel.getByTestId('label-text')).toHaveValue('Text');
+
+    // Offered, but not as something that would quietly do nothing.
+    await expect(panel.getByTestId('flip-horizontal')).toBeDisabled();
+    await expect(panel.getByTestId('flip-horizontal')).toHaveAttribute('title', /read backwards/i);
+
+    // The panel still flips the panel itself.
+    await window.getByTestId('parts-list').getByText('Outline').click();
+    await expect(panel.getByTestId('flip-horizontal')).toBeEnabled();
+  });
+});

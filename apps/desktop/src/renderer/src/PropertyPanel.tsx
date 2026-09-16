@@ -2,14 +2,17 @@ import {
   type DocumentStore,
   addStitchHoles,
   addStitchLine,
+  flipFeatures,
+  flipRefusal,
   renameFeature,
   setSource,
   setPartName,
   setPartQuantity,
 } from '@leathercad/document';
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
+import type { FlipAxis } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
-import { evaluate, followRefusal } from '@leathercad/domain';
+import { describeProblem, evaluate, followRefusal } from '@leathercad/domain';
 
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
@@ -141,6 +144,20 @@ export function PropertyPanel({
         </section>
       )}
 
+      {/*
+        Mirroring the piece itself, about its own centre — it stays where it is
+        and faces the other way. A linked counterpart across a fold is a
+        derivation and arrives with slice 4.8 (ADR 0012).
+      */}
+      {/*
+        Asked before the gesture is offered, from the same query the command
+        checks, so a button that would do nothing says why instead (X1).
+      */}
+      <div className="toolbar">
+        <FlipButton store={store} project={project} feature={feature} axis="horizontal" />
+        <FlipButton store={store} project={project} feature={feature} axis="vertical" />
+      </div>
+
       <DeriveActions store={store} part={part} feature={feature} nextId={nextId} />
 
       <button
@@ -152,6 +169,39 @@ export function PropertyPanel({
         Delete
       </button>
     </aside>
+  );
+}
+
+/** Mirroring the piece about its own centre, or saying why it cannot be. */
+function FlipButton({
+  store,
+  project,
+  feature,
+  axis,
+}: {
+  store: DocumentStore;
+  project: Project;
+  feature: Feature;
+  axis: FlipAxis;
+}) {
+  const refusal = flipRefusal(project, [feature.id], axis);
+  const horizontal = axis === 'horizontal';
+
+  return (
+    <button
+      type="button"
+      className="tool"
+      data-testid={horizontal ? 'flip-horizontal' : 'flip-vertical'}
+      disabled={refusal !== null}
+      title={
+        refusal === null
+          ? `Mirror ${horizontal ? 'left to right' : 'top to bottom'}, about this piece's centre`
+          : describeProblem(refusal)
+      }
+      onClick={() => store.dispatch(flipFeatures([feature.id], axis))}
+    >
+      {horizontal ? 'Flip ↔' : 'Flip ↕'}
+    </button>
   );
 }
 

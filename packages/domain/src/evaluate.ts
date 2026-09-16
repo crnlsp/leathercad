@@ -640,7 +640,15 @@ function about(feature: Feature): { featureId: FeatureId; featureName: string } 
   return { featureId: feature.id, featureName: feature.name };
 }
 
-function pathForShape(shape: ParametricShape): Path {
+/**
+ * The path a parametric shape evaluates to.
+ *
+ * Exported because it is the ground truth a transform is judged against:
+ * transforming a shape through its parameters and then evaluating it must draw
+ * the same curve as evaluating it and then transforming the path
+ * (`geometry.md` §4.2 rule 1).
+ */
+export function pathForShape(shape: ParametricShape): Path {
   switch (shape.type) {
     case 'rect': {
       const path = Shapes.roundedRect(shape.origin, shape.width, shape.height, shape.radii);

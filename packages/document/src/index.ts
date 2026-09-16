@@ -7,6 +7,7 @@
 
 export type {
   DeletePlan,
+  FlipAxis,
   DeleteResolution,
   PlannedDependent,
   RefusedTransform,
@@ -40,6 +41,8 @@ export {
   setLabelText,
   setMarkingPurpose,
   emptyDocument,
+  flipFeatures,
+  flipRefusal,
   emptyProject,
   pathPart,
   rectShape,

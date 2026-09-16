@@ -70,6 +70,7 @@ export interface ProblemFacts {
   readonly WOULD_BECOME_ELLIPSE: { readonly shape: 'circle' | 'arc' };
   readonly WOULD_SHEAR: Record<string, never>;
   readonly TEXT_WOULD_DISTORT: Record<string, never>;
+  readonly TEXT_WOULD_READ_BACKWARDS: Record<string, never>;
   /** `what` is the thing being placed, so one code serves every tool. */
   readonly NO_TARGET_PART: { readonly what: PlacedThing };
   readonly TARGET_SPANS_PARTS: { readonly what: PlacedThing };

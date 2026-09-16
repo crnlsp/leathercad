@@ -418,7 +418,7 @@ geometry was built. A partial run keeps only the anchors it covers.
 renumber every anchor after it, which is a run silently moving to a different edge — and anything
 that names it fails with `ANCHOR_MISSING`.
 
-### 4.7 Duplicate, flip and mirror — designed, 3.7b, 4.3, 4.8
+### 4.7 Duplicate, flip and mirror — flip built 3.7b; duplicate 4.3, mirror 4.8
 
 | Operation | Result | Relationship afterwards |
 |---|---|---|
@@ -431,9 +431,14 @@ that names it fails with `ANCHOR_MISSING`.
 - **Gestures on derived features are never silently ignored** (X3). A mirror-derived feature moves
   and rotates through its axis and glide, and refuses to scale. An offset-derived feature or a hole
   set refuses to move on its own ("it follows its outline").
-- **Flip depends on 3.7b.** Reflecting a rectangle through `transformShape` today keeps the origin
-  and changes the rotation, which leaves the rectangle in place with its rounded corners diagonally
-  opposite.
+- **Flip is built** (3.7b, [design](superpowers/specs/2026-09-16-reflections-design.md)).
+  `transformShape` reflects a rectangle by re-expressing it about its centre: a mirror flips one of
+  its own axes to restore handedness and the corner radii travel with it, so a mirrored panel lands
+  on the other side of the axis, the same way up, with its rounded corners swapped **across** the
+  axis rather than diagonally opposite. Judged against transforming the evaluated path, which is the
+  comparison the old round-trip test could not make.
+- **A label refuses to be mirrored**, with `TEXT_WOULD_READ_BACKWARDS`: a mirror is a similarity, so
+  without refusing it the words would come out rotated rather than reflected.
 
 ## 5. Layer roles — built
 

@@ -554,12 +554,26 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   must say plainly that the shape stops being editable as a circle or an arc, because that is the
   whole cost. Until it exists, 3.7 refuses those transforms rather than performing them quietly,
   which is the right default but not a complete answer.
-- **3.7b** Reflections through `transformShape`. Reflecting a rectangle keeps its origin and changes
-  its rotation, so it stays where it was with its rounded corners diagonally opposite — measured:
-  a 10 × 5 panel mirrored across x = 0 lands at x ∈ [0, 10] instead of [−10, 0]. The 3.7 round trip
-  could not catch it, because a wrong mapping still inverts. Recompute the origin from the reflected
-  centre, permute the radii, and property-test against transforming the evaluated path. Adds a
-  *Flip* command. The prerequisite of mirror (4.8); see [ADR 0012](adr/0012-mirror-is-a-derivation.md).
+- **3.7b** ✅ **Done.** Reflections through `transformShape`
+  ([design](superpowers/specs/2026-09-16-reflections-design.md)). Reflecting a rectangle used to keep
+  its origin and change its rotation, leaving it where it was with its rounded corners diagonally
+  opposite — measured: a 10 × 5 panel mirrored across x = 0 landed at x ∈ [0, 10] instead of
+  [−10, 0]. Everything is now computed from the rectangle's **centre** and its own two axes, which is
+  what the parameters mean: `pathForShape` builds the box from `origin` and *then* turns it about its
+  centre, so transforming `origin` alone moved the box somewhere the rotation swung away from.
+  A mirror flips one of the rectangle's own axes to restore handedness, and the corner radii travel
+  with it; the axis chosen is whichever leaves the panel closest to the way it was lying, so a
+  flipped piece does not report a half turn. Adds a *Flip* command, mirroring the selection about its
+  own centre. The prerequisite of mirror (4.8); see [ADR 0012](adr/0012-mirror-is-a-derivation.md).
+  **Judged against transforming the evaluated path**, sampled as point sets — the comparison the 3.7
+  round-trip test could not make, because a wrong mapping still inverts.
+  A refused flip returns the document by identity, so it earns no undo entry, and the panel asks
+  `flipRefusal` before offering the button at all — a disabled button with the reason in its title
+  beats one that quietly does nothing (X1).
+  Gotchas: a mirror **is** a similarity, so `transformTextSource` accepted one and would have turned
+  a flipped label into a rotated one — refused now with `TEXT_WOULD_READ_BACKWARDS`; and taking the
+  scale from the turned axis rather than the determinant left a 100 mm panel 99.99999999999999 mm
+  wide, which an existing exact-equality test caught.
 - **3.8** ✅ **Done.** Property panel with exact millimetre fields for position, size and all four
   corner radii, plus part name and quantity, and measured perimeter and area. Also a parts list for
   selecting what the canvas cannot reach. Entry commits on Enter or blur, reverts on Escape,

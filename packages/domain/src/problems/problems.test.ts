@@ -35,6 +35,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   WOULD_BECOME_ELLIPSE: { shape: 'circle' },
   WOULD_SHEAR: {},
   TEXT_WOULD_DISTORT: {},
+  TEXT_WOULD_READ_BACKWARDS: {},
   NO_TARGET_PART: { what: 'line' },
   TARGET_SPANS_PARTS: { what: 'line' },
   PARAMETER_INVALID: { ...named, parameter: 'width', requirement: 'finite', value: Number.NaN },

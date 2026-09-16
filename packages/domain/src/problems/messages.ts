@@ -101,6 +101,13 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
       'Hold Shift, or set the size in the panel.',
   },
 
+  TEXT_WOULD_READ_BACKWARDS: {
+    title: 'Would read backwards',
+    describe: () =>
+      'A label cannot be mirrored — it would read backwards. Flip the shapes and leave the words, ' +
+      'or retype them where you want them.',
+  },
+
   NO_TARGET_PART: {
     title: 'No part selected',
     describe: (f) => `Select a part first — ${aThing(f.what)} belongs to the panel it is drawn on.`,
