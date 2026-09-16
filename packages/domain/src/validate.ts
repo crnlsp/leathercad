@@ -81,6 +81,27 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
       const { feature } = entry;
       const about = { featureId: feature.id, featureName: feature.name };
 
+      // A label's own words print too, and the same typeface has to carry them.
+      if (feature.kind === 'text-label') {
+        const unprintable = missingGlyphs(feature.source.text);
+        if (unprintable.length > 0) {
+          found.push(
+            placed(
+              problem('TEXT_GLYPH_MISSING', {
+                partId: part.id,
+                partName: part.name,
+                ...about,
+                text: feature.source.text,
+                characters: unprintable.join(' '),
+              }),
+              part.id,
+              feature.id,
+              { kind: 'path', path: entry.path },
+            ),
+          );
+        }
+      }
+
       if (feature.kind === 'cut-contour') {
         const crossings = crossingsOf(entry.path);
         if (crossings.length > 0) {

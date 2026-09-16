@@ -1006,3 +1006,85 @@ test('exports a part named in Polish, which used to be impossible', async () => 
     rmSync(target, { force: true });
   }
 });
+
+test('a label is placed on a part, typed in the panel, and survives a save', async () => {
+  // Slice 4.11b. The words are the user's own, so unlike a part caption they
+  // are stored — as words, a place and a size, never as outlines.
+  const target = join(tmpdir(), `leathercad-e2e-label-${Date.now()}.lcp`);
+  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+
+    await instance.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+    }, target);
+
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 200, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 500, box!.y + 380, { steps: 5 });
+    await window.mouse.up();
+
+    // One click places it; the panel is where it is typed.
+    await window.getByTestId('tool-text').click();
+    // Wait for the mode to actually be on: clicking and placing in the same
+    // breath races React, as the fold-line test found.
+    await expect(window.getByTestId('tool-text')).toHaveClass(/active/);
+    await window.mouse.move(box!.x + 260, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.up();
+
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    const panel = window.getByTestId('property-panel');
+    const text = panel.getByTestId('label-text');
+    await expect(text).toHaveValue('Text');
+
+    await text.fill('Zszyć przed klejeniem');
+    // The parts list follows the words, so the label is findable by what it says.
+    await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
+
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('save')).not.toContainText('•');
+
+    // Throw it away and get it back from disk, at format version 5.
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('parts-list').getByRole('button', { name: /Zszyć/ }).click();
+    await window.keyboard.press('Delete');
+    await expect(window.getByTestId('feature-count')).toHaveText('1');
+
+    await window.getByTestId('open').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
+
+    // Back as parameters: the panel can still retype it.
+    await window.getByTestId('parts-list').getByRole('button', { name: /Zszyć/ }).click();
+    await expect(panel.getByTestId('label-text')).toHaveValue('Zszyć przed klejeniem');
+  } finally {
+    await instance.close();
+    rmSync(target, { force: true });
+  }
+});
+
+test('placing a label with no part selected changes nothing, and says why', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-text').click();
+    // Wait for the mode to actually be on: clicking and placing in the same
+    // breath races React, as the fold-line test found.
+    await expect(window.getByTestId('tool-text')).toHaveClass(/active/);
+    await window.mouse.move(box!.x + 300, box!.y + 300);
+    await window.mouse.down();
+    await window.mouse.up();
+
+    // A label belongs to a part, like a fold line does.
+    await expect(window.getByTestId('tool-notice')).toContainText('Select a part');
+    await expect(window.getByTestId('tool-notice')).toContainText('label');
+    await expect(window.getByTestId('feature-count')).toHaveText('0');
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+  });
+});

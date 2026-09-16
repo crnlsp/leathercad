@@ -64,6 +64,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   TRANSFORM_FLATTENS: interaction('X9'),
   WOULD_BECOME_ELLIPSE: interaction('X9'),
   WOULD_SHEAR: interaction('X9'),
+  TEXT_WOULD_DISTORT: interaction('X9'),
   NO_TARGET_PART: interaction('X4'),
   TARGET_SPANS_PARTS: interaction('X4'),
 

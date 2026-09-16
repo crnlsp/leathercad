@@ -335,4 +335,39 @@ describe('TEXT_GLYPH_MISSING', () => {
     expect(codes(evaluate(named('Przegroda główna')))).toEqual([]);
     expect(codes(evaluate(named('Łódź')))).toEqual([]);
   });
+
+  it('warns about a label’s own words, naming the label rather than the part', () => {
+    const label: Feature = {
+      ...base('label-1', 'Label'),
+      kind: 'text-label',
+      source: { kind: 'text', text: 'szyć 漢', at: { x: 0, y: 0 }, sizeMm: 3, rotationRad: 0 },
+    };
+    const [diagnostic, ...rest] = validate(evaluate(project([panel(), label])));
+
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({
+      problem: {
+        code: 'TEXT_GLYPH_MISSING',
+        facts: { featureId: 'label-1', text: 'szyć 漢', characters: '漢' },
+      },
+      featureId: 'label-1',
+    });
+    // Pointing at the label on the canvas, not at the part.
+    expect(diagnostic!.location?.kind).toBe('path');
+  });
+
+  it('says nothing about a label the typeface can print', () => {
+    const label: Feature = {
+      ...base('label-1', 'Label'),
+      kind: 'text-label',
+      source: {
+        kind: 'text',
+        text: 'Zszyć przed klejeniem',
+        at: { x: 0, y: 0 },
+        sizeMm: 3,
+        rotationRad: 0,
+      },
+    };
+    expect(codes(evaluate(project([panel(), label])))).toEqual([]);
+  });
 });

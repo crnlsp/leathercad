@@ -29,6 +29,9 @@ export type {
   Project,
   ProjectSettings,
   StitchLine,
+  TextLabel,
+  TextSource,
+  FeatureSource,
 } from './feature.js';
 export {
   DEFAULT_SETTINGS,
@@ -42,7 +45,7 @@ export {
 export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.js';
 export { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
 
-export { transformShape } from './transformShape.js';
+export { transformShape, transformTextSource } from './transformShape.js';
 
 export {
   MIN_HOLES_IN_A_SET,
@@ -65,6 +68,7 @@ export type {
   ProblemCategory,
   ProblemCode,
   ProblemFacts,
+  PlacedThing,
   ProblemLocation,
   Severity,
 } from './problems/index.js';

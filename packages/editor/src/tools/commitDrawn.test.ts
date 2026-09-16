@@ -101,7 +101,7 @@ describe('commitDrawn', () => {
     // mean an untouched project is literally the same object, so this proves
     // no command was dispatched rather than that one happened to be a no-op.
     expect(store.getState().document.project).toBe(before);
-    expect(drawTargetNotice(ctx)).toEqual({ code: 'NO_TARGET_PART', facts: {} });
+    expect(drawTargetNotice(ctx)).toEqual({ code: 'NO_TARGET_PART', facts: { what: 'line' } });
   });
 
   it('refuses when the selection spans two parts, because neither is meant', () => {
@@ -113,7 +113,7 @@ describe('commitDrawn', () => {
 
     expect(commitDrawn(ctx, nextId, 'Fold', line)).toBeNull();
     expect(store.getState().document.project).toBe(before);
-    expect(drawTargetNotice(ctx)).toEqual({ code: 'TARGET_SPANS_PARTS', facts: {} });
+    expect(drawTargetNotice(ctx)).toEqual({ code: 'TARGET_SPANS_PARTS', facts: { what: 'line' } });
   });
 
   it('says nothing while drawing cut contours, which need no target', () => {

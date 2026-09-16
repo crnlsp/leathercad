@@ -1,7 +1,7 @@
 import { EPS_ANGLE, EPS_AREA, approxZero, err, ok, type Result } from '@leathercad/core';
 import { MatOps, SegmentOps, type Mat2x3 } from '@leathercad/geometry';
 
-import type { ParametricShape } from './feature.js';
+import type { ParametricShape, TextSource } from './feature.js';
 import { problem, type Problem } from './problems/index.js';
 
 /**
@@ -39,6 +39,29 @@ export function transformShape(
     case 'arc':
       return transformArc(shape, m);
   }
+}
+
+/**
+ * The same rule, for a label: a transform it cannot express is refused.
+ *
+ * Moving and turning are free — `at` and `rotationRad` hold them exactly — and
+ * an even scale is just a bigger size. An uneven one would stretch the letters,
+ * which is neither expressible as a size nor something anyone wants printed,
+ * so it is refused with a reason rather than silently ignored (X1, X9).
+ *
+ * A mirror arrives with slice 4.8, which has to decide what a reflected label
+ * should read like; this deliberately does not guess.
+ */
+export function transformTextSource(source: TextSource, m: Mat2x3): Result<TextSource, Problem> {
+  if (isSingular(m)) return err(problem('TRANSFORM_FLATTENS', {}));
+  if (!MatOps.isSimilarity(m)) return err(problem('TEXT_WOULD_DISTORT', {}));
+
+  return ok({
+    ...source,
+    at: MatOps.apply(m, source.at),
+    sizeMm: source.sizeMm * MatOps.uniformScaleOf(m),
+    rotationRad: source.rotationRad + rotationOf(m),
+  });
 }
 
 /**

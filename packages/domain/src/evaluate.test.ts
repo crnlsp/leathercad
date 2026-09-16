@@ -141,3 +141,46 @@ describe('roleOf', () => {
     expect(roleOf({ ...base, kind: 'marking-line', purpose: 'other', source: path })).toBe('mark');
   });
 });
+
+describe('a text label', () => {
+  const label = (text: string, sizeMm: number, rotationRad = 0): Feature => ({
+    id: 'label-1',
+    kind: 'text-label',
+    name: 'Label',
+    visible: true,
+    locked: false,
+    source: { kind: 'text', text, at: { x: 10, y: 5 }, sizeMm, rotationRad },
+  });
+
+  it('resolves to laid-out words and the box they occupy', () => {
+    const [entry] = evaluate(projectWith([label('Glue here', 4)])).parts[0]!.features;
+
+    expect(entry?.ok).toBe(true);
+    if (entry?.ok !== true) return;
+    expect(entry.role).toBe('annotation');
+    expect(entry.text?.layout.text).toBe('Glue here');
+    expect(entry.path.closed).toBe(true);
+  });
+
+  it('turns the box with the words', () => {
+    const upright = evaluate(projectWith([label('Glue here', 4)])).parts[0]!.features[0]!;
+    const turned = evaluate(projectWith([label('Glue here', 4, Math.PI / 2)])).parts[0]!
+      .features[0]!;
+
+    if (!upright.ok || !turned.ok) throw new Error('both should resolve');
+    const wide = PathOps.bbox(upright.path)!;
+    const tall = PathOps.bbox(turned.path)!;
+
+    expect(wide.maxX - wide.minX).toBeGreaterThan(wide.maxY - wide.minY);
+    expect(tall.maxY - tall.minY).toBeGreaterThan(tall.maxX - tall.minX);
+  });
+
+  it('names the parameter when the size is not usable', () => {
+    const errors = evaluationErrors(evaluate(projectWith([label('Glue here', 0)])));
+
+    expect(errors[0]?.problem).toMatchObject({
+      code: 'PARAMETER_INVALID',
+      facts: { parameter: 'text size', requirement: 'positive', value: 0 },
+    });
+  });
+});

@@ -108,9 +108,22 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
 
   for (const resolvedPart of resolved.parts) {
     const paths: ExportPath[] = [];
+    const texts: ExportText[] = [];
 
     for (const entry of resolvedPart.features) {
       if (!entry.ok || !entry.feature.visible) continue;
+
+      // A label prints as filled outlines, like every other string on the
+      // sheet. Its box is for selection on screen and is not drawn.
+      if (entry.text !== undefined) {
+        texts.push({
+          role: entry.role,
+          source: entry.text.layout.text,
+          glyphs: outlinesOf(entry.text),
+          sizeMm: entry.text.layout.sizeMm,
+        });
+        continue;
+      }
 
       // A hole is a mark to punch through, so it prints as a circle at a true
       // millimetre size — not as a screen dot, which would come out whatever
@@ -130,6 +143,8 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
       paths.push({ role: entry.role, path: entry.path, style: PRINT_STYLES[entry.role] });
     }
 
+    // A part with only labels on it has nothing to cut, and a template page
+    // full of captions with no pieces is not a template.
     if (paths.length === 0) continue;
 
     const bounds = RectOps.unionAll(
@@ -147,7 +162,7 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
       name,
       quantity: resolvedPart.part.quantity,
       paths,
-      texts: [captionFor(name, bounds)],
+      texts: [captionFor(name, bounds), ...texts],
       boundsMm: bounds,
     });
   }

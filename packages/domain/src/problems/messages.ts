@@ -1,4 +1,10 @@
-import type { CompatibilityRule, Problem, ProblemCode, ProblemFacts } from './problem.js';
+import type {
+  CompatibilityRule,
+  PlacedThing,
+  Problem,
+  ProblemCode,
+  ProblemFacts,
+} from './problem.js';
 
 /**
  * The message catalogue: the one place a problem becomes words.
@@ -88,10 +94,16 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
       'A turned rectangle cannot be stretched along one axis — it would shear, and its corners ' +
       'would stop being square. Rotate it back to 0°, or scale it evenly.',
   },
+  TEXT_WOULD_DISTORT: {
+    title: 'Would distort the letters',
+    describe: () =>
+      'Text can only be scaled evenly — stretching it along one axis would distort the letters. ' +
+      'Hold Shift, or set the size in the panel.',
+  },
+
   NO_TARGET_PART: {
     title: 'No part selected',
-    describe: () =>
-      'Select a part first — a fold or marking line belongs to the panel it is drawn on.',
+    describe: (f) => `Select a part first — ${aThing(f.what)} belongs to the panel it is drawn on.`,
   },
   TARGET_SPANS_PARTS: {
     title: 'Selection spans parts',
@@ -152,7 +164,8 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     title: 'Cannot be printed',
     describe: (f) =>
       `“${f.text}” uses ${f.characters}, which this typeface cannot print — it comes out as a ` +
-      'box. Rename it using Latin characters.',
+      `box. ${f.featureId === undefined ? 'Rename the part' : 'Retype the label'} using Latin ` +
+      'characters.',
   },
 
   CONTOUR_SELF_INTERSECTS: {
@@ -214,6 +227,10 @@ export function describeProblemWithSubject(p: Problem): string {
 }
 
 /** Counts only, so the plural turns on "more than one" rather than an equality. */
+function aThing(what: PlacedThing): string {
+  return what === 'label' ? 'a label' : 'a fold or marking line';
+}
+
 function plural(count: number, noun: string): string {
   return `${String(count)} ${noun}${count > 1 ? 's' : ''}`;
 }

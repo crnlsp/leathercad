@@ -152,12 +152,31 @@ export function renderDisplayList(
         continue;
       }
 
-      ctx.font = `${item.sizeMm * perMm}px ${documentFamily(options)}`;
+      ctx.font = `${item.placed.layout.sizeMm * perMm}px ${documentFamily(options)}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
+
+      const angle = item.placed.rotationRad;
       for (const glyph of item.placed.glyphs) {
         const at = MatOps.apply(transform, glyph.at);
-        ctx.fillText(glyph.character, at.x, at.y);
+        if (angle === 0) {
+          ctx.fillText(glyph.character, at.x, at.y);
+          continue;
+        }
+
+        // Screen Y points down, so a counter-clockwise turn in the world is a
+        // clockwise one here. Written as a transform rather than rotate() so
+        // the backend keeps to the small canvas surface it declares.
+        ctx.setTransform(
+          Math.cos(angle),
+          -Math.sin(angle),
+          Math.sin(angle),
+          Math.cos(angle),
+          at.x,
+          at.y,
+        );
+        ctx.fillText(glyph.character, 0, 0);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
     }
 

@@ -356,7 +356,7 @@ fixture and a migration. Each slice that adds one bumps the version.
 | 4.2b | `frozenFrom?: string` on features; a part's `features` may be empty | Identity |
 | 4.8 | The `mirror` derivation op | Identity |
 | 4.10 | The `measurement` annotation kind | Identity |
-| 4.11 | The `text-label` annotation kind | Identity |
+| 4.11b ✅ | The `text-label` kind and its `text` source (format version 5) | Identity |
 
 - **4.3 and 4.9 add no persisted variants.** Cut-outs use the existing `role: 'inner'`, lock the
   existing `locked`, and seam allowance the existing `side: 'outward'`.
@@ -373,7 +373,7 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 | 1 | **4.2b** Reference graph and deletion | Compatibility table · `planDelete` and the dialog (delete / freeze / cancel) · re-point (*Follows*) · parts kept when emptied · refusal queries for cycles and derived moves · loader checks S2–S4 | — |
 | 2 | **4.12a** Diagnostic channel | Typed failures · `OFFSET_SPLIT` (D3) · `validate()` with the stitch and offset rules · problems panel (list and select) · failed features drawn as warnings (D4) | 4.2b |
 | 3 | **4.11a** Typography ✅ | Vendored typeface · `packages/typography` · millimetre text items · outlines in SVG and PDF · Helvetica removed (D1) · part captions on canvas | — |
-| 3b | **4.11b** Text labels | The `text-label` feature kind, its editor, format bump and fixture | 4.11a |
+| 3b | **4.11b** Text labels ✅ | The `text-label` feature kind, its editor, format bump and fixture | 4.11a |
 | 4 | **4.4b** Anchors through derivations | Offset corner correspondence · hole sets expose their line's anchors · `ANCHOR_MISSING` | 4.12a |
 | 5 | **3.7b** Reflections | `transformShape` reflects correctly (D2), property-tested against transforming the evaluated path · a Flip command | — |
 | 6 | **4.3** Parts panel and cut-outs | Part selection · dependency tree · delete and duplicate part · visibility and lock (D8) · drawing modes (§3.8) · material-relative inward (D6) · defaults from settings (D7) · part rules · loader checks S5–S6 | 4.2b, 4.12a |

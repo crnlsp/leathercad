@@ -7,6 +7,7 @@ import {
   documentTextItem,
   dotsItem,
   pathItem,
+  placedTextItem,
   type DisplayItem,
   type DisplayList,
 } from './displayList.js';
@@ -66,6 +67,13 @@ export function buildDisplayList(
       if (box !== null) drawn.push(box);
 
       const isSelected = selected.has(entry.feature.id);
+
+      // A label draws its words. The layout came from evaluation, so the
+      // canvas and the printed sheet place the same glyphs in the same spots.
+      if (entry.text !== undefined) {
+        items.push(placedTextItem(entry.role, entry.text, isSelected ? highlight : undefined));
+        continue;
+      }
 
       // A hole set's path is the line the holes sit on, which the stitch line
       // already draws. What this feature contributes is the holes, and they go

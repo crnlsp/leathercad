@@ -18,6 +18,7 @@ export type { StoreState } from './store.js';
 export { DocumentStore } from './store.js';
 
 export {
+  DEFAULT_LABEL_SIZE_MM,
   addFeature,
   addFoldLine,
   addHardwareHole,
@@ -25,6 +26,7 @@ export {
   addPart,
   addStitchHoles,
   addStitchLine,
+  addTextLabel,
   arcShape,
   circleShape,
   deleteFeatures,
@@ -34,6 +36,8 @@ export {
   setFoldDirection,
   setFoldThickness,
   setHardwareType,
+  setLabelSize,
+  setLabelText,
   setMarkingPurpose,
   emptyDocument,
   emptyProject,

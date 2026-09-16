@@ -2,9 +2,15 @@ import { PathOps, cubic, line as lineSegment, uniformRadii } from '@leathercad/g
 import { describe, expect, it } from 'vitest';
 
 import { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
-import { DEFAULT_SETTINGS, type Feature, type Part, type Project } from './feature.js';
+import {
+  DEFAULT_SETTINGS,
+  type CutContour,
+  type Feature,
+  type Part,
+  type Project,
+} from './feature.js';
 
-function panel(width = 105, height = 75): Feature {
+function panel(width = 105, height = 75): CutContour {
   return {
     id: 'cut-1',
     kind: 'cut-contour',

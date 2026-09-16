@@ -1,11 +1,21 @@
 import { EPS_ANGLE, approxZero } from '@leathercad/core';
-import { MatOps, PathOps, Shapes, arc, offsetPath, subPath, type Path } from '@leathercad/geometry';
+import {
+  MatOps,
+  PathOps,
+  Shapes,
+  arc,
+  offsetPath,
+  subPath,
+  type Path,
+  type Vec2,
+} from '@leathercad/geometry';
+import { placedText, type PlacedText } from '@leathercad/typography';
 
 import type {
   Derivation,
   Feature,
   FeatureId,
-  GeometrySource,
+  FeatureSource,
   ParametricShape,
   Part,
   Project,
@@ -31,6 +41,15 @@ export type ResolvedFeature =
       readonly path: Path;
       /** Present only on a stitch hole set. */
       readonly holes?: StitchHoles;
+      /**
+       * Present only on a text label: the words, laid out once in millimetres.
+       *
+       * The canvas draws the typeface at these positions and the exporters
+       * fill the same glyphs as outlines (ADR 0011). `path` is the box the run
+       * occupies, which is what selection and bounds work on — the same trick
+       * a hole set plays with the line its holes sit on.
+       */
+      readonly text?: PlacedText;
       /**
        * What resolving had to give up to succeed — an offset that split and kept
        * its largest piece (E2). Absent when nothing was given up.
@@ -75,6 +94,7 @@ interface CacheEntry {
   readonly from: Path | undefined;
   readonly path: Path;
   readonly holes: StitchHoles | undefined;
+  readonly text: PlacedText | undefined;
   readonly notes: readonly Problem[] | undefined;
 }
 
@@ -179,6 +199,7 @@ function hit(feature: Feature, entry: CacheEntry): ResolvedFeature {
     role: roleOf(feature),
     path: entry.path,
     ...(entry.holes === undefined ? {} : { holes: entry.holes }),
+    ...(entry.text === undefined ? {} : { text: entry.text }),
     ...(entry.notes === undefined ? {} : { notes: entry.notes }),
   };
 }
@@ -225,13 +246,25 @@ function build(
   const invalid = parameterProblem(feature);
   if (invalid !== null) throw new Failure(invalid);
 
-  const source: GeometrySource = feature.source;
+  const source: FeatureSource = feature.source;
 
   switch (source.kind) {
     case 'path':
-      return { from, path: source.path, holes: undefined, notes: undefined };
+      return { from, path: source.path, holes: undefined, text: undefined, notes: undefined };
     case 'shape':
-      return { from, path: pathForShape(source.shape), holes: undefined, notes: undefined };
+      return {
+        from,
+        path: pathForShape(source.shape),
+        holes: undefined,
+        text: undefined,
+        notes: undefined,
+      };
+    case 'text': {
+      const placed = placedText(source.text, source.sizeMm, source.at, {
+        rotationRad: source.rotationRad,
+      });
+      return { from, path: textBox(placed), holes: undefined, text: placed, notes: undefined };
+    }
     case 'derived': {
       // `from` is the resolved source; `sourcePathOf` threw if it failed.
       const sourcePath = from!;
@@ -245,12 +278,13 @@ function build(
           from,
           path: sourcePath,
           holes: distributeHoles(sourcePath, source.op),
+          text: undefined,
           notes: undefined,
         };
       }
 
       const offset = applyDerivation(feature, sourcePath, origin.source, source.op);
-      return { from, path: offset.path, holes: undefined, notes: offset.notes };
+      return { from, path: offset.path, holes: undefined, text: undefined, notes: offset.notes };
     }
   }
 }
@@ -306,7 +340,7 @@ function followSource(
 function applyDerivation(
   feature: Feature,
   sourcePath: Path,
-  source: GeometrySource,
+  source: FeatureSource,
   op: Extract<Derivation, { type: 'offset' }>,
 ): { path: Path; notes: readonly Problem[] | undefined } {
   const followed = runOf(feature, sourcePath, source, op.run);
@@ -349,7 +383,7 @@ function applyDerivation(
  * the ordinary case rather than the exception. A named anchor that is not there
  * fails (E4); it never re-targets to a neighbour.
  */
-function runOf(feature: Feature, sourcePath: Path, source: GeometrySource, run: Run): Path {
+function runOf(feature: Feature, sourcePath: Path, source: FeatureSource, run: Run): Path {
   if (run.kind === 'whole') return sourcePath;
 
   const anchors = anchorsOf(source, sourcePath);
@@ -419,6 +453,14 @@ function parameterProblem(feature: Feature): Problem | null {
       }
       break;
     }
+    case 'text':
+      checks.push(
+        ['position', source.at.x, 'finite'],
+        ['position', source.at.y, 'finite'],
+        ['text size', source.sizeMm, 'positive'],
+        ['rotation', source.rotationRad, 'finite'],
+      );
+      break;
     case 'derived': {
       const op = source.op;
       if (op.type === 'offset') {
@@ -464,6 +506,38 @@ function unmetRequirement(value: number, requirement: Requirement): Requirement 
   if (requirement === 'positive' && !(value > 0)) return 'positive';
   if (requirement === 'non-negative' && value < 0) return 'non-negative';
   return null;
+}
+
+/**
+ * The box a laid-out run occupies, turned with it.
+ *
+ * A label still needs a path: selection, hit-testing, bounds and fit-to-view
+ * all work on one, and none of them should have to know what text is.
+ */
+function textBox(placed: PlacedText): Path {
+  const { widthMm, ascentMm, descentMm } = placed.layout;
+  const angle = placed.rotationRad;
+  // The baseline's direction and the up direction, already turned.
+  const along: Vec2 = { x: Math.cos(angle), y: Math.sin(angle) };
+  const up: Vec2 = { x: -Math.sin(angle), y: Math.cos(angle) };
+
+  const step = (from: Vec2, direction: Vec2, distance: number): Vec2 => ({
+    x: from.x + direction.x * distance,
+    y: from.y + direction.y * distance,
+  });
+
+  const bottomLeft = step(placed.origin, up, -descentMm);
+  const height = ascentMm + descentMm;
+
+  return PathOps.polyline(
+    [
+      bottomLeft,
+      step(bottomLeft, along, widthMm),
+      step(step(bottomLeft, along, widthMm), up, height),
+      step(bottomLeft, up, height),
+    ],
+    true,
+  );
 }
 
 function about(feature: Feature): { featureId: FeatureId; featureName: string } {

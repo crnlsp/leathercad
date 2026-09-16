@@ -65,13 +65,22 @@ export function scaleContours(
   font: FontData,
   sizeMm: Mm,
   at: Vec2,
+  rotationRad = 0,
 ): Path[] {
   const scale = sizeMm / font.unitsPerEm;
   // A similarity, so any arc would stay an arc — glyphs hold only lines and
   // cubics, but the rule is the geometry layer's and not restated here.
-  // Chronological: scale the font units down to millimetres, *then* move the
-  // glyph to where it sits. The other order would scale the position too.
-  const matrix = MatOps.compose(MatOps.fromScale(scale, scale), MatOps.fromTranslation(at));
+  //
+  // Chronological, and the order is the whole correctness of this function:
+  // scale the font units down to millimetres, turn the glyph on the spot,
+  // *then* move it to where it sits. Scaling after translating would scale the
+  // position too; rotating after translating would swing the glyph around the
+  // origin of the page instead of its own.
+  const matrix = MatOps.composeAll(
+    MatOps.fromScale(scale, scale),
+    MatOps.fromRotation(rotationRad),
+    MatOps.fromTranslation(at),
+  );
   return contours.map((contour) => PathOps.transform(contour, matrix));
 }
 

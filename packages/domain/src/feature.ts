@@ -113,6 +113,31 @@ export type GeometrySource =
   /** Built from another feature, and rebuilt whenever that one changes. */
   | { readonly kind: 'derived'; readonly sourceId: FeatureId; readonly op: Derivation };
 
+/**
+ * What a text label is made of.
+ *
+ * Its geometry — the glyph outlines — is generated from these parameters by
+ * the vendored typeface, and never stored: the oldest invariant here, and the
+ * reason improving the typesetting improves every existing file.
+ *
+ * A source rather than fields on the feature, for the reason `HardwareHole`
+ * records below: a feature whose position is not in `source` is the one
+ * feature that moving, turning, hit-testing and mirroring each need a special
+ * case for.
+ */
+export interface TextSource {
+  readonly kind: 'text';
+  readonly text: string;
+  /** The left end of the baseline, before rotation. */
+  readonly at: Vec2;
+  readonly sizeMm: Mm;
+  /** Counter-clockwise, about `at`. */
+  readonly rotationRad: number;
+}
+
+/** Everything a feature's geometry can come from. */
+export type FeatureSource = GeometrySource | TextSource;
+
 export interface FeatureBase {
   readonly id: FeatureId;
   readonly name: string;
@@ -189,6 +214,22 @@ export interface MarkingLine extends FeatureBase {
  * Kept distinct from an inner `CutContour` because the semantics differ: these
  * are punched rather than cut, and they are reported separately.
  */
+/**
+ * Free text printed on the template: "fold before stitching", a maker's mark.
+ *
+ * The only feature whose source is text, and the only one that may hold text —
+ * narrowed in both directions, so the compiler refuses a cut contour made of
+ * words and a label made of a path.
+ *
+ * **Text that restates a model value is never a label.** Part captions and
+ * measurement values are generated (X6), so they cannot disagree with the
+ * model; a label is the user's own words, which is why it is stored.
+ */
+export interface TextLabel extends Omit<FeatureBase, 'source'> {
+  readonly kind: 'text-label';
+  readonly source: TextSource;
+}
+
 export interface HardwareHole extends FeatureBase {
   readonly kind: 'hardware-hole';
   /**
@@ -200,7 +241,7 @@ export interface HardwareHole extends FeatureBase {
 }
 
 export type Feature =
-  CutContour | StitchLine | StitchHoleSet | FoldLine | MarkingLine | HardwareHole;
+  CutContour | StitchLine | StitchHoleSet | FoldLine | MarkingLine | HardwareHole | TextLabel;
 export type FeatureKind = Feature['kind'];
 
 /** One physical piece of leather to be cut out. */
@@ -245,6 +286,8 @@ export function roleOf(feature: Feature): LayerRole {
       return 'mark';
     case 'hardware-hole':
       return 'hardware';
+    case 'text-label':
+      return 'annotation';
   }
 }
 

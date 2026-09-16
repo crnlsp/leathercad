@@ -110,6 +110,21 @@ const derivation = z.discriminatedUnion('type', [
   }),
 ]);
 
+/**
+ * A label's words, position and size — never its outlines.
+ *
+ * Derived geometry is never persisted (§3.3): the glyphs are regenerated from
+ * the vendored typeface on load, so improving the typesetting improves every
+ * file that already exists.
+ */
+const textSource = z.object({
+  kind: z.literal('text'),
+  text: z.string().min(1, { message: 'a label must have words' }),
+  at: vec2,
+  sizeMm: nonNegativeMm.refine((value) => value > 0, { message: 'must be greater than zero' }),
+  rotationRad: z.number().finite(),
+});
+
 const geometrySource = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('path'), path }),
   z.object({ kind: z.literal('shape'), shape: parametricShape }),
@@ -147,6 +162,14 @@ const feature = z.discriminatedUnion('kind', [
     ...featureBase,
     kind: z.literal('hardware-hole'),
     hardwareType: z.enum(['rivet', 'snap', 'screw', 'eyelet', 'other']),
+  }),
+  // Version 5. The only feature whose source is text, and the only one allowed
+  // to be: `source` is overridden here, so a label cannot hold a path and
+  // nothing else can hold words.
+  z.object({
+    ...featureBase,
+    kind: z.literal('text-label'),
+    source: textSource,
   }),
 ]);
 

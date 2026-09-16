@@ -23,6 +23,7 @@ import {
   followRefusal,
   problem,
   transformShape,
+  transformTextSource,
 } from '@leathercad/domain';
 import { MatOps, PathOps, Shapes, type Mat2x3, type Path, type Vec2 } from '@leathercad/geometry';
 
@@ -105,10 +106,11 @@ export function setFeatureVisible(id: FeatureId, visible: boolean): Command {
 /** Replaces a parametric shape — the path is regenerated on evaluation. */
 export function setShape(id: FeatureId, shape: ParametricShape): Command {
   return command('Edit shape', (document) => ({
-    project: mapFeature(document.project, id, (feature) => ({
-      ...feature,
-      source: { kind: 'shape', shape },
-    })),
+    project: mapFeature(document.project, id, (feature) =>
+      // A label is made of words; it has no shape to replace, and asking for
+      // one is a no-op rather than a way to turn it into a rectangle.
+      feature.kind === 'text-label' ? feature : { ...feature, source: { kind: 'shape', shape } },
+    ),
   }));
 }
 
@@ -188,7 +190,7 @@ export function refusedTransforms(
     for (const feature of part.features) {
       if (!targets.has(feature.id)) continue;
 
-      if (feature.source.kind === 'derived') {
+      if (feature.kind !== 'text-label' && feature.source.kind === 'derived') {
         // A derived feature has no geometry of its own to move. Moved with what
         // it follows, it follows; moved alone, nothing happens — and the user is
         // told why rather than left watching it not move (X3).
@@ -207,6 +209,12 @@ export function refusedTransforms(
         continue;
       }
 
+      if (feature.kind === 'text-label') {
+        const turned = transformTextSource(feature.source, matrix);
+        if (!turned.ok) refused.push({ featureId: feature.id, problem: turned.error });
+        continue;
+      }
+
       if (feature.source.kind !== 'shape') continue;
 
       const result = transformShape(feature.source.shape, matrix);
@@ -220,6 +228,13 @@ export function refusedTransforms(
 }
 
 function transformFeature(feature: Feature, matrix: Mat2x3): Feature {
+  // A label transforms through its parameters, exactly as a parametric shape
+  // does: it stays a label you can retype, rather than becoming outlines.
+  if (feature.kind === 'text-label') {
+    const turned = transformTextSource(feature.source, matrix);
+    return turned.ok ? { ...feature, source: turned.value } : feature;
+  }
+
   if (feature.source.kind === 'path') {
     return {
       ...feature,
@@ -420,7 +435,7 @@ export function addStitchHoles(
 export function setDerivation(id: FeatureId, op: Derivation): Command {
   return command('Edit derivation', (document) => ({
     project: mapFeature(document.project, id, (feature) =>
-      feature.source.kind === 'derived'
+      feature.kind !== 'text-label' && feature.source.kind === 'derived'
         ? { ...feature, source: { ...feature.source, op } }
         : feature,
     ),
@@ -561,6 +576,94 @@ export function addHardwareHole(
     visible: true,
     locked: false,
     source: { kind: 'shape', shape: circleShape(centre, radiusMm) },
+  });
+}
+
+/**
+ * How big a new label is, in millimetres.
+ *
+ * Small enough to sit inside a panel, large enough to read on a printed
+ * template. A project setting when defaults move there in slice 4.3 (X8); a
+ * constant until then, rather than a number typed in three places.
+ */
+export const DEFAULT_LABEL_SIZE_MM: Mm = 3;
+
+/**
+ * Free text printed on the template.
+ *
+ * The words live in the source, like a hardware hole's position lives in its
+ * circle: moving, turning and scaling then work on a label without any of them
+ * needing to know what a label is.
+ *
+ * Blank text is refused rather than stored — an empty label is invisible on
+ * screen and on paper, and a feature nobody can see or select is a way to lose
+ * work.
+ */
+export function addTextLabel(
+  partId: PartId,
+  featureId: FeatureId,
+  at: Vec2,
+  text = 'Text',
+  sizeMm: Mm = DEFAULT_LABEL_SIZE_MM,
+): Command {
+  const words = text.trim();
+
+  return command(`Add ${words === '' ? 'label' : words}`, (document) => {
+    if (words === '' || !(sizeMm > 0)) return document;
+
+    return {
+      project: mapPart(document.project, partId, (part) => ({
+        ...part,
+        features: [
+          ...part.features,
+          {
+            id: featureId,
+            kind: 'text-label',
+            name: words,
+            visible: true,
+            locked: false,
+            source: { kind: 'text', text: words, at, sizeMm, rotationRad: 0 },
+          },
+        ],
+      })),
+    };
+  });
+}
+
+/**
+ * Retypes a label.
+ *
+ * The feature's name follows the words, because a label in the parts list that
+ * says "Text" while the canvas says "fold here" is a list you stop reading.
+ */
+export function setLabelText(id: FeatureId, text: string): Command {
+  const words = text.trim();
+
+  return command('Edit label', (document) => {
+    if (words === '') return document;
+
+    return {
+      project: mapFeature(document.project, id, (feature) =>
+        feature.kind === 'text-label'
+          ? { ...feature, name: words, source: { ...feature.source, text: words } }
+          : feature,
+      ),
+    };
+  });
+}
+
+/** Resizes a label, in millimetres, like everything else that can be printed. */
+export function setLabelSize(id: FeatureId, sizeMm: Mm): Command {
+  return command('Resize label', (document) => {
+    if (!(sizeMm > 0)) return document;
+
+    return {
+      project: mapFeature(document.project, id, (feature) =>
+        feature.kind === 'text-label'
+          ? { ...feature, source: { ...feature.source, sizeMm } }
+          : feature,
+      ),
+    };
   });
 }
 
@@ -748,7 +851,7 @@ export function setSource(id: FeatureId, sourceId: FeatureId): Command {
       if (followRefusal(document.project, id, sourceId) !== null) return document;
       return {
         project: mapFeature(document.project, id, (feature) =>
-          feature.source.kind === 'derived'
+          feature.kind !== 'text-label' && feature.source.kind === 'derived'
             ? { ...feature, source: { ...feature.source, sourceId } }
             : feature,
         ),
@@ -801,7 +904,12 @@ function resolveDelete(
     if (!dependent.direct) continue;
     const feature = byId.get(dependent.featureId)!;
     const entry = resolved.get(dependent.featureId);
-    if (dependent.freezable && entry?.ok === true && feature.source.kind === 'derived') {
+    if (
+      dependent.freezable &&
+      entry?.ok === true &&
+      feature.kind !== 'text-label' &&
+      feature.source.kind === 'derived'
+    ) {
       const followed = byId.get(feature.source.sourceId);
       frozen.set(feature.id, {
         ...feature,

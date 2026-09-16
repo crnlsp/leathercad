@@ -426,7 +426,7 @@ describe('the reference graph, for any sound project', () => {
           parts: p.parts.map((part) => ({
             ...part,
             features: part.features.map((f) =>
-              f.id === featureId && f.source.kind === 'derived'
+              f.id === featureId && f.kind !== 'text-label' && f.source.kind === 'derived'
                 ? { ...f, source: { ...f.source, sourceId } }
                 : f,
             ),

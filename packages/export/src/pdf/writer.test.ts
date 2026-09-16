@@ -162,6 +162,64 @@ describe('text on paper', () => {
   });
 });
 
+describe('text labels on paper', () => {
+  function withLabel(text: string): Project {
+    const base = projectWithRect(80, 50);
+    const part = base.parts[0]!;
+    return {
+      ...base,
+      parts: [
+        {
+          ...part,
+          features: [
+            ...part.features,
+            {
+              id: 'label-1',
+              kind: 'text-label',
+              name: text,
+              visible: true,
+              locked: false,
+              source: { kind: 'text', text, at: { x: 10, y: 20 }, sizeMm: 4, rotationRad: 0 },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('puts a label in the scene as outlines, beside the part caption', () => {
+    const scene = buildExportScene(evaluate(withLabel('Zszyć tutaj')), 'Test');
+    const texts = scene.parts[0]!.texts;
+
+    expect(texts.map((t) => t.source)).toEqual(['Panel', 'Zszyć tutaj']);
+    expect(texts[1]!.glyphs.length).toBeGreaterThan(0);
+    expect(texts[1]!.sizeMm).toBe(4);
+  });
+
+  it('prints it, and prints more of it for more words', async () => {
+    const short = await pdfFor(withLabel('Fold'));
+    const long = await pdfFor(withLabel('Fold before stitching, then glue'));
+
+    expect(long.byteLength).toBeGreaterThan(short.byteLength);
+  });
+
+  it('does not put a hidden label on the sheet', async () => {
+    const shown = withLabel('Fold');
+    const hidden: Project = {
+      ...shown,
+      parts: shown.parts.map((part) => ({
+        ...part,
+        features: part.features.map((f) =>
+          f.kind === 'text-label' ? { ...f, visible: false } : f,
+        ),
+      })),
+    };
+
+    const scene = buildExportScene(evaluate(hidden), 'Test');
+    expect(scene.parts[0]!.texts.map((t) => t.source)).toEqual(['Panel']);
+  });
+});
+
 describe('document structure', () => {
   it('sets the MediaBox to A4 in points, exactly', () => {
     // If this is wrong, everything downstream is wrong and nothing else can

@@ -738,8 +738,22 @@ that walks one scenario through the whole phase.
   diameter is written `Ø`; pdf-lib gives every page an empty `/Font` dictionary of its own accord,
   so "no font embedded" means "nothing ever put in it"; and `Ł` legitimately overhangs its advance
   width, which a too-strict property test found and now pins as a fact.
-- **4.11b** Free text labels: a `text-label` feature kind, its editor, the format version bump and
-  its fixture. Split from 4.11a because it is the only part that persists anything.
+- **4.11b** ✅ **Done.** Free text labels
+  ([design](superpowers/specs/2026-09-16-text-labels-design.md)): the **Text** tool places one on the
+  selected part, the panel types it and sizes it in millimetres, and it prints as outlines with
+  everything else.
+  **The words live in the source**, not on the feature — the decision §3.6 already recorded for
+  hardware holes, and the reason a label moves, turns and scales through the existing transform
+  paths without any of them learning what a label is. An uneven scale is refused
+  (`TEXT_WOULD_DISTORT`): letters do not stretch.
+  **Format version 5**, with an identity migration and `fixtures/format/v5.lcp` holding a Polish
+  label — what is stored is the words, the place and the size, never the glyph outlines.
+  Rotation went into `packages/typography` rather than the domain, because 4.10's aligned dimensions
+  need exactly the same thing.
+  Gotchas: narrowing `TextLabel['source']` makes every `{ ...feature, source }` spread a compile
+  error until it says which features it means — which is the point, and it found each site; and a
+  label's `path` is the box its words occupy, so the panel hides "Measured" for one, a perimeter
+  nobody asked for being worse than no number.
 - **4.12a** ✅ **Done.** The diagnostic channel
   ([ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md),
   [design](superpowers/specs/2026-09-15-diagnostic-channel-design.md)): typed evaluation failures,

@@ -3,6 +3,8 @@ import {
   setFoldDirection,
   setFoldThickness,
   setHardwareType,
+  setLabelSize,
+  setLabelText,
   setMarkingPurpose,
   setShape,
 } from '@leathercad/document';
@@ -16,6 +18,7 @@ import { HardwareHoleEditor } from './HardwareHoleEditor.js';
 import { MarkingLineEditor } from './MarkingLineEditor.js';
 import { StitchHoleSetEditor } from './StitchHoleSetEditor.js';
 import { StitchLineEditor } from './StitchLineEditor.js';
+import { TextLabelEditor } from './TextLabelEditor.js';
 
 /**
  * The parameters of whatever is selected.
@@ -41,6 +44,18 @@ export function FeatureEditor({
 }) {
   const source = feature.source;
   const own = ownParameters(store, feature);
+
+  // A label's parameters *are* its source: the words, where they sit and how
+  // big they print.
+  if (feature.kind === 'text-label') {
+    return (
+      <TextLabelEditor
+        feature={feature}
+        onText={(text) => store.dispatch(setLabelText(feature.id, text))}
+        onSize={(sizeMm) => store.dispatch(setLabelSize(feature.id, sizeMm))}
+      />
+    );
+  }
 
   if (source.kind === 'shape') {
     return (

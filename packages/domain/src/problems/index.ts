@@ -17,6 +17,7 @@ export { PROBLEM_CODES } from './codes.js';
 export type {
   CompatibilityRule,
   Diagnostic,
+  PlacedThing,
   Problem,
   ProblemCode,
   ProblemFacts,

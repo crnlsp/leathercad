@@ -91,7 +91,10 @@ export function followRefusal(
 ): Problem | null {
   const feature = indexById(project).get(featureId);
   if (feature === undefined) return problem('FEATURE_MISSING', { featureId });
-  if (feature.source.kind !== 'derived') {
+  // Narrowing the feature, not just its source: a label's source is text, so
+  // it can never be re-pointed, and saying so here is what lets the candidate
+  // below be built at all.
+  if (feature.kind === 'text-label' || feature.source.kind !== 'derived') {
     return problem('NOT_DERIVED', { featureId: feature.id, featureName: feature.name });
   }
 
@@ -201,6 +204,9 @@ function declaresClosed(
       return source.path.closed;
     case 'shape':
       return source.shape.type === 'rect' || source.shape.type === 'circle';
+    case 'text':
+      // Words enclose nothing, whatever shape the letters happen to make.
+      return false;
     case 'derived': {
       if (visiting.has(feature.id)) return false;
       if (source.op.type !== 'offset' || source.op.run.kind !== 'whole') return false;

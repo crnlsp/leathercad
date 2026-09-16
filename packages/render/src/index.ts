@@ -16,6 +16,7 @@ export {
   documentTextItem,
   dotsItem,
   pathItem,
+  placedTextItem,
   textItem,
 } from './displayList.js';
 

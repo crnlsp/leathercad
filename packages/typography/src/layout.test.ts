@@ -212,3 +212,60 @@ describe('outlines', () => {
     expect(bounds.minX).toBeGreaterThan(-0.5);
   });
 });
+
+describe('rotated text', () => {
+  const layout = layoutText('AB', 10);
+
+  it('leaves everything where it was at no rotation', () => {
+    expect(placeText(layout, { x: 5, y: 7 }, { rotationRad: 0 })).toEqual(
+      placeText(layout, { x: 5, y: 7 }),
+    );
+  });
+
+  it('turns the run about the anchor the caller gave, not its own left end', () => {
+    // A quarter turn counter-clockwise: the run that ran along +X now runs
+    // along +Y, and the first glyph stays on the anchor.
+    const placed = placeText(layout, { x: 0, y: 0 }, { rotationRad: Math.PI / 2 });
+
+    expect(placed.glyphs[0]!.at.x).toBeCloseTo(0, 9);
+    expect(placed.glyphs[0]!.at.y).toBeCloseTo(0, 9);
+    expect(placed.glyphs[1]!.at.x).toBeCloseTo(0, 9);
+    expect(placed.glyphs[1]!.at.y).toBeCloseTo(layout.glyphs[1]!.xMm, 9);
+  });
+
+  it('turns centred text about the anchor, not about its left end', () => {
+    const straight = placeText(layout, { x: 20, y: 0 }, { align: 'centre' });
+    const turned = placeText(layout, { x: 20, y: 0 }, { align: 'centre', rotationRad: Math.PI });
+
+    // A half turn about the anchor puts the run's start where its end was.
+    const endOfStraight = straight.origin.x + layout.widthMm;
+    expect(turned.origin.x).toBeCloseTo(endOfStraight, 9);
+  });
+
+  it('turns the letters too, not only their positions', () => {
+    const upright = outlinesOf(placedText('H', 10, { x: 0, y: 0 }));
+    const turned = outlinesOf(
+      placeText(layoutText('H', 10), { x: 0, y: 0 }, { rotationRad: Math.PI / 2 }),
+    );
+
+    const uprightBox = unionBounds(upright);
+    const turnedBox = unionBounds(turned);
+
+    // An upright H is taller than it is wide; turned a quarter, it is wider
+    // than it is tall — the glyph itself rotated, not just where it sits.
+    expect(uprightBox.maxY - uprightBox.minY).toBeGreaterThan(uprightBox.maxX - uprightBox.minX);
+    expect(turnedBox.maxX - turnedBox.minX).toBeGreaterThan(turnedBox.maxY - turnedBox.minY);
+  });
+
+  it('keeps the run the same length whatever angle it is at', () => {
+    fc.assert(
+      fc.property(fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }), (angle) => {
+        const placed = placeText(layout, { x: 3, y: 4 }, { rotationRad: angle });
+        const first = placed.glyphs[0]!.at;
+        const last = placed.glyphs[placed.glyphs.length - 1]!.at;
+        const spanned = Math.hypot(last.x - first.x, last.y - first.y);
+        return Math.abs(spanned - layout.glyphs[1]!.xMm) < 1e-9;
+      }),
+    );
+  });
+});

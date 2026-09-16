@@ -42,7 +42,6 @@ export type DisplayItem =
       readonly kind: 'document-text';
       readonly role: LayerRole;
       readonly placed: PlacedText;
-      readonly sizeMm: Mm;
       readonly colour: string;
     }
   /**
@@ -105,11 +104,18 @@ export function documentTextItem(
   placement: TextPlacement = {},
   colour?: string,
 ): DisplayItem {
+  return placedTextItem(role, placedText(text, sizeMm, at, placement), colour);
+}
+
+/**
+ * Text that has already been laid out — a label, whose layout evaluation
+ * produced and which nothing downstream may redo.
+ */
+export function placedTextItem(role: LayerRole, placed: PlacedText, colour?: string): DisplayItem {
   return {
     kind: 'document-text',
     role,
-    placed: placedText(text, sizeMm, at, placement),
-    sizeMm,
+    placed,
     colour: colour ?? ROLE_STROKES[role].colour,
   };
 }

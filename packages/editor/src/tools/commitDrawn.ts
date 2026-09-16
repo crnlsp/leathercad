@@ -89,7 +89,9 @@ export function drawTargetNotice(ctx: ToolContext): Problem | null {
   if (targetPart(ctx) !== null) return null;
 
   const spansParts = ctx.store.getState().selection.features.size > 0;
-  return spansParts ? problem('TARGET_SPANS_PARTS', {}) : problem('NO_TARGET_PART', {});
+  return spansParts
+    ? problem('TARGET_SPANS_PARTS', { what: 'line' })
+    : problem('NO_TARGET_PART', { what: 'line' });
 }
 
 function drawAsOf(ctx: ToolContext): DrawAs {

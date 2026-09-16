@@ -36,6 +36,10 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       // Hardware is its own mode rather than a "draw as" option, because it is
       // the only one placed by a click at a chosen size rather than drawn.
       { id: 'hardware', label: 'Hardware', key: 'H' },
+      // X rather than T, which Rotate has for "turn". A label is placed with
+      // one click and then typed in the panel, so it belongs with the things
+      // you place rather than the things you drag out.
+      { id: 'text', label: 'Text', key: 'X' },
     ],
   },
   {

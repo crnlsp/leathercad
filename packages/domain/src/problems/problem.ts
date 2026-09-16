@@ -31,6 +31,9 @@ interface About {
   readonly featureName: string;
 }
 
+/** What a tool was about to put on a part. */
+export type PlacedThing = 'line' | 'label';
+
 /** The row of the derivation compatibility table (domain-model.md §4.2) that refused. */
 export type CompatibilityRule =
   | 'holes-need-hole-set'
@@ -66,8 +69,10 @@ export interface ProblemFacts {
   readonly TRANSFORM_FLATTENS: Record<string, never>;
   readonly WOULD_BECOME_ELLIPSE: { readonly shape: 'circle' | 'arc' };
   readonly WOULD_SHEAR: Record<string, never>;
-  readonly NO_TARGET_PART: Record<string, never>;
-  readonly TARGET_SPANS_PARTS: Record<string, never>;
+  readonly TEXT_WOULD_DISTORT: Record<string, never>;
+  /** `what` is the thing being placed, so one code serves every tool. */
+  readonly NO_TARGET_PART: { readonly what: PlacedThing };
+  readonly TARGET_SPANS_PARTS: { readonly what: PlacedThing };
 
   // ——— Evaluation outcomes (E): a feature that did not resolve ———
   readonly PARAMETER_INVALID: About & {
@@ -85,12 +90,15 @@ export interface ProblemFacts {
   readonly SOURCE_FAILED: About & { readonly sourceId: FeatureId; readonly sourceName: string };
   readonly GEOMETRY_FAILED: About & { readonly detail: string };
   /**
-   * Text the vendored typeface cannot print. Carries the part for now; slice
-   * 4.11b widens it when text labels become features of their own.
+   * Text the vendored typeface cannot print: a part's name, or a label's own
+   * words. The feature is named when there is one, so the panel can point at
+   * the label rather than at the part it sits on.
    */
   readonly TEXT_GLYPH_MISSING: {
     readonly partId: PartId;
     readonly partName: string;
+    readonly featureId?: FeatureId;
+    readonly featureName?: string;
     readonly text: string;
     /** The distinct characters with no glyph, in the order they appear. */
     readonly characters: string;

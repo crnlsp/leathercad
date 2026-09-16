@@ -198,19 +198,35 @@ type MeasureRef =
 
 **Later:** angular measurements.
 
-### 3.8 `TextLabel` — designed, 4.11
+### 3.8 `TextLabel` — built, 4.11b
 
 ```ts
-interface TextLabel extends FeatureBase {
+interface TextLabel extends Omit<FeatureBase, 'source'> {
   kind: 'text-label';
-  text: string;
-  at: Vec2;
-  sizeMm: Mm;
-  rotationRad: Radians;
+  source: TextSource;                 // narrowed: only a label holds text, and it holds nothing else
 }
+
+type TextSource = {
+  kind: 'text';
+  text: string;
+  at: Vec2;                           // the left end of the baseline, before rotation
+  sizeMm: Mm;
+  rotationRad: number;
+};
 ```
 
 Free text printed on the template: "fold before stitching", a logo position note.
+
+**The words live in `source`.** This section used to sketch them as fields on the feature; that
+predates `GeometrySource`, and §3.6 records the same decision for hardware holes and the reason for
+it — a feature whose position is not in `source` is the one feature that moving, turning,
+hit-testing and mirroring each need a special case for. As a source, a label inherits all of them,
+and its glyph outlines are generated rather than stored, like every other derived geometry.
+
+A label resolves to its laid-out text plus the **box** it occupies, which is what selection and
+bounds use. Transforms go through the parameters: moving sets `at`, turning accumulates
+`rotationRad`, an even scale sets `sizeMm`, and an uneven one is refused with `TEXT_WOULD_DISTORT`
+(X9) — letters do not stretch.
 
 **Text that restates a model value is never a label.** Part captions ("Card holder — cut 2") and
 measurement values are generated from the model, so they cannot disagree with it. All document text
@@ -226,6 +242,10 @@ type GeometrySource =
   | { kind: 'path'; path: Path }                                        // drawn; the only coordinates stored
   | { kind: 'shape'; shape: ParametricShape }                           // parameters; the path is generated
   | { kind: 'derived'; sourceId: FeatureId; op: Derivation };           // built from one other feature
+
+// A label's words are a source of their own (§3.8), kept out of GeometrySource
+// so that only a TextLabel can hold them and a TextLabel can hold nothing else.
+type FeatureSource = GeometrySource | TextSource;
 
 type Derivation =
   | { type: 'offset'; distanceMm: Mm; side: 'inward' | 'outward'; run: Run }          // built

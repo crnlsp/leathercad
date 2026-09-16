@@ -66,7 +66,7 @@ ordering.
 
 ### 3.1 Shape
 
-Format version 4, as the writer emits it (key order shown for reading; the writer sorts keys):
+Format version 5, as the writer emits it (key order shown for reading; the writer sorts keys):
 
 ```jsonc
 {
@@ -101,6 +101,12 @@ Format version 4, as the writer emits it (key order shown for reading; the write
           "source": { "kind": "derived", "sourceId": "01JBQB…",
                       "op": { "type": "stitch-holes", "pitchMm": 3.85, "mode": "fit-whole",
                               "corners": "hole-at-corner", "ironLabel": "KS Blade 3.85 mm" } }
+        },
+        {
+          "id": "01JBQD…", "kind": "text-label", "name": "Zszyć przed klejeniem",
+          "visible": true, "locked": false,
+          "source": { "kind": "text", "text": "Zszyć przed klejeniem",
+                      "at": { "x": 12, "y": 30 }, "sizeMm": 3, "rotationRad": 0 }
         }
       ]
     }
@@ -109,10 +115,14 @@ Format version 4, as the writer emits it (key order shown for reading; the write
 ```
 
 **Planned in Phase 4** ([reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md)
-§6), each with its own version bump and identity migration: `frozenFrom` on features (4.2b, now
-format version 4), the `mirror` op (4.8), and the `measurement` and `text-label` annotation kinds, which carry no
-`source` (4.10, 4.11). Page setup, materials, guides and a per-part placement transform are not in the
-format.
+§6), each with its own version bump and identity migration: `frozenFrom` on features (4.2b, format
+version 4), the `text-label` kind and its `text` source (4.11b, format version 5), the `mirror` op
+(4.8), and the `measurement` annotation kind, which carries no `source` (4.10). Page setup,
+materials, guides and a per-part placement transform are not in the format.
+
+A label stores **what was typed, where it sits and how big it prints** — never its glyph outlines.
+Those are regenerated from the vendored typeface on load, so improving the typesetting improves
+every file that already exists.
 
 Note what that wallet panel *does not* contain: a single coordinate of the stitch line, and not one
 of its ~120 hole positions. Three parameter blocks regenerate all of it.

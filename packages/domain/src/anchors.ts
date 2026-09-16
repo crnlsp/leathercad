@@ -1,7 +1,7 @@
 import { EPS_ANGLE, approxZero, type Mm } from '@leathercad/core';
 import { SegmentOps, type Path } from '@leathercad/geometry';
 
-import type { GeometrySource } from './feature.js';
+import type { FeatureSource } from './feature.js';
 
 /**
  * The durable landmarks a source offers, as distances along its path.
@@ -21,8 +21,11 @@ import type { GeometrySource } from './feature.js';
  * is the first corner *after the path's start point*, not a named corner —
  * what matters is that the same index keeps meaning the same corner.
  */
-export function anchorsOf(source: GeometrySource, path: Path): readonly Mm[] {
+export function anchorsOf(source: FeatureSource, path: Path): readonly Mm[] {
   switch (source.kind) {
+    case 'text':
+      // A label is words, not an outline; there is nothing to run between.
+      return [];
     case 'shape':
       switch (source.shape.type) {
         case 'rect':

@@ -116,7 +116,11 @@ export function PropertyPanel({
         />
       </section>
 
-      {resolved?.ok === true && (
+      {/*
+        A label's path is the box its words occupy, which has a perimeter and
+        an area that mean nothing to anyone. Measuring is for geometry.
+      */}
+      {resolved?.ok === true && feature.kind !== 'text-label' && (
         <section className="panel-section">
           <div className="panel-heading">Measured</div>
           <div className="readout">
@@ -247,6 +251,8 @@ function labelFor(feature: Feature): string {
       return 'Stitch holes';
     case 'hardware-hole':
       return 'Hardware hole';
+    case 'text-label':
+      return 'Text label';
   }
 }
 

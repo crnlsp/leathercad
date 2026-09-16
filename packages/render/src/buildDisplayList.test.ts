@@ -1,5 +1,6 @@
 import type { Diagnostic, Feature, Part, ResolvedProject } from '@leathercad/domain';
 import { PathOps, Shapes } from '@leathercad/geometry';
+import { placedText } from '@leathercad/typography';
 import { describe, expect, it } from 'vitest';
 
 import { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
@@ -147,6 +148,67 @@ describe('diagnostics on the canvas', () => {
   });
 });
 
+describe('text labels', () => {
+  const label: Feature = {
+    id: 'label-1',
+    kind: 'text-label',
+    name: 'Glue here',
+    visible: true,
+    locked: false,
+    source: { kind: 'text', text: 'Glue here', at: { x: 5, y: 5 }, sizeMm: 4, rotationRad: 0 },
+  };
+
+  /** What evaluation would hand the renderer for that label. */
+  const withLabel = (): ResolvedProject => {
+    const part: Part = { id: 'part-1', name: 'Panel', quantity: 1, features: [label] };
+    return {
+      project: {
+        id: 'p',
+        name: 'Test',
+        settings: { gridSpacingMm: 5, defaultStitchInsetMm: 3.5, defaultIronPitchMm: 3.85 },
+        parts: [part],
+      },
+      parts: [
+        {
+          part,
+          features: [
+            {
+              ok: true,
+              feature: label,
+              role: 'annotation',
+              path: Shapes.rect({ x: 5, y: 5 }, 20, 4),
+              text: placedText('Glue here', 4, { x: 5, y: 5 }),
+            },
+          ],
+        },
+      ],
+    };
+  };
+
+  it('draws the words, not the box they sit in', () => {
+    const items = buildDisplayList(withLabel()).items.filter(
+      (item) => item.kind === 'document-text',
+    );
+
+    // The label and the part caption; no path item for the box, which exists
+    // for selection rather than for drawing.
+    expect(items.map((item) => item.kind === 'document-text' && item.placed.layout.text)).toContain(
+      'Glue here',
+    );
+    expect(buildDisplayList(withLabel()).items.some((item) => item.kind === 'path')).toBe(false);
+  });
+
+  it('draws the layout evaluation produced, rather than laying it out again', () => {
+    const resolved = withLabel();
+    const drawn = buildDisplayList(resolved).items.find(
+      (item) => item.kind === 'document-text' && item.placed.layout.text === 'Glue here',
+    );
+
+    const expected = resolved.parts[0]!.features[0]!;
+    expect(drawn?.kind === 'document-text' && drawn.placed).toBe(expected.ok && expected.text);
+  });
+});
+
 describe('part captions', () => {
   it('names each part above it, in millimetres', () => {
     const caption = buildDisplayList(resolved([outline])).items.find(
@@ -158,7 +220,7 @@ describe('part captions', () => {
     expect(caption.placed.layout.text).toBe('Panel');
     // Document text is sized in millimetres, never pixels: it is part of the
     // drawing, and the same caption prints on the sheet.
-    expect(caption.sizeMm).toBeGreaterThan(0);
+    expect(caption.placed.layout.sizeMm).toBeGreaterThan(0);
     // Above the panel's top edge (Y is up).
     expect(caption.placed.origin.y).toBeGreaterThan(60);
   });

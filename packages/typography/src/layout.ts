@@ -1,5 +1,5 @@
 import type { Mm } from '@leathercad/core';
-import type { Path, Vec2 } from '@leathercad/geometry';
+import { MatOps, type Path, type Vec2 } from '@leathercad/geometry';
 
 import { contoursOf, scaleContours, type FontData, type GlyphData } from './fontData.js';
 import { PLEX_SANS } from './generated/plexSans.js';
@@ -27,6 +27,14 @@ export type TextBaseline = 'alphabetic' | 'top' | 'middle' | 'bottom';
 export interface TextPlacement {
   readonly align?: TextAlign;
   readonly baseline?: TextBaseline;
+  /**
+   * Turned about the anchor, counter-clockwise, in radians.
+   *
+   * Here rather than in whatever places the text, because 4.10's aligned
+   * dimensions need exactly this and a second implementation of it would be
+   * the beginning of two answers.
+   */
+  readonly rotationRad?: number;
 }
 
 export interface PositionedGlyph {
@@ -60,9 +68,11 @@ export interface PlacedGlyph {
 
 export interface PlacedText {
   readonly layout: TextLayout;
-  /** Where the baseline starts, after alignment. */
+  /** Where the baseline starts, after alignment and rotation. */
   readonly origin: Vec2;
   readonly glyphs: readonly PlacedGlyph[];
+  /** What every glyph is turned by, about the anchor. */
+  readonly rotationRad: number;
 }
 
 /** Whether the vendored typeface covers this character. */
@@ -133,17 +143,24 @@ export function textWidthMm(text: string, sizeMm: Mm): Mm {
  * means. Everything downstream reads glyph positions from here.
  */
 export function placeText(layout: TextLayout, at: Vec2, placement: TextPlacement = {}): PlacedText {
+  const rotationRad = placement.rotationRad ?? 0;
   const origin = {
     x: at.x - alignmentShift(layout, placement.align ?? 'left'),
     y: at.y - baselineShift(layout, placement.baseline ?? 'alphabetic'),
   };
 
+  // The anchor is the point the caller gave, so that is what the run turns
+  // about — not its own left end, which would swing centred text sideways.
+  const turn = MatOps.fromRotationAround(at, rotationRad);
+  const place = (point: Vec2): Vec2 => MatOps.apply(turn, point);
+
   return {
     layout,
-    origin,
+    origin: place(origin),
+    rotationRad,
     glyphs: layout.glyphs.map((glyph) => ({
       character: glyph.character,
-      at: { x: origin.x + glyph.xMm, y: origin.y },
+      at: place({ x: origin.x + glyph.xMm, y: origin.y }),
       missing: glyph.missing,
     })),
   };
@@ -172,7 +189,9 @@ export function outlinesOf(placed: PlacedText): Path[] {
     const data = FONT.glyphs[glyph.character] ?? FONT.notdef;
     // A space has no contours, and neither does anything else the typeface
     // draws as blank.
-    paths.push(...scaleContours(contoursOf(data), FONT, placed.layout.sizeMm, glyph.at));
+    paths.push(
+      ...scaleContours(contoursOf(data), FONT, placed.layout.sizeMm, glyph.at, placed.rotationRad),
+    );
   }
 
   return paths;
