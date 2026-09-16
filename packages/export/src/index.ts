@@ -17,8 +17,10 @@ export {
   sheetSizeMm,
 } from './paper.js';
 
-export type { ExportPart, ExportPath, ExportScene, PrintStyle } from './scene.js';
-export { PRINT_STYLES, buildExportScene, describePart } from './scene.js';
+export type { ExportPart, ExportPath, ExportScene, ExportText, PrintStyle } from './scene.js';
+export { PRINT_STYLES, buildExportScene } from './scene.js';
+// The one place a part's caption is worded and sized, shared with the canvas.
+export { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from '@leathercad/render';
 
 export type { OversizedPart, Page, PaginationResult, PlacedPart } from './paginate.js';
 export { describeOversized, paginate } from './paginate.js';

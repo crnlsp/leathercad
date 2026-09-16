@@ -148,6 +148,13 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     describe: (f) => `${f.featureName} could not be built (${f.detail}).`,
   },
 
+  TEXT_GLYPH_MISSING: {
+    title: 'Cannot be printed',
+    describe: (f) =>
+      `“${f.text}” uses ${f.characters}, which this typeface cannot print — it comes out as a ` +
+      'box. Rename it using Latin characters.',
+  },
+
   CONTOUR_SELF_INTERSECTS: {
     title: 'Outline crosses itself',
     describe: (f) =>

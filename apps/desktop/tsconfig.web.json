@@ -19,6 +19,9 @@
       "path": "../../packages/geometry"
     },
     {
+      "path": "../../packages/typography"
+    },
+    {
       "path": "../../packages/domain"
     },
     {

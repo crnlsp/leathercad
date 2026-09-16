@@ -1,4 +1,5 @@
 import { MatOps, type Path, type Segment } from '@leathercad/geometry';
+import { FONT_FAMILY } from '@leathercad/typography';
 
 import type { DisplayList, DisplayItem } from '../displayList.js';
 import { worldToScreen, type ViewportView } from '../view.js';
@@ -47,7 +48,10 @@ export interface Canvas2DLike {
 }
 
 export interface RenderOptions {
+  /** For overlay text — readouts and hints. Defaults to the system UI font. */
   readonly fontFamily?: string;
+  /** For document text. Defaults to the vendored typeface. */
+  readonly documentFontFamily?: string;
 }
 
 /**
@@ -121,23 +125,55 @@ export function renderDisplayList(
   }
   ctx.restore();
 
-  // Pass two: text, in screen pixels, so it is not mirrored by the Y flip.
+  // Pass two: text, drawn in screen pixels so the Y flip does not mirror it.
+  //
+  // Both kinds are drawn here, and the difference is where the size comes
+  // from. Document text is millimetres scaled by the viewport — it grows as
+  // you zoom in, because it is part of the drawing — and each glyph is placed
+  // at the position `typography` laid out, so the screen and the paper agree.
+  // Overlay text is a fixed pixel size, because it is chrome.
   const textItems = list.items.filter(
-    (i): i is Extract<DisplayItem, { kind: 'text' }> => i.kind === 'text',
+    (i): i is Extract<DisplayItem, { kind: 'document-text' | 'overlay-text' }> =>
+      i.kind === 'document-text' || i.kind === 'overlay-text',
   );
   if (textItems.length > 0) {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+
     for (const item of textItems) {
-      const at = MatOps.apply(transform, item.at);
       ctx.fillStyle = item.colour;
-      ctx.font = `${item.sizePx}px ${options.fontFamily ?? 'system-ui, sans-serif'}`;
-      ctx.textAlign = item.align ?? 'left';
-      ctx.textBaseline = item.baseline ?? 'alphabetic';
-      ctx.fillText(item.text, at.x, at.y);
+
+      if (item.kind === 'overlay-text') {
+        const at = MatOps.apply(transform, item.at);
+        ctx.font = `${item.sizePx}px ${options.fontFamily ?? 'system-ui, sans-serif'}`;
+        ctx.textAlign = item.align ?? 'left';
+        ctx.textBaseline = item.baseline ?? 'alphabetic';
+        ctx.fillText(item.text, at.x, at.y);
+        continue;
+      }
+
+      ctx.font = `${item.sizeMm * perMm}px ${documentFamily(options)}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      for (const glyph of item.placed.glyphs) {
+        const at = MatOps.apply(transform, glyph.at);
+        ctx.fillText(glyph.character, at.x, at.y);
+      }
     }
+
     ctx.restore();
   }
+}
+
+/**
+ * The vendored typeface, with a fallback that should never be reached.
+ *
+ * The app loads the file as a `FontFace` before the first paint. If it somehow
+ * has not, the text is still legible and still in the right places — the
+ * positions come from the layout, not from the browser's measurement.
+ */
+function documentFamily(options: RenderOptions): string {
+  return options.documentFontFamily ?? `"${FONT_FAMILY}", sans-serif`;
 }
 
 /** Emits one path into the context's current path, in millimetres. */

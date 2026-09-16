@@ -15,6 +15,11 @@ allowBuilds:
   # records the answer. Setting it true would grant a permission that does
   # nothing.
   electron: false
+  # Declined. Its only install script is IBM's `ibmtelemetry` postinstall,
+  # which reports package usage over the network. We need the font files, not
+  # the telemetry, and the files are vendored into assets/fonts/ anyway — the
+  # dependency exists to pin where they came from. See ADR 0011.
+  '@ibm/plex-sans': false
 
 # pnpm gates very recent releases behind a minimum release age. These were
 # reviewed and accepted; see ADR 0004.

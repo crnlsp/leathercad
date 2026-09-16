@@ -532,7 +532,7 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | X2 | No delete changes a feature the user did not name without showing it first | 4.2b |
 | X3 | Derived features are never silently detached, converted or ignored | 4.2b, 4.8 |
 | X4 | Selection chooses where something goes, never what is created | 4.3 |
-| X5 | Text that can reach paper is set in millimetres, in the vendored typeface, laid out once | 4.11 |
+| X5 | Text that can reach paper is set in millimetres, in the vendored typeface, laid out once | built 4.11a |
 | X6 | Text that restates a model value is generated, never stored | 4.10, 4.11 |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
 | X8 | Defaults come from project settings | 4.3 |
@@ -577,7 +577,7 @@ The diagnostics themselves:
 | `OFFSET_SPLIT` | warning | outcome | E2 | built 4.12a; unreachable until Tier 2 offsetting |
 | `SOURCE_FAILED` | error | outcome | E3 | built 4.12a |
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
-| `TEXT_GLYPH_MISSING` | warning | outcome | E2 | 4.11 |
+| `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
 | `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | 4.3 — it needs material-relative containment, which arrives with cut-outs |
 | `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm) | rule | DR2 | 4.3, with `OUTSIDE_PART` |

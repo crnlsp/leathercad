@@ -74,6 +74,8 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   ANCHOR_MISSING: outcome('E4'),
   SOURCE_FAILED: outcome('E3'),
   GEOMETRY_FAILED: outcome('E1'),
+  // Nothing throws and nothing is dropped: the box is drawn and this says so.
+  TEXT_GLYPH_MISSING: outcome('E2', 'warning'),
 
   CONTOUR_SELF_INTERSECTS: rule('DR3', 'error'),
   HOLE_SPACING_DEVIATION: rule('DR4', 'warning'),

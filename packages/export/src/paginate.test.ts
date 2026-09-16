@@ -19,6 +19,9 @@ function part(id: string, widthMm: number, heightMm: number, name = id): ExportP
         path: { segments: [], closed: true },
       },
     ],
+    // Pagination packs geometry; a caption rides along with its part and does
+    // not affect where the piece goes.
+    texts: [],
   };
 }
 

@@ -309,3 +309,30 @@ describe('validate, for any ordinary panel', () => {
     );
   });
 });
+
+// ——— TEXT_GLYPH_MISSING ———————————————————————————————————————————————————
+
+describe('TEXT_GLYPH_MISSING', () => {
+  const named = (name: string): Project => {
+    const p = project([panel()]);
+    return { ...p, parts: [{ ...p.parts[0]!, name }] };
+  };
+
+  it('warns about a part name the typeface cannot print', () => {
+    const [diagnostic, ...rest] = validate(evaluate(named('Panel 漢字')));
+
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({
+      problem: { code: 'TEXT_GLYPH_MISSING', facts: { characters: '漢 字' } },
+      severity: 'warning',
+      partId: 'part-0',
+    });
+    // About the part, not a feature: it is the part's name.
+    expect(diagnostic!.featureId).toBeUndefined();
+  });
+
+  it('says nothing about a Polish name, which is exactly why the typeface was vendored', () => {
+    expect(codes(evaluate(named('Przegroda główna')))).toEqual([]);
+    expect(codes(evaluate(named('Łódź')))).toEqual([]);
+  });
+});

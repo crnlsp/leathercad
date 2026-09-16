@@ -55,14 +55,23 @@ captions. Two more constraints shape the answer:
 
 ## Consequences
 
-- A new package, and new layering edges `render → typography` and `export → typography`, recorded
-  in the dependency-cruiser rules.
+Built in slice 4.11a ([design](../superpowers/specs/2026-09-16-typography-design.md)), except the
+text labels of point 2's second half, which are 4.11b. What shipped: `IBMPlexSans-Regular.woff` and
+`OFL.txt` in `assets/fonts/`, taken from the `@ibm/plex-sans` package with its telemetry postinstall
+declined; `pnpm fonts:generate` extracting 331 glyphs and 12 910 kerning pairs with `opentype.js`;
+`packages/typography`; document and overlay text as separate display items; and a PDF writer that
+embeds no font at all. `⌀` is not in the typeface, so a diameter is written `Ø`.
+
+- A new package, and new layering edges `render → typography`, `export → typography` and
+  `domain → typography` — the last so `validate()` can ask whether a string can be printed at all —
+  recorded in the dependency-cruiser rules.
 - PDF text is not selectable or searchable. That is acceptable for a cutting template, and the
   printed instructions stay legible.
 - A character outside the declared set renders as a visible replacement glyph and raises
   `TEXT_GLYPH_MISSING`. Nothing throws.
-- Implementation needs two approvals from the user: downloading the font files, and adding the
-  development dependency.
+- Implementation needed two approvals from the user: obtaining the font files, and adding the
+  development dependency. **Both were given on 2026-09-16**, for `@ibm/plex-sans` and `opentype.js`
+  respectively.
 
 ## Alternatives rejected
 

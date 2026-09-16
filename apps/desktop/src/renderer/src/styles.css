@@ -1,4 +1,20 @@
 /*
+ * The vendored typeface (ADR 0011).
+ *
+ * The same file `packages/typography` extracted its outlines from, so what the
+ * canvas draws on screen and what the exporters fill on paper are the same
+ * shapes. Never a system font: it would differ per machine and break both
+ * snapshot determinism and the promise that the screen previews the paper.
+ */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../../../assets/fonts/IBMPlexSans-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+/*
  * Slice 0.2 shell styling. Intentionally minimal — the editor's visual design
  * is a later exercise, once there is an editor.
  */

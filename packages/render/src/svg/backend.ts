@@ -1,4 +1,5 @@
 import { MatOps, SegmentOps, type Path, type Segment } from '@leathercad/geometry';
+import { outlinesOf } from '@leathercad/typography';
 
 import type { DisplayItem, DisplayList } from '../displayList.js';
 import { worldToScreen, type ViewportView } from '../view.js';
@@ -82,13 +83,21 @@ export function renderToSvgString(
           `<circle cx="${n(point.x)}" cy="${n(point.y)}" r="${radius}" fill="${item.fill}"/>`,
         );
       }
+    } else if (item.kind === 'document-text') {
+      // Outlines, not `<text>`: no font is referenced, so the file shows the
+      // same shapes in every viewer and cutter program, and a snapshot of it
+      // compares numbers rather than a font name (ADR 0011). Inside the world
+      // group, because the glyphs are in millimetres like everything else.
+      for (const outline of outlinesOf(item.placed)) {
+        parts.push(`<path d="${pathData(outline, n)}" fill="${item.colour}"/>`);
+      }
     }
   }
 
   parts.push('</g>');
 
   const texts = list.items.filter(
-    (i): i is Extract<DisplayItem, { kind: 'text' }> => i.kind === 'text',
+    (i): i is Extract<DisplayItem, { kind: 'overlay-text' }> => i.kind === 'overlay-text',
   );
   if (texts.length > 0) {
     parts.push(`<g font-family="${options.fontFamily ?? 'system-ui, sans-serif'}">`);

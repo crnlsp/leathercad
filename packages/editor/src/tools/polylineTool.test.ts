@@ -197,8 +197,8 @@ describe('polyline tool', () => {
     click(tool, ctx, { x: 0, y: 0 });
     tool.onPointerMove?.(ctx, pointer({ x: 10, y: 0 }));
 
-    const text = tool.buildOverlay?.(ctx).items.find((i) => i.kind === 'text');
-    expect(text?.kind === 'text' ? text.text : '').toContain('10.0 mm');
+    const text = tool.buildOverlay?.(ctx).items.find((i) => i.kind === 'overlay-text');
+    expect(text?.kind === 'overlay-text' ? text.text : '').toContain('10.0 mm');
   });
 });
 

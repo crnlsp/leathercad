@@ -1,6 +1,8 @@
 import type { Mm } from '@leathercad/core';
-import type { LayerRole, Part, ResolvedProject } from '@leathercad/domain';
+import type { LayerRole, ResolvedProject } from '@leathercad/domain';
 import { PathOps, RectOps, Shapes, type Path, type Rect } from '@leathercad/geometry';
+import { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from '@leathercad/render';
+import { outlinesOf, placedText } from '@leathercad/typography';
 
 /**
  * How a layer role is drawn on paper.
@@ -50,6 +52,24 @@ export interface ExportPath {
 }
 
 /**
+ * Text on paper: filled glyph outlines, never a font.
+ *
+ * Laid out once by `packages/typography` and written as paths, so no font is
+ * embedded in any export and every viewer and cutter program shows the same
+ * shapes (ADR 0011). `source` rides along for tests and diagnostics — nothing
+ * draws it.
+ */
+export interface ExportText {
+  readonly role: LayerRole;
+  readonly source: string;
+  readonly glyphs: readonly Path[];
+  readonly sizeMm: Mm;
+}
+
+// Size and placement come from `render`, so the caption above a piece on
+// screen is the caption above it on paper.
+
+/**
  * One part, ready to place on a page.
  *
  * Geometry is kept in its own coordinates with the bounds alongside, so the
@@ -60,6 +80,14 @@ export interface ExportPart {
   readonly name: string;
   readonly quantity: number;
   readonly paths: readonly ExportPath[];
+  /**
+   * The caption, in the part's own coordinates like its paths.
+   *
+   * Deliberately outside `boundsMm`, which stays the geometry's own box: the
+   * paginator packs the pieces, and a caption is allowed to sit in the gap
+   * above one.
+   */
+  readonly texts: readonly ExportText[];
   readonly boundsMm: Rect;
 }
 
@@ -112,11 +140,14 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
     );
     if (bounds === null) continue;
 
+    const name = describePart(resolvedPart.part);
+
     parts.push({
       id: resolvedPart.part.id,
-      name: describePart(resolvedPart.part),
+      name,
       quantity: resolvedPart.part.quantity,
       paths,
+      texts: [captionFor(name, bounds)],
       boundsMm: bounds,
     });
   }
@@ -124,8 +155,17 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
   return { projectName, parts };
 }
 
-/** "Card holder — cut 2", so a printed sheet is self-describing. */
-export function describePart(part: Part): string {
-  const name = part.name.trim() === '' ? 'Part' : part.name.trim();
-  return part.quantity > 1 ? `${name} — cut ${part.quantity}` : name;
+/** The caption above a piece, so a printed sheet says what each one is. */
+function captionFor(name: string, bounds: Rect): ExportText {
+  const placed = placedText(name, CAPTION_SIZE_MM, {
+    x: bounds.minX,
+    y: bounds.maxY + CAPTION_GAP_MM,
+  });
+
+  return {
+    role: 'annotation',
+    source: name,
+    glyphs: outlinesOf(placed),
+    sizeMm: CAPTION_SIZE_MM,
+  };
 }

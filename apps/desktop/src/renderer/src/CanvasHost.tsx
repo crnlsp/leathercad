@@ -1,6 +1,7 @@
 import { type DocumentStore } from '@leathercad/document';
 import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import { PathOps, RectOps, type Vec2 } from '@leathercad/geometry';
+import { FONT_FAMILY } from '@leathercad/typography';
 import {
   ToolManager,
   Viewport,
@@ -122,6 +123,17 @@ export function CanvasHost({
 
   // Any change to the document or selection means a repaint.
   useEffect(() => store.subscribe(invalidate), [store, invalidate]);
+
+  // The first frame can be painted before the vendored typeface has loaded,
+  // which would leave the captions in a fallback face. Repaint once it is
+  // here. The positions never change — they come from the layout, not from
+  // the browser — so this only affects the letterforms.
+  useEffect(() => {
+    void document.fonts.load(`16px "${FONT_FAMILY}"`).then(
+      () => invalidate(),
+      () => undefined,
+    );
+  }, [invalidate]);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;

@@ -43,6 +43,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   ANCHOR_MISSING: { ...named, anchor: 9, available: 4 },
   SOURCE_FAILED: { ...named, sourceId: 'f-2', sourceName: 'Outline' },
   GEOMETRY_FAILED: { ...named, detail: 'something the geometry layer said' },
+  TEXT_GLYPH_MISSING: { partId: 'p-1', partName: '漢', text: '漢', characters: '漢' },
   CONTOUR_SELF_INTERSECTS: { featureId: 'f-1', featureName: 'Outline', crossings: 1 },
   HOLE_SPACING_DEVIATION: { ...named, achievedMm: 5, pitchMm: 3.85 },
   HOLE_SPACING_UNEVEN: { ...named, narrowestMm: 3.7, widestMm: 4.1 },

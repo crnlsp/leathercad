@@ -72,7 +72,7 @@ runs headless — from tests, and from the CLI.
 ## 4. `ExportScene`
 
 ```ts
-interface ExportScene {                // built (slice 6.1); text arrives in 4.11
+interface ExportScene {                // built (slice 6.1); text built in 4.11a
   projectName: string;
   parts: ExportPart[];                 // the paginator places whole parts (slice 7.1)
 }
@@ -82,7 +82,7 @@ interface ExportPart {
   name: string;                        // the caption, generated: "Card holder — cut 2"
   quantity: number;
   paths: ExportPath[];                 // stitch holes included, as true-size circles
-  texts: ExportText[];                 // 4.11
+  texts: ExportText[];                 // built 4.11a: the part's caption
   boundsMm: Rect;                      // in the part's own coordinates
 }
 
@@ -94,7 +94,7 @@ interface ExportPath {
 
 // Laid out once by packages/typography and written as filled glyph outlines.
 // No font is embedded in any export (ADR 0011).
-interface ExportText {                 // 4.11
+interface ExportText {                 // built 4.11a
   role: LayerRole;
   source: string;                      // the string itself, for tests and diagnostics
   glyphs: readonly Path[];             // filled outlines, in millimetres

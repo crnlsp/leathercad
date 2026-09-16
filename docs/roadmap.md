@@ -588,7 +588,8 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 **The remaining work was reconciled as one design before any of it was built:** the
 [Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) and ADRs
 0009–0013. Slice numbers stay stable identifiers, but the build order follows the dependencies
-instead: **4.2b → 4.12a → 4.11 → 4.4b → 3.7b → 4.3 → 4.8 → 4.9 → 4.10 → 4.12**, then a close-out
+instead: **4.2b → 4.12a → 4.11a → 4.11b → 4.4b → 3.7b → 4.3 → 4.8 → 4.9 → 4.10 → 4.12**, then a
+close-out
 that walks one scenario through the whole phase.
 
 - **4.1** ✅ **Done.** `Part`, `Feature` (cut contour, stitch line, fold line, marking line),
@@ -721,11 +722,24 @@ that walks one scenario through the whole phase.
   reference anchors, centres or extents, never segment indices or free points
   ([ADR 0010](adr/0010-anchors-address-geometry.md)). Values are generated and set through the
   typography of 4.11.
-- **4.11** Typography ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)): one vendored
-  OFL typeface, a pure `packages/typography` laying text out once in millimetres, the font on screen
-  and outlines on paper. Helvetica leaves the PDF writer, which **fixes export failing on Polish
-  names** — pdf-lib's standard fonts cannot encode `ł` or `ę`, verified. Part captions on the canvas;
-  free text labels. **Built third**, because that export failure is live.
+- **4.11a** ✅ **Done.** Typography ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md),
+  [design](superpowers/specs/2026-09-16-typography-design.md)): IBM Plex Sans vendored in
+  `assets/fonts/` with its OFL licence, a pure `packages/typography` laying text out once in
+  millimetres, the font on screen and outlines on paper. Helvetica left the PDF writer and **no
+  font is embedded in any export**, which **fixes export failing on Polish names** — pdf-lib's
+  standard fonts cannot encode `ł` or `ę`. Part captions on the canvas, in the same words and size
+  the printed sheet uses.
+  **Document text and overlay text are different item kinds**, sized in millimetres and pixels
+  respectively, so an exporter cannot be handed a screen readout by accident.
+  **Nothing parses a font at run time**: `pnpm fonts:generate` extracts 331 glyphs and 12 910
+  kerning pairs at development time and the data is committed.
+  Gotchas: `MatOps.compose` is chronological, so a glyph is scaled *then* translated — the other
+  order scales the position too, which a placement test caught; `⌀` is not in the typeface, so a
+  diameter is written `Ø`; pdf-lib gives every page an empty `/Font` dictionary of its own accord,
+  so "no font embedded" means "nothing ever put in it"; and `Ł` legitimately overhangs its advance
+  width, which a too-strict property test found and now pins as a fact.
+- **4.11b** Free text labels: a `text-label` feature kind, its editor, the format version bump and
+  its fixture. Split from 4.11a because it is the only part that persists anything.
 - **4.12a** ✅ **Done.** The diagnostic channel
   ([ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md),
   [design](superpowers/specs/2026-09-15-diagnostic-channel-design.md)): typed evaluation failures,

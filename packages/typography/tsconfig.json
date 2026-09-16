@@ -2,8 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": ".",
-    "lib": ["ES2023", "DOM"]
+    "rootDir": "."
   },
   "include": ["src/**/*.ts"],
   "references": [
@@ -12,12 +11,6 @@
     },
     {
       "path": "../geometry"
-    },
-    {
-      "path": "../typography"
-    },
-    {
-      "path": "../domain"
     }
   ]
 }

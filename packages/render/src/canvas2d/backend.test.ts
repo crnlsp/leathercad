@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { arc, cubic, line, PathOps } from '@leathercad/geometry';
 
-import { pathItem, textItem, dotsItem } from '../displayList.js';
+import { documentTextItem, pathItem, textItem, dotsItem } from '../displayList.js';
 import type { ViewportView } from '../view.js';
 import { clearCanvas, renderDisplayList, tracePath, type Canvas2DLike } from './backend.js';
 
@@ -235,6 +235,41 @@ describe('renderDisplayList', () => {
       .lastIndexOf('setTransform(1.0000,0.0000,0.0000,1.0000,0.0000,0.0000)');
     expect(identityBefore).toBeGreaterThan(-1);
     expect(ctx.calls[textIndex]).toBe('fillText(hello,400.0000,300.0000)');
+  });
+
+  it('draws document text glyph by glyph, where the layout put them', () => {
+    // ADR 0011: the layout happens once, in millimetres, and the canvas places
+    // the font at those positions. Drawing the whole string in one call would
+    // let the browser's own measurement disagree with the paper's.
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      { items: [documentTextItem('annotation', { x: 0, y: 0 }, 'ab', 4)] },
+      view,
+    );
+
+    const drawn = ctx.calls.filter((c) => c.startsWith('fillText'));
+    expect(drawn).toHaveLength(2);
+    expect(drawn[0]).toContain('fillText(a,');
+    expect(drawn[1]).toContain('fillText(b,');
+    // The second glyph sits to the right of the first, by its advance.
+    const xOf = (call: string): number => Number(call.split(',')[1]);
+    expect(xOf(drawn[1]!)).toBeGreaterThan(xOf(drawn[0]!));
+  });
+
+  it('sizes document text in millimetres, so it scales with the zoom', () => {
+    const near = new Recorder();
+    const far = new Recorder();
+    const item = documentTextItem('annotation', { x: 0, y: 0 }, 'A', 4);
+
+    renderDisplayList(near, { items: [item] }, { ...view, scale: 4 });
+    renderDisplayList(far, { items: [item] }, { ...view, scale: 2 });
+
+    // 4 mm at 4 px/mm is 16 px; at 2 px/mm it is 8. Overlay text would have
+    // been the same size in both.
+    expect(near.calls.some((c) => c.includes('font'))).toBe(false);
+    expect(near.font).toBe('16px "IBM Plex Sans", sans-serif');
+    expect(far.font).toBe('8px "IBM Plex Sans", sans-serif');
   });
 
   it('does not clear the canvas, so it can be layered over a grid', () => {

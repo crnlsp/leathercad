@@ -3,6 +3,11 @@ import { PathOps, Shapes } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
+import type { DisplayItem } from './displayList.js';
+
+/** Everything except the part caption, which every part now carries. */
+const drawing = (items: readonly DisplayItem[]): DisplayItem[] =>
+  items.filter((item) => item.kind !== 'document-text');
 
 const outline: Feature = {
   id: 'cut-1',
@@ -35,8 +40,8 @@ const failedAt = PathOps.polyline(
   false,
 );
 
-function resolved(features: Feature[], failed: string[] = []): ResolvedProject {
-  const part: Part = { id: 'part-1', name: 'Panel', quantity: 1, features };
+function resolved(features: Feature[], failed: string[] = [], override?: Part): ResolvedProject {
+  const part: Part = override ?? { id: 'part-1', name: 'Panel', quantity: 1, features };
   return {
     project: {
       id: 'p',
@@ -100,7 +105,7 @@ const crossings: Diagnostic = {
 
 describe('diagnostics on the canvas', () => {
   it('draws nothing extra when nothing is wrong', () => {
-    expect(buildDisplayList(resolved([outline])).items).toHaveLength(1);
+    expect(drawing(buildDisplayList(resolved([outline])).items)).toHaveLength(1);
   });
 
   it('draws the geometry a failed feature was built from, dashed, in the severity colour', () => {
@@ -110,8 +115,8 @@ describe('diagnostics on the canvas', () => {
       diagnostics: [collapse],
     });
 
-    expect(list.items).toHaveLength(2);
-    const marker = list.items[1]!;
+    expect(drawing(list.items)).toHaveLength(2);
+    const marker = list.items[list.items.length - 1]!;
     expect(marker.kind).toBe('path');
     if (marker.kind !== 'path') return;
     expect(marker.path).toBe(failedAt);
@@ -121,7 +126,7 @@ describe('diagnostics on the canvas', () => {
 
   it('marks where an outline crosses itself', () => {
     const list = buildDisplayList(resolved([outline]), { diagnostics: [crossings] });
-    const marker = list.items[1]!;
+    const marker = list.items[list.items.length - 1]!;
 
     expect(marker.kind).toBe('dots');
     if (marker.kind !== 'dots') return;
@@ -139,5 +144,40 @@ describe('diagnostics on the canvas', () => {
       diagnostics: [crossings],
     });
     expect(list.items).toEqual([]);
+  });
+});
+
+describe('part captions', () => {
+  it('names each part above it, in millimetres', () => {
+    const caption = buildDisplayList(resolved([outline])).items.find(
+      (item) => item.kind === 'document-text',
+    );
+
+    expect(caption).toBeDefined();
+    if (caption?.kind !== 'document-text') return;
+    expect(caption.placed.layout.text).toBe('Panel');
+    // Document text is sized in millimetres, never pixels: it is part of the
+    // drawing, and the same caption prints on the sheet.
+    expect(caption.sizeMm).toBeGreaterThan(0);
+    // Above the panel's top edge (Y is up).
+    expect(caption.placed.origin.y).toBeGreaterThan(60);
+  });
+
+  it('says how many to cut, the same words the printed sheet uses', () => {
+    const list = buildDisplayList(
+      resolved([outline], [], { id: 'part-1', name: 'Gusset', quantity: 2, features: [outline] }),
+    );
+    const caption = list.items.find((item) => item.kind === 'document-text');
+
+    expect(caption?.kind === 'document-text' && caption.placed.layout.text).toBe('Gusset — cut 2');
+  });
+
+  it('leaves an empty part uncaptioned, having nothing to caption', () => {
+    expect(buildDisplayList(resolved([])).items).toEqual([]);
+  });
+
+  it('can be turned off', () => {
+    const list = buildDisplayList(resolved([outline]), { captions: false });
+    expect(list.items.every((item) => item.kind !== 'document-text')).toBe(true);
   });
 });

@@ -1,7 +1,10 @@
 import type { Diagnostic, FeatureId, ResolvedProject, Severity } from '@leathercad/domain';
+import { PathOps, RectOps, type Rect } from '@leathercad/geometry';
 
+import { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from './captions.js';
 import {
   ROLE_STROKES,
+  documentTextItem,
   dotsItem,
   pathItem,
   type DisplayItem,
@@ -20,6 +23,11 @@ export interface BuildOptions {
    * a feature that cannot resolve from simply vanishing (domain-model.md §4.4).
    */
   readonly diagnostics?: readonly Diagnostic[];
+  /**
+   * Name each part above it, as the printed sheet does. On by default: a part
+   * is the thing the user is designing, and an unlabelled rectangle is not.
+   */
+  readonly captions?: boolean;
 }
 
 const SELECTION_COLOUR = '#ffcc44';
@@ -48,9 +56,14 @@ export function buildDisplayList(
   const hidden = new Set<FeatureId>();
 
   for (const part of resolved.parts) {
+    const drawn: Rect[] = [];
+
     for (const entry of part.features) {
       if (!entry.feature.visible) hidden.add(entry.feature.id);
       if (!entry.ok || !entry.feature.visible) continue;
+
+      const box = PathOps.bbox(entry.path);
+      if (box !== null) drawn.push(box);
 
       const isSelected = selected.has(entry.feature.id);
 
@@ -77,6 +90,21 @@ export function buildDisplayList(
           isSelected
             ? { colour: highlight, widthPx: ROLE_STROKES[entry.role].widthPx + 1 }
             : undefined,
+        ),
+      );
+    }
+
+    // The caption is document text: the same words, size and position the
+    // printed sheet uses, so the screen is a preview of the paper rather than
+    // a different drawing.
+    const bounds = RectOps.unionAll(drawn);
+    if ((options.captions ?? true) && bounds !== null) {
+      items.push(
+        documentTextItem(
+          'annotation',
+          { x: bounds.minX, y: bounds.maxY + CAPTION_GAP_MM },
+          describePart(part.part),
+          CAPTION_SIZE_MM,
         ),
       );
     }

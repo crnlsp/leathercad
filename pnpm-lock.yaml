@@ -11,6 +11,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.9.1(supports-color@7.2.0))
+      '@ibm/plex-sans':
+        specifier: 1.1.0
+        version: 1.1.0
       '@playwright/test':
         specifier: ^1.62.1
         version: 1.62.1
@@ -29,6 +32,9 @@ importers:
       fast-check:
         specifier: ^4.9.0
         version: 4.9.0
+      opentype.js:
+        specifier: 2.0.0
+        version: 2.0.0
       pdfjs-dist:
         specifier: ^6.3.289
         version: 6.3.289
@@ -47,6 +53,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@leathercad/typography':
+        specifier: workspace:*
+        version: link:../../packages/typography
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -122,6 +131,9 @@ importers:
       '@leathercad/geometry':
         specifier: workspace:*
         version: link:../geometry
+      '@leathercad/typography':
+        specifier: workspace:*
+        version: link:../typography
 
   packages/editor:
     dependencies:
@@ -152,6 +164,12 @@ importers:
       '@leathercad/geometry':
         specifier: workspace:*
         version: link:../geometry
+      '@leathercad/render':
+        specifier: workspace:*
+        version: link:../render
+      '@leathercad/typography':
+        specifier: workspace:*
+        version: link:../typography
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -194,6 +212,18 @@ importers:
       '@leathercad/domain':
         specifier: workspace:*
         version: link:../domain
+      '@leathercad/geometry':
+        specifier: workspace:*
+        version: link:../geometry
+      '@leathercad/typography':
+        specifier: workspace:*
+        version: link:../typography
+
+  packages/typography:
+    dependencies:
+      '@leathercad/core':
+        specifier: workspace:*
+        version: link:../core
       '@leathercad/geometry':
         specifier: workspace:*
         version: link:../geometry
@@ -503,6 +533,13 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@ibm/plex-sans@1.1.0':
+    resolution: {integrity: sha512-WPgvO6Yfj2w5YbhyAr1tv95RUz4LRJlqN+CmYvBglabXteufP1D1E9BABMde+ZIKdRbFJDoKF5eQzfhpnbgZcQ==}
+
+  '@ibm/telemetry-js@1.11.0':
+    resolution: {integrity: sha512-RO/9j+URJnSfseWg9ZkEX9p+a3Ousd33DBU7rOafoZB08RqdzxFVYJ2/iM50dkBuD0o7WX7GYt1sLbNgCoE+pA==}
+    hasBin: true
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -1324,6 +1361,10 @@ packages:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
 
+  opentype.js@2.0.0:
+    resolution: {integrity: sha512-kCyjv6xdDY1W/jLWZ/L3QhhTlKUqDZMQ5+Jdlw12b3dXkKNpYBqqlMMj0YDQPShWFTMwgZI1hG14kN3XUDSg/A==}
+    hasBin: true
+
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
@@ -1926,6 +1967,12 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@ibm/plex-sans@1.1.0':
+    dependencies:
+      '@ibm/telemetry-js': 1.11.0
+
+  '@ibm/telemetry-js@1.11.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -2656,6 +2703,8 @@ snapshots:
   node-releases@2.0.54: {}
 
   obug@2.1.4: {}
+
+  opentype.js@2.0.0: {}
 
   optionator@0.9.4:
     dependencies:

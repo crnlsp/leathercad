@@ -136,9 +136,10 @@ Strict, one-directional dependency graph. An arrow means "may import".
                                 │   platform   │  PlatformHost — the OS boundary (§5).
                                 └──────────────┘  Implemented by apps/desktop, faked in tests.
 
-     typography ─depends on─▶ core, geometry   (pure: glyph metrics, outlines, layout in mm — 4.11)
-     render   ──depends on──▶ typography, for document text
-     export   ──depends on──▶ domain, geometry, render(display-list types only), typography
+     typography ─depends on─▶ core, geometry   (pure: glyph outlines and layout in mm — built 4.11a)
+     domain   ──depends on──▶ typography, to ask whether a string can be printed (DR5)
+     render   ──depends on──▶ typography, for document text and part captions
+     export   ──depends on──▶ domain, geometry, render (captions, display-list types), typography
      print    ──depends on──▶ export
      ui, cli  ──depend on───▶ platform, for file and dialog access
      cli      ──depends on──▶ everything except ui/editor/desktop

@@ -2,5 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "outDir": "dist", "rootDir": "." },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../core" }, { "path": "../geometry" }, { "path": "../domain" }]
+  "references": [
+    { "path": "../core" },
+    { "path": "../geometry" },
+    { "path": "../typography" },
+    { "path": "../domain" },
+    { "path": "../render" }
+  ]
 }

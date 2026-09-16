@@ -146,9 +146,9 @@ describe('rectangle tool', () => {
     const overlay = tool.buildOverlay?.(ctx).items ?? [];
     expect(overlay.length).toBeGreaterThan(0);
     // Live dimensions matter more than the rubber band in a millimetre tool.
-    const label = overlay.find((item) => item.kind === 'text');
+    const label = overlay.find((item) => item.kind === 'overlay-text');
     expect(label).toBeDefined();
-    if (label?.kind === 'text') expect(label.text).toBe('40.0 × 25.0 mm');
+    if (label?.kind === 'overlay-text') expect(label.text).toBe('40.0 × 25.0 mm');
   });
 
   it('Escape abandons the drag and writes nothing', () => {

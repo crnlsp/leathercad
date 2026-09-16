@@ -1,22 +1,23 @@
 import type { Mm } from '@leathercad/core';
 import { EXPORT_TOLERANCE_MM, SegmentOps, type Path, type Vec2 } from '@leathercad/geometry';
+import { outlinesOf, placedText, type TextPlacement } from '@leathercad/typography';
 import {
   PDFDocument,
   PrintScaling,
-  StandardFonts,
   appendBezierCurve,
   closePath,
+  fill,
   lineTo,
   moveTo,
   popGraphicsState,
   pushGraphicsState,
   restoreDashPattern,
   setDashPattern,
+  setFillingGrayscaleColor,
   setLineCap,
   setLineWidth,
   setStrokingGrayscaleColor,
   stroke,
-  type PDFFont,
   type PDFPage,
 } from 'pdf-lib';
 
@@ -28,7 +29,7 @@ import {
   sheetSizeMm,
   type PageSetup,
 } from '../paper.js';
-import type { ExportPath, ExportScene } from '../scene.js';
+import type { ExportPath, ExportScene, ExportText } from '../scene.js';
 
 export interface PdfExportOptions {
   readonly setup?: PageSetup;
@@ -43,6 +44,15 @@ export interface PdfExportResult {
 }
 
 const APP_NAME = 'LeatherCAD';
+
+/**
+ * Page furniture, in millimetres.
+ *
+ * Everything printed is sized in millimetres now, including the text: there is
+ * no font to ask for a point size any more, only outlines at a height.
+ */
+const INSTRUCTION_SIZE_MM = 2.8;
+const NOTE_SIZE_MM = 2.5;
 
 /**
  * Writes a print-ready PDF at exactly 1:1.
@@ -79,7 +89,9 @@ export async function exportPdf(
   // print dialog to Actual size rather than Fit to page.
   document.catalog.getOrCreateViewerPreferences().setPrintScaling(PrintScaling.None);
 
-  const font = await document.embedFont(StandardFonts.Helvetica);
+  // No font is embedded, in this or any other export: every string is written
+  // as filled glyph outlines (ADR 0011). That is also what fixes export on a
+  // part named "Przegroda główna" — pdf-lib's standard fonts cannot encode ł.
   const sheet = sheetSizeMm(setup);
 
   // An empty project still yields one page, so the user gets a file rather
@@ -88,7 +100,7 @@ export async function exportPdf(
 
   for (const page of pages) {
     const pdfPage = document.addPage([mmToPt(sheet.widthMm), mmToPt(sheet.heightMm)]);
-    drawPage(pdfPage, page, pages.length, scene, setup, font, now());
+    drawPage(pdfPage, page, pages.length, scene, setup, now());
   }
 
   return { bytes: await document.save(), pagination };
@@ -100,7 +112,6 @@ function drawPage(
   pageCount: number,
   scene: ExportScene,
   setup: PageSetup,
-  font: PDFFont,
   now: Date,
 ): void {
   for (const placement of layout.placements) {
@@ -108,19 +119,48 @@ function drawPage(
       drawPath(page, item, placement.offsetMm);
     }
 
-    // The part's name sits just above its bounding box, so a printed sheet
-    // says what each piece is without needing the screen.
-    const label = placement.part.name;
-    page.drawText(label, {
-      x: mmToPt(placement.offsetMm.x + placement.part.boundsMm.minX),
-      y: mmToPt(placement.offsetMm.y + placement.part.boundsMm.maxY + 1.5),
-      size: 8,
-      font,
-    });
+    // The caption was laid out with the part, in the part's own coordinates,
+    // so it travels with it to wherever the paginator put the piece.
+    for (const text of placement.part.texts) {
+      drawText(page, text, placement.offsetMm);
+    }
   }
 
-  drawVerificationBlock(page, setup, font);
-  drawFooter(page, setup, font, scene, layout.index + 1, pageCount, now);
+  drawVerificationBlock(page, setup);
+  drawFooter(page, setup, scene, layout.index + 1, pageCount, now);
+}
+
+/** Fills one laid-out string's glyph outlines. */
+function drawText(page: PDFPage, text: ExportText, offsetMm: Vec2, grey = 0): void {
+  if (text.glyphs.length === 0) return;
+
+  const operators = [
+    pushGraphicsState(),
+    setFillingGrayscaleColor(grey),
+    ...text.glyphs.flatMap((glyph) => tracePath(glyph, offsetMm)),
+    // Non-zero winding, as TrueType outlines assume: the counter of an "o"
+    // comes out as a hole rather than a filled blob.
+    fill(),
+    popGraphicsState(),
+  ];
+
+  page.pushOperators(...operators);
+}
+
+/** Lays out and fills a line of page furniture — not part of the design. */
+function drawFurniture(
+  page: PDFPage,
+  content: string,
+  sizeMm: Mm,
+  at: Vec2,
+  placement: TextPlacement = {},
+): void {
+  const placed = placedText(content, sizeMm, at, placement);
+  drawText(
+    page,
+    { role: 'annotation', source: content, glyphs: outlinesOf(placed), sizeMm },
+    { x: 0, y: 0 },
+  );
 }
 
 /** Emits one path in millimetre-derived points. */
@@ -181,7 +221,7 @@ function samePoint(a: Vec2, b: Vec2): boolean {
  * Costs a few square centimetres of margin and turns a silent, expensive
  * failure into a five-second check with a steel rule. Not optional.
  */
-function drawVerificationBlock(page: PDFPage, setup: PageSetup, font: PDFFont): void {
+function drawVerificationBlock(page: PDFPage, setup: PageSetup): void {
   const sheet = sheetSizeMm(setup);
   const baseY = setup.marginsMm.bottom + 8;
   const x = setup.marginsMm.left;
@@ -205,25 +245,21 @@ function drawVerificationBlock(page: PDFPage, setup: PageSetup, font: PDFFont): 
       stroke(),
       popGraphicsState(),
     );
-    page.drawText('50 mm', {
-      x: mmToPt(squareX + 2),
-      y: mmToPt(squareY + squareSize - 5),
-      size: 7,
-      font,
-    });
+    drawFurniture(page, '50 mm', NOTE_SIZE_MM, { x: squareX + 2, y: squareY + squareSize - 5 });
   }
 
-  page.drawText('Print at 100% / Actual size — do not scale or fit to page.', {
-    x: mmToPt(x),
-    y: mmToPt(baseY + 16),
-    size: 8,
-    font,
-  });
-  page.drawText('Measure the 100 mm ruler or the 50 mm square to confirm.', {
-    x: mmToPt(x),
-    y: mmToPt(baseY + 11.5),
-    size: 7,
-    font,
+  drawFurniture(
+    page,
+    'Print at 100% / Actual size — do not scale or fit to page.',
+    INSTRUCTION_SIZE_MM,
+    {
+      x,
+      y: baseY + 16,
+    },
+  );
+  drawFurniture(page, 'Measure the 100 mm ruler or the 50 mm square to confirm.', NOTE_SIZE_MM, {
+    x,
+    y: baseY + 11.5,
   });
 }
 
@@ -250,7 +286,6 @@ function drawRuler(page: PDFPage, x: Mm, y: Mm, lengthMm: Mm): void {
 function drawFooter(
   page: PDFPage,
   setup: PageSetup,
-  font: PDFFont,
   scene: ExportScene,
   pageNumber: number,
   pageCount: number,
@@ -265,13 +300,16 @@ function drawFooter(
   const left = `${name} · ${date} · ${APP_NAME}`;
   const right = `Page ${pageNumber} of ${pageCount} · 1:1`;
 
-  page.drawText(left, { x: mmToPt(setup.marginsMm.left), y: mmToPt(y), size: 7, font });
-  page.drawText(right, {
-    x: mmToPt(sheet.widthMm - setup.marginsMm.right) - font.widthOfTextAtSize(right, 7),
-    y: mmToPt(y),
-    size: 7,
-    font,
-  });
+  drawFurniture(page, left, NOTE_SIZE_MM, { x: setup.marginsMm.left, y });
+  // Right-aligned by the layout's own measurement, rather than by asking a
+  // font how wide it thinks the string is.
+  drawFurniture(
+    page,
+    right,
+    NOTE_SIZE_MM,
+    { x: sheet.widthMm - setup.marginsMm.right, y },
+    { align: 'right' },
+  );
 }
 
 /** The millimetre area a pattern may occupy, for callers checking fit. */

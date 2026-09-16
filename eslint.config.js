@@ -75,6 +75,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.d.ts',
       'dependency-graph.svg',
+      // Machine-written glyph outlines; regenerate rather than edit.
+      'packages/typography/src/generated/**',
     ],
   },
 
@@ -120,6 +122,21 @@ export default tseslint.config(
     rules: {
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+
+  {
+    // Development-time scripts: Node programs, run by hand or by a package
+    // script, never bundled. `pnpm fonts:generate` is one.
+    files: ['packages/*/tools/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 'off',
     },
   },
 

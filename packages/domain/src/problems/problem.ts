@@ -84,6 +84,17 @@ export interface ProblemFacts {
   readonly ANCHOR_MISSING: About & { readonly anchor: number; readonly available: number };
   readonly SOURCE_FAILED: About & { readonly sourceId: FeatureId; readonly sourceName: string };
   readonly GEOMETRY_FAILED: About & { readonly detail: string };
+  /**
+   * Text the vendored typeface cannot print. Carries the part for now; slice
+   * 4.11b widens it when text labels become features of their own.
+   */
+  readonly TEXT_GLYPH_MISSING: {
+    readonly partId: PartId;
+    readonly partName: string;
+    readonly text: string;
+    /** The distinct characters with no glyph, in the order they appear. */
+    readonly characters: string;
+  };
 
   // ——— Design rules (DR): legal, and probably wrong for leather ———
   readonly CONTOUR_SELF_INTERSECTS: About & { readonly crossings: number };

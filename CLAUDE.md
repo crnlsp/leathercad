@@ -43,6 +43,7 @@ pnpm typecheck        # tsc --build
 pnpm lint
 pnpm format           # prettier; markdown is deliberately excluded
 pnpm depcruise        # layering violations — must pass
+pnpm fonts:generate   # re-extract glyph outlines from assets/fonts/ (ADR 0011); output is committed
 ```
 
 Not yet implemented. Each exits with a pointer to the roadmap slice that adds it — implement it
@@ -64,12 +65,13 @@ Dependencies point downward only; `pnpm depcruise` enforces it.
 core       ids, Result, epsilons, quantise
 platform   PlatformHost — the OS boundary (files, dialogs, printing)          → core
 geometry   PURE mm maths: Vec2, Segment, Path, offset, intersect, distribute   → core
-domain     Part, Feature, derivation graph, stitching, validation              → geometry
+typography PURE text: vendored glyph outlines, layout in mm                    → core, geometry
+domain     Part, Feature, derivation graph, stitching, validation              → geometry, typography
 document   Document, Command, undo/redo, selection                            → domain
 persist    .lcp container, zod schemas, migrations                            → domain
-render     DisplayList, canvas2d + svg backends                               → domain
+render     DisplayList, canvas2d + svg backends                               → domain, typography
 editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
-export     ExportScene, svg/pdf/dxf writers                                   → domain, render
+export     ExportScene, svg/pdf/dxf writers                            → domain, render, typography
 print      paginate, registration, calibration                                → export
 ui         React panels and dialogs                                           → editor
 cli        `lcad` — used by slash commands and CI                             → everything but ui
@@ -87,7 +89,8 @@ Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run head
 - Ids are ULIDs from `core/id.ts` with an injectable entropy source. Never `Math.random()` directly.
 - Nothing in a serialisation path calls `Date.now()` — take a clock as a parameter.
 - Fonts are vendored in `assets/fonts/`. Never use a system font: it breaks PDF output and snapshot
-  determinism.
+  determinism. Nothing parses a font at run time — `packages/typography` ships glyph outlines
+  extracted at development time, and exports fill those outlines rather than embedding a font.
 - Stroke widths are **screen-constant** on canvas and **true millimetres** in export.
 - Every new dependency needs an ADR in `docs/adr/`.
 

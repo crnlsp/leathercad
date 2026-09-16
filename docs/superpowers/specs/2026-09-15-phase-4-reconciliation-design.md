@@ -372,7 +372,8 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 |---|---|---|---|
 | 1 | **4.2b** Reference graph and deletion | Compatibility table · `planDelete` and the dialog (delete / freeze / cancel) · re-point (*Follows*) · parts kept when emptied · refusal queries for cycles and derived moves · loader checks S2–S4 | — |
 | 2 | **4.12a** Diagnostic channel | Typed failures · `OFFSET_SPLIT` (D3) · `validate()` with the stitch and offset rules · problems panel (list and select) · failed features drawn as warnings (D4) | 4.2b |
-| 3 | **4.11** Typography | Vendored typeface · `packages/typography` · millimetre text items · outlines in SVG and PDF · Helvetica removed (D1) · part captions on canvas · text labels | — |
+| 3 | **4.11a** Typography ✅ | Vendored typeface · `packages/typography` · millimetre text items · outlines in SVG and PDF · Helvetica removed (D1) · part captions on canvas | — |
+| 3b | **4.11b** Text labels | The `text-label` feature kind, its editor, format bump and fixture | 4.11a |
 | 4 | **4.4b** Anchors through derivations | Offset corner correspondence · hole sets expose their line's anchors · `ANCHOR_MISSING` | 4.12a |
 | 5 | **3.7b** Reflections | `transformShape` reflects correctly (D2), property-tested against transforming the evaluated path · a Flip command | — |
 | 6 | **4.3** Parts panel and cut-outs | Part selection · dependency tree · delete and duplicate part · visibility and lock (D8) · drawing modes (§3.8) · material-relative inward (D6) · defaults from settings (D7) · part rules · loader checks S5–S6 | 4.2b, 4.12a |
@@ -441,5 +442,8 @@ levels, what lock means, and keeping emptied parts.
 ## 11. Decided, and still to approve
 
 - **The typeface: IBM Plex Sans**, chosen on 2026-09-15 for the reasons in ADR 0011.
-- **Two approvals still needed when 4.11 starts:** downloading the font files (from IBM's release,
-  OFL licensed), and adding a development dependency to extract glyph outlines.
+- **Both approvals were given on 2026-09-16**, when 4.11a started: the font files come from the
+  `@ibm/plex-sans` package and are committed to `assets/fonts/`, and `opentype.js` extracts the
+  glyph outlines at development time. IBM's telemetry postinstall is declined in
+  `pnpm-workspace.yaml`. See the
+  [typography design](2026-09-16-typography-design.md).

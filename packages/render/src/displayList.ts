@@ -1,5 +1,7 @@
+import type { Mm } from '@leathercad/core';
 import type { LayerRole } from '@leathercad/domain';
 import type { Path, Vec2 } from '@leathercad/geometry';
+import { placedText, type PlacedText, type TextPlacement } from '@leathercad/typography';
 
 export interface Stroke {
   readonly colour: string;
@@ -30,8 +32,28 @@ export type DisplayItem =
       readonly radiusPx: number;
       readonly fill: string;
     }
+  /**
+   * Text that can reach paper: a part caption, a dimension value.
+   *
+   * Sized in **millimetres** and laid out once by `typography`, so the canvas
+   * and the exporters place the same glyphs in the same places (ADR 0011).
+   */
   | {
-      readonly kind: 'text';
+      readonly kind: 'document-text';
+      readonly role: LayerRole;
+      readonly placed: PlacedText;
+      readonly sizeMm: Mm;
+      readonly colour: string;
+    }
+  /**
+   * Text that never leaves the screen: a rubber-band readout, a snap hint.
+   *
+   * Sized in **pixels**, because it is chrome rather than content — it should
+   * stay the same size as the user zooms. A separate item kind, so an export
+   * cannot be handed it by accident.
+   */
+  | {
+      readonly kind: 'overlay-text';
       readonly role: LayerRole;
       readonly at: Vec2;
       readonly text: string;
@@ -69,6 +91,29 @@ export function pathItem(role: LayerRole, path: Path, stroke?: Partial<Stroke>):
   return { kind: 'path', role, path, stroke: { ...ROLE_STROKES[role], ...stroke } };
 }
 
+/**
+ * Text in millimetres, laid out and placed in one step.
+ *
+ * `at` means whatever `placement` says it means — the left end of the
+ * baseline by default, the centre of the run when centred.
+ */
+export function documentTextItem(
+  role: LayerRole,
+  at: Vec2,
+  text: string,
+  sizeMm: Mm,
+  placement: TextPlacement = {},
+  colour?: string,
+): DisplayItem {
+  return {
+    kind: 'document-text',
+    role,
+    placed: placedText(text, sizeMm, at, placement),
+    sizeMm,
+    colour: colour ?? ROLE_STROKES[role].colour,
+  };
+}
+
 export function dotsItem(
   role: LayerRole,
   points: readonly Vec2[],
@@ -85,7 +130,14 @@ export function textItem(
   sizePx = 11,
   colour?: string,
 ): DisplayItem {
-  return { kind: 'text', role, at, text, sizePx, colour: colour ?? ROLE_STROKES[role].colour };
+  return {
+    kind: 'overlay-text',
+    role,
+    at,
+    text,
+    sizePx,
+    colour: colour ?? ROLE_STROKES[role].colour,
+  };
 }
 
 /** Millimetre bounds of everything in the list, or null when it is empty. */
@@ -114,6 +166,14 @@ export function displayListBounds(list: DisplayList): { min: Vec2; max: Vec2 } |
       }
     } else if (item.kind === 'dots') {
       for (const point of item.points) include(point);
+    } else if (item.kind === 'document-text') {
+      // The baseline's two ends: enough for fit-to-content, and in
+      // millimetres, unlike overlay text.
+      include(item.placed.origin);
+      include({
+        x: item.placed.origin.x + item.placed.layout.widthMm,
+        y: item.placed.origin.y + item.placed.layout.ascentMm,
+      });
     } else {
       include(item.at);
     }

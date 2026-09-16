@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { DEFAULT_SETTINGS, evaluate, type Project } from '@leathercad/domain';
 import { uniformRadii } from '@leathercad/geometry';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, type PDFDict } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_PAGE_SETUP, contentAreaMm, mmToPt, sheetSizeMm } from '../paper.js';
@@ -111,6 +111,56 @@ async function pdfFor(project: Project): Promise<Uint8Array> {
   const { bytes } = await exportPdf(scene, { now: FIXED_NOW, applicationVersion: 'test' });
   return bytes;
 }
+
+describe('text on paper', () => {
+  /** The name of every part in the project, and the project itself, renamed. */
+  function renamed(project: Project, name: string): Project {
+    return {
+      ...project,
+      name,
+      parts: project.parts.map((part) => ({ ...part, name })),
+    };
+  }
+
+  it('exports a part named in Polish, which is why typography was vendored', async () => {
+    // The live defect ADR 0011 was written for: pdf-lib's standard fonts are
+    // WinAnsi, which has no ł, so `page.drawText` threw and the user could not
+    // export their project at all. Outlines have no encoding to fall outside.
+    const project = renamed(projectWithRect(80, 50), 'Przegroda główna');
+
+    await expect(pdfFor(project)).resolves.toBeInstanceOf(Uint8Array);
+  });
+
+  it.each(['Pasek zapięcia', 'Łódź', 'Ćwiek', 'Żabka'])('exports a part named %s', async (name) => {
+    await expect(pdfFor(renamed(projectWithRect(60, 40), name))).resolves.toBeInstanceOf(
+      Uint8Array,
+    );
+  });
+
+  it('embeds no font at all, in any page', async () => {
+    // Every string is filled outlines. A cutter program that mishandles
+    // embedded fonts has nothing to mishandle. pdf-lib gives every page an
+    // empty /Font dictionary of its own accord; what matters is that nothing
+    // is ever put in it.
+    const bytes = await pdfFor(renamed(projectWithRect(80, 50), 'Przegroda główna'));
+    const document = await PDFDocument.load(bytes);
+
+    expect(document.getPages()).not.toHaveLength(0);
+    for (const page of document.getPages()) {
+      const fonts = page.node.Resources()?.get(PDFName.of('Font'));
+      expect(fonts === undefined || (fonts as PDFDict).entries().length === 0).toBe(true);
+    }
+  });
+
+  it('writes the caption as filled paths, so it is visibly on the page', async () => {
+    const plain = await pdfFor(projectWithRect(80, 50));
+    const longer = await pdfFor(renamed(projectWithRect(80, 50), 'A very much longer caption'));
+
+    // More letters, more outlines, so a longer name makes a larger content
+    // stream — the caption really is being drawn rather than dropped.
+    expect(longer.byteLength).toBeGreaterThan(plain.byteLength);
+  });
+});
 
 describe('document structure', () => {
   it('sets the MediaBox to A4 in points, exactly', () => {

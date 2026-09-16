@@ -1,7 +1,13 @@
 import { arc, cubic, path, polyline, vec } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
-import { dotsItem, pathItem, textItem, type DisplayList } from '../displayList.js';
+import {
+  documentTextItem,
+  dotsItem,
+  pathItem,
+  textItem,
+  type DisplayList,
+} from '../displayList.js';
 import type { ViewportView } from '../view.js';
 
 import { renderToSvgString } from './backend.js';
@@ -141,5 +147,34 @@ describe('renderToSvgString', () => {
     );
 
     expect(renderToSvgString(scene, view)).toMatchSnapshot();
+  });
+});
+
+describe('document text', () => {
+  it('emits glyph outlines as filled paths, not a <text> element', () => {
+    // ADR 0011: no font is referenced, so every viewer and cutter program
+    // shows the same shapes, and this snapshot compares numbers.
+    const svg = renderToSvgString(listOf(documentTextItem('annotation', vec(0, 0), 'Ab', 4)), view);
+
+    expect(svg).not.toContain('<text');
+    expect(svg).toMatch(/<path d="M [-0-9.]+ [-0-9.]+[^"]*" fill="/);
+  });
+
+  it('draws a character the typeface lacks rather than dropping it', () => {
+    const svg = renderToSvgString(listOf(documentTextItem('annotation', vec(0, 0), '漢', 4)), view);
+    expect(svg).toContain('fill="');
+  });
+
+  it('puts the outlines in the world group, in millimetres', () => {
+    const svg = renderToSvgString(
+      listOf(documentTextItem('annotation', vec(100, 50), 'A', 4)),
+      view,
+    );
+
+    // Inside the transformed group, so the glyph is positioned in millimetres
+    // like the geometry rather than in pixels like a readout.
+    const worldGroup = svg.slice(svg.indexOf('<g transform='), svg.indexOf('</g>'));
+    expect(worldGroup).toContain('<path');
+    expect(worldGroup).toMatch(/M 10[0-9.]+ /);
   });
 });

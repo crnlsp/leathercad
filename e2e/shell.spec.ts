@@ -965,3 +965,44 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await expect(window.getByTestId('problem-count')).toHaveCount(0);
   });
 });
+
+test('exports a part named in Polish, which used to be impossible', async () => {
+  // Slice 4.11a. pdf-lib's standard fonts are WinAnsi, which has no ł, so
+  // `drawText` threw and a project named this way could not be exported at
+  // all. Text is glyph outlines now, and an outline has no encoding to fall
+  // outside of.
+  const target = join(tmpdir(), `leathercad-e2e-pl-${Date.now()}.pdf`);
+  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+
+    await instance.evaluate(({ dialog, shell }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      shell.openPath = async () => '';
+    }, target);
+
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('project-name').fill('Portfel');
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 330, box!.y + 260, { steps: 5 });
+    await window.mouse.up();
+
+    await window.getByTestId('part-name').fill('Przegroda główna');
+    await window.getByTestId('part-name').press('Enter');
+
+    await window.getByTestId('export-pdf').click();
+    await expect.poll(() => existsSync(target), { timeout: 10_000 }).toBe(true);
+    await expect(window.getByTestId('file-error')).toHaveCount(0);
+
+    // A real page, with the caption drawn on it as outlines.
+    const info = execFileSync('pdfinfo', [target], { encoding: 'utf8' });
+    expect(info).toMatch(/Pages:\s+1/);
+  } finally {
+    await instance.close();
+    rmSync(target, { force: true });
+  }
+});

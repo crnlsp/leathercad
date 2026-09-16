@@ -15,17 +15,24 @@ const LAYERS = {
   // supplies the Electron implementation. See ADR 0002 and architecture.md §5.
   platform: ['core'],
   geometry: ['core'],
-  domain: ['core', 'geometry'],
+  // Pure millimetre typesetting over the vendored typeface. Sits beside
+  // geometry rather than above domain, because what it knows — glyph outlines
+  // and advances — is maths, not leatherwork. See ADR 0011.
+  typography: ['core', 'geometry'],
+  // Imports typography for one thing: whether the typeface can render a
+  // string, which is a design rule (DR5) and so a domain question.
+  domain: ['core', 'geometry', 'typography'],
   document: ['core', 'geometry', 'domain'],
   persist: ['core', 'geometry', 'domain'],
-  render: ['core', 'geometry', 'domain'],
-  export: ['core', 'geometry', 'domain', 'render'],
-  print: ['core', 'geometry', 'domain', 'render', 'export'],
-  editor: ['core', 'geometry', 'domain', 'document', 'render'],
+  render: ['core', 'geometry', 'typography', 'domain'],
+  export: ['core', 'geometry', 'typography', 'domain', 'render'],
+  print: ['core', 'geometry', 'typography', 'domain', 'render', 'export'],
+  editor: ['core', 'geometry', 'typography', 'domain', 'document', 'render'],
   ui: [
     'core',
     'platform',
     'geometry',
+    'typography',
     'domain',
     'document',
     'persist',
@@ -38,6 +45,7 @@ const LAYERS = {
     'core',
     'platform',
     'geometry',
+    'typography',
     'domain',
     'document',
     'persist',

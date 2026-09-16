@@ -1,5 +1,6 @@
 import { EPS_LENGTH, type Mm } from '@leathercad/core';
 import { selfIntersections, type Intersection, type Path } from '@leathercad/geometry';
+import { missingGlyphs } from '@leathercad/typography';
 
 import type { FeatureId, PartId } from './feature.js';
 import type { ResolvedProject } from './evaluate.js';
@@ -55,6 +56,24 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
   for (const { part, features } of resolved.parts) {
     if (part.features.length === 0) {
       found.push(placed(problem('EMPTY_PART', { partId: part.id, partName: part.name }), part.id));
+    }
+
+    // A part's name is printed above it on the sheet. A character the vendored
+    // typeface has no glyph for prints as a box rather than throwing (ADR
+    // 0011), so it is reported instead of refused.
+    const unprintable = missingGlyphs(part.name);
+    if (unprintable.length > 0) {
+      found.push(
+        placed(
+          problem('TEXT_GLYPH_MISSING', {
+            partId: part.id,
+            partName: part.name,
+            text: part.name,
+            characters: unprintable.join(' '),
+          }),
+          part.id,
+        ),
+      );
     }
 
     for (const entry of features) {

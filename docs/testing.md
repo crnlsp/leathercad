@@ -288,7 +288,9 @@ toward the parts of the codebase where it is worth the least.
 
 Non-negotiable, because golden tests, snapshots, and byte-stable saves all depend on them:
 
-- **Vendored fonts.** Never a system font, in the app or in tests.
+- **Vendored fonts.** Never a system font, in the app or in tests. Since 4.11a the glyph outlines
+  themselves are committed (`packages/typography/src/generated/`), so text geometry is identical on
+  every machine even if no font is installed at all.
 - **Injected clock.** Nothing in a serialisation path calls `Date.now()` directly.
 - **Seeded randomness.** ULID generation takes an injectable entropy source; tests use a fixed one.
 - **Fixed locale and timezone** in the Vitest config — `en-GB`, `UTC`. Number formatting varies by

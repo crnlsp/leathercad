@@ -1,5 +1,5 @@
 {
-  "name": "@leathercad/domain",
+  "name": "@leathercad/typography",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,11 +9,11 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "generate:glyphs": "node tools/generateGlyphs.mjs"
   },
   "dependencies": {
     "@leathercad/core": "workspace:*",
-    "@leathercad/geometry": "workspace:*",
-    "@leathercad/typography": "workspace:*"
+    "@leathercad/geometry": "workspace:*"
   }
 }

@@ -8,6 +8,9 @@ LICENSE
 fixtures/golden/
 **/__snapshots__/
 
+# Machine-written glyph outlines. Regenerate with `pnpm fonts:generate`.
+packages/typography/src/generated/
+
 # Markdown is hand-formatted. Prettier reflows fenced code blocks, which
 # destroys the deliberate alignment in the docs' illustrative snippets, and
 # prose gains nothing from it. Code formatting still applies everywhere else.
