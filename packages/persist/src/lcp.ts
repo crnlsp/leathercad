@@ -1,7 +1,7 @@
 import type { Project } from '@leathercad/domain';
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 
-import { graphProblems } from '@leathercad/domain';
+import { describeProblemWithSubject, graphProblems } from '@leathercad/domain';
 
 import { CURRENT_FORMAT_VERSION, migrate } from './migrations/index.js';
 import { ManifestSchema, ProjectSchema, type Manifest } from './schema.js';
@@ -114,7 +114,7 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
   const problems = graphProblems(result.data as Project);
   if (problems.length > 0) {
     throw new InvalidProjectFileError(
-      `document.json is not valid: ${problems.map((problem) => problem.message).join(' ')}`,
+      `document.json is not valid: ${problems.map(describeProblemWithSubject).join(' ')}`,
     );
   }
 

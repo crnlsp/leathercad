@@ -1,5 +1,12 @@
 import { addFoldLine, addMarkingLine, addPart, pathPart, shapePart } from '@leathercad/document';
-import { findFeature, type FeatureId, type GeometrySource, type PartId } from '@leathercad/domain';
+import {
+  findFeature,
+  problem,
+  type FeatureId,
+  type GeometrySource,
+  type PartId,
+  type Problem,
+} from '@leathercad/domain';
 
 import type { ToolContext } from '../tool.js';
 
@@ -76,15 +83,13 @@ export function targetPart(ctx: ToolContext): PartId | null {
   return parts.size === 1 ? [...parts][0]! : null;
 }
 
-/** Why nothing happened, for the status bar. Null when nothing is wrong. */
-export function drawTargetNotice(ctx: ToolContext): string | null {
+/** Why nothing would happen, for the status bar. Null when nothing is wrong. */
+export function drawTargetNotice(ctx: ToolContext): Problem | null {
   if (drawAsOf(ctx) === 'cut') return null;
   if (targetPart(ctx) !== null) return null;
 
   const spansParts = ctx.store.getState().selection.features.size > 0;
-  return spansParts
-    ? 'Select one part: this belongs to a single panel, and the selection spans more than one.'
-    : 'Select a part first — a fold or marking line belongs to the panel it is drawn on.';
+  return spansParts ? problem('TARGET_SPANS_PARTS', {}) : problem('NO_TARGET_PART', {});
 }
 
 function drawAsOf(ctx: ToolContext): DrawAs {

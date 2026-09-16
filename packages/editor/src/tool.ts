@@ -1,7 +1,13 @@
 import { approxEq } from '@leathercad/core';
 import type { Vec2 } from '@leathercad/geometry';
 import type { Command, DocumentStore } from '@leathercad/document';
-import { evaluate, type FeatureId, type Project, type ResolvedProject } from '@leathercad/domain';
+import {
+  evaluate,
+  type FeatureId,
+  type Problem,
+  type Project,
+  type ResolvedProject,
+} from '@leathercad/domain';
 import type { DisplayList } from '@leathercad/render';
 
 import { buildSnapIndex, snap, snapGlyph, type SnapCandidate, type SnapIndex } from './snap.js';
@@ -94,8 +100,11 @@ export interface Tool {
    * geometry it describes, which is exactly where it gets clipped by the edge
    * or hidden under the shape. A sentence explaining why nothing is moving has
    * to be readable, so it goes somewhere with room for it.
+   *
+   * A problem, not a sentence: the words are the domain's message catalogue,
+   * so a tool cannot explain a refusal differently from everywhere else.
    */
-  notice?(ctx: ToolContext): string | null;
+  notice?(ctx: ToolContext): Problem | null;
 
   /** Called when the tool is swapped out; must leave no transaction open. */
   onDeactivate?(ctx: ToolContext): void;
@@ -151,7 +160,7 @@ export class ToolManager {
   }
 
   /** The active tool's message, if it has one right now. */
-  notice(): string | null {
+  notice(): Problem | null {
     return this.active.notice?.(this.context) ?? null;
   }
 

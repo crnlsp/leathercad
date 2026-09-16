@@ -726,10 +726,27 @@ that walks one scenario through the whole phase.
   and outlines on paper. Helvetica leaves the PDF writer, which **fixes export failing on Polish
   names** — pdf-lib's standard fonts cannot encode `ł` or `ę`, verified. Part captions on the canvas;
   free text labels. **Built third**, because that export failure is live.
-- **4.12a** The diagnostic channel ([ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md)):
-  typed evaluation failures, `OFFSET_SPLIT` instead of silently dropped offset pieces, `validate()`
-  with the stitch and offset rules, a problems panel, and failed features drawn as warnings instead
-  of vanishing. **Built second**, so every later slice lands with its own diagnostics.
+- **4.12a** ✅ **Done.** The diagnostic channel
+  ([ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md),
+  [design](superpowers/specs/2026-09-15-diagnostic-channel-design.md)): typed evaluation failures,
+  `validate()` with the stitch and outline rules, `diagnose()` as the one list, a problems panel,
+  and failed features marked on the canvas instead of vanishing.
+  **One model, four layers** — identity (`problems/codes.ts`), information (`problems/problem.ts`),
+  presentation (`problems/messages.ts`), surfaces. A problem carries **facts, never a sentence**, so
+  the seven separate string channels this replaced — two refusal queries, `graphProblems`,
+  `transformShape`, `refusedTransforms`, the draw-target notice, evaluation errors and
+  `spacingWarning` — cannot come back one at a time. A depcruise rule allows only `problems/index.ts`
+  to import the message catalogue, which is what stops a domain module writing English again.
+  **Tests assert codes and facts, not wording**, with the pre-existing sentences pinned in one
+  catalogue test — so the words on screen are unchanged and provably so.
+  **`OFFSET_SPLIT` is unreachable today** and the slice says so rather than pretending: Tier 1
+  `offsetPath` returns no piece or exactly one, so the keep-largest step is unit-tested on synthetic
+  pieces and E2 holds the day Tier 2 arrives.
+  Gotchas: the lint rule against float equality also catches integer counts, so counts compare with
+  inequalities; `evaluate` builds a fresh `ResolvedProject` each call, so `diagnose` memoises on the
+  **project**, not the resolved tree; and a tool builds a fresh problem every pointer move, so the
+  canvas keeps the old one when `sameProblem` says it reads the same, or the chrome re-renders at
+  60 fps.
 - **4.12** Validation complete: zoom-to-problem, part and feature badges, a warning at export, and an
   audit test that every rule names a documented invariant and every structural invariant has both a
   refusal test and a loader test. The catalogue is `domain-model.md` §8.

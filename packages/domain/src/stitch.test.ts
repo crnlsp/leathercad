@@ -87,16 +87,13 @@ describe('stitch holes', () => {
     expect(holes.count).toBe(2);
   });
 
-  it('flags spacing that has drifted from the iron it was cut for', () => {
-    // A 2 mm run asked to hold a 3.85 mm pitch gets two holes 2 mm apart —
-    // crowded enough on that iron to tear out between them.
-    expect(holesOn(straightRun(2), CONTINUOUS).spacingWarning).toBe(true);
-  });
-
-  it('does not flag ordinary spacing', () => {
-    // A real panel never divides exactly, and a few hundredths off nominal is
-    // normal rather than notable.
-    expect(holesOn(rectStitchLine(105, 75, 8, 3.5), CONTINUOUS).spacingWarning).toBe(false);
+  it('reports the spacing a run too short for the iron actually achieved', () => {
+    // A 2 mm run asked to hold a 3.85 mm pitch gets two holes 2 mm apart.
+    // Whether that is worth a warning is HOLE_SPACING_DEVIATION's call
+    // (validate.test.ts); distribution only reports the number.
+    const holes = holesOn(straightRun(2), CONTINUOUS);
+    expect(holes.count).toBe(2);
+    expect(holes.achievedPitchMm).toBeCloseTo(2, 9);
   });
 
   it('computes positions from the index, so they do not drift', () => {

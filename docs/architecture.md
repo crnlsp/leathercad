@@ -168,9 +168,10 @@ and correct.
         │  evaluate()  — resolves the reference graph, memoised
         ▼
    ResolvedDocument (concrete Paths and point sets, typed per-feature failures)
-        │                          │  validate()  — design rules over the resolved project
+        │                          │  diagnose() = outcomes + validate() — one memoised list
         │                          ▼
-        │                     Diagnostic[] ──▶ problems panel, badges, canvas markers
+        │                     Diagnostic[] ──▶ problems panel, status count, property panel,
+        │                                      canvas markers — every surface reads this one
         │  buildDisplayList()  — layer-role styles; document text laid out by typography, in mm
         ▼
    DisplayList

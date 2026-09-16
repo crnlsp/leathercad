@@ -416,7 +416,10 @@ describe('select tool and derived features', () => {
     tool.onPointerDown?.(ctx, pointer({ x: 50, y: 5 }));
     tool.onPointerMove?.(ctx, pointer({ x: 70, y: 5 }));
 
-    expect(tool.notice?.(ctx)).toMatch(/follows Outline/);
+    expect(tool.notice?.(ctx)).toMatchObject({
+      code: 'DERIVED_MOVED_ALONE',
+      facts: { featureId: 'stitch-1', rootName: 'Outline' },
+    });
 
     tool.onPointerUp?.(ctx, pointer({ x: 70, y: 5 }));
     expect(store.getState().document.project.parts[0]!.features[1]!.source.kind).toBe('derived');

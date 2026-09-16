@@ -11,6 +11,8 @@
   --text-dim: #8b929b;
   --accent: #c9a227; /* veg-tan */
   --error: #e5675f;
+  --warning: #e0a93a;
+  --info: #6f9fd8;
 }
 
 * {
@@ -55,7 +57,7 @@ body {
    edge so the two do not draw a border each. */
 .left-column {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, auto);
   min-height: 0;
   border-right: 1px solid var(--border);
 }
@@ -575,4 +577,71 @@ body {
 .dialog .tool:focus {
   outline: 1px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* ——— Problems ——————————————————————————————————————————————————————————— */
+
+.problem-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+}
+
+button.problem-row:hover {
+  color: var(--text);
+  background: #262a30;
+  cursor: pointer;
+}
+
+.problem-mark {
+  flex: none;
+  width: 3px;
+  margin: 1px 0;
+  border-radius: 2px;
+  background: var(--text-dim);
+}
+
+.problem-mark.severity-error {
+  background: var(--error);
+}
+
+.problem-mark.severity-warning {
+  background: var(--warning);
+}
+
+.problem-mark.severity-info {
+  background: var(--info);
+}
+
+.problem-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.problem-title {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.problem-where {
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.problem-message {
+  color: var(--text-dim);
+  line-height: 1.35;
 }

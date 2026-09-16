@@ -145,7 +145,11 @@ describe('a partial run', () => {
       .filter((f) => !f.ok);
 
     expect(errors[0]).toBeDefined();
-    expect((errors[0] as { error: string }).error).toMatch(/run|anchor/i);
+    // E4: a corner that is not there fails; it never falls back to a neighbour.
+    expect((errors[0] as { problem: unknown }).problem).toMatchObject({
+      code: 'ANCHOR_MISSING',
+      facts: { anchor: 9 },
+    });
   });
 
   it('refuses a run on a circle, which has no corners to name', () => {
@@ -163,7 +167,10 @@ describe('a partial run', () => {
       .parts.flatMap((p) => p.features)
       .filter((f) => !f.ok);
 
-    expect(errors[0]).toBeDefined();
+    expect((errors[0] as { problem: unknown }).problem).toMatchObject({
+      code: 'ANCHOR_MISSING',
+      facts: { available: 0 },
+    });
   });
 });
 

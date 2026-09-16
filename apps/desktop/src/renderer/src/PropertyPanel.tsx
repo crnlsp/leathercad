@@ -7,11 +7,12 @@ import {
   setPartName,
   setPartQuantity,
 } from '@leathercad/document';
-import type { Feature, Part, Project } from '@leathercad/domain';
+import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
 import { evaluate, followRefusal } from '@leathercad/domain';
 
 import { NumberField } from './NumberField.js';
+import { ProblemRows } from './ProblemList.js';
 import { FeatureEditor } from './featureEditors/index.js';
 
 /**
@@ -24,12 +25,15 @@ export function PropertyPanel({
   store,
   project,
   selected,
+  diagnostics,
   nextId,
   requestDelete,
 }: {
   store: DocumentStore;
   project: Project;
   selected: ReadonlySet<string>;
+  /** The one diagnostic list, filtered here to what is selected (X7). */
+  diagnostics: readonly Diagnostic[];
   nextId: () => string;
   /** Deletes at once, or asks about dependents first (ADR 0009). */
   requestDelete: (ids: readonly string[]) => void;
@@ -50,6 +54,7 @@ export function PropertyPanel({
   }
 
   const { part, feature } = found;
+  const problems = diagnostics.filter((d) => d.featureId === feature.id);
   const resolved = evaluate(project)
     .parts.flatMap((p) => p.features)
     .find((entry) => entry.feature.id === feature.id);
@@ -125,10 +130,10 @@ export function PropertyPanel({
         </section>
       )}
 
-      {resolved?.ok === false && (
-        <section className="panel-section">
-          <div className="panel-heading">Problem</div>
-          <p className="panel-error">{resolved.error}</p>
+      {problems.length > 0 && (
+        <section className="panel-section" data-testid="feature-problems">
+          <div className="panel-heading">{problems.length === 1 ? 'Problem' : 'Problems'}</div>
+          <ProblemRows diagnostics={problems} project={project} showWhere={false} />
         </section>
       )}
 

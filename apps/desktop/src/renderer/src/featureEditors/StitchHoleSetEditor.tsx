@@ -109,13 +109,6 @@ export function StitchHoleSetEditor({
               <b>{holes.runs.map((run) => run.count).join(' · ')}</b>
             </div>
           )}
-          {holes.spacingWarning && (
-            <p className="panel-error" data-testid="spacing-warning">
-              The spacing came out {holes.achievedPitchMm.toFixed(2)} mm against a{' '}
-              {op.pitchMm.toFixed(2)} mm iron. Change the pitch, or the inset, to bring them
-              together.
-            </p>
-          )}
         </>
       )}
     </>

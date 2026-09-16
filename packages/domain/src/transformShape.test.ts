@@ -151,7 +151,7 @@ describe('non-uniform scale', () => {
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
-    expect(result.error).toMatch(/non-uniform/i);
+    expect(result.error).toEqual({ code: 'WOULD_BECOME_ELLIPSE', facts: { shape: 'circle' } });
   });
 
   it('refuses an arc, and leaves the record untouched', () => {
@@ -159,7 +159,9 @@ describe('non-uniform scale', () => {
     const result = transformShape(before, squash);
 
     expect(isErr(result)).toBe(true);
-    // Not merely equal — the same object. Nothing was rebuilt or rounded.
+    if (!isErr(result)) return;
+    expect(result.error).toEqual({ code: 'WOULD_BECOME_ELLIPSE', facts: { shape: 'arc' } });
+    // Nothing was rebuilt or rounded.
     expect(before).toEqual(arc());
   });
 
@@ -169,16 +171,21 @@ describe('non-uniform scale', () => {
     const result = transformShape(rect({ x: 0, y: 0 }, Math.PI / 6), squash);
 
     expect(isErr(result)).toBe(true);
+    if (!isErr(result)) return;
+    expect(result.error).toEqual({ code: 'WOULD_SHEAR', facts: {} });
   });
 });
 
 describe('degenerate transforms', () => {
-  it('refuses a zero scale for every shape', () => {
+  it('refuses a zero scale for every shape, as the same problem', () => {
     const flat = MatOps.fromScale(1, 0);
+    const flattens = { ok: false, error: { code: 'TRANSFORM_FLATTENS', facts: {} } };
 
-    expect(isErr(transformShape(rect(), flat))).toBe(true);
-    expect(isErr(transformShape(circle(), flat))).toBe(true);
-    expect(isErr(transformShape(arc(), flat))).toBe(true);
+    // Checked before the shape is looked at: a singular matrix is wrong for
+    // everything, so it must not come back as "would become an ellipse".
+    expect(transformShape(rect(), flat)).toEqual(flattens);
+    expect(transformShape(circle(), flat)).toEqual(flattens);
+    expect(transformShape(arc(), flat)).toEqual(flattens);
   });
 });
 

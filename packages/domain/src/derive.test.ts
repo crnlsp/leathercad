@@ -1,4 +1,4 @@
-import { PathOps, uniformRadii } from '@leathercad/geometry';
+import { PathOps, cubic, line as lineSegment, uniformRadii } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
@@ -80,7 +80,6 @@ describe('the whole chain', () => {
     expect(holes.count).toBeGreaterThan(70);
     expect(holes.achievedPitchMm).toBeGreaterThan(3.5);
     expect(holes.achievedPitchMm).toBeLessThan(4.2);
-    expect(holes.spacingWarning).toBe(false);
   });
 
   it('regenerates every link when the source dimension changes', () => {
@@ -167,12 +166,20 @@ describe('a derived stitch line', () => {
     const onLine = errors.find((e) => e.feature.id === 'stitch-1');
 
     expect(onLine).toBeDefined();
-    expect(onLine!.error).toMatch(/could not be built/i);
+    expect(onLine!.problem).toMatchObject({
+      code: 'SOURCE_FAILED',
+      facts: { featureId: 'stitch-1', sourceId: 'cut-1' },
+    });
+    // The root says what is actually wrong, naming the parameter the user typed.
+    expect(errors.find((e) => e.feature.id === 'cut-1')?.problem).toMatchObject({
+      code: 'PARAMETER_INVALID',
+      facts: { parameter: 'width', requirement: 'finite' },
+    });
   });
 
   it('reports a missing source rather than throwing', () => {
     const errors = evaluationErrors(evaluate(projectWith([stitchLine('does-not-exist')])));
-    expect(errors[0]?.error).toMatch(/not found/i);
+    expect(errors[0]?.problem).toMatchObject({ code: 'SOURCE_MISSING' });
   });
 
   it('reports a cycle rather than recursing forever', () => {
@@ -180,12 +187,55 @@ describe('a derived stitch line', () => {
     const b = stitchLine('stitch-1', 3.5, 'stitch-2');
 
     const errors = evaluationErrors(evaluate(projectWith([a, b])));
-    expect(errors.some((e) => /cycle|itself/i.test(e.error))).toBe(true);
+    expect(errors.map((e) => [e.feature.id, e.problem.code])).toEqual([
+      ['stitch-1', 'CYCLE'],
+      ['stitch-2', 'CYCLE'],
+    ]);
   });
 
   it('refuses an inset deeper than the outline can hold, naming the problem', () => {
     const errors = evaluationErrors(evaluate(projectWith([panel(), stitchLine('cut-1', 60)])));
-    expect(errors[0]?.error).toMatch(/deeper|hold/i);
+    expect(errors[0]?.problem).toMatchObject({
+      code: 'OFFSET_COLLAPSED',
+      facts: { distanceMm: 60, side: 'inward' },
+    });
+    // Pointing at the outline the inset could not fit inside.
+    expect(errors[0]?.location?.kind).toBe('path');
+  });
+
+  it('reports an offset of a curve it cannot follow, rather than throwing', () => {
+    const curvy: Feature = {
+      ...panel(),
+      source: {
+        kind: 'path',
+        path: PathOps.closed([
+          cubic({ x: 0, y: 0 }, { x: 40, y: -20 }, { x: 80, y: 20 }, { x: 100, y: 0 }),
+          lineSegment({ x: 100, y: 0 }, { x: 100, y: 60 }),
+          lineSegment({ x: 100, y: 60 }, { x: 0, y: 60 }),
+          lineSegment({ x: 0, y: 60 }, { x: 0, y: 0 }),
+        ]),
+      },
+    };
+    const errors = evaluationErrors(evaluate(projectWith([curvy, stitchLine('cut-1')])));
+    expect(errors.map((e) => e.problem.code)).toEqual(['OFFSET_UNSUPPORTED']);
+  });
+
+  it('reports an unusable pitch by name instead of letting distribution throw', () => {
+    const errors = evaluationErrors(
+      evaluate(projectWith([panel(), stitchLine('cut-1'), holeSet('stitch-1', 0)])),
+    );
+    expect(errors[0]?.problem).toMatchObject({
+      code: 'PARAMETER_INVALID',
+      facts: { featureId: 'holes-1', parameter: 'pitch', requirement: 'positive', value: 0 },
+    });
+  });
+
+  it('reports a negative inset by name', () => {
+    const errors = evaluationErrors(evaluate(projectWith([panel(), stitchLine('cut-1', -2)])));
+    expect(errors[0]?.problem).toMatchObject({
+      code: 'PARAMETER_INVALID',
+      facts: { parameter: 'inset', requirement: 'non-negative', value: -2 },
+    });
   });
 
   it('finds a source in another part, since a seam spans two pieces', () => {

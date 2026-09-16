@@ -312,21 +312,20 @@ window. The direction is resolved from the contour's role, not its winding (desi
 One project default, `settings.defaultStitchInsetMm`, serves both directions. The panel calls it the
 *stitch margin*.
 
-### 4.4 Evaluation — built, with typed failures designed in 4.12a
+### 4.4 Evaluation — built, with typed failures since 4.12a
 
 ```ts
 function evaluate(project: Project): ResolvedProject;
 
 type ResolvedFeature =
-  | { ok: true;  feature: Feature; role: LayerRole; path: Path; holes?: StitchHoles }
-  | { ok: false; feature: Feature; failure: EvaluationFailure };      // typed from 4.12a; a string today
-
-interface EvaluationFailure {
-  code: DiagnosticCode;               // OFFSET_COLLAPSED, SOURCE_FAILED, ANCHOR_MISSING, …
-  message: string;
-  at?: Vec2;
-}
+  | { ok: true;  feature: Feature; role: LayerRole; path: Path; holes?: StitchHoles;
+      notes?: readonly Problem[] }    // what resolving gave up: an offset that split (E2)
+  | { ok: false; feature: Feature; problem: Problem; location?: ProblemLocation };
 ```
+
+A failure carries a `Problem` — a code and typed facts, never a sentence (§8.6). `location` is the
+geometry the failure is about, which is what the canvas marks so a failed feature does not simply
+vanish.
 
 1. **Recursive, not scheduled.** A derived feature resolves its source first. Cycles cannot exist
    (S3). Evaluation keeps a defensive guard, which should be unreachable.
@@ -336,7 +335,9 @@ interface EvaluationFailure {
 3. **Failures are per feature** (E1). One bad number never blanks the canvas. A failed source is
    reported once, at its root (E3), and its dependents fail with `SOURCE_FAILED`.
 4. **Nothing is dropped without a diagnostic** (E2). An offset that splits keeps its largest piece
-   and reports `OFFSET_SPLIT`, saying how many were left out.
+   and reports `OFFSET_SPLIT`, saying how many were left out. Tier 1 offsetting never returns more
+   than one piece, so that path is exercised by a unit test of the keep-largest step rather than
+   through `evaluate`; it is written now so E2 holds when Tier 2 lands.
 5. **Derived geometry is never persisted** (S8). The file stores parameters; evaluation regenerates
    paths on load, so an improved offset silently improves every existing file.
 6. **Deterministic.** Same project in, same resolved geometry out.
@@ -507,10 +508,10 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 
 | Id | Invariant | Lands in |
 |---|---|---|
-| E1 | Every feature resolves or fails with a typed failure | 4.12a |
-| E2 | Nothing is silently dropped from what is drawn or printed: not a piece of a split offset, not an unrenderable character | 4.12a |
-| E3 | A failure is reported once, at its root; dependents report `SOURCE_FAILED` | built as strings; typed 4.12a |
-| E4 | A missing anchor fails; it never re-targets | 4.4b |
+| E1 | Every feature resolves or fails with a typed failure | built, 4.12a |
+| E2 | Nothing is silently dropped from what is drawn or printed: not a piece of a split offset, not an unrenderable character | 4.12a for offsets; text 4.11 |
+| E3 | A failure is reported once, at its root; dependents report `SOURCE_FAILED` | built, typed 4.12a |
+| E4 | A missing anchor fails; it never re-targets | built for runs, 4.12a; through derivations 4.4b |
 
 ### 8.4 Design rules
 
@@ -535,38 +536,58 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | X6 | Text that restates a model value is generated, never stored | 4.10, 4.11 |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
 | X8 | Defaults come from project settings | 4.3 |
+| X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
 
 ### 8.6 Diagnostics
 
+Built in 4.12a as four separated layers — identity, information, presentation, surfaces. The design
+is [the slice spec](superpowers/specs/2026-09-15-diagnostic-channel-design.md); the shapes are:
+
 ```ts
-interface Diagnostic {
-  code: DiagnosticCode;               // stable string
+type Problem = { code: ProblemCode; facts: ProblemFacts[code] };   // facts, never a sentence
+
+interface Diagnostic {                // a problem found in the design, placed
+  problem: Problem;
   severity: 'error' | 'warning' | 'info';
-  message: string;
   partId: PartId;
-  featureId?: FeatureId;
-  related?: readonly FeatureId[];
-  at?: Vec2;                          // zoom-to-problem; otherwise the feature's bounds
+  featureId?: FeatureId;              // absent for a problem with the part itself
+  related: readonly FeatureId[];      // what a SOURCE_FAILED follows
+  location?: ProblemLocation;         // points, or the geometry the problem is about
 }
+
+function diagnose(project: Project): readonly Diagnostic[];   // the one list (X7)
+function describeProblem(problem: Problem): string;           // the one catalogue of words
 ```
+
+**Refusals are problems too**, with the same codes and catalogue, but they are never diagnostics:
+they are refused at the gesture or by the loader, so they never exist in a document to be listed.
+Their codes are `DUPLICATE_ID`, `SOURCE_MISSING`, `FOLLOWS_ITSELF`, `WOULD_LOOP`, `CYCLE` and
+`DERIVATION_INCOMPATIBLE` (structural, S1–S4); `FEATURE_MISSING`, `NOT_DERIVED`,
+`DERIVED_MOVED_ALONE`, `TRANSFORM_FLATTENS`, `WOULD_BECOME_ELLIPSE`, `WOULD_SHEAR`,
+`NO_TARGET_PART` and `TARGET_SPANS_PARTS` (interaction, X1–X9).
+
+The diagnostics themselves:
 
 | Code | Severity | Category | Protects | Lands in |
 |---|---|---|---|---|
-| `OFFSET_COLLAPSED` | error | outcome | E1 | 4.12a |
-| `OFFSET_SPLIT` | warning | outcome | E2 | 4.12a |
-| `SOURCE_FAILED` | error | outcome | E3 | 4.12a |
-| `ANCHOR_MISSING` | error | outcome | E4 | 4.4b |
+| `PARAMETER_INVALID` | error | outcome | E1 | built 4.12a |
+| `OFFSET_COLLAPSED` | error | outcome | E1 | built 4.12a |
+| `OFFSET_UNSUPPORTED` | error | outcome | E1 | built 4.12a |
+| `GEOMETRY_FAILED` | error | outcome | E1 | built 4.12a — the fallback for a geometry throw the domain has no specific check for yet |
+| `OFFSET_SPLIT` | warning | outcome | E2 | built 4.12a; unreachable until Tier 2 offsetting |
+| `SOURCE_FAILED` | error | outcome | E3 | built 4.12a |
+| `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | 4.11 |
-| `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | 4.12a |
-| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | 4.12a; cut-outs 4.3 |
-| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm) | rule | DR2 | 4.12a; cut-outs 4.3 |
+| `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
+| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | 4.3 — it needs material-relative containment, which arrives with cut-outs |
+| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm) | rule | DR2 | 4.3, with `OUTSIDE_PART` |
 | `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | 4.3 |
 | `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | 4.3 |
-| `HOLE_SPACING_UNEVEN` | info (above 5 %) | rule | DR4 | 4.12a |
-| `HOLE_SPACING_DEVIATION` | warning (above 25 %) | rule | DR4 | 4.12a |
-| `HOLE_COUNT_TOO_LOW` | warning (under 2 on a run) | rule | DR4 | 4.12a |
+| `HOLE_SPACING_UNEVEN` | info (runs differing by above 5 % of the pitch) | rule | DR4 | built 4.12a |
+| `HOLE_SPACING_DEVIATION` | warning (above 25 % from the iron) | rule | DR4 | built 4.12a |
+| `HOLE_COUNT_TOO_LOW` | warning (under 2 in a set) | rule | DR4 | built 4.12a — counted per set, because with a hole at every corner a short run legitimately contributes one |
 | `TEXT_TOO_SMALL_TO_PRINT` | warning (under 1.5 mm) | rule | DR5 | 4.11 |
-| `EMPTY_PART` | info | rule | DR6 | 4.12a (parts are kept since 4.2b) |
+| `EMPTY_PART` | info | rule | DR6 | built 4.12a (parts are kept since 4.2b) |
 
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
 than reportable: `PART_HAS_MULTIPLE_OUTER` (S5), `CONTOUR_NOT_CLOSED` (S6), `BROKEN_DERIVATION` (S2

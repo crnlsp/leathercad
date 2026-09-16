@@ -1,4 +1,5 @@
 import { refusedTransforms, transformFeatures } from '@leathercad/document';
+import type { Problem } from '@leathercad/domain';
 import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
 import { textItem, type DisplayList } from '@leathercad/render';
 
@@ -22,7 +23,7 @@ type State =
       readonly pivot: Vec2;
       readonly from: Vec2;
       readonly factors: Vec2;
-      readonly refusal: string | null;
+      readonly refusal: Problem | null;
     };
 
 /** Below this the shape collapses, and a zero-size part cannot be selected to delete. */
@@ -70,7 +71,7 @@ export function createScaleTool(): Tool {
       const { document, selection } = ctx.store.getState();
       const refused = refusedTransforms(document.project, selection.features, matrix);
 
-      state = { ...state, factors, refusal: refused[0]?.reason ?? null };
+      state = { ...state, factors, refusal: refused[0]?.problem ?? null };
       ctx.store.preview(transformFeatures(selection.features, matrix, 'Scale'));
       ctx.invalidate();
     },

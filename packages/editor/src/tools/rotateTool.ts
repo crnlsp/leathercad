@@ -1,4 +1,5 @@
 import { refusedTransforms, transformFeatures } from '@leathercad/document';
+import type { Problem } from '@leathercad/domain';
 import { MatOps, type Vec2 } from '@leathercad/geometry';
 import { textItem, type DisplayList } from '@leathercad/render';
 
@@ -25,7 +26,7 @@ type State =
       readonly from: number;
       readonly angle: number;
       /** Why part of the selection is not turning, while it is not (X3). */
-      readonly refusal: string | null;
+      readonly refusal: Problem | null;
     };
 
 export function createRotateTool(): Tool {
@@ -62,7 +63,7 @@ export function createRotateTool(): Tool {
       const matrix = MatOps.fromRotationAround(state.pivot, angle);
       const { document, selection } = ctx.store.getState();
       const refused = refusedTransforms(document.project, selection.features, matrix);
-      state = { ...state, angle, refusal: refused[0]?.reason ?? null };
+      state = { ...state, angle, refusal: refused[0]?.problem ?? null };
 
       ctx.store.preview(transformFeatures(selection.features, matrix, 'Rotate'));
       ctx.invalidate();

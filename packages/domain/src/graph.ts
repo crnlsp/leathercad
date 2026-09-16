@@ -1,4 +1,5 @@
 import type { Feature, FeatureId, Project } from './feature.js';
+import { problem, problemKey, type CompatibilityRule, type Problem } from './problems/index.js';
 
 /**
  * The reference graph: which feature depends on which, and what may depend on
@@ -13,16 +14,10 @@ import type { Feature, FeatureId, Project } from './feature.js';
  * Everything here is pure and reads only parameters, never evaluated geometry.
  * A structural rule that depended on whether evaluation happened to succeed
  * would stop being structural.
+ *
+ * Refusals are **problems**, not sentences: the words are the message
+ * catalogue's (`problems/messages.ts`), which this module cannot import.
  */
-
-export type GraphProblemCode = 'DUPLICATE_ID' | 'MISSING_SOURCE' | 'CYCLE' | 'INCOMPATIBLE';
-
-export interface GraphProblem {
-  readonly featureId: FeatureId;
-  readonly code: GraphProblemCode;
-  /** Written for the person opening the file, naming the feature. */
-  readonly message: string;
-}
 
 /**
  * Everything that transitively depends on `ids`, in document order — not
@@ -64,19 +59,21 @@ export function dependentsOf(project: Project, ids: Iterable<FeatureId>): Featur
  * it is about to add. The order of the checks is the order a user can act on:
  * a missing source first, then a loop, then the compatibility table.
  */
-export function derivationRefusal(project: Project, feature: Feature): string | null {
+export function derivationRefusal(project: Project, feature: Feature): Problem | null {
   if (feature.source.kind !== 'derived') return null;
 
+  const about = { featureId: feature.id, featureName: feature.name };
   const byId = indexById(project);
   const source = byId.get(feature.source.sourceId);
-  if (source === undefined) return 'The feature it follows does not exist.';
-  if (source.id === feature.id) return `${feature.name} cannot follow itself.`;
+  if (source === undefined) return problem('SOURCE_MISSING', about);
+  if (source.id === feature.id) return problem('FOLLOWS_ITSELF', about);
 
   if (wouldLoop(byId, feature.id, source.id)) {
-    return `${feature.name} would end up following itself, through ${source.name}.`;
+    return problem('WOULD_LOOP', { ...about, sourceId: source.id, sourceName: source.name });
   }
 
-  return compatibilityRefusal(byId, feature, source);
+  const rule = compatibilityRefusal(byId, feature, source);
+  return rule === null ? null : problem('DERIVATION_INCOMPATIBLE', { ...about, rule });
 }
 
 /**
@@ -91,11 +88,11 @@ export function followRefusal(
   project: Project,
   featureId: FeatureId,
   sourceId: FeatureId,
-): string | null {
+): Problem | null {
   const feature = indexById(project).get(featureId);
-  if (feature === undefined) return 'That feature does not exist.';
+  if (feature === undefined) return problem('FEATURE_MISSING', { featureId });
   if (feature.source.kind !== 'derived') {
-    return `${feature.name} does not follow anything, so there is nothing to re-point.`;
+    return problem('NOT_DERIVED', { featureId: feature.id, featureName: feature.name });
   }
 
   const candidate: Feature = { ...feature, source: { ...feature.source, sourceId } };
@@ -104,18 +101,17 @@ export function followRefusal(
 
   const before = new Set(graphProblems(project).map(problemKey));
   const after = graphProblems(replaceFeature(project, candidate));
-  const introduced = after.find((problem) => !before.has(problemKey(problem)));
-  return introduced?.message ?? null;
+  return after.find((p) => !before.has(problemKey(p))) ?? null;
 }
 
 /**
- * Every violation of S1–S4 in a project, each naming the feature.
+ * Every violation of S1–S4 in a project, each about one feature.
  *
  * What the loader refuses. A sound project returns an empty list, and a
  * project the commands built is always sound.
  */
-export function graphProblems(project: Project): GraphProblem[] {
-  const problems: GraphProblem[] = [];
+export function graphProblems(project: Project): Problem[] {
+  const problems: Problem[] = [];
   const all = allFeatures(project);
 
   const seen = new Set<FeatureId>();
@@ -123,11 +119,7 @@ export function graphProblems(project: Project): GraphProblem[] {
   for (const feature of all) {
     if (seen.has(feature.id) && !reported.has(feature.id)) {
       reported.add(feature.id);
-      problems.push({
-        featureId: feature.id,
-        code: 'DUPLICATE_ID',
-        message: `Two features share the id ${feature.id}.`,
-      });
+      problems.push(problem('DUPLICATE_ID', { featureId: feature.id }));
     }
     seen.add(feature.id);
   }
@@ -135,34 +127,21 @@ export function graphProblems(project: Project): GraphProblem[] {
   const byId = indexById(project);
   for (const feature of all) {
     if (feature.source.kind !== 'derived') continue;
+    const about = { featureId: feature.id, featureName: feature.name };
 
     const source = byId.get(feature.source.sourceId);
     if (source === undefined) {
-      problems.push({
-        featureId: feature.id,
-        code: 'MISSING_SOURCE',
-        message: `${feature.name} follows a feature that does not exist.`,
-      });
+      problems.push(problem('SOURCE_MISSING', about));
       continue;
     }
 
     if (isOnCycle(byId, feature.id)) {
-      problems.push({
-        featureId: feature.id,
-        code: 'CYCLE',
-        message: `${feature.name} follows a chain that leads back to itself.`,
-      });
+      problems.push(problem('CYCLE', about));
       continue;
     }
 
-    const refusal = compatibilityRefusal(byId, feature, source);
-    if (refusal !== null) {
-      problems.push({
-        featureId: feature.id,
-        code: 'INCOMPATIBLE',
-        message: `${feature.name}: ${refusal}`,
-      });
-    }
+    const rule = compatibilityRefusal(byId, feature, source);
+    if (rule !== null) problems.push(problem('DERIVATION_INCOMPATIBLE', { ...about, rule }));
   }
 
   return problems;
@@ -171,51 +150,36 @@ export function graphProblems(project: Project): GraphProblem[] {
 /**
  * The derivation compatibility table — docs/domain-model.md §4.2.
  *
- * The only derivations a command creates and the loader accepts. The mirror
- * row arrives with its op, in slice 4.8.
+ * The only derivations a command creates and the loader accepts. Returns the
+ * row that refused, or `null`. The mirror row arrives with its op, in slice 4.8.
  */
 function compatibilityRefusal(
   byId: ReadonlyMap<FeatureId, Feature>,
   target: Feature,
   source: Feature,
-): string | null {
+): CompatibilityRule | null {
   if (target.source.kind !== 'derived') return null;
   const op = target.source.op;
 
   switch (op.type) {
     case 'stitch-holes':
-      if (target.kind !== 'stitch-hole-set') {
-        return 'Only a stitch hole set can follow a stitch line at a pitch.';
-      }
-      if (source.kind !== 'stitch-line') return 'Holes can only follow a stitch line.';
+      if (target.kind !== 'stitch-hole-set') return 'holes-need-hole-set';
+      if (source.kind !== 'stitch-line') return 'holes-need-stitch-line';
       return null;
 
     case 'offset':
       if (op.side === 'inward') {
-        if (target.kind !== 'stitch-line')
-          return 'Only a stitch line can be inset from an outline.';
-        if (source.kind !== 'cut-contour') {
-          return 'A stitch line can only be inset from an outline or a cut-out.';
-        }
+        if (target.kind !== 'stitch-line') return 'inset-needs-stitch-line';
+        if (source.kind !== 'cut-contour') return 'inset-needs-outline';
         return null;
       }
 
       // Outward: seam allowance, an outline derived from its stitch line.
-      if (target.kind !== 'cut-contour') {
-        return 'Only an outline can be offset outward from a stitch line.';
-      }
-      if (source.kind !== 'stitch-line') {
-        return 'An outline can only be offset outward from a stitch line.';
-      }
-      if (target.role !== 'outer') {
-        return "Only a part's outer outline can be derived from its stitch line, not a cut-out.";
-      }
-      if (op.run.kind !== 'whole') {
-        return 'A seam allowance follows the whole stitch line, so the outline it makes is closed.';
-      }
-      if (!declaresClosed(byId, source, new Set())) {
-        return 'A seam allowance needs a closed stitch line: an outline has to enclose the part.';
-      }
+      if (target.kind !== 'cut-contour') return 'allowance-needs-outline';
+      if (source.kind !== 'stitch-line') return 'allowance-needs-stitch-line';
+      if (target.role !== 'outer') return 'allowance-needs-outer';
+      if (op.run.kind !== 'whole') return 'allowance-needs-whole-run';
+      if (!declaresClosed(byId, source, new Set())) return 'allowance-needs-closed-line';
       return null;
   }
 }
@@ -292,8 +256,4 @@ function replaceFeature(project: Project, replacement: Feature): Project {
       features: part.features.map((f) => (f.id === replacement.id ? replacement : f)),
     })),
   };
-}
-
-function problemKey(problem: GraphProblem): string {
-  return `${problem.code}:${problem.featureId}`;
 }

@@ -44,10 +44,40 @@ export { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
 
 export { transformShape } from './transformShape.js';
 
+export {
+  MIN_HOLES_IN_A_SET,
+  SPACING_DEVIATION_FRACTION,
+  SPACING_UNEVEN_FRACTION,
+  validate,
+} from './validate.js';
+export { diagnose } from './diagnose.js';
+
 export { anchorsOf, cornerDistances } from './anchors.js';
 
-export type { GraphProblem, GraphProblemCode } from './graph.js';
 export { dependentsOf, derivationRefusal, followRefusal, graphProblems } from './graph.js';
+
+export type {
+  CodeInfo,
+  CompatibilityRule,
+  Diagnostic,
+  InvariantId,
+  Problem,
+  ProblemCategory,
+  ProblemCode,
+  ProblemFacts,
+  ProblemLocation,
+  Severity,
+} from './problems/index.js';
+export {
+  PROBLEM_CODES,
+  describeProblem,
+  describeProblemWithSubject,
+  problem,
+  problemKey,
+  problemTitle,
+  sameProblem,
+  subjectOf,
+} from './problems/index.js';
 
 export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
 export { distributeHoles, splitAtCorners } from './stitch.js';

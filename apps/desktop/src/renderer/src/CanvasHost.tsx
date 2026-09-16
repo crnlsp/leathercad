@@ -1,5 +1,5 @@
 import { type DocumentStore } from '@leathercad/document';
-import { evaluate } from '@leathercad/domain';
+import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import { PathOps, RectOps, type Vec2 } from '@leathercad/geometry';
 import {
   ToolManager,
@@ -31,8 +31,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 export interface CanvasStatus {
   readonly cursorMm: Vec2 | null;
   readonly scale: number;
-  /** The active tool's message, shown in the status bar. */
-  readonly notice: string | null;
+  /** Why the active tool is not doing what it was asked, shown in the status bar. */
+  readonly notice: Problem | null;
 }
 
 /**
@@ -68,7 +68,7 @@ export function CanvasHost({
   const hasFittedRef = useRef(false);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
   const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Problem | null>(null);
 
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
@@ -138,12 +138,20 @@ export function CanvasHost({
     renderGrid(context, view, DEFAULT_GRID_STYLE);
     renderDisplayList(
       context,
-      buildDisplayList(evaluate(document.project), { selected: selection.features }),
+      buildDisplayList(evaluate(document.project), {
+        selected: selection.features,
+        // The same list the panels read (X7), so a feature that failed is
+        // marked here instead of silently disappearing.
+        diagnostics: diagnose(document.project),
+      }),
       view,
     );
     // The tool overlay is ephemeral feedback and never touches the document.
     renderDisplayList(context, managerRef.current?.overlay() ?? { items: [] }, view);
-    setNotice(managerRef.current?.notice() ?? null);
+    // A tool builds a fresh problem on every pointer move. Keeping the old one
+    // when it says the same thing stops the chrome re-rendering every frame.
+    const next = managerRef.current?.notice() ?? null;
+    setNotice((current) => (sameProblem(current, next) ? current : next));
     renderRulers(context, view, {
       ...DEFAULT_RULER_STYLE,
       thicknessPx: DEFAULT_RULER_STYLE.thicknessPx * viewport.dpr,

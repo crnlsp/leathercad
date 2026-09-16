@@ -13,8 +13,10 @@ import type {
 } from './feature.js';
 import { roleOf } from './feature.js';
 import { anchorsOf } from './anchors.js';
+import { keepLargestPiece } from './offsetPieces.js';
 import { distributeHoles, type StitchHoles } from './stitch.js';
 import type { LayerRole } from './layerRole.js';
+import { problem, type Problem, type ProblemLocation } from './problems/index.js';
 
 export type ResolvedFeature =
   | {
@@ -29,8 +31,20 @@ export type ResolvedFeature =
       readonly path: Path;
       /** Present only on a stitch hole set. */
       readonly holes?: StitchHoles;
+      /**
+       * What resolving had to give up to succeed — an offset that split and kept
+       * its largest piece (E2). Absent when nothing was given up.
+       */
+      readonly notes?: readonly Problem[];
     }
-  | { readonly ok: false; readonly feature: Feature; readonly error: string };
+  | {
+      readonly ok: false;
+      readonly feature: Feature;
+      /** Why, typed (E1). An evaluation outcome from the problem registry. */
+      readonly problem: Problem;
+      /** The geometry the failure is about, when there is some to point at. */
+      readonly location?: ProblemLocation;
+    };
 
 export interface ResolvedPart {
   readonly part: Part;
@@ -61,6 +75,7 @@ interface CacheEntry {
   readonly from: Path | undefined;
   readonly path: Path;
   readonly holes: StitchHoles | undefined;
+  readonly notes: readonly Problem[] | undefined;
 }
 
 const cache = new WeakMap<Feature, CacheEntry>();
@@ -73,9 +88,10 @@ const cache = new WeakMap<Feature, CacheEntry>();
  * data, and means an improved shape constructor silently improves every
  * existing file. See CLAUDE.md invariant 4.
  *
- * Errors are per feature, not per project: one broken shape produces a failed
+ * Failures are per feature, not per project: one broken shape produces a failed
  * node while everything around it still draws. A blank canvas because of one
- * bad number is the wrong failure mode for a drawing tool.
+ * bad number is the wrong failure mode for a drawing tool. Every failure is a
+ * typed problem (E1), never a sentence.
  */
 export function evaluate(project: Project): ResolvedProject {
   // A derived feature can follow one in another part — a seam spans two
@@ -95,19 +111,43 @@ export function evaluate(project: Project): ResolvedProject {
 }
 
 /**
+ * A problem travelling up the stack from wherever evaluation found it.
+ *
+ * Evaluation is recursive and the failure is discovered deep inside it, so it
+ * is thrown rather than threaded through every return — but what is thrown is
+ * the typed problem, not a sentence to be parsed back later.
+ */
+class Failure extends Error {
+  readonly problem: Problem;
+  readonly location: ProblemLocation | undefined;
+
+  constructor(problem: Problem, location?: ProblemLocation) {
+    super(problem.code);
+    this.problem = problem;
+    this.location = location;
+  }
+}
+
+/**
  * Thrown through the intermediate frames rather than being wrapped.
  *
- * A source that merely failed produces "the outline it follows could not be
- * built", which is the right thing to say. A cycle is different: the wrapper
- * would hide the only fact that helps, so it travels to the top intact.
+ * A source that merely failed produces `SOURCE_FAILED`, which is the right thing
+ * to say. A cycle is different: the wrapper would hide the only fact that helps,
+ * so it travels to the top intact. S3 makes this unreachable through commands
+ * and the loader; it stays as a guard.
  */
-class CycleError extends RangeError {}
+class CycleError extends Failure {}
 
 function resolveTop(feature: Feature, byId: ReadonlyMap<FeatureId, Feature>): ResolvedFeature {
   try {
     return resolveFeature(feature, byId, new Set());
   } catch (error) {
-    return { ok: false, feature, error: error instanceof Error ? error.message : String(error) };
+    // Re-subjected: the cycle was found on some feature further along the
+    // loop, but this is the one being reported.
+    if (error instanceof CycleError) {
+      return { ok: false, feature, problem: problem('CYCLE', about(feature)) };
+    }
+    return failed(feature, error);
   }
 }
 
@@ -116,36 +156,57 @@ function resolveFeature(
   byId: ReadonlyMap<FeatureId, Feature>,
   visiting: Set<FeatureId>,
 ): ResolvedFeature {
-  const cached = cache.get(feature);
-  if (cached !== undefined && cached.from === sourcePathOf(feature, byId, visiting)) {
-    return hit(feature, cached);
-  }
-
   try {
+    // Inside the try: asking for the source path can fail, and that failure
+    // belongs to this feature, not to whichever feature asked for this one.
     const from = sourcePathOf(feature, byId, visiting);
+    const cached = cache.get(feature);
+    if (cached !== undefined && cached.from === from) return hit(feature, cached);
+
     const built = build(feature, from, byId);
     cache.set(feature, built);
     return hit(feature, built);
   } catch (error) {
     if (error instanceof CycleError) throw error;
-    return {
-      ok: false,
-      feature,
-      error: error instanceof Error ? error.message : String(error),
-    };
+    return failed(feature, error);
   }
 }
 
 function hit(feature: Feature, entry: CacheEntry): ResolvedFeature {
-  const resolved = { ok: true as const, feature, role: roleOf(feature), path: entry.path };
-  return entry.holes === undefined ? resolved : { ...resolved, holes: entry.holes };
+  return {
+    ok: true,
+    feature,
+    role: roleOf(feature),
+    path: entry.path,
+    ...(entry.holes === undefined ? {} : { holes: entry.holes }),
+    ...(entry.notes === undefined ? {} : { notes: entry.notes }),
+  };
+}
+
+/**
+ * The failed node for anything thrown while building `feature`.
+ *
+ * A `Failure` carries its problem. Anything else came from the geometry layer
+ * without the domain having checked for it first, and becomes
+ * `GEOMETRY_FAILED` — typed, so E1 holds, but a gap: each one met in a test is
+ * a check the domain should be making itself.
+ */
+function failed(feature: Feature, error: unknown): ResolvedFeature {
+  if (error instanceof Failure) {
+    return error.location === undefined
+      ? { ok: false, feature, problem: error.problem }
+      : { ok: false, feature, problem: error.problem, location: error.location };
+  }
+
+  const detail = error instanceof Error ? error.message : String(error);
+  return { ok: false, feature, problem: problem('GEOMETRY_FAILED', { ...about(feature), detail }) };
 }
 
 /**
  * The path this feature is built *from*, or undefined if it stands alone.
  *
- * Resolving the source is itself memoised, so asking twice — once to test the
- * cache and once to build — costs a map lookup, not a recomputation.
+ * Resolving the source is itself memoised, so asking on every evaluation costs
+ * a map lookup per link, not a recomputation.
  */
 function sourcePathOf(
   feature: Feature,
@@ -161,13 +222,16 @@ function build(
   from: Path | undefined,
   byId: ReadonlyMap<FeatureId, Feature>,
 ): CacheEntry {
+  const invalid = parameterProblem(feature);
+  if (invalid !== null) throw new Failure(invalid);
+
   const source: GeometrySource = feature.source;
 
   switch (source.kind) {
     case 'path':
-      return { from, path: source.path, holes: undefined };
+      return { from, path: source.path, holes: undefined, notes: undefined };
     case 'shape':
-      return { from, path: pathForShape(source.shape), holes: undefined };
+      return { from, path: pathForShape(source.shape), holes: undefined, notes: undefined };
     case 'derived': {
       // `from` is the resolved source; `sourcePathOf` threw if it failed.
       const sourcePath = from!;
@@ -177,14 +241,16 @@ function build(
         // The holes are the output, but a feature still needs a path — for
         // selection, for a bounding box, for fitting the view. It is the line
         // they were placed along.
-        return { from, path: sourcePath, holes: distributeHoles(sourcePath, source.op) };
+        return {
+          from,
+          path: sourcePath,
+          holes: distributeHoles(sourcePath, source.op),
+          notes: undefined,
+        };
       }
 
-      return {
-        from,
-        path: applyDerivation(sourcePath, origin.source, source.op),
-        holes: undefined,
-      };
+      const offset = applyDerivation(feature, sourcePath, origin.source, source.op);
+      return { from, path: offset.path, holes: undefined, notes: offset.notes };
     }
   }
 }
@@ -195,8 +261,8 @@ function build(
  * Recursive rather than scheduled: the chain is two links deep and each node
  * has one source, so a topological pass would be machinery without a job.
  *
- * A failed source yields **one** message here rather than the root cause
- * repeated down the chain — one problem, one entry in the panel.
+ * A failed source yields **one** `SOURCE_FAILED` here rather than the root
+ * cause repeated down the chain — one problem, one entry in the panel (E3).
  */
 function followSource(
   feature: Feature,
@@ -207,13 +273,11 @@ function followSource(
   // The source is already being resolved further up the stack, so following it
   // would come straight back here.
   if (visiting.has(sourceId) || sourceId === feature.id) {
-    throw new CycleError(`${feature.name} is derived from itself, through a cycle.`);
+    throw new CycleError(problem('CYCLE', about(feature)));
   }
 
   const from = byId.get(sourceId);
-  if (from === undefined) {
-    throw new RangeError('The feature this one follows was not found.');
-  }
+  if (from === undefined) throw new Failure(problem('SOURCE_MISSING', about(feature)));
 
   visiting.add(feature.id);
   let resolved: ResolvedFeature;
@@ -224,7 +288,9 @@ function followSource(
   }
 
   if (!resolved.ok) {
-    throw new RangeError(`The ${from.name} it follows could not be built.`);
+    throw new Failure(
+      problem('SOURCE_FAILED', { ...about(feature), sourceId: from.id, sourceName: from.name }),
+    );
   }
 
   return resolved;
@@ -238,24 +304,41 @@ function followSource(
  * `docs/geometry.md` §6.4 means by the domain normalising it.
  */
 function applyDerivation(
+  feature: Feature,
   sourcePath: Path,
   source: GeometrySource,
   op: Extract<Derivation, { type: 'offset' }>,
-): Path {
-  const followed = runOf(sourcePath, source, op.run);
+): { path: Path; notes: readonly Problem[] | undefined } {
+  const followed = runOf(feature, sourcePath, source, op.run);
+  const at: ProblemLocation = { kind: 'path', path: followed };
+
+  // Checked here rather than left to `offsetPath` to throw: the analytic
+  // offset cannot take a cubic, and that is a state of the design to report.
+  if (followed.segments.some((segment) => segment.kind === 'cubic')) {
+    throw new Failure(problem('OFFSET_UNSUPPORTED', about(feature)), at);
+  }
 
   const inwardIsLeft = !sourcePath.closed || PathOps.signedArea(sourcePath) > 0;
   const towardsInside = op.side === 'inward' ? 1 : -1;
   const distance = op.distanceMm * towardsInside * (inwardIsLeft ? 1 : -1);
 
-  const [result] = offsetPath(followed, distance, { join: 'round' });
-  if (result === undefined) {
-    throw new RangeError(
-      `A ${String(op.distanceMm)} mm inset is deeper than this outline can hold.`,
+  const pieces = offsetPath(followed, distance, { join: 'round' });
+  if (pieces.length === 0) {
+    throw new Failure(
+      problem('OFFSET_COLLAPSED', { ...about(feature), distanceMm: op.distanceMm, side: op.side }),
+      at,
     );
   }
 
-  return result;
+  // Nothing is dropped without a diagnostic (E2).
+  const { kept, dropped } = keepLargestPiece(pieces);
+  return {
+    path: kept,
+    notes:
+      dropped < 1
+        ? undefined
+        : [problem('OFFSET_SPLIT', { ...about(feature), droppedPieces: dropped })],
+  };
 }
 
 /**
@@ -263,9 +346,10 @@ function applyDerivation(
  *
  * A whole run is the source path itself, closed and all. A partial run is the
  * stretch between two anchors — the seam on three sides of a pocket, which is
- * the ordinary case rather than the exception.
+ * the ordinary case rather than the exception. A named anchor that is not there
+ * fails (E4); it never re-targets to a neighbour.
  */
-function runOf(sourcePath: Path, source: GeometrySource, run: Run): Path {
+function runOf(feature: Feature, sourcePath: Path, source: GeometrySource, run: Run): Path {
   if (run.kind === 'whole') return sourcePath;
 
   const anchors = anchorsOf(source, sourcePath);
@@ -273,15 +357,117 @@ function runOf(sourcePath: Path, source: GeometrySource, run: Run): Path {
   const to = anchors[run.toAnchor];
 
   if (from === undefined || to === undefined) {
-    throw new RangeError(
-      anchors.length === 0
-        ? 'This outline has no corners to run between, so it can only be followed whole.'
-        : `That run named corner ${String(Math.max(run.fromAnchor, run.toAnchor))}, ` +
-            `and this outline has ${String(anchors.length)}.`,
+    throw new Failure(
+      problem('ANCHOR_MISSING', {
+        ...about(feature),
+        anchor: Math.max(run.fromAnchor, run.toAnchor),
+        available: anchors.length,
+      }),
+      { kind: 'path', path: sourcePath },
     );
   }
 
   return subPath(sourcePath, from, to);
+}
+
+/**
+ * The first parameter of a feature that no geometry could be built from.
+ *
+ * Checked by the domain before geometry is asked, so the failure names the
+ * parameter the user typed — "the width" — instead of surfacing the geometry
+ * layer's guard, which speaks in function names.
+ */
+function parameterProblem(feature: Feature): Problem | null {
+  const checks: Array<[string, number, Requirement]> = [];
+  const source = feature.source;
+
+  switch (source.kind) {
+    case 'path':
+      break;
+    case 'shape': {
+      const shape = source.shape;
+      switch (shape.type) {
+        case 'rect':
+          checks.push(
+            ['position', shape.origin.x, 'finite'],
+            ['position', shape.origin.y, 'finite'],
+            ['width', shape.width, 'finite'],
+            ['height', shape.height, 'finite'],
+            ['rotation', shape.rotation, 'finite'],
+            ['corner radius', shape.radii.bottomLeft, 'non-negative'],
+            ['corner radius', shape.radii.bottomRight, 'non-negative'],
+            ['corner radius', shape.radii.topRight, 'non-negative'],
+            ['corner radius', shape.radii.topLeft, 'non-negative'],
+          );
+          break;
+        case 'circle':
+          checks.push(
+            ['position', shape.centre.x, 'finite'],
+            ['position', shape.centre.y, 'finite'],
+            ['radius', shape.radius, 'non-negative'],
+          );
+          break;
+        case 'arc':
+          checks.push(
+            ['position', shape.centre.x, 'finite'],
+            ['position', shape.centre.y, 'finite'],
+            ['radius', shape.radius, 'non-negative'],
+            ['start angle', shape.startAngle, 'finite'],
+            ['sweep', shape.sweepAngle, 'finite'],
+          );
+          break;
+      }
+      break;
+    }
+    case 'derived': {
+      const op = source.op;
+      if (op.type === 'offset') {
+        checks.push([op.side === 'inward' ? 'inset' : 'allowance', op.distanceMm, 'non-negative']);
+      } else {
+        checks.push(['pitch', op.pitchMm, 'positive']);
+        if (op.startOffsetMm !== undefined) {
+          checks.push(['start offset', op.startOffsetMm, 'non-negative']);
+        }
+        if (op.endOffsetMm !== undefined) {
+          checks.push(['end offset', op.endOffsetMm, 'non-negative']);
+        }
+      }
+      break;
+    }
+  }
+
+  for (const [parameter, value, requirement] of checks) {
+    const unmet = unmetRequirement(value, requirement);
+    if (unmet !== null) {
+      return problem('PARAMETER_INVALID', {
+        ...about(feature),
+        parameter,
+        requirement: unmet,
+        value,
+      });
+    }
+  }
+  return null;
+}
+
+type Requirement = 'finite' | 'positive' | 'non-negative';
+
+/**
+ * Which requirement `value` fails, or null.
+ *
+ * Exact comparisons against zero on purpose: these mirror the geometry
+ * layer's own guards (a pitch of `1e-12` is refused there only if it is not
+ * greater than zero), and the domain must not refuse what geometry accepts.
+ */
+function unmetRequirement(value: number, requirement: Requirement): Requirement | null {
+  if (!Number.isFinite(value)) return 'finite';
+  if (requirement === 'positive' && !(value > 0)) return 'positive';
+  if (requirement === 'non-negative' && value < 0) return 'non-negative';
+  return null;
+}
+
+function about(feature: Feature): { featureId: FeatureId; featureName: string } {
+  return { featureId: feature.id, featureName: feature.name };
 }
 
 function pathForShape(shape: ParametricShape): Path {
@@ -320,7 +506,7 @@ export function* resolvedFeatures(
   }
 }
 
-/** Features that failed to evaluate, for the problems panel. */
+/** Features that failed to evaluate. `diagnose` is what surfaces read. */
 export function evaluationErrors(
   resolved: ResolvedProject,
 ): Array<Extract<ResolvedFeature, { ok: false }>> {

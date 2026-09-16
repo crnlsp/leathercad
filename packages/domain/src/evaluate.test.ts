@@ -96,7 +96,10 @@ describe('evaluate', () => {
     const resolved = evaluate(projectWith([broken, rectFeature('good', 20, 20)]));
 
     expect(evaluationErrors(resolved)).toHaveLength(1);
-    expect(evaluationErrors(resolved)[0]!.error).toMatch(/finite/i);
+    expect(evaluationErrors(resolved)[0]!.problem).toMatchObject({
+      code: 'PARAMETER_INVALID',
+      facts: { parameter: 'width', requirement: 'finite' },
+    });
     // The healthy feature still resolves.
     expect([...resolvedFeatures(resolved)]).toHaveLength(1);
   });

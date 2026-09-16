@@ -1,5 +1,5 @@
 import { deleteFeatures, refusedTransforms, translateFeatures } from '@leathercad/document';
-import { evaluate } from '@leathercad/domain';
+import { evaluate, type Problem } from '@leathercad/domain';
 import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
 import { pathItem, type DisplayList } from '@leathercad/render';
 
@@ -14,7 +14,7 @@ type State =
       readonly kind: 'moving';
       readonly startMm: { x: number; y: number };
       /** Why part of the selection is not moving, while it is not (X3). */
-      readonly refusal: string | null;
+      readonly refusal: Problem | null;
     }
   | {
       readonly kind: 'band';
@@ -96,7 +96,7 @@ export function createSelectTool(): Tool {
           selection.features,
           MatOps.fromTranslation(delta),
         );
-        state = { ...state, refusal: refused[0]?.reason ?? null };
+        state = { ...state, refusal: refused[0]?.problem ?? null };
 
         ctx.store.preview(translateFeatures(selection.features, delta));
         ctx.invalidate();

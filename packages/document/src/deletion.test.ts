@@ -244,7 +244,17 @@ describe('refusedTransforms, for derived features', () => {
   it('refuses moving a stitch line on its own, and says what to move instead', () => {
     const refused = refusedTransforms(project(), ['stitch-1'], shift);
     expect(refused).toEqual([
-      expect.objectContaining({ featureId: 'stitch-1', reason: expect.stringMatching(/Outline/) }),
+      {
+        featureId: 'stitch-1',
+        problem: {
+          code: 'DERIVED_MOVED_ALONE',
+          facts: expect.objectContaining({
+            featureId: 'stitch-1',
+            rootId: 'cut-1',
+            rootName: 'Outline',
+          }),
+        },
+      },
     ]);
   });
 

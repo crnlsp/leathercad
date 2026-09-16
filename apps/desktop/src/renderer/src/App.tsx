@@ -8,7 +8,7 @@ import {
   setProjectName,
   type DeleteResolution,
 } from '@leathercad/document';
-import type { Project } from '@leathercad/domain';
+import { describeProblem, diagnose, type Project } from '@leathercad/domain';
 import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -18,6 +18,7 @@ import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { useProjectFile } from './useProjectFile.js';
 import { PartsList } from './PartsList.js';
+import { ProblemsPanel } from './ProblemsPanel.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
@@ -138,6 +139,11 @@ export function App() {
     setPendingDelete(null);
   };
 
+  // One list, read by the panel, the count, the property panel and the canvas
+  // (X7). Memoised on the project object inside `diagnose`, so asking here and
+  // again in the canvas costs one evaluation.
+  const diagnostics = diagnose(storeState.document.project);
+
   const featureCount = storeState.document.project.parts.reduce(
     (total, part) => total + part.features.length,
     0,
@@ -225,6 +231,11 @@ export function App() {
             selected={storeState.selection.features}
             onRemovePart={requestDeletePart}
           />
+          <ProblemsPanel
+            store={store}
+            project={storeState.document.project}
+            diagnostics={diagnostics}
+          />
         </div>
         <div className="canvas-column">
           <ToolOptions
@@ -248,6 +259,7 @@ export function App() {
           store={store}
           project={storeState.document.project}
           selected={storeState.selection.features}
+          diagnostics={diagnostics}
           nextId={nextId}
           requestDelete={requestDelete}
         />
@@ -270,6 +282,15 @@ export function App() {
             <b data-testid="feature-count">{featureCount}</b> features
             <span className="sep">·</span>
             <b data-testid="selected-count">{storeState.selection.features.size}</b> selected
+            {diagnostics.length > 0 && (
+              <>
+                <span className="sep">·</span>
+                <b className="status-error" data-testid="problem-count">
+                  {diagnostics.length}
+                </b>{' '}
+                {diagnostics.length === 1 ? 'problem' : 'problems'}
+              </>
+            )}
             {file.state.path !== null && (
               <>
                 <span className="sep">·</span>
@@ -280,7 +301,7 @@ export function App() {
           </span>
           {status?.notice !== null && status?.notice !== undefined ? (
             <span className="status-error" data-testid="tool-notice">
-              {status.notice}
+              {describeProblem(status.notice)}
             </span>
           ) : bridgeError !== null || file.state.error !== null ? (
             <span className="status-error" data-testid="file-error">

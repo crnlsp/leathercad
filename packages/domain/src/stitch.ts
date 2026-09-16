@@ -44,25 +44,12 @@ export interface StitchHoles {
    * is this one.
    */
   readonly achievedPitchMm: Mm;
-  readonly runs: readonly RunReport[];
   /**
-   * The achieved spacing has drifted far enough from the iron's pitch to be
-   * worth telling the user about. See `SPACING_TOLERANCE_FRACTION`.
+   * What each run achieved. Whether any of it is worth telling the user about
+   * is a design rule's decision, not distribution's: see `validate.ts`.
    */
-  readonly spacingWarning: boolean;
+  readonly runs: readonly RunReport[];
 }
-
-/**
- * How far the achieved spacing may drift from the iron's pitch before it is
- * worth saying so.
- *
- * A quarter of the nominal pitch. Tighter than that and the holes crowd — at
- * the extreme they tear out between each other — while looser leaves a seam
- * that visibly does not match the iron it was cut for. Either way the geometry
- * is still exactly what was asked for, so this is a warning and not a refusal:
- * the maker may know something the software does not.
- */
-const SPACING_TOLERANCE_FRACTION = 0.25;
 
 /**
  * Places holes along a stitch line.
@@ -132,8 +119,6 @@ export function distributeHoles(line: Path, op: StitchHolesOp): StitchHoles {
     count: deduped.length,
     achievedPitchMm,
     runs: reports,
-    spacingWarning:
-      Math.abs(achievedPitchMm - op.pitchMm) > op.pitchMm * SPACING_TOLERANCE_FRACTION,
   };
 }
 

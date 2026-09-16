@@ -925,3 +925,43 @@ test('places a rivet hole on the selected panel, named for what it is', async ()
     await expect(window.getByTestId('property-panel').getByLabel('Diameter')).toHaveValue('4');
   });
 });
+
+test('an inset too deep for its outline is listed, selectable and fixable', async () => {
+  // Slice 4.12a. One diagnostic list behind every surface: the panel, the
+  // status count and the property panel all show the same problem, and the
+  // feature that follows the broken one is reported once, as a consequence.
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+
+    const inset = panel.locator('label', { hasText: /^Inset/ }).locator('input');
+    await inset.fill('60');
+    await inset.press('Enter');
+
+    const problems = window.getByTestId('problems-panel');
+    const rows = problems.getByTestId('problem-row');
+    await expect(rows).toHaveCount(2);
+
+    // The root says what is wrong; the holes say only that what they follow
+    // failed, rather than repeating the inset's reason (E3).
+    await expect(rows.first()).toHaveAttribute('data-code', 'OFFSET_COLLAPSED');
+    await expect(rows.first()).toContainText('60 mm inset is deeper');
+    await expect(rows.nth(1)).toHaveAttribute('data-code', 'SOURCE_FAILED');
+    await expect(rows.nth(1)).toContainText('Stitch line it follows could not be built');
+    await expect(window.getByTestId('problem-count')).toHaveText('2');
+
+    // Clicking a problem selects what it is about, and the property panel
+    // shows the same sentence from the same list.
+    await window.getByTestId('parts-list').getByText('Outline').click();
+    await rows.first().click();
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expect(panel.getByTestId('feature-problems')).toContainText('deeper than this outline');
+
+    // Fixing the cause clears it everywhere.
+    await inset.fill('3.5');
+    await inset.press('Enter');
+    await expect(rows).toHaveCount(0);
+    await expect(problems).toContainText('Nothing to fix');
+    await expect(window.getByTestId('problem-count')).toHaveCount(0);
+  });
+});

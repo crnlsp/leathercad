@@ -168,19 +168,29 @@ describe('derivationRefusal', () => {
     expect(derivationRefusal(p, feature)).toBeNull();
   });
 
-  const refused: Array<[string, Project, string, RegExp]> = [
-    ['holes along an outline', project([outline('cut'), holes('h', 'cut')]), 'h', /stitch line/i],
+  const incompatible = (featureId: string, rule: string) => ({
+    code: 'DERIVATION_INCOMPATIBLE',
+    facts: { featureId, rule },
+  });
+
+  const refused: Array<[string, Project, string, object]> = [
+    [
+      'holes along an outline',
+      project([outline('cut'), holes('h', 'cut')]),
+      'h',
+      incompatible('h', 'holes-need-stitch-line'),
+    ],
     [
       'a stitch line inset from a fold line',
       project([fold('f'), inset('s', 'f')]),
       's',
-      /outline|cut-out/i,
+      incompatible('s', 'inset-needs-outline'),
     ],
     [
       'an outline offset outward from an open stitch line',
       project([drawnStitch('seam', false), allowance('out', 'seam')]),
       'out',
-      /closed/i,
+      incompatible('out', 'allowance-needs-closed-line'),
     ],
     [
       'an outline offset outward along part of a stitch line',
@@ -189,7 +199,7 @@ describe('derivationRefusal', () => {
         allowance('out', 'seam', { kind: 'between', fromAnchor: 0, toAnchor: 1 }),
       ]),
       'out',
-      /whole/i,
+      incompatible('out', 'allowance-needs-whole-run'),
     ],
     [
       'a cut-out offset outward from a stitch line',
@@ -198,14 +208,19 @@ describe('derivationRefusal', () => {
         { ...allowance('out', 'seam'), kind: 'cut-contour', role: 'inner' } as Feature,
       ]),
       'out',
-      /outer/i,
+      incompatible('out', 'allowance-needs-outer'),
     ],
-    ['a source that does not exist', project([inset('s', 'nowhere')]), 's', /does not exist/i],
+    [
+      'a source that does not exist',
+      project([inset('s', 'nowhere')]),
+      's',
+      { code: 'SOURCE_MISSING', facts: { featureId: 's' } },
+    ],
   ];
 
-  it.each(refused)('refuses %s, saying why', (_, p, id, reason) => {
+  it.each(refused)('refuses %s, saying why', (_, p, id, expected) => {
     const feature = p.parts.flatMap((part) => part.features).find((f) => f.id === id)!;
-    expect(derivationRefusal(p, feature)).toMatch(reason);
+    expect(derivationRefusal(p, feature)).toMatchObject(expected);
   });
 
   it('has nothing to say about a feature that is not derived', () => {
@@ -226,22 +241,57 @@ describe('followRefusal', () => {
     // own derived outline back at itself would loop. Built directly as an
     // inset from the allowance to make the loop reachable.
     const p = project([drawnStitch('seam', true), allowance('out', 'seam'), inset('inner', 'out')]);
-    const reason = followRefusal(p, 'out', 'inner');
-    expect(reason).toMatch(/Outline out/);
-    expect(reason).toMatch(/Stitch inner/);
+    expect(followRefusal(p, 'out', 'inner')).toMatchObject({
+      code: 'WOULD_LOOP',
+      facts: {
+        featureId: 'out',
+        featureName: 'Outline out',
+        sourceId: 'inner',
+        sourceName: 'Stitch inner',
+      },
+    });
   });
 
   it('refuses following itself', () => {
-    expect(followRefusal(chain(), 'stitch', 'stitch')).toMatch(/itself/i);
+    expect(followRefusal(chain(), 'stitch', 'stitch')).toMatchObject({
+      code: 'FOLLOWS_ITSELF',
+      facts: { featureId: 'stitch' },
+    });
   });
 
   it('refuses a re-point the compatibility table does not allow', () => {
     const p = project([outline('cut'), inset('stitch', 'cut'), fold('f')]);
-    expect(followRefusal(p, 'stitch', 'f')).toMatch(/outline|cut-out/i);
+    expect(followRefusal(p, 'stitch', 'f')).toMatchObject({
+      code: 'DERIVATION_INCOMPATIBLE',
+      facts: { featureId: 'stitch', rule: 'inset-needs-outline' },
+    });
   });
 
   it('refuses re-pointing a feature that is not derived', () => {
-    expect(followRefusal(chain(), 'cut', 'stitch')).toMatch(/does not follow/i);
+    expect(followRefusal(chain(), 'cut', 'stitch')).toMatchObject({
+      code: 'NOT_DERIVED',
+      facts: { featureId: 'cut' },
+    });
+  });
+
+  it('refuses a re-point that would break a feature further down, on the feature it breaks', () => {
+    // Insetting the stitch line from an open outline is fine for the stitch
+    // line itself. But the seam allowance built from that stitch line needs it
+    // closed, so the query reports the problem the re-point would *introduce*
+    // — about the allowance, which is what would break.
+    const openCut: Feature = {
+      ...base('open', 'Open cut'),
+      kind: 'cut-contour',
+      role: 'outer',
+      source: { kind: 'path', path: square(false) },
+    };
+    const p = project([outline('cut'), openCut, inset('s', 'cut')], [allowance('out', 's')]);
+
+    expect(followRefusal(p, 's', 'cut')).toBeNull();
+    expect(followRefusal(p, 's', 'open')).toMatchObject({
+      code: 'DERIVATION_INCOMPATIBLE',
+      facts: { featureId: 'out', rule: 'allowance-needs-closed-line' },
+    });
   });
 });
 
@@ -255,7 +305,7 @@ describe('graphProblems', () => {
   it('names a feature following one that does not exist', () => {
     const problems = graphProblems(project([inset('s', 'gone')]));
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatchObject({ featureId: 's', code: 'MISSING_SOURCE' });
+    expect(problems[0]).toMatchObject({ code: 'SOURCE_MISSING', facts: { featureId: 's' } });
   });
 
   it('names every feature on a loop', () => {
@@ -264,17 +314,25 @@ describe('graphProblems', () => {
       { ...allowance('b', 'a') } as Feature,
     ]);
     const cycles = graphProblems(p).filter((problem) => problem.code === 'CYCLE');
-    expect(cycles.map((c) => c.featureId).sort()).toEqual(['a', 'b']);
+    expect(cycles.map((c) => (c.facts as { featureId: string }).featureId).sort()).toEqual([
+      'a',
+      'b',
+    ]);
   });
 
   it('names a derivation the table does not allow', () => {
     const problems = graphProblems(project([outline('cut'), holes('h', 'cut')]));
-    expect(problems).toEqual([expect.objectContaining({ featureId: 'h', code: 'INCOMPATIBLE' })]);
+    expect(problems).toEqual([
+      {
+        code: 'DERIVATION_INCOMPATIBLE',
+        facts: { featureId: 'h', featureName: expect.any(String), rule: 'holes-need-stitch-line' },
+      },
+    ]);
   });
 
   it('names a duplicated id', () => {
     const problems = graphProblems(project([outline('cut')], [outline('cut')]));
-    expect(problems).toEqual([expect.objectContaining({ featureId: 'cut', code: 'DUPLICATE_ID' })]);
+    expect(problems).toEqual([{ code: 'DUPLICATE_ID', facts: { featureId: 'cut' } }]);
   });
 });
 
@@ -388,15 +446,23 @@ describe('an empty project', () => {
   });
 
   it('refuses to re-point a feature that is not there', () => {
-    expect(followRefusal(project(), 'missing', 'also-missing')).toMatch(/does not exist/);
+    expect(followRefusal(project(), 'missing', 'also-missing')).toEqual({
+      code: 'FEATURE_MISSING',
+      facts: { featureId: 'missing' },
+    });
   });
 });
 
 describe('the compatibility table, branch by branch', () => {
-  // Each refusal is a message a user will read. Every branch is named here so
-  // none of them can quietly change meaning, or stop being reachable.
+  // Each refusal names the row of the table that refused it. Every branch is
+  // named here so none of them can quietly change meaning, or stop being
+  // reachable; the words for each row are pinned in problems.test.ts.
   const featureIn = (p: Project, id: string): Feature =>
     p.parts.flatMap((part) => part.features).find((f) => f.id === id)!;
+  const ruleOf = (p: Project, id: string): unknown => {
+    const refusal = derivationRefusal(p, featureIn(p, id));
+    return refusal?.code === 'DERIVATION_INCOMPATIBLE' ? refusal.facts.rule : refusal;
+  };
 
   it('refuses a stitch-holes derivation on anything but a hole set', () => {
     const p = project([
@@ -404,7 +470,7 @@ describe('the compatibility table, branch by branch', () => {
       inset('s', 'cut'),
       { ...holes('h', 's'), kind: 'stitch-line' } as Feature,
     ]);
-    expect(derivationRefusal(p, featureIn(p, 'h'))).toMatch(/Only a stitch hole set/);
+    expect(ruleOf(p, 'h')).toBe('holes-need-hole-set');
   });
 
   it('refuses an inward offset on anything but a stitch line', () => {
@@ -412,7 +478,7 @@ describe('the compatibility table, branch by branch', () => {
       outline('cut'),
       { ...inset('x', 'cut'), kind: 'cut-contour', role: 'inner' } as Feature,
     ]);
-    expect(derivationRefusal(p, featureIn(p, 'x'))).toMatch(/Only a stitch line can be inset/);
+    expect(ruleOf(p, 'x')).toBe('inset-needs-stitch-line');
   });
 
   it('refuses an outward offset on anything but an outline', () => {
@@ -420,14 +486,12 @@ describe('the compatibility table, branch by branch', () => {
       drawnStitch('seam', true),
       { ...allowance('x', 'seam'), kind: 'stitch-line' } as Feature,
     ]);
-    expect(derivationRefusal(p, featureIn(p, 'x'))).toMatch(
-      /Only an outline can be offset outward/,
-    );
+    expect(ruleOf(p, 'x')).toBe('allowance-needs-outline');
   });
 
   it('refuses an outline offset outward from another outline', () => {
     const p = project([outline('cut'), allowance('x', 'cut')]);
-    expect(derivationRefusal(p, featureIn(p, 'x'))).toMatch(/outward from a stitch line/);
+    expect(ruleOf(p, 'x')).toBe('allowance-needs-stitch-line');
   });
 
   it('reads closedness through a derivation: a whole inset of a closed outline is closed', () => {
@@ -440,6 +504,6 @@ describe('the compatibility table, branch by branch', () => {
       [outline('cut'), inset('s', 'cut', { kind: 'between', fromAnchor: 0, toAnchor: 2 })],
       [allowance('out', 's')],
     );
-    expect(derivationRefusal(p, featureIn(p, 'out'))).toMatch(/closed/);
+    expect(ruleOf(p, 'out')).toBe('allowance-needs-closed-line');
   });
 });

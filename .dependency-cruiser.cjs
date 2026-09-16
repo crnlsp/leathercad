@@ -122,6 +122,21 @@ module.exports = {
     },
 
     {
+      name: 'problem-messages-stay-in-the-catalogue',
+      comment:
+        'Only problems/index.ts may import the message catalogue. The rest of the domain reports ' +
+        'problems as typed facts and must not be able to reach for a sentence — that is how a ' +
+        'second, ad-hoc way of reporting errors would start. See ' +
+        'docs/superpowers/specs/2026-09-15-diagnostic-channel-design.md.',
+      severity: 'error',
+      from: {
+        path: '^packages/domain/src/',
+        pathNot: '^packages/domain/src/problems/(index|problems\\.test)\\.ts$',
+      },
+      to: { path: '^packages/domain/src/problems/messages\\.ts$' },
+    },
+
+    {
       name: 'no-deep-package-imports',
       comment:
         'Cross-package imports go through the package index, never into its internals. ' +

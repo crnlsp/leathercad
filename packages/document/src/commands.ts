@@ -11,6 +11,7 @@ import type {
   GeometrySource,
   Part,
   PartId,
+  Problem,
   Project,
   Run,
 } from '@leathercad/domain';
@@ -20,6 +21,7 @@ import {
   derivationRefusal,
   evaluate,
   followRefusal,
+  problem,
   transformShape,
 } from '@leathercad/domain';
 import { MatOps, PathOps, Shapes, type Mat2x3, type Path, type Vec2 } from '@leathercad/geometry';
@@ -157,11 +159,10 @@ export function transformFeatures(
   });
 }
 
-/** A feature that would refuse the transform, with the reason to show. */
+/** A feature that would refuse the transform, and the problem that refuses it. */
 export interface RefusedTransform {
   readonly featureId: FeatureId;
-  readonly featureName: string;
-  readonly reason: string;
+  readonly problem: Problem;
 }
 
 /**
@@ -195,8 +196,12 @@ export function refusedTransforms(
           const root = rootOf(byId, feature);
           refused.push({
             featureId: feature.id,
-            featureName: feature.name,
-            reason: `${feature.name} follows ${root.name}, so it moves when ${root.name} does. Move ${root.name} instead.`,
+            problem: problem('DERIVED_MOVED_ALONE', {
+              featureId: feature.id,
+              featureName: feature.name,
+              rootId: root.id,
+              rootName: root.name,
+            }),
           });
         }
         continue;
@@ -206,7 +211,7 @@ export function refusedTransforms(
 
       const result = transformShape(feature.source.shape, matrix);
       if (!result.ok) {
-        refused.push({ featureId: feature.id, featureName: feature.name, reason: result.error });
+        refused.push({ featureId: feature.id, problem: result.error });
       }
     }
   }

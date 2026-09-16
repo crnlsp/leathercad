@@ -2,6 +2,7 @@ import { EPS_ANGLE, EPS_AREA, approxZero, err, ok, type Result } from '@leatherc
 import { MatOps, SegmentOps, type Mat2x3 } from '@leathercad/geometry';
 
 import type { ParametricShape } from './feature.js';
+import { problem, type Problem } from './problems/index.js';
 
 /**
  * Applies a transform to a parametric shape, through its parameters.
@@ -13,20 +14,22 @@ import type { ParametricShape } from './feature.js';
  *
  * What rule 1 does not say is what happens when the parameters *cannot*
  * express the result. This is that answer, and it is the rule for every
- * parametric shape added from here on:
+ * parametric shape added from here on — invariant X9:
  *
  * > A transformation that cannot preserve a shape's semantic representation
  * > must not silently demote it to another representation.
  *
  * So a non-uniformly scaled circle is **refused**, not quietly flattened into
- * cubics that can never be typed as a radius again. The caller gets a reason
- * written for the person holding the mouse. Rule 2 — drawn paths convert their
- * arcs to cubics — is unaffected: a drawn path has no parameters to protect.
+ * cubics that can never be typed as a radius again. The caller gets the
+ * problem, which the message catalogue turns into words for the person holding
+ * the mouse. Rule 2 — drawn paths convert their arcs to cubics — is unaffected:
+ * a drawn path has no parameters to protect.
  */
-export function transformShape(shape: ParametricShape, m: Mat2x3): Result<ParametricShape, string> {
-  if (isSingular(m)) {
-    return err('That would flatten the shape to nothing.');
-  }
+export function transformShape(
+  shape: ParametricShape,
+  m: Mat2x3,
+): Result<ParametricShape, Problem> {
+  if (isSingular(m)) return err(problem('TRANSFORM_FLATTENS', {}));
 
   switch (shape.type) {
     case 'rect':
@@ -38,10 +41,6 @@ export function transformShape(shape: ParametricShape, m: Mat2x3): Result<Parame
   }
 }
 
-const ROUND_MESSAGE =
-  'A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this ' +
-  'editor cannot represent. Scale it evenly instead.';
-
 /**
  * A rectangle's parameters are axis-aligned in its *own* frame, so a
  * non-uniform scale is expressible only while that frame is still square to
@@ -51,7 +50,7 @@ const ROUND_MESSAGE =
 function transformRect(
   shape: Extract<ParametricShape, { type: 'rect' }>,
   m: Mat2x3,
-): Result<ParametricShape, string> {
+): Result<ParametricShape, Problem> {
   const origin = MatOps.apply(m, shape.origin);
   const rotation = shape.rotation + rotationOf(m);
 
@@ -67,12 +66,7 @@ function transformRect(
     });
   }
 
-  if (!isAxisAligned(shape.rotation)) {
-    return err(
-      'A turned rectangle cannot be stretched along one axis — it would shear, and its corners ' +
-        'would stop being square. Rotate it back to 0°, or scale it evenly.',
-    );
-  }
+  if (!isAxisAligned(shape.rotation)) return err(problem('WOULD_SHEAR', {}));
 
   // Axis-aligned and axis-aligned scaling: exactly rule 1's worked example.
   // The radii do not scale, because a corner stretched unevenly is no longer
@@ -89,8 +83,8 @@ function transformRect(
 function transformCircle(
   shape: Extract<ParametricShape, { type: 'circle' }>,
   m: Mat2x3,
-): Result<ParametricShape, string> {
-  if (!MatOps.isSimilarity(m)) return err(ROUND_MESSAGE);
+): Result<ParametricShape, Problem> {
+  if (!MatOps.isSimilarity(m)) return err(problem('WOULD_BECOME_ELLIPSE', { shape: 'circle' }));
 
   return ok({
     ...shape,
@@ -112,8 +106,9 @@ function transformCircle(
 function transformArc(
   shape: Extract<ParametricShape, { type: 'arc' }>,
   m: Mat2x3,
-): Result<ParametricShape, string> {
-  if (!MatOps.isSimilarity(m)) return err(ROUND_MESSAGE);
+): Result<ParametricShape, Problem> {
+  const ellipse = problem('WOULD_BECOME_ELLIPSE', { shape: 'arc' });
+  if (!MatOps.isSimilarity(m)) return err(ellipse);
 
   const [segment] = SegmentOps.ArcOps.transform(
     {
@@ -128,7 +123,7 @@ function transformArc(
 
   // Unreachable: a similarity always yields exactly one arc segment. Checked
   // rather than asserted, because "unreachable" is where the next bug lives.
-  if (segment === undefined || segment.kind !== 'arc') return err(ROUND_MESSAGE);
+  if (segment === undefined || segment.kind !== 'arc') return err(ellipse);
 
   return ok({
     ...shape,

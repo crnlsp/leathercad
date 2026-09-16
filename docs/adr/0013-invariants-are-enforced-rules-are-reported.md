@@ -55,6 +55,13 @@ the catalogue and the navigation.
 
 ## Consequences
 
+Built in slice 4.12a; the design is
+[the slice spec](../superpowers/specs/2026-09-15-diagnostic-channel-design.md), which separates the
+channel into identity (`problems/codes.ts`), information (`problems/problem.ts`), presentation
+(`problems/messages.ts`) and surfaces. A typed failure is `{ problem, location? }`, where a
+`Problem` is a code plus typed facts and carries no sentence at all — the words come from the one
+catalogue, which a dependency-cruiser rule keeps the rest of the domain from importing.
+
 - `ResolvedFeature`'s error changes from a string to a typed failure.
 - Silent refusals become explained ones: closing a cycle, moving a derived feature on its own,
   scaling a linked mirror.

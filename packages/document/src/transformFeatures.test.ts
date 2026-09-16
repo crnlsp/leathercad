@@ -65,7 +65,10 @@ describe('transformFeatures', () => {
 
     expect(refused).toHaveLength(1);
     expect(refused[0]?.featureId).toBe('feat-1');
-    expect(refused[0]?.reason).toMatch(/ellipse/i);
+    expect(refused[0]?.problem).toEqual({
+      code: 'WOULD_BECOME_ELLIPSE',
+      facts: { shape: 'circle' },
+    });
   });
 
   it('reports nothing when every feature can take the transform', () => {
