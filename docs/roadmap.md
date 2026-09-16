@@ -707,10 +707,23 @@ that walks one scenario through the whole phase.
   Rows of holes — a belt's adjustment holes — are deliberately **not** here: a row is a set
   distributed along a path at a pitch, which is what `StitchHoleSet` already is, and building it as
   repeated single holes would be the wrong shape to fix later.
-- **4.4b** Anchors carried through derivations. An offset reports which corner produced which, a hole
-  set exposes its line's anchors, and an anchor with no image fails with `ANCHOR_MISSING` instead of
-  moving ([ADR 0010](adr/0010-anchors-address-geometry.md)). The prerequisite for mirror, seam
-  allowance and measurements naming the corners of derived geometry.
+- **4.4b** ✅ **Done.** Anchors carried through derivations
+  ([ADR 0010](adr/0010-anchors-address-geometry.md),
+  [design](superpowers/specs/2026-09-16-anchors-through-derivations-design.md)). `offsetPathTraced`
+  reports where every input segment and corner ended up, and the domain maps the source's anchors
+  through that trace rather than looking for them again in the result — the search ADR 0010 rejects,
+  because it lands on the wrong corner exactly when one disappears.
+  Anchors now live on the **resolved** feature, as distances along its own path, so a stitch line
+  knows which of its corners came from which corner of the outline, and a hole set exposes the line's
+  unchanged. `runOf` reads them instead of asking about parameters, which is what makes a run on
+  derived geometry work at all.
+  **A missing anchor keeps its index** and comes back as `null`: dropping it would renumber the rest,
+  which is a run silently moving to a different edge.
+  Gotchas: a corner arc the offset swallows is a sharp corner, not a lost anchor, so its image is the
+  join its neighbours meet at; the end of an **open** run has no corner after it, so its anchor maps
+  to where the run now ends rather than to nothing — a test caught that as a null; and a `null`
+  anchor cannot be *named* by anything yet, because only an inward offset takes a run, so that path
+  waits for measurements in 4.10 rather than being faked.
 - **4.8** Mirror as a derivation ([ADR 0012](adr/0012-mirror-is-a-derivation.md)): a linked
   counterpart of a feature or a whole part, same kind and role, with hole counts equal by
   construction. Moved and rotated through its axis and glide; never scaled. Offset-derived features

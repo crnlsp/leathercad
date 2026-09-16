@@ -12,6 +12,7 @@ import { selfIntersections } from './intersect.js';
 import {
   arc,
   end,
+  length as segmentLength,
   line,
   start,
   tangentAt,
@@ -24,6 +25,39 @@ import { add, cross, dot, perp, scale, sub, tryNormalise, type Vec2 } from '../v
 export interface OffsetOptions {
   /** How a gap at a corner is bridged. Only `round` exists so far. */
   readonly join: 'round';
+}
+
+/** Where something ended up on the offset, as distances along it. */
+export interface OffsetRange {
+  readonly startMm: Mm;
+  readonly endMm: Mm;
+}
+
+/**
+ * An offset result, and where each part of the input went.
+ *
+ * The correspondence comes from the code that built the geometry, which is the
+ * only place it exists: a later search for the nearest point lands on the
+ * wrong corner whenever an offset removes one ([ADR
+ * 0010](../../../../docs/adr/0010-anchors-address-geometry.md)). Both arrays
+ * are indexed by **input segment**.
+ */
+export interface OffsetPiece {
+  readonly path: Path;
+  /**
+   * Where the offset of input segment `i` lies on `path`, or `null` when the
+   * offset consumed it — a 3 mm corner arc inset by 3.5 mm.
+   */
+  readonly segments: readonly (OffsetRange | null)[];
+  /**
+   * Where the corner at the **end** of input segment `i` lies on `path`.
+   *
+   * A trimmed corner is the point the neighbours meet at; a bridged one is the
+   * middle of the arc that bridges it, which is the direction the corner
+   * pointed. `null` where the input has no corner there — the last segment of
+   * an open run.
+   */
+  readonly corners: readonly (Mm | null)[];
 }
 
 /**
@@ -68,6 +102,16 @@ export interface OffsetOptions {
  *   Tier 2 is for, and is still deferred.
  */
 export function offsetPath(p: Path, distanceMm: Mm, opts: OffsetOptions): Path[] {
+  return offsetPathTraced(p, distanceMm, opts).map((piece) => piece.path);
+}
+
+/**
+ * The same offset, and where every input segment and corner ended up.
+ *
+ * What anchors on derived geometry are built from: the domain maps a source's
+ * corners through this rather than looking for them again in the result.
+ */
+export function offsetPathTraced(p: Path, distanceMm: Mm, opts: OffsetOptions): OffsetPiece[] {
   const d = assertFinite(distanceMm, 'distanceMm');
 
   invariant(opts.join === 'round', `unsupported join ${opts.join}`);
@@ -85,14 +129,17 @@ export function offsetPath(p: Path, distanceMm: Mm, opts: OffsetOptions): Path[]
     analytic.push(s);
   }
 
-  // A zero offset returns the path itself, arcs and all.
-  if (approxZero(d, EPS_POINT)) return [p];
+  // A zero offset returns the path itself, arcs and all — so every segment is
+  // its own image and every corner stays where it is.
+  if (approxZero(d, EPS_POINT)) return [identityTrace(p)];
 
   // Kept alongside `offsets` because a consumed arc is dropped, which would
   // otherwise break the index correspondence the joins rely on.
   const sources: (LineSegment | ArcSegment)[] = [];
   const offsets: Segment[] = [];
-  for (const s of analytic) {
+  /** offsets index → input segment index, so the trace can speak in inputs. */
+  const inputOf: number[] = [];
+  for (const [index, s] of analytic.entries()) {
     if (s.kind === 'arc') {
       // Travelling counter-clockwise the left normal points at the centre, so
       // offsetting left shrinks the radius; clockwise it grows.
@@ -108,11 +155,13 @@ export function offsetPath(p: Path, distanceMm: Mm, opts: OffsetOptions): Path[]
 
       sources.push(s);
       offsets.push(arc(s.centre, radius, s.startAngle, s.sweepAngle));
+      inputOf.push(index);
       continue;
     }
 
     sources.push(s);
     offsets.push(offsetLine(s, d));
+    inputOf.push(index);
   }
 
   if (offsets.length === 0) return [];
@@ -120,7 +169,7 @@ export function offsetPath(p: Path, distanceMm: Mm, opts: OffsetOptions): Path[]
   const joined = joinAll(sources, offsets, d, p.closed);
   if (joined === undefined) return [];
 
-  const result = makePath(joined, p.closed);
+  const result = makePath(joined.segments, p.closed);
 
   // The last line of defence against a collapse that the per-segment checks
   // missed: a ring that has turned itself inside out has flipped its winding.
@@ -134,7 +183,89 @@ export function offsetPath(p: Path, distanceMm: Mm, opts: OffsetOptions): Path[]
   // refuse honestly.
   if (selfIntersections(result).length > 0) return [];
 
-  return [result];
+  return [trace(result, joined, inputOf, p.segments.length, p.closed)];
+}
+
+/** Every segment and corner of a path, as its own image. */
+function identityTrace(p: Path): OffsetPiece {
+  const segments: OffsetRange[] = [];
+  const corners: (Mm | null)[] = [];
+
+  let at = 0;
+  for (const [index, s] of p.segments.entries()) {
+    const endMm = at + segmentLength(s);
+    segments.push({ startMm: at, endMm });
+    // An open run's last segment ends the path rather than turning a corner.
+    corners.push(p.closed || index < p.segments.length - 1 ? endMm : null);
+    at = endMm;
+  }
+
+  return { path: p, segments, corners };
+}
+
+/**
+ * Turns what `joinAll` emitted into distances along the result.
+ *
+ * Bookkeeping, deliberately kept out of the joining itself: the join pass is
+ * about geometry and this is about where that geometry landed.
+ */
+function trace(
+  result: Path,
+  joined: Joined,
+  inputOf: readonly number[],
+  inputCount: number,
+  closed: boolean,
+): OffsetPiece {
+  const starts: Mm[] = [];
+  let at = 0;
+  for (const s of result.segments) {
+    starts.push(at);
+    at += segmentLength(s);
+  }
+
+  // Where each surviving offset, and each join, ended up.
+  const rangeOf = new Map<number, OffsetRange>();
+  const joinImage = new Map<number, Mm>();
+
+  for (const [position, from] of joined.provenance.entries()) {
+    const startMm = starts[position]!;
+    const endMm = startMm + segmentLength(result.segments[position]!);
+
+    if (from.kind === 'offset') {
+      rangeOf.set(from.index, { startMm, endMm });
+      continue;
+    }
+    // The middle of a bridging arc is the way the corner pointed.
+    joinImage.set(from.joinIndex, (startMm + endMm) / 2);
+  }
+
+  // A trimmed join left no segment of its own: it is the point where the two
+  // neighbours now meet, which is the end of the earlier one.
+  const joinCount = closed ? inputOf.length : inputOf.length - 1;
+  for (let j = 0; j < joinCount; j++) {
+    if (joinImage.has(j)) continue;
+    const before = rangeOf.get(j);
+    if (before !== undefined) joinImage.set(j, before.endMm);
+  }
+
+  const segments: (OffsetRange | null)[] = Array.from({ length: inputCount }, () => null);
+  for (const [offsetIndex, inputIndex] of inputOf.entries()) {
+    segments[inputIndex] = rangeOf.get(offsetIndex) ?? null;
+  }
+
+  // The corner at the end of input segment i is the join after whichever
+  // offset covers it — so a consumed corner arc reports the join its two
+  // neighbours now meet at, which is exactly where that corner went.
+  const corners: (Mm | null)[] = Array.from({ length: inputCount }, () => null);
+  let offsetIndex = -1;
+  for (let input = 0; input < inputCount; input++) {
+    const surviving = inputOf.indexOf(input);
+    if (surviving !== -1) offsetIndex = surviving;
+    if (offsetIndex === -1) continue;
+    corners[input] = joinImage.get(offsetIndex) ?? null;
+  }
+
+  return { path: result, segments, corners };
 }
 
 /** A line moves along its left normal. */
@@ -185,12 +316,22 @@ type Join =
  * cut the *first* segment, which a forward pass has already emitted untrimmed,
  * leaving the ring open by exactly the offset distance.
  */
+/** Where an emitted segment came from, so the trace can be built afterwards. */
+type Provenance =
+  | { readonly kind: 'offset'; readonly index: number }
+  | { readonly kind: 'bridge'; readonly joinIndex: number };
+
+interface Joined {
+  readonly segments: Segment[];
+  readonly provenance: Provenance[];
+}
+
 function joinAll(
   sources: readonly (LineSegment | ArcSegment)[],
   offsets: readonly Segment[],
   d: Mm,
   closed: boolean,
-): Segment[] | undefined {
+): Joined | undefined {
   const n = offsets.length;
   // A closed ring joins the last segment back to the first; an open run stops.
   const joinCount = closed ? n : n - 1;
@@ -203,6 +344,7 @@ function joinAll(
   }
 
   const out: Segment[] = [];
+  const provenance: Provenance[] = [];
   for (let i = 0; i < n; i++) {
     const current = offsets[i]!;
     // The join before this segment trims its start; the one after, its end.
@@ -222,11 +364,15 @@ function joinAll(
       // any other overlap involving one — so its endpoints are already right.
       out.push(current);
     }
+    provenance.push({ kind: 'offset', index: i });
 
-    if (after?.kind === 'bridge') out.push(after.arc);
+    if (after?.kind === 'bridge') {
+      out.push(after.arc);
+      provenance.push({ kind: 'bridge', joinIndex: i });
+    }
   }
 
-  return out;
+  return { segments: out, provenance };
 }
 
 /** The join between offset `i` and the one after it. */

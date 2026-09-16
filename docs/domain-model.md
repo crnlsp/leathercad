@@ -388,7 +388,7 @@ dialog reads it and the command enforces it.
 *Superseded:* this section previously named "bake" the default, and the M3 implementation
 cascades. Both change without telling the user; see the ADR.
 
-### 4.6 Anchors — built for roots, designed through derivations in 4.4b
+### 4.6 Anchors — built, through derivations in 4.4b
 
 [ADR 0010](adr/0010-anchors-address-geometry.md). **A place on a feature is an anchor:
 `(featureId, anchor index)`. Nothing addresses geometry by segment index** (S9).
@@ -398,7 +398,7 @@ cascades. Both change without telling the user; see the ADR.
 | `rect` shape | Its 4 corners | Width, height, radius, rotation: always 4 |
 | Drawn path | Its corners, in order | Moving a point; **not** inserting one. Vertex ids come before slice 3.9 |
 | `circle`, `arc` | None | Everything |
-| Derived (designed) | The source's anchors, mapped by the derivation | Whatever the source is stable under |
+| Derived | The source's anchors, mapped by the derivation | Whatever the source is stable under |
 
 How a derivation maps anchors:
 
@@ -406,8 +406,17 @@ How a derivation maps anchors:
 - a **mirror** maps each anchor through its transform;
 - a **hole set** exposes its stitch line's anchors.
 
-The mapping comes from the code that built the geometry, never from searching for the nearest point.
-**An anchor with no image is missing** (E4): anything that names it fails with `ANCHOR_MISSING`.
+The mapping comes from the code that built the geometry, never from searching for the nearest point:
+`offsetPathTraced` reports where each input segment and corner ended up, and the domain maps through
+that. A corner arc the offset swallowed is a sharp corner rather than a collapse, so its anchor
+still has an image.
+
+Anchors live on the **resolved** feature, as distances along its own path, because that is where the
+geometry was built. A partial run keeps only the anchors it covers.
+
+**An anchor with no image is missing** (E4): it keeps its index and is `null` — dropping it would
+renumber every anchor after it, which is a run silently moving to a different edge — and anything
+that names it fails with `ANCHOR_MISSING`.
 
 ### 4.7 Duplicate, flip and mirror — designed, 3.7b, 4.3, 4.8
 

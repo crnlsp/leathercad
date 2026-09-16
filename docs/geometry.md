@@ -410,6 +410,9 @@ just as they did to a library's:
 - Work in integers at the quantisation scale — **1 unit = 1e-4 mm**. Conversion is exact for
   coordinates that have already been quantised (CLAUDE.md invariant 8), so the round trip introduces
   no error of its own.
+- `offsetPathTraced` returns the same pieces plus **where each input segment and corner ended up**,
+  which is what anchors on derived geometry are built from (ADR 0010, slice 4.4b). The
+  correspondence comes from the joining code, because that is the only place it exists.
 - Whatever computes it, the entry point stays `offsetPath`, returning `Path[]`. Callers already
   handle zero, one and several results, so a better implementation is a drop-in.
 - Arc tolerance for round joins comes from our flatten tolerance. Never a library's default, and

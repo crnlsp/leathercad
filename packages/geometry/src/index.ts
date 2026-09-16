@@ -54,8 +54,8 @@ export type { Intersection } from './ops/intersect.js';
 export { intersectPaths, intersectSegments, selfIntersections } from './ops/intersect.js';
 export { subPath } from './ops/subPath.js';
 
-export type { OffsetOptions } from './ops/offset.js';
-export { offsetPath } from './ops/offset.js';
+export type { OffsetOptions, OffsetPiece, OffsetRange } from './ops/offset.js';
+export { offsetPath, offsetPathTraced } from './ops/offset.js';
 
 export type { DistributedPoint, Distribution, DistributeOptions } from './ops/distribute.js';
 export { distributeAlongPath } from './ops/distribute.js';

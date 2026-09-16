@@ -101,8 +101,11 @@ export type Run =
  *
  * The `offset` and `mirror` cases are the heart of the product — a stitch line
  * is not a copy of the cut line, it is the *relationship* "3.5 mm inside the
- * edge", so changing the outline updates it. Both arrive with the derivation
- * graph in slice 4.2; `offset` additionally needs Clipper (slice 1.9).
+ * edge", so changing the outline updates it. `offset` arrived with the
+ * derivation graph in slice 4.2, offset analytically by `packages/geometry`'s
+ * own Tier 1; `mirror` is slice 4.8. There is no Clipper binding and will not
+ * be one ([ADR 0008](../../../docs/adr/0008-no-clipper-binding.md)) — Tier 2
+ * is slice 9.11, written here rather than bought.
  *
  * See docs/domain-model.md §4.
  */

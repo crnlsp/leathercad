@@ -1,11 +1,12 @@
-import { EPS_ANGLE, approxZero } from '@leathercad/core';
+import { EPS_ANGLE, EPS_LENGTH, approxZero, type Mm } from '@leathercad/core';
 import {
   MatOps,
   PathOps,
   Shapes,
   arc,
-  offsetPath,
+  offsetPathTraced,
   subPath,
+  type OffsetPiece,
   type Path,
   type Vec2,
 } from '@leathercad/geometry';
@@ -23,6 +24,7 @@ import type {
 } from './feature.js';
 import { roleOf } from './feature.js';
 import { anchorsOf } from './anchors.js';
+import { mapAnchorsThroughOffset } from './derivedAnchors.js';
 import { keepLargestPiece } from './offsetPieces.js';
 import { distributeHoles, type StitchHoles } from './stitch.js';
 import type { LayerRole } from './layerRole.js';
@@ -50,6 +52,17 @@ export type ResolvedFeature =
        * a hole set plays with the line its holes sit on.
        */
       readonly text?: PlacedText;
+      /**
+       * The feature's durable landmarks, as distances along its own path.
+       *
+       * Roots read them from their parameters; a derived feature carries its
+       * source's, under the **same indices**, mapped by whatever built its
+       * geometry (ADR 0010). `null` where an anchor has no image — an inset
+       * deep enough to swallow a corner — because dropping it would renumber
+       * every anchor after it, which is how a run silently moves to a
+       * different edge.
+       */
+      readonly anchors: readonly (Mm | null)[];
       /**
        * What resolving had to give up to succeed — an offset that split and kept
        * its largest piece (E2). Absent when nothing was given up.
@@ -95,6 +108,7 @@ interface CacheEntry {
   readonly path: Path;
   readonly holes: StitchHoles | undefined;
   readonly text: PlacedText | undefined;
+  readonly anchors: readonly (Mm | null)[];
   readonly notes: readonly Problem[] | undefined;
 }
 
@@ -177,13 +191,14 @@ function resolveFeature(
   visiting: Set<FeatureId>,
 ): ResolvedFeature {
   try {
-    // Inside the try: asking for the source path can fail, and that failure
-    // belongs to this feature, not to whichever feature asked for this one.
-    const from = sourcePathOf(feature, byId, visiting);
+    // Inside the try: asking for the source can fail, and that failure belongs
+    // to this feature, not to whichever feature asked for this one.
+    const source = resolvedSourceOf(feature, byId, visiting);
+    const from = source?.path;
     const cached = cache.get(feature);
     if (cached !== undefined && cached.from === from) return hit(feature, cached);
 
-    const built = build(feature, from, byId);
+    const built = build(feature, source);
     cache.set(feature, built);
     return hit(feature, built);
   } catch (error) {
@@ -198,6 +213,7 @@ function hit(feature: Feature, entry: CacheEntry): ResolvedFeature {
     feature,
     role: roleOf(feature),
     path: entry.path,
+    anchors: entry.anchors,
     ...(entry.holes === undefined ? {} : { holes: entry.holes }),
     ...(entry.text === undefined ? {} : { text: entry.text }),
     ...(entry.notes === undefined ? {} : { notes: entry.notes }),
@@ -224,67 +240,97 @@ function failed(feature: Feature, error: unknown): ResolvedFeature {
 }
 
 /**
- * The path this feature is built *from*, or undefined if it stands alone.
+ * What this feature is built *from*, resolved, or undefined if it stands alone.
  *
- * Resolving the source is itself memoised, so asking on every evaluation costs
- * a map lookup per link, not a recomputation.
+ * The whole resolved source rather than only its path, because a derived
+ * feature inherits its source's **anchors** as well as its geometry (ADR
+ * 0010). Resolving is memoised, so asking on every evaluation costs a map
+ * lookup per link, not a recomputation.
  */
-function sourcePathOf(
+function resolvedSourceOf(
   feature: Feature,
   byId: ReadonlyMap<FeatureId, Feature>,
   visiting: Set<FeatureId>,
-): Path | undefined {
+): Extract<ResolvedFeature, { ok: true }> | undefined {
   if (feature.source.kind !== 'derived') return undefined;
-  return followSource(feature, feature.source.sourceId, byId, visiting).path;
+  return followSource(feature, feature.source.sourceId, byId, visiting);
 }
 
 function build(
   feature: Feature,
-  from: Path | undefined,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  resolvedSource: Extract<ResolvedFeature, { ok: true }> | undefined,
 ): CacheEntry {
   const invalid = parameterProblem(feature);
   if (invalid !== null) throw new Failure(invalid);
 
+  const from = resolvedSource?.path;
   const source: FeatureSource = feature.source;
 
   switch (source.kind) {
-    case 'path':
-      return { from, path: source.path, holes: undefined, text: undefined, notes: undefined };
-    case 'shape':
+    case 'path': {
+      const path = source.path;
       return {
         from,
-        path: pathForShape(source.shape),
+        path,
         holes: undefined,
         text: undefined,
+        anchors: anchorsOf(source, path),
         notes: undefined,
       };
+    }
+    case 'shape': {
+      const path = pathForShape(source.shape);
+      return {
+        from,
+        path,
+        holes: undefined,
+        text: undefined,
+        anchors: anchorsOf(source, path),
+        notes: undefined,
+      };
+    }
     case 'text': {
       const placed = placedText(source.text, source.sizeMm, source.at, {
         rotationRad: source.rotationRad,
       });
-      return { from, path: textBox(placed), holes: undefined, text: placed, notes: undefined };
+      return {
+        from,
+        path: textBox(placed),
+        holes: undefined,
+        text: placed,
+        anchors: [],
+        notes: undefined,
+      };
     }
     case 'derived': {
-      // `from` is the resolved source; `sourcePathOf` threw if it failed.
+      // `from` is the resolved source; `resolvedSourceOf` threw if it failed.
       const sourcePath = from!;
-      const origin = byId.get(source.sourceId)!;
+      const sourceAnchors = resolvedSource!.anchors;
 
       if (source.op.type === 'stitch-holes') {
         // The holes are the output, but a feature still needs a path — for
         // selection, for a bounding box, for fitting the view. It is the line
-        // they were placed along.
+        // they were placed along, so it carries that line's anchors unchanged
+        // (ADR 0010): the holes on a corner are still on that corner.
         return {
           from,
           path: sourcePath,
           holes: distributeHoles(sourcePath, source.op),
           text: undefined,
+          anchors: sourceAnchors,
           notes: undefined,
         };
       }
 
-      const offset = applyDerivation(feature, sourcePath, origin.source, source.op);
-      return { from, path: offset.path, holes: undefined, text: undefined, notes: offset.notes };
+      const offset = applyDerivation(feature, sourcePath, sourceAnchors, source.op);
+      return {
+        from,
+        path: offset.path,
+        holes: undefined,
+        text: undefined,
+        anchors: offset.anchors,
+        notes: offset.notes,
+      };
     }
   }
 }
@@ -340,10 +386,10 @@ function followSource(
 function applyDerivation(
   feature: Feature,
   sourcePath: Path,
-  source: FeatureSource,
+  sourceAnchors: readonly (Mm | null)[],
   op: Extract<Derivation, { type: 'offset' }>,
-): { path: Path; notes: readonly Problem[] | undefined } {
-  const followed = runOf(feature, sourcePath, source, op.run);
+): { path: Path; anchors: readonly (Mm | null)[]; notes: readonly Problem[] | undefined } {
+  const followed = runOf(feature, sourcePath, sourceAnchors, op.run);
   const at: ProblemLocation = { kind: 'path', path: followed };
 
   // Checked here rather than left to `offsetPath` to throw: the analytic
@@ -356,7 +402,7 @@ function applyDerivation(
   const towardsInside = op.side === 'inward' ? 1 : -1;
   const distance = op.distanceMm * towardsInside * (inwardIsLeft ? 1 : -1);
 
-  const pieces = offsetPath(followed, distance, { join: 'round' });
+  const pieces = offsetPathTraced(followed, distance, { join: 'round' });
   if (pieces.length === 0) {
     throw new Failure(
       problem('OFFSET_COLLAPSED', { ...about(feature), distanceMm: op.distanceMm, side: op.side }),
@@ -365,14 +411,60 @@ function applyDerivation(
   }
 
   // Nothing is dropped without a diagnostic (E2).
-  const { kept, dropped } = keepLargestPiece(pieces);
+  const { kept, dropped } = keepLargestPiece(pieces.map((piece) => piece.path));
+  const keptPiece = pieces.find((piece) => piece.path === kept)!;
+
   return {
     path: kept,
+    // The source's anchors, under the same indices, mapped by the offset's own
+    // trace rather than looked for again in the result (ADR 0010).
+    anchors: anchorsOnRun(sourceAnchors, sourcePath, followed, op.run, keptPiece),
     notes:
       dropped < 1
         ? undefined
         : [problem('OFFSET_SPLIT', { ...about(feature), droppedPieces: dropped })],
   };
+}
+
+/**
+ * The source's anchors as they land on the offset.
+ *
+ * A whole run keeps them all. A partial run keeps the ones it actually covers,
+ * re-based to the stretch it followed — including its two ends, which are
+ * themselves corners of the source and the most useful things to name on a
+ * seam that stops short.
+ */
+function anchorsOnRun(
+  sourceAnchors: readonly (Mm | null)[],
+  sourcePath: Path,
+  followed: Path,
+  run: Run,
+  piece: OffsetPiece,
+): readonly (Mm | null)[] {
+  if (run.kind === 'whole') {
+    return mapAnchorsThroughOffset(sourceAnchors, sourcePath, piece);
+  }
+
+  const total = PathOps.length(sourcePath);
+  const runLength = PathOps.length(followed);
+  const from = sourceAnchors[run.fromAnchor];
+  // `runOf` already refused a run whose ends are not there, so this cannot
+  // happen; answering with "all missing" rather than a guess keeps it true if
+  // that order ever changes.
+  if (from === null || from === undefined) return sourceAnchors.map(() => null);
+
+  // A run may wrap through the path's start, so how far along it an anchor
+  // sits is measured the way `subPath` walks it. An anchor the run does not
+  // reach is missing from the derived feature — in its own place, so the ones
+  // after it keep their numbers.
+  const within = sourceAnchors.map((anchor) => {
+    if (anchor === null) return null;
+    const ahead = anchor - from;
+    const local = ahead < 0 ? ahead + total : ahead;
+    return local <= runLength + EPS_LENGTH ? local : null;
+  });
+
+  return mapAnchorsThroughOffset(within, followed, piece);
 }
 
 /**
@@ -383,12 +475,16 @@ function applyDerivation(
  * the ordinary case rather than the exception. A named anchor that is not there
  * fails (E4); it never re-targets to a neighbour.
  */
-function runOf(feature: Feature, sourcePath: Path, source: FeatureSource, run: Run): Path {
+function runOf(
+  feature: Feature,
+  sourcePath: Path,
+  anchors: readonly (Mm | null)[],
+  run: Run,
+): Path {
   if (run.kind === 'whole') return sourcePath;
 
-  const anchors = anchorsOf(source, sourcePath);
-  const from = anchors[run.fromAnchor];
-  const to = anchors[run.toAnchor];
+  const from = anchors[run.fromAnchor] ?? undefined;
+  const to = anchors[run.toAnchor] ?? undefined;
 
   if (from === undefined || to === undefined) {
     throw new Failure(

@@ -41,6 +41,7 @@ function resolvedOf(...paths: Path[]): ResolvedProject {
           feature: f,
           role: 'cut' as const,
           path: paths[i]!,
+          anchors: [],
         })),
       },
     ],

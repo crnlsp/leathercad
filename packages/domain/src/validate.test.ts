@@ -120,7 +120,7 @@ function resolvedHoles(
     parts: [
       {
         part: p.parts[0]!,
-        features: [{ ok: true, feature, role: 'stitch-holes', path: line, holes }],
+        features: [{ ok: true, feature, role: 'stitch-holes', path: line, holes, anchors: [] }],
       },
     ],
   };

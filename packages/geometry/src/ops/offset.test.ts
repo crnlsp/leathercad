@@ -7,7 +7,10 @@ import { circle, roundedRect } from '../shapes.js';
 import { vec } from '../vec2.js';
 
 import { selfIntersections } from './intersect.js';
-import { offsetPath } from './offset.js';
+import { measure } from '../path/index.js';
+import { pointAt as pointOnSegment } from '../segment/index.js';
+
+import { offsetPath, offsetPathTraced } from './offset.js';
 
 const RUNS = { numRuns: 1000 };
 const ROUND = { join: 'round' } as const;
@@ -306,5 +309,182 @@ describe('offsetPath', () => {
         { numRuns: 300 },
       );
     });
+  });
+});
+
+// ——— The trace: where each part of the input ended up ————————————————————
+
+describe('offsetPathTraced', () => {
+  /** The point at a distance along a path, for checking where a corner went. */
+  const pointAt = (p: Path, distanceMm: number) => {
+    const at = measure(p).locate(distanceMm);
+    return pointOnSegment(p.segments[at.segmentIndex]!, at.t);
+  };
+
+  const distanceBetween = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
+    Math.hypot(a.x - b.x, a.y - b.y);
+
+  it('reports one entry per input segment, whatever the offset did to them', () => {
+    const [piece] = offsetPathTraced(square(100), 10, ROUND);
+
+    expect(piece!.segments).toHaveLength(4);
+    expect(piece!.corners).toHaveLength(4);
+    expect(piece!.segments.every((range) => range !== null)).toBe(true);
+  });
+
+  it('keeps the corners in order along the result', () => {
+    const [piece] = offsetPathTraced(square(100), 10, ROUND);
+    const corners = piece!.corners.filter((c): c is number => c !== null);
+
+    expect(corners).toEqual([...corners].sort((a, b) => a - b));
+    expect(Math.max(...corners)).toBeLessThanOrEqual(length(piece!.path) + 1e-9);
+  });
+
+  it('puts an inset square’s corner 10√2 from the original, on the diagonal', () => {
+    // The trimmed join: two offsets crossing at the inset corner. Exactly what
+    // a nearest-point search would get wrong the moment a corner disappears.
+    const [piece] = offsetPathTraced(square(100), 10, ROUND);
+    const image = pointAt(piece!.path, piece!.corners[0]!);
+
+    expect(distanceBetween(image, vec(100, 0))).toBeCloseTo(10 * Math.SQRT2, 9);
+  });
+
+  it('puts an outset corner in the middle of the arc that bridges it', () => {
+    // Outward, the offsets lean apart and a round join bridges the gap. The
+    // middle of that arc is the way the corner pointed.
+    const [piece] = offsetPathTraced(square(100), -10, ROUND);
+    const image = pointAt(piece!.path, piece!.corners[0]!);
+
+    // On the bridging arc: exactly the offset distance from the corner it is
+    // about, and out along the diagonal.
+    expect(distanceBetween(image, vec(100, 0))).toBeCloseTo(10, 9);
+    expect(image.x).toBeGreaterThan(100);
+    expect(image.y).toBeLessThan(0);
+  });
+
+  it('follows a rounded corner onto the concentric arc it became', () => {
+    const radius = 10;
+    const inset = 4;
+    const rr = roundedRect(vec(0, 0), 100, 60, radius);
+    const [piece] = offsetPathTraced(rr, inset, ROUND);
+
+    const arcs = rr.segments.flatMap((segment, index) =>
+      segment.kind === 'arc' ? [{ segment, index }] : [],
+    );
+    expect(arcs).toHaveLength(4);
+
+    for (const { segment, index } of arcs) {
+      const range = piece!.segments[index];
+      expect(range).not.toBeNull();
+
+      const image = pointAt(piece!.path, (range!.startMm + range!.endMm) / 2);
+      const original = pointOnSegment(segment, 0.5);
+
+      // Concentric: the same direction from the corner's centre, one inset
+      // nearer. Not "the closest point", which is what this exists to avoid.
+      expect(distanceBetween(image, segment.centre)).toBeCloseTo(radius - inset, 9);
+      expect(distanceBetween(image, original)).toBeCloseTo(inset, 9);
+    }
+  });
+
+  it('still reports a corner the offset swallowed, at the sharp corner it became', () => {
+    // A 3 mm corner inset by 3.5 is a sharp corner, not a collapse
+    // (docs/geometry.md §6.2) — so the anchor that named it still has an image
+    // rather than vanishing.
+    const rr = roundedRect(vec(0, 0), 100, 60, 3);
+    const [piece] = offsetPathTraced(rr, 3.5, ROUND);
+
+    const arcIndices = rr.segments
+      .map((segment, index) => (segment.kind === 'arc' ? index : -1))
+      .filter((index) => index !== -1);
+
+    for (const index of arcIndices) {
+      expect(piece!.segments[index]).toBeNull();
+      expect(piece!.corners[index]).not.toBeNull();
+    }
+  });
+
+  it('maps everything to itself at zero, the offset that changes nothing', () => {
+    const rr = roundedRect(vec(0, 0), 100, 60, 10);
+    const [piece] = offsetPathTraced(rr, 0, ROUND);
+
+    expect(piece!.path).toBe(rr);
+    expect(piece!.segments[0]!.startMm).toBe(0);
+    // The ranges tile the path end to end, and every corner is still a corner.
+    for (const [index, range] of piece!.segments.entries()) {
+      if (index === 0) continue;
+      expect(range!.startMm).toBeCloseTo(piece!.segments[index - 1]!.endMm, 12);
+    }
+    expect(piece!.segments[piece!.segments.length - 1]!.endMm).toBeCloseTo(length(rr), 9);
+    expect(piece!.corners.every((c) => c !== null)).toBe(true);
+  });
+
+  it('has no corner after an open run’s last segment, even at zero', () => {
+    // The identity trace has to answer the same way the real one does, or a
+    // zero offset would report a corner that is not there.
+    const open = polyline([vec(0, 0), vec(50, 0), vec(50, 40)], false);
+    const [piece] = offsetPathTraced(open, 0, ROUND);
+
+    expect(piece!.corners[0]).not.toBeNull();
+    expect(piece!.corners[1]).toBeNull();
+  });
+
+  it('has no corner after the last segment of an open run', () => {
+    const open = polyline([vec(0, 0), vec(50, 0), vec(50, 40)], false);
+    const [piece] = offsetPathTraced(open, 5, ROUND);
+
+    expect(piece!.corners[0]).not.toBeNull();
+    expect(piece!.corners[piece!.corners.length - 1]).toBeNull();
+  });
+
+  it('reports nothing at all when the offset collapses', () => {
+    expect(offsetPathTraced(square(100), 60, ROUND)).toEqual([]);
+  });
+
+  it('never points outside the path it traced', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 20, max: 300, noNaN: true }),
+        fc.double({ min: 0.5, max: 8, noNaN: true }),
+        (side, d) => {
+          const [piece] = offsetPathTraced(square(side), d, ROUND);
+          if (piece === undefined) return true;
+
+          const total = length(piece.path);
+          const within = (value: number): boolean => value >= -1e-9 && value <= total + 1e-9;
+
+          return (
+            piece.segments.every(
+              (range) => range === null || (within(range.startMm) && within(range.endMm)),
+            ) && piece.corners.every((corner) => corner === null || within(corner))
+          );
+        },
+      ),
+      RUNS,
+    );
+  });
+
+  it('keeps every corner of a rounded rectangle, however deep the inset goes', () => {
+    // The guarantee anchors rest on: an inset that does not collapse the shape
+    // keeps four corners with four images, whether the radius survived or not.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 2, max: 20, noNaN: true }),
+        fc.double({ min: 0.5, max: 12, noNaN: true }),
+        (radius, d) => {
+          const rr = roundedRect(vec(0, 0), 120, 80, radius);
+          const [piece] = offsetPathTraced(rr, d, ROUND);
+          if (piece === undefined) return true;
+
+          const arcIndices = rr.segments
+            .map((segment, index) => (segment.kind === 'arc' ? index : -1))
+            .filter((index) => index !== -1);
+
+          return (
+            arcIndices.length === 4 && arcIndices.every((index) => piece.corners[index] !== null)
+          );
+        },
+      ),
+    );
   });
 });

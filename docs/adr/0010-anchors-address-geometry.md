@@ -46,11 +46,17 @@ Validation needs locations as well, and v1.2 seam pairing will address runs on t
 
 ## Consequences
 
+Built in slice 4.4b
+([design](../superpowers/specs/2026-09-16-anchors-through-derivations-design.md)), except the mirror
+mapping of point 3, which arrives with the op in 4.8. `offsetPathTraced` returns the correspondence;
+`ResolvedFeature.anchors` carries it; a missing anchor is `null` and keeps its index.
+
 - Measurements (4.10), runs on derived features, validation locations and v1.2 seams share one
   addressing scheme.
-- `anchorsOf` resolves through the derivation chain instead of reading one source.
+- Anchors are resolved with the geometry rather than recomputed from parameters: `anchorsOf` still
+  answers for roots, and evaluation carries the result through the chain.
 - `offsetPath` has to report which input corner produced which output corner. It is still pure, and
-  it returns more.
+  `offsetPathTraced` returns more; `offsetPath` is a wrapper over it.
 - The "known hole" in `2026-09-05-stitch-derivation-design.md` §4 becomes a hard prerequisite of
   slice 3.9, not a note.
 
