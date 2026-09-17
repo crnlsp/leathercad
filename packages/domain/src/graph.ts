@@ -20,6 +20,29 @@ import { problem, problemKey, type CompatibilityRule, type Problem } from './pro
  */
 
 /**
+ * Everything a feature points at, of either kind.
+ *
+ * Two edge kinds share these functions, as the module comment promised:
+ *
+ * - **derives** — the target's geometry is built from the source;
+ * - **references** — the target points at the source's geometry without being
+ *   built from it. A mirror folded about a fold line is the first of these,
+ *   built in 4.8b; measurement ends join it in 4.10.
+ *
+ * S2 and S3 make no distinction between them: every edge must resolve, and the
+ * graph must be acyclic **across both**. Reading them from one function is what
+ * keeps that true without each caller remembering the second kind exists.
+ */
+function edgesFrom(feature: Feature): FeatureId[] {
+  if (feature.kind === 'text-label' || feature.source.kind !== 'derived') return [];
+
+  const op = feature.source.op;
+  return op.type === 'mirror' && op.axis.kind === 'fold'
+    ? [feature.source.sourceId, op.axis.foldId]
+    : [feature.source.sourceId];
+}
+
+/**
  * Everything that transitively depends on `ids`, in document order — not
  * counting `ids` themselves.
  *
@@ -36,7 +59,10 @@ export function dependentsOf(project: Project, ids: Iterable<FeatureId>): Featur
     grew = false;
     for (const feature of all) {
       if (reached.has(feature.id)) continue;
-      if (feature.source.kind === 'derived' && reached.has(feature.source.sourceId)) {
+      // Either kind of edge makes this a dependent: a counterpart folded about
+      // a fold depends on that fold as surely as on what it mirrors, and
+      // deleting the fold has to show it.
+      if (edgesFrom(feature).some((id) => reached.has(id))) {
         reached.add(feature.id);
         grew = true;
       }
@@ -135,6 +161,16 @@ export function graphProblems(project: Project): Problem[] {
     const source = byId.get(feature.source.sourceId);
     if (source === undefined) {
       problems.push(problem('SOURCE_MISSING', about));
+      continue;
+    }
+
+    // S2 over the **references** edge: a mirror folded about a fold that is
+    // not there mirrors about nothing. As structural as a missing source, and
+    // refused by the loader for the same reason — everything past this point
+    // assumes the graph is sound.
+    const op = feature.source.op;
+    if (op.type === 'mirror' && op.axis.kind === 'fold' && !byId.has(op.axis.foldId)) {
+      problems.push(problem('MIRROR_FOLD_MISSING', { ...about, foldId: op.axis.foldId }));
       continue;
     }
 
@@ -257,26 +293,36 @@ function declaresClosed(
 }
 
 /** Whether following sources upstream from `startId` reaches `featureId`. */
+/**
+ * Whether following edges from `startId` ever reaches `featureId`.
+ *
+ * A walk rather than a chain: a feature can point at two things now, so the
+ * frontier branches. `seen` keeps it finite even on a graph that is already
+ * looped, which is exactly the graph this is asked about.
+ */
 function wouldLoop(
   byId: ReadonlyMap<FeatureId, Feature>,
   featureId: FeatureId,
   startId: FeatureId,
 ): boolean {
   const seen = new Set<FeatureId>();
-  let at: FeatureId | undefined = startId;
-  while (at !== undefined) {
+  const frontier: FeatureId[] = [startId];
+
+  while (frontier.length > 0) {
+    const at = frontier.pop()!;
     if (at === featureId) return true;
-    if (seen.has(at)) return false;
+    if (seen.has(at)) continue;
     seen.add(at);
-    const source: Feature['source'] | undefined = byId.get(at)?.source;
-    at = source?.kind === 'derived' ? source.sourceId : undefined;
+
+    const feature = byId.get(at);
+    if (feature !== undefined) frontier.push(...edgesFrom(feature));
   }
   return false;
 }
 
 function isOnCycle(byId: ReadonlyMap<FeatureId, Feature>, id: FeatureId): boolean {
-  const source = byId.get(id)?.source;
-  return source?.kind === 'derived' && wouldLoop(byId, id, source.sourceId);
+  const feature = byId.get(id);
+  return feature !== undefined && edgesFrom(feature).some((to) => wouldLoop(byId, id, to));
 }
 
 function allFeatures(project: Project): Feature[] {

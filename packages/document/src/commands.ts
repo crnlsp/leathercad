@@ -11,6 +11,7 @@ import type {
   GeometrySource,
   Part,
   PartId,
+  MirrorAxis,
   Problem,
   Project,
   Run,
@@ -367,6 +368,34 @@ export function refusedTransforms(
         // scale. One question answers it — is this a distance-preserving
         // transform — which covers shears as well, for the same reason.
         if (feature.source.op.type === 'mirror') {
+          // A **fold-tracked** counterpart is placed by its fold, so no
+          // gesture on it is absorbed. The general rule this is the first
+          // instance of: dragging a derived, linked result must not silently
+          // break or half-alter the relationship. Absorbing it would slide one
+          // half of a folded piece along the spine; detaching from the fold
+          // would break the link the maker asked for (X3). So it is refused,
+          // and the message names the two things that do move it.
+          if (feature.source.op.axis.kind === 'fold') {
+            const foldId = feature.source.op.axis.foldId;
+            // Dragged *with* its source or its fold, it is not being asked to
+            // go anywhere of its own: the source moves and it re-mirrors, or
+            // the fold moves and it follows. Only a counterpart dragged on its
+            // own has been asked for something the fold decides.
+            if (targets.has(feature.source.sourceId) || targets.has(foldId)) continue;
+
+            const fold = byId.get(foldId);
+            refused.push({
+              featureId: feature.id,
+              problem: problem('MIRROR_PLACED_BY_FOLD', {
+                featureId: feature.id,
+                featureName: feature.name,
+                foldName: fold?.name ?? 'its fold',
+                sourceName: byId.get(feature.source.sourceId)?.name ?? 'its original',
+              }),
+            });
+            continue;
+          }
+
           // Scaled **with its original** is not a refusal: the original takes
           // the scale and the counterpart follows it, which is what selecting
           // a whole symmetric panel and resizing it has to do. Only a
@@ -450,6 +479,9 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
     const op = feature.source.op;
     if (op.type !== 'mirror') return feature;
 
+    // Only a captured axis absorbs a gesture. A fold-tracked counterpart is
+    // placed by its fold, and `refusedTransforms` says so instead.
+    if (op.axis.kind !== 'line') return feature;
     const current = glideMatrix(op.axis.origin, op.axis.angleRad, op.glideMm);
     const moved = withSource
       ? MatOps.composeAll(MatOps.invert(matrix), current, matrix)
@@ -466,7 +498,7 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
         ...feature.source,
         op: {
           type: 'mirror',
-          axis: { origin: parts.origin, angleRad: parts.angleRad },
+          axis: { kind: 'line', origin: parts.origin, angleRad: parts.angleRad },
           glideMm: parts.glideMm,
         },
       },
@@ -1279,6 +1311,27 @@ function relock(
   }));
 }
 
+/**
+ * The fold, captured as the line it currently is.
+ *
+ * `null` when it cannot be one — a bent fold, or one that does not resolve —
+ * in which case there is nothing to freeze to and the counterpart goes with
+ * the fold instead.
+ */
+function capturedLineOf(project: Project, foldId: FeatureId): MirrorAxis | null {
+  const entry = evaluate(project)
+    .parts.flatMap((part) => part.features)
+    .find((e) => e.feature.id === foldId);
+  if (entry?.ok !== true) return null;
+
+  const lines = entry.path.segments.filter((segment) => segment.kind === 'line');
+  const first = lines[0];
+  if (first === undefined || lines.length !== entry.path.segments.length) return null;
+
+  const angleRad = Math.atan2(first.b.y - first.a.y, first.b.x - first.a.x);
+  return { kind: 'line', origin: first.a, angleRad };
+}
+
 /** How far a duplicate sits from the piece it was copied from. */
 const DUPLICATE_GAP_MM = 5;
 
@@ -1321,9 +1374,9 @@ function moveClear(project: Project, copy: Part): Project {
  * Named for what the maker sees happen, as `FlipAxis` is: `horizontal` puts
  * the counterpart to the right, across a vertical line.
  */
-export type MirrorAxis = 'horizontal' | 'vertical';
+export type MirrorDirection = 'horizontal' | 'vertical';
 
-/** A mirror's axis, as the op stores it. */
+/** A captured mirror axis, as *Mirror ↔ / ↕* measure one. */
 export interface Axis {
   readonly origin: Vec2;
   readonly angleRad: number;
@@ -1363,7 +1416,7 @@ const MIRROR_GAP_MM = 0;
 export function mirrorAxisFor(
   project: Project,
   ids: Iterable<FeatureId>,
-  axis: MirrorAxis,
+  axis: MirrorDirection,
 ): Axis | null {
   const wanted = new Set(ids);
   if (wanted.size === 0) return null;
@@ -1394,7 +1447,7 @@ export function mirrorAxisFor(
 export function mirrorRefusal(
   project: Project,
   ids: Iterable<FeatureId>,
-  axis: MirrorAxis = 'horizontal',
+  axis: MirrorDirection = 'horizontal',
 ): Problem | null {
   const wanted = [...new Set(ids)];
 
@@ -1448,7 +1501,105 @@ export function mirrorFeatures(
             const made = part.features.flatMap((feature) => {
               const newId = renamed.get(feature.id);
               if (newId === undefined || feature.kind === 'text-label') return [];
-              return [counterpartOf(feature, newId, axis)];
+              return [counterpartOf(feature, newId, { kind: 'line', ...axis })];
+            });
+            return made.length === 0 ? part : { ...part, features: [...part.features, ...made] };
+          }),
+        },
+      };
+    },
+  };
+}
+
+/**
+ * Why this selection cannot be folded about this fold, or `null`.
+ *
+ * Pure and shared with the interface, so a disabled button carries the same
+ * reason the command would give (ADR 0013).
+ */
+export function foldMirrorRefusal(
+  project: Project,
+  ids: Iterable<FeatureId>,
+  foldId: FeatureId,
+): Problem | null {
+  const wanted = [...new Set(ids)];
+  const byId = new Map(
+    project.parts.flatMap((part) => part.features).map((f) => [f.id, f] as const),
+  );
+
+  const fold = byId.get(foldId);
+  if (fold === undefined || fold.kind !== 'fold-line') {
+    return problem('MIRROR_FOLD_MISSING', {
+      featureId: foldId,
+      featureName: fold?.name ?? 'That feature',
+      foldId,
+    });
+  }
+
+  for (const id of wanted) {
+    const feature = byId.get(id);
+    if (feature === undefined) continue;
+
+    // The fold is the axis, not something to mirror about itself.
+    if (feature.id === foldId) return problem('MIRROR_NO_AXIS', {});
+
+    // S5, said **before** the gesture rather than after it. A piece of leather
+    // has one edge, and completing a contour from half of one needs a boolean
+    // union this project does not have and deliberately has not bought
+    // (ADR 0008). The message names both real alternatives.
+    if (feature.kind === 'cut-contour' && feature.role === 'outer') {
+      const part = project.parts.find((candidate) =>
+        candidate.features.some((f) => f.id === feature.id),
+      );
+      return problem('MIRROR_OUTLINE_ACROSS_FOLD', {
+        featureId: feature.id,
+        featureName: feature.name,
+        partName: part?.name ?? 'This part',
+      });
+    }
+  }
+
+  return mirrorRefusal(project, wanted);
+}
+
+/**
+ * Counterparts folded about a fold line — symmetry a maker keeps working with.
+ *
+ * The difference from `mirrorFeatures` is the whole slice. That one captures a
+ * line and freezes it, so widening the piece afterwards leaves the counterpart
+ * behind. This one **references the fold**, so moving the fold re-mirrors
+ * everything folded about it: a wallet's card slots stay the mirror of each
+ * other while its width is still being decided.
+ *
+ * The counterparts join the **same part**, because a fold is inside one piece
+ * of leather. Two separate pieces — a left and a right — are `mirrorFeatures`
+ * with a captured axis instead.
+ *
+ * The fold is **named, never inferred**: no nearest-fold heuristic, because a
+ * mirror about the wrong line is not visibly wrong until the leather is cut.
+ */
+export function mirrorAcrossFold(
+  ids: readonly FeatureId[],
+  newIds: readonly FeatureId[],
+  foldId: FeatureId,
+): Command {
+  return {
+    label: ids.length === 1 ? 'Mirror across fold' : `Mirror ${String(ids.length)} across fold`,
+    apply: (document) => {
+      const wanted = [...new Set(ids)];
+      if (wanted.length === 0 || newIds.length < wanted.length) return document;
+      if (foldMirrorRefusal(document.project, wanted, foldId) !== null) return document;
+
+      const renamed = new Map(wanted.map((id, i) => [id, newIds[i]!] as const));
+
+      return {
+        project: {
+          ...document.project,
+          parts: document.project.parts.map((part) => {
+            const made = part.features.flatMap((feature) => {
+              const newId = renamed.get(feature.id);
+              if (newId === undefined || feature.kind === 'text-label') return [];
+              return [counterpartOf(feature, newId, { kind: 'fold', foldId })];
             });
             return made.length === 0 ? part : { ...part, features: [...part.features, ...made] };
           }),
@@ -1468,7 +1619,7 @@ export function mirrorFeatures(
 function counterpartOf(
   feature: Exclude<Feature, { kind: 'text-label' }>,
   id: FeatureId,
-  axis: Axis,
+  axis: MirrorAxis,
 ): Feature {
   const source = {
     kind: 'derived' as const,
@@ -1563,7 +1714,40 @@ function resolveDelete(
       .map((entry) => [entry.feature.id, entry] as const),
   );
 
+  // A counterpart folded about a deleted fold is frozen by **capturing the
+  // line the fold currently is**, not by turning it into drawn geometry. It
+  // keeps its shape, keeps following its source, and stops tracking the fold —
+  // which is exactly what "freeze" has always meant, applied to the reference
+  // edge instead of the derivation one.
+  const capturedAxes = new Map<FeatureId, Feature>();
+  for (const feature of project.parts.flatMap((part) => part.features)) {
+    if (feature.kind === 'text-label' || feature.source.kind !== 'derived') continue;
+    const op = feature.source.op;
+    if (op.type !== 'mirror' || op.axis.kind !== 'fold') continue;
+    if (!gone.has(op.axis.foldId)) continue;
+
+    const line = capturedLineOf(project, op.axis.foldId);
+    if (line === null) continue;
+    capturedAxes.set(feature.id, {
+      ...feature,
+      source: { ...feature.source, op: { ...op, axis: line } },
+    });
+  }
+
   for (const dependent of plan.dependents) {
+    // Asked **before** `direct`, which only knows the *derives* edge: a
+    // counterpart depends on its fold through the **references** edge, so it
+    // is a direct dependent of the fold without its `sourceId` saying so.
+    //
+    // What was deleted is its axis, not its source, so it keeps mirroring —
+    // about the line the fold was on. Better than flattening it to a path,
+    // because it still follows the piece it mirrors.
+    const captured = capturedAxes.get(dependent.featureId);
+    if (captured !== undefined) {
+      frozen.set(dependent.featureId, captured);
+      continue;
+    }
+
     if (!dependent.direct) continue;
     const feature = byId.get(dependent.featureId)!;
     const entry = resolved.get(dependent.featureId);

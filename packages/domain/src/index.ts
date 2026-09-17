@@ -22,6 +22,7 @@ export type {
   HardwareHole,
   MarkingLine,
   Derivation,
+  MirrorAxis,
   ParametricShape,
   Run,
   Part,

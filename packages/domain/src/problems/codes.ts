@@ -60,6 +60,8 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   PART_ALREADY_HAS_OUTER: structural('S5'),
   CONTOUR_NOT_CLOSED: structural('S6'),
   FEATURE_LOCKED: structural('S7'),
+  MIRROR_FOLD_MISSING: structural('S2'),
+  MIRROR_OUTLINE_ACROSS_FOLD: structural('S5'),
 
   FEATURE_MISSING: interaction('X1'),
   NOT_DERIVED: interaction('X1'),
@@ -70,6 +72,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   TEXT_WOULD_DISTORT: interaction('X9'),
   TEXT_WOULD_READ_BACKWARDS: interaction('X9'),
   MIRROR_WOULD_SCALE: interaction('X3'),
+  MIRROR_PLACED_BY_FOLD: interaction('X3'),
   MIRROR_NO_AXIS: interaction('X3'),
   NO_TARGET_PART: interaction('X4'),
   TARGET_SPANS_PARTS: interaction('X4'),
@@ -81,6 +84,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   ANCHOR_MISSING: outcome('E4'),
   SOURCE_FAILED: outcome('E3'),
   GEOMETRY_FAILED: outcome('E1'),
+  FOLD_NOT_STRAIGHT: outcome('E1'),
   // Nothing throws and nothing is dropped: the box is drawn and this says so.
   TEXT_GLYPH_MISSING: outcome('E2', 'warning'),
 

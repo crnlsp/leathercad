@@ -91,6 +91,10 @@ export interface ProblemFacts {
   };
   /** S7: a locked feature changes only by being unlocked. */
   readonly FEATURE_LOCKED: About;
+  /** S2: the fold a mirror is folded about has to exist. */
+  readonly MIRROR_FOLD_MISSING: About & { readonly foldId: FeatureId };
+  /** S5: a part has one edge, so its outline cannot be mirrored into itself. */
+  readonly MIRROR_OUTLINE_ACROSS_FOLD: About & { readonly partName: string };
 
   // ——— Interaction (X): refused at a gesture ———
   readonly FEATURE_MISSING: { readonly featureId: FeatureId };
@@ -106,6 +110,19 @@ export interface ProblemFacts {
   readonly MIRROR_WOULD_SCALE: About & { readonly sourceName: string };
   /** X3: nothing to take a mirror axis from. */
   readonly MIRROR_NO_AXIS: Record<string, never>;
+  /**
+   * X3: a fold-tracked counterpart is placed by its fold, not by dragging.
+   *
+   * The general rule this is the first instance of: dragging a derived, linked
+   * result must not silently break or half-alter the relationship. Absorbing
+   * the drag would slide one half of a folded piece along the spine; silently
+   * detaching from the fold would break the link the maker asked for (X3). So
+   * it is refused, and the message names the two things that do move it.
+   */
+  readonly MIRROR_PLACED_BY_FOLD: About & {
+    readonly foldName: string;
+    readonly sourceName: string;
+  };
   readonly TRANSFORM_FLATTENS: Record<string, never>;
   readonly WOULD_BECOME_ELLIPSE: { readonly shape: 'circle' | 'arc' };
   readonly WOULD_SHEAR: Record<string, never>;
@@ -130,6 +147,8 @@ export interface ProblemFacts {
   readonly ANCHOR_MISSING: About & { readonly anchor: number; readonly available: number };
   readonly SOURCE_FAILED: About & { readonly sourceId: FeatureId; readonly sourceName: string };
   readonly GEOMETRY_FAILED: About & { readonly detail: string };
+  /** E1: a bent or curved fold has no single line to mirror about. */
+  readonly FOLD_NOT_STRAIGHT: Record<string, never>;
   /**
    * Text the vendored typeface cannot print: a part's name, or a label's own
    * words. The feature is named when there is one, so the panel can point at

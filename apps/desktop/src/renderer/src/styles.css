@@ -776,3 +776,9 @@ button.problem-row:hover {
   color: var(--text-dim);
   font-size: 10px;
 }
+
+/* Nothing in the properties panel may make it scroll sideways: the fields are
+   already as narrow as they read well at. */
+.panel {
+  overflow-x: hidden;
+}

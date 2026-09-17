@@ -312,6 +312,7 @@ describe('the contract: the counterpart is the original, reflected, placed here'
     }
     const op = feature.source.op;
     if (op.type !== 'mirror') throw new Error('not a mirror');
+    if (op.axis.kind !== 'line') throw new Error('not a captured axis');
     return glideMatrix(op.axis.origin, op.axis.angleRad, op.glideMm);
   }
 

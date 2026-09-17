@@ -1497,3 +1497,86 @@ test('a counterpart follows when its original is resized', async () => {
     await expect(window.getByTestId('feature-count')).toHaveText('2');
   });
 });
+
+test('the wallet scenario: card slots mirrored across a fold that then moves', async () => {
+  // Slice 4.8b, §2 of the design, end to end. The value is not the reflection
+  // — it is that the two halves stay each other's mirror while the piece is
+  // still being decided.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const panel = window.getByTestId('property-panel');
+
+    // The shell.
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 650, box!.y + 420, { steps: 5 });
+    await window.mouse.up();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    // A fold down the middle, drawn on the shell.
+    await window.getByTestId('tool-line').click();
+    await window.getByTestId('draw-as-fold').click();
+    // Just inside the edges: a fold drawn exactly onto the outline trips the
+    // sampled containment rule, which is a boundary case of DR2 and not this
+    // slice's to change.
+    await window.mouse.click(box!.x + 450, box!.y + 210);
+    await window.mouse.click(box!.x + 450, box!.y + 410);
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+
+    // A card slot on the left half.
+    await window.getByTestId('tool-rectangle').click();
+    await window.getByTestId('draw-as-cut-out').click();
+    await window.mouse.move(box!.x + 290, box!.y + 250);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 410, box!.y + 270, { steps: 5 });
+    await window.mouse.up();
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+
+    // Fold it across the crease.
+    await panel.getByTestId('mirror-across-fold').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expect(panel.getByTestId('mirror-note')).toContainText('Folded across');
+    await expect(panel.getByTestId('mirrored-badge')).toBeVisible();
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+
+    // The counterpart cannot be dragged: it is placed by the fold.
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').last().click();
+    await window.mouse.move(box!.x + 520, box!.y + 260);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 560, box!.y + 300, { steps: 5 });
+    await window.mouse.up();
+    // Nothing broke, and the drawing still validates.
+    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+  });
+});
+
+test('an outline cannot be completed by mirroring it across its own fold', async () => {
+  // The refusal that keeps the door open for booleans instead of building a
+  // workaround: a piece of leather has one edge (S5).
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const panel = window.getByTestId('property-panel');
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 600, box!.y + 420, { steps: 5 });
+    await window.mouse.up();
+
+    await window.getByTestId('tool-line').click();
+    await window.getByTestId('draw-as-fold').click();
+    await window.mouse.click(box!.x + 425, box!.y + 210);
+    await window.mouse.click(box!.x + 425, box!.y + 410);
+
+    // Select the outline and ask to fold it.
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').first().click();
+
+    const fold = panel.getByTestId('mirror-across-fold');
+    await expect(fold).toBeDisabled();
+    await expect(fold).toHaveAttribute('title', /one edge|second piece/i);
+  });
+});

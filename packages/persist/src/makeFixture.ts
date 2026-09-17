@@ -399,9 +399,112 @@ export function fixtureProjectV6(): Project {
                 // keeps this fixture an equality check rather than a
                 // near-equality one. What the rounding does to an angle is
                 // pinned separately in `fixture.test.ts`.
-                axis: { origin: { x: 0, y: -10 }, angleRad: 0 },
+                // `kind` is what `v6_to_v7` adds. This function describes the
+                // project a v6 file **loads as**, which until that migration
+                // was the same thing as what the v6 writer wrote — the first
+                // time the two have differed.
+                axis: { kind: 'line' as const, origin: { x: 0, y: -10 }, angleRad: 0 },
                 glideMm: 5,
               },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * Version 7 — a mirror that tracks a fold.
+ *
+ * The v6 baseline plus the shape 4.8b added: a part with a fold line down it
+ * and a cut-out mirrored **across that fold** rather than across a captured
+ * line. So the corpus holds both arms of the axis union, not one.
+ *
+ * What it proves on reload: the fold reference survives, and the counterpart's
+ * geometry is still recomputed from two inputs rather than stored.
+ */
+export function fixtureProjectV7(): Project {
+  const previous = fixtureProjectV6();
+
+  return {
+    ...previous,
+    id: 'fixture-v7',
+    name: 'Format baseline v7',
+    parts: [
+      ...previous.parts,
+      {
+        id: 'part-shell',
+        name: 'Shell',
+        quantity: 1,
+        features: [
+          {
+            id: 'shell-cut',
+            kind: 'cut-contour',
+            role: 'outer',
+            name: 'Outline',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'shape',
+              shape: {
+                type: 'rect',
+                origin: { x: 0, y: 0 },
+                width: 190,
+                height: 95,
+                radii: uniformRadii(6),
+                rotation: 0,
+              },
+            },
+          },
+          {
+            id: 'shell-fold',
+            kind: 'fold-line',
+            direction: 'valley',
+            name: 'Fold',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'path',
+              path: polyline(
+                [
+                  { x: 95, y: 0 },
+                  { x: 95, y: 95 },
+                ],
+                false,
+              ),
+            },
+          },
+          {
+            id: 'shell-slot',
+            kind: 'cut-contour',
+            role: 'inner',
+            name: 'Card slot',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'shape',
+              shape: {
+                type: 'rect',
+                origin: { x: 12, y: 20 },
+                width: 70,
+                height: 6,
+                radii: uniformRadii(3),
+                rotation: 0,
+              },
+            },
+          },
+          {
+            id: 'shell-slot-mirrored',
+            kind: 'cut-contour',
+            role: 'inner',
+            name: 'Card slot mirrored',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'shell-slot',
+              op: { type: 'mirror', axis: { kind: 'fold', foldId: 'shell-fold' }, glideMm: 0 },
             },
           },
         ],

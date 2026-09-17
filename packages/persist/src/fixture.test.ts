@@ -14,6 +14,7 @@ import {
   fixtureProjectV4,
   fixtureProjectV5,
   fixtureProjectV6,
+  fixtureProjectV7,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -23,6 +24,7 @@ const FIXTURE_V3 = resolve(import.meta.dirname, '../../../fixtures/format/v3.lcp
 const FIXTURE_V4 = resolve(import.meta.dirname, '../../../fixtures/format/v4.lcp');
 const FIXTURE_V5 = resolve(import.meta.dirname, '../../../fixtures/format/v5.lcp');
 const FIXTURE_V6 = resolve(import.meta.dirname, '../../../fixtures/format/v6.lcp');
+const FIXTURE_V7 = resolve(import.meta.dirname, '../../../fixtures/format/v7.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -49,9 +51,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V6), { recursive: true });
-      writeFileSync(FIXTURE_V6, saveProject(fixtureProjectV6(), OPTIONS));
-      expect(existsSync(FIXTURE_V6)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V7), { recursive: true });
+      writeFileSync(FIXTURE_V7, saveProject(fixtureProjectV7(), OPTIONS));
+      expect(existsSync(FIXTURE_V7)).toBe(true);
     });
   }
 
@@ -148,11 +150,62 @@ describe('the format baseline fixture', () => {
     expect(loadProject(readFileSync(FIXTURE_V5)).project).toEqual(fixtureProjectV5());
   });
 
-  it('holds a mirrored counterpart at the current version', () => {
-    const loaded = loadProject(readFileSync(FIXTURE_V6));
+  it('still opens a version 6 file, and migrates its mirror axis', () => {
+    // **The first migration that is not an identity.** v6 stored a mirror axis
+    // as a bare line; v7 discriminates it, because a fold axis carries a
+    // reference instead of numbers. This file is never regenerated: it is the
+    // only proof the chain can carry a real change rather than only new shapes
+    // old files happen not to contain.
+    expect(readManifest(readFileSync(FIXTURE_V6)).formatVersion).toBe(6);
+    expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(6);
+    expect(loadProject(readFileSync(FIXTURE_V6)).project).toEqual(fixtureProjectV6());
+  });
 
-    expect(readManifest(readFileSync(FIXTURE_V6)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
-    expect(loaded.project).toEqual(fixtureProjectV6());
+  it('adds the discriminant to a real version 6 axis, rather than to a hand-made one', () => {
+    // Read the bytes: the stored axis has no `kind`, and the loaded one does.
+    const raw = JSON.parse(
+      strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE_V6)))['document.json']!),
+    ) as { parts: { features: { source: { op?: Record<string, unknown> } }[] }[] };
+
+    const storedAxis = raw.parts
+      .flatMap((part) => part.features)
+      .map((feature) => feature.source.op)
+      .find((op) => op?.['type'] === 'mirror')?.['axis'] as Record<string, unknown> | undefined;
+
+    expect(storedAxis).toBeDefined();
+    expect(storedAxis).not.toHaveProperty('kind');
+
+    const migrated = loadProject(readFileSync(FIXTURE_V6))
+      .project.parts.flatMap((part) => part.features)
+      .find((feature) => feature.id === 'mirror-1');
+
+    expect(
+      migrated?.source.kind === 'derived' &&
+        migrated.source.op.type === 'mirror' &&
+        migrated.source.op.axis.kind,
+    ).toBe('line');
+  });
+
+  it('holds both kinds of mirror axis at the current version', () => {
+    const loaded = loadProject(readFileSync(FIXTURE_V7));
+
+    expect(readManifest(readFileSync(FIXTURE_V7)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+    expect(loaded.project).toEqual(fixtureProjectV7());
+  });
+
+  it('stores a fold-tracked mirror as a reference, not as a line', () => {
+    // The first `references` edge in the format: what is written is *which
+    // fold*, never where that fold happens to be. Move the fold in a later
+    // session and the counterpart moves with it.
+    const mirror = loadProject(readFileSync(FIXTURE_V7))
+      .project.parts.flatMap((part) => part.features)
+      .find((feature) => feature.id === 'shell-slot-mirrored');
+
+    expect(mirror?.source).toEqual({
+      kind: 'derived',
+      sourceId: 'shell-slot',
+      op: { type: 'mirror', axis: { kind: 'fold', foldId: 'shell-fold' }, glideMm: 0 },
+    });
   });
 
   it('stores a counterpart as a relationship, never as its reflected shape', () => {
@@ -168,7 +221,7 @@ describe('the format baseline fixture', () => {
       sourceId: 'cut-1',
       op: {
         type: 'mirror',
-        axis: { origin: { x: 0, y: -10 }, angleRad: 0 },
+        axis: { kind: 'line', origin: { x: 0, y: -10 }, angleRad: 0 },
         glideMm: 5,
       },
     });
@@ -201,7 +254,11 @@ describe('the format baseline fixture', () => {
                       sourceId: 'cut-1',
                       op: {
                         type: 'mirror',
-                        axis: { origin: { x: 0, y: -10 }, angleRad: Math.PI / 2 },
+                        axis: {
+                          kind: 'line' as const,
+                          origin: { x: 0, y: -10 },
+                          angleRad: Math.PI / 2,
+                        },
                         glideMm: 5,
                       },
                     },
@@ -218,7 +275,9 @@ describe('the format baseline fixture', () => {
       .find((feature) => feature.id === 'mirror-1');
 
     const angle =
-      mirror?.source.kind === 'derived' && mirror.source.op.type === 'mirror'
+      mirror?.source.kind === 'derived' &&
+      mirror.source.op.type === 'mirror' &&
+      mirror.source.op.axis.kind === 'line'
         ? mirror.source.op.axis.angleRad
         : null;
 
@@ -230,7 +289,7 @@ describe('the format baseline fixture', () => {
     // Derived geometry is never persisted (file-format.md §3.3). What is stored
     // is what the user typed; the glyphs are regenerated by the typeface, so an
     // improvement to the typesetting improves this file too.
-    const label = loadProject(readFileSync(FIXTURE_V6))
+    const label = loadProject(readFileSync(FIXTURE_V7))
       .project.parts.flatMap((part) => part.features)
       .find((feature) => feature.kind === 'text-label');
 

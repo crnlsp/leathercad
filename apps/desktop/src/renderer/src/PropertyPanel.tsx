@@ -4,6 +4,8 @@ import {
   addStitchLine,
   flipFeatures,
   flipRefusal,
+  foldMirrorRefusal,
+  mirrorAcrossFold,
   mirrorAxisFor,
   mirrorFeatures,
   mirrorRefusal,
@@ -13,7 +15,7 @@ import {
   setPartQuantity,
 } from '@leathercad/document';
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
-import type { FlipAxis, MirrorAxis } from '@leathercad/document';
+import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
 import { describeProblem, evaluate, followRefusal, lockRefusal } from '@leathercad/domain';
 
@@ -156,10 +158,21 @@ export function PropertyPanel({
                 "where it is" is said by dragging it.
               */
               <p className="panel-note" data-testid="mirror-note">
-                Reflected across a line fixed where this was made — it does not follow{' '}
-                {sourceNameOf(project, feature.source.sourceId)} about. Moving{' '}
-                {sourceNameOf(project, feature.source.sourceId)} moves this the opposite way, and
-                resizing it changes the gap between the two. Drag this piece to place the pair.
+                {feature.source.op.axis.kind === 'fold' ? (
+                  <>
+                    Folded across {sourceNameOf(project, feature.source.op.axis.foldId)}. Move that
+                    fold and this follows it; move {sourceNameOf(project, feature.source.sourceId)}{' '}
+                    and this stays its mirror. It cannot be dragged on its own.
+                  </>
+                ) : (
+                  <>
+                    Reflected across a line fixed where this was made — it does not follow{' '}
+                    {sourceNameOf(project, feature.source.sourceId)} about. Moving{' '}
+                    {sourceNameOf(project, feature.source.sourceId)} moves this the opposite way,
+                    and resizing it changes the gap between the two. Drag this piece to place the
+                    pair.
+                  </>
+                )}
               </p>
             )}
 
@@ -233,6 +246,20 @@ export function PropertyPanel({
         />
       </div>
 
+      {/*
+        On its own row: three buttons do not fit the panel's width, and a
+        properties panel that scrolls sideways is a broken one. It earns the
+        room — it is the only one of the three that makes a counterpart which
+        keeps following something.
+      */}
+      <FoldMirrorButton
+        store={store}
+        project={project}
+        part={part}
+        feature={feature}
+        nextId={nextId}
+      />
+
       <DeriveActions store={store} part={part} feature={feature} nextId={nextId} />
 
       {/*
@@ -272,7 +299,7 @@ function MirrorButton({
   store: DocumentStore;
   project: Project;
   feature: Feature;
-  axis: MirrorAxis;
+  axis: MirrorDirection;
   nextId: () => string;
 }) {
   const refusal = mirrorRefusal(project, [feature.id], axis);
@@ -300,6 +327,56 @@ function MirrorButton({
       }}
     >
       {horizontal ? 'Mirror ↔' : 'Mirror ↕'}
+    </button>
+  );
+}
+
+/**
+ * Folding a feature across a fold line — the symmetry that keeps working.
+ *
+ * Offered only when the part has **exactly one** fold line, and named after
+ * it, because the fold is an explicit dependency and never a guess: a mirror
+ * about the wrong crease is not visibly wrong until the leather is cut. With
+ * several folds the maker has to say which, which is 4.8b's selection path
+ * rather than this shortcut.
+ */
+function FoldMirrorButton({
+  store,
+  project,
+  part,
+  feature,
+  nextId,
+}: {
+  store: DocumentStore;
+  project: Project;
+  part: Part;
+  feature: Feature;
+  nextId: () => string;
+}) {
+  const folds = part.features.filter((candidate) => candidate.kind === 'fold-line');
+  if (folds.length !== 1) return null;
+
+  const fold = folds[0]!;
+  const refusal = foldMirrorRefusal(project, [feature.id], fold.id);
+
+  return (
+    <button
+      type="button"
+      className="tool"
+      data-testid="mirror-across-fold"
+      disabled={refusal !== null}
+      title={
+        refusal === null
+          ? `A counterpart across ${fold.name}, which re-mirrors whenever that fold moves`
+          : describeProblem(refusal)
+      }
+      onClick={() => {
+        const id = nextId();
+        store.dispatch(mirrorAcrossFold([feature.id], [id], fold.id));
+        store.select([id]);
+      }}
+    >
+      Mirror across fold
     </button>
   );
 }

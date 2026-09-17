@@ -67,7 +67,7 @@ function mirrored(
       sourceId: from,
       op: {
         type: 'mirror' as const,
-        axis: { origin: { x: atX, y: 0 }, angleRad: Math.PI / 2 },
+        axis: { kind: 'line' as const, origin: { x: atX, y: 0 }, angleRad: Math.PI / 2 },
         glideMm,
       },
     },
@@ -280,7 +280,7 @@ describe('the compatibility table’s mirror row (S4)', () => {
         sourceId: 'cut-1',
         op: {
           type: 'mirror',
-          axis: { origin: { x: 100, y: 0 }, angleRad: Math.PI / 2 },
+          axis: { kind: 'line', origin: { x: 100, y: 0 }, angleRad: Math.PI / 2 },
           glideMm: 0,
         },
       },
@@ -326,7 +326,7 @@ describe('the axis round-trips through evaluation', () => {
               sourceId: 'cut-1',
               op: {
                 type: 'mirror',
-                axis: { origin: parts.origin, angleRad: parts.angleRad },
+                axis: { kind: 'line', origin: parts.origin, angleRad: parts.angleRad },
                 glideMm: parts.glideMm,
               },
             },

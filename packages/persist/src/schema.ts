@@ -113,7 +113,12 @@ const derivation = z.discriminatedUnion('type', [
   // millimetre rather than a non-negative one.
   z.object({
     type: z.literal('mirror'),
-    axis: z.object({ origin: vec2, angleRad: z.number().finite() }),
+    axis: z.discriminatedUnion('kind', [
+      // Captured once, by *Mirror ↔ / ↕*.
+      z.object({ kind: z.literal('line'), origin: vec2, angleRad: z.number().finite() }),
+      // Tracks a fold line: the first `references` edge in the format.
+      z.object({ kind: z.literal('fold'), foldId: z.string().min(1) }),
+    ]),
     glideMm: mm,
   }),
 ]);

@@ -66,7 +66,7 @@ ordering.
 
 ### 3.1 Shape
 
-Format version 6, as the writer emits it (key order shown for reading; the writer sorts keys):
+Format version 7, as the writer emits it (key order shown for reading; the writer sorts keys):
 
 ```jsonc
 {
@@ -117,8 +117,14 @@ Format version 6, as the writer emits it (key order shown for reading; the write
 **Planned in Phase 4** ([reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md)
 §6), each with its own version bump and identity migration: `frozenFrom` on features (4.2b, format
 version 4), the `text-label` kind and its `text` source (4.11b, format version 5), the `mirror` op
-(4.8a, format version 6), and the `measurement` annotation kind, which carries no `source` (4.10). Page setup,
+(4.8a, format version 6), the **fold-tracking mirror axis** (4.8b, format version 7 — the first
+migration that rewrites data rather than passing it through), and the `measurement` annotation kind,
+which carries no `source` (4.10). Page setup,
 materials, guides and a per-part placement transform are not in the format.
+
+A **fold-tracked mirror** stores *which fold*, never where that fold happens to be — the first
+**references** edge in the format. Move the fold in a later session and the counterpart moves with
+it.
 
 A **mirror** stores an axis and a glide — where the fold is and how far the counterpart slides
 along it — and not one coordinate of the reflected shape. The counterpart is recomputed from its

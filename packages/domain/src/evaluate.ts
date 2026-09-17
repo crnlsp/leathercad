@@ -1,4 +1,4 @@
-import { EPS_ANGLE, EPS_LENGTH, approxZero, type Mm } from '@leathercad/core';
+import { EPS_ANGLE, EPS_LENGTH, EPS_POINT, approxZero, type Mm } from '@leathercad/core';
 import {
   MatOps,
   PathOps,
@@ -7,6 +7,7 @@ import {
   glideMatrix,
   offsetPathTraced,
   subPath,
+  type Mat2x3,
   type OffsetPiece,
   type Path,
   type Vec2,
@@ -18,6 +19,7 @@ import type {
   Feature,
   FeatureId,
   FeatureSource,
+  MirrorAxis,
   ParametricShape,
   Part,
   Project,
@@ -106,6 +108,14 @@ export interface ResolvedProject {
  */
 interface CacheEntry {
   readonly from: Path | undefined;
+  /**
+   * The fold's geometry, for a mirror that tracks one.
+   *
+   * A mirror across a fold depends on **two** inputs, so the cache is only
+   * valid while both are unchanged. Without this, moving the fold would leave
+   * every counterpart sitting where it was.
+   */
+  readonly foldFrom: Path | undefined;
   readonly path: Path;
   readonly holes: StitchHoles | undefined;
   readonly text: PlacedText | undefined;
@@ -196,10 +206,13 @@ function resolveFeature(
     // to this feature, not to whichever feature asked for this one.
     const source = resolvedSourceOf(feature, byId, visiting);
     const from = source?.path;
+    const foldFrom = foldPathOf(feature, byId, visiting);
     const cached = cache.get(feature);
-    if (cached !== undefined && cached.from === from) return hit(feature, cached);
+    if (cached !== undefined && cached.from === from && cached.foldFrom === foldFrom) {
+      return hit(feature, cached);
+    }
 
-    const built = build(feature, source);
+    const built = build(feature, source, foldFrom);
     cache.set(feature, built);
     return hit(feature, built);
   } catch (error) {
@@ -241,6 +254,105 @@ function failed(feature: Feature, error: unknown): ResolvedFeature {
 }
 
 /**
+ * The geometry of the fold a mirror is folded about, or `undefined`.
+ *
+ * The **references** edge, resolved at evaluation exactly as the *derives*
+ * edge is — which is what makes moving the fold move every counterpart that
+ * tracks it. Nothing is cached across a change to it: the cache entry records
+ * this path and is discarded when it differs.
+ *
+ * A missing fold is refused here rather than allowed to produce a mirror about
+ * nothing. S2 makes it unreachable from a command or a loaded file; this is
+ * the guard behind that.
+ */
+function foldPathOf(
+  feature: Feature,
+  byId: ReadonlyMap<FeatureId, Feature>,
+  visiting: Set<FeatureId>,
+): Path | undefined {
+  if (feature.kind === 'text-label' || feature.source.kind !== 'derived') return undefined;
+  const op = feature.source.op;
+  if (op.type !== 'mirror' || op.axis.kind !== 'fold') return undefined;
+
+  const fold = byId.get(op.axis.foldId);
+  if (fold === undefined) {
+    throw new Failure(
+      problem('MIRROR_FOLD_MISSING', { ...about(feature), foldId: op.axis.foldId }),
+    );
+  }
+
+  // Following it the same way a source is followed, so a cycle through the
+  // reference is caught by the same guard (S3 across both edge kinds).
+  if (visiting.has(fold.id)) throw new CycleError(problem('CYCLE', about(feature)));
+  visiting.add(fold.id);
+  try {
+    const resolved = resolveFeature(fold, byId, visiting);
+    if (!resolved.ok) {
+      throw new Failure(
+        problem('SOURCE_FAILED', {
+          ...about(feature),
+          sourceId: fold.id,
+          sourceName: fold.name,
+        }),
+      );
+    }
+    return resolved.path;
+  } finally {
+    visiting.delete(fold.id);
+  }
+}
+
+/**
+ * The transform a mirror op describes, whichever kind of axis it has.
+ *
+ * A `line` axis carries its own numbers. A `fold` axis is **the infinite line
+ * through the fold's path**, which is why that path has to be straight: one
+ * segment of a bent fold is a silent guess about which part of the piece is
+ * being mirrored, and silent guesses on a pattern about to be cut are the
+ * worst failure this can produce.
+ */
+function mirrorMatrix(axis: MirrorAxis, glideMm: Mm, foldFrom: Path | undefined): Mat2x3 {
+  if (axis.kind === 'line') return glideMatrix(axis.origin, axis.angleRad, glideMm);
+
+  // `foldPathOf` threw if it was missing, so this is only reachable with one.
+  const line = straightLineOf(foldFrom!);
+  if (line === null) throw new Failure(problem('FOLD_NOT_STRAIGHT', {}));
+
+  // No glide about a fold: it would slide one half of the piece along the
+  // spine relative to the other.
+  return glideMatrix(line.origin, line.angleRad, 0);
+}
+
+/**
+ * The line a path lies on, or `null` when it does not lie on one.
+ *
+ * Straight means every segment is a line and all of them are collinear — a
+ * fold drawn as two clicks, or as several along the same crease. A curve, or a
+ * bend, has no single line and is refused.
+ */
+function straightLineOf(path: Path): { origin: Vec2; angleRad: number } | null {
+  const lines = path.segments.filter((segment) => segment.kind === 'line');
+  if (lines.length === 0 || lines.length !== path.segments.length) return null;
+
+  const first = lines[0]!;
+  const direction = { x: first.b.x - first.a.x, y: first.b.y - first.a.y };
+  const span = Math.hypot(direction.x, direction.y);
+  if (approxZero(span, EPS_LENGTH)) return null;
+
+  const unit = { x: direction.x / span, y: direction.y / span };
+  for (const segment of lines) {
+    for (const point of [segment.a, segment.b]) {
+      // Distance from the first segment's line: the cross product of the unit
+      // direction with the offset from a point known to be on it.
+      const across = unit.x * (point.y - first.a.y) - unit.y * (point.x - first.a.x);
+      if (!approxZero(across, EPS_POINT)) return null;
+    }
+  }
+
+  return { origin: first.a, angleRad: Math.atan2(unit.y, unit.x) };
+}
+
+/**
  * What this feature is built *from*, resolved, or undefined if it stands alone.
  *
  * The whole resolved source rather than only its path, because a derived
@@ -260,6 +372,7 @@ function resolvedSourceOf(
 function build(
   feature: Feature,
   resolvedSource: Extract<ResolvedFeature, { ok: true }> | undefined,
+  foldFrom: Path | undefined,
 ): CacheEntry {
   const invalid = parameterProblem(feature);
   if (invalid !== null) throw new Failure(invalid);
@@ -272,6 +385,7 @@ function build(
       const path = source.path;
       return {
         from,
+        foldFrom,
         path,
         holes: undefined,
         text: undefined,
@@ -283,6 +397,7 @@ function build(
       const path = pathForShape(source.shape);
       return {
         from,
+        foldFrom,
         path,
         holes: undefined,
         text: undefined,
@@ -296,6 +411,7 @@ function build(
       });
       return {
         from,
+        foldFrom,
         path: textBox(placed),
         holes: undefined,
         text: placed,
@@ -319,11 +435,12 @@ function build(
         // line could yield a different count from a rounding difference, and
         // two panels sewn together must have the same number of holes. A
         // reflection cannot lose one.
-        const m = glideMatrix(source.op.axis.origin, source.op.axis.angleRad, source.op.glideMm);
+        const m = mirrorMatrix(source.op.axis, source.op.glideMm, foldFrom);
         const holes = resolvedSource!.holes;
 
         return {
           from,
+          foldFrom,
           path: PathOps.transform(sourcePath, m),
           holes:
             holes === undefined
@@ -353,6 +470,7 @@ function build(
         // (ADR 0010): the holes on a corner are still on that corner.
         return {
           from,
+          foldFrom,
           path: sourcePath,
           holes: distributeHoles(sourcePath, source.op),
           text: undefined,
@@ -370,6 +488,7 @@ function build(
       );
       return {
         from,
+        foldFrom,
         path: offset.path,
         holes: undefined,
         text: undefined,
@@ -618,13 +737,16 @@ function parameterProblem(feature: Feature): Problem | null {
         checks.push([op.side === 'inward' ? 'inset' : 'allowance', op.distanceMm, 'non-negative']);
       } else if (op.type === 'mirror') {
         // A glide may be negative — it slides either way along the axis — so
-        // only finiteness is asked of these.
-        checks.push(
-          ['mirror axis', op.axis.origin.x, 'finite'],
-          ['mirror axis', op.axis.origin.y, 'finite'],
-          ['mirror angle', op.axis.angleRad, 'finite'],
-          ['glide', op.glideMm, 'finite'],
-        );
+        // only finiteness is asked of these. A fold axis has no numbers of its
+        // own: it is a reference, checked by `foldPathOf` instead.
+        checks.push(['glide', op.glideMm, 'finite']);
+        if (op.axis.kind === 'line') {
+          checks.push(
+            ['mirror axis', op.axis.origin.x, 'finite'],
+            ['mirror axis', op.axis.origin.y, 'finite'],
+            ['mirror angle', op.axis.angleRad, 'finite'],
+          );
+        }
       } else {
         checks.push(['pitch', op.pitchMm, 'positive']);
         if (op.startOffsetMm !== undefined) {

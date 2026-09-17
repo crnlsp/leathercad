@@ -83,6 +83,31 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
         : 'Draw it as a marking line.'),
   },
 
+  MIRROR_FOLD_MISSING: {
+    title: 'The fold is gone',
+    describe: (f) => `${f.featureName} is mirrored across a fold that no longer exists.`,
+  },
+  MIRROR_OUTLINE_ACROSS_FOLD: {
+    title: 'A piece has one edge',
+    describe: (f) =>
+      `Mirroring across a fold is for what is *inside* a piece — slots, stitching, hardware. ` +
+      `${f.partName} already has an outline, and a piece of leather has one edge, so its contour ` +
+      'cannot be completed this way. Draw the whole outline, or mirror the part to make a second ' +
+      'piece.',
+  },
+  MIRROR_PLACED_BY_FOLD: {
+    title: 'Placed by its fold',
+    describe: (f) =>
+      `${f.featureName} is mirrored across ${f.foldName}, so it goes where the fold puts it. ` +
+      `Move ${f.foldName}, or move ${f.sourceName}.`,
+  },
+  FOLD_NOT_STRAIGHT: {
+    title: 'The fold is not straight',
+    describe: () =>
+      'A mirror needs one line to fold about, and this fold bends. Draw it as a straight crease, ' +
+      'or mirror across a different one.',
+  },
+
   MIRROR_WOULD_SCALE: {
     title: 'A counterpart cannot be resized',
     describe: (f) =>

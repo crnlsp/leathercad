@@ -98,13 +98,52 @@ export type Derivation =
        * sentence: the counterpart is the source reflected in that line.
        */
       readonly type: 'mirror';
-      readonly axis: {
-        readonly origin: Vec2;
-        /** Normalised to `[0, π)`: a line at θ and θ + π is the same line. */
-        readonly angleRad: Radians;
-      };
-      /** How far along the axis, after reflecting. Signed against `angleRad`. */
+      readonly axis: MirrorAxis;
+      /**
+       * How far along the axis, after reflecting. Signed against `angleRad`.
+       *
+       * Always 0 for a `fold` axis: a glide would slide one half of a folded
+       * piece along the spine relative to the other, which is not what a fold
+       * means and not a thing anyone wants.
+       */
       readonly glideMm: Mm;
+    };
+
+/**
+ * Where a counterpart's mirror line comes from — the two meanings the gesture
+ * that made it had.
+ *
+ * `line` is **captured once**: *Mirror ↔ / ↕* measured the selection and froze
+ * the result (4.8a). It promises "a counterpart of this piece, here", never
+ * "these two stay symmetric forever".
+ *
+ * `fold` **tracks a fold line** in the same part (4.8b). Move the fold and
+ * every counterpart re-mirrors about its new position, which is the symmetry a
+ * maker can keep working with — the card slots on one side of a wallet staying
+ * the mirror of the other while the wallet's width is still being decided.
+ *
+ * The `fold` arm is what makes a mirror the first **two-input** derivation:
+ * a *derives* edge to its source, and a *references* edge to the fold. See
+ * `domain-model.md` §4.2.
+ */
+export type MirrorAxis =
+  | {
+      readonly kind: 'line';
+      readonly origin: Vec2;
+      /** Normalised to `[0, π)`: a line at θ and θ + π is the same line. */
+      readonly angleRad: Radians;
+    }
+  | {
+      readonly kind: 'fold';
+      /**
+       * The fold line this mirror is folded about.
+       *
+       * **Explicitly chosen, never inferred.** The operation is always
+       * `source feature + fold feature → counterpart`; there is no
+       * nearest-fold or obvious-fold heuristic, because a mirror about the
+       * wrong line is not visibly wrong until the leather is cut.
+       */
+      readonly foldId: FeatureId;
     };
 
 /**

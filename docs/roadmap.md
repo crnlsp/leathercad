@@ -836,10 +836,39 @@ that walks one scenario through the whole phase.
   mirror line, overlapping its counterpart. That is correct by the fixed-axis rule and visible on the
   canvas, and the real answer for a symmetric panel is mirroring across a **fold line**, whose axis is
   a thing in the drawing rather than a measurement of it. Slice 4.8b.
-- **4.8b** Mirror, the composition: whole-part mirroring, *Mirror across fold* using an existing
-  `fold-line` as the axis, labels in a mirrored part, hole-count parity checked by construction, and
-  how a linked pair presents in the dependency tree. Consumes a proven mirror operation and adds no
-  algebra to it.
+- **4.8b** ✅ **Done.** Mirror across a fold
+  ([design](superpowers/specs/2026-09-18-mirror-across-fold-design.md)). **Symmetry a maker keeps
+  working with**: a counterpart folded about a `fold-line` **references** that fold, so moving the
+  fold re-mirrors everything folded about it. 4.8a's captured axis is a placement; this is a
+  relationship — a wallet's card slots stay each other's mirror while the wallet's width is still
+  being decided.
+  **The first two-input derivation**, and the first *references* edge: a *derives* edge to the source
+  and a *references* edge to the fold, both now walked by S2 (every edge resolves) and S3 (acyclic
+  across **both**). `dependentsOf` follows them too, so deleting a fold shows the counterparts that
+  depend on it. Not a constraint system: one derivation reads one line at evaluation, nothing is
+  bidirectional.
+  **The fold is named, never inferred** — no nearest-fold heuristic, because a mirror about the wrong
+  crease is not visibly wrong until the leather is cut. A **bent fold is refused** rather than having
+  one of its segments picked. **Dragging a fold-tracked counterpart is refused**, naming the fold and
+  the source: the general rule's first instance, that dragging a derived linked result must not
+  silently break or half-alter the relationship. Deleting the fold offers to **freeze the axis**,
+  capturing the line the fold was on — the deliberate way out, and no new interaction concept.
+  **The symmetric outline is deliberately out of scope.** A piece of leather has one edge (S5), and
+  completing a contour from half of one needs a boolean union ADR 0008 declined. Refused before the
+  gesture with a message naming both real alternatives. Fold symmetry is for what is *inside* a
+  piece.
+  **Format version 7, and the first migration that rewrites data** rather than passing it through:
+  `v6_to_v7` adds `kind: 'line'` to every stored mirror axis. A chain of identities satisfies the
+  framework without proving it can carry a real change; this one does. The v7 fixture holds both arms
+  of the axis union.
+  Gotchas: `dependent.direct` only knows the *derives* edge, so the freeze had to be decided **before**
+  that guard — a counterpart is a direct dependent of its fold through the reference and its
+  `sourceId` does not say so; the evaluation cache keys on the source path, so it gained the fold's
+  path too or moving the fold changed nothing; `wouldLoop` walked a chain and had to become a graph
+  walk once a feature could point at two things; and three buttons do not fit the property panel, so
+  *Mirror across fold* has its own row — a properties panel that scrolls sideways is a broken one.
+  **Noticed, not fixed:** a fold drawn exactly onto the outline trips DR2's sampled containment and
+  is reported as running off the material. A boundary case of the 4.3a rule, not this slice's.
 - **4.9** Seam allowance: a closed stitch line with its outline derived outward. *Stitch + allowance*
   makes the new part in one step, and one stitch margin (`settings.defaultStitchInsetMm`) serves both
   directions. Deleting such a part's stitch line is the case ADR 0009 exists for.

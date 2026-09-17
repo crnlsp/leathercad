@@ -468,6 +468,26 @@ that names it fails with `ANCHOR_MISSING`.
   nobody could see. Fixed, the rule is one sentence — the counterpart is the original reflected in
   that line — which is also why moving the original moves the counterpart the *opposite* way. The
   panel says so rather than letting it be discovered.
+- **A mirror axis is one of two things** (4.8b). `{ kind: 'line' }` is captured once and frozen;
+  `{ kind: 'fold', foldId }` **tracks a fold line**, so moving the fold re-mirrors everything folded
+  about it. The second makes a mirror the **first two-input derivation**: a *derives* edge to its
+  source and a *references* edge to the fold, both walked by S2 and S3. It is not a constraint
+  system — one derivation reads one referenced line at evaluation, nothing is bidirectional, and
+  moving a counterpart does not move the fold.
+- **A fold-tracked counterpart cannot be dragged.** It is placed by its fold, and the refusal names
+  the fold and the source. This is the general rule's first instance: **dragging a derived, linked
+  result must not silently break or half-alter the relationship.** Absorbing the drag would slide
+  one half of a folded piece along its spine; detaching from the fold would break the link the maker
+  asked for (X3). Deleting the fold is the deliberate way out, and it offers to **freeze the axis** —
+  capturing the line the fold was on, so the counterpart keeps its shape and its source.
+- **An outline cannot be mirrored across a fold into its own part** (S5): a piece of leather has one
+  edge, and completing a contour from half of one needs a boolean union this project has
+  deliberately not bought ([ADR 0008](adr/0008-no-clipper-binding.md)). Refused before the gesture,
+  with a message naming both real alternatives — draw the whole outline, or mirror the part to make
+  a second piece. Fold symmetry is for what is **inside** a piece: slots, stitching, hardware.
+- **`Part.quantity` must never stand in for a mirrored pair.** It means "cut this many of this
+  shape", and a left and a right are two *different* shapes — cutting two of one would give the maker
+  two left gussets. A mirrored part is a separate part with `quantity: 1`.
 - **`Mirror ↔` and `Mirror ↕` are a placement, not a symmetry constraint.** They capture an axis from
   the selection's world-aligned bounding box **at the moment they are used**, and that axis then stays
   where it was put. So changing the original afterwards changes the gap between the pair, and growing
@@ -572,8 +592,8 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | Id | Invariant | Enforced by | Lands in |
 |---|---|---|---|
 | S1 | Feature and part ids are unique | Loader; id generation | built |
-| S2 | Every reference resolves to an existing feature | Commands (ADR 0009); loader | 4.2b |
-| S3 | The reference graph is acyclic | Commands; loader | built for derivations; references 4.10 |
+| S2 | Every reference resolves to an existing feature | Commands (ADR 0009); loader | 4.2b; **references** edge 4.8b |
+| S3 | The reference graph is acyclic | Commands; loader | built for derivations; **references** built 4.8b |
 | S4 | Every derivation appears in the compatibility table (§4.2) | Commands; loader | 4.2b |
 | S5 | A part has at most one outer contour | Commands; loader | built 4.3a |
 | S6 | Outer contours and cut-outs enclose an area | Drawing modes; loader | built 4.3a |
