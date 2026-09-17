@@ -1,7 +1,9 @@
 import {
   type DocumentStore,
+  addAllowance,
   addStitchHoles,
   addStitchLine,
+  allowanceRefusal,
   flipFeatures,
   flipRefusal,
   foldMirrorRefusal,
@@ -260,7 +262,13 @@ export function PropertyPanel({
         nextId={nextId}
       />
 
-      <DeriveActions store={store} part={part} feature={feature} nextId={nextId} />
+      <DeriveActions
+        store={store}
+        project={project}
+        part={part}
+        feature={feature}
+        nextId={nextId}
+      />
 
       {/*
         Asked here too, and for the same reason as the flips: without it a
@@ -450,11 +458,13 @@ function FlipButton({
  */
 function DeriveActions({
   store,
+  project,
   part,
   feature,
   nextId,
 }: {
   store: DocumentStore;
+  project: Project;
   part: Part;
   feature: Feature;
   nextId: () => string;
@@ -481,32 +491,86 @@ function DeriveActions({
 
   if (feature.kind === 'stitch-line') {
     return (
-      <button
-        type="button"
-        className="tool"
-        data-testid="add-stitch-holes"
-        title="Holes along this line, at the pitch of your iron"
-        onClick={() => {
-          const id = nextId();
-          store.dispatch(
-            // Likewise the iron: the pitch comes from the project's settings,
-            // and the label follows the pitch so the panel can still name the
-            // iron rather than calling every default "Custom".
-            addStitchHoles(part.id, id, feature.id, {
-              mode: 'fit-whole',
-              corners: 'hole-at-corner',
-              ...ironLabelFor(store.getState().document.project.settings.defaultIronPitchMm),
-            }),
-          );
-          store.select([id]);
-        }}
-      >
-        Add holes
-      </button>
+      <>
+        <AllowanceButton
+          store={store}
+          part={part}
+          feature={feature}
+          project={project}
+          nextId={nextId}
+        />
+        <button
+          type="button"
+          className="tool"
+          data-testid="add-stitch-holes"
+          title="Holes along this line, at the pitch of your iron"
+          onClick={() => {
+            const id = nextId();
+            store.dispatch(
+              // Likewise the iron: the pitch comes from the project's settings,
+              // and the label follows the pitch so the panel can still name the
+              // iron rather than calling every default "Custom".
+              addStitchHoles(part.id, id, feature.id, {
+                mode: 'fit-whole',
+                corners: 'hole-at-corner',
+                ...ironLabelFor(store.getState().document.project.settings.defaultIronPitchMm),
+              }),
+            );
+            store.select([id]);
+          }}
+        >
+          Add holes
+        </button>
+      </>
     );
   }
 
   return null;
+}
+
+/**
+ * Growing the cut edge outward from the stitching that defines it.
+ *
+ * Offered beside *Add holes* because it is the other thing a maker does to a
+ * stitch line, and because drawing the stitching first and deciding on the
+ * edge after is the common order — not every pocket starts life in *Stitch +
+ * allowance* mode. It builds the identical derivation that mode does.
+ */
+function AllowanceButton({
+  store,
+  project,
+  part,
+  feature,
+  nextId,
+}: {
+  store: DocumentStore;
+  project: Project;
+  part: Part;
+  feature: Feature;
+  nextId: () => string;
+}) {
+  const refusal = allowanceRefusal(project, feature.id);
+
+  return (
+    <button
+      type="button"
+      className="tool"
+      data-testid="add-allowance"
+      disabled={refusal !== null}
+      title={
+        refusal === null
+          ? "The cut edge, that far outside this seam — and it follows the seam's shape"
+          : describeProblem(refusal)
+      }
+      onClick={() => {
+        const id = nextId();
+        store.dispatch(addAllowance(part.id, id, feature.id));
+        store.select([id]);
+      }}
+    >
+      Add seam allowance
+    </button>
+  );
 }
 
 /** The name of an iron with this pitch, if the presets know one. */

@@ -22,6 +22,7 @@ import {
   dependentsOf,
   derivationRefusal,
   evaluate,
+  findFeature,
   followRefusal,
   lockRefusal,
   problem,
@@ -864,6 +865,127 @@ export function addFoldLine(
     locked: false,
     source,
   });
+}
+
+/**
+ * Why a seam allowance cannot be grown from this feature, or `null`.
+ *
+ * Pure and shared with the interface, so the panel's button is disabled by the
+ * same question the command refuses with (ADR 0013).
+ */
+export function allowanceRefusal(project: Project, stitchId: FeatureId): Problem | null {
+  const found = findFeature(project, stitchId);
+  if (found === null) return problem('FEATURE_MISSING', { featureId: stitchId });
+
+  const { part, feature } = found;
+  if (feature.kind !== 'stitch-line') {
+    return problem('NOT_DERIVED', { featureId: feature.id, featureName: feature.name });
+  }
+
+  // Everything else the compatibility table has to say — the run must be
+  // whole, the line must be closed — is asked by building the candidate and
+  // handing it to the same check the loader uses (S4, S5, S6). One question,
+  // one answer, wherever it is asked from.
+  const candidate = allowanceFeature('probe' as FeatureId, stitchId, 1);
+  return derivationRefusal(project, candidate) ?? additionRefusal(project, part.id, candidate);
+}
+
+/**
+ * The cut edge of a piece, grown outward from the stitching that defines it.
+ *
+ * The other direction of one relationship (§3.4): a stitch line **inset** from
+ * an outline is the common case; this is the one for when the *inside*
+ * dimension is what matters — a pocket that has to take a card is specified by
+ * its opening, and the edge is whatever leaves the allowance outside the seam.
+ *
+ * **Linked, not baked.** The edge is an ordinary derived feature, so editing
+ * the opening — its size, its position — or retyping the allowance moves it,
+ * and the file stores the relationship rather than one coordinate of the
+ * result. The drawing mode and this action build the same derivation; there is
+ * deliberately no second seam-allowance model.
+ */
+export function addAllowance(
+  partId: PartId,
+  featureId: FeatureId,
+  stitchId: FeatureId,
+  allowanceMm?: Mm,
+): Command {
+  return {
+    label: 'Add seam allowance',
+    apply: (document) => {
+      if (allowanceRefusal(document.project, stitchId) !== null) return document;
+
+      // One number serves both directions, so the project's stitch margin is
+      // the allowance too (X8). The field keeps its name; the panel calls it
+      // *Edge margin*, which reads correctly from either end.
+      const allowance = allowanceMm ?? document.project.settings.defaultStitchInsetMm;
+
+      return addFeature(partId, allowanceFeature(featureId, stitchId, allowance)).apply(document);
+    },
+  };
+}
+
+/**
+ * A new part dimensioned from its opening: a drawn stitch line, and its edge.
+ *
+ * One command and one undo step, because the two are one thought. The stitch
+ * line is the **root** — it is what the maker drew and what they will retype —
+ * and the outline follows it, which is the first part in the product whose
+ * edge is derived rather than drawn.
+ */
+export function addAllowancePart(
+  partId: PartId,
+  stitchId: FeatureId,
+  outlineId: FeatureId,
+  source: GeometrySource,
+  allowanceMm?: Mm,
+): Command {
+  return {
+    label: 'Add Pocket',
+    apply: (document) => {
+      const allowance = allowanceMm ?? document.project.settings.defaultStitchInsetMm;
+
+      const part: Part = {
+        id: partId,
+        name: 'Pocket',
+        quantity: 1,
+        features: [
+          {
+            id: stitchId,
+            kind: 'stitch-line',
+            name: 'Stitch line',
+            visible: true,
+            locked: false,
+            source,
+          },
+          allowanceFeature(outlineId, stitchId, allowance),
+        ],
+      };
+
+      // Built whole and added whole: a part with a stitch line and no edge is
+      // not a state this command should be able to leave behind.
+      return { project: { ...document.project, parts: [...document.project.parts, part] } };
+    },
+  };
+}
+
+/** The derivation both ways in share, so they cannot drift apart. */
+function allowanceFeature(featureId: FeatureId, stitchId: FeatureId, allowanceMm: Mm): Feature {
+  return {
+    id: featureId,
+    kind: 'cut-contour',
+    role: 'outer',
+    name: 'Outline',
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'derived',
+      sourceId: stitchId,
+      // Whole run only: an outline has to enclose the part, and a run between
+      // two anchors does not (`allowance-needs-whole-run`).
+      op: { type: 'offset', distanceMm: allowanceMm, side: 'outward', run: { kind: 'whole' } },
+    },
+  };
 }
 
 /**

@@ -294,7 +294,7 @@ reason, and the loader refuses files that break them, naming the feature:
 | Target | Op | Source | Conditions |
 |---|---|---|---|
 | Stitch line | offset, inward | Cut contour (outer or cut-out) | Whole run or partial run |
-| Outer cut contour | offset, outward | Stitch line | Source closed; whole run only |
+| Outer cut contour | offset, outward | Stitch line | Source closed; whole run only — built 4.9 |
 | Stitch hole set | stitch holes | Stitch line | |
 | The same kind | mirror | The same kind | A cut contour keeps its role — built 4.8a |
 

@@ -1,4 +1,5 @@
 import {
+  addAllowancePart,
   addCutOut,
   addDrawnStitchLine,
   addFoldLine,
@@ -26,17 +27,29 @@ import type { ToolContext } from '../tool.js';
  * selected the moment it is drawn, so a mode that decided by selection would
  * quietly change meaning on the next draw. See the reconciliation §3.8.
  *
- * `stitch-allowance` is the sixth mode in that table and arrives with seam
- * allowance, slice 4.9: it needs an outline derived outward from a stitch
- * line, which is a derivation this does not have yet.
+ * `stitch-allowance` is the sixth, built in 4.9: a new part dimensioned from
+ * its opening, with the cut edge derived outward from the stitch line the
+ * maker drew. Like *Outline* it makes its own part and never reads the
+ * selection.
  */
-export type DrawMode = 'outline' | 'cut-out' | 'stitch' | 'fold' | 'marking';
+export type DrawMode = 'outline' | 'stitch-allowance' | 'cut-out' | 'stitch' | 'fold' | 'marking';
 
 /** Geometry a tool can actually produce. A derived source is never drawn. */
 export type DrawnSource = Extract<GeometrySource, { kind: 'shape' } | { kind: 'path' }>;
 
-/** The modes whose result has to enclose an area (S6). */
-const ENCLOSING: ReadonlySet<DrawMode> = new Set<DrawMode>(['outline', 'cut-out']);
+/**
+ * The modes whose result has to enclose an area (S6).
+ *
+ * *Stitch + allowance* joins them because the **outline it derives** has to
+ * enclose the part, and an outline grown outward from an open run is an open
+ * run (`allowance-needs-closed-line`). Refused at the gesture, so the maker
+ * hears it while they are drawing rather than from the loader later.
+ */
+const ENCLOSING: ReadonlySet<DrawMode> = new Set<DrawMode>([
+  'outline',
+  'stitch-allowance',
+  'cut-out',
+]);
 
 /**
  * One tool's commit boundary: the only way drawn geometry reaches the document.
@@ -120,6 +133,18 @@ function fileDrawn(
     return featureId;
   }
 
+  if (mode === 'stitch-allowance') {
+    // Also a new part, and also blind to the selection — but dimensioned from
+    // the *opening*: what was drawn is the stitch line, and the cut edge is
+    // derived outward from it. One command, one undo step.
+    const outlineId = nextId() as FeatureId;
+    ctx.dispatch(addAllowancePart(nextId() as PartId, featureId, outlineId, source));
+    // The stitch line is selected, not the edge: it is the thing the maker
+    // dimensioned and the thing they will retype.
+    ctx.store.select([featureId]);
+    return featureId;
+  }
+
   const partId = targetPart(ctx);
   if (partId === null) return null;
 
@@ -129,7 +154,7 @@ function fileDrawn(
 }
 
 function commandFor(
-  mode: Exclude<DrawMode, 'outline'>,
+  mode: Exclude<DrawMode, 'outline' | 'stitch-allowance'>,
   partId: PartId,
   featureId: FeatureId,
   source: DrawnSource,
@@ -187,8 +212,8 @@ export function drawRefusal(ctx: ToolContext, source: DrawnSource): Problem | nu
   // something. An open path used to be filed silently as a marking line.
   if (ENCLOSING.has(mode) && !enclosesArea(source)) {
     return problem('CONTOUR_NOT_CLOSED', {
-      featureName: mode === 'outline' ? 'An outline' : 'A cut-out',
-      role: mode === 'outline' ? 'outer' : 'inner',
+      featureName: NOT_ENCLOSING[mode] ?? 'This',
+      role: mode === 'cut-out' ? 'inner' : 'outer',
       // A run of points can be closed with another click; an arc cannot, ever,
       // so it must not be told to try.
       closable: source.kind === 'path',
@@ -201,8 +226,8 @@ export function drawRefusal(ctx: ToolContext, source: DrawnSource): Problem | nu
 /** Why nothing would happen for want of a part, for the status bar. */
 export function drawTargetNotice(ctx: ToolContext): Problem | null {
   const mode = modeOf(ctx);
-  // An outline makes its own part and never reads the selection.
-  if (mode === 'outline') return null;
+  // These make their own part and never read the selection.
+  if (mode === 'outline' || mode === 'stitch-allowance') return null;
   if (targetPart(ctx) !== null) return null;
 
   const what = mode === 'cut-out' ? 'cut-out' : 'line';
@@ -210,6 +235,13 @@ export function drawTargetNotice(ctx: ToolContext): Problem | null {
   const spansParts = selection.features.size > 0 || selection.parts.size > 0;
   return spansParts ? problem('TARGET_SPANS_PARTS', { what }) : problem('NO_TARGET_PART', { what });
 }
+
+/** What to call the thing that did not enclose anything, per mode. */
+const NOT_ENCLOSING: Readonly<Record<string, string>> = {
+  outline: 'An outline',
+  'stitch-allowance': 'A seam',
+  'cut-out': 'A cut-out',
+};
 
 /** Whether drawn geometry encloses an area, by what it is rather than by area. */
 function enclosesArea(source: DrawnSource): boolean {

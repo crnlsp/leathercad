@@ -380,7 +380,7 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 | 6b | **4.3b** Parts panel ✅ | Part selection · dependency tree · delete and duplicate part · visibility and lock (D8) | 4.3a |
 | 7 | **4.8a** Mirror, the operation ✅ | The mirror op · mirror a feature · placement by axis and glide · re-parameterising gestures · scaling refused · format 6 | 4.2b, 4.4b, 3.7b, 4.3 |
 | 7b | **4.8b** Mirror across a fold ✅ | Mirror a part · mirror across a fold line · labels · hole parity by construction · the pair in the dependency tree | 4.8a |
-| 8 | **4.9** Seam allowance | *Stitch + allowance* mode · outward offsets · stitch margin | 4.2b, 4.4b, 4.3 |
+| 8 | **4.9** Seam allowance ✅ | *Stitch + allowance* mode · outward offsets · stitch margin | 4.2b, 4.4b, 4.3 |
 | 9 | **4.10** Measurements | Measure tool · measurement annotations · anchor, centre and extent refs · values set through typography | 4.2b, 4.4b, 4.11 |
 | 10 | **4.12** Validation complete | Zoom-to-problem · badges · export warning · the invariant audit test | All of the above |
 | 11 | **Close-out** | One end-to-end scenario across the phase · roadmap summary · final pass over the docs | All |

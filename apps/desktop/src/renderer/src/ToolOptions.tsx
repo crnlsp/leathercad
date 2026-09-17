@@ -6,12 +6,17 @@ import { PUNCH_SIZES_MM } from './punches.js';
 const DRAW_TOOLS: ReadonlySet<string> = new Set(['rectangle', 'circle', 'arc', 'line', 'polyline']);
 
 /**
- * One fixed result each (X4). *Outline* makes a new part and never reads the
- * selection; the rest join the selected part. *Stitch + allowance* is the
- * sixth and arrives with seam allowance, slice 4.9.
+ * One fixed result each (X4). *Outline* and *Stitch + allowance* each make a
+ * new part and never read the selection; the rest join the selected one.
+ *
+ * *Stitch + allowance* dimensions the part from its **opening**: what is drawn
+ * is the stitch line, and the cut edge is derived outward from it — the
+ * direction a maker wants when the inside measurement is the one that matters
+ * (§3.4).
  */
 const DRAW_MODES: readonly { readonly id: DrawMode; readonly label: string }[] = [
   { id: 'outline', label: 'Outline' },
+  { id: 'stitch-allowance', label: 'Stitch + allowance' },
   { id: 'cut-out', label: 'Cut-out' },
   { id: 'stitch', label: 'Stitch' },
   { id: 'fold', label: 'Fold' },

@@ -1580,3 +1580,78 @@ test('an outline cannot be completed by mirroring it across its own fold', async
     await expect(fold).toHaveAttribute('title', /one edge|second piece/i);
   });
 });
+
+test('a pocket dimensioned from its opening, with the edge derived outward', async () => {
+  // Slice 4.9. The other direction of one relationship: the maker specifies
+  // the opening and the cut edge is whatever leaves the allowance outside it.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const panel = window.getByTestId('property-panel');
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.getByTestId('draw-as-stitch-allowance').click();
+    await expect(window.getByTestId('draw-as-stitch-allowance')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    await window.mouse.move(box!.x + 260, box!.y + 220);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 560, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+
+    // One part, two features: what was drawn is the stitch line, and the edge
+    // follows it.
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+
+    // The stitch line is what is selected — it is what the maker dimensioned.
+    await expect(panel).toContainText('Stitch line');
+
+    // Retype the opening, and the edge follows it.
+    const width = panel.locator('label', { hasText: /^Width/ }).locator('input');
+    await width.fill('95');
+    await width.press('Enter');
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+
+    // The edge is derived, so it has no shape of its own to edit.
+    await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').last().click();
+    await expect(panel.getByTestId('follows')).toBeVisible();
+    await expect(panel.locator('label', { hasText: /^Edge margin/ })).toBeVisible();
+  });
+});
+
+test('a seam allowance can be added to a stitch line drawn earlier', async () => {
+  // The common order: draw the stitching, decide on the edge after.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const panel = window.getByTestId('property-panel');
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.getByTestId('draw-as-outline').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 600, box!.y + 420, { steps: 5 });
+    await window.mouse.up();
+
+    // A stitch line inset from that outline cannot take an allowance: its part
+    // already has an edge (S5).
+    await window.getByTestId('add-stitch-line').click();
+    await expect(panel.getByTestId('add-allowance')).toBeDisabled();
+    await expect(panel.getByTestId('add-allowance')).toHaveAttribute('title', /outline|edge/i);
+
+    // Draw a stitch line on a part of its own, and it can.
+    await window.getByTestId('tool-rectangle').click();
+    await window.getByTestId('draw-as-stitch-allowance').click();
+    await window.mouse.move(box!.x + 680, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 860, box!.y + 340, { steps: 5 });
+    await window.mouse.up();
+
+    await expect(window.getByTestId('part-count')).toHaveText('2');
+    // It already has its edge, so the action is spent.
+    await expect(panel.getByTestId('add-allowance')).toBeDisabled();
+  });
+});

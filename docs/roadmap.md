@@ -869,9 +869,27 @@ that walks one scenario through the whole phase.
   *Mirror across fold* has its own row — a properties panel that scrolls sideways is a broken one.
   **Noticed, not fixed:** a fold drawn exactly onto the outline trips DR2's sampled containment and
   is reported as running off the material. A boundary case of the 4.3a rule, not this slice's.
-- **4.9** Seam allowance: a closed stitch line with its outline derived outward. *Stitch + allowance*
-  makes the new part in one step, and one stitch margin (`settings.defaultStitchInsetMm`) serves both
-  directions. Deleting such a part's stitch line is the case ADR 0009 exists for.
+- **4.9** ✅ **Done.** Seam allowance — dimensioning the opening, not the edge
+  ([design](superpowers/specs/2026-09-18-seam-allowance-design.md)). The other direction of one
+  relationship (§3.4): a pocket that has to take a card is specified by its **opening**, and the cut
+  edge is whatever leaves the allowance outside the seam. *Stitch + allowance* is the sixth drawing
+  mode — a new part whose drawn stitch line is the root and whose outer contour is derived outward
+  from it, in one undo step, never reading the selection (X4). **Add seam allowance** does the same
+  from a stitch line drawn earlier, which is the commoner order, using the identical derivation
+  rather than a second model.
+  **Linked, not baked**: the edge is an ordinary derived feature, so retyping the opening's width or
+  the margin moves it, and the file stores the relationship rather than one coordinate of the result.
+  One number serves both directions — `settings.defaultStitchInsetMm`, which the panel calls *Edge
+  margin* (X8).
+  **The design was mostly a check, and that is the point.** Probing first showed the outward offset,
+  the compatibility row, `declaresClosed` and the anchor mapping already worked; 4.9 connects and
+  exposes them rather than inventing work. Corners are **round at the allowance's radius** — what a
+  wing divider traces, and what a maker would cut anyway, so a rectangular opening gives a
+  rounded-rectangle edge on purpose. An allowance too large for its own shape reports
+  `OFFSET_COLLAPSED` rather than guessing; Tier 2 geometry stays slice 9.11.
+  **D6's limitation was checked and not hit**: the ambiguous case is an allowance grown from
+  stitching round a cut-out, which `allowance-needs-outer` already forbids, so `towardsMaterial`
+  stays as it is rather than being generalised speculatively.
 - **4.10** Measurements — horizontal, vertical, aligned and radial — as annotations whose ends
   reference anchors, centres or extents, never segment indices or free points
   ([ADR 0010](adr/0010-anchors-address-geometry.md)). Values are generated and set through the
