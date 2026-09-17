@@ -39,6 +39,10 @@ export function anchorsOf(source: FeatureSource, path: Path): readonly Mm[] {
     // eslint-disable-next-line no-fallthrough
     case 'path':
       return cornerDistances(path);
+    case 'measurement':
+      // Nothing measures a measurement. It is a reading of the drawing, not a
+      // place on it.
+      return [];
     case 'derived':
       // A run on a derived feature is not something anyone has asked for, and
       // allowing it would mean anchors that move when their own source moves.

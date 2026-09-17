@@ -6,6 +6,7 @@ import {
   setLabelSize,
   setLabelText,
   setMarkingPurpose,
+  setMeasurement,
   setShape,
 } from '@leathercad/document';
 import type { DocumentStore } from '@leathercad/document';
@@ -16,6 +17,7 @@ import { ShapeEditor } from '../shapeEditors/index.js';
 import { FoldLineEditor } from './FoldLineEditor.js';
 import { HardwareHoleEditor } from './HardwareHoleEditor.js';
 import { MarkingLineEditor } from './MarkingLineEditor.js';
+import { MeasurementEditor } from './MeasurementEditor.js';
 import { StitchHoleSetEditor } from './StitchHoleSetEditor.js';
 import { StitchLineEditor } from './StitchLineEditor.js';
 import { TextLabelEditor } from './TextLabelEditor.js';
@@ -53,6 +55,16 @@ export function FeatureEditor({
         feature={feature}
         onText={(text) => store.dispatch(setLabelText(feature.id, text))}
         onSize={(sizeMm) => store.dispatch(setLabelSize(feature.id, sizeMm))}
+      />
+    );
+  }
+
+  // A dimension's parameters are how it is drawn, not what it says.
+  if (feature.kind === 'measurement') {
+    return (
+      <MeasurementEditor
+        source={feature.source}
+        onChange={(change) => store.dispatch(setMeasurement(feature.id, change))}
       />
     );
   }

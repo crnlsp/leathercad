@@ -40,6 +40,10 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       // one click and then typed in the panel, so it belongs with the things
       // you place rather than the things you drag out.
       { id: 'text', label: 'Text', key: 'X' },
+      // A dimension is placed by naming two corners, so it belongs with the
+      // things you point at rather than the things you drag out. It reads the
+      // drawing and never changes it, which is why it is not under Modify.
+      { id: 'measure', label: 'Measure', key: 'M' },
     ],
   },
   {
@@ -48,7 +52,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       // Move is not here on purpose. The select tool already moves a selection
       // by dragging it, and a second mode that did the same thing would teach
       // the user that modes are not distinct — the opposite of what this
-      // palette exists to say. Reserved keys remaining: M, N, G.
+      // palette exists to say. Reserved keys remaining: N, G.
       { id: 'rotate', label: 'Rotate', key: 'T' },
       { id: 'scale', label: 'Scale', key: 'S' },
     ],

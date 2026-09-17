@@ -93,6 +93,8 @@ export interface ProblemFacts {
   readonly FEATURE_LOCKED: About;
   /** S2: the fold a mirror is folded about has to exist. */
   readonly MIRROR_FOLD_MISSING: About & { readonly foldId: FeatureId };
+  /** S2: a dimension names two places, and both have to exist. */
+  readonly MEASURE_REF_MISSING: About;
   /** S5: a part has one edge, so its outline cannot be mirrored into itself. */
   readonly MIRROR_OUTLINE_ACROSS_FOLD: About & { readonly partName: string };
 
@@ -110,6 +112,14 @@ export interface ProblemFacts {
   readonly MIRROR_WOULD_SCALE: About & { readonly sourceName: string };
   /** X3: nothing to take a mirror axis from. */
   readonly MIRROR_NO_AXIS: Record<string, never>;
+  /**
+   * X3: a dimension end needs a durable place, and this is not one.
+   *
+   * Empty space, a point along an edge, a grid position — none of them survive
+   * the drawing changing, so a dimension to one would read as authoritative
+   * while quietly going stale (ADR 0010).
+   */
+  readonly MEASURE_NEEDS_ANCHOR: Record<string, never>;
   /**
    * X3: a fold-tracked counterpart is placed by its fold, not by dragging.
    *

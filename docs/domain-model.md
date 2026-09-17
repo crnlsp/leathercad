@@ -67,8 +67,14 @@ interface GeometricFeature extends FeatureBase {
 }
 ```
 
-**Annotations** (designed) are features without a geometry source: a measurement and a text label.
-They belong to a part and resolve after the geometry they refer to (§3.7, §3.8).
+**Annotations** are features whose geometry is generated rather than drawn: a measurement and a text
+label. They belong to a part and resolve after the geometry they refer to (§3.7, §3.8).
+
+Both **do** have a `GeometrySource` — a label's is its words, a measurement's is its references —
+because that is where their geometry genuinely comes from, and because every feature having one is an
+assumption the whole domain rests on. An earlier draft described annotations as "features without a
+geometry source"; the intent was that they have no *shape of their own*, and the model expresses that
+by giving them a source that is not one, rather than by removing the field.
 
 ### 3.1 `CutContour` — built
 
@@ -172,31 +178,45 @@ separately.
 
 **Later:** `hardwareRefId`, a link into the hardware library (v1.1).
 
-### 3.7 `Measurement` — designed, 4.10
+### 3.7 `Measurement` — linear built 4.10a
 
 ```ts
-interface Measurement extends FeatureBase {
+interface Measurement extends Omit<FeatureBase, 'source'> {
   kind: 'measurement';
-  type: 'horizontal' | 'vertical' | 'aligned' | 'radial';
+  source: MeasureSource;
+}
+
+interface MeasureSource {
+  kind: 'measurement';
+  measure: 'horizontal' | 'vertical' | 'aligned';
   a: MeasureRef;
-  b?: MeasureRef;                     // absent for radial
+  b: MeasureRef;
   offsetMm: Mm;                       // how far the dimension line sits from the geometry
   precision: 0 | 1 | 2;
 }
 
-type MeasureRef =
-  | { kind: 'anchor'; featureId: FeatureId; anchor: number }
-  | { kind: 'centre'; featureId: FeatureId }
-  | { kind: 'extent'; featureId: FeatureId; side: 'left' | 'right' | 'bottom' | 'top' };
+type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
 ```
 
-- **An annotation.** It has no geometry source; its ends are **references** in the graph (§4.2).
-- **Every end references geometry.** No segment indices (S9) and no free points, because a dimension
+- **An annotation, and an ordinary feature.** Its references live in its `GeometrySource`, because the
+  dimension line is computed from exactly them — so selection, visibility, lock, delete, the parts
+  panel and the export layer all come for free rather than being built again.
+- **The first source naming two features**, and it names them as **references** rather than
+  derivations: a measurement reads geometry it is not built from. The edge kind arrived in 4.8b for a
+  mirror's fold; this is its second and larger user, and `edgesFrom` carries both.
+- **Every end references an anchor.** No segment indices (S9) and no free points, because a dimension
   that silently goes stale is worse than no dimension.
-- **The value is generated**, never stored.
+- **The value is generated**, never stored (X6), and shown at `precision`.
 - A missing anchor fails the measurement (E4). It never attaches to a neighbouring corner.
+- **Never freezable.** Deleting what it measures offers no "keep it": a frozen dimension is a number
+  that no longer means anything, which is the stale label this feature exists to replace.
+- **Durability.** An anchor on a parametric shape survives every ordinary edit. An anchor on a *drawn
+  path* survives move, rotate and scale but **not vertex editing**, which renumbers corners — ADR 0010
+  point 5's open item, cleared by slice 3.9. That is a property of anchors, not of measurements, and
+  the implementation deliberately does not hide it.
 
-**Later:** angular measurements.
+**Later:** `radial`, and with it `centre` references; `extent` references, which are the least durable
+kind because they follow evaluated bounds rather than a place; angular measurements.
 
 ### 3.8 `TextLabel` — built, 4.11b
 
@@ -592,8 +612,8 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | Id | Invariant | Enforced by | Lands in |
 |---|---|---|---|
 | S1 | Feature and part ids are unique | Loader; id generation | built |
-| S2 | Every reference resolves to an existing feature | Commands (ADR 0009); loader | 4.2b; **references** edge 4.8b |
-| S3 | The reference graph is acyclic | Commands; loader | built for derivations; **references** built 4.8b |
+| S2 | Every reference resolves to an existing feature | Commands (ADR 0009); loader | 4.2b; **references** edge 4.8b, measurements 4.10a |
+| S3 | The reference graph is acyclic | Commands; loader | built for derivations; **references** built 4.8b, over both edges |
 | S4 | Every derivation appears in the compatibility table (§4.2) | Commands; loader | 4.2b |
 | S5 | A part has at most one outer contour | Commands; loader | built 4.3a |
 | S6 | Outer contours and cut-outs enclose an area | Drawing modes; loader | built 4.3a |
@@ -640,7 +660,7 @@ rules are exact — a hole is a point, and a point is either on the material or 
 | X3 | Derived features are never silently detached, converted or ignored | 4.2b, 4.8 |
 | X4 | Selection chooses where something goes, never what is created | built 4.3a |
 | X5 | Text that can reach paper is set in millimetres, in the vendored typeface, laid out once | built 4.11a |
-| X6 | Text that restates a model value is generated, never stored | 4.10, 4.11 |
+| X6 | Text that restates a model value is generated, never stored | built 4.10a for dimensions |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
 | X8 | Defaults come from project settings | built 4.3a |
 | X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
@@ -760,7 +780,7 @@ shapes and derivations instead of literals.
 |---|---|---|
 | `CutContour`, `StitchLine`, `StitchHoleSet`, `FoldLine`, `MarkingLine`, `HardwareHole` | Built | |
 | Cut-outs, drawn stitch lines, drawing modes | Designed: 4.3, 4.9 | |
-| `Measurement` (horizontal, vertical, aligned, radial) | Designed: 4.10 | Angular |
+| `Measurement` (horizontal, vertical, aligned) | Built 4.10a | Radial, angular |
 | `TextLabel`, generated captions | Designed: 4.11 | |
 | Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes` | Built | |
 | Op: `mirror` | Designed: 4.8 | Boolean (v1.2) |

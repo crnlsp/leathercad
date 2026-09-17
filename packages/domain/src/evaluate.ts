@@ -3,6 +3,7 @@ import {
   MatOps,
   PathOps,
   Shapes,
+  SegmentOps,
   arc,
   glideMatrix,
   offsetPathTraced,
@@ -19,6 +20,7 @@ import type {
   Feature,
   FeatureId,
   FeatureSource,
+  MeasureSource,
   MirrorAxis,
   ParametricShape,
   Part,
@@ -109,13 +111,18 @@ export interface ResolvedProject {
 interface CacheEntry {
   readonly from: Path | undefined;
   /**
-   * The fold's geometry, for a mirror that tracks one.
+   * The geometry of everything this feature **references** but is not built
+   * from — a mirror's fold, a measurement's two ends.
    *
-   * A mirror across a fold depends on **two** inputs, so the cache is only
-   * valid while both are unchanged. Without this, moving the fold would leave
-   * every counterpart sitting where it was.
+   * A referencing feature depends on more than its source, so the entry is
+   * only valid while every one of them is unchanged. Without it, moving a fold
+   * would leave its counterparts where they were, and moving a corner would
+   * leave a dimension reading the old number.
+   *
+   * A list rather than a slot per kind: 4.8b needed one, 4.10a needs two, and
+   * a third special-case field is how a cache quietly stops being correct.
    */
-  readonly foldFrom: Path | undefined;
+  readonly refsFrom: readonly (Path | undefined)[];
   readonly path: Path;
   readonly holes: StitchHoles | undefined;
   readonly text: PlacedText | undefined;
@@ -206,13 +213,14 @@ function resolveFeature(
     // to this feature, not to whichever feature asked for this one.
     const source = resolvedSourceOf(feature, byId, visiting);
     const from = source?.path;
-    const foldFrom = foldPathOf(feature, byId, visiting);
+    const referenced = referencedOf(feature, byId, visiting);
+    const refsFrom = referenced.map((entry) => entry?.path);
     const cached = cache.get(feature);
-    if (cached !== undefined && cached.from === from && cached.foldFrom === foldFrom) {
+    if (cached !== undefined && cached.from === from && sameRefs(cached.refsFrom, refsFrom)) {
       return hit(feature, cached);
     }
 
-    const built = build(feature, source, foldFrom);
+    const built = build(feature, source, referenced);
     cache.set(feature, built);
     return hit(feature, built);
   } catch (error) {
@@ -265,6 +273,77 @@ function failed(feature: Feature, error: unknown): ResolvedFeature {
  * nothing. S2 makes it unreachable from a command or a loaded file; this is
  * the guard behind that.
  */
+/**
+ * The geometry of everything this feature references, in a fixed order.
+ *
+ * One list, whatever the kind, so the cache and the builders agree about what
+ * index means what: a mirror's fold is `[0]`; a measurement's ends are `[0]`
+ * and `[1]`.
+ */
+/** A referenced feature, resolved: its geometry **and** its anchors. */
+interface Referenced {
+  readonly path: Path;
+  readonly anchors: readonly (Mm | null)[];
+}
+
+function referencedOf(
+  feature: Feature,
+  byId: ReadonlyMap<FeatureId, Feature>,
+  visiting: Set<FeatureId>,
+): readonly (Referenced | undefined)[] {
+  if (feature.kind === 'text-label') return [];
+
+  if (feature.source.kind === 'measurement') {
+    const { a, b } = feature.source;
+    return [
+      referencedOne(feature, a.featureId, byId, visiting),
+      referencedOne(feature, b.featureId, byId, visiting),
+    ];
+  }
+
+  const fold = foldPathOf(feature, byId, visiting);
+  return [fold === undefined ? undefined : { path: fold, anchors: [] }];
+}
+
+/** Whether two reference lists name the same geometry, entry for entry. */
+function sameRefs(a: readonly (Path | undefined)[], b: readonly (Path | undefined)[]): boolean {
+  return a.length === b.length && a.every((path, i) => path === b[i]);
+}
+
+/**
+ * One referenced feature's geometry, resolved the way a source is.
+ *
+ * Followed through the same `visiting` set, so a cycle through a reference is
+ * caught by the same guard the derivation edge uses (S3 across both kinds).
+ */
+function referencedOne(
+  feature: Feature,
+  refId: FeatureId,
+  byId: ReadonlyMap<FeatureId, Feature>,
+  visiting: Set<FeatureId>,
+): Referenced {
+  const target = byId.get(refId);
+  if (target === undefined) throw new Failure(problem('MEASURE_REF_MISSING', about(feature)));
+
+  if (visiting.has(target.id)) throw new CycleError(problem('CYCLE', about(feature)));
+  visiting.add(target.id);
+  try {
+    const resolved = resolveFeature(target, byId, visiting);
+    if (!resolved.ok) {
+      throw new Failure(
+        problem('SOURCE_FAILED', {
+          ...about(feature),
+          sourceId: target.id,
+          sourceName: target.name,
+        }),
+      );
+    }
+    return { path: resolved.path, anchors: resolved.anchors };
+  } finally {
+    visiting.delete(target.id);
+  }
+}
+
 function foldPathOf(
   feature: Feature,
   byId: ReadonlyMap<FeatureId, Feature>,
@@ -372,8 +451,9 @@ function resolvedSourceOf(
 function build(
   feature: Feature,
   resolvedSource: Extract<ResolvedFeature, { ok: true }> | undefined,
-  foldFrom: Path | undefined,
+  referenced: readonly (Referenced | undefined)[],
 ): CacheEntry {
+  const refsFrom = referenced.map((entry) => entry?.path);
   const invalid = parameterProblem(feature);
   if (invalid !== null) throw new Failure(invalid);
 
@@ -385,7 +465,7 @@ function build(
       const path = source.path;
       return {
         from,
-        foldFrom,
+        refsFrom,
         path,
         holes: undefined,
         text: undefined,
@@ -397,11 +477,24 @@ function build(
       const path = pathForShape(source.shape);
       return {
         from,
-        foldFrom,
+        refsFrom,
         path,
         holes: undefined,
         text: undefined,
         anchors: anchorsOf(source, path),
+        notes: undefined,
+      };
+    }
+    case 'measurement': {
+      const drawn = drawMeasurement(feature, source, referenced[0]!, referenced[1]!);
+      return {
+        from,
+        refsFrom,
+        path: drawn.path,
+        holes: undefined,
+        text: drawn.text,
+        // Nothing measures a measurement.
+        anchors: [],
         notes: undefined,
       };
     }
@@ -411,7 +504,7 @@ function build(
       });
       return {
         from,
-        foldFrom,
+        refsFrom,
         path: textBox(placed),
         holes: undefined,
         text: placed,
@@ -435,12 +528,12 @@ function build(
         // line could yield a different count from a rounding difference, and
         // two panels sewn together must have the same number of holes. A
         // reflection cannot lose one.
-        const m = mirrorMatrix(source.op.axis, source.op.glideMm, foldFrom);
+        const m = mirrorMatrix(source.op.axis, source.op.glideMm, referenced[0]?.path);
         const holes = resolvedSource!.holes;
 
         return {
           from,
-          foldFrom,
+          refsFrom,
           path: PathOps.transform(sourcePath, m),
           holes:
             holes === undefined
@@ -470,7 +563,7 @@ function build(
         // (ADR 0010): the holes on a corner are still on that corner.
         return {
           from,
-          foldFrom,
+          refsFrom,
           path: sourcePath,
           holes: distributeHoles(sourcePath, source.op),
           text: undefined,
@@ -488,7 +581,7 @@ function build(
       );
       return {
         from,
-        foldFrom,
+        refsFrom,
         path: offset.path,
         holes: undefined,
         text: undefined,
@@ -497,6 +590,104 @@ function build(
       };
     }
   }
+}
+
+/**
+ * The dimension line, its extension lines, and the number over it.
+ *
+ * The **value is read here, every time** (X6): it is never stored, so it
+ * cannot drift from the geometry the way a label typed once does. That is the
+ * whole reason a dimension is worth more than a label, and the reason the
+ * measurement carries a `precision` rather than a string.
+ *
+ * Laid out in millimetres in the vendored typeface (ADR 0011), so what is on
+ * screen is what prints.
+ */
+function drawMeasurement(
+  feature: Feature,
+  source: MeasureSource,
+  refA: Referenced,
+  refB: Referenced,
+): { path: Path; text: PlacedText } {
+  const a = anchorPoint(feature, refA, source.a.anchor);
+  const b = anchorPoint(feature, refB, source.b.anchor);
+
+  // What the dimension reads between, which for a horizontal or vertical one
+  // is the pair projected onto that axis.
+  const [from, to] =
+    source.measure === 'horizontal'
+      ? [a, { x: b.x, y: a.y }]
+      : source.measure === 'vertical'
+        ? [a, { x: a.x, y: b.y }]
+        : [a, b];
+
+  const valueMm = Math.hypot(to.x - from.x, to.y - from.y);
+
+  // The dimension line sits `offsetMm` off to one side, along the normal of
+  // what it measures; the extension lines reach back to the places named.
+  const span = Math.hypot(to.x - from.x, to.y - from.y);
+  const unit = approxZero(span, EPS_LENGTH)
+    ? { x: 0, y: 1 }
+    : { x: (to.x - from.x) / span, y: (to.y - from.y) / span };
+  const normal = { x: -unit.y, y: unit.x };
+  const off = (p: Vec2): Vec2 => ({
+    x: p.x + normal.x * source.offsetMm,
+    y: p.y + normal.y * source.offsetMm,
+  });
+
+  const fromOff = off(from);
+  const toOff = off(to);
+
+  const path: Path = {
+    closed: false,
+    segments: [
+      // The two extension lines, then the dimension line between them.
+      { kind: 'line', a, b: fromOff },
+      { kind: 'line', a: fromOff, b: toOff },
+      { kind: 'line', a: toOff, b },
+    ],
+  };
+
+  const label = valueMm.toFixed(source.precision);
+  const midpoint = { x: (fromOff.x + toOff.x) / 2, y: (fromOff.y + toOff.y) / 2 };
+  // Set above the dimension line, reading along it, and never upside down —
+  // a number a maker has to tilt their head for is a number they misread.
+  const along = Math.atan2(unit.y, unit.x);
+  const rotationRad = along > Math.PI / 2 || along < -Math.PI / 2 ? along + Math.PI : along;
+
+  const placed = placedText(label, MEASUREMENT_TEXT_MM, midpoint, { rotationRad });
+
+  return { path, text: placed };
+}
+
+/** How big a dimension's number is set, in millimetres on the sheet. */
+const MEASUREMENT_TEXT_MM = 3;
+
+/**
+ * Where an anchor is, as a point.
+ *
+ * A missing anchor **fails the measurement** and never attaches to a
+ * neighbour (E4): a dimension that quietly moved to the next corner along
+ * would read as authoritative while measuring something nobody asked about.
+ */
+function anchorPoint(feature: Feature, ref: Referenced, anchor: number): Vec2 {
+  const at = ref.anchors[anchor];
+
+  // Missing, not moved (E4). An inset deep enough to swallow a corner removes
+  // that anchor, and a dimension that slid to the next one along would read as
+  // authoritative while measuring something nobody asked about.
+  if (at === undefined || at === null) {
+    throw new Failure(
+      problem('ANCHOR_MISSING', {
+        ...about(feature),
+        anchor,
+        available: ref.anchors.length,
+      }),
+    );
+  }
+
+  const found = PathOps.measure(ref.path).locate(at);
+  return SegmentOps.pointAt(ref.path.segments[found.segmentIndex]!, found.t);
 }
 
 /**

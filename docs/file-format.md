@@ -66,7 +66,7 @@ ordering.
 
 ### 3.1 Shape
 
-Format version 7, as the writer emits it (key order shown for reading; the writer sorts keys):
+Format version 8, as the writer emits it (key order shown for reading; the writer sorts keys):
 
 ```jsonc
 {

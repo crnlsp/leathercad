@@ -161,6 +161,27 @@ export type Run =
   | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number };
 
 /**
+ * A durable place on the drawing: a feature, and one of its anchors.
+ *
+ * **Anchors, never points** ([ADR 0010](../../../docs/adr/0010-anchors-address-geometry.md)). A
+ * dimension to a free point goes stale without saying so — it keeps naming
+ * coordinates the drawing has left behind, and reads as authoritative while
+ * being wrong. An anchor is defined by the feature's parameters, so a
+ * rectangle has four corners whatever its size, position, rotation or radii.
+ *
+ * A union of one arm on purpose: `centre` (for a radius) and `extent` join it
+ * later without changing anything that reads it.
+ */
+export type MeasureRef = {
+  readonly kind: 'anchor';
+  readonly featureId: FeatureId;
+  readonly anchor: number;
+};
+
+/** What a linear dimension reads between its two ends. */
+export type MeasureKind = 'horizontal' | 'vertical' | 'aligned';
+
+/**
  * Where a feature's geometry comes from.
  *
  * The `offset` and `mirror` cases are the heart of the product — a stitch line
@@ -178,7 +199,38 @@ export type GeometrySource =
   | { readonly kind: 'path'; readonly path: Path }
   | { readonly kind: 'shape'; readonly shape: ParametricShape }
   /** Built from another feature, and rebuilt whenever that one changes. */
-  | { readonly kind: 'derived'; readonly sourceId: FeatureId; readonly op: Derivation };
+  | { readonly kind: 'derived'; readonly sourceId: FeatureId; readonly op: Derivation }
+  | MeasureSource;
+
+/**
+ * A dimension: two places on the drawing, and how to read between them.
+ *
+ * **A source, not the absence of one.** A measurement's geometry — its
+ * dimension line, its extension lines and the number above them — is computed
+ * from exactly these references and this offset, so this *is* where its
+ * geometry comes from. Keeping it a `GeometrySource` keeps the model's
+ * standing assumption intact — every feature has one — and makes the
+ * dependency explicit rather than special.
+ *
+ * It is the first source naming **two** features, and it names them as
+ * *references* rather than derivations: a measurement reads geometry it is not
+ * built from. The edge kind arrived in 4.8b for a mirror's fold; this is its
+ * second user. See `domain-model.md` §3.7.
+ *
+ * The **value is never here.** It is read from the model on every evaluation
+ * (X6), which is the whole reason a dimension is worth more than a label
+ * someone typed once.
+ */
+export interface MeasureSource {
+  readonly kind: 'measurement';
+  readonly measure: MeasureKind;
+  readonly a: MeasureRef;
+  readonly b: MeasureRef;
+  /** How far the dimension line sits off the geometry it measures. */
+  readonly offsetMm: Mm;
+  /** Decimal places shown. The number itself is never rounded in the model. */
+  readonly precision: 0 | 1 | 2;
+}
 
 /**
  * What a text label is made of.
@@ -307,8 +359,27 @@ export interface HardwareHole extends FeatureBase {
   readonly hardwareType: 'rivet' | 'snap' | 'screw' | 'eyelet' | 'other';
 }
 
+/**
+ * A dimension on the drawing — an annotation, never cut.
+ *
+ * Its `source` carries its references (`MeasureSource`), so it is an ordinary
+ * feature in an ordinary part: selectable, hideable, lockable, deletable and
+ * listed in the parts panel, with none of that built a second time.
+ */
+export interface Measurement extends Omit<FeatureBase, 'source'> {
+  readonly kind: 'measurement';
+  readonly source: MeasureSource;
+}
+
 export type Feature =
-  CutContour | StitchLine | StitchHoleSet | FoldLine | MarkingLine | HardwareHole | TextLabel;
+  | CutContour
+  | StitchLine
+  | StitchHoleSet
+  | FoldLine
+  | MarkingLine
+  | HardwareHole
+  | TextLabel
+  | Measurement;
 export type FeatureKind = Feature['kind'];
 
 /** One physical piece of leather to be cut out. */
@@ -354,6 +425,7 @@ export function roleOf(feature: Feature): LayerRole {
     case 'hardware-hole':
       return 'hardware';
     case 'text-label':
+    case 'measurement':
       return 'annotation';
   }
 }

@@ -72,7 +72,13 @@ export function buildDisplayList(
       // canvas and the printed sheet place the same glyphs in the same spots.
       if (entry.text !== undefined) {
         items.push(placedTextItem(entry.role, entry.text, isSelected ? highlight : undefined));
-        continue;
+
+        // A label's `path` is the box its words occupy, which is for selection
+        // and bounds and must never be drawn. A **dimension** is the other
+        // case: its path is the dimension line and its two extension lines,
+        // and a number floating with no line under it says nothing about what
+        // it measures.
+        if (entry.feature.kind !== 'measurement') continue;
       }
 
       // A hole set's path is the line the holes sit on, which the stitch line

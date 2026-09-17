@@ -26,6 +26,8 @@ export {
 } from './tools/commitDrawn.js';
 export type { HardwareOptions } from './tools/hardwareTool.js';
 export { createHardwareTool, DEFAULT_HARDWARE } from './tools/hardwareTool.js';
+export { createMeasureTool } from './tools/measureTool.js';
+export { anchorNear, anchorPointOf } from './anchorPick.js';
 export { createLineTool, createPolylineTool } from './tools/polylineTool.js';
 export { createRectangleTool } from './tools/rectangleTool.js';
 export { createRotateTool } from './tools/rotateTool.js';

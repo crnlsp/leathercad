@@ -15,6 +15,7 @@ import {
   fixtureProjectV5,
   fixtureProjectV6,
   fixtureProjectV7,
+  fixtureProjectV8,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -25,6 +26,7 @@ const FIXTURE_V4 = resolve(import.meta.dirname, '../../../fixtures/format/v4.lcp
 const FIXTURE_V5 = resolve(import.meta.dirname, '../../../fixtures/format/v5.lcp');
 const FIXTURE_V6 = resolve(import.meta.dirname, '../../../fixtures/format/v6.lcp');
 const FIXTURE_V7 = resolve(import.meta.dirname, '../../../fixtures/format/v7.lcp');
+const FIXTURE_V8 = resolve(import.meta.dirname, '../../../fixtures/format/v8.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -51,9 +53,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V7), { recursive: true });
-      writeFileSync(FIXTURE_V7, saveProject(fixtureProjectV7(), OPTIONS));
-      expect(existsSync(FIXTURE_V7)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V8), { recursive: true });
+      writeFileSync(FIXTURE_V8, saveProject(fixtureProjectV8(), OPTIONS));
+      expect(existsSync(FIXTURE_V8)).toBe(true);
     });
   }
 
@@ -186,11 +188,37 @@ describe('the format baseline fixture', () => {
     ).toBe('line');
   });
 
-  it('holds both kinds of mirror axis at the current version', () => {
-    const loaded = loadProject(readFileSync(FIXTURE_V7));
+  it('still opens a version 7 file, now that dimensions exist', () => {
+    expect(readManifest(readFileSync(FIXTURE_V7)).formatVersion).toBe(7);
+    expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(7);
+    expect(loadProject(readFileSync(FIXTURE_V7)).project).toEqual(fixtureProjectV7());
+  });
 
-    expect(readManifest(readFileSync(FIXTURE_V7)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
-    expect(loaded.project).toEqual(fixtureProjectV7());
+  it('holds a dimension at the current version', () => {
+    const loaded = loadProject(readFileSync(FIXTURE_V8));
+
+    expect(readManifest(readFileSync(FIXTURE_V8)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+    expect(loaded.project).toEqual(fixtureProjectV8());
+  });
+
+  it('stores a dimension as two references and no value at all (X6)', () => {
+    // The point of a dimension over a typed label: the number is read from the
+    // model every time, so the file cannot hold a stale one.
+    const raw = strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE_V8)))['document.json']!);
+    const stored = (JSON.parse(raw) as { parts: { features: { id: string }[] }[] }).parts
+      .flatMap((part) => part.features)
+      .find((feature) => feature.id === 'shell-width');
+
+    expect(stored).toMatchObject({
+      source: {
+        kind: 'measurement',
+        measure: 'horizontal',
+        a: { kind: 'anchor', featureId: 'shell-cut', anchor: 1 },
+        b: { kind: 'anchor', featureId: 'shell-cut', anchor: 2 },
+      },
+    });
+    // The shell is 190 wide; nothing in the stored dimension says so.
+    expect(JSON.stringify(stored)).not.toContain('190');
   });
 
   it('stores a fold-tracked mirror as a reference, not as a line', () => {

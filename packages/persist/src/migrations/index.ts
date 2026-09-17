@@ -19,6 +19,7 @@ import { v3ToV4 } from './v3_to_v4.js';
 import { v4ToV5 } from './v4_to_v5.js';
 import { v5ToV6 } from './v5_to_v6.js';
 import { v6ToV7 } from './v6_to_v7.js';
+import { v7ToV8 } from './v7_to_v8.js';
 
 export interface Migration {
   readonly from: number;
@@ -35,9 +36,10 @@ export const MIGRATIONS: readonly Migration[] = [
   { from: 5, to: 6, migrate: v5ToV6 },
   // The first that rewrites data rather than passing it through.
   { from: 6, to: 7, migrate: v6ToV7 },
+  { from: 7, to: 8, migrate: v7ToV8 },
 ];
 
-export const CURRENT_FORMAT_VERSION = 7;
+export const CURRENT_FORMAT_VERSION = 8;
 
 export class NewerFormatError extends Error {
   constructor(readonly fileVersion: number) {

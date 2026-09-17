@@ -11,6 +11,8 @@ import type {
   GeometrySource,
   Part,
   PartId,
+  MeasureKind,
+  MeasureRef,
   MirrorAxis,
   Problem,
   Project,
@@ -153,6 +155,8 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
       // A label is made of words; it has no shape to replace, and asking for
       // one is a no-op rather than a way to turn it into a rectangle.
       if (feature.kind === 'text-label') return feature;
+      // Nor a dimension: it has no shape, it reads one.
+      if (feature.kind === 'measurement') return feature;
       // Nor does a **derived** feature have a shape of its own. Replacing its
       // source here would silently detach it from what it follows — a stitch
       // line that stopped following its outline, a counterpart that stopped
@@ -458,6 +462,11 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
     return turned.ok ? { ...feature, source: turned.value } : feature;
   }
 
+  // A dimension has no geometry of its own to move: it is a reading of the
+  // places it names, and it re-reads them wherever they end up. Moving one
+  // alone is not a refusal — there is simply nothing to move.
+  if (feature.kind === 'measurement') return feature;
+
   if (feature.source.kind === 'path') {
     return {
       ...feature,
@@ -505,6 +514,12 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
       },
     };
   }
+
+  // Only a shape is left: the measurement arm was returned above.
+  if (feature.source.kind !== 'shape') return feature;
+
+  // Only a shape is left: the measurement arm returned above.
+  if (feature.source.kind !== 'shape') return feature;
 
   const result = transformShape(feature.source.shape, matrix);
   // Refused: left exactly as it was, rather than converted behind the user's
@@ -745,7 +760,9 @@ export function addStitchHoles(
 export function setDerivation(id: FeatureId, op: Derivation): Command {
   return command('Edit derivation', (document) => ({
     project: mapFeature(document.project, id, (feature) =>
-      feature.kind !== 'text-label' && feature.source.kind === 'derived'
+      feature.kind !== 'text-label' &&
+      feature.kind !== 'measurement' &&
+      feature.source.kind === 'derived'
         ? { ...feature, source: { ...feature.source, op } }
         : feature,
     ),
@@ -865,6 +882,69 @@ export function addFoldLine(
     locked: false,
     source,
   });
+}
+
+/** How far a new dimension sits off what it measures, before anyone moves it. */
+export const DEFAULT_DIMENSION_OFFSET_MM = 8;
+
+/**
+ * A dimension between two places on the drawing.
+ *
+ * Both ends are **anchors** — durable places defined by a feature's
+ * parameters, not coordinates (ADR 0010). That is what lets the number keep
+ * meaning the same thing while the drawing changes around it, and it is the
+ * whole reason this is worth more than a typed label.
+ *
+ * The measurement joins the part of its **first** reference, because a
+ * dimension belongs to the piece it is about.
+ */
+export function addMeasurement(
+  featureId: FeatureId,
+  measure: MeasureKind,
+  a: MeasureRef,
+  b: MeasureRef,
+  offsetMm: Mm = DEFAULT_DIMENSION_OFFSET_MM,
+  precision: 0 | 1 | 2 = 1,
+): Command {
+  return {
+    label: 'Add dimension',
+    apply: (document) => {
+      const home = findFeature(document.project, a.featureId);
+      if (home === null || findFeature(document.project, b.featureId) === null) return document;
+
+      const feature: Feature = {
+        id: featureId,
+        kind: 'measurement',
+        name: 'Dimension',
+        visible: true,
+        locked: false,
+        source: { kind: 'measurement', measure, a, b, offsetMm, precision },
+      };
+
+      return addFeature(home.part.id, feature).apply(document);
+    },
+  };
+}
+
+/** Moves a dimension line off the geometry, or changes what it shows. */
+export function setMeasurement(
+  id: FeatureId,
+  change: { readonly offsetMm?: Mm; readonly precision?: 0 | 1 | 2 },
+): Command {
+  return command('Edit dimension', (document) => ({
+    project: mapFeature(document.project, id, (feature) =>
+      feature.kind === 'measurement'
+        ? {
+            ...feature,
+            source: {
+              ...feature.source,
+              offsetMm: change.offsetMm ?? feature.source.offsetMm,
+              precision: change.precision ?? feature.source.precision,
+            },
+          }
+        : feature,
+    ),
+  }));
 }
 
 /**
@@ -1275,7 +1355,15 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
       partId: part.id,
       partName: part.name,
       direct,
-      freezable: direct && feature.kind !== 'stitch-hole-set' && resolved.get(id)?.ok === true,
+      // A measurement is never freezable, for the reason a hole set is not:
+      // there is no drawn form to keep. Worse, a frozen dimension is a number
+      // that no longer means anything — the stale label this feature exists to
+      // replace.
+      freezable:
+        direct &&
+        feature.kind !== 'stitch-hole-set' &&
+        feature.kind !== 'measurement' &&
+        resolved.get(id)?.ok === true,
     };
   });
 
@@ -1395,7 +1483,11 @@ export function duplicatePart(
         // A label's source is its words, so it can never be re-pointed —
         // narrowing the feature rather than only its source is what lets the
         // copy below be built at all.
-        if (feature.kind === 'text-label' || feature.source.kind !== 'derived') {
+        if (
+          feature.kind === 'text-label' ||
+          feature.kind === 'measurement' ||
+          feature.source.kind !== 'derived'
+        ) {
           return { ...feature, ...unlocked, id };
         }
 
@@ -1780,7 +1872,9 @@ export function setSource(id: FeatureId, sourceId: FeatureId): Command {
       if (followRefusal(document.project, id, sourceId) !== null) return document;
       return {
         project: mapFeature(document.project, id, (feature) =>
-          feature.kind !== 'text-label' && feature.source.kind === 'derived'
+          feature.kind !== 'text-label' &&
+          feature.kind !== 'measurement' &&
+          feature.source.kind === 'derived'
             ? { ...feature, source: { ...feature.source, sourceId } }
             : feature,
         ),
@@ -1843,7 +1937,13 @@ function resolveDelete(
   // edge instead of the derivation one.
   const capturedAxes = new Map<FeatureId, Feature>();
   for (const feature of project.parts.flatMap((part) => part.features)) {
-    if (feature.kind === 'text-label' || feature.source.kind !== 'derived') continue;
+    if (
+      feature.kind === 'text-label' ||
+      feature.kind === 'measurement' ||
+      feature.source.kind !== 'derived'
+    ) {
+      continue;
+    }
     const op = feature.source.op;
     if (op.type !== 'mirror' || op.axis.kind !== 'fold') continue;
     if (!gone.has(op.axis.foldId)) continue;
@@ -1877,6 +1977,7 @@ function resolveDelete(
       dependent.freezable &&
       entry?.ok === true &&
       feature.kind !== 'text-label' &&
+      feature.kind !== 'measurement' &&
       feature.source.kind === 'derived'
     ) {
       const followed = byId.get(feature.source.sourceId);

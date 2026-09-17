@@ -512,3 +512,47 @@ export function fixtureProjectV7(): Project {
     ],
   };
 }
+
+/**
+ * Version 8 — a dimension.
+ *
+ * The v7 baseline plus a measurement between two corners of the shell's
+ * outline. What it proves on reload is that the **references** survive and the
+ * **value does not exist**: the number is read from the model, so an improved
+ * layout or a resized panel changes what a reader sees without the file
+ * changing at all.
+ */
+export function fixtureProjectV8(): Project {
+  const previous = fixtureProjectV7();
+
+  return {
+    ...previous,
+    id: 'fixture-v8',
+    name: 'Format baseline v8',
+    parts: previous.parts.map((part) =>
+      part.id !== 'part-shell'
+        ? part
+        : {
+            ...part,
+            features: [
+              ...part.features,
+              {
+                id: 'shell-width',
+                kind: 'measurement',
+                name: 'Width',
+                visible: true,
+                locked: false,
+                source: {
+                  kind: 'measurement',
+                  measure: 'horizontal',
+                  a: { kind: 'anchor', featureId: 'shell-cut', anchor: 1 },
+                  b: { kind: 'anchor', featureId: 'shell-cut', anchor: 2 },
+                  offsetMm: 10,
+                  precision: 1,
+                },
+              },
+            ],
+          },
+    ),
+  };
+}

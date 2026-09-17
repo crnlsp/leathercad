@@ -83,6 +83,17 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
         : 'Draw it as a marking line.'),
   },
 
+  MEASURE_REF_MISSING: {
+    title: 'Measures nothing',
+    describe: (f) => `${f.featureName} names a place that is no longer in the drawing.`,
+  },
+  MEASURE_NEEDS_ANCHOR: {
+    title: 'Nothing to measure from',
+    describe: () =>
+      'A dimension has to name a corner, so it keeps meaning the same place when the drawing ' +
+      'changes. Point at one.',
+  },
+
   MIRROR_FOLD_MISSING: {
     title: 'The fold is gone',
     describe: (f) => `${f.featureName} is mirrored across a fold that no longer exists.`,

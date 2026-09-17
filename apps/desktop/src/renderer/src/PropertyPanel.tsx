@@ -598,6 +598,8 @@ function labelFor(feature: Feature): string {
       return feature.role === 'outer' ? 'Cut line (outer)' : 'Cut line (inner)';
     case 'stitch-line':
       return 'Stitch line';
+    case 'measurement':
+      return 'Dimension';
     case 'fold-line':
       return 'Fold line';
     case 'marking-line':

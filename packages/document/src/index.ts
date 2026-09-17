@@ -30,11 +30,13 @@ export type { StoreState } from './store.js';
 export { DocumentStore } from './store.js';
 
 export {
+  DEFAULT_DIMENSION_OFFSET_MM,
   DEFAULT_LABEL_SIZE_MM,
   addFeature,
   addFoldLine,
   addHardwareHole,
   addMarkingLine,
+  addMeasurement,
   addPart,
   allowanceRefusal,
   addStitchHoles,
@@ -74,6 +76,7 @@ export {
   setFeatureLocked,
   setFeatureVisible,
   setPartName,
+  setMeasurement,
   setPartVisible,
   setPartQuantity,
   setProjectName,

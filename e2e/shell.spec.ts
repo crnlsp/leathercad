@@ -1655,3 +1655,92 @@ test('a seam allowance can be added to a stitch line drawn earlier', async () =>
     await expect(panel.getByTestId('add-allowance')).toBeDisabled();
   });
 });
+
+test('a dimension reads the drawing, and keeps reading it', async () => {
+  // Slice 4.10a. The point is not that it measures — it is that the number
+  // cannot drift from the geometry the way a typed label does (X6).
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const panel = window.getByTestId('property-panel');
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 300, box!.y + 250);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 600, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+
+    // Switching away from a draw tool hides the "Draw as" strip, so the canvas
+    // grows and the drawing shifts down within it by half the height gained.
+    // The corners are still where they were in millimetres; this is only where
+    // they now land on screen.
+    await window.getByTestId('tool-measure').click();
+    const after = await window.getByTestId('editor-canvas').boundingBox();
+    const shift = (after!.height - box!.height) / 2;
+    const corner = (x: number, y: number): [number, number] => [after!.x + x, after!.y + y + shift];
+
+    // Dimension the two right-hand corners. The measure tool takes corners and
+    // nothing else, so these clicks must land on them.
+    await window.mouse.click(...corner(600, 250));
+    await window.mouse.click(...corner(600, 400));
+
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expect(panel).toContainText('Dimension');
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+
+    // Now change the shape it measures. The dimension keeps naming the same
+    // two corners and keeps resolving — the number is read, never stored.
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').first().click();
+    const height = panel.locator('label', { hasText: /^Height/ }).locator('input');
+    await height.fill('40');
+    await height.press('Enter');
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+
+    await window.getByTestId('tool-measure').click();
+
+    // A click on nothing is refused with a reason, not turned into a dimension
+    // to a point that would quietly go stale.
+    await window.mouse.click(...corner(780, 620));
+    await expect(window.getByTestId('tool-notice')).toContainText(/corner/i);
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+  });
+});
+
+test('a dimension is listed when what it measures is deleted, and cannot be frozen', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const panel = window.getByTestId('property-panel');
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 300, box!.y + 250);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 600, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+
+    await window.getByTestId('tool-measure').click();
+    const after = await window.getByTestId('editor-canvas').boundingBox();
+    const shift = (after!.height - box!.height) / 2;
+    const corner = (x: number, y: number): [number, number] => [after!.x + x, after!.y + y + shift];
+
+    await window.mouse.click(...corner(600, 250));
+    await window.mouse.click(...corner(600, 400));
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+
+    // Delete the outline: the dimension depends on it, so the dialog asks.
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').first().click();
+    await panel.getByTestId('delete-feature').click();
+
+    const dialog = window.getByTestId('delete-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Dimension');
+    // A dimension has no drawn form to keep, so freezing is offered but
+    // disabled — nothing to freeze, and the button says so.
+    await expect(dialog.getByTestId('delete-freeze')).toBeDisabled();
+    await expect(dialog.getByTestId('delete-freeze')).toContainText('0');
+
+    await dialog.getByTestId('delete-all').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('0');
+  });
+});

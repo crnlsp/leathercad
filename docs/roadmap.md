@@ -890,10 +890,36 @@ that walks one scenario through the whole phase.
   **D6's limitation was checked and not hit**: the ambiguous case is an allowance grown from
   stitching round a cut-out, which `allowance-needs-outer` already forbids, so `towardsMaterial`
   stays as it is rather than being generalised speculatively.
-- **4.10** Measurements — horizontal, vertical, aligned and radial — as annotations whose ends
-  reference anchors, centres or extents, never segment indices or free points
-  ([ADR 0010](adr/0010-anchors-address-geometry.md)). Values are generated and set through the
-  typography of 4.11.
+- **4.10a** ✅ **Done.** Measurements, linear
+  ([design](superpowers/specs/2026-09-18-measurements-design.md)). A dimension between two **anchors**
+  — horizontal, vertical or aligned — whose number is read from the model on every evaluation and
+  never stored (X6). That is the whole feature: a dimension cannot drift from the geometry the way a
+  label typed once does.
+  **The second and larger user of the `references` edge**, and the first source naming **two**
+  features. Its refs live in a `GeometrySource` rather than the field being made optional: a
+  measurement's geometry genuinely comes from its references, every feature having a source is an
+  assumption the domain rests on, and the alternative was 70-odd call sites. `domain-model.md`'s older
+  "features without a geometry source" wording is corrected in the same commit rather than left
+  contradicting the code.
+  The graph work was almost all free from 4.8b — `edgesFrom`, S2, S3 and `dependentsOf` needed the two
+  refs and nothing else. The one thing generalised properly rather than bolted on: the evaluation
+  cache's single `foldFrom` slot became a **reference list**, since 4.8b needed one and this needs two.
+  **Never freezable**: deleting what a dimension measures offers no "keep it", because a frozen
+  dimension is a number that no longer means anything.
+  **Anchor picking is deliberately not in the shared snap index.** `SnapOptions` treats absent kinds as
+  enabled and the priority list would put a corner above a segment end, so adding an `anchor` kind
+  would change what *every* tool snaps to. The measure tool resolves its own reference instead; making
+  corners a global snap target is a decision to take on its own merits.
+  Gotchas: `buildDisplayList` drew text and then `continue`d — right for a label, whose path is its
+  text box, and wrong for a dimension, which needs both, so the number appeared with no line under it;
+  and the measure tool did its own pixels-to-millimetres arithmetic instead of using the viewport's
+  `pickToleranceMm`, which accounts for device pixel ratio.
+  **Deferred deliberately:** `radial` and the `centre` references it needs; `extent` references, the
+  least durable kind because they follow evaluated bounds rather than a place; angular; chained and
+  baseline dimensions; dimensions between parts.
+  **Known, and not hidden:** an anchor on a **drawn path** survives move, rotate and scale but not
+  vertex editing, which renumbers corners. That is ADR 0010 point 5's open item — a property of
+  anchors, not of measurements — and slice 3.9 clears it.
 - **4.11a** ✅ **Done.** Typography ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md),
   [design](superpowers/specs/2026-09-16-typography-design.md)): IBM Plex Sans vendored in
   `assets/fonts/` with its OFL licence, a pure `packages/typography` laying text out once in

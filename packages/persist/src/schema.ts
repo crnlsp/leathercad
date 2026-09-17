@@ -138,10 +138,33 @@ const textSource = z.object({
   rotationRad: z.number().finite(),
 });
 
+const measureRef = z.object({
+  kind: z.literal('anchor'),
+  featureId: z.string().min(1),
+  anchor: z.number().int().nonnegative(),
+});
+
+/**
+ * A dimension's two ends, and how to read between them.
+ *
+ * **No value is stored.** The number is read from the model on every
+ * evaluation (X6), which is what stops a dimension drifting from the geometry
+ * the way a typed label does.
+ */
+const measureSource = z.object({
+  kind: z.literal('measurement'),
+  measure: z.enum(['horizontal', 'vertical', 'aligned']),
+  a: measureRef,
+  b: measureRef,
+  offsetMm: mm,
+  precision: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+});
+
 const geometrySource = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('path'), path }),
   z.object({ kind: z.literal('shape'), shape: parametricShape }),
   z.object({ kind: z.literal('derived'), sourceId: z.string().min(1), op: derivation }),
+  measureSource,
 ]);
 
 const featureBase = {
@@ -183,6 +206,11 @@ const feature = z.discriminatedUnion('kind', [
     ...featureBase,
     kind: z.literal('text-label'),
     source: textSource,
+  }),
+  z.object({
+    ...featureBase,
+    kind: z.literal('measurement'),
+    source: measureSource,
   }),
 ]);
 

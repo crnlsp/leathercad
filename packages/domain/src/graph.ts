@@ -34,7 +34,16 @@ import { problem, problemKey, type CompatibilityRule, type Problem } from './pro
  * keeps that true without each caller remembering the second kind exists.
  */
 function edgesFrom(feature: Feature): FeatureId[] {
-  if (feature.kind === 'text-label' || feature.source.kind !== 'derived') return [];
+  if (feature.kind === 'text-label') return [];
+
+  // A measurement is the second **references** user: it names two places it
+  // reads and is built from neither. Both are ordinary edges, so S2, S3 and
+  // `dependentsOf` cover them without knowing what a dimension is.
+  if (feature.source.kind === 'measurement') {
+    return [feature.source.a.featureId, feature.source.b.featureId];
+  }
+
+  if (feature.source.kind !== 'derived') return [];
 
   const op = feature.source.op;
   return op.type === 'mirror' && op.axis.kind === 'fold'
@@ -120,7 +129,13 @@ export function followRefusal(
   // Narrowing the feature, not just its source: a label's source is text, so
   // it can never be re-pointed, and saying so here is what lets the candidate
   // below be built at all.
-  if (feature.kind === 'text-label' || feature.source.kind !== 'derived') {
+  // A measurement is narrowed out for the same reason: its source is a pair of
+  // references, so there is no single thing to re-point it at.
+  if (
+    feature.kind === 'text-label' ||
+    feature.kind === 'measurement' ||
+    feature.source.kind !== 'derived'
+  ) {
     return problem('NOT_DERIVED', { featureId: feature.id, featureName: feature.name });
   }
 
@@ -155,6 +170,17 @@ export function graphProblems(project: Project): Problem[] {
 
   const byId = indexById(project);
   for (const feature of all) {
+    // S2 over a measurement's **references**: a dimension to a feature that is
+    // not there measures nothing, and everything past the loader assumes the
+    // graph is sound.
+    if (feature.source.kind === 'measurement') {
+      const about = { featureId: feature.id, featureName: feature.name };
+      const missing = edgesFrom(feature).find((id) => !byId.has(id));
+      if (missing !== undefined) problems.push(problem('MEASURE_REF_MISSING', about));
+      else if (isOnCycle(byId, feature.id)) problems.push(problem('CYCLE', about));
+      continue;
+    }
+
     if (feature.source.kind !== 'derived') continue;
     const about = { featureId: feature.id, featureName: feature.name };
 
@@ -268,6 +294,9 @@ function declaresClosed(
       return source.shape.type === 'rect' || source.shape.type === 'circle';
     case 'text':
       // Words enclose nothing, whatever shape the letters happen to make.
+      return false;
+    case 'measurement':
+      // A dimension line is a line with two ends and a number over it.
       return false;
     case 'derived': {
       if (visiting.has(feature.id)) return false;
