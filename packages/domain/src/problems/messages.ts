@@ -79,6 +79,13 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
         : 'Draw it as a marking line.'),
   },
 
+  FEATURE_LOCKED: {
+    title: 'Locked',
+    describe: (f) =>
+      `${f.featureName} is locked, so it cannot be changed or deleted. Unlock it in the parts ` +
+      'panel first.',
+  },
+
   FEATURE_MISSING: {
     title: 'No such feature',
     describe: () => 'That feature does not exist.',

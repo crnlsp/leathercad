@@ -12,7 +12,7 @@ import {
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
-import { describeProblem, evaluate, followRefusal } from '@leathercad/domain';
+import { describeProblem, evaluate, followRefusal, lockRefusal } from '@leathercad/domain';
 
 import { IRON_PRESETS } from './irons.js';
 import { NumberField } from './NumberField.js';
@@ -91,33 +91,54 @@ export function PropertyPanel({
       </section>
 
       <section className="panel-section">
-        <div className="panel-heading">{labelFor(feature)}</div>
-        <label className="field">
-          <span className="field-label">Name</span>
-          <span className="field-input">
-            <input
-              type="text"
-              value={feature.name}
-              onChange={(event) => store.dispatch(renameFeature(feature.id, event.target.value))}
-            />
-          </span>
-        </label>
+        <div className="panel-heading">
+          {labelFor(feature)}
+          {feature.locked && (
+            <span className="badge" data-testid="locked-badge">
+              Locked
+            </span>
+          )}
+        </div>
+        {/*
+          A `fieldset` rather than a `disabled` on each control: every field in
+          here, and every field a later editor adds, is disabled by the fact of
+          the lock rather than by remembering to ask. Without it the panel
+          offers a width box on a locked outline, the user types 120, presses
+          Enter, and nothing happens with nothing said (S7, X1).
+        */}
+        <fieldset className="field-group" disabled={feature.locked}>
+          {feature.locked && (
+            <p className="panel-note" data-testid="locked-note">
+              Locked, so nothing here can be changed. Unlock it in the parts panel.
+            </p>
+          )}
+          <label className="field">
+            <span className="field-label">Name</span>
+            <span className="field-input">
+              <input
+                type="text"
+                value={feature.name}
+                onChange={(event) => store.dispatch(renameFeature(feature.id, event.target.value))}
+              />
+            </span>
+          </label>
 
-        {feature.frozenFrom !== undefined && (
-          <p className="panel-note" data-testid="frozen-note">
-            Frozen from {feature.frozenFrom}: drawn geometry now, no longer following it.
-          </p>
-        )}
+          {feature.frozenFrom !== undefined && (
+            <p className="panel-note" data-testid="frozen-note">
+              Frozen from {feature.frozenFrom}: drawn geometry now, no longer following it.
+            </p>
+          )}
 
-        {feature.source.kind === 'derived' && (
-          <FollowsField store={store} project={project} feature={feature} />
-        )}
+          {feature.source.kind === 'derived' && (
+            <FollowsField store={store} project={project} feature={feature} />
+          )}
 
-        <FeatureEditor
-          store={store}
-          feature={feature}
-          holes={resolved?.ok === true ? resolved.holes : undefined}
-        />
+          <FeatureEditor
+            store={store}
+            feature={feature}
+            holes={resolved?.ok === true ? resolved.holes : undefined}
+          />
+        </fieldset>
       </section>
 
       {/*
@@ -161,15 +182,40 @@ export function PropertyPanel({
 
       <DeriveActions store={store} part={part} feature={feature} nextId={nextId} />
 
-      <button
-        type="button"
-        className="tool danger"
-        data-testid="delete-feature"
-        onClick={() => requestDelete([feature.id])}
-      >
-        Delete
-      </button>
+      {/*
+        Asked here too, and for the same reason as the flips: without it a
+        locked feature with dependents opens the delete dialog, the user
+        answers "delete them too", and nothing happens — a question asked
+        about something that was never going to be allowed.
+      */}
+      <DeleteButton project={project} feature={feature} requestDelete={requestDelete} />
     </aside>
+  );
+}
+
+/** Removing the piece, or saying why it cannot be removed. */
+function DeleteButton({
+  project,
+  feature,
+  requestDelete,
+}: {
+  project: Project;
+  feature: Feature;
+  requestDelete: (ids: readonly string[]) => void;
+}) {
+  const refusal = lockRefusal(project, [feature.id]);
+
+  return (
+    <button
+      type="button"
+      className="tool danger"
+      data-testid="delete-feature"
+      disabled={refusal !== null}
+      title={refusal === null ? undefined : describeProblem(refusal)}
+      onClick={() => requestDelete([feature.id])}
+    >
+      Delete
+    </button>
   );
 }
 

@@ -147,16 +147,25 @@ function commandFor(
 }
 
 /**
- * The part a drawn feature would join: the one the selection is in.
+ * The part a drawn feature would join.
  *
- * Null when nothing is selected, or when the selection spans two parts. Both
- * are refusals rather than guesses — a fold line silently attached to the wrong
- * panel is invisible until the leather is cut.
+ * In order: the **selected part**, when exactly one part heading is picked in
+ * the parts panel; else the one part the selected features share. Null when
+ * nothing is selected, or when the selection spans two parts — both refusals
+ * rather than guesses, because a fold line silently attached to the wrong
+ * panel is invisible until the leather is cut (§3.1).
  */
 export function targetPart(ctx: ToolContext): PartId | null {
   const { document, selection } = ctx.store.getState();
-  const parts = new Set<PartId>();
 
+  if (selection.parts.size > 0) {
+    if (selection.parts.size > 1) return null;
+    const [only] = selection.parts;
+    // A part picked before it was deleted is not a target.
+    return document.project.parts.some((part) => part.id === only) ? only! : null;
+  }
+
+  const parts = new Set<PartId>();
   for (const id of selection.features) {
     const found = findFeature(document.project, id);
     if (found !== null) parts.add(found.part.id);
@@ -197,7 +206,8 @@ export function drawTargetNotice(ctx: ToolContext): Problem | null {
   if (targetPart(ctx) !== null) return null;
 
   const what = mode === 'cut-out' ? 'cut-out' : 'line';
-  const spansParts = ctx.store.getState().selection.features.size > 0;
+  const { selection } = ctx.store.getState();
+  const spansParts = selection.features.size > 0 || selection.parts.size > 0;
   return spansParts ? problem('TARGET_SPANS_PARTS', { what }) : problem('NO_TARGET_PART', { what });
 }
 

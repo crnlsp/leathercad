@@ -59,6 +59,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   DERIVATION_INCOMPATIBLE: structural('S4'),
   PART_ALREADY_HAS_OUTER: structural('S5'),
   CONTOUR_NOT_CLOSED: structural('S6'),
+  FEATURE_LOCKED: structural('S7'),
 
   FEATURE_MISSING: interaction('X1'),
   NOT_DERIVED: interaction('X1'),

@@ -550,7 +550,7 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | S4 | Every derivation appears in the compatibility table (§4.2) | Commands; loader | 4.2b |
 | S5 | A part has at most one outer contour | Commands; loader | built 4.3a |
 | S6 | Outer contours and cut-outs enclose an area | Drawing modes; loader | built 4.3a |
-| S7 | A locked feature changes only by being unlocked | Commands | 4.3 |
+| S7 | A locked feature changes only by being unlocked | Commands | built 4.3b |
 | S8 | Derived geometry is never persisted | File format | built |
 | S9 | Nothing addresses geometry by segment index | Model types | built for runs; 4.10 |
 | S10 | Quantities, distances, pitches and text sizes are positive | Schema; commands | built; extended per slice |
@@ -598,6 +598,25 @@ rules are exact — a hole is a point, and a point is either on the material or 
 | X8 | Defaults come from project settings | built 4.3a |
 | X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
 | X10 | A refusal keeps the user's work where it can still be corrected | built 4.3a for drawing |
+
+**S7 — what the lock protects** (built 4.3b). Before it, `locked` was a *pick lock* and nothing
+else: `hitTest` and `snap` skipped a locked feature and every command still edited and deleted it
+(defect D8). That was worse than no lock, because the one thing it did was take the feature off the
+canvas — so a locked outline could not be selected in order to be unlocked. The parts panel is the
+way back, which is why the two arrived together.
+
+The lock covers **geometry and structure**: moving, transforming, reshaping, renaming,
+re-parameterising, re-pointing a derivation, and deleting — directly, as part of a part, or as the
+cascade behind someone else's delete. It does **not** cover visibility. Read strictly S7 would
+include hiding, but that is the wrong answer on a workbench: you lock the outline so you cannot
+nudge it, and you still want to hide it to see what is underneath. Lock protects the piece, not the
+view. A locked feature is also still selectable in the parts panel, and its dependents still follow
+it — it simply cannot change itself.
+
+Enforced by refusing inside `mapFeature` **by default**, with an explicit `evenIfLocked` on the two
+commands that may touch one, rather than by a check each command remembers to write. Same reasoning
+as 4.3a's draw commit boundary: an invariant every caller has to remember is one that eventually
+gets forgotten.
 
 **X10 — a refusal is "not yet", not "gone"** (4.3a). Where a rejected operation has a plausible
 correction, the work stays put and the reason is shown beside it; the user decides whether to fix it

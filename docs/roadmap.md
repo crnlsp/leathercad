@@ -691,9 +691,44 @@ that walks one scenario through the whole phase.
   `perf.test.ts` records the baseline with loose ceilings rather than pretending otherwise. Whether
   to spend a bounding-box rejection or a clearance band on it is **4.3b or later**, once the parts
   panel shows what real documents look like.
-- **4.3b** Parts panel: part selection beside feature selection, the parts panel as a dependency tree
-  (*Outline ▸ Stitch line ▸ Holes*), delete and duplicate a part re-pointing the derivations inside
-  it, visibility, and a lock that commands honour rather than only picking (D8).
+- **4.3b** ✅ **Done.** The parts panel, and a lock that means it
+  ([design](superpowers/specs/2026-09-17-parts-panel-design.md)). **Part selection** beside feature
+  selection: clicking a part's heading makes it the target for the next cut-out or fold line, which
+  is how you name a part after reopening a file without first picking something inside it. The panel
+  is a **dependency tree** — *Outline ▸ Stitch line ▸ Holes* — so the reference graph is visible and
+  the delete dialog stops being a surprise. **Duplicate part** re-points the derivations inside the
+  copy, so the copy's stitch line follows the copy's outline; derivations reaching into other parts
+  keep pointing there. **Visibility** per feature and per part, and **delete part** through the
+  existing plan and dialog.
+  **The lock now means it** (S7, D8). `locked` was a *pick lock*: hit-testing and snapping skipped a
+  locked feature and every command still edited and deleted it — worse than no lock, because it took
+  the feature off the canvas and nothing could give it back. Commands refuse it now, the refusal
+  names the feature, and the panel is the way to unlock it. Enforced by refusing inside `mapFeature`
+  **by default**, with an explicit `evenIfLocked` on the two commands allowed to touch one, rather
+  than a check each command must remember. Visibility is deliberately outside the lock: you pin the
+  outline down so you cannot nudge it, and still want to hide it to see underneath.
+  Gotchas: **a duplicate of a locked part landed exactly on top of its original** — the copy
+  inherited the lock and the placement step was then refused by it, which looks precisely like the
+  button doing nothing; copies are built unlocked and re-locked once placed. The **delete dialog
+  opened for locked features** and the command then refused, asking a question about something that
+  was never going to happen — both delete paths and the button now ask `lockRefusal` first, and
+  `flipRefusal` gained the lock for the same reason. A locked feature's parameter fields are
+  disabled by a `fieldset`, so a later editor inherits the guard instead of having to ask. And
+  `mapFeature` used to rebuild the project even when the id did not exist, so a no-op command pushed
+  an undo entry with nothing behind it.
+  **No `Part.visible` field**, so no format version 5: a part is hidden when every feature in it is.
+  The cost is that hiding a whole part and showing it again forgets which single features were
+  hidden — cheaper than a migration for a view convenience, and one migration away if it matters.
+  **Known, not fixed here — and deliberately not attached to Duplicate.** A duplicate is placed clear
+  of the original and can therefore land outside the viewport, so the copy is invisible until you
+  double-click to frame the drawing. Duplicate is only where this first shows; the question is
+  general — **when, if ever, should a command move the view?** Every command that creates or
+  transforms geometry has it: duplicate, mirror (4.8), seam allowance (4.9), paste, and any future
+  command that places something away from where the user is looking. Answering it per command as it
+  comes up is how an editor ends up with a viewport that jumps unpredictably, so it wants one
+  deliberate interaction design covering the lot — and the plumbing to match, since framing the
+  selection needs the viewport lifted out of `CanvasHost`. Recorded in the reconciliation §10, so it
+  is not attached to whichever slice next trips over it.
 - **4.4** ✅ **Done.** Derived `StitchLine` — inset inward, live-linked, editable in the panel. Also
   **partial runs**, which the design added after walking the real cases: a pocket is stitched on
   three sides and open at the top, so a stitch line that could only be a closed loop could not

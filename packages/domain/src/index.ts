@@ -68,7 +68,10 @@ export {
   graphProblems,
 } from './graph.js';
 
-export { additionRefusal, partStructureProblems } from './partStructure.js';
+export { additionRefusal, hasOuterContour, partStructureProblems } from './partStructure.js';
+export type { FeatureNode } from './featureTree.js';
+export { featureTree } from './featureTree.js';
+export { lockRefusal, lockedAmong } from './lock.js';
 
 export type {
   CodeInfo,

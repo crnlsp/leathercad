@@ -1,4 +1,4 @@
-import type { FeatureId } from '@leathercad/domain';
+import type { FeatureId, PartId } from '@leathercad/domain';
 
 import { EMPTY_SELECTION, type Command, type Document, type Selection } from './document.js';
 
@@ -184,8 +184,14 @@ export class DocumentStore {
     this.emit();
   }
 
+  /** Picks features, and drops any part heading that was picked. */
   select(ids: Iterable<FeatureId>): void {
-    this.setSelection({ features: new Set(ids) });
+    this.setSelection({ parts: new Set(), features: new Set(ids) });
+  }
+
+  /** Picks parts, and drops any features that were picked. */
+  selectParts(ids: Iterable<PartId>): void {
+    this.setSelection({ parts: new Set(ids), features: new Set() });
   }
 
   clearSelection(): void {

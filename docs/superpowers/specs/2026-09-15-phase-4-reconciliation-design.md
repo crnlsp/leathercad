@@ -41,7 +41,7 @@ Verified against `main` at `43c7bbc`, by probe or by reading the code. Not infer
 | D5 | **Two refusals are silent.** Creating a derivation that would close a cycle, and moving a derived feature. | `addDerived` returns the document unchanged; `transformFeature` returns a derived feature unchanged |
 | D6 ✅ | **"Inward" is decided by winding, not by material.** Right for an outer contour, wrong for a cut-out, whose material is outside the path. **Fixed in 4.3a**, where cut-outs first become creatable | `applyDerivation` reads the signed area |
 | D7 ✅ | **Project defaults are ignored.** The panel adds stitch lines at a hard-coded 3.5 mm; `settings.defaultStitchInsetMm` is never read. **Fixed in 4.3a**: the commands read the project | `PropertyPanel.tsx`: `DEFAULT_STITCH_INSET_MM` |
-| D8 | **`locked` is only a pick lock.** Hit-testing and snapping skip locked features; every command still edits and deletes them. | `hitTest.ts`, `snap.ts`; no command reads it |
+| D8 ✅ | **`locked` is only a pick lock.** Hit-testing and snapping skip locked features; every command still edits and deletes them. **Fixed in 4.3b**, with the parts panel that is the only way to unlock one | `hitTest.ts`, `snap.ts`; no command reads it |
 
 ### 1.2 What already exists to build on
 
@@ -377,7 +377,7 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 | 4 | **4.4b** Anchors through derivations | Offset corner correspondence · hole sets expose their line's anchors · `ANCHOR_MISSING` | 4.12a |
 | 5 | **3.7b** Reflections ✅ | `transformShape` reflects correctly (D2), property-tested against transforming the evaluated path · a Flip command | — |
 | 6 | **4.3a** Cut-outs and part rules ✅ | Drawing modes (§3.8) · cut-outs · material-relative inward (D6) · defaults from settings (D7) · part rules · loader checks S5–S6 | 4.2b, 4.12a |
-| 6b | **4.3b** Parts panel | Part selection · dependency tree · delete and duplicate part · visibility and lock (D8) | 4.3a |
+| 6b | **4.3b** Parts panel ✅ | Part selection · dependency tree · delete and duplicate part · visibility and lock (D8) | 4.3a |
 | 7 | **4.8** Mirror | The mirror op · mirror a feature or a part · placement by axis and glide · scaling refused | 4.2b, 4.4b, 3.7b, 4.3 |
 | 8 | **4.9** Seam allowance | *Stitch + allowance* mode · outward offsets · stitch margin | 4.2b, 4.4b, 4.3 |
 | 9 | **4.10** Measurements | Measure tool · measurement annotations · anchor, centre and extent refs · values set through typography | 4.2b, 4.4b, 4.11 |
@@ -439,6 +439,14 @@ levels, what lock means, and keeping emptied parts.
 - **Angular measurements; slot and diamond hole shapes; the radius-aware corner policy.**
 - **Boolean operations, seam pairing and hole-count parity, templates.** Their existing phases.
 - **Linked copies that are not mirrored.** `quantity` already covers identical pieces.
+- **Whether a command should ever move the viewport** (noticed in 4.3b). Duplicate places the copy
+  clear of the original, which can put it outside the view: the copy is correct and invisible until
+  the drawing is framed. The question is not Duplicate's — it belongs to **every command that
+  creates or transforms geometry away from where the user is looking**: duplicate, mirror (4.8),
+  seam allowance (4.9), paste, and whatever comes after. Answering it one command at a time is how
+  an editor acquires a viewport that jumps unpredictably, so it wants a single deliberate
+  interaction design, plus the plumbing to match — framing the selection needs the viewport lifted
+  out of `CanvasHost`. **Not to be attached to whichever slice happens to expose it.**
 
 ## 11. Decided, and still to approve
 

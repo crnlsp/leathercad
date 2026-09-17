@@ -22,6 +22,7 @@ import {
   derivationRefusal,
   evaluate,
   followRefusal,
+  lockRefusal,
   problem,
   transformShape,
   transformTextSource,
@@ -33,6 +34,7 @@ import {
   Shapes,
   type Mat2x3,
   type Path,
+  type Rect,
   type Vec2,
 } from '@leathercad/geometry';
 
@@ -109,9 +111,34 @@ export function renameFeature(id: FeatureId, name: string): Command {
   }));
 }
 
+/**
+ * Shows or hides a feature.
+ *
+ * Allowed on a locked feature on purpose: the lock protects the piece, not the
+ * view. You pin the outline down so you cannot nudge it, and you still want to
+ * hide it to see what is underneath. See `domain/lock.ts`.
+ */
 export function setFeatureVisible(id: FeatureId, visible: boolean): Command {
   return command(visible ? 'Show feature' : 'Hide feature', (document) => ({
-    project: mapFeature(document.project, id, (feature) => ({ ...feature, visible })),
+    project: mapFeature(document.project, id, (feature) => ({ ...feature, visible }), {
+      evenIfLocked: true,
+    }),
+  }));
+}
+
+/**
+ * Pins a feature down, or lets it go (S7).
+ *
+ * The one command that may change a locked feature, because it is the only way
+ * back: `hitTest` and `snap` already skip a locked feature, so without this —
+ * and without the parts panel it is reached from — locking an outline would
+ * put it permanently out of reach (defect D8).
+ */
+export function setFeatureLocked(id: FeatureId, locked: boolean): Command {
+  return command(locked ? 'Lock' : 'Unlock', (document) => ({
+    project: mapFeature(document.project, id, (feature) => ({ ...feature, locked }), {
+      evenIfLocked: true,
+    }),
   }));
 }
 
@@ -158,6 +185,10 @@ export function transformFeatures(
 
   return command(label, (document) => {
     if (targets.size === 0) return document;
+    // A mixed selection is refused whole (S7). Moving the free half would
+    // leave the drawing somewhere the user did not ask for and cannot see at
+    // a glance — worse than not moving at all.
+    if (lockRefusal(document.project, targets) !== null) return document;
 
     return {
       project: {
@@ -225,6 +256,13 @@ export function flipRefusal(
   axis: FlipAxis,
 ): Problem | null {
   const targets = [...new Set(ids)];
+
+  // The lock first: it refuses the whole selection, so it is the reason, not
+  // one of several. Without it the button stays enabled on a locked piece and
+  // pressing it does nothing (S7, X1).
+  const locked = lockRefusal(project, targets);
+  if (locked !== null) return locked;
+
   const centre = centreOf(project, targets);
   if (centre === null) return null;
 
@@ -645,11 +683,35 @@ function mapPart(project: Project, id: PartId, update: (part: Part) => Part): Pr
   };
 }
 
+/**
+ * Edits one feature, **refusing a locked one** (S7).
+ *
+ * Refusing by default rather than at each call site is deliberate: a command
+ * added later that forgets to think about the lock gets the safe answer, and
+ * the two places that genuinely may touch a locked feature — hiding it and
+ * unlocking it — say so out loud with `evenIfLocked`. The same reasoning as
+ * the draw commit boundary in 4.3a: an invariant every caller has to remember
+ * is one that eventually gets forgotten.
+ *
+ * Returns the project unchanged when refused; `lockRefusal` is how the reason
+ * reaches the user.
+ */
 function mapFeature(
   project: Project,
   id: FeatureId,
   update: (feature: Feature) => Feature,
+  options: { readonly evenIfLocked?: boolean } = {},
 ): Project {
+  if (options.evenIfLocked !== true && lockRefusal(project, [id]) !== null) return project;
+
+  // Nothing to edit is not an edit. Without this the project object would be
+  // rebuilt anyway and the store, which decides by identity, would push an
+  // undo entry for a command that changed nothing — "Undo Rename" with no
+  // rename behind it.
+  if (!project.parts.some((part) => part.features.some((feature) => feature.id === id))) {
+    return project;
+  }
+
   return {
     ...project,
     parts: project.parts.map((part) =>
@@ -1018,6 +1080,161 @@ export function deletePart(partId: PartId, resolution?: DeleteResolution): Comma
 }
 
 /**
+ * Whether a part is showing.
+ *
+ * Derived from its features rather than stored: a part is hidden when nothing
+ * in it is visible. No `Part.visible` field means no format version and no
+ * migration for what is a view convenience.
+ *
+ * **The cost, stated rather than hidden:** hiding a whole part and showing it
+ * again forgets which single features were hidden beforehand. If that turns
+ * out to matter, a persisted field is one migration away — this is the cheaper
+ * thing first, not the permanent answer.
+ */
+export function isPartVisible(part: Part): boolean {
+  return part.features.length === 0 || part.features.some((feature) => feature.visible);
+}
+
+/**
+ * Shows or hides every feature in a part.
+ *
+ * Locked features included: the lock protects the piece, not the view.
+ */
+export function setPartVisible(partId: PartId, visible: boolean): Command {
+  return command(visible ? 'Show part' : 'Hide part', (document) => ({
+    project: mapPart(document.project, partId, (part) => ({
+      ...part,
+      features: part.features.map((feature) => ({ ...feature, visible })),
+    })),
+  }));
+}
+
+/**
+ * Copies a part, re-pointing the derivations inside it (§3.2).
+ *
+ * A duplicate is a **copy with no relationship** to its original — that is
+ * what separates it from a mirror (4.8), whose counterpart stays linked. So
+ * every `derived` source *inside* the part is re-pointed to the copy, which is
+ * what makes the copy's stitch line follow the copy's outline; a source
+ * reaching into another part is left exactly where it was, because it still
+ * means that other part.
+ *
+ * The ids are given rather than made, so the command stays a pure description
+ * of an edit like every other one. One per feature, in document order; too few
+ * refuses and changes nothing rather than duplicating half a part.
+ *
+ * The copy is placed clear of the original, because a copy drawn exactly on
+ * top of its original is invisible and the first thing anyone would do is drag
+ * it off. Only the copy's **root** features are moved — the derived ones
+ * follow on their own, which is both correct and why this costs nothing.
+ */
+export function duplicatePart(
+  partId: PartId,
+  newPartId: PartId,
+  featureIds: readonly FeatureId[],
+): Command {
+  return {
+    label: 'Duplicate part',
+    labelFor: (document) => {
+      const part = document.project.parts.find((p) => p.id === partId);
+      return part === undefined ? 'Duplicate part' : `Duplicate ${part.name}`;
+    },
+    apply: (document) => {
+      const part = document.project.parts.find((p) => p.id === partId);
+      if (part === undefined) return document;
+      if (featureIds.length < part.features.length) return document;
+
+      const renamed = new Map<FeatureId, FeatureId>(
+        part.features.map((feature, i) => [feature.id, featureIds[i]!] as const),
+      );
+
+      const features = part.features.map((feature): Feature => {
+        const id = renamed.get(feature.id)!;
+        // Built unlocked, and locked again once it is in place. A copy of a
+        // locked outline is still locked — but the lock belongs to the
+        // finished copy, not to the act of making it, and leaving it on here
+        // would make the placement below refuse itself and drop the copy
+        // exactly on top of the original.
+        const unlocked = { locked: false };
+
+        // A label's source is its words, so it can never be re-pointed —
+        // narrowing the feature rather than only its source is what lets the
+        // copy below be built at all.
+        if (feature.kind === 'text-label' || feature.source.kind !== 'derived') {
+          return { ...feature, ...unlocked, id };
+        }
+
+        // Inside the part: follow the copy. Outside it: unchanged, so the copy
+        // points where the original pointed and no reference is created into
+        // or out of the copy.
+        const sourceId = renamed.get(feature.source.sourceId) ?? feature.source.sourceId;
+        return { ...feature, ...unlocked, id, source: { ...feature.source, sourceId } };
+      });
+
+      const copy: Part = { ...part, id: newPartId, name: `${part.name} copy`, features };
+      const withCopy: Project = { ...document.project, parts: [...document.project.parts, copy] };
+
+      const wasLocked = new Map<FeatureId, boolean>(
+        part.features.map((feature, i) => [featureIds[i]!, feature.locked] as const),
+      );
+
+      return { project: relock(moveClear(withCopy, copy), newPartId, wasLocked) };
+    },
+  };
+}
+
+/** Puts the copies' locks back, once the copy has been placed. */
+function relock(
+  project: Project,
+  partId: PartId,
+  wasLocked: ReadonlyMap<FeatureId, boolean>,
+): Project {
+  return mapPart(project, partId, (part) => ({
+    ...part,
+    features: part.features.map((feature) => ({
+      ...feature,
+      locked: wasLocked.get(feature.id) ?? feature.locked,
+    })),
+  }));
+}
+
+/** How far a duplicate sits from the piece it was copied from. */
+const DUPLICATE_GAP_MM = 5;
+
+/**
+ * Shifts a freshly made copy to the right of everything already drawn.
+ *
+ * Measured from the whole project rather than from the original alone, so
+ * duplicating the same part twice does not stack two copies in one place.
+ */
+function moveClear(project: Project, copy: Part): Project {
+  const resolved = evaluate(project);
+
+  const boxesIn = (partId: PartId): Rect[] =>
+    resolved.parts
+      .filter((entry) => entry.part.id === partId)
+      .flatMap((entry) =>
+        entry.features.flatMap((feature) => {
+          const box = feature.ok ? PathOps.bbox(feature.path) : null;
+          return box === null ? [] : [box];
+        }),
+      );
+
+  const everything = RectOps.unionAll(
+    resolved.parts.flatMap((entry) => boxesIn(entry.part.id)).filter((box) => box !== null),
+  );
+  const mine = RectOps.unionAll(boxesIn(copy.id));
+  if (everything === null || mine === null) return project;
+
+  const deltaMm = { x: everything.maxX - mine.minX + DUPLICATE_GAP_MM, y: 0 };
+  // Only what was drawn: a derived feature is refused a move of its own
+  // (X3) and does not need one — it follows what it was built from.
+  const roots = copy.features.filter((f) => f.source.kind !== 'derived').map((f) => f.id);
+
+  return transformFeatures(roots, MatOps.fromTranslation(deltaMm)).apply({ project }).project;
+}
+
+/**
  * Makes a derived feature follow a different source, keeping its parameters.
  *
  * How an outline is replaced without losing the stitching that followed it.
@@ -1065,6 +1282,13 @@ function resolveDelete(
   resolution: DeleteResolution | undefined,
 ): DeleteOutcome | null {
   const plan = planDelete(project, ids);
+
+  // S7, over the cascade rather than only the request: deleting an outline
+  // would delete or freeze the stitch line that follows it, and if *that* is
+  // locked the user pinned it down precisely so this could not happen to it.
+  const touched = [...plan.requested, ...plan.dependents.map((d) => d.featureId)];
+  if (lockRefusal(project, touched) !== null) return null;
+
   const gone = new Set(plan.requested);
   const frozen = new Map<FeatureId, Feature>();
 

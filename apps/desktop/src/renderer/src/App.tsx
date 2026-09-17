@@ -3,12 +3,13 @@ import {
   DocumentStore,
   deleteFeatures,
   deletePart,
+  duplicatePart,
   emptyDocument,
   planDelete,
   setProjectName,
   type DeleteResolution,
 } from '@leathercad/document';
-import { describeProblem, diagnose, type Project } from '@leathercad/domain';
+import { describeProblem, diagnose, lockRefusal, type Project } from '@leathercad/domain';
 import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -101,8 +102,19 @@ export function App() {
    */
   const requestDelete = useCallback(
     (ids: readonly string[]) => {
-      const plan = planDelete(store.getState().document.project, ids);
+      const project = store.getState().document.project;
+      const plan = planDelete(project, ids);
       if (plan.requested.length === 0) return;
+      // Over the cascade, not only the request, and *before* the dialog: a
+      // question about a delete that was never going to happen is worse than
+      // no question. The command refuses it too — this is what keeps the user
+      // from being asked (S7).
+      if (
+        lockRefusal(project, [...plan.requested, ...plan.dependents.map((d) => d.featureId)]) !==
+        null
+      ) {
+        return;
+      }
       if (plan.dependents.length === 0) {
         store.dispatch(deleteFeatures(ids));
         store.clearSelection();
@@ -118,7 +130,15 @@ export function App() {
       const part = store.getState().document.project.parts.find((p) => p.id === partId);
       if (part === undefined) return;
       const ids = part.features.map((f) => f.id);
-      if (planDelete(store.getState().document.project, ids).dependents.length === 0) {
+      const project = store.getState().document.project;
+      const plan = planDelete(project, ids);
+      if (
+        lockRefusal(project, [...plan.requested, ...plan.dependents.map((d) => d.featureId)]) !==
+        null
+      ) {
+        return;
+      }
+      if (plan.dependents.length === 0) {
         store.dispatch(deletePart(partId));
         store.clearSelection();
         return;
@@ -126,6 +146,22 @@ export function App() {
       setPendingDelete({ ids, partId });
     },
     [store],
+  );
+
+  const requestDuplicatePart = useCallback(
+    (partId: string) => {
+      const part = store.getState().document.project.parts.find((p) => p.id === partId);
+      if (part === undefined) return;
+
+      // The command takes the ids rather than making them, so it stays a pure
+      // description of an edit: one per feature, in document order.
+      const newPartId = nextId();
+      const featureIds = part.features.map(() => nextId());
+      store.dispatch(duplicatePart(partId, newPartId, featureIds));
+      // The copy is what you are now working on.
+      store.selectParts([newPartId]);
+    },
+    [store, nextId],
   );
 
   const resolvePendingDelete = (resolution: DeleteResolution): void => {
@@ -229,7 +265,9 @@ export function App() {
             store={store}
             project={storeState.document.project}
             selected={storeState.selection.features}
+            selectedParts={storeState.selection.parts}
             onRemovePart={requestDeletePart}
+            onDuplicatePart={requestDuplicatePart}
           />
           <ProblemsPanel
             store={store}

@@ -13,7 +13,16 @@ export type {
   RefusedTransform,
 } from './commands.js';
 export type { Command, Document, Selection } from './document.js';
-export { EMPTY_SELECTION, command, isSelected, selectionOf, toggleSelected } from './document.js';
+export {
+  EMPTY_SELECTION,
+  command,
+  isEmptySelection,
+  isPartSelected,
+  isSelected,
+  partSelectionOf,
+  selectionOf,
+  toggleSelected,
+} from './document.js';
 
 export type { StoreState } from './store.js';
 export { DocumentStore } from './store.js';
@@ -34,6 +43,8 @@ export {
   circleShape,
   deleteFeatures,
   deletePart,
+  duplicatePart,
+  isPartVisible,
   planDelete,
   setSource,
   setFoldDirection,
@@ -50,8 +61,10 @@ export {
   rectShape,
   rectanglePart,
   renameFeature,
+  setFeatureLocked,
   setFeatureVisible,
   setPartName,
+  setPartVisible,
   setPartQuantity,
   setProjectName,
   setDerivation,

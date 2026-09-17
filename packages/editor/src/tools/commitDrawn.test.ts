@@ -14,6 +14,7 @@ import {
   createDrawCommit,
   drawRefusal,
   drawTargetNotice,
+  targetPart,
   type DrawCommit,
   type DrawMode,
 } from './commitDrawn.js';
@@ -302,5 +303,60 @@ describe('a refused drawing always leaves a reason (X1)', () => {
 
     expect(draw.commit(ctx, nextId, 'Mark', openRun)).not.toBeNull();
     expect(draw.notice(ctx)).toBeNull();
+  });
+});
+
+describe('the target part, once parts can be selected (§3.1)', () => {
+  const closedSquare = {
+    kind: 'path',
+    path: PathOps.polyline(
+      [
+        { x: 10, y: 10 },
+        { x: 30, y: 10 },
+        { x: 30, y: 30 },
+        { x: 10, y: 30 },
+      ],
+      true,
+    ),
+  } as const;
+
+  it('is the selected part, without needing a feature picked', () => {
+    // The point of part selection: reopen a file, click the part heading, draw
+    // a cut-out. Before this the only way to name a part was to pick something
+    // already inside it.
+    const { ctx, store, draw } = harness('cut-out');
+    addPanel(store, 'p1');
+    store.selectParts(['p1' as never]);
+
+    expect(targetPart(ctx)).toBe('p1');
+    expect(draw.commit(ctx, nextId, 'Slot', closedSquare)).not.toBeNull();
+  });
+
+  it('still falls back to the part the selected features are in', () => {
+    const { ctx, store } = harness('cut-out');
+    const cut = addPanel(store, 'p1');
+    store.select([cut as never]);
+
+    expect(targetPart(ctx)).toBe('p1');
+  });
+
+  it('refuses when two parts are selected, naming what it would have placed', () => {
+    const { ctx, store } = harness('cut-out');
+    addPanel(store, 'p1');
+    addPanel(store, 'p2');
+    store.selectParts(['p1' as never, 'p2' as never]);
+
+    expect(targetPart(ctx)).toBeNull();
+    expect(drawTargetNotice(ctx)).toEqual({
+      code: 'TARGET_SPANS_PARTS',
+      facts: { what: 'cut-out' },
+    });
+  });
+
+  it('is nothing when the selected part has been deleted underneath it', () => {
+    const { ctx, store } = harness('cut-out');
+    store.selectParts(['gone' as never]);
+
+    expect(targetPart(ctx)).toBeNull();
   });
 });

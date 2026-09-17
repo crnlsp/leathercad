@@ -661,3 +661,110 @@ button.problem-row:hover {
   color: var(--text-dim);
   line-height: 1.35;
 }
+
+/* ——— The parts panel ————————————————————————————————————————————————————
+   A part is a piece of leather, and the panel is the only way to reach a
+   feature the canvas will not give you — hidden, off screen, or locked. */
+
+.part.selected {
+  border-left: 2px solid var(--accent);
+  padding-left: 6px;
+  margin-left: -8px;
+}
+
+.part-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.part-name {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.part-name:hover {
+  background: #262a30;
+}
+
+.feature-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.feature-row .row {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The name gives way before the toggles do: a long name must not push the
+   lock off the edge of the panel, because the lock is the way back. */
+.feature-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-toggle {
+  flex: none;
+  width: 20px;
+  padding: 2px 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+}
+
+.icon-toggle:hover {
+  background: #262a30;
+}
+
+/* Off reads as off at a glance, without a second colour to learn. */
+.icon-toggle.off {
+  opacity: 0.4;
+}
+
+.part-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.part-actions .tool {
+  flex: 1;
+  font-size: 11px;
+}
+
+/* A fieldset only to carry `disabled` down to every control inside it, so a
+   locked feature's parameters cannot be typed into. It must add no box of its
+   own. */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field-group:disabled {
+  opacity: 0.55;
+}

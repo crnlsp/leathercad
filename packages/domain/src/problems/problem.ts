@@ -87,6 +87,8 @@ export interface ProblemFacts {
      */
     readonly closable: boolean;
   };
+  /** S7: a locked feature changes only by being unlocked. */
+  readonly FEATURE_LOCKED: About;
 
   // ——— Interaction (X): refused at a gesture ———
   readonly FEATURE_MISSING: { readonly featureId: FeatureId };

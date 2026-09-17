@@ -1282,3 +1282,133 @@ test('an arc drawn where it cannot be cut says so instead of vanishing', async (
     await expect(window.getByTestId('part-count')).toHaveText('0');
   });
 });
+
+test('the parts panel shows what follows what, and locks it down', async () => {
+  // Slice 4.3b. The tree is where the reference graph becomes visible, and the
+  // lock is what `locked` should have meant all along (D8).
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 600, box!.y + 450, { steps: 5 });
+    await window.mouse.up();
+
+    await window.getByTestId('add-stitch-line').click();
+    await window.getByTestId('add-stitch-holes').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+
+    // Outline ▸ Stitch line ▸ Holes, each nested a step further in.
+    const panel = window.getByTestId('parts-list');
+    const rows = panel.locator('.feature-row');
+    await expect(rows).toHaveCount(3);
+    const indents = await rows.evaluateAll((els) =>
+      els.map((el) => (el as HTMLElement).style.paddingLeft),
+    );
+    expect(indents).toEqual(['0px', '12px', '24px']);
+
+    // Lock the outline. It is still selectable here — the panel is the only
+    // way back, because a locked feature is out of hit-testing.
+    const outline = panel.locator('[data-testid^="feature-locked-"]').first();
+    await outline.click();
+    await expect(outline).toHaveAttribute('aria-pressed', 'true');
+
+    await panel.locator('[data-testid^="feature-row-"]').first().click();
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+
+    // Deleting it is not merely refused: the button says why, rather than
+    // opening a dialog about a delete that was never going to happen.
+    const remove = window.getByTestId('property-panel').getByTestId('delete-feature');
+    await expect(remove).toBeDisabled();
+    await expect(remove).toHaveAttribute('title', /locked/i);
+
+    // Unlock, and it deletes as it always did.
+    await outline.click();
+    await expect(outline).toHaveAttribute('aria-pressed', 'false');
+    await expect(remove).toBeEnabled();
+  });
+});
+
+test('a duplicated part gets its own stitching, beside the original', async () => {
+  // §3.2: a duplicate is a copy with *no* relationship to its original, so the
+  // copy's stitch line follows the copy's outline.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 500, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+    await window.getByTestId('add-stitch-line').click();
+
+    const panel = window.getByTestId('parts-list');
+    await panel.locator('[data-testid^="duplicate-part-"]').first().click();
+
+    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expect(panel).toContainText('Panel copy');
+    // Nothing is off the material: the copy's stitch line follows the copy's
+    // own outline, so it sits inside the copy rather than back on the original.
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+  });
+});
+
+test('hiding a part takes it off the drawing, and brings it back', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 500, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+
+    const panel = window.getByTestId('parts-list');
+    const eye = panel.locator('[data-testid^="part-visible-"]').first();
+
+    await eye.click();
+    await expect(eye).toHaveAttribute('aria-pressed', 'false');
+    await expect(panel.locator('[data-testid^="feature-visible-"]').first()).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    await eye.click();
+    await expect(eye).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+test('selecting a part heading makes it the target for a cut-out', async () => {
+  // X4 plus §3.1: selection chooses *where*, and a part heading is a way to
+  // say where without picking something inside it first.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 600, box!.y + 450, { steps: 5 });
+    await window.mouse.up();
+
+    // Drop the selection the way reopening a file would.
+    await window.getByTestId('tool-select').click();
+    await window.mouse.click(box!.x + 100, box!.y + 550);
+    await expect(window.getByTestId('selected-count')).toHaveText('0');
+
+    const heading = window.getByTestId('parts-list').locator('[data-testid^="part-heading-"]');
+    await heading.first().click();
+    await expect(heading.first()).toHaveAttribute('aria-pressed', 'true');
+
+    await window.getByTestId('tool-circle').click();
+    await window.getByTestId('draw-as-cut-out').click();
+    await window.mouse.move(box!.x + 400, box!.y + 320);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 450, box!.y + 320, { steps: 5 });
+    await window.mouse.up();
+
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+  });
+});

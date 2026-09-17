@@ -1,4 +1,4 @@
-import type { FeatureId, Project } from '@leathercad/domain';
+import type { FeatureId, PartId, Project } from '@leathercad/domain';
 
 /**
  * Everything that belongs in the saved file.
@@ -11,26 +11,49 @@ export interface Document {
   readonly project: Project;
 }
 
-/** What the user has picked. Restored by undo, but not part of the file. */
+/**
+ * What the user has picked. Restored by undo, but not part of the file.
+ *
+ * Two levels, a third with vertex editing (`architecture.md` §6.5). A canvas
+ * click selects a feature; a part's heading in the parts panel selects the
+ * part. Both sets exist, but the panel sets one and clears the other — a
+ * selection that is quietly both is one nobody can reason about, and the
+ * target-part rule would have two answers.
+ */
 export interface Selection {
+  readonly parts: ReadonlySet<PartId>;
   readonly features: ReadonlySet<FeatureId>;
 }
 
-export const EMPTY_SELECTION: Selection = { features: new Set() };
+export const EMPTY_SELECTION: Selection = { parts: new Set(), features: new Set() };
 
 export function selectionOf(ids: Iterable<FeatureId>): Selection {
-  return { features: new Set(ids) };
+  return { parts: new Set(), features: new Set(ids) };
+}
+
+export function partSelectionOf(ids: Iterable<PartId>): Selection {
+  return { parts: new Set(ids), features: new Set() };
 }
 
 export function isSelected(selection: Selection, id: FeatureId): boolean {
   return selection.features.has(id);
 }
 
+export function isPartSelected(selection: Selection, id: PartId): boolean {
+  return selection.parts.has(id);
+}
+
+/** Whether anything at all is picked, of either kind. */
+export function isEmptySelection(selection: Selection): boolean {
+  return selection.parts.size === 0 && selection.features.size === 0;
+}
+
 export function toggleSelected(selection: Selection, id: FeatureId): Selection {
   const next = new Set(selection.features);
   if (next.has(id)) next.delete(id);
   else next.add(id);
-  return { features: next };
+  // Picking a feature means the part heading is no longer what is picked.
+  return { parts: new Set(), features: next };
 }
 
 /**

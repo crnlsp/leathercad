@@ -1,23 +1,38 @@
-import { type DocumentStore } from '@leathercad/document';
-import { roleOf, type Project } from '@leathercad/domain';
+import {
+  isPartVisible,
+  setFeatureLocked,
+  setFeatureVisible,
+  setPartVisible,
+  type DocumentStore,
+} from '@leathercad/document';
+import { featureTree, roleOf, type FeatureNode, type Part, type Project } from '@leathercad/domain';
 
 /**
- * Every feature in the project, grouped by part.
+ * Every part in the project, and what each one is made of.
  *
- * Clicking the canvas is fine for something you can see; this is for the ones
- * you cannot — hidden behind another part, or off screen.
+ * Two jobs the canvas cannot do. It shows the **dependency tree** — *Outline ▸
+ * Stitch line ▸ Holes* — which is where the reference graph becomes visible,
+ * and it is the only way to reach a feature you cannot click: hidden behind
+ * another part, off screen, or **locked**, which takes it out of hit-testing
+ * entirely. That last one is why the lock and this panel are one slice: without
+ * it, locking an outline would put it permanently out of reach.
  */
 export function PartsList({
   store,
   project,
   selected,
+  selectedParts,
   onRemovePart,
+  onDuplicatePart,
 }: {
   store: DocumentStore;
   project: Project;
   selected: ReadonlySet<string>;
+  selectedParts: ReadonlySet<string>;
   /** Removes a part, asking first if anything outside it depends on it. */
   onRemovePart: (partId: string) => void;
+  /** Copies a part, re-pointing the derivations inside it. */
+  onDuplicatePart: (partId: string) => void;
 }) {
   if (project.parts.length === 0) {
     return (
@@ -32,39 +47,208 @@ export function PartsList({
     <aside className="panel" data-testid="parts-list">
       <h2>Parts</h2>
       {project.parts.map((part) => (
-        <section className="panel-section" key={part.id}>
-          <div className="panel-heading">
-            {part.name}
-            {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
-          </div>
-          {part.features.length === 0 && (
-            // A part is removed only on purpose (ADR 0009), so an emptied one
-            // stays — named, and with the way to remove it right here.
-            <div className="empty-part">
-              <span className="panel-empty">Empty</span>
-              <button
-                type="button"
-                className="tool"
-                data-testid="remove-empty-part"
-                onClick={() => onRemovePart(part.id)}
-              >
-                Remove
-              </button>
-            </div>
-          )}
-          {part.features.map((feature) => (
-            <button
-              key={feature.id}
-              type="button"
-              className={selected.has(feature.id) ? 'row selected' : 'row'}
-              onClick={() => store.select([feature.id])}
-            >
-              <span className={`swatch role-${roleOf(feature)}`} />
-              {feature.name}
-            </button>
-          ))}
-        </section>
+        <PartSection
+          key={part.id}
+          store={store}
+          part={part}
+          selected={selected}
+          isSelected={selectedParts.has(part.id)}
+          onRemovePart={onRemovePart}
+          onDuplicatePart={onDuplicatePart}
+        />
       ))}
     </aside>
+  );
+}
+
+function PartSection({
+  store,
+  part,
+  selected,
+  isSelected,
+  onRemovePart,
+  onDuplicatePart,
+}: {
+  store: DocumentStore;
+  part: Part;
+  selected: ReadonlySet<string>;
+  isSelected: boolean;
+  onRemovePart: (partId: string) => void;
+  onDuplicatePart: (partId: string) => void;
+}) {
+  const visible = isPartVisible(part);
+
+  return (
+    <section className={isSelected ? 'panel-section part selected' : 'panel-section part'}>
+      <div className="part-heading">
+        <button
+          type="button"
+          className="part-name"
+          data-testid={`part-heading-${part.id}`}
+          aria-pressed={isSelected}
+          // Selecting the part is what makes it the target for the next
+          // cut-out or fold line, without having to pick something inside it
+          // first (§3.1).
+          onClick={() => store.selectParts([part.id])}
+        >
+          {part.name}
+          {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
+        </button>
+        <IconToggle
+          testId={`part-visible-${part.id}`}
+          on={visible}
+          onLabel="Hide part"
+          offLabel="Show part"
+          glyph={visible ? '👁' : '🚫'}
+          onToggle={() => store.dispatch(setPartVisible(part.id, !visible))}
+        />
+      </div>
+
+      {part.features.length === 0 ? (
+        // A part is removed only on purpose (ADR 0009), so an emptied one
+        // stays — named, and with the way to remove it right here.
+        <div className="empty-part">
+          <span className="panel-empty">Empty</span>
+          <button
+            type="button"
+            className="tool"
+            data-testid="remove-empty-part"
+            onClick={() => onRemovePart(part.id)}
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        featureTree(part).map((node) => (
+          <FeatureRow
+            key={node.feature.id}
+            store={store}
+            node={node}
+            selected={selected}
+            depth={0}
+          />
+        ))
+      )}
+
+      <div className="part-actions">
+        <button
+          type="button"
+          className="tool"
+          data-testid={`duplicate-part-${part.id}`}
+          title="A copy beside this one, with its own stitching"
+          onClick={() => onDuplicatePart(part.id)}
+        >
+          Duplicate
+        </button>
+        {part.features.length > 0 && (
+          <button
+            type="button"
+            className="tool danger"
+            data-testid={`delete-part-${part.id}`}
+            onClick={() => onRemovePart(part.id)}
+          >
+            Delete
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * One feature, and whatever follows it.
+ *
+ * Indented by depth rather than nested in lists: the rows stay one flat column
+ * of the same height, which is what makes a part with thirty features
+ * scannable.
+ */
+function FeatureRow({
+  store,
+  node,
+  selected,
+  depth,
+}: {
+  store: DocumentStore;
+  node: FeatureNode;
+  selected: ReadonlySet<string>;
+  depth: number;
+}) {
+  const { feature } = node;
+
+  return (
+    <>
+      <div className="feature-row" style={{ paddingLeft: `${String(depth * 12)}px` }}>
+        <button
+          type="button"
+          className={selected.has(feature.id) ? 'row selected' : 'row'}
+          data-testid={`feature-row-${feature.id}`}
+          // A locked feature is still selectable here, deliberately: it is out
+          // of hit-testing on the canvas, so this is the only way to reach it
+          // and unlock it.
+          onClick={() => store.select([feature.id])}
+        >
+          <span className={`swatch role-${roleOf(feature)}`} />
+          <span className="feature-name">{feature.name}</span>
+        </button>
+        <IconToggle
+          testId={`feature-locked-${feature.id}`}
+          on={feature.locked}
+          onLabel="Unlock"
+          offLabel="Lock"
+          glyph={feature.locked ? '🔒' : '🔓'}
+          onToggle={() => store.dispatch(setFeatureLocked(feature.id, !feature.locked))}
+        />
+        <IconToggle
+          testId={`feature-visible-${feature.id}`}
+          on={feature.visible}
+          onLabel="Hide"
+          offLabel="Show"
+          glyph={feature.visible ? '👁' : '🚫'}
+          onToggle={() => store.dispatch(setFeatureVisible(feature.id, !feature.visible))}
+        />
+      </div>
+      {node.children.map((child) => (
+        <FeatureRow
+          key={child.feature.id}
+          store={store}
+          node={child}
+          selected={selected}
+          depth={depth + 1}
+        />
+      ))}
+    </>
+  );
+}
+
+/** A small on/off control that says what pressing it would do. */
+function IconToggle({
+  testId,
+  on,
+  onLabel,
+  offLabel,
+  glyph,
+  onToggle,
+}: {
+  testId: string;
+  on: boolean;
+  onLabel: string;
+  offLabel: string;
+  glyph: string;
+  onToggle: () => void;
+}) {
+  const label = on ? onLabel : offLabel;
+
+  return (
+    <button
+      type="button"
+      className={on ? 'icon-toggle' : 'icon-toggle off'}
+      data-testid={testId}
+      aria-pressed={on}
+      aria-label={label}
+      title={label}
+      onClick={onToggle}
+    >
+      {glyph}
+    </button>
   );
 }

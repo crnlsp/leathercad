@@ -375,7 +375,7 @@ Two levels now, a third with vertex editing:
 
 ```ts
 type Selection = {
-  parts: ReadonlySet<PartId>;        // from the parts panel (slice 4.3)
+  parts: ReadonlySet<PartId>;        // from the parts panel (built 4.3b)
   features: ReadonlySet<FeatureId>;  // from the canvas and the parts panel
   // vertices arrive with slice 3.9, addressed by vertex id — never by segment index,
   // which renumbers when a vertex is inserted (ADR 0010)
@@ -383,6 +383,8 @@ type Selection = {
 ```
 
 A canvas click selects a feature; clicking a part's heading in the parts panel selects the part. The
+panel sets one and clears the other: a selection that is quietly both is one nobody can reason
+about, and the target-part rule would have two answers. The
 **target part** for anything that joins a part is the selected part, or the one part the selected
 features belong to — and selection only ever chooses *where* something goes, never *what* is created
 ([Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) §3.8).

@@ -30,6 +30,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   DERIVATION_INCOMPATIBLE: { ...named, rule: 'holes-need-stitch-line' },
   PART_ALREADY_HAS_OUTER: { ...named, partName: 'Panel', outerName: 'Outline' },
   CONTOUR_NOT_CLOSED: { ...named, role: 'outer', closable: true },
+  FEATURE_LOCKED: named,
 
   FEATURE_MISSING: { featureId: 'f-1' },
   NOT_DERIVED: named,
