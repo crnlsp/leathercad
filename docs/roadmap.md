@@ -603,8 +603,8 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
 [Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) and ADRs
 0009–0013. Slice numbers stay stable identifiers, but the build order follows the dependencies
 instead: **4.2b → 4.12a → 4.11a → 4.11b → 4.4b → 3.7b → 4.3 → 4.8 → 4.9 → 4.10 → 4.12**, then a
-close-out
-that walks one scenario through the whole phase.
+close-out that walks one scenario through the whole phase (4.13), and then the **UI/UX audit
+checkpoint** below — which Phase 5 waits on.
 
 - **4.1** ✅ **Done.** `Part`, `Feature` (cut contour, stitch line, fold line, marking line),
   `GeometrySource` (`path` and `shape`), layer roles, and `evaluate` producing a resolved document.
@@ -976,6 +976,72 @@ that walks one scenario through the whole phase.
 - **4.12** Validation complete: zoom-to-problem, part and feature badges, a warning at export, and an
   audit test that every rule names a documented invariant and every structural invariant has both a
   refusal test and a loader test. The catalogue is `domain-model.md` §8.
+- **4.13 Close-out.** One end-to-end scenario walked through the whole phase, a roadmap summary, and
+  a final pass over the docs the phase changed.
+
+### Checkpoint — the UI/UX audit
+*Between M3 and Phase 5. A gate, not a phase.*
+
+**Phase 5 does not begin when the last 4.X slice merges.** It begins when the application has been
+looked at as one thing.
+
+Phase 4 was built as a dozen vertical slices, each reviewed on its own terms and each leaving the app
+working. That is the right way to build it and it has a known failure mode: twelve individually sound
+features that together feel like twelve features rather than one tool. Several findings already point
+that way — the canvas jumping when the tool changes, a property panel that outgrew its width, three
+different words for a relationship between features. None was worth interrupting a slice for; all of
+them are worth an afternoon together.
+
+**Entry condition:** every planned 4.X slice merged, `main` green — `pnpm check` and `pnpm test:e2e`.
+
+**What it is:** a review and polish pass over the whole application, walked as a leatherworker would:
+
+> create or open a project → draw and edit geometry → organise parts and features → use derived
+> features → measure → read validation → export
+
+looking at interaction consistency between tools; selection, dragging, deletion, Escape and keyboard
+behaviour; snapping and pointer feel; tool-mode clarity; the property panel's layout, overflow and
+hierarchy; the parts tree; **how clearly source, derived, referenced and linked objects are told
+apart**; hover, selected, active, disabled, warning and error states; the validation surfaces —
+badges, diagnostics, selection, zoom-to-problem; measurement presentation and editing; discoverability
+of the actions that matter; ambiguous terminology; clicks that earn nothing; layout shifts; and the
+consistency of spacing, controls and labels.
+
+The question it answers is the one no slice could: **does this feel like a leather-pattern tool, or a
+collection of independently implemented features?**
+
+**What it is not:** a feature phase. Nothing new is designed here.
+
+**The constraint that keeps it finite.** Every finding is triaged into exactly one of three, and the
+triage is part of the deliverable:
+
+| | | When |
+|---|---|---|
+| 1 | **Bug or inconsistency** | Fixed before Phase 5 |
+| 2 | **UX improvement, low architectural impact** | Likely fixed before Phase 5 |
+| 3 | **Larger interaction or design work** | Recorded for a later phase, **not** done here |
+
+Category 3 is what stops an audit becoming a redesign. A finding that needs a new interaction model
+is a finding, not a task.
+
+**Two rules of method**, learned from the slices:
+
+- **Validate against the running application and the existing E2E coverage**, not against reading the
+  code. The dimension drawn with no line under it, the pick tolerance that ignored device pixel ratio,
+  and the canvas jump were all found by looking; none would have been found by inspection.
+- **Fix systemic patterns once.** If three panels overflow, the finding is about how panels are sized,
+  not about three panels.
+
+**Deliverable**, before any 5.X work:
+
+1. a concise audit document;
+2. findings prioritised by severity and impact, each triaged 1/2/3;
+3. concrete recommendations;
+4. the list to implement before 5.X;
+5. a separate list of larger post-1.0 UX ideas.
+
+The audit is presented for review and **Phase 5 does not start until it is resolved.** The goal is a
+coherent interaction baseline before the next architectural phase — not cosmetic perfection.
 
 ### Phase 5 — Persistence
 *Ends at M4.*

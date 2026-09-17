@@ -385,7 +385,8 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 | 8 | **4.9** Seam allowance ✅ | *Stitch + allowance* mode · outward offsets · stitch margin | 4.2b, 4.4b, 4.3 |
 | 9 | **4.10a** Measurements, linear ✅ | Measure tool · measurement annotations · anchor, centre and extent refs · values set through typography | 4.2b, 4.4b, 4.11 |
 | 10 | **4.12** Validation complete | Zoom-to-problem · badges · export warning · the invariant audit test | All of the above |
-| 11 | **Close-out** | One end-to-end scenario across the phase · roadmap summary · final pass over the docs | All |
+| 11 | **4.13 Close-out** | One end-to-end scenario across the phase · roadmap summary · final pass over the docs | All |
+| 12 | **UI/UX audit checkpoint** | Not a slice: a review and polish gate over the whole application before Phase 5. See `roadmap.md` | All of Phase 4 |
 
 Why the order departs from the numbers:
 
