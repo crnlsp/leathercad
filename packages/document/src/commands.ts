@@ -17,6 +17,7 @@ import type {
 } from '@leathercad/domain';
 import {
   DEFAULT_SETTINGS,
+  additionRefusal,
   dependentsOf,
   derivationRefusal,
   evaluate,
@@ -62,6 +63,9 @@ export function addPart(part: Part): Command {
 export function addFeature(partId: PartId, feature: Feature): Command {
   return command(`Add ${feature.name}`, (document) => {
     if (derivationRefusal(document.project, feature) !== null) return document;
+    // S5 and S6: one outline per part, and an outline that encloses something.
+    // The UI asks `additionRefusal` for the reason.
+    if (additionRefusal(document.project, partId, feature) !== null) return document;
     return {
       project: mapPart(document.project, partId, (part) => ({
         ...part,
@@ -504,20 +508,52 @@ export function addStitchLine(
   partId: PartId,
   featureId: FeatureId,
   sourceId: FeatureId,
-  distanceMm: Mm,
+  distanceMm?: Mm,
   run: Run = { kind: 'whole' },
 ): Command {
-  return addDerived(partId, sourceId, {
+  return {
+    label: 'Add Stitch line',
+    apply: (document) => {
+      // The project's stitch margin unless the caller insists (D7, X8). The
+      // panel used to hard-code 3.5 mm, so a project set up for 4 mm quietly
+      // got 3.5 every time.
+      const inset = distanceMm ?? document.project.settings.defaultStitchInsetMm;
+
+      return addDerived(partId, sourceId, {
+        id: featureId,
+        kind: 'stitch-line',
+        name: 'Stitch line',
+        visible: true,
+        locked: false,
+        source: {
+          kind: 'derived',
+          sourceId,
+          op: { type: 'offset', distanceMm: inset, side: 'inward', run },
+        },
+      }).apply(document);
+    },
+  };
+}
+
+/**
+ * A stitch line drawn by hand rather than inset from an outline.
+ *
+ * The seam of a piece that has no outline yet — the other half of *Stitch +
+ * allowance* (4.9), and the way a stitch line is drawn on a part whose edge
+ * was drawn freehand.
+ */
+export function addDrawnStitchLine(
+  partId: PartId,
+  featureId: FeatureId,
+  source: GeometrySource,
+): Command {
+  return addFeature(partId, {
     id: featureId,
     kind: 'stitch-line',
     name: 'Stitch line',
     visible: true,
     locked: false,
-    source: {
-      kind: 'derived',
-      sourceId,
-      op: { type: 'offset', distanceMm, side: 'inward', run },
-    },
+    source,
   });
 }
 
@@ -526,16 +562,36 @@ export function addStitchHoles(
   partId: PartId,
   featureId: FeatureId,
   sourceId: FeatureId,
-  op: Extract<Derivation, { type: 'stitch-holes' }>,
+  op?: Partial<Extract<Derivation, { type: 'stitch-holes' }>>,
 ): Command {
-  return addDerived(partId, sourceId, {
-    id: featureId,
-    kind: 'stitch-hole-set',
-    name: 'Stitch holes',
-    visible: true,
-    locked: false,
-    source: { kind: 'derived', sourceId, op },
-  });
+  return {
+    label: 'Add Stitch holes',
+    apply: (document) => {
+      // The iron the project is set up for, unless the caller names another.
+      const pitchMm = op?.pitchMm ?? document.project.settings.defaultIronPitchMm;
+
+      return addDerived(partId, sourceId, {
+        id: featureId,
+        kind: 'stitch-hole-set',
+        name: 'Stitch holes',
+        visible: true,
+        locked: false,
+        source: {
+          kind: 'derived',
+          sourceId,
+          op: {
+            type: 'stitch-holes',
+            pitchMm,
+            mode: op?.mode ?? 'fit-whole',
+            corners: op?.corners ?? 'hole-at-corner',
+            ...(op?.ironLabel === undefined ? {} : { ironLabel: op.ironLabel }),
+            ...(op?.startOffsetMm === undefined ? {} : { startOffsetMm: op.startOffsetMm }),
+            ...(op?.endOffsetMm === undefined ? {} : { endOffsetMm: op.endOffsetMm }),
+          },
+        },
+      }).apply(document);
+    },
+  };
 }
 
 /** Changes what a derived feature does — the inset, the pitch, the run. */
@@ -629,6 +685,28 @@ export function addFoldLine(
     kind: 'fold-line',
     direction,
     name: `Fold (${direction})`,
+    visible: true,
+    locked: false,
+    source,
+  });
+}
+
+/**
+ * A hole cut out of a part — a card slot, a thumb scoop, a buckle window.
+ *
+ * An inner contour, so it is cut like the outline and counted as a cut
+ * (§3.1), and so the part's material is the leather **outside** it: a stitch
+ * line round a cut-out runs away from the hole (D6).
+ *
+ * Refused if it does not enclose an area (S6): a shape with two ends cuts
+ * nothing. `additionRefusal` is how the reason reaches the user.
+ */
+export function addCutOut(partId: PartId, featureId: FeatureId, source: GeometrySource): Command {
+  return addFeature(partId, {
+    id: featureId,
+    kind: 'cut-contour',
+    role: 'inner',
+    name: 'Cut-out',
     visible: true,
     locked: false,
     source,

@@ -57,7 +57,18 @@ export { diagnose } from './diagnose.js';
 
 export { anchorsOf, cornerDistances } from './anchors.js';
 
-export { dependentsOf, derivationRefusal, followRefusal, graphProblems } from './graph.js';
+export type { Material } from './material.js';
+export { allOnMaterial, distanceToEdge, isOnMaterial, materialOf } from './material.js';
+
+export {
+  dependentsOf,
+  derivationRefusal,
+  enclosesArea,
+  followRefusal,
+  graphProblems,
+} from './graph.js';
+
+export { additionRefusal, partStructureProblems } from './partStructure.js';
 
 export type {
   CodeInfo,

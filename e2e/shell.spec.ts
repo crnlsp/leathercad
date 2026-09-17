@@ -385,10 +385,11 @@ test('the options strip appears only for a tool that has options', async () => {
     await window.getByTestId('tool-select').click();
     await expect(window.getByTestId('tool-options')).toHaveCount(0);
 
-    // A draw tool does have something to say: what the next line becomes.
+    // A draw tool does have something to say: what the next thing drawn
+    // becomes. Outline is the default — a new piece of leather.
     await window.getByTestId('tool-rectangle').click();
     await expect(window.getByTestId('tool-options')).toHaveCount(1);
-    await expect(window.getByTestId('draw-as-cut')).toHaveAttribute('aria-pressed', 'true');
+    await expect(window.getByTestId('draw-as-outline')).toHaveAttribute('aria-pressed', 'true');
 
     // And the hardware tool asks a different question entirely.
     await window.getByTestId('tool-hardware').click();
@@ -516,7 +517,18 @@ test('draws an arc through three points and saves its parameters', async () => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     expect(box).not.toBeNull();
 
+    // An arc has two ends, so it is a run to mark rather than an outline to
+    // cut — and since §3.8 that means drawing it in Marking mode, on a part.
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 200, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 560, box!.y + 460, { steps: 5 });
+    await window.mouse.up();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
     await window.getByTestId('tool-arc').click();
+    await window.getByTestId('draw-as-marking').click();
+    await expect(window.getByTestId('draw-as-marking')).toHaveAttribute('aria-pressed', 'true');
 
     // Start, end, then the bulge — the arc bends through the third click.
     await window.mouse.click(box!.x + 250, box!.y + 400);
@@ -524,9 +536,10 @@ test('draws an arc through three points and saves its parameters', async () => {
     await window.mouse.move(box!.x + 350, box!.y + 300);
     await window.mouse.click(box!.x + 350, box!.y + 300);
 
+    // On the panel, not in a part of its own.
     await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
 
-    // Two ends, so it is a run to mark rather than an outline to cut.
     const panel = window.getByTestId('property-panel');
     await expect(panel).toContainText('Marking line');
     await expect(panel.locator('label', { hasText: /^Radius/ })).toBeVisible();
@@ -537,9 +550,9 @@ test('draws an arc through three points and saves its parameters', async () => {
     await radius.press('Enter');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expect(window.getByTestId('feature-count')).toHaveText('1');
   });
 });
 
@@ -934,7 +947,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     const panel = await panelWithChain(window);
     await window.getByTestId('parts-list').getByText('Stitch line').click();
 
-    const inset = panel.locator('label', { hasText: /^Inset/ }).locator('input');
+    const inset = panel.locator('label', { hasText: /^Edge margin/ }).locator('input');
     await inset.fill('60');
     await inset.press('Enter');
 
@@ -945,7 +958,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     // The root says what is wrong; the holes say only that what they follow
     // failed, rather than repeating the inset's reason (E3).
     await expect(rows.first()).toHaveAttribute('data-code', 'OFFSET_COLLAPSED');
-    await expect(rows.first()).toContainText('60 mm inset is deeper');
+    await expect(rows.first()).toContainText('60 mm edge margin is deeper');
     await expect(rows.nth(1)).toHaveAttribute('data-code', 'SOURCE_FAILED');
     await expect(rows.nth(1)).toContainText('Stitch line it follows could not be built');
     await expect(window.getByTestId('problem-count')).toHaveText('2');
@@ -955,7 +968,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await window.getByTestId('parts-list').getByText('Outline').click();
     await rows.first().click();
     await expect(window.getByTestId('selected-count')).toHaveText('1');
-    await expect(panel.getByTestId('feature-problems')).toContainText('deeper than this outline');
+    await expect(panel.getByTestId('feature-problems')).toContainText('deeper than this edge');
 
     // Fixing the cause clears it everywhere.
     await inset.fill('3.5');
@@ -1165,5 +1178,107 @@ test('a label cannot be flipped, and the button says why', async () => {
     // The panel still flips the panel itself.
     await window.getByTestId('parts-list').getByText('Outline').click();
     await expect(panel.getByTestId('flip-horizontal')).toBeEnabled();
+  });
+});
+
+test('a cut-out joins the selected part, and an open one is refused', async () => {
+  // Slice 4.3a. Each mode has one fixed result and selection only chooses the
+  // part (X4); a cut-out has to enclose something (S6).
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    // Outline mode is the default, and never reads the selection.
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 600, box!.y + 450, { steps: 5 });
+    await window.mouse.up();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    // The outline is selected, so the cut-out knows which part it belongs to.
+    await window.getByTestId('draw-as-cut-out').click();
+    await expect(window.getByTestId('draw-as-cut-out')).toHaveAttribute('aria-pressed', 'true');
+    await window.mouse.move(box!.x + 330, box!.y + 280);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 430, box!.y + 360, { steps: 5 });
+    await window.mouse.up();
+
+    // One part, two features: a hole belongs to the piece it is cut in.
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expect(window.getByTestId('parts-list')).toContainText('Cut-out');
+    // On the material, so nothing to report.
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+
+    // An open run cannot be cut out of anything, and says so rather than
+    // quietly becoming a marking line, which is what used to happen.
+    await window.getByTestId('tool-line').click();
+    await expect(window.getByTestId('draw-as-cut-out')).toHaveAttribute('aria-pressed', 'true');
+    await window.mouse.move(box!.x + 300, box!.y + 420);
+    await window.mouse.down();
+    await window.mouse.up();
+    await window.mouse.move(box!.x + 420, box!.y + 420);
+    await window.mouse.down();
+    await window.mouse.up();
+
+    await expect(window.getByTestId('tool-notice')).toContainText('nothing to cut');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+  });
+});
+
+test('a refused outline keeps its points, and closing it is the correction', async () => {
+  // X10, from the 4.3a review. A refusal that discards eleven clicks round a
+  // gusset is a correct rule delivered as a punishment: the run stays live
+  // until the user closes it or gives it up.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const click = async (x: number, y: number) => {
+      await window.mouse.move(box!.x + x, box!.y + y);
+      await window.mouse.down();
+      await window.mouse.up();
+    };
+
+    await window.getByTestId('tool-polyline').click();
+    await expect(window.getByTestId('draw-as-outline')).toHaveAttribute('aria-pressed', 'true');
+
+    await click(250, 200);
+    await click(500, 200);
+    await click(500, 400);
+    // Enter finishes the run — open, which an outline may not be (S6).
+    await window.keyboard.press('Enter');
+
+    await expect(window.getByTestId('tool-notice')).toContainText('nothing to cut');
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+
+    // The points are still there: clicking back on the first one closes the
+    // run that was refused, rather than starting a new one.
+    await click(250, 200);
+
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    // The notice element only exists while there is something to say.
+    await expect(window.getByTestId('tool-notice')).toHaveCount(0);
+    // A cut contour, which is what an outline is — not the marking line an
+    // open run used to be quietly filed as.
+    await expect(window.getByTestId('property-panel')).toContainText('Cut line');
+  });
+});
+
+test('an arc drawn where it cannot be cut says so instead of vanishing', async () => {
+  // The arc tool had no held refusal of its own, so three clicks in Outline
+  // mode drew nothing and said nothing at all (X1). Every draw tool now
+  // commits through the same boundary.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-arc').click();
+    await expect(window.getByTestId('draw-as-outline')).toHaveAttribute('aria-pressed', 'true');
+
+    await window.mouse.click(box!.x + 250, box!.y + 400);
+    await window.mouse.click(box!.x + 450, box!.y + 400);
+    await window.mouse.click(box!.x + 350, box!.y + 300);
+
+    await expect(window.getByTestId('tool-notice')).toContainText('nothing to cut');
+    await expect(window.getByTestId('part-count')).toHaveText('0');
   });
 });

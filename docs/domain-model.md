@@ -362,6 +362,23 @@ vanish.
    paths on load, so an improved offset silently improves every existing file.
 6. **Deterministic.** Same project in, same resolved geometry out.
 
+**"Inward" means toward the material** (D6, built 4.3a). A part's leather is inside its outline and
+*outside* every cut-out, so a stitch line inset from a cut-out runs **away** from the hole while the
+same inset round the outline runs into it. The domain resolves the direction from the role of what is
+being followed and hands geometry a signed distance; geometry keeps knowing only left and right.
+
+> **Known limitation, to be resolved by 4.9.** The direction is read from the **directly followed**
+> feature's role, in `applyDerivation`. That is correct for everything representable today, because
+> §4.2 requires the source of an inward offset to be a cut contour — so its role is always there to
+> read. It does **not** generalise. Seam allowance (4.9) derives an outline *outward from a stitch
+> line*, and a stitch line does not have a role: which side of it the leather is on depends on the
+> contour at the **root** of its chain, which may be an outline or a cut-out. An allowance grown
+> from the stitching round a thumb slot has to run toward the hole, and nothing in the current
+> signature can tell it so. 4.9 should resolve material orientation from the derivation's root
+> rather than from its immediate source, and `towardsMaterial` is the line to change. Left as it is
+> on purpose: guessing at the shape 4.9 needs before 4.9 exists is how a wrong abstraction gets
+> frozen in.
+
 ### 4.5 Deleting a feature others depend on — built, 4.2b
 
 [ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md). **A delete never changes a feature
@@ -531,8 +548,8 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | S2 | Every reference resolves to an existing feature | Commands (ADR 0009); loader | 4.2b |
 | S3 | The reference graph is acyclic | Commands; loader | built for derivations; references 4.10 |
 | S4 | Every derivation appears in the compatibility table (§4.2) | Commands; loader | 4.2b |
-| S5 | A part has at most one outer contour | Commands; loader | 4.3 |
-| S6 | Outer contours and cut-outs enclose an area | Drawing modes; loader | 4.3 |
+| S5 | A part has at most one outer contour | Commands; loader | built 4.3a |
+| S6 | Outer contours and cut-outs enclose an area | Drawing modes; loader | built 4.3a |
 | S7 | A locked feature changes only by being unlocked | Commands | 4.3 |
 | S8 | Derived geometry is never persisted | File format | built |
 | S9 | Nothing addresses geometry by segment index | Model types | built for runs; 4.10 |
@@ -558,6 +575,15 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | DR5 | Printed text is legible |
 | DR6 | A part disappears only when someone deletes it |
 
+**Design rules are sampled, not proved** (4.3a). DR2's containment questions — is this line on the
+leather, is this cut-out inside the part — are asked at a finite number of points along a path, not
+solved. A path that leaves the material and returns between two samples is not reported. This is
+deliberate: an exact answer needs path-against-path clipping, which [ADR 0008](adr/0008-no-clipper-binding.md)
+declined, and a rule that exists to catch mistakes does not have to certify their absence. What
+follows from it: a rule finding nothing is **not** a guarantee, nothing downstream may treat these
+rules as a proof of validity, and a cut path or an export must never be gated on one of them. Hole
+rules are exact — a hole is a point, and a point is either on the material or not.
+
 ### 8.5 Interaction invariants
 
 | Id | Invariant | Lands in |
@@ -565,12 +591,27 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | X1 | No command fails silently: every refusal has a reason, from the same check that refuses | 4.2b onward |
 | X2 | No delete changes a feature the user did not name without showing it first | 4.2b |
 | X3 | Derived features are never silently detached, converted or ignored | 4.2b, 4.8 |
-| X4 | Selection chooses where something goes, never what is created | 4.3 |
+| X4 | Selection chooses where something goes, never what is created | built 4.3a |
 | X5 | Text that can reach paper is set in millimetres, in the vendored typeface, laid out once | built 4.11a |
 | X6 | Text that restates a model value is generated, never stored | 4.10, 4.11 |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
-| X8 | Defaults come from project settings | 4.3 |
+| X8 | Defaults come from project settings | built 4.3a |
 | X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
+| X10 | A refusal keeps the user's work where it can still be corrected | built 4.3a for drawing |
+
+**X10 — a refusal is "not yet", not "gone"** (4.3a). Where a rejected operation has a plausible
+correction, the work stays put and the reason is shown beside it; the user decides whether to fix it
+or abandon it. Where there is no correction to make, the work goes and the reason still stays.
+
+The case that named the rule: an open polyline in Outline mode. It is genuinely refused — an outline
+has to enclose something (S6) — but the correction is one more click, so the run stays live, keeps
+its rubber band, and can be extended, closed, backspaced or escaped. Discarding eleven points around
+a gusset and leaving a sentence in the status bar is a correct refusal delivered as a punishment. By
+contrast the Line tool finishes itself at two points and can never close, so holding its points would
+trap the user in a refusal they cannot answer: there the points go and only the reason is kept.
+
+Both halves are the same rule as X1 — the reason always survives — with the user's work added to it.
+A tool that cannot say which case it is in should keep the work.
 
 ### 8.6 Diagnostics
 
@@ -613,10 +654,10 @@ The diagnostics themselves:
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
-| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | 4.3 — it needs material-relative containment, which arrives with cut-outs |
-| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm) | rule | DR2 | 4.3, with `OUTSIDE_PART` |
-| `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | 4.3 |
-| `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | 4.3 |
+| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a |
+| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm) | rule | DR2 | built 4.3a |
+| `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | built 4.3a |
+| `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | built 4.3a |
 | `HOLE_SPACING_UNEVEN` | info (runs differing by above 5 % of the pitch) | rule | DR4 | built 4.12a |
 | `HOLE_SPACING_DEVIATION` | warning (above 25 % from the iron) | rule | DR4 | built 4.12a |
 | `HOLE_COUNT_TOO_LOW` | warning (under 2 in a set) | rule | DR4 | built 4.12a — counted per set, because with a hole at every corner a short run legitimately contributes one |
@@ -626,6 +667,10 @@ The diagnostics themselves:
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
 than reportable: `PART_HAS_MULTIPLE_OUTER` (S5), `CONTOUR_NOT_CLOSED` (S6), `BROKEN_DERIVATION` (S2
 for a deleted source, `SOURCE_FAILED` for a failed one). `HOLES_OUTSIDE_PART` became `OUTSIDE_PART`.
+
+Since 4.3a the first two exist as **refusal** codes rather than diagnostics — `PART_ALREADY_HAS_OUTER`
+and `CONTOUR_NOT_CLOSED` — raised by the command and the loader that refuse them, never listed in the
+panel.
 
 **v1.2:** `SEAM_HOLE_COUNT_MISMATCH`, `PARTS_OVERLAP_ON_SHEET`.
 

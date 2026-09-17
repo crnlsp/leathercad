@@ -1,14 +1,21 @@
-import type { DrawAs, HardwareOptions } from '@leathercad/editor';
+import type { DrawMode, HardwareOptions } from '@leathercad/editor';
 
 import { PUNCH_SIZES_MM } from './punches.js';
 
 /** Which tools draw geometry whose kind the user chooses. */
 const DRAW_TOOLS: ReadonlySet<string> = new Set(['rectangle', 'circle', 'arc', 'line', 'polyline']);
 
-const DRAW_AS_CHOICES: readonly { readonly id: DrawAs; readonly label: string }[] = [
-  { id: 'cut', label: 'Cut' },
+/**
+ * One fixed result each (X4). *Outline* makes a new part and never reads the
+ * selection; the rest join the selected part. *Stitch + allowance* is the
+ * sixth and arrives with seam allowance, slice 4.9.
+ */
+const DRAW_MODES: readonly { readonly id: DrawMode; readonly label: string }[] = [
+  { id: 'outline', label: 'Outline' },
+  { id: 'cut-out', label: 'Cut-out' },
+  { id: 'stitch', label: 'Stitch' },
   { id: 'fold', label: 'Fold' },
-  { id: 'mark', label: 'Marking' },
+  { id: 'marking', label: 'Marking' },
 ];
 
 const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
@@ -38,8 +45,8 @@ export function ToolOptions({
   onHardware,
 }: {
   toolId: string;
-  drawAs: DrawAs;
-  onDrawAs: (next: DrawAs) => void;
+  drawAs: DrawMode;
+  onDrawAs: (next: DrawMode) => void;
   hardware: HardwareOptions;
   onHardware: (next: HardwareOptions) => void;
 }) {
@@ -47,7 +54,7 @@ export function ToolOptions({
     return (
       <div className="tool-options" data-testid="tool-options">
         <span className="field-label">Draw as</span>
-        {DRAW_AS_CHOICES.map((choice) => (
+        {DRAW_MODES.map((choice) => (
           <button
             key={choice.id}
             type="button"

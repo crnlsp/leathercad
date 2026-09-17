@@ -1,4 +1,5 @@
-import { EPS_POINT } from '@leathercad/core';
+import { EPS_POINT, type Mm } from '@leathercad/core';
+
 import { solveCubic } from '../polynomial.js';
 import * as Seg from '../segment/index.js';
 import { closestPointOnSegment, type Vec2 } from '../vec2.js';
@@ -203,6 +204,26 @@ function cubicCrossings(s: Seg.CubicSegment, point: Vec2): number | null {
 /** Distance-based test, for "did the user click the line" rather than "inside". */
 export function isPointOnPath(p: Path, point: Vec2, tolerance: number): boolean {
   return p.segments.some((s) => distanceToSegment(s, point) <= tolerance);
+}
+
+/**
+ * Shortest distance from a point to the path itself — the line, not the region
+ * it encloses.
+ *
+ * Positive on both sides: how far a hole is from an edge does not depend on
+ * which side of it the hole happens to be, and the caller already knows that
+ * from `containsPoint`.
+ *
+ * Infinite for a path with no segments, which is the honest answer to "how far
+ * is this from nothing".
+ */
+export function distanceToPath(p: Path, point: Vec2): Mm {
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const s of p.segments) {
+    const distance = distanceToSegment(s, point);
+    if (distance < nearest) nearest = distance;
+  }
+  return nearest;
 }
 
 /**

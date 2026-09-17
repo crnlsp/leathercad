@@ -1,12 +1,24 @@
-import { DocumentStore, emptyDocument } from '@leathercad/document';
+import {
+  DocumentStore,
+  emptyDocument,
+  addPart,
+  rectShape,
+  rectanglePart,
+} from '@leathercad/document';
 import type { Path, Vec2 } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import type { PointerInput, Tool, ToolContext } from '../tool.js';
+import type { DrawMode } from './commitDrawn.js';
 import { Viewport } from '../viewport.js';
 import { createLineTool, createPolylineTool } from './polylineTool.js';
 
-function harness(): { ctx: ToolContext; store: DocumentStore } {
+/**
+ * `outline` unless a test says otherwise, because that is the mode a closed
+ * run belongs to. An **open** run is refused there since §3.8 — it encloses
+ * nothing — so tests that draw one say which mode they mean.
+ */
+function harness(drawAs: DrawMode = 'outline'): { ctx: ToolContext; store: DocumentStore } {
   const store = new DocumentStore(emptyDocument('proj'));
   const viewport = new Viewport();
   viewport.resize(800, 600, 1);
@@ -19,6 +31,7 @@ function harness(): { ctx: ToolContext; store: DocumentStore } {
       store,
       dispatch: (command) => store.dispatch(command),
       invalidate: () => {},
+      drawAs: () => drawAs,
     },
   };
 }
@@ -41,21 +54,56 @@ const click = (tool: Tool, ctx: ToolContext, at: Vec2, shiftKey = false): void =
 const key = (tool: Tool, ctx: ToolContext, k: string): void =>
   tool.onKey?.(ctx, { key: k, shiftKey: false, ctrlKey: false });
 
-/** The drawn path of the first feature, if it has one. */
+/**
+ * The drawn path of the feature the tool just made.
+ *
+ * The **last** one, not the first: every mode but *Outline* adds to a part
+ * that already has an outline of its own for the drawing to join.
+ */
 function firstPath(store: DocumentStore): Path | null {
-  const source = store.getState().document.project.parts[0]?.features[0]?.source;
+  const source = drawnFeature(store)?.source;
   return source?.kind === 'path' ? source.path : null;
 }
 
-const firstFeature = (store: DocumentStore) =>
-  store.getState().document.project.parts[0]?.features[0];
+function drawnFeature(store: DocumentStore) {
+  const features = store.getState().document.project.parts.flatMap((part) => part.features);
+  return features[features.length - 1];
+}
+
+const firstFeature = drawnFeature;
 
 let counter = 0;
 const nextId = (): string => `poly-${counter++}`;
 
+/**
+ * A part for a drawn feature to join.
+ *
+ * Every mode but *Outline* puts what it draws on the selected part, so these
+ * tests need one to exist and be selected. *Outline* makes its own and never
+ * reads the selection.
+ */
+function withPart(drawAs: DrawMode): { ctx: ToolContext; store: DocumentStore } {
+  const made = harness(drawAs);
+  if (drawAs !== 'outline') {
+    const featureId = 'panel-cut';
+    made.store.dispatch(
+      addPart(
+        rectanglePart(
+          'panel' as never,
+          featureId as never,
+          'Panel',
+          rectShape({ x: -50, y: -50 }, 200, 200),
+        ),
+      ),
+    );
+    made.store.select([featureId as never]);
+  }
+  return made;
+}
+
 describe('polyline tool', () => {
   it('commits an open run on Enter', () => {
-    const { ctx, store } = harness();
+    const { ctx, store } = withPart('marking');
     const tool = createPolylineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -69,7 +117,7 @@ describe('polyline tool', () => {
   });
 
   it('makes an open run a marking line, not something to cut', () => {
-    const { ctx, store } = harness();
+    const { ctx, store } = withPart('marking');
     const tool = createPolylineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -109,7 +157,9 @@ describe('polyline tool', () => {
   });
 
   it('will not close on two points, which encloses nothing', () => {
-    const { ctx, store } = harness();
+    // Drawn as a marking line, because the run this produces is open — and an
+    // open run in Outline mode is now refused rather than filed as one (§3.8).
+    const { ctx, store } = withPart('marking');
     const tool = createPolylineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -137,7 +187,7 @@ describe('polyline tool', () => {
   });
 
   it('drops the last point on Backspace', () => {
-    const { ctx, store } = harness();
+    const { ctx, store } = withPart('marking');
     const tool = createPolylineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -164,7 +214,7 @@ describe('polyline tool', () => {
   });
 
   it('constrains the segment angle with Shift', () => {
-    const { ctx, store } = harness();
+    const { ctx, store } = withPart('marking');
     const tool = createPolylineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -180,7 +230,7 @@ describe('polyline tool', () => {
   });
 
   it('selects what it made', () => {
-    const { ctx, store } = harness();
+    const { ctx, store } = withPart('marking');
     const tool = createPolylineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -204,7 +254,7 @@ describe('polyline tool', () => {
 
 describe('line tool', () => {
   it('finishes itself on the second click', () => {
-    const { ctx, store } = harness();
+    const { ctx, store } = withPart('marking');
     const tool = createLineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -216,7 +266,7 @@ describe('line tool', () => {
   });
 
   it('takes no third point', () => {
-    const { ctx, store } = harness();
+    const { ctx, store } = withPart('marking');
     const tool = createLineTool(nextId);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -226,5 +276,100 @@ describe('line tool', () => {
 
     // The third click starts a second line rather than extending the first.
     expect(store.getState().document.project.parts).toHaveLength(1);
+  });
+});
+
+describe('a refused run is not thrown away', () => {
+  /**
+   * The UX principle, in the one place it currently bites: when a refusal has
+   * a plausible correction, the work stays where the user can correct it.
+   * Pressing Enter on an open run in Outline mode used to discard every point
+   * and leave a sentence in the status bar — eleven clicks round a gusset for
+   * a message.
+   */
+  /**
+   * How many segments the rubber band is showing — one per point held, since
+   * the preview runs from the first point through to the cursor.
+   */
+  const previewSegments = (tool: Tool, ctx: ToolContext): number => {
+    const item = tool.buildOverlay?.(ctx).items.find((i) => i.kind === 'path');
+    return item === undefined || item.kind !== 'path' ? 0 : item.path.segments.length;
+  };
+
+  it('keeps the points, and says why, when an open run is refused', () => {
+    const { ctx, store } = harness('outline');
+    const tool = createPolylineTool(nextId);
+
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 20, y: 0 });
+    click(tool, ctx, { x: 20, y: 20 });
+    key(tool, ctx, 'Enter');
+
+    expect(store.getState().document.project.parts).toHaveLength(0);
+    expect(tool.notice?.(ctx)).toMatchObject({
+      code: 'CONTOUR_NOT_CLOSED',
+      facts: { role: 'outer' },
+    });
+    // The rubber band is still showing all three points, plus the cursor.
+    expect(previewSegments(tool, ctx)).toBe(3);
+  });
+
+  it('lets the user close what was refused, which is the correction', () => {
+    const { ctx, store } = harness('outline');
+    const tool = createPolylineTool(nextId);
+
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 20, y: 0 });
+    click(tool, ctx, { x: 20, y: 20 });
+    key(tool, ctx, 'Enter');
+
+    // Clicking back on the first point closes it — the same gesture as always,
+    // on the run that was refused rather than on a fresh one.
+    click(tool, ctx, { x: 0, y: 0 });
+
+    const path = firstPath(store);
+    expect(path?.closed).toBe(true);
+    expect(path?.segments).toHaveLength(3);
+    expect(tool.notice?.(ctx)).toBeNull();
+  });
+
+  it('lets the user back a point off a refused run', () => {
+    const { ctx } = harness('outline');
+    const tool = createPolylineTool(nextId);
+
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 20, y: 0 });
+    click(tool, ctx, { x: 20, y: 20 });
+    key(tool, ctx, 'Enter');
+    key(tool, ctx, 'Backspace');
+
+    // Two points left of the three that were refused.
+    expect(previewSegments(tool, ctx)).toBe(2);
+  });
+
+  it('still lets Escape mean "throw it away"', () => {
+    const { ctx } = harness('outline');
+    const tool = createPolylineTool(nextId);
+
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 20, y: 0 });
+    key(tool, ctx, 'Enter');
+    key(tool, ctx, 'Escape');
+
+    expect(tool.buildOverlay?.(ctx).items).toHaveLength(0);
+  });
+
+  it('does not strand the line tool, which can never close', () => {
+    // Two points and it finishes itself, so there is no correction to make
+    // here — the reason is kept, the points are not, and the user is free to
+    // switch modes or tools rather than clicking into a refusal that repeats.
+    const { ctx } = harness('outline');
+    const tool = createLineTool(nextId);
+
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 20, y: 0 });
+
+    expect(tool.notice?.(ctx)).toMatchObject({ code: 'CONTOUR_NOT_CLOSED' });
+    expect(tool.buildOverlay?.(ctx).items).toHaveLength(0);
   });
 });

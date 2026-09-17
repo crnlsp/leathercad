@@ -53,7 +53,7 @@ export interface ToolContext {
    * Absent means `'cut'`, so a caller that does not care — every test harness
    * written before the setting existed — keeps the behaviour it had.
    */
-  readonly drawAs?: () => 'cut' | 'fold' | 'mark';
+  readonly drawAs?: () => 'outline' | 'cut-out' | 'stitch' | 'fold' | 'marking';
   /**
    * Asks the application to delete these features.
    *

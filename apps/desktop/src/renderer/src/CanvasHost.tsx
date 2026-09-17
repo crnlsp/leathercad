@@ -15,7 +15,7 @@ import {
   createScaleTool,
   createSelectTool,
   createTextTool,
-  type DrawAs,
+  type DrawMode,
   type HardwareOptions,
   type PointerInput,
 } from '@leathercad/editor';
@@ -56,7 +56,7 @@ export function CanvasHost({
 }: {
   store: DocumentStore;
   toolId: string;
-  drawAs: DrawAs;
+  drawAs: DrawMode;
   hardware: HardwareOptions;
   requestDelete: (ids: readonly string[]) => void;
   nextId: () => string;

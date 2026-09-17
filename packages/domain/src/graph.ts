@@ -188,6 +188,17 @@ function compatibilityRefusal(
 }
 
 /**
+ * Whether this feature encloses an area, by its parameters alone (S6).
+ *
+ * What an outline and a cut-out both have to do: a shape with two ends has
+ * nothing to cut out of the leather. Read from parameters rather than from
+ * evaluated geometry, for the reason at the top of this file.
+ */
+export function enclosesArea(project: Project, feature: Feature): boolean {
+  return declaresClosed(indexById(project), feature, new Set());
+}
+
+/**
  * Whether a feature is closed by its parameters alone.
  *
  * A shape that encloses an area, a closed drawn path, or a whole-run offset of

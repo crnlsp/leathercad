@@ -1,7 +1,11 @@
 import type { Project } from '@leathercad/domain';
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 
-import { describeProblemWithSubject, graphProblems } from '@leathercad/domain';
+import {
+  describeProblemWithSubject,
+  graphProblems,
+  partStructureProblems,
+} from '@leathercad/domain';
 
 import { CURRENT_FORMAT_VERSION, migrate } from './migrations/index.js';
 import { ManifestSchema, ProjectSchema, type Manifest } from './schema.js';
@@ -111,7 +115,11 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
   // (S1–S4). A file can satisfy one and break the other, and everything past
   // this point assumes a sound graph — so a broken one is refused here, naming
   // the feature, rather than found later as a stitch line following nothing.
-  const problems = graphProblems(result.data as Project);
+  const problems = [
+    ...graphProblems(result.data as Project),
+    // S5 and S6: one outline per part, and outlines that enclose something.
+    ...partStructureProblems(result.data as Project),
+  ];
   if (problems.length > 0) {
     throw new InvalidProjectFileError(
       `document.json is not valid: ${problems.map(describeProblemWithSubject).join(' ')}`,

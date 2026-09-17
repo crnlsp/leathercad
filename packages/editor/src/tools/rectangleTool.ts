@@ -2,7 +2,7 @@ import { rectShape } from '@leathercad/document';
 import { Shapes } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
-import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
+import { createDrawCommit } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 
@@ -23,6 +23,9 @@ type State =
 export function createRectangleTool(nextId: () => string): Tool {
   let state: State = { kind: 'idle' };
 
+  /** Every draw tool commits through one of these, so no refusal is silent. */
+  const draw = createDrawCommit();
+
   const reset = (ctx: ToolContext): void => {
     state = { kind: 'idle' };
     ctx.invalidate();
@@ -35,6 +38,7 @@ export function createRectangleTool(nextId: () => string): Tool {
 
     onPointerDown(ctx, event) {
       if (event.button !== 0) return;
+      draw.begin();
       state = { kind: 'dragging', startMm: event.at, currentMm: event.at };
       ctx.invalidate();
     },
@@ -66,13 +70,13 @@ export function createRectangleTool(nextId: () => string): Tool {
 
       const origin = { x: Math.min(startMm.x, end.x), y: Math.min(startMm.y, end.y) };
 
-      commitDrawn(ctx, nextId, 'Panel', {
+      draw.commit(ctx, nextId, 'Panel', {
         kind: 'shape',
         shape: rectShape(origin, Math.abs(width), Math.abs(height)),
       });
     },
 
-    notice: drawTargetNotice,
+    notice: (ctx) => draw.notice(ctx),
 
     onKey(ctx, event) {
       if (event.key === 'Escape') reset(ctx);

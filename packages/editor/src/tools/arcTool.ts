@@ -2,7 +2,7 @@ import { arcShape } from '@leathercad/document';
 import { Shapes, type Path, type Segment, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
-import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
+import { createDrawCommit } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 import { constrainToAngleStep } from './angleConstraint.js';
@@ -29,6 +29,15 @@ type State =
 export function createArcTool(nextId: () => string): Tool {
   let state: State = { kind: 'idle', cursor: null };
 
+  /**
+   * Holds the reason when a drawing is refused, so it reaches the status bar.
+   *
+   * An arc has two ends, so in Outline or Cut-out mode it is always refused
+   * (S6) — and an arc has no correction path, unlike a polyline that can still
+   * be closed. The drawing goes; the reason stays until the next one starts.
+   */
+  const draw = createDrawCommit();
+
   const reset = (ctx: ToolContext): void => {
     state = { kind: 'idle', cursor: null };
     ctx.invalidate();
@@ -47,6 +56,7 @@ export function createArcTool(nextId: () => string): Tool {
       if (event.button !== 0) return;
 
       const at = aim(event.at, event.shiftKey);
+      if (state.kind !== 'placing') draw.begin();
       const points = state.kind === 'placing' ? [...state.points, at] : [at];
 
       if (points.length < 3) {
@@ -61,7 +71,7 @@ export function createArcTool(nextId: () => string): Tool {
       const shape = solve(start, bulge, end);
       if (shape === null) return;
 
-      commitDrawn(ctx, nextId, 'Line', { kind: 'shape', shape });
+      draw.commit(ctx, nextId, 'Line', { kind: 'shape', shape });
     },
 
     onPointerMove(ctx, event) {
@@ -70,7 +80,7 @@ export function createArcTool(nextId: () => string): Tool {
       ctx.invalidate();
     },
 
-    notice: drawTargetNotice,
+    notice: (ctx) => draw.notice(ctx),
 
     onKey(ctx, event) {
       if (event.key === 'Escape') {

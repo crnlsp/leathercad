@@ -32,7 +32,7 @@ interface About {
 }
 
 /** What a tool was about to put on a part. */
-export type PlacedThing = 'line' | 'label';
+export type PlacedThing = 'line' | 'label' | 'cut-out';
 
 /** The row of the derivation compatibility table (domain-model.md §4.2) that refused. */
 export type CompatibilityRule =
@@ -61,6 +61,32 @@ export interface ProblemFacts {
   readonly WOULD_LOOP: About & { readonly sourceId: FeatureId; readonly sourceName: string };
   readonly CYCLE: About;
   readonly DERIVATION_INCOMPATIBLE: About & { readonly rule: CompatibilityRule };
+  /** S5: a part is one piece of leather, so it has one edge. */
+  readonly PART_ALREADY_HAS_OUTER: About & {
+    readonly partName: string;
+    readonly outerName: string;
+  };
+  /**
+   * S6: an outline or a cut-out has to enclose an area to be cut out.
+   *
+   * Raised by the loader about a feature, and by a drawing mode about one the
+   * user is in the middle of drawing — which does not exist yet, and so has no
+   * id.
+   */
+  readonly CONTOUR_NOT_CLOSED: {
+    readonly featureId?: FeatureId;
+    readonly featureName: string;
+    readonly role: 'outer' | 'inner';
+    /**
+     * Whether closing it is a correction the user can actually make.
+     *
+     * A run of points can be closed; an arc has two ends and always will, so
+     * telling its author to "close the shape" is advice nothing accepts —
+     * the same defect as sending someone to draw a second outline. False only
+     * where the shape itself cannot enclose anything.
+     */
+    readonly closable: boolean;
+  };
 
   // ——— Interaction (X): refused at a gesture ———
   readonly FEATURE_MISSING: { readonly featureId: FeatureId };
@@ -111,6 +137,14 @@ export interface ProblemFacts {
   readonly HOLE_SPACING_UNEVEN: About & { readonly narrowestMm: Mm; readonly widestMm: Mm };
   readonly HOLE_COUNT_TOO_LOW: About & { readonly count: number };
   readonly EMPTY_PART: { readonly partId: PartId; readonly partName: string };
+  readonly PART_HAS_NO_OUTER_CONTOUR: { readonly partId: PartId; readonly partName: string };
+  readonly CUT_OUT_OUTSIDE_PART: About;
+  readonly OUTSIDE_PART: About & { readonly what: 'holes' | 'line' };
+  readonly HOLE_TOO_CLOSE_TO_EDGE: About & {
+    /** The nearest edge, in millimetres. */
+    readonly clearanceMm: Mm;
+    readonly minimumMm: Mm;
+  };
 }
 
 export type ProblemCode = keyof ProblemFacts;

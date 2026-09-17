@@ -1,7 +1,7 @@
 import { dist, polyline, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
-import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
+import { createDrawCommit } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 import { constrainToAngleStep } from './angleConstraint.js';
@@ -39,6 +39,18 @@ function polylineLike(
 ): Tool {
   let state: State = { kind: 'idle' };
 
+  const draw = createDrawCommit();
+
+  /**
+   * Whether a refused run could still be corrected where it stands.
+   *
+   * The correction for "this does not enclose anything" is to keep going and
+   * close it, which needs a third point. A polyline can always take one; the
+   * line tool finishes itself at two and never can, so holding its points
+   * would only trap the user in a refusal they cannot answer.
+   */
+  const correctable = config.maxPoints === Infinity;
+
   const reset = (ctx: ToolContext): void => {
     state = { kind: 'idle' };
     ctx.invalidate();
@@ -46,17 +58,31 @@ function polylineLike(
 
   /** Commits what has been drawn, if it is worth committing. */
   const finish = (ctx: ToolContext, points: readonly Vec2[], closed: boolean): void => {
-    reset(ctx);
-
     // One point is a click, not a line. Committing it would leave a part in
     // the list that cannot be seen or selected.
-    if (points.length < 2) return;
-    if (closed && points.length < 3) return;
+    if (points.length < 2 || (closed && points.length < 3)) {
+      reset(ctx);
+      return;
+    }
 
-    commitDrawn(ctx, nextId, closed ? 'Panel' : 'Line', {
-      kind: 'path',
-      path: polyline(points, closed),
-    });
+    const source = { kind: 'path', path: polyline(points, closed) } as const;
+
+    if (draw.commit(ctx, nextId, closed ? 'Panel' : 'Line', source) !== null) {
+      reset(ctx);
+      return;
+    }
+
+    // Refused. The run stays live where it can still be answered, so the user
+    // can add a point, Backspace one off, click the first point to close, or
+    // press Escape to let it go — a refusal that says "not an outline yet"
+    // rather than one that eats eleven clicks round a gusset.
+    if (!correctable) {
+      reset(ctx);
+      return;
+    }
+
+    state = { kind: 'drawing', points, cursor: points[points.length - 1]! };
+    ctx.invalidate();
   };
 
   return {
@@ -66,6 +92,12 @@ function polylineLike(
 
     onPointerDown(ctx, event) {
       if (event.button !== 0) return;
+
+      // Every click is the user answering whatever the last one was told, so
+      // the held refusal clears here and `finish` puts it back if it still
+      // applies. A run kept alive after a refusal stops nagging the moment it
+      // is being corrected.
+      draw.begin();
 
       if (state.kind === 'idle') {
         state = { kind: 'drawing', points: [event.at], cursor: event.at };
@@ -100,7 +132,7 @@ function polylineLike(
       ctx.invalidate();
     },
 
-    notice: drawTargetNotice,
+    notice: (ctx) => draw.notice(ctx),
 
     onKey(ctx, event) {
       if (state.kind !== 'drawing') return;

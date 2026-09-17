@@ -64,6 +64,21 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     describe: (f) => COMPATIBILITY[f.rule],
   },
 
+  PART_ALREADY_HAS_OUTER: {
+    title: 'Already has an outline',
+    describe: (f) =>
+      `${f.partName} is already cut to ${f.outerName}. A part is one piece of leather, so it has ` +
+      'one outline — draw this as a cut-out, or start another part.',
+  },
+  CONTOUR_NOT_CLOSED: {
+    title: 'Does not enclose anything',
+    describe: (f) =>
+      `${f.featureName} has two ends, so there is nothing to cut ${f.role === 'inner' ? 'out of the part' : 'out'}. ` +
+      (f.closable
+        ? 'Close the shape, or draw it as a marking line.'
+        : 'Draw it as a marking line.'),
+  },
+
   FEATURE_MISSING: {
     title: 'No such feature',
     describe: () => 'That feature does not exist.',
@@ -136,7 +151,7 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     title: 'Offset collapsed',
     describe: (f) =>
       f.side === 'inward'
-        ? `A ${String(f.distanceMm)} mm inset is deeper than this outline can hold.`
+        ? `A ${String(f.distanceMm)} mm edge margin is deeper than this edge can hold.`
         : `A ${String(f.distanceMm)} mm allowance cannot be built outside this stitch line.`,
   },
   OFFSET_UNSUPPORTED: {
@@ -185,7 +200,7 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     title: 'Spacing off the iron',
     describe: (f) =>
       `The spacing came out ${f.achievedMm.toFixed(2)} mm against a ${f.pitchMm.toFixed(2)} mm ` +
-      'iron. Change the pitch, or the inset, to bring them together.',
+      'iron. Change the pitch, or the edge margin, to bring them together.',
   },
   HOLE_SPACING_UNEVEN: {
     title: 'Uneven spacing',
@@ -199,6 +214,33 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
       `${f.featureName} has ${f.count < 1 ? 'no holes' : plural(f.count, 'hole')}, ` +
       'and a seam needs at least two.',
   },
+  PART_HAS_NO_OUTER_CONTOUR: {
+    title: 'Nothing to cut',
+    describe: (f) =>
+      `${f.partName} has stitching and marks but no outline, so there is no piece of leather to ` +
+      'cut them from. Draw an outline, or move these onto another part.',
+  },
+  CUT_OUT_OUTSIDE_PART: {
+    title: 'Cut-out is off the part',
+    describe: (f) =>
+      `${f.featureName} is not inside the outline it belongs to, so it cuts nothing. Move it onto ` +
+      'the part.',
+  },
+  OUTSIDE_PART: {
+    title: 'Off the material',
+    describe: (f) =>
+      f.what === 'holes'
+        ? `${f.featureName} has holes off the material — through the outline, or into a cut-out. ` +
+          'They cannot be punched.'
+        : `${f.featureName} runs off the material, so part of it cannot be marked.`,
+  },
+  HOLE_TOO_CLOSE_TO_EDGE: {
+    title: 'Too near the edge',
+    describe: (f) =>
+      `${f.featureName} comes within ${f.clearanceMm.toFixed(2)} mm of an edge, under the ` +
+      `${f.minimumMm.toFixed(2)} mm a stitch needs. Leather tears out between a hole and an edge.`,
+  },
+
   EMPTY_PART: {
     title: 'Empty part',
     describe: (f) =>
@@ -235,7 +277,14 @@ export function describeProblemWithSubject(p: Problem): string {
 
 /** Counts only, so the plural turns on "more than one" rather than an equality. */
 function aThing(what: PlacedThing): string {
-  return what === 'label' ? 'a label' : 'a fold or marking line';
+  switch (what) {
+    case 'label':
+      return 'a label';
+    case 'cut-out':
+      return 'a cut-out';
+    case 'line':
+      return 'a fold or marking line';
+  }
 }
 
 function plural(count: number, noun: string): string {

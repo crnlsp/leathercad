@@ -26,6 +26,8 @@ export {
   addMarkingLine,
   addPart,
   addStitchHoles,
+  addCutOut,
+  addDrawnStitchLine,
   addStitchLine,
   addTextLabel,
   arcShape,

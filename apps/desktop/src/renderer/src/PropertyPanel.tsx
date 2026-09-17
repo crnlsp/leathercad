@@ -14,6 +14,7 @@ import type { FlipAxis } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
 import { describeProblem, evaluate, followRefusal } from '@leathercad/domain';
 
+import { IRON_PRESETS } from './irons.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
 import { FeatureEditor } from './featureEditors/index.js';
@@ -205,9 +206,6 @@ function FlipButton({
   );
 }
 
-/** The inset most leatherwork uses, and the one the settings default to. */
-const DEFAULT_STITCH_INSET_MM = 3.5;
-
 /**
  * What can be derived from what is selected.
  *
@@ -233,10 +231,12 @@ function DeriveActions({
         type="button"
         className="tool"
         data-testid="add-stitch-line"
-        title="A stitch line that follows this outline, and keeps following it"
+        title="A stitch line that follows this edge at a fixed margin, and keeps following it"
         onClick={() => {
           const id = nextId();
-          store.dispatch(addStitchLine(part.id, id, feature.id, DEFAULT_STITCH_INSET_MM));
+          // No inset given: the command reads the project's stitch margin, so
+          // a project set up for 4 mm gets 4 mm (D7, X8).
+          store.dispatch(addStitchLine(part.id, id, feature.id));
           store.select([id]);
         }}
       >
@@ -255,12 +255,13 @@ function DeriveActions({
         onClick={() => {
           const id = nextId();
           store.dispatch(
+            // Likewise the iron: the pitch comes from the project's settings,
+            // and the label follows the pitch so the panel can still name the
+            // iron rather than calling every default "Custom".
             addStitchHoles(part.id, id, feature.id, {
-              type: 'stitch-holes',
-              pitchMm: 3.85,
               mode: 'fit-whole',
               corners: 'hole-at-corner',
-              ironLabel: 'KS Blade 3.85 mm',
+              ...ironLabelFor(store.getState().document.project.settings.defaultIronPitchMm),
             }),
           );
           store.select([id]);
@@ -272,6 +273,12 @@ function DeriveActions({
   }
 
   return null;
+}
+
+/** The name of an iron with this pitch, if the presets know one. */
+function ironLabelFor(pitchMm: number): { ironLabel?: string } {
+  const iron = IRON_PRESETS.find((preset) => preset.pitchMm === pitchMm);
+  return iron === undefined ? {} : { ironLabel: iron.label };
 }
 
 function findSelected(

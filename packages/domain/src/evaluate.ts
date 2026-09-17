@@ -322,7 +322,13 @@ function build(
         };
       }
 
-      const offset = applyDerivation(feature, sourcePath, sourceAnchors, source.op);
+      const offset = applyDerivation(
+        feature,
+        resolvedSource!.feature,
+        sourcePath,
+        sourceAnchors,
+        source.op,
+      );
       return {
         from,
         path: offset.path,
@@ -385,6 +391,7 @@ function followSource(
  */
 function applyDerivation(
   feature: Feature,
+  followedFeature: Feature,
   sourcePath: Path,
   sourceAnchors: readonly (Mm | null)[],
   op: Extract<Derivation, { type: 'offset' }>,
@@ -400,7 +407,16 @@ function applyDerivation(
 
   const inwardIsLeft = !sourcePath.closed || PathOps.signedArea(sourcePath) > 0;
   const towardsInside = op.side === 'inward' ? 1 : -1;
-  const distance = op.distanceMm * towardsInside * (inwardIsLeft ? 1 : -1);
+
+  // D6: inward means **into the leather**, not into the shape. A part's
+  // material is inside its outline and *outside* every cut-out, so a stitch
+  // line round a thumb slot runs away from the hole — into the part — while
+  // the same inset round the outline runs into it. Without this the stitching
+  // for a slot would be drawn across the gap it is meant to edge.
+  const towardsMaterial =
+    followedFeature.kind === 'cut-contour' && followedFeature.role === 'inner' ? -1 : 1;
+
+  const distance = op.distanceMm * towardsInside * towardsMaterial * (inwardIsLeft ? 1 : -1);
 
   const pieces = offsetPathTraced(followed, distance, { join: 'round' });
   if (pieces.length === 0) {

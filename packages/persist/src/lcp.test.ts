@@ -406,3 +406,79 @@ describe('a frozen feature', () => {
     expect(loadProject(saveProject(frozen, options)).project).toEqual(frozen);
   });
 });
+
+describe('the loader refuses a part it could not have made (S5, S6)', () => {
+  /** A project the commands would never build, as a file might still hold it. */
+  function fileWith(features: unknown[]): Uint8Array {
+    const project = {
+      id: 'p',
+      name: 'Test',
+      settings: { gridSpacingMm: 1, defaultStitchInsetMm: 3.5, defaultIronPitchMm: 3.85 },
+      parts: [{ id: 'part-1', name: 'Panel', quantity: 1, features }],
+    };
+    return archive(project as never);
+  }
+
+  const outline = (id: string, name: string) => ({
+    id,
+    kind: 'cut-contour',
+    role: 'outer',
+    name,
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'shape',
+      shape: {
+        type: 'rect',
+        origin: { x: 0, y: 0 },
+        width: 100,
+        height: 60,
+        rotation: 0,
+        radii: { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 },
+      },
+    },
+  });
+
+  it('refuses two outlines on one part, naming the second', () => {
+    const bytes = fileWith([outline('cut-1', 'Outline'), outline('cut-2', 'Another outline')]);
+
+    expect(() => loadProject(bytes)).toThrow(InvalidProjectFileError);
+    expect(() => loadProject(bytes)).toThrow(/Another outline/);
+    expect(() => loadProject(bytes)).toThrow(/one outline/);
+  });
+
+  it('refuses an outline that encloses nothing', () => {
+    const bytes = fileWith([
+      {
+        ...outline('cut-1', 'Open edge'),
+        source: {
+          kind: 'path',
+          path: {
+            closed: false,
+            segments: [{ kind: 'line', a: { x: 0, y: 0 }, b: { x: 50, y: 0 } }],
+          },
+        },
+      },
+    ]);
+
+    expect(() => loadProject(bytes)).toThrow(/Open edge/);
+    expect(() => loadProject(bytes)).toThrow(/nothing to cut/);
+  });
+
+  it('opens a part with one outline and a cut-out in it', () => {
+    const bytes = fileWith([
+      outline('cut-1', 'Outline'),
+      {
+        id: 'hole-1',
+        kind: 'cut-contour',
+        role: 'inner',
+        name: 'Thumb slot',
+        visible: true,
+        locked: false,
+        source: { kind: 'shape', shape: { type: 'circle', centre: { x: 50, y: 30 }, radius: 10 } },
+      },
+    ]);
+
+    expect(loadProject(bytes).project.parts[0]?.features).toHaveLength(2);
+  });
+});

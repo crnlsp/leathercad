@@ -652,14 +652,48 @@ that walks one scenario through the whole phase.
   **Two E2E tests assumed deleting a lone outline removed its part.** The part now stays, marked
   empty, until *Remove*. Format **version 4** (`frozenFrom`), with `fixtures/format/v4.lcp`; v3 is now
   an old file.
-- **4.3** Parts panel and cut-outs. Part selection beside feature selection; the parts panel as a
-  dependency tree (*Outline ▸ Stitch line ▸ Holes*); delete and duplicate a part, re-pointing the
-  derivations inside it; visibility, and a lock that commands honour rather than only picking.
-  Drawing modes regrouped so each has one fixed result: *Outline* and *Stitch + allowance* always
-  make a new part, *Cut-out*, *Stitch*, *Fold* and *Marking* join the selected part, and an open path
-  in an outline mode is refused rather than filed as a marking line. "Inward" resolved against the
-  part's material, so a stitch line round a cut-out runs outside it. Defaults read from project
-  settings. See the reconciliation §3.1 and §3.8.
+- **4.3a** ✅ **Done.** Cut-outs and the rules that give them meaning
+  ([design](superpowers/specs/2026-09-16-cutouts-and-part-rules-design.md)). Drawing modes regrouped
+  so each has **one fixed result** and selection only chooses the part (X4): *Outline* makes a new
+  part and never reads the selection, while *Cut-out*, *Stitch*, *Fold* and *Marking* join the
+  selected one. An open path in an enclosing mode is **refused with a reason** (S6) rather than
+  quietly filed as a marking line, and a part refuses a second outline (S5) — both also refused by
+  the loader.
+  **"Inward" now means toward the material** (D6): a part's leather is inside its outline and outside
+  every cut-out, so a stitch line round a thumb slot runs away from the hole instead of across the
+  gap. **Defaults come from project settings** (D7): the panel no longer hard-codes 3.5 mm and
+  3.85 mm.
+  Four part rules land with the cut-outs that make them askable: `PART_HAS_NO_OUTER_CONTOUR`,
+  `CUT_OUT_OUTSIDE_PART`, and `OUTSIDE_PART` and `HOLE_TOO_CLOSE_TO_EDGE`, the two deferred from
+  4.12a because they need material-relative containment. One definition of "the material" serves the
+  offset direction and every rule, so they cannot disagree about where the leather is.
+  Gotchas: the old tool tests all drew open runs in what is now Outline mode, so they were saying
+  "an open path becomes a marking line" — the rule §3.8 replaces; and `PathOps.distanceToPath` had to
+  be exported from geometry, where `isPointOnPath` already computed it and threw the number away.
+  **From review**, seven things the acceptance criteria passed without: the held refusal moved out of
+  the polyline tool into a `DrawCommit` boundary every draw tool commits through, because the arc
+  tool did not have it and an arc in Outline mode vanished saying nothing (X1); `PART_HAS_NO_OUTER_CONTOUR`
+  now reads the part's parameters rather than its evaluated material, because an outline that failed
+  to build was reported as no outline at all and the advice — draw one — is advice S5 refuses;
+  containment samples an open path's far end, where a 1 mm overshoot used to hide while a 5 mm one
+  did not; the hole rules carry the offending hole positions, so "a hole is 0.8 mm from an edge" no
+  longer highlights eleven metres of stitch line; a refused open run keeps its points so it can be
+  closed rather than redrawn (**X10**, new); *Inset* became **Edge margin** throughout, which is the
+  one name that reads correctly round a cut-out, where the line runs outward; and the D6 direction's
+  dependence on the immediately-followed feature is written down in `domain-model.md` §4.4 as 4.9's
+  problem to solve. Making the arc's refusal audible then showed it giving advice nobody can take —
+  "close the shape", to an arc — so `CONTOUR_NOT_CLOSED` carries whether closing is a correction that
+  exists.
+  **Measured, not budgeted:** `diagnose` — evaluation *and* validation, which is what the panel
+  waits for — costs ~13 ms on a 3 000-hole strap, ~24 ms with twenty slots, and ~70 ms on a
+  500-point traced outline, of which ~42 ms is validation. The material rules are O(holes × edge
+  segments). `product-spec.md` §7 budgets chain regeneration at 50 ms and the traced case exceeds it;
+  `perf.test.ts` records the baseline with loose ceilings rather than pretending otherwise. Whether
+  to spend a bounding-box rejection or a clearance band on it is **4.3b or later**, once the parts
+  panel shows what real documents look like.
+- **4.3b** Parts panel: part selection beside feature selection, the parts panel as a dependency tree
+  (*Outline ▸ Stitch line ▸ Holes*), delete and duplicate a part re-pointing the derivations inside
+  it, visibility, and a lock that commands honour rather than only picking (D8).
 - **4.4** ✅ **Done.** Derived `StitchLine` — inset inward, live-linked, editable in the panel. Also
   **partial runs**, which the design added after walking the real cases: a pocket is stitched on
   three sides and open at the top, so a stitch line that could only be a closed loop could not

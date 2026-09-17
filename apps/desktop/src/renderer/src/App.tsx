@@ -12,7 +12,7 @@ import { describeProblem, diagnose, type Project } from '@leathercad/domain';
 import { systemIdSource } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { DEFAULT_HARDWARE, type DrawAs, type HardwareOptions } from '@leathercad/editor';
+import { DEFAULT_HARDWARE, type DrawMode, type HardwareOptions } from '@leathercad/editor';
 
 import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
 import { DeleteDialog } from './DeleteDialog.js';
@@ -37,7 +37,7 @@ export function App() {
   // What a drawn line becomes, and what the hardware tool punches. Owned
   // here because both outlive the tool they configure: switching to the arc
   // tool and back must not silently put the user back on 'Cut'.
-  const [drawAs, setDrawAs] = useState<DrawAs>('cut');
+  const [drawAs, setDrawAs] = useState<DrawMode>('outline');
   const [hardware, setHardware] = useState<HardwareOptions>(DEFAULT_HARDWARE);
 
   const nextId = useMemo(() => createIdFactory(systemIdSource), []);

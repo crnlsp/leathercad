@@ -41,7 +41,7 @@ describe('a fold line drawn across a panel', () => {
         store,
         dispatch: (command) => store.dispatch(command),
         invalidate: () => {},
-        drawAs: () => 'fold',
+        drawAs: () => 'fold' as const,
       },
       tool,
       [tool],

@@ -1,9 +1,18 @@
 import { EPS_LENGTH, type Mm } from '@leathercad/core';
-import { selfIntersections, type Intersection, type Path } from '@leathercad/geometry';
+import {
+  PathOps,
+  SegmentOps,
+  selfIntersections,
+  type Intersection,
+  type Path,
+  type Vec2,
+} from '@leathercad/geometry';
 import { missingGlyphs } from '@leathercad/typography';
 
 import type { FeatureId, PartId } from './feature.js';
-import type { ResolvedProject } from './evaluate.js';
+import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
+import { distanceToEdge, isOnMaterial, materialOf, type Material } from './material.js';
+import { hasOuterContour } from './partStructure.js';
 import type { StitchHoles } from './stitch.js';
 import {
   PROBLEM_CODES,
@@ -11,6 +20,7 @@ import {
   type Diagnostic,
   type Problem,
   type ProblemLocation,
+  type Severity,
 } from './problems/index.js';
 
 /**
@@ -50,12 +60,78 @@ export const SPACING_UNEVEN_FRACTION = 0.05;
 /** Fewer holes than this cannot close a seam (`HOLE_COUNT_TOO_LOW`). */
 export const MIN_HOLES_IN_A_SET = 2;
 
+/**
+ * How close a hole may come to an edge before it is worth a warning.
+ *
+ * Under about a millimetre and a half the leather between the hole and the
+ * edge tears out — at the awl, at the needle, or in use. It is a warning
+ * rather than a refusal because thin, firm leather and a small iron can carry
+ * less, and the maker knows which they have.
+ */
+export const MIN_HOLE_EDGE_CLEARANCE_MM: Mm = 1.5;
+
+/**
+ * How many points along a line are asked whether they are on the material.
+ *
+ * **These rules are sampled, not proved.** Containment is asked at a finite
+ * number of points, so a path that leaves the leather and returns between two
+ * of them is not reported: the rules find mistakes, they do not certify their
+ * absence. That is the right trade for a warning — an exact answer needs
+ * path-against-path clipping, which this project does not have and has
+ * deliberately not bought (ADR 0008). Anything that comes to depend on these
+ * being exact is depending on something untrue.
+ *
+ * The one place the convention used to be wrong rather than merely coarse was
+ * the end of an open path, which no sample ever reached — see `pointsAlong`.
+ */
+const SAMPLES_ALONG_A_LINE = 24;
+
 export function validate(resolved: ResolvedProject): Diagnostic[] {
   const found: Diagnostic[] = [];
 
-  for (const { part, features } of resolved.parts) {
+  for (const resolvedPart of resolved.parts) {
+    const { part, features } = resolvedPart;
     if (part.features.length === 0) {
       found.push(placed(problem('EMPTY_PART', { partId: part.id, partName: part.name }), part.id));
+    }
+
+    const material = materialOf(resolvedPart);
+
+    // DR1: a part is a piece of leather with one edge. Features with nothing
+    // to cut them from are a part that cannot be made. Asked of the
+    // parameters: an outline that fails to build is still an outline, and
+    // telling the user to draw another one is advice the command refuses.
+    if (part.features.length > 0 && !hasOuterContour(part)) {
+      found.push(
+        placed(
+          problem('PART_HAS_NO_OUTER_CONTOUR', { partId: part.id, partName: part.name }),
+          part.id,
+        ),
+      );
+    }
+
+    // DR2: everything in a part lies on its material. Only askable once there
+    // is material to be off.
+    if (material.outer !== null) {
+      for (const entry of features) {
+        if (!entry.ok) continue;
+        for (const { problem: p, points } of offMaterial(entry, material)) {
+          found.push(
+            placed(
+              p,
+              part.id,
+              entry.feature.id,
+              // The holes at fault where a rule knows them, the whole feature
+              // where it does not: "which hole" is the question the maker has
+              // to answer before they can fix anything.
+              points === undefined
+                ? { kind: 'path', path: entry.path }
+                : { kind: 'points', points },
+              p.code === 'OUTSIDE_PART' && p.facts.what === 'line' ? 'warning' : undefined,
+            ),
+          );
+        }
+      }
     }
 
     // A part's name is printed above it on the sheet. A character the vendored
@@ -171,6 +247,135 @@ function holeProblems(
 }
 
 /**
+ * A material rule, and the geometry that would let the user act on it.
+ *
+ * `points` are the holes at fault. A set of three thousand holes with one too
+ * near an edge is not corrected by highlighting eleven metres of stitch line —
+ * the maker has to be shown *which* hole, so the ones that broke the rule
+ * travel with it.
+ */
+interface MaterialProblem {
+  readonly problem: Problem;
+  readonly points?: readonly Vec2[];
+}
+
+/**
+ * Everything wrong with where this feature sits on the leather.
+ *
+ * One pass per feature, because the questions share their work: a hole set is
+ * asked where its holes are once, and both rules read the answer.
+ */
+function offMaterial(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  material: Material,
+): MaterialProblem[] {
+  const { feature } = entry;
+  const about = { featureId: feature.id, featureName: feature.name };
+  const found: MaterialProblem[] = [];
+
+  // A cut-out that is not inside its part cuts nothing.
+  if (feature.kind === 'cut-contour' && feature.role === 'inner') {
+    const outside = pointsAlong(entry.path).some(
+      (point) => !PathOps.containsPoint(material.outer!, point),
+    );
+    if (outside) found.push({ problem: problem('CUT_OUT_OUTSIDE_PART', about) });
+    return found;
+  }
+
+  const punched = holePoints(entry);
+  if (punched !== null) {
+    const off = punched.filter((point) => !isOnMaterial(material, point));
+    if (off.length > 0) {
+      found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }), points: off });
+      // Where a hole is off the material entirely, how near the edge it sits
+      // is not the thing to say about it.
+      return found;
+    }
+
+    // One pass rather than a min and then a filter: the nearest clearance and
+    // the holes that share it come out of the same walk.
+    let clearanceMm = Number.POSITIVE_INFINITY;
+    const tight: Vec2[] = [];
+    for (const point of punched) {
+      const distance = distanceToEdge(material, point);
+      if (distance >= MIN_HOLE_EDGE_CLEARANCE_MM) continue;
+      if (distance < clearanceMm) clearanceMm = distance;
+      tight.push(point);
+    }
+
+    if (tight.length > 0) {
+      found.push({
+        problem: problem('HOLE_TOO_CLOSE_TO_EDGE', {
+          ...about,
+          clearanceMm,
+          minimumMm: MIN_HOLE_EDGE_CLEARANCE_MM,
+        }),
+        points: tight,
+      });
+    }
+    return found;
+  }
+
+  // A line that wanders off the leather marks nothing where it left.
+  if (
+    feature.kind === 'stitch-line' ||
+    feature.kind === 'fold-line' ||
+    feature.kind === 'marking-line'
+  ) {
+    const off = pointsAlong(entry.path).some((point) => !isOnMaterial(material, point));
+    if (off) found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'line' }) });
+  }
+
+  return found;
+}
+
+/**
+ * Where this feature is punched, or null when it punches nothing.
+ *
+ * A hole set is its holes; a hardware hole is the centre of its circle, which
+ * is what the punch is lined up on.
+ */
+function holePoints(entry: Extract<ResolvedFeature, { ok: true }>): readonly Vec2[] | null {
+  if (entry.holes !== undefined) return entry.holes.holes.map((hole) => hole.point);
+
+  const source = entry.feature.source;
+  if (
+    entry.feature.kind === 'hardware-hole' &&
+    source.kind === 'shape' &&
+    source.shape.type === 'circle'
+  ) {
+    return [source.shape.centre];
+  }
+  return null;
+}
+
+/**
+ * Points along a path, for asking whether it stays on the leather.
+ *
+ * An **open** path is sampled to its far end as well: a closed one's end is
+ * its start and already sampled, but a line's is not, and a marking line that
+ * overshoots the edge does it at exactly that point. Missing it meant a 1 mm
+ * overshoot went unreported while a 5 mm one did not, for no reason the user
+ * could see.
+ *
+ * Between the samples nothing is claimed — see `SAMPLES_ALONG_A_LINE`.
+ */
+function pointsAlong(path: Path): Vec2[] {
+  if (path.segments.length === 0) return [];
+
+  const measure = PathOps.measure(path);
+  const total = measure.totalLength();
+  const points: Vec2[] = [];
+  const steps = path.closed ? SAMPLES_ALONG_A_LINE : SAMPLES_ALONG_A_LINE + 1;
+
+  for (let i = 0; i < steps; i++) {
+    const at = measure.locate((total * i) / SAMPLES_ALONG_A_LINE);
+    points.push(SegmentOps.pointAt(path.segments[at.segmentIndex]!, at.t));
+  }
+  return points;
+}
+
+/**
  * Self-intersections, memoised on the path object.
  *
  * The same identity trick as `evaluate`: an unchanged outline is the same
@@ -192,10 +397,14 @@ function placed(
   partId: PartId,
   featureId?: FeatureId,
   location?: ProblemLocation,
+  severity?: Severity,
 ): Diagnostic {
   return {
     problem: p,
-    severity: PROBLEM_CODES[p.code].severity,
+    // The registry's default, unless this occurrence is different in kind: a
+    // hole off the material cannot be punched, while a line off it is a guide
+    // that overshoots (domain-model.md §8.6).
+    severity: severity ?? PROBLEM_CODES[p.code].severity,
     partId,
     ...(featureId === undefined ? {} : { featureId }),
     related: [],

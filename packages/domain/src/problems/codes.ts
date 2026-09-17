@@ -57,6 +57,8 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   // it too, which S3 makes unreachable.
   CYCLE: structural('S3'),
   DERIVATION_INCOMPATIBLE: structural('S4'),
+  PART_ALREADY_HAS_OUTER: structural('S5'),
+  CONTOUR_NOT_CLOSED: structural('S6'),
 
   FEATURE_MISSING: interaction('X1'),
   NOT_DERIVED: interaction('X1'),
@@ -84,4 +86,10 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   HOLE_SPACING_UNEVEN: rule('DR4', 'info'),
   HOLE_COUNT_TOO_LOW: rule('DR4', 'warning'),
   EMPTY_PART: rule('DR6', 'info'),
+  PART_HAS_NO_OUTER_CONTOUR: rule('DR1', 'error'),
+  CUT_OUT_OUTSIDE_PART: rule('DR2', 'error'),
+  // Severity is chosen per occurrence: a hole off the material is a hole
+  // punched through nothing, while a line off it is a guide that overshoots.
+  OUTSIDE_PART: rule('DR2', 'error'),
+  HOLE_TOO_CLOSE_TO_EDGE: rule('DR2', 'warning'),
 };

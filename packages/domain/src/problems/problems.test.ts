@@ -28,6 +28,9 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   WOULD_LOOP: { ...named, sourceId: 'f-2', sourceName: 'Outline' },
   CYCLE: named,
   DERIVATION_INCOMPATIBLE: { ...named, rule: 'holes-need-stitch-line' },
+  PART_ALREADY_HAS_OUTER: { ...named, partName: 'Panel', outerName: 'Outline' },
+  CONTOUR_NOT_CLOSED: { ...named, role: 'outer', closable: true },
+
   FEATURE_MISSING: { featureId: 'f-1' },
   NOT_DERIVED: named,
   DERIVED_MOVED_ALONE: { ...named, rootId: 'f-2', rootName: 'Outline' },
@@ -58,6 +61,10 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   HOLE_SPACING_UNEVEN: { ...named, narrowestMm: 3.7, widestMm: 4.1 },
   HOLE_COUNT_TOO_LOW: { ...named, count: 1 },
   EMPTY_PART: { partId: 'p-1', partName: 'Gusset' },
+  PART_HAS_NO_OUTER_CONTOUR: { partId: 'p-1', partName: 'Gusset' },
+  CUT_OUT_OUTSIDE_PART: { featureId: 'f-1', featureName: 'Card slot' },
+  OUTSIDE_PART: { ...named, what: 'holes' },
+  HOLE_TOO_CLOSE_TO_EDGE: { ...named, clearanceMm: 0.8, minimumMm: 1.5 },
 };
 
 const everyCode = Object.keys(SAMPLES) as ProblemCode[];
@@ -69,7 +76,7 @@ describe('problem identity', () => {
   });
 
   it.each(everyCode)('%s names the invariant it protects', (code) => {
-    // The forms in docs/domain-model.md §8: S1–S10, E1–E4, DR1–DR6, X1–X9.
+    // The forms in docs/domain-model.md §8: S1–S10, E1–E4, DR1–DR6, X1–X10.
     expect(PROBLEM_CODES[code].protects).toMatch(/^(S|E|DR|X)\d+$/);
   });
 
@@ -194,7 +201,7 @@ describe('the message catalogue', () => {
     [problem('SOURCE_MISSING', named), 'Stitch line follows a feature that does not exist.'],
     [
       problem('OFFSET_COLLAPSED', { ...named, distanceMm: 60, side: 'inward' }),
-      'A 60 mm inset is deeper than this outline can hold.',
+      'A 60 mm edge margin is deeper than this edge can hold.',
     ],
     [
       problem('SOURCE_FAILED', { ...named, sourceId: 'o', sourceName: 'Outline' }),
@@ -210,8 +217,8 @@ describe('the message catalogue', () => {
     ],
     [
       problem('HOLE_SPACING_DEVIATION', { ...named, achievedMm: 5, pitchMm: 3.85 }),
-      'The spacing came out 5.00 mm against a 3.85 mm iron. Change the pitch, or the inset, to ' +
-        'bring them together.',
+      'The spacing came out 5.00 mm against a 3.85 mm iron. Change the pitch, or the edge ' +
+        'margin, to bring them together.',
     ],
   ];
 

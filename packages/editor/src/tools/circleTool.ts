@@ -2,7 +2,7 @@ import { circleShape } from '@leathercad/document';
 import { Shapes, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
-import { commitDrawn, drawTargetNotice } from './commitDrawn.js';
+import { createDrawCommit } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 
@@ -26,6 +26,9 @@ const MIN_RADIUS_MM = 0.01;
 export function createCircleTool(nextId: () => string): Tool {
   let state: State = { kind: 'idle' };
 
+  /** Every draw tool commits through one of these, so no refusal is silent. */
+  const draw = createDrawCommit();
+
   const reset = (ctx: ToolContext): void => {
     state = { kind: 'idle' };
     ctx.invalidate();
@@ -38,6 +41,7 @@ export function createCircleTool(nextId: () => string): Tool {
 
     onPointerDown(ctx, event) {
       if (event.button !== 0) return;
+      draw.begin();
       state = { kind: 'dragging', centreMm: event.at, currentMm: event.at };
       ctx.invalidate();
     },
@@ -60,10 +64,10 @@ export function createCircleTool(nextId: () => string): Tool {
 
       if (radius < MIN_RADIUS_MM) return;
 
-      commitDrawn(ctx, nextId, 'Panel', { kind: 'shape', shape: circleShape(centreMm, radius) });
+      draw.commit(ctx, nextId, 'Panel', { kind: 'shape', shape: circleShape(centreMm, radius) });
     },
 
-    notice: drawTargetNotice,
+    notice: (ctx) => draw.notice(ctx),
 
     onKey(ctx, event) {
       if (event.key === 'Escape') reset(ctx);

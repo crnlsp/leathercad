@@ -2,6 +2,7 @@ import { PathOps, uniformRadii, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
+import { diagnose } from './diagnose.js';
 import { evaluate, type ResolvedProject } from './evaluate.js';
 import { DEFAULT_SETTINGS, type Feature, type Project } from './feature.js';
 import type { RunReport, StitchHoles } from './stitch.js';
@@ -114,13 +115,33 @@ function resolvedHoles(
     runs,
   };
 
-  const p = project([feature]);
+  // With an outline, so the spacing rules are asked in isolation: a part with
+  // no material of its own is a different problem, and it has its own rule.
+  const outline = panel(200, 100, 0);
+  const p = project([outline, feature]);
   return {
     project: p,
     parts: [
       {
         part: p.parts[0]!,
-        features: [{ ok: true, feature, role: 'stitch-holes', path: line, holes, anchors: [] }],
+        features: [
+          {
+            ok: true,
+            feature: outline,
+            role: 'cut',
+            path: PathOps.polyline(
+              [
+                { x: 0, y: 0 },
+                { x: 200, y: 0 },
+                { x: 200, y: 100 },
+                { x: 0, y: 100 },
+              ],
+              true,
+            ),
+            anchors: [],
+          },
+          { ok: true, feature, role: 'stitch-holes', path: line, holes, anchors: [] },
+        ],
       },
     ],
   };
@@ -178,7 +199,12 @@ describe('CONTOUR_SELF_INTERSECTS', () => {
   });
 
   it('leaves a stitch line that crosses itself alone — only a cut has to be unambiguous', () => {
-    expect(codes(evaluate(project([drawn('stitch-line', figureOfEight, true)])))).toEqual([]);
+    // On a panel big enough to hold it, so the only question asked is whether
+    // a crossing stitch line is reported. It is not: only a cut has to be
+    // unambiguous.
+    expect(
+      codes(evaluate(project([panel(200, 120, 0), drawn('stitch-line', figureOfEight, true)]))),
+    ).toEqual([]);
   });
 });
 
@@ -216,12 +242,14 @@ describe('HOLE_SPACING_DEVIATION', () => {
     const short = drawn(
       'stitch-line',
       [
-        { x: 0, y: 0 },
-        { x: 2, y: 0 },
+        { x: 20, y: 20 },
+        { x: 22, y: 20 },
       ],
       false,
     );
-    expect(codes(evaluate(project([short, holeSet()])))).toEqual(['HOLE_SPACING_DEVIATION']);
+    expect(codes(evaluate(project([panel(), short, holeSet()])))).toEqual([
+      'HOLE_SPACING_DEVIATION',
+    ]);
   });
 });
 
@@ -369,5 +397,337 @@ describe('TEXT_GLYPH_MISSING', () => {
       },
     };
     expect(codes(evaluate(project([panel(), label])))).toEqual([]);
+  });
+});
+
+// ——— Part rules (DR1, DR2) ————————————————————————————————————————————————
+
+describe('the rules about a part and its material', () => {
+  /** A 105 × 75 panel with a 20 mm round hole in the middle of it. */
+  const slot = (centre = { x: 52, y: 37 }, radius = 20): Feature => ({
+    ...base('hole-1', 'Thumb slot'),
+    kind: 'cut-contour',
+    role: 'inner',
+    source: { kind: 'shape', shape: { type: 'circle', centre, radius } },
+  });
+
+  const rivet = (centre: { x: number; y: number }): Feature => ({
+    ...base('rivet-1', 'Rivet 4 mm'),
+    kind: 'hardware-hole',
+    hardwareType: 'rivet',
+    source: { kind: 'shape', shape: { type: 'circle', centre, radius: 2 } },
+  });
+
+  describe('PART_HAS_NO_OUTER_CONTOUR', () => {
+    it('reports a part with stitching but nothing to cut it from', () => {
+      const [diagnostic, ...rest] = validate(
+        evaluate(
+          project([
+            drawn(
+              'stitch-line',
+              [
+                { x: 0, y: 0 },
+                { x: 40, y: 0 },
+              ],
+              false,
+            ),
+          ]),
+        ),
+      );
+
+      expect(rest).toEqual([]);
+      expect(diagnostic).toMatchObject({
+        problem: { code: 'PART_HAS_NO_OUTER_CONTOUR', facts: { partId: 'part-0' } },
+        severity: 'error',
+        partId: 'part-0',
+      });
+      // About the part, not a feature: it is the part that cannot be made.
+      expect(diagnostic!.featureId).toBeUndefined();
+    });
+
+    it('says nothing about a part that has one', () => {
+      expect(codes(evaluate(project([panel(), stitchLine()])))).toEqual([]);
+    });
+
+    it('leaves an empty part to EMPTY_PART, which says it better', () => {
+      expect(codes(evaluate(project([])))).toEqual(['EMPTY_PART']);
+    });
+  });
+
+  describe('CUT_OUT_OUTSIDE_PART', () => {
+    it('reports a cut-out that misses the part', () => {
+      const [diagnostic] = validate(evaluate(project([panel(), slot({ x: 300, y: 40 })])));
+
+      expect(diagnostic).toMatchObject({
+        problem: { code: 'CUT_OUT_OUTSIDE_PART', facts: { featureId: 'hole-1' } },
+        severity: 'error',
+        featureId: 'hole-1',
+      });
+    });
+
+    it('reports one that only half overlaps, which cuts a notch rather than a hole', () => {
+      expect(codes(evaluate(project([panel(), slot({ x: 0, y: 37 })])))).toContain(
+        'CUT_OUT_OUTSIDE_PART',
+      );
+    });
+
+    it('says nothing about one inside the part', () => {
+      expect(codes(evaluate(project([panel(), slot()])))).toEqual([]);
+    });
+  });
+
+  describe('OUTSIDE_PART', () => {
+    it('reports holes punched through the outline, as an error', () => {
+      // A stitch line outside the panel, with holes along it.
+      const outside = drawn(
+        'stitch-line',
+        [
+          { x: 200, y: 10 },
+          { x: 260, y: 10 },
+        ],
+        false,
+      );
+      const reported = validate(evaluate(project([panel(), outside, holeSet('stitch-1')]))).filter(
+        (d) => d.problem.code === 'OUTSIDE_PART',
+      );
+
+      // Both are off the leather and both are said: the line is a guide that
+      // overshoots, the holes cannot be punched at all.
+      expect(
+        reported.map((d) => [
+          d.problem.code === 'OUTSIDE_PART' && d.problem.facts.what,
+          d.severity,
+        ]),
+      ).toEqual([
+        ['line', 'warning'],
+        ['holes', 'error'],
+      ]);
+    });
+
+    it('reports holes that fall into a cut-out, which is not leather either', () => {
+      const acrossTheSlot = drawn(
+        'stitch-line',
+        [
+          { x: 40, y: 37 },
+          { x: 64, y: 37 },
+        ],
+        false,
+      );
+      expect(
+        codes(evaluate(project([panel(), slot(), acrossTheSlot, holeSet('stitch-1')]))),
+      ).toContain('OUTSIDE_PART');
+    });
+
+    it('reports a rivet off the material', () => {
+      expect(codes(evaluate(project([panel(), rivet({ x: 300, y: 40 })])))).toContain(
+        'OUTSIDE_PART',
+      );
+    });
+
+    it('reports a marking line that wanders off, as a warning rather than an error', () => {
+      const wandering = {
+        ...base('mark-1', 'Glue line'),
+        kind: 'marking-line' as const,
+        purpose: 'glue-area' as const,
+        source: {
+          kind: 'path' as const,
+          path: PathOps.polyline(
+            [
+              { x: 20, y: 20 },
+              { x: 300, y: 20 },
+            ],
+            false,
+          ),
+        },
+      };
+
+      const [diagnostic] = validate(evaluate(project([panel(), wandering]))).filter(
+        (d) => d.problem.code === 'OUTSIDE_PART',
+      );
+
+      // A hole off the material cannot be punched; a line off it is a guide
+      // that overshoots. Same code, different severity.
+      expect(diagnostic).toMatchObject({
+        problem: { facts: { what: 'line' } },
+        severity: 'warning',
+      });
+    });
+
+    it('says nothing when everything sits on the leather', () => {
+      expect(codes(evaluate(project([panel(), slot(), rivet({ x: 12, y: 12 })])))).toEqual([]);
+    });
+  });
+
+  describe('HOLE_TOO_CLOSE_TO_EDGE', () => {
+    const rivetAt = (x: number) => rivet({ x, y: 37 });
+
+    it('warns about a rivet under 1.5 mm from the edge, saying how near', () => {
+      const [diagnostic] = validate(evaluate(project([panel(), rivetAt(1)]))).filter(
+        (d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
+      );
+
+      expect(diagnostic).toMatchObject({
+        problem: { facts: { clearanceMm: 1, minimumMm: 1.5 } },
+        severity: 'warning',
+        featureId: 'rivet-1',
+      });
+    });
+
+    it('does not warn at 1.5 mm exactly, or further in', () => {
+      expect(codes(evaluate(project([panel(), rivetAt(1.5)])))).toEqual([]);
+      expect(codes(evaluate(project([panel(), rivetAt(8)])))).toEqual([]);
+    });
+
+    it('measures to a cut-out’s edge as readily as to the outline', () => {
+      // A rivet 1 mm outside the slot: far from the outline, far too near the
+      // hole. Both are edges the leather can tear to.
+      const [diagnostic] = validate(
+        evaluate(project([panel(), slot(), rivet({ x: 52 - 21, y: 37 })])),
+      ).filter((d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE');
+
+      expect(diagnostic).toBeDefined();
+      expect(
+        diagnostic!.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE' &&
+          diagnostic!.problem.facts.clearanceMm,
+      ).toBeCloseTo(1, 6);
+    });
+
+    it('says nothing about a hole off the material — that is a different problem', () => {
+      const off = codes(evaluate(project([panel(), rivet({ x: 300, y: 40 })])));
+
+      expect(off).toContain('OUTSIDE_PART');
+      expect(off).not.toContain('HOLE_TOO_CLOSE_TO_EDGE');
+    });
+  });
+});
+
+// ——— DR1 asks the parameters, not the geometry ————————————————————————————
+
+describe('a part whose outline exists but cannot be built', () => {
+  /** An outline with a negative radius: declared, and impossible. */
+  const impossibleOutline: Feature = {
+    ...base('cut-1', 'Outline'),
+    kind: 'cut-contour',
+    role: 'outer',
+    source: { kind: 'shape', shape: { type: 'circle', centre: { x: 50, y: 50 }, radius: -10 } },
+  };
+
+  const glueLine: Feature = {
+    ...base('mark-1', 'Glue line'),
+    kind: 'marking-line',
+    purpose: 'glue-area',
+    source: {
+      kind: 'path',
+      path: PathOps.polyline(
+        [
+          { x: 10, y: 10 },
+          { x: 40, y: 10 },
+        ],
+        false,
+      ),
+    },
+  };
+
+  it('reports what is actually wrong, and does not tell the user to draw another outline', () => {
+    // Reading DR1 off the evaluated material said "no outline — draw one"
+    // about a part that has one; the command would then refuse the second
+    // (S5), leaving the user in a loop of advice nothing accepts.
+    const codes = diagnose(project([impossibleOutline, glueLine])).map((d) => d.problem.code);
+
+    expect(codes).toContain('PARAMETER_INVALID');
+    expect(codes).not.toContain('PART_HAS_NO_OUTER_CONTOUR');
+  });
+
+  it('still reports a part that genuinely has no outline', () => {
+    const codes = diagnose(project([glueLine])).map((d) => d.problem.code);
+
+    expect(codes).toContain('PART_HAS_NO_OUTER_CONTOUR');
+  });
+});
+
+// ——— The sampling convention ——————————————————————————————————————————————
+
+describe('a line that leaves the leather at its very end', () => {
+  const overshoot = (toX: number): Feature => ({
+    ...base('mark-1', 'Glue line'),
+    kind: 'marking-line',
+    purpose: 'glue-area',
+    source: {
+      kind: 'path',
+      path: PathOps.polyline(
+        [
+          { x: 10, y: 37 },
+          { x: toX, y: 37 },
+        ],
+        false,
+      ),
+    },
+  });
+
+  it('is reported when it overshoots by a millimetre', () => {
+    // The samples used to stop one step short of the end, so a small
+    // overshoot — which is what an overshoot usually is — went unseen while a
+    // larger one did not, for no reason the user could have worked out.
+    expect(codes(evaluate(project([panel(105, 75, 0), overshoot(106)])))).toContain('OUTSIDE_PART');
+  });
+
+  it('is reported when it overshoots by five', () => {
+    expect(codes(evaluate(project([panel(105, 75, 0), overshoot(110)])))).toContain('OUTSIDE_PART');
+  });
+
+  it('says nothing about one that stops short of the edge', () => {
+    expect(codes(evaluate(project([panel(105, 75, 0), overshoot(100)])))).toEqual([]);
+  });
+});
+
+// ——— Which hole ————————————————————————————————————————————————————————————
+
+describe('a hole rule names the holes at fault', () => {
+  const rivetAt = (centre: Vec2): Feature => ({
+    ...base('rivet-1', 'Rivet 4 mm'),
+    kind: 'hardware-hole',
+    hardwareType: 'rivet',
+    source: { kind: 'shape', shape: { type: 'circle', centre, radius: 2 } },
+  });
+
+  const pointsOf = (resolved: ResolvedProject, code: string): Vec2[] => {
+    const found = validate(resolved).find((d) => d.problem.code === code);
+    return found?.location?.kind === 'points' ? [...found.location.points] : [];
+  };
+
+  it('points HOLE_TOO_CLOSE_TO_EDGE at the hole, not at the whole feature', () => {
+    const resolved = evaluate(project([panel(105, 75, 0), rivetAt({ x: 1, y: 37 })]));
+
+    expect(codes(resolved)).toContain('HOLE_TOO_CLOSE_TO_EDGE');
+    expect(pointsOf(resolved, 'HOLE_TOO_CLOSE_TO_EDGE')).toEqual([{ x: 1, y: 37 }]);
+  });
+
+  it('points OUTSIDE_PART at the hole that is off the leather', () => {
+    const resolved = evaluate(project([panel(105, 75, 0), rivetAt({ x: 200, y: 37 })]));
+
+    expect(pointsOf(resolved, 'OUTSIDE_PART')).toEqual([{ x: 200, y: 37 }]);
+  });
+
+  it('names only the offending holes of a set, not all three hundred', () => {
+    // A slot close enough to the seam that the stitching beside it runs thin.
+    // Highlighting the whole stitch line would tell the maker nothing they
+    // could act on: the question is *which* hole to move.
+    const slot: Feature = {
+      ...base('hole-1', 'Thumb slot'),
+      kind: 'cut-contour',
+      role: 'inner',
+      source: { kind: 'shape', shape: { type: 'circle', centre: { x: 12, y: 37 }, radius: 7.5 } },
+    };
+    const resolved = evaluate(project([panel(105, 75, 0), slot, stitchLine(3.5), holeSet()]));
+
+    const set = resolved.parts[0]!.features.find((f) => f.feature.id === 'holes-1');
+    const total = set?.ok === true ? (set.holes?.count ?? 0) : 0;
+    const named = pointsOf(resolved, 'HOLE_TOO_CLOSE_TO_EDGE');
+
+    expect(total).toBeGreaterThan(50);
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.length).toBeLessThan(total);
+    // Each one really is near the slot rather than merely in the set.
+    for (const point of named) expect(point.y).toBeGreaterThan(20);
   });
 });
