@@ -80,6 +80,31 @@ export type Derivation =
       readonly endOffsetMm?: Mm;
       /** Cosmetic, so the panel can say "KS Blade 3.85". Never read as geometry. */
       readonly ironLabel?: string;
+    }
+  | {
+      /**
+       * A counterpart that stays matched: the source, reflected and placed.
+       *
+       * The axis and the glide are the **only** things the counterpart owns —
+       * everything about *what* it is comes from its source. Together they
+       * express every orientation-reversing isometry, which is why any move or
+       * turn of a counterpart can be absorbed back into them and none is ever
+       * refused for want of a way to say it ([ADR 0012](../../../docs/adr/0012-mirror-is-a-derivation.md)).
+       *
+       * The axis is **absolute, in world millimetres, and does not track the
+       * source**. An axis that chased the source's bounding box would jump
+       * whenever the source's geometry changed, moving the counterpart by
+       * twice as much for reasons nobody could see. Fixed, the rule is one
+       * sentence: the counterpart is the source reflected in that line.
+       */
+      readonly type: 'mirror';
+      readonly axis: {
+        readonly origin: Vec2;
+        /** Normalised to `[0, π)`: a line at θ and θ + π is the same line. */
+        readonly angleRad: Radians;
+      };
+      /** How far along the axis, after reflecting. Signed against `angleRad`. */
+      readonly glideMm: Mm;
     };
 
 /**

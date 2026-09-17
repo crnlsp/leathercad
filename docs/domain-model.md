@@ -250,7 +250,7 @@ type FeatureSource = GeometrySource | TextSource;
 type Derivation =
   | { type: 'offset'; distanceMm: Mm; side: 'inward' | 'outward'; run: Run }          // built
   | { type: 'stitch-holes'; pitchMm: Mm; mode: …; corners: …; … }                     // built
-  | { type: 'mirror'; axis: { origin: Vec2; angleRad: Radians }; glideMm: Mm };       // designed, 4.8
+  | { type: 'mirror'; axis: { origin: Vec2; angleRad: Radians }; glideMm: Mm };       // built 4.8a
 
 type Run =
   | { kind: 'whole' }
@@ -296,7 +296,7 @@ reason, and the loader refuses files that break them, naming the feature:
 | Stitch line | offset, inward | Cut contour (outer or cut-out) | Whole run or partial run |
 | Outer cut contour | offset, outward | Stitch line | Source closed; whole run only |
 | Stitch hole set | stitch holes | Stitch line | |
-| The same kind | mirror | The same kind | A cut contour keeps its role |
+| The same kind | mirror | The same kind | A cut contour keeps its role — built 4.8a |
 
 A representative card-holder panel:
 
@@ -435,7 +435,7 @@ geometry was built. A partial run keeps only the anchors it covers.
 renumber every anchor after it, which is a run silently moving to a different edge — and anything
 that names it fails with `ANCHOR_MISSING`.
 
-### 4.7 Duplicate, flip and mirror — flip built 3.7b; duplicate 4.3, mirror 4.8
+### 4.7 Duplicate, flip and mirror — flip built 3.7b; duplicate built 4.3b; mirror built 4.8a
 
 | Operation | Result | Relationship afterwards |
 |---|---|---|
@@ -456,6 +456,33 @@ that names it fails with `ANCHOR_MISSING`.
   comparison the old round-trip test could not make.
 - **A label refuses to be mirrored**, with `TEXT_WOULD_READ_BACKWARDS`: a mirror is a similarity, so
   without refusing it the words would come out rotated rather than reflected.
+- **A counterpart owns its placement and nothing else** (built 4.8a,
+  [design](superpowers/specs/2026-09-17-mirror-design.md)). The axis and glide are its own; the path,
+  the holes, the anchors, the kind and the role all come from its original. A gesture the placement
+  can absorb is absorbed — moved alone the axis takes it, moved *with* its source the axis travels
+  too, so a pair drags rigidly instead of sliding apart — and a gesture it cannot is refused with a
+  reason. Since a glide reflection composed with any isometry is another glide reflection, the only
+  thing that can fail is a scale, which is `MIRROR_WOULD_SCALE`.
+- **The axis is absolute and does not track the source.** One that chased the source's bounding box
+  would jump whenever the geometry changed, moving the counterpart by twice as much for reasons
+  nobody could see. Fixed, the rule is one sentence — the counterpart is the original reflected in
+  that line — which is also why moving the original moves the counterpart the *opposite* way. The
+  panel says so rather than letting it be discovered.
+- **`Mirror ↔` and `Mirror ↕` are a placement, not a symmetry constraint.** They capture an axis from
+  the selection's world-aligned bounding box **at the moment they are used**, and that axis then stays
+  where it was put. So changing the original afterwards changes the gap between the pair, and growing
+  it far enough makes the two **overlap**. That is intentional and is pinned by a test: an axis that
+  tracked the original would be less predictable, not more, because it would move whenever the
+  geometry did. What these two gestures promise is "a counterpart of this piece, here" — never "these
+  two stay symmetric forever". **Persistent symmetry is mirror-across-fold (4.8b)**, where the axis is
+  a fold line the maker drew and can see, rather than a measurement of a shape that keeps changing.
+- **Anchors map by doing nothing.** The image path's vertices are the source's reflected in the same
+  order, so the arc-length parameterisation is identical and an anchor at *s* is still at *s*; none
+  goes missing, because a reflection loses nothing (ADR 0010).
+- **A mirrored hole set gets its holes from its source's**, not from redistributing along the
+  mirrored line. Two panels sewn together must have the same hole count, and a reflection cannot
+  produce a different one — which is why `evaluate` has a second place that produces a `holes` field
+  and deliberately so.
 
 ## 5. Layer roles — built
 

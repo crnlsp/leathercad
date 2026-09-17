@@ -79,6 +79,14 @@ export function FeatureEditor({
         return <StitchLineEditor op={source.op} onChange={change} />;
       case 'stitch-holes':
         return <StitchHoleSetEditor op={source.op} holes={holes} onChange={change} />;
+      case 'mirror':
+        // Nothing, deliberately. A counterpart's parameters are an axis and a
+        // glide, and neither is a number anyone should have to reason about:
+        // *where it is* is said by dragging it, and *what it is* is said by
+        // the note above. Falling through to the freehand message below would
+        // be worse than silence — a counterpart is not freehand geometry, and
+        // vertex editing would not help it.
+        return own;
     }
   }
 

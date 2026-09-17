@@ -6,8 +6,10 @@
  */
 
 export type {
+  Axis,
   DeletePlan,
   FlipAxis,
+  MirrorAxis,
   DeleteResolution,
   PlannedDependent,
   RefusedTransform,
@@ -45,6 +47,9 @@ export {
   deletePart,
   duplicatePart,
   isPartVisible,
+  mirrorAxisFor,
+  mirrorFeatures,
+  mirrorRefusal,
   planDelete,
   setSource,
   setFoldDirection,

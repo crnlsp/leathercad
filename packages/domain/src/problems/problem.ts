@@ -44,7 +44,9 @@ export type CompatibilityRule =
   | 'allowance-needs-stitch-line'
   | 'allowance-needs-outer'
   | 'allowance-needs-whole-run'
-  | 'allowance-needs-closed-line';
+  | 'allowance-needs-closed-line'
+  | 'mirror-keeps-kind'
+  | 'mirror-keeps-role';
 
 /**
  * Every problem code, and the facts it carries.
@@ -94,6 +96,16 @@ export interface ProblemFacts {
   readonly FEATURE_MISSING: { readonly featureId: FeatureId };
   readonly NOT_DERIVED: About;
   readonly DERIVED_MOVED_ALONE: About & { readonly rootId: FeatureId; readonly rootName: string };
+  /**
+   * X3: a counterpart is the size of its original.
+   *
+   * Its placement is a reflection and a slide, which can say where a piece is
+   * but not how big — so a scale has no parameter to land in, and is refused
+   * rather than quietly dropped.
+   */
+  readonly MIRROR_WOULD_SCALE: About & { readonly sourceName: string };
+  /** X3: nothing to take a mirror axis from. */
+  readonly MIRROR_NO_AXIS: Record<string, never>;
   readonly TRANSFORM_FLATTENS: Record<string, never>;
   readonly WOULD_BECOME_ELLIPSE: { readonly shape: 'circle' | 'arc' };
   readonly WOULD_SHEAR: Record<string, never>;

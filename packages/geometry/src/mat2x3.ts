@@ -136,6 +136,19 @@ export function isMirrored(m: Mat2x3): boolean {
  * non-uniform scale turns a circular arc into an elliptical one, which the
  * Segment union cannot represent. See docs/geometry.md §4.2.
  */
+/**
+ * Whether this transform preserves distance — a move, a turn, a reflection, or
+ * any composition of them.
+ *
+ * A similarity whose scale is exactly one. What it excludes is the thing a
+ * mirrored counterpart cannot survive: a scale has nowhere to go in a
+ * reflection-and-slide, so a counterpart refuses it rather than being resized
+ * behind its original's back (ADR 0012).
+ */
+export function isIsometry(m: Mat2x3, eps: number = 1e-9): boolean {
+  return isSimilarity(m, eps) && approxEq(m.a * m.a + m.b * m.b, 1, eps);
+}
+
 export function isSimilarity(m: Mat2x3, eps: number = 1e-9): boolean {
   const colXLenSq = m.a * m.a + m.b * m.b;
   const colYLenSq = m.c * m.c + m.d * m.d;

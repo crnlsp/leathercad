@@ -1412,3 +1412,88 @@ test('selecting a part heading makes it the target for a cut-out', async () => {
     await expect(window.getByTestId('feature-count')).toHaveText('2');
   });
 });
+
+test('a mirrored counterpart stays matched to the piece it came from', async () => {
+  // Slice 4.8a. Flip changes this piece; mirror makes a counterpart that keeps
+  // following it (ADR 0012).
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 500, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+    await expect(window.getByTestId('feature-count')).toHaveText('1');
+
+    const panel = window.getByTestId('property-panel');
+    await panel.getByTestId('mirror-horizontal').click();
+
+    // The counterpart joins the same part — a pair belongs to the piece it is
+    // cut in — and is selected, because it is what you are now placing.
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expect(window.getByTestId('parts-list')).toContainText('mirrored');
+
+    // A selected counterpart never reads as an ordinary independent feature:
+    // it is badged, its relationship is named, and the note says what the
+    // fixed mirror line means before the maker meets it by accident.
+    await expect(panel.getByTestId('mirrored-badge')).toBeVisible();
+    await expect(panel).toContainText('Mirrored from');
+    await expect(panel.getByTestId('mirror-note')).toContainText('opposite way');
+    await expect(panel.getByTestId('mirror-note')).toContainText('changes the gap');
+    await expect(panel.getByTestId('follows')).toBeVisible();
+
+    // And it is marked in the dependency tree too, where it nests under the
+    // piece it mirrors.
+    await expect(
+      window.getByTestId('parts-list').locator('[data-testid^="mirrored-mark-"]'),
+    ).toHaveCount(1);
+
+    // It has no shape of its own — the fields belong to its original.
+    await expect(panel.locator('label', { hasText: /^Width/ })).toHaveCount(0);
+
+    // And it cannot be resized: a counterpart is the size of its original.
+    // The reason appears *during* the drag, while the user can still let go.
+    await window.getByTestId('tool-scale').click();
+    await window.mouse.move(box!.x + 620, box!.y + 400);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 700, box!.y + 460, { steps: 5 });
+
+    await expect(window.getByTestId('tool-notice')).toContainText(/size/i);
+
+    await window.mouse.up();
+    // Refused means unchanged: the counterpart is still its original's size.
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+  });
+});
+
+test('a counterpart follows when its original is resized', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 500, box!.y + 400, { steps: 5 });
+    await window.mouse.up();
+
+    const panel = window.getByTestId('property-panel');
+    await panel.getByTestId('mirror-horizontal').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+
+    // Back to the original, and widen it.
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').first().click();
+
+    const width = panel.locator('label', { hasText: /^Width/ }).locator('input');
+    const before = await width.inputValue();
+    await width.fill(String(Number(before) + 40));
+    await width.press('Enter');
+
+    // Nothing is broken by the change: the counterpart followed rather than
+    // detaching or landing off the material.
+    await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
+    await expect(window.getByTestId('feature-count')).toHaveText('2');
+  });
+});

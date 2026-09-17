@@ -4,13 +4,16 @@ import {
   addStitchLine,
   flipFeatures,
   flipRefusal,
+  mirrorAxisFor,
+  mirrorFeatures,
+  mirrorRefusal,
   renameFeature,
   setSource,
   setPartName,
   setPartQuantity,
 } from '@leathercad/document';
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
-import type { FlipAxis } from '@leathercad/document';
+import type { FlipAxis, MirrorAxis } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
 import { describeProblem, evaluate, followRefusal, lockRefusal } from '@leathercad/domain';
 
@@ -93,6 +96,14 @@ export function PropertyPanel({
       <section className="panel-section">
         <div className="panel-heading">
           {labelFor(feature)}
+          {isMirrored(feature) && (
+            // So a selected counterpart never reads as an ordinary independent
+            // feature. What it *is* belongs beside its name, not three fields
+            // down.
+            <span className="badge" data-testid="mirrored-badge">
+              Mirrored
+            </span>
+          )}
           {feature.locked && (
             <span className="badge" data-testid="locked-badge">
               Locked
@@ -133,6 +144,25 @@ export function PropertyPanel({
             <FollowsField store={store} project={project} feature={feature} />
           )}
 
+          {feature.kind !== 'text-label' &&
+            feature.source.kind === 'derived' &&
+            feature.source.op.type === 'mirror' && (
+              /*
+                The relationship, stated rather than discovered. A maker who
+                moves the original and watches the counterpart go the *other*
+                way needs to know that before it happens, not after — the
+                mirror line is fixed, which is what makes the pair
+                predictable. The axis and glide themselves are never shown:
+                "where it is" is said by dragging it.
+              */
+              <p className="panel-note" data-testid="mirror-note">
+                Reflected across a line fixed where this was made — it does not follow{' '}
+                {sourceNameOf(project, feature.source.sourceId)} about. Moving{' '}
+                {sourceNameOf(project, feature.source.sourceId)} moves this the opposite way, and
+                resizing it changes the gap between the two. Drag this piece to place the pair.
+              </p>
+            )}
+
           <FeatureEditor
             store={store}
             feature={feature}
@@ -167,9 +197,9 @@ export function PropertyPanel({
       )}
 
       {/*
-        Mirroring the piece itself, about its own centre — it stays where it is
-        and faces the other way. A linked counterpart across a fold is a
-        derivation and arrives with slice 4.8 (ADR 0012).
+        Flipping the piece itself, about its own centre — it stays where it is
+        and faces the other way, and nothing is linked afterwards. The mirror
+        below is the other one: a counterpart that keeps following this piece.
       */}
       {/*
         Asked before the gesture is offered, from the same query the command
@@ -178,6 +208,29 @@ export function PropertyPanel({
       <div className="toolbar">
         <FlipButton store={store} project={project} feature={feature} axis="horizontal" />
         <FlipButton store={store} project={project} feature={feature} axis="vertical" />
+      </div>
+
+      {/*
+        Mirror is the other thing entirely: flip changes this piece, mirror
+        makes a counterpart that stays matched to it (ADR 0012). Side by side
+        because that is where the maker looks for both, and named differently
+        because they are not variants of each other.
+      */}
+      <div className="toolbar">
+        <MirrorButton
+          store={store}
+          project={project}
+          feature={feature}
+          axis="horizontal"
+          nextId={nextId}
+        />
+        <MirrorButton
+          store={store}
+          project={project}
+          feature={feature}
+          axis="vertical"
+          nextId={nextId}
+        />
       </div>
 
       <DeriveActions store={store} part={part} feature={feature} nextId={nextId} />
@@ -190,6 +243,64 @@ export function PropertyPanel({
       */}
       <DeleteButton project={project} feature={feature} requestDelete={requestDelete} />
     </aside>
+  );
+}
+
+/** Whether this feature is a mirrored counterpart of another. */
+function isMirrored(feature: Feature): boolean {
+  return (
+    feature.kind !== 'text-label' &&
+    feature.source.kind === 'derived' &&
+    feature.source.op.type === 'mirror'
+  );
+}
+
+/** What a feature follows, by name, for the sentence that explains a mirror. */
+function sourceNameOf(project: Project, sourceId: string): string {
+  const found = project.parts.flatMap((part) => part.features).find((f) => f.id === sourceId);
+  return found?.name ?? 'its original';
+}
+
+/** A counterpart that stays matched, or saying why one cannot be made. */
+function MirrorButton({
+  store,
+  project,
+  feature,
+  axis,
+  nextId,
+}: {
+  store: DocumentStore;
+  project: Project;
+  feature: Feature;
+  axis: MirrorAxis;
+  nextId: () => string;
+}) {
+  const refusal = mirrorRefusal(project, [feature.id], axis);
+  const horizontal = axis === 'horizontal';
+
+  return (
+    <button
+      type="button"
+      className="tool"
+      data-testid={horizontal ? 'mirror-horizontal' : 'mirror-vertical'}
+      disabled={refusal !== null}
+      title={
+        refusal === null
+          ? `A counterpart ${horizontal ? 'to the right' : 'below'}, mirrored across this piece's ` +
+            `${horizontal ? 'right' : 'bottom'} edge as it is now. It keeps following this piece's ` +
+            'shape; the mirror line stays where it is put.'
+          : describeProblem(refusal)
+      }
+      onClick={() => {
+        const placement = mirrorAxisFor(project, [feature.id], axis);
+        if (placement === null) return;
+        const id = nextId();
+        store.dispatch(mirrorFeatures([feature.id], [id], placement));
+        store.select([id]);
+      }}
+    >
+      {horizontal ? 'Mirror ↔' : 'Mirror ↕'}
+    </button>
   );
 }
 
@@ -389,9 +500,14 @@ function FollowsField({
       .map((candidate) => ({ id: candidate.id, label: `${part.name} › ${candidate.name}` })),
   );
 
+  // Named for the relationship it actually is. "Follows" is right for a stitch
+  // line inset from an outline; a counterpart is mirrored *from* its original,
+  // and the word is what tells the maker which of the two they are looking at.
+  const mirrored = isMirrored(feature);
+
   return (
     <label className="field">
-      <span className="field-label">Follows</span>
+      <span className="field-label">{mirrored ? 'Mirrored from' : 'Follows'}</span>
       <select
         data-testid="follows"
         value={current}

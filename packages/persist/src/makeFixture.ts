@@ -357,3 +357,55 @@ export function fixtureProjectV5(): Project {
     ],
   };
 }
+
+/**
+ * Version 6 — a mirrored counterpart.
+ *
+ * The v5 baseline with a second part whose outline is `cut-1` reflected across
+ * a vertical axis and slid along it. What this fixture proves is that the
+ * counterpart's **placement** survives a round trip while its **geometry**
+ * does not exist in the file at all: a mirror is a relationship, and the shape
+ * is recomputed on load like every other derived feature (file-format.md §3.3).
+ */
+export function fixtureProjectV6(): Project {
+  const previous = fixtureProjectV5();
+
+  return {
+    ...previous,
+    id: 'fixture-v6',
+    name: 'Format baseline v6',
+    parts: [
+      ...previous.parts,
+      {
+        id: 'part-mirror',
+        name: 'Panel mirrored',
+        quantity: 1,
+        features: [
+          {
+            id: 'mirror-1',
+            kind: 'cut-contour',
+            role: 'outer',
+            name: 'Outline mirrored',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'cut-1',
+              op: {
+                type: 'mirror',
+                // A horizontal axis: the wallet case, one piece either side of
+                // a fold. Chosen over a vertical one so every number here
+                // survives the writer's six-decimal rounding exactly, which
+                // keeps this fixture an equality check rather than a
+                // near-equality one. What the rounding does to an angle is
+                // pinned separately in `fixture.test.ts`.
+                axis: { origin: { x: 0, y: -10 }, angleRad: 0 },
+                glideMm: 5,
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}

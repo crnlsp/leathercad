@@ -69,6 +69,8 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   WOULD_SHEAR: interaction('X9'),
   TEXT_WOULD_DISTORT: interaction('X9'),
   TEXT_WOULD_READ_BACKWARDS: interaction('X9'),
+  MIRROR_WOULD_SCALE: interaction('X3'),
+  MIRROR_NO_AXIS: interaction('X3'),
   NO_TARGET_PART: interaction('X4'),
   TARGET_SPANS_PARTS: interaction('X4'),
 

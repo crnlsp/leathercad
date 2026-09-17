@@ -5,7 +5,14 @@ import {
   setPartVisible,
   type DocumentStore,
 } from '@leathercad/document';
-import { featureTree, roleOf, type FeatureNode, type Part, type Project } from '@leathercad/domain';
+import {
+  featureTree,
+  roleOf,
+  type Feature,
+  type FeatureNode,
+  type Part,
+  type Project,
+} from '@leathercad/domain';
 
 /**
  * Every part in the project, and what each one is made of.
@@ -189,6 +196,14 @@ function FeatureRow({
         >
           <span className={`swatch role-${roleOf(feature)}`} />
           <span className="feature-name">{feature.name}</span>
+          {isMirroredFeature(feature) && (
+            // A counterpart already nests under its original here, but the
+            // nesting alone reads the same as a stitch line's. This says which
+            // relationship it is, in the width of one glyph.
+            <span className="row-mark" data-testid={`mirrored-mark-${feature.id}`} title="Mirrored">
+              ⇄
+            </span>
+          )}
         </button>
         <IconToggle
           testId={`feature-locked-${feature.id}`}
@@ -217,6 +232,15 @@ function FeatureRow({
         />
       ))}
     </>
+  );
+}
+
+/** Whether this feature is a mirrored counterpart of another. */
+function isMirroredFeature(feature: Feature): boolean {
+  return (
+    feature.kind !== 'text-label' &&
+    feature.source.kind === 'derived' &&
+    feature.source.op.type === 'mirror'
   );
 }
 

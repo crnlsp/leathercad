@@ -807,10 +807,39 @@ that walks one scenario through the whole phase.
   to where the run now ends rather than to nothing — a test caught that as a null; and a `null`
   anchor cannot be *named* by anything yet, because only an inward offset takes a run, so that path
   waits for measurements in 4.10 rather than being faked.
-- **4.8** Mirror as a derivation ([ADR 0012](adr/0012-mirror-is-a-derivation.md)): a linked
-  counterpart of a feature or a whole part, same kind and role, with hole counts equal by
-  construction. Moved and rotated through its axis and glide; never scaled. Offset-derived features
-  refuse to move on their own instead of silently staying put. No part transform.
+- **4.8a** ✅ **Done.** Mirror, the operation
+  ([design](superpowers/specs/2026-09-17-mirror-design.md), [ADR 0012](adr/0012-mirror-is-a-derivation.md)).
+  A **counterpart that stays matched**: same kind, same role, geometry entirely its original's.
+  *Mirror ↔* and *Mirror ↕* fold it across the edge of what is selected, and the counterpart joins
+  the same part — a pair of card slots belongs to the panel they are cut in.
+  **A counterpart owns its placement and nothing else.** Drag it and it moves; turn it and it turns;
+  it stays linked throughout. Dragging it **with** its original moves the pair rigidly, which is the
+  case that would be wrong if the counterpart merely re-parameterised. Scaling it is refused — a
+  counterpart is the size of its original — and so is reshaping it. Since a glide reflection composed
+  with any isometry is another glide reflection, a scale is the *only* thing that can fail: there is
+  no "cannot express that" state to design around.
+  **The axis is absolute and never tracks the source**, so moving the original moves the counterpart
+  the opposite way. That is what makes a pair predictable, and the panel says it rather than letting
+  it be discovered.
+  Gotchas worth not rediscovering: the loader refused a mirrored outline until **S6 learned that a
+  reflection preserves closedness** — `declaresClosed` knew only about offsets; **winding reverses**
+  and that is safe only because `applyDerivation` reads the actual signed area rather than assuming
+  a direction, which a property test now pins; `setShape` on a **derived** feature silently converted
+  it into drawn geometry (an X3 violation, pre-existing, now refused); `transformFeatures` and
+  `mapFeature` rebuilt the project even when nothing changed, pushing undo entries with nothing
+  behind them; and the writer rounds every number to six decimals, **angles included**, so the format
+  fixture uses an axis whose numbers survive it and a separate test pins what the rounding does.
+  **Format version 6**, so a build predating mirror refuses a file holding one rather than dropping
+  the counterpart.
+  **Known, not fixed here:** *Mirror ↔* takes the axis from the selection's **world-aligned** bounding
+  box, which is predictable but one-shot — widen the original afterwards and it crosses its own
+  mirror line, overlapping its counterpart. That is correct by the fixed-axis rule and visible on the
+  canvas, and the real answer for a symmetric panel is mirroring across a **fold line**, whose axis is
+  a thing in the drawing rather than a measurement of it. Slice 4.8b.
+- **4.8b** Mirror, the composition: whole-part mirroring, *Mirror across fold* using an existing
+  `fold-line` as the axis, labels in a mirrored part, hole-count parity checked by construction, and
+  how a linked pair presents in the dependency tree. Consumes a proven mirror operation and adds no
+  algebra to it.
 - **4.9** Seam allowance: a closed stitch line with its outline derived outward. *Stitch + allowance*
   makes the new part in one step, and one stitch margin (`settings.defaultStitchInsetMm`) serves both
   directions. Deleting such a part's stitch line is the case ADR 0009 exists for.

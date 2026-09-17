@@ -4,6 +4,8 @@ import { dirname, resolve } from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
+import type { Feature } from '@leathercad/domain';
+
 import { loadProject, readManifest, saveProject } from './lcp.js';
 import {
   fixtureProject,
@@ -11,6 +13,7 @@ import {
   fixtureProjectV3,
   fixtureProjectV4,
   fixtureProjectV5,
+  fixtureProjectV6,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -19,6 +22,7 @@ const FIXTURE_V2 = resolve(import.meta.dirname, '../../../fixtures/format/v2.lcp
 const FIXTURE_V3 = resolve(import.meta.dirname, '../../../fixtures/format/v3.lcp');
 const FIXTURE_V4 = resolve(import.meta.dirname, '../../../fixtures/format/v4.lcp');
 const FIXTURE_V5 = resolve(import.meta.dirname, '../../../fixtures/format/v5.lcp');
+const FIXTURE_V6 = resolve(import.meta.dirname, '../../../fixtures/format/v6.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -45,9 +49,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V5), { recursive: true });
-      writeFileSync(FIXTURE_V5, saveProject(fixtureProjectV5(), OPTIONS));
-      expect(existsSync(FIXTURE_V5)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V6), { recursive: true });
+      writeFileSync(FIXTURE_V6, saveProject(fixtureProjectV6(), OPTIONS));
+      expect(existsSync(FIXTURE_V6)).toBe(true);
     });
   }
 
@@ -135,18 +139,98 @@ describe('the format baseline fixture', () => {
     );
   });
 
-  it('holds a text label at the current version', () => {
-    const loaded = loadProject(readFileSync(FIXTURE_V5));
+  it('still opens a version 5 file, now that mirrors exist', () => {
+    // v5 stopped being current when the mirror derivation arrived (slice 4.8a).
+    // Never regenerated: it is the only proof that a file written before
+    // counterparts existed still loads.
+    expect(readManifest(readFileSync(FIXTURE_V5)).formatVersion).toBe(5);
+    expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(5);
+    expect(loadProject(readFileSync(FIXTURE_V5)).project).toEqual(fixtureProjectV5());
+  });
 
-    expect(readManifest(readFileSync(FIXTURE_V5)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
-    expect(loaded.project).toEqual(fixtureProjectV5());
+  it('holds a mirrored counterpart at the current version', () => {
+    const loaded = loadProject(readFileSync(FIXTURE_V6));
+
+    expect(readManifest(readFileSync(FIXTURE_V6)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+    expect(loaded.project).toEqual(fixtureProjectV6());
+  });
+
+  it('stores a counterpart as a relationship, never as its reflected shape', () => {
+    // Derived geometry is never persisted (file-format.md §3.3). A mirror is an
+    // axis and a glide; the counterpart's outline is recomputed on load, which
+    // is what makes editing the original in a later session still move it.
+    const mirror = loadProject(readFileSync(FIXTURE_V6))
+      .project.parts.flatMap((part) => part.features)
+      .find((feature) => feature.id === 'mirror-1');
+
+    expect(mirror?.source).toEqual({
+      kind: 'derived',
+      sourceId: 'cut-1',
+      op: {
+        type: 'mirror',
+        axis: { origin: { x: 0, y: -10 }, angleRad: 0 },
+        glideMm: 5,
+      },
+    });
+  });
+
+  it('stores a mirror axis angle to six decimals, as it does every other angle', () => {
+    // `stableJson` rounds every number on the way out, angles included — a
+    // rectangle's `rotation` has always been stored this way. For a mirror
+    // axis 1e-6 rad is 0.0002 mm over a 200 mm span, which is two orders below
+    // anything printable, so it is accepted rather than special-cased. Pinned
+    // here because it is the kind of thing that is only noticed when a test
+    // compares an axis for exact equality and quietly fails.
+    const base = fixtureProjectV6();
+    const mirrorPart = base.parts.find((part) => part.id === 'part-mirror')!;
+    const counterpart = mirrorPart.features[0]!;
+
+    const saved = saveProject(
+      {
+        ...base,
+        parts: base.parts.map((part) =>
+          part.id !== 'part-mirror'
+            ? part
+            : {
+                ...part,
+                features: [
+                  {
+                    ...counterpart,
+                    source: {
+                      kind: 'derived',
+                      sourceId: 'cut-1',
+                      op: {
+                        type: 'mirror',
+                        axis: { origin: { x: 0, y: -10 }, angleRad: Math.PI / 2 },
+                        glideMm: 5,
+                      },
+                    },
+                  } as Feature,
+                ],
+              },
+        ),
+      },
+      OPTIONS,
+    );
+
+    const mirror = loadProject(saved)
+      .project.parts.flatMap((part) => part.features)
+      .find((feature) => feature.id === 'mirror-1');
+
+    const angle =
+      mirror?.source.kind === 'derived' && mirror.source.op.type === 'mirror'
+        ? mirror.source.op.axis.angleRad
+        : null;
+
+    expect(angle).toBe(1.570796);
+    expect(Math.abs(angle! - Math.PI / 2)).toBeLessThan(1e-6);
   });
 
   it('brings a label back as words, a place and a size — never as outlines', () => {
     // Derived geometry is never persisted (file-format.md §3.3). What is stored
     // is what the user typed; the glyphs are regenerated by the typeface, so an
     // improvement to the typesetting improves this file too.
-    const label = loadProject(readFileSync(FIXTURE_V5))
+    const label = loadProject(readFileSync(FIXTURE_V6))
       .project.parts.flatMap((part) => part.features)
       .find((feature) => feature.kind === 'text-label');
 

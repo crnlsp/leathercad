@@ -4,6 +4,7 @@ import {
   PathOps,
   Shapes,
   arc,
+  glideMatrix,
   offsetPathTraced,
   subPath,
   type OffsetPiece,
@@ -307,6 +308,44 @@ function build(
       const sourcePath = from!;
       const sourceAnchors = resolvedSource!.anchors;
 
+      if (source.op.type === 'mirror') {
+        // The counterpart is the source, reflected and placed. Everything it
+        // has comes from the source: the path, the holes if it has them, and
+        // the anchors.
+        //
+        // Note that a mirrored **hole set** gets its holes here rather than
+        // from `distributeHoles` — so this is the second place a `holes` field
+        // is produced, and deliberately so. Redistributing along the mirrored
+        // line could yield a different count from a rounding difference, and
+        // two panels sewn together must have the same number of holes. A
+        // reflection cannot lose one.
+        const m = glideMatrix(source.op.axis.origin, source.op.axis.angleRad, source.op.glideMm);
+        const holes = resolvedSource!.holes;
+
+        return {
+          from,
+          path: PathOps.transform(sourcePath, m),
+          holes:
+            holes === undefined
+              ? undefined
+              : {
+                  ...holes,
+                  holes: holes.holes.map((hole) => ({
+                    ...hole,
+                    point: MatOps.apply(m, hole.point),
+                  })),
+                },
+          text: undefined,
+          // The image path's vertices are the source's reflected **in the same
+          // order**, so each edge is the image of the corresponding edge with
+          // the same length: the arc-length parameterisation is identical and
+          // an anchor at s is still at s. Nothing goes missing — a reflection
+          // loses nothing (ADR 0010).
+          anchors: sourceAnchors,
+          notes: undefined,
+        };
+      }
+
       if (source.op.type === 'stitch-holes') {
         // The holes are the output, but a feature still needs a path — for
         // selection, for a bounding box, for fitting the view. It is the line
@@ -577,6 +616,15 @@ function parameterProblem(feature: Feature): Problem | null {
       const op = source.op;
       if (op.type === 'offset') {
         checks.push([op.side === 'inward' ? 'inset' : 'allowance', op.distanceMm, 'non-negative']);
+      } else if (op.type === 'mirror') {
+        // A glide may be negative — it slides either way along the axis — so
+        // only finiteness is asked of these.
+        checks.push(
+          ['mirror axis', op.axis.origin.x, 'finite'],
+          ['mirror axis', op.axis.origin.y, 'finite'],
+          ['mirror angle', op.axis.angleRad, 'finite'],
+          ['glide', op.glideMm, 'finite'],
+        );
       } else {
         checks.push(['pitch', op.pitchMm, 'positive']);
         if (op.startOffsetMm !== undefined) {

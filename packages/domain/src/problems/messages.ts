@@ -34,6 +34,10 @@ const COMPATIBILITY: Readonly<Record<CompatibilityRule, string>> = {
     "Only a part's outer outline can be derived from its stitch line, not a cut-out.",
   'allowance-needs-whole-run':
     'A seam allowance follows the whole stitch line, so the outline it makes is closed.',
+  'mirror-keeps-kind': 'A counterpart is the same kind of thing as what it mirrors.',
+  'mirror-keeps-role':
+    'A mirrored cut contour stays what it was: an outline mirrors to an outline, a cut-out to a ' +
+    'cut-out.',
   'allowance-needs-closed-line':
     'A seam allowance needs a closed stitch line: an outline has to enclose the part.',
 };
@@ -77,6 +81,17 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
       (f.closable
         ? 'Close the shape, or draw it as a marking line.'
         : 'Draw it as a marking line.'),
+  },
+
+  MIRROR_WOULD_SCALE: {
+    title: 'A counterpart cannot be resized',
+    describe: (f) =>
+      `${f.featureName} is a mirror of ${f.sourceName}, so it is the size ${f.sourceName} is. ` +
+      `Scale ${f.sourceName} and this follows.`,
+  },
+  MIRROR_NO_AXIS: {
+    title: 'Nothing to mirror across',
+    describe: () => 'Select something with a size to it, and the mirror runs along its edge.',
   },
 
   FEATURE_LOCKED: {

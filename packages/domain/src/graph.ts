@@ -165,6 +165,21 @@ function compatibilityRefusal(
   const op = target.source.op;
 
   switch (op.type) {
+    case 'mirror':
+      // A counterpart is the same thing, reflected. A mirror that changed the
+      // kind would not be a mirror, it would be a different feature wearing
+      // the name — and a cut contour that changed role would turn an outline
+      // into a hole in the leather.
+      if (target.kind !== source.kind) return 'mirror-keeps-kind';
+      if (
+        target.kind === 'cut-contour' &&
+        source.kind === 'cut-contour' &&
+        target.role !== source.role
+      ) {
+        return 'mirror-keeps-role';
+      }
+      return null;
+
     case 'stitch-holes':
       if (target.kind !== 'stitch-hole-set') return 'holes-need-hole-set';
       if (source.kind !== 'stitch-line') return 'holes-need-stitch-line';
@@ -220,7 +235,19 @@ function declaresClosed(
       return false;
     case 'derived': {
       if (visiting.has(feature.id)) return false;
-      if (source.op.type !== 'offset' || source.op.run.kind !== 'whole') return false;
+
+      // A **mirror** is an isometry: the image of a closed contour is closed,
+      // and the image of an open run is open. So the answer is its source's,
+      // whatever that is.
+      //
+      // An **offset** of a whole closed run is closed; a partial run is not,
+      // because it stops at its anchors. Anything else cannot be said to
+      // enclose an area from its parameters alone.
+      const follows =
+        source.op.type === 'mirror' ||
+        (source.op.type === 'offset' && source.op.run.kind === 'whole');
+      if (!follows) return false;
+
       const from = byId.get(source.sourceId);
       if (from === undefined) return false;
       visiting.add(feature.id);

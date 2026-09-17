@@ -32,6 +32,8 @@ import {
   PathOps,
   RectOps,
   Shapes,
+  decomposeGlide,
+  glideMatrix,
   type Mat2x3,
   type Path,
   type Rect,
@@ -145,11 +147,18 @@ export function setFeatureLocked(id: FeatureId, locked: boolean): Command {
 /** Replaces a parametric shape — the path is regenerated on evaluation. */
 export function setShape(id: FeatureId, shape: ParametricShape): Command {
   return command('Edit shape', (document) => ({
-    project: mapFeature(document.project, id, (feature) =>
+    project: mapFeature(document.project, id, (feature) => {
       // A label is made of words; it has no shape to replace, and asking for
       // one is a no-op rather than a way to turn it into a rectangle.
-      feature.kind === 'text-label' ? feature : { ...feature, source: { kind: 'shape', shape } },
-    ),
+      if (feature.kind === 'text-label') return feature;
+      // Nor does a **derived** feature have a shape of its own. Replacing its
+      // source here would silently detach it from what it follows — a stitch
+      // line that stopped following its outline, a counterpart that stopped
+      // mirroring — which is exactly what X3 forbids. The panel offers no
+      // shape fields for one; this is the guarantee underneath that.
+      if (feature.source.kind === 'derived') return feature;
+      return { ...feature, source: { kind: 'shape', shape } };
+    }),
   }));
 }
 
@@ -190,17 +199,29 @@ export function transformFeatures(
     // a glance — worse than not moving at all.
     if (lockRefusal(document.project, targets) !== null) return document;
 
-    return {
+    const next = {
       project: {
         ...document.project,
         parts: document.project.parts.map((part) => ({
           ...part,
           features: part.features.map((feature) =>
-            targets.has(feature.id) ? transformFeature(feature, matrix) : feature,
+            targets.has(feature.id)
+              ? transformFeature(
+                  feature,
+                  matrix,
+                  feature.kind !== 'text-label' &&
+                    feature.source.kind === 'derived' &&
+                    targets.has(feature.source.sourceId),
+                )
+              : feature,
           ),
         })),
       },
     };
+
+    // Everything refused is everything unchanged, and a no-op earns no
+    // history: "Undo Move" with nothing behind it is worse than no entry.
+    return movedAnything(document.project, next.project) ? next : document;
   });
 }
 
@@ -340,9 +361,32 @@ export function refusedTransforms(
       if (!targets.has(feature.id)) continue;
 
       if (feature.kind !== 'text-label' && feature.source.kind === 'derived') {
-        // A derived feature has no geometry of its own to move. Moved with what
-        // it follows, it follows; moved alone, nothing happens — and the user is
-        // told why rather than left watching it not move (X3).
+        // A mirror has a placement of its own, so it moves, turns and flips.
+        // The one thing it cannot do is change size: a counterpart is the size
+        // of its original, and a reflection-and-slide has nowhere to put a
+        // scale. One question answers it — is this a distance-preserving
+        // transform — which covers shears as well, for the same reason.
+        if (feature.source.op.type === 'mirror') {
+          // Scaled **with its original** is not a refusal: the original takes
+          // the scale and the counterpart follows it, which is what selecting
+          // a whole symmetric panel and resizing it has to do. Only a
+          // counterpart scaled on its own has nowhere to put the change.
+          if (!MatOps.isIsometry(matrix) && !movesWithItsSource(byId, feature, targets)) {
+            refused.push({
+              featureId: feature.id,
+              problem: problem('MIRROR_WOULD_SCALE', {
+                featureId: feature.id,
+                featureName: feature.name,
+                sourceName: byId.get(feature.source.sourceId)?.name ?? 'its original',
+              }),
+            });
+          }
+          continue;
+        }
+
+        // Any other derived feature has no geometry of its own to move. Moved
+        // with what it follows, it follows; moved alone, nothing happens — and
+        // the user is told why rather than left watching it not move (X3).
         if (!movesWithItsSource(byId, feature, targets)) {
           const root = rootOf(byId, feature);
           refused.push({
@@ -376,7 +420,7 @@ export function refusedTransforms(
   return refused;
 }
 
-function transformFeature(feature: Feature, matrix: Mat2x3): Feature {
+function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false): Feature {
   // A label transforms through its parameters, exactly as a parametric shape
   // does: it stays a label you can retype, rather than becoming outlines.
   if (feature.kind === 'text-label') {
@@ -391,11 +435,43 @@ function transformFeature(feature: Feature, matrix: Mat2x3): Feature {
     };
   }
 
-  // A derived feature has no geometry of its own to move: it follows the one
-  // it is built from, and moving that moves this. Transforming it here would
-  // detach it from its source, which is exactly what the derivation exists to
-  // prevent.
-  if (feature.source.kind === 'derived') return feature;
+  // A **mirror** is the one derived feature with a placement of its own, so a
+  // gesture lands in its parameters rather than being ignored. Two ways round,
+  // and the difference is what makes a pair behave like an object:
+  //
+  // - moved **alone**, the axis absorbs the gesture (`T ∘ M`), so the
+  //   counterpart goes where it is put and the original stays;
+  // - moved **with its source**, the axis travels too (`T ∘ M ∘ T⁻¹`), so the
+  //   assembly moves rigidly instead of sliding its halves apart.
+  //
+  // Either way the result is still a reflection-and-slide, so it can always be
+  // said — see `decomposeGlide`.
+  if (feature.source.kind === 'derived') {
+    const op = feature.source.op;
+    if (op.type !== 'mirror') return feature;
+
+    const current = glideMatrix(op.axis.origin, op.axis.angleRad, op.glideMm);
+    const moved = withSource
+      ? MatOps.composeAll(MatOps.invert(matrix), current, matrix)
+      : MatOps.compose(current, matrix);
+
+    const parts = decomposeGlide(moved);
+    // Not an isometry — a scale or a shear. Left exactly as it was;
+    // `refusedTransforms` is how the reason reaches the user.
+    if (parts === null) return feature;
+
+    return {
+      ...feature,
+      source: {
+        ...feature.source,
+        op: {
+          type: 'mirror',
+          axis: { origin: parts.origin, angleRad: parts.angleRad },
+          glideMm: parts.glideMm,
+        },
+      },
+    };
+  }
 
   const result = transformShape(feature.source.shape, matrix);
   // Refused: left exactly as it was, rather than converted behind the user's
@@ -708,9 +784,14 @@ function mapFeature(
   // rebuilt anyway and the store, which decides by identity, would push an
   // undo entry for a command that changed nothing — "Undo Rename" with no
   // rename behind it.
-  if (!project.parts.some((part) => part.features.some((feature) => feature.id === id))) {
-    return project;
-  }
+  const found = project.parts.flatMap((part) => part.features).find((feature) => feature.id === id);
+  if (found === undefined) return project;
+
+  // An update that hands back the same feature is not an edit either. Several
+  // commands refuse by returning their input — `setShape` on a derived feature,
+  // for one — and without this the project would be rebuilt anyway and the
+  // store, which decides by identity, would push an undo entry for nothing.
+  if (update(found) === found) return project;
 
   return {
     ...project,
@@ -1232,6 +1313,179 @@ function moveClear(project: Project, copy: Part): Project {
   const roots = copy.features.filter((f) => f.source.kind !== 'derived').map((f) => f.id);
 
   return transformFeatures(roots, MatOps.fromTranslation(deltaMm)).apply({ project }).project;
+}
+
+/**
+ * Which way *Mirror ↔* and *Mirror ↕* fold.
+ *
+ * Named for what the maker sees happen, as `FlipAxis` is: `horizontal` puts
+ * the counterpart to the right, across a vertical line.
+ */
+export type MirrorAxis = 'horizontal' | 'vertical';
+
+/** A mirror's axis, as the op stores it. */
+export interface Axis {
+  readonly origin: Vec2;
+  readonly angleRad: number;
+}
+
+/** How far a mirrored counterpart sits from its original: touching. */
+const MIRROR_GAP_MM = 0;
+
+/**
+ * The line *Mirror ↔ / ↕* folds about, or `null` when there is nothing to
+ * measure.
+ *
+ * **Defined exactly, because for an upright panel every interpretation agrees
+ * and for a turned one they do not** (the design's §8):
+ *
+ * - **world millimetres**, the frame the rulers show and every stored
+ *   coordinate uses;
+ * - the bounding box is **world-axis-aligned**, not turned to the selection —
+ *   "↔" means left-and-right *in the drawing*, which is what the glyph says,
+ *   and a selection of two differently-turned features has no local frame to
+ *   align to anyway;
+ * - **horizontal** takes the vertical line through the box's maximum x;
+ *   **vertical** takes the horizontal line through its minimum y. So the
+ *   counterpart lands immediately right of, or below, the selection, touching.
+ *
+ * For a turned piece the world box is larger than the piece, so the
+ * counterpart sits beside the *box*. That is accepted rather than worked
+ * around: predictability is worth more than a snug fit here, and mirroring
+ * across a fold line — 4.8b — is the gesture for folding along a line that is
+ * not square to the world.
+ *
+ * The axis is computed **once** and then stored absolutely. It never tracks
+ * the source: an axis that chased a bounding box would jump whenever the
+ * geometry changed, moving the counterpart by twice as much for reasons
+ * nobody could see.
+ */
+export function mirrorAxisFor(
+  project: Project,
+  ids: Iterable<FeatureId>,
+  axis: MirrorAxis,
+): Axis | null {
+  const wanted = new Set(ids);
+  if (wanted.size === 0) return null;
+
+  const boxes: Rect[] = [];
+  for (const part of evaluate(project).parts) {
+    for (const entry of part.features) {
+      if (!entry.ok || !wanted.has(entry.feature.id)) continue;
+      const box = PathOps.bbox(entry.path);
+      if (box !== null) boxes.push(box);
+    }
+  }
+
+  const bounds = RectOps.unionAll(boxes);
+  if (bounds === null) return null;
+
+  return axis === 'horizontal'
+    ? { origin: { x: bounds.maxX + MIRROR_GAP_MM, y: bounds.minY }, angleRad: Math.PI / 2 }
+    : { origin: { x: bounds.minX, y: bounds.minY - MIRROR_GAP_MM }, angleRad: 0 };
+}
+
+/**
+ * Why this selection cannot be mirrored, or `null`.
+ *
+ * Pure, and shared with the interface, so a disabled button and a refused
+ * command cannot disagree (ADR 0013).
+ */
+export function mirrorRefusal(
+  project: Project,
+  ids: Iterable<FeatureId>,
+  axis: MirrorAxis = 'horizontal',
+): Problem | null {
+  const wanted = [...new Set(ids)];
+
+  // A label is refused outright: a mirror is a similarity, so mirrored words
+  // come out rotated rather than reflected — the right way round in the wrong
+  // place, which is defect D2's silent wrongness in another costume.
+  const byId = new Map(
+    project.parts.flatMap((part) => part.features).map((f) => [f.id, f] as const),
+  );
+  for (const id of wanted) {
+    const feature = byId.get(id);
+    if (feature?.kind === 'text-label') return problem('TEXT_WOULD_READ_BACKWARDS', {});
+  }
+
+  return mirrorAxisFor(project, wanted, axis) === null ? problem('MIRROR_NO_AXIS', {}) : null;
+}
+
+/**
+ * Counterparts that stay matched: each selected feature, reflected.
+ *
+ * Every counterpart mirrors **its own** original rather than being re-derived
+ * from the mirrored outline. That is what makes a mirrored hole set have
+ * exactly as many holes as the set it came from — redistributing along a
+ * nominally-equal path can come out one short, and two panels sewn together
+ * have to match (ADR 0012).
+ *
+ * The counterparts join **the same part**: a pair of card slots belongs to the
+ * panel they are cut in. Mirroring a whole part into a new one is 4.8b.
+ *
+ * The ids are given rather than made, so the command stays a pure description
+ * of an edit; too few refuses and changes nothing.
+ */
+export function mirrorFeatures(
+  ids: readonly FeatureId[],
+  newIds: readonly FeatureId[],
+  axis: Axis,
+): Command {
+  return {
+    label: ids.length === 1 ? 'Mirror' : `Mirror ${String(ids.length)} features`,
+    apply: (document) => {
+      const wanted = [...new Set(ids)];
+      if (wanted.length === 0 || newIds.length < wanted.length) return document;
+      if (mirrorRefusal(document.project, wanted) !== null) return document;
+
+      const renamed = new Map(wanted.map((id, i) => [id, newIds[i]!] as const));
+
+      return {
+        project: {
+          ...document.project,
+          parts: document.project.parts.map((part) => {
+            const made = part.features.flatMap((feature) => {
+              const newId = renamed.get(feature.id);
+              if (newId === undefined || feature.kind === 'text-label') return [];
+              return [counterpartOf(feature, newId, axis)];
+            });
+            return made.length === 0 ? part : { ...part, features: [...part.features, ...made] };
+          }),
+        },
+      };
+    },
+  };
+}
+
+/**
+ * The same feature, mirror-derived from itself: same kind, same role.
+ *
+ * A label is excluded by the type, not by a check: its source is its words, so
+ * it has nowhere to put a derivation, and `mirrorRefusal` has already turned
+ * one away before this is reached.
+ */
+function counterpartOf(
+  feature: Exclude<Feature, { kind: 'text-label' }>,
+  id: FeatureId,
+  axis: Axis,
+): Feature {
+  const source = {
+    kind: 'derived' as const,
+    sourceId: feature.id,
+    op: { type: 'mirror' as const, axis, glideMm: 0 },
+  };
+
+  return {
+    ...feature,
+    id,
+    name: `${feature.name} mirrored`,
+    // A counterpart's own, not its original's: it starts visible and free
+    // whatever the original happens to be.
+    visible: true,
+    locked: false,
+    source,
+  } as Feature;
 }
 
 /**

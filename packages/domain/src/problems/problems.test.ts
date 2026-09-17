@@ -35,6 +35,8 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   FEATURE_MISSING: { featureId: 'f-1' },
   NOT_DERIVED: named,
   DERIVED_MOVED_ALONE: { ...named, rootId: 'f-2', rootName: 'Outline' },
+  MIRROR_WOULD_SCALE: { ...named, sourceName: 'Outline' },
+  MIRROR_NO_AXIS: {},
   TRANSFORM_FLATTENS: {},
   WOULD_BECOME_ELLIPSE: { shape: 'circle' },
   WOULD_SHEAR: {},

@@ -23,6 +23,8 @@ export * as RectOps from './rect.js';
 
 export type { Vec2 } from './vec2.js';
 export type { Mat2x3 } from './mat2x3.js';
+export type { Glide } from './glide.js';
+export { decomposeGlide, glideEquals, glideMatrix } from './glide.js';
 export type { Rect } from './rect.js';
 export type {
   ArcSegment,

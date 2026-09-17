@@ -108,6 +108,14 @@ const derivation = z.discriminatedUnion('type', [
     endOffsetMm: nonNegativeMm.optional(),
     ironLabel: z.string().optional(),
   }),
+  // A counterpart's placement, and the only thing it owns (ADR 0012). The
+  // glide is signed — it slides either way along the axis — so it is a plain
+  // millimetre rather than a non-negative one.
+  z.object({
+    type: z.literal('mirror'),
+    axis: z.object({ origin: vec2, angleRad: z.number().finite() }),
+    glideMm: mm,
+  }),
 ]);
 
 /**
