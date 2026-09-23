@@ -1,0 +1,91 @@
+name: Weekly
+
+# Too slow for every pull request, too valuable to leave to memory.
+
+on:
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Mutation testing (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [geometry, domain]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Stryker's incremental file: mutants whose code and tests are unchanged
+      # since last week keep their result instead of being run again.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: reports/mutation/${{ matrix.package }}/incremental.json
+          key: stryker-${{ matrix.package }}-${{ github.sha }}
+          restore-keys: stryker-${{ matrix.package }}-
+
+      - name: Stryker
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: pnpm "test:mutation:$PACKAGE"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-${{ matrix.package }}
+          path: reports/mutation/${{ matrix.package }}/
+          retention-days: 30
+          if-no-files-found: ignore
+
+  cross-platform:
+    name: Unit tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux runs on every pull request. These catch paths, line endings
+        # and locale before Phase 8 has to. Weekly, not per pull request:
+        # macOS minutes cost ten times Linux's on a private repository.
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # No install scripts: the unit tests need neither the Electron binary
+      # nor the git hook, and the hook's POSIX shell does not run under cmd.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # poppler is absent, so the rasterised print checks skip here. They run
+      # on Linux, where CI requires them.
+      - run: pnpm test

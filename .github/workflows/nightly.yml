@@ -1,0 +1,122 @@
+name: Nightly
+
+# The slow checks that would make every pull request wait: property tests at
+# a hundred times their usual effort, and the benchmark trend. Neither blocks
+# anything. A property failure opens an issue carrying the seed that found it.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  properties:
+    name: Deep property run
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install poppler
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - run: pnpm install --frozen-lockfile
+
+      # A fresh seed every night, so the run explores rather than repeats; a
+      # printed one, so whatever it finds reproduces anywhere.
+      - name: Pick a seed
+        id: seed
+        shell: bash
+        run: echo "seed=$(( (RANDOM << 15) | RANDOM ))" >> "$GITHUB_OUTPUT"
+
+      # 10 000 runs for every property that does not set its own count
+      # (docs/testing.md §3.3), and a timeout to match.
+      - name: Property tests at 10 000 runs
+        shell: bash
+        env:
+          LEATHERCAD_FC_RUNS: '10000'
+          LEATHERCAD_FC_SEED: ${{ steps.seed.outputs.seed }}
+        run: pnpm exec vitest run --testTimeout=1800000 2>&1 | tee property-run.log
+
+      - name: Report the failure as an issue
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SEED: ${{ steps.seed.outputs.seed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '%s\n' \
+            "The nightly property run failed: $RUN_URL" \
+            '' \
+            'Reproduce with:' \
+            '' \
+            '```bash' \
+            "LEATHERCAD_FC_RUNS=10000 LEATHERCAD_FC_SEED=$SEED pnpm exec vitest run --testTimeout=1800000" \
+            '```' \
+            '' \
+            'Commit the shrunk counterexample as a named regression test (docs/testing.md §3.3).' \
+            '' \
+            '```' \
+            "$(grep -E 'FAIL|Counterexample|Property failed|seed|heap' property-run.log | head -40)" \
+            '```')
+          gh label create nightly-property --repo "$GITHUB_REPOSITORY" --color B60205 \
+            --description 'Found by the nightly property run' --force
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label nightly-property --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label nightly-property \
+              --title "Nightly property run failed (seed $SEED)" --body "$body"
+          fi
+
+  bench:
+    name: Benchmark trend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Shared runners are noisy neighbours, so these numbers are a trend
+      # across nights, not a verdict on one. Comparison against the committed
+      # baseline belongs on the machine that recorded it (`pnpm bench:compare`).
+      - name: Benchmarks
+        run: pnpm bench:baseline
+
+      - name: Upload results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bench-${{ github.run_number }}
+          path: packages/*/bench/*.json
+          retention-days: 90

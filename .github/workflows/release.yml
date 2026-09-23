@@ -1,0 +1,91 @@
+name: Release
+
+# release-please keeps one pull request open that bumps the version and writes
+# CHANGELOG.md from the conventional commits merged since the last release.
+# Merging that pull request tags the release; the second job then builds the
+# AppImage from the tag and attaches it, with an SBOM, to the GitHub release.
+#
+# Needs "Allow GitHub Actions to create and approve pull requests" (Settings →
+# Actions → General). A pull request opened with the workflow token does not
+# trigger CI on itself; see ADR 0014.
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release pull request
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  build:
+    name: Build and attach the AppImage
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: AppImage
+        run: pnpm package
+
+      # A build SBOM: everything that went into the AppImage, build tooling
+      # included. The app ships no node_modules — Vite bundles its runtime
+      # code — so a production-only SBOM would be empty.
+      - name: SBOM
+        run: >-
+          pnpm sbom --sbom-format cyclonedx --sbom-type application
+          --filter @leathercad/desktop --out apps/desktop/release/leathercad.cdx.json
+
+      # Signed provenance: this file was built by this workflow from this
+      # commit. Attestations on a private repository need Enterprise Cloud,
+      # so the step waits for the repository to be public.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: apps/desktop/release/*.AppImage
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: >-
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber
+          apps/desktop/release/*.AppImage apps/desktop/release/leathercad.cdx.json

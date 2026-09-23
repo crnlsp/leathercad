@@ -1,7 +1,7 @@
 # Testing Strategy
 
-**Status:** Design — no implementation yet
-**Last updated:** 2026-09-03
+**Status:** Implemented — every layer in §2 exists
+**Last updated:** 2026-09-23
 
 ---
 
@@ -25,9 +25,12 @@ invisible and expensive.
 | Document & command | Vitest | ~80 | < 3 s | Undo, evaluation, serialisation |
 | Export accuracy | Vitest + pdfjs-dist | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
-| Rendering (pixel diff) | Playwright + pixelmatch | ~12 | ~60 s | Anti-aliasing, hairlines, grid |
-| E2E | Playwright + Electron | ~4 | ~90 s | The app actually runs |
-| Benchmarks | Vitest bench | ~8 | ~30 s | Accidental O(n²) |
+| Rendering (pixel diff) | Playwright `toHaveScreenshot`, in the pinned container | ~12 | ~60 s | Anti-aliasing, hairlines, grid |
+| E2E | Playwright + Electron, with an axe scan | ~4 | ~90 s | The app actually runs |
+| Packaged smoke | Playwright + the packaged binary | 4 | ~60 s | asar, fuses, resources |
+| Loader fuzzing | Vitest + fast-check | 6 | < 1 s | A damaged `.lcp` refuses with a reason |
+| Benchmarks | Vitest 5 `bench` fixture | 15 | ~45 s | Accidental O(n²) |
+| Mutation | StrykerJS, weekly | — | hours | Tests that run code without checking it |
 
 `pnpm test` runs everything except the pixel-diff and E2E layers, in under a minute. Those two run
 in CI and on demand — fast enough to run on every save is what makes tests actually get run.
@@ -140,6 +143,22 @@ uniform values with a pool of "interesting" ones: 0, ±1, ±0.1, ±100, and valu
   property stays; the specific case becomes permanent.
 - Seeds are fixed in CI so failures reproduce. Local runs may use random seeds to find new cases.
 - `numRuns` at 100 by default, 1000 for offsetting and distribution, and a nightly CI job at 10 000.
+  The nightly job picks a random seed and prints it. `LEATHERCAD_FC_RUNS` and `LEATHERCAD_FC_SEED`
+  reproduce any run anywhere (`vitest.setup.ts`). A failure opens or updates an issue labelled
+  `nightly-property`.
+
+### 3.4 Mutation testing
+
+Coverage proves a line ran. It does not prove that any test would notice if the line were wrong,
+and in geometry that is the whole question. StrykerJS mutates `geometry` and `domain`, turning `<`
+into `<=` and `+` into `-`, emptying a return, and re-runs the tests that cover each mutant. A
+mutant that survives marks an assertion nobody wrote.
+
+`pnpm test:mutation:geometry` and `pnpm test:mutation:domain` run one package each, from inside the
+package, so each uses its own Vitest config. They are slow, so CI runs them weekly and keeps the
+HTML report as an artifact. There is no break threshold yet: the first full report sets the one to
+hold. On Vitest 5 the runner needs the local patch described in ADR 0016. Without it every mutant
+survives and the score measures the setup, not the tests.
 
 ## 4. Edge-case corpus
 
@@ -219,8 +238,14 @@ does. **This should be where most rendering coverage lives.**
 ### 5.2 Pixel diffs — the narrow remainder
 
 Reserved for genuinely raster concerns: anti-aliasing quality, hairline crispness, grid moiré,
-device-pixel-ratio handling, text rendering. Playwright drives Electron, screenshots the canvas, and
-`pixelmatch` compares.
+device-pixel-ratio handling, text rendering. Playwright drives Electron, screenshots the window or
+the canvas, and compares with `toHaveScreenshot` (`e2e/visual/`, `playwright.visual.config.ts`).
+
+`pnpm test:visual` runs it inside the official Playwright image at the version in the lockfile
+(`tools/visual.mjs`), on a laptop and in CI alike, and it needs `pnpm build` first.
+`pnpm test:visual --update-snapshots` rewrites the references; look at every changed image before
+committing it. The version string and the cursor readout are masked, because they change for
+reasons that are not regressions.
 
 Kept small (about a dozen scenes) because it is by far the highest-maintenance layer. Determinism
 requires: DPR pinned to 1, animations disabled, **vendored fonts** rather than system fonts, a fixed
@@ -301,7 +326,7 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
-Three jobs, run in parallel on every pull request, so one run reports every failure rather than
+Seven jobs, run in parallel on every pull request, so one run reports every failure rather than
 only the first:
 
 ```
@@ -314,9 +339,20 @@ test     pnpm test:coverage     # unit, property, golden, export, snapshot,
                                 # and the coverage thresholds in one pass
                                 # LEATHERCAD_REQUIRE_POPPLER=1
 
-e2e      pnpm test:e2e          # Playwright + Electron, under xvfb
+e2e      pnpm test:e2e          # Playwright + Electron, under xvfb, incl. the axe scan
                                 # uploads playwright-report/ on failure
+
+visual   pnpm test:visual       # pixel diffs in the pinned container
+
+package  pnpm test:packaged     # smoke test of the packaged binary
+         pnpm package           # the AppImage, uploaded as an artifact
+
+workflows     actionlint, zizmor   # workflow syntax, injection, pinning
+dependencies  osv-scanner          # the lockfile against known vulnerabilities
 ```
+
+`static` also runs `pnpm knip`. Every action is pinned to a commit; zizmor fails the run on one that
+is not.
 
 `pnpm check` runs the `static` and `test` work locally — including `test:coverage`, not plain
 `test` — and is what the pre-push hook invokes, so a green `pnpm check` predicts a green CI for
@@ -324,11 +360,14 @@ everything but E2E. It runs the coverage build deliberately: slice 1.8 shipped a
 passed uninstrumented and timed out under coverage in CI, which is precisely the divergence this
 closes.
 
-Still to come, each with the slice that adds it: `pnpm test:visual` (2.3, pixel diffs in the pinned
-container) and `pnpm bench --compare` (1.9, against the committed baseline).
+Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
+a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
+testing of `geometry` and `domain`, and the unit tests on Windows and macOS. CodeQL and OpenSSF
+Scorecard are wired, and skip themselves while the repository is private.
 
-Nightly: property tests at `numRuns: 10000` with a random seed, reporting any new shrunk
-counterexample as an issue.
+`pnpm bench` runs the benchmarks. `pnpm bench:compare` sets each against the baseline committed
+under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
+machine that recorded it; the committed one is from the maintainer's.
 
 ## 10. Test-driven development, concretely
 

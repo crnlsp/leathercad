@@ -1,0 +1,16 @@
+# LF everywhere, on every platform. Golden files, snapshots and byte-stable
+# saves compare text exactly, and a Windows checkout would otherwise turn
+# every line ending into CRLF. See docs/testing.md §8.
+* text=auto eol=lf
+
+# Binary, never touched.
+*.lcp binary
+*.png binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Vendored exactly as published (ADR 0011), line endings included.
+assets/fonts/** -text

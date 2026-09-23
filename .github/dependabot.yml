@@ -7,6 +7,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # A week's grace before proposing a release, so a compromised version is
+    # likelier to be caught and pulled before it reaches CI. The same idea as
+    # pnpm's minimumReleaseAge.
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ['*']
@@ -21,6 +26,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     versioning-strategy: increase
     groups:
       dependencies:

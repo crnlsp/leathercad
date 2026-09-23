@@ -15,3 +15,6 @@ packages/typography/src/generated/
 # destroys the deliberate alignment in the docs' illustrative snippets, and
 # prose gains nothing from it. Code formatting still applies everywhere else.
 *.md
+
+# Benchmark baselines, written by `pnpm bench:baseline`.
+packages/*/bench/

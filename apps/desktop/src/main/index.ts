@@ -2,6 +2,7 @@ import { join } from 'node:path';
 
 import { BrowserWindow, app, shell } from 'electron';
 
+import { startDiagnostics, watchWindow } from './diagnostics.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
 
 // Electron derives userData from the npm package name, which would give
@@ -9,6 +10,9 @@ import { registerPlatformHandlers } from './platformHandlers.js';
 // ~/.config/leathercad. Both calls must happen before the app is ready.
 app.setName('LeatherCAD');
 app.setPath('userData', join(app.getPath('appData'), 'leathercad'));
+
+// The log and the crash handler, before anything else can fail.
+startDiagnostics();
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -31,6 +35,8 @@ function createWindow(): void {
       webSecurity: true,
     },
   });
+
+  watchWindow(mainWindow);
 
   // Avoid the white flash while the renderer boots.
   mainWindow.on('ready-to-show', () => mainWindow?.show());

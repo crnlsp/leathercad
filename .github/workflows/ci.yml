@@ -13,25 +13,30 @@ concurrency:
 permissions:
   contents: read
 
-# Three independent jobs rather than one serial one, so a single run reports
-# every failure instead of only the first. The setup preamble is repeated in
-# each; a composite action to remove four duplicated lines would be more
-# machinery than it saves.
+# Independent jobs rather than one serial one, so a single run reports every
+# failure instead of only the first. The setup preamble is repeated in each; a
+# composite action to remove four duplicated lines would be more machinery than
+# it saves.
+#
+# Every action is pinned to a commit, with its version in a comment. Dependabot
+# bumps both; the `workflows` job below fails on an unpinned one. The versions
+# of pnpm and Node come from package.json's `packageManager` and from
+# .node-version, so CI and a laptop cannot drift apart.
 jobs:
   static:
     name: Static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -48,6 +53,11 @@ jobs:
       - name: Layering
         run: pnpm depcruise
 
+      # Unused files, exports and dependencies. Every existing exception is
+      # listed, with its reason, in knip.jsonc.
+      - name: Dead code
+        run: pnpm knip
+
   test:
     name: Tests and coverage
     runs-on: ubuntu-latest
@@ -59,15 +69,15 @@ jobs:
       # packages/export/src/pdf/writer.test.ts.
       LEATHERCAD_REQUIRE_POPPLER: '1'
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
 
       # poppler renders the exported PDF so the tests can measure it in
@@ -90,15 +100,15 @@ jobs:
     env:
       LEATHERCAD_REQUIRE_POPPLER: '1'
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
 
       - name: Install poppler
@@ -114,7 +124,7 @@ jobs:
       # without the trace and screenshots.
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
           path: |
@@ -122,3 +132,125 @@ jobs:
             test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+  visual:
+    name: Pixel diffs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # The same container a laptop uses: tools/visual.mjs derives the image
+      # from the installed Playwright. See docs/testing.md §5.2.
+      - name: Pixel diffs
+        run: pnpm test:visual
+
+      # The expected, actual and diff images, to see what moved.
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-diffs
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install poppler
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - run: pnpm install --frozen-lockfile
+
+      # The packaged app, driven by Playwright: asar, fuses, resources. The
+      # E2E suite drives the development build and cannot see these.
+      - name: Packaged smoke test
+        run: xvfb-run -a pnpm test:packaged
+
+      # Then the build a user would download, with every fuse as shipped.
+      - name: AppImage
+        run: pnpm package
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: appimage
+          path: apps/desktop/release/*.AppImage
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: packaged-report
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  workflows:
+    name: Workflow security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Syntax, expressions, and shellcheck over every `run:` block.
+      - name: actionlint
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+        with:
+          args: -color
+
+      # Injection, over-broad permissions, credential leaks, unpinned actions.
+      # Findings print in the log; uploading them to code scanning needs a
+      # public repository. Configured in .github/zizmor.yml.
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          version: 1.30.1
+          advanced-security: false
+
+  dependencies:
+    name: Known vulnerabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Every package in the lockfile against the OSV database. A fix goes in
+      # pnpm-workspace.yaml `overrides`, with the advisory and its reason.
+      - name: osv-scanner
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        with:
+          scan-args: --lockfile=pnpm-lock.yaml

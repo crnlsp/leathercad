@@ -35,27 +35,40 @@ Violating any of these is a bug, even if tests pass.
 
 ```bash
 pnpm dev              # run the app (electron-vite, with HMR)
-pnpm check            # typecheck + lint + format:check + depcruise + test:coverage — before a slice is done
+pnpm check            # typecheck + lint + format:check + depcruise + knip + test:coverage — before a slice is done
 pnpm test             # unit + property + golden + export + snapshot
-pnpm test:e2e         # builds, then Playwright drives the real Electron app
+pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
+pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
+pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
+pnpm package          # the AppImage, in apps/desktop/release/ (ADR 0014)
 pnpm build
 pnpm typecheck        # tsc --build
 pnpm lint
 pnpm format           # prettier; markdown is deliberately excluded
 pnpm depcruise        # layering violations — must pass
+pnpm knip             # unused files, exports and dependencies; exceptions live in knip.jsonc
+pnpm bench            # benchmarks; bench:compare against the committed baseline, bench:baseline to rewrite it
+pnpm test:mutation:geometry   # Stryker, slow — also test:mutation:domain (ADR 0016)
 pnpm fonts:generate   # re-extract glyph outlines from assets/fonts/ (ADR 0011); output is committed
 ```
 
-Not yet implemented. Each exits with a pointer to the roadmap slice that adds it — implement it
-there, don't stub it out earlier: `pnpm test:visual` (slice 2.3), `pnpm bench` (1.9).
+`pnpm test:visual --update-snapshots` rewrites the pixel references. Look at every changed image
+before committing it. A baseline from `pnpm bench:baseline` only compares on the machine that
+recorded it.
 
 Work lands on a slice branch through a pull request, never by pushing to `main`. `pnpm install`
 installs a `pre-push` hook that enforces both halves of that. See `docs/roadmap.md` §2.4.
 
-**pnpm is not on PATH** unless you have run `sudo pacman -S pnpm`. A bootstrap copy lives at
+**pnpm and Node are pinned**: `packageManager` in `package.json`, and `.node-version`. CI reads
+both. Any installed pnpm switches itself to the pinned version. pnpm is not on PATH unless you have
+run `sudo pacman -S pnpm`. A bootstrap copy lives at
 `~/.local/share/pnpm-bootstrap/node_modules/.bin`; prefix commands with
 `export PATH="$HOME/.local/share/pnpm-bootstrap/node_modules/.bin:$PATH"` until then. pnpm 11
 re-invokes itself from PATH before running scripts, so a bare path to the binary is not enough.
+
+A dependency version forced for a vulnerability goes in `pnpm-workspace.yaml` `overrides`, and a
+fix to third-party code in `patches/`. Each gets the advisory or upstream issue, and is removed when
+upstream catches up.
 
 ## Layout
 

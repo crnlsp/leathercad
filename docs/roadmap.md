@@ -1261,6 +1261,48 @@ Gotchas:
 - **Property-panel sizing**, and the parts tree truncating feature names at about ten characters.
 - **A screen-calibration step**, post-1.0, which is what would make the 1:1 claim literal on screen.
 
+### Checkpoint — engineering tooling
+*Alongside UI Foundations. Not a slice: no product behaviour changes.*
+
+The tooling review ranked what a project of this shape is expected to have. Everything ranked A or
+B, and cheap or moderate to build, was built in one pull request. See
+[the engineering-tooling spec](superpowers/specs/2026-09-23-engineering-tooling-design.md) and ADRs
+[0014](adr/0014-electron-builder-and-release-please.md)–[0016](adr/0016-quality-tooling.md).
+
+- **Shipping.** An AppImage with fuses set, built and smoke-tested on every pull request.
+  release-please keeps a release pull request open, and merging it attaches the AppImage and an
+  SBOM to a GitHub release. This takes 8.5's pipeline; icons, the desktop entry, MIME registration
+  and Flatpak stay in 8.5.
+- **The two test layers testing.md promised.** Pixel diffs in the pinned Playwright container
+  (`pnpm test:visual`), and benchmarks with a committed baseline (`pnpm bench:compare`).
+- **Tests of the tests.** Stryker mutation testing weekly, and property tests at 10 000 runs
+  nightly with a printed seed.
+- **Supply chain.** Every action pinned to a commit and checked by zizmor and actionlint, the
+  lockfile checked by osv-scanner, and a seven-day Dependabot cooldown. CodeQL and Scorecard are
+  wired for when the repository is public.
+- **Evidence after a crash.** A local log and local crash dumps in `~/.local/state/leathercad/`.
+
+What the new tools found is recorded where they found it and ratcheted, not fixed here, with one
+exception: the project-name field had no accessible name, and a one-attribute fix outside the F
+slices' markup gave it one. The rest, and where each belongs:
+
+- **A robustness bug:** a `.lcp` with a tiny stitch pitch exhausts memory on load. Slice **5.6**.
+- **For the F slices, which own this markup:** three accessibility findings. There is no `<main>`
+  (a `<main>` around `.canvas-column` fixes it and the `region` finding), and the three `<aside>`
+  panels have no names. They are ratcheted in `e2e/accessibility.spec.ts`. Also in `CanvasHost.tsx`:
+  ten reads of refs during render. Two may show stale state: the cursor style (`managerRef`) and the
+  canvas notice's bounds (`containerRef`), which do not update until something else re-renders.
+  Look at those two when F.3 is in `CanvasHost`. The other eight are the deliberate latest-value
+  pattern. No broad refactor.
+- **Informational:** offsetting a 500-point traced outline costs ~74 ms, over the 50 ms §7 budget
+  on its own. It is a benchmark finding (`packages/geometry/bench/offset-traced.json`), not a
+  target to optimise to.
+- **Later architecture:** serving the renderer from a custom `app://` protocol instead of `file://`,
+  so the `GrantFileProtocolExtraPrivileges` fuse can be turned off (ADR 0014). It is not a blocker.
+
+Mutation testing and the nightly and weekly suites are **informational**: nothing gates on them
+until they have produced baselines worth holding.
+
 ### Phase 5 — Persistence
 *Ends at M4.*
 
@@ -1301,6 +1343,21 @@ Gotchas:
   See [page setup and determinism](superpowers/specs/2026-09-18-page-setup-and-determinism-decisions.md).
 - **5.3** Autosave, crash recovery, recent files, unsaved-changes handling.
 - **5.4** Sample projects shipped in `fixtures/projects/`.
+- **5.6** **Loader hardening: refuse what the editor cannot produce.** A robustness bug, found by
+  the `.lcp` fuzz test in the engineering-tooling checkpoint. A file whose stitch-hole `pitchMm` is
+  tiny (`1e-300` reproduces it) passes `ProjectSchema`, which only requires a non-negative pitch.
+  `evaluate` then tries to place ~10³⁰² holes, and the process runs out of memory. The editor cannot
+  create that file: `StitchHoleSetEditor` enforces `min={0.5}`. So only a damaged, hand-edited or
+  hostile file reaches it, and that is exactly who the loader exists to refuse.
+  **Acceptance:** a named regression test in `lcp.test.ts` loads that file and gets an
+  `InvalidProjectFileError` naming the feature, in milliseconds. `lcp.fuzz.test.ts` passes at
+  `LEATHERCAD_FC_RUNS=20000`, where it now crashes. Every other generated quantity gets the same
+  audit: anything whose size scales with `length / parameter` needs a floor the editor already
+  enforces, or a cap in the domain.
+  **To decide in the slice, not before:** refuse at the schema (the editor's bounds become the
+  file's), or cap in `evaluate` with a `Problem`. The first is simpler; the second also protects
+  any future path into the domain. It is a validation change, **not a format version**: no file the
+  editor can write changes meaning.
 
 ### Phase 6 — Export
 
@@ -1363,7 +1420,9 @@ Gotchas:
 - **8.3** Onboarding: three worked sample projects (card holder, strap, bifold) and a short getting
   started guide.
 - **8.4** Error handling, empty states, and the "what do I do now" gaps.
-- **8.5** Packaging: AppImage and Flatpak, icons, desktop entry, MIME registration for `.lcp`.
+- **8.5** Packaging: Flatpak, icons, desktop entry, MIME registration for `.lcp`. The AppImage, its
+  fuses, the packaged smoke test and the release pipeline landed with the engineering-tooling
+  checkpoint.
 - **8.6** README, screenshots, contribution guide, and the v1.0.0 release.
 
 ### Phase 9 — Beyond v1

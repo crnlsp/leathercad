@@ -244,6 +244,7 @@ export function App() {
           <input
             className="project-name"
             data-testid="project-name"
+            aria-label="Project name"
             value={storeState.document.project.name}
             placeholder="Untitled"
             onChange={(event) => store.dispatch(setProjectName(event.target.value))}

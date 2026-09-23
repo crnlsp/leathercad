@@ -281,6 +281,16 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
     └── irons.json        user-defined iron presets
 ```
 
+What the app writes about *itself* is state, not configuration, and goes in
+`$XDG_STATE_HOME/leathercad/` (falling back to `~/.local/state/`), per
+[ADR 0015](adr/0015-local-logs-and-crash-dumps.md):
+
+```
+~/.local/state/leathercad/
+├── logs/main.log         one megabyte, then main.old.log; nothing is uploaded
+└── crashes/              native crash minidumps, kept locally
+```
+
 The split is by lifetime and portability: **a `.lcp` sent to another leatherworker must open
 identically on their machine**. Anything that would change what they see belongs in the file;
 anything that reflects *their* setup — their printer's calibration, their theme, their window

@@ -20,6 +20,10 @@ allowBuilds:
   # the telemetry, and the files are vendored into assets/fonts/ anyway — the
   # dependency exists to pin where they came from. See ADR 0011.
   '@ibm/plex-sans': false
+  # Declined. electron-builder depends on it for Windows Squirrel installers,
+  # which this project does not build (Linux first; Windows is Phase 8). Its
+  # install script only prepares Windows tooling. See ADR 0014.
+  electron-winstaller: false
 
 # pnpm gates very recent releases behind a minimum release age. These were
 # reviewed and accepted; see ADR 0004.
@@ -28,3 +32,19 @@ minimumReleaseAgeExclude:
   - '@vitest/mocker@5.0.0'
   - '@vitest/spy@5.0.0'
   - vitest@5.0.0
+
+# Versions forced past what a dependency pins, each for a known vulnerability
+# that osv-scanner reports. Remove one when the dependency's own pin moves on.
+overrides:
+  # GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx. Pinned to
+  # exactly 6.15.1 by typed-rest-client, which Stryker uses only to upload to
+  # its dashboard, a reporter this project does not enable. 6.16.0 is the
+  # fixed minor.
+  'typed-rest-client>qs': 6.16.0
+
+# Local fixes to third-party code, each temporary and each with its upstream
+# issue. Delete the entry and its file in patches/ when the fix is released.
+patchedDependencies:
+  # stryker-js#6210: on Vitest 5 the runner's test-name filter matches nothing,
+  # so every covered mutant is reported as surviving. Two lines. ADR 0016.
+  '@stryker-mutator/vitest-runner@10.0.0': patches/@stryker-mutator__vitest-runner@10.0.0.patch

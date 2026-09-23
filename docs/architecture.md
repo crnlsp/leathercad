@@ -81,15 +81,20 @@ conformance suite for the replacement.
 | Build | Vite + electron-vite | MIT | Fast, TS-native |
 | Unit tests | Vitest | MIT | Same transform pipeline as the build; fast |
 | Property tests | fast-check | MIT | The core of the geometry test strategy |
-| E2E / visual | Playwright | Apache-2.0 | First-class Electron support |
-| Offsetting / booleans | Clipper2 (WASM or JS port) | BSL-1.0 | Battle-tested polygon offsetting; do not write this yourself |
+| E2E / visual | Playwright | Apache-2.0 | First-class Electron support; pixel diffs with `toHaveScreenshot` in its own container image |
+| Accessibility | @axe-core/playwright | MPL-2.0 | Scans the running window inside E2E ([ADR 0016](adr/0016-quality-tooling.md)) |
+| Mutation testing | StrykerJS | Apache-2.0 | Checks that the geometry tests would catch a wrong answer ([ADR 0016](adr/0016-quality-tooling.md)) |
+| Dead code | knip | ISC | Unused files, exports and dependencies ([ADR 0016](adr/0016-quality-tooling.md)) |
+| Offsetting / booleans | Written here (analytic, 1.9) | — | No Clipper binding: both were tried and rejected ([ADR 0008](adr/0008-no-clipper-binding.md)) |
 | PDF writing | pdf-lib | MIT | Direct vector PDF, full control of coordinates |
-| PDF parsing (tests) | pdfjs-dist | Apache-2.0 | Read exported PDFs back to assert dimensions |
+| PDF parsing (tests) | pdfjs-dist | Apache-2.0 | Planned for reading exported PDFs back. Unused: the print checks use poppler (`knip.jsonc`) |
 | ZIP container | fflate | MIT | Small, sync API, no native deps |
 | Schema validation | zod | MIT | Runtime validation at the file-load boundary |
 | Immutable updates | immer | MIT | Structural sharing for the undo stack |
 | Layering enforcement | dependency-cruiser | MIT | Fails CI on an illegal import |
-| Packaging | electron-builder | MIT | AppImage + Flatpak + deb |
+| Packaging | electron-builder | MIT | AppImage today, with fuses set; Flatpak in 8.5 ([ADR 0014](adr/0014-electron-builder-and-release-please.md)) |
+| Releases | release-please (Action) | Apache-2.0 | Version, changelog and tag from conventional commits ([ADR 0014](adr/0014-electron-builder-and-release-please.md)) |
+| Logging | electron-log | MIT | A local log and local crash dumps, nothing uploaded ([ADR 0015](adr/0015-local-logs-and-crash-dumps.md)) |
 
 Deliberately **not** used: Redux (wrong model for a CAD document), a CSS framework beyond a small
 hand-written token set, three.js (no 3D), Storybook (high upkeep for a canvas-centric app).
@@ -454,8 +459,9 @@ tools get rich — Phase 4 is not deferrable past Phase 5.
 
 **R4 — Underestimating offsetting.** Naive per-segment offsetting works on a rectangle and fails on
 the first real wallet, because it does not remove the self-intersections that appear at concave
-corners. *Mitigation:* use Clipper2 behind our own interface, and write the property tests before
-trusting the output.
+corners. *Mitigation:* write the property tests before trusting the output. The original plan, to
+use Clipper2 behind our own interface, was abandoned; see
+[ADR 0008](adr/0008-no-clipper-binding.md).
 
 **R5 — Floating-point sloppiness.** `===` on floats, ad-hoc epsilons, unquantised input. Produces
 snapping and boolean failures that are not reproducible. *Mitigation:* one epsilon module, an

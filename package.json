@@ -8,7 +8,7 @@
   "type": "module",
   "engines": {
     "node": ">=22.12.0",
-    "pnpm": ">=10"
+    "pnpm": ">=11"
   },
   "scripts": {
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
@@ -23,22 +23,35 @@
     "fonts:generate": "pnpm --filter @leathercad/typography run generate:glyphs",
     "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
     "depcruise:graph": "depcruise packages apps --config .dependency-cruiser.cjs --output-type dot | dot -T svg > dependency-graph.svg",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm depcruise && pnpm test:coverage",
+    "knip": "knip",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm depcruise && pnpm knip && pnpm test:coverage",
     "dev": "pnpm --filter @leathercad/desktop dev",
     "build": "pnpm --filter @leathercad/desktop build",
     "test:e2e": "pnpm build && playwright test",
-    "test:visual": "node -e \"console.error('Not implemented until slice 2.3 (Canvas2D backend). See docs/testing.md'); process.exit(1)\"",
-    "bench": "node -e \"console.error('Not implemented until slice 1.9 (offsetting). See docs/testing.md'); process.exit(1)\""
+    "test:visual": "node tools/visual.mjs",
+    "bench": "vitest bench --reporter=verbose",
+    "bench:baseline": "LEATHERCAD_BENCH=baseline vitest bench --reporter=verbose",
+    "bench:compare": "LEATHERCAD_BENCH=compare vitest bench --reporter=verbose",
+    "test:mutation:geometry": "cd packages/geometry && stryker run ../../stryker.config.mjs",
+    "test:mutation:domain": "cd packages/domain && stryker run ../../stryker.config.mjs",
+    "package": "pnpm --filter @leathercad/desktop package",
+    "test:packaged": "pnpm --filter @leathercad/desktop package:e2e && playwright test --config playwright.packaged.config.ts"
   },
+  "packageManager": "pnpm@11.25.0",
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
     "@ibm/plex-sans": "1.1.0",
     "@playwright/test": "^1.62.1",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/node": "^22.10.0",
     "@vitest/coverage-v8": "^5.0.0",
     "dependency-cruiser": "^18.2.0",
     "eslint": "^10.9.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "fast-check": "^4.9.0",
+    "knip": "^6.37.0",
     "opentype.js": "2.0.0",
     "pdfjs-dist": "^6.3.289",
     "prettier": "^3.9.6",

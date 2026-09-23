@@ -37,3 +37,11 @@ pnpm-debug.log*
 
 # Claude Code local overrides (project settings ARE committed)
 .claude/settings.local.json
+
+# Mutation testing (pnpm test:mutation)
+reports/
+.stryker-tmp/
+
+# Packaged app (pnpm package)
+apps/desktop/release/
+stryker-setup-*.js

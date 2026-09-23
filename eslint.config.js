@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 /**
@@ -116,6 +117,25 @@ export default tseslint.config(
   },
 
   {
+    // The rules of hooks, and the React Compiler's checks on top of them. A
+    // stale closure in a panel reads an old document and dispatches a command
+    // against it — a bug no type catches. See ADR 0016.
+    files: ['apps/desktop/src/renderer/**/*.{ts,tsx}'],
+    ...reactHooks.configs.flat.recommended,
+  },
+
+  {
+    // FINDING, recorded when the plugin was added: CanvasHost reads refs during
+    // render in ten places. Most are the deliberate latest-value pattern the
+    // comment at `drawAsRef` explains. Two are not obviously safe: the cursor
+    // style reads `managerRef` and the notice bounds read `containerRef`, so
+    // neither updates until something else re-renders. Scoped to this one file
+    // so nothing new joins it. See the engineering-tooling spec §4.
+    files: ['apps/desktop/src/renderer/src/CanvasHost.tsx'],
+    rules: { 'react-hooks/refs': 'off' },
+  },
+
+  {
     // Tests need the freedom the production code does not get: literal
     // comparisons are the whole point of an assertion.
     files: ['**/*.test.ts', '**/*.bench.ts', '**/test/**/*.ts'],
@@ -126,9 +146,10 @@ export default tseslint.config(
   },
 
   {
-    // Development-time scripts: Node programs, run by hand or by a package
-    // script, never bundled. `pnpm fonts:generate` is one.
-    files: ['packages/*/tools/**/*.mjs'],
+    // Development-time scripts and configs: Node programs, run by hand, by a
+    // package script or by a tool, never bundled. `pnpm fonts:generate`,
+    // `pnpm test:visual` and the Stryker and electron-builder configs.
+    files: ['packages/*/tools/**/*.mjs', 'tools/**/*.mjs', '**/*.config.mjs'],
     languageOptions: {
       globals: {
         console: 'readonly',
