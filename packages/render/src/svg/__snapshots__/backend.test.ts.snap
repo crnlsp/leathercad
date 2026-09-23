@@ -4,7 +4,7 @@ exports[`renderToSvgString > matches its snapshot — the mechanism docs/testing
 "<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
 <g transform="matrix(2 0 0 -2 200 150)" fill="none" stroke-linecap="round" stroke-linejoin="round">
 <path d="M -20 -10 L 20 -10 L 20 10 L -20 10 L -20 -10 Z" stroke="#e8eaed" stroke-width="0.75"/>
-<path d="M 8 0 A 8 8 0 0 1 -8 0" stroke="#5aa9ff" stroke-width="0.5" stroke-dasharray="2 1.5"/>
+<path d="M 8 0 A 8 8 0 0 1 -8 0" stroke="#5aa9ff" stroke-width="0.5" stroke-dasharray="2 2"/>
 <circle cx="-8" cy="0" r="1" fill="#5aa9ff"/>
 <circle cx="0" cy="0" r="1" fill="#5aa9ff"/>
 <circle cx="8" cy="0" r="1" fill="#5aa9ff"/>

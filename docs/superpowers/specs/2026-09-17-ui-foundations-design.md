@@ -530,18 +530,23 @@ specks.
 
 ### 9.4 The canvas keeps its place
 
-The canvas currently changes height when the *Draw as* strip appears and disappears — measured
-`840 × 682.5` versus `840 × 734.5`, moving the drawing **~26 px, about 8.7 mm**, on every tool change.
+**The invariant: the drawing stays at the same millimetre position on screen unless the user
+explicitly moves it** — by panning, zooming, framing, or moving geometry. Nothing about the layout
+may move it: a panel opening or closing, the rail collapsing, a breakpoint, the window being resized,
+a tool changing. Every window point stays over the millimetre it was over when the canvas's box
+changes. `Viewport.reframe` does this, given how far the canvas's top-left moved.
 
-**Treated as a correctness defect, not a test inconvenience.** An unexplained 8.7 mm displacement in
-a tool whose promise is 1:1 is unacceptable. The fix belongs in `Viewport`: on resize, hold the world
-point at the canvas centre fixed. Then the drawing never moves unless the user moves it — and the
-compensation arithmetic currently in the E2E suite is deleted rather than adjusted.
+**Do not "hold the world point at the canvas centre."** That rule is what the viewport did before
+F.3, and it *is* the bug: the centre moves whenever an edge does, so every layout change moved the
+drawing by half the change. This section originally prescribed it, and F.3 found it to be the cause
+(2026-09-23).
 
-*Corrected when built (F.3, 2026-09-23):* holding the point at the canvas centre is what the viewport
-already did, and it is the cause. The centre moves whenever an edge does, so the drawing moved by
-half the change. What is built holds **every window point** over its millimetre (`Viewport.reframe`),
-which is the stated intent: the drawing never moves unless the user moves it.
+**Treated as a correctness defect, not a test inconvenience.** An unexplained displacement in a tool
+whose promise is 1:1 is unacceptable. It was measured at **~26 px, about 8.7 mm**, on every tool
+change while the *Draw as* strip came and went (`840 × 682.5` versus `840 × 734.5`). Once F.2 added
+the problems drawer, it was 26.7 mm whenever that opened. E2E tests hold it: the same millimetre is
+read at one window point across the drawer and the rail. The compensation arithmetic the E2E suite
+used to carry was deleted, not adjusted.
 
 ### 9.5 Snap feedback says what it caught
 
@@ -695,8 +700,9 @@ The viewport fix (§9.4), and the deletion of the E2E compensation arithmetic.
 ### F.4 — The remaining tokens
 
 `packages/render/src/theme/` as the single source: spacing, radii, elevation, motion, the `--density`
-token. `apps/desktop` projects them onto `:root`. The one-sentence ADR 0011 amendment. **The audit
-test that screen and paper agree.** (The typography half moved to F.0.)
+token. `apps/desktop` projects them onto `:root`. ~~The one-sentence ADR 0011 amendment~~ — void:
+it was for Plex Mono, dropped in the decisions; the UI weights were recorded in ADR 0011 in F.0.
+**The audit test that screen and paper agree.** (The typography half moved to F.0.)
 
 ### F.5 — Colour planes and canvas
 

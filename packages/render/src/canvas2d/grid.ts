@@ -4,6 +4,7 @@ import { MatOps } from '@leathercad/geometry';
 import { labelPrecisionFor, majorStepFor, niceTickStepMm, ticksInRange } from '../ticks.js';
 import { visibleBoundsMm, worldToScreen, type ViewportView } from '../view.js';
 import { vendoredFamily, type Canvas2DLike } from './backend.js';
+import { PALETTE } from '../theme/index.js';
 
 export interface GridStyle {
   readonly minor: string;
@@ -101,9 +102,9 @@ export interface RulerStyle {
 export const DEFAULT_RULER_STYLE: RulerStyle = {
   thicknessPx: 22,
   leftThicknessPx: 34,
-  background: '#1b1d21',
-  tick: '#5a626d',
-  text: '#8b929b',
+  background: PALETTE.bg,
+  tick: PALETTE.tick,
+  text: PALETTE.textDim,
   // `--t-num-micro` (UI Foundations §4.2): nothing below 11 px, and a
   // measurement one weight above body.
   fontPx: 11,

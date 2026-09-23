@@ -319,7 +319,11 @@ Nothing draws synchronously from an event handler.
 DPR handling: back the canvas at `cssSize * dpr` and set a base transform of
 `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`. Construction lines, handles, and grid lines use
 **screen-constant widths** (they should look the same at any zoom); only print and export use
-mm-true stroke widths.
+mm-true stroke widths. **Dash rhythms are the exception, and are true millimetres in both**: one role
+table in `packages/render/src/theme/` gives the screen and the exporter the same array, and the
+canvas draws it at its real size or solid when it is too fine to read — never stretched (UI
+Foundations §2). The same module holds the palette and the metric tokens, which the desktop app
+projects onto `:root` for the stylesheet.
 
 ### 6.3 Tools as explicit state machines
 

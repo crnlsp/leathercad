@@ -2,6 +2,7 @@ import { MatOps, type Path, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 
 import type { DisplayList, DisplayItem } from '../displayList.js';
+import { screenDash } from '../theme/index.js';
 import { worldToScreen, type ViewportView } from '../view.js';
 
 /**
@@ -119,7 +120,14 @@ export function renderDisplayList(
       tracePath(ctx, item.path);
       ctx.strokeStyle = item.stroke.colour;
       ctx.lineWidth = item.stroke.widthPx / perMm;
-      ctx.setLineDash((item.stroke.dashPx ?? []).map((d) => d / perMm));
+      // The world transform is in millimetres: a tool's pixel dash is divided
+      // back into them, a role's millimetre dash is used as it is — or not at
+      // all, when it is too fine to read (F.4).
+      ctx.setLineDash(
+        item.stroke.dashPx !== undefined
+          ? item.stroke.dashPx.map((d) => d / perMm)
+          : [...screenDash(item.stroke.dashMm ?? [], perMm)],
+      );
       ctx.stroke();
       ctx.setLineDash([]);
     } else if (item.kind === 'dots') {

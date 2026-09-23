@@ -104,7 +104,10 @@ Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run head
 - Fonts are vendored in `assets/fonts/`. Never use a system font: it breaks PDF output and snapshot
   determinism. Nothing parses a font at run time — `packages/typography` ships glyph outlines
   extracted at development time, and exports fill those outlines rather than embedding a font.
-- Stroke widths are **screen-constant** on canvas and **true millimetres** in export.
+- Stroke widths are **screen-constant** on canvas and **true millimetres** in export. **Dash rhythms
+  are true millimetres in both**, from one role table in `packages/render/src/theme/`, drawn on
+  screen at their real size or solid, never stretched. Colours, type and metric tokens live there
+  too; `styles.css` defines none of its own, and an audit test holds it to that.
 - Every new dependency needs an ADR in `docs/adr/`.
 
 ## Terminology

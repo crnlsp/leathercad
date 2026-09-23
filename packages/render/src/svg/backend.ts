@@ -2,6 +2,7 @@ import { MatOps, SegmentOps, type Path, type Segment } from '@leathercad/geometr
 import { FONT_FAMILY, outlinesOf } from '@leathercad/typography';
 
 import type { DisplayItem, DisplayList } from '../displayList.js';
+import { screenDash } from '../theme/index.js';
 import { worldToScreen, type ViewportView } from '../view.js';
 
 export interface SvgOptions {
@@ -67,11 +68,14 @@ export function renderToSvgString(
 
   for (const item of list.items) {
     if (item.kind === 'path') {
-      const dash = item.stroke.dashPx;
+      // As on the canvas: a tool's dash in pixels, a role's in true millimetres
+      // or not at all (F.4).
+      const dash =
+        item.stroke.dashPx !== undefined
+          ? item.stroke.dashPx.map((d) => d / perMm)
+          : screenDash(item.stroke.dashMm ?? [], perMm);
       const dashAttr =
-        dash === undefined || dash.length === 0
-          ? ''
-          : ` stroke-dasharray="${dash.map((d) => n(d / perMm)).join(' ')}"`;
+        dash.length === 0 ? '' : ` stroke-dasharray="${dash.map((d) => n(d)).join(' ')}"`;
 
       parts.push(
         `<path d="${pathData(item.path, n)}" stroke="${item.stroke.colour}" ` +

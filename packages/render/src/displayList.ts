@@ -1,7 +1,9 @@
 import type { Mm } from '@leathercad/core';
-import type { LayerRole } from '@leathercad/domain';
+import { LAYER_ROLES, type LayerRole } from '@leathercad/domain';
 import type { Path, Vec2 } from '@leathercad/geometry';
 import { placedText, type PlacedText, type TextPlacement } from '@leathercad/typography';
+
+import { ROLE_STYLES } from './theme/index.js';
 
 export interface Stroke {
   readonly colour: string;
@@ -13,7 +15,16 @@ export interface Stroke {
    * 0.25 mm on paper. See CLAUDE.md § Conventions.
    */
   readonly widthPx: number;
-  /** Dash pattern in device pixels. */
+  /**
+   * A document line's dash rhythm, in **millimetres** — the role table's, the
+   * same array the exporter prints (F.4). Drawn true or solid by `screenDash`.
+   */
+  readonly dashMm?: readonly number[];
+  /**
+   * A dash in **device pixels**, for the tools' own feedback only — rubber
+   * bands, selection boxes, diagnostic highlights. Screen chrome, never
+   * printed, so it has no millimetre rhythm to keep. Wins over `dashMm`.
+   */
   readonly dashPx?: readonly number[];
 }
 
@@ -74,17 +85,16 @@ export interface DisplayList {
   readonly items: readonly DisplayItem[];
 }
 
-/** The default screen appearance of each layer role. */
-export const ROLE_STROKES: Readonly<Record<LayerRole, Stroke>> = {
-  cut: { colour: '#e8eaed', widthPx: 1.5 },
-  stitch: { colour: '#5aa9ff', widthPx: 1, dashPx: [4, 3] },
-  'stitch-holes': { colour: '#5aa9ff', widthPx: 1 },
-  fold: { colour: '#5fd08a', widthPx: 1, dashPx: [7, 3, 2, 3] },
-  mark: { colour: '#8b929b', widthPx: 1 },
-  hardware: { colour: '#e0913a', widthPx: 1 },
-  annotation: { colour: '#8b929b', widthPx: 1 },
-  construction: { colour: '#3a4048', widthPx: 1 },
-};
+/**
+ * The default screen appearance of each layer role — read from the one role
+ * table, so the dash is the very array the exporter prints (UI Foundations §2).
+ */
+export const ROLE_STROKES: Readonly<Record<LayerRole, Stroke>> = Object.fromEntries(
+  LAYER_ROLES.map((role) => {
+    const { colour, widthPx, dashMm } = ROLE_STYLES[role];
+    return [role, { colour, widthPx, dashMm }];
+  }),
+) as Record<LayerRole, Stroke>;
 
 export function pathItem(role: LayerRole, path: Path, stroke?: Partial<Stroke>): DisplayItem {
   return { kind: 'path', role, path, stroke: { ...ROLE_STROKES[role], ...stroke } };

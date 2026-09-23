@@ -11,6 +11,7 @@ import {
   type DisplayItem,
   type DisplayList,
 } from './displayList.js';
+import { PALETTE } from './theme/index.js';
 
 export interface BuildOptions {
   /** Drawn in the selection colour and slightly heavier. */
@@ -35,9 +36,9 @@ const SELECTION_COLOUR = '#ffcc44';
 
 /** How a problem marks the drawing. Warmer than any layer role, on purpose. */
 export const DIAGNOSTIC_COLOURS: Readonly<Record<Severity, string>> = {
-  error: '#e5675f',
-  warning: '#e0a93a',
-  info: '#6f9fd8',
+  error: PALETTE.error,
+  warning: PALETTE.warning,
+  info: PALETTE.info,
 };
 
 /**

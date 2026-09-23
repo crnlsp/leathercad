@@ -202,27 +202,35 @@ describe('renderDisplayList', () => {
     expect(stroke).toContain('0.3750'); // 1.5 px / 4 px per mm
   });
 
-  it('scales the dash pattern too', () => {
+  const line = PathOps.polyline(
+    [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ],
+    false,
+  );
+
+  it("draws a role's dash at its true millimetres, the array the paper prints (F.4)", () => {
     const ctx = new Recorder();
-    renderDisplayList(
-      ctx,
-      {
-        items: [
-          pathItem(
-            'stitch',
-            PathOps.polyline(
-              [
-                { x: 0, y: 0 },
-                { x: 1, y: 0 },
-              ],
-              false,
-            ),
-          ),
-        ],
-      },
-      view,
-    );
+    renderDisplayList(ctx, { items: [pathItem('stitch', line)] }, view);
+    // The world transform is in millimetres, so a 2 mm dash is set as 2.
+    expect(ctx.calls).toContain('setLineDash(2|2)');
+  });
+
+  it("converts a tool's pixel dash into millimetres, as it always did", () => {
+    const ctx = new Recorder();
+    renderDisplayList(ctx, { items: [pathItem('construction', line, { dashPx: [4, 3] })] }, view);
     expect(ctx.calls).toContain('setLineDash(1|0.75)');
+  });
+
+  it('draws a rhythm too fine to read as solid, never stretched', () => {
+    const ctx = new Recorder();
+    // 0.2 px to the millimetre: a 1 mm dot is a fifth of a pixel.
+    renderDisplayList(ctx, { items: [pathItem('mark', line)] }, { ...view, scale: 0.2 });
+    expect(ctx.calls).toContain('setLineDash()');
+    expect(
+      ctx.calls.some((call) => call.startsWith('setLineDash(') && call !== 'setLineDash()'),
+    ).toBe(false);
   });
 
   it('draws text in screen space so the Y flip does not mirror it', () => {

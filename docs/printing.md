@@ -113,6 +113,9 @@ Two things worth stating explicitly:
 **Stroke widths are true millimetres here**, unlike on screen where construction lines are
 screen-constant. A cut line printed at 0.2 mm is 0.2 mm on paper at any zoom. The default set:
 cut 0.25 mm, stitch 0.15 mm dashed 2-2, fold 0.15 mm dash-dot, mark 0.10 mm, annotation 0.10 mm.
+They come from the role table in `packages/render/src/theme/`, which the canvas reads too: **the dash
+rhythm on screen is the one on paper**, in true millimetres, and an audit test in `packages/export`
+fails if the two ever differ (F.4).
 
 **Which items are included is an export preset**, resolved from layer roles
 ([domain-model.md](domain-model.md) §5) — "template print", "laser cut", "stitch guide". The user

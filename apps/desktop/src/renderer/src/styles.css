@@ -45,32 +45,13 @@
  *   the declaration states the intent and survives a change of face.
  */
 
-:root {
-  --bg: #1b1d21;
-  --bg-raised: #22252a;
-  --border: #32363d;
-  --text: #e6e8ea;
-  --text-dim: #8b929b;
-  --accent: #c9a227; /* veg-tan */
-  --error: #e5675f;
-  --warning: #e0a93a;
-  --info: #6f9fd8;
-
-  --font-sans: 'IBM Plex Sans', sans-serif;
-
-  --t-dialog: 600 19px/26px var(--font-sans);
-  --t-panel: 600 16px/22px var(--font-sans);
-  --t-strong: 600 14px/20px var(--font-sans);
-  --t-body: 400 14px/20px var(--font-sans);
-  --t-label: 500 12px/16px var(--font-sans);
-  --t-micro: 500 11px/15px var(--font-sans);
-  --t-num-lg: 500 17px/22px var(--font-sans);
-  --t-num: 500 14px/20px var(--font-sans);
-  --t-num-micro: 500 11px/14px var(--font-sans);
-
-  --tracking-title: -0.01em;
-  --tracking-micro: 0.02em;
-}
+/*
+ * No token is defined here. Colours, type, spacing, radii, elevation, motion
+ * and density are written onto :root at startup from packages/render/src/theme
+ * (apps/desktop/src/renderer/src/theme.ts) — the module the canvas draws with
+ * and the exporter prints from. An audit test holds every var(--…) below to
+ * that list, and refuses a colour written here directly (F.4).
+ */
 
 * {
   box-sizing: border-box;
@@ -135,7 +116,7 @@ body {
  * the only route to a locked feature.
  */
 .workspace {
-  --rail-w: 152px;
+  --rail-w: var(--rail-w-expanded);
   --parts-w: 220px;
   --properties-w: 288px;
 
@@ -146,7 +127,7 @@ body {
 }
 
 .workspace.rail-collapsed {
-  --rail-w: 52px;
+  --rail-w: var(--rail-w-collapsed);
 }
 
 @media (max-width: 1279px) {
@@ -173,7 +154,7 @@ body {
   bottom: 0;
   z-index: 8;
   display: none;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  box-shadow: var(--elevation-raised);
 }
 
 .workspace.properties-overlay > .panel.properties {
@@ -227,7 +208,6 @@ body {
 .rail .tool {
   justify-content: space-between;
   width: 100%;
-  min-height: 30px;
 }
 
 .rail .tooltip-anchor {
@@ -414,9 +394,11 @@ body {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  padding: 4px 10px;
+  /* Row height is density's to decide, never the type's (decisions §1.1). */
+  min-height: var(--h-control);
+  padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   font: var(--t-label);
@@ -426,13 +408,13 @@ body {
 
 .tool:hover:not(:disabled) {
   color: var(--text);
-  border-color: #444b55;
+  border-color: var(--border-hover);
 }
 
 .chip {
   padding: 3px 9px;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   font: var(--t-label);
@@ -442,17 +424,17 @@ body {
 
 .chip:hover {
   color: var(--text);
-  border-color: #444b55;
+  border-color: var(--border-hover);
 }
 
 .chip.active {
-  background: #2c313a;
+  background: var(--active);
   border-color: var(--accent);
   color: var(--text);
 }
 
 .tool.active {
-  background: #2c313a;
+  background: var(--active);
   border-color: var(--accent);
   color: var(--text);
 }
@@ -464,8 +446,8 @@ body {
 
 .tool kbd {
   padding: 0 4px;
-  border-radius: 3px;
-  background: #14161a;
+  border-radius: var(--r-sm);
+  background: var(--inset);
   color: var(--text-dim);
   font: var(--t-micro);
   letter-spacing: var(--tracking-micro);
@@ -474,10 +456,10 @@ body {
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: var(--space-4);
   background: var(--bg-raised);
   border-left: 1px solid var(--border);
 }
@@ -491,13 +473,13 @@ body {
    the panel's edges so the scrolled content passes cleanly underneath. */
 .panel-header {
   position: sticky;
-  top: -16px;
+  top: calc(-1 * var(--space-4));
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: -16px -16px 0;
-  padding: 16px 16px 10px;
+  gap: var(--space-2);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  padding: var(--space-4) var(--space-4) 10px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-raised);
 }
@@ -533,7 +515,7 @@ body {
 .panel-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .panel-heading {
@@ -584,8 +566,8 @@ body {
   min-width: 0;
   padding: 4px 4px;
   border: 1px solid var(--border);
-  border-radius: 3px;
-  background: #14161a;
+  border-radius: var(--r-sm);
+  background: var(--inset);
   color: var(--text);
   font: var(--t-label);
   font-weight: 400;
@@ -608,8 +590,8 @@ body {
   width: 100%;
   padding: 4px 6px;
   border: 1px solid var(--border);
-  border-radius: 3px;
-  background: #14161a;
+  border-radius: var(--r-sm);
+  background: var(--inset);
   color: var(--text);
   font: var(--t-num);
 }
@@ -677,9 +659,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 6px;
+  padding: var(--row-pad-y) 6px;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   font: var(--t-label);
@@ -689,7 +671,7 @@ body {
 
 .row:hover {
   color: var(--text);
-  background: #262a30;
+  background: var(--hover);
 }
 
 .row.selected {
@@ -700,27 +682,33 @@ body {
 .swatch {
   width: 10px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--r-sm);
   background: currentColor;
 }
 
+/* The canvas's own role colours, from the one role table. */
 .swatch.role-cut {
-  background: #e8eaed;
+  background: var(--role-cut);
 }
-.swatch.role-stitch {
-  background: #5aa9ff;
+.swatch.role-stitch,
+.swatch.role-stitch-holes {
+  background: var(--role-stitch);
 }
 .swatch.role-fold {
-  background: #5fd08a;
+  background: var(--role-fold);
 }
-.swatch.role-mark {
-  background: #8b929b;
+.swatch.role-mark,
+.swatch.role-annotation {
+  background: var(--role-mark);
+}
+.swatch.role-hardware {
+  background: var(--role-hardware);
 }
 
 .badge {
-  padding: 0 4px;
-  border-radius: 3px;
-  background: #14161a;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--inset);
   color: var(--text-dim);
   font: var(--t-micro);
   letter-spacing: var(--tracking-micro);
@@ -737,17 +725,17 @@ body {
   colour, because a two-digit count in dark red on dark grey is a smudge.
 */
 .badge.severity-error {
-  background: color-mix(in srgb, var(--error) 30%, #14161a);
+  background: color-mix(in srgb, var(--error) 30%, var(--inset));
   color: var(--text);
 }
 
 .badge.severity-warning {
-  background: color-mix(in srgb, var(--warning) 26%, #14161a);
+  background: color-mix(in srgb, var(--warning) 26%, var(--inset));
   color: var(--text);
 }
 
 .badge.severity-info {
-  background: color-mix(in srgb, var(--info) 24%, #14161a);
+  background: color-mix(in srgb, var(--info) 24%, var(--inset));
   color: var(--text);
 }
 
@@ -764,7 +752,7 @@ body {
   width: 150px;
   padding: 3px 7px;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text);
   font: var(--t-body);
@@ -776,7 +764,7 @@ body {
 
 .project-name:focus {
   border-color: var(--accent);
-  background: #14161a;
+  background: var(--inset);
   outline: none;
 }
 
@@ -789,7 +777,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0 0 0 / 45%);
+  background: var(--scrim);
 }
 
 .dialog {
@@ -799,10 +787,13 @@ body {
   width: min(440px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  padding: 16px;
+  padding: var(--space-4);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-md);
   background: var(--bg-raised);
+  /* Raised: dialogs and popovers are the only surfaces that cast a shadow
+     (§6.2). The delete dialog read as pasted on without one. */
+  box-shadow: var(--elevation-raised);
   color: var(--text);
   font: var(--t-body);
 }
@@ -882,7 +873,7 @@ body {
   width: 100%;
   padding: 5px 6px;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   font: var(--t-body);
@@ -891,7 +882,7 @@ body {
 
 button.problem-row:hover {
   color: var(--text);
-  background: #262a30;
+  background: var(--hover);
   cursor: pointer;
 }
 
@@ -899,7 +890,7 @@ button.problem-row:hover {
   flex: none;
   width: 3px;
   margin: 1px 0;
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   background: var(--text-dim);
 }
 
@@ -1015,7 +1006,7 @@ button.problem-row:hover {
   gap: 6px;
   padding: 2px 4px;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text);
   font: var(--t-strong);
@@ -1024,7 +1015,7 @@ button.problem-row:hover {
 }
 
 .part-name:hover {
-  background: #262a30;
+  background: var(--hover);
 }
 
 .feature-row {
@@ -1052,7 +1043,7 @@ button.problem-row:hover {
   width: 20px;
   padding: 2px 0;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   font: var(--t-micro);
@@ -1062,7 +1053,7 @@ button.problem-row:hover {
 }
 
 .icon-toggle:hover {
-  background: #262a30;
+  background: var(--hover);
 }
 
 /* Off reads as off at a glance, without a second colour to learn. */
@@ -1086,9 +1077,9 @@ button.problem-row:hover {
   width: 200px;
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 3px;
-  background: #16181c;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  border-radius: var(--r-sm);
+  background: var(--popover);
+  box-shadow: var(--elevation-raised);
 }
 
 .menu-item {
@@ -1097,7 +1088,7 @@ button.problem-row:hover {
   gap: 2px;
   padding: 6px 8px;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text);
   font: var(--t-label);
@@ -1107,7 +1098,7 @@ button.problem-row:hover {
 
 .menu-item:hover,
 .menu-item:focus-visible {
-  background: #262a30;
+  background: var(--hover);
   outline: none;
 }
 
@@ -1126,7 +1117,7 @@ button.problem-row:hover {
 .field-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -1185,9 +1176,9 @@ button.problem-row:hover {
   max-width: 280px;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 3px;
-  background: #101215;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  border-radius: var(--r-sm);
+  background: var(--tooltip);
+  box-shadow: var(--elevation-raised);
   color: var(--text);
   font: var(--t-label);
   font-weight: 400;
@@ -1216,11 +1207,40 @@ button.problem-row:hover {
   max-width: 320px;
   padding: 6px 9px;
   border: 1px solid color-mix(in srgb, var(--warning) 55%, var(--border));
-  border-radius: 3px;
-  background: #16181c;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  border-radius: var(--r-sm);
+  background: var(--popover);
+  box-shadow: var(--elevation-raised);
   color: var(--text);
   font: var(--t-label);
   font-weight: 400;
   pointer-events: none;
+}
+
+/* ——— F.4: motion ————————————————————————————————————————————————————————
+   Colour-only acknowledgement of a press or a hover (§6.3): background, border,
+   colour and opacity, never a transform. Off entirely for reduced motion. */
+
+.tool,
+.chip,
+.row,
+.menu-item,
+.icon-toggle,
+.part-name,
+.drawer-handle,
+button.problem-row,
+.field input,
+.field select {
+  transition:
+    background-color var(--motion),
+    border-color var(--motion),
+    color var(--motion),
+    opacity var(--motion);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
 }

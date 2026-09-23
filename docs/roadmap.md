@@ -1147,7 +1147,7 @@ features consume these; they do not extend or amend the visual language on their
 | **F.1** ✅ | Systemic interaction | `ReasonedButton` (a disabled control that renders its refusal — the domain already produces every one, and the UI hides them in a native `title`, contradicting X1); `Tooltip`; a `Notice` near the gesture; one word per relationship — **Follows / Mirrors / Mirrors … across / Measures**; drag vs click–click made consistent and a header hint that is true; **Length** on an open line, and no area on a hole |
 | **F.2** ✅ | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
 | **F.3** ✅ | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
-| **F.4** | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
+| **F.4** ✅ | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
 | **F.5** | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
 | **F.6** | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
 | **F.7** | Leather-specific treatment | True-size slanted stitch slits; seam allowance as a band; fold direction ticks; the derived link tick; the canvas legend and the part caption. **Then run the identity test and record the result** |
@@ -1305,6 +1305,39 @@ so the Y flip stays in `view.ts`.
   reframes.
 - A change of pixel density still resizes plainly: the old and new device pixels are not the same
   length, and it happens when a window moves between screens, not while drawing.
+
+**F.4 — done** (2026-09-23). **One source of truth: `packages/render/src/theme/`.**
+- **What it holds:** the palette (today's colours, named — F.5 replans them); the **role table**,
+  with each line's screen colour and width, paper width and grey, and one dash rhythm in
+  millimetres; and the type, spacing, radii, elevation, motion and density tokens.
+- **Who reads it:** the canvas and SVG backends read it directly, the exporter prints from the same
+  role table, and `apps/desktop` writes every token onto `:root` before the first render.
+  `styles.css` now defines no colour, radius or type value of its own.
+- **Screen and paper agree.** Dash rhythms are true millimetres in both: the stitch line's 2-2 mm,
+  the fold's dash-dot, and the marking line's dots, which were solid on screen and dotted on paper.
+  `screenDash` draws the true rhythm or none, never a stretched one, and is property-tested.
+  Tool feedback keeps its own pixel dashes, since it is screen chrome and is never printed.
+- **Audit tests.** `packages/export` holds every role to the very same dash array on screen and on
+  paper. `apps/desktop` holds every `var(--…)` in the stylesheet to the theme, allows only the three
+  layout widths as local variables, and refuses any colour literal or pixel radius.
+- **Applied:**
+  - three radii replace five ad-hoc values, with badges on the pill;
+  - the delete dialog is raised: shadow and scrim (the audit found it "pasted on");
+  - colour-only transitions at 120 ms, switched off for reduced motion;
+  - the panel rhythm is 16/12/8;
+  - control and row heights come from `--density`. Comfortable is the default; compact is defined
+    but has no switch, since density is post-1.0.
+- **The "one-sentence ADR 0011 amendment" is void.** It was for Plex Mono, which F.0's decisions
+  dropped. The only change to the typeface (UI weights 500 and 600) was recorded in ADR 0011 during
+  F.0.
+
+Gotchas:
+- **Vitest stubs CSS imports to an empty string**, even `?raw`, so a stylesheet audit written that
+  way passes on nothing. It reads the file from disk and first asserts that it got one.
+- **`apps/desktop` had no `vitest.config.ts`.** Its first unit test also ran from the compiled copy
+  in `dist/`. It now includes only `src/**/*.test.ts`, like every package.
+- A screenshot taken during a hover transition shows the old colour fading, which is not a
+  selection bug. Playwright's pixel tests disable animations.
 #### Deferred opportunities worth keeping visible
 
 - **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and

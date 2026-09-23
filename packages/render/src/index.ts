@@ -6,6 +6,17 @@
  * layer beneath this one is Y-up millimetres and knows nothing about screens.
  */
 
+export {
+  DASH_LEGIBLE_PX,
+  DENSITY,
+  PALETTE,
+  ROLE_STYLES,
+  cssVariables,
+  screenDash,
+  type Density,
+  type RoleStyle,
+} from './theme/index.js';
+
 export type { ViewportView } from './view.js';
 export { mmToPixels, pixelsToMm, screenToWorld, visibleBoundsMm, worldToScreen } from './view.js';
 

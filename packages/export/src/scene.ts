@@ -1,7 +1,7 @@
 import type { Mm } from '@leathercad/core';
-import type { LayerRole, ResolvedProject } from '@leathercad/domain';
+import { LAYER_ROLES, type LayerRole, type ResolvedProject } from '@leathercad/domain';
 import { PathOps, RectOps, Shapes, type Path, type Rect } from '@leathercad/geometry';
-import { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from '@leathercad/render';
+import { CAPTION_GAP_MM, CAPTION_SIZE_MM, ROLE_STYLES, describePart } from '@leathercad/render';
 import { outlinesOf, placedText } from '@leathercad/typography';
 
 /**
@@ -22,16 +22,17 @@ export interface PrintStyle {
   readonly grey: number;
 }
 
-export const PRINT_STYLES: Readonly<Record<LayerRole, PrintStyle>> = {
-  cut: { widthMm: 0.25, dashMm: [], grey: 0 },
-  stitch: { widthMm: 0.15, dashMm: [2, 2], grey: 0 },
-  'stitch-holes': { widthMm: 0.15, dashMm: [], grey: 0 },
-  fold: { widthMm: 0.15, dashMm: [7, 2, 1.5, 2], grey: 0 },
-  mark: { widthMm: 0.1, dashMm: [1, 1.5], grey: 0.45 },
-  hardware: { widthMm: 0.2, dashMm: [], grey: 0 },
-  annotation: { widthMm: 0.1, dashMm: [], grey: 0.35 },
-  construction: { widthMm: 0.1, dashMm: [1, 1], grey: 0.6 },
-};
+/**
+ * Read from the one role table in `packages/render/src/theme`, which the screen
+ * reads too — so a line cannot be dotted on paper and solid on screen again
+ * (UI Foundations §2).
+ */
+export const PRINT_STYLES: Readonly<Record<LayerRole, PrintStyle>> = Object.fromEntries(
+  LAYER_ROLES.map((role) => {
+    const { widthMm, dashMm, grey } = ROLE_STYLES[role];
+    return [role, { widthMm, dashMm, grey }];
+  }),
+) as Record<LayerRole, PrintStyle>;
 
 /**
  * How big a stitch hole is drawn on the template.
