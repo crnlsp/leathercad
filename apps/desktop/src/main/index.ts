@@ -20,7 +20,9 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
-    minWidth: 940,
+    // The smallest frame the layout supports (UI Foundations §7.2): below 900
+    // px Parts and Properties are overlays, and nothing is removed.
+    minWidth: 860,
     minHeight: 600,
     show: false,
     title: 'LeatherCAD',

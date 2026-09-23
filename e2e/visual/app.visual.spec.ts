@@ -106,7 +106,9 @@ test('a stitched panel on the canvas', async () => {
     // Nothing selected and the pointer off the canvas, so the picture is the
     // drawing and not the interaction with it.
     await window.getByTestId('tool-select').click();
-    await window.mouse.click(box!.x + 700, box!.y + 600);
+    // The canvas's empty corner — measured from its own size, which F.2 made
+    // narrower, not from a fixed offset that now lands off the canvas.
+    await window.mouse.click(box!.x + box!.width - 30, box!.y + box!.height - 30);
     await expect(window.getByTestId('selected-count')).toHaveText('0');
     await pointerAway(window);
 

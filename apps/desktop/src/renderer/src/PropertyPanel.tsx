@@ -20,7 +20,13 @@ import {
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
-import { evaluate, followRefusal, lockRefusal, type ResolvedFeature } from '@leathercad/domain';
+import {
+  evaluate,
+  followRefusal,
+  lockRefusal,
+  roleOf,
+  type ResolvedFeature,
+} from '@leathercad/domain';
 
 import { IRON_PRESETS } from './irons.js';
 import { NumberField } from './NumberField.js';
@@ -55,8 +61,10 @@ export function PropertyPanel({
 
   if (found === null) {
     return (
-      <aside className="panel" data-testid="property-panel">
-        <h2>Properties</h2>
+      <aside className="panel properties" data-testid="property-panel" aria-label="Properties">
+        <header className="panel-header">
+          <h2>Properties</h2>
+        </header>
         <p className="panel-empty">
           {selected.size > 1
             ? `${selected.size} features selected. Editing more than one at a time comes later.`
@@ -73,8 +81,29 @@ export function PropertyPanel({
     .find((entry) => entry.feature.id === feature.id);
 
   return (
-    <aside className="panel" data-testid="property-panel">
-      <h2>Properties</h2>
+    <aside className="panel properties" data-testid="property-panel" aria-label="Properties">
+      {/*
+        What is selected stays in view however far the fields scroll: its mark,
+        its name and what it is (UI Foundations §7.1). The mark is the role's
+        swatch until F.6 draws the leather marks.
+      */}
+      <header className="panel-header" data-testid="property-header">
+        <span className={`swatch role-${roleOf(feature)}`} aria-hidden="true" />
+        <h2 className="header-name">{feature.name}</h2>
+        {isMirrored(feature) && (
+          // So a selected counterpart never reads as an ordinary independent
+          // feature. What it *is* belongs beside its name, not three fields
+          // down.
+          <span className="badge" data-testid="mirrored-badge">
+            Mirrors
+          </span>
+        )}
+        {feature.locked && (
+          <span className="badge" data-testid="locked-badge">
+            Locked
+          </span>
+        )}
+      </header>
 
       <section className="panel-section">
         <div className="panel-heading">Part</div>
@@ -100,22 +129,7 @@ export function PropertyPanel({
       </section>
 
       <section className="panel-section">
-        <div className="panel-heading">
-          {labelFor(feature)}
-          {isMirrored(feature) && (
-            // So a selected counterpart never reads as an ordinary independent
-            // feature. What it *is* belongs beside its name, not three fields
-            // down.
-            <span className="badge" data-testid="mirrored-badge">
-              Mirrors
-            </span>
-          )}
-          {feature.locked && (
-            <span className="badge" data-testid="locked-badge">
-              Locked
-            </span>
-          )}
-        </div>
+        <div className="panel-heading">{labelFor(feature)}</div>
         {/*
           A `fieldset` rather than a `disabled` on each control: every field in
           here, and every field a later editor adds, is disabled by the fact of

@@ -3,9 +3,6 @@ import type { DrawMode, HardwareOptions } from '@leathercad/editor';
 
 import { PUNCH_SIZES_MM } from './punches.js';
 
-/** Which tools draw geometry whose kind the user chooses. */
-const DRAW_TOOLS: ReadonlySet<string> = new Set(['rectangle', 'circle', 'arc', 'line', 'polyline']);
-
 /**
  * One fixed result each (X4). *Outline* and *Stitch + allowance* each make a
  * new part and never read the selection; the rest join the selected one.
@@ -33,10 +30,14 @@ const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
 ];
 
 /**
- * Settings for the active tool, and nothing else.
+ * The options row above the canvas — **always present** (UI Foundations §7.1).
  *
- * Renders nothing at all when the active tool has no options — an empty strip
- * above the canvas is the noise this layout exists to remove.
+ * It used to render only for a tool with options, so the canvas grew and
+ * shrank by its height on every tool change and the drawing jumped ~8.7 mm
+ * under the pointer. Reserving the row removes that at its source, and keeps
+ * *Draw as* — the setting that carries the leather meaning — on screen instead
+ * of appearing and vanishing with the tool. Hardware shows its own settings;
+ * every other tool shows what the next drawing will be.
  *
  * "Draw as" lives here rather than in the rail because it is not a mode: it
  * does not change what a click *does*, it changes what the result is *called*.
@@ -56,7 +57,7 @@ export function ToolOptions({
   hardware: HardwareOptions;
   onHardware: (next: HardwareOptions) => void;
 }) {
-  if (DRAW_TOOLS.has(toolId)) {
+  if (toolId !== 'hardware') {
     return (
       <div className="tool-options" data-testid="tool-options">
         <span className="field-label">Draw as</span>
@@ -76,47 +77,41 @@ export function ToolOptions({
     );
   }
 
-  if (toolId === 'hardware') {
-    return (
-      <div className="tool-options" data-testid="tool-options">
-        <label className="field">
-          <span className="field-label">Punch</span>
-          <select
-            data-testid="hardware-diameter"
-            value={String(hardware.diameterMm)}
-            onChange={(event) =>
-              onHardware({ ...hardware, diameterMm: Number(event.target.value) })
-            }
-          >
-            {PUNCH_SIZES_MM.map((mm) => (
-              <option key={mm} value={String(mm)}>
-                {formatEditable(mm, 2)} mm
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span className="field-label">For</span>
-          <select
-            data-testid="hardware-type"
-            value={hardware.hardwareType}
-            onChange={(event) =>
-              onHardware({
-                ...hardware,
-                hardwareType: event.target.value as HardwareOptions['hardwareType'],
-              })
-            }
-          >
-            {HARDWARE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type[0]!.toUpperCase() + type.slice(1)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className="tool-options" data-testid="tool-options">
+      <label className="field">
+        <span className="field-label">Punch</span>
+        <select
+          data-testid="hardware-diameter"
+          value={String(hardware.diameterMm)}
+          onChange={(event) => onHardware({ ...hardware, diameterMm: Number(event.target.value) })}
+        >
+          {PUNCH_SIZES_MM.map((mm) => (
+            <option key={mm} value={String(mm)}>
+              {formatEditable(mm, 2)} mm
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span className="field-label">For</span>
+        <select
+          data-testid="hardware-type"
+          value={hardware.hardwareType}
+          onChange={(event) =>
+            onHardware({
+              ...hardware,
+              hardwareType: event.target.value as HardwareOptions['hardwareType'],
+            })
+          }
+        >
+          {HARDWARE_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type[0]!.toUpperCase() + type.slice(1)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
 }

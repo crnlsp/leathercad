@@ -15,6 +15,8 @@ import {
   type Project,
 } from '@leathercad/domain';
 
+import { useEffect, useRef, useState } from 'react';
+
 import { CountBadge } from './CountBadge.js';
 import { Tooltip } from './Tooltip.js';
 
@@ -53,7 +55,7 @@ export function PartsList({
 }) {
   if (project.parts.length === 0) {
     return (
-      <aside className="panel" data-testid="parts-list">
+      <aside className="panel parts" data-testid="parts-list" aria-label="Parts">
         <h2>Parts</h2>
         <p className="panel-empty">
           No parts yet. Press R, then drag or click two corners to draw one.
@@ -63,7 +65,7 @@ export function PartsList({
   }
 
   return (
-    <aside className="panel" data-testid="parts-list">
+    <aside className="panel parts" data-testid="parts-list" aria-label="Parts">
       <h2>Parts</h2>
       {project.parts.map((part) => (
         <PartSection
@@ -129,6 +131,7 @@ function PartSection({
           glyph={visible ? '👁' : '🚫'}
           onToggle={() => store.dispatch(setPartVisible(part.id, !visible))}
         />
+        <PartMenu part={part} onDuplicatePart={onDuplicatePart} onRemovePart={onRemovePart} />
       </div>
 
       {part.features.length === 0 ? (
@@ -157,30 +160,100 @@ function PartSection({
           />
         ))
       )}
+    </section>
+  );
+}
 
-      <div className="part-actions">
-        <Tooltip text="A copy beside this one, with its own stitching">
+/**
+ * A part's own actions, behind one small button on its heading row.
+ *
+ * *Duplicate* and *Delete* used to take a full row under every part, which is
+ * how six features filled the panel. In an overflow they cost nothing until
+ * asked for (UI Foundations §7.1), and closing on Escape or a click elsewhere
+ * keeps the menu from outliving the thought that opened it.
+ */
+function PartMenu({
+  part,
+  onDuplicatePart,
+  onRemovePart,
+}: {
+  part: Part;
+  onDuplicatePart: (partId: string) => void;
+  onRemovePart: (partId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  // A menu takes focus when it opens, and gives it back when Escape closes it
+  // — heard wherever focus is, since a click does not always leave it here.
+  useEffect(() => {
+    if (!open) return;
+    root.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    const away = (event: PointerEvent): void => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', escape, true);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', escape, true);
+    };
+  }, [open]);
+
+  const choose = (action: () => void) => () => {
+    setOpen(false);
+    action();
+  };
+
+  return (
+    <div className="part-menu-anchor" ref={root}>
+      <Tooltip text={open ? null : `Actions for ${part.name}`}>
+        <button
+          ref={trigger}
+          type="button"
+          className="icon-toggle"
+          data-testid={`part-menu-${part.id}`}
+          aria-label={`Actions for ${part.name}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((was) => !was)}
+        >
+          ⋯
+        </button>
+      </Tooltip>
+      {open && (
+        <div className="part-menu" role="menu" aria-label={`Actions for ${part.name}`}>
           <button
             type="button"
-            className="tool"
+            role="menuitem"
+            className="menu-item"
             data-testid={`duplicate-part-${part.id}`}
-            onClick={() => onDuplicatePart(part.id)}
+            onClick={choose(() => onDuplicatePart(part.id))}
           >
             Duplicate
+            <span className="menu-note">A copy beside this one, with its own stitching</span>
           </button>
-        </Tooltip>
-        {part.features.length > 0 && (
-          <button
-            type="button"
-            className="tool danger"
-            data-testid={`delete-part-${part.id}`}
-            onClick={() => onRemovePart(part.id)}
-          >
-            Delete
-          </button>
-        )}
-      </div>
-    </section>
+          {part.features.length > 0 && (
+            <button
+              type="button"
+              role="menuitem"
+              className="menu-item danger"
+              data-testid={`delete-part-${part.id}`}
+              onClick={choose(() => onRemovePart(part.id))}
+            >
+              Delete part
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

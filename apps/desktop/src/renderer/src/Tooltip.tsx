@@ -36,6 +36,12 @@ export function Tooltip({
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
+  // A tooltip switched off — a menu's trigger while the menu is open — must not
+  // come back with the position it had before, the moment it is switched on.
+  // Reset while rendering rather than in an effect, React's pattern for state
+  // that follows a prop: no extra pass, and nothing shown in between.
+  if (text === null && at !== null) setAt(null);
+
   if (text === null) return children;
 
   const show = (): void => {
@@ -57,7 +63,11 @@ export function Tooltip({
         timer.current = window.setTimeout(show, DELAY_MS);
       }}
       onPointerLeave={hide}
-      onFocus={show}
+      // Keyboard focus only: a mouse click also focuses the button, and a tip
+      // that springs up under the pointer on every click is noise.
+      onFocus={(event) => {
+        if (event.target.matches(':focus-visible')) show();
+      }}
       onBlur={hide}
       onKeyDown={(event) => {
         if (event.key === 'Escape') hide();
@@ -79,7 +89,10 @@ export function Tooltip({
           bubble.style.top = `${at.top}px`;
         }}
       >
-        {text}
+        {/* Only while shown: hidden text would still match text queries and be
+            read as page content. Focus shows it at once, so a screen reader
+            gets the description when the control is reached. */}
+        {at === null ? null : text}
       </span>
     </span>
   );

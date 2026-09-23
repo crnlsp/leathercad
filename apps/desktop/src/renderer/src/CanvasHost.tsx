@@ -405,7 +405,10 @@ export function CanvasHost({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onPointerLeave={() => setCursorMm(null)}
+        onPointerLeave={() => {
+          setCursorMm(null);
+          managerRef.current?.pointerLeave();
+        }}
         onDoubleClick={handleDoubleClick}
       />
       {notice !== null && pointerCss !== null && (

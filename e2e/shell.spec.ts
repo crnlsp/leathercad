@@ -451,32 +451,129 @@ test('history sits apart from the file actions', async () => {
   });
 });
 
-test('the options strip appears only for a tool that has options', async () => {
-  await withFreshApp(async (window) => {
-    // Select has nothing to configure, so the strip must not occupy space. An
-    // empty bar above the canvas is exactly the noise this layout removes.
+test('no panel is ever removed, and a locked feature stays reachable at 860 × 600 (F.2)', async () => {
+  // At 860 × 640 the parts panel used to vanish, and it is the only route to a
+  // locked feature — locking takes it out of hit-testing (audit §3.3). Below
+  // 1024 px Properties becomes an overlay, below 900 px so does Parts, each
+  // opened from the status bar; the rail always stays.
+  await withFreshApp(async (window, instance) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 330, box!.y + 270, { steps: 5 });
+    await window.mouse.up();
+    await window
+      .getByTestId('parts-list')
+      .locator('[data-testid^="feature-locked-"]')
+      .first()
+      .click();
     await window.getByTestId('tool-select').click();
-    await expect(window.getByTestId('tool-options')).toHaveCount(0);
+    await window.mouse.click(box!.x + 40, box!.y + 40);
+    await expect(window.getByTestId('selected-count')).toHaveText('0');
 
-    // A draw tool does have something to say: what the next thing drawn
-    // becomes. Outline is the default — a new piece of leather.
+    await instance.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(860, 600);
+    });
+    await expect(window.getByTestId('toggle-parts')).toBeVisible();
+    await expect(window.getByTestId('toggle-properties')).toBeVisible();
+    await expect(window.getByTestId('tool-rail')).toBeVisible();
+    for (const id of ['parts-list', 'property-panel', 'problems-panel']) {
+      await expect(window.getByTestId(id)).toHaveCount(1);
+    }
+
+    // The way back to the locked outline: open Parts, pick it, read it.
+    await window.getByTestId('toggle-parts').click();
+    await window.getByTestId('parts-list').getByText('Outline').click();
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await window.getByTestId('toggle-properties').click();
+    await expect(window.getByTestId('property-panel')).toBeVisible();
+    await expect(window.getByTestId('locked-badge')).toBeVisible();
+  });
+});
+
+test('the rail collapses below 1200 px, and the maker can open it (F.2)', async () => {
+  await withFreshApp(async (window, instance) => {
+    const rail = window.getByTestId('tool-rail');
+    await expect(rail).not.toHaveClass(/collapsed/);
+    await expect(window.getByTestId('tool-rectangle')).toContainText('Rectangle');
+
+    await instance.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(1100, 760);
+    });
+    await expect(rail).toHaveClass(/collapsed/);
+    // The shortcut is the face; the name is still what the button is called.
+    await expect(window.getByTestId('tool-rectangle')).toHaveAccessibleName('Rectangle');
+
+    await window.getByTestId('rail-toggle').click();
+    await expect(rail).not.toHaveClass(/collapsed/);
+  });
+});
+
+test('problems wait in a drawer that says the verdict, and part actions in a menu (F.2)', async () => {
+  await withFreshApp(async (window) => {
+    const toggle = window.getByTestId('problems-toggle');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toContainText('Nothing to fix');
+
+    const panel = await panelWithChain(window);
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+    const inset = panel.locator('label', { hasText: /^Edge margin/ }).locator('input');
+    await inset.fill('60');
+    await inset.press('Enter');
+    // Collapsed, it still says how many — closing it never hides trouble.
+    await expect(toggle).toContainText('2 problems');
+    const drawer = window.getByTestId('problems-panel');
+    await expect(drawer.getByTestId('problem-row')).toHaveCount(0);
+    await toggle.click();
+    await expect(drawer.getByTestId('problem-row')).toHaveCount(2);
+
+    const menu = window.getByTestId('parts-list').locator('[data-testid^="part-menu-"]');
+    await menu.click();
+    await expect(window.getByRole('menu')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(window.getByRole('menu')).toHaveCount(0);
+  });
+});
+
+test('the options row is always there, so the drawing never jumps (F.2)', async () => {
+  // It used to render only for a tool with options, so the canvas grew and
+  // shrank by its height on every tool change and the drawing moved ~8.7 mm
+  // under the pointer. Reserved, it removes that at its source, and keeps the
+  // Draw as setting — what the next drawing will be — always on screen.
+  await withFreshApp(async (window) => {
+    const canvas = window.getByTestId('editor-canvas');
+
     await window.getByTestId('tool-rectangle').click();
     await expect(window.getByTestId('tool-options')).toHaveCount(1);
     await expect(window.getByTestId('draw-as-outline')).toHaveAttribute('aria-pressed', 'true');
+    const drawing = await canvas.boundingBox();
 
-    // And the hardware tool asks a different question entirely.
+    for (const tool of ['select', 'measure', 'text', 'rotate', 'line']) {
+      await window.getByTestId(`tool-${tool}`).click();
+      await expect(window.getByTestId('tool-options')).toHaveCount(1);
+      expect(await canvas.boundingBox()).toEqual(drawing);
+    }
+
+    // The hardware tool asks a different question in the same row.
     await window.getByTestId('tool-hardware').click();
     await expect(window.getByTestId('hardware-diameter')).toHaveValue('4');
+    expect(await canvas.boundingBox()).toEqual(drawing);
   });
 });
 
 test('the canvas takes every pixel the options strip is not using', async () => {
   // A canvas that collapses to its intrinsic 150px still passes a width-only
-  // check while every drag below it silently misses. With a tool that has
-  // options the strip takes a band and the canvas takes the rest; with one
-  // that has none the canvas takes all of it.
+  // check while every drag below it silently misses. The options row takes a
+  // band above, the problems drawer's handle one below, and the canvas the
+  // rest.
   await withFreshApp(async (window) => {
-    const heights = async (): Promise<{ host: number; column: number; strip: number }> =>
+    const heights = async (): Promise<{
+      host: number;
+      column: number;
+      strip: number;
+      drawer: number;
+    }> =>
       window.evaluate(() => {
         const height = (selector: string): number =>
           document.querySelector(selector)?.getBoundingClientRect().height ?? 0;
@@ -484,19 +581,16 @@ test('the canvas takes every pixel the options strip is not using', async () => 
           host: height('.canvas-host'),
           column: height('.canvas-column'),
           strip: height('.tool-options'),
+          drawer: height('.problems-drawer'),
         };
       });
 
     await window.getByTestId('tool-rectangle').click();
-    const withStrip = await heights();
-    expect(withStrip.column).toBeGreaterThan(400);
-    expect(withStrip.strip).toBeGreaterThan(0);
-    expect(withStrip.host).toBe(withStrip.column - withStrip.strip);
-
-    await window.getByTestId('tool-select').click();
-    const without = await heights();
-    expect(without.strip).toBe(0);
-    expect(without.host).toBe(without.column);
+    const layout = await heights();
+    expect(layout.column).toBeGreaterThan(400);
+    expect(layout.strip).toBeGreaterThan(0);
+    expect(layout.drawer).toBeGreaterThan(0);
+    expect(layout.host).toBe(layout.column - layout.strip - layout.drawer);
   });
 });
 
@@ -776,6 +870,18 @@ test('a stitch line and its holes follow the panel width', async () => {
   });
 });
 
+/**
+ * Opens the problems drawer under the canvas, which starts collapsed to its
+ * handle (F.2). The handle already says the verdict; the rows need it open.
+ */
+async function openProblems(
+  window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
+): Promise<void> {
+  const toggle = window.getByTestId('problems-toggle');
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+}
+
 /** A panel with a stitch line and holes, the outline selected. */
 async function panelWithChain(window: Awaited<ReturnType<ElectronApplication['firstWindow']>>) {
   const box = await window.getByTestId('editor-canvas').boundingBox();
@@ -991,9 +1097,14 @@ test('drawing a fold line with nothing selected changes nothing, and says why', 
     // alone is 700 px away (F.1). The same sentence, from the same problem.
     const notice = window.getByTestId('canvas-notice');
     await expect(notice).toContainText('Select a part');
-    const at = await notice.boundingBox();
-    expect(Math.abs(at!.x - (box!.x + 300))).toBeLessThan(40);
-    expect(Math.abs(at!.y - (box!.y + 300))).toBeLessThan(40);
+    // Beside it on whichever side has room: near the canvas's right edge it
+    // turns back to the pointer's left rather than running off.
+    const at = (await notice.boundingBox())!;
+    const pointer = { x: box!.x + 300, y: box!.y + 300 };
+    const gapX = Math.max(at.x - pointer.x, pointer.x - (at.x + at.width), 0);
+    const gapY = Math.max(at.y - pointer.y, pointer.y - (at.y + at.height), 0);
+    expect(gapX).toBeLessThan(40);
+    expect(gapY).toBeLessThan(40);
   });
 });
 
@@ -1058,6 +1169,12 @@ test('a tool says how it is used, on hover and on focus (F.1)', async () => {
 
     await polyline.focus();
     await expect(tip).toBeVisible();
+
+    // A mouse click focuses the button too, but is not asking for help: once
+    // the pointer leaves, nothing may linger (found in F.2).
+    await window.getByTestId('tool-line').click();
+    await window.mouse.move(600, 600);
+    await expect(window.getByRole('tooltip', { name: /Drag end to end/ })).toHaveCount(0);
   });
 });
 
@@ -1090,9 +1207,6 @@ test('the panel measures what a feature has, and reads a dimension (F.1)', async
       await input.press('Enter');
     }
     await window.getByTestId('tool-measure').click();
-    // The options strip goes with a draw tool, and the canvas grows into its
-    // place: read the view only once it has (the jump F.3 fixes).
-    await expect(window.getByTestId('tool-options')).toHaveCount(0);
     const readout = window.getByTestId('cursor-readout');
     const canvas = (await window.getByTestId('editor-canvas').boundingBox())!;
     // Where 0 and 100 mm land, read from the app: the canvas moves with the tool.
@@ -1167,6 +1281,9 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await inset.press('Enter');
 
     const problems = window.getByTestId('problems-panel');
+    // Collapsed, the handle already says how many and how bad.
+    await expect(problems).toContainText('2 problems');
+    await openProblems(window);
     const rows = problems.getByTestId('problem-row');
     await expect(rows).toHaveCount(2);
 
@@ -1247,6 +1364,7 @@ test('clicking a problem takes you to it, and the badges clear when it is fixed'
     const parts = window.getByTestId('parts-list');
     await expect(parts.getByTestId('count-badge').first()).toHaveText('2');
 
+    await openProblems(window);
     const before = await mmPerPx(window);
 
     await window.getByTestId('parts-list').getByText('Outline').click();
@@ -1680,6 +1798,8 @@ test('a duplicated part gets its own stitching, beside the original', async () =
     await window.getByTestId('add-stitch-line').click();
 
     const panel = window.getByTestId('parts-list');
+    // A part's own actions are in the overflow on its heading row (F.2).
+    await panel.locator('[data-testid^="part-menu-"]').first().click();
     await panel.locator('[data-testid^="duplicate-part-"]').first().click();
 
     await expect(window.getByTestId('part-count')).toHaveText('2');
@@ -1756,9 +1876,9 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
-    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.move(box!.x + 120, box!.y + 200);
     await window.mouse.down();
-    await window.mouse.move(box!.x + 500, box!.y + 400, { steps: 5 });
+    await window.mouse.move(box!.x + 300, box!.y + 400, { steps: 5 });
     await window.mouse.up();
     await expect(window.getByTestId('feature-count')).toHaveText('1');
 
@@ -1792,9 +1912,9 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
     // And it cannot be resized: a counterpart is the size of its original.
     // The reason appears *during* the drag, while the user can still let go.
     await window.getByTestId('tool-scale').click();
-    await window.mouse.move(box!.x + 620, box!.y + 400);
+    await window.mouse.move(box!.x + 480, box!.y + 400);
     await window.mouse.down();
-    await window.mouse.move(box!.x + 700, box!.y + 460, { steps: 5 });
+    await window.mouse.move(box!.x + 540, box!.y + 460, { steps: 5 });
 
     await expect(window.getByTestId('tool-notice')).toContainText(/size/i);
 
@@ -1969,9 +2089,9 @@ test('a seam allowance can be added to a stitch line drawn earlier', async () =>
 
     await window.getByTestId('tool-rectangle').click();
     await window.getByTestId('draw-as-outline').click();
-    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.move(box!.x + 80, box!.y + 200);
     await window.mouse.down();
-    await window.mouse.move(box!.x + 600, box!.y + 420, { steps: 5 });
+    await window.mouse.move(box!.x + 300, box!.y + 420, { steps: 5 });
     await window.mouse.up();
 
     // A stitch line inset from that outline cannot take an allowance: its part
@@ -1983,9 +2103,9 @@ test('a seam allowance can be added to a stitch line drawn earlier', async () =>
     // Draw a stitch line on a part of its own, and it can.
     await window.getByTestId('tool-rectangle').click();
     await window.getByTestId('draw-as-stitch-allowance').click();
-    await window.mouse.move(box!.x + 680, box!.y + 200);
+    await window.mouse.move(box!.x + 380, box!.y + 200);
     await window.mouse.down();
-    await window.mouse.move(box!.x + 860, box!.y + 340, { steps: 5 });
+    await window.mouse.move(box!.x + 560, box!.y + 340, { steps: 5 });
     await window.mouse.up();
 
     await expect(window.getByTestId('part-count')).toHaveText('2');
@@ -2039,7 +2159,7 @@ test('a dimension reads the drawing, and keeps reading it', async () => {
 
     // A click on nothing is refused with a reason, not turned into a dimension
     // to a point that would quietly go stale.
-    await window.mouse.click(...corner(780, 620));
+    await window.mouse.click(...corner(560, 560));
     await expect(window.getByTestId('tool-notice')).toContainText(/corner/i);
     await expect(window.getByTestId('feature-count')).toHaveText('2');
   });

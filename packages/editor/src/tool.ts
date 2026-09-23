@@ -207,6 +207,17 @@ export class ToolManager {
   }
 
   /**
+   * The pointer has left the canvas: whatever it had snapped to is no longer
+   * on offer, so its glyph goes. The tool keeps its own state — a drag under
+   * pointer capture still ends where it ends.
+   */
+  pointerLeave(): void {
+    if (this.caught === null) return;
+    this.caught = null;
+    this.context.invalidate();
+  }
+
+  /**
    * The event with its position moved onto the nearest snap target.
    *
    * **Ctrl suspends it**, for the times a point is wanted near geometry rather

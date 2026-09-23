@@ -122,32 +122,83 @@ body {
   height: 100%;
 }
 
+/*
+ * The frame (UI Foundations §7.1):
+ *
+ *   rail | parts | tool options · canvas · problems drawer | properties
+ *
+ * Each panel has a column of its own, so none competes with another for
+ * height — the tool rail above the parts tree is how the tree used to shrink
+ * to nothing (audit §3.3). Widths step down at 1280 px; below 1024 px
+ * Properties becomes an overlay and below 900 px so does Parts, each opened
+ * from the status bar (§7.2). **No panel is ever removed**: the parts tree is
+ * the only route to a locked feature.
+ */
 .workspace {
+  --rail-w: 152px;
+  --parts-w: 220px;
+  --properties-w: 288px;
+
+  position: relative;
   display: grid;
-  grid-template-columns: 200px 1fr 240px;
+  grid-template-columns: var(--rail-w) var(--parts-w) minmax(0, 1fr) var(--properties-w);
   min-height: 0;
 }
 
-/* The mode scope and the parts list share the left column; the column owns the
-   edge so the two do not draw a border each.
+.workspace.rail-collapsed {
+  --rail-w: 52px;
+}
 
-   Problems may take at most 30% of the column and scrolls beyond it. Sized to
-   its content alone, a few problems in body type squeezed the parts list to
-   nothing — and the parts list is the only way to a hidden or locked feature.
-   A stopgap until F.2 moves Problems into a drawer under the canvas. */
-.left-column {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) fit-content(30%);
-  min-height: 0;
-  border-right: 1px solid var(--border);
+@media (max-width: 1279px) {
+  .workspace {
+    --parts-w: 200px;
+    --properties-w: 264px;
+  }
+}
+
+.workspace.properties-overlay {
+  grid-template-columns: var(--rail-w) var(--parts-w) minmax(0, 1fr);
+}
+
+.workspace.properties-overlay.parts-overlay {
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+}
+
+/* An overlay panel keeps its place in the DOM and is shown on request, over
+   the canvas, with the one elevation a floating surface gets. */
+.workspace.properties-overlay > .panel.properties,
+.workspace.parts-overlay > .panel.parts {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 8;
+  display: none;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+.workspace.properties-overlay > .panel.properties {
+  right: 0;
+  width: 288px;
+}
+
+.workspace.parts-overlay > .panel.parts {
+  left: var(--rail-w);
+  width: 240px;
+}
+
+.workspace.properties-open > .panel.properties,
+.workspace.parts-open > .panel.parts {
+  display: flex;
 }
 
 .rail {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
+  min-height: 0;
+  padding: 10px 8px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .rail-group {
@@ -166,17 +217,47 @@ body {
   font: var(--t-label);
 }
 
+.rail-rule {
+  width: 100%;
+  margin: 0 0 4px;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
 .rail .tool {
   justify-content: space-between;
   width: 100%;
+  min-height: 30px;
 }
 
 .rail .tooltip-anchor {
   display: flex;
 }
 
-/* The strip is only sometimes there, so the canvas cannot depend on landing in
-   a particular grid row — it takes whatever height the strip leaves. */
+/* Collapsed: the shortcut is the face until F.6 gives each tool an icon, and
+   the tooltip carries the name and how it is used. */
+.rail.collapsed {
+  padding: 10px 6px;
+}
+
+.rail.collapsed .tool {
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.rail.collapsed .tool kbd {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: var(--t-label);
+}
+
+/* The rail's own toggle sits at its foot. The flex child is the tooltip's
+   wrapper, not the button inside it. */
+.rail > .tooltip-anchor:last-child {
+  margin-top: auto;
+}
+
 .canvas-column {
   display: flex;
   flex-direction: column;
@@ -194,9 +275,15 @@ body {
 
 .tool-options {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  /* A fixed height, not its content's: the row is reserved so the canvas never
+     moves when the tool changes (§7.1), and chips and selects differ by a few
+     pixels. */
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 10px;
   font: var(--t-label);
   background: var(--bg-raised);
   border-bottom: 1px solid var(--border);
@@ -388,14 +475,52 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: 16px;
   background: var(--bg-raised);
   border-left: 1px solid var(--border);
 }
 
-.left-column > .panel {
+.panel.parts {
   border-left: none;
+  border-right: 1px solid var(--border);
+}
+
+/* What is selected stays in view while the fields scroll (§7.1). Pulled out to
+   the panel's edges so the scrolled content passes cleanly underneath. */
+.panel-header {
+  position: sticky;
+  top: -16px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -16px -16px 0;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+
+.panel-header .header-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.panel-header .swatch {
+  flex: none;
+  width: 14px;
+}
+
+/* An 88 px label column in Properties (§7.3), so the longest label — Edge
+   margin, Thickness — sits on one line beside its field. */
+.panel.properties .field-label {
+  flex-basis: 88px;
+}
+
+.panel.properties .field-pair .field-label {
+  flex-basis: auto;
 }
 
 .panel h2 {
@@ -816,12 +941,55 @@ button.problem-row:hover {
   color: var(--text-dim);
 }
 
-/* In the 200 px left column a body-size message runs to four or five lines a
-   problem, so there it is set at label size. Body size is for the drawer F.2
-   moves Problems into; the property panel's inline problem keeps it. */
-.left-column .problem-message {
+/* ——— The problems drawer (§7.1) ———————————————————————————————————————————
+   Under the canvas, full width. Collapsed it is a 28 px handle that still says
+   the verdict; open it takes at most 40% of the column and scrolls. */
+
+.problems-drawer {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  max-height: 40%;
+  border-top: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+
+.drawer-handle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
   font: var(--t-label);
-  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drawer-handle:hover {
+  color: var(--text);
+}
+
+.drawer-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.drawer-chevron {
+  margin-left: auto;
+}
+
+.drawer-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 4px 16px;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 12px 12px;
 }
 
 /* ——— The parts panel ————————————————————————————————————————————————————
@@ -870,12 +1038,13 @@ button.problem-row:hover {
   min-width: 0;
 }
 
-/* The name gives way before the toggles do: a long name must not push the
-   lock off the edge of the panel, because the lock is the way back. */
+/* Names wrap rather than truncate (§7.1) — "Stitch hol…" told nobody which
+   feature it was. The name still gives way to the toggles: a long name must
+   not push the lock off the edge of the panel, because the lock is the way
+   back. */
 .feature-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .icon-toggle {
@@ -901,14 +1070,54 @@ button.problem-row:hover {
   opacity: 0.4;
 }
 
-.part-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
+/* A part's actions, in an overflow on its heading row (§7.1). */
+.part-menu-anchor {
+  position: relative;
+  flex: none;
 }
 
-.part-actions .tool {
-  flex: 1;
+.part-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #16181c;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font: var(--t-label);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: #262a30;
+  outline: none;
+}
+
+.menu-item.danger {
+  color: var(--error);
+}
+
+.menu-note {
+  color: var(--text-dim);
+  font-weight: 400;
 }
 
 /* A fieldset only to carry `disabled` down to every control inside it, so a

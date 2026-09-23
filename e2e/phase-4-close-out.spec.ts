@@ -206,9 +206,11 @@ test('a card holder, from the first outline to the printed page', async () => {
     await expect(panel.locator('.readout').first()).toContainText('134.00 mm');
 
     // ── A pocket drafted from its opening (A3) ───────────────────────────────
+    // Drawn roughly where there is room on screen — below the shell — and then
+    // typed to where it belongs, beside it: the typing is the precise part.
     await useTool(window, 'rectangle', 'stitch-allowance');
     at = await viewOf(window);
-    await drag(window, at(ox + 215, oy + 5), at(ox + 280, oy + 50));
+    await drag(window, at(ox + 10, oy - 60), at(ox + 60, oy - 25));
     await expect(window.getByTestId('part-count')).toHaveText('2');
     await expect(features).toHaveText('8');
     await expect(panel).toContainText('Stitch line');
@@ -258,6 +260,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     await type(window, 'Y', oy + 89);
     // The slot now crosses the stitching, so the line and its holes run into it.
     await expect(problems.getByTestId('count-badge')).toHaveText('2');
+    await window.getByTestId('problems-toggle').click();
     await expect(problems).toContainText('Off the material');
 
     // Clicking selects what is wrong, not what was just edited.

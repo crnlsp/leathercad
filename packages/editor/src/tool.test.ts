@@ -104,6 +104,24 @@ describe('ToolManager snapping', () => {
     expect(tool.points[0]).toEqual(vec(19.5, 0.3));
   });
 
+  it('drops the snap glyph when the pointer leaves the canvas', () => {
+    // Found by F.2's visual test: the narrower canvas put its centre near a
+    // stitch line, and the snap marker stayed drawn after the pointer left —
+    // advertising a snap no click could take.
+    const { manager, store } = harness();
+    addSquare(store);
+
+    manager.pointerMove(pointer(vec(19.5, 0.3)));
+    expect(manager.snapPoint()).toEqual(vec(20, 0));
+    const withGlyph = manager.overlay().items.length;
+    expect(withGlyph).toBeGreaterThan(0);
+
+    manager.pointerLeave();
+
+    expect(manager.snapPoint()).toBeNull();
+    expect(manager.overlay().items.length).toBeLessThan(withGlyph);
+  });
+
   it('snaps on move and on up, not only on down', () => {
     const { manager, tool, store } = harness();
     addSquare(store);

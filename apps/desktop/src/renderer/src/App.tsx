@@ -37,6 +37,7 @@ import { ToolPalette } from './ToolPalette.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
+import { useMediaQuery } from './useMediaQuery.js';
 
 function fileName(path: string): string {
   return path.split('/').pop() ?? path;
@@ -52,6 +53,34 @@ export function App() {
   // tool and back must not silently put the user back on 'Cut'.
   const [drawAs, setDrawAs] = useState<DrawMode>('outline');
   const [hardware, setHardware] = useState<HardwareOptions>(DEFAULT_HARDWARE);
+
+  // The frame's own state (UI Foundations §7.1–7.2). None of it is the
+  // document's, and none of it is persisted with it.
+  //
+  // The rail collapses by itself below 1200 px, and follows the maker's own
+  // choice above it. The choice lasts the session: persisting it belongs in
+  // preferences.json (slice 8.2) — not localStorage, which a second window
+  // blocks on for seconds because both share one profile.
+  const railAutoCollapsed = useMediaQuery('(max-width: 1199px)');
+  const [railPreferCollapsed, setRailPreferCollapsed] = useState(false);
+  const [railExpandedWhileNarrow, setRailExpandedWhileNarrow] = useState(false);
+  const railCollapsed = railAutoCollapsed ? !railExpandedWhileNarrow : railPreferCollapsed;
+  const toggleRail = useCallback(() => {
+    if (railAutoCollapsed) {
+      setRailExpandedWhileNarrow((expanded) => !expanded);
+      return;
+    }
+    setRailPreferCollapsed((collapsed) => !collapsed);
+  }, [railAutoCollapsed]);
+
+  const [problemsOpen, setProblemsOpen] = useState(false);
+  // Below these widths a panel stops taking a column and becomes an overlay
+  // opened from the status bar — never removed, because the parts tree is the
+  // only route to a locked feature (audit §3.3).
+  const propertiesOverlay = useMediaQuery('(max-width: 1023px)');
+  const partsOverlay = useMediaQuery('(max-width: 899px)');
+  const [propertiesOpen, setPropertiesOpen] = useState(false);
+  const [partsOpen, setPartsOpen] = useState(false);
 
   const nextId = useMemo(() => createIdFactory(systemIdSource), []);
   const store = useMemo(() => new DocumentStore(emptyDocument(nextId(), 'Untitled')), [nextId]);
@@ -317,25 +346,35 @@ export function App() {
         </span>
       </header>
 
-      <div className="workspace">
-        <div className="left-column">
-          <ToolPalette activeId={toolId} onSelect={setToolId} />
-          <PartsList
-            store={store}
-            project={storeState.document.project}
-            selected={storeState.selection.features}
-            selectedParts={storeState.selection.parts}
-            badges={badges}
-            onRemovePart={requestDeletePart}
-            onDuplicatePart={requestDuplicatePart}
-          />
-          <ProblemsPanel
-            project={storeState.document.project}
-            diagnostics={diagnostics}
-            onGoTo={goToDiagnostic}
-          />
-        </div>
-        <div className="canvas-column">
+      <div
+        className={[
+          'workspace',
+          railCollapsed ? 'rail-collapsed' : '',
+          propertiesOverlay ? 'properties-overlay' : '',
+          propertiesOverlay && propertiesOpen ? 'properties-open' : '',
+          partsOverlay ? 'parts-overlay' : '',
+          partsOverlay && partsOpen ? 'parts-open' : '',
+        ]
+          .filter((name) => name !== '')
+          .join(' ')}
+      >
+        <ToolPalette
+          activeId={toolId}
+          onSelect={setToolId}
+          collapsed={railCollapsed}
+          onToggleCollapsed={toggleRail}
+        />
+        <PartsList
+          store={store}
+          project={storeState.document.project}
+          selected={storeState.selection.features}
+          selectedParts={storeState.selection.parts}
+          badges={badges}
+          onRemovePart={requestDeletePart}
+          onDuplicatePart={requestDuplicatePart}
+        />
+        {/* The drawing is what the window is for: its main landmark. */}
+        <main className="canvas-column" aria-label="Drawing">
           <ToolOptions
             toolId={toolId}
             drawAs={drawAs}
@@ -353,7 +392,14 @@ export function App() {
             hardware={hardware}
             requestDelete={requestDelete}
           />
-        </div>
+          <ProblemsPanel
+            project={storeState.document.project}
+            diagnostics={diagnostics}
+            onGoTo={goToDiagnostic}
+            open={problemsOpen}
+            onToggle={() => setProblemsOpen((open) => !open)}
+          />
+        </main>
         <PropertyPanel
           store={store}
           project={storeState.document.project}
@@ -373,6 +419,29 @@ export function App() {
           the wrong way round.
         */}
         <span className="status-left">
+          {/* Only where a panel has become an overlay: the way back to it. */}
+          {partsOverlay && (
+            <button
+              type="button"
+              className="chip"
+              data-testid="toggle-parts"
+              aria-pressed={partsOpen}
+              onClick={() => setPartsOpen((open) => !open)}
+            >
+              Parts
+            </button>
+          )}
+          {propertiesOverlay && (
+            <button
+              type="button"
+              className="chip"
+              data-testid="toggle-properties"
+              aria-pressed={propertiesOpen}
+              onClick={() => setPropertiesOpen((open) => !open)}
+            >
+              Properties
+            </button>
+          )}
           <span data-testid="status-counts">
             v<span data-testid="app-version">{version ?? '…'}</span>
             <span className="sep">·</span>

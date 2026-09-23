@@ -1145,7 +1145,7 @@ features consume these; they do not extend or amend the visual language on their
 |---|---|---|
 | **F.0** ✅ | Typography | Apply the vendored face to the DOM (it is loaded and unused today); vendor Plex Sans 500/600; the nine-token scale; `formatMm()` / `formatAngle()` emitting the true minus |
 | **F.1** ✅ | Systemic interaction | `ReasonedButton` (a disabled control that renders its refusal — the domain already produces every one, and the UI hides them in a native `title`, contradicting X1); `Tooltip`; a `Notice` near the gesture; one word per relationship — **Follows / Mirrors / Mirrors … across / Measures**; drag vs click–click made consistent and a header hint that is true; **Length** on an open line, and no area on a hole |
-| **F.2** | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
+| **F.2** ✅ | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
 | **F.3** | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
 | **F.4** | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
 | **F.5** | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
@@ -1157,8 +1157,9 @@ features consume these; they do not extend or amend the visual language on their
 **1 — Bug or inconsistency, fix before Phase 5.** ✅ *done this session:* three platform-font
 fallbacks in `packages/render` (the live dimension, part captions and both rulers were **not** in the
 typeface the pattern prints in); the missing U+2212 and Romanian letters; the hard-coded A4 export
-(**5.5**). *Remaining:* the canvas jump (F.3); the parts panel disappearing below ~900 px, which
-makes a **locked feature unreachable** (F.2); ~~disabled controls hiding their reason~~ (✅ F.1);
+(**5.5**). *Remaining:* the canvas jump (F.3 — its tool-change half is gone with F.2's reserved
+options row); ~~the parts panel disappearing below ~900 px, which makes a **locked feature
+unreachable**~~ (✅ F.2); ~~disabled controls hiding their reason~~ (✅ F.1);
 ~~Perimeter/Area shown for lines and holes~~ (✅ F.1); ~~number fields clipping their units~~ (✅ F.0);
 ~~terminology collisions~~ (✅ F.1); a failed feature drawn in red over its healthy source (F.5); emoji
 icons (F.6).
@@ -1246,6 +1247,48 @@ Gotchas:
   once `tool-options` has gone.
 - **Playwright's `has:` resolves its inner locator relative to the outer one,** so it must not be
   pre-scoped to the panel.
+
+**F.2 — done** (2026-09-23). The frame from UI Foundations §7.1:
+`rail | parts | options · canvas · problems drawer | properties`.
+- **The rail has a column of its own.** 152 px with labels and shortcuts, or 52 px with the shortcut
+  as the face until F.6 draws icons. It collapses by itself below 1200 px and follows the maker's
+  toggle above.
+- **Parts runs full height.** Names wrap instead of truncating. Duplicate and Delete moved into a
+  `⋯` menu on each part's heading row, which takes focus, closes on Escape or a click elsewhere, and
+  gives focus back.
+- **Problems is a drawer under the canvas,** collapsed by default to a 28 px handle that still says
+  the verdict: *Nothing to fix*, or how many and how bad. Open, it takes at most 40 % of the column.
+  F.0's stopgap cap on the left column is gone.
+- **Properties is 288 px,** with a sticky header carrying the role's mark, the feature's name and
+  its badges. Panel padding is 16 px and the label column 88 px.
+- **The options row is always present, at a fixed height.** Changing tool no longer moves the
+  canvas, which removes the tool-change half of the jump at its source. *Draw as* stays on screen.
+- **Breakpoints (§7.2).** Parts is 200 px and Properties 264 px below 1280 px. Below 1024 px
+  Properties becomes an overlay opened from the status bar, and below 900 px so does Parts. The rail
+  always stays and no panel leaves the DOM. `minWidth` in the main process went from 940 to 860, the
+  supported minimum, or the smallest breakpoint could never be reached.
+
+Gotchas:
+- **`localStorage` stalls a second window.** Both instances share one profile, so every E2E test
+  launching its own app took 4.3 s instead of 1.1 s, and some failed intermittently. The rail's
+  choice now lasts the session. Persisting it belongs in `preferences.json` (8.2), not browser
+  storage.
+- **Hidden tooltip text matched text queries.** "Actions for Shell" made `getByText('Shell')`
+  ambiguous. A tooltip renders its text only while shown.
+- **A mouse click showed a tooltip,** because focus shows one at once and a click focuses. Now only
+  keyboard focus does (`:focus-visible`). A tooltip switched off (a menu's trigger while the menu is
+  open) also came back at its old position the moment it was switched on.
+- **The canvas is narrower at 1280 px:** 620 px, where it was 840. E2E tests that drew near the old
+  right edge were moved inside it.
+- **Synced with the engineering tooling (#49), F.2 cleared what it left to the F slices:**
+  - The axe scan's three recorded violations were in the workspace markup this step rebuilt. The
+    canvas column is now the `<main>` landmark and every panel is named, so `KNOWN` is empty, and a
+    second scan covers the working layout: collapsed rail, open drawer, a populated tree and the
+    Properties overlay.
+  - The visual references were regenerated and inspected, and exposed a bug. **A snap glyph stayed
+    drawn after the pointer left the canvas**, because the narrower canvas put the test's pointer
+    path near a stitch line. `ToolManager.pointerLeave()` now drops it, and a unit test pins it.
+  - The new `react-hooks` lint rule moved the tooltip's reset out of an effect and into render.
 #### Deferred opportunities worth keeping visible
 
 - **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and
