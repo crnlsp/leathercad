@@ -1578,11 +1578,38 @@ until they have produced baselines worth holding.
   manifest, where it is readable, and comes from an injected clock.
   Load errors name the field — `parts[0].features[0].source.width: expected number` — because a
   user's project is hours of their work and "invalid file" tells them to give up.
-- **5.2** 🟡 **Partly done.** `formatVersion` 1, the migration runner, and the round-trip plus
+- **5.2** ✅ **Done** (2026-09-23). `formatVersion`, the migration runner, and the round-trip and
   byte-stability tests are in. A file from a newer version is refused rather than guessed at.
-  Still to add before this counts as **M4**: the committed `fixtures/format/v1.lcp` corpus, and
-  unknown-field preservation so a file touched by a newer build is not quietly damaged by an older
-  one.
+  - **The corpus** was already in place when this entry still listed it as missing. It is
+    `fixtures/format/v1.lcp` through `v9.lcp`, one real file per version, and each opens through the
+    chain in `fixture.test.ts`.
+  - **Unknown-field preservation**, the last piece
+    ([design](superpowers/specs/2026-09-23-unknown-field-preservation-design.md)). The schema
+    used to strip every key it did not know. Opening a newer build's file and saving it deleted, for
+    example, a grain direction on a part, and the maker did not even have to edit anything.
+    - Every object in `ProjectSchema` is now a zod 4 `looseObject`. Unknown keys stay where they
+      were found, and `stableJson` writes them back. An unedited round trip is byte-identical.
+    - Edits keep them wherever a command copies the object, which every command does for the
+      project, its settings, parts and features. An object an edit rebuilds, such as a retyped
+      shape, keeps nothing it does not know.
+    - Known keys are validated as before. zod neither keeps nor honours a `__proto__` key.
+    - The manifest is still written fresh on every save.
+    - This is not a format version.
+  - **Mechanism, changed from the plan.** `file-format.md` §4.3 had sketched an `_ext` bag. Loose
+    objects behave identically, including under edits. The bag would have needed a tree walk in each
+    direction and an `_ext` field on dozens of domain types that no domain code reads. §4.3 now
+    describes what is built.
+  - Tests:
+    - a property test adds a generated key to any object in the current fixture, and it
+      survives byte for byte;
+    - one example at each level;
+    - geometry unchanged by unknown keys;
+    - the `__proto__` case;
+    - an invalid known field still refused;
+    - a desktop test that opens a file, renames, hides, locks and moves, saves, and finds the
+      fields still there. It fails without the fix.
+  **M4** is now 5.3 (autosave, recovery, recent files, unsaved changes) and 5.4 (sample projects)
+  away.
 - **5.5** ✅ **Done.** **Minimal project page setup** — `paper` + `orientation` in `ProjectSettings`,
   format version 9, and `exportPdfFile` passing it. Before it there was none: `DEFAULT_PAGE_SETUP`
   applied and **every export in the product was A4 portrait**.

@@ -232,9 +232,24 @@ setting nobody has asked for is a setting that can be got wrong.
 ### 4.3 Unknown-field preservation
 
 Within a known version, unknown properties on known objects are **preserved** through a load/save
-cycle in an `_ext` bag rather than dropped. This means a file touched by a newer minor build is not
-quietly damaged by an older one. Cheap to implement in the deserialiser, and it removes a whole
-category of data-loss bug reports.
+cycle rather than dropped. This means a file touched by a newer minor build is not quietly damaged
+by an older one. It is cheap to implement in the deserialiser, and it removes a whole category of
+data-loss bug reports.
+
+**How (5.2):** every object in `ProjectSchema` is a zod 4 `looseObject`. An unknown key stays on the
+object it was found on, the app carries it untouched, and `stableJson` writes it back, so an
+unedited round trip is byte-identical.
+- **Edits.** A command that copies an object keeps it. Every command copies the project, its
+  settings, parts and features. An object an edit rebuilds, such as a retyped shape, keeps nothing
+  unknown, because its known values changed together.
+- **Numbers** in unknown fields are written to six decimals, like every number in the file.
+- **The manifest** describes the writer and is written fresh on every save, so it is not preserved.
+- **Security.** zod neither keeps nor honours a `__proto__` key, and known keys are validated
+  exactly as before.
+- **Why not the `_ext` bag first sketched here.** The behaviour is identical, including under edits.
+  The bag would need a tree walk in each direction and an `_ext` field on every domain type, and
+  nothing in the domain would read it. See
+  [the design](superpowers/specs/2026-09-23-unknown-field-preservation-design.md).
 
 ### 4.4 Migrations are not the only forward-compatibility tool
 
@@ -330,6 +345,8 @@ place.
 5. **Rejection.** A file with `formatVersion` above current is refused with the right error.
 6. **Corruption.** Truncated ZIP, missing `document.json`, malformed JSON, wrong mimetype — each
    produces a specific, actionable error rather than a crash.
-7. **Unknown-field preservation.** A document with extra properties survives a load/save cycle.
+7. **Unknown-field preservation.** A document with extra properties survives a load/save cycle,
+   byte for byte, at any object in it. It also survives the commands that copy the objects they
+   edit (`unknownFields.test.ts` in `persist` and `apps/desktop`).
 8. **Referential integrity.** A dangling `fromId` loads with a `BROKEN_DERIVATION` diagnostic rather
    than throwing.
