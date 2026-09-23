@@ -59,7 +59,9 @@ Illustrator, Inkscape, Fusion 360, or on graph paper — all of which fight them
 A representative session, which the MVP must support end to end:
 
 1. "I want a card holder. Outer piece 105 × 75 mm, corners radiused 8 mm."
-2. "The card pockets are 95 × 60 mm with a curved thumb scoop."
+2. "The card pockets are 95 × 60 mm with a curved thumb scoop." *(1.0 draws the scoop with arc
+   segments in the polyline tool (roadmap 3.9a). It stitches the pocket's three sewn sides, and a
+   stitch line across the scoop itself is a documented 1.0 limitation.)*
 3. "Stitch line runs 3.5 mm in from the edge, all the way around."
 4. "My iron is 3.85 mm pitch. Put holes on that line, with a hole exactly on each corner."
 5. "How long is that stitch line? How many holes did that give me?" *(They need to buy thread and
@@ -93,6 +95,12 @@ Steps 3, 4 and 7 are the ones no general-purpose tool does well. They are the pr
    Leather costs money and is not undoable.
 
 ## 5. MVP scope
+
+> **Superseded as the definition of 1.0** by the roadmap's *Checkpoint — the 1.0 boundary*
+> (pre-1.0 product audit, accepted and frozen 2026-09-23). That list is shorter than the one below,
+> and it names every item's slice. Several items here are 1.1: SVG export, a print preview, a
+> general Bézier and vertex editor, guides and alignment, recent files, and sample projects. The
+> rationale below still stands. **Windows and macOS moved the other way**: they are 1.0 targets.
 
 The MVP is defined as: **the smallest version that a leatherworker would choose over Inkscape.**
 
@@ -162,7 +170,7 @@ Deferred because they are expensive, not because they are unimportant. Rough ord
 | Nesting / hide-yield optimisation | Genuinely hard; needs boolean ops | v2 |
 | Full constraint solver | Months of work; the derivation graph covers most real cases | v3 |
 | 3D preview / fold simulation | Different product | v3 |
-| Windows / macOS builds | Deliberate: one platform, one print engine, until 1:1 is proven | post-v1 |
+| ~~Windows / macOS builds~~ | **Moved into 1.0** at the boundary review: 1.0 is a public release on all three, with a measured print on each (roadmap 8.6, 7.7) | v1 |
 
 ### The four features that make v1 worth using
 
@@ -209,8 +217,9 @@ See [domain-model.md](domain-model.md) §4.
 
 ## 8. Platform and licensing
 
-- **Linux first**, as an AppImage and a Flatpak. Windows and macOS are post-v1 and are a packaging
-  and print-path problem, not an architecture problem — see [architecture.md](architecture.md) §7.
+- **Linux, Windows and macOS for 1.0.** Linux was built first, as an AppImage; a Flatpak is 1.1.
+  Windows and macOS are a packaging, signing and print-path problem, not an architecture problem.
+  See [architecture.md](architecture.md) §7 and roadmap 8.6.
 - **Open source.** Recommended licence: **Apache-2.0** (permissive plus an explicit patent grant).
   All dependencies must be permissively licensed — MIT, Apache-2.0, BSD, or BSL-1.0. No GPL
   dependencies, so that the licence choice stays open.

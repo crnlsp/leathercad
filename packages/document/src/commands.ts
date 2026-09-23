@@ -163,7 +163,13 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
       // mirroring — which is exactly what X3 forbids. The panel offers no
       // shape fields for one; this is the guarantee underneath that.
       if (feature.source.kind === 'derived') return feature;
-      return { ...feature, source: { kind: 'shape', shape } };
+      // Changed, not rebuilt: a shape source keeps whatever else it carries —
+      // a newer build's unknown fields among them (file-format.md §4.3).
+      return {
+        ...feature,
+        source:
+          feature.source.kind === 'shape' ? { ...feature.source, shape } : { kind: 'shape', shape },
+      };
     }),
   }));
 }
@@ -470,7 +476,9 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
   if (feature.source.kind === 'path') {
     return {
       ...feature,
-      source: { kind: 'path', path: PathOps.transform(feature.source.path, matrix) },
+      // The source is kept and its path replaced: a moved path is new geometry,
+      // but the source around it is the same one (file-format.md §4.3).
+      source: { ...feature.source, path: PathOps.transform(feature.source.path, matrix) },
     };
   }
 
@@ -506,9 +514,11 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
       ...feature,
       source: {
         ...feature.source,
+        // Changed in place, so a newer build's fields on the mirror and its
+        // axis stay (file-format.md §4.3).
         op: {
-          type: 'mirror',
-          axis: { kind: 'line', origin: parts.origin, angleRad: parts.angleRad },
+          ...op,
+          axis: { ...op.axis, origin: parts.origin, angleRad: parts.angleRad },
           glideMm: parts.glideMm,
         },
       },
@@ -526,7 +536,7 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
   // back. `refusedTransforms` is how the reason reaches them.
   if (!result.ok) return feature;
 
-  return { ...feature, source: { kind: 'shape', shape: result.value } };
+  return { ...feature, source: { ...feature.source, shape: result.value } };
 }
 
 /**

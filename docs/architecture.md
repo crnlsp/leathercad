@@ -416,9 +416,12 @@ Both use a shared "nice number" tick generator producing 1 / 2 / 5 × 10ⁿ mm i
 that ticks stay at least ~8 px apart. The 1 mm grid hides itself below a px-per-mm threshold to
 avoid moiré. Major gridlines every 10 mm.
 
-## 7. Cross-platform later
+## 7. Cross-platform for 1.0
 
-The work to add Windows and macOS is confined to:
+Windows and macOS are 1.0 targets (roadmap 8.6 and 7.7). The shell is already cross-platform:
+`PlatformHost` goes through Electron's dialogs and `shell.openPath`, and `stateDirectory()` picks
+the platform's state directory. The app never drives a printer (7.6), so there is no spooler code to
+port. The work that remains is confined to:
 
 1. A second and third `PlatformHost` implementation (dialogs are already Electron's; printing
    differs — CUPS `lp` on Linux, the Win32 spooler or shelling to a viewer on Windows).

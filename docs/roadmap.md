@@ -549,7 +549,7 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   the same thing would teach the user that modes are not distinct — the opposite of what the palette
   exists to say. Reserved keys remaining: M, N, G.
   See [the design](superpowers/specs/2026-09-05-transforms-design.md).
-- **3.12** "Convert to drawn path": the explicit, opt-in escape hatch for a shape the user *wants*
+- **3.12** **1.1.** "Convert to drawn path": the explicit, opt-in escape hatch for a shape the user *wants*
   flattened — a circle they need to squash into an ellipse, an arc they want to reshape freely. It
   must say plainly that the shape stops being editable as a circle or an arc, because that is the
   whole cost. Until it exists, 3.7 refuses those transforms rather than performing them quietly,
@@ -584,9 +584,20 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   draft state was still set. Two identical commands meant two history entries, so the first press
   of Undo appeared to do nothing. The draft is now mirrored in a ref so the second call sees it
   already consumed.
-- **3.9** Vertex editing: add, remove, move, corner ↔ smooth.
-- **3.10** Guides, alignment, and distribution.
-- **3.11** Isolate a tool's overlay from the draw loop. `buildOverlay` runs inside the paint, so
+- **3.9a** **1.0. Arc segments in the polyline tool.** This is the smallest enabler for the product
+  spec's pocket with a curved thumb scoop, and it is contained in the editor:
+  - drawn paths already store arc segments, and the schema, persistence, evaluation, stitching and
+    PDF export all handle them;
+  - `Shapes.arcThroughPoints` already builds an arc from three points.
+
+  **Checked before committing to it** (audit §2.1): a scooped pocket stitched along its three sewn
+  sides works today, with a stitch line of 173.5 mm and 47 holes.
+  **Documented limitation:** a stitch line inset *across* the scoop fails with `OFFSET_COLLAPSED`,
+  because a concave line-to-arc join needs Tier 2 offsetting (Phase 9 #11). The scoop is a pocket's
+  opening and is not stitched. **No general curve editor.**
+- **3.9** **1.1.** Vertex editing: add, remove, move, corner ↔ smooth.
+- **3.10** **1.1.** Guides, alignment, and distribution.
+- **3.11** **1.1**, with no known throw left. Isolate a tool's overlay from the draw loop. `buildOverlay` runs inside the paint, so
   anything it throws stops the canvas painting entirely — grid, rulers and every feature, not just
   the offending preview. Slice 3.6b hit this: the instant after the arc tool's first click the
   cursor still sits on the point just placed, and a zero-length rubber band threw. Every assertion
@@ -1567,6 +1578,87 @@ slices' markup gave it one. The rest, and where each belongs:
 Mutation testing and the nightly and weekly suites are **informational**: nothing gates on them
 until they have produced baselines worth holding.
 
+### Checkpoint — the 1.0 boundary
+*After UI Foundations and 5.2/5.6. A scope decision, not a phase.*
+
+**The pre-1.0 product audit** asked one question: can a new leathercrafter start with a blank
+project, make a useful pattern, edit it safely, understand its problems, save it reliably, reopen
+it, and print a correct 1:1 result without fighting the application? See
+[the audit](superpowers/specs/2026-09-23-pre-1.0-product-audit.md), which classifies every finding
+and cites the code.
+
+**The verdict.** The pattern core is ready: `phase-4-close-out.spec.ts` builds a card holder end to
+end. What is not ready is the safety net around it, and the print path beyond A4:
+- **Work is lost without a word** by closing the window, opening another file, or a crash.
+- **There is no *New project*.**
+- **Every export is A4 portrait.**
+- **A part bigger than the sheet cannot be printed.**
+- **No print has ever been measured** (M5).
+
+**This list is the definition of 1.0, and it is frozen** (confirmed by the user, 2026-09-23). It
+replaces `product-spec.md` §5's longer MVP list. **The scope-freeze rule:** an idea that is not
+required for document safety, the core leathercraft workflow, pattern correctness, print correctness,
+or basic cross-platform release usability goes to 1.1 or later. That holds even when it turns up
+during implementation.
+
+**The working sequence:**
+
+| # | Slice | 1.0 item |
+|---|---|---|
+| 1 | **5.3a** | Never lose work silently: *New project*, a correct dirty state, and *Save / Don't save / Cancel* before closing, reloading, opening or starting a new project |
+| 2 | **5.3b** | Crash recovery: a recovery copy while dirty, and a restore offer after an unclean exit that never overwrites a project (robustness requirements in the 5.3b entry) |
+| 3 | **6.4a** | Choose the paper and its orientation, written to the project's page setup (5.5) |
+| 4 | **3.9a** | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
+| 5 | **7.2a** | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
+| 6 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code |
+| 7 | **8.5a** | Production desktop integration: an app icon, a desktop entry, and a production menu, on all three platforms |
+| 8 | **8.6** | Release: **Linux, Windows and macOS builds**, signing and notarisation, a current README with getting started, third-party notices, the newer-version message telling the maker to update, and v1.0.0. The checklist is in the 8.6 entry |
+
+**1.1 and later**, in rough order of value:
+- recent files and persistent preferences (8.2);
+- SVG export (6.2) and DXF;
+- the full export dialog (6.4);
+- a worked sample project (8.3, which absorbs 5.4);
+- the sheet preview (7.4) and calibration factors (7.5);
+- vertex editing and an edge scoop (3.9);
+- guides and alignment (3.10), overlay isolation (3.11), convert to path (3.12);
+- dimension arrowheads and the hole-count budget;
+- seam pairing;
+- thickness compensation and the hardware library (Phase 9);
+- templates (8.1);
+- Flatpak and `.lcp` association;
+- a general curve editor (vertex editing, Béziers), and stitching *across* a concave arc join, which
+  needs Tier 2 offsetting (Phase 9 #11). The 3.9a scoop's opening is not stitched, so it does not
+  need it.
+
+**Out:**
+- auto-update;
+- material, cost or BOM metadata;
+- a notes field separate from labels;
+- nesting (v2);
+- a constraint solver;
+- 3D;
+- an onboarding wizard;
+- handles for values that are already typed.
+
+**The `.lcp` compatibility policy** is explicit and accepted (`file-format.md` §4.5):
+- older files always open in later versions, with no window;
+- a change to what is drawn, cut or printed bumps the version, and an older build refuses it with a
+  sentence;
+- a metadata-only addition keeps the version, and an older build preserves it (#57);
+- **unknown data is never silently discarded during load, save or an ordinary in-place edit.** An
+  edit that replaces an object with a new one does not carry the old object's unknown fields. Two
+  such edits exist: freezing a derived feature into drawn geometry, and the segments recomputed when
+  a drawn path moves. This is documented and tested, not implied.
+
+**Resolved at review (2026-09-23, audit §6):**
+- tiling is in 1.0;
+- the compatibility policy is accepted, with the precise wording above;
+- the edge scoop is in, as 3.9a, after a feasibility check (audit §2.1);
+- this list replaces `product-spec.md` §5;
+- **Windows and macOS are 1.0 targets**, in 8.6, with their credential-dependent steps recorded as
+  release tasks.
+
 ### Phase 5 — Persistence
 *Ends at M4.*
 
@@ -1632,8 +1724,30 @@ until they have produced baselines worth holding.
   Deliberately minimal: margins and the 62 mm verification footer stay constants, because they are
   already correct and changing them has print-accuracy consequences.
   See [page setup and determinism](superpowers/specs/2026-09-18-page-setup-and-determinism-decisions.md).
-- **5.3** Autosave, crash recovery, recent files, unsaved-changes handling.
-- **5.4** Sample projects shipped in `fixtures/projects/`.
+- **5.3** Re-scoped by the pre-1.0 audit (§5). The one line mixed four things of very different
+  value.
+  - **5.3a** **1.0. Never lose work silently.** *New project* (a button and Ctrl+N). A dirty state
+    that is false for an untouched document and after undo back to the saved state; today a blank
+    project reads "unsaved". One guard used by closing the window, opening a file and *New*,
+    offering *Save / Don't save / Cancel*. *Save* on an untitled project goes through *Save as*, and
+    cancelling that cancels the action.
+  - **5.3b** **1.0. Crash recovery.** Accepted scope: a `.lcp` recovery copy in the app's state
+    directory (`stateDirectory()/recovery/`: XDG state on Linux, the user-data folder on Windows and
+    macOS). It is written at most every 60 s, only while dirty, and never during a drag transaction.
+    At startup a leftover copy means the last session did not end cleanly, and the app offers to
+    restore it as an **untitled, dirty** document. Declining does not delete the copy at once. Its
+    design must also cover:
+    - **atomic writes**: a temporary file, then a rename over the copy;
+    - a corrupt or incomplete recovery file: named, ignored, and never fatal at startup;
+    - startup with no valid recovery file: nothing is asked;
+    - cleanup after a clean save or a clean close;
+    - a crash during the recovery write itself, which the temporary file and rename absorb;
+    - the original project can never be overwritten: the recovery path is never a project path,
+      and restoring opens untitled.
+    It is not a backup or version-history system.
+  - **5.3c** **1.1.** Recent files, with the preferences file of 8.2. The OS dialog already reopens
+    the last folder.
+- **5.4** Merged into **8.3**: both asked for sample projects. 1.1.
 - **5.6** ✅ **Done** (2026-09-23). **Loader hardening: refuse what the editor cannot produce.**
   See [the 5.6 design](superpowers/specs/2026-09-23-loader-hardening-design.md).
   **The defect.** A file whose stitch-hole `pitchMm` was tiny passed `ProjectSchema`, which only
@@ -1691,7 +1805,7 @@ until they have produced baselines worth holding.
   by line style. Widths are **true millimetres** here, unlike on screen where they are constant in
   pixels — a cut line printed at 0.25 mm is 0.25 mm on the page. Black because a mono printer
   renders blue and green as indistinguishable greys, and a template exists to be photocopied.
-- **6.2** SVG writer: mm units, layer groups, the single Y-flip, with the accuracy tests from
+- **6.2** **1.1.** SVG writer: mm units, layer groups, the single Y-flip, with the accuracy tests from
   [printing.md](printing.md) §14.
 - **6.3** ✅ **Done.** PDF writer on `pdf-lib`, using raw content-stream operators rather than its
   SVG helper, which assumes a Y flip we do not want — PDF is Y-up like the model, so this is the
@@ -1702,7 +1816,10 @@ until they have produced baselines worth holding.
   ruler 100.10 mm, the excess being the 0.2 mm stroke measured outer edge to outer edge.
   Arcs go through the tolerance-driven `toCubics` from slice 1.3, since PDF has no arc primitive —
   the path that made that subdivision tolerance-driven in the first place.
-- **6.4** Export dialog: preset, layers, paper, bounds. **Depends on 5.5** — the paper control needs
+- **6.4a** **1.0. Choose the paper.** Paper and orientation, written to the project's page setup
+  (5.5 built the plumbing and has no UI). Every export from the app is A4 portrait today, and an A4
+  sheet sent to a Letter printer is where a print dialog offers "fit to page".
+- **6.4** **1.1**, the rest. Export dialog: preset, layers, paper, bounds. **Depends on 5.5** — the paper control needs
   a page setup in the project to write to, or it becomes a second setting that disagrees with the
   one pagination uses. `paperOptionsFitting` already answers "what would fit", so the dialog reports
   rather than computes.
@@ -1717,7 +1834,12 @@ until they have produced baselines worth holding.
   with the paper that would fit it — never scaled, never clipped.
   Tiling proper (overlap, registration marks, assembly sheet) remains future work, and is the only
   way to print a part bigger than the paper.
-- **7.2** Registration marks, overlap bands, tile labels, edge arrows, assembly sheet.
+- **7.2a** **1.0, awaiting approval** (audit §6.1). **Tile a part larger than the sheet.** Split it
+  across sheets with an overlap, registration marks and a tile label (row, column), at 1:1, with the
+  verification square and ruler on every sheet. Parts that fit keep packing whole, as 7.1 does.
+  Without it, a notebook cover, a tote panel or a strap cannot be printed at all.
+- **7.2** **1.1**, the rest: edge arrows and an assembly sheet. Registration marks, overlap bands,
+  tile labels, edge arrows, assembly sheet.
   **Constraint, recorded before it is needed: pagination must never rotate a part to make it fit
   until the model knows which way the part's grain runs.** Packing already orders parts to fill the
   sheet, and rotating an oversized one is the obvious next step — but leather stretches across the
@@ -1730,26 +1852,69 @@ until they have produced baselines worth holding.
   A raster test caught the square overlapping the content area — it ran from 18 mm to 68 mm above
   the page bottom while patterns began at 36 mm, so a part could have been printed straight over
   the thing that proves the scale is right.
-- **7.4** On-screen print preview using the same `paginate()` and the Canvas2D backend, with the
+- **7.4** **1.1.** Export already opens the PDF in the system viewer, which is an exact preview of
+  every sheet. On-screen print preview using the same `paginate()` and the Canvas2D backend, with the
   deep-equality test binding them together.
-- **7.5** Printer calibration wizard and per-printer correction factors, with the ±2 % guard.
+- **7.5** **1.1.** Printer calibration wizard and per-printer correction factors, with the ±2 %
+  guard. The verification square and ruler already show when a printer is off.
 - **7.6** ❌ **Explicitly deferred.** The user does not want the application to handle printers:
   "I dont want this app to handle the printer... for now only pdf good quality". Export opens the
   file in the system viewer and stops there. Revisit only if asked.
-- **7.7** **Print the calibration target, measure it with a steel rule, record the result.** **→ M5**
+- **7.7** **1.0.** **Print the calibration target, measure it with a steel rule, record the result**,
+  once on each of Linux, Windows and macOS, from each platform's default PDF viewer. A viewer that
+  defaults to "scale to fit" is exactly what this catches. **→ M5.** A person does this, not code.
+  `print-verification-log.md` still reads "pending".
 
 ### Phase 8 — v1.0
 *Everything between "it works" and "someone else can use it".*
 
-- **8.1** Part templates: save to library, insert from library.
-- **8.2** Project settings, preferences, and a keyboard shortcut map.
-- **8.3** Onboarding: three worked sample projects (card holder, strap, bifold) and a short getting
-  started guide.
-- **8.4** Error handling, empty states, and the "what do I do now" gaps.
-- **8.5** Packaging: Flatpak, icons, desktop entry, MIME registration for `.lcp`. The AppImage, its
+- **8.1** **1.1.** Part templates: save to library, insert from library.
+- **8.2** **1.1.** Project settings, preferences, and a keyboard shortcut map, plus recent files
+  (5.3c) and the legend and rail state that F.2 and F.7 could not keep.
+- **8.3** **1.1.** Onboarding: one worked sample project first (the card holder), absorbing 5.4.
+  The empty states already carry a first-time maker to a stitched panel. Originally: three worked
+  sample projects (card holder, strap, bifold) and a short getting started guide.
+- **8.4** **Largely done** by F.1 and F.2: every refusal says why, every empty panel says what to
+  do, and the drawer states the verdict. The one gap the audit found, the newer-version message not
+  saying *update*, moved into 8.6. Error handling, empty states, and the "what do I do now" gaps.
+- **8.5a** **1.0. Production desktop integration, on all three platforms.** The AppImage shows
+  Electron's default icon today, so this needs:
+  - an app icon (`.png`, `.ico`, `.icns`);
+  - a Linux desktop entry;
+  - a production menu. Electron's default still offers Reload and Toggle Developer Tools, which
+    5.3a found.
+- **8.5** **1.1**, the rest. Packaging: Flatpak, icons, desktop entry, MIME registration for `.lcp`. The AppImage, its
   fuses, the packaged smoke test and the release pipeline landed with the engineering-tooling
   checkpoint.
-- **8.6** README, screenshots, contribution guide, and the v1.0.0 release.
+- **8.6** **1.0. Release readiness, on Linux, Windows and macOS.** README, screenshots, contribution
+  guide, and the v1.0.0 release.
+  **Code:**
+  - electron-builder targets for Windows (NSIS installer) and macOS (dmg, universal) beside the
+    AppImage;
+  - a CI build and packaged smoke test on `windows-latest` and `macos-latest`;
+  - the release workflow attaching all three artefacts;
+  - asar integrity, which Electron enforces on Windows and macOS;
+  - a README rewrite. It still says "early scaffolding" and promises tiling the app does not yet
+    do;
+  - a getting-started page;
+  - third-party notices for the bundled runtime dependencies, in the app and the release;
+  - the newer-version message telling the maker to update.
+
+  **Release tasks that need credentials or settings outside the repository.** Each is recorded here
+  rather than pushed to 1.1; the release waits on them:
+  - [ ] **Windows code signing.** An OV or EV certificate, or Azure Trusted Signing, and its secrets
+        in the repository.
+  - [ ] **macOS signing and notarisation.** An Apple Developer Program membership, a Developer ID
+        Application certificate, and an App Store Connect API key for `notarytool`, as repository
+        secrets. Unsigned macOS builds are blocked by Gatekeeper, so this is a prerequisite, not
+        polish.
+  - [ ] **Linux.** The AppImage needs no signing authority. An optional GPG signature can come with
+        the release checksums.
+  - [ ] **The Release workflow's permission.** It has failed on every push to `main` since #49 with
+        *"GitHub Actions is not permitted to create or approve pull requests"*. Fix it in Settings →
+        Actions → General → Workflow permissions → *Allow GitHub Actions to create and approve pull
+        requests*.
+  - [ ] **The physical print on each platform** (7.7).
 
 ### Phase 9 — Beyond v1
 
@@ -1766,7 +1931,7 @@ Ordered by expected value, not by difficulty:
    creates. Build the two together.
 6. **Seam pairing and hole-count parity validation** — catches a genuinely expensive mistake.
 7. **Parameterised templates** — "card slot, width 95 mm".
-8. **Windows and macOS** — packaging plus per-platform print verification.
+8. ~~**Windows and macOS**~~ **Moved into 1.0** (8.6 and 7.7) at the 1.0 boundary review.
 9. **Nesting on a hide** — hard, and needs boolean operations first.
 10. **Constraint solver** — only if real use proves the derivation graph insufficient.
 11. **Robust offsetting, written here** — the general case analytic offsetting rejects: a concave

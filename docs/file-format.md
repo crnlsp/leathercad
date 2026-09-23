@@ -239,9 +239,20 @@ data-loss bug reports.
 **How (5.2):** every object in `ProjectSchema` is a zod 4 `looseObject`. An unknown key stays on the
 object it was found on, the app carries it untouched, and `stableJson` writes it back, so an
 unedited round trip is byte-identical.
-- **Edits.** A command that copies an object keeps it. Every command copies the project, its
-  settings, parts and features. An object an edit rebuilds, such as a retyped shape, keeps nothing
-  unknown, because its known values changed together.
+- **The guarantee.** Unknown data is **never silently discarded** by opening, by saving, or by an
+  ordinary in-place edit, one that changes an object and keeps it. Every command copies the project,
+  its settings, parts and features when it changes them. It also copies a feature's source, shape
+  and derivation when it moves, turns, scales, retypes or re-parameterises them.
+- **The exception.** Unknown fields are not carried over when an edit **replaces** an object with a
+  new one of a different kind, or **recomputes** a geometric primitive. Two edits do that:
+  - **freezing** a derived feature into drawn geometry replaces its derived source with a path;
+  - **moving or transforming a drawn path** recomputes the path and its segments. The source that
+    holds the path is kept.
+
+  Unknown fields on the replaced object go with it, because this build cannot tell whether a field
+  it has never seen still describes the new object. The feature, and every object the edit kept,
+  keep theirs. Both edits are pinned by tests (`apps/desktop/src/renderer/src/unknownFields.test.ts`)
+  so that the exception is documented rather than implied.
 - **Numbers** in unknown fields are written to six decimals, like every number in the file.
 - **The manifest** describes the writer and is written fresh on every save, so it is not preserved.
 - **Security.** zod neither keeps nor honours a `__proto__` key, and known keys are validated
@@ -257,6 +268,30 @@ Because derived geometry is recomputed rather than stored, many changes that wou
 another format are free here. Improving the offset algorithm, changing the flattening tolerance, or
 fixing a corner-policy bug all improve existing files with **no migration at all** — the parameters
 did not change, only their interpretation. This is a real, ongoing dividend of §3.3.
+
+### 4.5 The compatibility policy for 1.x
+
+*Accepted at the 1.0 boundary review (2026-09-23).* Until then each rule was followed in practice,
+but nothing stated what a release promises.
+
+1. **Backward, always.** Every file any released version wrote opens in every later version.
+   Migrations are immutable (invariant 9), and the corpus (§4.2 rule 4) proves each one.
+2. **A change to what is drawn, cut or printed bumps `formatVersion`.** An older build refuses the
+   newer file with a sentence that tells the maker to update. It never opens a file whose meaning it
+   would silently get wrong. A new optional geometric parameter is exactly that case: an older build
+   would ignore it and cut the wrong thing.
+3. **A metadata-only addition keeps the version.** That means a note, a colour, or a display hint:
+   nothing that changes what is drawn, cut or printed. An older build opens the file and carries the
+   field through open, edit and save (§4.3). This is the case §4.3 exists for. Under rule 2 alone it
+   would never arise.
+4. **Unknown data is never silently discarded during load, save, or an ordinary in-place edit**
+   (§4.3). Two things are not preserved, and both are documented:
+   - the manifest, which describes its writer and is rewritten on every save;
+   - the unknown fields of an object an edit replaces or recomputes: a frozen feature's old source,
+     and a moved path and its segments.
+
+No supported-version window is needed. Rule 1 makes compatibility unbounded backwards, and rule 2
+keeps forward compatibility safe by refusing rather than guessing.
 
 ## 5. Validation on load
 
