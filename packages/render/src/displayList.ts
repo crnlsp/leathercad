@@ -71,6 +71,23 @@ export type DisplayItem =
       readonly colour: string;
       readonly align?: CanvasTextAlign;
       readonly baseline?: CanvasTextBaseline;
+    }
+  /**
+   * Where something is wrong: a severity glyph with a short leader to its
+   * evidence (UI Foundations §8.5, F.5). The source geometry draws as itself;
+   * the failure is the marker. Screen-constant, like a dot: it stays findable
+   * at any zoom.
+   */
+  | {
+      readonly kind: 'marker';
+      readonly role: LayerRole;
+      /** The point on the evidence the leader starts from, in millimetres. */
+      readonly at: Vec2;
+      /** Filled triangle, hollow triangle, or dot — a shape, not only a hue. */
+      readonly glyph: 'error' | 'warning' | 'info';
+      readonly colour: string;
+      /** A selected failed feature is haloed here, never on its source (§8.4). */
+      readonly selected: boolean;
     };
 
 /**
@@ -137,6 +154,15 @@ export function dotsItem(
   fill?: string,
 ): DisplayItem {
   return { kind: 'dots', role, points, radiusPx, fill: fill ?? ROLE_STROKES[role].colour };
+}
+
+export function markerItem(
+  at: Vec2,
+  glyph: 'error' | 'warning' | 'info',
+  colour: string,
+  selected = false,
+): DisplayItem {
+  return { kind: 'marker', role: 'construction', at, glyph, colour, selected };
 }
 
 export function textItem(

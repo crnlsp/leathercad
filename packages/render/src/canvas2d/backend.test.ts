@@ -199,7 +199,8 @@ describe('renderDisplayList', () => {
     );
 
     const stroke = ctx.calls.find((c) => c.startsWith('stroke('));
-    expect(stroke).toContain('0.3750'); // 1.5 px / 4 px per mm
+    // 1.75 px (the cut edge, UI Foundations §8.1) / 4 px per mm.
+    expect(stroke).toContain('0.4375');
   });
 
   const line = PathOps.polyline(

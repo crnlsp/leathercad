@@ -87,7 +87,7 @@ body,
 }
 
 body {
-  background: var(--bg);
+  background: var(--shell-800);
   color: var(--text);
   font: var(--t-body);
   overflow: hidden;
@@ -178,8 +178,8 @@ body {
   gap: 2px;
   min-height: 0;
   padding: 10px 8px;
-  border-right: 1px solid var(--border);
-  background: var(--bg);
+  border-right: 1px solid var(--shell-line);
+  background: var(--shell-800);
 }
 
 .rail-group {
@@ -202,7 +202,7 @@ body {
   width: 100%;
   margin: 0 0 4px;
   border: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--shell-line);
 }
 
 .rail .tool {
@@ -265,8 +265,8 @@ body {
   height: 38px;
   padding: 0 10px;
   font: var(--t-label);
-  background: var(--bg-raised);
-  border-bottom: 1px solid var(--border);
+  background: var(--shell-700);
+  border-bottom: 1px solid var(--shell-line);
 }
 
 .app-header {
@@ -274,8 +274,8 @@ body {
   align-items: baseline;
   gap: 10px;
   padding: 10px 14px;
-  background: var(--bg-raised);
-  border-bottom: 1px solid var(--border);
+  background: var(--shell-700);
+  border-bottom: 1px solid var(--shell-line);
 }
 
 .app-header h1 {
@@ -284,7 +284,7 @@ body {
 }
 
 .app-subtitle {
-  color: var(--accent);
+  color: var(--tan);
   font: var(--t-label);
 }
 
@@ -330,8 +330,8 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 6px 14px;
-  background: var(--bg-raised);
-  border-top: 1px solid var(--border);
+  background: var(--shell-700);
+  border-top: 1px solid var(--shell-line);
   color: var(--text-dim);
   font: var(--t-micro);
   font-weight: 400;
@@ -387,7 +387,7 @@ body {
 .toolbar.history {
   margin-right: 6px;
   padding-right: 12px;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--shell-line);
 }
 
 .tool {
@@ -397,7 +397,7 @@ body {
   /* Row height is density's to decide, never the type's (decisions §1.1). */
   min-height: var(--h-control);
   padding: 0 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
@@ -408,12 +408,12 @@ body {
 
 .tool:hover:not(:disabled) {
   color: var(--text);
-  border-color: var(--border-hover);
+  border-color: var(--text-mute);
 }
 
 .chip {
   padding: 3px 9px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
@@ -424,18 +424,18 @@ body {
 
 .chip:hover {
   color: var(--text);
-  border-color: var(--border-hover);
+  border-color: var(--text-mute);
 }
 
 .chip.active {
-  background: var(--active);
-  border-color: var(--accent);
+  background: var(--shell-600);
+  border-color: var(--tan);
   color: var(--text);
 }
 
 .tool.active {
-  background: var(--active);
-  border-color: var(--accent);
+  background: var(--shell-600);
+  border-color: var(--tan);
   color: var(--text);
 }
 
@@ -447,7 +447,7 @@ body {
 .tool kbd {
   padding: 0 4px;
   border-radius: var(--r-sm);
-  background: var(--inset);
+  background: var(--shell-900);
   color: var(--text-dim);
   font: var(--t-micro);
   letter-spacing: var(--tracking-micro);
@@ -460,13 +460,13 @@ body {
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-4);
-  background: var(--bg-raised);
-  border-left: 1px solid var(--border);
+  background: var(--shell-700);
+  border-left: 1px solid var(--shell-line);
 }
 
 .panel.parts {
   border-left: none;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--shell-line);
 }
 
 /* What is selected stays in view while the fields scroll (§7.1). Pulled out to
@@ -480,8 +480,8 @@ body {
   gap: var(--space-2);
   margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
   padding: var(--space-4) var(--space-4) 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-raised);
+  border-bottom: 1px solid var(--shell-line);
+  background: var(--shell-700);
 }
 
 .panel-header .header-name {
@@ -565,16 +565,16 @@ body {
   flex: 1;
   min-width: 0;
   padding: 4px 4px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
-  background: var(--inset);
+  background: var(--shell-900);
   color: var(--text);
   font: var(--t-label);
   font-weight: 400;
 }
 
 .field select:focus {
-  border-color: var(--accent);
+  border-color: var(--tan);
   outline: none;
 }
 
@@ -589,9 +589,9 @@ body {
 .field input {
   width: 100%;
   padding: 4px 6px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
-  background: var(--inset);
+  background: var(--shell-900);
   color: var(--text);
   font: var(--t-num);
 }
@@ -603,7 +603,7 @@ body {
 }
 
 .field input:focus {
-  border-color: var(--accent);
+  border-color: var(--tan);
   outline: none;
 }
 
@@ -671,11 +671,11 @@ body {
 
 .row:hover {
   color: var(--text);
-  background: var(--hover);
+  background: var(--shell-600);
 }
 
 .row.selected {
-  border-color: var(--accent);
+  border-color: var(--tan);
   color: var(--text);
 }
 
@@ -708,7 +708,7 @@ body {
 .badge {
   padding: 0 5px;
   border-radius: var(--r-pill);
-  background: var(--inset);
+  background: var(--shell-900);
   color: var(--text-dim);
   font: var(--t-micro);
   letter-spacing: var(--tracking-micro);
@@ -725,17 +725,17 @@ body {
   colour, because a two-digit count in dark red on dark grey is a smudge.
 */
 .badge.severity-error {
-  background: color-mix(in srgb, var(--error) 30%, var(--inset));
+  background: color-mix(in srgb, var(--error) 30%, var(--shell-900));
   color: var(--text);
 }
 
 .badge.severity-warning {
-  background: color-mix(in srgb, var(--warning) 26%, var(--inset));
+  background: color-mix(in srgb, var(--warning) 26%, var(--shell-900));
   color: var(--text);
 }
 
 .badge.severity-info {
-  background: color-mix(in srgb, var(--info) 24%, var(--inset));
+  background: color-mix(in srgb, var(--info) 24%, var(--shell-900));
   color: var(--text);
 }
 
@@ -745,7 +745,7 @@ body {
 }
 
 .dirty {
-  color: var(--accent);
+  color: var(--tan);
 }
 
 .project-name {
@@ -759,12 +759,12 @@ body {
 }
 
 .project-name:hover {
-  border-color: var(--border);
+  border-color: var(--shell-line);
 }
 
 .project-name:focus {
-  border-color: var(--accent);
-  background: var(--inset);
+  border-color: var(--tan);
+  background: var(--shell-900);
   outline: none;
 }
 
@@ -788,9 +788,9 @@ body {
   max-height: calc(100vh - 64px);
   overflow-y: auto;
   padding: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--shell-line);
   border-radius: var(--r-md);
-  background: var(--bg-raised);
+  background: var(--shell-700);
   /* Raised: dialogs and popovers are the only surfaces that cast a shadow
      (§6.2). The delete dialog read as pasted on without one. */
   box-shadow: var(--elevation-raised);
@@ -861,7 +861,7 @@ body {
    alone would not guarantee. */
 .tool:focus-visible,
 .dialog .tool:focus {
-  outline: 1px solid var(--accent);
+  outline: 1px solid var(--tan);
   outline-offset: 1px;
 }
 
@@ -882,7 +882,7 @@ body {
 
 button.problem-row:hover {
   color: var(--text);
-  background: var(--hover);
+  background: var(--shell-600);
   cursor: pointer;
 }
 
@@ -941,8 +941,8 @@ button.problem-row:hover {
   flex: none;
   flex-direction: column;
   max-height: 40%;
-  border-top: 1px solid var(--border);
-  background: var(--bg-raised);
+  border-top: 1px solid var(--shell-line);
+  background: var(--shell-700);
 }
 
 .drawer-handle {
@@ -988,7 +988,7 @@ button.problem-row:hover {
    feature the canvas will not give you — hidden, off screen, or locked. */
 
 .part.selected {
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--tan);
   padding-left: 6px;
   margin-left: -8px;
 }
@@ -1015,7 +1015,7 @@ button.problem-row:hover {
 }
 
 .part-name:hover {
-  background: var(--hover);
+  background: var(--shell-600);
 }
 
 .feature-row {
@@ -1053,7 +1053,7 @@ button.problem-row:hover {
 }
 
 .icon-toggle:hover {
-  background: var(--hover);
+  background: var(--shell-600);
 }
 
 /* Off reads as off at a glance, without a second colour to learn. */
@@ -1076,9 +1076,9 @@ button.problem-row:hover {
   flex-direction: column;
   width: 200px;
   padding: 4px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
-  background: var(--popover);
+  background: var(--shell-900);
   box-shadow: var(--elevation-raised);
 }
 
@@ -1098,7 +1098,7 @@ button.problem-row:hover {
 
 .menu-item:hover,
 .menu-item:focus-visible {
-  background: var(--hover);
+  background: var(--shell-600);
   outline: none;
 }
 
@@ -1175,9 +1175,9 @@ button.problem-row:hover {
   z-index: 20;
   max-width: 280px;
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
-  background: var(--tooltip);
+  background: var(--shell-900);
   box-shadow: var(--elevation-raised);
   color: var(--text);
   font: var(--t-label);
@@ -1206,9 +1206,9 @@ button.problem-row:hover {
   z-index: 5;
   max-width: 320px;
   padding: 6px 9px;
-  border: 1px solid color-mix(in srgb, var(--warning) 55%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--warning) 55%, var(--shell-line));
   border-radius: var(--r-sm);
-  background: var(--popover);
+  background: var(--shell-900);
   box-shadow: var(--elevation-raised);
   color: var(--text);
   font: var(--t-label);
@@ -1243,4 +1243,34 @@ button.problem-row,
   *::after {
     transition: none !important;
   }
+}
+
+/* ——— F.5: severity is a colour plus a glyph ——————————————————————————————— */
+
+.severity-glyph {
+  flex: none;
+  vertical-align: -1px;
+}
+
+.severity-glyph.severity-error {
+  color: var(--error);
+}
+
+.severity-glyph.severity-warning {
+  color: var(--warning);
+}
+
+.severity-glyph.severity-info {
+  color: var(--info);
+}
+
+/* In a tinted badge the glyph takes the badge's text colour: the tint already
+   carries the hue, the shape carries the severity. */
+.badge .severity-glyph {
+  margin-right: 3px;
+  color: inherit;
+}
+
+.problem-row .severity-glyph {
+  margin-top: 5px;
 }

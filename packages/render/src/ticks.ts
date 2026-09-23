@@ -67,3 +67,21 @@ export function labelPrecisionFor(stepMm: Mm): number {
   if (stepMm >= 1) return 0;
   return Math.min(4, Math.ceil(-Math.log10(stepMm)));
 }
+
+/**
+ * How often to label a ruler: the smallest 1-2-5 multiple of the major step
+ * that leaves `roomPx` between labels (F.5).
+ *
+ * Every major tick used to carry a label, so zoomed out the top ruler's
+ * figures ran into one another. Ticks stay where they are; only the labels
+ * thin, and always onto major ticks, so a label never names a minor one.
+ */
+export function labelStepFor(majorStepMm: Mm, pxPerMm: number, roomPx: number): Mm {
+  if (majorStepMm <= 0 || pxPerMm <= 0) return majorStepMm;
+  for (let decade = 1; ; decade *= 10) {
+    for (const multiple of [1, 2, 5]) {
+      const step = majorStepMm * multiple * decade;
+      if (step * pxPerMm >= roomPx) return step;
+    }
+  }
+}

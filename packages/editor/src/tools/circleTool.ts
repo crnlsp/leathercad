@@ -1,7 +1,7 @@
 import { formatMm } from '@leathercad/core';
 import { circleShape } from '@leathercad/document';
 import { Shapes, type Vec2 } from '@leathercad/geometry';
-import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import { createDrawCommit } from './commitDrawn.js';
 import { isDrag } from './gesture.js';
@@ -105,7 +105,7 @@ export function createCircleTool(nextId: () => string): Tool {
       return {
         items: [
           pathItem('construction', Shapes.circle(centreMm, radius), {
-            colour: '#ffcc44',
+            colour: CANVAS.overlay.preview,
             widthPx: 1,
             dashPx: [4, 3],
           }),
@@ -116,7 +116,7 @@ export function createCircleTool(nextId: () => string): Tool {
             { x: centreMm.x, y: centreMm.y - radius - 3 },
             `⌀ ${formatMm(radius * 2, 1)}`,
             12,
-            '#ffcc44',
+            CANVAS.overlay.preview,
           ),
         ],
       };

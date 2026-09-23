@@ -7,7 +7,8 @@
  * backends read them directly, `packages/export` prints from the same role
  * table, and `apps/desktop` projects them onto `:root` for the stylesheet.
  */
-export { PALETTE } from './palette.js';
+export { ACCENT, GROUND, SHELL, STATE } from './palette.js';
+export { CANVAS } from './canvas.js';
 export { DASH_LEGIBLE_PX, ROLE_STYLES, screenDash, type RoleStyle } from './roles.js';
 export { DENSITY, type Density } from './tokens.js';
 export { cssVariables } from './css.js';

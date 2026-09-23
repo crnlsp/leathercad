@@ -7,10 +7,14 @@
  */
 
 export {
+  ACCENT,
+  CANVAS,
   DASH_LEGIBLE_PX,
   DENSITY,
-  PALETTE,
+  GROUND,
   ROLE_STYLES,
+  SHELL,
+  STATE,
   cssVariables,
   screenDash,
   type Density,
@@ -26,6 +30,7 @@ export {
   displayListBounds,
   documentTextItem,
   dotsItem,
+  markerItem,
   pathItem,
   placedTextItem,
   textItem,
@@ -38,13 +43,8 @@ export { clearCanvas, renderDisplayList, tracePath } from './canvas2d/backend.js
 
 export { labelPrecisionFor, majorStepFor, niceTickStepMm, ticksInRange } from './ticks.js';
 
-export type { GridStyle, RulerStyle } from './canvas2d/grid.js';
-export {
-  DEFAULT_GRID_STYLE,
-  DEFAULT_RULER_STYLE,
-  renderGrid,
-  renderRulers,
-} from './canvas2d/grid.js';
+export type { RulerStyle } from './canvas2d/grid.js';
+export { DEFAULT_RULER_STYLE, renderGrid, renderRulers } from './canvas2d/grid.js';
 
 export type { BuildOptions } from './buildDisplayList.js';
 export { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';

@@ -2,7 +2,8 @@ import { MatOps, SegmentOps, type Path, type Segment } from '@leathercad/geometr
 import { FONT_FAMILY, outlinesOf } from '@leathercad/typography';
 
 import type { DisplayItem, DisplayList } from '../displayList.js';
-import { screenDash } from '../theme/index.js';
+import { markerShape } from '../marker.js';
+import { CANVAS, GROUND, screenDash } from '../theme/index.js';
 import { worldToScreen, type ViewportView } from '../view.js';
 
 export interface SvgOptions {
@@ -118,6 +119,43 @@ export function renderToSvgString(
       );
     }
     parts.push('</g>');
+  }
+
+  // Severity markers, in screen pixels and on top, as the canvas draws them.
+  for (const item of list.items) {
+    if (item.kind !== 'marker') continue;
+    const shape = markerShape(
+      MatOps.apply(transform, item.at),
+      item.glyph,
+      CANVAS.marker.sizePx,
+      CANVAS.marker.leaderPx,
+    );
+    if (item.selected) {
+      parts.push(
+        `<circle cx="${n(shape.halo.centre.x)}" cy="${n(shape.halo.centre.y)}" ` +
+          `r="${n(shape.halo.radius)}" fill="${CANVAS.halo.selected}"/>`,
+      );
+    }
+    const [from, to] = shape.leader;
+    parts.push(
+      `<line x1="${n(from.x)}" y1="${n(from.y)}" x2="${n(to.x)}" y2="${n(to.y)}" ` +
+        `stroke="${item.colour}" stroke-width="1.25"/>`,
+    );
+    const glyph = shape.glyph;
+    if (glyph.kind === 'dot') {
+      parts.push(
+        `<circle cx="${n(glyph.centre.x)}" cy="${n(glyph.centre.y)}" r="${n(glyph.radius)}" ` +
+          `fill="${item.colour}"/>`,
+      );
+    } else {
+      const points = glyph.points.map((p) => `${n(p.x)},${n(p.y)}`).join(' ');
+      parts.push(
+        glyph.filled
+          ? `<polygon points="${points}" fill="${item.colour}" data-glyph="${item.glyph}"/>`
+          : `<polygon points="${points}" fill="${GROUND.ground}" stroke="${item.colour}" ` +
+              `stroke-width="1.5" data-glyph="${item.glyph}"/>`,
+      );
+    }
   }
 
   parts.push('</svg>');

@@ -16,13 +16,14 @@ import {
   createScaleTool,
   createSelectTool,
   createTextTool,
+  hitTest,
   type DrawMode,
   type HardwareOptions,
   type PointerInput,
 } from '@leathercad/editor';
 import {
-  DEFAULT_GRID_STYLE,
   DEFAULT_RULER_STYLE,
+  GROUND,
   buildDisplayList,
   clearCanvas,
   renderDisplayList,
@@ -95,6 +96,13 @@ export function CanvasHost({
   const placedRef = useRef<{ left: number; top: number; dpr: number } | null>(null);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
   const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
+  /**
+   * The same pointer, for the painter: the rulers' cursor tick (§9.2). A ref,
+   * because painting reads it and must not wait for React.
+   */
+  const pointerRef = useRef<Vec2 | null>(null);
+  /** The feature a click would pick, for the hover halo (§8.4). */
+  const hoveredRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
   /** Where the pointer is over the canvas, in CSS pixels — where a notice is said. */
   const [pointerCss, setPointerCss] = useState<{ x: number; y: number } | null>(null);
@@ -191,15 +199,19 @@ export function CanvasHost({
 
     // Layer order matters: the wipe happens once, and each layer afterwards
     // only adds to what is already there.
-    clearCanvas(context, view, '#101215');
-    renderGrid(context, view, DEFAULT_GRID_STYLE);
+    // The whole viewport is the light drafting ground (UI Foundations §5.2).
+    clearCanvas(context, view, GROUND.ground);
+    renderGrid(context, view);
     renderDisplayList(
       context,
       buildDisplayList(evaluate(document.project), {
         selected: selection.features,
+        hovered: hoveredRef.current,
         // The same list the panels read (X7), so a feature that failed is
         // marked here instead of silently disappearing.
         diagnostics: diagnose(document.project),
+        // The zoom band: how much detail the drawing carries at this scale.
+        pxPerMm: view.scale,
       }),
       view,
     );
@@ -209,12 +221,17 @@ export function CanvasHost({
     // when it says the same thing stops the chrome re-rendering every frame.
     const next = managerRef.current?.notice() ?? null;
     setNotice((current) => (sameProblem(current, next) ? current : next));
-    renderRulers(context, view, {
-      ...DEFAULT_RULER_STYLE,
-      thicknessPx: DEFAULT_RULER_STYLE.thicknessPx * viewport.dpr,
-      leftThicknessPx: DEFAULT_RULER_STYLE.leftThicknessPx * viewport.dpr,
-      fontPx: DEFAULT_RULER_STYLE.fontPx * viewport.dpr,
-    });
+    renderRulers(
+      context,
+      view,
+      {
+        ...DEFAULT_RULER_STYLE,
+        thicknessPx: DEFAULT_RULER_STYLE.thicknessPx * viewport.dpr,
+        leftThicknessPx: DEFAULT_RULER_STYLE.leftThicknessPx * viewport.dpr,
+        fontPx: DEFAULT_RULER_STYLE.fontPx * viewport.dpr,
+      },
+      pointerRef.current,
+    );
   }, [store]);
 
   useEffect(() => {
@@ -376,9 +393,19 @@ export function CanvasHost({
       // The snapped point when there is one: the readout has to agree with
       // what a click would commit, or it is telling the user the wrong number
       // at exactly the moment they are relying on it.
-      setCursorMm(managerRef.current?.snapPoint() ?? raw);
+      const at = managerRef.current?.snapPoint() ?? raw;
+      setCursorMm(at);
+      pointerRef.current = at;
+
+      // Hover says what a click would pick, so only where a click picks.
+      const hovered =
+        managerRef.current?.activeTool.id === 'select'
+          ? hitTest(evaluate(store.getState().document.project), raw, viewport.pickToleranceMm())
+          : null;
+      hoveredRef.current = hovered;
+      invalidate();
     },
-    [invalidate, toInput],
+    [invalidate, store, toInput],
   );
 
   const handlePointerUp = useCallback(
@@ -422,7 +449,10 @@ export function CanvasHost({
         onPointerCancel={handlePointerUp}
         onPointerLeave={() => {
           setCursorMm(null);
+          pointerRef.current = null;
+          hoveredRef.current = null;
           managerRef.current?.pointerLeave();
+          invalidate();
         }}
         onDoubleClick={handleDoubleClick}
       />

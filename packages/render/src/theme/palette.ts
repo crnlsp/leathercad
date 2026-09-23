@@ -1,25 +1,54 @@
 /**
- * The interface's colours, as they are today. F.5 replans them into the four
- * colour planes; until then this is the one place they are written down, so
- * the canvas, the panels and the stylesheet cannot drift apart.
+ * The four colour planes (UI Foundations §5, F.5). They never borrow from each
+ * other: a shell colour is never drawn on the ground, and a role colour never
+ * paints chrome.
  */
-export const PALETTE = {
-  bg: '#1b1d21',
-  bgRaised: '#22252a',
-  /** Inputs and badges: a step below the panel they sit in. */
-  inset: '#14161a',
-  hover: '#262a30',
-  active: '#2c313a',
-  popover: '#16181c',
-  tooltip: '#101215',
-  border: '#32363d',
-  borderHover: '#444b55',
+
+/** The application around the drawing: warm-biased greys under a tan accent. */
+export const SHELL = {
+  900: '#14161a',
+  800: '#1b1d21',
+  700: '#22252a',
+  600: '#2a2e34',
+  line: '#32363d',
   text: '#e6e8ea',
   textDim: '#8b929b',
-  tick: '#5a626d',
-  /** Veg-tan. */
-  accent: '#c9a227',
-  error: '#e5675f',
-  warning: '#e0a93a',
-  info: '#6f9fd8',
+  textMute: '#6b7079',
+} as const;
+
+/**
+ * The drafting ground: the whole canvas, a warm-neutral off-white. No texture,
+ * no gradient, no page rectangle — the model's space is unbounded, and a page
+ * edge would imply a page the document does not have (§5.2).
+ */
+export const GROUND = {
+  ground: '#f1eee8',
+  fine: '#e2ddd3',
+  major: '#d2cbbd',
+  hundred: '#beb5a3',
+  axis: '#a89e88',
+  ink: '#1d2126',
+  inkDim: '#6e695e',
+} as const;
+
+/**
+ * The accent means one thing — the user's own current focus — and needs a value
+ * for each plane (§5.3).
+ */
+export const ACCENT = {
+  /** On the shell: active tool, focus ring, primary fill. */
+  tan: '#c9a227',
+  /** On the ground: selection halo, anchors, active guides. */
+  tanInk: '#a8810e',
+  onTan: '#1d2126',
+} as const;
+
+/**
+ * Severity, per plane (§5.4). Always a colour **plus a glyph** — filled
+ * triangle, hollow triangle, dot — so colour is never the only carrier, and the
+ * warning's move to orange (decisions §1.2) cannot be confused with error.
+ */
+export const STATE = {
+  shell: { error: '#e5675f', warning: '#d9891f', info: '#6f9fd8' },
+  ground: { error: '#c0392f', warning: '#b5651a', info: '#3c6fa8' },
 } as const;

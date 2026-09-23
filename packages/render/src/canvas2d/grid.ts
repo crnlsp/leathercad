@@ -1,43 +1,28 @@
 import { formatNumber } from '@leathercad/core';
-import { MatOps } from '@leathercad/geometry';
+import { MatOps, type Vec2 } from '@leathercad/geometry';
 
-import { labelPrecisionFor, majorStepFor, niceTickStepMm, ticksInRange } from '../ticks.js';
+import {
+  labelPrecisionFor,
+  labelStepFor,
+  majorStepFor,
+  niceTickStepMm,
+  ticksInRange,
+} from '../ticks.js';
 import { visibleBoundsMm, worldToScreen, type ViewportView } from '../view.js';
 import { vendoredFamily, type Canvas2DLike } from './backend.js';
-import { PALETTE } from '../theme/index.js';
-
-export interface GridStyle {
-  readonly minor: string;
-  readonly major: string;
-  readonly axis: string;
-  /** Minimum on-screen spacing before the grid coarsens, in device pixels. */
-  readonly minSpacingPx?: number;
-}
-
-export const DEFAULT_GRID_STYLE: GridStyle = {
-  minor: '#23262b',
-  major: '#2f343b',
-  axis: '#454c56',
-  minSpacingPx: 7,
-};
+import { CANVAS } from '../theme/index.js';
 
 /**
- * Draws an adaptive millimetre grid.
+ * Draws the drafting ground's grid: three tiers at 1, 10 and 100 mm, each with
+ * its own contrast step, each dropping out at the zoom where it would become
+ * texture (UI Foundations §9.1). The axes go last, on top.
  *
- * Lines are emitted in **screen space**, not through the world transform.
- * A gridline is one device pixel wide by definition, and pushing a hairline
- * through a scale transform makes its width depend on zoom — which is exactly
- * the blurring the grid exists to avoid. Snapping to a half-pixel keeps it
- * crisp rather than smeared across two rows.
+ * Fixed millimetre tiers rather than an adaptive mesh: the one mesh this
+ * replaced produced moiré zoomed in and vanished zoomed out, and a grid square
+ * that changes size with the zoom is not a unit anyone can count in.
  */
-export function renderGrid(
-  ctx: Canvas2DLike,
-  view: ViewportView,
-  style: GridStyle = DEFAULT_GRID_STYLE,
-): void {
+export function renderGrid(ctx: Canvas2DLike, view: ViewportView): void {
   const bounds = visibleBoundsMm(view);
-  const minorStep = niceTickStepMm(style.minSpacingPx ?? 7, view.scale);
-  const majorStep = majorStepFor(minorStep);
   const transform = worldToScreen(view);
 
   ctx.save();
@@ -45,34 +30,31 @@ export function renderGrid(
   ctx.lineWidth = 1;
   ctx.setLineDash([]);
 
-  const drawLines = (steps: number, colour: string, skipMultipleOf: number | null): void => {
-    ctx.strokeStyle = colour;
-    ctx.beginPath();
+  const tiers = CANVAS.grid;
+  tiers.forEach((tier, index) => {
+    if (view.scale < tier.minPxPerMm) return;
+    // A line the next tier up will draw is left to it, so every line is drawn
+    // once, in the strongest colour it has a right to.
+    const coarser = tiers[index + 1]?.stepMm ?? null;
 
-    for (const x of ticksInRange(bounds.minX, bounds.maxX, steps)) {
-      if (skipMultipleOf !== null && isMultiple(x, skipMultipleOf)) continue;
+    ctx.strokeStyle = tier.colour;
+    ctx.beginPath();
+    for (const x of ticksInRange(bounds.minX, bounds.maxX, tier.stepMm)) {
+      if (coarser !== null && isMultiple(x, coarser)) continue;
       const px = crisp(MatOps.apply(transform, { x, y: 0 }).x);
       ctx.moveTo(px, 0);
       ctx.lineTo(px, view.heightPx);
     }
-
-    for (const y of ticksInRange(bounds.minY, bounds.maxY, steps)) {
-      if (skipMultipleOf !== null && isMultiple(y, skipMultipleOf)) continue;
+    for (const y of ticksInRange(bounds.minY, bounds.maxY, tier.stepMm)) {
+      if (coarser !== null && isMultiple(y, coarser)) continue;
       const py = crisp(MatOps.apply(transform, { x: 0, y }).y);
       ctx.moveTo(0, py);
       ctx.lineTo(view.widthPx, py);
     }
-
     ctx.stroke();
-  };
+  });
 
-  // Minor lines skip positions a major line will cover, so the two never
-  // overlap and the major stays its own colour.
-  drawLines(minorStep, style.minor, majorStep);
-  drawLines(majorStep, style.major, null);
-
-  // The origin, drawn last so it sits on top.
-  ctx.strokeStyle = style.axis;
+  ctx.strokeStyle = CANVAS.axis;
   ctx.beginPath();
   const origin = MatOps.apply(transform, { x: 0, y: 0 });
   ctx.moveTo(crisp(origin.x), 0);
@@ -92,8 +74,12 @@ export interface RulerStyle {
    */
   readonly leftThicknessPx: number;
   readonly background: string;
+  /** The hairline where a ruler meets the ground. */
+  readonly edge: string;
   readonly tick: string;
   readonly text: string;
+  /** The tick that follows the pointer (§9.2). */
+  readonly cursor: string;
   readonly fontPx: number;
   readonly fontWeight: number;
   readonly fontFamily: string;
@@ -102,9 +88,12 @@ export interface RulerStyle {
 export const DEFAULT_RULER_STYLE: RulerStyle = {
   thicknessPx: 22,
   leftThicknessPx: 34,
-  background: PALETTE.bg,
-  tick: PALETTE.tick,
-  text: PALETTE.textDim,
+  // On the ground they measure (UI Foundations §5.2, §9.2).
+  background: CANVAS.ruler.background,
+  edge: CANVAS.ruler.edge,
+  tick: CANVAS.ruler.tick,
+  text: CANVAS.ruler.text,
+  cursor: CANVAS.cursorTick,
   // `--t-num-micro` (UI Foundations §4.2): nothing below 11 px, and a
   // measurement one weight above body.
   fontPx: 11,
@@ -127,6 +116,8 @@ export function renderRulers(
   ctx: Canvas2DLike,
   view: ViewportView,
   style: RulerStyle = DEFAULT_RULER_STYLE,
+  /** Where the pointer is, for the tick that follows it on both rulers. */
+  cursorMm: Vec2 | null = null,
 ): void {
   const bounds = visibleBoundsMm(view);
   const minorStep = niceTickStepMm(7, view.scale);
@@ -135,6 +126,20 @@ export function renderRulers(
   const transform = worldToScreen(view);
   const top = style.thicknessPx;
   const left = style.leftThicknessPx;
+
+  // Labels thin, never overlap. Plex Sans digits and the minus are all 0.6 em
+  // wide, so a label's width is known without measuring it: the widest one
+  // across the top, and one line's height down the side, plus a gap.
+  const widestLabel = Math.max(
+    formatNumber(bounds.minX, precision).length,
+    formatNumber(bounds.maxX, precision).length,
+  );
+  const topLabelStep = labelStepFor(
+    majorStep,
+    view.scale,
+    widestLabel * 0.6 * style.fontPx + style.fontPx,
+  );
+  const leftLabelStep = labelStepFor(majorStep, view.scale, style.fontPx * 2);
 
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -159,7 +164,9 @@ export function renderRulers(
     const major = isMultiple(x, majorStep);
     ctx.moveTo(px, major ? top - 9 : top - 4);
     ctx.lineTo(px, top);
-    if (major) ctx.fillText(formatNumber(x, precision), px + 3, top - 11);
+    if (major && isMultiple(x, topLabelStep)) {
+      ctx.fillText(formatNumber(x, precision), px + 3, top - 11);
+    }
   }
   ctx.stroke();
 
@@ -175,9 +182,36 @@ export function renderRulers(
     const major = isMultiple(y, majorStep);
     ctx.moveTo(major ? left - 9 : left - 4, py);
     ctx.lineTo(left, py);
-    if (major) ctx.fillText(formatNumber(y, precision), 3, py);
+    if (major && isMultiple(y, leftLabelStep)) ctx.fillText(formatNumber(y, precision), 3, py);
   }
   ctx.stroke();
+
+  // The hairlines where the rulers meet the ground.
+  ctx.strokeStyle = style.edge;
+  ctx.beginPath();
+  ctx.moveTo(left, crisp(top - 1));
+  ctx.lineTo(view.widthPx, crisp(top - 1));
+  ctx.moveTo(crisp(left - 1), top);
+  ctx.lineTo(crisp(left - 1), view.heightPx);
+  ctx.stroke();
+
+  // The cursor tick on both rulers: a drafting affordance that reads the
+  // pointer's position off the scale it is being measured against (§9.2).
+  if (cursorMm !== null) {
+    const at = MatOps.apply(transform, cursorMm);
+    ctx.strokeStyle = style.cursor;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (at.x >= left && at.x <= view.widthPx) {
+      ctx.moveTo(at.x, 0);
+      ctx.lineTo(at.x, top);
+    }
+    if (at.y >= top && at.y <= view.heightPx) {
+      ctx.moveTo(0, at.y);
+      ctx.lineTo(left, at.y);
+    }
+    ctx.stroke();
+  }
 
   // Corner patch, so the two rulers meet cleanly.
   ctx.fillStyle = style.background;

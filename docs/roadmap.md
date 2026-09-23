@@ -1148,7 +1148,7 @@ features consume these; they do not extend or amend the visual language on their
 | **F.2** ✅ | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
 | **F.3** ✅ | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
 | **F.4** ✅ | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
-| **F.5** | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
+| **F.5** ✅ | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
 | **F.6** | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
 | **F.7** | Leather-specific treatment | True-size slanted stitch slits; seam allowance as a band; fold direction ticks; the derived link tick; the canvas legend and the part caption. **Then run the identity test and record the result** |
 
@@ -1160,7 +1160,7 @@ typeface the pattern prints in); the missing U+2212 and Romanian letters; the ha
 (**5.5**). *Remaining:* ~~the canvas jump~~ (✅ F.2 and F.3); ~~the parts panel disappearing below ~900 px, which makes a **locked feature
 unreachable**~~ (✅ F.2); ~~disabled controls hiding their reason~~ (✅ F.1);
 ~~Perimeter/Area shown for lines and holes~~ (✅ F.1); ~~number fields clipping their units~~ (✅ F.0);
-~~terminology collisions~~ (✅ F.1); a failed feature drawn in red over its healthy source (F.5); emoji
+~~terminology collisions~~ (✅ F.1); ~~a failed feature drawn in red over its healthy source~~ (✅ F.5); emoji
 icons (F.6).
 
 **F.0 — done** (2026-09-23). The UI is set in IBM Plex Sans, the face it has vendored since 4.11a,
@@ -1338,6 +1338,39 @@ Gotchas:
   in `dist/`. It now includes only `src/**/*.test.ts`, like every package.
 - A screenshot taken during a hover transition shows the old colour fading, which is not a
   selection bug. Playwright's pixel tests disable animations.
+
+**F.5 — done** (2026-09-23). The canvas is a **light drafting ground inside the dark shell**, and
+everything on it reads from the F.4 theme, so screen and paper keep one contract.
+- **Four colour planes** (§5): shell, ground, accent (`--tan` on the shell, `--tan-ink` on the
+  ground) and state, each severity with a shell value and a ground value. The stylesheet reads the
+  plane names, and its audit caught every old name left behind. The role table takes §8.1's colours
+  and screen widths; the paper widths are unchanged, so nothing printed moves.
+- **The grid is three fixed tiers,** 1 / 10 / 100 mm plus the axes, each dropping out at its own
+  zoom (§9.1). The **rulers** sit on the ground with a `--tan-ink` cursor tick on both.
+- **Selection is a halo beneath, never a repaint** (§8.4). A hole set is haloed along its line, a
+  dimension on its dimension line only, and a failed feature on its marker. Hovering in the Select
+  tool gives the fainter halo.
+- **A failure marks the failure, not its source** (§8.5). A new `marker` display item carries a
+  severity glyph on a short leader, drawn by both screen backends from one shared `markerShape`.
+  The healthy outline is no longer painted red.
+- **Severity is a colour plus a glyph everywhere:** filled triangle, hollow triangle and dot on the
+  canvas, in badges and in problem rows. `SeverityGlyph` is inline SVG, since the vendored face has
+  no triangles. Warning moved to `#D9891F` (decisions §1.2).
+- **Zoom bands** (§9.3). Below 2 px/mm a hole set renders as its stitch line, and below 0.6 px/mm
+  every dash is solid. The true-size slits of the detail band are F.7's.
+- **Tool feedback** (rubber bands, previews, selection box, snap glyph) takes its colours from
+  `CANVAS.overlay`. The old yellow nearly vanished on the light ground.
+- **The paper reference** is its visual language only: `CANVAS.paperReference`, in the 100 mm grid's
+  value and hidden below 2 px/mm, with no toggle yet.
+
+Found and fixed:
+- **Ruler labels ran together zoomed out** ("−1200−1100−1000"): every major tick was labelled,
+  whatever the spacing. `labelStepFor` thins labels onto major ticks with room to spare, using Plex
+  Sans's 0.6 em tabular figures, and is property-tested. A ruler test fails without it.
+- **§5.2's contrast figure was wrong.** Ink on ground is 13.97 : 1, not "above 14". The colours are
+  kept (far past AAA), and the spec is corrected.
+- `apps/desktop/vitest.config.ts` from F.4 was ESM loaded as CommonJS, which printed a warning on
+  every run. It is now `.mts`.
 #### Deferred opportunities worth keeping visible
 
 - **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and

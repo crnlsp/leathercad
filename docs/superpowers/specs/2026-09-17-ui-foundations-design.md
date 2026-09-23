@@ -199,7 +199,8 @@ Warm-neutral off-white. Restrained: no texture, no gradient, no paper fibre, no 
 | `--ink` | `#1D2126` | Cut lines, part names |
 | `--ink-dim` | `#6E695E` | Canvas captions, ruler labels |
 
-`--ink` on `--ground` is above 14 : 1. `--ink-dim` on `--ground` is 4.6 : 1.
+`--ink` on `--ground` is 13.97 : 1 (first written as "above 14"; measured when built, F.5).
+`--ink-dim` on `--ground` is 4.6 : 1.
 
 **The whole canvas viewport is the drafting ground** — not a card or a sheet floating on a
 workbench. The model's coordinate space is unbounded, and drawing a page edge would imply a page the

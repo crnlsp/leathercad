@@ -1,6 +1,6 @@
 import { formatAngle, formatMm } from '@leathercad/core';
 import { dist, polyline, type Vec2 } from '@leathercad/geometry';
-import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import { isDrag } from './gesture.js';
 import { createDrawCommit } from './commitDrawn.js';
@@ -176,7 +176,7 @@ function polylineLike(
       if (state.kind !== 'drawing') return { items: [] };
 
       const preview = [...state.points, state.cursor];
-      const stroke = { colour: '#ffcc44', widthPx: 1, dashPx: [4, 3] };
+      const stroke = { colour: CANVAS.overlay.preview, widthPx: 1, dashPx: [4, 3] };
       const last = state.points[state.points.length - 1]!;
       const run = dist(last, state.cursor);
       const angle = (Math.atan2(state.cursor.y - last.y, state.cursor.x - last.x) * 180) / Math.PI;
@@ -190,7 +190,7 @@ function polylineLike(
             { x: state.cursor.x, y: state.cursor.y + 3 },
             `${formatMm(run, 1)}  ${formatAngle(angle)}`,
             12,
-            '#ffcc44',
+            CANVAS.overlay.preview,
           ),
         ],
       };

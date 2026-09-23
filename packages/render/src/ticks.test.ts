@@ -1,7 +1,13 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { labelPrecisionFor, majorStepFor, niceTickStepMm, ticksInRange } from './ticks.js';
+import {
+  labelPrecisionFor,
+  majorStepFor,
+  niceTickStepMm,
+  ticksInRange,
+  labelStepFor,
+} from './ticks.js';
 
 describe('niceTickStepMm', () => {
   it('only ever returns 1, 2 or 5 times a power of ten', () => {
@@ -152,5 +158,37 @@ describe('labelPrecisionFor', () => {
     expect(labelPrecisionFor(0.5)).toBe(1);
     expect(labelPrecisionFor(0.1)).toBe(1);
     expect(labelPrecisionFor(0.01)).toBe(2);
+  });
+});
+
+describe('labelStepFor', () => {
+  // F.5: labels went on every major tick, and zoomed out "−1200−1100−1000"
+  // ran together on the top ruler. A label step leaves room for the label.
+  const major = fc.constantFrom(0.1, 1, 10, 100, 1000);
+  const pxPerMm = fc.double({ min: 0.05, max: 400, noNaN: true });
+  const room = fc.double({ min: 5, max: 80, noNaN: true });
+
+  it('labels only whole multiples of the major step', () => {
+    fc.assert(
+      fc.property(major, pxPerMm, room, (step, scale, needed) => {
+        const label = labelStepFor(step, scale, needed);
+        const multiple = label / step;
+        return Math.abs(multiple - Math.round(multiple)) < 1e-9 && multiple >= 1;
+      }),
+    );
+  });
+
+  it('leaves at least the room a label needs', () => {
+    fc.assert(
+      fc.property(major, pxPerMm, room, (step, scale, needed) => {
+        return labelStepFor(step, scale, needed) * scale >= needed - 1e-9;
+      }),
+    );
+  });
+
+  it('labels every major tick when there is room, and thins them only when there is not', () => {
+    expect(labelStepFor(10, 4, 30)).toBe(10); // 40 px apart: every one
+    expect(labelStepFor(100, 0.2, 40)).toBe(200); // 20 px apart: every other one
+    expect(labelStepFor(100, 0.2, 90)).toBe(500);
   });
 });

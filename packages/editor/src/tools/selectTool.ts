@@ -1,7 +1,7 @@
 import { deleteFeatures, refusedTransforms, translateFeatures } from '@leathercad/document';
 import { evaluate, type Problem } from '@leathercad/domain';
 import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
-import { pathItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
 
 import { featuresWithin, hitTest } from '../hitTest.js';
 import type { Tool, ToolContext } from '../tool.js';
@@ -156,7 +156,7 @@ export function createSelectTool(): Tool {
           pathItem(
             'construction',
             Shapes.rect({ x: band.minX, y: band.minY }, RectOps.width(band), RectOps.height(band)),
-            { colour: '#7f8794', widthPx: 1, dashPx: [3, 3] },
+            { colour: CANVAS.overlay.box, widthPx: 1, dashPx: [3, 3] },
           ),
         ],
       };

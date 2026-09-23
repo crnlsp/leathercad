@@ -528,6 +528,11 @@ test('problems wait in a drawer that says the verdict, and part actions in a men
     await toggle.click();
     await expect(drawer.getByTestId('problem-row')).toHaveCount(2);
 
+    // Severity is a colour plus a shape (F.5): the badge and every row carry
+    // the glyph, so an orange warning can never be read as a red error.
+    await expect(toggle.locator('[data-glyph="error"]')).toBeVisible();
+    await expect(drawer.getByTestId('problem-row').first().locator('[data-glyph]')).toBeVisible();
+
     const menu = window.getByTestId('parts-list').locator('[data-testid^="part-menu-"]');
     await menu.click();
     await expect(window.getByRole('menu')).toBeVisible();

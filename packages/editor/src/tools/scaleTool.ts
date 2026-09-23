@@ -2,7 +2,7 @@ import { formatNumber } from '@leathercad/core';
 import { refusedTransforms, transformFeatures } from '@leathercad/document';
 import type { Problem } from '@leathercad/domain';
 import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
-import { textItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, textItem, type DisplayList } from '@leathercad/render';
 
 import type { Tool, ToolContext } from '../tool.js';
 import { selectionPivot } from './selectionPivot.js';
@@ -99,7 +99,7 @@ export function createScaleTool(): Tool {
             { x: pivot.x, y: pivot.y },
             `${formatNumber(factors.x, 2)} × ${formatNumber(factors.y, 2)}`,
             12,
-            '#ffcc44',
+            CANVAS.overlay.preview,
           ),
         ],
       };

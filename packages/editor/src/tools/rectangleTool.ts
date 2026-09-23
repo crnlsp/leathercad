@@ -1,7 +1,7 @@
 import { formatMm, formatNumber } from '@leathercad/core';
 import { rectShape } from '@leathercad/document';
 import { Shapes } from '@leathercad/geometry';
-import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import { createDrawCommit } from './commitDrawn.js';
 import { isDrag } from './gesture.js';
@@ -116,7 +116,7 @@ export function createRectangleTool(nextId: () => string): Tool {
       return {
         items: [
           pathItem('construction', Shapes.rect(origin, width, height), {
-            colour: '#ffcc44',
+            colour: CANVAS.overlay.preview,
             widthPx: 1,
             dashPx: [4, 3],
           }),
@@ -127,7 +127,7 @@ export function createRectangleTool(nextId: () => string): Tool {
             { x: origin.x, y: origin.y + height + 3 },
             `${formatNumber(width, 1)} × ${formatMm(height, 1)}`,
             12,
-            '#ffcc44',
+            CANVAS.overlay.preview,
           ),
         ],
       };

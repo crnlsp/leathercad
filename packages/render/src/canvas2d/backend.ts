@@ -2,7 +2,8 @@ import { MatOps, type Path, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 
 import type { DisplayList, DisplayItem } from '../displayList.js';
-import { screenDash } from '../theme/index.js';
+import { markerShape } from '../marker.js';
+import { CANVAS, GROUND, screenDash } from '../theme/index.js';
 import { worldToScreen, type ViewportView } from '../view.js';
 
 /**
@@ -202,6 +203,59 @@ export function renderDisplayList(
 
     ctx.restore();
   }
+
+  // Pass three: severity markers, on top of everything, in screen pixels so
+  // they stay findable at any zoom (UI Foundations §8.5).
+  const markers = list.items.filter(
+    (i): i is Extract<DisplayItem, { kind: 'marker' }> => i.kind === 'marker',
+  );
+  if (markers.length === 0) return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setLineDash([]);
+  for (const item of markers) {
+    const shape = markerShape(
+      MatOps.apply(transform, item.at),
+      item.glyph,
+      CANVAS.marker.sizePx,
+      CANVAS.marker.leaderPx,
+    );
+    if (item.selected) {
+      ctx.fillStyle = CANVAS.halo.selected;
+      ctx.beginPath();
+      ctx.arc(shape.halo.centre.x, shape.halo.centre.y, shape.halo.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = item.colour;
+    ctx.fillStyle = item.colour;
+    ctx.lineWidth = 1.25;
+    ctx.beginPath();
+    ctx.moveTo(shape.leader[0].x, shape.leader[0].y);
+    ctx.lineTo(shape.leader[1].x, shape.leader[1].y);
+    ctx.stroke();
+
+    ctx.beginPath();
+    if (shape.glyph.kind === 'dot') {
+      ctx.arc(shape.glyph.centre.x, shape.glyph.centre.y, shape.glyph.radius, 0, Math.PI * 2);
+      ctx.fill();
+      continue;
+    }
+    const [a, b, c] = shape.glyph.points;
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.closePath();
+    if (shape.glyph.filled) {
+      ctx.fill();
+    } else {
+      // Hollow: the ground shows through, so it cannot be mistaken for error.
+      ctx.fillStyle = GROUND.ground;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 /**

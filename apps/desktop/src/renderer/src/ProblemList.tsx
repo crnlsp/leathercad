@@ -5,6 +5,7 @@ import {
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
+import { SeverityGlyph } from './SeverityGlyph.js';
 
 /**
  * The rows every problem surface is made of.
@@ -37,6 +38,7 @@ export function ProblemRows({
         const body = (
           <>
             <span className={`problem-mark severity-${diagnostic.severity}`} aria-hidden="true" />
+            <SeverityGlyph severity={diagnostic.severity} />
             <span className="problem-text">
               <span className="problem-title">{problemTitle(diagnostic.problem.code)}</span>
               {showWhere && where !== null && <span className="problem-where">{where}</span>}

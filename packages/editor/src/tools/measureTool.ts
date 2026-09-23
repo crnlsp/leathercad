@@ -7,7 +7,7 @@ import {
   type MeasureRef,
   type Problem,
 } from '@leathercad/domain';
-import { dotsItem, pathItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, dotsItem, pathItem, type DisplayList } from '@leathercad/render';
 import { polyline } from '@leathercad/geometry';
 
 import { anchorNear, anchorPointOf } from '../anchorPick.js';
@@ -117,14 +117,14 @@ export function createMeasureTool(nextId: () => string, measure: () => MeasureKi
         }
       }
 
-      const items = [dotsItem('construction', corners, 3, '#ffcc44')];
+      const items = [dotsItem('construction', corners, 3, CANVAS.overlay.preview)];
 
       if (state.kind === 'placing') {
         const from = anchorPointOf(resolved, state.from);
         if (from !== null) {
           items.push(
             pathItem('construction', polyline([from, cursorMm], false), {
-              colour: '#ffcc44',
+              colour: CANVAS.overlay.preview,
               widthPx: 1,
               dashPx: [4, 3],
             }),

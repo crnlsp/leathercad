@@ -1,5 +1,5 @@
 import type { FeatureId, ResolvedProject } from '@leathercad/domain';
-import { dotsItem, pathItem, type DisplayItem } from '@leathercad/render';
+import { CANVAS, dotsItem, pathItem, type DisplayItem } from '@leathercad/render';
 import {
   intersectPaths,
   PathOps,
@@ -307,4 +307,4 @@ export function snapGlyph(
  *
  * Magenta is the only hue no layer role uses.
  */
-const SNAP_COLOUR = '#e86bff';
+const SNAP_COLOUR = CANVAS.overlay.snap;

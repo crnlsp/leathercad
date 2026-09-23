@@ -1,7 +1,7 @@
 import { formatAngle, formatMm } from '@leathercad/core';
 import { arcShape } from '@leathercad/document';
 import { Shapes, type Path, type Segment, type Vec2 } from '@leathercad/geometry';
-import { pathItem, textItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import { createDrawCommit } from './commitDrawn.js';
 
@@ -117,7 +117,11 @@ export function createArcTool(nextId: () => string): Tool {
       if (preview === null) return { items: [] };
 
       const items = [
-        pathItem('construction', preview, { colour: '#ffcc44', widthPx: 1, dashPx: [4, 3] }),
+        pathItem('construction', preview, {
+          colour: CANVAS.overlay.preview,
+          widthPx: 1,
+          dashPx: [4, 3],
+        }),
       ];
 
       if (end !== undefined) {
@@ -129,7 +133,7 @@ export function createArcTool(nextId: () => string): Tool {
               { x: state.cursor.x, y: state.cursor.y + 3 },
               `r ${formatMm(shape.radius, 1)} · ${formatAngle(Math.abs((shape.sweepAngle * 180) / Math.PI), 0)}`,
               12,
-              '#ffcc44',
+              CANVAS.overlay.preview,
             ),
           );
         }

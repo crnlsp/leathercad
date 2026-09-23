@@ -5,7 +5,8 @@ import { placedText } from '@leathercad/typography';
 import { describe, expect, it } from 'vitest';
 
 import { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
-import type { DisplayItem } from './displayList.js';
+import { ROLE_STROKES, type DisplayItem } from './displayList.js';
+import { CANVAS } from './theme/index.js';
 
 /** Everything except the part caption, which every part now carries. */
 const drawing = (items: readonly DisplayItem[]): DisplayItem[] =>
@@ -107,39 +108,61 @@ const crossings: Diagnostic = {
 };
 
 describe('diagnostics on the canvas', () => {
+  // UI Foundations §8.5 (F.5): a failure marks the failure, not its source.
+  // It used to redraw the healthy outline dashed in red, so the one feature
+  // that was fine turned red and the one that had failed was invisible.
+  const markers = (items: readonly DisplayItem[]) => items.filter((i) => i.kind === 'marker');
+
   it('draws nothing extra when nothing is wrong', () => {
     expect(drawing(buildDisplayList(resolved([outline])).items)).toHaveLength(1);
   });
 
-  it('draws the geometry a failed feature was built from, dashed, in the severity colour', () => {
-    // A failed feature has no geometry of its own. Without this it vanishes
-    // from the canvas, which is the one thing domain-model.md §4.4 forbids.
+  it('marks a failure with a marker, and leaves its healthy source alone', () => {
     const list = buildDisplayList(resolved([outline, stitchLine], ['stitch-1']), {
       diagnostics: [collapse],
     });
 
-    expect(drawing(list.items)).toHaveLength(2);
-    const marker = list.items[list.items.length - 1]!;
-    expect(marker.kind).toBe('path');
-    if (marker.kind !== 'path') return;
-    expect(marker.path).toBe(failedAt);
-    expect(marker.stroke.colour).toBe(DIAGNOSTIC_COLOURS.error);
-    expect(marker.stroke.dashPx).toBeDefined();
+    // The outline draws as an outline — no second copy in the severity colour.
+    const paths = list.items.filter((i) => i.kind === 'path');
+    expect(paths).toHaveLength(1);
+    if (paths[0]!.kind === 'path') expect(paths[0]!.stroke.colour).toBe(ROLE_STROKES.cut.colour);
+
+    const [marker] = markers(list.items);
+    expect(marker).toMatchObject({
+      kind: 'marker',
+      glyph: 'error',
+      colour: DIAGNOSTIC_COLOURS.error,
+    });
+    // Pinned to the evidence: halfway along the geometry it failed on.
+    if (marker?.kind === 'marker') {
+      expect(marker.at.x).toBeCloseTo(50, 9);
+      expect(marker.at.y).toBeCloseTo(0, 9);
+    }
   });
 
-  it('marks where an outline crosses itself', () => {
+  it('marks where an outline crosses itself, with the crossing itself shown', () => {
     const list = buildDisplayList(resolved([outline]), { diagnostics: [crossings] });
-    const marker = list.items[list.items.length - 1]!;
 
-    expect(marker.kind).toBe('dots');
-    if (marker.kind !== 'dots') return;
-    expect(marker.points).toEqual([{ x: 25, y: 25 }]);
-    expect(marker.fill).toBe(DIAGNOSTIC_COLOURS.error);
+    expect(markers(list.items)).toEqual([
+      expect.objectContaining({ at: { x: 25, y: 25 }, glyph: 'error' }),
+    ]);
+    const dots = list.items.find((i) => i.kind === 'dots');
+    expect(dots).toMatchObject({ points: [{ x: 25, y: 25 }], fill: DIAGNOSTIC_COLOURS.error });
+  });
+
+  it('gives each severity its own shape, so colour is never the only carrier', () => {
+    const glyphFor = (severity: Diagnostic['severity']) =>
+      markers(
+        buildDisplayList(resolved([outline]), { diagnostics: [{ ...crossings, severity }] }).items,
+      )[0];
+    expect(glyphFor('error')).toMatchObject({ glyph: 'error' });
+    expect(glyphFor('warning')).toMatchObject({ glyph: 'warning' });
+    expect(glyphFor('info')).toMatchObject({ glyph: 'info' });
   });
 
   it('draws markers over the geometry, never under it', () => {
     const list = buildDisplayList(resolved([outline]), { diagnostics: [crossings] });
-    expect(list.items[list.items.length - 1]!.kind).toBe('dots');
+    expect(list.items[list.items.length - 1]!.kind).toBe('marker');
   });
 
   it('says nothing about a feature the user has hidden', () => {
@@ -147,6 +170,112 @@ describe('diagnostics on the canvas', () => {
       diagnostics: [crossings],
     });
     expect(list.items).toEqual([]);
+  });
+});
+
+describe('selection', () => {
+  // UI Foundations §8.4 (F.5): selection adds a halo beneath; it never
+  // repaints. A selected stitch line used to turn amber and stop looking like
+  // a stitch line — exactly when the maker was about to work on it.
+  it('keeps the role colour and dash, and lays a halo beneath the line', () => {
+    const list = buildDisplayList(resolved([outline]), { selected: new Set(['cut-1']) });
+    const [halo, line] = drawing(list.items);
+
+    expect(halo).toMatchObject({ kind: 'path', stroke: { colour: CANVAS.halo.selected } });
+    if (halo?.kind === 'path') expect(halo.stroke.widthPx).toBe(CANVAS.halo.widthPx);
+    expect(line).toMatchObject({ kind: 'path', stroke: ROLE_STROKES.cut });
+  });
+
+  it('halos a hole set along its line, and leaves the holes as they are', () => {
+    const holes = { ...stitchLine, id: 'holes-1', kind: 'stitch-hole-set' } as unknown as Feature;
+    const project = resolved([outline]);
+    const line = Shapes.rect({ x: 5, y: 5 }, 90, 50);
+    const withHoles: ResolvedProject = {
+      ...project,
+      parts: [
+        {
+          ...project.parts[0]!,
+          features: [
+            ...project.parts[0]!.features,
+            {
+              ok: true,
+              feature: holes,
+              role: 'stitch-holes',
+              path: line,
+              anchors: [],
+              holes: { holes: [{ point: { x: 5, y: 5 } }, { point: { x: 9, y: 5 } }] },
+            } as never,
+          ],
+        },
+      ],
+    };
+
+    const list = buildDisplayList(withHoles, { selected: new Set(['holes-1']), pxPerMm: 4 });
+    const halo = list.items.find(
+      (i) => i.kind === 'path' && i.stroke.colour === CANVAS.halo.selected,
+    );
+    expect(halo).toMatchObject({ path: line });
+    const dots = list.items.find((i) => i.kind === 'dots');
+    expect(dots).toMatchObject({ fill: ROLE_STROKES['stitch-holes'].colour });
+  });
+
+  it('puts the halo on the marker of a selected feature that failed, not on its source', () => {
+    const list = buildDisplayList(resolved([outline, stitchLine], ['stitch-1']), {
+      diagnostics: [collapse],
+      selected: new Set(['stitch-1']),
+    });
+    expect(
+      list.items.some((i) => i.kind === 'path' && i.stroke.colour === CANVAS.halo.selected),
+    ).toBe(false);
+    expect(list.items.find((i) => i.kind === 'marker')).toMatchObject({ selected: true });
+  });
+});
+
+describe('zoom bands', () => {
+  // UI Foundations §9.3 (F.5): the meaning is constant, the detail adapts.
+  // Zoomed out, a hole set stops being hundreds of specks and renders as its
+  // stitch line, in stitch blue.
+  const holesProject = (): ResolvedProject => {
+    const project = resolved([outline]);
+    const holes = { ...stitchLine, id: 'holes-1', kind: 'stitch-hole-set' } as unknown as Feature;
+    const line = Shapes.rect({ x: 5, y: 5 }, 90, 50);
+    return {
+      ...project,
+      parts: [
+        {
+          ...project.parts[0]!,
+          features: [
+            ...project.parts[0]!.features,
+            {
+              ok: true,
+              feature: holes,
+              role: 'stitch-holes',
+              path: line,
+              anchors: [],
+              holes: { holes: [{ point: { x: 5, y: 5 } }] },
+            } as never,
+          ],
+        },
+      ],
+    };
+  };
+
+  it('draws the holes at a working zoom', () => {
+    const list = buildDisplayList(holesProject(), { pxPerMm: CANVAS.bands.overviewBelowPxPerMm });
+    expect(list.items.some((i) => i.kind === 'dots')).toBe(true);
+  });
+
+  it('draws the set as its stitch line in the overview band', () => {
+    const list = buildDisplayList(holesProject(), {
+      pxPerMm: CANVAS.bands.overviewBelowPxPerMm / 2,
+    });
+    expect(list.items.some((i) => i.kind === 'dots')).toBe(false);
+    const asLine = list.items.filter((i) => i.kind === 'path' && i.role === 'stitch-holes');
+    expect(asLine).toEqual([
+      expect.objectContaining({
+        stroke: expect.objectContaining({ colour: ROLE_STROKES.stitch.colour }),
+      }),
+    ]);
   });
 });
 

@@ -2,7 +2,7 @@ import { formatAngle } from '@leathercad/core';
 import { refusedTransforms, transformFeatures } from '@leathercad/document';
 import type { Problem } from '@leathercad/domain';
 import { MatOps, type Vec2 } from '@leathercad/geometry';
-import { textItem, type DisplayList } from '@leathercad/render';
+import { CANVAS, textItem, type DisplayList } from '@leathercad/render';
 
 import type { Tool, ToolContext } from '../tool.js';
 import { ANGLE_STEP } from './angleConstraint.js';
@@ -95,7 +95,7 @@ export function createRotateTool(): Tool {
             { x: state.pivot.x, y: state.pivot.y },
             formatAngle((state.angle * 180) / Math.PI),
             12,
-            '#ffcc44',
+            CANVAS.overlay.preview,
           ),
         ],
       };

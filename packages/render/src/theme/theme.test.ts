@@ -2,7 +2,17 @@ import { LAYER_ROLES } from '@leathercad/domain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { DASH_LEGIBLE_PX, ROLE_STYLES, cssVariables, screenDash } from './index.js';
+import {
+  ACCENT,
+  CANVAS,
+  DASH_LEGIBLE_PX,
+  GROUND,
+  ROLE_STYLES,
+  SHELL,
+  STATE,
+  cssVariables,
+  screenDash,
+} from './index.js';
 
 describe('the role table', () => {
   it('styles every role once, for screen and paper both', () => {
@@ -41,7 +51,9 @@ describe('screenDash — true, or none', () => {
   it('draws the rhythm exactly when its smallest segment is legible', () => {
     fc.assert(
       fc.property(dash, pxPerMm, (pattern, scale) => {
-        const legible = Math.min(...pattern) * scale >= DASH_LEGIBLE_PX;
+        const legible =
+          scale >= CANVAS.bands.solidDashBelowPxPerMm &&
+          Math.min(...pattern) * scale >= DASH_LEGIBLE_PX;
         return screenDash(pattern, scale).length > 0 === legible;
       }),
     );
@@ -69,5 +81,62 @@ describe('cssVariables', () => {
     for (const name of Object.keys(comfortable).filter((key) => key.startsWith('--t-'))) {
       expect(compact[name]).toBe(comfortable[name]);
     }
+  });
+});
+
+/** WCAG relative luminance and contrast — how the spec states its colour claims. */
+function contrast(a: string, b: string): number {
+  const lum = (hex: string): number => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi! + 0.05) / (lo! + 0.05);
+}
+
+describe('the four planes (F.5)', () => {
+  it('sets ink on the ground at the contrast the spec claims', () => {
+    // UI Foundations §5.2: ink about 14 : 1 (13.97 measured — the spec said
+    // "above 14", corrected when built), well past AAA's 7; ink-dim 4.6 : 1.
+    expect(contrast(GROUND.ink, GROUND.ground)).toBeGreaterThan(7);
+    expect(contrast(GROUND.inkDim, GROUND.ground)).toBeGreaterThan(4.5);
+  });
+
+  it('draws every role legibly on the ground — except construction, faint on purpose', () => {
+    for (const role of LAYER_ROLES) {
+      if (role === 'construction') continue;
+      expect(contrast(ROLE_STYLES[role].colour, GROUND.ground), role).toBeGreaterThan(3);
+    }
+  });
+
+  it('keeps severity readable on the plane it is drawn on', () => {
+    for (const severity of ['error', 'warning', 'info'] as const) {
+      expect(contrast(STATE.ground[severity], GROUND.ground), severity).toBeGreaterThan(3);
+      expect(contrast(STATE.shell[severity], SHELL[800]), severity).toBeGreaterThan(3);
+    }
+  });
+
+  it('gives the accent an on-dark and an on-light value', () => {
+    expect(contrast(ACCENT.tan, SHELL[800])).toBeGreaterThan(3);
+    expect(contrast(ACCENT.tanInk, GROUND.ground)).toBeGreaterThan(3);
+  });
+});
+
+describe('the grid tiers (F.5)', () => {
+  it('drops each tier out where it would become texture', () => {
+    // UI Foundations §9.1: 1 mm from 4 px/mm, 10 mm from 0.6, 100 mm always.
+    expect(CANVAS.grid.map((tier) => [tier.stepMm, tier.minPxPerMm])).toEqual([
+      [1, 4],
+      [10, 0.6],
+      [100, 0],
+    ]);
+  });
+
+  it('draws every dash solid below 0.6 px/mm, however long its segments', () => {
+    expect(screenDash([7, 2, 1.5, 2], 0.59)).toEqual([]);
+    expect(screenDash([40, 40], 0.5)).toEqual([]);
   });
 });

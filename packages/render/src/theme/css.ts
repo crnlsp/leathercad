@@ -1,6 +1,6 @@
 import type { LayerRole } from '@leathercad/domain';
 
-import { PALETTE } from './palette.js';
+import { ACCENT, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
   DENSITY,
@@ -29,7 +29,24 @@ const kebab = (name: string): string => name.replace(/[A-Z]/g, (c) => `-${c.toLo
 export function cssVariables(density: Density): Record<string, string> {
   const variables: Record<string, string> = {};
 
-  for (const [name, value] of Object.entries(PALETTE)) variables[`--${kebab(name)}`] = value;
+  // The four planes (§5). Shell and state-on-shell are what the chrome reads;
+  // the ground values are there for anything the chrome draws of the ground.
+  for (const step of [900, 800, 700, 600] as const)
+    variables[`--shell-${String(step)}`] = SHELL[step];
+  variables['--shell-line'] = SHELL.line;
+  variables['--text'] = SHELL.text;
+  variables['--text-dim'] = SHELL.textDim;
+  variables['--text-mute'] = SHELL.textMute;
+  for (const [name, value] of Object.entries(GROUND)) {
+    variables[name === 'ground' ? '--ground' : `--ground-${kebab(name)}`] = value;
+  }
+  variables['--ink'] = GROUND.ink;
+  variables['--ink-dim'] = GROUND.inkDim;
+  variables['--tan'] = ACCENT.tan;
+  variables['--tan-ink'] = ACCENT.tanInk;
+  variables['--on-tan'] = ACCENT.onTan;
+  for (const [name, value] of Object.entries(STATE.shell)) variables[`--${name}`] = value;
+  for (const [name, value] of Object.entries(STATE.ground)) variables[`--${name}-ground`] = value;
   for (const [role, style] of Object.entries(ROLE_STYLES) as [LayerRole, { colour: string }][]) {
     variables[`--role-${role}`] = style.colour;
   }
