@@ -8,6 +8,8 @@ import {
   type Page,
 } from '@playwright/test';
 
+import { closeApp } from '../closeApp.js';
+
 /**
  * What the app looks like, pixel for pixel. See docs/testing.md §5.2.
  *
@@ -81,7 +83,7 @@ test('the empty window', async () => {
     await blankVersion(window);
     await expect(window).toHaveScreenshot('empty-window.png');
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -114,6 +116,6 @@ test('a stitched panel on the canvas', async () => {
 
     await expect(canvas).toHaveScreenshot('stitched-panel.png');
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

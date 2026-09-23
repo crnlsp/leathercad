@@ -1,4 +1,4 @@
-import type { DocumentStore } from '@leathercad/document';
+import type { Document, DocumentStore } from '@leathercad/document';
 import { evaluate, exportReadiness, type ExportReadiness } from '@leathercad/domain';
 import { buildExportScene, describeOversized, exportPdf, pageSetupFor } from '@leathercad/export';
 import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
@@ -25,10 +25,20 @@ export function useProjectFile(
   store: DocumentStore,
   host: () => PlatformHost,
   appVersion: string,
+  /** A fresh, empty document, for *New*. */
+  blank: () => Document,
 ): {
   state: ProjectFileState;
-  save: (forcePrompt?: boolean) => Promise<void>;
+  /** True once the project is written; false when the maker cancelled or the write failed. */
+  save: (forcePrompt?: boolean) => Promise<boolean>;
   open: () => Promise<void>;
+  /** Starts an empty, untitled project. The caller asks about unsaved work first. */
+  newProject: () => void;
+  /**
+   * Whether the document differs from what was last saved or opened. By
+   * identity: undoing back to the saved document makes it clean again.
+   */
+  isDirty: () => boolean;
   /**
    * Exports, then says what the maker should check. Null when they cancelled
    * or it failed — and null too when there is nothing to say, so a clean
@@ -43,7 +53,9 @@ export function useProjectFile(
     error: null,
     savedAt: null,
   });
-  const savedDocument = useRef<unknown>(null);
+  // The document the app starts with counts as saved: an untouched project has
+  // nothing to lose, and a close guard must not ask about a blank page (5.3a).
+  const savedDocument = useRef<unknown>(store.getState().document);
   const createdUtc = useRef<string | undefined>(undefined);
 
   const markSaved = useCallback(() => {
@@ -64,7 +76,7 @@ export function useProjectFile(
           });
           // A cancelled dialog is not an error; it is the user changing their
           // mind, and must not leave a message on screen.
-          if (target === null) return;
+          if (target === null) return false;
           if (!target.endsWith(`.${LCP_EXTENSION}`)) target = `${target}.${LCP_EXTENSION}`;
         }
 
@@ -77,11 +89,13 @@ export function useProjectFile(
         await platform.writeFile(target, bytes);
         savedDocument.current = store.getState().document;
         setState({ path: target, error: null, savedAt: new Date().toLocaleTimeString() });
+        return true;
       } catch (error) {
         setState((previous) => ({
           ...previous,
           error: error instanceof Error ? error.message : String(error),
         }));
+        return false;
       }
     },
     [appVersion, host, state.path, store],
@@ -171,5 +185,14 @@ export function useProjectFile(
     }
   }, [appVersion, host, store]);
 
-  return { state, save, open, exportPdfFile, markSaved, savedDocument };
+  const newProject = useCallback(() => {
+    store.reset(blank(), 'New project');
+    savedDocument.current = store.getState().document;
+    createdUtc.current = undefined;
+    setState({ path: null, error: null, savedAt: null });
+  }, [blank, store]);
+
+  const isDirty = useCallback(() => savedDocument.current !== store.getState().document, [store]);
+
+  return { state, save, open, newProject, isDirty, exportPdfFile, markSaved, savedDocument };
 }

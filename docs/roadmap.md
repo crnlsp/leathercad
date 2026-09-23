@@ -1605,7 +1605,7 @@ during implementation.
 
 | # | Slice | 1.0 item |
 |---|---|---|
-| 1 | **5.3a** | Never lose work silently: *New project*, a correct dirty state, and *Save / Don't save / Cancel* before closing, reloading, opening or starting a new project |
+| 1 | **5.3a** ✅ | Never lose work silently: *New project*, a correct dirty state, and *Save / Don't save / Cancel* before closing, reloading, opening or starting a new project |
 | 2 | **5.3b** | Crash recovery: a recovery copy while dirty, and a restore offer after an unclean exit that never overwrites a project (robustness requirements in the 5.3b entry) |
 | 3 | **6.4a** | Choose the paper and its orientation, written to the project's page setup (5.5) |
 | 4 | **3.9a** | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
@@ -1726,11 +1726,29 @@ during implementation.
   See [page setup and determinism](superpowers/specs/2026-09-18-page-setup-and-determinism-decisions.md).
 - **5.3** Re-scoped by the pre-1.0 audit (§5). The one line mixed four things of very different
   value.
-  - **5.3a** **1.0. Never lose work silently.** *New project* (a button and Ctrl+N). A dirty state
-    that is false for an untouched document and after undo back to the saved state; today a blank
-    project reads "unsaved". One guard used by closing the window, opening a file and *New*,
-    offering *Save / Don't save / Cancel*. *Save* on an untitled project goes through *Save as*, and
-    cancelling that cancels the action.
+  - **5.3a** ✅ **Done** (2026-09-23). **1.0. Never lose work silently.**
+    See [the design](superpowers/specs/2026-09-23-unsaved-changes-design.md).
+    - *New project*: a button and Ctrl+N.
+    - A dirty state that is false for an untouched document, and after undo back to what was
+      saved. Until now a blank project read "Save •".
+    - One question, *Save changes to "Name"?*, with *Save / Don't save / Cancel*. It is asked
+      before closing the window, reloading, opening a file, and *New*. Focus starts on *Save*,
+      which loses nothing. *Save* on an untitled project goes through *Save as*, and backing out of
+      that cancels the whole action.
+    - Closing is guarded by the page's `beforeunload` rather than the main process's `close`, so
+      a **reload** asks too. Electron's default menu offers View › Reload, which used to discard
+      work just as silently.
+    Gotchas:
+    - **Every E2E teardown now uses `closeApp()`.** It destroys the window, which skips unload
+      and so skips the question. Without it, each test that ended with unsaved work sat out
+      Playwright's 60 s teardown.
+    - **A refused unload makes Chromium report a "leave page?" dialog** over the debugging
+      protocol. Electron never shows it, and Playwright's automatic dismissal then throws "No
+      dialog is showing". The unsaved-changes tests dismiss it themselves.
+    - Two existing tests throw work away and reopen it from disk. They now answer *Don't save*,
+      which is exactly their intent.
+    - Still open for release hygiene (8.5a): Electron's default menu, with Reload and Toggle
+      Developer Tools, ships in the production app.
   - **5.3b** **1.0. Crash recovery.** Accepted scope: a `.lcp` recovery copy in the app's state
     directory (`stateDirectory()/recovery/`: XDG state on Linux, the user-data folder on Windows and
     macOS). It is written at most every 60 s, only while dirty, and never during a drag transaction.

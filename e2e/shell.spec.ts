@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
+import { closeApp } from './closeApp.js';
+
 const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 let app: ElectronApplication;
@@ -23,7 +25,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await app?.close();
+  await closeApp(app);
 });
 
 /**
@@ -57,7 +59,7 @@ async function withFreshApp(
 
     await body(window, instance);
   } finally {
-    await instance.close();
+    await closeApp(instance);
   }
 }
 
@@ -354,7 +356,10 @@ test('saves a project and reopens it with its parameters intact', async () => {
     // The emptied part stays until it is removed on purpose (ADR 0009).
     await expect(window.getByTestId('feature-count')).toHaveText('0');
 
+    // The delete is unsaved work, so opening asks first (5.3a); throwing it
+    // away is the point of this step.
     await window.getByTestId('open').click();
+    await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(window.getByTestId('parts-list')).toContainText('Card holder');
 
@@ -368,7 +373,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
     // Opening is not an edit, so there is nothing to undo back into.
     await expect(window.getByTestId('undo')).toBeDisabled();
   } finally {
-    await instance.close();
+    await closeApp(instance);
     rmSync(target, { force: true });
   }
 });
@@ -408,7 +413,7 @@ test('exports a print-ready PDF at 1:1', async () => {
     expect(info).toMatch(/Page size:\s+595\.276 x 841\.89 pts \(A4\)/);
     expect(info).toContain('LeatherCAD');
   } finally {
-    await instance.close();
+    await closeApp(instance);
     rmSync(target, { force: true });
   }
 });
@@ -1596,7 +1601,7 @@ test('export says what did not make it onto the paper', async () => {
     await notice.getByText('Close').click();
     await expect(notice).toHaveCount(0);
   } finally {
-    await instance.close();
+    await closeApp(instance);
     rmSync(target, { force: true });
   }
 });
@@ -1637,7 +1642,7 @@ test('exports a part named in Polish, which used to be impossible', async () => 
     const info = execFileSync('pdfinfo', [target], { encoding: 'utf8' });
     expect(info).toMatch(/Pages:\s+1/);
   } finally {
-    await instance.close();
+    await closeApp(instance);
     rmSync(target, { force: true });
   }
 });
@@ -1691,7 +1696,9 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await window.keyboard.press('Delete');
     await expect(window.getByTestId('feature-count')).toHaveText('1');
 
+    // Unsaved, so opening asks first (5.3a), and throwing it away is the point.
     await window.getByTestId('open').click();
+    await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('feature-count')).toHaveText('2');
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 
@@ -1699,7 +1706,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await window.getByTestId('parts-list').getByRole('button', { name: /Zszyć/ }).click();
     await expect(panel.getByTestId('label-text')).toHaveValue('Zszyć przed klejeniem');
   } finally {
-    await instance.close();
+    await closeApp(instance);
     rmSync(target, { force: true });
   }
 });

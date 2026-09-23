@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
+import { closeApp } from './closeApp.js';
+
 /**
  * Slice 4.13: one card holder, drafted the way a maker would, through every
  * part of Phase 4 at once.
@@ -291,7 +293,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     await expect(window.getByTestId('save')).not.toContainText('•');
     expect(existsSync(file)).toBe(true);
   } finally {
-    await first.close();
+    await closeApp(first);
   }
 
   // ── Reopened in a fresh instance: parameters in, the same numbers out (A7) ─
@@ -342,7 +344,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     const info = execFileSync('pdfinfo', [pdf], { encoding: 'utf8' });
     expect(info).toMatch(/Page size:\s+595\.276 x 841\.89 pts \(A4\)/);
   } finally {
-    await second.close();
+    await closeApp(second);
     rmSync(file, { force: true });
     rmSync(pdf, { force: true });
   }

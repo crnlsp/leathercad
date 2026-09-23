@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
+import { closeApp } from './closeApp.js';
+
 /**
  * An automated accessibility scan of the running window.
  *
@@ -36,7 +38,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await app?.close();
+  await closeApp(app);
 });
 
 test('the main window has no accessibility violations beyond those recorded', async () => {
@@ -110,6 +112,6 @@ test('the F.2 layout at work has no accessibility violations either', async () =
     }));
     expect(found, 'accessibility violations in the working layout').toEqual([]);
   } finally {
-    await instance.close();
+    await closeApp(instance);
   }
 });

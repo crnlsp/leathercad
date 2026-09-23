@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
+import { closeApp } from '../closeApp.js';
+
 /**
  * The packaged app, not the development build.
  *
@@ -36,7 +38,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await app?.close();
+  await closeApp(app);
 });
 
 test('starts, and reports the packaged version through the bridge', async () => {

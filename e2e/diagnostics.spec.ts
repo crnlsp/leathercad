@@ -3,6 +3,8 @@ import { join, resolve } from 'node:path';
 
 import { _electron as electron, expect, test } from '@playwright/test';
 
+import { closeApp } from './closeApp.js';
+
 /**
  * The app leaves a log behind, in the XDG state directory and not among the
  * user's configuration. See apps/desktop/src/main/diagnostics.ts and ADR 0015.
@@ -29,6 +31,6 @@ test('writes a start-up line to ~/.local/state/leathercad/logs/main.log', async 
     expect(readFileSync(logFile, 'utf8')).toContain(`LeatherCAD ${version} starting`);
     expect(crashes).toBe(join(state, 'crashes'));
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

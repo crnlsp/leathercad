@@ -35,6 +35,7 @@ import { ProblemsPanel } from './ProblemsPanel.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
+import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
@@ -91,8 +92,65 @@ export function App() {
   const [storeState, setStoreState] = useState(() => store.getState());
   useEffect(() => store.subscribe(() => setStoreState(store.getState())), [store]);
 
-  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0');
+  const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
+  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank);
   const dirty = file.savedDocument.current !== storeState.document;
+
+  // Never lose work silently (5.3a): closing the window, opening a project and
+  // starting a new one all ask first when there is unsaved work, with one
+  // question and one answer. Resolves true when the action may go ahead.
+  const [pendingDiscard, setPendingDiscard] = useState<{
+    action: DiscardingAction;
+    resolve: (proceed: boolean) => void;
+  } | null>(null);
+  const discarding = useRef(false);
+  const confirmDiscard = useCallback(
+    (action: DiscardingAction): Promise<boolean> => {
+      if (!file.isDirty()) return Promise.resolve(true);
+      // One question at a time: a second close while it is on screen is
+      // answered by the first.
+      if (discarding.current) return Promise.resolve(false);
+      discarding.current = true;
+      return new Promise((resolve) =>
+        setPendingDiscard({
+          action,
+          resolve: (proceed) => {
+            discarding.current = false;
+            setPendingDiscard(null);
+            resolve(proceed);
+          },
+        }),
+      );
+    },
+    [file],
+  );
+
+  const newProject = useCallback(async () => {
+    if (await confirmDiscard('new')) file.newProject();
+  }, [confirmDiscard, file]);
+  const openProject = useCallback(async () => {
+    if (await confirmDiscard('open')) await file.open();
+  }, [confirmDiscard, file]);
+
+  // The window's close button, Ctrl+Q and a reload all unload the page. With
+  // unsaved work the unload is refused — Electron then keeps the window — and
+  // the question is asked instead. An answer that lets it go closes the window
+  // again, past this guard.
+  const closing = useRef(false);
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent): void => {
+      if (closing.current || !file.isDirty()) return;
+      event.preventDefault();
+      event.returnValue = false;
+      void confirmDiscard('close').then((proceed) => {
+        if (!proceed) return;
+        closing.current = true;
+        window.close();
+      });
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [confirmDiscard, file]);
 
   useEffect(() => {
     void (async () => {
@@ -124,7 +182,10 @@ export function App() {
           void file.save(event.shiftKey);
         } else if (key === 'o') {
           event.preventDefault();
-          void file.open();
+          void openProject();
+        } else if (key === 'n') {
+          event.preventDefault();
+          void newProject();
         } else if (key === 'e') {
           event.preventDefault();
           void exportPdf();
@@ -137,7 +198,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [file, exportPdf]);
+  }, [file, exportPdf, newProject, openProject]);
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
 
@@ -307,17 +368,27 @@ export function App() {
         </div>
 
         <div className="toolbar">
+          <Tooltip text="Start a new project (Ctrl+N)">
+            <button
+              type="button"
+              className="tool"
+              data-testid="new"
+              onClick={() => void newProject()}
+            >
+              New
+            </button>
+          </Tooltip>
           <Tooltip text="Open a project (Ctrl+O)">
             <button
               type="button"
               className="tool"
               data-testid="open"
-              onClick={() => void file.open()}
+              onClick={() => void openProject()}
             >
               Open
             </button>
           </Tooltip>
-          <Tooltip text="Save (Ctrl+S)">
+          <Tooltip text="Save (Ctrl+S) · Save as (Ctrl+Shift+S)">
             <button
               type="button"
               className="tool"
@@ -490,6 +561,18 @@ export function App() {
 
       {exportNotice !== null && (
         <ExportNotice readiness={exportNotice} onClose={() => setExportNotice(null)} />
+      )}
+
+      {pendingDiscard !== null && (
+        <UnsavedChangesDialog
+          projectName={storeState.document.project.name}
+          action={pendingDiscard.action}
+          // Saving an untitled project asks where; backing out of that asks
+          // nothing further and changes nothing.
+          onSave={() => void file.save().then((saved) => pendingDiscard.resolve(saved))}
+          onDiscard={() => pendingDiscard.resolve(true)}
+          onCancel={() => pendingDiscard.resolve(false)}
+        />
       )}
 
       {pendingDelete !== null && (
