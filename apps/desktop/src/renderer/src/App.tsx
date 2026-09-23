@@ -9,14 +9,25 @@ import {
   setProjectName,
   type DeleteResolution,
 } from '@leathercad/document';
-import { describeProblem, diagnose, lockRefusal, type Project } from '@leathercad/domain';
+import {
+  badgesOf,
+  describeProblem,
+  diagnose,
+  diagnosticTarget,
+  evaluate,
+  lockRefusal,
+  type Diagnostic,
+  type ExportReadiness,
+  type Project,
+} from '@leathercad/domain';
 import { systemIdSource } from '@leathercad/platform';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_HARDWARE, type DrawMode, type HardwareOptions } from '@leathercad/editor';
 
-import { CanvasHost, type CanvasStatus } from './CanvasHost.js';
+import { CanvasHost, type CanvasHandle, type CanvasStatus } from './CanvasHost.js';
 import { DeleteDialog } from './DeleteDialog.js';
+import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile } from './useProjectFile.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -62,6 +73,14 @@ export function App() {
     })();
   }, []);
 
+  // What the last export left the maker to check, until they close it. Null
+  // when there was nothing to say, which is the common case.
+  const [exportNotice, setExportNotice] = useState<ExportReadiness | null>(null);
+
+  const exportPdf = useCallback(async () => {
+    setExportNotice(await file.exportPdfFile());
+  }, [file]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       const target = event.target;
@@ -77,7 +96,7 @@ export function App() {
           void file.open();
         } else if (key === 'e') {
           event.preventDefault();
-          void file.exportPdfFile();
+          void exportPdf();
         }
         return;
       }
@@ -87,9 +106,34 @@ export function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [file]);
+  }, [file, exportPdf]);
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
+
+  // The canvas owns the viewport; this is the only handle on it, and the only
+  // thing anyone asks it for is "show me this rectangle".
+  const canvasRef = useRef<CanvasHandle>(null);
+
+  /**
+   * Going to a problem: **select the subject, frame the evidence.**
+   *
+   * The two differ whenever a feature failed to build — its diagnostic points
+   * at what it was built *from*, because that is the geometry that exists and
+   * the thing to edit — and the selection still follows what the row says the
+   * problem is about, so clicking the same row twice selects the same feature.
+   */
+  const goToDiagnostic = useCallback(
+    (diagnostic: Diagnostic) => {
+      const project = store.getState().document.project;
+      const target = diagnosticTarget(evaluate(project), diagnostic);
+
+      if (target.subject.kind === 'feature') store.select([target.subject.featureId]);
+      else store.selectParts([target.subject.partId]);
+
+      if (target.bounds !== null) canvasRef.current?.frame(target.bounds);
+    },
+    [store],
+  );
 
   // A delete waiting on a decision about what follows it (ADR 0009). Null when
   // no dialog is open.
@@ -180,6 +224,11 @@ export function App() {
   // again in the canvas costs one evaluation.
   const diagnostics = diagnose(storeState.document.project);
 
+  // The same list again, folded into counts. One pass, and the panel, the
+  // parts tree and the feature rows all read this rather than counting their
+  // own way to a different number.
+  const badges = badgesOf(diagnostics);
+
   const featureCount = storeState.document.project.parts.reduce(
     (total, part) => total + part.features.length,
     0,
@@ -246,7 +295,7 @@ export function App() {
             type="button"
             className="tool"
             data-testid="export-pdf"
-            onClick={() => void file.exportPdfFile()}
+            onClick={() => void exportPdf()}
             title="Export a print-ready PDF at 1:1 (Ctrl+E)"
           >
             Export PDF
@@ -266,13 +315,14 @@ export function App() {
             project={storeState.document.project}
             selected={storeState.selection.features}
             selectedParts={storeState.selection.parts}
+            badges={badges}
             onRemovePart={requestDeletePart}
             onDuplicatePart={requestDuplicatePart}
           />
           <ProblemsPanel
-            store={store}
             project={storeState.document.project}
             diagnostics={diagnostics}
+            onGoTo={goToDiagnostic}
           />
         </div>
         <div className="canvas-column">
@@ -284,6 +334,7 @@ export function App() {
             onHardware={setHardware}
           />
           <CanvasHost
+            ref={canvasRef}
             store={store}
             toolId={toolId}
             nextId={nextId}
@@ -354,6 +405,10 @@ export function App() {
             : `${status.cursorMm.x.toFixed(2)} , ${status.cursorMm.y.toFixed(2)} mm`}
         </span>
       </footer>
+
+      {exportNotice !== null && (
+        <ExportNotice readiness={exportNotice} onClose={() => setExportNotice(null)} />
+      )}
 
       {pendingDelete !== null && (
         <DeleteDialog

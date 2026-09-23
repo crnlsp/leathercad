@@ -1,7 +1,7 @@
 # Validation complete (slice 4.12) — design
 
 **Date:** 2026-09-19
-**Status:** Proposed — for review before implementation
+**Status:** Accepted (2026-09-19), with the three decisions in §11.
 **Completes:** [4.12a's diagnostic channel](2026-09-15-diagnostic-channel-design.md),
 [ADR 0013](../../adr/0013-invariants-are-enforced-rules-are-reported.md)
 **Invariants touched:** X7 finally holds across every surface; no new invariant, no new problem code
@@ -203,13 +203,25 @@ never restates rules:
 1. **Every code names an invariant** in `domain-model.md` §8's form — built in 4.12a.
 2. **Every code's category matches its family** — S→structural, X→interaction, E→outcome,
    DR→rule — built in 4.12a.
-3. **New:** every invariant the documentation lists as *built* has at least one code, **or** is
-   recorded as enforced without one. S7 (the lock) and S8 (derived geometry never persisted) have no
-   code by design; the audit requires them to say so rather than being silently absent.
-4. **New:** every **structural** code is refused in two places — by a command and by the loader —
-   which is ADR 0013's central claim and currently true only by convention.
-5. **New:** every **rule** code is produced by `validate` in at least one test, so a rule that stops
-   firing is caught by something other than a maker noticing.
+3. **New:** every invariant §8 lists has at least one code, **or** is on
+   `INVARIANTS_WITHOUT_A_CODE` with a reason. Ten are: S8, S9, S10, DR5, X2, X5, X6, X7, X8 and X10
+   — held up by a schema, by the layering, or by there being no field a violation could live in.
+   (S7 was named here as an example and is **wrong**: `FEATURE_LOCKED` arrived with 4.3b. The audit
+   catches exactly that, refusing an exemption for an invariant that has a code.)
+4. **Replaced.** "Every structural code is refused by a command *and* by the loader" is not
+   uniformly true and should not be forced: a `DUPLICATE_ID` cannot come from a command, because
+   commands do not invent ids, and a `MIRROR_OUTLINE_ACROSS_FOLD` cannot come from a file, because
+   the loader's structural scan has no gesture to refuse. Made honest instead of mechanical: §8.6's
+   refusal table names, per code, where it is refused, and the audit holds the registry and that
+   table to each other in both directions.
+5. **Kept, generalised, and made order-independent** (§11.1): every code — not only a rule — must be
+   named by a test that is not one of the catalogue's own. Two are exempt by name and by reason
+   (`OFFSET_SPLIT`, `GEOMETRY_FAILED`), both unreachable today, and the audit fails if a test ever
+   does reach one and the excuse is left behind.
+
+**What it found on the way in**, which is the argument for having it: `MEASURE_NEEDS_ANCHOR` was
+produced by the measure tool and named by no unit test at all — the tool had E2E coverage and no
+other. `packages/editor/src/tools/measureTool.test.ts` is the audit's first catch.
 
 ### How it avoids duplicating the domain rules
 
@@ -222,10 +234,11 @@ difference:
   copy would be the one that quietly rots.
 - **Auditing:** "`HOLE_TOO_CLOSE_TO_EDGE` is a `rule` protecting `DR2`, and some test produces it."
 
-Point 5 is the only one needing new machinery, and the cheap honest way is a **registry the tests
-populate**: a tiny module the domain's own tests already import, recording which codes they observed,
-and an audit that runs last and checks the set. That is real coverage of the catalogue rather than a
-list someone maintains by hand — which would drift in exactly the way the audit exists to prevent.
+Point 5 needed a way to know a code is tested. **Settled at review as a source scan** (§11.1): the
+audit reads every `*.test.ts` under `packages/` and asks whether each code is named in one. Nothing
+is registered at run time, so no test depends on another having run, and a code that no test
+mentions at all is caught — which a registry populated by running tests could never do, since a code
+nothing produces is a code nothing registers.
 
 **Where the invariant list itself lives.** `domain-model.md` §8 is prose, and a test cannot read
 prose. The audit checks the **code's** self-description (`PROBLEM_CODES`), and a separate, short
@@ -243,8 +256,9 @@ source of truth — the document — and one mechanical link to it, without pars
    off the paper** because it did not resolve.
 4. **`exportReadiness` is a pure domain query**, and the dialog renders it without judgement of its
    own.
-5. **The audit test** holds points 1–5 of §7, including that every structural code is refused by both
-   a command and the loader.
+5. **The audit test** holds points 1–5 of §7, statically: registry and documentation agree in both
+   directions, every invariant is accounted for, and every code is exercised by a test that is not
+   the catalogue's own.
 6. **Diagnostics are never stale**: tests prove one disappears when its cause is fixed and appears on
    a derived feature when its source changes — including a measurement and a fold-linked mirror.
 7. **The reconciliation's four ambiguities** (§2) are corrected in the documents, not worked around.
@@ -278,7 +292,18 @@ source of truth — the document — and one mechanical link to it, without pars
   feature selected; fix it, see the badge clear; export with a failed feature and read the warning
   naming it.
 
-## 11. Open questions for you
+## 11. Settled at review
+
+1. **The registry in `codes.ts` is authoritative**, and the audit verifies **registry completeness**
+   and **explicit test coverage** — without depending on the order tests run in. So no
+   runtime-populated set: coverage is checked by reading the test sources for each code, which is
+   mechanical, order-independent, and catches a code no test mentions at all.
+2. **`CanvasHost.frame(bounds)`** is added as the **canvas-owned viewport API**. A diagnostic supplies
+   bounds; UI code never touches a transform.
+3. **The export warning counts omitted features separately** from validation problems that are still
+   exported, and **export stays non-blocking**.
+
+## 12. Superseded open questions
 
 1. **The test-populated code registry** (§7 point 5) is the only new machinery in the slice. It is
    honest — it observes what the tests actually produced — but it makes one test depend on the others

@@ -722,10 +722,37 @@ function describeProblem(problem: Problem): string;           // the one catalog
 
 **Refusals are problems too**, with the same codes and catalogue, but they are never diagnostics:
 they are refused at the gesture or by the loader, so they never exist in a document to be listed.
-Their codes are `DUPLICATE_ID`, `SOURCE_MISSING`, `FOLLOWS_ITSELF`, `WOULD_LOOP`, `CYCLE` and
-`DERIVATION_INCOMPATIBLE` (structural, S1–S4); `FEATURE_MISSING`, `NOT_DERIVED`,
-`DERIVED_MOVED_ALONE`, `TRANSFORM_FLATTENS`, `WOULD_BECOME_ELLIPSE`, `WOULD_SHEAR`,
-`NO_TARGET_PART` and `TARGET_SPANS_PARTS` (interaction, X1–X9).
+The audit test (below) holds this table to the registry in both directions, which is why it is a
+table and no longer a sentence — the sentence had gone four slices out of date.
+
+| Code | Category | Protects | Refused by |
+|---|---|---|---|
+| `DUPLICATE_ID` | structural | S1 | Loader |
+| `SOURCE_MISSING` | structural | S2 | Commands; loader |
+| `MIRROR_FOLD_MISSING` | structural | S2 | Commands; loader; evaluation |
+| `MEASURE_REF_MISSING` | structural | S2 | Commands; loader; evaluation |
+| `FOLLOWS_ITSELF` | structural | S3 | Commands; loader |
+| `WOULD_LOOP` | structural | S3 | Commands, over both edge kinds |
+| `CYCLE` | structural | S3 | Loader |
+| `DERIVATION_INCOMPATIBLE` | structural | S4 | Commands; loader |
+| `PART_ALREADY_HAS_OUTER` | structural | S5 | Commands; loader |
+| `MIRROR_OUTLINE_ACROSS_FOLD` | structural | S5 | Commands |
+| `CONTOUR_NOT_CLOSED` | structural | S6 | Drawing modes; loader |
+| `FEATURE_LOCKED` | structural | S7 | Commands |
+| `FEATURE_MISSING` | interaction | X1 | Commands |
+| `NOT_DERIVED` | interaction | X1 | Commands |
+| `DERIVED_MOVED_ALONE` | interaction | X3 | Commands |
+| `MIRROR_WOULD_SCALE` | interaction | X3 | Commands |
+| `MIRROR_PLACED_BY_FOLD` | interaction | X3 | Commands |
+| `MIRROR_NO_AXIS` | interaction | X3 | Commands |
+| `MEASURE_NEEDS_ANCHOR` | interaction | X3 | The measure tool |
+| `NO_TARGET_PART` | interaction | X4 | Drawing modes |
+| `TARGET_SPANS_PARTS` | interaction | X4 | Drawing modes |
+| `TRANSFORM_FLATTENS` | interaction | X9 | Transform tools |
+| `WOULD_BECOME_ELLIPSE` | interaction | X9 | Transform tools |
+| `WOULD_SHEAR` | interaction | X9 | Transform tools |
+| `TEXT_WOULD_DISTORT` | interaction | X9 | Transform tools |
+| `TEXT_WOULD_READ_BACKWARDS` | interaction | X9 | Transform tools |
 
 The diagnostics themselves:
 
@@ -737,6 +764,7 @@ The diagnostics themselves:
 | `GEOMETRY_FAILED` | error | outcome | E1 | built 4.12a — the fallback for a geometry throw the domain has no specific check for yet |
 | `OFFSET_SPLIT` | warning | outcome | E2 | built 4.12a; unreachable until Tier 2 offsetting |
 | `SOURCE_FAILED` | error | outcome | E3 | built 4.12a |
+| `FOLD_NOT_STRAIGHT` | error | outcome | E1 | built 4.8b — a mirror can only be folded about a straight line |
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
@@ -760,8 +788,15 @@ panel.
 
 **v1.2:** `SEAM_HOLE_COUNT_MISMATCH`, `PARTS_OVERLAP_ON_SHEET`.
 
-An audit test holds the catalogue to this section: every code names an invariant, and every
-structural invariant has a command-refusal test and a loader test.
+**An audit test holds the catalogue to this section** (`problems/audit.test.ts`, 4.12a). It reads
+the registry and the repository, so nothing in it depends on another test having run first:
+
+- every invariant a code protects appears in §8's tables, and every invariant in those tables
+  either has a code or is on `INVARIANTS_WITHOUT_A_CODE` with a reason it needs none;
+- the two tables above match the registry both ways — category and protected invariant included —
+  so a code added in code and not in prose fails, and so does the reverse;
+- every code is named by a test that is not one of the catalogue's own, with the two unreachable
+  ones exempted by name and by reason.
 
 ## 9. Templates
 

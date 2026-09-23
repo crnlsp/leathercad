@@ -59,6 +59,9 @@ export {
   validate,
 } from './validate.js';
 export { diagnose } from './diagnose.js';
+export { badgesOf, worstOf, type Badge, type Badges } from './badges.js';
+export { diagnosticTarget, MIN_FRAME_MM, type DiagnosticTarget } from './diagnosticTarget.js';
+export { exportReadiness, type ExportReadiness, type OmittedFeature } from './exportReadiness.js';
 
 export { anchorsOf, cornerDistances } from './anchors.js';
 

@@ -267,30 +267,41 @@ Document ──evaluate──▶ ResolvedProject ──validate──▶ Diagnos
                         (typed failures)            (outcomes + design rules)
 ```
 
+**Corrected in 4.12a and 4.12** — the sketch below is superseded in four places, each marked. What
+was built is better in three of them and the fourth was tried and rejected; leaving the sketch
+standing would have meant someone implementing it twice.
+
 ```ts
+// As built (4.12a). The sketch had `message: string` and `at?: Vec2`.
 interface Diagnostic {
-  code: DiagnosticCode;               // stable string
+  problem: Problem;                   // code + facts, never a sentence
   severity: 'error' | 'warning' | 'info';
-  message: string;
   partId: PartId;
   featureId?: FeatureId;
-  related?: readonly FeatureId[];
-  at?: Vec2;                          // zoom-to-problem; falls back to the feature's bounds
+  related: readonly FeatureId[];
+  location?: ProblemLocation;         // points, or the geometry the problem is about
 }
 ```
+
+**`location`, not `at`.** A single point cannot say "these three holes" or "this whole stitch line",
+and 4.3a's hole rules carry *which holes*. `location` is authoritative and `at` is retired.
 
 Every surface reads the same list (X7):
 
 | Surface | Shows |
 |---|---|
-| **Problems panel** | Every diagnostic, grouped by part, errors first. Clicking one selects the feature and zooms to it |
-| **Parts panel** | A count badge on each part and each feature row |
+| **Problems panel** | Every diagnostic, in part and feature order. Clicking one **selects its subject and frames its evidence** — which differ for a failed feature, whose geometry does not exist and whose diagnostic points at what it was built from |
+| **Parts panel** | A count badge on each part and each feature row: how many, coloured by the worst severity there, and **nothing at zero**. A part's badge counts its features' problems as well as its own |
 | **Property panel** | The selected feature's diagnostics |
 | **Canvas** | Failed features as warning outlines; the location of the selected diagnostic |
-| **Export** | Refuses nothing. Warns that errors exist and that failed features are left out |
+| **Export** | Refuses nothing, and says two separate things: **how many rules are broken**, and **which features are not on the paper** because they did not resolve. The second is named feature by feature, not counted — `exportReadiness` in the domain decides both, and the dialog only renders it |
 | **Status bar** | Gesture refusals only. Never diagnostics |
 
-Validation is memoised per part, on the same identity keys as evaluation.
+~~Validation is memoised per part, on the same identity keys as evaluation.~~ **Tried and rejected**
+(4.12a): `evaluate` builds a fresh `ResolvedProject` on every call, so there are no per-part identity
+keys to memoise on. `diagnose` memoises on the **project object** instead, which every command
+replaces — so a stale diagnostic is not something that has to be invalidated, it is something that
+cannot exist.
 
 ### 3.8 Drawing modes: selection chooses where, never what
 

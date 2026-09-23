@@ -8,11 +8,14 @@ import {
 import {
   featureTree,
   roleOf,
+  type Badges,
   type Feature,
   type FeatureNode,
   type Part,
   type Project,
 } from '@leathercad/domain';
+
+import { CountBadge } from './CountBadge.js';
 
 /**
  * Every part in the project, and what each one is made of.
@@ -29,6 +32,7 @@ export function PartsList({
   project,
   selected,
   selectedParts,
+  badges,
   onRemovePart,
   onDuplicatePart,
 }: {
@@ -36,6 +40,11 @@ export function PartsList({
   project: Project;
   selected: ReadonlySet<string>;
   selectedParts: ReadonlySet<string>;
+  /**
+   * Problem counts, rolled up from the one diagnostic list. Passed in rather
+   * than computed here so the panel and this tree cannot disagree (X7).
+   */
+  badges: Badges;
   /** Removes a part, asking first if anything outside it depends on it. */
   onRemovePart: (partId: string) => void;
   /** Copies a part, re-pointing the derivations inside it. */
@@ -60,6 +69,7 @@ export function PartsList({
           part={part}
           selected={selected}
           isSelected={selectedParts.has(part.id)}
+          badges={badges}
           onRemovePart={onRemovePart}
           onDuplicatePart={onDuplicatePart}
         />
@@ -73,6 +83,7 @@ function PartSection({
   part,
   selected,
   isSelected,
+  badges,
   onRemovePart,
   onDuplicatePart,
 }: {
@@ -80,6 +91,7 @@ function PartSection({
   part: Part;
   selected: ReadonlySet<string>;
   isSelected: boolean;
+  badges: Badges;
   onRemovePart: (partId: string) => void;
   onDuplicatePart: (partId: string) => void;
 }) {
@@ -100,6 +112,11 @@ function PartSection({
         >
           {part.name}
           {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
+          {/*
+            Counting everything inside the part, its features included: a
+            collapsed or scrolled-past part must not be able to hide trouble.
+          */}
+          <CountBadge badge={badges.parts.get(part.id) ?? null} />
         </button>
         <IconToggle
           testId={`part-visible-${part.id}`}
@@ -132,6 +149,7 @@ function PartSection({
             store={store}
             node={node}
             selected={selected}
+            badges={badges}
             depth={0}
           />
         ))
@@ -173,11 +191,13 @@ function FeatureRow({
   store,
   node,
   selected,
+  badges,
   depth,
 }: {
   store: DocumentStore;
   node: FeatureNode;
   selected: ReadonlySet<string>;
+  badges: Badges;
   depth: number;
 }) {
   const { feature } = node;
@@ -204,6 +224,9 @@ function FeatureRow({
               ⇄
             </span>
           )}
+          {/* Only what names this feature: a part's own problems count on the
+              part's row, not on every feature in it. */}
+          <CountBadge badge={badges.features.get(feature.id) ?? null} />
         </button>
         <IconToggle
           testId={`feature-locked-${feature.id}`}
@@ -228,6 +251,7 @@ function FeatureRow({
           store={store}
           node={child}
           selected={selected}
+          badges={badges}
           depth={depth + 1}
         />
       ))}

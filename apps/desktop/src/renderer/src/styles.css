@@ -474,6 +474,31 @@ body {
   font-weight: 500;
 }
 
+/*
+  A problem count, coloured by the worst of what it counts.
+
+  Ranking is the colour's job and counting is the number's: a part with nine
+  remarks must not be able to look like a part with one error, and splitting the
+  number three ways would make a badge that has to be read rather than seen.
+
+  The text stays light on a tinted ground rather than taking the severity's own
+  colour, because a two-digit count in dark red on dark grey is a smudge.
+*/
+.badge.severity-error {
+  background: color-mix(in srgb, var(--error) 30%, #14161a);
+  color: var(--text);
+}
+
+.badge.severity-warning {
+  background: color-mix(in srgb, var(--warning) 26%, #14161a);
+  color: var(--text);
+}
+
+.badge.severity-info {
+  background: color-mix(in srgb, var(--info) 24%, #14161a);
+  color: var(--text);
+}
+
 .tool.danger:hover:not(:disabled) {
   border-color: var(--error);
   color: var(--error);

@@ -102,3 +102,76 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   OUTSIDE_PART: rule('DR2', 'error'),
   HOLE_TOO_CLOSE_TO_EDGE: rule('DR2', 'warning'),
 };
+
+/**
+ * The invariants that hold **without** a problem code, and why.
+ *
+ * Most invariants are enforced by something that can say so: a command refuses,
+ * a rule reports. These are not. They hold because the shapes make the
+ * violation unrepresentable, because a schema refuses the file before the
+ * domain sees it, or because a flow — not a check — is what protects them.
+ *
+ * Writing them down is the point. Without this list, 4.12's audit could only
+ * ask "does every code name an invariant", which never notices an invariant
+ * that quietly has nothing enforcing it. With it, the audit asks the useful
+ * question in the other direction — *is every invariant accounted for* — and a
+ * new row in §8 must either arrive with a code or arrive with a reason.
+ */
+export interface UncodedInvariant {
+  readonly invariant: InvariantId;
+  /** What holds it up instead. */
+  readonly because: string;
+}
+
+export const INVARIANTS_WITHOUT_A_CODE: readonly UncodedInvariant[] = [
+  {
+    invariant: 'S8',
+    because:
+      'The writer has nowhere to put a computed path: the schema stores parameters, and evaluation is what produces geometry. A violation would be a new field, not a bad value.',
+  },
+  {
+    invariant: 'S9',
+    because:
+      'Runs and anchors address geometry by arc length and anchor index (ADR 0010); no model type carries a segment index, so the state has no representation to report.',
+  },
+  {
+    invariant: 'S10',
+    because:
+      'The zod schema refuses a non-positive quantity, pitch or text size before the domain sees the file, and commands quantise and guard what they store.',
+  },
+  {
+    invariant: 'DR5',
+    because:
+      'Planned: TEXT_TOO_SMALL_TO_PRINT arrives with document text in 4.11. Until text can be placed at a chosen height there is nothing to measure.',
+  },
+  {
+    invariant: 'X2',
+    because:
+      "ADR 0009's delete dialog protects this: it is a flow, not a check. What it shows is tested where the dialog is, and a problem code would have nowhere to be shown.",
+  },
+  {
+    invariant: 'X5',
+    because:
+      'Held by the layering: millimetres are the only unit in the model, and packages/typography ships outlines for the one vendored face, so no other text can reach paper.',
+  },
+  {
+    invariant: 'X6',
+    because:
+      'A measurement stores its references and precision, never the number it prints. There is no field a stale caption could be stored in.',
+  },
+  {
+    invariant: 'X7',
+    because:
+      'Structural, and enforced by depcruise: a surface cannot reach a second source of problems because there is no second producer to import.',
+  },
+  {
+    invariant: 'X8',
+    because:
+      'Commands take settings and have no constants to fall back on; a missing default is a type error rather than a silently wrong value.',
+  },
+  {
+    invariant: 'X10',
+    because:
+      'A property of refusals rather than a state to report: a refused command returns the project unchanged, and the drawing boundary keeps the work in progress. Tested where each refusal is.',
+  },
+];

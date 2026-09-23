@@ -979,6 +979,120 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
   });
 });
 
+/**
+ * How many millimetres one screen pixel covers, read off the cursor readout.
+ *
+ * A ratio rather than a position, deliberately: the canvas can change size when
+ * a panel beside it does, which moves every millimetre under a fixed screen
+ * point without the view having gone anywhere. Two readings a known number of
+ * pixels apart cancel that out, and what is left is the zoom.
+ */
+async function mmPerPx(
+  window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
+): Promise<number> {
+  const readout = window.getByTestId('cursor-readout');
+  const box = await window.getByTestId('editor-canvas').boundingBox();
+
+  const readAt = async (offsetPx: number): Promise<number> => {
+    await window.mouse.move(box!.x + offsetPx, box!.y + box!.height / 2);
+    // The readout is React state fed by a pointer event, so it arrives a frame
+    // later; until then it shows the em dashes it starts with.
+    await expect
+      .poll(async () => (await readout.textContent()) ?? '', { timeout: 5_000 })
+      .not.toContain('—');
+
+    const text = (await readout.textContent()) ?? '';
+    return Number.parseFloat(text.split(',')[0]!.trim());
+  };
+
+  const near = await readAt(100);
+  const far = await readAt(300);
+  return (far - near) / 200;
+}
+
+test('clicking a problem takes you to it, and the badges clear when it is fixed', async () => {
+  // Slice 4.12. Select the subject, frame the evidence: the stitch line that
+  // failed is what gets selected, while the view goes to the outline it was
+  // being built from — which is both the only geometry that exists and the
+  // thing that has to be edited to fix it.
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+
+    const inset = panel.locator('label', { hasText: /^Edge margin/ }).locator('input');
+    await inset.fill('60');
+    await inset.press('Enter');
+
+    // Counted where the trouble is, and coloured by the worst of it. The part
+    // row carries both of its features' problems; each feature carries its own.
+    const problems = window.getByTestId('problems-panel');
+    await expect(problems.getByTestId('count-badge')).toHaveText('2');
+    await expect(problems.getByTestId('count-badge')).toHaveAttribute('data-severity', 'error');
+
+    const parts = window.getByTestId('parts-list');
+    await expect(parts.getByTestId('count-badge').first()).toHaveText('2');
+
+    const before = await mmPerPx(window);
+
+    await window.getByTestId('parts-list').getByText('Outline').click();
+    await problems.getByTestId('problem-row').first().click();
+
+    // The stitch line is selected, not the outline being shown.
+    await expect(panel).toContainText('Stitch line');
+    // And the view has moved in: a 105 x 75 outline framed in a window that
+    // was showing the whole sheet is a plain, checkable change of zoom.
+    expect(await mmPerPx(window)).toBeLessThan(before);
+
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+    await inset.fill('3.5');
+    await inset.press('Enter');
+
+    // Nothing wrong, nothing shown: a badge reading zero is chrome.
+    await expect(window.getByTestId('count-badge')).toHaveCount(0);
+  });
+});
+
+test('export says what did not make it onto the paper', async () => {
+  // Nothing blocks — the PDF is written and opened — but a feature that failed
+  // to build is absent from the template, and a maker cutting from that
+  // template has no way to know it was ever meant to be there.
+  const target = join(tmpdir(), `leathercad-e2e-omitted-${Date.now()}.pdf`);
+  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+
+    await instance.evaluate(({ dialog, shell }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      shell.openPath = async () => '';
+    }, target);
+
+    const panel = await panelWithChain(window);
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+    const inset = panel.locator('label', { hasText: /^Edge margin/ }).locator('input');
+    await inset.fill('60');
+    await inset.press('Enter');
+
+    await window.getByTestId('export-pdf').click();
+    await expect.poll(() => existsSync(target), { timeout: 10_000 }).toBe(true);
+
+    const notice = window.getByTestId('export-notice');
+    await expect(notice).toBeVisible();
+    // Named, not counted: these two are the ones the paper does not have.
+    await expect(notice.getByTestId('export-omitted')).toContainText('Stitch line');
+    await expect(notice.getByTestId('export-omitted')).toContainText('Stitch holes');
+    await expect(notice.getByTestId('export-counts')).toContainText('2 errors');
+
+    await notice.getByText('Close').click();
+    await expect(notice).toHaveCount(0);
+  } finally {
+    await instance.close();
+    rmSync(target, { force: true });
+  }
+});
+
 test('exports a part named in Polish, which used to be impossible', async () => {
   // Slice 4.11a. pdf-lib's standard fonts are WinAnsi, which has no ł, so
   // `drawText` threw and a project named this way could not be exported at

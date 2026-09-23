@@ -123,9 +123,16 @@ module.exports = {
 
     {
       name: 'domain-stays-pure',
-      comment: 'packages/domain must not touch the filesystem or the network.',
+      comment:
+        'packages/domain must not touch the filesystem or the network. The one exception is ' +
+        "4.12's invariant audit, whose whole job is to read the repository — the registry, the " +
+        'documentation and the test sources — and check they still agree. Named explicitly, the ' +
+        'same way problems.test.ts is named below, so the exception cannot spread by accident.',
       severity: 'error',
-      from: { path: '^packages/domain/' },
+      from: {
+        path: '^packages/domain/',
+        pathNot: '^packages/domain/src/problems/audit\\.test\\.ts$',
+      },
       to: { dependencyTypes: ['core'] },
     },
 

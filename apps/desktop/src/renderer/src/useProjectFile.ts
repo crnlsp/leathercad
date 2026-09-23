@@ -1,5 +1,5 @@
 import type { DocumentStore } from '@leathercad/document';
-import { evaluate } from '@leathercad/domain';
+import { evaluate, exportReadiness, type ExportReadiness } from '@leathercad/domain';
 import { buildExportScene, describeOversized, exportPdf } from '@leathercad/export';
 import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
@@ -29,7 +29,12 @@ export function useProjectFile(
   state: ProjectFileState;
   save: (forcePrompt?: boolean) => Promise<void>;
   open: () => Promise<void>;
-  exportPdfFile: () => Promise<void>;
+  /**
+   * Exports, then says what the maker should check. Null when they cancelled
+   * or it failed — and null too when there is nothing to say, so a clean
+   * export stays silent.
+   */
+  exportPdfFile: () => Promise<ExportReadiness | null>;
   markSaved: () => void;
   savedDocument: React.MutableRefObject<unknown>;
 } {
@@ -111,7 +116,7 @@ export function useProjectFile(
    * from an ordinary viewer — so handing them the open file is where our
    * responsibility ends.
    */
-  const exportPdfFile = useCallback(async () => {
+  const exportPdfFile = useCallback(async (): Promise<ExportReadiness | null> => {
     try {
       const platform = host();
       const project = store.getState().document.project;
@@ -122,7 +127,7 @@ export function useProjectFile(
         defaultPath: `${suggested}.pdf`,
         filters: PDF_FILTERS,
       });
-      if (target === null) return;
+      if (target === null) return null;
 
       const scene = buildExportScene(evaluate(project), project.name);
       const { bytes, pagination } = await exportPdf(scene, {
@@ -143,11 +148,22 @@ export function useProjectFile(
       }));
 
       await platform.openInExternalViewer(target.endsWith('.pdf') ? target : `${target}.pdf`);
+
+      // Read from the project that was just exported, and reported *after* the
+      // file is written: export warns, and never blocks (§5).
+      const readiness = exportReadiness(project);
+      const quiet =
+        readiness.omitted.length === 0 &&
+        readiness.errors === 0 &&
+        readiness.warnings === 0 &&
+        readiness.infos === 0;
+      return quiet ? null : readiness;
     } catch (error) {
       setState((previous) => ({
         ...previous,
         error: error instanceof Error ? error.message : String(error),
       }));
+      return null;
     }
   }, [appVersion, host, store]);
 

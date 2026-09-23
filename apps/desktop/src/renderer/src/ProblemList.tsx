@@ -16,13 +16,16 @@ import {
 export function ProblemRows({
   diagnostics,
   project,
-  onSelect,
+  onGoTo,
   showWhere = true,
 }: {
   diagnostics: readonly Diagnostic[];
   project: Project;
-  /** Selecting the feature a problem is about. Omitted where it is already selected. */
-  onSelect?: (featureId: string) => void;
+  /**
+   * Going to a problem: selecting its subject and framing its evidence.
+   * Omitted in the property panel, which is already showing what is selected.
+   */
+  onGoTo?: (diagnostic: Diagnostic) => void;
   /** Whether to name the part and feature. Off in the property panel, which already has. */
   showWhere?: boolean;
 }) {
@@ -42,8 +45,9 @@ export function ProblemRows({
           </>
         );
 
-        const selectable = onSelect !== undefined && diagnostic.featureId !== undefined;
-        return selectable ? (
+        // Every row, including a problem with the part itself: an empty part
+        // is something to be taken to as much as a hole in the wrong place.
+        return onGoTo !== undefined ? (
           <button
             key={key}
             type="button"
@@ -51,7 +55,7 @@ export function ProblemRows({
             data-testid="problem-row"
             data-code={diagnostic.problem.code}
             data-severity={diagnostic.severity}
-            onClick={() => onSelect(diagnostic.featureId!)}
+            onClick={() => onGoTo(diagnostic)}
           >
             {body}
           </button>

@@ -1,6 +1,6 @@
 import { type DocumentStore } from '@leathercad/document';
 import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
-import { PathOps, RectOps, type Vec2 } from '@leathercad/geometry';
+import { PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 import {
   ToolManager,
@@ -29,7 +29,27 @@ import {
   renderGrid,
   renderRulers,
 } from '@leathercad/render';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+
+/**
+ * The canvas's viewport, as much of it as anything outside may touch.
+ *
+ * The viewport lives in here and nothing else may move it: no panel reaches for
+ * a transform, and there is no second idea of where the view is. What a caller
+ * has is a millimetre rectangle and a request to show it — which is the whole
+ * vocabulary zoom-to-problem needs.
+ *
+ * This is **navigation**, not a command moving the view. The maker clicked a
+ * problem and asked to be taken to it. Whether creating a part should move the
+ * view is a different question, still deferred.
+ */
+/** Margin left around anything the view is asked to frame, in device pixels. */
+const FIT_PADDING_PX = 60;
+
+export interface CanvasHandle {
+  /** Frames a millimetre rectangle, leaving the usual margin. */
+  frame(bounds: Rect): void;
+}
 
 export interface CanvasStatus {
   readonly cursorMm: Vec2 | null;
@@ -54,6 +74,7 @@ export function CanvasHost({
   requestDelete,
   nextId,
   onStatus,
+  ref,
 }: {
   store: DocumentStore;
   toolId: string;
@@ -62,6 +83,7 @@ export function CanvasHost({
   requestDelete: (ids: readonly string[]) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
+  ref?: React.Ref<CanvasHandle>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,6 +98,19 @@ export function CanvasHost({
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
   }, []);
+
+  useImperativeHandle(
+    ref,
+    (): CanvasHandle => ({
+      frame(bounds) {
+        // The same padding the double-click fit uses, so being taken to a
+        // problem looks like being taken to a part.
+        viewportRef.current.fitTo(bounds, FIT_PADDING_PX * viewportRef.current.dpr);
+        invalidate();
+      },
+    }),
+    [invalidate],
+  );
 
   // Settings the tools read at the moment they act. Refs rather than props
   // because the ToolContext below is built once and must not be rebuilt — a
@@ -351,7 +386,7 @@ export function CanvasHost({
 
     viewportRef.current.fitTo(
       RectOps.unionAll(boxes) ?? RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
-      60 * viewportRef.current.dpr,
+      FIT_PADDING_PX * viewportRef.current.dpr,
     );
     invalidate();
   }, [store, invalidate]);

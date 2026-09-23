@@ -973,9 +973,34 @@ checkpoint** below — which Phase 5 waits on.
   **project**, not the resolved tree; and a tool builds a fresh problem every pointer move, so the
   canvas keeps the old one when `sameProblem` says it reads the same, or the chrome re-renders at
   60 fps.
-- **4.12** Validation complete: zoom-to-problem, part and feature badges, a warning at export, and an
-  audit test that every rule names a documented invariant and every structural invariant has both a
-  refusal test and a loader test. The catalogue is `domain-model.md` §8.
+- **4.12** ✅ **Done.** Validation complete
+  ([design](superpowers/specs/2026-09-19-validation-complete-design.md)): zoom-to-problem, part and
+  feature badges, a warning at export, and the invariant audit. X7 finally holds on every surface,
+  and the slice adds **no new problem code** — it is reach, not rules.
+  **Select the subject, frame the evidence.** `diagnosticTarget` is a pure function over the same
+  `ResolvedProject` every surface reads, so clicking a row twice goes to the same place. The two
+  differ whenever a feature failed: it has no geometry of its own, its diagnostic already points at
+  what it was built *from*, and that is where the fix is — so the view goes to the outline while the
+  selection stays on the stitch line the user clicked. `CanvasHost.frame(bounds)` is the canvas-owned
+  way in; no panel touches a transform.
+  **Badges count, colour ranks.** One fold over `severity`, nothing at zero, and a part's badge
+  includes its features' — nine infos must never look like one error.
+  **Export warns and never blocks**, and keeps two facts apart: how many rules are broken, and
+  *which features are not on the paper*. The second is named rather than counted, because a feature
+  silently missing from a template is how a pattern gets cut wrong. `exportReadiness` decides both,
+  in the domain, from the same `ok` flag the scene builder filters on — pinned by a test in
+  `packages/export` that asserts against the scene builder itself rather than a second copy of its
+  filter.
+  **The audit is static**, not order-dependent: it reads `PROBLEM_CODES`, `domain-model.md` §8 and
+  every `*.test.ts` under `packages/`. It holds the registry and §8.6's two tables to each other in
+  both directions, requires every invariant to have a code or a written reason it needs none
+  (`INVARIANTS_WITHOUT_A_CODE`), and requires every code to be named by a test that is not the
+  catalogue's own.
+  Gotchas: the audit has to read the filesystem, which `domain-stays-pure` forbids — exempted by
+  name, the way `problems.test.ts` already is for the message catalogue; the first thing it caught
+  was that the measure tool had no unit test at all, so `MEASURE_NEEDS_ANCHOR` was produced by
+  nothing any test looked at; and a degenerate frame has no scale that fits it, so zooming to a
+  single hole needs a floor on the window size or the click looks like it did nothing.
 - **4.13 Close-out.** One end-to-end scenario walked through the whole phase, a roadmap summary, and
   a final pass over the docs the phase changed.
 
