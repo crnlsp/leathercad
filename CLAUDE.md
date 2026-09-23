@@ -119,7 +119,8 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | `packages/persist` | `docs/file-format.md` |
 | `packages/export`, `packages/print` | `docs/printing.md` |
 | Anything structural | `docs/architecture.md` |
-| The rest of Phase 4 | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
+| Phase 4's model (derivations, deletion, validation) | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
+| UI Foundations, F.0–F.7 | `docs/roadmap.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
 | Tests | `docs/testing.md` |
 
 Run `/geo-check` and `/arch-check` before considering a slice done. If a change invalidates

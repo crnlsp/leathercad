@@ -93,7 +93,9 @@ from it: the ends of a measurement.
 resolves ([ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md)).
 
 **Freeze** — On deleting a source, keeping a derived dependent as drawn geometry, from its last
-resolved shape, instead of deleting it. Only ever the user's explicit choice.
+resolved shape, instead of deleting it. For a counterpart whose fold is deleted, freezing captures the
+line the fold was on instead, so the counterpart still mirrors its source. Only ever the user's
+explicit choice.
 
 **Re-point** — Changing which feature a derived feature follows, keeping the relationship's
 parameters. How an outline is replaced without losing its stitching.

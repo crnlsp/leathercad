@@ -383,11 +383,11 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 
 | # | Slice | Delivers | Needs |
 |---|---|---|---|
-| 1 | **4.2b** Reference graph and deletion | Compatibility table · `planDelete` and the dialog (delete / freeze / cancel) · re-point (*Follows*) · parts kept when emptied · refusal queries for cycles and derived moves · loader checks S2–S4 | — |
-| 2 | **4.12a** Diagnostic channel | Typed failures · `OFFSET_SPLIT` (D3) · `validate()` with the stitch and offset rules · problems panel (list and select) · failed features drawn as warnings (D4) | 4.2b |
+| 1 | **4.2b** Reference graph and deletion ✅ | Compatibility table · `planDelete` and the dialog (delete / freeze / cancel) · re-point (*Follows*) · parts kept when emptied · refusal queries for cycles and derived moves · loader checks S2–S4 | — |
+| 2 | **4.12a** Diagnostic channel ✅ | Typed failures · `OFFSET_SPLIT` (D3) · `validate()` with the stitch and offset rules · problems panel (list and select) · failed features drawn as warnings (D4) | 4.2b |
 | 3 | **4.11a** Typography ✅ | Vendored typeface · `packages/typography` · millimetre text items · outlines in SVG and PDF · Helvetica removed (D1) · part captions on canvas | — |
 | 3b | **4.11b** Text labels ✅ | The `text-label` feature kind, its editor, format bump and fixture | 4.11a |
-| 4 | **4.4b** Anchors through derivations | Offset corner correspondence · hole sets expose their line's anchors · `ANCHOR_MISSING` | 4.12a |
+| 4 | **4.4b** Anchors through derivations ✅ | Offset corner correspondence · hole sets expose their line's anchors · `ANCHOR_MISSING` | 4.12a |
 | 5 | **3.7b** Reflections ✅ | `transformShape` reflects correctly (D2), property-tested against transforming the evaluated path · a Flip command | — |
 | 6 | **4.3a** Cut-outs and part rules ✅ | Drawing modes (§3.8) · cut-outs · material-relative inward (D6) · defaults from settings (D7) · part rules · loader checks S5–S6 | 4.2b, 4.12a |
 | 6b | **4.3b** Parts panel ✅ | Part selection · dependency tree · delete and duplicate part · visibility and lock (D8) | 4.3a |
@@ -395,9 +395,9 @@ Derived from what each slice needs, not from its number. Slice numbers stay stab
 | 7b | **4.8b** Mirror across a fold ✅ | Mirror a part · mirror across a fold line · labels · hole parity by construction · the pair in the dependency tree | 4.8a |
 | 8 | **4.9** Seam allowance ✅ | *Stitch + allowance* mode · outward offsets · stitch margin | 4.2b, 4.4b, 4.3 |
 | 9 | **4.10a** Measurements, linear ✅ | Measure tool · measurement annotations · anchor, centre and extent refs · values set through typography | 4.2b, 4.4b, 4.11 |
-| 10 | **4.12** Validation complete | Zoom-to-problem · badges · export warning · the invariant audit test | All of the above |
-| 11 | **4.13 Close-out** | One end-to-end scenario across the phase · roadmap summary · final pass over the docs | All |
-| 12 | **UI/UX audit checkpoint** | Not a slice: a review and polish gate over the whole application before Phase 5. See `roadmap.md` | All of Phase 4 |
+| 10 | **4.12** Validation complete ✅ | Zoom-to-problem · badges · export warning · the invariant audit test | All of the above |
+| 11 | **4.13 Close-out** ✅ | One end-to-end scenario across the phase · roadmap summary · final pass over the docs | All |
+| 12 | **UI/UX audit checkpoint** — audit done; F.0–F.7 follow | Not a slice: a review and polish gate over the whole application before Phase 5. See `roadmap.md` | All of Phase 4 |
 
 Why the order departs from the numbers:
 

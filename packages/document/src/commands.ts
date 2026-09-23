@@ -1358,12 +1358,14 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
       // A measurement is never freezable, for the reason a hole set is not:
       // there is no drawn form to keep. Worse, a frozen dimension is a number
       // that no longer means anything — the stale label this feature exists to
-      // replace.
+      // replace. A counterpart losing its fold is freezable without being
+      // `direct`: it depends on the fold through the references edge.
       freezable:
-        direct &&
-        feature.kind !== 'stitch-hole-set' &&
-        feature.kind !== 'measurement' &&
-        resolved.get(id)?.ok === true,
+        withCapturedAxis(project, feature, requestedSet) !== null ||
+        (direct &&
+          feature.kind !== 'stitch-hole-set' &&
+          feature.kind !== 'measurement' &&
+          resolved.get(id)?.ok === true),
     };
   });
 
@@ -1544,6 +1546,41 @@ function capturedLineOf(project: Project, foldId: FeatureId): MirrorAxis | null 
 
   const angleRad = Math.atan2(first.b.y - first.a.y, first.b.x - first.a.x);
   return { kind: 'line', origin: first.a, angleRad };
+}
+
+/**
+ * A counterpart frozen by **capturing the line its fold currently is**, or
+ * `null` when deleting `gone` does not call for that.
+ *
+ * It keeps its shape, keeps following its source, and stops tracking the fold —
+ * which is exactly what "freeze" has always meant, applied to the reference
+ * edge instead of the derivation one.
+ *
+ * Not when the source goes too: nothing would be left to mirror, and the
+ * counterpart is then an ordinary direct dependent, frozen as drawn geometry.
+ *
+ * One function for the plan and the command, so the dialog cannot offer a
+ * freeze the command does not perform, or hide one it does.
+ */
+function withCapturedAxis(
+  project: Project,
+  feature: Feature,
+  gone: ReadonlySet<FeatureId>,
+): Feature | null {
+  if (
+    feature.kind === 'text-label' ||
+    feature.kind === 'measurement' ||
+    feature.source.kind !== 'derived'
+  ) {
+    return null;
+  }
+  const op = feature.source.op;
+  if (op.type !== 'mirror' || op.axis.kind !== 'fold') return null;
+  if (!gone.has(op.axis.foldId) || gone.has(feature.source.sourceId)) return null;
+
+  const line = capturedLineOf(project, op.axis.foldId);
+  if (line === null) return null;
+  return { ...feature, source: { ...feature.source, op: { ...op, axis: line } } };
 }
 
 /** How far a duplicate sits from the piece it was copied from. */
@@ -1930,30 +1967,12 @@ function resolveDelete(
       .map((entry) => [entry.feature.id, entry] as const),
   );
 
-  // A counterpart folded about a deleted fold is frozen by **capturing the
-  // line the fold currently is**, not by turning it into drawn geometry. It
-  // keeps its shape, keeps following its source, and stops tracking the fold —
-  // which is exactly what "freeze" has always meant, applied to the reference
-  // edge instead of the derivation one.
+  // A counterpart folded about a deleted fold is frozen by capturing the fold's
+  // line, not by turning it into drawn geometry — see `withCapturedAxis`.
   const capturedAxes = new Map<FeatureId, Feature>();
   for (const feature of project.parts.flatMap((part) => part.features)) {
-    if (
-      feature.kind === 'text-label' ||
-      feature.kind === 'measurement' ||
-      feature.source.kind !== 'derived'
-    ) {
-      continue;
-    }
-    const op = feature.source.op;
-    if (op.type !== 'mirror' || op.axis.kind !== 'fold') continue;
-    if (!gone.has(op.axis.foldId)) continue;
-
-    const line = capturedLineOf(project, op.axis.foldId);
-    if (line === null) continue;
-    capturedAxes.set(feature.id, {
-      ...feature,
-      source: { ...feature.source, op: { ...op, axis: line } },
-    });
+    const captured = withCapturedAxis(project, feature, gone);
+    if (captured !== null) capturedAxes.set(feature.id, captured);
   }
 
   for (const dependent of plan.dependents) {

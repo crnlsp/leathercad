@@ -1,15 +1,25 @@
-import { evaluate, type FeatureId, type PartId, type Project } from '@leathercad/domain';
+import {
+  evaluate,
+  graphProblems,
+  type FeatureId,
+  type PartId,
+  type Project,
+} from '@leathercad/domain';
 import { MatOps, PathOps, polyline } from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
   addCutOut,
   addFoldLine,
   addPart,
+  addStitchHoles,
+  addStitchLine,
   deleteFeatures,
   emptyDocument,
   foldMirrorRefusal,
   mirrorAcrossFold,
+  planDelete,
   rectShape,
   rectanglePart,
   refusedTransforms,
@@ -199,6 +209,63 @@ describe('deleting the fold a counterpart is folded about', () => {
     const next = deleteFeatures([FOLD], 'delete-dependents').apply(before);
 
     expect(featureIn(next.project, COPY)).toBeUndefined();
+  });
+
+  it('offers the freeze it performs: the plan the dialog reads agrees with the command', () => {
+    // Found by the 4.13 scenario. The counterpart depends on the fold through
+    // the references edge, so `direct` is false — and the plan used to take
+    // that to mean "nothing to freeze", disabling the one way out the command
+    // supports.
+    const before = folded(shell());
+
+    const plan = planDelete(before.project, [FOLD]);
+
+    expect(plan.dependents).toEqual([
+      expect.objectContaining({ featureId: COPY, freezable: true }),
+    ]);
+  });
+
+  it('freezes as drawn geometry when the source goes with the fold', () => {
+    // Nothing is left to mirror, so capturing the axis would keep a derivation
+    // pointing at a deleted feature. It keeps its shape, as any freeze does.
+    const before = folded(shell());
+    const was = boxOf(before.project, COPY);
+
+    const next = deleteFeatures([SLOT, FOLD], 'freeze-dependents').apply(before);
+
+    const copy = featureIn(next.project, COPY)!;
+    expect(copy.source.kind).toBe('path');
+    expect(boxOf(next.project, COPY).minX).toBeCloseTo(was.minX, 6);
+  });
+
+  it('keeps whatever the plan offers to keep, whatever is deleted', () => {
+    // The plan is what the dialog shows; the command is what happens. Over
+    // every choice of what to delete, whatever the plan offers to keep is kept,
+    // and the project stays sound. Not "only what it offers": holes on a frozen
+    // stitch line stay because they still follow it (4.2b), without being
+    // freezable themselves.
+    const STITCH = 'stitch-1' as FeatureId;
+    const HOLES = 'holes-1' as FeatureId;
+    let base = folded(shell());
+    base = addStitchLine(PART, STITCH, SHELL, 3.5).apply(base);
+    base = addStitchHoles(PART, HOLES, STITCH).apply(base);
+    const before = base;
+
+    fc.assert(
+      fc.property(
+        fc.subarray([SHELL, FOLD, SLOT, COPY, STITCH, HOLES], { minLength: 1 }),
+        (ids) => {
+          const plan = planDelete(before.project, ids);
+          const next = deleteFeatures(ids, 'freeze-dependents').apply(before).project;
+
+          expect(graphProblems(next)).toEqual([]);
+          for (const id of ids) expect(featureIn(next, id)).toBeUndefined();
+          for (const dependent of plan.dependents.filter((d) => d.freezable)) {
+            expect(featureIn(next, dependent.featureId)).toBeDefined();
+          }
+        },
+      ),
+    );
   });
 
   it('asks first, because the counterpart depends on it', () => {

@@ -606,6 +606,9 @@ instead: **4.2b → 4.12a → 4.11a → 4.11b → 4.4b → 3.7b → 4.3 → 4.8 
 close-out that walks one scenario through the whole phase (4.13), and then the **UI/UX audit
 checkpoint** below — which Phase 5 waits on.
 
+✅ **Phase 4 is closed** (4.13, 2026-09-23). The audit ran before the close-out, at the user's
+direction, and its F.0–F.7 work is what comes next.
+
 - **4.1** ✅ **Done.** `Part`, `Feature` (cut contour, stitch line, fold line, marking line),
   `GeometrySource` (`path` and `shape`), layer roles, and `evaluate` producing a resolved document.
   Derived geometry is never persisted — the file holds parameters and evaluation recomputes, so an
@@ -1001,8 +1004,51 @@ checkpoint** below — which Phase 5 waits on.
   was that the measure tool had no unit test at all, so `MEASURE_NEEDS_ANCHOR` was produced by
   nothing any test looked at; and a degenerate frame has no scale that fits it, so zooming to a
   single hole needs a floor on the window size or the click looks like it did nothing.
-- **4.13 Close-out.** One end-to-end scenario walked through the whole phase, a roadmap summary, and
-  a final pass over the docs the phase changed.
+- **4.13** ✅ **Done.** Close-out
+  ([design](superpowers/specs/2026-09-23-phase-4-close-out-design.md)). **One card holder, drafted
+  through the running application from the first outline to the printed page**:
+  `e2e/phase-4-close-out.spec.ts`. The steps:
+  - a 180 × 95 shell typed exactly, a derived stitch line and holes, and a fold;
+  - a card slot mirrored across the fold, and a pocket drafted from its opening;
+  - a dimension that keeps resolving, and a Polish label;
+  - a mistake found from the problems panel and fixed by typing;
+  - the fold deleted with its counterpart frozen, then undone;
+  - saved, reopened in a fresh instance, and exported to A4.
+
+  The per-behaviour tests in `shell.spec.ts` never checked that the behaviours **compose**; this
+  test checks that.
+  **It found two defects, both in deleting a fold, and both fixed here.** The delete dialog offered
+  **Keep 0 frozen**, disabled, for a counterpart folded about the fold being deleted. `planDelete`
+  decided *freezable* from the *derives* edge alone, while the command already froze the axis
+  through the *references* edge. So the one way out 4.8b built was unreachable from the UI, and no
+  unit test had asked the plan. A property test holding the plan to the command then found the
+  second: deleting the slot **and** its fold with *freeze* **dropped** the counterpart, because it
+  captured the axis of a mirror whose source was gone. Both now go through one function,
+  `withCapturedAxis`, which the plan and the command share. The property test asserts that whatever
+  the plan offers to keep, the command keeps, over every subset of a folded, stitched shell.
+  Gotchas:
+  - **The scenario reaches the canvas by millimetres, not pixels.** The canvas changes size with
+    the tool (F.3), so a pixel offset carried from one tool to the next lands about 8.7 mm off.
+    The scenario reads the cursor readout at two points each time it is about to click, and solves
+    for the view.
+  - **A dimension's value is readable only on the canvas.** No DOM element carries it, so the
+    scenario asserts that the dimension resolves rather than what it reads. Recorded, not fixed:
+    presenting measurements belongs to F.1.
+
+  **Phase 4 in summary.**
+  - **What the phase built.** Parts made of features that are parameters, never stored geometry.
+    Derived stitch lines, holes, seam allowances and mirrors that stay linked. One reference graph,
+    with deletion that asks. Anchors that survive derivation. Cut-outs, and a material-relative
+    "inward". Fold, marking, hardware and text on paper as outlines in one vendored typeface.
+    Dimensions that cannot drift. One diagnostic channel, reachable from every surface.
+  - **Format versions.** Format went from version 2 to 8 in the phase; 5.5 then took it to 9.
+    Every version has a committed fixture, and `v6_to_v7` is the first migration that rewrites data.
+  - **Carried forward, deliberately:** radial and angular dimensions; Tier 2 offsetting (9.11);
+    vertex ids and anchors on edited paths (3.9); whether a command should move the view; hole rows
+    along a line; grain.
+  - **Known and tracked, separately from any slice:** the canvas jump (F.3); an order-dependent
+    `intersectSegments`; the `ticks.test.ts` float flake; and DR2 reporting an edge-to-edge fold
+    as off the material.
 
 ### Checkpoint — the UI/UX audit
 *Between M3 and Phase 5. A gate, not a phase.*
@@ -1284,8 +1330,8 @@ Steady part-time work — evenings and weekends — with Claude Code:
 | 1 — Geometry | 10 | 3–4 weeks |
 | 2 — Canvas (M1) | 6 | 1.5–2 weeks |
 | 3 — Editing (M2) | 10 | 3–4 weeks |
-| 4 — Domain (M3) | 12 | 3–4 weeks |
-| 5 — Persistence (M4) | 4 | 1 week |
+| 4 — Domain (M3) | 19 | 3–4 weeks |
+| 5 — Persistence (M4) | 5 | 1 week |
 | 6 — Export | 4 | 1.5 weeks |
 | 7 — Printing (M5) | 7 | 2–3 weeks |
 | 8 — v1.0 | 6 | 2–3 weeks |

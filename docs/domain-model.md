@@ -1,10 +1,10 @@
 # Domain Model
 
 **Package:** `packages/domain`
-**Status:** Built through slice 4.7. The rest of Phase 4 is designed in the
+**Status:** Built through Phase 4, closed out in slice 4.13. The phase was designed as one in the
 [Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md). Each section
-says which parts are **built**, **designed** (Phase 4, not yet built) or **later**.
-**Last updated:** 2026-09-15
+says which parts are **built** or **later**.
+**Last updated:** 2026-09-23
 
 ---
 
@@ -106,7 +106,7 @@ interface StitchLine extends GeometricFeature {
 Where the thread runs. Open or closed.
 
 - **Built:** derived inward from a cut contour, whole or as a partial run between anchors.
-- **Designed (4.9):** drawn directly on a part, and as the source of a seam-allowance outline.
+- **Built (4.9):** drawn directly on a part, and as the source of a seam-allowance outline.
 
 ### 3.3 `StitchHoleSet` — built
 
@@ -339,7 +339,7 @@ A stitch line and its outline are related by one number, the **stitch margin**. 
 the one the maker dimensions:
 
 - **Stitch inset** (the common case): draw the outline, derive the stitch line inward.
-- **Seam allowance** (designed, 4.9): draw the stitch line ("the pocket opening must be exactly
+- **Seam allowance** (built, 4.9): draw the stitch line ("the pocket opening must be exactly
   95 mm"), derive the outline outward.
 
 Seam allowance is **not a property**. It is a derivation direction. As a number hanging off a
@@ -347,7 +347,7 @@ contour it would force one workflow on everyone.
 
 **"Inward" means into the part's material.** For an outer contour the material is inside the path;
 for a cut-out it is outside. A stitch line around a card-slot window therefore runs outside the
-window. The direction is resolved from the contour's role, not its winding (designed, 4.3).
+window. The direction is resolved from the contour's role, not its winding (built, 4.3a).
 
 One project default, `settings.defaultStitchInsetMm`, serves both directions. The panel calls it the
 *stitch margin*.
@@ -499,7 +499,10 @@ that names it fails with `ANCHOR_MISSING`.
   result must not silently break or half-alter the relationship.** Absorbing the drag would slide
   one half of a folded piece along its spine; detaching from the fold would break the link the maker
   asked for (X3). Deleting the fold is the deliberate way out, and it offers to **freeze the axis** —
-  capturing the line the fold was on, so the counterpart keeps its shape and its source.
+  capturing the line the fold was on, so the counterpart keeps its shape and its source. Deleting the
+  source in the same step leaves nothing to mirror, so the counterpart is then frozen as drawn
+  geometry like any direct dependent. One function decides both what the delete dialog offers and
+  what the command does (4.13).
 - **An outline cannot be mirrored across a fold into its own part** (S5): a piece of leather has one
   edge, and completing a contour from half of one needs a boolean union this project has
   deliberately not bought ([ADR 0008](adr/0008-no-clipper-binding.md)). Refused before the gesture,
@@ -814,17 +817,17 @@ shapes and derivations instead of literals.
 | Concept | Status | Later |
 |---|---|---|
 | `CutContour`, `StitchLine`, `StitchHoleSet`, `FoldLine`, `MarkingLine`, `HardwareHole` | Built | |
-| Cut-outs, drawn stitch lines, drawing modes | Designed: 4.3, 4.9 | |
+| Cut-outs, drawn stitch lines, drawing modes | Built: 4.3a, 4.9 | |
 | `Measurement` (horizontal, vertical, aligned) | Built 4.10a | Radial, angular |
-| `TextLabel`, generated captions | Designed: 4.11 | |
+| `TextLabel`, generated captions | Built: 4.11a, 4.11b | |
 | Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes` | Built | |
-| Op: `mirror` | Designed: 4.8 | Boolean (v1.2) |
+| Op: `mirror`, by axis and across a fold | Built: 4.8a, 4.8b | Boolean (v1.2) |
 | Reference graph, explicit deletion, re-pointing | Built: 4.2b | References with 4.10 |
-| Anchors through derivations | Designed: 4.4b | Vertex ids before 3.9 |
+| Anchors through derivations | Built: 4.4b | Vertex ids before 3.9 |
 | Evaluation with memoisation and per-feature failures | Built; typed 4.12a | |
 | Layer roles and export presets | Built | |
 | Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (v1.1) |
-| Validation, the §8.6 catalogue | Designed: 4.12a–4.12 | Seam and layout rules (v1.2) |
+| Validation, the §8.6 catalogue | Built: 4.12a–4.12 | Seam and layout rules (v1.2) |
 | Templates as copies | Later: 8.1 | Parameterised (v1.2) |
 | `Seam` and assembly | Design only | v1.2 |
 | Material thickness compensation | Fields stored | v1.1 |
