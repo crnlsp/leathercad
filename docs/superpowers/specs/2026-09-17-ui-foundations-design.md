@@ -538,6 +538,11 @@ a tool whose promise is 1:1 is unacceptable. The fix belongs in `Viewport`: on r
 point at the canvas centre fixed. Then the drawing never moves unless the user moves it — and the
 compensation arithmetic currently in the E2E suite is deleted rather than adjusted.
 
+*Corrected when built (F.3, 2026-09-23):* holding the point at the canvas centre is what the viewport
+already did, and it is the cause. The centre moves whenever an edge does, so the drawing moved by
+half the change. What is built holds **every window point** over its millimetre (`Viewport.reframe`),
+which is the stated intent: the drawing never moves unless the user moves it.
+
 ### 9.5 Snap feedback says what it caught
 
 Glyph plus a word: `corner · Outline`. Drafting is about knowing what you have hold of.

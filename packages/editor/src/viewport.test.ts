@@ -183,3 +183,57 @@ describe('visibleBounds', () => {
     expect(RectOps.containsPoint(v.visibleBounds(), v.centreMm)).toBe(true);
   });
 });
+
+describe('reframe', () => {
+  // F.3. When the canvas's box changes — the problems drawer opens, the rail
+  // collapses, the window is resized — the drawing must not move on screen.
+  // Holding the world point at the canvas *centre* is what moved it: the
+  // centre itself moves when an edge does, by half the change (~8.7 mm).
+  const size = fc.integer({ min: 200, max: 2000 });
+  const shift = fc.integer({ min: -300, max: 300 });
+
+  it('keeps every window point over the same millimetre', () => {
+    fc.assert(
+      fc.property(size, size, size, size, shift, shift, (w, h, w2, h2, dx, dy) => {
+        const v = new Viewport();
+        v.resize(w, h, 1);
+        v.scale = 3;
+        v.centreMm = { x: 60, y: 40 };
+
+        // A window point, expressed in the old canvas and in the new one,
+        // whose top-left has moved by (dx, dy).
+        const windowPoint = { x: 150, y: 120 };
+        const before = v.toWorld(windowPoint);
+
+        v.reframe(w2, h2, { x: dx, y: dy });
+        const after = v.toWorld({ x: windowPoint.x - dx, y: windowPoint.y - dy });
+
+        return closeTo(after.x, before.x) && closeTo(after.y, before.y);
+      }),
+    );
+  });
+
+  it('does not zoom', () => {
+    const v = new Viewport();
+    v.resize(800, 600, 1);
+    v.scale = 3;
+    v.reframe(800, 652, { x: 0, y: -52 });
+    expect(v.scale).toBeCloseTo(3, 12);
+  });
+
+  it('moves nothing when only the far edges move', () => {
+    // A drawer opening below the canvas takes height from the bottom: the top
+    // edge is where it was, so nothing above the drawer may shift.
+    const v = new Viewport();
+    v.resize(620, 700, 1);
+    v.scale = 3;
+    v.centreMm = { x: 60, y: 40 };
+    const topLeft = v.toWorld({ x: 0, y: 0 });
+
+    v.reframe(620, 480, { x: 0, y: 0 });
+
+    const after = v.toWorld({ x: 0, y: 0 });
+    expect(after.x).toBeCloseTo(topLeft.x, 9);
+    expect(after.y).toBeCloseTo(topLeft.y, 9);
+  });
+});

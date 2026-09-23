@@ -49,6 +49,34 @@ export class Viewport {
     this.dpr = dpr;
   }
 
+  /**
+   * Resizes the canvas **without moving the drawing** (F.3).
+   *
+   * `shiftPx` is how far the canvas's top-left corner moved, in device pixels:
+   * a drawer opening below it moves nothing, a rail collapsing beside it moves
+   * it left. The camera is re-centred so every point in the window stays over
+   * the millimetre it was over — the drawing moves only when the maker moves
+   * it.
+   *
+   * Plain `resize` holds the point at the canvas *centre* instead, and the
+   * centre moves whenever an edge does: half the change, which was the ~8.7 mm
+   * jump on every tool change (UI Foundations §9.4). Done through `toWorld`, so
+   * the Y flip stays where it is defined (CLAUDE.md invariant 2).
+   */
+  reframe(widthPx: number, heightPx: number, shiftPx: Vec2): void {
+    // The window point at the old canvas's top-left, and what it showed.
+    const held = this.toWorld({ x: 0, y: 0 });
+    this.widthPx = widthPx;
+    this.heightPx = heightPx;
+    // In the new canvas that window point sits at -shift. Move the camera so it
+    // shows the same millimetre there.
+    const now = this.toWorld({ x: -shiftPx.x, y: -shiftPx.y });
+    this.centreMm = {
+      x: this.centreMm.x + (held.x - now.x),
+      y: this.centreMm.y + (held.y - now.y),
+    };
+  }
+
   toScreen(pointMm: Vec2): Vec2 {
     return MatOps.apply(worldToScreen(this.toView()), pointMm);
   }

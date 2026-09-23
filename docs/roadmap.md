@@ -1146,7 +1146,7 @@ features consume these; they do not extend or amend the visual language on their
 | **F.0** ✅ | Typography | Apply the vendored face to the DOM (it is loaded and unused today); vendor Plex Sans 500/600; the nine-token scale; `formatMm()` / `formatAngle()` emitting the true minus |
 | **F.1** ✅ | Systemic interaction | `ReasonedButton` (a disabled control that renders its refusal — the domain already produces every one, and the UI hides them in a native `title`, contradicting X1); `Tooltip`; a `Notice` near the gesture; one word per relationship — **Follows / Mirrors / Mirrors … across / Measures**; drag vs click–click made consistent and a header hint that is true; **Length** on an open line, and no area on a hole |
 | **F.2** ✅ | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
-| **F.3** | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
+| **F.3** ✅ | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
 | **F.4** | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
 | **F.5** | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
 | **F.6** | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
@@ -1157,8 +1157,7 @@ features consume these; they do not extend or amend the visual language on their
 **1 — Bug or inconsistency, fix before Phase 5.** ✅ *done this session:* three platform-font
 fallbacks in `packages/render` (the live dimension, part captions and both rulers were **not** in the
 typeface the pattern prints in); the missing U+2212 and Romanian letters; the hard-coded A4 export
-(**5.5**). *Remaining:* the canvas jump (F.3 — its tool-change half is gone with F.2's reserved
-options row); ~~the parts panel disappearing below ~900 px, which makes a **locked feature
+(**5.5**). *Remaining:* ~~the canvas jump~~ (✅ F.2 and F.3); ~~the parts panel disappearing below ~900 px, which makes a **locked feature
 unreachable**~~ (✅ F.2); ~~disabled controls hiding their reason~~ (✅ F.1);
 ~~Perimeter/Area shown for lines and holes~~ (✅ F.1); ~~number fields clipping their units~~ (✅ F.0);
 ~~terminology collisions~~ (✅ F.1); a failed feature drawn in red over its healthy source (F.5); emoji
@@ -1289,6 +1288,23 @@ Gotchas:
     drawn after the pointer left the canvas**, because the narrower canvas put the test's pointer
     path near a stitch line. `ToolManager.pointerLeave()` now drops it, and a unit test pins it.
   - The new `react-hooks` lint rule moved the tooltip's reset out of an effect and into render.
+
+**F.3 — done** (2026-09-23). **The drawing moves only when the maker moves it.** `Viewport.reframe`
+keeps every window point over the millimetre it was over when the canvas's box changes: the drawer
+opening, the rail collapsing, a breakpoint, the window. `CanvasHost` passes how far the canvas's
+top-left moved. It is property-tested over random sizes and shifts, and written through `toWorld`,
+so the Y flip stays in `view.ts`.
+- **§9.4's mechanism was the cause, not the cure.** "Hold the world point at the canvas centre" is
+  what plain `resize` already did, and the centre moves whenever an edge does, by half the change.
+  The spec states the intent — nothing moves unless the maker moves it — and that intent is what is
+  built. Without the fix, opening F.2's problems drawer moved the drawing **26.7 mm**. An E2E test
+  reads the same millimetre at one window point before and after the drawer opens and the rail
+  collapses, and fails without the fix.
+- **The E2E compensation arithmetic is deleted.** The dimension tests click the corners where they
+  were drawn, and the 4.13 scenario reads the view once and again only after it deliberately
+  reframes.
+- A change of pixel density still resizes plainly: the old and new device pixels are not the same
+  length, and it happens when a window moves between screens, not while drawing.
 #### Deferred opportunities worth keeping visible
 
 - **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and

@@ -91,6 +91,8 @@ export function CanvasHost({
   const dirtyRef = useRef(true);
   const frameRef = useRef(0);
   const hasFittedRef = useRef(false);
+  /** Where the canvas last sat in the window, so a resize can hold the drawing still. */
+  const placedRef = useRef<{ left: number; top: number; dpr: number } | null>(null);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
   const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
@@ -234,14 +236,27 @@ export function CanvasHost({
 
     const resize = (): void => {
       const dpr = window.devicePixelRatio || 1;
-      const { width, height } = container.getBoundingClientRect();
+      const { width, height, left, top } = container.getBoundingClientRect();
       if (width === 0 || height === 0) return;
 
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      viewportRef.current.resize(canvas.width, canvas.height, dpr);
+
+      // The drawing stays where it is in the window whatever moves the canvas's
+      // edges — the drawer, the rail, a breakpoint, the window (F.3). Only the
+      // first sizing, and a change of pixel density, simply resize.
+      const placed = placedRef.current;
+      if (placed !== null && placed.dpr === dpr) {
+        viewportRef.current.reframe(canvas.width, canvas.height, {
+          x: (left - placed.left) * dpr,
+          y: (top - placed.top) * dpr,
+        });
+      } else {
+        viewportRef.current.resize(canvas.width, canvas.height, dpr);
+      }
+      placedRef.current = { left, top, dpr };
 
       if (!hasFittedRef.current) {
         hasFittedRef.current = true;

@@ -536,6 +536,40 @@ test('problems wait in a drawer that says the verdict, and part actions in a men
   });
 });
 
+test('the drawing stays put when the drawer opens or the rail collapses (F.3)', async () => {
+  // The drawing moves only when the maker moves it. Holding the point at the
+  // canvas centre was what moved it: open a drawer below the canvas and the
+  // centre rises, and everything with it. Now the millimetre under any window
+  // point is the same before and after the canvas's box changes.
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+    const inset = panel.locator('label', { hasText: /^Edge margin/ }).locator('input');
+    await inset.fill('60');
+    await inset.press('Enter');
+
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    const readout = window.getByTestId('cursor-readout');
+    const probe = { x: box.x + 400, y: box.y + 120 };
+    const reading = async (): Promise<string> => {
+      await window.mouse.move(probe.x + 1, probe.y);
+      await window.mouse.move(probe.x, probe.y);
+      await expect(readout).not.toContainText('—');
+      return (await readout.textContent()) ?? '';
+    };
+
+    const before = await reading();
+
+    await window.getByTestId('problems-toggle').click();
+    await expect(window.getByTestId('problems-panel').getByTestId('problem-row')).toHaveCount(2);
+    expect(await reading()).toBe(before);
+
+    await window.getByTestId('rail-toggle').click();
+    await expect(window.getByTestId('tool-rail')).toHaveClass(/collapsed/);
+    expect(await reading()).toBe(before);
+  });
+});
+
 test('the options row is always there, so the drawing never jumps (F.2)', async () => {
   // It used to render only for a tool with options, so the canvas grew and
   // shrank by its height on every tool change and the drawing moved ~8.7 mm
@@ -1209,7 +1243,7 @@ test('the panel measures what a feature has, and reads a dimension (F.1)', async
     await window.getByTestId('tool-measure').click();
     const readout = window.getByTestId('cursor-readout');
     const canvas = (await window.getByTestId('editor-canvas').boundingBox())!;
-    // Where 0 and 100 mm land, read from the app: the canvas moves with the tool.
+    // Where the typed millimetres land on screen, read from the app itself.
     // Probed in the canvas's empty top-left: near geometry the readout snaps
     // to it, and a snapped probe gives a wrong view.
     const px = async (xMm: number, yMm: number): Promise<[number, number]> => {
@@ -1314,10 +1348,10 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
 /**
  * How many millimetres one screen pixel covers, read off the cursor readout.
  *
- * A ratio rather than a position, deliberately: the canvas can change size when
- * a panel beside it does, which moves every millimetre under a fixed screen
- * point without the view having gone anywhere. Two readings a known number of
- * pixels apart cancel that out, and what is left is the zoom.
+ * A ratio rather than a position, deliberately: framing a problem moves the
+ * view, and the question is only whether it zoomed. Two readings a known
+ * number of pixels apart cancel the position out, and what is left is the
+ * zoom.
  */
 async function mmPerPx(
   window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
@@ -2127,14 +2161,10 @@ test('a dimension reads the drawing, and keeps reading it', async () => {
     await window.mouse.move(box!.x + 600, box!.y + 400, { steps: 5 });
     await window.mouse.up();
 
-    // Switching away from a draw tool hides the "Draw as" strip, so the canvas
-    // grows and the drawing shifts down within it by half the height gained.
-    // The corners are still where they were in millimetres; this is only where
-    // they now land on screen.
+    // Changing tool moves nothing (F.2, F.3): the corners are where they were
+    // drawn, on screen as in millimetres.
     await window.getByTestId('tool-measure').click();
-    const after = await window.getByTestId('editor-canvas').boundingBox();
-    const shift = (after!.height - box!.height) / 2;
-    const corner = (x: number, y: number): [number, number] => [after!.x + x, after!.y + y + shift];
+    const corner = (x: number, y: number): [number, number] => [box!.x + x, box!.y + y];
 
     // Dimension the two right-hand corners. The measure tool takes corners and
     // nothing else, so these clicks must land on them.
@@ -2177,9 +2207,7 @@ test('a dimension is listed when what it measures is deleted, and cannot be froz
     await window.mouse.up();
 
     await window.getByTestId('tool-measure').click();
-    const after = await window.getByTestId('editor-canvas').boundingBox();
-    const shift = (after!.height - box!.height) / 2;
-    const corner = (x: number, y: number): [number, number] => [after!.x + x, after!.y + y + shift];
+    const corner = (x: number, y: number): [number, number] => [box!.x + x, box!.y + y];
 
     await window.mouse.click(...corner(600, 250));
     await window.mouse.click(...corner(600, 400));

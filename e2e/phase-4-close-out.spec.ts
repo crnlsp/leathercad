@@ -28,12 +28,11 @@ function num(text: string | null): number {
 /**
  * Where a millimetre lands on screen, read from the app itself.
  *
- * The canvas changes size when the tool does — the known jump F.3 fixes — so a
- * pixel offset remembered from one tool is wrong in the next. This reads the
- * cursor readout at two points and solves for the view, and is called again
- * after anything that might have moved it. Grid snapping is off and the probes
- * sit in the canvas's empty lower-left corner, so the readout is the raw
- * pointer position.
+ * The scenario places everything by millimetres, so it reads the cursor
+ * readout at two points and solves for the view. Changing tool no longer moves
+ * the canvas (F.2, F.3), so this is read once, and again only after the view is
+ * deliberately reframed. Grid snapping is off and the probes sit in the
+ * canvas's empty lower-left corner, so the readout is the raw pointer position.
  */
 async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
@@ -176,7 +175,6 @@ test('a card holder, from the first outline to the printed page', async () => {
 
     // ── A card slot on the left half, mirrored across the fold (A2) ──────────
     await useTool(window, 'rectangle', 'cut-out');
-    at = await viewOf(window);
     await drag(window, at(ox + 20, oy + 55), at(ox + 70, oy + 65));
     await expect(features).toHaveText('5');
     await type(window, 'X', ox + 15);
@@ -209,7 +207,6 @@ test('a card holder, from the first outline to the printed page', async () => {
     // Drawn roughly where there is room on screen — below the shell — and then
     // typed to where it belongs, beside it: the typing is the precise part.
     await useTool(window, 'rectangle', 'stitch-allowance');
-    at = await viewOf(window);
     await drag(window, at(ox + 10, oy - 60), at(ox + 60, oy - 25));
     await expect(window.getByTestId('part-count')).toHaveText('2');
     await expect(features).toHaveText('8');
@@ -245,7 +242,6 @@ test('a card holder, from the first outline to the printed page', async () => {
     // ── A label on the shell ─────────────────────────────────────────────────
     await window.getByTestId('parts-list').getByText('Shell').click();
     await useTool(window, 'text');
-    at = await viewOf(window);
     await window.mouse.click(...at(ox + 115, oy + 25));
     await expect(features).toHaveText('10');
     await panel.getByTestId('label-text').fill('Zszyć przed klejeniem');
