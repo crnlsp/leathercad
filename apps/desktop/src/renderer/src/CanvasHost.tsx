@@ -1,5 +1,5 @@
 import { type DocumentStore } from '@leathercad/document';
-import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
+import { describeProblem, diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import { PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 import {
@@ -94,6 +94,8 @@ export function CanvasHost({
   const panningRef = useRef<{ x: number; y: number } | null>(null);
   const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
+  /** Where the pointer is over the canvas, in CSS pixels — where a notice is said. */
+  const [pointerCss, setPointerCss] = useState<{ x: number; y: number } | null>(null);
 
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
@@ -342,6 +344,7 @@ export function CanvasHost({
 
       const rect = event.currentTarget.getBoundingClientRect();
       const raw = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
+      setPointerCss({ x: event.clientX - rect.left, y: event.clientY - rect.top });
 
       if (panning !== null) {
         viewport.panByPx(
@@ -405,6 +408,57 @@ export function CanvasHost({
         onPointerLeave={() => setCursorMm(null)}
         onDoubleClick={handleDoubleClick}
       />
+      {notice !== null && pointerCss !== null && (
+        <CanvasNotice
+          problem={notice}
+          at={pointerCss}
+          bounds={{
+            width: containerRef.current?.clientWidth ?? 0,
+            height: containerRef.current?.clientHeight ?? 0,
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Room kept for the notice, so it can be turned back from the canvas edge. */
+const NOTICE_WIDTH_PX = 320;
+const NOTICE_HEIGHT_PX = 72;
+
+/**
+ * A refused gesture, said beside the pointer (UI Foundations §7.4).
+ *
+ * The status bar said it alone, 700 px from where the maker was looking — so a
+ * fold drawn with nothing selected looked like a tool that did nothing. It
+ * follows the pointer for as long as the tool's notice holds, and turns back
+ * from the canvas edge rather than running off it. The status bar keeps saying
+ * it too; this is where it is seen.
+ */
+function CanvasNotice({
+  problem,
+  at,
+  bounds,
+}: {
+  problem: Problem;
+  at: { x: number; y: number };
+  bounds: { width: number; height: number };
+}) {
+  const right = at.x + 16 + NOTICE_WIDTH_PX > bounds.width;
+  const below = at.y + 20 + NOTICE_HEIGHT_PX > bounds.height;
+  return (
+    <div
+      className="canvas-notice"
+      data-testid="canvas-notice"
+      role="status"
+      style={{
+        left: right ? undefined : at.x + 16,
+        right: right ? Math.max(8, bounds.width - at.x + 12) : undefined,
+        top: below ? undefined : at.y + 20,
+        bottom: below ? Math.max(8, bounds.height - at.y + 12) : undefined,
+      }}
+    >
+      {describeProblem(problem)}
     </div>
   );
 }

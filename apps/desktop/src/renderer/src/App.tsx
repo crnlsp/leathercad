@@ -36,6 +36,7 @@ import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
+import { Tooltip } from './Tooltip.js';
 
 function fileName(path: string): string {
   return path.split('/').pop() ?? path;
@@ -239,28 +240,30 @@ export function App() {
       <header className="app-header">
         <h1>LeatherCAD</h1>
 
-        <input
-          className="project-name"
-          data-testid="project-name"
-          value={storeState.document.project.name}
-          placeholder="Untitled"
-          title="Project name — used for the file name and the PDF footer"
-          onChange={(event) => store.dispatch(setProjectName(event.target.value))}
-        />
+        <Tooltip text="Project name — used for the file name and the PDF footer">
+          <input
+            className="project-name"
+            data-testid="project-name"
+            value={storeState.document.project.name}
+            placeholder="Untitled"
+            onChange={(event) => store.dispatch(setProjectName(event.target.value))}
+          />
+        </Tooltip>
 
         <div className="toolbar history" data-testid="history-group">
-          <button
-            type="button"
-            className="tool"
-            data-testid="undo"
-            disabled={!storeState.canUndo}
-            onClick={() => store.undo()}
-            title={
-              storeState.undoLabel === null ? 'Nothing to undo' : `Undo ${storeState.undoLabel}`
-            }
-          >
-            Undo
-          </button>
+          {/* Names what it will undo. Disabled needs no reason beyond its own
+              label: there is nothing to undo. */}
+          <Tooltip text={storeState.undoLabel === null ? null : `Undo ${storeState.undoLabel}`}>
+            <button
+              type="button"
+              className="tool"
+              data-testid="undo"
+              disabled={!storeState.canUndo}
+              onClick={() => store.undo()}
+            >
+              Undo
+            </button>
+          </Tooltip>
           <button
             type="button"
             className="tool"
@@ -273,37 +276,43 @@ export function App() {
         </div>
 
         <div className="toolbar">
-          <button
-            type="button"
-            className="tool"
-            data-testid="open"
-            onClick={() => void file.open()}
-            title="Open a project (Ctrl+O)"
-          >
-            Open
-          </button>
-          <button
-            type="button"
-            className="tool"
-            data-testid="save"
-            onClick={() => void file.save()}
-            title="Save (Ctrl+S)"
-          >
-            Save{dirty ? ' •' : ''}
-          </button>
-          <button
-            type="button"
-            className="tool"
-            data-testid="export-pdf"
-            onClick={() => void exportPdf()}
-            title="Export a print-ready PDF at 1:1 (Ctrl+E)"
-          >
-            Export PDF
-          </button>
+          <Tooltip text="Open a project (Ctrl+O)">
+            <button
+              type="button"
+              className="tool"
+              data-testid="open"
+              onClick={() => void file.open()}
+            >
+              Open
+            </button>
+          </Tooltip>
+          <Tooltip text="Save (Ctrl+S)">
+            <button
+              type="button"
+              className="tool"
+              data-testid="save"
+              onClick={() => void file.save()}
+            >
+              Save{dirty ? ' •' : ''}
+            </button>
+          </Tooltip>
+          <Tooltip text="Export a print-ready PDF at 1:1 (Ctrl+E)">
+            <button
+              type="button"
+              className="tool"
+              data-testid="export-pdf"
+              onClick={() => void exportPdf()}
+            >
+              Export PDF
+            </button>
+          </Tooltip>
         </div>
 
-        <span className="app-hint">
-          drag to draw · middle-drag or alt-drag to pan · scroll to zoom · Del removes
+        {/* What the active tool does with a click or a drag, true for that tool
+            and no other (F.1). Getting about the canvas comes last, so it is
+            what gives way when the header narrows. */}
+        <span className="app-hint" data-testid="tool-how-to">
+          {howToFor(toolId)} · scroll zooms · middle-drag pans
         </span>
       </header>
 
@@ -437,4 +446,9 @@ function describeDelete(project: Project, pending: PendingDelete): string {
     .flatMap((part) => part.features)
     .filter((f) => pending.ids.includes(f.id));
   return named.length === 1 ? named[0]!.name : `${String(named.length)} features`;
+}
+
+/** The active tool's one line of guidance. */
+function howToFor(toolId: string): string {
+  return ALL_TOOLS.find((tool) => tool.id === toolId)?.howTo ?? '';
 }

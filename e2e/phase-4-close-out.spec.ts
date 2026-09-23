@@ -186,7 +186,7 @@ test('a card holder, from the first outline to the printed page', async () => {
 
     await panel.getByTestId('mirror-across-fold').click();
     await expect(features).toHaveText('6');
-    await expect(panel.getByTestId('mirror-note')).toContainText('Folded across');
+    await expect(panel.getByTestId('mirror-note')).toContainText(/Mirrors .* across/);
     await expect(problems).toContainText('Nothing to fix');
 
     const counterpart = window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]', {
@@ -284,7 +284,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     await window.getByTestId('undo').click();
     await expect(features).toHaveText('10');
     await counterpart.click();
-    await expect(panel.getByTestId('mirror-note')).toContainText('Folded across');
+    await expect(panel.getByTestId('mirror-note')).toContainText(/Mirrors .* across/);
     await expect(problems).toContainText('Nothing to fix');
 
     // ── Saved ────────────────────────────────────────────────────────────────
@@ -332,7 +332,7 @@ test('a card holder, from the first outline to the printed page', async () => {
         has: window.locator('[data-testid^="mirrored-mark-"]'),
       })
       .click();
-    await expect(panel.getByTestId('mirror-note')).toContainText('Folded across');
+    await expect(panel.getByTestId('mirror-note')).toContainText(/Mirrors .* across/);
 
     // ── And onto paper (A8) ──────────────────────────────────────────────────
     await window.getByTestId('export-pdf').click();

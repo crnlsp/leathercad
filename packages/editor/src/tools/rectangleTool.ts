@@ -4,19 +4,26 @@ import { Shapes } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import { createDrawCommit } from './commitDrawn.js';
+import { isDrag } from './gesture.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 
 /**
- * Draws a rectangle by dragging a diagonal.
+ * Draws a rectangle from one corner to the other — by dragging the diagonal,
+ * or by clicking one corner and then the other. Every two-point tool takes
+ * both (F.1): a maker told to drag a line got a rubber band and nothing, and
+ * one who clicks a rectangle should not either.
  *
  * The state is an explicit discriminant, not a scatter of booleans — the one
- * convention that keeps canvas tools from rotting.
+ * convention that keeps canvas tools from rotting. `phase` says which press
+ * the next pointer-up ends: the first (a drag, or the first click of two), or
+ * the second click.
  */
 type State =
   | { readonly kind: 'idle' }
   | {
-      readonly kind: 'dragging';
+      readonly kind: 'spanning';
+      readonly phase: 'first-press' | 'placing' | 'second-press';
       readonly startMm: { x: number; y: number };
       readonly currentMm: { x: number; y: number };
     };
@@ -39,19 +46,31 @@ export function createRectangleTool(nextId: () => string): Tool {
 
     onPointerDown(ctx, event) {
       if (event.button !== 0) return;
+      if (state.kind === 'spanning' && state.phase === 'placing') {
+        state = { ...state, phase: 'second-press' };
+        return;
+      }
       draw.begin();
-      state = { kind: 'dragging', startMm: event.at, currentMm: event.at };
+      state = { kind: 'spanning', phase: 'first-press', startMm: event.at, currentMm: event.at };
       ctx.invalidate();
     },
 
     onPointerMove(ctx, event) {
-      if (state.kind !== 'dragging') return;
+      if (state.kind !== 'spanning') return;
       state = { ...state, currentMm: constrain(state.startMm, event.at, event.shiftKey) };
       ctx.invalidate();
     },
 
     onPointerUp(ctx, event) {
-      if (state.kind !== 'dragging') return;
+      if (state.kind !== 'spanning' || state.phase === 'placing') return;
+
+      // A first press that never became a drag is the first of two clicks:
+      // the corner is placed and the rectangle follows the pointer.
+      if (state.phase === 'first-press' && !isDrag(ctx, state.startMm, event.at)) {
+        state = { ...state, phase: 'placing' };
+        ctx.invalidate();
+        return;
+      }
 
       // Read everything out of the state *before* resetting it. `reset`
       // reassigns the closure variable, and TypeScript keeps the narrowing
@@ -64,9 +83,9 @@ export function createRectangleTool(nextId: () => string): Tool {
       const height = end.y - startMm.y;
       reset(ctx);
 
-      // A click without a drag is not a rectangle. Creating a zero-size part
-      // would leave something invisible in the parts list that cannot be
-      // selected to delete.
+      // A second click on the first corner is not a rectangle. Creating a
+      // zero-size part would leave something invisible in the parts list that
+      // cannot be selected to delete.
       if (Math.abs(width) < 0.01 || Math.abs(height) < 0.01) return;
 
       const origin = { x: Math.min(startMm.x, end.x), y: Math.min(startMm.y, end.y) };
@@ -84,7 +103,7 @@ export function createRectangleTool(nextId: () => string): Tool {
     },
 
     buildOverlay(): DisplayList {
-      if (state.kind !== 'dragging') return { items: [] };
+      if (state.kind !== 'spanning') return { items: [] };
 
       const { startMm, currentMm } = state;
       const width = Math.abs(currentMm.x - startMm.x);

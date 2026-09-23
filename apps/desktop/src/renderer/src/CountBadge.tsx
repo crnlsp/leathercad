@@ -1,4 +1,5 @@
 import type { Badge } from '@leathercad/domain';
+import { Tooltip } from './Tooltip.js';
 
 /**
  * How many problems, coloured by the worst of them.
@@ -16,13 +17,14 @@ export function CountBadge({ badge, title }: { badge: Badge | null; title?: stri
 
   const what = badge.count === 1 ? 'problem' : 'problems';
   return (
-    <span
-      className={`badge severity-${badge.worst}`}
-      data-testid="count-badge"
-      data-severity={badge.worst}
-      title={title ?? `${badge.count} ${what}, worst: ${badge.worst}`}
-    >
-      {badge.count}
-    </span>
+    <Tooltip text={title ?? `${badge.count} ${what}, worst: ${badge.worst}`}>
+      <span
+        className={`badge severity-${badge.worst}`}
+        data-testid="count-badge"
+        data-severity={badge.worst}
+      >
+        {badge.count}
+      </span>
+    </Tooltip>
   );
 }

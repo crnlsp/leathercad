@@ -171,6 +171,10 @@ body {
   width: 100%;
 }
 
+.rail .tooltip-anchor {
+  display: flex;
+}
+
 /* The strip is only sometimes there, so the canvas cannot depend on landing in
    a particular grid row — it takes whatever height the strip leaves. */
 .canvas-column {
@@ -368,7 +372,7 @@ body {
 
 .tool:disabled {
   opacity: 0.4;
-  cursor: default;
+  cursor: not-allowed;
 }
 
 .tool kbd {
@@ -936,4 +940,78 @@ button.problem-row:hover {
    already as narrow as they read well at. */
 .panel {
   overflow-x: hidden;
+}
+
+/* ——— F.1: reasons, tooltips and notices ————————————————————————————————— */
+
+/* A disabled control says why beneath itself (ReasonedButton). The catalogue's
+   own sentence, at label size, dim — present, never loud. */
+.reasoned,
+.reasoned-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reasoned > .tooltip-anchor > .tool,
+.reasoned > .tool {
+  align-self: flex-start;
+}
+
+.reason {
+  max-width: 44ch;
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+.tooltip-anchor {
+  display: inline-flex;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: 280px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #101215;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  color: var(--text);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: normal;
+  pointer-events: none;
+}
+
+.tooltip[hidden] {
+  display: none;
+}
+
+/* A readout whose value is words rather than a number: it may wrap, and it is
+   not set at the measurement weight. */
+.readout .readout-words {
+  min-width: 0;
+  font: var(--t-label);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* A refused gesture, said beside the pointer rather than 700 px away in the
+   status bar (UI Foundations §7.4). The status bar still says it too. */
+.canvas-notice {
+  position: absolute;
+  z-index: 5;
+  max-width: 320px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--warning) 55%, var(--border));
+  border-radius: 3px;
+  background: #16181c;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  color: var(--text);
+  font: var(--t-label);
+  font-weight: 400;
+  pointer-events: none;
 }

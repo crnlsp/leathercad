@@ -20,11 +20,12 @@ import {
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
-import { describeProblem, evaluate, followRefusal, lockRefusal } from '@leathercad/domain';
+import { evaluate, followRefusal, lockRefusal, type ResolvedFeature } from '@leathercad/domain';
 
 import { IRON_PRESETS } from './irons.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
+import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
 import { FeatureEditor } from './featureEditors/index.js';
 
 /**
@@ -106,7 +107,7 @@ export function PropertyPanel({
             // feature. What it *is* belongs beside its name, not three fields
             // down.
             <span className="badge" data-testid="mirrored-badge">
-              Mirrored
+              Mirrors
             </span>
           )}
           {feature.locked && (
@@ -161,15 +162,18 @@ export function PropertyPanel({
                 "where it is" is said by dragging it.
               */
               <p className="panel-note" data-testid="mirror-note">
+                {/* One word per relationship (F.1): Mirrors, and Mirrors … across. */}
                 {feature.source.op.axis.kind === 'fold' ? (
                   <>
-                    Folded across {sourceNameOf(project, feature.source.op.axis.foldId)}. Move that
-                    fold and this follows it; move {sourceNameOf(project, feature.source.sourceId)}{' '}
-                    and this stays its mirror. It cannot be dragged on its own.
+                    Mirrors {sourceNameOf(project, feature.source.sourceId)} across{' '}
+                    {sourceNameOf(project, feature.source.op.axis.foldId)}. Move that fold and this
+                    follows it; move {sourceNameOf(project, feature.source.sourceId)} and this stays
+                    its mirror. It cannot be dragged on its own.
                   </>
                 ) : (
                   <>
-                    Reflected across a line fixed where this was made — it does not follow{' '}
+                    Mirrors {sourceNameOf(project, feature.source.sourceId)} across a line fixed
+                    where this was made — it does not follow{' '}
                     {sourceNameOf(project, feature.source.sourceId)} about. Moving{' '}
                     {sourceNameOf(project, feature.source.sourceId)} moves this the opposite way,
                     and resizing it changes the gap between the two. Drag this piece to place the
@@ -187,22 +191,8 @@ export function PropertyPanel({
         </fieldset>
       </section>
 
-      {/*
-        A label's path is the box its words occupy, which has a perimeter and
-        an area that mean nothing to anyone. Measuring is for geometry.
-      */}
-      {resolved?.ok === true && feature.kind !== 'text-label' && (
-        <section className="panel-section">
-          <div className="panel-heading">Measured</div>
-          <div className="readout">
-            <span>Perimeter</span>
-            <b>{formatMm(PathOps.length(resolved.path))}</b>
-          </div>
-          <div className="readout">
-            <span>Area</span>
-            <b>{formatNumber(PathOps.area(resolved.path) / 100, 2)} cm²</b>
-          </div>
-        </section>
+      {resolved?.ok === true && (
+        <Measured project={project} feature={feature} resolved={resolved} />
       )}
 
       {problems.length > 0 && (
@@ -221,10 +211,15 @@ export function PropertyPanel({
         Asked before the gesture is offered, from the same query the command
         checks, so a button that would do nothing says why instead (X1).
       */}
-      <div className="toolbar">
-        <FlipButton store={store} project={project} feature={feature} axis="horizontal" />
-        <FlipButton store={store} project={project} feature={feature} axis="vertical" />
-      </div>
+      <section className="panel-section">
+        <div className="panel-heading small">Flip this piece</div>
+        <ReasonedRow
+          buttons={[
+            flipButton(store, project, feature, 'horizontal'),
+            flipButton(store, project, feature, 'vertical'),
+          ]}
+        />
+      </section>
 
       {/*
         Mirror is the other thing entirely: flip changes this piece, mirror
@@ -232,36 +227,28 @@ export function PropertyPanel({
         because that is where the maker looks for both, and named differently
         because they are not variants of each other.
       */}
-      <div className="toolbar">
-        <MirrorButton
+      <section className="panel-section">
+        <div className="panel-heading small">Mirror into a counterpart</div>
+        <ReasonedRow
+          buttons={[
+            mirrorButton(store, project, feature, 'horizontal', nextId),
+            mirrorButton(store, project, feature, 'vertical', nextId),
+          ]}
+        />
+        {/*
+          On its own row: three buttons do not fit the panel's width, and a
+          properties panel that scrolls sideways is a broken one. It earns the
+          room — it is the only one of the three that makes a counterpart which
+          keeps following something.
+        */}
+        <FoldMirrorButton
           store={store}
           project={project}
+          part={part}
           feature={feature}
-          axis="horizontal"
           nextId={nextId}
         />
-        <MirrorButton
-          store={store}
-          project={project}
-          feature={feature}
-          axis="vertical"
-          nextId={nextId}
-        />
-      </div>
-
-      {/*
-        On its own row: three buttons do not fit the panel's width, and a
-        properties panel that scrolls sideways is a broken one. It earns the
-        room — it is the only one of the three that makes a counterpart which
-        keeps following something.
-      */}
-      <FoldMirrorButton
-        store={store}
-        project={project}
-        part={part}
-        feature={feature}
-        nextId={nextId}
-      />
+      </section>
 
       <DeriveActions
         store={store}
@@ -298,46 +285,30 @@ function sourceNameOf(project: Project, sourceId: string): string {
 }
 
 /** A counterpart that stays matched, or saying why one cannot be made. */
-function MirrorButton({
-  store,
-  project,
-  feature,
-  axis,
-  nextId,
-}: {
-  store: DocumentStore;
-  project: Project;
-  feature: Feature;
-  axis: MirrorDirection;
-  nextId: () => string;
-}) {
-  const refusal = mirrorRefusal(project, [feature.id], axis);
+function mirrorButton(
+  store: DocumentStore,
+  project: Project,
+  feature: Feature,
+  axis: MirrorDirection,
+  nextId: () => string,
+): ReasonedButtonProps {
   const horizontal = axis === 'horizontal';
-
-  return (
-    <button
-      type="button"
-      className="tool"
-      data-testid={horizontal ? 'mirror-horizontal' : 'mirror-vertical'}
-      disabled={refusal !== null}
-      title={
-        refusal === null
-          ? `A counterpart ${horizontal ? 'to the right' : 'below'}, mirrored across this piece's ` +
-            `${horizontal ? 'right' : 'bottom'} edge as it is now. It keeps following this piece's ` +
-            'shape; the mirror line stays where it is put.'
-          : describeProblem(refusal)
-      }
-      onClick={() => {
-        const placement = mirrorAxisFor(project, [feature.id], axis);
-        if (placement === null) return;
-        const id = nextId();
-        store.dispatch(mirrorFeatures([feature.id], [id], placement));
-        store.select([id]);
-      }}
-    >
-      {horizontal ? 'Mirror ↔' : 'Mirror ↕'}
-    </button>
-  );
+  return {
+    testId: horizontal ? 'mirror-horizontal' : 'mirror-vertical',
+    reason: mirrorRefusal(project, [feature.id], axis),
+    hint:
+      `A counterpart ${horizontal ? 'to the right' : 'below'}, mirrored across this piece's ` +
+      `${horizontal ? 'right' : 'bottom'} edge as it is now. It keeps following this piece's ` +
+      'shape; the mirror line stays where it is put.',
+    onClick: () => {
+      const placement = mirrorAxisFor(project, [feature.id], axis);
+      if (placement === null) return;
+      const id = nextId();
+      store.dispatch(mirrorFeatures([feature.id], [id], placement));
+      store.select([id]);
+    },
+    children: horizontal ? 'Mirror ↔' : 'Mirror ↕',
+  };
 }
 
 /**
@@ -366,19 +337,12 @@ function FoldMirrorButton({
   if (folds.length !== 1) return null;
 
   const fold = folds[0]!;
-  const refusal = foldMirrorRefusal(project, [feature.id], fold.id);
 
   return (
-    <button
-      type="button"
-      className="tool"
-      data-testid="mirror-across-fold"
-      disabled={refusal !== null}
-      title={
-        refusal === null
-          ? `A counterpart across ${fold.name}, which re-mirrors whenever that fold moves`
-          : describeProblem(refusal)
-      }
+    <ReasonedButton
+      testId="mirror-across-fold"
+      reason={foldMirrorRefusal(project, [feature.id], fold.id)}
+      hint={`A counterpart across ${fold.name}, which re-mirrors whenever that fold moves`}
       onClick={() => {
         const id = nextId();
         store.dispatch(mirrorAcrossFold([feature.id], [id], fold.id));
@@ -386,7 +350,7 @@ function FoldMirrorButton({
       }}
     >
       Mirror across fold
-    </button>
+    </ReasonedButton>
   );
 }
 
@@ -400,53 +364,33 @@ function DeleteButton({
   feature: Feature;
   requestDelete: (ids: readonly string[]) => void;
 }) {
-  const refusal = lockRefusal(project, [feature.id]);
-
   return (
-    <button
-      type="button"
-      className="tool danger"
-      data-testid="delete-feature"
-      disabled={refusal !== null}
-      title={refusal === null ? undefined : describeProblem(refusal)}
+    <ReasonedButton
+      testId="delete-feature"
+      variant="destructive"
+      reason={lockRefusal(project, [feature.id])}
       onClick={() => requestDelete([feature.id])}
     >
       Delete
-    </button>
+    </ReasonedButton>
   );
 }
 
 /** Mirroring the piece about its own centre, or saying why it cannot be. */
-function FlipButton({
-  store,
-  project,
-  feature,
-  axis,
-}: {
-  store: DocumentStore;
-  project: Project;
-  feature: Feature;
-  axis: FlipAxis;
-}) {
-  const refusal = flipRefusal(project, [feature.id], axis);
+function flipButton(
+  store: DocumentStore,
+  project: Project,
+  feature: Feature,
+  axis: FlipAxis,
+): ReasonedButtonProps {
   const horizontal = axis === 'horizontal';
-
-  return (
-    <button
-      type="button"
-      className="tool"
-      data-testid={horizontal ? 'flip-horizontal' : 'flip-vertical'}
-      disabled={refusal !== null}
-      title={
-        refusal === null
-          ? `Mirror ${horizontal ? 'left to right' : 'top to bottom'}, about this piece's centre`
-          : describeProblem(refusal)
-      }
-      onClick={() => store.dispatch(flipFeatures([feature.id], axis))}
-    >
-      {horizontal ? 'Flip ↔' : 'Flip ↕'}
-    </button>
-  );
+  return {
+    testId: horizontal ? 'flip-horizontal' : 'flip-vertical',
+    reason: flipRefusal(project, [feature.id], axis),
+    hint: `Turn it over ${horizontal ? 'left to right' : 'top to bottom'}, about its own centre. Nothing stays linked.`,
+    onClick: () => store.dispatch(flipFeatures([feature.id], axis)),
+    children: horizontal ? 'Flip ↔' : 'Flip ↕',
+  };
 }
 
 /**
@@ -472,11 +416,10 @@ function DeriveActions({
 }) {
   if (feature.kind === 'cut-contour') {
     return (
-      <button
-        type="button"
-        className="tool"
-        data-testid="add-stitch-line"
-        title="A stitch line that follows this edge at a fixed margin, and keeps following it"
+      <ReasonedButton
+        testId="add-stitch-line"
+        reason={null}
+        hint="A stitch line that follows this edge at a fixed margin, and keeps following it"
         onClick={() => {
           const id = nextId();
           // No inset given: the command reads the project's stitch margin, so
@@ -486,7 +429,7 @@ function DeriveActions({
         }}
       >
         Add stitch line
-      </button>
+      </ReasonedButton>
     );
   }
 
@@ -500,11 +443,10 @@ function DeriveActions({
           project={project}
           nextId={nextId}
         />
-        <button
-          type="button"
-          className="tool"
-          data-testid="add-stitch-holes"
-          title="Holes along this line, at the pitch of your iron"
+        <ReasonedButton
+          testId="add-stitch-holes"
+          reason={null}
+          hint="Holes along this line, at the pitch of your iron"
           onClick={() => {
             const id = nextId();
             store.dispatch(
@@ -521,7 +463,7 @@ function DeriveActions({
           }}
         >
           Add holes
-        </button>
+        </ReasonedButton>
       </>
     );
   }
@@ -550,19 +492,11 @@ function AllowanceButton({
   feature: Feature;
   nextId: () => string;
 }) {
-  const refusal = allowanceRefusal(project, feature.id);
-
   return (
-    <button
-      type="button"
-      className="tool"
-      data-testid="add-allowance"
-      disabled={refusal !== null}
-      title={
-        refusal === null
-          ? "The cut edge, that far outside this seam — and it follows the seam's shape"
-          : describeProblem(refusal)
-      }
+    <ReasonedButton
+      testId="add-allowance"
+      reason={allowanceRefusal(project, feature.id)}
+      hint="The cut edge, that far outside this seam — and it follows the seam's shape"
       onClick={() => {
         const id = nextId();
         store.dispatch(addAllowance(part.id, id, feature.id));
@@ -570,7 +504,7 @@ function AllowanceButton({
       }}
     >
       Add seam allowance
-    </button>
+    </ReasonedButton>
   );
 }
 
@@ -595,8 +529,10 @@ function findSelected(
 
 function labelFor(feature: Feature): string {
   switch (feature.kind) {
+    // The maker's words, the ones the drawing modes already use — not the
+    // model's "cut line (outer)" beside a feature named "Outline" (F.1).
     case 'cut-contour':
-      return feature.role === 'outer' ? 'Cut line (outer)' : 'Cut line (inner)';
+      return feature.role === 'outer' ? 'Outline' : 'Cut-out';
     case 'stitch-line':
       return 'Stitch line';
     case 'measurement':
@@ -644,14 +580,13 @@ function FollowsField({
       .map((candidate) => ({ id: candidate.id, label: `${part.name} › ${candidate.name}` })),
   );
 
-  // Named for the relationship it actually is. "Follows" is right for a stitch
-  // line inset from an outline; a counterpart is mirrored *from* its original,
-  // and the word is what tells the maker which of the two they are looking at.
+  // Named for the relationship it actually is, one word each (F.1): a stitch
+  // line Follows its outline; a counterpart Mirrors its original.
   const mirrored = isMirrored(feature);
 
   return (
     <label className="field">
-      <span className="field-label">{mirrored ? 'Mirrored from' : 'Follows'}</span>
+      <span className="field-label">{mirrored ? 'Mirrors' : 'Follows'}</span>
       <select
         data-testid="follows"
         value={current}
@@ -664,5 +599,85 @@ function FollowsField({
         ))}
       </select>
     </label>
+  );
+}
+
+/**
+ * What there is to measure on this feature, and nothing that means nothing.
+ *
+ * A perimeter and an area are facts about a closed shape. A line has a length
+ * and no area; a stitch line's length is its thread run; a hole's size is its
+ * diameter, already in its editor; a hole set's numbers are its count and
+ * spacing; and a label's path is only the box its words occupy (F.1, audit
+ * §3.6). A dimension's value is read from the same laid-out label the canvas
+ * draws and the PDF prints, so the three cannot disagree.
+ */
+function Measured({
+  project,
+  feature,
+  resolved,
+}: {
+  project: Project;
+  feature: Feature;
+  resolved: Extract<ResolvedFeature, { ok: true }>;
+}) {
+  if (
+    feature.kind === 'text-label' ||
+    feature.kind === 'hardware-hole' ||
+    feature.kind === 'stitch-hole-set'
+  ) {
+    return null;
+  }
+
+  if (feature.kind === 'measurement') {
+    const source = feature.source;
+    const names = [
+      ...new Set(
+        source.kind === 'measurement'
+          ? [source.a.featureId, source.b.featureId].map((id) => sourceNameOf(project, id))
+          : [],
+      ),
+    ];
+    return (
+      <section className="panel-section">
+        <div className="readout key">
+          <span>Reads</span>
+          <b data-testid="dimension-value">
+            {resolved.text === undefined ? '—' : `${resolved.text.layout.text} mm`}
+          </b>
+        </div>
+        <div className="readout">
+          <span>Measures</span>
+          <b className="readout-words">{names.join(' · ')}</b>
+        </div>
+      </section>
+    );
+  }
+
+  const length = <b data-testid="measured-length">{formatMm(PathOps.length(resolved.path))}</b>;
+  if (!resolved.path.closed || feature.kind === 'stitch-line') {
+    return (
+      <section className="panel-section">
+        <div className="panel-heading">Measured</div>
+        <div className="readout">
+          <span>Length</span>
+          {length}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="panel-section">
+      <div className="panel-heading">Measured</div>
+      <div className="readout">
+        <span>Perimeter</span>
+        {length}
+      </div>
+      <div className="readout">
+        <span>Area</span>
+        <b>{formatNumber(PathOps.area(resolved.path) / 100, 2)} cm²</b>
+      </div>
+    </section>
   );
 }

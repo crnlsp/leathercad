@@ -4,6 +4,7 @@ import { Shapes, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import { createDrawCommit } from './commitDrawn.js';
+import { isDrag } from './gesture.js';
 
 import type { Tool, ToolContext } from '../tool.js';
 
@@ -16,10 +17,18 @@ import type { Tool, ToolContext } from '../tool.js';
  *
  * No Shift constraint. A circle is already uniform, so there is nothing for it
  * to hold square.
+ *
+ * A drag, or two clicks — the centre, then the rim — like every two-point
+ * tool (F.1). `phase` says which press the next pointer-up ends.
  */
 type State =
   | { readonly kind: 'idle' }
-  | { readonly kind: 'dragging'; readonly centreMm: Vec2; readonly currentMm: Vec2 };
+  | {
+      readonly kind: 'spanning';
+      readonly phase: 'first-press' | 'placing' | 'second-press';
+      readonly centreMm: Vec2;
+      readonly currentMm: Vec2;
+    };
 
 /** Below this a drag is a misclick, and a zero-radius part cannot be selected to delete. */
 const MIN_RADIUS_MM = 0.01;
@@ -42,19 +51,31 @@ export function createCircleTool(nextId: () => string): Tool {
 
     onPointerDown(ctx, event) {
       if (event.button !== 0) return;
+      if (state.kind === 'spanning' && state.phase === 'placing') {
+        state = { ...state, phase: 'second-press' };
+        return;
+      }
       draw.begin();
-      state = { kind: 'dragging', centreMm: event.at, currentMm: event.at };
+      state = { kind: 'spanning', phase: 'first-press', centreMm: event.at, currentMm: event.at };
       ctx.invalidate();
     },
 
     onPointerMove(ctx, event) {
-      if (state.kind !== 'dragging') return;
+      if (state.kind !== 'spanning') return;
       state = { ...state, currentMm: event.at };
       ctx.invalidate();
     },
 
     onPointerUp(ctx, event) {
-      if (state.kind !== 'dragging') return;
+      if (state.kind !== 'spanning' || state.phase === 'placing') return;
+
+      // A first press that never became a drag places the centre; the rim is
+      // the next click.
+      if (state.phase === 'first-press' && !isDrag(ctx, state.centreMm, event.at)) {
+        state = { ...state, phase: 'placing' };
+        ctx.invalidate();
+        return;
+      }
 
       // Read the state out before resetting: `reset` reassigns the closure
       // variable, and the narrowing survives the call because the assignment
@@ -75,7 +96,7 @@ export function createCircleTool(nextId: () => string): Tool {
     },
 
     buildOverlay(): DisplayList {
-      if (state.kind !== 'dragging') return { items: [] };
+      if (state.kind !== 'spanning') return { items: [] };
 
       const { centreMm, currentMm } = state;
       const radius = distance(centreMm, currentMm);

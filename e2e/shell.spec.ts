@@ -986,6 +986,147 @@ test('drawing a fold line with nothing selected changes nothing, and says why', 
     await expect(window.getByTestId('tool-notice')).toContainText('Select a part');
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await expect(window.getByTestId('parts-list')).toContainText('No parts yet');
+
+    // And said beside the pointer, where the maker is looking — the status bar
+    // alone is 700 px away (F.1). The same sentence, from the same problem.
+    const notice = window.getByTestId('canvas-notice');
+    await expect(notice).toContainText('Select a part');
+    const at = await notice.boundingBox();
+    expect(Math.abs(at!.x - (box!.x + 300))).toBeLessThan(40);
+    expect(Math.abs(at!.y - (box!.y + 300))).toBeLessThan(40);
+  });
+});
+
+test('every two-point tool takes a drag or two clicks (F.1)', async () => {
+  // Rectangle and Circle were drag-only and Line click-only, while the header
+  // said "drag to draw" for all of them. Now each takes either gesture, and the
+  // header says how the active tool is used.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const click = async (x: number, y: number): Promise<void> => {
+      await window.mouse.move(box!.x + x, box!.y + y);
+      await window.mouse.down();
+      await window.mouse.up();
+    };
+
+    await window.getByTestId('tool-rectangle').click();
+    await expect(window.getByTestId('tool-how-to')).toContainText('click both corners');
+    await click(150, 150);
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await click(300, 260);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    await window.getByTestId('tool-circle').click();
+    await expect(window.getByTestId('tool-how-to')).toContainText('the centre and then the rim');
+    await click(500, 200);
+    await click(540, 230);
+    await expect(window.getByTestId('part-count')).toHaveText('2');
+
+    // A fold on the selected circle, dragged rather than clicked.
+    await window.getByTestId('tool-line').click();
+    await expect(window.getByTestId('tool-how-to')).toContainText('Drag end to end');
+    await window.getByTestId('draw-as-fold').click();
+    await expect(window.getByTestId('draw-as-fold')).toHaveAttribute('aria-pressed', 'true');
+    await window.mouse.move(box!.x + 490, box!.y + 215);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 510, box!.y + 215, { steps: 4 });
+    await window.mouse.up();
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+
+    // Polyline and Arc keep their click-by-click model, and say so.
+    await window.getByTestId('tool-polyline').click();
+    await expect(window.getByTestId('tool-how-to')).toContainText('Click each point');
+    await window.getByTestId('tool-arc').click();
+    await expect(window.getByTestId('tool-how-to')).toContainText('Click the start, the end');
+    await window.getByTestId('tool-select').click();
+    await expect(window.getByTestId('tool-how-to')).toContainText('Shift-click adds or removes');
+  });
+});
+
+test('a tool says how it is used, on hover and on focus (F.1)', async () => {
+  // A real tooltip replaces the native title: delayed on hover so sweeping the
+  // rail does not flicker, immediate on focus, and tied to the control.
+  await withFreshApp(async (window) => {
+    const polyline = window.getByTestId('tool-polyline');
+    await polyline.hover();
+    const tip = window.getByRole('tooltip', { name: /Enter finishes/ });
+    await expect(tip).toBeVisible();
+    await expect(polyline).toHaveAttribute('aria-describedby', /.+/);
+
+    await window.mouse.move(600, 600);
+    await expect(tip).toBeHidden();
+
+    await polyline.focus();
+    await expect(tip).toBeVisible();
+  });
+});
+
+test('the panel measures what a feature has, and reads a dimension (F.1)', async () => {
+  // A line has a length and no area; a hole set's numbers are its count and
+  // spacing; a dimension's value is in the panel as well as on the drawing.
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+    await expect(panel.getByText('Perimeter')).toBeVisible();
+    await expect(panel.getByText('Area')).toBeVisible();
+
+    await window.getByTestId('parts-list').getByText('Stitch line').click();
+    await expect(panel.getByText('Length')).toBeVisible();
+    await expect(panel.getByText('Area')).toHaveCount(0);
+
+    await window.getByTestId('parts-list').getByText('Stitch holes').click();
+    await expect(panel.getByTestId('hole-count')).toBeVisible();
+    await expect(panel.getByText('Measured')).toHaveCount(0);
+
+    // Type the outline to a known size, then dimension its right-hand edge.
+    await window.getByTestId('parts-list').getByText('Outline').click();
+    for (const [label, value] of [
+      ['X', '0'],
+      ['Y', '0'],
+      ['Width', '105'],
+      ['Height', '75'],
+    ] as const) {
+      const input = panel.locator('label', { hasText: new RegExp(`^${label}`) }).locator('input');
+      await input.fill(value);
+      await input.press('Enter');
+    }
+    await window.getByTestId('tool-measure').click();
+    // The options strip goes with a draw tool, and the canvas grows into its
+    // place: read the view only once it has (the jump F.3 fixes).
+    await expect(window.getByTestId('tool-options')).toHaveCount(0);
+    const readout = window.getByTestId('cursor-readout');
+    const canvas = (await window.getByTestId('editor-canvas').boundingBox())!;
+    // Where 0 and 100 mm land, read from the app: the canvas moves with the tool.
+    // Probed in the canvas's empty top-left: near geometry the readout snaps
+    // to it, and a snapped probe gives a wrong view.
+    const px = async (xMm: number, yMm: number): Promise<[number, number]> => {
+      await window.mouse.move(canvas.x + 40, canvas.y + 40);
+      await expect(readout).not.toContainText('—');
+      const a = (await readout.textContent())!.split(',').map(num);
+      await window.mouse.move(canvas.x + 140, canvas.y + 140);
+      await expect
+        .poll(async () => (await readout.textContent())!.split(',').map(num)[0])
+        .not.toBe(a[0]);
+      const b = (await readout.textContent())!.split(',').map(num);
+      const perPx = (b[0]! - a[0]!) / 100;
+      return [canvas.x + 40 + (xMm - a[0]!) / perPx, canvas.y + 40 - (yMm - a[1]!) / perPx];
+    };
+    await window.mouse.click(...(await px(105, 0)));
+    await window.mouse.click(...(await px(105, 75)));
+    await expect(window.getByTestId('feature-count')).toHaveText('4');
+
+    // At the dimension's own precision, one decimal by default — the same
+    // characters the drawing shows.
+    await expect(panel.getByTestId('dimension-value')).toHaveText('75.0 mm');
+    await expect(panel).toContainText('Measures');
+
+    // Read, not stored: retype the outline and the panel follows the drawing.
+    await window.getByTestId('tool-select').click();
+    await window.getByTestId('parts-list').getByText('Outline').click();
+    const height = panel.locator('label', { hasText: /^Height/ }).locator('input');
+    await height.fill('80');
+    await height.press('Enter');
+    await window.getByTestId('parts-list').getByText('Dimension').click();
+    await expect(panel.getByTestId('dimension-value')).toHaveText('80.0 mm');
   });
 });
 
@@ -1361,7 +1502,12 @@ test('a label cannot be flipped, and the button says why', async () => {
 
     // Offered, but not as something that would quietly do nothing.
     await expect(panel.getByTestId('flip-horizontal')).toBeDisabled();
-    await expect(panel.getByTestId('flip-horizontal')).toHaveAttribute('title', /read backwards/i);
+    // And it says why where it can be read, not in a tooltip on a control that
+    // cannot be hovered (F.1) — once for the pair, since both share the reason.
+    const flipRow = panel.locator('.reasoned-row', { has: window.getByTestId('flip-horizontal') });
+    const reason = flipRow.getByTestId('reason');
+    await expect(reason).toHaveCount(1);
+    await expect(reason).toBeVisible();
 
     // The panel still flips the panel itself.
     await window.getByTestId('parts-list').getByText('Outline').click();
@@ -1447,8 +1593,10 @@ test('a refused outline keeps its points, and closing it is the correction', asy
     // The notice element only exists while there is something to say.
     await expect(window.getByTestId('tool-notice')).toHaveCount(0);
     // A cut contour, which is what an outline is — not the marking line an
-    // open run used to be quietly filed as.
-    await expect(window.getByTestId('property-panel')).toContainText('Cut line');
+    // open run used to be quietly filed as. Headed in the maker's word (F.1).
+    await expect(window.getByTestId('property-panel').locator('.panel-heading').nth(1)).toHaveText(
+      'Outline',
+    );
   });
 });
 
@@ -1509,7 +1657,7 @@ test('the parts panel shows what follows what, and locks it down', async () => {
     // opening a dialog about a delete that was never going to happen.
     const remove = window.getByTestId('property-panel').getByTestId('delete-feature');
     await expect(remove).toBeDisabled();
-    await expect(remove).toHaveAttribute('title', /locked/i);
+    await expect(window.getByTestId('delete-feature-reason')).toContainText(/locked/i);
 
     // Unlock, and it deletes as it always did.
     await outline.click();
@@ -1627,7 +1775,7 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
     // it is badged, its relationship is named, and the note says what the
     // fixed mirror line means before the maker meets it by accident.
     await expect(panel.getByTestId('mirrored-badge')).toBeVisible();
-    await expect(panel).toContainText('Mirrored from');
+    await expect(panel).toContainText('Mirrors');
     await expect(panel.getByTestId('mirror-note')).toContainText('opposite way');
     await expect(panel.getByTestId('mirror-note')).toContainText('changes the gap');
     await expect(panel.getByTestId('follows')).toBeVisible();
@@ -1724,7 +1872,7 @@ test('the wallet scenario: card slots mirrored across a fold that then moves', a
     // Fold it across the crease.
     await panel.getByTestId('mirror-across-fold').click();
     await expect(window.getByTestId('feature-count')).toHaveText('4');
-    await expect(panel.getByTestId('mirror-note')).toContainText('Folded across');
+    await expect(panel.getByTestId('mirror-note')).toContainText(/Mirrors .* across/);
     await expect(panel.getByTestId('mirrored-badge')).toBeVisible();
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
 
@@ -1765,7 +1913,9 @@ test('an outline cannot be completed by mirroring it across its own fold', async
 
     const fold = panel.getByTestId('mirror-across-fold');
     await expect(fold).toBeDisabled();
-    await expect(fold).toHaveAttribute('title', /one edge|second piece/i);
+    await expect(panel.getByTestId('mirror-across-fold-reason')).toContainText(
+      /one edge|second piece/i,
+    );
   });
 });
 
@@ -1828,7 +1978,7 @@ test('a seam allowance can be added to a stitch line drawn earlier', async () =>
     // already has an edge (S5).
     await window.getByTestId('add-stitch-line').click();
     await expect(panel.getByTestId('add-allowance')).toBeDisabled();
-    await expect(panel.getByTestId('add-allowance')).toHaveAttribute('title', /outline|edge/i);
+    await expect(panel.getByTestId('add-allowance-reason')).toContainText(/outline|edge/i);
 
     // Draw a stitch line on a part of its own, and it can.
     await window.getByTestId('tool-rectangle').click();

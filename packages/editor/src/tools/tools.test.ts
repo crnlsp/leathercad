@@ -109,7 +109,7 @@ describe('rectangle tool', () => {
     expect(shape.height).toBeCloseTo(100, 9);
   });
 
-  it('ignores a click that never became a drag', () => {
+  it('draws nothing from a click alone', () => {
     // A zero-size part would be invisible in the canvas and impossible to
     // select, but would still sit in the parts list.
     const { ctx, store } = harness();
@@ -117,6 +117,39 @@ describe('rectangle tool', () => {
 
     expect(store.getState().document.project.parts).toHaveLength(0);
     expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('takes two clicks as well as a drag: one corner, then the other (F.1)', () => {
+    const { ctx, store } = harness();
+    const tool = createRectangleTool(nextId);
+
+    tool.onPointerDown?.(ctx, pointer({ x: 10, y: 20 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 10, y: 20 }));
+    // Between the clicks the rectangle follows the pointer, with its numbers.
+    tool.onPointerMove?.(ctx, pointer({ x: 60, y: 50 }));
+    expect(tool.buildOverlay?.(ctx).items.length).toBeGreaterThan(0);
+    tool.onPointerDown?.(ctx, pointer({ x: 115, y: 95 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 115, y: 95 }));
+
+    const shape = firstRect(store)!;
+    expect(shape.origin).toEqual({ x: 10, y: 20 });
+    expect(shape.width).toBeCloseTo(105, 9);
+    expect(shape.height).toBeCloseTo(75, 9);
+    expect(store.getState().document.project.parts).toHaveLength(1);
+  });
+
+  it('Escape abandons a rectangle begun with a click', () => {
+    const { ctx, store } = harness();
+    const tool = createRectangleTool(nextId);
+
+    tool.onPointerDown?.(ctx, pointer({ x: 10, y: 20 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 10, y: 20 }));
+    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    tool.onPointerDown?.(ctx, pointer({ x: 115, y: 95 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 115, y: 95 }));
+
+    // The second click began a new rectangle rather than finishing the old one.
+    expect(store.getState().document.project.parts).toHaveLength(0);
   });
 
   it('selects what it just drew', () => {

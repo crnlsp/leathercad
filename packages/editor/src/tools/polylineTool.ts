@@ -2,6 +2,7 @@ import { formatAngle, formatMm } from '@leathercad/core';
 import { dist, polyline, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
+import { isDrag } from './gesture.js';
 import { createDrawCommit } from './commitDrawn.js';
 
 import type { Tool, ToolContext } from '../tool.js';
@@ -131,6 +132,17 @@ function polylineLike(
       if (state.kind !== 'drawing') return;
       state = { ...state, cursor: constrain(state.points, event.at, event.shiftKey) };
       ctx.invalidate();
+    },
+
+    // A line takes a drag as well as two clicks, like every two-point tool
+    // (F.1). A polyline does not: each of its presses is a point, and a drag
+    // between them has no second meaning to give.
+    onPointerUp(ctx, event) {
+      if (config.maxPoints !== 2 || event.button !== 0) return;
+      if (state.kind !== 'drawing' || state.points.length !== 1) return;
+      const first = state.points[0]!;
+      if (!isDrag(ctx, first, event.at)) return;
+      finish(ctx, [first, constrain(state.points, event.at, event.shiftKey)], false);
     },
 
     notice: (ctx) => draw.notice(ctx),

@@ -16,6 +16,7 @@ import {
 } from '@leathercad/domain';
 
 import { CountBadge } from './CountBadge.js';
+import { Tooltip } from './Tooltip.js';
 
 /**
  * Every part in the project, and what each one is made of.
@@ -54,7 +55,9 @@ export function PartsList({
     return (
       <aside className="panel" data-testid="parts-list">
         <h2>Parts</h2>
-        <p className="panel-empty">No parts yet. Press R and drag to draw one.</p>
+        <p className="panel-empty">
+          No parts yet. Press R, then drag or click two corners to draw one.
+        </p>
       </aside>
     );
   }
@@ -156,15 +159,16 @@ function PartSection({
       )}
 
       <div className="part-actions">
-        <button
-          type="button"
-          className="tool"
-          data-testid={`duplicate-part-${part.id}`}
-          title="A copy beside this one, with its own stitching"
-          onClick={() => onDuplicatePart(part.id)}
-        >
-          Duplicate
-        </button>
+        <Tooltip text="A copy beside this one, with its own stitching">
+          <button
+            type="button"
+            className="tool"
+            data-testid={`duplicate-part-${part.id}`}
+            onClick={() => onDuplicatePart(part.id)}
+          >
+            Duplicate
+          </button>
+        </Tooltip>
         {part.features.length > 0 && (
           <button
             type="button"
@@ -220,9 +224,11 @@ function FeatureRow({
             // A counterpart already nests under its original here, but the
             // nesting alone reads the same as a stitch line's. This says which
             // relationship it is, in the width of one glyph.
-            <span className="row-mark" data-testid={`mirrored-mark-${feature.id}`} title="Mirrored">
-              ⇄
-            </span>
+            <Tooltip text="Mirrors the feature it nests under">
+              <span className="row-mark" data-testid={`mirrored-mark-${feature.id}`}>
+                ⇄
+              </span>
+            </Tooltip>
           )}
           {/* Only what names this feature: a part's own problems count on the
               part's row, not on every feature in it. */}
@@ -287,16 +293,17 @@ function IconToggle({
   const label = on ? onLabel : offLabel;
 
   return (
-    <button
-      type="button"
-      className={on ? 'icon-toggle' : 'icon-toggle off'}
-      data-testid={testId}
-      aria-pressed={on}
-      aria-label={label}
-      title={label}
-      onClick={onToggle}
-    >
-      {glyph}
-    </button>
+    <Tooltip text={label}>
+      <button
+        type="button"
+        className={on ? 'icon-toggle' : 'icon-toggle off'}
+        data-testid={testId}
+        aria-pressed={on}
+        aria-label={label}
+        onClick={onToggle}
+      >
+        {glyph}
+      </button>
+    </Tooltip>
   );
 }

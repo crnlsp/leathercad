@@ -2,6 +2,9 @@
 
 Date: 2026-09-04
 Status: implemented (slice 3.5a)
+Amended: UI Foundations F.1 (2026-09-23) added a **Place** group (Hardware, Text, Measure) between
+Draw and Modify, grouping tools by how they are used, and gave each tool one line of guidance for
+the header and its tooltip. See `ui-foundations-decisions.md` §2.1.
 Build before: slice 3.6 (circle and arc tools)
 
 ## Problem

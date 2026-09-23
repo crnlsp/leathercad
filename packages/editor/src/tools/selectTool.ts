@@ -5,6 +5,7 @@ import { pathItem, type DisplayList } from '@leathercad/render';
 
 import { featuresWithin, hitTest } from '../hitTest.js';
 import type { Tool, ToolContext } from '../tool.js';
+import { isDrag } from './gesture.js';
 
 type State =
   | { readonly kind: 'idle' }
@@ -21,14 +22,6 @@ type State =
       readonly startMm: { x: number; y: number };
       readonly currentMm: { x: number; y: number };
     };
-
-/**
- * The distance a pointer must travel before a press becomes a drag.
- *
- * Without it, a click that wobbles by one pixel registers as a move and puts a
- * spurious entry in the undo history.
- */
-const DRAG_THRESHOLD_PX = 3;
 
 export function createSelectTool(): Tool {
   let state: State = { kind: 'idle' };
@@ -79,8 +72,7 @@ export function createSelectTool(): Tool {
       }
 
       if (state.kind === 'maybe-move') {
-        const travelled = Math.hypot(event.at.x - state.startMm.x, event.at.y - state.startMm.y);
-        if (travelled < ctx.viewport.pxToMm(DRAG_THRESHOLD_PX)) return;
+        if (!isDrag(ctx, state.startMm, event.at)) return;
         ctx.store.begin('Move');
         state = { kind: 'moving', startMm: state.startMm, refusal: null };
       }

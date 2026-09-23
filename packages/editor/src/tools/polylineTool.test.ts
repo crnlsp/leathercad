@@ -5,7 +5,7 @@ import {
   rectShape,
   rectanglePart,
 } from '@leathercad/document';
-import type { Path, Vec2 } from '@leathercad/geometry';
+import { PathOps, type Path, type Vec2 } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import type { PointerInput, Tool, ToolContext } from '../tool.js';
@@ -276,6 +276,35 @@ describe('line tool', () => {
 
     // The third click starts a second line rather than extending the first.
     expect(store.getState().document.project.parts).toHaveLength(1);
+  });
+
+  it('draws with a drag too, like every other two-point tool (F.1)', () => {
+    // Rectangle and Circle were drag-only and Line click-only, so a maker
+    // dragging a fold — as the header said to — got a rubber band and nothing.
+    const { ctx, store } = withPart('marking');
+    const tool = createLineTool(nextId);
+
+    tool.onPointerDown?.(ctx, pointer({ x: 0, y: 0 }));
+    tool.onPointerMove?.(ctx, pointer({ x: 15, y: 20 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 30, y: 40 }));
+
+    const p = firstPath(store);
+    expect(p?.segments).toHaveLength(1);
+    expect(PathOps.length(p!)).toBeCloseTo(50, 9);
+  });
+
+  it('treats a press that barely moves as a click, not a line', () => {
+    // A hand is not still: under a few pixels of travel the press is the
+    // first click of two, and the line is not finished.
+    const { ctx, store } = withPart('marking');
+    const tool = createLineTool(nextId);
+
+    tool.onPointerDown?.(ctx, pointer({ x: 0, y: 0 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 0.2, y: 0.1 }));
+
+    expect(firstPath(store)).toBeNull();
+    click(tool, ctx, { x: 30, y: 40 });
+    expect(firstPath(store)?.segments).toHaveLength(1);
   });
 });
 

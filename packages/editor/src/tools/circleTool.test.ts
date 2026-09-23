@@ -46,6 +46,20 @@ describe('circle tool', () => {
     expect(shapeIn(store)).toEqual({ type: 'circle', centre: { x: 20, y: 20 }, radius: 5 });
   });
 
+  it('takes two clicks as well as a drag: the centre, then the rim (F.1)', () => {
+    const { ctx, store } = harness();
+    const tool = createCircleTool(() => `id-${Math.random()}`);
+
+    tool.onPointerDown?.(ctx, pointer({ x: 20, y: 20 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 20, y: 20 }));
+    expect(shapeIn(store)).toBeNull();
+    tool.onPointerMove?.(ctx, pointer({ x: 22, y: 22 }));
+    tool.onPointerDown?.(ctx, pointer({ x: 23, y: 24 }));
+    tool.onPointerUp?.(ctx, pointer({ x: 23, y: 24 }));
+
+    expect(shapeIn(store)).toEqual({ type: 'circle', centre: { x: 20, y: 20 }, radius: 5 });
+  });
+
   it('files the circle as a cut contour on a new part', () => {
     const { ctx, store } = harness();
     const tool = createCircleTool(() => `id-${Math.random()}`);

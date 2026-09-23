@@ -1144,7 +1144,7 @@ features consume these; they do not extend or amend the visual language on their
 | | Step | Contains |
 |---|---|---|
 | **F.0** ✅ | Typography | Apply the vendored face to the DOM (it is loaded and unused today); vendor Plex Sans 500/600; the nine-token scale; `formatMm()` / `formatAngle()` emitting the true minus |
-| **F.1** | Systemic interaction | `ReasonedButton` (a disabled control that renders its refusal — the domain already produces every one, and the UI hides them in a native `title`, contradicting X1); `Tooltip`; a `Notice` near the gesture; one word per relationship — **Follows / Mirrors / Mirrors … across / Measures**; drag vs click–click made consistent and a header hint that is true; **Length** on an open line, and no area on a hole |
+| **F.1** ✅ | Systemic interaction | `ReasonedButton` (a disabled control that renders its refusal — the domain already produces every one, and the UI hides them in a native `title`, contradicting X1); `Tooltip`; a `Notice` near the gesture; one word per relationship — **Follows / Mirrors / Mirrors … across / Measures**; drag vs click–click made consistent and a header hint that is true; **Length** on an open line, and no area on a hole |
 | **F.2** | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
 | **F.3** | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
 | **F.4** | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
@@ -1158,9 +1158,9 @@ features consume these; they do not extend or amend the visual language on their
 fallbacks in `packages/render` (the live dimension, part captions and both rulers were **not** in the
 typeface the pattern prints in); the missing U+2212 and Romanian letters; the hard-coded A4 export
 (**5.5**). *Remaining:* the canvas jump (F.3); the parts panel disappearing below ~900 px, which
-makes a **locked feature unreachable** (F.2); disabled controls hiding their reason (F.1);
-Perimeter/Area shown for lines and holes (F.1); ~~number fields clipping their units~~ (✅ F.0);
-terminology collisions (F.1); a failed feature drawn in red over its healthy source (F.5); emoji
+makes a **locked feature unreachable** (F.2); ~~disabled controls hiding their reason~~ (✅ F.1);
+~~Perimeter/Area shown for lines and holes~~ (✅ F.1); ~~number fields clipping their units~~ (✅ F.0);
+~~terminology collisions~~ (✅ F.1); a failed feature drawn in red over its healthy source (F.5); emoji
 icons (F.6).
 
 **F.0 — done** (2026-09-23). The UI is set in IBM Plex Sans, the face it has vendored since 4.11a,
@@ -1215,6 +1215,37 @@ feedback that names what it caught; anchors shown on hover in every tool.
 and hide yield; run-boundary marks at corners; a canvas legend; theming and density; screen
 calibration, which would make "1:1 on screen" literal rather than a nominal-DPI approximation.
 
+
+**F.1 — done** (2026-09-23).
+- **`ReasonedButton`.** A control that cannot act renders the domain's own refusal beneath itself,
+  from the same query the command checks (X1), tied to it with `aria-describedby`. `ReasonedRow` says
+  a shared reason once for a pair, such as Flip ↔ / Flip ↕ on a label. It is used by every refusable
+  action in the property panel: Flip, Mirror, Mirror across fold, Add seam allowance and Delete.
+- **`Tooltip`.** Styled, delayed 400 ms on hover, immediate on focus, positioned against the window
+  so a panel's overflow cannot clip it. It replaces every native `title` in the renderer.
+- **The notice by the pointer.** A tool's refusal follows the pointer across the canvas for as long
+  as it holds, and turns back from the edges. The status bar still carries it.
+- **One word per relationship.** *Follows* and *Mirrors*, with *Mirrors … across* for a fold. A cut
+  contour is headed *Outline* or *Cut-out*, the words the drawing modes use, not *Cut line (outer)*.
+  Flip and Mirror sit under headings that say what each does: *Flip this piece* and *Mirror into a
+  counterpart*.
+- **Gestures.** Rectangle and Circle take two clicks as well as a drag, and Line takes a drag as well
+  as two clicks. All three share one `isDrag` threshold with the select tool (`tools/gesture.ts`).
+  Each tool has one true line of guidance, shown in the header while it is active and in its
+  tooltip. The palette groups tools by how they are used: **Draw**, **Place** (Hardware, Text,
+  Measure), **Modify**.
+- **Measured.** *Length* on an open line and on a stitch line. *Perimeter* and *Area* only on a closed
+  shape. Nothing on a hole or a hole set. A dimension shows **Reads**, the same laid-out string the
+  canvas draws and the PDF prints, so the panel cannot disagree with the drawing, and **Measures**,
+  naming what it measures.
+
+Gotchas:
+- **A readout probe near geometry snaps.** Tests that map millimetres to pixels by reading the cursor
+  readout must probe empty canvas; the measure tool's snap onto an outline gave a view 8 mm out.
+- **Wait for the canvas to settle.** A tool change resizes the canvas (F.3), so read the view only
+  once `tool-options` has gone.
+- **Playwright's `has:` resolves its inner locator relative to the outer one,** so it must not be
+  pre-scoped to the panel.
 #### Deferred opportunities worth keeping visible
 
 - **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and

@@ -1,5 +1,6 @@
 import type { DeletePlan, DeleteResolution, PlannedDependent } from '@leathercad/document';
 import { useEffect, useRef } from 'react';
+import { Tooltip } from './Tooltip.js';
 
 /**
  * Asks what to do with the features that follow what is being deleted.
@@ -70,16 +71,17 @@ export function DeleteDialog({
           >
             Cancel
           </button>
-          <button
-            type="button"
-            className="tool"
-            data-testid="delete-freeze"
-            disabled={freezable === 0}
-            title="Keep them as drawn geometry, where they are now, no longer following anything"
-            onClick={() => onResolve('freeze-dependents')}
-          >
-            Keep {freezable} frozen
-          </button>
+          <Tooltip text="Keep them as drawn geometry, where they are now, no longer following anything">
+            <button
+              type="button"
+              className="tool"
+              data-testid="delete-freeze"
+              disabled={freezable === 0}
+              onClick={() => onResolve('freeze-dependents')}
+            >
+              Keep {freezable} frozen
+            </button>
+          </Tooltip>
           <button
             type="button"
             className="tool danger"

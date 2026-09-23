@@ -1,4 +1,5 @@
 import { TOOL_GROUPS } from './tools.js';
+import { Tooltip } from './Tooltip.js';
 
 /**
  * The mode palette.
@@ -20,17 +21,17 @@ export function ToolPalette({
         <div className="rail-group" key={group.label ?? `lead-${index}`}>
           {group.label !== null && <h2 className="rail-heading">{group.label}</h2>}
           {group.tools.map((tool) => (
-            <button
-              key={tool.id}
-              type="button"
-              className={tool.id === activeId ? 'tool active' : 'tool'}
-              data-testid={`tool-${tool.id}`}
-              onClick={() => onSelect(tool.id)}
-              title={`${tool.label} (${tool.key})`}
-            >
-              {tool.label}
-              <kbd>{tool.key}</kbd>
-            </button>
+            <Tooltip key={tool.id} text={tool.howTo}>
+              <button
+                type="button"
+                className={tool.id === activeId ? 'tool active' : 'tool'}
+                data-testid={`tool-${tool.id}`}
+                onClick={() => onSelect(tool.id)}
+              >
+                {tool.label}
+                <kbd>{tool.key}</kbd>
+              </button>
+            </Tooltip>
           ))}
         </div>
       ))}
