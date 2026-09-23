@@ -1,10 +1,22 @@
-import { EPS_LENGTH, approxZero, type Mm } from '@leathercad/core';
+import { EPS_LENGTH, approxGte, approxZero, type Mm } from '@leathercad/core';
 import { PathOps, distributeAlongPath, subPath, type Path, type Vec2 } from '@leathercad/geometry';
 
 import { cornerDistances } from './anchors.js';
 import type { Derivation } from './feature.js';
 
 type StitchHolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
+
+/**
+ * The finest pitch a hole set may have: the editor's floor, and evaluation's.
+ *
+ * Nothing near it is a pricking iron — the common pitches start at 2.7 mm —
+ * so it refuses no real stitching. What it refuses is a pitch that would make
+ * distribution place `length / pitch` holes without bound: a file holding
+ * `1e-300` passed the schema and ran the process out of memory (slice 5.6). A
+ * number the editor cannot produce is refused on the one hole set, by name,
+ * and the rest of the project still opens.
+ */
+export const MIN_PITCH_MM: Mm = 0.5;
 
 /**
  * One awl hole.
@@ -63,11 +75,23 @@ export interface StitchHoles {
  * someone who has stitched. The shared hole where two runs meet is emitted
  * once: a doubled corner hole is invisible until someone punches it.
  *
+ * **Precondition:** `op.pitchMm` is at least `MIN_PITCH_MM`, or this throws a
+ * `RangeError` before generating anything. `evaluate` checks it first and
+ * reports a `PARAMETER_INVALID` on the hole set instead.
+ *
  * The distribution itself is `distributeAlongPath`, which computes positions
  * as `start + k x pitch` rather than by accumulating, so hundreds of holes do
  * not drift.
  */
 export function distributeHoles(line: Path, op: StitchHolesOp): StitchHoles {
+  // The precondition behind evaluate's check: holes are made here and nowhere
+  // else, so a pitch under the floor cannot reach generation from any caller.
+  // evaluate refuses it first with a Problem naming the hole set (5.6).
+  if (!approxGte(op.pitchMm, MIN_PITCH_MM, EPS_LENGTH)) {
+    throw new RangeError(
+      `pitchMm must be at least ${String(MIN_PITCH_MM)} mm, received ${String(op.pitchMm)}`,
+    );
+  }
   const runs = op.corners === 'hole-at-corner' ? splitAtCorners(line) : [line];
 
   const holes: StitchHole[] = [];

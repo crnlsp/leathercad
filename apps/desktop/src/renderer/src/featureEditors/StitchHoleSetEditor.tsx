@@ -1,5 +1,5 @@
 import { formatMm } from '@leathercad/core';
-import type { Derivation, StitchHoles } from '@leathercad/domain';
+import { MIN_PITCH_MM, type Derivation, type StitchHoles } from '@leathercad/domain';
 
 import { NumberField } from '../NumberField.js';
 import { IRON_PRESETS, presetForPitch } from '../irons.js';
@@ -52,7 +52,9 @@ export function StitchHoleSetEditor({
       <NumberField
         label="Pitch"
         value={op.pitchMm}
-        min={0.5}
+        // The domain's floor, so the field and evaluation refuse the same
+        // pitches (5.6).
+        min={MIN_PITCH_MM}
         step={0.05}
         precision={2}
         // Typing a pitch by hand means it is no longer that iron's pitch, so

@@ -203,6 +203,10 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
           return `${owner} is ${formatNumber(f.value)}, and it must be more than zero.`;
         case 'non-negative':
           return `${owner} is ${formatNumber(f.value)}, and it must not be negative.`;
+        // The rule, not the value: a pitch of 1e-300 would round to "0" here,
+        // and a positive number must not be called zero.
+        case 'at-least':
+          return `${owner} is below ${formatMm(f.minimum)}, the smallest that can be used. Type at least ${formatMm(f.minimum)}.`;
       }
     },
   },

@@ -1550,7 +1550,7 @@ What the new tools found is recorded where they found it and ratcheted, not fixe
 exception: the project-name field had no accessible name, and a one-attribute fix outside the F
 slices' markup gave it one. The rest, and where each belongs:
 
-- **A robustness bug:** a `.lcp` with a tiny stitch pitch exhausts memory on load. Slice **5.6**.
+- **A robustness bug:** a `.lcp` with a tiny stitch pitch exhausts memory on load. Slice **5.6** ✅.
 - **For the F slices, which own this markup:** three accessibility findings. There is no `<main>`
   (a `<main>` around `.canvas-column` fixes it and the `region` finding), and the three `<aside>`
   panels have no names. They are ratcheted in `e2e/accessibility.spec.ts`. Also in `CanvasHost.tsx`:
@@ -1607,21 +1607,56 @@ until they have produced baselines worth holding.
   See [page setup and determinism](superpowers/specs/2026-09-18-page-setup-and-determinism-decisions.md).
 - **5.3** Autosave, crash recovery, recent files, unsaved-changes handling.
 - **5.4** Sample projects shipped in `fixtures/projects/`.
-- **5.6** **Loader hardening: refuse what the editor cannot produce.** A robustness bug, found by
-  the `.lcp` fuzz test in the engineering-tooling checkpoint. A file whose stitch-hole `pitchMm` is
-  tiny (`1e-300` reproduces it) passes `ProjectSchema`, which only requires a non-negative pitch.
-  `evaluate` then tries to place ~10³⁰² holes, and the process runs out of memory. The editor cannot
-  create that file: `StitchHoleSetEditor` enforces `min={0.5}`. So only a damaged, hand-edited or
-  hostile file reaches it, and that is exactly who the loader exists to refuse.
-  **Acceptance:** a named regression test in `lcp.test.ts` loads that file and gets an
-  `InvalidProjectFileError` naming the feature, in milliseconds. `lcp.fuzz.test.ts` passes at
-  `LEATHERCAD_FC_RUNS=20000`, where it now crashes. Every other generated quantity gets the same
-  audit: anything whose size scales with `length / parameter` needs a floor the editor already
-  enforces, or a cap in the domain.
-  **To decide in the slice, not before:** refuse at the schema (the editor's bounds become the
-  file's), or cap in `evaluate` with a `Problem`. The first is simpler; the second also protects
-  any future path into the domain. It is a validation change, **not a format version**: no file the
-  editor can write changes meaning.
+- **5.6** ✅ **Done** (2026-09-23). **Loader hardening: refuse what the editor cannot produce.**
+  See [the 5.6 design](superpowers/specs/2026-09-23-loader-hardening-design.md).
+  **The defect.** A file whose stitch-hole `pitchMm` was tiny passed `ProjectSchema`, which only
+  asked for a non-negative pitch; `1e-300` reproduces it. `evaluate` then tried to place about
+  10³⁰² holes, and the process ran out of memory. It was found by the `.lcp` fuzz test of the
+  engineering-tooling checkpoint (F1). On `main` at `ad39f26`, `LEATHERCAD_FC_RUNS=20000` killed
+  the fuzz worker with `SIGABRT`. The editor could not make that file, because its pitch field
+  stops at 0.5 mm.
+  **The decision left to the slice: a floor in `evaluate`, not a schema refusal.** A pitch of 0
+  already opened and was reported as `PARAMETER_INVALID` on its one hole set, so `1e-300` now
+  behaves the same way.
+  - The file opens, and the maker fixes one hole set rather than losing the project.
+  - It also guards the other way a pitch reaches the domain: the command that adds holes takes the
+    project's `defaultIronPitchMm`, which comes from the file.
+  - **`MIN_PITCH_MM = 0.5`** lives in `domain`, and the panel's pitch field reads it, so the editor
+    and evaluation refuse the same pitches.
+  - `PARAMETER_INVALID` gained an `at-least` requirement with a `minimum`. Its message states the
+    floor. It never prints the value, because the catalogue would round `1e-300` to "0".
+  - A pitch of 0 now fails as `at-least` rather than `positive`.
+  - This is a validation change, **not a format version**, and there is no schema change.
+  - **One invariant, checked where holes are made.** `distributeHoles` has a precondition that
+    throws before generating anything, so a raw `1e-300` cannot reach hole generation from any
+    caller. The paths that produce a pitch are listed in the design §3, each with its test: the
+    loader, the panel field, the iron presets, and the command that takes the project default.
+  - **Accepted at review:** opening the file and refusing only the hole set is preferred to
+    rejecting the whole project.
+  **The acceptance criterion changed with the decision.** It had expected `InvalidProjectFileError`
+  naming the feature. Now the named regression test in `lcp.test.ts` saves and loads the file,
+  evaluates it within a second, and finds the hole set refused by name while the rest resolves.
+  `lcp.fuzz.test.ts` passes at `LEATHERCAD_FC_RUNS=20000`.
+  **The audit** (design §4): only the pitch divides a length by a number the file controls. Every
+  other generated quantity is bounded by the file's size, a fixed tolerance, the ±100 000 mm
+  coordinate limit, or the viewport.
+  Gotchas:
+  - **The floor is compared with `approxGte` and `EPS_LENGTH`** (invariant 7). The first property
+    test ran its "below" range right up to the floor, and fast-check shrank to
+    `0.49999990000000005`, which is the floor up to float noise and is accepted. That value is
+    now an explicit example, and the "below" range stops `EPS_LENGTH` short of the floor.
+  - **The domain test reproduces the out-of-memory crash itself.** Before the fix, running
+    `derive.test.ts` aborted its worker, so the defect is pinned below the loader as well as in
+    it.
+  - **The app cannot even save the hostile file.** The serialiser rounds to six decimals, so
+    saving `1e-300` writes 0. The first version of the persist regression test saved through
+    `saveProject`, which made it test a pitch of 0 and pass for the wrong reason. It now writes
+    the raw `1e-300` into the archive by hand and asserts that it is there. Without the floor, that
+    test runs the heap out of memory.
+  **Recorded, not fixed:** with the floor in place, the hole count is linear in the geometry's
+  size, and the editor can still draw a lot of it. A 100 m circle at 0.5 mm is about 1.26 million
+  holes. That is a performance question, with a hole-count budget if one is ever wanted, not a
+  question about refusing what the editor cannot make.
 
 ### Phase 6 — Export
 

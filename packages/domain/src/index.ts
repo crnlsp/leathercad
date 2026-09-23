@@ -114,4 +114,4 @@ export {
 } from './problems/index.js';
 
 export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
-export { distributeHoles, splitAtCorners } from './stitch.js';
+export { MIN_PITCH_MM, distributeHoles, splitAtCorners } from './stitch.js';

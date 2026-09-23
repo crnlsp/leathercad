@@ -482,3 +482,85 @@ describe('the loader refuses a part it could not have made (S5, S6)', () => {
     expect(loadProject(bytes).project.parts[0]?.features).toHaveLength(2);
   });
 });
+
+describe('a stitch pitch the editor cannot make (5.6)', () => {
+  it('opens a file whose pitch is 1e-300, and names the hole set instead of running out of memory', () => {
+    // The loader fuzz test's find: this passed the schema, and evaluating it
+    // tried to place ~10³⁰² holes. The file opens, since one bad number should
+    // not lock a maker out of their project; the hole set is refused by name,
+    // at once, and typing a pitch fixes it.
+    const project = sampleProject();
+    const [part] = project.parts;
+    const withHoles: Project = {
+      ...project,
+      parts: [
+        {
+          ...part!,
+          features: [
+            ...part!.features,
+            {
+              id: 'feat-3',
+              kind: 'stitch-line',
+              name: 'Stitch line',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'derived',
+                sourceId: 'feat-1',
+                op: { type: 'offset', distanceMm: 3.5, side: 'inward', run: { kind: 'whole' } },
+              },
+            },
+            {
+              id: 'feat-4',
+              kind: 'stitch-hole-set',
+              name: 'Stitch holes',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'derived',
+                sourceId: 'feat-3',
+                op: {
+                  type: 'stitch-holes',
+                  pitchMm: 3.85,
+                  mode: 'fit-whole',
+                  corners: 'hole-at-corner',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    // Written by hand, as a damaged or hostile file would be: the app's own
+    // serialiser rounds to six decimals and would save 1e-300 as 0.
+    const saved = unzipSync(saveProject(withHoles, options));
+    const document = JSON.parse(strFromU8(saved['document.json']!)) as {
+      parts: { features: { source: { op?: { pitchMm?: number } } }[] }[];
+    };
+    document.parts[0]!.features[3]!.source.op!.pitchMm = 1e-300;
+    const bytes = archive(document, CURRENT_FORMAT_VERSION);
+    expect(strFromU8(unzipSync(bytes)['document.json']!)).toContain('"pitchMm":1e-300');
+
+    const started = performance.now();
+    const { project: loaded } = loadProject(bytes);
+    const resolved = evaluate(loaded);
+    expect(performance.now() - started).toBeLessThan(1_000);
+
+    const holes = resolved.parts[0]!.features.find((entry) => entry.feature.id === 'feat-4');
+    expect(holes?.ok).toBe(false);
+    if (holes?.ok === false) {
+      expect(holes.problem).toMatchObject({
+        code: 'PARAMETER_INVALID',
+        facts: {
+          featureName: 'Stitch holes',
+          parameter: 'pitch',
+          requirement: 'at-least',
+          value: 1e-300,
+        },
+      });
+    }
+    // Everything else in the part still resolves.
+    expect(resolved.parts[0]!.features.filter((entry) => !entry.ok)).toHaveLength(1);
+  });
+});

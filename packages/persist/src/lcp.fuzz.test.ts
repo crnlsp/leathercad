@@ -27,10 +27,11 @@ import { NewerFormatError } from './migrations/index.js';
  * `evaluate` assume a sound document. Anything it lets through is a document
  * the rest of the app will be asked to draw.
  *
- * Known failure, roadmap slice 5.6: a stitch-hole `pitchMm` of `1e-300` passes
- * the schema and exhausts memory in `evaluate`. The CI seed does not reach it.
- * `LEATHERCAD_FC_RUNS=20000` does, and the nightly run reports it. When 5.6
- * lands, its named regression test goes in `lcp.test.ts`.
+ * It found one (slice 5.6): a stitch-hole `pitchMm` of `1e-300` passed the
+ * schema and ran `evaluate` out of memory placing ~10³⁰² holes. `evaluate` now
+ * refuses a pitch below the editor's floor on that hole set alone, the file
+ * still opens, and the named regression test is in `lcp.test.ts`. The CI seed
+ * never reached it; `LEATHERCAD_FC_RUNS=20000` did, and now passes.
  */
 
 const FORMAT_DIR = resolve(import.meta.dirname, '../../../fixtures/format');

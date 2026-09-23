@@ -145,9 +145,12 @@ export interface ProblemFacts {
   // ——— Evaluation outcomes (E): a feature that did not resolve ———
   readonly PARAMETER_INVALID: About & {
     readonly parameter: string;
-    readonly requirement: 'finite' | 'positive' | 'non-negative';
     readonly value: number;
-  };
+  } & (
+      | { readonly requirement: 'finite' | 'positive' | 'non-negative' }
+      /** Under a floor the editor enforces too — a pitch finer than any iron (5.6). */
+      | { readonly requirement: 'at-least'; readonly minimum: Mm }
+    );
   readonly OFFSET_COLLAPSED: About & {
     readonly distanceMm: Mm;
     readonly side: 'inward' | 'outward';

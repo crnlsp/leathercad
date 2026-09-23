@@ -2,6 +2,7 @@ import {
   EPS_ANGLE,
   EPS_LENGTH,
   EPS_POINT,
+  approxGte,
   approxZero,
   formatNumber,
   type Mm,
@@ -38,7 +39,7 @@ import { roleOf } from './feature.js';
 import { anchorsOf } from './anchors.js';
 import { mapAnchorsThroughOffset } from './derivedAnchors.js';
 import { keepLargestPiece } from './offsetPieces.js';
-import { distributeHoles, type StitchHoles } from './stitch.js';
+import { MIN_PITCH_MM, distributeHoles, type StitchHoles } from './stitch.js';
 import type { LayerRole } from './layerRole.js';
 import { problem, type Problem, type ProblemLocation } from './problems/index.js';
 
@@ -946,7 +947,10 @@ function parameterProblem(feature: Feature): Problem | null {
           );
         }
       } else {
-        checks.push(['pitch', op.pitchMm, 'positive']);
+        // The editor's floor, not merely "more than zero": distribution places
+        // `length / pitch` holes, and a file holding 1e-300 ran the process out
+        // of memory (5.6).
+        checks.push(['pitch', op.pitchMm, { atLeast: MIN_PITCH_MM }]);
         if (op.startOffsetMm !== undefined) {
           checks.push(['start offset', op.startOffsetMm, 'non-negative']);
         }
@@ -964,15 +968,20 @@ function parameterProblem(feature: Feature): Problem | null {
       return problem('PARAMETER_INVALID', {
         ...about(feature),
         parameter,
-        requirement: unmet,
         value,
+        ...unmet,
       });
     }
   }
   return null;
 }
 
-type Requirement = 'finite' | 'positive' | 'non-negative';
+/** What a parameter must be: a kind of number, or at least a floor. */
+type Requirement = 'finite' | 'positive' | 'non-negative' | { readonly atLeast: Mm };
+
+type Unmet =
+  | { readonly requirement: 'finite' | 'positive' | 'non-negative' }
+  | { readonly requirement: 'at-least'; readonly minimum: Mm };
 
 /**
  * Which requirement `value` fails, or null.
@@ -980,11 +989,20 @@ type Requirement = 'finite' | 'positive' | 'non-negative';
  * Exact comparisons against zero on purpose: these mirror the geometry
  * layer's own guards (a pitch of `1e-12` is refused there only if it is not
  * greater than zero), and the domain must not refuse what geometry accepts.
+ * A floor is the exception, and a product rule rather than a geometric one: a
+ * pitch finer than the editor allows is refused here although geometry would
+ * try to place its holes (5.6). It is compared within `EPS_LENGTH`, so a
+ * pitch that is the floor up to float noise is not refused.
  */
-function unmetRequirement(value: number, requirement: Requirement): Requirement | null {
-  if (!Number.isFinite(value)) return 'finite';
-  if (requirement === 'positive' && !(value > 0)) return 'positive';
-  if (requirement === 'non-negative' && value < 0) return 'non-negative';
+function unmetRequirement(value: number, requirement: Requirement): Unmet | null {
+  if (!Number.isFinite(value)) return { requirement: 'finite' };
+  if (typeof requirement === 'object') {
+    return approxGte(value, requirement.atLeast, EPS_LENGTH)
+      ? null
+      : { requirement: 'at-least', minimum: requirement.atLeast };
+  }
+  if (requirement === 'positive' && !(value > 0)) return { requirement: 'positive' };
+  if (requirement === 'non-negative' && value < 0) return { requirement: 'non-negative' };
   return null;
 }
 

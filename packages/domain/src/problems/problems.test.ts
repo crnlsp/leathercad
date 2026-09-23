@@ -293,4 +293,31 @@ describe('the message catalogue', () => {
     expect(negative).toMatch(/radius/);
     expect(negative).toMatch(/negative/);
   });
+
+  it('says the floor a number is under, never a value rounded away to zero (5.6)', () => {
+    // 1e-300 rounds to "0" at the catalogue's precision, which would tell the
+    // maker their positive pitch is zero. The sentence says the rule instead.
+    const tiny = describeProblem(
+      problem('PARAMETER_INVALID', {
+        ...named,
+        parameter: 'pitch',
+        requirement: 'at-least',
+        minimum: 0.5,
+        value: 1e-300,
+      }),
+    );
+    expect(tiny).toMatch(/pitch/);
+    // Pitch moved to the floor; a size of zero still says "more than zero".
+    const zero = describeProblem(
+      problem('PARAMETER_INVALID', {
+        ...named,
+        parameter: 'text size',
+        requirement: 'positive',
+        value: 0,
+      }),
+    );
+    expect(zero).toMatch(/text size is 0, and it must be more than zero/);
+    expect(tiny).toMatch(/0\.50 mm/);
+    expect(tiny).not.toMatch(/\b0\b(?!\.)|e-/);
+  });
 });

@@ -2,7 +2,7 @@ import { PathOps, Shapes, offsetPath, uniformRadii } from '@leathercad/geometry'
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { distributeHoles } from './stitch.js';
+import { MIN_PITCH_MM, distributeHoles } from './stitch.js';
 import type { Derivation } from './feature.js';
 
 type HoleOp = Omit<Extract<Derivation, { type: 'stitch-holes' }>, 'type'>;
@@ -132,5 +132,21 @@ describe('stitch holes', () => {
       ),
       { numRuns: 200 },
     );
+  });
+});
+
+describe('the pitch floor, at the one place holes are made (5.6)', () => {
+  it('refuses to generate holes below the floor, at once, whoever the caller is', () => {
+    // evaluate checks first and reports the hole set by name; this is the
+    // precondition behind that check, so no other caller can reach the
+    // ~10³⁰² holes a raw 1e-300 asks for.
+    const started = performance.now();
+    expect(() => holesOn(straightRun(100), { ...CONTINUOUS, pitchMm: 1e-300 })).toThrow(RangeError);
+    expect(() => holesOn(straightRun(100), { ...CONTINUOUS, pitchMm: 0 })).toThrow(RangeError);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
+  it('generates at the floor', () => {
+    expect(holesOn(straightRun(100), { ...CONTINUOUS, pitchMm: MIN_PITCH_MM }).count).toBe(201);
   });
 });

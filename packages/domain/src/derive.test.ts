@@ -1,4 +1,6 @@
 import { PathOps, cubic, line as lineSegment, uniformRadii } from '@leathercad/geometry';
+import { EPS_LENGTH } from '@leathercad/core';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
@@ -9,6 +11,7 @@ import {
   type Part,
   type Project,
 } from './feature.js';
+import { MIN_PITCH_MM } from './stitch.js';
 
 function panel(width = 105, height = 75): CutContour {
   return {
@@ -230,10 +233,94 @@ describe('a derived stitch line', () => {
     const errors = evaluationErrors(
       evaluate(projectWith([panel(), stitchLine('cut-1'), holeSet('stitch-1', 0)])),
     );
+    // Zero is below the floor like any other pitch too fine for an iron (5.6).
     expect(errors[0]?.problem).toMatchObject({
       code: 'PARAMETER_INVALID',
-      facts: { featureId: 'holes-1', parameter: 'pitch', requirement: 'positive', value: 0 },
+      facts: {
+        featureId: 'holes-1',
+        parameter: 'pitch',
+        requirement: 'at-least',
+        minimum: MIN_PITCH_MM,
+        value: 0,
+      },
     });
+  });
+
+  it('refuses a pitch too fine for any iron at once, rather than placing 10³⁰² holes (5.6)', () => {
+    // Found by the loader fuzz test: 1e-300 passed the schema, and distribution
+    // ran the process out of memory. The editor stops at the floor; a file
+    // that did not is refused here, on the one hole set, and the rest resolves.
+    const started = performance.now();
+    const resolved = evaluate(
+      projectWith([panel(), stitchLine('cut-1'), holeSet('stitch-1', 1e-300)]),
+    );
+    expect(performance.now() - started).toBeLessThan(1_000);
+
+    const errors = evaluationErrors(resolved);
+    expect(errors.map((e) => e.feature.id)).toEqual(['holes-1']);
+    expect(errors[0]?.problem).toMatchObject({
+      code: 'PARAMETER_INVALID',
+      facts: {
+        featureId: 'holes-1',
+        featureName: 'Stitch holes',
+        parameter: 'pitch',
+        requirement: 'at-least',
+        minimum: MIN_PITCH_MM,
+      },
+    });
+  });
+
+  it('refuses every pitch below the floor, and stitches every pitch from it up', () => {
+    // Below by more than the tolerance: a pitch within EPS_LENGTH of the floor
+    // is the floor up to float noise, and is accepted (next test).
+    const below = fc.double({
+      min: 0,
+      max: MIN_PITCH_MM - EPS_LENGTH,
+      minExcluded: true,
+      maxExcluded: true,
+      noNaN: true,
+    });
+    fc.assert(
+      fc.property(below, (pitch) => {
+        const errors = evaluationErrors(
+          evaluate(projectWith([panel(), stitchLine('cut-1'), holeSet('stitch-1', pitch)])),
+        );
+        return (
+          errors.length === 1 &&
+          errors[0]!.problem.code === 'PARAMETER_INVALID' &&
+          errors[0]!.feature.id === 'holes-1'
+        );
+      }),
+    );
+
+    const usable = fc.double({ min: MIN_PITCH_MM, max: 20, noNaN: true });
+    fc.assert(
+      fc.property(usable, (pitch) => {
+        const project = projectWith([panel(), stitchLine('cut-1'), holeSet('stitch-1', pitch)]);
+        return evaluationErrors(evaluate(project)).length === 0 && holesIn(project).count > 0;
+      }),
+      { numRuns: 50 },
+    );
+  });
+
+  it('refuses a negative or non-numeric pitch by the same check', () => {
+    const refused = (pitch: number) =>
+      evaluationErrors(
+        evaluate(projectWith([panel(), stitchLine('cut-1'), holeSet('stitch-1', pitch)])),
+      )[0]?.problem;
+    expect(refused(-3.85)).toMatchObject({ facts: { requirement: 'at-least' } });
+    expect(refused(Number.NaN)).toMatchObject({ facts: { requirement: 'finite' } });
+    expect(refused(Number.POSITIVE_INFINITY)).toMatchObject({ facts: { requirement: 'finite' } });
+  });
+
+  it('stitches at the floor, which the editor allows, and at the floor less float noise', () => {
+    // 0.49999990000000005 was fast-check's shrunk counterexample to a generator
+    // that ran right up to the floor: within EPS_LENGTH, it is the floor.
+    for (const pitch of [MIN_PITCH_MM, 0.49999990000000005]) {
+      const project = projectWith([panel(), stitchLine('cut-1'), holeSet('stitch-1', pitch)]);
+      expect(evaluationErrors(evaluate(project))).toEqual([]);
+      expect(holesIn(project).count).toBeGreaterThan(0);
+    }
   });
 
   it('reports a negative inset by name', () => {

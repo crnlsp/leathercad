@@ -132,6 +132,13 @@ Evaluates to holes `{ point, tangent, runIndex, ordinal }` and a report: the cou
 spacing, and per-run length, count and spacing. **Holes have no ids.** They are addressed by
 position, because there is no correct answer to which of the old 84 holes is this one of the new 86.
 
+**The pitch has a floor, `MIN_PITCH_MM` = 0.5 mm,** shared by the editor's field and evaluation
+(5.6). Distribution places `length / pitch` holes, so a pitch nearer zero than any iron makes the
+count unbounded. A file that holds one still opens, and the hole set alone fails with
+`PARAMETER_INVALID` (`at-least`), naming the floor. The canvas draws each hole as a slit (F.7):
+the slit's length and slant are a rendering convention worked out from the pitch, not part of the
+hole.
+
 **Later:** slot and diamond hole shapes, and suppressing individual holes, expressed as a list of
 ordinals on the set.
 
