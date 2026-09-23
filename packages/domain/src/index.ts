@@ -1,3 +1,11 @@
+export {
+  PAPER_SIZES,
+  PAPER_NAMES,
+  ORIENTATIONS,
+  type Orientation,
+  type PaperName,
+  type PaperSize,
+} from './paper.js';
 /**
  * @leathercad/domain — leathercraft meaning on top of pure geometry.
  *

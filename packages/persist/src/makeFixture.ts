@@ -556,3 +556,21 @@ export function fixtureProjectV8(): Project {
     ),
   };
 }
+
+/**
+ * Version 9 — the project says which paper it prints on.
+ *
+ * Same drawing as version 8. What is new is two fields in `settings`, which is
+ * the whole point of the version: the fixture's job is to prove that a file
+ * written before the choice existed still opens and still prints A4 portrait.
+ */
+export function fixtureProjectV9(): Project {
+  const previous = fixtureProjectV8();
+
+  return {
+    ...previous,
+    id: 'fixture-v9',
+    name: 'Format baseline v9',
+    settings: { ...previous.settings, paper: 'A4', orientation: 'portrait' },
+  };
+}

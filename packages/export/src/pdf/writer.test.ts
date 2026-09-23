@@ -3,12 +3,18 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { DEFAULT_SETTINGS, evaluate, type Project } from '@leathercad/domain';
+import {
+  DEFAULT_SETTINGS,
+  evaluate,
+  type Orientation,
+  type Project,
+  type ProjectSettings,
+} from '@leathercad/domain';
 import { uniformRadii } from '@leathercad/geometry';
 import { PDFDocument, PDFName, type PDFDict } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PAGE_SETUP, contentAreaMm, mmToPt, sheetSizeMm } from '../paper.js';
+import { DEFAULT_PAGE_SETUP, contentAreaMm, mmToPt, pageSetupFor, sheetSizeMm } from '../paper.js';
 import { buildExportScene } from '../scene.js';
 import { exportPdf } from './writer.js';
 
@@ -108,8 +114,18 @@ function projectWithRect(widthMm: number, heightMm: number, radius = 0): Project
 
 async function pdfFor(project: Project): Promise<Uint8Array> {
   const scene = buildExportScene(evaluate(project), project.name);
-  const { bytes } = await exportPdf(scene, { now: FIXED_NOW, applicationVersion: 'test' });
+  const { bytes } = await exportPdf(scene, {
+    // What the application passes: the project's own paper, not a fallback.
+    setup: pageSetupFor(project.settings),
+    now: FIXED_NOW,
+    applicationVersion: 'test',
+  });
   return bytes;
+}
+
+/** The same project, printed on different paper. */
+function on(project: Project, paper: ProjectSettings['paper'], orientation: Orientation): Project {
+  return { ...project, settings: { ...project.settings, paper, orientation } };
 }
 
 describe('text on paper', () => {
@@ -230,6 +246,28 @@ describe('document structure', () => {
       expect(page!.getWidth()).toBeCloseTo(mmToPt(210), 4);
       expect(page!.getHeight()).toBeCloseTo(mmToPt(297), 4);
     });
+  });
+
+  it("prints on the paper the project names, not on the exporter's fallback", async () => {
+    // The end of the chain that slice 5.5 exists for. Before it, every export
+    // in the product was A4 portrait because `exportPdf` fell back to
+    // `DEFAULT_PAGE_SETUP` and nothing ever passed one — so this asserts the
+    // stored choice reaches the page, which is the only place it is visible.
+    const project = projectWithRect(100, 50);
+
+    for (const [paper, orientation, widthMm, heightMm] of [
+      ['A5', 'portrait', 148, 210],
+      ['A4', 'portrait', 210, 297],
+      ['A4', 'landscape', 297, 210],
+      ['A3', 'portrait', 297, 420],
+      ['Letter', 'portrait', 215.9, 279.4],
+    ] as const) {
+      const document = await PDFDocument.load(await pdfFor(on(project, paper, orientation)));
+      const [page] = document.getPages();
+
+      expect(page!.getWidth(), `${paper} ${orientation}`).toBeCloseTo(mmToPt(widthMm), 4);
+      expect(page!.getHeight(), `${paper} ${orientation}`).toBeCloseTo(mmToPt(heightMm), 4);
+    }
   });
 
   it('produces one page for a pattern that fits', async () => {

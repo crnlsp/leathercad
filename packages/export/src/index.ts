@@ -8,6 +8,7 @@ export type { Margins, Orientation, PageSetup, PaperName, PaperSize } from './pa
 export {
   DEFAULT_MARGINS,
   DEFAULT_PAGE_SETUP,
+  pageSetupFor,
   MM_TO_PT,
   PAPER_SIZES,
   contentAreaMm,

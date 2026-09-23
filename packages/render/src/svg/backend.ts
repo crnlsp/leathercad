@@ -1,10 +1,11 @@
 import { MatOps, SegmentOps, type Path, type Segment } from '@leathercad/geometry';
-import { outlinesOf } from '@leathercad/typography';
+import { FONT_FAMILY, outlinesOf } from '@leathercad/typography';
 
 import type { DisplayItem, DisplayList } from '../displayList.js';
 import { worldToScreen, type ViewportView } from '../view.js';
 
 export interface SvgOptions {
+  /** Defaults to the vendored typeface. Never a platform font. */
   readonly fontFamily?: string;
   /** Painted behind everything. Omitted entirely when not given. */
   readonly background?: string;
@@ -100,7 +101,7 @@ export function renderToSvgString(
     (i): i is Extract<DisplayItem, { kind: 'overlay-text' }> => i.kind === 'overlay-text',
   );
   if (texts.length > 0) {
-    parts.push(`<g font-family="${options.fontFamily ?? 'system-ui, sans-serif'}">`);
+    parts.push(`<g font-family="${options.fontFamily ?? `'${FONT_FAMILY}', sans-serif`}">`);
     for (const item of texts) {
       const at = MatOps.apply(transform, item.at);
       parts.push(

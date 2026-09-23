@@ -2,7 +2,7 @@ import { MatOps } from '@leathercad/geometry';
 
 import { labelPrecisionFor, majorStepFor, niceTickStepMm, ticksInRange } from '../ticks.js';
 import { visibleBoundsMm, worldToScreen, type ViewportView } from '../view.js';
-import type { Canvas2DLike } from './backend.js';
+import { vendoredFamily, type Canvas2DLike } from './backend.js';
 
 export interface GridStyle {
   readonly minor: string;
@@ -103,7 +103,11 @@ export const DEFAULT_RULER_STYLE: RulerStyle = {
   tick: '#5a626d',
   text: '#8b929b',
   fontPx: 10,
-  fontFamily: 'ui-monospace, monospace',
+  // The vendored face, not a platform monospace. Plex's digits are already
+  // tabular — every one has the same advance — so the ruler's figures line up
+  // without asking the host for a typewriter font that differs on every
+  // machine and makes a rendered reference unreproducible.
+  fontFamily: vendoredFamily(),
 };
 
 /**

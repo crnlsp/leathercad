@@ -2,6 +2,7 @@ import type { Mm, Radians, Ulid } from '@leathercad/core';
 import type { CornerRadii, Path, Vec2 } from '@leathercad/geometry';
 
 import type { LayerRole } from './layerRole.js';
+import type { Orientation, PaperName } from './paper.js';
 
 export type FeatureId = Ulid;
 export type PartId = Ulid;
@@ -394,12 +395,26 @@ export interface ProjectSettings {
   readonly gridSpacingMm: Mm;
   readonly defaultStitchInsetMm: Mm;
   readonly defaultIronPitchMm: Mm;
+  /**
+   * The paper this project prints on — **the one place it is decided.**
+   *
+   * Margins and the verification footer are deliberately *not* here. They are
+   * constants in `packages/export`, they are already correct, and changing
+   * them has print-accuracy consequences; a setting nobody has asked for is a
+   * setting that can be got wrong.
+   */
+  readonly paper: PaperName;
+  readonly orientation: Orientation;
 }
 
 export const DEFAULT_SETTINGS: ProjectSettings = {
   gridSpacingMm: 1,
   defaultStitchInsetMm: 3.5,
   defaultIronPitchMm: 3.85,
+  // What every project printed as before it could be chosen, so a new project
+  // and a migrated one start in the same place.
+  paper: 'A4',
+  orientation: 'portrait',
 };
 
 export interface Project {

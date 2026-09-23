@@ -16,6 +16,7 @@ import {
   fixtureProjectV6,
   fixtureProjectV7,
   fixtureProjectV8,
+  fixtureProjectV9,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -27,6 +28,7 @@ const FIXTURE_V5 = resolve(import.meta.dirname, '../../../fixtures/format/v5.lcp
 const FIXTURE_V6 = resolve(import.meta.dirname, '../../../fixtures/format/v6.lcp');
 const FIXTURE_V7 = resolve(import.meta.dirname, '../../../fixtures/format/v7.lcp');
 const FIXTURE_V8 = resolve(import.meta.dirname, '../../../fixtures/format/v8.lcp');
+const FIXTURE_V9 = resolve(import.meta.dirname, '../../../fixtures/format/v9.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -53,9 +55,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V8), { recursive: true });
-      writeFileSync(FIXTURE_V8, saveProject(fixtureProjectV8(), OPTIONS));
-      expect(existsSync(FIXTURE_V8)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V9), { recursive: true });
+      writeFileSync(FIXTURE_V9, saveProject(fixtureProjectV9(), OPTIONS));
+      expect(existsSync(FIXTURE_V9)).toBe(true);
     });
   }
 
@@ -194,11 +196,52 @@ describe('the format baseline fixture', () => {
     expect(loadProject(readFileSync(FIXTURE_V7)).project).toEqual(fixtureProjectV7());
   });
 
-  it('holds a dimension at the current version', () => {
-    const loaded = loadProject(readFileSync(FIXTURE_V8));
+  it('holds a dimension, one version back now', () => {
+    expect(readManifest(readFileSync(FIXTURE_V8)).formatVersion).toBe(8);
+    expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(8);
+    expect(loadProject(readFileSync(FIXTURE_V8)).project).toEqual(fixtureProjectV8());
+  });
 
-    expect(readManifest(readFileSync(FIXTURE_V8)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
-    expect(loaded.project).toEqual(fixtureProjectV8());
+  it('names its paper at the current version', () => {
+    const loaded = loadProject(readFileSync(FIXTURE_V9));
+
+    expect(readManifest(readFileSync(FIXTURE_V9)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+    expect(loaded.project).toEqual(fixtureProjectV9());
+  });
+
+  it('opens every file written before paper could be chosen as A4 portrait', () => {
+    // **The regression this version exists for.** Until version 9 nobody could
+    // choose: `exportPdf` fell back to `DEFAULT_PAGE_SETUP`, so every project
+    // ever saved printed A4 portrait. A migration that filled in anything else
+    // would change what comes out of the printer for a pattern someone may
+    // already have cut from — so every fixture in the corpus is checked, not
+    // just the most recent one.
+    for (const fixture of [
+      FIXTURE,
+      FIXTURE_V2,
+      FIXTURE_V3,
+      FIXTURE_V4,
+      FIXTURE_V5,
+      FIXTURE_V6,
+      FIXTURE_V7,
+      FIXTURE_V8,
+    ]) {
+      const { settings } = loadProject(readFileSync(fixture)).project;
+
+      expect(settings.paper, fixture).toBe('A4');
+      expect(settings.orientation, fixture).toBe('portrait');
+    }
+  });
+
+  it('stores the paper by name, so a sheet size has one definition', () => {
+    // A stored 210 x 297 would be a second definition of A4, free to drift
+    // from the one in the domain.
+    const raw = strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE_V9)))['document.json']!);
+    const stored = (JSON.parse(raw) as { settings: Record<string, unknown> }).settings;
+
+    expect(stored['paper']).toBe('A4');
+    expect(stored['orientation']).toBe('portrait');
+    expect(JSON.stringify(stored)).not.toContain('297');
   });
 
   it('stores a dimension as two references and no value at all (X6)', () => {

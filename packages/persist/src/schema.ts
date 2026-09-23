@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ORIENTATIONS, PAPER_NAMES, type Orientation, type PaperName } from '@leathercad/domain';
 
 /**
  * What a `.lcp` file on disk may contain.
@@ -225,6 +226,10 @@ const settings = z.object({
   gridSpacingMm: nonNegativeMm,
   defaultStitchInsetMm: nonNegativeMm,
   defaultIronPitchMm: nonNegativeMm,
+  // The names rather than the dimensions: a stored 210 x 297 would be a second
+  // definition of A4, free to drift from the one in the domain.
+  paper: z.enum(PAPER_NAMES as [PaperName, ...PaperName[]]),
+  orientation: z.enum(ORIENTATIONS as [Orientation, ...Orientation[]]),
 });
 
 export const ProjectSchema = z.object({

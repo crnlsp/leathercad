@@ -66,13 +66,14 @@ ordering.
 
 ### 3.1 Shape
 
-Format version 8, as the writer emits it (key order shown for reading; the writer sorts keys):
+Format version 9, as the writer emits it (key order shown for reading; the writer sorts keys):
 
 ```jsonc
 {
   "id": "01JBQ8…",
   "name": "Bifold Wallet",
-  "settings": { "gridSpacingMm": 1, "defaultStitchInsetMm": 3.5, "defaultIronPitchMm": 3.85 },
+  "settings": { "gridSpacingMm": 1, "defaultStitchInsetMm": 3.5, "defaultIronPitchMm": 3.85,
+                "paper": "A4", "orientation": "portrait" },
   "parts": [
     {
       "id": "01JBQ9…",
@@ -186,6 +187,27 @@ function loadDocument(raw: unknown, fileVersion: number): Project {
   return ProjectSchema.parse(doc);        // zod — validate only after migrating
 }
 ```
+
+### 4.1a Version 9 — the paper a project prints on
+
+`settings.paper` and `settings.orientation` (slice 5.5). Before them there was nowhere to store the
+choice, so `exportPdf` fell back to `DEFAULT_PAGE_SETUP` and **every project ever saved printed A4
+portrait**.
+
+So `v8_to_v9` writes exactly that — `"A4"` and `"portrait"` — and the reason is not that they are
+sensible defaults. A migration may describe what a document *already meant*; it may not decide
+something new on the user's behalf. Anything else would change what comes out of the printer for a
+file someone may already have cut a pattern from. `fixture.test.ts` asserts it across the **whole
+corpus**, v1 through v8, not just the most recent file.
+
+**The name is stored, not the dimensions.** A stored `210 × 297` would be a second definition of A4,
+free to drift from the one in `packages/domain/src/paper.ts`. That module is also why the paper
+vocabulary lives in the domain at all: `ProjectSettings` has to name it, and `domain` cannot import
+`packages/export`.
+
+**Margins and the 62 mm verification footer are deliberately not stored.** They are constants in
+`packages/export`, they are already correct, and changing them has print-accuracy consequences — a
+setting nobody has asked for is a setting that can be got wrong.
 
 ### 4.2 The rules
 

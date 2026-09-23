@@ -1068,6 +1068,79 @@ is a finding, not a task.
 The audit is presented for review and **Phase 5 does not start until it is resolved.** The goal is a
 coherent interaction baseline before the next architectural phase — not cosmetic perfection.
 
+---
+
+#### ✅ The audit was done (2026-09-17/18). Its output
+
+Performed by **building and driving the application** across eight workflows, not by reading the
+code — which is what turned up most of it. Four documents, and they are the context a later slice
+should start from rather than this summary:
+
+| Document | What it settles |
+|---|---|
+| [The audit and a visual language](superpowers/specs/2026-09-17-ui-ux-audit-and-visual-language.md) | The findings, the visual-design audit, the product-identity argument |
+| [UI Foundations](superpowers/specs/2026-09-17-ui-foundations-design.md) | The design system: tokens, type scale, four colour planes, control states, panel structure, the feature/line language, F.0–F.7 |
+| [Decisions and disagreements](superpowers/specs/2026-09-18-ui-foundations-decisions.md) | The six open questions settled, four places the direction was pushed back on, the tool-palette audit |
+| [Paper reference, typography, page setup](superpowers/specs/2026-09-18-paper-reference-and-typography.md) · [decisions](superpowers/specs/2026-09-18-page-setup-and-determinism-decisions.md) | The paper reference, one type family, the determinism fixes, the 5.5 recommendation |
+
+**The one rule the whole system runs on:** the same operation has the same visual meaning
+everywhere — tool rail, parts tree, property panel, diagnostics, canvas, and ink on the printed
+pattern. Appearance may adapt to size and zoom; meaning may not.
+
+**The test it has to pass:** remove the wordmark from a screenshot — is this still obviously software
+for making leather patterns? Today, no. The ten-item checklist is in UI Foundations §12.
+
+#### The UI Foundations checkpoint — F.0 to F.7
+
+**Structure before styling**, with typography pulled ahead because it touches no container. Phase 5
+features consume these; they do not extend or amend the visual language on their own.
+
+| | Step | Contains |
+|---|---|---|
+| **F.0** | Typography | Apply the vendored face to the DOM (it is loaded and unused today); vendor Plex Sans 500/600; the nine-token scale; `formatMm()` / `formatAngle()` emitting the true minus |
+| **F.1** | Systemic interaction | `ReasonedButton` (a disabled control that renders its refusal — the domain already produces every one, and the UI hides them in a native `title`, contradicting X1); `Tooltip`; a `Notice` near the gesture; one word per relationship — **Follows / Mirrors / Mirrors … across / Measures**; drag vs click–click made consistent and a header hint that is true; **Length** on an open line, and no area on a hole |
+| **F.2** | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
+| **F.3** | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
+| **F.4** | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
+| **F.5** | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
+| **F.6** | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
+| **F.7** | Leather-specific treatment | True-size slanted stitch slits; seam allowance as a band; fold direction ticks; the derived link tick; the canvas legend and the part caption. **Then run the identity test and record the result** |
+
+#### Triage, as the checkpoint required
+
+**1 — Bug or inconsistency, fix before Phase 5.** ✅ *done this session:* three platform-font
+fallbacks in `packages/render` (the live dimension, part captions and both rulers were **not** in the
+typeface the pattern prints in); the missing U+2212 and Romanian letters; the hard-coded A4 export
+(**5.5**). *Remaining:* the canvas jump (F.3); the parts panel disappearing below ~900 px, which
+makes a **locked feature unreachable** (F.2); disabled controls hiding their reason (F.1);
+Perimeter/Area shown for lines and holes (F.1); number fields clipping their units (F.0/F.1);
+terminology collisions (F.1); a failed feature drawn in red over its healthy source (F.5); emoji
+icons (F.6).
+
+**2 — UX improvement, low architectural impact.** The typography rollout (F.0); the layout
+architecture (F.2); the colour planes (F.4/F.5); the icon system (F.6); selection as a halo; snap
+feedback that names what it caught; anchors shown on hover in every tool.
+
+**3 — Larger work, recorded not done.** The paper reference's picker and contextual suggestion (needs
+5.5, then 6.4); alignment and smart guides; a fold preview; **grain direction** (see 7.2); a cut list
+and hide yield; run-boundary marks at corners; a canvas legend; theming and density; screen
+calibration, which would make "1:1 on screen" literal rather than a nominal-DPI approximation.
+
+#### Deferred opportunities worth keeping visible
+
+- **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and
+  `oversized`, and `paperOptionsFitting` already answers which paper *would* work — a maker currently
+  learns all three only after the PDF is written. Belongs with **6.4**, where the page setup becomes
+  user-visible.
+- **The paper reference overlay** — corner ticks around the **printable area** (A4 portrait is
+  190 × 215 mm once margins and the 62 mm verification footer are out, *not* 210 × 297), anchored to
+  the selection, off by default, geometry never clipped, and **never a diagnostic**: a pattern larger
+  than a sheet is not wrong.
+- **Diagnostics have no stable identity across edits** — fine today, since the panel keys by content,
+  but it fails silently as a React key if anyone assumes otherwise.
+- **Property-panel sizing**, and the parts tree truncating feature names at about ten characters.
+- **A screen-calibration step**, post-1.0, which is what would make the 1:1 claim literal on screen.
+
 ### Phase 5 — Persistence
 *Ends at M4.*
 
@@ -1084,6 +1157,28 @@ coherent interaction baseline before the next architectural phase — not cosmet
   Still to add before this counts as **M4**: the committed `fixtures/format/v1.lcp` corpus, and
   unknown-field preservation so a file touched by a newer build is not quietly damaged by an older
   one.
+- **5.5** ✅ **Done.** **Minimal project page setup** — `paper` + `orientation` in `ProjectSettings`,
+  format version 9, and `exportPdfFile` passing it. Before it there was none: `DEFAULT_PAGE_SETUP`
+  applied and **every export in the product was A4 portrait**.
+  **One conversion point**, `pageSetupFor(settings)`, so there is nowhere for a second paper setting
+  to appear — the export dialog (6.4) will edit the project, not its own state. The paper vocabulary
+  moved down to `packages/domain/src/paper.ts`, because `ProjectSettings` has to name it and `domain`
+  cannot import `export`; the derived half — margins, the footer, `contentAreaMm`,
+  `paperOptionsFitting` — stays where it was.
+  **The name is stored, not the dimensions**: a stored 210 × 297 would be a second definition of A4.
+  `v8_to_v9` writes A4 portrait, and the whole fixture corpus v1–v8 is asserted to load that way,
+  because a migration may describe what a document already meant and may not decide something new
+  for a file someone has cut from. The writer test exports the same project on A5, A4, A4 landscape,
+  A3 and Letter and measures the MediaBox — the only place the choice is visible.
+  **No UI yet**: choosing the paper is 6.4. What this buys today is that the plumbing has one source
+  of truth before four things start reading it.
+  It lands here rather than in 6.4 because four things need to agree on it — the export dialog
+  (6.4), pagination (7.1), the print preview (7.4) and the paper reference — and four consumers with
+  no source of truth is how two paper settings get invented and then disagree. The migration is the
+  whole cost of the slice.
+  Deliberately minimal: margins and the 62 mm verification footer stay constants, because they are
+  already correct and changing them has print-accuracy consequences.
+  See [page setup and determinism](superpowers/specs/2026-09-18-page-setup-and-determinism-decisions.md).
 - **5.3** Autosave, crash recovery, recent files, unsaved-changes handling.
 - **5.4** Sample projects shipped in `fixtures/projects/`.
 
@@ -1104,7 +1199,10 @@ coherent interaction baseline before the next architectural phase — not cosmet
   ruler 100.10 mm, the excess being the 0.2 mm stroke measured outer edge to outer edge.
   Arcs go through the tolerance-driven `toCubics` from slice 1.3, since PDF has no arc primitive —
   the path that made that subdivision tolerance-driven in the first place.
-- **6.4** Export dialog: preset, layers, paper, bounds.
+- **6.4** Export dialog: preset, layers, paper, bounds. **Depends on 5.5** — the paper control needs
+  a page setup in the project to write to, or it becomes a second setting that disagrees with the
+  one pagination uses. `paperOptionsFitting` already answers "what would fit", so the dialog reports
+  rather than computes.
 
 ### Phase 7 — Printing
 *Ends at M5. The payoff.*
@@ -1117,6 +1215,12 @@ coherent interaction baseline before the next architectural phase — not cosmet
   Tiling proper (overlap, registration marks, assembly sheet) remains future work, and is the only
   way to print a part bigger than the paper.
 - **7.2** Registration marks, overlap bands, tile labels, edge arrows, assembly sheet.
+  **Constraint, recorded before it is needed: pagination must never rotate a part to make it fit
+  until the model knows which way the part's grain runs.** Packing already orders parts to fill the
+  sheet, and rotating an oversized one is the obvious next step — but leather stretches across the
+  grain, so a rotated piece instructs someone to cut in a direction that will stretch wrong, and the
+  printed pattern would be confidently incorrect. A one-line constraint now; an expensive retrofit
+  after someone has cut from it. Grain direction itself is post-1.0.
 - **7.3** ✅ **Done.** 50 mm verification square and 100 mm ruler on every page, plus the printed
   instruction to print at 100%. With `/PrintScaling /None` in the catalog that makes three
   independent defences, which matters because the application deliberately never drives a printer.

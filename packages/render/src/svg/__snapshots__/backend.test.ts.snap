@@ -9,7 +9,7 @@ exports[`renderToSvgString > matches its snapshot — the mechanism docs/testing
 <circle cx="0" cy="0" r="1" fill="#5aa9ff"/>
 <circle cx="8" cy="0" r="1" fill="#5aa9ff"/>
 </g>
-<g font-family="system-ui, sans-serif">
+<g font-family="'IBM Plex Sans', sans-serif">
 <text x="200" y="126" font-size="11" fill="#8b929b">40 mm</text>
 </g>
 </svg>"

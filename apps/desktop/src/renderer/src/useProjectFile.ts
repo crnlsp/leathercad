@@ -1,6 +1,6 @@
 import type { DocumentStore } from '@leathercad/document';
 import { evaluate, exportReadiness, type ExportReadiness } from '@leathercad/domain';
-import { buildExportScene, describeOversized, exportPdf } from '@leathercad/export';
+import { buildExportScene, describeOversized, exportPdf, pageSetupFor } from '@leathercad/export';
 import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
@@ -131,6 +131,10 @@ export function useProjectFile(
 
       const scene = buildExportScene(evaluate(project), project.name);
       const { bytes, pagination } = await exportPdf(scene, {
+        // The project's own paper, not the exporter's fallback. Until this
+        // existed, `DEFAULT_PAGE_SETUP` applied to every export ever made and
+        // nobody could print on A3.
+        setup: pageSetupFor(project.settings),
         applicationVersion: appVersion,
         now: () => new Date(),
       });

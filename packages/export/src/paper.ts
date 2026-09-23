@@ -1,4 +1,11 @@
 import type { Mm } from '@leathercad/core';
+import {
+  PAPER_SIZES,
+  type Orientation,
+  type PaperName,
+  type PaperSize,
+  type ProjectSettings,
+} from '@leathercad/domain';
 
 /**
  * Paper sizes and the millimetre-to-point conversion.
@@ -18,24 +25,6 @@ export function mmToPt(mm: Mm): number {
 export function ptToMm(pt: number): Mm {
   return pt / MM_TO_PT;
 }
-
-export interface PaperSize {
-  readonly name: string;
-  readonly widthMm: Mm;
-  readonly heightMm: Mm;
-}
-
-export const PAPER_SIZES = {
-  A5: { name: 'A5', widthMm: 148, heightMm: 210 },
-  A4: { name: 'A4', widthMm: 210, heightMm: 297 },
-  A3: { name: 'A3', widthMm: 297, heightMm: 420 },
-  Letter: { name: 'Letter', widthMm: 215.9, heightMm: 279.4 },
-  Legal: { name: 'Legal', widthMm: 215.9, heightMm: 355.6 },
-} as const satisfies Record<string, PaperSize>;
-
-export type PaperName = keyof typeof PAPER_SIZES;
-
-export type Orientation = 'portrait' | 'landscape';
 
 export interface Margins {
   readonly top: Mm;
@@ -75,12 +64,35 @@ export const DEFAULT_PAGE_SETUP: PageSetup = {
   footerHeightMm: 62,
 };
 
+/**
+ * The paper vocabulary a project stores lives in `@leathercad/domain`, because
+ * `ProjectSettings` has to name it and `domain` cannot import this package.
+ * Re-exported here so callers of the export API keep one import.
+ */
+export { PAPER_SIZES, type Orientation, type PaperName, type PaperSize };
+
 /** Sheet dimensions with orientation applied. */
 export function sheetSizeMm(setup: PageSetup): { widthMm: Mm; heightMm: Mm } {
   const { widthMm, heightMm } = setup.paper;
   return setup.orientation === 'portrait'
     ? { widthMm, heightMm }
     : { widthMm: heightMm, heightMm: widthMm };
+}
+
+/**
+ * The project's stored choice, turned into the full page setup everything else
+ * takes. **The one conversion point**, so there is nowhere for a second paper
+ * setting to appear: a caller either passes this or gets the default.
+ *
+ * Margins and the footer come from here rather than from the project because
+ * they are not the maker's decision yet (§ the 5.5 slice).
+ */
+export function pageSetupFor(settings: ProjectSettings): PageSetup {
+  return {
+    ...DEFAULT_PAGE_SETUP,
+    paper: PAPER_SIZES[settings.paper],
+    orientation: settings.orientation,
+  };
 }
 
 /**

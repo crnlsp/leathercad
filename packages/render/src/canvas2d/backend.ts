@@ -48,7 +48,17 @@ export interface Canvas2DLike {
 }
 
 export interface RenderOptions {
-  /** For overlay text — readouts and hints. Defaults to the system UI font. */
+  /**
+   * For overlay text — readouts and hints. Defaults to the **vendored**
+   * typeface, like everything else this package draws.
+   *
+   * It used to default to `system-ui`, which meant a millimetre value read one
+   * way on screen and another on paper: the live dimension and the part caption
+   * went through here in whatever face the machine happened to have, while the
+   * same strings are filled from Plex outlines by the exporters. A renderer
+   * whose output depends on the host's installed fonts cannot be snapshotted
+   * either.
+   */
   readonly fontFamily?: string;
   /** For document text. Defaults to the vendored typeface. */
   readonly documentFontFamily?: string;
@@ -145,7 +155,7 @@ export function renderDisplayList(
 
       if (item.kind === 'overlay-text') {
         const at = MatOps.apply(transform, item.at);
-        ctx.font = `${item.sizePx}px ${options.fontFamily ?? 'system-ui, sans-serif'}`;
+        ctx.font = `${item.sizePx}px ${options.fontFamily ?? vendoredFamily()}`;
         ctx.textAlign = item.align ?? 'left';
         ctx.textBaseline = item.baseline ?? 'alphabetic';
         ctx.fillText(item.text, at.x, at.y);
@@ -192,7 +202,15 @@ export function renderDisplayList(
  * positions come from the layout, not from the browser's measurement.
  */
 function documentFamily(options: RenderOptions): string {
-  return options.documentFontFamily ?? `"${FONT_FAMILY}", sans-serif`;
+  return options.documentFontFamily ?? vendoredFamily();
+}
+
+/**
+ * The one family this package names. There is no platform font anywhere in
+ * `packages/render` — `fonts.test.ts` holds it to that.
+ */
+export function vendoredFamily(): string {
+  return `"${FONT_FAMILY}", sans-serif`;
 }
 
 /** Emits one path into the context's current path, in millimetres. */

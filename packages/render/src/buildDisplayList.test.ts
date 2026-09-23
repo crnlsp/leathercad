@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from '@leathercad/domain';
 import type { Diagnostic, Feature, Part, ResolvedProject } from '@leathercad/domain';
 import { PathOps, Shapes } from '@leathercad/geometry';
 import { placedText } from '@leathercad/typography';
@@ -47,7 +48,7 @@ function resolved(features: Feature[], failed: string[] = [], override?: Part): 
     project: {
       id: 'p',
       name: 'Test',
-      settings: { gridSpacingMm: 5, defaultStitchInsetMm: 3.5, defaultIronPitchMm: 3.85 },
+      settings: DEFAULT_SETTINGS,
       parts: [part],
     },
     parts: [
@@ -166,7 +167,7 @@ describe('text labels', () => {
       project: {
         id: 'p',
         name: 'Test',
-        settings: { gridSpacingMm: 5, defaultStitchInsetMm: 3.5, defaultIronPitchMm: 3.85 },
+        settings: DEFAULT_SETTINGS,
         parts: [part],
       },
       parts: [

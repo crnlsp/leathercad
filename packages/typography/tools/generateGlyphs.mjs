@@ -30,8 +30,9 @@ const OUT = resolve(HERE, '../src/generated/plexSans.ts');
  * ASCII, the Latin-1 letters, and Latin Extended-A — which is what makes
  * Polish (ą ć ę ł ń ó ś ź ż), Czech, Hungarian and the rest of Central Europe
  * work, the gap that made `exportPdf` throw on a part named "Przegroda
- * główna". Plus the punctuation a dimension needs: degrees, multiplication,
- * primes, the diameter sign.
+ * główna", plus Romanian's four comma-below letters from Latin Extended-B.
+ * And the punctuation a dimension needs: degrees, multiplication, primes, and
+ * the true minus.
  *
  * Anything outside it renders as a visible replacement box and raises
  * `TEXT_GLYPH_MISSING`. Widening the set is a deliberate change: it is
@@ -42,9 +43,20 @@ function declaredCharacters() {
   for (let code = 0x20; code <= 0x7e; code++) chars.push(String.fromCodePoint(code));
   for (let code = 0xa0; code <= 0xff; code++) chars.push(String.fromCodePoint(code));
   for (let code = 0x100; code <= 0x17f; code++) chars.push(String.fromCodePoint(code));
+  // Romanian's comma-below letters live in Latin Extended-B, past the range
+  // above, and IBM Plex Sans has all four. Without them a part named "Ștanță"
+  // prints as boxes — the same gap that "Przegroda główna" used to hit.
+  for (const romanian of ['Ș', 'ș', 'Ț', 'ț']) chars.push(romanian);
+
   // No ⌀ (U+2300): IBM Plex Sans does not have it, so a diameter is written
   // with Ø, which it does.
-  for (const extra of ['–', '—', '‘', '’', '“', '”', '…', '′', '″', '≈', '≤', '≥']) {
+  //
+  // **U+2212 is the real minus**, and it is not U+002D. A negative coordinate
+  // or a −90° angle set with a hyphen is a hyphen: narrower than a digit, so a
+  // column of figures stops lining up, and typographically wrong on a drawing.
+  // Plex gives it an advance of 600 — the same as every digit — so it is the
+  // one character that keeps a signed column tabular.
+  for (const extra of ['–', '—', '‘', '’', '“', '”', '…', '′', '″', '−', '≈', '≤', '≥']) {
     chars.push(extra);
   }
   return chars;
