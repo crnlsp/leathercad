@@ -1209,6 +1209,73 @@ button.problem-row:hover {
   pointer-events: none;
 }
 
+/* ——— F.7: the legend ——————————————————————————————————————————————————————
+   The key to the drawing sits on the drafting ground and speaks its plane: the
+   ground, its ink, and the accent's ground value for focus (§5). Top-right,
+   below the ruler, floating over the canvas so opening it moves nothing. */
+
+.canvas-legend {
+  position: absolute;
+  z-index: 4;
+  /* Below the 22 px top ruler. */
+  top: calc(22px + var(--space-2));
+  right: var(--space-2);
+  max-width: 220px;
+  border: 1px solid var(--ground-major);
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  color: var(--ink);
+  font: var(--t-label);
+}
+
+.canvas-legend-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 26px;
+  padding: 2px var(--space-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  cursor: pointer;
+}
+
+.canvas-legend-toggle:hover {
+  color: var(--ink);
+}
+
+.canvas-legend-toggle:focus-visible {
+  outline: 1px solid var(--tan-ink);
+  outline-offset: 1px;
+}
+
+.canvas-legend-strip {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.canvas-legend-title {
+  flex: 1;
+  text-align: left;
+}
+
+.canvas-legend-rows {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0 var(--space-2) var(--space-2);
+  list-style: none;
+}
+
+.canvas-legend-rows li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* ——— F.4: motion ————————————————————————————————————————————————————————
    Colour-only acknowledgement of a press or a hover (§6.3): background, border,
    colour and opacity, never a transform. Off entirely for reduced motion. */

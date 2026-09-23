@@ -8,7 +8,8 @@
  * table, and `apps/desktop` projects them onto `:root` for the stylesheet.
  */
 export { ACCENT, GROUND, SHELL, STATE } from './palette.js';
-export { CANVAS } from './canvas.js';
+export { CANVAS, alpha } from './canvas.js';
+export { NOMINAL_IRON } from './iron.js';
 export { DASH_LEGIBLE_PX, ROLE_STYLES, screenDash, type RoleStyle } from './roles.js';
 export { DENSITY, type Density } from './tokens.js';
 export { cssVariables } from './css.js';

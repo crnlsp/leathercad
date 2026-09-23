@@ -1,7 +1,8 @@
-import { MatOps, SegmentOps, type Path, type Segment } from '@leathercad/geometry';
+import { MatOps, PathOps, SegmentOps, type Path, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY, outlinesOf } from '@leathercad/typography';
 
 import type { DisplayItem, DisplayList } from '../displayList.js';
+import { foldTickShape, hatchLines, linkTickShape } from '../leather.js';
 import { markerShape } from '../marker.js';
 import { CANVAS, GROUND, screenDash } from '../theme/index.js';
 import { worldToScreen, type ViewportView } from '../view.js';
@@ -67,6 +68,7 @@ export function renderToSvgString(
       `fill="none" stroke-linecap="round" stroke-linejoin="round">`,
   );
 
+  let hatches = 0;
   for (const item of list.items) {
     if (item.kind === 'path') {
       // As on the canvas: a tool's dash in pixels, a role's in true millimetres
@@ -89,6 +91,30 @@ export function renderToSvgString(
           `<circle cx="${n(point.x)}" cy="${n(point.y)}" r="${radius}" fill="${item.fill}"/>`,
         );
       }
+    } else if (item.kind === 'slits') {
+      // One path of separate strokes, butt-capped, as the canvas draws them.
+      const d = item.slits.map(([a, b]) => `M ${n(a.x)} ${n(a.y)} L ${n(b.x)} ${n(b.y)}`).join(' ');
+      parts.push(
+        `<path d="${d}" stroke="${item.stroke.colour}" ` +
+          `stroke-width="${n(item.stroke.widthPx / perMm)}" stroke-linecap="butt"/>`,
+      );
+    } else if (item.kind === 'fill') {
+      const d = item.paths.map((path) => pathData(path, n)).join(' ');
+      parts.push(`<path d="${d}" fill="${item.colour}" fill-rule="evenodd" stroke="none"/>`);
+    } else if (item.kind === 'hatch') {
+      const bounds = PathOps.bbox(item.path);
+      if (bounds === null) continue;
+      // An id per hatch in this document, counted, so the output is the same
+      // on every run.
+      const id = `hatch-${String(hatches++)}`;
+      const d = hatchLines(bounds, item.spacingPx / perMm)
+        .map(([a, b]) => `M ${n(a.x)} ${n(a.y)} L ${n(b.x)} ${n(b.y)}`)
+        .join(' ');
+      parts.push(
+        `<clipPath id="${id}"><path d="${pathData(item.path, n)}"/></clipPath>`,
+        `<path d="${d}" clip-path="url(#${id})" stroke="${item.colour}" ` +
+          `stroke-width="${n(item.widthPx / perMm)}" stroke-linecap="butt"/>`,
+      );
     } else if (item.kind === 'document-text') {
       // Outlines, not `<text>`: no font is referenced, so the file shows the
       // same shapes in every viewer and cutter program, and a snapshot of it
@@ -119,6 +145,40 @@ export function renderToSvgString(
       );
     }
     parts.push('</g>');
+  }
+
+  // Fold ticks and link ticks, in screen pixels over the lines, as the canvas
+  // draws them (F.7).
+  for (const item of list.items) {
+    if (item.kind === 'fold-tick') {
+      const points = foldTickShape(MatOps.apply(transform, item.at), item.fold)
+        .map((p) => `${n(p.x)},${n(p.y)}`)
+        .join(' ');
+      parts.push(
+        `<polyline points="${points}" fill="none" stroke="${item.colour}" ` +
+          `stroke-width="${n(CANVAS.foldTick.strokePx)}" stroke-linecap="round" ` +
+          `stroke-linejoin="round" data-glyph="${item.fold}"/>`,
+      );
+    } else if (item.kind === 'link-tick') {
+      const rings = linkTickShape(
+        MatOps.apply(transform, item.at),
+        MatOps.applyDirection(transform, item.tangent),
+      );
+      // The ground under both, then both rings: interlocked.
+      for (const { centre, radius } of rings) {
+        parts.push(
+          `<circle cx="${n(centre.x)}" cy="${n(centre.y)}" r="${n(radius)}" ` +
+            `fill="${GROUND.ground}"/>`,
+        );
+      }
+      for (const { centre, radius } of rings) {
+        parts.push(
+          `<circle cx="${n(centre.x)}" cy="${n(centre.y)}" r="${n(radius)}" fill="none" ` +
+            `stroke="${item.colour}" stroke-width="${n(CANVAS.linkTick.strokePx)}" ` +
+            `data-glyph="link"/>`,
+        );
+      }
+    }
   }
 
   // Severity markers, in screen pixels and on top, as the canvas draws them.

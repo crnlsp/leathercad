@@ -1,17 +1,30 @@
-import type { Diagnostic, FeatureId, ResolvedProject, Severity } from '@leathercad/domain';
+import type { Diagnostic, Feature, FeatureId, ResolvedProject, Severity } from '@leathercad/domain';
 import { PathOps, RectOps, type Path, type Rect } from '@leathercad/geometry';
+import { placedText } from '@leathercad/typography';
 
-import { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from './captions.js';
+import {
+  CAPTION_GAP_MM,
+  CAPTION_LINE_GAP_MM,
+  CAPTION_SIZE_MM,
+  STITCHING_CAPTION_SIZE_MM,
+  describePart,
+  describeStitching,
+} from './captions.js';
 import {
   ROLE_STROKES,
-  documentTextItem,
   dotsItem,
+  fillItem,
+  foldTickItem,
+  hatchItem,
+  linkTickItem,
   markerItem,
   pathItem,
   placedTextItem,
+  slitsItem,
   type DisplayItem,
   type DisplayList,
 } from './displayList.js';
+import { foldTicksAlong, linkTickOn, slitsFor } from './leather.js';
 import { CANVAS, ROLE_STYLES, STATE } from './theme/index.js';
 
 export interface BuildOptions {
@@ -35,8 +48,8 @@ export interface BuildOptions {
   readonly captions?: boolean;
   /**
    * The zoom, in device pixels per millimetre, which picks the zoom band
-   * (§9.3). Absent means the working band — what a test or an export of the
-   * screen wants.
+   * (§9.3) and spaces the fold ticks. Absent means the working zoom — what a
+   * test or an export of the screen wants.
    */
   readonly pxPerMm?: number;
 }
@@ -56,9 +69,19 @@ export function buildDisplayList(
   options: BuildOptions = {},
 ): DisplayList {
   const selected = options.selected ?? new Set<FeatureId>();
-  const overview = (options.pxPerMm ?? Infinity) < CANVAS.bands.overviewBelowPxPerMm;
+  const zoom = options.pxPerMm ?? CANVAS.bands.workingPxPerMm;
+  const overview = zoom < CANVAS.bands.overviewBelowPxPerMm;
   const items: DisplayItem[] = [];
   const hidden = new Set<FeatureId>();
+
+  // What every feature resolved to, so a seam allowance can find the stitching
+  // it grew from.
+  const resolvedPaths = new Map<FeatureId, Path>();
+  for (const part of resolved.parts) {
+    for (const entry of part.features) {
+      if (entry.ok) resolvedPaths.set(entry.feature.id, entry.path);
+    }
+  }
 
   /**
    * A halo beneath a line: the accent, broad and translucent, laid down before
@@ -78,6 +101,10 @@ export function buildDisplayList(
 
   for (const part of resolved.parts) {
     const drawn: Rect[] = [];
+    // Bands and hatches: beneath every halo and line in the part, so nothing
+    // drawn on top of a region is tinted by it.
+    const beneath: DisplayItem[] = [];
+    const partStart = items.length;
 
     for (const entry of part.features) {
       if (!entry.feature.visible) hidden.add(entry.feature.id);
@@ -86,6 +113,7 @@ export function buildDisplayList(
       const box = PathOps.bbox(entry.path);
       if (box !== null) drawn.push(box);
       const id = entry.feature.id;
+      const { feature } = entry;
 
       // A label draws its words. The layout came from evaluation, so the
       // canvas and the printed sheet place the same glyphs in the same spots.
@@ -115,43 +143,63 @@ export function buildDisplayList(
       // per hole is a cloud of blobs — and the holes stay as they are (§8.4).
       if (entry.holes !== undefined) {
         halo(id, entry.path);
-        items.push(
-          overview
-            ? // Zoomed out, the holes stop being drawn and the set renders as
-              // its stitch line, in stitch blue: still stitching, on the
-              // stitch line, only less detailed (§9.3).
-              pathItem(entry.role, entry.path, {
-                colour: ROLE_STROKES.stitch.colour,
-                dashMm: ROLE_STYLES.stitch.dashMm,
-              })
-            : dotsItem(
-                entry.role,
-                entry.holes.holes.map((hole) => hole.point),
-              ),
-        );
+        if (overview) {
+          // Zoomed out, the holes stop being drawn and the set renders as its
+          // stitch line, in stitch blue: still stitching, on the stitch line,
+          // only less detailed (§9.3).
+          items.push(
+            pathItem(entry.role, entry.path, {
+              colour: ROLE_STROKES.stitch.colour,
+              dashMm: ROLE_STYLES.stitch.dashMm,
+            }),
+          );
+        } else {
+          // Each hole a slit, sized from the iron — the nominal pitch, not the
+          // spacing achieved — and slanted as the iron cuts (F.7).
+          const { source } = feature;
+          const pitchMm =
+            source.kind === 'derived' && source.op.type === 'stitch-holes'
+              ? source.op.pitchMm
+              : entry.holes.achievedPitchMm;
+          const { slits, widthPx } = slitsFor(entry.holes.holes, pitchMm, zoom);
+          items.push(slitsItem(slits, widthPx));
+        }
         continue;
+      }
+
+      // A seam allowance is the material between the stitching and the edge
+      // grown from it, so it is drawn as that band (F.7). Both are closed:
+      // 4.9 refuses an allowance on an open line or a partial run.
+      const stitching = allowanceSource(feature);
+      const stitchPath = stitching === null ? undefined : resolvedPaths.get(stitching);
+      if (stitchPath !== undefined && stitchPath.closed && entry.path.closed) {
+        beneath.push(fillItem(entry.role, [entry.path, stitchPath], CANVAS.allowance));
+      }
+      // A cut-out is removal, not boundary: hatched inward (§8.2).
+      if (feature.kind === 'cut-contour' && feature.role === 'inner' && entry.path.closed) {
+        beneath.push(hatchItem(entry.path));
       }
 
       halo(id, entry.path);
       items.push(pathItem(entry.role, entry.path));
-    }
 
-    // The caption is document text: the same words, size and position the
-    // printed sheet uses, so the screen is a preview of the paper rather than
-    // a different drawing — in the ground's quiet ink, not a role's colour.
-    const bounds = RectOps.unionAll(drawn);
-    if ((options.captions ?? true) && bounds !== null) {
-      items.push(
-        documentTextItem(
-          'annotation',
-          { x: bounds.minX, y: bounds.maxY + CAPTION_GAP_MM },
-          describePart(part.part),
-          CAPTION_SIZE_MM,
-          {},
-          CANVAS.caption,
-        ),
-      );
+      // A fold says which way it folds, on the drawing itself (F.7).
+      if (feature.kind === 'fold-line') {
+        for (const at of foldTicksAlong(entry.path, zoom)) {
+          items.push(foldTickItem(at, feature.direction));
+        }
+      }
+      // Derived is a state, not a colour: the line keeps its role and wears a
+      // link (§8.3).
+      if (isLinked(feature)) {
+        const tick = linkTickOn(entry.path);
+        if (tick !== null) items.push(linkTickItem(entry.role, tick.at, tick.tangent));
+      }
     }
+    items.splice(partStart, 0, ...beneath);
+
+    const bounds = RectOps.unionAll(drawn);
+    if ((options.captions ?? true) && bounds !== null) items.push(...captionsFor(part, bounds));
   }
 
   // Markers last, so a problem is never drawn under the geometry it is about.
@@ -182,4 +230,50 @@ export function buildDisplayList(
   }
 
   return { items };
+}
+
+/**
+ * The caption above a part: its name, and under the name the iron (F.7).
+ *
+ * The name is document text in the words and size the printed sheet uses, in
+ * the ground's quiet ink rather than a role's colour. The iron line is the
+ * canvas caption of UI Foundations §13, smaller; the name sits a line higher to
+ * make room for it. Paper keeps the name alone.
+ */
+function captionsFor(part: ResolvedProject['parts'][number], bounds: Rect): readonly DisplayItem[] {
+  const base = { x: bounds.minX, y: bounds.maxY + CAPTION_GAP_MM };
+  const stitching = describeStitching(part);
+  const name = (y: number) =>
+    placedTextItem(
+      'annotation',
+      placedText(describePart(part.part), CAPTION_SIZE_MM, { x: base.x, y }),
+      CANVAS.caption,
+    );
+  if (stitching === null) return [name(base.y)];
+
+  const iron = placedText(stitching, STITCHING_CAPTION_SIZE_MM, base);
+  return [
+    name(base.y + iron.layout.ascentMm + CAPTION_LINE_GAP_MM),
+    placedTextItem('annotation', iron, CANVAS.caption),
+  ];
+}
+
+/** The stitch line a seam allowance grew from: an edge offset outward from it. */
+function allowanceSource(feature: Feature): FeatureId | null {
+  const { source } = feature;
+  return feature.kind === 'cut-contour' &&
+    source.kind === 'derived' &&
+    source.op.type === 'offset' &&
+    source.op.side === 'outward'
+    ? source.sourceId
+    : null;
+}
+
+/**
+ * Whether a line wears the link tick: built from another feature, and not a
+ * hole set, which is always built from its stitch line and would say nothing
+ * by wearing one. A frozen feature is drawn geometry now, and has no link.
+ */
+function isLinked(feature: Feature): boolean {
+  return feature.source.kind === 'derived' && feature.kind !== 'stitch-hole-set';
 }

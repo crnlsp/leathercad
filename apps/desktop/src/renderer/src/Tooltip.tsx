@@ -45,8 +45,14 @@ export function Tooltip({
   if (text === null) return children;
 
   const show = (): void => {
-    const box = anchor.current?.getBoundingClientRect();
-    if (box === undefined) return;
+    const node = anchor.current;
+    if (node === null) return;
+    // Only while it is still asked for: pointed at, or holding keyboard focus.
+    // A control whose content changes on a click — the legend's toggle (F.7) —
+    // is sent a fresh pointer-enter as the old content goes, and the delayed
+    // show then fired after the pointer had left.
+    if (!node.matches(':hover') && node.querySelector(':focus-visible') === null) return;
+    const box = node.getBoundingClientRect();
     setAt({ left: box.left, top: box.bottom + 4 });
   };
   const hide = (): void => {

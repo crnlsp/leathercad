@@ -3,7 +3,7 @@ import { LAYER_ROLES, type LayerRole } from '@leathercad/domain';
 import type { Path, Vec2 } from '@leathercad/geometry';
 import { placedText, type PlacedText, type TextPlacement } from '@leathercad/typography';
 
-import { ROLE_STYLES } from './theme/index.js';
+import { CANVAS, ROLE_STYLES, alpha } from './theme/index.js';
 
 export interface Stroke {
   readonly colour: string;
@@ -42,6 +42,57 @@ export type DisplayItem =
       /** Radius in device pixels — dots stay visible when zoomed out. */
       readonly radiusPx: number;
       readonly fill: string;
+    }
+  /**
+   * Stitch holes as a pricking iron makes them (F.7): separate strokes, each a
+   * slit's two ends in millimetres, drawn with butt caps so a slit is exactly
+   * as long as it says.
+   */
+  | {
+      readonly kind: 'slits';
+      readonly role: LayerRole;
+      readonly slits: readonly (readonly [Vec2, Vec2])[];
+      readonly stroke: { readonly colour: string; readonly widthPx: number };
+    }
+  /**
+   * A region between closed paths, filled even-odd: the seam allowance's band
+   * between an edge and the stitching it grew from (F.7). Screen only.
+   */
+  | {
+      readonly kind: 'fill';
+      readonly role: LayerRole;
+      readonly paths: readonly Path[];
+      readonly colour: string;
+    }
+  /** A cut-out's inward hatch, clipped to its inside (§8.2, F.7). Screen only. */
+  | {
+      readonly kind: 'hatch';
+      readonly role: LayerRole;
+      readonly path: Path;
+      readonly colour: string;
+      /** Screen-constant, like a stroke width: a hatch is a texture, not a rhythm. */
+      readonly spacingPx: number;
+      readonly widthPx: number;
+    }
+  /** Which way a fold folds: V or Λ, upright, in screen pixels (F.7). */
+  | {
+      readonly kind: 'fold-tick';
+      readonly role: LayerRole;
+      readonly at: Vec2;
+      readonly fold: 'valley' | 'mountain';
+      readonly colour: string;
+    }
+  /**
+   * That a line is derived: two rings at its midpoint, turned to its tangent,
+   * in screen pixels (§8.3, F.7).
+   */
+  | {
+      readonly kind: 'link-tick';
+      readonly role: LayerRole;
+      readonly at: Vec2;
+      /** The line's direction here, in the world. */
+      readonly tangent: Vec2;
+      readonly colour: string;
     }
   /**
    * Text that can reach paper: a part caption, a dimension value.
@@ -156,6 +207,33 @@ export function dotsItem(
   return { kind: 'dots', role, points, radiusPx, fill: fill ?? ROLE_STROKES[role].colour };
 }
 
+export function slitsItem(
+  slits: readonly (readonly [Vec2, Vec2])[],
+  widthPx: number,
+  colour: string = ROLE_STROKES['stitch-holes'].colour,
+): DisplayItem {
+  return { kind: 'slits', role: 'stitch-holes', slits, stroke: { colour, widthPx } };
+}
+
+export function fillItem(role: LayerRole, paths: readonly Path[], colour: string): DisplayItem {
+  return { kind: 'fill', role, paths, colour };
+}
+
+export function hatchItem(path: Path): DisplayItem {
+  const { colour, spacingPx, widthPx } = CANVAS.hatch;
+  return { kind: 'hatch', role: 'cut', path, colour, spacingPx, widthPx };
+}
+
+export function foldTickItem(at: Vec2, fold: 'valley' | 'mountain'): DisplayItem {
+  return { kind: 'fold-tick', role: 'fold', at, fold, colour: ROLE_STROKES.fold.colour };
+}
+
+/** In the role's colour at the link tick's opacity: derived is a state, not a colour. */
+export function linkTickItem(role: LayerRole, at: Vec2, tangent: Vec2): DisplayItem {
+  const colour = alpha(ROLE_STROKES[role].colour, CANVAS.linkTick.opacity);
+  return { kind: 'link-tick', role, at, tangent, colour };
+}
+
 export function markerItem(
   at: Vec2,
   glyph: 'error' | 'warning' | 'info',
@@ -208,6 +286,18 @@ export function displayListBounds(list: DisplayList): { min: Vec2; max: Vec2 } |
       }
     } else if (item.kind === 'dots') {
       for (const point of item.points) include(point);
+    } else if (item.kind === 'slits') {
+      for (const [a, b] of item.slits) {
+        include(a);
+        include(b);
+      }
+    } else if (item.kind === 'fill' || item.kind === 'hatch') {
+      for (const path of item.kind === 'fill' ? item.paths : [item.path]) {
+        for (const segment of path.segments) {
+          include(segmentStart(segment));
+          include(segmentEnd(segment));
+        }
+      }
     } else if (item.kind === 'document-text') {
       // The baseline's two ends: enough for fit-to-content, and in
       // millimetres, unlike overlay text.

@@ -1,12 +1,12 @@
 import { DEFAULT_SETTINGS } from '@leathercad/domain';
-import type { Diagnostic, Feature, Part, ResolvedProject } from '@leathercad/domain';
-import { PathOps, Shapes } from '@leathercad/geometry';
+import type { Diagnostic, Feature, LayerRole, Part, ResolvedProject } from '@leathercad/domain';
+import { PathOps, Shapes, type Path } from '@leathercad/geometry';
 import { placedText } from '@leathercad/typography';
 import { describe, expect, it } from 'vitest';
 
 import { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
 import { ROLE_STROKES, type DisplayItem } from './displayList.js';
-import { CANVAS } from './theme/index.js';
+import { CANVAS, NOMINAL_IRON } from './theme/index.js';
 
 /** Everything except the part caption, which every part now carries. */
 const drawing = (items: readonly DisplayItem[]): DisplayItem[] =>
@@ -203,7 +203,13 @@ describe('selection', () => {
               role: 'stitch-holes',
               path: line,
               anchors: [],
-              holes: { holes: [{ point: { x: 5, y: 5 } }, { point: { x: 9, y: 5 } }] },
+              holes: {
+                holes: [
+                  { point: { x: 5, y: 5 }, tangent: { x: 1, y: 0 } },
+                  { point: { x: 9, y: 5 }, tangent: { x: 1, y: 0 } },
+                ],
+                achievedPitchMm: 4,
+              },
             } as never,
           ],
         },
@@ -215,8 +221,8 @@ describe('selection', () => {
       (i) => i.kind === 'path' && i.stroke.colour === CANVAS.halo.selected,
     );
     expect(halo).toMatchObject({ path: line });
-    const dots = list.items.find((i) => i.kind === 'dots');
-    expect(dots).toMatchObject({ fill: ROLE_STROKES['stitch-holes'].colour });
+    const slits = list.items.find((i) => i.kind === 'slits');
+    expect(slits).toMatchObject({ stroke: { colour: ROLE_STROKES['stitch-holes'].colour } });
   });
 
   it('puts the halo on the marker of a selected feature that failed, not on its source', () => {
@@ -252,7 +258,10 @@ describe('zoom bands', () => {
               role: 'stitch-holes',
               path: line,
               anchors: [],
-              holes: { holes: [{ point: { x: 5, y: 5 } }] },
+              holes: {
+                holes: [{ point: { x: 5, y: 5 }, tangent: { x: 1, y: 0 } }],
+                achievedPitchMm: 4,
+              },
             } as never,
           ],
         },
@@ -262,14 +271,14 @@ describe('zoom bands', () => {
 
   it('draws the holes at a working zoom', () => {
     const list = buildDisplayList(holesProject(), { pxPerMm: CANVAS.bands.overviewBelowPxPerMm });
-    expect(list.items.some((i) => i.kind === 'dots')).toBe(true);
+    expect(list.items.some((i) => i.kind === 'slits')).toBe(true);
   });
 
   it('draws the set as its stitch line in the overview band', () => {
     const list = buildDisplayList(holesProject(), {
       pxPerMm: CANVAS.bands.overviewBelowPxPerMm / 2,
     });
-    expect(list.items.some((i) => i.kind === 'dots')).toBe(false);
+    expect(list.items.some((i) => i.kind === 'slits')).toBe(false);
     const asLine = list.items.filter((i) => i.kind === 'path' && i.role === 'stitch-holes');
     expect(asLine).toEqual([
       expect.objectContaining({
@@ -373,5 +382,310 @@ describe('part captions', () => {
   it('can be turned off', () => {
     const list = buildDisplayList(resolved([outline]), { captions: false });
     expect(list.items.every((item) => item.kind !== 'document-text')).toBe(true);
+  });
+});
+
+describe('leather-specific treatment (F.7)', () => {
+  const at = (x: number, y: number) => ({ x, y });
+  const base = { visible: true, locked: false } as const;
+
+  const drawnOutline: Feature = {
+    ...base,
+    id: 'outline',
+    kind: 'cut-contour',
+    role: 'outer',
+    name: 'Outline',
+    source: { kind: 'path', path: Shapes.rect(at(0, 0), 100, 60) },
+  };
+  const followingStitch: Feature = {
+    ...base,
+    id: 'stitch',
+    kind: 'stitch-line',
+    name: 'Stitch line',
+    source: {
+      kind: 'derived',
+      sourceId: 'outline',
+      op: { type: 'offset', distanceMm: 4, side: 'inward', run: { kind: 'whole' } },
+    },
+  };
+  const holeSet: Feature = {
+    ...base,
+    id: 'holes',
+    kind: 'stitch-hole-set',
+    name: 'Stitch holes',
+    source: {
+      kind: 'derived',
+      sourceId: 'stitch',
+      op: {
+        type: 'stitch-holes',
+        pitchMm: 3.85,
+        mode: 'fit-whole',
+        corners: 'hole-at-corner',
+        ironLabel: 'KS Blade 3.85 mm',
+      },
+    },
+  };
+  const drawnStitch: Feature = {
+    ...base,
+    id: 'opening',
+    kind: 'stitch-line',
+    name: 'Stitch line',
+    source: { kind: 'path', path: Shapes.rect(at(4, 4), 92, 52) },
+  };
+  const allowanceEdge: Feature = {
+    ...base,
+    id: 'edge',
+    kind: 'cut-contour',
+    role: 'outer',
+    name: 'Outline',
+    source: {
+      kind: 'derived',
+      sourceId: 'opening',
+      op: { type: 'offset', distanceMm: 4, side: 'outward', run: { kind: 'whole' } },
+    },
+  };
+  const cutOut: Feature = {
+    ...base,
+    id: 'slot',
+    kind: 'cut-contour',
+    role: 'inner',
+    name: 'Cut-out',
+    source: { kind: 'path', path: Shapes.rect(at(10, 10), 20, 8) },
+  };
+  const mirroredSlot: Feature = {
+    ...base,
+    id: 'slot-2',
+    kind: 'cut-contour',
+    role: 'inner',
+    name: 'Cut-out',
+    source: {
+      kind: 'derived',
+      sourceId: 'slot',
+      op: {
+        type: 'mirror',
+        axis: { kind: 'line', origin: at(50, 0), angleRad: Math.PI / 2 },
+        glideMm: 0,
+      },
+    },
+  };
+  const frozenSlot: Feature = {
+    ...base,
+    id: 'slot-3',
+    kind: 'cut-contour',
+    role: 'inner',
+    name: 'Cut-out',
+    frozenFrom: 'Cut-out',
+    source: { kind: 'path', path: Shapes.rect(at(70, 40), 20, 8) },
+  };
+  const fold = (direction: 'valley' | 'mountain'): Feature => ({
+    ...base,
+    id: 'fold',
+    kind: 'fold-line',
+    name: 'Fold line',
+    direction,
+    source: { kind: 'path', path: PathOps.polyline([at(50, 0), at(50, 60)], false) },
+  });
+
+  const roleFor: Record<Feature['kind'], LayerRole> = {
+    'cut-contour': 'cut',
+    'stitch-line': 'stitch',
+    'stitch-hole-set': 'stitch-holes',
+    'fold-line': 'fold',
+    'marking-line': 'mark',
+    'hardware-hole': 'hardware',
+    'text-label': 'annotation',
+    measurement: 'annotation',
+  };
+
+  /** Each feature resolved to the path given, as evaluation would hand it over. */
+  function scene(entries: [Feature, Path][], name = 'Panel'): ResolvedProject {
+    const features = entries.map(([feature]) => feature);
+    const part: Part = { id: 'part-1', name, quantity: 1, features };
+    return {
+      project: { id: 'p', name: 'Test', settings: DEFAULT_SETTINGS, parts: [part] },
+      parts: [
+        {
+          part,
+          features: entries.map(([feature, path]) => ({
+            ok: true,
+            feature,
+            role: roleFor[feature.kind],
+            path,
+            anchors: [],
+            ...(feature.kind === 'stitch-hole-set'
+              ? {
+                  holes: {
+                    holes: [
+                      { point: at(4, 4), tangent: at(1, 0), runIndex: 0, ordinal: 0 },
+                      { point: at(7.85, 4), tangent: at(1, 0), runIndex: 0, ordinal: 1 },
+                      { point: at(96, 30), tangent: at(0, 1), runIndex: 1, ordinal: 0 },
+                    ],
+                    count: 88,
+                    achievedPitchMm: 3.84,
+                    runs: [],
+                  },
+                }
+              : {}),
+          })),
+        },
+      ],
+    };
+  }
+
+  const outlinePath = Shapes.rect(at(0, 0), 100, 60);
+  const stitchPath = Shapes.rect(at(4, 4), 92, 52);
+  const stitched = (): ResolvedProject =>
+    scene([
+      [drawnOutline, outlinePath],
+      [followingStitch, stitchPath],
+      [holeSet, stitchPath],
+    ]);
+
+  const ofKind = <K extends DisplayItem['kind']>(items: readonly DisplayItem[], kind: K) =>
+    items.filter((i): i is Extract<DisplayItem, { kind: K }> => i.kind === kind);
+
+  describe('stitch holes as slits', () => {
+    it('draws each hole as a slit in stitch blue, not as a dot', () => {
+      const list = buildDisplayList(stitched(), { pxPerMm: 4 });
+      expect(ofKind(list.items, 'dots')).toEqual([]);
+      const [slits] = ofKind(list.items, 'slits');
+      expect(slits?.role).toBe('stitch-holes');
+      expect(slits?.slits).toHaveLength(3);
+      expect(slits?.stroke.colour).toBe(ROLE_STROKES['stitch-holes'].colour);
+    });
+
+    it('sizes the slit from the iron’s nominal pitch, not the achieved spacing', () => {
+      const [slits] = ofKind(buildDisplayList(stitched(), { pxPerMm: 10 }).items, 'slits');
+      const [a, b] = slits!.slits[0]!;
+      expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(NOMINAL_IRON.toothPerPitch * 3.85, 9);
+      // Detail band: as wide as the blade.
+      expect(slits!.stroke.widthPx).toBeCloseTo(NOMINAL_IRON.bladeMm * 10, 9);
+    });
+  });
+
+  describe('the seam allowance as a band', () => {
+    const allowance = (): ResolvedProject =>
+      scene([
+        [drawnStitch, stitchPath],
+        [allowanceEdge, outlinePath],
+      ]);
+
+    it('fills between the edge and the stitch line it grew from', () => {
+      const [band] = ofKind(buildDisplayList(allowance()).items, 'fill');
+      expect(band).toMatchObject({ colour: CANVAS.allowance, paths: [outlinePath, stitchPath] });
+    });
+
+    it('lies beneath every line of its part', () => {
+      const items = buildDisplayList(allowance()).items;
+      const band = items.findIndex((i) => i.kind === 'fill');
+      const firstLine = items.findIndex((i) => i.kind === 'path');
+      expect(band).toBeGreaterThanOrEqual(0);
+      expect(band).toBeLessThan(firstLine);
+    });
+
+    it('is not drawn for an ordinary outline and the stitching inset from it', () => {
+      expect(ofKind(buildDisplayList(stitched()).items, 'fill')).toEqual([]);
+    });
+  });
+
+  describe('cut-outs hatched inward', () => {
+    it('hatches a cut-out beneath its line, and never an outline', () => {
+      const items = buildDisplayList(
+        scene([
+          [drawnOutline, outlinePath],
+          [cutOut, Shapes.rect(at(10, 10), 20, 8)],
+        ]),
+      ).items;
+      const hatches = ofKind(items, 'hatch');
+      expect(hatches).toHaveLength(1);
+      expect(hatches[0]!.path).toEqual(Shapes.rect(at(10, 10), 20, 8));
+      expect(hatches[0]!.colour).toBe(CANVAS.hatch.colour);
+      expect(items.indexOf(hatches[0]!)).toBeLessThan(items.findIndex((i) => i.kind === 'path'));
+    });
+  });
+
+  describe('folds that say which way they fold', () => {
+    it('ticks a valley with V and a mountain with Λ, on the line', () => {
+      for (const direction of ['valley', 'mountain'] as const) {
+        const line = PathOps.polyline([at(50, 0), at(50, 60)], false);
+        const ticks = ofKind(
+          buildDisplayList(scene([[fold(direction), line]]), { pxPerMm: 4 }).items,
+          'fold-tick',
+        );
+        expect(ticks.length).toBeGreaterThan(0);
+        expect(ticks.every((t) => t.fold === direction && t.at.x === 50)).toBe(true);
+        expect(ticks[0]!.colour).toBe(ROLE_STROKES.fold.colour);
+      }
+    });
+  });
+
+  describe('the derived link tick', () => {
+    const ticksOf = (project: ResolvedProject) =>
+      ofKind(buildDisplayList(project).items, 'link-tick');
+
+    it('marks a stitch line that follows an edge, in its own colour at 60 %', () => {
+      const ticks = ticksOf(stitched());
+      // The stitch line only: the outline is drawn, and the holes are always
+      // derived, so a tick on them would say nothing.
+      expect(ticks).toHaveLength(1);
+      expect(ticks[0]).toMatchObject({ role: 'stitch', colour: `${ROLE_STROKES.stitch.colour}99` });
+      // The middle of its longest side: 92 mm along the top or bottom.
+      expect(ticks[0]!.at.x).toBeCloseTo(50, 9);
+    });
+
+    it('marks a seam-allowance edge and a mirrored counterpart', () => {
+      expect(
+        ticksOf(
+          scene([
+            [drawnStitch, stitchPath],
+            [allowanceEdge, outlinePath],
+          ]),
+        ),
+      ).toHaveLength(1);
+      expect(
+        ticksOf(
+          scene([
+            [cutOut, Shapes.rect(at(10, 10), 20, 8)],
+            [mirroredSlot, Shapes.rect(at(70, 10), 20, 8)],
+          ]),
+        ),
+      ).toEqual([expect.objectContaining({ role: 'cut' })]);
+    });
+
+    it('does not mark drawn geometry, or a feature frozen into it', () => {
+      expect(
+        ticksOf(
+          scene([
+            [drawnOutline, outlinePath],
+            [frozenSlot, Shapes.rect(at(70, 40), 20, 8)],
+          ]),
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  describe('the iron in the part caption', () => {
+    const captions = (project: ResolvedProject) =>
+      ofKind(buildDisplayList(project).items, 'document-text');
+
+    it('says the iron under the part’s name, quieter than the name', () => {
+      const [first, second] = captions(stitched());
+      const name = [first, second].find((c) => c?.placed.layout.text === 'Panel')!;
+      const iron = [first, second].find((c) => c !== name)!;
+      expect(iron.placed.layout.text).toBe('88 holes · 3.85 mm · KS Blade');
+      // Under the name and above the piece (Y is up).
+      expect(iron.placed.origin.y).toBeGreaterThan(60);
+      expect(name.placed.origin.y).toBeGreaterThan(
+        iron.placed.origin.y + iron.placed.layout.ascentMm,
+      );
+      expect(iron.placed.layout.sizeMm).toBeLessThan(name.placed.layout.sizeMm);
+      expect(iron.colour).toBe(CANVAS.caption);
+    });
+
+    it('leaves a part without stitching with its name alone', () => {
+      expect(
+        captions(scene([[drawnOutline, outlinePath]])).map((c) => c.placed.layout.text),
+      ).toEqual(['Panel']);
+    });
   });
 });

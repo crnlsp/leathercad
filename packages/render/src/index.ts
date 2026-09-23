@@ -12,6 +12,7 @@ export {
   DASH_LEGIBLE_PX,
   DENSITY,
   GROUND,
+  NOMINAL_IRON,
   ROLE_STYLES,
   SHELL,
   STATE,
@@ -37,6 +38,9 @@ export {
 } from './displayList.js';
 
 export { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from './captions.js';
+
+export type { Ring } from './leather.js';
+export { linkTickShape } from './leather.js';
 
 export type { Canvas2DLike, RenderOptions } from './canvas2d/backend.js';
 export { clearCanvas, renderDisplayList, tracePath } from './canvas2d/backend.js';

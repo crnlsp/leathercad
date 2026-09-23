@@ -76,6 +76,7 @@ export function CanvasHost({
   nextId,
   onStatus,
   ref,
+  children,
 }: {
   store: DocumentStore;
   toolId: string;
@@ -85,6 +86,8 @@ export function CanvasHost({
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
   ref?: React.Ref<CanvasHandle>;
+  /** Drawn over the canvas without taking space from it: the legend (F.7). */
+  children?: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -456,6 +459,7 @@ export function CanvasHost({
         }}
         onDoubleClick={handleDoubleClick}
       />
+      {children}
       {notice !== null && pointerCss !== null && (
         <CanvasNotice
           problem={notice}

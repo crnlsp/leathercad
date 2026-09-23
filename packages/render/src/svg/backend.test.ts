@@ -4,10 +4,16 @@ import { describe, expect, it } from 'vitest';
 import {
   documentTextItem,
   dotsItem,
+  fillItem,
+  foldTickItem,
+  hatchItem,
+  linkTickItem,
   pathItem,
+  slitsItem,
   textItem,
   type DisplayList,
 } from '../displayList.js';
+import { CANVAS, GROUND } from '../theme/index.js';
 import type { ViewportView } from '../view.js';
 
 import { renderToSvgString } from './backend.js';
@@ -176,5 +182,56 @@ describe('document text', () => {
     const worldGroup = svg.slice(svg.indexOf('<g transform='), svg.indexOf('</g>'));
     expect(worldGroup).toContain('<path');
     expect(worldGroup).toMatch(/M 10[0-9.]+ /);
+  });
+});
+
+describe('the leather marks (F.7), as the canvas draws them', () => {
+  const square = polyline([vec(0, 0), vec(10, 0), vec(10, 10), vec(0, 10)], true);
+
+  it('draws slits as one path of separate strokes, with butt caps', () => {
+    const svg = renderToSvgString(
+      listOf(
+        slitsItem(
+          [
+            [vec(0, 0), vec(1, 1)],
+            [vec(4, 0), vec(5, 1)],
+          ],
+          1.25,
+        ),
+      ),
+      view,
+    );
+    expect(svg).toContain('d="M 0 0 L 1 1 M 4 0 L 5 1"');
+    expect(svg).toContain('stroke-linecap="butt"');
+  });
+
+  it('fills a band even-odd, inside the world group', () => {
+    const inner = polyline([vec(2, 2), vec(8, 2), vec(8, 8)], true);
+    const svg = renderToSvgString(listOf(fillItem('cut', [square, inner], CANVAS.allowance)), view);
+    expect(svg).toMatch(new RegExp(`fill="${CANVAS.allowance}" fill-rule="evenodd"`));
+  });
+
+  it('clips a hatch to its cut-out with a clip path of its own', () => {
+    const svg = renderToSvgString(listOf(hatchItem(square), hatchItem(square)), view);
+    const ids = [...svg.matchAll(/<clipPath id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    expect(svg).toContain(`clip-path="url(#${ids[0]!})"`);
+    expect(svg).toContain(`stroke="${CANVAS.hatch.colour}"`);
+  });
+
+  it('draws a fold tick as an upright chevron and a link tick as two rings', () => {
+    const svg = renderToSvgString(
+      listOf(foldTickItem(vec(0, 0), 'mountain'), linkTickItem('stitch', vec(0, 0), vec(1, 0))),
+      view,
+    );
+    // The world origin is the canvas centre, (200, 150): a Λ, apex above.
+    const w = CANVAS.foldTick.widthPx / 2;
+    const h = CANVAS.foldTick.heightPx / 2;
+    expect(svg).toContain(
+      `<polyline points="${200 - w},${150 + h} 200,${150 - h} ${200 + w},${150 + h}"`,
+    );
+    expect(svg.match(/<circle [^>]*data-glyph="link"/g)).toHaveLength(2);
+    expect(svg).toContain(`fill="${GROUND.ground}"`);
   });
 });

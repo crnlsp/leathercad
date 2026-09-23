@@ -637,6 +637,61 @@ test('every line is named by its mark, and no emoji is left (F.6)', async () => 
   });
 });
 
+test('the canvas legend is the key to what is drawn, and moves nothing (F.7)', async () => {
+  // UI Foundations §8.6: the drawing's own language, on the drawing. It lists
+  // only what this document draws, starts collapsed to a strip of marks, and
+  // floats over the canvas so opening it never moves the drawing (§9.4).
+  await withFreshApp(async (window) => {
+    const legend = window.getByTestId('canvas-legend');
+    await expect(legend).toHaveCount(0);
+
+    const panel = await panelWithChain(window);
+    const toggle = legend.getByTestId('canvas-legend-toggle');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    const marks = () =>
+      legend
+        .locator('.feature-mark')
+        .evaluateAll((all) => all.map((m) => m.getAttribute('data-mark')));
+    // The stitch line follows the outline, so the link is in the key too.
+    expect(await marks()).toEqual(['cut-edge', 'stitch-line', 'stitch-holes', 'linked']);
+
+    const canvas = window.getByTestId('editor-canvas');
+    const before = await canvas.boundingBox();
+    // Opening swaps the marks under the pointer for the title. The tooltip's
+    // hover delay used to survive that and open after the pointer had gone
+    // (found in F.7), so wait well past the delay.
+    await window.mouse.move(0, 0);
+    await toggle.click();
+    await window.mouse.move(0, 0);
+    await window.waitForTimeout(700);
+    await expect(window.getByRole('tooltip')).toHaveCount(0);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(legend.locator('li')).toHaveText([
+      'Outline',
+      'Stitch line',
+      'Stitch holes',
+      'Follows or mirrors another line',
+    ]);
+    expect(await canvas.boundingBox()).toEqual(before);
+
+    // A hidden feature is not drawn, so it is not in the key.
+    await window
+      .getByTestId('parts-list')
+      .locator('.feature-row', { hasText: /Stitch holes/ })
+      .locator('[data-testid^="feature-visible-"]')
+      .click();
+    await expect(legend.locator('li')).toHaveText([
+      'Outline',
+      'Stitch line',
+      'Follows or mirrors another line',
+    ]);
+    await expect(panel).toBeVisible();
+
+    await toggle.click();
+    await expect(legend.locator('li')).toHaveCount(0);
+  });
+});
+
 test('the Draw as row keeps all six marks on screen at 1200 and 1280 px (F.6)', async () => {
   // The marks made each chip wider, and at 1280 px the last one ran off the
   // edge of the 620 px canvas.

@@ -607,7 +607,7 @@ close-out that walks one scenario through the whole phase (4.13), and then the *
 checkpoint** below — which Phase 5 waits on.
 
 ✅ **Phase 4 is closed** (4.13, 2026-09-23). The audit ran before the close-out, at the user's
-direction, and its F.0–F.7 work is what comes next.
+direction, and its F.0–F.7 work followed. F.7 completes it (§ *The UI Foundations checkpoint*).
 
 - **4.1** ✅ **Done.** `Part`, `Feature` (cut contour, stitch line, fold line, marking line),
   `GeometrySource` (`path` and `shape`), layer roles, and `evaluate` producing a resolved document.
@@ -1150,7 +1150,7 @@ features consume these; they do not extend or amend the visual language on their
 | **F.4** ✅ | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
 | **F.5** ✅ | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
 | **F.6** ✅ | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
-| **F.7** | Leather-specific treatment | True-size slanted stitch slits; seam allowance as a band; fold direction ticks; the derived link tick; the canvas legend and the part caption. **Then run the identity test and record the result** |
+| **F.7** ✅ | Leather-specific treatment | True-size slanted stitch slits; seam allowance as a band; fold direction ticks; the derived link tick; the canvas legend and the part caption. **Then run the identity test and record the result** |
 
 #### Triage, as the checkpoint required
 
@@ -1420,6 +1420,96 @@ Found and fixed:
 Still open, not built: **the draw tools taking the active *Draw as* role's colour** (decisions
 §4.1.1). The decisions record lists it as still open, to be challenged before it is built, and it is
 not on the F.6 row.
+**F.7 — done** (2026-09-23). **The canvas says in lines what the panel said in sentences.** See
+[the F.7 design](superpowers/specs/2026-09-23-leather-treatment-design.md). Nothing in the model,
+the file or the paper changed.
+- **Stitch holes are slits.** Each is centred on its hole and leans 45° to the line. The angle is
+  measured from the hole's tangent, so the slit turns with the line round a corner, and a line
+  drawn the other way gives the same slit. A slit is half the pitch long.
+  - **Nominal, and said so.** The model stores only the pitch, so the slit comes from a nominal
+    French-style iron defined once, in `render/theme/iron.ts`. Makers publish tooth widths of about
+    half the pitch and cutting angles of 40–43°. The iron library is where an iron's own tooth
+    will come from.
+  - **The bands.** In the detail band a slit is drawn at its true length and with the 0.4 mm
+    blade. In the working band its length is floored at 3 px, and its slant never is. The overview
+    band is unchanged. Butt caps, so a slit is as long as it says.
+- **The seam allowance is a band:** 12 % ink between the edge and the stitch line it grew from,
+  beneath everything else in the part. Screen only.
+- **Cut-outs are hatched inward:** §8.1's 45° lines at 18 % ink, clipped to the inside. This is
+  not on the F.7 row. It is here because §8.2 specifies it, item 4 of the identity test needs it,
+  and no F step had drawn it on the canvas.
+- **Folds show which way they fold:** a V for a valley and a Λ for a mountain, about every 96 px.
+  They stand upright on screen rather than turning with the line. A chevron turned to the line
+  points along it, so a fold drawn the other way would read as the opposite fold.
+- **Derived geometry wears a link tick:** two interlocked rings, at 60 % of the role colour, in the
+  middle of the longest segment. It goes on a stitch line that follows, an allowance edge and a
+  mirrored counterpart. It does not go on a hole set, which is always derived, on a frozen feature,
+  or on a dimension.
+- **The legend** sits top-right under the ruler, on the ground. It lists only what is drawn, in
+  mark order, plus the link row. It starts collapsed to a strip of marks, and its state lasts the
+  session: remembering it is 8.2's.
+- **The caption says the iron:** `136 holes · 3.85 mm · KS Blade` under the part's name, at 2.2 mm.
+  The name moves up a line to make room. This is on the canvas only; paper keeps the name alone.
+- **One slant everywhere.** F.6's stitch-holes mark leaned at about 72°, and the glossary said
+  20–30°. The mark is now computed from the same constant, and the glossary gives 40–45° with the
+  makers' figures.
+
+Found and fixed:
+- **A tooltip opened after the pointer had left.** The bug was in F.1's `Tooltip`. The legend's
+  toggle swaps its strip for its title on a click. The pointer-leave then went to a node that was
+  no longer in the page, React never saw it, and the hover timer fired 400 ms later. `show()` now
+  goes ahead only while its anchor is hovered or has keyboard focus. The legend's E2E test fails
+  without the fix. It needs a strip of several marks and a pointer arriving from outside the
+  toggle, so the test moves to the window corner first.
+- **The link tick sat on a corner.** Halfway round a closed rectangle is its opposite corner, and
+  the first screenshot showed it there. The tick now sits mid-run on the longest segment. That is
+  also cheaper, because it no longer measures the whole path on every frame.
+- **Per-frame cost.** The display list is rebuilt on every pointer move. On the benchmark's
+  636-hole strap it took 13 µs before this slice. The first build of F.7 took 310 µs, from
+  measuring every derived path and rotating each hole's tangent separately. It now takes 87 µs,
+  because a slit is computed per hole where a dot only referred to its point. The SVG of the same
+  scene went from 0.37 to 1.4 ms: four coordinates per slit, plus the outlines of the iron caption.
+  The paper benches are unchanged. The committed baseline is not rewritten here.
+
+**The identity test (§12), run 2026-09-23.** The subject is a 1920 × 1080 screenshot of the
+running app, with the wordmark hidden. It shows the 4.13 card holder, framed, with the shell's hole
+set selected. **9 of the 10 items are shown, and at least 6 are required, so it passes.** This is
+the final result: the screenshot was reviewed again before #55 merged.
+
+| | Item | Result |
+|---|---|---|
+| 1 | Drafting ground in a dark shell, 1/10/100 mm grid | ✅ The 1 mm tier joins at 4 px/mm, as §9.1 says |
+| 2 | Tabular millimetres that do not move | ✅ Rulers, *Pitch 3.85 mm*, *Spacing 3.81 mm*, the status bar |
+| 3 | Slanted slits at the iron's angle and spacing | ✅ At the nominal iron's slant (above) |
+| 4 | The cut edge the heaviest line; cut-outs hatched | ✅ |
+| 5 | A fold that shows which way it folds | ✅ V ticks on the valley fold |
+| 6 | A seam allowance drawn as a band | ✅ The pocket |
+| 7 | A tree in leathercraft marks: *Outline ▸ Stitch line ▸ Stitch holes* | ✅ |
+| 8 | *Iron · Pitch · Fit · Corners · Holes · Spacing · Runs* | ✅ *Runs 24 · 45 · 23 · 45* |
+| 9 | A dimension drawn like drafting: extension lines, arrowheads, the number breaking the line | ⚠ **Partly.** It has extension lines and a dimension line, but **no arrowheads**, and the number sits beside the line instead of breaking it |
+| 10 | A canvas legend in the language of the drawing | ✅ |
+
+Item 9 is recorded here, not built. A dimension's geometry comes from evaluation in `domain`, and
+it prints, so arrowheads would be a measurement change with a paper consequence, not a canvas
+treatment. It needs a slice of its own.
+
+**With F.7 the UI Foundations checkpoint is complete.** Decided at review (2026-09-23), and
+recorded in the F.7 design §6:
+- **The iron caption stays canvas-only.** It does not print, so sheets are not reflowed for drafting
+  metadata that is not geometry.
+- **Paper keeps its 1 mm centre circles.** The slit is the screen's representation of a stitch hole.
+  Its length and slant are a rendering convention worked out from the stored pitch, not model data.
+  The circles have a physical alignment purpose that has been checked on paper, and the print
+  contract stays stable.
+- **The legend stays collapsed by default** until 8.2 persists preferences. F.7 adds no persistence
+  of its own.
+- **Follow-up: dimension arrowheads, with the number breaking the line.** This is identity item 9.
+  It needs a slice of its own, because a dimension's geometry is evaluated in `domain` and prints.
+- **Recorded performance finding:** the display list went from 13 to 87 µs on the 636-hole
+  benchmark strap. It is not to be optimised unless an interactive performance problem is shown.
+  The committed bench baseline still holds the pre-F.7 figures.
+- **Draw tools in the role's colour** (decisions §4.1.1) stays open and is not built.
+
 #### Deferred opportunities worth keeping visible
 
 - **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and

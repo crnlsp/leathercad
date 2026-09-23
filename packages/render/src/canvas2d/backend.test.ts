@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { arc, cubic, line, PathOps } from '@leathercad/geometry';
 
-import { documentTextItem, pathItem, textItem, dotsItem } from '../displayList.js';
+import {
+  documentTextItem,
+  dotsItem,
+  fillItem,
+  foldTickItem,
+  hatchItem,
+  linkTickItem,
+  pathItem,
+  slitsItem,
+  textItem,
+} from '../displayList.js';
+import { CANVAS, GROUND } from '../theme/index.js';
 import type { ViewportView } from '../view.js';
 import { clearCanvas, renderDisplayList, tracePath, type Canvas2DLike } from './backend.js';
 
@@ -59,10 +70,13 @@ class Recorder implements Canvas2DLike {
     this.record('arc', x, y, r, s, e, ccw ?? false);
   }
   stroke(): void {
-    this.record('stroke', String(this.strokeStyle), this.lineWidth.toFixed(4));
+    this.record('stroke', String(this.strokeStyle), this.lineWidth.toFixed(4), this.lineCap);
   }
-  fill(): void {
-    this.record('fill', String(this.fillStyle));
+  fill(rule?: CanvasFillRule): void {
+    this.record('fill', String(this.fillStyle), ...(rule === undefined ? [] : [rule]));
+  }
+  clip(rule?: CanvasFillRule): void {
+    this.record('clip', ...(rule === undefined ? [] : [rule]));
   }
   fillRect(x: number, y: number, w: number, h: number): void {
     this.record('fillRect', x, y, w, h);
@@ -317,5 +331,109 @@ describe('renderDisplayList', () => {
     // 2 px at 4 px/mm is 0.5 mm in world space.
     expect(ctx.calls.filter((c) => c.startsWith('arc('))).toHaveLength(2);
     expect(ctx.calls.find((c) => c.startsWith('arc('))).toContain('0.5000');
+  });
+});
+
+describe('the leather marks (F.7)', () => {
+  const square = PathOps.polyline(
+    [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 10 },
+    ],
+    true,
+  );
+
+  it('draws slits with butt caps, so a slit is exactly as long as its millimetres', () => {
+    const ctx = new Recorder();
+    const item = slitsItem(
+      [
+        [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        [
+          { x: 4, y: 0 },
+          { x: 5, y: 1 },
+        ],
+      ],
+      1.25,
+    );
+    renderDisplayList(ctx, { items: [item] }, view);
+
+    expect(ctx.calls.filter((c) => c.startsWith('moveTo'))).toHaveLength(2);
+    expect(ctx.calls.filter((c) => c.startsWith('lineTo'))).toHaveLength(2);
+    const stroke = ctx.calls.find((c) => c.startsWith('stroke('));
+    // Screen-constant width, divided back into millimetres; butt caps.
+    expect(stroke).toBe('stroke(#2f6690,0.3125,butt)');
+  });
+
+  it('fills a band even-odd, so the inside of the inner edge stays clear', () => {
+    const ctx = new Recorder();
+    const inner = PathOps.polyline(
+      [
+        { x: 2, y: 2 },
+        { x: 8, y: 2 },
+        { x: 8, y: 8 },
+      ],
+      true,
+    );
+    renderDisplayList(ctx, { items: [fillItem('cut', [square, inner], CANVAS.allowance)] }, view);
+    expect(ctx.calls).toContain(`fill(${CANVAS.allowance},evenodd)`);
+    expect(ctx.calls.filter((c) => c === 'closePath()')).toHaveLength(2);
+  });
+
+  it('clips a hatch to its cut-out, and draws nothing outside it', () => {
+    const ctx = new Recorder();
+    renderDisplayList(ctx, { items: [hatchItem(square)] }, view);
+    const clip = ctx.calls.indexOf('clip()');
+    const stroke = ctx.calls.findIndex((c) => c.startsWith('stroke('));
+    expect(clip).toBeGreaterThan(-1);
+    expect(stroke).toBeGreaterThan(clip);
+    expect(ctx.calls[stroke]).toContain(CANVAS.hatch.colour);
+    // The clip is undone before anything else is drawn.
+    expect(ctx.calls.slice(stroke)).toContain('restore()');
+  });
+
+  it('draws fold ticks upright in screen pixels', () => {
+    const ctx = new Recorder();
+    renderDisplayList(ctx, { items: [foldTickItem({ x: 0, y: 0 }, 'valley')] }, view);
+    // The world origin is the canvas centre, (400, 300): a V whose apex is below
+    // its arms on screen.
+    const w = CANVAS.foldTick.widthPx / 2;
+    const h = CANVAS.foldTick.heightPx / 2;
+    expect(ctx.calls).toContain(`moveTo(${(400 - w).toFixed(4)},${(300 - h).toFixed(4)})`);
+    expect(ctx.calls).toContain(`lineTo(${(400).toFixed(4)},${(300 + h).toFixed(4)})`);
+  });
+
+  it('draws a link tick as two rings on the ground, turned to the line', () => {
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      { items: [linkTickItem('stitch', { x: 0, y: 0 }, { x: 0, y: 1 })] },
+      view,
+    );
+    const rings = ctx.calls.filter((c) => c.startsWith('arc('));
+    // Filled with the ground, then stroked: two discs and two rings.
+    expect(rings).toHaveLength(4);
+    expect(ctx.calls).toContain(`fill(${GROUND.ground})`);
+    // A vertical line in the world is vertical on screen too: both centres
+    // share an x.
+    const xs = new Set(rings.map((c) => c.split(',')[0]));
+    expect(xs.size).toBe(1);
+  });
+
+  it('draws the glyphs after the geometry, so a line never covers its tick', () => {
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      { items: [foldTickItem({ x: 0, y: 0 }, 'mountain'), pathItem('fold', square)] },
+      view,
+    );
+    const lastGeometryStroke = ctx.calls.findIndex((c) => c.startsWith('stroke(#2e7d53,0.3125'));
+    const tick = ctx.calls.findIndex((c) => c.startsWith('stroke(#2e7d53,1.2500'));
+    expect(lastGeometryStroke).toBeGreaterThan(-1);
+    expect(tick).toBeGreaterThan(lastGeometryStroke);
   });
 });

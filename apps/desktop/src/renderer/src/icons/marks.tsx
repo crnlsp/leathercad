@@ -5,6 +5,9 @@ import { useId, type ReactElement } from 'react';
 
 import { Icon } from './Icon.js';
 import { markFor, type Mark } from './markFor.js';
+import { slitMarkPath } from './slits.js';
+
+const SLITS = slitMarkPath();
 
 /** Where a mark is drawn, which decides the value its hue takes (decisions §3). */
 export type Plane = 'shell' | 'ground';
@@ -84,13 +87,14 @@ const DRAWINGS: Readonly<Record<Mark, (ink: Ink, neutral: string, uid: string) =
       strokeLinecap="butt"
     />
   ),
-  // Three slits at the iron's slant: three here, eighty on the canvas (§3).
+  // Three slits at the iron's slant — the canvas's own, from one constant:
+  // three here, eighty on the canvas (§3). Butt caps, as the canvas draws them.
   'stitch-holes': (ink) => (
     <path
-      d="M3.5 11.5 5.5 5.5M7 11.5 9 5.5M10.5 11.5 12.5 5.5"
+      d={SLITS}
       stroke={ink('stitch-holes')}
       strokeWidth={WEIGHT['stitch-holes']}
-      strokeLinecap="round"
+      strokeLinecap="butt"
     />
   ),
   // The fold's own rhythm, with ticks: toward the viewer for a valley…

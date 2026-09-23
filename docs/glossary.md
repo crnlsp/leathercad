@@ -23,7 +23,10 @@ spacing.
 Sometimes called the "stitch groove" line when it is physically grooved into the leather.
 
 **Stitch hole** — One hole in the leather through which thread passes. Round for an awl or round
-punch; a narrow slot at roughly 20–30° to the stitch line for a diamond chisel.
+punch; for a pricking iron or diamond chisel, a narrow slot slanted at roughly 40–45° to the stitch
+line and about half the pitch long (makers publish cutting angles of 40–43°, and tooth widths of
+1.6 mm at 3.0, 1.9 mm at 3.85). The canvas draws a hole this way, from a nominal iron: the model
+records the pitch but not the tooth.
 
 **Saddle stitch** — The hand stitch used in most leatherwork: two needles, one thread, passing
 through the same hole from both sides. Relevant because both mating pieces must have *the same

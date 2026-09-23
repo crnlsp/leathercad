@@ -1,7 +1,8 @@
-import { MatOps, type Path, type Segment } from '@leathercad/geometry';
+import { MatOps, PathOps, type Path, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 
 import type { DisplayList, DisplayItem } from '../displayList.js';
+import { foldTickShape, hatchLines, linkTickShape } from '../leather.js';
 import { markerShape } from '../marker.js';
 import { CANVAS, GROUND, screenDash } from '../theme/index.js';
 import { worldToScreen, type ViewportView } from '../view.js';
@@ -33,7 +34,8 @@ export interface Canvas2DLike {
     counterclockwise?: boolean,
   ): void;
   stroke(): void;
-  fill(): void;
+  fill(fillRule?: CanvasFillRule): void;
+  clip(fillRule?: CanvasFillRule): void;
   fillRect(x: number, y: number, w: number, h: number): void;
   fillText(text: string, x: number, y: number): void;
   setLineDash(segments: number[]): void;
@@ -140,6 +142,45 @@ export function renderDisplayList(
         ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
       }
       ctx.fill();
+    } else if (item.kind === 'slits') {
+      // Butt caps: a round cap would add half the width to each end, and a
+      // slit drawn true would no longer be as long as it says (F.7).
+      ctx.lineCap = 'butt';
+      ctx.beginPath();
+      for (const [a, b] of item.slits) {
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+      }
+      ctx.strokeStyle = item.stroke.colour;
+      ctx.lineWidth = item.stroke.widthPx / perMm;
+      ctx.setLineDash([]);
+      ctx.stroke();
+      ctx.lineCap = 'round';
+    } else if (item.kind === 'fill') {
+      // Even-odd, so a band between two edges leaves the inside of the inner
+      // one clear.
+      ctx.fillStyle = item.colour;
+      ctx.beginPath();
+      for (const path of item.paths) tracePath(ctx, path);
+      ctx.fill('evenodd');
+    } else if (item.kind === 'hatch') {
+      const bounds = PathOps.bbox(item.path);
+      if (bounds === null) continue;
+      ctx.save();
+      ctx.beginPath();
+      tracePath(ctx, item.path);
+      ctx.clip();
+      ctx.beginPath();
+      for (const [a, b] of hatchLines(bounds, item.spacingPx / perMm)) {
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+      }
+      ctx.strokeStyle = item.colour;
+      ctx.lineWidth = item.widthPx / perMm;
+      ctx.lineCap = 'butt';
+      ctx.setLineDash([]);
+      ctx.stroke();
+      ctx.restore();
     }
   }
   ctx.restore();
@@ -204,7 +245,11 @@ export function renderDisplayList(
     ctx.restore();
   }
 
-  // Pass three: severity markers, on top of everything, in screen pixels so
+  // Pass three: the leather glyphs — a fold's direction, a derived line's link
+  // — in screen pixels, over the lines they belong to (F.7).
+  drawGlyphs(ctx, list, transform);
+
+  // Pass four: severity markers, on top of everything, in screen pixels so
   // they stay findable at any zoom (UI Foundations §8.5).
   const markers = list.items.filter(
     (i): i is Extract<DisplayItem, { kind: 'marker' }> => i.kind === 'marker',
@@ -252,6 +297,63 @@ export function renderDisplayList(
       ctx.fillStyle = GROUND.ground;
       ctx.fill();
       ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/**
+ * Fold ticks and link ticks, from the shapes the SVG backend draws too. The
+ * link's direction goes through the world transform like everything else, so
+ * the flip stays in `view.ts`.
+ */
+function drawGlyphs(
+  ctx: Canvas2DLike,
+  list: DisplayList,
+  transform: ReturnType<typeof worldToScreen>,
+): void {
+  const glyphs = list.items.filter(
+    (i): i is Extract<DisplayItem, { kind: 'fold-tick' | 'link-tick' }> =>
+      i.kind === 'fold-tick' || i.kind === 'link-tick',
+  );
+  if (glyphs.length === 0) return;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setLineDash([]);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const item of glyphs) {
+    const at = MatOps.apply(transform, item.at);
+    if (item.kind === 'fold-tick') {
+      const [a, b, c] = foldTickShape(at, item.fold);
+      ctx.strokeStyle = item.colour;
+      ctx.lineWidth = CANVAS.foldTick.strokePx;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(c.x, c.y);
+      ctx.stroke();
+      continue;
+    }
+
+    // The ground first, under both rings, then both rings: interlocked, and
+    // the line does not run through them.
+    const rings = linkTickShape(at, MatOps.applyDirection(transform, item.tangent));
+    ctx.fillStyle = GROUND.ground;
+    ctx.beginPath();
+    for (const { centre, radius } of rings) {
+      ctx.moveTo(centre.x + radius, centre.y);
+      ctx.arc(centre.x, centre.y, radius, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.strokeStyle = item.colour;
+    ctx.lineWidth = CANVAS.linkTick.strokePx;
+    for (const { centre, radius } of rings) {
+      ctx.beginPath();
+      ctx.moveTo(centre.x + radius, centre.y);
+      ctx.arc(centre.x, centre.y, radius, 0, Math.PI * 2);
       ctx.stroke();
     }
   }

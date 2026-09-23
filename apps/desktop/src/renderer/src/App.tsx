@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_HARDWARE, type DrawMode, type HardwareOptions } from '@leathercad/editor';
 
 import { CanvasHost, type CanvasHandle, type CanvasStatus } from './CanvasHost.js';
+import { CanvasLegend } from './CanvasLegend.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile } from './useProjectFile.js';
@@ -391,7 +392,9 @@ export function App() {
             drawAs={drawAs}
             hardware={hardware}
             requestDelete={requestDelete}
-          />
+          >
+            <CanvasLegend project={storeState.document.project} />
+          </CanvasHost>
           <ProblemsPanel
             project={storeState.document.project}
             diagnostics={diagnostics}

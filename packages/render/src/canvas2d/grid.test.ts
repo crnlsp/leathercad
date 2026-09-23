@@ -35,6 +35,7 @@ function recorder(): Canvas2DLike & {
     arc: noop,
     stroke: () => strokes.push(strokeStyle),
     fill: noop,
+    clip: noop,
     fillRect: noop,
     fillText: (text, x, y) => {
       labels.push(text);

@@ -1,7 +1,7 @@
 import { ACCENT, GROUND } from './palette.js';
 
 /** `#rrggbb` at an opacity, as `#rrggbbaa` — both screen backends read it. */
-function alpha(hex: string, opacity: number): string {
+export function alpha(hex: string, opacity: number): string {
   return `${hex}${Math.round(opacity * 255)
     .toString(16)
     .padStart(2, '0')}`;
@@ -53,7 +53,41 @@ export const CANVAS = {
    * being drawn and a set renders as its stitch line; below
    * `solidDashBelowPxPerMm` every rhythm is drawn solid.
    */
-  bands: { detailFromPxPerMm: 8, overviewBelowPxPerMm: 2, solidDashBelowPxPerMm: 0.6 },
+  bands: {
+    detailFromPxPerMm: 8,
+    overviewBelowPxPerMm: 2,
+    solidDashBelowPxPerMm: 0.6,
+    /** The zoom assumed when none is given — the audit's working zoom. */
+    workingPxPerMm: 4,
+  },
+
+  /**
+   * A stitch hole is a slit (F.7). In the working band its length may be
+   * floored so it stays a slit rather than a speck; its slant never is. A size
+   * is a measurement and a slant is the code (decisions §2.4).
+   */
+  slit: { minLengthPx: 3 },
+
+  /**
+   * The seam allowance: the material between the stitching and the edge grown
+   * from it, filled faintly beneath both lines (F.7).
+   */
+  allowance: alpha(GROUND.ink, 0.12),
+
+  /** A cut-out's inward hatch, §8.1: removal, not boundary. */
+  hatch: { colour: alpha(GROUND.ink, 0.18), spacingPx: 6, widthPx: 1 },
+
+  /**
+   * A fold's direction: a V for a valley, a Λ for a mountain, upright on
+   * screen and centred on the line (F.7).
+   */
+  foldTick: { widthPx: 8, heightPx: 5, strokePx: 1.25, spacingPx: 96, minLinePx: 24 },
+
+  /**
+   * Derived is a state, not a colour (§8.3): two interlocked rings at the
+   * path's midpoint, in the role's colour at 60 %, filled with the ground.
+   */
+  linkTick: { radiusPx: 2.5, apartPx: 3.5, strokePx: 1.25, opacity: 0.6 },
 
   /** A failure is a glyph with a short leader to its evidence (§8.5). */
   marker: { sizePx: 11, leaderPx: 14 },

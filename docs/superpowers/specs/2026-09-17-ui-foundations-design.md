@@ -437,8 +437,8 @@ so it survives greyscale, photocopying and colour-blindness. **Colour is never t
 ### 8.3 Derived is a state, not a colour
 
 A derived feature keeps its role colour: what it *is* has not changed, only what you may do to it.
-It gains a **link tick** — a small chain mark at the path midpoint, role colour at 60 % — and the tree
-row states the relationship in one agreed word.
+It gains a **link tick** — a small chain mark mid-run on the path's longest segment, role colour at
+60 % — and the tree row states the relationship in one agreed word.
 
 **Terminology, settled once** (the audit found four spellings — *Follows*, *Mirrored from*,
 *Mirrors*, `⇄`):
@@ -643,6 +643,9 @@ With the wordmark removed, a screenshot must show **at least six** of these:
 
 Items 3, 6, 8 and 10 are the ones no general vector editor would ever show.
 
+**Run at F.7 (2026-09-23): 9 of 10**, item 9 only partly, since a dimension has no arrowheads yet.
+The item-by-item record is in the roadmap, under the UI Foundations checkpoint.
+
 ---
 
 ## 13. What is preserved
@@ -716,7 +719,8 @@ Tier 1 adopted; the eleven marks authored; `FeatureMark` used in all five places
 
 ### F.7 — Leather-specific treatment
 
-True-size slanted holes. Seam allowance as a band. Fold direction ticks. The derived link tick.
+✅ Done 2026-09-23; see [the F.7 design](2026-09-23-leather-treatment-design.md), which also
+hatches cut-outs on the canvas (§8.2) since no earlier step had. True-size slanted holes. Seam allowance as a band. Fold direction ticks. The derived link tick.
 The canvas legend and the part caption. **Then run §12's checklist and record the result.**
 
 ### Not in this checkpoint
