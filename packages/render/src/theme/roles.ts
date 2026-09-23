@@ -4,8 +4,15 @@ import { CANVAS } from './canvas.js';
 
 /** How one role is drawn — on screen and on paper, from one row. */
 export interface RoleStyle {
-  /** On screen. Screen-constant, so a cut line stays a hairline at any zoom. */
+  /** On screen, on the drafting ground. */
   readonly colour: string;
+  /**
+   * The same hue on the dark shell, where a mark names the role in the tree,
+   * the rail and the panels (F.6). The canvas's ink would be invisible there;
+   * hue identity, not the exact value, is the invariant (decisions §3).
+   */
+  readonly shell: string;
+  /** Screen-constant, so a cut line stays a hairline at any zoom. */
   readonly widthPx: number;
   /** On paper, in true millimetres: a 0.25 mm line prints 0.25 mm wide. */
   readonly widthMm: number;
@@ -31,16 +38,65 @@ export interface RoleStyle {
  */
 export const ROLE_STYLES: Readonly<Record<LayerRole, RoleStyle>> = {
   // The heaviest line in the drawing, in ink.
-  cut: { colour: '#1d2126', widthPx: 1.75, widthMm: 0.25, grey: 0, dashMm: [] },
-  stitch: { colour: '#2f6690', widthPx: 1.25, widthMm: 0.15, grey: 0, dashMm: [2, 2] },
-  'stitch-holes': { colour: '#2f6690', widthPx: 1.25, widthMm: 0.15, grey: 0, dashMm: [] },
-  fold: { colour: '#2e7d53', widthPx: 1.25, widthMm: 0.15, grey: 0, dashMm: [7, 2, 1.5, 2] },
-  mark: { colour: '#7a7468', widthPx: 1, widthMm: 0.1, grey: 0.45, dashMm: [1, 1.5] },
+  cut: { colour: '#1d2126', shell: '#e5e8eb', widthPx: 1.75, widthMm: 0.25, grey: 0, dashMm: [] },
+  stitch: {
+    colour: '#2f6690',
+    shell: '#8cb8d9',
+    widthPx: 1.25,
+    widthMm: 0.15,
+    grey: 0,
+    dashMm: [2, 2],
+  },
+  'stitch-holes': {
+    colour: '#2f6690',
+    shell: '#8cb8d9',
+    widthPx: 1.25,
+    widthMm: 0.15,
+    grey: 0,
+    dashMm: [],
+  },
+  fold: {
+    colour: '#2e7d53',
+    shell: '#71cb9b',
+    widthPx: 1.25,
+    widthMm: 0.15,
+    grey: 0,
+    dashMm: [7, 2, 1.5, 2],
+  },
+  mark: {
+    colour: '#7a7468',
+    shell: '#afaba1',
+    widthPx: 1,
+    widthMm: 0.1,
+    grey: 0.45,
+    dashMm: [1, 1.5],
+  },
   // Violet: out of the amber family, so a rivet can never read as selected.
-  hardware: { colour: '#5b4ca8', widthPx: 1.5, widthMm: 0.2, grey: 0, dashMm: [] },
+  hardware: {
+    colour: '#5b4ca8',
+    shell: '#aca4d6',
+    widthPx: 1.5,
+    widthMm: 0.2,
+    grey: 0,
+    dashMm: [],
+  },
   // Measurements and labels.
-  annotation: { colour: '#8a5a2b', widthPx: 1, widthMm: 0.1, grey: 0.35, dashMm: [] },
-  construction: { colour: '#b6ad9b', widthPx: 1, widthMm: 0.1, grey: 0.6, dashMm: [1, 1] },
+  annotation: {
+    colour: '#8a5a2b',
+    shell: '#d3a373',
+    widthPx: 1,
+    widthMm: 0.1,
+    grey: 0.35,
+    dashMm: [],
+  },
+  construction: {
+    colour: '#b6ad9b',
+    shell: '#8e8167',
+    widthPx: 1,
+    widthMm: 0.1,
+    grey: 0.6,
+    dashMm: [1, 1],
+  },
 };
 /**
  * The smallest dash or gap, in device pixels, that still reads as one.

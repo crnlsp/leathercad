@@ -2,6 +2,8 @@ import { badgesOf, type Diagnostic, type Project } from '@leathercad/domain';
 
 import { CountBadge } from './CountBadge.js';
 import { ProblemRows } from './ProblemList.js';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Icon } from './icons/Icon.js';
 
 /**
  * Everything wrong with the design, in one place — a drawer under the canvas.
@@ -54,7 +56,7 @@ export function ProblemsPanel({
           {count === 0 ? 'Nothing to fix.' : `${count} ${count === 1 ? 'problem' : 'problems'}`}
         </span>
         <span className="drawer-chevron" aria-hidden="true">
-          {open ? '▾' : '▴'}
+          <Icon of={open ? ChevronDown : ChevronUp} />
         </span>
       </button>
 

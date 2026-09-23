@@ -7,7 +7,6 @@ import {
 } from '@leathercad/document';
 import {
   featureTree,
-  roleOf,
   type Badges,
   type Feature,
   type FeatureNode,
@@ -15,9 +14,12 @@ import {
   type Project,
 } from '@leathercad/domain';
 
-import { useEffect, useRef, useState } from 'react';
+import { Copy, Ellipsis, Eye, EyeOff, FlipHorizontal2, Lock, LockOpen, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { CountBadge } from './CountBadge.js';
+import { Icon } from './icons/Icon.js';
+import { FeatureMark, MarkOf } from './icons/marks.js';
 import { Tooltip } from './Tooltip.js';
 
 /**
@@ -115,6 +117,7 @@ function PartSection({
           // first (§3.1).
           onClick={() => store.selectParts([part.id])}
         >
+          <FeatureMark mark="piece" />
           {part.name}
           {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
           {/*
@@ -128,7 +131,7 @@ function PartSection({
           on={visible}
           onLabel="Hide part"
           offLabel="Show part"
-          glyph={visible ? '👁' : '🚫'}
+          glyph={<Icon of={visible ? Eye : EyeOff} />}
           onToggle={() => store.dispatch(setPartVisible(part.id, !visible))}
         />
         <PartMenu part={part} onDuplicatePart={onDuplicatePart} onRemovePart={onRemovePart} />
@@ -225,7 +228,7 @@ function PartMenu({
           aria-expanded={open}
           onClick={() => setOpen((was) => !was)}
         >
-          ⋯
+          <Icon of={Ellipsis} />
         </button>
       </Tooltip>
       {open && (
@@ -237,7 +240,10 @@ function PartMenu({
             data-testid={`duplicate-part-${part.id}`}
             onClick={choose(() => onDuplicatePart(part.id))}
           >
-            Duplicate
+            <span className="menu-label">
+              <Icon of={Copy} />
+              Duplicate
+            </span>
             <span className="menu-note">A copy beside this one, with its own stitching</span>
           </button>
           {part.features.length > 0 && (
@@ -248,7 +254,10 @@ function PartMenu({
               data-testid={`delete-part-${part.id}`}
               onClick={choose(() => onRemovePart(part.id))}
             >
-              Delete part
+              <span className="menu-label">
+                <Icon of={Trash2} />
+                Delete part
+              </span>
             </button>
           )}
         </div>
@@ -291,7 +300,7 @@ function FeatureRow({
           // and unlock it.
           onClick={() => store.select([feature.id])}
         >
-          <span className={`swatch role-${roleOf(feature)}`} />
+          <MarkOf feature={feature} />
           <span className="feature-name">{feature.name}</span>
           {isMirroredFeature(feature) && (
             // A counterpart already nests under its original here, but the
@@ -299,7 +308,11 @@ function FeatureRow({
             // relationship it is, in the width of one glyph.
             <Tooltip text="Mirrors the feature it nests under">
               <span className="row-mark" data-testid={`mirrored-mark-${feature.id}`}>
-                ⇄
+                {isFoldMirrored(feature) ? (
+                  <FeatureMark mark="mirror-across-fold" size={14} />
+                ) : (
+                  <Icon of={FlipHorizontal2} size={14} />
+                )}
               </span>
             </Tooltip>
           )}
@@ -312,7 +325,7 @@ function FeatureRow({
           on={feature.locked}
           onLabel="Unlock"
           offLabel="Lock"
-          glyph={feature.locked ? '🔒' : '🔓'}
+          glyph={<Icon of={feature.locked ? Lock : LockOpen} />}
           onToggle={() => store.dispatch(setFeatureLocked(feature.id, !feature.locked))}
         />
         <IconToggle
@@ -320,7 +333,7 @@ function FeatureRow({
           on={feature.visible}
           onLabel="Hide"
           offLabel="Show"
-          glyph={feature.visible ? '👁' : '🚫'}
+          glyph={<Icon of={feature.visible ? Eye : EyeOff} />}
           onToggle={() => store.dispatch(setFeatureVisible(feature.id, !feature.visible))}
         />
       </div>
@@ -335,6 +348,16 @@ function FeatureRow({
         />
       ))}
     </>
+  );
+}
+
+/** Whether a counterpart is mirrored across a fold, rather than a fixed axis. */
+function isFoldMirrored(feature: Feature): boolean {
+  return (
+    feature.kind !== 'text-label' &&
+    feature.source.kind === 'derived' &&
+    feature.source.op.type === 'mirror' &&
+    feature.source.op.axis.kind === 'fold'
   );
 }
 
@@ -360,7 +383,7 @@ function IconToggle({
   on: boolean;
   onLabel: string;
   offLabel: string;
-  glyph: string;
+  glyph: ReactNode;
   onToggle: () => void;
 }) {
   const label = on ? onLabel : offLabel;

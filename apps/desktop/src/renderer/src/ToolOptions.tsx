@@ -2,6 +2,8 @@ import { formatEditable } from '@leathercad/core';
 import type { DrawMode, HardwareOptions } from '@leathercad/editor';
 
 import { PUNCH_SIZES_MM } from './punches.js';
+import { FeatureMark } from './icons/marks.js';
+import type { Mark } from './icons/markFor.js';
 
 /**
  * One fixed result each (X4). *Outline* and *Stitch + allowance* each make a
@@ -12,13 +14,17 @@ import { PUNCH_SIZES_MM } from './punches.js';
  * direction a maker wants when the inside measurement is the one that matters
  * (§3.4).
  */
-const DRAW_MODES: readonly { readonly id: DrawMode; readonly label: string }[] = [
-  { id: 'outline', label: 'Outline' },
-  { id: 'stitch-allowance', label: 'Stitch + allowance' },
-  { id: 'cut-out', label: 'Cut-out' },
-  { id: 'stitch', label: 'Stitch' },
-  { id: 'fold', label: 'Fold' },
-  { id: 'marking', label: 'Marking' },
+const DRAW_MODES: readonly {
+  readonly id: DrawMode;
+  readonly label: string;
+  readonly mark: Mark;
+}[] = [
+  { id: 'outline', label: 'Outline', mark: 'cut-edge' },
+  { id: 'stitch-allowance', label: 'Stitch + allowance', mark: 'seam-allowance' },
+  { id: 'cut-out', label: 'Cut-out', mark: 'cut-out' },
+  { id: 'stitch', label: 'Stitch', mark: 'stitch-line' },
+  { id: 'fold', label: 'Fold', mark: 'fold-valley' },
+  { id: 'marking', label: 'Marking', mark: 'marking' },
 ];
 
 const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
@@ -60,7 +66,7 @@ export function ToolOptions({
   if (toolId !== 'hardware') {
     return (
       <div className="tool-options" data-testid="tool-options">
-        <span className="field-label">Draw as</span>
+        <span className="draw-as-label">Draw as</span>
         {DRAW_MODES.map((choice) => (
           <button
             key={choice.id}
@@ -70,6 +76,8 @@ export function ToolOptions({
             aria-pressed={choice.id === drawAs}
             onClick={() => onDrawAs(choice.id)}
           >
+            {/* Each chip shows the line it makes (decisions §4.1). */}
+            <FeatureMark mark={choice.mark} />
             {choice.label}
           </button>
         ))}

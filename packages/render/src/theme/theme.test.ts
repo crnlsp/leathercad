@@ -140,3 +140,34 @@ describe('the grid tiers (F.5)', () => {
     expect(screenDash([40, 40], 0.5)).toEqual([]);
   });
 });
+
+describe('role colours on the shell (F.6)', () => {
+  // A mark in the tree or the rail sits on the dark shell, where the canvas's
+  // ink is invisible. Decisions §3: hue identity is the invariant, not the
+  // exact value — so each role has a shell value of the same hue.
+  const hue = (hex: string): number => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const max = Math.max(r!, g!, b!);
+    const min = Math.min(r!, g!, b!);
+    if (max === min) return 0;
+    const d = max - min;
+    const h = max === r ? ((g! - b!) / d) % 6 : max === g ? (b! - r!) / d + 2 : (r! - g!) / d + 4;
+    return (h * 60 + 360) % 360;
+  };
+
+  it('keeps each role in its own hue', () => {
+    for (const role of LAYER_ROLES) {
+      const { colour, shell } = ROLE_STYLES[role];
+      const apart = Math.abs(hue(colour) - hue(shell));
+      expect(Math.min(apart, 360 - apart), role).toBeLessThan(6);
+    }
+  });
+
+  it('reads on every shell surface a mark sits on', () => {
+    for (const role of LAYER_ROLES) {
+      for (const surface of [SHELL[700], SHELL[800]]) {
+        expect(contrast(ROLE_STYLES[role].shell, surface), role).toBeGreaterThan(3);
+      }
+    }
+  });
+});

@@ -1,5 +1,8 @@
 import { TOOL_GROUPS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Icon } from './icons/Icon.js';
+import { ToolIcon } from './icons/ToolIcon.js';
 
 /**
  * The mode palette — a column of its own.
@@ -51,7 +54,12 @@ export function ToolPalette({
                 aria-label={collapsed ? tool.label : undefined}
                 onClick={() => onSelect(tool.id)}
               >
-                {!collapsed && tool.label}
+                {/* Icon and label and shortcut expanded; the icon with the
+                    shortcut as a corner badge collapsed (decisions §4.3). */}
+                <span className="tool-face">
+                  <ToolIcon toolId={tool.id} size={collapsed ? 20 : 16} />
+                  {!collapsed && tool.label}
+                </span>
                 <kbd>{tool.key}</kbd>
               </button>
             </Tooltip>
@@ -68,7 +76,7 @@ export function ToolPalette({
           aria-label={collapsed ? 'Show tool names' : 'Hide tool names'}
           onClick={onToggleCollapsed}
         >
-          {collapsed ? '»' : '«'}
+          <Icon of={collapsed ? ChevronsRight : ChevronsLeft} />
         </button>
       </Tooltip>
     </nav>

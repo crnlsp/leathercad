@@ -1149,7 +1149,7 @@ features consume these; they do not extend or amend the visual language on their
 | **F.3** ✅ | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
 | **F.4** ✅ | The remaining tokens | One source of truth in `packages/render/src/theme/`, projected onto CSS custom properties; spacing, radii, two elevation steps, 120 ms motion, a `--density` token; **the audit test that screen and paper agree** |
 | **F.5** ✅ | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
-| **F.6** | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
+| **F.6** ✅ | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
 | **F.7** | Leather-specific treatment | True-size slanted stitch slits; seam allowance as a band; fold direction ticks; the derived link tick; the canvas legend and the part caption. **Then run the identity test and record the result** |
 
 #### Triage, as the checkpoint required
@@ -1160,8 +1160,8 @@ typeface the pattern prints in); the missing U+2212 and Romanian letters; the ha
 (**5.5**). *Remaining:* ~~the canvas jump~~ (✅ F.2 and F.3); ~~the parts panel disappearing below ~900 px, which makes a **locked feature
 unreachable**~~ (✅ F.2); ~~disabled controls hiding their reason~~ (✅ F.1);
 ~~Perimeter/Area shown for lines and holes~~ (✅ F.1); ~~number fields clipping their units~~ (✅ F.0);
-~~terminology collisions~~ (✅ F.1); ~~a failed feature drawn in red over its healthy source~~ (✅ F.5); emoji
-icons (F.6).
+~~terminology collisions~~ (✅ F.1); ~~a failed feature drawn in red over its healthy source~~ (✅ F.5); ~~emoji
+icons~~ (✅ F.6).
 
 **F.0 — done** (2026-09-23). The UI is set in IBM Plex Sans, the face it has vendored since 4.11a,
 instead of `system-ui`. Regular, Medium and SemiBold are declared, and only Regular is ever outlined
@@ -1371,6 +1371,55 @@ Found and fixed:
   kept (far past AAA), and the spec is corrected.
 - `apps/desktop/vitest.config.ts` from F.4 was ESM loaded as CommonJS, which printed a warning on
   every run. It is now `.mts`.
+
+**F.6 — done** (2026-09-23). Icons in two tiers
+([ADR 0017](adr/0017-lucide-for-generic-icons.md)).
+- **Tier 1 is Lucide** (`lucide-react`, pinned, a devDependency with no install script) for the
+  generic verbs: eye, lock, more, chevrons, pointer, type, copy, trash, flip. It is used at 16 px
+  with an absolute 1.5 px stroke.
+- **The geometry tools are drawn here** in Lucide's language, each showing its **construction
+  nodes**: the rectangle's diagonal corners, the circle's centre and rim, the arc's three points,
+  the pivot of Rotate.
+- **Tier 2 is the twelve LeatherCAD marks**, each a specimen of its line in its role's hue: the
+  dash ratio with butt caps, so round caps cannot change it; the invariant weight order; and the
+  distinguishing device — hatch, ticks, slits, arrowheads. `markFor` names a feature by what its
+  line *is*, so an outline, a cut-out and a seam allowance never share a mark.
+- **`FeatureMark` / `MarkOf` is the one component used wherever a feature is named:**
+  - the rail: Hardware and Measure, in the current colour so the rail's state colours apply;
+  - the parts tree, where marks replace the swatches, and the piece mark heads each part;
+  - the sticky property header;
+  - problem rows;
+  - the *Draw as* chips.
+
+  The F.7 legend will use it too.
+- **Every emoji is gone.** The eye and lock toggles, the `⋯`, the chevrons and the ⇄ mirror mark are
+  icons. An E2E test scans the whole interface for the pictograph planes and for
+  `Emoji_Presentation`.
+- **The collapsed rail** is a 20 px icon with the shortcut as a corner badge.
+
+Found and fixed:
+- **The canvas's role colours are invisible on the shell.** F.5 made them light-ground values, and
+  the cut edge is near-black ink. Decisions §3 makes hue identity the invariant, not the value, so
+  each role gained a **shell value**: the same hue, derived by raising lightness only. It is tested
+  within 6° of the canvas hue and above 3 : 1 on both shell surfaces, the pattern severity already
+  follows.
+- **The *Draw as* row overflowed at 1280 px** once each chip carried its mark. The spacing is
+  tighter and the label takes its natural width. An E2E test holds all six chips on screen at 1200
+  and 1280 px.
+- **Tree names broke mid-word** ("Stit / ch / hole / s") in the 200 px column. Names now break at
+  words, the toggles are narrower, and badges never wrap.
+- **The collapsed rail ran over the status bar at 860 × 600,** the smallest supported size, once its
+  rows grew to fit 20 px icons, and it covered the *Parts* overlay button. Rows are now 30 px, and
+  F.2's E2E test asserts that the rail fits without scrolling.
+- **A cut-out mark's clip path had a fixed id,** repeated in a tree of cut-outs. It uses `useId`
+  now.
+- An emoji test on `Extended_Pictographic` also caught the typographic arrows in "Flip ↔", which
+  the vendored face has, and `Emoji_Presentation` alone missed 👁. The test uses both the pictograph
+  planes and `Emoji_Presentation`.
+
+Still open, not built: **the draw tools taking the active *Draw as* role's colour** (decisions
+§4.1.1). The decisions record lists it as still open, to be challenged before it is built, and it is
+not on the F.6 row.
 #### Deferred opportunities worth keeping visible
 
 - **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and

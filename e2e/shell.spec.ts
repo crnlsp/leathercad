@@ -478,6 +478,12 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
     await expect(window.getByTestId('toggle-parts')).toBeVisible();
     await expect(window.getByTestId('toggle-properties')).toBeVisible();
     await expect(window.getByTestId('tool-rail')).toBeVisible();
+    // All eleven tools fit the collapsed rail here, without scrolling. At
+    // 36 px rows (F.6) it ran over the status bar and hid its buttons.
+    const rail = await window
+      .getByTestId('tool-rail')
+      .evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
+    expect(rail.scroll).toBeLessThanOrEqual(rail.client);
     for (const id of ['parts-list', 'property-panel', 'problems-panel']) {
       await expect(window.getByTestId(id)).toHaveCount(1);
     }
@@ -572,6 +578,81 @@ test('the drawing stays put when the drawer opens or the rail collapses (F.3)', 
     await window.getByTestId('rail-toggle').click();
     await expect(window.getByTestId('tool-rail')).toHaveClass(/collapsed/);
     expect(await reading()).toBe(before);
+  });
+});
+
+test('every line is named by its mark, and no emoji is left (F.6)', async () => {
+  // Emoji rendered in whatever colour font the platform had, ignored the text
+  // colour, and could not show state by colour. Every tool now has an icon,
+  // and every feature is named by the mark the tree, the property header and
+  // the problems list all share.
+  await withFreshApp(async (window) => {
+    const panel = await panelWithChain(window);
+
+    for (const tool of [
+      'select',
+      'rectangle',
+      'circle',
+      'arc',
+      'line',
+      'polyline',
+      'hardware',
+      'text',
+      'measure',
+      'rotate',
+      'scale',
+    ]) {
+      await expect(window.getByTestId(`tool-${tool}`).locator('svg')).toHaveCount(1);
+    }
+
+    const tree = window.getByTestId('parts-list');
+    await expect(tree.locator('[data-mark="piece"]')).toHaveCount(1);
+    await expect(tree.locator('[data-mark="cut-edge"]')).toHaveCount(1);
+    await expect(tree.locator('[data-mark="stitch-line"]')).toHaveCount(1);
+    await expect(tree.locator('[data-mark="stitch-holes"]')).toHaveCount(1);
+    await expect(
+      panel.getByTestId('property-header').locator('[data-mark="cut-edge"]'),
+    ).toBeVisible();
+
+    // A problem row names its feature by the same mark.
+    await tree.getByText('Stitch line').click();
+    const inset = panel.locator('label', { hasText: /^Edge margin/ }).locator('input');
+    await inset.fill('60');
+    await inset.press('Enter');
+    await window.getByTestId('problems-toggle').click();
+    await expect(
+      window
+        .getByTestId('problems-panel')
+        .getByTestId('problem-row')
+        .first()
+        .locator('[data-mark="stitch-line"]'),
+    ).toBeVisible();
+
+    const text = await window.evaluate(() => document.body.innerText);
+    // Characters that render as colour emoji by default — 👁 🚫 🔒 🔓 were
+    // here. Not the typographic arrows in "Flip ↔", which the vendored face has.
+    // The pictograph planes as well: 👁 is text-presentation by default and
+    // escapes Emoji_Presentation, and it rendered as an emoji all the same.
+    expect(text.match(/[\u{1F000}-\u{1FAFF}]|\p{Emoji_Presentation}/gu) ?? []).toEqual([]);
+  });
+});
+
+test('the Draw as row keeps all six marks on screen at 1200 and 1280 px (F.6)', async () => {
+  // The marks made each chip wider, and at 1280 px the last one ran off the
+  // edge of the 620 px canvas.
+  await withFreshApp(async (window, instance) => {
+    for (const width of [1280, 1200]) {
+      await instance.evaluate(({ BrowserWindow }, w) => {
+        BrowserWindow.getAllWindows()[0]?.setSize(w, 840);
+      }, width);
+      await expect.poll(() => window.evaluate(() => window.outerWidth)).toBe(width);
+      const row = await window.getByTestId('tool-options').evaluate((el) => ({
+        scroll: el.scrollWidth,
+        client: el.clientWidth,
+      }));
+      expect(row.scroll, `at ${width} px`).toBeLessThanOrEqual(row.client);
+      await expect(window.getByTestId('draw-as-marking')).toBeInViewport({ ratio: 1 });
+    }
   });
 });
 

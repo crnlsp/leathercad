@@ -20,19 +20,14 @@ import {
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
-import {
-  evaluate,
-  followRefusal,
-  lockRefusal,
-  roleOf,
-  type ResolvedFeature,
-} from '@leathercad/domain';
+import { evaluate, followRefusal, lockRefusal, type ResolvedFeature } from '@leathercad/domain';
 
 import { IRON_PRESETS } from './irons.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
 import { FeatureEditor } from './featureEditors/index.js';
+import { MarkOf } from './icons/marks.js';
 
 /**
  * Exact numeric editing for whatever is selected.
@@ -84,11 +79,11 @@ export function PropertyPanel({
     <aside className="panel properties" data-testid="property-panel" aria-label="Properties">
       {/*
         What is selected stays in view however far the fields scroll: its mark,
-        its name and what it is (UI Foundations §7.1). The mark is the role's
-        swatch until F.6 draws the leather marks.
+        its name and what it is (UI Foundations §7.1) — named by the same mark
+        the parts tree uses (F.6).
       */}
       <header className="panel-header" data-testid="property-header">
-        <span className={`swatch role-${roleOf(feature)}`} aria-hidden="true" />
+        <MarkOf feature={feature} />
         <h2 className="header-name">{feature.name}</h2>
         {isMirrored(feature) && (
           // So a selected counterpart never reads as an ordinary independent

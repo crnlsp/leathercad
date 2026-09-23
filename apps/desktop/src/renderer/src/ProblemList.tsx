@@ -6,6 +6,7 @@ import {
   type Project,
 } from '@leathercad/domain';
 import { SeverityGlyph } from './SeverityGlyph.js';
+import { MarkOf } from './icons/marks.js';
 
 /**
  * The rows every problem surface is made of.
@@ -34,6 +35,12 @@ export function ProblemRows({
     <>
       {diagnostics.map((diagnostic) => {
         const where = locate(project, diagnostic);
+        const subject =
+          diagnostic.featureId === undefined
+            ? undefined
+            : project.parts
+                .flatMap((part) => part.features)
+                .find((feature) => feature.id === diagnostic.featureId);
         const key = `${problemKey(diagnostic.problem)}:${diagnostic.partId}`;
         const body = (
           <>
@@ -41,7 +48,13 @@ export function ProblemRows({
             <SeverityGlyph severity={diagnostic.severity} />
             <span className="problem-text">
               <span className="problem-title">{problemTitle(diagnostic.problem.code)}</span>
-              {showWhere && where !== null && <span className="problem-where">{where}</span>}
+              {showWhere && where !== null && (
+                <span className="problem-where">
+                  {/* The feature it is about, named by the mark the tree uses. */}
+                  {subject !== undefined && <MarkOf feature={subject} size={12} />}
+                  {where}
+                </span>
+              )}
               <span className="problem-message">{describeProblem(diagnostic.problem)}</span>
             </span>
           </>
