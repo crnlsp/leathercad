@@ -20,6 +20,11 @@ const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 type Window = Awaited<ReturnType<ElectronApplication['firstWindow']>>;
 
+/** A number as the app writes it: negatives carry a true minus (U+2212). */
+function num(text: string | null): number {
+  return Number.parseFloat((text ?? '').trim().replace('\u2212', '-'));
+}
+
 /**
  * Where a millimetre lands on screen, read from the app itself.
  *
@@ -38,7 +43,7 @@ async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [nu
     const previous = (await readout.textContent()) ?? '';
     await window.mouse.move(box.x + px, box.y + py);
     await expect.poll(async () => (await readout.textContent()) ?? '').not.toBe(previous);
-    const [x, y] = ((await readout.textContent()) ?? '').split(',').map((s) => parseFloat(s));
+    const [x, y] = ((await readout.textContent()) ?? '').split(',').map(num);
     return { x: x!, y: y! };
   };
 
@@ -53,6 +58,17 @@ async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [nu
     box.x + 20 + (xMm - a.x) / mmPerPx,
     box.y + box.height - 20 - (yMm - a.y) / mmPerPx,
   ];
+}
+
+/**
+ * The window the app opens at, set explicitly. A desktop's window manager may
+ * give a test a larger window than CI's virtual display does, and a layout
+ * that only fails at the size CI runs (it has) should fail here too.
+ */
+async function atDefaultSize(instance: ElectronApplication): Promise<void> {
+  await instance.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0]!.setSize(1280, 840),
+  );
 }
 
 async function drag(window: Window, from: [number, number], to: [number, number]): Promise<void> {
@@ -105,6 +121,7 @@ test('a card holder, from the first outline to the printed page', async () => {
   try {
     const window = await first.firstWindow();
     await window.waitForLoadState('domcontentloaded');
+    await atDefaultSize(first);
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
     await first.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
@@ -128,8 +145,8 @@ test('a card holder, from the first outline to the printed page', async () => {
 
     // Keep it where it was drawn, on whole millimetres, so everything after
     // can be placed relative to it.
-    const ox = Math.round(Number(await field(window, 'X').inputValue()));
-    const oy = Math.round(Number(await field(window, 'Y').inputValue()));
+    const ox = Math.round(num(await field(window, 'X').inputValue()));
+    const oy = Math.round(num(await field(window, 'Y').inputValue()));
     await type(window, 'X', ox);
     await type(window, 'Y', oy);
     await type(window, 'Width', 180);
@@ -283,6 +300,7 @@ test('a card holder, from the first outline to the printed page', async () => {
   try {
     const window = await second.firstWindow();
     await window.waitForLoadState('domcontentloaded');
+    await atDefaultSize(second);
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
     await second.evaluate(
       ({ dialog, shell }, paths) => {

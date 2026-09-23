@@ -1,4 +1,4 @@
-import { quantise } from '@leathercad/core';
+import { formatEditable, parseNumber, quantise } from '@leathercad/core';
 import { useRef, useState } from 'react';
 
 /**
@@ -7,7 +7,8 @@ import { useRef, useState } from 'react';
  * Commits on Enter or blur, reverts on Escape, and quantises to the storage
  * grid before it ever reaches the document (CLAUDE.md invariant 8). It keeps
  * its own draft string while focused so that typing "10." or "-" does not get
- * parsed into nonsense halfway through.
+ * parsed into nonsense halfway through. It shows a negative with a true minus
+ * and accepts either minus back, so a value can be retyped as it reads.
  *
  * Typing an exact number is not a convenience here — it is the primary way to
  * work. Mouse precision is the fallback.
@@ -50,7 +51,7 @@ export function NumberField({
   // entries, which made the first press of Undo appear to do nothing.
   const [draft, setDraft] = useState<string | null>(null);
   const draftRef = useRef<string | null>(null);
-  const shown = draft ?? (value === null ? '' : formatMm(value, precision));
+  const shown = draft ?? (value === null ? '' : formatEditable(value, precision));
 
   const updateDraft = (next: string | null): void => {
     draftRef.current = next;
@@ -69,7 +70,7 @@ export function NumberField({
       return;
     }
 
-    const parsed = Number.parseFloat(pending.replace(',', '.'));
+    const parsed = parseNumber(pending);
     if (!Number.isFinite(parsed)) return;
 
     const clamped = min !== undefined ? Math.max(min, parsed) : parsed;
@@ -105,7 +106,7 @@ export function NumberField({
               // current number to step from, and inventing one would be worse.
               const current = value ?? min ?? 0;
               const next = quantise(
-                (draft === null ? current : Number.parseFloat(draft) || current) + delta,
+                (draft === null ? current : parseNumber(draft) || current) + delta,
               );
               setDraft(null);
               onCommit(min !== undefined ? Math.max(min, next) : next);
@@ -118,10 +119,4 @@ export function NumberField({
       </span>
     </label>
   );
-}
-
-/** Trims trailing zeros so 105 reads as "105", not "105.00". */
-function formatMm(value: number, precision: number): string {
-  const fixed = value.toFixed(precision);
-  return fixed.replace(/\.?0+$/, '');
 }

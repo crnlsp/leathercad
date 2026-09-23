@@ -1,3 +1,4 @@
+import { formatAngle } from '@leathercad/core';
 import { refusedTransforms, transformFeatures } from '@leathercad/document';
 import type { Problem } from '@leathercad/domain';
 import { MatOps, type Vec2 } from '@leathercad/geometry';
@@ -92,7 +93,7 @@ export function createRotateTool(): Tool {
           textItem(
             'annotation',
             { x: state.pivot.x, y: state.pivot.y },
-            `${((state.angle * 180) / Math.PI).toFixed(1)}°`,
+            formatAngle((state.angle * 180) / Math.PI),
             12,
             '#ffcc44',
           ),

@@ -1,3 +1,4 @@
+import { formatNumber } from '@leathercad/core';
 import { MatOps } from '@leathercad/geometry';
 
 import { labelPrecisionFor, majorStepFor, niceTickStepMm, ticksInRange } from '../ticks.js';
@@ -86,13 +87,14 @@ export interface RulerStyle {
   readonly thicknessPx: number;
   /**
    * The left ruler needs more room than the top one: its labels run across
-   * the strip rather than along it, and "-160" does not fit in 22 px.
+   * the strip rather than along it, and "−160" does not fit in 22 px.
    */
   readonly leftThicknessPx: number;
   readonly background: string;
   readonly tick: string;
   readonly text: string;
   readonly fontPx: number;
+  readonly fontWeight: number;
   readonly fontFamily: string;
 }
 
@@ -102,7 +104,10 @@ export const DEFAULT_RULER_STYLE: RulerStyle = {
   background: '#1b1d21',
   tick: '#5a626d',
   text: '#8b929b',
-  fontPx: 10,
+  // `--t-num-micro` (UI Foundations §4.2): nothing below 11 px, and a
+  // measurement one weight above body.
+  fontPx: 11,
+  fontWeight: 500,
   // The vendored face, not a platform monospace. Plex's digits are already
   // tabular — every one has the same advance — so the ruler's figures line up
   // without asking the host for a typewriter font that differs on every
@@ -139,7 +144,7 @@ export function renderRulers(
   ctx.fillRect(0, 0, view.widthPx, top);
   ctx.fillRect(0, 0, left, view.heightPx);
 
-  ctx.font = `${style.fontPx}px ${style.fontFamily}`;
+  ctx.font = `${style.fontWeight} ${style.fontPx}px ${style.fontFamily}`;
   ctx.fillStyle = style.text;
   ctx.strokeStyle = style.tick;
 
@@ -153,13 +158,13 @@ export function renderRulers(
     const major = isMultiple(x, majorStep);
     ctx.moveTo(px, major ? top - 9 : top - 4);
     ctx.lineTo(px, top);
-    if (major) ctx.fillText(x.toFixed(precision), px + 3, top - 11);
+    if (major) ctx.fillText(formatNumber(x, precision), px + 3, top - 11);
   }
   ctx.stroke();
 
   // Left ruler. Labels stay upright rather than rotated — a rotated number is
   // harder to read — and are left-aligned from the edge so a long one like
-  // "-160" has the whole strip to run into instead of overflowing off-canvas.
+  // "−160" has the whole strip to run into instead of overflowing off-canvas.
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.beginPath();
@@ -169,7 +174,7 @@ export function renderRulers(
     const major = isMultiple(y, majorStep);
     ctx.moveTo(major ? left - 9 : left - 4, py);
     ctx.lineTo(left, py);
-    if (major) ctx.fillText(y.toFixed(precision), 3, py);
+    if (major) ctx.fillText(formatNumber(y, precision), 3, py);
   }
   ctx.stroke();
 

@@ -1,4 +1,11 @@
-import { EPS_ANGLE, EPS_LENGTH, EPS_POINT, approxZero, type Mm } from '@leathercad/core';
+import {
+  EPS_ANGLE,
+  EPS_LENGTH,
+  EPS_POINT,
+  approxZero,
+  formatNumber,
+  type Mm,
+} from '@leathercad/core';
 import {
   MatOps,
   PathOps,
@@ -648,7 +655,7 @@ function drawMeasurement(
     ],
   };
 
-  const label = valueMm.toFixed(source.precision);
+  const label = formatNumber(valueMm, source.precision);
   const midpoint = { x: (fromOff.x + toOff.x) / 2, y: (fromOff.y + toOff.y) / 2 };
   // Set above the dimension line, reading along it, and never upside down —
   // a number a maker has to tilt their head for is a number they misread.

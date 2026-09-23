@@ -9,6 +9,15 @@ const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 let app: ElectronApplication;
 
+/**
+ * A number as the app writes it. Negatives carry a true minus (U+2212, F.0),
+ * which `Number` and `parseFloat` do not read — they return NaN, and an
+ * assertion like `not.toBe(0)` would then pass on nothing at all.
+ */
+function num(text: string | null): number {
+  return Number.parseFloat((text ?? '').trim().replace('\u2212', '-'));
+}
+
 test.beforeAll(async () => {
   app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
 });
@@ -204,6 +213,70 @@ test('draw roughly, then type exact millimetres', async () => {
     // Typing is undoable like anything else.
     await window.getByTestId('undo').click();
     await expect(panel.locator('.readout').first()).not.toContainText('346.27 mm');
+  });
+});
+
+test('the interface is set in the typeface the pattern prints in', async () => {
+  // F.0. Checked on computed styles rather than on the stylesheet: a native
+  // control that does not inherit the page's font, or a `font` shorthand that
+  // resets the figure style, looks correct in the CSS and wrong on screen.
+  await withFreshApp(async (window) => {
+    await window.getByTestId('tool-hardware').click();
+    const styles = await window.evaluate(async () => {
+      await document.fonts.ready;
+      const pick = (selector: string) => {
+        const element = document.querySelector(selector);
+        if (element === null) return null;
+        const style = getComputedStyle(element);
+        return { family: style.fontFamily, figures: style.fontVariantNumeric };
+      };
+      return {
+        weights: [400, 500, 600].map((w) => document.fonts.check(`${w} 12px "IBM Plex Sans"`)),
+        body: pick('body'),
+        button: pick('[data-testid="tool-select"]'),
+        select: pick('[data-testid="hardware-diameter"]'),
+        input: pick('[data-testid="project-name"]'),
+        readout: pick('[data-testid="cursor-readout"]'),
+      };
+    });
+
+    expect(styles.weights).toEqual([true, true, true]);
+    for (const element of [
+      styles.body,
+      styles.button,
+      styles.select,
+      styles.input,
+      styles.readout,
+    ]) {
+      expect(element?.family).toMatch(/^"?IBM Plex Sans"?/);
+      expect(element?.figures).toContain('tabular-nums');
+    }
+  });
+});
+
+test('a negative reads with a true minus, and can be typed with either', async () => {
+  // F.0. U+2212 is as wide as a digit, so a column of signed numbers lines up;
+  // the hyphen is narrower and does not. What is typed is a keyboard's hyphen,
+  // or the minus copied from the panel itself — both have to be read back.
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 330, box!.y + 270, { steps: 5 });
+    await window.mouse.up();
+
+    const x = window
+      .getByTestId('property-panel')
+      .locator('label', { hasText: /^X/ })
+      .locator('input');
+    await x.fill('-12.5');
+    await x.press('Enter');
+    await expect(x).toHaveValue('−12.5');
+
+    await x.fill('−7');
+    await x.press('Enter');
+    await expect(x).toHaveValue('−7');
   });
 });
 
@@ -597,7 +670,8 @@ test('rotates a rectangle and it stays a rectangle', async () => {
     // the panel can still be typed into.
     const turn = panel.locator('label', { hasText: /^Turn/ }).locator('input');
     await expect(turn).toBeVisible();
-    expect(Number(await turn.inputValue())).not.toBe(0);
+    expect(num(await turn.inputValue())).not.toBe(0);
+    expect(Number.isFinite(num(await turn.inputValue()))).toBe(true);
     expect(
       await panel
         .locator('label', { hasText: /^Width/ })
@@ -807,7 +881,7 @@ test("a second panel starts exactly on the first panel's corner", async () => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
     const numberIn = async (label: string): Promise<number> =>
-      Number(await panel.getByLabel(label).inputValue());
+      num(await panel.getByLabel(label).inputValue());
 
     const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
       await window.mouse.move(box!.x + x1, box!.y + y1);
@@ -1002,7 +1076,7 @@ async function mmPerPx(
       .not.toContain('—');
 
     const text = (await readout.textContent()) ?? '';
-    return Number.parseFloat(text.split(',')[0]!.trim());
+    return num(text.split(',')[0]!);
   };
 
   const near = await readAt(100);

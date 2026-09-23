@@ -1,3 +1,4 @@
+import { formatEditable, formatMm } from '@leathercad/core';
 import type {
   CompatibilityRule,
   PlacedThing,
@@ -209,8 +210,8 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     title: 'Offset collapsed',
     describe: (f) =>
       f.side === 'inward'
-        ? `A ${String(f.distanceMm)} mm edge margin is deeper than this edge can hold.`
-        : `A ${String(f.distanceMm)} mm allowance cannot be built outside this stitch line.`,
+        ? `A ${formatEditable(f.distanceMm, 2)} mm edge margin is deeper than this edge can hold.`
+        : `A ${formatEditable(f.distanceMm, 2)} mm allowance cannot be built outside this stitch line.`,
   },
   OFFSET_UNSUPPORTED: {
     title: 'Cannot offset curves',
@@ -257,14 +258,14 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
   HOLE_SPACING_DEVIATION: {
     title: 'Spacing off the iron',
     describe: (f) =>
-      `The spacing came out ${f.achievedMm.toFixed(2)} mm against a ${f.pitchMm.toFixed(2)} mm ` +
+      `The spacing came out ${formatMm(f.achievedMm)} against a ${formatMm(f.pitchMm)} ` +
       'iron. Change the pitch, or the edge margin, to bring them together.',
   },
   HOLE_SPACING_UNEVEN: {
     title: 'Uneven spacing',
     describe: (f) =>
-      `The runs of ${f.featureName} are spaced from ${f.narrowestMm.toFixed(2)} mm to ` +
-      `${f.widestMm.toFixed(2)} mm, so the change will show at the corners.`,
+      `The runs of ${f.featureName} are spaced from ${formatMm(f.narrowestMm)} to ` +
+      `${formatMm(f.widestMm)}, so the change will show at the corners.`,
   },
   HOLE_COUNT_TOO_LOW: {
     title: 'Too few holes',
@@ -295,8 +296,8 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
   HOLE_TOO_CLOSE_TO_EDGE: {
     title: 'Too near the edge',
     describe: (f) =>
-      `${f.featureName} comes within ${f.clearanceMm.toFixed(2)} mm of an edge, under the ` +
-      `${f.minimumMm.toFixed(2)} mm a stitch needs. Leather tears out between a hole and an edge.`,
+      `${f.featureName} comes within ${formatMm(f.clearanceMm)} of an edge, under the ` +
+      `${formatMm(f.minimumMm)} a stitch needs. Leather tears out between a hole and an edge.`,
   },
 
   EMPTY_PART: {

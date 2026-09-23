@@ -1,7 +1,8 @@
 /**
  * @leathercad/core — the bottom layer.
  *
- * Tolerances, quantisation, guards, ids and Result. Imports nothing.
+ * Tolerances, quantisation, guards, ids, Result, and how a number is written.
+ * Imports nothing.
  * Everything else in the workspace is built on top of it.
  */
 
@@ -32,6 +33,15 @@ export {
 } from './epsilon.js';
 
 export { QUANTUM_MM, quantise } from './quantise.js';
+
+export {
+  MINUS,
+  formatAngle,
+  formatEditable,
+  formatMm,
+  formatNumber,
+  parseNumber,
+} from './format.js';
 
 export { assertFinite, invariant } from './guard.js';
 

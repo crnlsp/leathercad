@@ -1,3 +1,4 @@
+import { formatEditable } from '@leathercad/core';
 import type { DrawMode, HardwareOptions } from '@leathercad/editor';
 
 import { PUNCH_SIZES_MM } from './punches.js';
@@ -89,7 +90,7 @@ export function ToolOptions({
           >
             {PUNCH_SIZES_MM.map((mm) => (
               <option key={mm} value={String(mm)}>
-                {mm} mm
+                {formatEditable(mm, 2)} mm
               </option>
             ))}
           </select>

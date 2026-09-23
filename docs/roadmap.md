@@ -1143,7 +1143,7 @@ features consume these; they do not extend or amend the visual language on their
 
 | | Step | Contains |
 |---|---|---|
-| **F.0** | Typography | Apply the vendored face to the DOM (it is loaded and unused today); vendor Plex Sans 500/600; the nine-token scale; `formatMm()` / `formatAngle()` emitting the true minus |
+| **F.0** ✅ | Typography | Apply the vendored face to the DOM (it is loaded and unused today); vendor Plex Sans 500/600; the nine-token scale; `formatMm()` / `formatAngle()` emitting the true minus |
 | **F.1** | Systemic interaction | `ReasonedButton` (a disabled control that renders its refusal — the domain already produces every one, and the UI hides them in a native `title`, contradicting X1); `Tooltip`; a `Notice` near the gesture; one word per relationship — **Follows / Mirrors / Mirrors … across / Measures**; drag vs click–click made consistent and a header hint that is true; **Length** on an open line, and no area on a hole |
 | **F.2** | Layout architecture | Icon rail 152/52 px in its own column; Parts full height; Problems as a drawer under the canvas; Properties with a sticky header; **the rule that no panel is ever removed at any window size** |
 | **F.3** | The canvas keeps its place | Hold the world point at the canvas centre fixed across a resize, and delete the compensation arithmetic in the E2E suite |
@@ -1159,9 +1159,52 @@ fallbacks in `packages/render` (the live dimension, part captions and both ruler
 typeface the pattern prints in); the missing U+2212 and Romanian letters; the hard-coded A4 export
 (**5.5**). *Remaining:* the canvas jump (F.3); the parts panel disappearing below ~900 px, which
 makes a **locked feature unreachable** (F.2); disabled controls hiding their reason (F.1);
-Perimeter/Area shown for lines and holes (F.1); number fields clipping their units (F.0/F.1);
+Perimeter/Area shown for lines and holes (F.1); ~~number fields clipping their units~~ (✅ F.0);
 terminology collisions (F.1); a failed feature drawn in red over its healthy source (F.5); emoji
 icons (F.6).
+
+**F.0 — done** (2026-09-23). The UI is set in IBM Plex Sans, the face it has vendored since 4.11a,
+instead of `system-ui`. Regular, Medium and SemiBold are declared, and only Regular is ever outlined
+for paper. The nine tokens from UI Foundations §4.2 are CSS custom properties on `:root`, each a
+`font` shorthand, and every text rule takes one. Uppercase with letter-spacing is gone. Figures are
+tabular throughout; measurements are set at 500 and counts at body weight.
+Every displayed number goes through `formatNumber` / `formatMm` / `formatAngle` / `formatEditable`
+in `packages/core`, which write U+2212 and never write "−0". `parseNumber` reads either minus and a
+decimal comma, so a value can be retyped exactly as it reads. That covers the ruler, the cursor
+readout, the tool previews, the property panel, a dimension's label, the problem messages, the
+"too big for the paper" size, default hardware names and the punch sizes. The only `toFixed` left is
+serialisation: `lcp.ts` and the SVG writer round numbers for files, not people.
+`--t-num-lg` marks the stitch-hole panel's *Holes* and *Spacing*, the two numbers that panel is
+for. Bold is pinned to the vendored 600, since a bare `<b>` asks for a 700 that does not exist. The
+SVG screen backend sets overlay text at 500, as the canvas does. Property-tested:
+- no output contains a hyphen;
+- the output carries a minus exactly when the rounded value is negative;
+- what is written reads back to within half a unit of its precision.
+
+Gotchas:
+- **Form controls never inherited the page font.** Native buttons and selects fell back to the
+  system face. Worst were the *Draw as* chips: the `.chip` class had no CSS at all, so they have been
+  white native buttons since 4.3a. `font: inherit` on controls fixes the face. `.chip` now looks like
+  `.tool`, and selects like inputs, which is the only styling in this step.
+- **A larger number showed less of itself.** Paired fields put a label, a 14 px figure and a 28 px
+  unit column into about 100 px, and *Width* showed "103" for 103.38. That is worse than the clipped
+  unit it replaced. In a pair the label now sits above the field.
+- **The field's trailing-zero trim ate whole numbers.** At precision 0, 10 became "1" and 0 became
+  a blank field, so the dimension's *Decimals* field went empty at 0. `formatEditable` trims only
+  after a decimal point.
+- **CI caught what the desktop hid.** Problem messages at body size in the 200 px left column made
+  Problems tall enough to cover the parts list at the app's default 1280 × 840. The 4.13 scenario
+  then clicked a problems panel lying on top of the row it wanted. Locally the window manager gave a
+  larger window, so it passed. Problems is now capped at 30 % of the column and scrolls, and sets its
+  messages at label size there. It is a stopgap until F.2 moves Problems into a drawer, and the
+  scenario now pins the window to 1280 × 840 so local runs match CI.
+- **`font` shorthands reset the figure style.** Every `font: var(--t-…)` resets
+  `font-variant-numeric`, so `tabular-nums` set on `body` held only for body text. It is now on
+  `*` with `!important`. An E2E test reads computed styles on a button, a select, an input and the
+  readout, and checks all three weights have loaded; the test fails without the fix.
+- **E2E helpers parsed numbers with `Number()`,** which returns `NaN` for U+2212. The rotate test
+  asserted `not.toBe(0)`, which `NaN` passes, so it would have kept passing on nothing. Both spec
+  files now share one `num()` helper that reads either minus.
 
 **2 — UX improvement, low architectural impact.** The typography rollout (F.0); the layout
 architecture (F.2); the colour planes (F.4/F.5); the icon system (F.6); selection as a halo; snap

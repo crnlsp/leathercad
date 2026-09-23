@@ -1,3 +1,4 @@
+import { formatMm } from '@leathercad/core';
 import type { Derivation, StitchHoles } from '@leathercad/domain';
 
 import { NumberField } from '../NumberField.js';
@@ -95,13 +96,15 @@ export function StitchHoleSetEditor({
 
       {holes !== undefined && (
         <>
-          <div className="readout">
+          {/* The two numbers this panel is for: what gets punched, and how far
+              apart it came out. */}
+          <div className="readout key">
             <span>Holes</span>
             <b data-testid="hole-count">{holes.count}</b>
           </div>
-          <div className="readout">
+          <div className="readout key">
             <span>Spacing</span>
-            <b data-testid="achieved-spacing">{holes.achievedPitchMm.toFixed(2)} mm</b>
+            <b data-testid="achieved-spacing">{formatMm(holes.achievedPitchMm)}</b>
           </div>
           {holes.runs.length > 1 && (
             <div className="readout">

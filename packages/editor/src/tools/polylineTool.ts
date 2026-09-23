@@ -1,3 +1,4 @@
+import { formatAngle, formatMm } from '@leathercad/core';
 import { dist, polyline, type Vec2 } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
 
@@ -175,7 +176,7 @@ function polylineLike(
           textItem(
             'annotation',
             { x: state.cursor.x, y: state.cursor.y + 3 },
-            `${run.toFixed(1)} mm  ${angle.toFixed(1)}°`,
+            `${formatMm(run, 1)}  ${formatAngle(angle)}`,
             12,
             '#ffcc44',
           ),

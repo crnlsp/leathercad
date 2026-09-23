@@ -101,7 +101,11 @@ export function renderToSvgString(
     (i): i is Extract<DisplayItem, { kind: 'overlay-text' }> => i.kind === 'overlay-text',
   );
   if (texts.length > 0) {
-    parts.push(`<g font-family="${options.fontFamily ?? `'${FONT_FAMILY}', sans-serif`}">`);
+    // Weight 500, as the canvas backend sets it: overlay text is a tool's
+    // readout, and a measurement is set one weight above body.
+    parts.push(
+      `<g font-family="${options.fontFamily ?? `'${FONT_FAMILY}', sans-serif`}" font-weight="500">`,
+    );
     for (const item of texts) {
       const at = MatOps.apply(transform, item.at);
       parts.push(

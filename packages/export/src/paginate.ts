@@ -1,4 +1,4 @@
-import type { Mm } from '@leathercad/core';
+import { formatMm, formatNumber, type Mm } from '@leathercad/core';
 import { RectOps, type Vec2 } from '@leathercad/geometry';
 
 import { contentAreaMm, paperOptionsFitting, type PageSetup } from './paper.js';
@@ -140,7 +140,7 @@ export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult
 
 /** A sentence a user can act on, for the oversized case. */
 export function describeOversized(entry: OversizedPart): string {
-  const size = `${entry.widthMm.toFixed(1)} × ${entry.heightMm.toFixed(1)} mm`;
+  const size = `${formatNumber(entry.widthMm, 1)} × ${formatMm(entry.heightMm, 1)}`;
   if (entry.fitsOn.length === 0) {
     return `"${entry.part.name}" is ${size} and does not fit any supported paper at 1:1.`;
   }

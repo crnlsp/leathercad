@@ -14,9 +14,35 @@
   font-display: block;
 }
 
+/* 500 and 600 are for the interface only (F.0). What prints is outlined from
+   Regular, so these never reach paper. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../../../assets/fonts/IBMPlexSans-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../../../assets/fonts/IBMPlexSans-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+}
+
 /*
- * Slice 0.2 shell styling. Intentionally minimal — the editor's visual design
- * is a later exercise, once there is an editor.
+ * The type scale (UI Foundations §4.2). Nine tokens, three weights, one face.
+ * Each is a `font` shorthand, so a rule takes its whole voice from one name.
+ *
+ * - No uppercase with letter-spacing anywhere; headings get sentence case and
+ *   weight.
+ * - A measurement is set one weight above body (500 against 400), never in
+ *   another face. Counts that are not measurements stay at body weight.
+ * - Nothing below 11 px.
+ * - Figures are tabular everywhere. Plex Sans digits already share one advance;
+ *   the declaration states the intent and survives a change of face.
  */
 
 :root {
@@ -29,10 +55,47 @@
   --error: #e5675f;
   --warning: #e0a93a;
   --info: #6f9fd8;
+
+  --font-sans: 'IBM Plex Sans', sans-serif;
+
+  --t-dialog: 600 19px/26px var(--font-sans);
+  --t-panel: 600 16px/22px var(--font-sans);
+  --t-strong: 600 14px/20px var(--font-sans);
+  --t-body: 400 14px/20px var(--font-sans);
+  --t-label: 500 12px/16px var(--font-sans);
+  --t-micro: 500 11px/15px var(--font-sans);
+  --t-num-lg: 500 17px/22px var(--font-sans);
+  --t-num: 500 14px/20px var(--font-sans);
+  --t-num-micro: 500 11px/14px var(--font-sans);
+
+  --tracking-title: -0.01em;
+  --tracking-micro: 0.02em;
 }
 
 * {
   box-sizing: border-box;
+  /* Tabular, lining figures everywhere a number can appear (UI Foundations
+     §4.3, rule 3). Important because every `font: var(--t-…)` shorthand resets
+     font-variant-numeric to normal: set on body alone, it held for body text and
+     nowhere else. Plex's digits are tabular by default, so this states the
+     intent and survives a change of face. */
+  font-variant-numeric: tabular-nums lining-nums !important;
+}
+
+/* Form controls do not inherit the page's font by default: a native button or
+   select would quietly fall back to the system face. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Bold means 600, the heaviest weight vendored. A bare `b` asks for 700, and
+   a face that does not exist is a face the browser invents. */
+b,
+strong {
+  font-weight: 600;
 }
 
 html,
@@ -45,11 +108,7 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font:
-    13px/1.5 system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
+  font: var(--t-body);
   overflow: hidden;
 }
 
@@ -70,10 +129,15 @@ body {
 }
 
 /* The mode scope and the parts list share the left column; the column owns the
-   edge so the two do not draw a border each. */
+   edge so the two do not draw a border each.
+
+   Problems may take at most 30% of the column and scrolls beyond it. Sized to
+   its content alone, a few problems in body type squeezed the parts list to
+   nothing — and the parts list is the only way to a hidden or locked feature.
+   A stopgap until F.2 moves Problems into a drawer under the canvas. */
 .left-column {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) minmax(0, auto);
+  grid-template-rows: auto minmax(0, 1fr) fit-content(30%);
   min-height: 0;
   border-right: 1px solid var(--border);
 }
@@ -99,10 +163,7 @@ body {
 .rail-heading {
   margin: 0 0 2px;
   color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: var(--t-label);
 }
 
 .rail .tool {
@@ -132,6 +193,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
+  font: var(--t-label);
   background: var(--bg-raised);
   border-bottom: 1px solid var(--border);
 }
@@ -147,16 +209,12 @@ body {
 
 .app-header h1 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font: var(--t-strong);
 }
 
 .app-subtitle {
   color: var(--accent);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: var(--t-label);
 }
 
 .canvas-host {
@@ -184,14 +242,16 @@ body {
   margin-left: auto;
   overflow: hidden;
   color: var(--text-dim);
-  font-size: 11px;
+  font: var(--t-label);
+  font-weight: 400;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
+/* Counts, not measurements: emphasised by colour, at body weight. */
 .app-status b {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .app-status {
@@ -202,13 +262,13 @@ body {
   background: var(--bg-raised);
   border-top: 1px solid var(--border);
   color: var(--text-dim);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  font: var(--t-micro);
+  font-weight: 400;
   white-space: nowrap;
 }
 
 .app-status code {
-  font-family: ui-monospace, 'JetBrains Mono', monospace;
+  font: inherit;
   color: var(--text-dim);
 }
 
@@ -221,8 +281,11 @@ body {
   color: var(--error);
 }
 
+/* The cursor readout is a measurement (UI Foundations §4.2, --t-num-micro). */
 .status-right {
   overflow: hidden;
+  color: var(--text);
+  font: var(--t-num-micro);
   text-overflow: ellipsis;
 }
 
@@ -265,8 +328,7 @@ body {
   border-radius: 4px;
   background: transparent;
   color: var(--text-dim);
-  font: inherit;
-  font-size: 12px;
+  font: var(--t-label);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -274,6 +336,28 @@ body {
 .tool:hover:not(:disabled) {
   color: var(--text);
   border-color: #444b55;
+}
+
+.chip {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  font: var(--t-label);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip:hover {
+  color: var(--text);
+  border-color: #444b55;
+}
+
+.chip.active {
+  background: #2c313a;
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .tool.active {
@@ -292,8 +376,8 @@ body {
   border-radius: 3px;
   background: #14161a;
   color: var(--text-dim);
-  font-family: ui-monospace, monospace;
-  font-size: 10px;
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
 }
 
 .panel {
@@ -312,11 +396,9 @@ body {
 
 .panel h2 {
   margin: 0;
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--text);
+  font: var(--t-panel);
+  letter-spacing: var(--tracking-title);
 }
 
 .panel-section {
@@ -330,40 +412,59 @@ body {
   align-items: center;
   gap: 6px;
   color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
+  font: var(--t-strong);
 }
 
 .panel-heading.small {
   margin-top: 4px;
   color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 500;
+  font: var(--t-label);
 }
 
+/* Prose in a panel: refusals, empty states, notes. Wraps at about 44 ch. */
 .panel-empty {
+  max-width: 44ch;
   margin: 0;
   color: var(--text-dim);
-  font-size: 11px;
-  line-height: 1.5;
+  font: var(--t-body);
 }
 
 .panel-error {
+  max-width: 44ch;
   margin: 0;
   color: var(--error);
-  font-size: 11px;
+  font: var(--t-body);
 }
 
 .field {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font: var(--t-label);
 }
 
 .field-label {
-  flex: 0 0 46px;
+  flex: 0 0 72px;
   color: var(--text-dim);
+}
+
+/* A select holds words, not a measurement, and must shrink with the panel
+   rather than push past its edge. */
+.field select {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #14161a;
+  color: var(--text);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+.field select:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 .field-input {
@@ -381,8 +482,13 @@ body {
   border-radius: 3px;
   background: #14161a;
   color: var(--text);
-  font: inherit;
-  font-variant-numeric: tabular-nums;
+  font: var(--t-num);
+}
+
+/* The unit has a reserved column of its own (UI Foundations §4.3, rule 5), so a
+   long number stops short of it instead of running underneath. */
+.field-input:has(.field-suffix) input {
+  padding-right: 32px;
 }
 
 .field input:focus {
@@ -392,9 +498,11 @@ body {
 
 .field-suffix {
   position: absolute;
-  right: 6px;
+  right: 0;
+  width: 28px;
   color: var(--text-dim);
-  font-size: 10px;
+  font: var(--t-label);
+  font-weight: 400;
   pointer-events: none;
 }
 
@@ -404,20 +512,36 @@ body {
   gap: 6px;
 }
 
+/* Two fields to a row leaves no room beside each input for a label, a number
+   and its unit — the number is what gives way, and a width that reads "103"
+   when it is 103.38 is worse than no field at all. So in a pair the label sits
+   above. */
+.field-pair .field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
 .field-pair .field-label {
-  flex-basis: 34px;
+  flex: none;
 }
 
 .readout {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   color: var(--text-dim);
-  font-size: 11px;
+  font: var(--t-label);
 }
 
 .readout b {
   color: var(--text);
-  font-variant-numeric: tabular-nums;
+  font: var(--t-num);
+}
+
+/* The number a panel is about (UI Foundations §4.2, --t-num-lg). */
+.readout.key b {
+  font: var(--t-num-lg);
 }
 
 .row {
@@ -429,8 +553,7 @@ body {
   border-radius: 3px;
   background: transparent;
   color: var(--text-dim);
-  font: inherit;
-  font-size: 11px;
+  font: var(--t-label);
   text-align: left;
   cursor: pointer;
 }
@@ -470,8 +593,8 @@ body {
   border-radius: 3px;
   background: #14161a;
   color: var(--text-dim);
-  font-size: 10px;
-  font-weight: 500;
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
 }
 
 /*
@@ -515,8 +638,7 @@ body {
   border-radius: 3px;
   background: transparent;
   color: var(--text);
-  font: inherit;
-  font-size: 12px;
+  font: var(--t-body);
 }
 
 .project-name:hover {
@@ -553,12 +675,13 @@ body {
   border-radius: 6px;
   background: var(--bg-raised);
   color: var(--text);
-  font-size: 12px;
+  font: var(--t-body);
 }
 
 .dialog h3 {
   margin: 0;
-  font-size: 14px;
+  font: var(--t-dialog);
+  letter-spacing: var(--tracking-title);
 }
 
 .dialog p {
@@ -572,7 +695,7 @@ body {
 }
 
 .dialog-part {
-  font-weight: 600;
+  font: var(--t-strong);
 }
 
 .dialog-note {
@@ -587,9 +710,11 @@ body {
 }
 
 .panel-note {
+  max-width: 44ch;
   margin: 0;
   color: var(--text-dim);
-  font-size: 11px;
+  font: var(--t-label);
+  font-weight: 400;
 }
 
 .empty-part {
@@ -631,8 +756,7 @@ body {
   border-radius: 3px;
   background: transparent;
   color: var(--text-dim);
-  font: inherit;
-  font-size: 11px;
+  font: var(--t-body);
   text-align: left;
 }
 
@@ -671,20 +795,29 @@ button.problem-row:hover {
 
 .problem-title {
   color: var(--text);
-  font-weight: 500;
+  font: var(--t-strong);
 }
 
 .problem-where {
   overflow: hidden;
   color: var(--text-dim);
-  font-size: 10px;
+  font: var(--t-label);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* A problem message wraps at about 60 ch. */
 .problem-message {
+  max-width: 60ch;
   color: var(--text-dim);
-  line-height: 1.35;
+}
+
+/* In the 200 px left column a body-size message runs to four or five lines a
+   problem, so there it is set at label size. Body size is for the drawer F.2
+   moves Problems into; the property panel's inline problem keeps it. */
+.left-column .problem-message {
+  font: var(--t-label);
+  font-weight: 400;
 }
 
 /* ——— The parts panel ————————————————————————————————————————————————————
@@ -713,9 +846,7 @@ button.problem-row:hover {
   border-radius: 3px;
   background: transparent;
   color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  font: var(--t-strong);
   text-align: left;
   cursor: pointer;
 }
@@ -751,7 +882,7 @@ button.problem-row:hover {
   border-radius: 3px;
   background: transparent;
   color: var(--text-dim);
-  font-size: 11px;
+  font: var(--t-micro);
   line-height: 1;
   text-align: center;
   cursor: pointer;
@@ -774,7 +905,6 @@ button.problem-row:hover {
 
 .part-actions .tool {
   flex: 1;
-  font-size: 11px;
 }
 
 /* A fieldset only to carry `disabled` down to every control inside it, so a
@@ -799,7 +929,7 @@ button.problem-row:hover {
 .row-mark {
   flex: none;
   color: var(--text-dim);
-  font-size: 10px;
+  font: var(--t-micro);
 }
 
 /* Nothing in the properties panel may make it scroll sideways: the fields are

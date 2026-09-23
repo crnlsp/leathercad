@@ -1,4 +1,4 @@
-import { createIdFactory } from '@leathercad/core';
+import { createIdFactory, formatMm, formatNumber } from '@leathercad/core';
 import {
   DocumentStore,
   deleteFeatures,
@@ -402,7 +402,7 @@ export function App() {
         <span className="status-right" data-testid="cursor-readout">
           {status === null || status.cursorMm === null
             ? '— , —'
-            : `${status.cursorMm.x.toFixed(2)} , ${status.cursorMm.y.toFixed(2)} mm`}
+            : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
         </span>
       </footer>
 

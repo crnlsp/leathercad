@@ -1,4 +1,4 @@
-import type { Mm, Ulid } from '@leathercad/core';
+import { formatEditable, type Mm, type Ulid } from '@leathercad/core';
 import type {
   Derivation,
   Feature,
@@ -1134,7 +1134,8 @@ export function addHardwareHole(
     id: featureId,
     kind: 'hardware-hole',
     hardwareType,
-    name: `${HARDWARE_NAMES[hardwareType]} ${formatMm(radiusMm * 2)} mm`,
+    // "4" rather than "4.00", and "2.5" rather than "2.50".
+    name: `${HARDWARE_NAMES[hardwareType]} ${formatEditable(radiusMm * 2, 2)} mm`,
     visible: true,
     locked: false,
     source: { kind: 'shape', shape: circleShape(centre, radiusMm) },
@@ -1236,11 +1237,6 @@ const HARDWARE_NAMES: Readonly<Record<HardwareHole['hardwareType'], string>> = {
   eyelet: 'Eyelet',
   other: 'Hole',
 };
-
-/** "4" rather than "4.00", and "2.5" rather than "2.50". */
-function formatMm(value: Mm): string {
-  return String(Number(value.toFixed(2)));
-}
 
 /**
  * Changes a feature's own parameters — the ones that are not its geometry.

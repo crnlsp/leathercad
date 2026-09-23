@@ -1,3 +1,4 @@
+import { formatMm, formatNumber } from '@leathercad/core';
 import {
   type DocumentStore,
   addAllowance,
@@ -195,11 +196,11 @@ export function PropertyPanel({
           <div className="panel-heading">Measured</div>
           <div className="readout">
             <span>Perimeter</span>
-            <b>{PathOps.length(resolved.path).toFixed(2)} mm</b>
+            <b>{formatMm(PathOps.length(resolved.path))}</b>
           </div>
           <div className="readout">
             <span>Area</span>
-            <b>{(PathOps.area(resolved.path) / 100).toFixed(2)} cm²</b>
+            <b>{formatNumber(PathOps.area(resolved.path) / 100, 2)} cm²</b>
           </div>
         </section>
       )}

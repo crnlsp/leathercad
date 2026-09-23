@@ -155,7 +155,9 @@ export function renderDisplayList(
 
       if (item.kind === 'overlay-text') {
         const at = MatOps.apply(transform, item.at);
-        ctx.font = `${item.sizePx}px ${options.fontFamily ?? vendoredFamily()}`;
+        // Overlay text is the tool's readout — a length, an angle — so it is set
+        // as a measurement: one weight above body (UI Foundations §4.3).
+        ctx.font = `500 ${item.sizePx}px ${options.fontFamily ?? vendoredFamily()}`;
         ctx.textAlign = item.align ?? 'left';
         ctx.textBaseline = item.baseline ?? 'alphabetic';
         ctx.fillText(item.text, at.x, at.y);

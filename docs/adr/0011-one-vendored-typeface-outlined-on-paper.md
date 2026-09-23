@@ -62,6 +62,11 @@ declined; `pnpm fonts:generate` extracting 331 glyphs and 12 910 kerning pairs w
 `packages/typography`; document and overlay text as separate display items; and a PDF writer that
 embeds no font at all. `⌀` is not in the typeface, so a diameter is written `Ø`.
 
+UI Foundations step F.0 (2026-09-23) added `IBMPlexSans-Medium.woff` and
+`IBMPlexSans-SemiBold.woff`, from the same package, for the interface's 500 and 600 weights. It is
+still one typeface. Glyph extraction and everything on paper still use Regular, so the new files
+never reach an export.
+
 - A new package, and new layering edges `render → typography`, `export → typography` and
   `domain → typography` — the last so `validate()` can ask whether a string can be printed at all —
   recorded in the dependency-cruiser rules.

@@ -1,3 +1,4 @@
+import { formatNumber } from '@leathercad/core';
 import { refusedTransforms, transformFeatures } from '@leathercad/document';
 import type { Problem } from '@leathercad/domain';
 import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
@@ -96,7 +97,7 @@ export function createScaleTool(): Tool {
           textItem(
             'annotation',
             { x: pivot.x, y: pivot.y },
-            `${factors.x.toFixed(2)} × ${factors.y.toFixed(2)}`,
+            `${formatNumber(factors.x, 2)} × ${formatNumber(factors.y, 2)}`,
             12,
             '#ffcc44',
           ),

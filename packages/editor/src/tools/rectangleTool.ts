@@ -1,3 +1,4 @@
+import { formatMm, formatNumber } from '@leathercad/core';
 import { rectShape } from '@leathercad/document';
 import { Shapes } from '@leathercad/geometry';
 import { pathItem, textItem, type DisplayList } from '@leathercad/render';
@@ -105,7 +106,7 @@ export function createRectangleTool(nextId: () => string): Tool {
           textItem(
             'annotation',
             { x: origin.x, y: origin.y + height + 3 },
-            `${width.toFixed(1)} × ${height.toFixed(1)} mm`,
+            `${formatNumber(width, 1)} × ${formatMm(height, 1)}`,
             12,
             '#ffcc44',
           ),
