@@ -40,7 +40,7 @@ pnpm test             # unit + property + golden + export + snapshot
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
-pnpm package          # the AppImage, in apps/desktop/release/ (ADR 0014)
+pnpm package          # this platform's installer, in apps/desktop/release/: AppImage, NSIS .exe, or dmg (ADR 0014)
 pnpm build
 pnpm typecheck        # tsc --build
 pnpm lint

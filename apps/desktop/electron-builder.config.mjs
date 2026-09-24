@@ -2,7 +2,9 @@
 /**
  * Packaging. See ADR 0014 and docs/architecture.md §5.
  *
- * `pnpm package` builds an AppImage in apps/desktop/release/. The app needs no
+ * `pnpm package` builds the current platform's installer in
+ * apps/desktop/release/: an AppImage on Linux, an NSIS installer on Windows,
+ * a universal dmg on macOS (8.6a). The app needs no
  * node_modules at run time — the main process imports only Electron and Node,
  * and Vite bundles everything else into out/ — so `files` is out/ alone and
  * every dependency is a devDependency.
@@ -10,8 +12,9 @@
  * Fuses are Electron features compiled into the binary and switched off here,
  * where no JavaScript can switch them back on. They close the ways a shipped
  * Electron app is commonly turned into a general-purpose Node runtime.
- * `enableEmbeddedAsarIntegrityValidation` is set for when Windows and macOS
- * builds exist; Electron does not implement it on Linux.
+ * `enableEmbeddedAsarIntegrityValidation` makes Windows and macOS refuse an
+ * app.asar that has been altered since packaging; Electron does not implement
+ * it on Linux.
  *
  * One fuse differs in the build the packaged smoke test drives:
  * `LEATHERCAD_PACKAGE_FOR_E2E=1` leaves the inspector arguments on, because
@@ -66,8 +69,22 @@ export default {
     },
     // MIME registration for .lcp and Flatpak are slice 8.5, 1.1.
   },
-  win: { icon: 'build/icon.ico' },
-  mac: { icon: 'build/icon.icns', category: 'public.app-category.graphics-design' },
+  // Windows (8.6a): an NSIS installer, per user, no administrator needed.
+  // Unsigned until the release's code-signing certificate exists (roadmap
+  // 8.6); electron-builder signs when CSC_LINK is set, with no change here.
+  win: { target: ['nsis'], icon: 'build/icon.ico' },
+  nsis: { oneClick: true, perMachine: false },
+  // macOS (8.6a): one dmg for Apple silicon and Intel. Flipping the fuses
+  // rewrites the binary and invalidates Electron's own signature, and an
+  // arm64 app with no valid signature will not start at all — so until the
+  // Developer ID exists it is signed ad hoc ('-'). With CSC_LINK set,
+  // electron-builder finds the real identity and notarisation can follow.
+  mac: {
+    target: [{ target: 'dmg', arch: ['universal'] }],
+    icon: 'build/icon.icns',
+    category: 'public.app-category.graphics-design',
+    identity: process.env['CSC_LINK'] === undefined ? '-' : undefined,
+  },
   // Releases are uploaded by .github/workflows/release.yml, not by the builder.
   publish: null,
 };

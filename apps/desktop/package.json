@@ -10,8 +10,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --build",
-    "package": "electron-vite build && electron-builder --config electron-builder.config.mjs --linux AppImage",
-    "package:dir": "electron-vite build && electron-builder --config electron-builder.config.mjs --linux dir",
+    "package": "electron-vite build && electron-builder --config electron-builder.config.mjs",
+    "package:dir": "electron-vite build && electron-builder --config electron-builder.config.mjs --dir",
     "package:e2e": "LEATHERCAD_PACKAGE_FOR_E2E=1 pnpm run package:dir",
     "generate:icons": "node scripts/generate-icons.mjs"
   },

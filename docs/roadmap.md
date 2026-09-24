@@ -1991,13 +1991,29 @@ during implementation.
   fuses, the packaged smoke test and the release pipeline landed with the engineering-tooling
   checkpoint.
 - **8.6** **1.0. Release readiness, on Linux, Windows and macOS.** README, screenshots, contribution
-  guide, and the v1.0.0 release.
+  guide, and the v1.0.0 release. Split into two slices:
+  - **8.6a**: builds on every platform (2026-09-24, open for review).
+    - electron-builder targets: an NSIS installer (per user, no administrator) on Windows, and a
+      universal dmg on macOS, beside the AppImage. `pnpm package` builds the current platform's
+      installer.
+    - On macOS the app is signed ad hoc until the Developer ID exists. Flipping the fuses
+      invalidates Electron's own signature, and an arm64 app with none will not start.
+    - `.github/workflows/package.yml` runs the packaged smoke test and builds the installer on
+      `windows-latest` and `macos-latest`. It runs when packaging could have changed, weekly and on
+      demand, not on every PR: the repository is private, where a macOS minute costs ten.
+    - The release workflow builds and attaches all three installers.
+    - Asar integrity is enforced by the fuse already on. The smoke test starting the packaged app is
+      its check.
+    - `shellEmulator` makes package scripts mean the same in Windows's `cmd.exe`.
+  - **8.6b**: the rest of the code list below, after the open 1.0 PRs merge, so the README
+    describes `main`.
+
   **Code:**
-  - electron-builder targets for Windows (NSIS installer) and macOS (dmg, universal) beside the
-    AppImage;
-  - a CI build and packaged smoke test on `windows-latest` and `macos-latest`;
-  - the release workflow attaching all three artefacts;
-  - asar integrity, which Electron enforces on Windows and macOS;
+  - ~~electron-builder targets for Windows (NSIS installer) and macOS (dmg, universal) beside the
+    AppImage;~~ 8.6a
+  - ~~a CI build and packaged smoke test on `windows-latest` and `macos-latest`;~~ 8.6a
+  - ~~the release workflow attaching all three artefacts;~~ 8.6a
+  - ~~asar integrity, which Electron enforces on Windows and macOS;~~ 8.6a
   - a README rewrite. It still says "early scaffolding" and promises tiling the app does not yet
     do;
   - a getting-started page;

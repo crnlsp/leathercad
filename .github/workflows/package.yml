@@ -1,0 +1,103 @@
+name: Package
+
+# Windows and macOS builds (slice 8.6a): the packaged smoke test on each, then
+# the installer a user would download. Linux is packaged on every pull request
+# by ci.yml.
+#
+# Not on every pull request: the repository is private, where a macOS minute
+# costs ten and a Windows minute two. It runs when packaging could have
+# changed — the desktop app, the packaged test, the lockfile, this file — and
+# weekly, and on demand, so a regression from anywhere else is still caught
+# within days. The release workflow builds all three platforms regardless.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'e2e/packaged/**'
+      - 'playwright.packaged.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/package.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/desktop/**'
+      - 'e2e/packaged/**'
+      - 'playwright.packaged.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/package.yml'
+  schedule:
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # The smoke test reads the exported PDF with poppler, independently of
+      # the writer that made it.
+      - name: Install poppler (macOS)
+        if: runner.os == 'macOS'
+        run: brew install poppler
+
+      - name: Install poppler (Windows)
+        if: runner.os == 'Windows'
+        run: choco install poppler --no-progress -y
+
+      - run: pnpm install --frozen-lockfile
+
+      # The packaged app, driven by Playwright: asar with its integrity check,
+      # the fuses, the ad-hoc signature on macOS.
+      - name: Packaged smoke test
+        run: pnpm test:packaged
+
+      # Then the installer a user would download, with every fuse as shipped.
+      - name: Installer
+        run: pnpm package
+
+      - name: Upload installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer-${{ runner.os }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: packaged-report-${{ runner.os }}
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

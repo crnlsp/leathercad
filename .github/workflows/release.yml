@@ -2,8 +2,12 @@ name: Release
 
 # release-please keeps one pull request open that bumps the version and writes
 # CHANGELOG.md from the conventional commits merged since the last release.
-# Merging that pull request tags the release; the second job then builds the
-# AppImage from the tag and attaches it, with an SBOM, to the GitHub release.
+# Merging that pull request tags the release; the second job then builds each
+# platform's installer from the tag — the AppImage, the Windows NSIS installer
+# and the macOS dmg (8.6a) — and attaches them, with an SBOM, to the release.
+#
+# Unsigned on Windows and ad-hoc signed on macOS until the certificates exist
+# (roadmap 8.6, release tasks); electron-builder signs when CSC_LINK is set.
 #
 # Needs "Allow GitHub Actions to create and approve pull requests" (Settings →
 # Actions → General). A pull request opened with the workflow token does not
@@ -38,11 +42,15 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   build:
-    name: Build and attach the AppImage
+    name: Build and attach (${{ matrix.os }})
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     permissions:
       contents: write
       id-token: write
@@ -62,13 +70,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: AppImage
+      - name: Installer
         run: pnpm package
 
-      # A build SBOM: everything that went into the AppImage, build tooling
+      # A build SBOM: everything that went into the installers, build tooling
       # included. The app ships no node_modules — Vite bundles its runtime
-      # code — so a production-only SBOM would be empty.
+      # code — so a production-only SBOM would be empty. One is enough: the
+      # dependency tree is the same on every platform.
       - name: SBOM
+        if: runner.os == 'Linux'
         run: >-
           pnpm sbom --sbom-format cyclonedx --sbom-type application
           --filter @leathercad/desktop --out apps/desktop/release/leathercad.cdx.json
@@ -80,12 +90,18 @@ jobs:
         if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: apps/desktop/release/*.AppImage
+          subject-path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
 
       - name: Attach to the release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.release-please.outputs.tag_name }}
         run: >-
+          shopt -s nullglob;
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber
-          apps/desktop/release/*.AppImage apps/desktop/release/leathercad.cdx.json
+          apps/desktop/release/*.AppImage apps/desktop/release/*.exe
+          apps/desktop/release/*.dmg apps/desktop/release/*.cdx.json

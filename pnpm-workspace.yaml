@@ -2,6 +2,11 @@ packages:
   - 'packages/*'
   - 'apps/*'
 
+# Runs package scripts through pnpm's own POSIX-like shell on every platform,
+# so `LEATHERCAD_PACKAGE_FOR_E2E=1 pnpm …` and `&&` mean the same on Windows
+# as on Linux and macOS (8.6a). Without it Windows runs scripts in cmd.exe.
+shellEmulator: true
+
 # pnpm blocks dependency install scripts by default. Only packages that
 # genuinely need one to function are allowed here, and each needs a reason.
 # Treat additions to this list as a security decision, not a formality.
@@ -20,9 +25,9 @@ allowBuilds:
   # the telemetry, and the files are vendored into assets/fonts/ anyway — the
   # dependency exists to pin where they came from. See ADR 0011.
   '@ibm/plex-sans': false
-  # Declined. electron-builder depends on it for Windows Squirrel installers,
-  # which this project does not build (Linux first; Windows is Phase 8). Its
-  # install script only prepares Windows tooling. See ADR 0014.
+  # Declined. electron-builder depends on it for Windows Squirrel installers;
+  # this project builds NSIS on Windows instead (8.6a), which does not use it.
+  # Its install script only prepares Windows tooling. See ADR 0014.
   electron-winstaller: false
 
 # pnpm gates very recent releases behind a minimum release age. These were
