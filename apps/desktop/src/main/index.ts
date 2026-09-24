@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { BrowserWindow, Menu, app, shell } from 'electron';
 
 import windowIcon from '../../build/icon.png?asset';
+import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { menuTemplate } from './menu.js';
@@ -80,6 +82,44 @@ function createWindow(): void {
   }
 }
 
+/**
+ * Help › Third-Party Notices: the file the build wrote beside the renderer
+ * (8.6b), in a window of its own. Plain text, no preload, nothing to run, and
+ * nowhere to navigate to.
+ */
+let noticesWindow: BrowserWindow | null = null;
+
+function openNotices(): void {
+  if (noticesWindow !== null) {
+    noticesWindow.focus();
+    return;
+  }
+  noticesWindow = new BrowserWindow({
+    width: 720,
+    height: 640,
+    title: 'Third-Party Notices',
+    icon: windowIcon,
+    ...(mainWindow === null ? {} : { parent: mainWindow }),
+    autoHideMenuBar: true,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  noticesWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  noticesWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  noticesWindow.on('closed', () => {
+    noticesWindow = null;
+  });
+  // A development build serves the renderer from Vite and has no notices
+  // file; the window says so rather than showing an error page.
+  const file = join(__dirname, '../renderer', NOTICES_FILE);
+  if (existsSync(file)) {
+    void noticesWindow.loadFile(file);
+  } else {
+    void noticesWindow.loadURL(
+      `data:text/plain;charset=utf-8,${encodeURIComponent('Third-party notices are written by a production build (pnpm build).')}`,
+    );
+  }
+}
+
 app.whenReady().then(() => {
   registerPlatformHandlers(() => mainWindow, recovery);
 
@@ -98,6 +138,7 @@ app.whenReady().then(() => {
         packaged: app.isPackaged,
         send: (action) => mainWindow?.webContents.send(IPC.menuAction, action),
         openLogFolder: () => void shell.openPath(stateDirectory()),
+        openNotices,
       }),
     ),
   );

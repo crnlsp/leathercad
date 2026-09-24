@@ -2017,8 +2017,8 @@ during implementation.
     - Asar integrity is enforced by the fuse already on. The smoke test starting the packaged app is
       its check.
     - `shellEmulator` makes package scripts mean the same in Windows's `cmd.exe`.
-  - **8.6b**: the rest of the code list below, after the open 1.0 PRs merge, so the README
-    describes `main`.
+  - **8.6b** ✅ **Done** (2026-09-24): the rest of the code list below, after the open 1.0 PRs
+    merged, so the README describes `main`.
 
   **Code:**
   - ~~electron-builder targets for Windows (NSIS installer) and macOS (dmg, universal) beside the
@@ -2026,11 +2026,16 @@ during implementation.
   - ~~a CI build and packaged smoke test on `windows-latest` and `macos-latest`;~~ 8.6a
   - ~~the release workflow attaching all three artefacts;~~ 8.6a
   - ~~asar integrity, which Electron enforces on Windows and macOS;~~ 8.6a
-  - a README rewrite. It still says "early scaffolding" and promises tiling the app does not yet
-    do;
-  - a getting-started page;
-  - third-party notices for the bundled runtime dependencies, in the app and the release;
-  - the newer-version message telling the maker to update.
+  - ~~a README rewrite. It still said "early scaffolding" and promised tiling the app did not yet
+    do;~~ 8.6b
+  - ~~a getting-started page;~~ 8.6b, `docs/getting-started.md`
+  - ~~third-party notices for the bundled runtime dependencies, in the app and the release;~~ 8.6b.
+    A build plugin (`apps/desktop/src/notices/thirdPartyNotices.ts`) reads the packages from the
+    bundles themselves and writes `THIRD_PARTY_NOTICES.txt`, with each package's own licence text;
+    a package with no licence file stops the build. *Help → Third-Party Notices* shows it, and the
+    installer puts it and LeatherCAD's `LICENSE.txt` beside `app.asar`;
+  - ~~the newer-version message telling the maker to update.~~ 8.6b: it names the version that
+    saved the file, and says *Update LeatherCAD to open it*.
 
   **Release tasks that need credentials or settings outside the repository.** Each is recorded here
   rather than pushed to 1.1; the release waits on them:

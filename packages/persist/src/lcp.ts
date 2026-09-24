@@ -7,7 +7,7 @@ import {
   partStructureProblems,
 } from '@leathercad/domain';
 
-import { CURRENT_FORMAT_VERSION, migrate } from './migrations/index.js';
+import { CURRENT_FORMAT_VERSION, NewerFormatError, migrate } from './migrations/index.js';
 import { ManifestSchema, ProjectSchema, type Manifest } from './schema.js';
 
 export const LCP_MIME = 'application/vnd.leathercad.project';
@@ -100,6 +100,13 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
 
   const manifest = parseEntry(entries, MANIFEST_ENTRY, ManifestSchema, 'manifest');
   const rawDocument = parseJson(entries, DOCUMENT_ENTRY);
+
+  // Refused here rather than in `migrate`, which sees only the document: the
+  // manifest says which version saved the file, and that is the version the
+  // maker needs to update to.
+  if (manifest.formatVersion > CURRENT_FORMAT_VERSION) {
+    throw new NewerFormatError(manifest.formatVersion, manifest.applicationVersion);
+  }
 
   // Migrate before validating: an old file is invalid against the current
   // schema by definition, so checking first would reject exactly the files

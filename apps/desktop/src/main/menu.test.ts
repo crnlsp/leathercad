@@ -16,13 +16,15 @@ import { menuTemplate } from './menu.js';
 function build(options: { isMac?: boolean; packaged?: boolean } = {}) {
   const send = vi.fn<(action: MenuAction) => void>();
   const openLogFolder = vi.fn();
+  const openNotices = vi.fn();
   const template = menuTemplate({
     isMac: options.isMac ?? false,
     packaged: options.packaged ?? true,
     send,
     openLogFolder,
+    openNotices,
   });
-  return { template, send, openLogFolder };
+  return { template, send, openLogFolder, openNotices };
 }
 
 /** Every item, at any depth. */
@@ -94,5 +96,13 @@ describe('the application menu', () => {
     const { template, openLogFolder } = build();
     item(template, 'Show Log Folder').click?.({} as never, undefined, {} as never);
     expect(openLogFolder).toHaveBeenCalledOnce();
+  });
+
+  it('shows the third-party notices from Help, on every platform (8.6b)', () => {
+    for (const isMac of [false, true]) {
+      const { template, openNotices } = build({ isMac });
+      item(template, 'Third-Party Notices').click?.({} as never, undefined, {} as never);
+      expect(openNotices).toHaveBeenCalledOnce();
+    }
   });
 });

@@ -4,7 +4,7 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
 import { InvalidProjectFileError, loadProject, readManifest, saveProject } from './lcp.js';
-import { CURRENT_FORMAT_VERSION, NewerFormatError } from './migrations/index.js';
+import { CURRENT_FORMAT_VERSION, NewerFormatError, migrate } from './migrations/index.js';
 
 const FIXED_CLOCK = (): Date => new Date('2026-09-04T10:00:00.000Z');
 const options = { applicationVersion: '0.0.0', now: FIXED_CLOCK };
@@ -137,14 +137,14 @@ describe('the archive itself', () => {
 });
 
 /** Builds an archive by hand, for the cases a correct save cannot produce. */
-function archive(document: unknown, formatVersion = 1): Uint8Array {
+function archive(document: unknown, formatVersion = 1, applicationVersion = '0'): Uint8Array {
   return zipSync({
     mimetype: [strToU8('application/vnd.leathercad.project'), { level: 0 }],
     'manifest.json': strToU8(
       JSON.stringify({
         formatVersion,
         application: 'LeatherCAD',
-        applicationVersion: '0',
+        applicationVersion,
         createdUtc: '2026-01-01T00:00:00.000Z',
         modifiedUtc: '2026-01-01T00:00:00.000Z',
       }),
@@ -168,6 +168,18 @@ describe('rejecting bad input', () => {
     const bytes = archive(sampleProject(), CURRENT_FORMAT_VERSION + 5);
     expect(() => loadProject(bytes)).toThrow(NewerFormatError);
     expect(() => loadProject(bytes)).toThrow(/newer version/i);
+  });
+
+  it('tells the maker to update, and which version saved the file', () => {
+    // The audit's one gap in 8.4: the refusal said what happened and not what
+    // to do. What to do is update, to at least the version named.
+    const bytes = archive(sampleProject(), CURRENT_FORMAT_VERSION + 1, '1.4.0');
+    expect(() => loadProject(bytes)).toThrow(/LeatherCAD 1\.4\.0/);
+    expect(() => loadProject(bytes)).toThrow(/Update LeatherCAD to open it\./);
+  });
+
+  it('still says to update when nothing says which version saved it', () => {
+    expect(() => migrate({}, CURRENT_FORMAT_VERSION + 1)).toThrow(/Update LeatherCAD to open it\./);
   });
 
   it('rejects something that is not a ZIP at all', () => {

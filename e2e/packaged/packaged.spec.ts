@@ -97,6 +97,16 @@ test('has its own menu, with no Reload and no developer tools (8.5a)', async () 
   }
 });
 
+test('ships its licence and the third-party notices beside the archive (8.6b)', async () => {
+  const resources = await app.evaluate(() => process.resourcesPath);
+  expect(readFileSync(join(resources, 'LICENSE.txt'), 'utf8')).toMatch(/Apache License/);
+  const notices = readFileSync(join(resources, 'THIRD_PARTY_NOTICES.txt'), 'utf8');
+  // One from each bundle, and the vendored typeface.
+  for (const name of ['react 19', 'pdf-lib 1', 'electron-log 5', 'IBM Plex Sans']) {
+    expect(notices).toContain(name);
+  }
+});
+
 test('runs from the asar archive, not from a loose directory', async () => {
   const appPath = await app.evaluate(({ app: electronApp }) => electronApp.getAppPath());
   expect(appPath).toMatch(/app\.asar$/);

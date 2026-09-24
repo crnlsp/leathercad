@@ -3,27 +3,42 @@
 Desktop application for designing leathercraft patterns — wallets, card holders, cases, straps,
 bags — that print at exact **1:1 scale**.
 
-Draw parts with real millimetre dimensions, set the stitch line as a live offset from the cut edge,
-generate stitch holes at your pricking iron's pitch, and print a tiled, registration-marked template
-you can glue to card and cut.
+Draw parts in real millimetres, set the stitch line as a live offset from the cut edge, put holes
+along it at your pricking iron's pitch, and print a template you can glue to card and cut. A part
+bigger than the paper prints across several sheets, with join lines and registration crosses.
 
-Electron + TypeScript. Linux first. Apache-2.0.
+Linux, Windows and macOS. Electron + TypeScript. Apache-2.0.
 
-> **Status: early scaffolding.** The Electron shell runs and the platform boundary is wired, but
-> there is nothing to draw with yet. Next up is the geometry core —
-> [`docs/roadmap.md`](docs/roadmap.md) §4, slice 1.1.
+**[Download](https://github.com/cornelisp/leathercad/releases/latest)** ·
+**[Getting started](docs/getting-started.md)**
+
+## What it does
+
+- **Parts** from rectangles, circles, arcs, lines and polylines with arc segments — a pocket with a
+  thumb scoop is one outline. Cut-outs, fold lines, marking lines, hardware holes, text labels and
+  dimensions join the part they are drawn on.
+- **Stitching that follows the edge.** A stitch line is an inset of its outline, holes are placed
+  along it at the iron's pitch, and a seam allowance can grow outward from the stitching instead.
+  Change a panel from 105 mm to 110 mm and its stitch line and holes update themselves.
+- **Problems stated, not hidden.** Holes too close to an edge, spacing far from the iron's pitch, a
+  stitch line whose outline is gone: each is listed, and shown where it is.
+- **Print at 1:1.** Export writes a vector PDF on A5, A4, A3, Letter or Legal, portrait or
+  landscape. Nothing is ever scaled to fit: a part too big for the sheet is tiled across several.
+  Every sheet carries a 50 mm square and a 100 mm ruler to check the print with.
+- **Your work is kept.** Closing with unsaved changes asks first, and after a crash the app offers
+  the unsaved work back.
 
 ## Why not a general vector editor
 
 Geometry here carries craft meaning. A path is not "a black stroke" — it is a *cut contour* or a
 *stitch line*, and its appearance, export layer, validation rules, and parametric behaviour follow
-from that. Change a panel from 105 mm to 110 mm and its stitch line and 120 stitch holes update
-themselves.
+from that.
 
 ## Documentation
 
 | Document | Contents |
 |---|---|
+| [getting-started.md](docs/getting-started.md) | Install, draw, stitch, print — for makers |
 | [product-spec.md](docs/product-spec.md) | Scope, MVP boundary, deferred features |
 | [architecture.md](docs/architecture.md) | Stack, layering, data flow, canvas system, risks |
 | [domain-model.md](docs/domain-model.md) | Features, derivation graph, stitching, validation |
@@ -62,7 +77,7 @@ pnpm check          # typecheck + lint + layering + dead code + tests
 pnpm test:e2e       # builds, then Playwright drives the real Electron app
 pnpm test:visual    # pixel diffs in the pinned Playwright container (needs Docker)
 pnpm test:packaged  # packages the app and smoke-tests the packaged binary
-pnpm package        # builds the AppImage into apps/desktop/release/
+pnpm package        # this platform's installer, in apps/desktop/release/
 ```
 
 Individual checks: `pnpm typecheck`, `pnpm lint`, `pnpm depcruise`, `pnpm knip`, `pnpm test`.
@@ -73,14 +88,21 @@ Slower ones, run weekly and nightly in CI: `pnpm bench`, `pnpm test:mutation:geo
 [`docs/architecture.md`](docs/architecture.md) §2. A violation fails the build — that is deliberate,
 and the rules are documented inline in `.dependency-cruiser.cjs`.
 
-Releases are cut by merging the release pull request that release-please keeps open; the AppImage
-and an SBOM are attached to the GitHub release. See
+Releases are cut by merging the release pull request that release-please keeps open; the Linux
+AppImage, the Windows installer, the macOS dmg and an SBOM are attached to the GitHub release. See
 [ADR 0014](docs/adr/0014-electron-builder-and-release-please.md).
 
-The app keeps a log in `~/.local/state/leathercad/logs/main.log`, and crash dumps beside it. Nothing
-is uploaded. Attach the log to a bug report.
+The app keeps a log, and crash dumps beside it: *Help → Show Log Folder* opens the folder
+(`~/.local/state/leathercad/logs/` on Linux). Nothing is uploaded. Attach the log to a bug report.
+
+The licences of everything the app ships are in *Help → Third-Party Notices*, written at build time
+from what the bundles actually contain, and in `THIRD_PARTY_NOTICES.txt` beside the installed app.
 
 ## The promise
 
 A line drawn as 100 mm measures 100 mm on paper. Every architectural decision in the documents above
 serves that, and every printed page carries a 50 mm square so you can check it with a steel rule.
+
+The PDF is measured automatically on every change, on all three platforms
+(`e2e/print-verification.spec.ts`). Paper is measured by a person, and recorded in
+[`docs/print-verification-log.md`](docs/print-verification-log.md).

@@ -85,3 +85,23 @@ test('the menu is the app’s own, and its items do what their keys do', async (
     await closeApp(app);
   }
 });
+
+test('Help › Third-Party Notices shows the licences of what the app ships (8.6b)', async () => {
+  const { app } = await launch();
+  try {
+    const opened = app.waitForEvent('window');
+    await choose(app, 'Help', 'Third-Party Notices');
+    const notices = await opened;
+    await notices.waitForLoadState('domcontentloaded');
+    // The file the build wrote from its own bundles: the renderer's packages,
+    // main's, and the vendored typeface, each with its licence text.
+    const text = (await notices.locator('body').textContent()) ?? '';
+    expect(text).toContain('LeatherCAD — third-party notices');
+    for (const name of ['react 19', 'zod 4', 'electron-log 5', 'IBM Plex Sans']) {
+      expect(text).toContain(name);
+    }
+    expect(text).toContain('SIL OPEN FONT LICENSE');
+  } finally {
+    await closeApp(app);
+  }
+});

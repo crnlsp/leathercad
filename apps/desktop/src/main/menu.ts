@@ -15,13 +15,14 @@ import type { MenuItemConstructorOptions } from 'electron';
  * the action a second time.
  *
  * Pure, so it is tested without Electron running: the caller supplies where
- * actions go and how to show the log folder.
+ * actions go, and how to show the log folder and the third-party notices.
  */
 export function menuTemplate(options: {
   readonly isMac: boolean;
   readonly packaged: boolean;
   readonly send: (action: MenuAction) => void;
   readonly openLogFolder: () => void;
+  readonly openNotices: () => void;
 }): MenuItemConstructorOptions[] {
   const { isMac, packaged, send } = options;
 
@@ -87,6 +88,8 @@ export function menuTemplate(options: {
     label: 'Help',
     submenu: [
       { label: 'Show Log Folder', click: () => options.openLogFolder() },
+      // The licences of what the app ships (8.6b), written by the build.
+      { label: 'Third-Party Notices', click: () => options.openNotices() },
       ...(isMac ? [] : [{ type: 'separator' } as const, { role: 'about' } as const]),
     ],
   };

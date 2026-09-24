@@ -45,10 +45,20 @@ export const MIGRATIONS: readonly Migration[] = [
 export const CURRENT_FORMAT_VERSION = 9;
 
 export class NewerFormatError extends Error {
-  constructor(readonly fileVersion: number) {
+  /**
+   * `savedBy` is the application version the file's manifest names, when
+   * there is one: the version to update to, at least.
+   */
+  constructor(
+    readonly fileVersion: number,
+    readonly savedBy?: string,
+  ) {
+    // What happened, then what to do about it (8.4, the pre-1.0 audit): the
+    // maker can act on "update", and not on a format number.
     super(
-      `This file was saved by a newer version of LeatherCAD (format ${fileVersion}; ` +
-        `this build understands up to ${CURRENT_FORMAT_VERSION}).`,
+      `This file was saved by ${savedBy === undefined ? 'a newer version of LeatherCAD' : `LeatherCAD ${savedBy}, a newer version than this one`}. ` +
+        `Update LeatherCAD to open it. ` +
+        `(The file is format ${fileVersion}; this version reads up to format ${CURRENT_FORMAT_VERSION}.)`,
     );
     this.name = 'NewerFormatError';
   }

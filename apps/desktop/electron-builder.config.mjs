@@ -47,6 +47,13 @@ export default {
     // protocol (`protocol.handle('app', …)`), a main-process change.
     grantFileProtocolExtraPrivileges: true,
   },
+  // The licences, beside app.asar in every install (8.6b): LeatherCAD's own,
+  // and the third-party notices the build wrote from what it bundled. The app
+  // shows the notices from Help, from inside the archive.
+  extraResources: [
+    { from: '../../LICENSE', to: 'LICENSE.txt' },
+    { from: 'out/renderer/THIRD_PARTY_NOTICES.txt', to: 'THIRD_PARTY_NOTICES.txt' },
+  ],
   artifactName: '${productName}-${version}-${arch}.${ext}',
   // The icon is drawn once, in build/icon.svg, and rendered to each format by
   // `pnpm icons:generate` (slice 8.5a); the files are committed.
