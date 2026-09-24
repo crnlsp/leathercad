@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.1](https://github.com/crnlsp/leathercad/compare/leathercad-v1.0.0...leathercad-v1.0.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **desktop:** no socket or localhost in the shipped CSP ([d06a284](https://github.com/crnlsp/leathercad/commit/d06a284f0038d9d9f5f9050ab5f841595b736b25))
+* **desktop:** no socket or localhost in the shipped CSP ([d64a9c6](https://github.com/crnlsp/leathercad/commit/d64a9c6cb1a11091116dbd059ac3ada27576abcf))
+* **desktop:** open only https: links outside the app ([aceec84](https://github.com/crnlsp/leathercad/commit/aceec84d364f4a5955e34580ebe8313db6849570))
+* **desktop:** open only https: links outside the app ([f0d81a1](https://github.com/crnlsp/leathercad/commit/f0d81a1240395e549012e13135c36a763206ee5c))
+* **desktop:** read, write and open only the files the user chose ([57b682e](https://github.com/crnlsp/leathercad/commit/57b682ee104d39221ec34b562d1d0af29b851abd))
+* **desktop:** read, write and open only the files the user chose ([7930906](https://github.com/crnlsp/leathercad/commit/7930906f31c76b6d3351d2199b3b5a7e381cf731))
+
 ## 1.0.0 (2026-09-24)
 
 
