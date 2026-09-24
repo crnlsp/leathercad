@@ -1607,7 +1607,7 @@ during implementation.
 |---|---|---|
 | 1 | **5.3a** ✅ | Never lose work silently: *New project*, a correct dirty state, and *Save / Don't save / Cancel* before closing, reloading, opening or starting a new project |
 | 2 | **5.3b** ✅ | Crash recovery: a recovery copy while dirty, and a restore offer after an unclean exit that never overwrites a project (robustness requirements in the 5.3b entry) |
-| 3 | **6.4a** | Choose the paper and its orientation, written to the project's page setup (5.5) |
+| 3 | **6.4a** ✅ | Choose the paper and its orientation, written to the project's page setup (5.5) |
 | 4 | **3.9a** | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
 | 5 | **7.2a** | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
 | 6 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code |
@@ -1859,9 +1859,20 @@ during implementation.
   ruler 100.10 mm, the excess being the 0.2 mm stroke measured outer edge to outer edge.
   Arcs go through the tolerance-driven `toCubics` from slice 1.3, since PDF has no arc primitive —
   the path that made that subdivision tolerance-driven in the first place.
-- **6.4a** **1.0. Choose the paper.** Paper and orientation, written to the project's page setup
-  (5.5 built the plumbing and has no UI). Every export from the app is A4 portrait today, and an A4
-  sheet sent to a Letter printer is where a print dialog offers "fit to page".
+- **6.4a** ✅ **Done** (2026-09-24). **1.0. Choose the paper.** Paper and orientation, written to
+  the project's page setup (5.5 built the plumbing and had no UI). Before it, every export was A4
+  portrait, and an A4 sheet sent to a Letter printer is where a print dialog offers "fit to page".
+  - `setPaper` and `setOrientation` commands: undoable and unsaved like any edit. Choosing what is
+    already chosen earns no history. Unknown settings are kept.
+  - A paper control in the header beside *Export PDF*, whose tooltip names the paper.
+  - The oversized message names the chosen paper and suggests that paper turned before any other.
+  - **Found and fixed on the way:** the PDF's 50 mm square was skipped on A5 portrait, on a page that
+    still said to measure it. `verificationLayout` is now the block's one layout, drawn by the writer
+    and reserved by `contentAreaMm`. On a sheet too narrow for the square beside the ruler, it stacks
+    above it. It is checked on every sheet: inside the margins, never overlapping, never under the
+    pattern, and 50 mm through poppler.
+
+  No format change. See [the design](superpowers/specs/2026-09-24-paper-and-orientation-design.md).
 - **6.4** **1.1**, the rest. Export dialog: preset, layers, paper, bounds. **Depends on 5.5** — the paper control needs
   a page setup in the project to write to, or it becomes a second setting that disagrees with the
   one pagination uses. `paperOptionsFitting` already answers "what would fit", so the dialog reports
@@ -1877,7 +1888,7 @@ during implementation.
   with the paper that would fit it — never scaled, never clipped.
   Tiling proper (overlap, registration marks, assembly sheet) remains future work, and is the only
   way to print a part bigger than the paper.
-- **7.2a** **1.0, awaiting approval** (audit §6.1). **Tile a part larger than the sheet.** Split it
+- **7.2a** **1.0**, in the frozen boundary (audit §6.1). **Tile a part larger than the sheet.** Split it
   across sheets with an overlap, registration marks and a tile label (row, column), at 1:1, with the
   verification square and ruler on every sheet. Parts that fit keep packing whole, as 7.1 does.
   Without it, a notebook cover, a tote panel or a strap cannot be printed at all.

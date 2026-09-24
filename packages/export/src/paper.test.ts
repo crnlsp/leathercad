@@ -68,7 +68,7 @@ describe('paperOptionsFitting', () => {
   });
 
   it('excludes paper too small', () => {
-    // A4 portrait offers 190 x 251 mm once margins and the footer block are
+    // A4 portrait offers 190 x 215 mm once margins and the footer block are
     // taken off; A3 portrait offers 277 x 374.
     const options = paperOptionsFitting(250, 300);
     expect(options.some((o) => o.paper.name === 'A4')).toBe(false);

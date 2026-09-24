@@ -451,6 +451,34 @@ body {
   color: var(--text);
 }
 
+/* The paper the PDF prints on, beside the button that prints it (6.4a): the
+   size, then which way up. */
+.paper-control {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: 6px;
+}
+
+.paper-select {
+  min-height: var(--h-control);
+  padding: 0 4px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  font: var(--t-label);
+}
+
+.paper-select:focus-visible {
+  border-color: var(--tan);
+  outline: none;
+}
+
+.tool.icon-only {
+  padding: 0 6px;
+}
+
 .tool:disabled {
   opacity: 0.4;
   cursor: not-allowed;

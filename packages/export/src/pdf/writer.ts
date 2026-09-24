@@ -25,8 +25,10 @@ import { paginate, type Page, type PaginationResult } from '../paginate.js';
 import {
   DEFAULT_PAGE_SETUP,
   contentAreaMm,
+  VERIFICATION_TEXT,
   mmToPt,
   sheetSizeMm,
+  verificationLayout,
   type PageSetup,
 } from '../paper.js';
 import type { ExportPath, ExportScene, ExportText } from '../scene.js';
@@ -51,7 +53,6 @@ const APP_NAME = 'LeatherCAD';
  * Everything printed is sized in millimetres now, including the text: there is
  * no font to ask for a point size any more, only outlines at a height.
  */
-const INSTRUCTION_SIZE_MM = 2.8;
 const NOTE_SIZE_MM = 2.5;
 
 /**
@@ -222,49 +223,39 @@ function samePoint(a: Vec2, b: Vec2): boolean {
  * failure into a five-second check with a steel rule. Not optional.
  */
 function drawVerificationBlock(page: PDFPage, setup: PageSetup): void {
-  const sheet = sheetSizeMm(setup);
-  const baseY = setup.marginsMm.bottom + 8;
-  const x = setup.marginsMm.left;
+  // Laid out once, in `verificationLayout`, which is also what keeps the
+  // pattern off it — so what is drawn and what is reserved cannot disagree.
+  const layout = verificationLayout(setup);
+  const { square, squareSizeMm: size } = layout;
 
-  drawRuler(page, x, baseY, 100);
+  drawRuler(page, layout.ruler.x, layout.ruler.y, layout.rulerLengthMm, layout.rulerHeightMm);
 
-  const squareX = x + 112;
-  const squareSize = 50;
-  const squareY = baseY;
-  if (squareX + squareSize <= sheet.widthMm - setup.marginsMm.right) {
-    page.pushOperators(
-      pushGraphicsState(),
-      setLineWidth(mmToPt(0.2)),
-      setStrokingGrayscaleColor(0),
-      restoreDashPattern(),
-      moveTo(mmToPt(squareX), mmToPt(squareY)),
-      lineTo(mmToPt(squareX + squareSize), mmToPt(squareY)),
-      lineTo(mmToPt(squareX + squareSize), mmToPt(squareY + squareSize)),
-      lineTo(mmToPt(squareX), mmToPt(squareY + squareSize)),
-      closePath(),
-      stroke(),
-      popGraphicsState(),
-    );
-    drawFurniture(page, '50 mm', NOTE_SIZE_MM, { x: squareX + 2, y: squareY + squareSize - 5 });
-  }
+  page.pushOperators(
+    pushGraphicsState(),
+    setLineWidth(mmToPt(0.2)),
+    setStrokingGrayscaleColor(0),
+    restoreDashPattern(),
+    moveTo(mmToPt(square.x), mmToPt(square.y)),
+    lineTo(mmToPt(square.x + size), mmToPt(square.y)),
+    lineTo(mmToPt(square.x + size), mmToPt(square.y + size)),
+    lineTo(mmToPt(square.x), mmToPt(square.y + size)),
+    closePath(),
+    stroke(),
+    popGraphicsState(),
+  );
+  drawFurniture(page, '50 mm', NOTE_SIZE_MM, { x: square.x + 2, y: square.y + size - 5 });
 
   drawFurniture(
     page,
-    'Print at 100% / Actual size — do not scale or fit to page.',
-    INSTRUCTION_SIZE_MM,
-    {
-      x,
-      y: baseY + 16,
-    },
+    VERIFICATION_TEXT.instruction,
+    VERIFICATION_TEXT.instructionSizeMm,
+    layout.instruction,
   );
-  drawFurniture(page, 'Measure the 100 mm ruler or the 50 mm square to confirm.', NOTE_SIZE_MM, {
-    x,
-    y: baseY + 11.5,
-  });
+  drawFurniture(page, VERIFICATION_TEXT.note, VERIFICATION_TEXT.noteSizeMm, layout.note);
 }
 
 /** A 100 mm ruler with 10 mm major and 5 mm minor ticks. */
-function drawRuler(page: PDFPage, x: Mm, y: Mm, lengthMm: Mm): void {
+function drawRuler(page: PDFPage, x: Mm, y: Mm, lengthMm: Mm, majorMm: Mm): void {
   const operators = [
     pushGraphicsState(),
     setLineWidth(mmToPt(0.2)),
@@ -275,7 +266,7 @@ function drawRuler(page: PDFPage, x: Mm, y: Mm, lengthMm: Mm): void {
   ];
 
   for (let mm = 0; mm <= lengthMm; mm += 5) {
-    const height = mm % 10 === 0 ? 3.5 : 2;
+    const height = mm % 10 === 0 ? majorMm : 2;
     operators.push(moveTo(mmToPt(x + mm), mmToPt(y)), lineTo(mmToPt(x + mm), mmToPt(y + height)));
   }
 

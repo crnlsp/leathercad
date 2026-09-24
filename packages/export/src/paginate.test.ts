@@ -110,6 +110,30 @@ describe('paginate', () => {
     expect(message).toMatch(/A3/);
   });
 
+  it('names the paper the part does not fit, now that the maker chooses it', () => {
+    const result = paginate(scene([part('big', 250, 180, 'Panel')]), DEFAULT_PAGE_SETUP);
+    expect(describeOversized(result.oversized[0]!)).toBe(
+      '"Panel" is 250.0 × 180.0 mm and will not fit A4 portrait at 1:1. It fits A3 portrait.',
+    );
+  });
+
+  it('suggests turning the chosen paper before changing it', () => {
+    // The paper in the printer is the one the maker chose. A strap too long
+    // for Letter portrait fits Letter landscape — which is the answer, not
+    // A4 landscape, which happens to come first in the list and which a
+    // printer loaded with Letter does not have.
+    const letter = { ...DEFAULT_PAGE_SETUP, paper: PAPER_SIZES.Letter };
+    const result = paginate(scene([part('strap', 250, 100, 'Strap')]), letter);
+
+    expect(result.oversized[0]!.fitsOn[0]).toEqual({
+      paper: { name: 'Letter' },
+      orientation: 'landscape',
+    });
+    expect(describeOversized(result.oversized[0]!)).toBe(
+      '"Strap" is 250.0 × 100.0 mm and will not fit Letter portrait at 1:1. It fits Letter landscape.',
+    );
+  });
+
   it('still paginates the parts that do fit alongside one that does not', () => {
     const result = paginate(
       scene([part('big', 400, 300), part('small', 80, 60)]),

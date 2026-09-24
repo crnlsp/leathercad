@@ -14,6 +14,8 @@ import type {
   MeasureKind,
   MeasureRef,
   MirrorAxis,
+  Orientation,
+  PaperName,
   Problem,
   Project,
   Run,
@@ -794,6 +796,40 @@ export function setProjectName(name: string): Command {
   return command('Rename project', (document) => ({
     project: { ...document.project, name },
   }));
+}
+
+/**
+ * Chooses the paper the project prints on (6.4a) — **the one place it is
+ * decided**, read by the PDF export through `pageSetupFor`. Choosing what is
+ * already chosen changes nothing, so it earns no history and does not make a
+ * clean project unsaved. Every other setting is kept as it was, including one
+ * a newer build wrote (5.2).
+ */
+export function setPaper(paper: PaperName): Command {
+  return command('Change paper', (document) =>
+    document.project.settings.paper === paper
+      ? document
+      : {
+          project: {
+            ...document.project,
+            settings: { ...document.project.settings, paper },
+          },
+        },
+  );
+}
+
+/** Turns the paper, portrait or landscape. As `setPaper`. */
+export function setOrientation(orientation: Orientation): Command {
+  return command('Turn the paper', (document) =>
+    document.project.settings.orientation === orientation
+      ? document
+      : {
+          project: {
+            ...document.project,
+            settings: { ...document.project.settings, orientation },
+          },
+        },
+  );
 }
 
 export function setPartName(id: PartId, name: string): Command {

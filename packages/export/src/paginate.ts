@@ -41,7 +41,13 @@ export interface OversizedPart {
   readonly part: ExportPart;
   readonly widthMm: Mm;
   readonly heightMm: Mm;
-  /** Papers that would fit it, for telling the user what to do instead. */
+  /** The paper it was measured against: the one the maker chose. */
+  readonly on: { paper: { name: string }; orientation: string };
+  /**
+   * Papers that would fit it, for telling the user what to do instead. The
+   * chosen paper turned comes first when it fits, since that is the paper in
+   * their printer; then the rest in the order of `PAPER_SIZES`.
+   */
   readonly fitsOn: ReadonlyArray<{ paper: { name: string }; orientation: string }>;
 }
 
@@ -68,14 +74,16 @@ export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult
     const height = RectOps.height(part.boundsMm) + LABEL_HEIGHT_MM;
 
     if (width > area.widthMm || height > area.heightMm) {
+      const options = paperOptionsFitting(width, height, setup);
+      const turned = options.filter((option) => option.paper.name === setup.paper.name);
       oversized.push({
         part,
         widthMm: width,
         heightMm: height - LABEL_HEIGHT_MM,
-        fitsOn: paperOptionsFitting(width, height, setup).map((option) => ({
-          paper: { name: option.paper.name },
-          orientation: option.orientation,
-        })),
+        on: { paper: { name: setup.paper.name }, orientation: setup.orientation },
+        fitsOn: [...turned, ...options.filter((option) => !turned.includes(option))].map(
+          (option) => ({ paper: { name: option.paper.name }, orientation: option.orientation }),
+        ),
       });
     } else {
       fitting.push(part);
@@ -145,5 +153,5 @@ export function describeOversized(entry: OversizedPart): string {
     return `"${entry.part.name}" is ${size} and does not fit any supported paper at 1:1.`;
   }
   const best = entry.fitsOn[0]!;
-  return `"${entry.part.name}" is ${size} and will not fit the current paper at 1:1. It fits ${best.paper.name} ${best.orientation}.`;
+  return `"${entry.part.name}" is ${size} and will not fit ${entry.on.paper.name} ${entry.on.orientation} at 1:1. It fits ${best.paper.name} ${best.orientation}.`;
 }

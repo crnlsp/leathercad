@@ -48,7 +48,7 @@ export type PaperName = keyof typeof PAPER_SIZES;
 export type Orientation = 'portrait' | 'landscape';
 
 /**
- * Every name and orientation, for the schema — and, when 6.4 arrives, a picker.
+ * Every name and orientation, for the schema and for the paper control (6.4a).
  *
  * Deliberately no `isPaperName` guard and no sheet-size helper here. The zod
  * enum validates on the way in, and `packages/export` owns everything derived

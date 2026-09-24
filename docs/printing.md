@@ -172,6 +172,10 @@ Stored in mm; converted to points only in the PDF writer.
 
 Plus user-defined custom sizes, which matter for roll printers and A4+ formats.
 
+**What 1.0 offers** (slice 6.4a): A5, A4, A3, Letter and Legal, portrait or landscape, chosen in the
+header beside *Export PDF* and stored in the project (`ProjectSettings.paper`, `.orientation`). A2,
+Tabloid and custom sizes are later.
+
 ### 5.2 Tile grid
 
 Content area per page:
@@ -300,6 +304,13 @@ Printed in the bottom margin of every page:
 
 This costs a few square centimetres of margin and turns a silent, expensive failure into a five
 second check. It is not optional and it is not a preference.
+
+**On every sheet a maker can choose, whole.**
+- `verificationLayout` in `packages/export/src/paper.ts` is the block's one layout. The PDF writer
+  draws from it, and `contentAreaMm` keeps the pattern at least 4 mm above it.
+- The square sits beside the ruler where the sheet is wide enough (182 mm or more). On a narrower
+  sheet, A5 portrait, it stacks above the ruler at the right margin, and the block reserves 8 mm more.
+  It used to be skipped there.
 
 ### 8.2 Correction — opt-in, per printer, a last resort
 

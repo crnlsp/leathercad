@@ -5,6 +5,8 @@ import { join } from 'node:path';
 
 import {
   DEFAULT_SETTINGS,
+  ORIENTATIONS,
+  PAPER_NAMES,
   evaluate,
   type Orientation,
   type Project,
@@ -14,7 +16,14 @@ import { uniformRadii } from '@leathercad/geometry';
 import { PDFDocument, PDFName, type PDFDict } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PAGE_SETUP, contentAreaMm, mmToPt, pageSetupFor, sheetSizeMm } from '../paper.js';
+import {
+  DEFAULT_PAGE_SETUP,
+  contentAreaMm,
+  mmToPt,
+  pageSetupFor,
+  sheetSizeMm,
+  verificationLayout,
+} from '../paper.js';
 import { buildExportScene } from '../scene.js';
 import { exportPdf } from './writer.js';
 
@@ -562,6 +571,33 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     expect(widthMm).toBeLessThan(50.4);
     expect(heightMm).toBeGreaterThan(49.8);
     expect(heightMm).toBeLessThan(50.4);
+  });
+
+  it.each(
+    PAPER_NAMES.flatMap((paper) =>
+      ORIENTATIONS.map((orientation) => [paper, orientation] as const),
+    ),
+  )('prints the 50 mm square on %s %s, where the layout puts it', async (paper, orientation) => {
+    // Regression: on A5 portrait the square was skipped, on a page that still
+    // told the maker to measure it. Measured through poppler on every sheet a
+    // maker can choose, at the place `verificationLayout` gives.
+    const project = on(projectWithRect(100, 50), paper, orientation);
+    const setup = pageSetupFor(project.settings);
+    const { square, squareSizeMm } = verificationLayout(setup);
+    const sheet = sheetSizeMm(setup);
+    const image = render(await pdfFor(project));
+
+    const bounds = darkBounds(
+      image,
+      Math.floor((sheet.heightMm - (square.y + squareSizeMm + 2)) * PX_PER_MM),
+      Math.ceil((sheet.heightMm - square.y + 1) * PX_PER_MM),
+      Math.round((square.x - 1) * PX_PER_MM),
+    );
+    expect(bounds.found).toBe(true);
+    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(49.8);
+    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(50.4);
+    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeGreaterThan(49.8);
+    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeLessThan(50.4);
   });
 
   it('keeps the pattern clear of the verification block', async () => {

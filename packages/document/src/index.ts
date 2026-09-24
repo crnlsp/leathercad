@@ -79,6 +79,8 @@ export {
   setMeasurement,
   setPartVisible,
   setPartQuantity,
+  setOrientation,
+  setPaper,
   setProjectName,
   setDerivation,
   setShape,

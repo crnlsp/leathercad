@@ -30,6 +30,7 @@ import { CanvasLegend } from './CanvasLegend.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile } from './useProjectFile.js';
+import { PaperControl } from './PaperControl.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -411,7 +412,10 @@ export function App() {
               Save{dirty ? ' •' : ''}
             </button>
           </Tooltip>
-          <Tooltip text="Export a print-ready PDF at 1:1 (Ctrl+E)">
+          <PaperControl settings={storeState.document.project.settings} store={store} />
+          <Tooltip
+            text={`Export a print-ready PDF at 1:1 on ${storeState.document.project.settings.paper} ${storeState.document.project.settings.orientation} (Ctrl+E)`}
+          >
             <button
               type="button"
               className="tool"

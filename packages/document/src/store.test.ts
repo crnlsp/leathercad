@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS, ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
 import { uniformRadii } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -11,6 +12,8 @@ import {
   renameFeature,
   setPartName,
   setPartQuantity,
+  setOrientation,
+  setPaper,
   setProjectName,
   setShape,
   translateFeatures,
@@ -39,6 +42,8 @@ const commandArb: fc.Arbitrary<Command> = fc.oneof(
   fc.constant(
     addPart(rectanglePart('part-2', 'feat-2', 'Second', rectShape({ x: 0, y: 0 }, 10, 10))),
   ),
+  fc.constantFrom(...PAPER_NAMES).map((paper) => setPaper(paper)),
+  fc.constantFrom(...ORIENTATIONS).map((orientation) => setOrientation(orientation)),
 );
 
 describe('undo', () => {
@@ -310,6 +315,55 @@ describe('setProjectName', () => {
     const store = new DocumentStore(docWithRect());
     store.dispatch(setProjectName('Bifold wallet'));
     expect(store.getState().document.project.name).toBe('Bifold wallet');
+  });
+});
+
+describe('the paper (6.4a)', () => {
+  it('chooses the paper and turns it, each an undoable step with its own name', () => {
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(setPaper('A3'));
+    store.dispatch(setOrientation('landscape'));
+
+    const { settings } = store.getState().document.project;
+    expect([settings.paper, settings.orientation]).toEqual(['A3', 'landscape']);
+    expect(store.getState().undoLabel).toBe('Turn the paper');
+    store.undo();
+    expect(store.getState().undoLabel).toBe('Change paper');
+    store.undo();
+    expect(store.getState().document.project.settings).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('earns no history for choosing what is already chosen', () => {
+    // A4 portrait is the default: picking it again is not a change, and must
+    // not make a clean project unsaved.
+    const store = new DocumentStore(docWithRect());
+    const before = store.getState().document;
+    store.dispatch(setPaper('A4'));
+    store.dispatch(setOrientation('portrait'));
+    expect(store.getState().document).toBe(before);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('keeps every other setting, including ones a newer build wrote', () => {
+    // Settings are a loose object (5.2): a field this build does not know
+    // survives an ordinary edit next to it.
+    const base = docWithRect();
+    const withUnknown = {
+      ...base,
+      project: {
+        ...base.project,
+        settings: { ...base.project.settings, gridSpacingMm: 5, futureField: 'kept' },
+      },
+    };
+    const store = new DocumentStore(withUnknown);
+    store.dispatch(setPaper('Letter'));
+    store.dispatch(setOrientation('landscape'));
+
+    expect(store.getState().document.project.settings).toEqual({
+      ...withUnknown.project.settings,
+      paper: 'Letter',
+      orientation: 'landscape',
+    });
   });
 });
 
