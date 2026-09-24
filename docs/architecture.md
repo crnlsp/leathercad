@@ -275,6 +275,11 @@ interface PlatformHost {
 Implemented once in `apps/desktop` over Electron IPC, and once as an in-memory fake in the test
 suite. Everything above `editor` depends on the interface, never on Electron.
 
+The main process reads, writes and opens only paths the user chose in one of the app's own dialogs
+during the session — the path returned, or that path with one of the dialog's filter extensions
+appended — and opens only a PDF in the external viewer (`apps/desktop/src/main/pathGrants.ts`). A
+renderer that runs something it should not still cannot reach any other file.
+
 Electron security posture, non-negotiable: `contextIsolation: true`, `nodeIntegration: false`,
 `sandbox: true`, a preload exposing only the typed `PlatformHost` channel, and a strict CSP with no
 remote content loaded anywhere. No window opens a second window or navigates; a request to open a
