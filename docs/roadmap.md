@@ -1699,7 +1699,9 @@ stays deferred.
   holds wall-clock ceilings (50 ms, 200 ms). Under the full parallel coverage run in a loaded
   container they were exceeded now and then, by 6–12 %, by three different cases. Alone they pass
   every time, and nothing in `domain` changed. A flaky gate, not a regression; revisit the
-  ceilings or run them serially if CI shows it.
+  ceilings or run them serially if CI shows it. CI showed it — 25–35 % over on GitHub runners,
+  under coverage — so the file now runs in its own serial, uninstrumented step (`pnpm test:perf`);
+  the ceilings are unchanged.
 
 **1.1 and later**, in rough order of value:
 - recent files and persistent preferences (8.2);
