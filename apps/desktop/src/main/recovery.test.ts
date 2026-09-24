@@ -1,4 +1,5 @@
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -73,6 +74,58 @@ describe('writing a copy', () => {
     await mine.clear();
     await mine.clear(); // clearing twice is not an error
     expect(files()).toEqual(['202-1000.lcp']);
+  });
+});
+
+describe('saving while a copy is being written', () => {
+  // The invariant: saving must not leave a stale copy that a later start
+  // offers as if it were newer unsaved work. The renderer asks for a copy on
+  // a timer and for a clear when the project is saved; the two arrive in that
+  // order, but a write is a temporary file and a rename, and a clear that ran
+  // while the write was still in flight was undone by the rename landing
+  // after it.
+  it('clears a copy whose write was still in flight when the project was saved', async () => {
+    const store = session(101);
+    const writing = store.write(bytes('unsaved work'));
+    const clearing = store.clear(); // the save lands mid-write
+    await Promise.all([writing, clearing]);
+
+    expect(files()).toEqual([]);
+    crash(101);
+    expect(await session(102).findAbandoned()).toBeNull();
+  });
+
+  it('keeps the order it was asked in: a write after the clear is kept', async () => {
+    const store = session(101);
+    const first = store.write(bytes('before the save'));
+    const cleared = store.clear();
+    const after = store.write(bytes('edited after the save'));
+    await Promise.all([first, cleared, after]);
+
+    expect(readFileSync(join(dir, '101-1000.lcp'), 'utf8')).toBe('edited after the save');
+  });
+
+  it('does not let a write still in flight at a clean exit leave a copy behind', async () => {
+    // A clean exit deletes synchronously, on its way out; a write that lands
+    // after it would be offered by the next start as work the maker never
+    // saved.
+    const store = session(101);
+    const writing = store.write(bytes('unsaved work'));
+    store.releaseOnQuit();
+    await writing;
+    expect(files()).toEqual([]);
+  });
+
+  it('carries on after a failed write, so the clear still happens', async () => {
+    const store = session(101);
+    rmSync(dir, { recursive: true, force: true });
+    writeFileSync(dir, 'not a directory'); // the write cannot succeed
+    const failing = store.write(bytes('x'));
+    const clearing = store.clear();
+    await expect(failing).rejects.toThrow();
+    await expect(clearing).resolves.toBeUndefined();
+    rmSync(dir, { force: true });
+    mkdirSync(dir);
   });
 });
 

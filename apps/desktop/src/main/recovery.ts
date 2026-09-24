@@ -50,6 +50,10 @@ export class RecoveryStore {
   readonly id: string;
   private readonly adopted = new Set<string>();
   private keep = false;
+  /** Set by a clean exit: from here on, a copy that lands is removed. */
+  private released = false;
+  /** This session's writes and clears, one after another in the order asked. */
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly directory: string,
@@ -59,14 +63,33 @@ export class RecoveryStore {
     this.id = `${String(session.pid)}-${String(session.startedAt)}`;
   }
 
-  /** Replaces this session's copy with `data`, whole or not at all. */
-  async write(data: Uint8Array): Promise<void> {
-    await writeFileAtomic(this.pathOf(this.id), data);
+  /**
+   * Replaces this session's copy with `data`, whole or not at all.
+   *
+   * Writes and clears run **in the order they were asked**. A write is a
+   * temporary file and a rename; a clear that ran while one was in flight was
+   * undone when the rename landed after it — so a project saved mid-write kept
+   * a stale copy, which a later start would offer as newer unsaved work.
+   */
+  write(data: Uint8Array): Promise<void> {
+    return this.inOrder(async () => {
+      if (this.released) return;
+      await writeFileAtomic(this.pathOf(this.id), data);
+      // A clean exit released this session while the write was in flight.
+      if (this.released) await unlink(this.pathOf(this.id)).catch(() => undefined);
+    });
   }
 
   /** Removes this session's copy: the project is saved, or empty, again. */
-  async clear(): Promise<void> {
-    await unlink(this.pathOf(this.id)).catch(() => undefined);
+  clear(): Promise<void> {
+    return this.inOrder(() => unlink(this.pathOf(this.id)).catch(() => undefined));
+  }
+
+  /** Runs `task` after everything asked before it, whether that succeeded or not. */
+  private inOrder(task: () => Promise<void>): Promise<void> {
+    const run = this.queue.then(task);
+    this.queue = run.catch(() => undefined);
+    return run;
   }
 
   /**
@@ -139,6 +162,7 @@ export class RecoveryStore {
    */
   releaseOnQuit(): void {
     if (this.keep) return;
+    this.released = true;
     for (const id of [this.id, ...this.adopted]) {
       try {
         unlinkSync(this.pathOf(id));

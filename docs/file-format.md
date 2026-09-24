@@ -380,6 +380,11 @@ size — belongs in preferences.
   - A copy that does not load is renamed `.corrupt` and never offered again.
 - **Cleanup.** The copy is deleted when the project is clean again (saved, new or opened) and at a
   clean exit. A renderer crash keeps it through the quit that follows.
+  - **The invariant:** saving never leaves a stale copy that a later start would offer as newer
+    unsaved work.
+  - This session's writes and clears run in the order they were asked, so a save that lands while a
+    copy is being written clears it once the write is done.
+  - A write that lands after a clean exit removes itself.
 
 ## 8. Companion formats
 

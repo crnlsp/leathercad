@@ -35,6 +35,8 @@ a backup scheme and not version history, and it never touches the project file.
 | **A corrupt or incomplete copy** | `loadProject` refuses it. It is renamed to `.corrupt`, so it is never offered again but is kept for inspection, and the log names it. Startup carries on, and the next valid copy, if any, is offered |
 | **No valid copy at startup** | Nothing is asked |
 | **A clean save** | This session's copy is deleted once the project is clean. A clean project has nothing to recover |
+| **A save while a copy is being written** | Writes and clears run in the order they were asked, so the clear waits for the write in flight and then removes it. Saving never leaves a stale copy that a later start would offer as newer unsaved work (fixed after 5.3b; `recovery.test.ts`) |
+| **A clean exit while a copy is being written** | The exit's delete releases the session. A write that lands after it removes itself, so the next start offers nothing |
 | **New or Open** | The same: the document that replaced it is clean, so the copy goes |
 | **A clean close** | The main process deletes this session's copy, and any it took over by *Not now*, when the app quits normally |
 | **The renderer crashes but the app keeps running** | The main process remembers it and leaves the copy on quit, so the next start offers it |
