@@ -215,6 +215,38 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [file, exportPdf, newProject, openProject]);
 
+  // The application menu (8.5a) runs the same handlers as the keys above, so
+  // a menu choice and a shortcut cannot come to mean different things.
+  useEffect(
+    () =>
+      getPlatformHost().onMenuAction((action) => {
+        switch (action) {
+          case 'new':
+            void newProject();
+            break;
+          case 'open':
+            void openProject();
+            break;
+          case 'save':
+            void file.save();
+            break;
+          case 'save-as':
+            void file.save(true);
+            break;
+          case 'export-pdf':
+            void exportPdf();
+            break;
+          case 'undo':
+            store.undo();
+            break;
+          case 'redo':
+            store.redo();
+            break;
+        }
+      }),
+    [file, exportPdf, newProject, openProject, store],
+  );
+
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
 
   // The canvas owns the viewport; this is the only handle on it, and the only

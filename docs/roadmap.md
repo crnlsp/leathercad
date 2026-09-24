@@ -1628,7 +1628,7 @@ during implementation.
 | 4 | **3.9a** ✅ | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
 | 5 | **7.2a** ✅ | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
 | 6 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code |
-| 7 | **8.5a** | Production desktop integration: an app icon, a desktop entry, and a production menu, on all three platforms |
+| 7 | **8.5a** ✅ | Production desktop integration: an app icon, a desktop entry, and a production menu, on all three platforms |
 | 8 | **8.6** | Release: **Linux, Windows and macOS builds**, signing and notarisation, a current README with getting started, third-party notices, the newer-version message telling the maker to update, and v1.0.0. The checklist is in the 8.6 entry |
 
 **1.1 and later**, in rough order of value:
@@ -1964,12 +1964,29 @@ during implementation.
 - **8.4** **Largely done** by F.1 and F.2: every refusal says why, every empty panel says what to
   do, and the drawer states the verdict. The one gap the audit found, the newer-version message not
   saying *update*, moved into 8.6. Error handling, empty states, and the "what do I do now" gaps.
-- **8.5a** **1.0. Production desktop integration, on all three platforms.** The AppImage shows
-  Electron's default icon today, so this needs:
-  - an app icon (`.png`, `.ico`, `.icns`);
-  - a Linux desktop entry;
-  - a production menu. Electron's default still offers Reload and Toggle Developer Tools, which
-    5.3a found.
+- **8.5a** ✅ **Done** (2026-09-24). **1.0. Production desktop integration, on all three
+  platforms.**
+  - **An app icon**: the product spec's own card pocket, a tan piece with a thumb scoop stitched on
+    its three sewn sides, on the shell's ground. It is drawn once in `build/icon.svg`, and
+    `pnpm icons:generate` renders `icon.png`, a 16–512 px Linux set, `.ico` and `.icns`, which are
+    committed. On Linux the window takes its icon at run time.
+  - **A Linux desktop entry** with GenericName, Keywords, Comment and Graphics.
+    - `desktopName` is set, with `syncDesktopName`, so the window's app ID matches the entry's
+      `StartupWMClass`. Without it a desktop cannot tell which entry a running window belongs to.
+    - Checked inside the built AppImage.
+  - **A production menu**: File, Edit, View, Help, plus the app and Window menus on macOS.
+    - Each item runs the renderer's own handler, through `PlatformHost.onMenuAction`, so a menu
+      choice and a key press cannot drift apart.
+    - Accelerators are shown but not registered, so a key runs once.
+    - Reload and the developer tools exist only in a development build. The packaged smoke test
+      checks that.
+    - Edit keeps cut, copy and paste, which text fields need on macOS.
+  - **Found on the way:** document undo took only Ctrl+Z, so Cmd+Z did nothing on macOS.
+
+  See [the design](superpowers/specs/2026-09-24-desktop-integration-design.md).
+  Before it was built, the entry read: an app icon (`.png`, `.ico`, `.icns`), a Linux desktop entry,
+  and a production menu. Electron's default still offered Reload and Toggle Developer Tools, which
+  5.3a found.
 - **8.5** **1.1**, the rest. Packaging: Flatpak, icons, desktop entry, MIME registration for `.lcp`. The AppImage, its
   fuses, the packaged smoke test and the release pipeline landed with the engineering-tooling
   checkpoint.

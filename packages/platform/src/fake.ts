@@ -1,4 +1,10 @@
-import type { OpenDialogOptions, PlatformHost, RecoveredCopy, SaveDialogOptions } from './host.js';
+import type {
+  MenuAction,
+  OpenDialogOptions,
+  PlatformHost,
+  RecoveredCopy,
+  SaveDialogOptions,
+} from './host.js';
 
 /**
  * A PlatformHost backed by a Map. Used by every test that would otherwise need
@@ -93,5 +99,17 @@ export class InMemoryPlatformHost implements PlatformHost {
 
   getRecoveryIntervalMs(): Promise<number> {
     return Promise.resolve(60_000);
+  }
+
+  private readonly menuListeners = new Set<(action: MenuAction) => void>();
+
+  onMenuAction(listener: (action: MenuAction) => void): () => void {
+    this.menuListeners.add(listener);
+    return () => this.menuListeners.delete(listener);
+  }
+
+  /** A test choosing an item from the application menu. */
+  chooseMenu(action: MenuAction): void {
+    for (const listener of this.menuListeners) listener(action);
   }
 }

@@ -21,6 +21,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "fonts:generate": "pnpm --filter @leathercad/typography run generate:glyphs",
+    "icons:generate": "pnpm --filter @leathercad/desktop run generate:icons",
     "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
     "depcruise:graph": "depcruise packages apps --config .dependency-cruiser.cjs --output-type dot | dot -T svg > dependency-graph.svg",
     "knip": "knip",

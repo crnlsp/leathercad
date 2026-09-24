@@ -19,6 +19,7 @@ export type {
   OpenDialogOptions,
   SaveDialogOptions,
   FileFilter,
+  MenuAction,
   RecoveredCopy,
 } from './host.js';
 export { InMemoryPlatformHost } from './fake.js';

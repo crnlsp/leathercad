@@ -1,4 +1,5 @@
 import type {
+  MenuAction,
   OpenDialogOptions,
   PlatformHost,
   RecoveredCopy,
@@ -24,6 +25,7 @@ interface PreloadBridge {
   findRecovery(): Promise<RecoveredCopy | null>;
   resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void>;
   getRecoveryIntervalMs(): Promise<number>;
+  onMenuAction(listener: (action: MenuAction) => void): () => void;
 }
 
 declare global {

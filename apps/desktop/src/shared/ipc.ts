@@ -17,6 +17,8 @@ export const IPC = {
   findRecovery: 'platform:findRecovery',
   resolveRecovery: 'platform:resolveRecovery',
   getRecoveryIntervalMs: 'platform:getRecoveryIntervalMs',
+  /** Main → renderer: an application-menu item was chosen (8.5a). */
+  menuAction: 'menu:action',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

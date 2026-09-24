@@ -6,6 +6,9 @@ node_modules/
 dist/
 out/
 build/
+# Except the desktop app's build resources: its icons, which are source and are
+# committed (8.5a, `pnpm icons:generate`). electron-builder reads them there.
+!apps/desktop/build/
 release/
 *.tsbuildinfo
 .vite/

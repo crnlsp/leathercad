@@ -39,6 +39,12 @@ const platformBridge = {
     ipcRenderer.invoke(IPC.resolveRecovery, id, how),
 
   getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
+
+  onMenuAction: (listener: (action: string) => void): (() => void) => {
+    const handler = (_event: unknown, action: string): void => listener(action);
+    ipcRenderer.on(IPC.menuAction, handler);
+    return () => ipcRenderer.removeListener(IPC.menuAction, handler);
+  },
 };
 
 export type PlatformBridge = typeof platformBridge;

@@ -1,8 +1,11 @@
 import { join } from 'node:path';
 
-import { BrowserWindow, app, shell } from 'electron';
+import { BrowserWindow, Menu, app, shell } from 'electron';
 
+import windowIcon from '../../build/icon.png?asset';
+import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
+import { menuTemplate } from './menu.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
 import { RecoveryStore } from './recovery.js';
 
@@ -34,6 +37,9 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     title: 'LeatherCAD',
+    // Linux takes the window's icon from here; Windows and macOS from the
+    // packaged executable (slice 8.5a).
+    icon: windowIcon,
     backgroundColor: '#1b1d21',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -76,6 +82,26 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   registerPlatformHandlers(() => mainWindow, recovery);
+
+  // The app's own menu, not Electron's default: no Reload and no developer
+  // tools in a packaged build (8.5a). Each item asks the renderer, which runs
+  // the same handler as the keyboard shortcut.
+  app.setAboutPanelOptions({
+    applicationName: 'LeatherCAD',
+    applicationVersion: app.getVersion(),
+    copyright: 'Copyright © 2026 cornelisp · Apache-2.0',
+  });
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      menuTemplate({
+        isMac: process.platform === 'darwin',
+        packaged: app.isPackaged,
+        send: (action) => mainWindow?.webContents.send(IPC.menuAction, action),
+        openLogFolder: () => void shell.openPath(stateDirectory()),
+      }),
+    ),
+  );
+
   createWindow();
 
   app.on('activate', () => {

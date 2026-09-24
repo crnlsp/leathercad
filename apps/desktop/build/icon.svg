@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- LeatherCAD: the product spec's own card pocket — a tan piece with a
+       thumb scoop, stitched on its three sewn sides — on the shell's ground.
+       Source of every icon file here; regenerate with `pnpm icons:generate`. -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="#1b1d21"/>
+  <path d="M252,286 L402,286 A113.35,113.35 0 0 0 622,286 L772,286 L772,716 A56,56 0 0 1 716,772 L308,772 A56,56 0 0 1 252,716 Z" fill="#c9a227"/>
+  <g fill="#1d2126">
+    <circle cx="310.0" cy="350.0" r="15"/>
+    <circle cx="310.0" cy="410.7" r="15"/>
+    <circle cx="310.0" cy="471.3" r="15"/>
+    <circle cx="310.0" cy="532.0" r="15"/>
+    <circle cx="310.0" cy="592.7" r="15"/>
+    <circle cx="310.0" cy="653.3" r="15"/>
+    <circle cx="310.0" cy="714.0" r="15"/>
+    <circle cx="367.7" cy="714.0" r="15"/>
+    <circle cx="425.4" cy="714.0" r="15"/>
+    <circle cx="483.1" cy="714.0" r="15"/>
+    <circle cx="540.9" cy="714.0" r="15"/>
+    <circle cx="598.6" cy="714.0" r="15"/>
+    <circle cx="656.3" cy="714.0" r="15"/>
+    <circle cx="714.0" cy="714.0" r="15"/>
+    <circle cx="714.0" cy="653.3" r="15"/>
+    <circle cx="714.0" cy="592.7" r="15"/>
+    <circle cx="714.0" cy="532.0" r="15"/>
+    <circle cx="714.0" cy="471.3" r="15"/>
+    <circle cx="714.0" cy="410.7" r="15"/>
+    <circle cx="714.0" cy="350.0" r="15"/>
+  </g>
+</svg>

@@ -308,7 +308,8 @@ export function CanvasHost({
       // Never steal keys from a text field.
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
 
-      if (event.ctrlKey && event.key.toLowerCase() === 'z') {
+      // Ctrl on Linux and Windows, Cmd on macOS — as the menu shows it.
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         if (event.shiftKey) store.redo();
         else store.undo();

@@ -50,6 +50,7 @@ pnpm knip             # unused files, exports and dependencies; exceptions live 
 pnpm bench            # benchmarks; bench:compare against the committed baseline, bench:baseline to rewrite it
 pnpm test:mutation:geometry   # Stryker, slow — also test:mutation:domain (ADR 0016)
 pnpm fonts:generate   # re-extract glyph outlines from assets/fonts/ (ADR 0011); output is committed
+pnpm icons:generate   # render apps/desktop/build/icon.svg to .png/.ico/.icns (needs rsvg-convert, magick); output is committed
 ```
 
 `pnpm test:visual --update-snapshots` rewrites the pixel references. Look at every changed image

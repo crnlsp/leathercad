@@ -22,8 +22,10 @@
   "ignoreExportsUsedInFile": true,
 
   // System tools the tests shell out to. poppler is required in CI
-  // (LEATHERCAD_REQUIRE_POPPLER); graphviz only by `pnpm depcruise:graph`.
-  "ignoreBinaries": ["pdfinfo", "pdftoppm", "dot"],
+  // (LEATHERCAD_REQUIRE_POPPLER); graphviz only by `pnpm depcruise:graph`;
+  // librsvg and ImageMagick only by `pnpm icons:generate`, whose output is
+  // committed (8.5a).
+  "ignoreBinaries": ["pdfinfo", "pdftoppm", "dot", "rsvg-convert", "magick"],
 
   "ignoreDependencies": [
     // Deliberate: pins where the vendored fonts came from. ADR 0011.

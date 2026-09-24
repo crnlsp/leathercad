@@ -49,6 +49,26 @@ test('starts, and reports the packaged version through the bridge', async () => 
   await expect(window.getByTestId('app-version')).toContainText(VERSION);
 });
 
+test('has its own menu, with no Reload and no developer tools (8.5a)', async () => {
+  // Electron's default menu shipped both: a reload throws unsaved work at the
+  // 5.3a question, and the developer tools are a console into the renderer.
+  const roles = await app.evaluate(({ Menu }) => {
+    const found: string[] = [];
+    const walk = (items: Electron.MenuItem[]): void => {
+      for (const entry of items) {
+        found.push(String(entry.role ?? '').toLowerCase());
+        if (entry.submenu) walk(entry.submenu.items);
+      }
+    };
+    walk(Menu.getApplicationMenu()?.items ?? []);
+    return found;
+  });
+  expect(roles).toContain('quit');
+  for (const role of ['reload', 'forcereload', 'toggledevtools']) {
+    expect(roles).not.toContain(role);
+  }
+});
+
 test('runs from the asar archive, not from a loose directory', async () => {
   const appPath = await app.evaluate(({ app: electronApp }) => electronApp.getAppPath());
   expect(appPath).toMatch(/app\.asar$/);

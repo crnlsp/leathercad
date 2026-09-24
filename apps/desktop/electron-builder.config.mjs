@@ -45,13 +45,29 @@ export default {
     grantFileProtocolExtraPrivileges: true,
   },
   artifactName: '${productName}-${version}-${arch}.${ext}',
+  // The icon is drawn once, in build/icon.svg, and rendered to each format by
+  // `pnpm icons:generate` (slice 8.5a); the files are committed.
   linux: {
     target: ['AppImage'],
+    icon: 'build/icons',
     category: 'Graphics',
     synopsis: 'Leathercraft patterns that print at exact 1:1 scale',
-    // Icons, the desktop entry's MIME registration for .lcp, and Flatpak are
-    // slice 8.5. Until then the AppImage carries Electron's default icon.
+    description:
+      'Design leathercraft patterns — parts, stitch lines, holes — that print at exact 1:1 scale.',
+    // The desktop entry is named for `desktopName` in package.json, which is
+    // also the window's app_id / WM_CLASS: without the match, a desktop cannot
+    // tell which entry a running window belongs to, and shows a generic icon.
+    syncDesktopName: true,
+    desktop: {
+      entry: {
+        GenericName: 'Leathercraft pattern designer',
+        Keywords: 'leather;leathercraft;pattern;stitch;sewing;template;print;',
+      },
+    },
+    // MIME registration for .lcp and Flatpak are slice 8.5, 1.1.
   },
+  win: { icon: 'build/icon.ico' },
+  mac: { icon: 'build/icon.icns', category: 'public.app-category.graphics-design' },
   // Releases are uploaded by .github/workflows/release.yml, not by the builder.
   publish: null,
 };

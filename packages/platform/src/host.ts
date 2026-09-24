@@ -77,7 +77,18 @@ export interface PlatformHost {
 
   /** How often to write a recovery copy while there is unsaved work, in ms. */
   getRecoveryIntervalMs(): Promise<number>;
+
+  /**
+   * Listens for a choice from the application menu (slice 8.5a). The menu
+   * belongs to the operating system; what each item does belongs to the
+   * renderer, which runs the same handler its keyboard shortcut does. Returns
+   * the way to stop listening.
+   */
+  onMenuAction(listener: (action: MenuAction) => void): () => void;
 }
+
+/** What the application menu can ask the renderer to do. */
+export type MenuAction = 'new' | 'open' | 'save' | 'save-as' | 'export-pdf' | 'undo' | 'redo';
 
 /** A recovery copy found at startup. */
 export interface RecoveredCopy {
