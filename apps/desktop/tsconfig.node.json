@@ -13,6 +13,7 @@
     "src/preload/**/*.ts",
     "src/shared/**/*.ts",
     "src/notices/**/*.ts",
+    "src/csp/**/*.ts",
     "electron.vite.config.ts"
   ],
   "references": [{ "path": "../../packages/platform" }]

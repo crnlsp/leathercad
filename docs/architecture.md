@@ -277,7 +277,8 @@ suite. Everything above `editor` depends on the interface, never on Electron.
 
 Electron security posture, non-negotiable: `contextIsolation: true`, `nodeIntegration: false`,
 `sandbox: true`, a preload exposing only the typed `PlatformHost` channel, and a strict CSP with no
-remote content loaded anywhere.
+remote content loaded anywhere. The shipped page's `connect-src` is `'self'` alone; only the page the
+dev server serves also allows its HMR socket (`apps/desktop/src/csp/devServerCsp.ts`).
 
 ## 6. Canvas and interaction system
 
