@@ -42,7 +42,8 @@ describe('the shipped Content-Security-Policy', () => {
   it('names no socket and no localhost anywhere', () => {
     for (const sources of shipped.values()) {
       for (const source of sources) {
-        expect(source).not.toMatch(/^wss?:|localhost/);
+        expect(source).not.toMatch(/^wss?:/);
+        expect(source).not.toContain('localhost');
       }
     }
   });
