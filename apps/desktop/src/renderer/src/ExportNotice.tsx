@@ -1,5 +1,7 @@
-import type { ExportReadiness } from '@leathercad/domain';
+import { TILE_OVERLAP_MM, describeTiled } from '@leathercad/export';
 import { useEffect, useRef } from 'react';
+
+import type { ExportReport } from './useProjectFile.js';
 
 /**
  * What the maker should know about the template they just exported.
@@ -17,16 +19,17 @@ import { useEffect, useRef } from 'react';
  *   from a template has no way to know a piece was ever meant to be there, so
  *   this is the half that is named feature by feature rather than counted.
  *
- * Everything here comes from `exportReadiness`. This file decides no severity,
- * counts nothing, and cannot disagree with what the exporter drew.
+ * And, since tiling (7.2a), a third: **parts printed across sheets**, each
+ * named with its grid and the paper that would hold it whole, and how the
+ * sheets go together. Not a problem — the file is complete — but a maker
+ * holding six sheets needs to know which belong together and how.
+ *
+ * Everything here comes from `exportReadiness` and the pagination. This file
+ * decides no severity, counts nothing, and cannot disagree with what the
+ * exporter drew.
  */
-export function ExportNotice({
-  readiness,
-  onClose,
-}: {
-  readiness: ExportReadiness;
-  onClose: () => void;
-}) {
+export function ExportNotice({ report, onClose }: { report: ExportReport; onClose: () => void }) {
+  const { readiness, tiled } = report;
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -55,7 +58,30 @@ export function ExportNotice({
           if (event.key === 'Escape') onClose();
         }}
       >
-        <h3 id="export-notice-title">Exported, with something to check</h3>
+        <h3 id="export-notice-title">
+          {readiness.omitted.length === 0 && counts.length === 0
+            ? 'Exported across several sheets'
+            : 'Exported, with something to check'}
+        </h3>
+
+        {tiled.length > 0 && (
+          <section className="dialog-group" data-testid="export-tiled">
+            <p>
+              <b>
+                {tiled.length === 1
+                  ? 'This part is printed across sheets'
+                  : `These ${String(tiled.length)} parts are printed across sheets`}
+              </b>{' '}
+              at 1:1, overlapping by {String(TILE_OVERLAP_MM)} mm. Cut one sheet on a dashed line,
+              lay it over the next, and match the crosses.
+            </p>
+            <ul>
+              {tiled.map((entry) => (
+                <li key={entry.part.id}>{describeTiled(entry)}</li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {readiness.omitted.length > 0 && (
           <section className="dialog-group" data-testid="export-omitted">

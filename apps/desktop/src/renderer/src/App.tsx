@@ -17,7 +17,6 @@ import {
   evaluate,
   lockRefusal,
   type Diagnostic,
-  type ExportReadiness,
   type Project,
 } from '@leathercad/domain';
 import { systemIdSource } from '@leathercad/platform';
@@ -29,7 +28,7 @@ import { CanvasHost, type CanvasHandle, type CanvasStatus } from './CanvasHost.j
 import { CanvasLegend } from './CanvasLegend.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
-import { useProjectFile } from './useProjectFile.js';
+import { useProjectFile, type ExportReport } from './useProjectFile.js';
 import { PaperControl } from './PaperControl.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -178,7 +177,7 @@ export function App() {
 
   // What the last export left the maker to check, until they close it. Null
   // when there was nothing to say, which is the common case.
-  const [exportNotice, setExportNotice] = useState<ExportReadiness | null>(null);
+  const [exportNotice, setExportNotice] = useState<ExportReport | null>(null);
 
   const exportPdf = useCallback(async () => {
     setExportNotice(await file.exportPdfFile());
@@ -579,7 +578,7 @@ export function App() {
       </footer>
 
       {exportNotice !== null && (
-        <ExportNotice readiness={exportNotice} onClose={() => setExportNotice(null)} />
+        <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />
       )}
 
       {recovery.offer !== null && (

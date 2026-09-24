@@ -126,6 +126,9 @@ export const VERIFICATION_TEXT = {
   instructionSizeMm: 2.8,
   note: 'Measure the 100 mm ruler or the 50 mm square to confirm.',
   noteSizeMm: 2.5,
+  /** On a tiled sheet (7.2a): how the sheets go together. */
+  tileNote: 'Cut on a dashed line, lay it over the next sheet, match the crosses.',
+  tileSizeMm: 2.5,
 } as const;
 
 /** Where the verification block's pieces go on one sheet, in mm from its bottom-left. */
@@ -141,6 +144,13 @@ export interface VerificationLayout {
   /** Where each line of text starts, on its baseline. */
   readonly instruction: { readonly x: Mm; readonly y: Mm };
   readonly note: { readonly x: Mm; readonly y: Mm };
+  /**
+   * On a tiled sheet (7.2a), the tile's label and the assembly note: above
+   * the instruction, left of the square, and never wider than `tileTextMaxWidthMm`.
+   */
+  readonly tileLabel: { readonly x: Mm; readonly y: Mm };
+  readonly tileNote: { readonly x: Mm; readonly y: Mm };
+  readonly tileTextMaxWidthMm: Mm;
   /** How much of the sheet above the bottom margin the block reserves. */
   readonly heightMm: Mm;
 }
@@ -152,6 +162,8 @@ const SQUARE_SIZE_MM = 50;
 const SQUARE_OFFSET_MM = 112;
 /** Between the ruler's ticks and a square stacked above it. */
 const STACK_GAP_MM = 4.5;
+/** Between the text on the left and the square. */
+const TEXT_GAP_MM = 2;
 
 /**
  * The verification block's layout on this sheet — **the one answer**, read by
@@ -172,6 +184,8 @@ export function verificationLayout(setup: PageSetup): VerificationLayout {
   const text = {
     instruction: { x: m.left, y: ruler.y + 16 },
     note: { x: m.left, y: ruler.y + 11.5 },
+    tileNote: { x: m.left, y: ruler.y + 21.5 },
+    tileLabel: { x: m.left, y: ruler.y + 26 },
   };
   const common = {
     ruler,
@@ -180,10 +194,17 @@ export function verificationLayout(setup: PageSetup): VerificationLayout {
     squareSizeMm: SQUARE_SIZE_MM,
     ...text,
   };
+  // The tile's text stops short of the square, wherever the square is.
+  const clearOf = (square: { x: Mm }): Mm => square.x - TEXT_GAP_MM - m.left;
 
   const beside = { x: ruler.x + SQUARE_OFFSET_MM, y: ruler.y };
   if (approxLte(beside.x + SQUARE_SIZE_MM, sheet.widthMm - m.right)) {
-    return { ...common, square: beside, heightMm: setup.footerHeightMm };
+    return {
+      ...common,
+      square: beside,
+      tileTextMaxWidthMm: clearOf(beside),
+      heightMm: setup.footerHeightMm,
+    };
   }
 
   const stacked = {
@@ -192,7 +213,12 @@ export function verificationLayout(setup: PageSetup): VerificationLayout {
   };
   // The same clearance above the square as beside the ruler.
   const rise = stacked.y - beside.y;
-  return { ...common, square: stacked, heightMm: setup.footerHeightMm + rise };
+  return {
+    ...common,
+    square: stacked,
+    tileTextMaxWidthMm: clearOf(stacked),
+    heightMm: setup.footerHeightMm + rise,
+  };
 }
 
 /**

@@ -1626,7 +1626,7 @@ during implementation.
 | 2 | **5.3b** ✅ | Crash recovery: a recovery copy while dirty, and a restore offer after an unclean exit that never overwrites a project (robustness requirements in the 5.3b entry) |
 | 3 | **6.4a** ✅ | Choose the paper and its orientation, written to the project's page setup (5.5) |
 | 4 | **3.9a** ✅ | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
-| 5 | **7.2a** | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
+| 5 | **7.2a** ✅ | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
 | 6 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code |
 | 7 | **8.5a** | Production desktop integration: an app icon, a desktop entry, and a production menu, on all three platforms |
 | 8 | **8.6** | Release: **Linux, Windows and macOS builds**, signing and notarisation, a current README with getting started, third-party notices, the newer-version message telling the maker to update, and v1.0.0. The checklist is in the 8.6 entry |
@@ -1903,12 +1903,28 @@ during implementation.
   together: "in leathercraft most people dont print on something bigger then a4 sometimes you need
   multiple pages". Shelf packing, tallest first. A part too large for one sheet is reported by name
   with the paper that would fit it — never scaled, never clipped.
-  Tiling proper (overlap, registration marks, assembly sheet) remains future work, and is the only
-  way to print a part bigger than the paper.
-- **7.2a** **1.0**, in the frozen boundary (audit §6.1). **Tile a part larger than the sheet.** Split it
-  across sheets with an overlap, registration marks and a tile label (row, column), at 1:1, with the
-  verification square and ruler on every sheet. Parts that fit keep packing whole, as 7.1 does.
-  Without it, a notebook cover, a tote panel or a strap cannot be printed at all.
+  Tiling proper — a part bigger than the paper — is 7.2a, done; the assembly sheet and edge arrows
+  are 7.2, 1.1.
+- **7.2a** ✅ **Done** (2026-09-24). **1.0. Tile a part larger than the sheet.** Without it, a
+  notebook cover, a tote panel or a strap could not be printed at all.
+  - A part too large for the chosen sheet is printed across `rows × columns` sheets at 1:1, after the
+    packed parts. Each sheet is a window the size of the printable area, placed by a translation
+    alone and clipped. The grid is centred, and tiles overlap by 10 mm. Nothing rotates.
+  - On each sheet:
+    - **join lines** down the middle of every shared overlap band, in light grey 6-3 dashes, which no
+      pattern role uses;
+    - **registration crosses** on them, at the same model coordinates on every sheet that shows them;
+    - a **tile label** (`Strap · R1 C2 · 1 × 3 sheets`);
+    - the assembly note;
+    - the whole verification block.
+
+    The label and note belong to `verificationLayout`, so the all-sheets layout property checks them.
+  - The export notice names each tiled part, with its grid and the paper that would hold it whole.
+    It is no longer an error in the status bar.
+  - Checked through poppler: a 250 mm strap on A4 portrait is two sheets whose halves, measured to
+    their shared join line, add up to 250 mm. Physical verification is still 7.7.
+
+  See [the design](superpowers/specs/2026-09-24-tiling-design.md).
 - **7.2** **1.1**, the rest: edge arrows and an assembly sheet. Registration marks, overlap bands,
   tile labels, edge arrows, assembly sheet.
   **Constraint, recorded before it is needed: pagination must never rotate a part to make it fit

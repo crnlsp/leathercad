@@ -1,16 +1,19 @@
 import type { Mm } from '@leathercad/core';
 import { EXPORT_TOLERANCE_MM, SegmentOps, type Path, type Vec2 } from '@leathercad/geometry';
-import { outlinesOf, placedText, type TextPlacement } from '@leathercad/typography';
+import { outlinesOf, placedText, textWidthMm, type TextPlacement } from '@leathercad/typography';
 import {
   PDFDocument,
   PrintScaling,
   appendBezierCurve,
+  clip,
   closePath,
+  endPath,
   fill,
   lineTo,
   moveTo,
   popGraphicsState,
   pushGraphicsState,
+  rectangle,
   restoreDashPattern,
   setDashPattern,
   setFillingGrayscaleColor,
@@ -21,7 +24,7 @@ import {
   type PDFPage,
 } from 'pdf-lib';
 
-import { paginate, type Page, type PaginationResult } from '../paginate.js';
+import { paginate, type Page, type PaginationResult, type Tile } from '../paginate.js';
 import {
   DEFAULT_PAGE_SETUP,
   contentAreaMm,
@@ -115,6 +118,20 @@ function drawPage(
   setup: PageSetup,
   now: Date,
 ): void {
+  const tile = layout.tile;
+  if (tile !== undefined) {
+    // One tile of a part too large for the sheet (7.2a): everything outside
+    // its window is cropped by the clip, never scaled to fit. The window is
+    // the printable area exactly, so nothing reaches the verification block.
+    const area = contentAreaMm(setup);
+    page.pushOperators(
+      pushGraphicsState(),
+      rectangle(mmToPt(area.x), mmToPt(area.y), mmToPt(area.widthMm), mmToPt(area.heightMm)),
+      clip(),
+      endPath(),
+    );
+  }
+
   for (const placement of layout.placements) {
     for (const item of placement.part.paths) {
       drawPath(page, item, placement.offsetMm);
@@ -127,8 +144,87 @@ function drawPage(
     }
   }
 
+  if (tile !== undefined) {
+    drawJoins(page, tile, layout.placements[0]!.offsetMm);
+    page.pushOperators(popGraphicsState());
+    drawTileLabel(page, setup, tile);
+  }
+
   drawVerificationBlock(page, setup);
   drawFooter(page, setup, scene, layout.index + 1, pageCount, now);
+}
+
+/**
+ * Join lines: light grey, in long dashes no pattern role uses — a cut is
+ * solid, a stitch line 2-2, a fold dash-dot — so no one cuts or stitches along
+ * one, and the crosses on it say what it is.
+ */
+const JOIN_GREY = 0.6;
+const JOIN_WIDTH_MM = 0.2;
+const JOIN_DASH_MM = [6, 3];
+/** Half a registration cross's arm. */
+const CROSS_MM = 3;
+
+/**
+ * The join lines this sheet shares with its neighbours, and registration
+ * crosses on them — all in the part's own coordinates, so each lands on the
+ * same place in the pattern on every sheet that shows it. A cross sits at the
+ * middle of the window's span along each line, and where two lines cross.
+ */
+function drawJoins(page: PDFPage, tile: Tile, offsetMm: Vec2): void {
+  const w = tile.windowMm;
+  const at = (x: Mm, y: Mm): [number, number] => [mmToPt(x + offsetMm.x), mmToPt(y + offsetMm.y)];
+
+  const lines = [
+    ...tile.joinsMm.x.map((x) => [at(x, w.minY), at(x, w.maxY)] as const),
+    ...tile.joinsMm.y.map((y) => [at(w.minX, y), at(w.maxX, y)] as const),
+  ];
+  page.pushOperators(
+    pushGraphicsState(),
+    setLineWidth(mmToPt(JOIN_WIDTH_MM)),
+    setStrokingGrayscaleColor(JOIN_GREY),
+    setDashPattern(JOIN_DASH_MM.map(mmToPt), 0),
+    ...lines.flatMap(([from, to]) => [moveTo(...from), lineTo(...to)]),
+    stroke(),
+    popGraphicsState(),
+  );
+
+  const middleX = (w.minX + w.maxX) / 2;
+  const middleY = (w.minY + w.maxY) / 2;
+  const crosses = [
+    ...tile.joinsMm.x.flatMap((x) => [{ x, y: middleY }, ...tile.joinsMm.y.map((y) => ({ x, y }))]),
+    ...tile.joinsMm.y.map((y) => ({ x: middleX, y })),
+  ];
+  page.pushOperators(
+    pushGraphicsState(),
+    setLineWidth(mmToPt(JOIN_WIDTH_MM)),
+    setStrokingGrayscaleColor(0),
+    restoreDashPattern(),
+    ...crosses.flatMap((c) => [
+      moveTo(...at(c.x - CROSS_MM, c.y)),
+      lineTo(...at(c.x + CROSS_MM, c.y)),
+      moveTo(...at(c.x, c.y - CROSS_MM)),
+      lineTo(...at(c.x, c.y + CROSS_MM)),
+    ]),
+    stroke(),
+    popGraphicsState(),
+  );
+}
+
+/**
+ * Which tile this is, and how the sheets go together, in the footer beside
+ * the square. A long part name is shortened rather than run into the square.
+ */
+function drawTileLabel(page: PDFPage, setup: PageSetup, tile: Tile): void {
+  const layout = verificationLayout(setup);
+  const size = VERIFICATION_TEXT.tileSizeMm;
+  const grid = ` · ${tile.label} · ${String(tile.rows)} × ${String(tile.columns)} sheets`;
+  let name = tile.part.name.trim() === '' ? 'Part' : tile.part.name.trim();
+  while (name.length > 1 && textWidthMm(`${name}${grid}`, size) > layout.tileTextMaxWidthMm) {
+    name = `${name.slice(0, -2)}…`;
+  }
+  drawFurniture(page, `${name}${grid}`, size, layout.tileLabel);
+  drawFurniture(page, VERIFICATION_TEXT.tileNote, size, layout.tileNote);
 }
 
 /** Fills one laid-out string's glyph outlines. */

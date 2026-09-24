@@ -12,8 +12,9 @@ import { closeApp } from './closeApp.js';
  *
  * Before it, every export was A4 portrait, and the only answer to a strap too
  * long for A4 was a message naming a paper the maker had no way to choose. This
- * walks that workflow: a strap that does not fit, the paper turned, exported
- * again at 1:1, and the choice kept with the project.
+ * walks that workflow: a strap that does not fit — tiled across two sheets
+ * since 7.2a — the paper turned, exported again whole at 1:1, and the choice
+ * kept with the project.
  */
 
 const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
@@ -28,6 +29,11 @@ function field(window: Page, label: string) {
 async function type(window: Page, label: string, value: number): Promise<void> {
   await field(window, label).fill(String(value));
   await field(window, label).press('Enter');
+}
+
+function pageCount(pdf: string): number {
+  const info = execFileSync('pdfinfo', [pdf], { encoding: 'utf8' });
+  return Number(/Pages:\s+(\d+)/.exec(info)?.[1]);
 }
 
 /** The sheet size pdfinfo reads from the file, in points. */
@@ -82,14 +88,19 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await type(window, 'Height', 100);
     await window.getByTestId('part-name').fill('Strap');
 
-    // Exported on A4 portrait: reported by name, with the way out — turning
-    // the paper that is already in the printer. Never scaled, never clipped.
+    // Exported on A4 portrait: printed across two sheets at 1:1 (7.2a) — never
+    // scaled, never left out — and the notice says so, with the way to print
+    // it whole: turning the paper that is already in the printer.
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
-    await expect(window.getByTestId('file-error')).toHaveText(
-      '"Strap" is 250.0 × 100.0 mm and will not fit A4 portrait at 1:1. It fits A4 landscape.',
+    const notice = window.getByTestId('export-notice');
+    await expect(notice.getByTestId('export-tiled')).toContainText(
+      '"Strap" is 250.0 × 100.0 mm, larger than A4 portrait: printed on 2 sheets, 1 × 2. It fits whole on A4 landscape.',
     );
+    await expect(window.getByTestId('file-error')).toHaveCount(0);
     expect(pageSize(pdf)).toBe('595.276 x 841.89');
+    expect(pageCount(pdf)).toBe(2);
+    await notice.getByText('Close').click();
     rmSync(pdf);
 
     // Turned. The choice is an edit to the project, so it is unsaved…
@@ -102,7 +113,9 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
     await expect(window.getByTestId('file-error')).toHaveCount(0);
+    await expect(window.getByTestId('export-notice')).toHaveCount(0);
     expect(pageSize(pdf)).toBe('841.89 x 595.276');
+    expect(pageCount(pdf)).toBe(1);
     rmSync(pdf);
 
     // A maker in North America loads Letter. 612 × 792 pt is exactly 8.5 × 11 in.

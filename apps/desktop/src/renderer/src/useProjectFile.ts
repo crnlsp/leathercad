@@ -1,6 +1,6 @@
 import type { Document, DocumentStore } from '@leathercad/document';
 import { evaluate, exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
-import { buildExportScene, describeOversized, exportPdf, pageSetupFor } from '@leathercad/export';
+import { buildExportScene, exportPdf, pageSetupFor, type TiledPart } from '@leathercad/export';
 import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
@@ -21,6 +21,12 @@ const PDF_FILTERS = [{ name: 'PDF', extensions: ['pdf'] }];
  * through `PlatformHost`, which is what keeps the shell replaceable. See
  * docs/architecture.md §5.
  */
+/** What the maker is told after an export: what to check, and what spans sheets. */
+export interface ExportReport {
+  readonly readiness: ExportReadiness;
+  readonly tiled: readonly TiledPart[];
+}
+
 export function useProjectFile(
   store: DocumentStore,
   host: () => PlatformHost,
@@ -49,7 +55,7 @@ export function useProjectFile(
    * or it failed — and null too when there is nothing to say, so a clean
    * export stays silent.
    */
-  exportPdfFile: () => Promise<ExportReadiness | null>;
+  exportPdfFile: () => Promise<ExportReport | null>;
   markSaved: () => void;
   savedDocument: React.MutableRefObject<unknown>;
 } {
@@ -135,7 +141,7 @@ export function useProjectFile(
    * from an ordinary viewer — so handing them the open file is where our
    * responsibility ends.
    */
-  const exportPdfFile = useCallback(async (): Promise<ExportReadiness | null> => {
+  const exportPdfFile = useCallback(async (): Promise<ExportReport | null> => {
     try {
       const platform = host();
       const project = store.getState().document.project;
@@ -160,27 +166,26 @@ export function useProjectFile(
 
       await platform.writeFile(target.endsWith('.pdf') ? target : `${target}.pdf`, bytes);
 
-      // Oversized parts are reported, never scaled down or clipped. Silently
-      // shrinking a template is the one failure this application exists to
-      // prevent.
-      const problems = pagination.oversized.map(describeOversized);
       setState((previous) => ({
         ...previous,
-        error: problems.length === 0 ? null : problems.join(' '),
+        error: null,
         savedAt: new Date().toLocaleTimeString(),
       }));
 
       await platform.openInExternalViewer(target.endsWith('.pdf') ? target : `${target}.pdf`);
 
       // Read from the project that was just exported, and reported *after* the
-      // file is written: export warns, and never blocks (§5).
+      // file is written: export warns, and never blocks (§5). A part too large
+      // for the sheet is printed across several (7.2a) — not a problem, but
+      // something the maker needs to know to put the sheets together.
       const readiness = exportReadiness(project);
       const quiet =
         readiness.omitted.length === 0 &&
         readiness.errors === 0 &&
         readiness.warnings === 0 &&
-        readiness.infos === 0;
-      return quiet ? null : readiness;
+        readiness.infos === 0 &&
+        pagination.tiled.length === 0;
+      return quiet ? null : { readiness, tiled: pagination.tiled };
     } catch (error) {
       setState((previous) => ({
         ...previous,

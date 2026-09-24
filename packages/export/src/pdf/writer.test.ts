@@ -402,7 +402,7 @@ function parsePgm(bytes: Buffer): Gray {
   return { width, height, pixels: new Uint8Array(bytes.subarray(offset, offset + width * height)) };
 }
 
-function render(bytes: Uint8Array): Gray {
+function render(bytes: Uint8Array, pageNumber = 1): Gray {
   const directory = mkdtempSync(join(tmpdir(), 'leathercad-pdf-'));
   try {
     const pdfPath = join(directory, 'out.pdf');
@@ -412,13 +412,13 @@ function render(bytes: Uint8Array): Gray {
       String(DPI),
       '-gray',
       '-f',
-      '1',
+      String(pageNumber),
       '-l',
-      '1',
+      String(pageNumber),
       pdfPath,
       join(directory, 'page'),
     ]);
-    return parsePgm(readFileSync(join(directory, 'page-1.pgm')));
+    return parsePgm(readFileSync(join(directory, `page-${String(pageNumber)}.pgm`)));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -598,6 +598,75 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(50.4);
     expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeGreaterThan(49.8);
     expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeLessThan(50.4);
+  });
+
+  it('prints a strap too long for the sheet on two, halves that add up to its length (7.2a)', async () => {
+    // A 250 mm strap on A4 portrait, which prints 190 mm across. Measured on
+    // paper only, through poppler: on each sheet, from the strap's end to the
+    // dashed join line the two sheets share. Laid together on that line, the
+    // halves must be the strap — at 1:1, with nothing lost in the overlap.
+    const project = projectWithRect(250, 100);
+    const scene = buildExportScene(evaluate(project), project.name);
+    const { bytes, pagination } = await exportPdf(scene, {
+      setup: pageSetupFor(project.settings),
+      now: FIXED_NOW,
+      applicationVersion: 'test',
+    });
+    expect(pagination.pages).toHaveLength(2);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);
+
+    const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
+    /** Black (the strap's edge) and grey (the join line) columns on one row of one sheet. */
+    const scan = (pageNumber: number) => {
+      const image = render(bytes, pageNumber);
+      const placement = pagination.pages[pageNumber - 1]!.placements[0]!;
+      // 20 mm up the strap: clear of its name, and of the crosses at the middle.
+      const row = Math.round((sheet.heightMm - (placement.offsetMm.y + 20)) * PX_PER_MM);
+      const black: number[] = [];
+      const grey: number[] = [];
+      for (let x = 0; x < image.width; x++) {
+        // Five rows, so a gap in the dashes cannot hide the join.
+        const darkest = Math.min(
+          ...[-2, -1, 0, 1, 2].map((dy) => image.pixels[(row + dy) * image.width + x]!),
+        );
+        if (darkest < 60) black.push(x);
+        else if (darkest < 200) grey.push(x);
+      }
+      return { black, grey };
+    };
+
+    const first = scan(1);
+    const second = scan(2);
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    // Sheet 1: the strap's left end, then the join. Sheet 2: the join, then its right end.
+    const leftEnd = Math.min(...first.black);
+    const rightEnd = Math.max(...second.black);
+    const onFirst = (mean(first.grey) - leftEnd) / PX_PER_MM;
+    const onSecond = (rightEnd - mean(second.grey)) / PX_PER_MM;
+
+    // Within half a millimetre: two strokes and two join lines of pixels.
+    expect(Math.abs(onFirst + onSecond - 250)).toBeLessThan(0.5);
+    // The join is in the overlap: both halves are more than a sheet's worth apart.
+    expect(onFirst).toBeGreaterThan(100);
+    expect(onSecond).toBeGreaterThan(50);
+  });
+
+  it('prints the whole verification block on every tiled sheet', async () => {
+    const project = projectWithRect(250, 100);
+    const bytes = await pdfFor(project);
+    const setup = pageSetupFor(project.settings);
+    const { square, squareSizeMm } = verificationLayout(setup);
+    const sheet = sheetSizeMm(setup);
+    for (const pageNumber of [1, 2]) {
+      const bounds = darkBounds(
+        render(bytes, pageNumber),
+        Math.floor((sheet.heightMm - (square.y + squareSizeMm + 2)) * PX_PER_MM),
+        Math.ceil((sheet.heightMm - square.y + 1) * PX_PER_MM),
+        Math.round((square.x - 1) * PX_PER_MM),
+      );
+      expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(49.8);
+      expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(50.4);
+    }
   });
 
   it('keeps the pattern clear of the verification block', async () => {

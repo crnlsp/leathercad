@@ -182,7 +182,8 @@ If schedule pressure forces cuts, cut anything *except* these:
 2. **Live-derived stitch line from cut line.** This is the single biggest daily time saver.
 3. **Automatic stitch holes with correct corner behaviour.** This is the feature people buy
    Leathercraft CAD for.
-4. **Verified 1:1 tiled printing.** Without it, nothing else matters.
+4. **Verified 1:1 tiled printing.** Without it, nothing else matters. *(Tiling is built, as 7.2a, and
+   measured through poppler. "Verified" means a steel rule on paper, which is 7.7.)*
 
 ## 6. Why one-way derivation instead of constraints
 

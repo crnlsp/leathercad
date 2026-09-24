@@ -39,7 +39,9 @@ const everySheet = PAPER_NAMES.flatMap((paper) =>
 );
 
 /** Everything the block draws, as boxes on the sheet. */
-function boxesOf(setup: PageSetup): Record<'ruler' | 'square' | 'instruction' | 'note', Box> {
+function boxesOf(
+  setup: PageSetup,
+): Record<'ruler' | 'square' | 'instruction' | 'note' | 'tileNote' | 'tileLabel', Box> {
   const layout = verificationLayout(setup);
   const text = (content: string, sizeMm: Mm, at: { x: Mm; y: Mm }): Box => {
     const perUnit = sizeMm / FONT.unitsPerEm;
@@ -69,6 +71,13 @@ function boxesOf(setup: PageSetup): Record<'ruler' | 'square' | 'instruction' | 
       layout.instruction,
     ),
     note: text(VERIFICATION_TEXT.note, VERIFICATION_TEXT.noteSizeMm, layout.note),
+    // On a tiled sheet (7.2a). The label is as wide as it is ever allowed to
+    // be: the writer shortens a long part name to fit.
+    tileNote: text(VERIFICATION_TEXT.tileNote, VERIFICATION_TEXT.tileSizeMm, layout.tileNote),
+    tileLabel: {
+      ...text('X', VERIFICATION_TEXT.tileSizeMm, layout.tileLabel),
+      maxX: layout.tileLabel.x + layout.tileTextMaxWidthMm,
+    },
   };
 }
 
@@ -89,6 +98,13 @@ describe('the verification block', () => {
       expect(approxLte(box.maxX, sheet.widthMm - m.right), `${name} right`).toBe(true);
       expect(approxLte(m.bottom, box.minY), `${name} bottom`).toBe(true);
     }
+  });
+
+  it.each(everySheet)('fits the tile note beside the square on $label', ({ setup }) => {
+    const layout = verificationLayout(setup);
+    expect(
+      textWidthMm(VERIFICATION_TEXT.tileNote, VERIFICATION_TEXT.tileSizeMm),
+    ).toBeLessThanOrEqual(layout.tileTextMaxWidthMm);
   });
 
   it.each(everySheet)('draws nothing over itself on $label', ({ setup }) => {

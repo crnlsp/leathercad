@@ -276,6 +276,21 @@ square exist as well. Three independent defences against the same failure.
 
 For tiled output, the difference between a usable pattern and a jigsaw puzzle.
 
+**What 1.0 builds (slice 7.2a)**, which differs from the list below where marked:
+- **Join lines** replace corner crosshairs and the trim line. There is one down the middle of each
+  overlap band a sheet shares with a neighbour, in light grey 6-3 dashes, a rhythm no pattern role
+  uses. It is drawn at the same model coordinate on both sheets.
+- **Registration crosses** sit on the join lines, at the middle of the window's span and where two
+  join lines cross. Being in model coordinates, they land on the same place in the pattern on every
+  sheet. The maker cuts one sheet on a join line, lays it over the next, and matches the crosses.
+- **The overlap is 10 mm**, with no setting yet.
+- **A tile label and the assembly note** go in the footer beside the verification square:
+  `Strap · R1 C2 · 1 × 3 sheets`.
+- **Not yet (7.2, 1.1):** edge arrows, the assembly sheet, and tape guides.
+
+The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
+tiled part follows the packed parts on sheets of its own. Nothing rotates.
+
 - **Corner crosshairs** at the exact corners of each page's content rect: 8 mm arms, 0.1 mm stroke,
   drawn in the margin so they do not overlay the pattern.
 - **Overlap band** shown as a light hatch with a solid trim line along its inner edge, plus the text
