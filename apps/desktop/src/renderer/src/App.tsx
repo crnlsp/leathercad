@@ -6,7 +6,6 @@ import {
   duplicatePart,
   emptyDocument,
   planDelete,
-  setProjectName,
   type DeleteResolution,
 } from '@leathercad/document';
 import {
@@ -24,12 +23,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_HARDWARE, type DrawMode, type HardwareOptions } from '@leathercad/editor';
 
-import { CanvasHost, type CanvasHandle, type CanvasStatus } from './CanvasHost.js';
+import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile, type ExportReport } from './useProjectFile.js';
-import { PaperControl } from './PaperControl.js';
+import { ProjectBar, windowTitle } from './ProjectBar.js';
+import { printStatusFor } from './sheets.js';
+import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -52,6 +53,47 @@ export function App() {
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
   const [toolId, setToolId] = useState<string>('rectangle');
+  // Design or Sheets (7.4c). View state, like the tool: never saved.
+  const [view, setView] = useState<CanvasView>('design');
+  /**
+   * A part under the pointer — on a sheet, or on its Parts row — so the other
+   * side can show it too (7.4d). View state, never saved.
+   */
+  const [hoveredPart, setHoveredPart] = useState<string | null>(null);
+  const viewRef = useRef<CanvasView>('design');
+  /** The tool the board had when the maker went to the sheets, to give back. */
+  const designToolRef = useRef<string>('rectangle');
+
+  /**
+   * Going to the sheets leaves the drawing tools behind — nothing is drawn on
+   * paper — and coming back gives the board its tool again.
+   */
+  const showView = useCallback(
+    (next: CanvasView) => {
+      if (viewRef.current === next) return;
+      if (next === 'sheets') {
+        designToolRef.current = toolId;
+        setToolId('select');
+      } else {
+        setToolId(designToolRef.current);
+      }
+      viewRef.current = next;
+      setView(next);
+    },
+    [toolId],
+  );
+
+  /**
+   * Choosing a tool. On the Sheets view, any tool but Select means going back
+   * to the board with it: tools act on the design, never on the paper.
+   */
+  const chooseTool = useCallback((id: string) => {
+    if (viewRef.current === 'sheets' && id !== 'select') {
+      viewRef.current = 'design';
+      setView('design');
+    }
+    setToolId(id);
+  }, []);
   // What a drawn line becomes, and what the hardware tool punches. Owned
   // here because both outlive the tool they configure: switching to the arc
   // tool and back must not silently put the user back on 'Cut'.
@@ -97,6 +139,12 @@ export function App() {
   const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
   const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank);
   const dirty = file.savedDocument.current !== storeState.document;
+
+  // The window says which project it holds, and whether it has unsaved work
+  // (F.8): the taskbar and the window switcher read this title.
+  useEffect(() => {
+    document.title = windowTitle(storeState.document.project, dirty);
+  }, [storeState.document.project, dirty]);
 
   // Crash recovery (5.3b): a copy while there is unsaved work, and an offer of
   // what a crash left behind.
@@ -202,6 +250,12 @@ export function App() {
         } else if (key === 'e') {
           event.preventDefault();
           void exportPdf();
+        } else if (key === '1') {
+          event.preventDefault();
+          showView('design');
+        } else if (key === '2') {
+          event.preventDefault();
+          showView('sheets');
         }
         return;
       }
@@ -209,11 +263,11 @@ export function App() {
       // The active tool claimed this key (the polyline's A and L mid-run).
       if (event.defaultPrevented) return;
       const match = ALL_TOOLS.find((tool) => tool.key.toLowerCase() === event.key.toLowerCase());
-      if (match !== undefined) setToolId(match.id);
+      if (match !== undefined) chooseTool(match.id);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [file, exportPdf, newProject, openProject]);
+  }, [file, exportPdf, newProject, openProject, showView, chooseTool]);
 
   // The application menu (8.5a) runs the same handlers as the keys above, so
   // a menu choice and a shortcut cannot come to mean different things.
@@ -242,9 +296,15 @@ export function App() {
           case 'redo':
             store.redo();
             break;
+          case 'view-design':
+            showView('design');
+            break;
+          case 'view-sheets':
+            showView('sheets');
+            break;
         }
       }),
-    [file, exportPdf, newProject, openProject, store],
+    [file, exportPdf, newProject, openProject, store, showView],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
@@ -269,9 +329,11 @@ export function App() {
       if (target.subject.kind === 'feature') store.select([target.subject.featureId]);
       else store.selectParts([target.subject.partId]);
 
+      // A problem is in the design: show it on the board.
+      showView('design');
       if (target.bounds !== null) canvasRef.current?.frame(target.bounds);
     },
-    [store],
+    [store, showView],
   );
 
   // A delete waiting on a decision about what follows it (ADR 0009). Null when
@@ -375,20 +437,21 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>LeatherCAD</h1>
+      <ProjectBar
+        project={storeState.document.project}
+        store={store}
+        dirty={dirty}
+        saved={file.state.path !== null}
+        onNew={() => void newProject()}
+        onOpen={() => void openProject()}
+        onSave={() => void file.save()}
+        onExport={() => void exportPdf()}
+      />
 
-        <Tooltip text="Project name — used for the file name and the PDF footer">
-          <input
-            className="project-name"
-            data-testid="project-name"
-            aria-label="Project name"
-            value={storeState.document.project.name}
-            placeholder="Untitled"
-            onChange={(event) => store.dispatch(setProjectName(event.target.value))}
-          />
-        </Tooltip>
-
+      {/* The work bar (F.8): what the maker is doing right now — history, the
+          active tool's options and its one line of guidance. The project and
+          its output are the bar above's; nothing here is about files. */}
+      <div className="work-bar" data-testid="work-bar" role="region" aria-label="Work">
         <div className="toolbar history" data-testid="history-group">
           {/* Names what it will undo. Disabled needs no reason beyond its own
               label: there is nothing to undo. */}
@@ -413,60 +476,26 @@ export function App() {
             Redo
           </button>
         </div>
-
-        <div className="toolbar">
-          <Tooltip text="Start a new project (Ctrl+N)">
-            <button
-              type="button"
-              className="tool"
-              data-testid="new"
-              onClick={() => void newProject()}
-            >
-              New
-            </button>
-          </Tooltip>
-          <Tooltip text="Open a project (Ctrl+O)">
-            <button
-              type="button"
-              className="tool"
-              data-testid="open"
-              onClick={() => void openProject()}
-            >
-              Open
-            </button>
-          </Tooltip>
-          <Tooltip text="Save (Ctrl+S) · Save as (Ctrl+Shift+S)">
-            <button
-              type="button"
-              className="tool"
-              data-testid="save"
-              onClick={() => void file.save()}
-            >
-              Save{dirty ? ' •' : ''}
-            </button>
-          </Tooltip>
-          <PaperControl settings={storeState.document.project.settings} store={store} />
-          <Tooltip
-            text={`Export a print-ready PDF at 1:1 on ${storeState.document.project.settings.paper} ${storeState.document.project.settings.orientation} (Ctrl+E)`}
-          >
-            <button
-              type="button"
-              className="tool"
-              data-testid="export-pdf"
-              onClick={() => void exportPdf()}
-            >
-              Export PDF
-            </button>
-          </Tooltip>
-        </div>
-
-        {/* What the active tool does with a click or a drag, true for that tool
-            and no other (F.1). Getting about the canvas comes last, so it is
-            what gives way when the header narrows. */}
-        <span className="app-hint" data-testid="tool-how-to">
-          {howToFor(toolId)} · scroll zooms · middle-drag pans
-        </span>
-      </header>
+        {view === 'design' ? (
+          <>
+            <ToolOptions
+              toolId={toolId}
+              drawAs={drawAs}
+              onDrawAs={setDrawAs}
+              hardware={hardware}
+              onHardware={setHardware}
+            />
+            {/* What the active tool does with a click or a drag, true for that
+                tool and no other (F.1). It is what gives way when the bar narrows. */}
+            <span className="work-hint" data-testid="tool-how-to">
+              {howToFor(toolId)} · scroll zooms · middle-drag pans
+            </span>
+          </>
+        ) : (
+          <SheetsSummary project={storeState.document.project} />
+        )}
+        <ViewSwitch view={view} onView={showView} />
+      </div>
 
       <div
         className={[
@@ -482,7 +511,7 @@ export function App() {
       >
         <ToolPalette
           activeId={toolId}
-          onSelect={setToolId}
+          onSelect={chooseTool}
           collapsed={railCollapsed}
           onToggleCollapsed={toggleRail}
         />
@@ -492,21 +521,20 @@ export function App() {
           selected={storeState.selection.features}
           selectedParts={storeState.selection.parts}
           badges={badges}
+          printStatus={printStatusFor(storeState.document.project)}
+          hoveredPart={view === 'sheets' ? hoveredPart : null}
+          onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
           onRemovePart={requestDeletePart}
           onDuplicatePart={requestDuplicatePart}
         />
         {/* The drawing is what the window is for: its main landmark. */}
         <main className="canvas-column" aria-label="Drawing">
-          <ToolOptions
-            toolId={toolId}
-            drawAs={drawAs}
-            onDrawAs={setDrawAs}
-            hardware={hardware}
-            onHardware={setHardware}
-          />
           <CanvasHost
             ref={canvasRef}
             store={store}
+            view={view}
+            hoveredPart={hoveredPart}
+            onHoverPart={setHoveredPart}
             toolId={toolId}
             nextId={nextId}
             onStatus={handleStatus}
@@ -514,7 +542,8 @@ export function App() {
             hardware={hardware}
             requestDelete={requestDelete}
           >
-            <CanvasLegend project={storeState.document.project} />
+            {/* The legend explains the board's marks; the sheets are ink. */}
+            {view === 'design' && <CanvasLegend project={storeState.document.project} />}
           </CanvasHost>
           <ProblemsPanel
             project={storeState.document.project}
@@ -587,7 +616,6 @@ export function App() {
               <>
                 <span className="sep">·</span>
                 <span data-testid="file-path">{fileName(file.state.path)}</span>
-                {dirty && <span className="dirty"> unsaved</span>}
               </>
             )}
           </span>
@@ -603,9 +631,11 @@ export function App() {
         </span>
 
         <span className="status-right" data-testid="cursor-readout">
-          {status === null || status.cursorMm === null
-            ? '— , —'
-            : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
+          {view === 'sheets'
+            ? (status?.sheet ?? '—')
+            : status === null || status.cursorMm === null
+              ? '— , —'
+              : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
         </span>
       </footer>
 

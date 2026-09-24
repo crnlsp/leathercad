@@ -55,14 +55,18 @@ in the print path.
         │                                              │
         ├──▶ PdfWriter    ──▶ tiled PDF                ├──▶ SvgWriter ──▶ .svg
         ├──▶ SvgWriter    ──▶ one .svg per page        ├──▶ PdfWriter ──▶ single-page .pdf
-        └──▶ Canvas2D     ──▶ on-screen print preview  └──▶ DxfWriter ──▶ .dxf   (v1.1)
+        └──▶ Canvas2D     ──▶ the Sheets view          └──▶ DxfWriter ──▶ .dxf   (v1.1)
 ```
 
 Two properties this buys, and they are the reason for the shape:
 
 - **The print preview and the printed PDF call the same `paginate()`.** They cannot disagree about
   page count, tile placement, or overlap, because a disagreement would be a bug in one function
-  rather than a mismatch between two implementations.
+  rather than a mismatch between two implementations. Built (7.4a–7.4c) as one derived `SheetPlan`:
+  the PDF writes it, and the app's sheet count, Parts labels and **Sheets view** read it. Everything
+  a sheet prints besides its pieces — the verification block, the footer, a tiled sheet's joins,
+  crosses, label and clip — is one description, `sheetInk`, which the writer prints and the Sheets
+  view draws. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md).
 - **All writers consume the same `ExportScene`.** SVG, PDF, and DXF cannot drift apart in what they
   include or where they place it.
 
@@ -255,8 +259,9 @@ Canvas2D and SVG require is absent here. One fewer place to get it wrong.
 4. Draw the scene items intersecting that rect.
 5. Draw registration marks (§7) outside the clip.
 6. Draw the calibration block (§8) in the bottom margin.
-7. Draw the footer: project name, page label, `1:1 — print at 100 %, do not fit to page`, and the
-   generation timestamp.
+7. Draw the footer: project name, the sheet label ("Sheet 2 of 3", from 7.4a; the word is "sheet"
+   on screen and on paper), `1:1 — print at 100 %, do not fit to page`, and the generation
+   timestamp.
 
 ### 6.3 Document-level metadata
 
@@ -295,7 +300,7 @@ tiled part follows the packed parts on sheets of its own. Nothing rotates.
   drawn in the margin so they do not overlay the pattern.
 - **Overlap band** shown as a light hatch with a solid trim line along its inner edge, plus the text
   `overlap 10 mm`. The user trims on the line and butts the pages, or leaves the band and laps them.
-- **Tile label** in the top-left margin: `R1C2`, plus `page 2 of 6`.
+- **Tile label** in the top-left margin: `R1C2`, plus `sheet 2 of 6`.
 - **Edge arrows** on each side that has a neighbour, labelled with the neighbour's tile id — so a
   user with pages spread on a table knows what joins what.
 - **Assembly sheet** as page 1 when there is more than one tile: a thumbnail of the whole pattern

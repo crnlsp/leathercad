@@ -12,8 +12,7 @@ import {
   renameFeature,
   setPartName,
   setPartQuantity,
-  setOrientation,
-  setPaper,
+  setPageSetup,
   setProjectName,
   setShape,
   translateFeatures,
@@ -42,8 +41,9 @@ const commandArb: fc.Arbitrary<Command> = fc.oneof(
   fc.constant(
     addPart(rectanglePart('part-2', 'feat-2', 'Second', rectShape({ x: 0, y: 0 }, 10, 10))),
   ),
-  fc.constantFrom(...PAPER_NAMES).map((paper) => setPaper(paper)),
-  fc.constantFrom(...ORIENTATIONS).map((orientation) => setOrientation(orientation)),
+  fc
+    .tuple(fc.constantFrom(...PAPER_NAMES), fc.constantFrom(...ORIENTATIONS))
+    .map(([paper, orientation]) => setPageSetup(paper, orientation)),
 );
 
 describe('undo', () => {
@@ -318,17 +318,25 @@ describe('setProjectName', () => {
   });
 });
 
-describe('the paper (6.4a)', () => {
-  it('chooses the paper and turns it, each an undoable step with its own name', () => {
+describe('the paper (6.4a, 7.4a)', () => {
+  it('chooses paper and orientation as one undoable step', () => {
     const store = new DocumentStore(docWithRect());
-    store.dispatch(setPaper('A3'));
-    store.dispatch(setOrientation('landscape'));
+    store.dispatch(setPageSetup('A3', 'landscape'));
 
     const { settings } = store.getState().document.project;
     expect([settings.paper, settings.orientation]).toEqual(['A3', 'landscape']);
-    expect(store.getState().undoLabel).toBe('Turn the paper');
-    store.undo();
     expect(store.getState().undoLabel).toBe('Change paper');
+    store.undo();
+    expect(store.getState().document.project.settings).toEqual(DEFAULT_SETTINGS);
+    expect(store.getState().canUndo).toBe(false);
+    store.redo();
+    expect(store.getState().document.project.settings.orientation).toBe('landscape');
+  });
+
+  it('turns the paper alone, still one step', () => {
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(setPageSetup('A4', 'landscape'));
+    expect(store.getState().document.project.settings.paper).toBe('A4');
     store.undo();
     expect(store.getState().document.project.settings).toEqual(DEFAULT_SETTINGS);
   });
@@ -338,8 +346,7 @@ describe('the paper (6.4a)', () => {
     // not make a clean project unsaved.
     const store = new DocumentStore(docWithRect());
     const before = store.getState().document;
-    store.dispatch(setPaper('A4'));
-    store.dispatch(setOrientation('portrait'));
+    store.dispatch(setPageSetup('A4', 'portrait'));
     expect(store.getState().document).toBe(before);
     expect(store.getState().canUndo).toBe(false);
   });
@@ -356,8 +363,7 @@ describe('the paper (6.4a)', () => {
       },
     };
     const store = new DocumentStore(withUnknown);
-    store.dispatch(setPaper('Letter'));
-    store.dispatch(setOrientation('landscape'));
+    store.dispatch(setPageSetup('Letter', 'landscape'));
 
     expect(store.getState().document.project.settings).toEqual({
       ...withUnknown.project.settings,

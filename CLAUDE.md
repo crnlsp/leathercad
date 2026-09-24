@@ -57,8 +57,10 @@ pnpm icons:generate   # render apps/desktop/build/icon.svg to .png/.ico/.icns (n
 before committing it. A baseline from `pnpm bench:baseline` only compares on the machine that
 recorded it.
 
-Work lands on a slice branch through a pull request, never by pushing to `main`. `pnpm install`
-installs a `pre-push` hook that enforces both halves of that. See `docs/roadmap.md` §2.4.
+Two long-lived branches: **`main` is production** — what is released — and **`develop` is
+development**. Work lands on `develop`; `develop` reaches `main` through a pull request when it is
+ready to release. Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
+refuses it and runs `pnpm check` on every push. See `docs/roadmap.md` §2.4.
 
 **pnpm and Node are pinned**: `packageManager` in `package.json`, and `.node-version`. CI reads
 both. Any installed pnpm switches itself to the pinned version. pnpm is not on PATH unless you have
@@ -138,6 +140,7 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | Anything structural | `docs/architecture.md` |
 | Phase 4's model (derivations, deletion, validation) | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
 | UI Foundations, F.0–F.7 | `docs/roadmap.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
+| The paper workflow and the window's bars (F.8, 7.4a–7.4d) | `docs/superpowers/specs/2026-09-24-sheets-workflow-design.md`; Design and Sheets stay separate views |
 | Tests | `docs/testing.md` |
 
 Run `/geo-check` and `/arch-check` before considering a slice done. If a change invalidates

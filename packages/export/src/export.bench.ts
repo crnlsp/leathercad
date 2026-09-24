@@ -3,8 +3,10 @@ import { uniformRadii } from '@leathercad/geometry';
 import { buildDisplayList, renderToSvgString } from '@leathercad/render';
 import { test, type Bench } from 'vitest';
 
+import { DEFAULT_PAGE_SETUP } from './paper.js';
 import { exportPdf } from './pdf/writer.js';
 import { buildExportScene } from './scene.js';
+import { planSheets } from './sheetPlan.js';
 
 /**
  * From a resolved project to what reaches the screen and the paper.
@@ -103,4 +105,9 @@ test('build the export scene', ({ bench }) =>
   measure(bench, 'export-scene', () => buildExportScene(resolved, project.name)));
 
 test('write the PDF', ({ bench }) =>
-  measure(bench, 'pdf', () => exportPdf(scene, { now: FIXED_NOW, applicationVersion: 'bench' })));
+  measure(bench, 'pdf', () =>
+    exportPdf(planSheets(scene, DEFAULT_PAGE_SETUP), {
+      now: FIXED_NOW,
+      applicationVersion: 'bench',
+    }),
+  ));

@@ -18,6 +18,7 @@ where a print dialog offers "fit to page".
 ## 2. What is built
 
 - **Two commands**, `setPaper(name)` and `setOrientation(orientation)`, in `packages/document`.
+  *(Replaced in 7.4a by one, `setPageSetup(paper, orientation)`: one choice, one undo step.)*
   - They are ordinary edits: undoable (*Change paper*, *Turn the paper*), they make the project
     unsaved, and they are saved with it and carried into a recovery copy.
   - Choosing what is already chosen returns the same document, so it earns no history and doesn't
@@ -61,6 +62,8 @@ choosing the paper made it one click away. The fix:
 - **A part too large for every paper** is still reported, never scaled. Printing it is tiling, 7.2a.
 - **An on-canvas paper outline** (the "paper reference" proposal). The screen and the PDF stay
   consistent because both read the one stored setting. The canvas doesn't draw the sheet.
+  *Superseded 2026-09-24: the Sheets view (7.4c) shows the real sheets. See
+  [Design and Sheets](2026-09-24-sheets-workflow-design.md).*
 
 ## 5. Acceptance criteria
 

@@ -22,6 +22,9 @@ Linux, Windows and macOS. Electron + TypeScript. Apache-2.0.
   Change a panel from 105 mm to 110 mm and its stitch line and holes update themselves.
 - **Problems stated, not hidden.** Holes too close to an edge, spacing far from the iron's pitch, a
   stitch line whose outline is gone: each is listed, and shown where it is.
+- **See the paper before you print.** The paper list says what each choice prints — *3 sheets of
+  A4, portrait*, *1 sheet of A4, landscape* — Parts says which sheet each part is on, and the
+  Sheets view shows the pieces on the paper exactly as the PDF will, taped joins included.
 - **Print at 1:1.** Export writes a vector PDF on A5, A4, A3, Letter or Legal, portrait or
   landscape. Nothing is ever scaled to fit: a part too big for the sheet is tiled across several.
   Every sheet carries a 50 mm square and a 100 mm ruler to check the print with.

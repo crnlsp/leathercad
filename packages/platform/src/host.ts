@@ -88,7 +88,16 @@ export interface PlatformHost {
 }
 
 /** What the application menu can ask the renderer to do. */
-export type MenuAction = 'new' | 'open' | 'save' | 'save-as' | 'export-pdf' | 'undo' | 'redo';
+export type MenuAction =
+  | 'new'
+  | 'open'
+  | 'save'
+  | 'save-as'
+  | 'export-pdf'
+  | 'undo'
+  | 'redo'
+  | 'view-design'
+  | 'view-sheets';
 
 /** A recovery copy found at startup. */
 export interface RecoveredCopy {

@@ -799,37 +799,22 @@ export function setProjectName(name: string): Command {
 }
 
 /**
- * Chooses the paper the project prints on (6.4a) — **the one place it is
- * decided**, read by the PDF export through `pageSetupFor`. Choosing what is
- * already chosen changes nothing, so it earns no history and does not make a
- * clean project unsaved. Every other setting is kept as it was, including one
- * a newer build wrote (5.2).
+ * Chooses the paper the project prints on and which way up (6.4a, 7.4a) —
+ * **the one place it is decided**, read by the export through `pageSetupFor`.
+ *
+ * Paper and orientation are one choice, made from one list whose every entry
+ * says what it prints ("1 sheet of A4, landscape"), so they are one command and
+ * one undo step. Choosing what is already chosen changes nothing, so it earns
+ * no history and does not make a clean project unsaved. Every other setting is
+ * kept as it was, including one a newer build wrote (5.2).
  */
-export function setPaper(paper: PaperName): Command {
-  return command('Change paper', (document) =>
-    document.project.settings.paper === paper
+export function setPageSetup(paper: PaperName, orientation: Orientation): Command {
+  return command('Change paper', (document) => {
+    const { settings } = document.project;
+    return settings.paper === paper && settings.orientation === orientation
       ? document
-      : {
-          project: {
-            ...document.project,
-            settings: { ...document.project.settings, paper },
-          },
-        },
-  );
-}
-
-/** Turns the paper, portrait or landscape. As `setPaper`. */
-export function setOrientation(orientation: Orientation): Command {
-  return command('Turn the paper', (document) =>
-    document.project.settings.orientation === orientation
-      ? document
-      : {
-          project: {
-            ...document.project,
-            settings: { ...document.project.settings, orientation },
-          },
-        },
-  );
+      : { project: { ...document.project, settings: { ...settings, paper, orientation } } };
+  });
 }
 
 export function setPartName(id: PartId, name: string): Command {

@@ -135,3 +135,14 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
 ];
 
 export const ALL_TOOLS: readonly ToolEntry[] = TOOL_GROUPS.flatMap((g) => g.tools);
+
+/**
+ * The tools that draw a new line — the ones *Draw as* applies to (F.8). The
+ * work bar offers it only for these: for Select, Rotate or Scale it would be
+ * a setting that does nothing.
+ */
+export const DRAWING_TOOL_IDS: ReadonlySet<string> = new Set(
+  TOOL_GROUPS.filter((group) => group.label === 'Draw').flatMap((group) =>
+    group.tools.map((tool) => tool.id),
+  ),
+);

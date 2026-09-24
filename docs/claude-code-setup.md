@@ -4,7 +4,7 @@ How this repository is configured to get useful work out of Claude Code, and —
 deliberately left out.
 
 **Status:** Design — no implementation yet
-**Last updated:** 2026-09-03
+**Last updated:** 2026-09-24
 
 ---
 
@@ -122,6 +122,20 @@ Drives the loop in [roadmap.md](roadmap.md) §2.2 — restate acceptance criteri
 packages, write tests first, implement, verify with `/geo-check` and `/arch-check`, run the app,
 update docs if an invariant changed, commit. Refuses to proceed if the slice has no written
 acceptance criteria.
+
+### `frontend-design`
+**Use when:** designing or reshaping UI in `packages/ui` or the theme in `packages/render/src/theme/`.
+
+Guidance on intentional visual design and interface copy: a compact token plan made before code,
+restraint, and plain labels that name what the user gets, not how the system is built. It is
+vendored verbatim from [anthropics/skills](https://github.com/anthropics/skills) at `34040c9`,
+under Apache-2.0, with its `LICENSE.txt` beside it. To update it, copy the upstream files over
+again rather than editing in place, so it stays diffable against upstream.
+
+It is written mostly for web pages, so where it disagrees with `CLAUDE.md`, `CLAUDE.md` wins:
+vendored fonts only, and tokens live in the theme, never in `styles.css`. It covers how the
+interface looks and reads, not how it behaves. Interaction models, such as how the board relates
+to printed pages, still need their own reasoning.
 
 ## 5. Slash commands
 

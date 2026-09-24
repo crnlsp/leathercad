@@ -17,6 +17,8 @@ import {
 import { Copy, Ellipsis, Eye, EyeOff, FlipHorizontal2, Lock, LockOpen, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { describePrintStatus, type PartPrintStatus } from '@leathercad/export';
+
 import { CountBadge } from './CountBadge.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
@@ -38,11 +40,23 @@ export function PartsList({
   selected,
   selectedParts,
   badges,
+  printStatus,
+  hoveredPart = null,
+  onHoverPart,
   onRemovePart,
   onDuplicatePart,
 }: {
   store: DocumentStore;
   project: Project;
+  /** On the Sheets view, the part under the pointer there: highlighted here (7.4d). */
+  hoveredPart?: string | null;
+  /** On the Sheets view, a row under the pointer: haloed on its sheets. */
+  onHoverPart?: ((partId: string | null) => void) | undefined;
+  /**
+   * Where each part prints, from the sheet plan the PDF writes (7.4b). Passed
+   * in so this tree, the sheet count and the Sheets view read one answer.
+   */
+  printStatus: ReadonlyMap<string, PartPrintStatus>;
   selected: ReadonlySet<string>;
   selectedParts: ReadonlySet<string>;
   /**
@@ -77,6 +91,9 @@ export function PartsList({
           selected={selected}
           isSelected={selectedParts.has(part.id)}
           badges={badges}
+          printStatus={printStatus.get(part.id) ?? null}
+          isHovered={hoveredPart === part.id}
+          onHoverPart={onHoverPart}
           onRemovePart={onRemovePart}
           onDuplicatePart={onDuplicatePart}
         />
@@ -91,21 +108,34 @@ function PartSection({
   selected,
   isSelected,
   badges,
+  printStatus,
+  isHovered,
+  onHoverPart,
   onRemovePart,
   onDuplicatePart,
 }: {
   store: DocumentStore;
   part: Part;
+  isHovered: boolean;
+  onHoverPart: ((partId: string | null) => void) | undefined;
   selected: ReadonlySet<string>;
   isSelected: boolean;
   badges: Badges;
+  printStatus: PartPrintStatus | null;
   onRemovePart: (partId: string) => void;
   onDuplicatePart: (partId: string) => void;
 }) {
   const visible = isPartVisible(part);
 
   return (
-    <section className={isSelected ? 'panel-section part selected' : 'panel-section part'}>
+    <section
+      className={['panel-section part', isSelected ? 'selected' : '', isHovered ? 'hovered' : '']
+        .filter((name) => name !== '')
+        .join(' ')}
+      data-testid={`part-section-${part.id}`}
+      onMouseEnter={onHoverPart === undefined ? undefined : () => onHoverPart(part.id)}
+      onMouseLeave={onHoverPart === undefined ? undefined : () => onHoverPart(null)}
+    >
       <div className="part-heading">
         <button
           type="button"
@@ -136,6 +166,7 @@ function PartSection({
         />
         <PartMenu part={part} onDuplicatePart={onDuplicatePart} onRemovePart={onRemovePart} />
       </div>
+      {printStatus !== null && <PrintLine status={printStatus} partId={part.id} />}
 
       {part.features.length === 0 ? (
         // A part is removed only on purpose (ADR 0009), so an emptied one
@@ -401,5 +432,28 @@ function IconToggle({
         {glyph}
       </button>
     </Tooltip>
+  );
+}
+
+/**
+ * Where the part prints, under its name (7.4b): `Sheet 1`, `Sheets 2–3,
+ * taped`, or `Not printed` with the reason — and, for a part that prints,
+ * whatever visible on the board stays off the paper. The maker should not
+ * have to infer from the canvas what the PDF will hold.
+ */
+function PrintLine({ status, partId }: { status: PartPrintStatus; partId: string }) {
+  const { label, note } = describePrintStatus(status);
+  return (
+    <p
+      className={status.sheets === null ? 'part-print not-printed' : 'part-print'}
+      data-testid={`part-print-${partId}`}
+    >
+      <span className="part-print-sheets">{label}</span>
+      {note !== null && (
+        <span className="part-print-note" data-testid={`part-print-note-${partId}`}>
+          {note}
+        </span>
+      )}
+    </p>
   );
 }

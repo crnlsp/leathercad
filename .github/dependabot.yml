@@ -5,6 +5,9 @@ updates:
   # nothing else in the repository watches them.
   - package-ecosystem: github-actions
     directory: /
+    # Updates are development work: they land on develop, and reach main with
+    # the next release like everything else.
+    target-branch: develop
     schedule:
       interval: weekly
     # A week's grace before proposing a release, so a compromised version is
@@ -24,6 +27,7 @@ updates:
   # the same three CI jobs as any other.
   - package-ecosystem: npm
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
     cooldown:

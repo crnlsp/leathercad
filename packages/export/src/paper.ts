@@ -90,11 +90,12 @@ export function sheetSizeMm(setup: PageSetup): { widthMm: Mm; heightMm: Mm } {
  * they are not the maker's decision yet (§ the 5.5 slice).
  */
 export function pageSetupFor(settings: ProjectSettings): PageSetup {
-  return {
-    ...DEFAULT_PAGE_SETUP,
-    paper: PAPER_SIZES[settings.paper],
-    orientation: settings.orientation,
-  };
+  return pageSetupOf(settings.paper, settings.orientation);
+}
+
+/** The page setup for a paper and orientation, with margins and footer as exported. */
+export function pageSetupOf(paper: PaperName, orientation: Orientation): PageSetup {
+  return { ...DEFAULT_PAGE_SETUP, paper: PAPER_SIZES[paper], orientation };
 }
 
 /**

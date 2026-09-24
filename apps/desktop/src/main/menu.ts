@@ -72,6 +72,11 @@ export function menuTemplate(options: {
   const view: MenuItemConstructorOptions = {
     label: 'View',
     submenu: [
+      // The two views of one pattern (7.4c): how it is designed, and the
+      // sheets it will print on.
+      action('Design', 'CmdOrCtrl+1', 'view-design'),
+      action('Sheets', 'CmdOrCtrl+2', 'view-sheets'),
+      { type: 'separator' },
       { role: 'togglefullscreen' },
       ...(packaged
         ? []

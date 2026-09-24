@@ -4,6 +4,7 @@ import type { DrawMode, HardwareOptions } from '@leathercad/editor';
 import { PUNCH_SIZES_MM } from './punches.js';
 import { FeatureMark } from './icons/marks.js';
 import type { Mark } from './icons/markFor.js';
+import { DRAWING_TOOL_IDS } from './tools.js';
 
 /**
  * One fixed result each (X4). *Outline* and *Stitch + allowance* each make a
@@ -36,19 +37,16 @@ const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
 ];
 
 /**
- * The options row above the canvas — **always present** (UI Foundations §7.1).
+ * The active tool's options, in the work bar (F.8) — **always present**, so
+ * the bar keeps its height and the board never jumps when the tool changes
+ * (UI Foundations §7.1).
  *
- * It used to render only for a tool with options, so the canvas grew and
- * shrank by its height on every tool change and the drawing jumped ~8.7 mm
- * under the pointer. Reserving the row removes that at its source, and keeps
- * *Draw as* — the setting that carries the leather meaning — on screen instead
- * of appearing and vanishing with the tool. Hardware shows its own settings;
- * every other tool shows what the next drawing will be.
- *
- * "Draw as" lives here rather than in the rail because it is not a mode: it
- * does not change what a click *does*, it changes what the result is *called*.
- * A fold line can be drawn with any of the five draw tools, so a tool per
- * combination would be fifteen buttons for three ideas.
+ * *Draw as* is offered only while a drawing tool is active: it does not change
+ * what a click *does*, it changes what the drawn line is *called*, and for
+ * Select, Rotate or Scale that is a setting with no effect. A fold line can be
+ * drawn with any of the five drawing tools, so a tool per combination would be
+ * fifteen buttons for three ideas. Hardware asks its own question here. Every
+ * other tool leaves the space to its one line of guidance, which follows.
  */
 export function ToolOptions({
   toolId,
@@ -64,6 +62,9 @@ export function ToolOptions({
   onHardware: (next: HardwareOptions) => void;
 }) {
   if (toolId !== 'hardware') {
+    if (!DRAWING_TOOL_IDS.has(toolId)) {
+      return <div className="tool-options" data-testid="tool-options" />;
+    }
     return (
       <div className="tool-options" data-testid="tool-options">
         <span className="draw-as-label">Draw as</span>

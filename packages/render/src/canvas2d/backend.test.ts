@@ -437,3 +437,52 @@ describe('the leather marks (F.7)', () => {
     expect(tick).toBeGreaterThan(lastGeometryStroke);
   });
 });
+
+describe('a clipped layer (7.4c)', () => {
+  it('clips to the millimetre rectangle, draws inside it, and restores', () => {
+    const ctx = new Recorder();
+    const list = {
+      items: [
+        pathItem(
+          'cut',
+          PathOps.polyline([
+            { x: -50, y: 0 },
+            { x: 50, y: 0 },
+          ]),
+        ),
+      ],
+    };
+    renderDisplayList(ctx, list, view, { clipMm: { minX: -10, minY: -5, maxX: 10, maxY: 5 } });
+
+    const clipAt = ctx.calls.indexOf('clip()');
+    const strokeAt = ctx.calls.findIndex((c) => c.startsWith('stroke('));
+    expect(clipAt).toBeGreaterThan(-1);
+    // The clip is traced in millimetres, under the world transform…
+    expect(ctx.calls.slice(0, clipAt)).toEqual(
+      expect.arrayContaining(['moveTo(-10.0000,-5.0000)', 'lineTo(10.0000,5.0000)']),
+    );
+    // …before anything is drawn, and taken away after.
+    expect(strokeAt).toBeGreaterThan(clipAt);
+    expect(ctx.calls.at(-1)).toBe('restore()');
+    expect(ctx.calls.filter((c) => c === 'save()').length).toBe(
+      ctx.calls.filter((c) => c === 'restore()').length,
+    );
+  });
+
+  it('draws exactly as before without one', () => {
+    const list = {
+      items: [
+        pathItem(
+          'cut',
+          PathOps.polyline([
+            { x: 0, y: 0 },
+            { x: 5, y: 0 },
+          ]),
+        ),
+      ],
+    };
+    const plain = new Recorder();
+    renderDisplayList(plain, list, view);
+    expect(plain.calls).not.toContain('clip()');
+  });
+});

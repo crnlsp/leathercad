@@ -65,6 +65,8 @@ describe('the application menu', () => {
     ['Export PDF…', 'export-pdf', 'CmdOrCtrl+E'],
     ['Undo', 'undo', 'CmdOrCtrl+Z'],
     ['Redo', 'redo', 'CmdOrCtrl+Shift+Z'],
+    ['Design', 'view-design', 'CmdOrCtrl+1'],
+    ['Sheets', 'view-sheets', 'CmdOrCtrl+2'],
   ] as const)('%s asks the renderer for %s, and shows %s', (label, action, accelerator) => {
     const { template, send } = build();
     const entry = item(template, label);

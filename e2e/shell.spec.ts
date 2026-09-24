@@ -63,11 +63,11 @@ async function withFreshApp(
   }
 }
 
-test('opens a window titled LeatherCAD', async () => {
+test('opens a window titled after its project, then LeatherCAD (F.8)', async () => {
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
 
-  await expect(window).toHaveTitle('LeatherCAD');
+  await expect(window).toHaveTitle('Untitled — LeatherCAD');
 });
 
 test('reaches the main process through the platform bridge', async () => {
@@ -341,9 +341,9 @@ test('saves a project and reopens it with its parameters intact', async () => {
     await window.getByTestId('part-name').fill('Card holder');
 
     // The dot marks unsaved changes.
-    await expect(window.getByTestId('save')).toContainText('•');
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
     await window.getByTestId('save').click();
-    await expect(window.getByTestId('save')).not.toContainText('•');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     expect(existsSync(target)).toBe(true);
 
     // Throw the work away, then get it back from disk.
@@ -453,6 +453,61 @@ test('history sits apart from the file actions', async () => {
   await withFreshApp(async (window) => {
     await expect(window.getByTestId('history-group').getByTestId('undo')).toBeVisible();
     await expect(window.getByTestId('history-group').getByTestId('save')).toHaveCount(0);
+  });
+});
+
+test('the project bar holds the project and its output; the work bar holds the work (F.8)', async () => {
+  await withFreshApp(async (window) => {
+    const project = window.getByTestId('project-bar');
+    const work = window.getByTestId('work-bar');
+
+    // The project, its file actions, the sheets it prints on, and printing.
+    for (const id of ['project-name', 'save-state', 'save', 'new', 'open', 'paper', 'export-pdf']) {
+      await expect(project.getByTestId(id), id).toHaveCount(1);
+      await expect(work.getByTestId(id), id).toHaveCount(0);
+    }
+    // History, the active tool's options and its guidance.
+    for (const id of ['undo', 'redo', 'tool-options', 'tool-how-to']) {
+      await expect(work.getByTestId(id), id).toHaveCount(1);
+      await expect(project.getByTestId(id), id).toHaveCount(0);
+    }
+
+    // Export PDF is the one primary action in the window.
+    await expect(window.locator('.primary')).toHaveCount(1);
+    await expect(window.getByTestId('export-pdf')).toHaveClass(/primary/);
+  });
+});
+
+test('Draw as is offered only while a drawing tool is active (F.8)', async () => {
+  await withFreshApp(async (window) => {
+    for (const tool of ['rectangle', 'circle', 'arc', 'line', 'polyline']) {
+      await window.getByTestId(`tool-${tool}`).click();
+      await expect(window.getByTestId('draw-as-outline'), tool).toBeVisible();
+    }
+    for (const tool of ['select', 'rotate', 'scale', 'text', 'measure', 'hardware']) {
+      await window.getByTestId(`tool-${tool}`).click();
+      await expect(window.getByTestId('tool-how-to')).toContainText(
+        tool === 'select' ? 'Click to select' : '',
+      );
+      await expect(window.getByTestId('draw-as-outline'), tool).toHaveCount(0);
+    }
+  });
+});
+
+test('the window and the project bar say which project it is, and whether it is saved (F.8)', async () => {
+  await withFreshApp(async (window) => {
+    await expect(window).toHaveTitle('Untitled — LeatherCAD');
+    await expect(window.getByTestId('save-state')).toHaveText('');
+
+    await window.getByTestId('project-name').fill('Card holder');
+    await expect(window).toHaveTitle('• Card holder — LeatherCAD');
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+
+    // Undone back to where it started: clean again, and untitled.
+    await window.getByTestId('project-name').blur();
+    await window.getByTestId('undo').click();
+    await expect(window).toHaveTitle('Untitled — LeatherCAD');
+    await expect(window.getByTestId('save-state')).toHaveText('');
   });
 });
 
@@ -742,11 +797,11 @@ test('the options row is always there, so the drawing never jumps (F.2)', async 
   });
 });
 
-test('the canvas takes every pixel the options strip is not using', async () => {
+test('the canvas takes every pixel the problems drawer is not using', async () => {
   // A canvas that collapses to its intrinsic 150px still passes a width-only
-  // check while every drag below it silently misses. The options row takes a
-  // band above, the problems drawer's handle one below, and the canvas the
-  // rest.
+  // check while every drag below it silently misses. The work bar sits above
+  // the whole workspace (F.8), the problems drawer's handle below the canvas,
+  // and the canvas takes the rest of its column.
   await withFreshApp(async (window) => {
     const heights = async (): Promise<{
       host: number;
@@ -760,7 +815,7 @@ test('the canvas takes every pixel the options strip is not using', async () => 
         return {
           host: height('.canvas-host'),
           column: height('.canvas-column'),
-          strip: height('.tool-options'),
+          strip: height('.work-bar'),
           drawer: height('.problems-drawer'),
         };
       });
@@ -770,7 +825,7 @@ test('the canvas takes every pixel the options strip is not using', async () => 
     expect(layout.column).toBeGreaterThan(400);
     expect(layout.strip).toBeGreaterThan(0);
     expect(layout.drawer).toBeGreaterThan(0);
-    expect(layout.host).toBe(layout.column - layout.strip - layout.drawer);
+    expect(layout.host).toBe(layout.column - layout.drawer);
   });
 });
 
@@ -794,14 +849,20 @@ test('the workspace narrows instead of pushing the properties panel off screen',
   });
 });
 
-test('the header stays one row when the window narrows', async () => {
+test('the project bar and the work bar each stay one row when the window narrows', async () => {
   // A header that wrapped to two lines at 1280 is what prompted the whole
-  // layout. The hint is the least important thing in the row, so it is the
-  // thing that gives — the controls must not fold.
+  // layout. The hint is the least important thing in the work bar, so it is
+  // the thing that gives — the controls must not fold.
   await withFreshApp(async (window, instance) => {
     const headerHeight = async (): Promise<number> =>
       window.evaluate(() =>
-        Math.round(document.querySelector('.app-header')?.getBoundingClientRect().height ?? 0),
+        Math.round(
+          ['.project-bar', '.work-bar']
+            .map(
+              (selector) => document.querySelector(selector)?.getBoundingClientRect().height ?? 0,
+            )
+            .reduce((a, b) => a + b, 0),
+        ),
       );
 
     const wide = await headerHeight();
@@ -1688,7 +1749,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 
     await window.getByTestId('save').click();
-    await expect(window.getByTestId('save')).not.toContainText('•');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
 
     // Throw it away and get it back from disk, at format version 5.
     await window.getByTestId('tool-select').click();

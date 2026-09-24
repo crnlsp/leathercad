@@ -188,14 +188,18 @@ and correct.
    ResolvedDocument
         │  buildExportScene()  — document text as glyph outlines
         ▼
-   ExportScene ──▶ Paginator ──▶ Page[] ──▶ PDF / SVG / DXF writers
-                                   └──────▶ Canvas2D backend (print preview)
+   ExportScene ──▶ planSheets() ──▶ SheetPlan ──┬──▶ PDF writer (with sheetInk)
+                                                 ├──▶ sheet count, Parts' "Sheet 2", tape joins
+                                                 └──▶ sheetsView() ──▶ Canvas2D (the Sheets view)
 ```
 
 Two properties matter here:
 
-- **Print preview and the PDF share the paginator.** They cannot drift apart, because a drift would
-  be a bug in the same function.
+- **The Sheets view and the PDF share one sheet plan** (7.4a–7.4c). `planSheets` paginates once,
+  the PDF writes that plan, and everything the app says about paper reads it — so the preview is
+  the print. What a sheet prints besides its pieces is one description, `sheetInk`, drawn by both.
+  The plan is derived and never stored, and it depends on neither the window nor where pieces sit
+  on the board.
 - **The SVG backend renders the same `DisplayList` as the screen.** This makes SVG-string snapshots
   a valid proxy for "what does the canvas draw", which is the backbone of the rendering test
   strategy in [testing.md](testing.md) §5.

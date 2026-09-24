@@ -9,6 +9,7 @@
  */
 export { ACCENT, GROUND, SHELL, STATE } from './palette.js';
 export { CANVAS, alpha } from './canvas.js';
+export { PAPER_FURNITURE, SHEET } from './sheets.js';
 export { NOMINAL_IRON } from './iron.js';
 export { DASH_LEGIBLE_PX, ROLE_STYLES, screenDash, type RoleStyle } from './roles.js';
 export { DENSITY, type Density } from './tokens.js';

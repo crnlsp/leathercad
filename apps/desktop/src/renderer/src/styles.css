@@ -99,7 +99,8 @@ body {
      min-content and drags every other row out with it, which is how one
      stubborn header pushed the properties panel past the window edge. */
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto;
+  /* Project bar, work bar, the workspace, the status bar (F.8). */
+  grid-template-rows: auto auto 1fr auto;
   height: 100%;
 }
 
@@ -265,39 +266,114 @@ body {
   flex: 1;
 }
 
+/*
+ * The two bars differ in kind, not only in place (F.8).
+ *
+ * The project bar is state: a title, whether it is saved, and what it will
+ * print on, on the darkest shell with almost no chrome. The work bar is the
+ * thing in hand: history, the tool's options as chips, its guidance — on the
+ * panels' surface, so it reads as part of the workspace below it.
+ */
+.project-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 4px 14px;
+  background: var(--shell-900);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.project-identity,
+.project-output {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+/* When the window narrows, the name gives way before the output does. */
+.project-identity {
+  flex: 0 1 auto;
+}
+
+.project-identity > * {
+  flex: none;
+}
+
+.project-identity > :has(> .project-name) {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 6ch;
+}
+
+.project-output {
+  flex: none;
+}
+
+/* Said once, beside the project it is about. */
+.save-state {
+  color: var(--text-mute);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.save-state.unsaved {
+  color: var(--tan);
+}
+
+.work-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* A fixed height, not its content's: the bar is reserved so the board never
+     moves when the tool changes (§7.1), and chips and selects differ by a few
+     pixels. */
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 14px;
+  font: var(--t-label);
+  background: var(--shell-700);
+  border-bottom: 1px solid var(--shell-line);
+}
+
 .tool-options {
   display: flex;
   flex: none;
   align-items: center;
   gap: 4px;
-  /* A fixed height, not its content's: the row is reserved so the canvas never
-     moves when the tool changes (§7.1), and chips and selects differ by a few
-     pixels. */
-  box-sizing: border-box;
-  height: 38px;
-  padding: 0 10px;
-  font: var(--t-label);
-  background: var(--shell-700);
-  border-bottom: 1px solid var(--shell-line);
 }
 
-.app-header {
+/* Design | Sheets, at the end of the work bar: it changes the board. */
+.view-switch {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--shell-700);
-  border-bottom: 1px solid var(--shell-line);
+  flex: none;
+  gap: 2px;
+  margin-left: auto;
+  padding-left: var(--space-2);
 }
 
-.app-header h1 {
+/* The sheet plan in words, while the Sheets view shows. */
+.sheets-summary {
+  flex: 0 1 auto;
+  min-width: 0;
   margin: 0;
-  font: var(--t-strong);
+  overflow: hidden;
+  color: var(--text);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.app-subtitle {
-  color: var(--tan);
-  font: var(--t-label);
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .canvas-host {
@@ -316,13 +392,13 @@ body {
   cursor: grabbing;
 }
 
-/* The hint is the least important thing in the header, so it is the one that
-   gives when the window narrows. Without this the controls fold instead, and a
-   two-line header is what the whole layout exists to remove. */
-.app-hint {
+/* The hint is the least important thing in the work bar, so it is the one
+   that gives when the window narrows. Without this the controls fold instead,
+   and a two-line bar is what the whole layout exists to remove. */
+.work-hint {
   flex: 0 1 auto;
   min-width: 0;
-  margin-left: auto;
+  margin-left: var(--space-2);
   overflow: hidden;
   color: var(--text-dim);
   font: var(--t-label);
@@ -394,12 +470,30 @@ body {
   align-items: center;
 }
 
-/* Undo and redo are history, not persistence. The header reads identity, then
-   history, then file — and the rule keeps the two groups from blurring. */
+/* Undo and redo lead the work bar; the rule sets them apart from the tool's
+   own options. */
 .toolbar.history {
   margin-right: 6px;
   padding-right: 12px;
   border-right: 1px solid var(--shell-line);
+}
+
+/* The one primary action in the window: Export PDF (UI Foundations §5). */
+.tool.primary {
+  border-color: var(--tan);
+  background: var(--tan);
+  color: var(--on-tan);
+  font-weight: 600;
+}
+
+.tool.primary:hover:not(:disabled) {
+  border-color: var(--tan-ink);
+  color: var(--on-tan);
+}
+
+/* Project management that is not the main thing: New and Open. */
+.tool.quiet {
+  border-color: transparent;
 }
 
 .tool {
@@ -451,16 +545,40 @@ body {
   color: var(--text);
 }
 
-/* The paper the PDF prints on, beside the button that prints it (6.4a): the
-   size, then which way up. */
-.paper-control {
+/* The paper, said as what it produces (7.4a): the sheets drawn small, then
+   "3 sheets of A4, portrait". */
+.sheet-indicator {
   display: flex;
-  gap: 2px;
+  gap: var(--space-2);
   align-items: center;
-  margin-left: 6px;
 }
 
-.paper-select {
+.sheet-glyph {
+  flex: none;
+  color: var(--text-dim);
+}
+
+.sheet-glyph-sheet {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.sheet-glyph-join {
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-dasharray: 2 1;
+}
+
+.sheet-glyph-more {
+  fill: currentColor;
+  font: var(--t-micro);
+}
+
+.sheet-select {
+  /* A native select is as wide as its longest entry, and an entry names the
+     taped parts: long names must not push Export PDF off a narrow window. */
+  max-width: min(22rem, 34vw);
   min-height: var(--h-control);
   padding: 0 4px;
   border: 1px solid var(--shell-line);
@@ -470,7 +588,7 @@ body {
   font: var(--t-label);
 }
 
-.paper-select:focus-visible {
+.sheet-select:focus-visible {
   border-color: var(--tan);
   outline: none;
 }
@@ -763,18 +881,20 @@ body {
   color: var(--error);
 }
 
-.dirty {
-  color: var(--tan);
-}
-
+/* The window's one title: the project, editable where it stands. */
 .project-name {
-  width: 150px;
+  field-sizing: content;
+  /* The name is what gives way when the window narrows, never the actions. */
+  min-width: 0;
+  max-width: min(40ch, 100%);
   padding: 3px 7px;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--text);
-  font: var(--t-body);
+  font: var(--t-panel);
+  letter-spacing: var(--tracking-title);
+  text-overflow: ellipsis;
 }
 
 .project-name:hover {
@@ -1035,6 +1155,28 @@ button.problem-row:hover {
 
 .part-name:hover {
   background: var(--shell-600);
+}
+
+/* Where the part prints (7.4b): quiet when all of it reaches paper, and in
+   the warning colour when something the board shows will not. */
+.part-print {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  margin: 0 0 2px 30px;
+  color: var(--text-dim);
+  font: var(--t-micro);
+  font-weight: 400;
+}
+
+/* On the Sheets view, the part under the pointer there (7.4d). */
+.part.hovered {
+  background: var(--shell-600);
+}
+
+.part-print-note,
+.part-print.not-printed .part-print-sheets {
+  color: var(--warning);
 }
 
 .feature-row {

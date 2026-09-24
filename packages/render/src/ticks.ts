@@ -22,8 +22,12 @@ export function niceTickStepMm(minSpacingPx: number, pxPerMm: number): Mm {
   const exponent = Math.floor(Math.log10(minimumMm));
   const base = Math.pow(10, exponent);
 
+  // Compared in pixels, as the spacing is asked for — not against
+  // `minimumMm`, whose division can round up past a step that meets it
+  // exactly: 1.0000000000000004 px at 0.05000000000000002 px/mm needs 20 mm,
+  // which the quotient made look 4e-15 mm too short, and 50 came back.
   for (const multiple of [1, 2, 5]) {
-    if (base * multiple >= minimumMm) return base * multiple;
+    if (base * multiple * pxPerMm >= minSpacingPx) return base * multiple;
   }
   return base * 10;
 }

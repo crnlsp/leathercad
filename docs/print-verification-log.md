@@ -30,16 +30,24 @@ handling. That is what this file is for.
 
 ## The procedure
 
+This is step 3 of the full 1.0 gate, [`release-1.0-validation.md`](release-1.0-validation.md).
+
 About ten minutes, with a **steel rule** (not a tape) graduated in half millimetres. Once on each of
 Linux, Windows and macOS, from that platform's default PDF viewer.
 
 1. **Open** `fixtures/projects/print-test.lcp` in the LeatherCAD build under test. Note the version
-   in the status bar. The project is on A4 portrait; if the printer holds Letter, set *Paper* to
-   Letter first — the layout changes, the measurements do not.
-2. **Export PDF.** Save it anywhere. It opens in the system's PDF viewer.
-3. **Print from that viewer**, at *Actual size* / *100 %* — not *Fit*, not *Shrink oversized
-   pages*. Note the viewer and the exact name of the setting chosen. Three sheets come out.
-4. **Measure**, each to the nearest half millimetre:
+   in the status bar. The project is on A4 portrait, and the paper list beside *Export PDF* says
+   *3 sheets of A4, portrait (Strap taped)*. If the printer holds Letter, choose *3 sheets of
+   Letter, portrait (Strap taped)* first — the layout changes, the measurements do not.
+2. **Look at the Sheets view** (*Sheets*, or Ctrl+2) and note what it shows: three sheets, the
+   panel and the pocket on sheet 1, the strap across sheets 2 and 3 with a dashed join. Since 7.4c
+   the Sheets view and the PDF are drawn from one sheet plan; the paper must match it.
+3. **Export PDF.** Save it anywhere. It opens in the system's PDF viewer.
+4. **Print from that viewer**, at *Actual size* / *100 %* — not *Fit*, not *Shrink oversized
+   pages*. Note the viewer and the exact name of the setting chosen. Three sheets come out, their
+   footers reading *Sheet 1 of 3*, *Sheet 2 of 3* and *Sheet 3 of 3*, each carrying what the
+   Sheets view showed on it.
+5. **Measure**, each to the nearest half millimetre:
 
    | # | Where | What | Expected |
    |---|---|---|---|
@@ -57,7 +65,7 @@ Linux, Windows and macOS, from that platform's default PDF viewer.
    come out at 3.850 mm and whose rounded top at 3.922 mm — and ten holes are nine gaps, not ten.
    Both mistakes were once in this file.
 
-5. **Record** a row below. A reading more than **0.5 mm** from expected — one graduation — is a
+6. **Record** a row below. A reading more than **0.5 mm** from expected — one graduation — is a
    failure. Record it anyway, with what was tried: a failing row is exactly what this file is for.
 
 ## Entries

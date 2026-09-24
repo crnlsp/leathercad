@@ -141,8 +141,28 @@ shared endpoints, optionally closed. Has no style, no meaning, and no pixels.
 independent. Consumed by the SVG, PDF, and DXF writers, and by the paginator.
 
 **Paginator** — The pure function that slices an export scene into printed pages given a paper
-size, margins, and overlap. Shared by the PDF writer and the on-screen print preview, so that they
-cannot disagree.
+size, margins, and overlap. Its result, in a sheet plan, is shared by the PDF writer and the Sheets
+view, so that they cannot disagree.
+
+**Sheet** — One physical piece of paper of the chosen size and orientation, and the PDF page that
+prints it: "Sheet 2 of 3" on screen is page 2 of the PDF and says so in its footer. Use *sheet* in
+the UI and on paper; *page* only for the PDF file format itself. A sheet has its paper edge, 10 mm
+margins, the verification block, and the **printable area** left over.
+
+**Printable area** — The part of a sheet a pattern may occupy: the paper less margins and the
+verification block (`contentAreaMm`). A4 portrait prints up to 190 × 215 mm, not 210 × 297.
+
+**Taped piece** — A part too large for the printable area, printed as tiles across several sheets
+that overlap by 10 mm and are taped together on their join lines. Its sheets are "Sheets 2–3,
+taped".
+
+**Sheet plan** — The derived result of paginating the export scene for the chosen paper: which
+sheets exist and what each carries. Recomputed from the document, never stored. The PDF writes it;
+the sheet count, Parts labels and Sheets view read it.
+
+**Design view / Sheets view** — The two views of one pattern. *Design* is the board where the maker
+arranges and relates pieces, freely. *Sheets* shows the same pieces as the sheet plan puts them on
+paper. Board positions never affect the sheets, and nothing in the Sheets view is edited.
 
 **Registration mark** — Crosshairs, corner marks, and tile labels printed on tiled pages so the
 user can align and tape them together accurately.

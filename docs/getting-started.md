@@ -58,18 +58,26 @@ changes, it asks first.
 
 ## 5. Print, and check the print
 
-1. Choose the paper in your printer, and its orientation, under **Paper**.
-2. **Export PDF** (**Ctrl+E**). The PDF opens in your system's PDF viewer. A part bigger than the
-   sheet is printed across several, with a dashed line and crosses to join them by; the app tells
-   you which parts it tiled.
-3. Print from the viewer at **Actual size** or **100 %** — never *Fit to page* or *Shrink*.
-4. Check it with a steel rule. **Every sheet has a 50 mm square and a 100 mm ruler.** If they
+1. Choose the paper in your printer from the list beside **Export PDF**. Each entry says what it
+   prints, for example *3 sheets of A4, portrait (Strap taped)* or *1 sheet of A4, landscape*, so
+   you can pick the one that uses the fewest sheets. **Parts** says which sheet each part prints
+   on, and why a part will not print (it is hidden, or it has a problem).
+2. Choose **Sheets** at the right of the bar under the project's name (**Ctrl+2**) to see the pieces
+   on the paper exactly as the PDF will put them. A part bigger than a sheet is printed across
+   several, taped together on a dashed join line with crosses on it; its joins also show on the
+   board, labelled *Tape join*. Anything drawn in magenta is only on screen, never on paper.
+   **Design** (**Ctrl+1**) takes you back to the board, where you left it.
+3. **Export PDF** (**Ctrl+E**). The PDF is what the Sheets view showed, sheet for sheet — its pages
+   are numbered *Sheet 1 of 3* like the view — and it opens in your system's PDF viewer.
+4. Print from the viewer at **Actual size** or **100 %** — never *Fit to page* or *Shrink*.
+5. Check it with a steel rule. **Every sheet has a 50 mm square and a 100 mm ruler.** If they
    measure 50 and 100, everything on the sheet is true to size. If they do not, the viewer or the
    printer scaled it: fix the print setting and print again.
 
 ## Where things are
 
-- **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo.
+- **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
+  **Ctrl+1** and **Ctrl+2** switch between Design and Sheets.
 - **Logs:** *Help → Show Log Folder*. Nothing is ever uploaded; attach the log to a bug report.
 - **Licences:** *Help → Third-Party Notices*, and `THIRD_PARTY_NOTICES.txt` beside the app.
 - **Bugs and ideas:** [GitHub issues](https://github.com/cornelisp/leathercad/issues).

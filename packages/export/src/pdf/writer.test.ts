@@ -25,6 +25,8 @@ import {
   verificationLayout,
 } from '../paper.js';
 import { buildExportScene } from '../scene.js';
+import { planSheets } from '../sheetPlan.js';
+
 import { exportPdf } from './writer.js';
 
 const FIXED_NOW = (): Date => new Date('2026-09-04T12:00:00.000Z');
@@ -123,9 +125,8 @@ function projectWithRect(widthMm: number, heightMm: number, radius = 0): Project
 
 async function pdfFor(project: Project): Promise<Uint8Array> {
   const scene = buildExportScene(evaluate(project), project.name);
-  const { bytes } = await exportPdf(scene, {
-    // What the application passes: the project's own paper, not a fallback.
-    setup: pageSetupFor(project.settings),
+  // What the application passes: the plan for the project's own paper.
+  const { bytes } = await exportPdf(planSheets(scene, pageSetupFor(project.settings)), {
     now: FIXED_NOW,
     applicationVersion: 'test',
   });
@@ -718,11 +719,9 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     // halves must be the strap — at 1:1, with nothing lost in the overlap.
     const project = projectWithRect(250, 100);
     const scene = buildExportScene(evaluate(project), project.name);
-    const { bytes, pagination } = await exportPdf(scene, {
-      setup: pageSetupFor(project.settings),
-      now: FIXED_NOW,
-      applicationVersion: 'test',
-    });
+    const plan = planSheets(scene, pageSetupFor(project.settings));
+    const { bytes } = await exportPdf(plan, { now: FIXED_NOW, applicationVersion: 'test' });
+    const { pagination } = plan;
     expect(pagination.pages).toHaveLength(2);
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);
 

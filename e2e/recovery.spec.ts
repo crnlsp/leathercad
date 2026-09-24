@@ -84,7 +84,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
   }, project);
   await drawAPanel(first.window, 150);
   await first.window.getByTestId('save').click();
-  await expect(first.window.getByTestId('save')).toHaveText('Save');
+  await expect(first.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
   const saved = readFileSync(project);
 
   // Unsaved work, then a copy of it, then the crash.
@@ -103,7 +103,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
 
     // Back, as it was — and untitled and unsaved, not the file it came from.
     await expect(second.window.getByTestId('part-count')).toHaveText('2');
-    await expect(second.window.getByTestId('save')).toHaveText('Save •');
+    await expect(second.window.getByTestId('save-state')).toHaveText('Unsaved changes');
     await expect(second.window.getByTestId('status-bar')).not.toContainText(basename(project));
     expect(readFileSync(project).equals(saved)).toBe(true);
 
@@ -113,7 +113,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, elsewhere);
     await second.window.getByTestId('save').click();
-    await expect(second.window.getByTestId('save')).toHaveText('Save');
+    await expect(second.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     expect(existsSync(elsewhere)).toBe(true);
     expect(readFileSync(project).equals(saved)).toBe(true);
   } finally {

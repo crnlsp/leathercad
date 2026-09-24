@@ -72,7 +72,7 @@ test.afterAll(async () => {
 test('starts, and reports the packaged version through the bridge', async () => {
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
-  await expect(window).toHaveTitle('LeatherCAD');
+  await expect(window).toHaveTitle('Untitled — LeatherCAD');
   await expect(window.getByTestId('bridge-error')).toHaveCount(0);
   await expect(window.getByTestId('app-version')).toContainText(VERSION);
 });

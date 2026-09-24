@@ -24,7 +24,7 @@ on:
       - 'pnpm-workspace.yaml'
       - '.github/workflows/package.yml'
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'apps/desktop/**'
       - 'e2e/packaged/**'

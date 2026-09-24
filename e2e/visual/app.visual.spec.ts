@@ -119,3 +119,34 @@ test('a stitched panel on the canvas', async () => {
     await closeApp(app);
   }
 });
+
+test('the print test on its sheets (7.4c)', async () => {
+  const { app, window } = await launch();
+  try {
+    // The footer is dated, as the PDF's is: fix the day, or the reference
+    // would fail tomorrow.
+    await window.clock.setFixedTime(new Date('2026-09-24T12:00:00.000Z'));
+    await app.evaluate(
+      ({ dialog }, path) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+      },
+      resolve(import.meta.dirname, '../../fixtures/projects/print-test.lcp'),
+    );
+    await window.getByTestId('open').click();
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+
+    await window.getByTestId('view-sheets').click();
+    await expect(window.getByTestId('sheets-summary')).toHaveText(
+      '3 sheets of A4, portrait. Strap is taped across sheets 2–3.',
+    );
+    // The pointer off the canvas: no piece haloed, no sheet named.
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.mouse.move(box!.x + 5, box!.y + 5);
+    await window.mouse.move(0, 0);
+    await expect(window.getByTestId('cursor-readout')).toHaveText('—');
+
+    await expect(window.getByTestId('editor-canvas')).toHaveScreenshot('print-test-sheets.png');
+  } finally {
+    await closeApp(app);
+  }
+});

@@ -51,6 +51,12 @@ describe('niceTickStepMm', () => {
     );
   });
 
+  it('takes a step that meets the spacing exactly, not the next one up', () => {
+    // Found by the property above (seed -1845172983): the quotient rounded
+    // 20 mm up past itself and the ruler jumped to 50.
+    expect(niceTickStepMm(1.0000000000000004, 0.05000000000000002)).toBe(20);
+  });
+
   it('gives 1 mm at a comfortable zoom and coarsens as you zoom out', () => {
     expect(niceTickStepMm(8, 10)).toBe(1);
     expect(niceTickStepMm(8, 4)).toBe(2);

@@ -1,6 +1,5 @@
 import type { Mm } from '@leathercad/core';
 import { EXPORT_TOLERANCE_MM, SegmentOps, type Path, type Vec2 } from '@leathercad/geometry';
-import { outlinesOf, placedText, textWidthMm, type TextPlacement } from '@leathercad/typography';
 import {
   PDFDocument,
   PrintScaling,
@@ -24,20 +23,19 @@ import {
   type PDFPage,
 } from 'pdf-lib';
 
-import { paginate, type Page, type PaginationResult, type Tile } from '../paginate.js';
+import type { Page } from '../paginate.js';
 import {
   DEFAULT_PAGE_SETUP,
   contentAreaMm,
-  VERIFICATION_TEXT,
   mmToPt,
   sheetSizeMm,
-  verificationLayout,
   type PageSetup,
 } from '../paper.js';
-import type { ExportPath, ExportScene, ExportText } from '../scene.js';
+import type { ExportPath, ExportText } from '../scene.js';
+import { sheetInk, type SheetInk } from '../sheetInk.js';
+import type { SheetPlan } from '../sheetPlan.js';
 
 export interface PdfExportOptions {
-  readonly setup?: PageSetup;
   /** Injected so an exported file is reproducible. */
   readonly now?: () => Date;
   readonly applicationVersion?: string;
@@ -45,18 +43,9 @@ export interface PdfExportOptions {
 
 export interface PdfExportResult {
   readonly bytes: Uint8Array;
-  readonly pagination: PaginationResult;
 }
 
 const APP_NAME = 'LeatherCAD';
-
-/**
- * Page furniture, in millimetres.
- *
- * Everything printed is sized in millimetres now, including the text: there is
- * no font to ask for a point size any more, only outlines at a height.
- */
-const NOTE_SIZE_MM = 2.5;
 
 /**
  * Writes a print-ready PDF at exactly 1:1.
@@ -75,12 +64,11 @@ const NOTE_SIZE_MM = 2.5;
  * failing at once is unlikely. See docs/printing.md §8.
  */
 export async function exportPdf(
-  scene: ExportScene,
+  plan: SheetPlan,
   options: PdfExportOptions = {},
 ): Promise<PdfExportResult> {
-  const setup = options.setup ?? DEFAULT_PAGE_SETUP;
+  const { scene, setup } = plan;
   const now = options.now ?? ((): Date => new Date());
-  const pagination = paginate(scene, setup);
 
   const document = await PDFDocument.create();
   document.setTitle(scene.projectName);
@@ -98,35 +86,31 @@ export async function exportPdf(
   // part named "Przegroda główna" — pdf-lib's standard fonts cannot encode ł.
   const sheet = sheetSizeMm(setup);
 
-  // An empty project still yields one page, so the user gets a file rather
-  // than a silent no-op.
-  const pages = pagination.pages.length > 0 ? pagination.pages : [{ index: 0, placements: [] }];
-
-  for (const page of pages) {
+  // Exactly the plan's sheets, in its order: sheet n is page n. The plan
+  // already holds the one scale-check sheet an empty project exports, so the
+  // count the maker was shown is the count written.
+  for (const page of plan.sheets) {
     const pdfPage = document.addPage([mmToPt(sheet.widthMm), mmToPt(sheet.heightMm)]);
-    drawPage(pdfPage, page, pages.length, scene, setup, now());
+    drawPage(pdfPage, page, sheetInk(plan, page.index, now()));
   }
 
-  return { bytes: await document.save(), pagination };
+  return { bytes: await document.save() };
 }
 
-function drawPage(
-  page: PDFPage,
-  layout: Page,
-  pageCount: number,
-  scene: ExportScene,
-  setup: PageSetup,
-  now: Date,
-): void {
-  const tile = layout.tile;
-  if (tile !== undefined) {
+function drawPage(page: PDFPage, layout: Page, ink: SheetInk): void {
+  if (ink.clip !== null) {
     // One tile of a part too large for the sheet (7.2a): everything outside
     // its window is cropped by the clip, never scaled to fit. The window is
     // the printable area exactly, so nothing reaches the verification block.
-    const area = contentAreaMm(setup);
+    const { clip: area } = ink;
     page.pushOperators(
       pushGraphicsState(),
-      rectangle(mmToPt(area.x), mmToPt(area.y), mmToPt(area.widthMm), mmToPt(area.heightMm)),
+      rectangle(
+        mmToPt(area.minX),
+        mmToPt(area.minY),
+        mmToPt(area.maxX - area.minX),
+        mmToPt(area.maxY - area.minY),
+      ),
       clip(),
       endPath(),
     );
@@ -144,87 +128,15 @@ function drawPage(
     }
   }
 
-  if (tile !== undefined) {
-    drawJoins(page, tile, layout.placements[0]!.offsetMm);
+  if (ink.clip !== null) {
+    for (const item of ink.clipped) drawFurniturePath(page, item);
     page.pushOperators(popGraphicsState());
-    drawTileLabel(page, setup, tile);
   }
 
-  drawVerificationBlock(page, setup);
-  drawFooter(page, setup, scene, layout.index + 1, pageCount, now);
-}
-
-/**
- * Join lines: light grey, in long dashes no pattern role uses — a cut is
- * solid, a stitch line 2-2, a fold dash-dot — so no one cuts or stitches along
- * one, and the crosses on it say what it is.
- */
-const JOIN_GREY = 0.6;
-const JOIN_WIDTH_MM = 0.2;
-const JOIN_DASH_MM = [6, 3];
-/** Half a registration cross's arm. */
-const CROSS_MM = 3;
-
-/**
- * The join lines this sheet shares with its neighbours, and registration
- * crosses on them — all in the part's own coordinates, so each lands on the
- * same place in the pattern on every sheet that shows it. A cross sits at the
- * middle of the window's span along each line, and where two lines cross.
- */
-function drawJoins(page: PDFPage, tile: Tile, offsetMm: Vec2): void {
-  const w = tile.windowMm;
-  const at = (x: Mm, y: Mm): [number, number] => [mmToPt(x + offsetMm.x), mmToPt(y + offsetMm.y)];
-
-  const lines = [
-    ...tile.joinsMm.x.map((x) => [at(x, w.minY), at(x, w.maxY)] as const),
-    ...tile.joinsMm.y.map((y) => [at(w.minX, y), at(w.maxX, y)] as const),
-  ];
-  page.pushOperators(
-    pushGraphicsState(),
-    setLineWidth(mmToPt(JOIN_WIDTH_MM)),
-    setStrokingGrayscaleColor(JOIN_GREY),
-    setDashPattern(JOIN_DASH_MM.map(mmToPt), 0),
-    ...lines.flatMap(([from, to]) => [moveTo(...from), lineTo(...to)]),
-    stroke(),
-    popGraphicsState(),
-  );
-
-  const middleX = (w.minX + w.maxX) / 2;
-  const middleY = (w.minY + w.maxY) / 2;
-  const crosses = [
-    ...tile.joinsMm.x.flatMap((x) => [{ x, y: middleY }, ...tile.joinsMm.y.map((y) => ({ x, y }))]),
-    ...tile.joinsMm.y.map((y) => ({ x: middleX, y })),
-  ];
-  page.pushOperators(
-    pushGraphicsState(),
-    setLineWidth(mmToPt(JOIN_WIDTH_MM)),
-    setStrokingGrayscaleColor(0),
-    restoreDashPattern(),
-    ...crosses.flatMap((c) => [
-      moveTo(...at(c.x - CROSS_MM, c.y)),
-      lineTo(...at(c.x + CROSS_MM, c.y)),
-      moveTo(...at(c.x, c.y - CROSS_MM)),
-      lineTo(...at(c.x, c.y + CROSS_MM)),
-    ]),
-    stroke(),
-    popGraphicsState(),
-  );
-}
-
-/**
- * Which tile this is, and how the sheets go together, in the footer beside
- * the square. A long part name is shortened rather than run into the square.
- */
-function drawTileLabel(page: PDFPage, setup: PageSetup, tile: Tile): void {
-  const layout = verificationLayout(setup);
-  const size = VERIFICATION_TEXT.tileSizeMm;
-  const grid = ` · ${tile.label} · ${String(tile.rows)} × ${String(tile.columns)} sheets`;
-  let name = tile.part.name.trim() === '' ? 'Part' : tile.part.name.trim();
-  while (name.length > 1 && textWidthMm(`${name}${grid}`, size) > layout.tileTextMaxWidthMm) {
-    name = `${name.slice(0, -2)}…`;
-  }
-  drawFurniture(page, `${name}${grid}`, size, layout.tileLabel);
-  drawFurniture(page, VERIFICATION_TEXT.tileNote, size, layout.tileNote);
+  // The verification block, the tile label and the footer: `sheetInk`, the one
+  // description the Sheets view draws too (7.4c).
+  for (const item of ink.paths) drawFurniturePath(page, item);
+  for (const text of ink.texts) drawText(page, text, { x: 0, y: 0 });
 }
 
 /** Fills one laid-out string's glyph outlines. */
@@ -244,22 +156,6 @@ function drawText(page: PDFPage, text: ExportText, offsetMm: Vec2, grey = 0): vo
   page.pushOperators(...operators);
 }
 
-/** Lays out and fills a line of page furniture — not part of the design. */
-function drawFurniture(
-  page: PDFPage,
-  content: string,
-  sizeMm: Mm,
-  at: Vec2,
-  placement: TextPlacement = {},
-): void {
-  const placed = placedText(content, sizeMm, at, placement);
-  drawText(
-    page,
-    { role: 'annotation', source: content, glyphs: outlinesOf(placed), sizeMm },
-    { x: 0, y: 0 },
-  );
-}
-
 /** Emits one path in millimetre-derived points. */
 function drawPath(page: PDFPage, item: ExportPath, offsetMm: Vec2): void {
   const operators = [
@@ -275,6 +171,25 @@ function drawPath(page: PDFPage, item: ExportPath, offsetMm: Vec2): void {
     popGraphicsState(),
   ];
   page.pushOperators(...operators);
+}
+
+/**
+ * Page furniture — the ruler, the square, joins and crosses — as it has always
+ * been printed: square ends, not the pattern's round caps, so a ruler's ends
+ * are where its millimetres say.
+ */
+function drawFurniturePath(page: PDFPage, item: ExportPath): void {
+  page.pushOperators(
+    pushGraphicsState(),
+    setLineWidth(mmToPt(item.style.widthMm)),
+    setStrokingGrayscaleColor(item.style.grey),
+    item.style.dashMm.length > 0
+      ? setDashPattern(item.style.dashMm.map(mmToPt), 0)
+      : restoreDashPattern(),
+    ...tracePath(item.path, { x: 0, y: 0 }),
+    stroke(),
+    popGraphicsState(),
+  );
 }
 
 function tracePath(path: Path, offsetMm: Vec2): ReturnType<typeof moveTo>[] {
@@ -310,93 +225,6 @@ function tracePath(path: Path, offsetMm: Vec2): ReturnType<typeof moveTo>[] {
 
 function samePoint(a: Vec2, b: Vec2): boolean {
   return Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
-}
-
-/**
- * A 50 mm square and a 100 mm ruler, on every page.
- *
- * Costs a few square centimetres of margin and turns a silent, expensive
- * failure into a five-second check with a steel rule. Not optional.
- */
-function drawVerificationBlock(page: PDFPage, setup: PageSetup): void {
-  // Laid out once, in `verificationLayout`, which is also what keeps the
-  // pattern off it — so what is drawn and what is reserved cannot disagree.
-  const layout = verificationLayout(setup);
-  const { square, squareSizeMm: size } = layout;
-
-  drawRuler(page, layout.ruler.x, layout.ruler.y, layout.rulerLengthMm, layout.rulerHeightMm);
-
-  page.pushOperators(
-    pushGraphicsState(),
-    setLineWidth(mmToPt(0.2)),
-    setStrokingGrayscaleColor(0),
-    restoreDashPattern(),
-    moveTo(mmToPt(square.x), mmToPt(square.y)),
-    lineTo(mmToPt(square.x + size), mmToPt(square.y)),
-    lineTo(mmToPt(square.x + size), mmToPt(square.y + size)),
-    lineTo(mmToPt(square.x), mmToPt(square.y + size)),
-    closePath(),
-    stroke(),
-    popGraphicsState(),
-  );
-  drawFurniture(page, '50 mm', NOTE_SIZE_MM, { x: square.x + 2, y: square.y + size - 5 });
-
-  drawFurniture(
-    page,
-    VERIFICATION_TEXT.instruction,
-    VERIFICATION_TEXT.instructionSizeMm,
-    layout.instruction,
-  );
-  drawFurniture(page, VERIFICATION_TEXT.note, VERIFICATION_TEXT.noteSizeMm, layout.note);
-}
-
-/** A 100 mm ruler with 10 mm major and 5 mm minor ticks. */
-function drawRuler(page: PDFPage, x: Mm, y: Mm, lengthMm: Mm, majorMm: Mm): void {
-  const operators = [
-    pushGraphicsState(),
-    setLineWidth(mmToPt(0.2)),
-    setStrokingGrayscaleColor(0),
-    restoreDashPattern(),
-    moveTo(mmToPt(x), mmToPt(y)),
-    lineTo(mmToPt(x + lengthMm), mmToPt(y)),
-  ];
-
-  for (let mm = 0; mm <= lengthMm; mm += 5) {
-    const height = mm % 10 === 0 ? majorMm : 2;
-    operators.push(moveTo(mmToPt(x + mm), mmToPt(y)), lineTo(mmToPt(x + mm), mmToPt(y + height)));
-  }
-
-  operators.push(stroke(), popGraphicsState());
-  page.pushOperators(...operators);
-}
-
-function drawFooter(
-  page: PDFPage,
-  setup: PageSetup,
-  scene: ExportScene,
-  pageNumber: number,
-  pageCount: number,
-  now: Date,
-): void {
-  const sheet = sheetSizeMm(setup);
-  const y = setup.marginsMm.bottom - 5;
-  if (y < 0) return;
-
-  const name = scene.projectName.trim() === '' ? 'Untitled' : scene.projectName.trim();
-  const date = now.toISOString().slice(0, 10);
-  const left = `${name} · ${date} · ${APP_NAME}`;
-  const right = `Page ${pageNumber} of ${pageCount} · 1:1`;
-
-  drawFurniture(page, left, NOTE_SIZE_MM, { x: setup.marginsMm.left, y });
-  // Right-aligned by the layout's own measurement, rather than by asking a
-  // font how wide it thinks the string is.
-  drawFurniture(
-    page,
-    right,
-    NOTE_SIZE_MM,
-    { x: sheet.widthMm - setup.marginsMm.right, y },
-    { align: 'right' },
-  );
 }
 
 /** The millimetre area a pattern may occupy, for callers checking fit. */

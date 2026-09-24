@@ -70,7 +70,7 @@ async function closed(app: ElectronApplication): Promise<boolean> {
 test('an untouched project is not unsaved, and closes without asking', async () => {
   const { app, window } = await launch();
   try {
-    await expect(window.getByTestId('save')).toHaveText('Save');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     await expect(window.getByTestId('status-bar')).not.toContainText('unsaved');
 
     await requestClose(app);
@@ -84,7 +84,7 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
   const { app, window } = await launch();
   try {
     await drawAPanel(window);
-    await expect(window.getByTestId('save')).toHaveText('Save •');
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
 
     await requestClose(app);
     const dialog = window.getByTestId('unsaved-dialog');
@@ -132,7 +132,7 @@ test('New asks first, and starts a clean, empty project', async () => {
 
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await expect(window.getByTestId('project-name')).toHaveValue('Untitled');
-    await expect(window.getByTestId('save')).toHaveText('Save');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // A new, untouched project asks nothing of the next New.
@@ -158,7 +158,7 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
     await dialog.getByTestId('unsaved-save').click();
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save')).toHaveText('Save •');
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
 
     // Now they save it where they choose, and only then does New go ahead.
     await app.evaluate(({ dialog: native }, path) => {
@@ -176,7 +176,7 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
     await window.getByTestId('open').click();
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save')).toHaveText('Save');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
 
     // …and a dirty one asks, with the same question.
     await drawAPanel(window, '2');
@@ -188,7 +188,7 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
     await window.keyboard.press('Control+o');
     await dialog.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save')).toHaveText('Save');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);
     rmSync(file, { force: true });
@@ -217,10 +217,10 @@ test('undoing back to what was saved is not unsaved', async () => {
   const { app, window } = await launch();
   try {
     await drawAPanel(window);
-    await expect(window.getByTestId('save')).toHaveText('Save •');
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('part-count')).toHaveText('0');
-    await expect(window.getByTestId('save')).toHaveText('Save');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
 
     await requestClose(app);
     expect(await closed(app)).toBe(true);

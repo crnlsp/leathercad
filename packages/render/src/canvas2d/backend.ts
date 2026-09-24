@@ -1,4 +1,4 @@
-import { MatOps, PathOps, type Path, type Segment } from '@leathercad/geometry';
+import { MatOps, PathOps, type Path, type Rect, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 
 import type { DisplayList, DisplayItem } from '../displayList.js';
@@ -64,6 +64,13 @@ export interface RenderOptions {
    * either.
    */
   readonly fontFamily?: string;
+  /**
+   * Draw only inside this millimetre rectangle (7.4c): a taped sheet on the
+   * Sheets view shows its piece cropped to the printable area, as the PDF
+   * crops it. Applied here, in the world transform, so no caller converts it
+   * to pixels.
+   */
+  readonly clipMm?: Rect;
   /** For document text. Defaults to the vendored typeface. */
   readonly documentFontFamily?: string;
 }
@@ -110,6 +117,25 @@ export function renderDisplayList(
 ): void {
   const transform = worldToScreen(view);
   const perMm = view.scale;
+
+  if (options.clipMm !== undefined) {
+    const { clipMm, ...rest } = options;
+    ctx.save();
+    ctx.setTransform(transform.a, transform.b, transform.c, transform.d, transform.e, transform.f);
+    ctx.beginPath();
+    ctx.moveTo(clipMm.minX, clipMm.minY);
+    ctx.lineTo(clipMm.maxX, clipMm.minY);
+    ctx.lineTo(clipMm.maxX, clipMm.maxY);
+    ctx.lineTo(clipMm.minX, clipMm.maxY);
+    ctx.closePath();
+    ctx.clip();
+    try {
+      renderDisplayList(ctx, list, view, rest);
+    } finally {
+      ctx.restore();
+    }
+    return;
+  }
 
   // Pass one: geometry, in millimetres.
   ctx.save();

@@ -1,7 +1,9 @@
 # Paper-size reference, and the typography direction
 
 **Date:** 2026-09-18
-**Status:** Reviewed and accepted 2026-09-18. The determinism fixes in §2.7 are **implemented**; the
+**Status:** Part 1's paper reference is **superseded** (2026-09-24) by the Sheets view in
+[Design and Sheets](2026-09-24-sheets-workflow-design.md), which shows the real sheets. Otherwise:
+reviewed and accepted 2026-09-18. The determinism fixes in §2.7 are **implemented**; the
 paper reference and the typography rollout are not. See
 [page setup and determinism](2026-09-18-page-setup-and-determinism-decisions.md).
 **Extends:** [UI Foundations](2026-09-17-ui-foundations-design.md) ·

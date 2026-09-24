@@ -144,19 +144,31 @@ What does not:
 
 ### 2.4 Branching and commits
 
-One branch per slice, named `slice/3.4-rectangle-tool`. Merge when acceptance criteria pass and CI
-is green. Commit messages name the slice and its user-visible effect, not the files touched.
+**Two long-lived branches** (since 2026-09-24):
+- **`main` is production.** What is on it is what is released; release-please and the release
+  workflow run from it. Nothing is pushed to it directly — it changes only by a pull request from
+  `develop`, merged when CI is green.
+- **`develop` is development.** Slices land here. CI, CodeQL and packaging run on every push to
+  it, and Dependabot proposes its updates against it.
+
+A slice may still be built on a short-lived `slice/3.4-rectangle-tool` branch and merged into
+`develop` by pull request; delete it once merged, so only the two long-lived branches remain.
+Commit messages name the slice and its user-visible effect, not the files touched.
 
 ```
-git switch -c slice/3.4-rectangle-tool
+git switch develop && git pull
+git switch -c slice/3.4-rectangle-tool      # optional; small work can go on develop itself
 ... build the slice, commit ...
-git push -u origin HEAD          # the hook runs pnpm check
-gh pr create --fill              # three CI jobs run
-gh pr merge --squash             # once they are green
+git push -u origin HEAD                     # the hook runs pnpm check
+gh pr create --fill --base develop          # CI runs
+gh pr merge --squash --delete-branch        # once it is green
+
+# A release: develop to production
+gh pr create --fill --base main --head develop
 ```
 
-A `pre-push` hook enforces this: it refuses a push to `main` and runs `pnpm check` on slice
-branches. `pnpm install` installs it, by pointing `core.hooksPath` at `.githooks/`.
+A `pre-push` hook enforces this: it refuses a push to `main` and runs `pnpm check` on every other
+push. `pnpm install` installs it, by pointing `core.hooksPath` at `.githooks/`.
 
 The enforcement is client-side and `--no-verify` defeats it. That is the available option, not the
 preferred one: GitHub's branch protection and rulesets both require a public repository or a paid
@@ -1179,6 +1191,7 @@ features consume these; they do not extend or amend the visual language on their
 | **F.5** ✅ | Colour planes and canvas | The four planes; the drafting ground and three grid tiers; rulers with a cursor tick; **selection as a halo that keeps the role colour**; a failure marker replacing the red-over-source overlay; three zoom bands; the paper reference's *visual language only* |
 | **F.6** ✅ | Icons | Tier 1 adopted for generic verbs and geometry tools; **eleven LeatherCAD marks**; `FeatureMark` used in rail, tree, property header, diagnostics and legend |
 | **F.7** ✅ | Leather-specific treatment | True-size slanted stitch slits; seam allowance as a band; fold direction ticks; the derived link tick; the canvas legend and the part caption. **Then run the identity test and record the result** |
+| **F.8** ✅ | Project bar and work bar | Added at the 2026-09-24 boundary revision: the project and its output above, the editing context below it, *Export PDF* primary, the window title. [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md) §4 |
 
 #### Triage, as the checkpoint required
 
@@ -1538,13 +1551,37 @@ recorded in the F.7 design §6:
   The committed bench baseline still holds the pre-F.7 figures.
 - **Draw tools in the role's colour** (decisions §4.1.1) stays open and is not built.
 
+**F.8 — done** (2026-09-24). **The project above, the work below.** The header is two bars that
+differ in kind:
+- **The project bar** is state. It holds:
+  - the project's name as the window's one title;
+  - "Unsaved changes" or "Saved", said once (the dot on *Save* and the status bar's "unsaved" are
+    gone);
+  - *Save*, then *New* and *Open* as quiet buttons;
+  - at the right, the sheet indicator and *Export PDF*, the window's one primary action in tan.
+- **The work bar** is the thing in hand. It spans the window: at 1280 px the board column's
+  620 px is already full of *Draw as* chips. It holds:
+  - *Undo* and *Redo*;
+  - the active tool's options, with *Draw as* only for the five drawing tools;
+  - the tool's guidance, which gives way first when the window narrows.
+- **The window title** is `• Card holder — LeatherCAD` while unsaved.
+- **The header wordmark is gone**: the window title and the icon carry the name, and a hidden
+  `h1` keeps the document outline.
+- **At 860 × 600** both bars together cost only as much height as the rail can spare. The F.2
+  no-removal test still passes.
+- **E2E** checks that each bar holds only its own concern, that there is one primary action, that
+  *Draw as* appears for drawing tools only, and the title and save state through an edit and its
+  undo. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md) §4.
+
 #### Deferred opportunities worth keeping visible
 
-- **`3 sheets · all parts fit` in the status bar.** `paginate()` already returns `pages` and
+- ~~**`3 sheets · all parts fit` in the status bar.**~~ **Superseded by 7.4a**: the count lives in
+  the paper choice itself, where the cause is. `paginate()` already returns `pages` and
   `oversized`, and `paperOptionsFitting` already answers which paper *would* work — a maker currently
   learns all three only after the PDF is written. Belongs with **6.4**, where the page setup becomes
   user-visible.
-- **The paper reference overlay** — corner ticks around the **printable area** (A4 portrait is
+- ~~**The paper reference overlay**~~ **Superseded by 7.4c's Sheets view**, which shows the real
+  sheets rather than one reference rectangle — corner ticks around the **printable area** (A4 portrait is
   190 × 215 mm once margins and the 62 mm verification footer are out, *not* 210 × 297), anchored to
   the selection, off by default, geometry never clipped, and **never a diagnostic**: a pattern larger
   than a sheet is not wrong.
@@ -1618,6 +1655,16 @@ required for document safety, the core leathercraft workflow, pattern correctnes
 or basic cross-platform release usability goes to 1.1 or later. That holds even when it turns up
 during implementation.
 
+**Revised 2026-09-24, by the user, after the pre-release UX pass.** The test for 1.0 is usefulness to
+a leatherworker, not the label an item carried before: can a maker design a pattern, **see before
+printing how many sheets it needs, what is on each and where a large piece is taped**, export, print
+at 1:1 and verify it? The core leathercraft workflow now includes understanding the paper before
+printing. So the sheet workflow moves in from 1.1: the sheet count, where each part prints, the
+Sheets view (7.4) and the project bar / work bar split (F.8). Nothing else moves, and the
+scope-freeze rule stands with this as its test. See
+[Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md), which also lists what
+stays deferred.
+
 **The working sequence:**
 
 | # | Slice | 1.0 item |
@@ -1627,16 +1674,42 @@ during implementation.
 | 3 | **6.4a** ✅ | Choose the paper and its orientation, written to the project's page setup (5.5) |
 | 4 | **3.9a** ✅ | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
 | 5 | **7.2a** ✅ | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
-| 6 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code |
-| 7 | **8.5a** ✅ | Production desktop integration: an app icon, a desktop entry, and a production menu, on all three platforms |
-| 8 | **8.6** | Release: **Linux, Windows and macOS builds**, signing and notarisation, a current README with getting started, third-party notices, the newer-version message telling the maker to update, and v1.0.0. The checklist is in the 8.6 entry |
+| 6 | **8.5a** ✅ | Production desktop integration: an app icon, a desktop entry, and a production menu, on all three platforms |
+| 7 | **F.8** ✅ | Project bar and work bar: the project and its output above, the editing context above the board; the window title with unsaved state; *Export PDF* as the one primary action; *Draw as* only for drawing tools |
+| 8 | **7.4a** ✅ | How many sheets: one derived sheet plan that the PDF writes; the paper choice worded as its result ("3 sheets of A4, portrait"), one undo step; "Sheet N of M" in the PDF footer |
+| 9 | **7.4b** ✅ | Where each part prints: sheet labels and "Not printed" reasons in Parts; the joins of an oversized piece drawn on it in Design |
+| 10 | **7.4c** ✅ | The Sheets view: the same pieces on the physical sheets, exactly as the PDF places them, in ink on paper; Design and Sheets each keep their camera |
+| 11 | **7.4d** ✅ | Pointing at sheets: selection shared with Design, hover linked with Parts, the maker's workflow end to end |
+| 12 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code. Done last, on the build that ships |
+| 13 | **8.6** | Release: **Linux, Windows and macOS builds**, signing and notarisation, a current README with getting started, third-party notices, the newer-version message telling the maker to update, and v1.0.0. The checklist is in the 8.6 entry |
+
+**Status after the practical-1.0 work (2026-09-24).** Items 1–11 are built.
+- **Checked:** `pnpm check` (2250 tests), E2E (100), the packaged smoke test (7) and the pixel
+  references (3, retaken in the pinned container and inspected), all passing.
+- **What is left needs a person or credentials:** the manual gate in
+  [`release-1.0-validation.md`](release-1.0-validation.md), which includes the physical print on
+  each platform (12, 7.7),
+  and 8.6's release tasks — signing, notarisation, the Release workflow's permission.
+- **The readiness pass found and fixed three things:**
+  - the project bar clipping *New* and *Open* at 860 px when a project has a long name — the name
+    gives way now;
+  - the packaged smoke test still expecting the old window title;
+  - a rounding bug in the ruler's tick step that made `pnpm check` fail now and then.
+- **The readiness pass recorded one thing without changing it:** `packages/domain/src/perf.test.ts`
+  holds wall-clock ceilings (50 ms, 200 ms). Under the full parallel coverage run in a loaded
+  container they were exceeded now and then, by 6–12 %, by three different cases. Alone they pass
+  every time, and nothing in `domain` changed. A flaky gate, not a regression; revisit the
+  ceilings or run them serially if CI shows it.
 
 **1.1 and later**, in rough order of value:
 - recent files and persistent preferences (8.2);
 - SVG export (6.2) and DXF;
-- the full export dialog (6.4);
+- the rest of the export dialog (6.4): presets, layers, bounds, printing selected sheets;
 - a worked sample project (8.3, which absorbs 5.4);
-- the sheet preview (7.4) and calibration factors (7.5);
+- calibration factors (7.5);
+- the rest of the native menu (a Draw menu, zoom, paper), beyond 7.4c's View › Design / Sheets;
+- pieces gliding between Design and Sheets, and a slimmer verification block (needs a new physical
+  measurement);
 - vertex editing and an edge scoop (3.9);
 - guides and alignment (3.10), overlay isolation (3.11), convert to path (3.12);
 - dimension arrowheads and the hole-count budget;
@@ -1879,7 +1952,7 @@ during implementation.
 - **6.4a** ✅ **Done** (2026-09-24). **1.0. Choose the paper.** Paper and orientation, written to
   the project's page setup (5.5 built the plumbing and had no UI). Before it, every export was A4
   portrait, and an A4 sheet sent to a Letter printer is where a print dialog offers "fit to page".
-  - `setPaper` and `setOrientation` commands: undoable and unsaved like any edit. Choosing what is
+  - `setPaper` and `setOrientation` commands (one `setPageSetup` since 7.4a): undoable and unsaved like any edit. Choosing what is
     already chosen earns no history. Unknown settings are kept.
   - A paper control in the header beside *Export PDF*, whose tooltip names the paper.
   - The oversized message names the chosen paper and suggests that paper turned before any other.
@@ -1925,7 +1998,8 @@ during implementation.
     their shared join line, add up to 250 mm. Physical verification is still 7.7.
 
   See [the design](superpowers/specs/2026-09-24-tiling-design.md).
-- **7.2** **1.1**, the rest: edge arrows and an assembly sheet. Registration marks, overlap bands,
+- **7.2** **1.1**, the rest: edge arrows and a printed assembly sheet. (On screen, 7.4c's Sheets view
+  shows a taped piece's sheets in their grid.) Registration marks, overlap bands,
   tile labels, edge arrows, assembly sheet.
   **Constraint, recorded before it is needed: pagination must never rotate a part to make it fit
   until the model knows which way the part's grain runs.** Packing already orders parts to fill the
@@ -1939,9 +2013,81 @@ during implementation.
   A raster test caught the square overlapping the content area — it ran from 18 mm to 68 mm above
   the page bottom while patterns began at 36 mm, so a part could have been printed straight over
   the thing that proves the scale is right.
-- **7.4** **1.1.** Export already opens the PDF in the system viewer, which is an exact preview of
-  every sheet. On-screen print preview using the same `paginate()` and the Canvas2D backend, with the
-  deep-equality test binding them together.
+- **7.4** **1.0, as 7.4a–7.4d** (moved in at the 2026-09-24 boundary revision). The system viewer is
+  an exact preview of every sheet, but only after exporting, and it can't say which piece on the
+  board went where. The Sheets view shows the plan before export, from the one `SheetPlan` the PDF
+  writes. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md) §10.
+  - **7.4a** ✅ **Done** (2026-09-24). How many sheets. `planSheets(scene, setup)` in
+    `packages/export` is the one derived answer to "what will be printed": the PDF writes it
+    (`exportPdf(plan)`, which no longer paginates on its own), and the renderer's `sheetPlanFor`
+    hands the same object to the paper list and to Export, cached per project. An empty project's
+    one scale-check sheet is part of the plan, not a writer special case. `setPageSetup` replaces
+    `setPaper` and `setOrientation`: one choice, one undo step, *Change paper*. The paper control is
+    one list whose every entry is its result — *3 sheets of A4, portrait (Strap taped)*, *1 sheet of
+    A4, landscape* — with the sheets drawn small beside it and the printable area in its tooltip.
+    The PDF footer says *Sheet 2 of 3* from the same `sheetLabel` the Sheets view will use. Tests:
+    the PDF's page count equals the plan's over random scenes on every paper; the plan is
+    independent of board positions (a property over translations, and through the real move
+    command) and deterministic; the E2E reads the count before exporting and checks it with
+    `pdfinfo`.
+  - **7.4b** ✅ **Done** (2026-09-24). Where each part prints.
+    - **Parts:** under each part's name, *Sheet 1* or *Sheets 2–3, taped*, from `printStatusOf`
+      over the same plan and evaluation.
+    - **When nothing prints:** *Not printed* in the warning colour, with the reason — *It is
+      hidden*, *What is shown has problems*, *It has only words, no lines to cut* or *Nothing is
+      drawn in it*.
+    - **When something is left off:** a printing part counts what stays off the paper, e.g. *1
+      hidden feature and 1 feature with a problem aren't printed*.
+    - **Joins on the board:** `tapeJoins(plan)` draws a taped piece's join lines on the design
+      board, at the plan's model coordinates, labelled *Tape join*. They are drawn in
+      `SHEET.furniture`, a magenta no role and no print grey can be, and a theme test holds it
+      apart from every role and severity.
+    - **One join style:** its dash rhythm moved from the PDF writer into `PAPER_FURNITURE` in the
+      theme, so screen and paper share it.
+    - **E2E:** the labels through a paper change and a hidden part; the joins on the canvas by
+      pixel, gone on A4 landscape; and no coloured pixel in the exported PDF.
+  - **7.4c** ✅ **Done** (2026-09-24). **The Sheets view.**
+    - **What it draws:** the sheet plan as the paper it will be, from `sheetsView(plan,
+      layoutSheets(plan))`.
+      - White sheets on a dimmed ground.
+      - Everything that prints in grey ink: pieces, captions, the verification block, the footer,
+        joins and crosses.
+      - Everything that does not print in the furniture magenta: the dashed printable-area
+        outline, the tint behind the verification band, *Sheet 2 of 3* above each sheet, and a
+        taped piece's name below its grid.
+    - **One description of the furniture:** `sheetInk(plan, sheet, now)` describes the block, the
+      footer and a tiled sheet's joins, crosses, label and clip. The PDF writer now prints from it
+      too, so the ruler cannot be laid out two ways; the poppler measurements are unchanged.
+    - **Taped sheets:** each is its own layer, clipped to the printable area as the PDF clips it,
+      through a new `clipMm` option on the canvas backend (the clip stays in `render`, in
+      millimetres).
+    - **Layout:** `layoutSheets` places sheets in PDF order from the plan alone — never the
+      window — and a taped piece's sheets in their grid.
+    - **Switching views:** *Design | Sheets* at the right of the work bar, Ctrl+1 and Ctrl+2, and
+      View › Design / Sheets.
+      - Each view keeps its own camera; the Sheets camera frames all sheets again when their
+        extent changes.
+      - Going to the sheets sets Select and gives the board its tool back afterwards. Any other
+        tool on the Sheets view returns to the board with it.
+      - No tool acts on paper: left-drag pans there, and Delete deletes nothing.
+    - **In words:** the work bar says the plan — *3 sheets of A4, portrait. Strap is taped across
+      sheets 2–3.* — plus what will not print.
+    - **Not in 1.0:** pieces gliding between the views.
+  - **7.4d** ✅ **Done** (2026-09-24). Pointing at sheets.
+    - **What is under the pointer:** `pieceAt(plan, layout, point)` finds the sheet and the piece.
+      Pieces are packed by their bounds, so on a sheet none overlap; a tiled one counts only
+      inside its printable area.
+    - **Clicking:** a piece selects its outline, as a click on the board would, so Properties
+      shows the part and the board has the same selection. Empty paper clears it.
+    - **Hovering:** a piece lights its Parts row; a Parts row haloes its piece on every sheet it is
+      on. The status bar names the sheet under the pointer: *Sheet 2 of 3*.
+    - **Dragging:** a drag that starts on a piece pans, and says *LeatherCAD places pieces on
+      sheets for you. Choose another paper to change the layout.*
+    - **The maker's journey in `e2e/sheets.spec.ts`:** the paper's words before export; the Sheets
+      view and Parts agreeing; the strap found on sheet 2 by pointing; the selection shared; the
+      drag moving nothing; a move on the board and a smaller window changing no sheet; and the
+      export writing three A4 portrait pages with no coloured pixel. It also covers hidden and
+      empty projects. Repeated three times, all passing.
 - **7.5** **1.1.** Printer calibration wizard and per-printer correction factors, with the ±2 %
   guard. The verification square and ruler already show when a printer is off.
 - **7.6** ❌ **Explicitly deferred.** The user does not want the application to handle printers:

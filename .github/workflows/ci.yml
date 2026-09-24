@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # main is production; develop is where development lands.
+    branches: [main, develop]
   pull_request:
   workflow_dispatch:
 

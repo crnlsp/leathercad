@@ -7,7 +7,9 @@ import {
   CANVAS,
   DASH_LEGIBLE_PX,
   GROUND,
+  PAPER_FURNITURE,
   ROLE_STYLES,
+  SHEET,
   SHELL,
   STATE,
   cssVariables,
@@ -168,6 +170,56 @@ describe('role colours on the shell (F.6)', () => {
       for (const surface of [SHELL[700], SHELL[800]]) {
         expect(contrast(ROLE_STYLES[role].shell, surface), role).toBeGreaterThan(3);
       }
+    }
+  });
+});
+
+describe('ink and not-ink (7.4b, 7.4c)', () => {
+  const rgb = (hex: string): [number, number, number] => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+  const distance = (a: string, b: string): number => {
+    const [x, y] = [rgb(a), rgb(b)];
+    return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+  };
+
+  it('draws screen-only furniture in a colour no print grey can be', () => {
+    // Everything on paper is black or grey, so a coloured line on the Sheets
+    // view is, by construction, something that will not print.
+    const [r, g, b] = rgb(SHEET.furniture);
+    expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeGreaterThan(80);
+  });
+
+  it('keeps it apart from every role, and from error, warning and the accent', () => {
+    for (const role of LAYER_ROLES) {
+      expect(distance(SHEET.furniture, ROLE_STYLES[role].colour), role).toBeGreaterThan(90);
+    }
+    for (const other of [
+      STATE.ground.error,
+      STATE.ground.warning,
+      STATE.ground.info,
+      ACCENT.tanInk,
+    ]) {
+      expect(distance(SHEET.furniture, other), other).toBeGreaterThan(90);
+    }
+  });
+
+  it('reads on the paper and on both grounds it is drawn on', () => {
+    for (const ground of [SHEET.paper, SHEET.ground, GROUND.ground]) {
+      expect(contrast(SHEET.furniture, ground), ground).toBeGreaterThan(3);
+    }
+  });
+
+  it('makes the paper the lightest thing on the Sheets view', () => {
+    expect(contrast(SHEET.paper, SHEET.ground)).toBeGreaterThan(1.3);
+    expect(contrast(SHEET.paperEdge, SHEET.paper)).toBeGreaterThan(2);
+  });
+
+  it('prints a join in a rhythm no pattern role uses', () => {
+    for (const role of LAYER_ROLES) {
+      expect(ROLE_STYLES[role].dashMm, role).not.toEqual(PAPER_FURNITURE.join.dashMm);
     }
   });
 });

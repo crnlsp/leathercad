@@ -1,9 +1,11 @@
 import type { Document, DocumentStore } from '@leathercad/document';
-import { evaluate, exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
-import { buildExportScene, exportPdf, pageSetupFor, type TiledPart } from '@leathercad/export';
+import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
+import { exportPdf, type TiledPart } from '@leathercad/export';
 import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
+
+import { sheetPlanFor } from './sheets.js';
 
 export interface ProjectFileState {
   readonly path: string | null;
@@ -154,12 +156,11 @@ export function useProjectFile(
       });
       if (target === null) return null;
 
-      const scene = buildExportScene(evaluate(project), project.name);
-      const { bytes, pagination } = await exportPdf(scene, {
-        // The project's own paper, not the exporter's fallback. Until this
-        // existed, `DEFAULT_PAGE_SETUP` applied to every export ever made and
-        // nobody could print on A3.
-        setup: pageSetupFor(project.settings),
+      // The plan the maker has been looking at — the sheet count, Parts and
+      // the Sheets view all read this same object — so the file is exactly
+      // the print they were shown (7.4a).
+      const plan = sheetPlanFor(project);
+      const { bytes } = await exportPdf(plan, {
         applicationVersion: appVersion,
         now: () => new Date(),
       });
@@ -184,8 +185,8 @@ export function useProjectFile(
         readiness.errors === 0 &&
         readiness.warnings === 0 &&
         readiness.infos === 0 &&
-        pagination.tiled.length === 0;
-      return quiet ? null : { readiness, tiled: pagination.tiled };
+        plan.pagination.tiled.length === 0;
+      return quiet ? null : { readiness, tiled: plan.pagination.tiled };
     } catch (error) {
       setState((previous) => ({
         ...previous,

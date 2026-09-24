@@ -100,9 +100,10 @@ Steps 3, 4 and 7 are the ones no general-purpose tool does well. They are the pr
 
 > **Superseded as the definition of 1.0** by the roadmap's *Checkpoint — the 1.0 boundary*
 > (pre-1.0 product audit, accepted and frozen 2026-09-23). That list is shorter than the one below,
-> and it names every item's slice. Several items here are 1.1: SVG export, a print preview, a
-> general Bézier and vertex editor, guides and alignment, recent files, and sample projects. The
-> rationale below still stands. **Windows and macOS moved the other way**: they are 1.0 targets.
+> and it names every item's slice. Several items here are 1.1: SVG export, a general Bézier and
+> vertex editor, guides and alignment, recent files, and sample projects. The rationale below still
+> stands. **Windows, macOS and the on-screen print preview moved the other way**: they are 1.0 —
+> the preview as the Sheets view, at the 2026-09-24 boundary revision.
 
 The MVP is defined as: **the smallest version that a leatherworker would choose over Inkscape.**
 
@@ -153,7 +154,7 @@ The MVP is defined as: **the smallest version that a leatherworker would choose 
 - PDF export at exact 1:1
 - Tiled printing across A4 / A3 / Letter with margins, overlap, registration marks, tile labels
 - A 50 mm verification square and a 100 mm calibration ruler on every printed page
-- On-screen print preview driven by the same pagination code as the PDF
+- On-screen print preview driven by the same pagination code as the PDF (the Sheets view, 7.4c)
 
 ### Explicitly out of the MVP
 

@@ -290,7 +290,7 @@ test('a card holder, from the first outline to the printed page', async () => {
 
     // ── Saved ────────────────────────────────────────────────────────────────
     await window.getByTestId('save').click();
-    await expect(window.getByTestId('save')).not.toContainText('•');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     expect(existsSync(file)).toBe(true);
   } finally {
     await closeApp(first);
