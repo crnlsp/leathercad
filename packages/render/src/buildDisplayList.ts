@@ -1,6 +1,6 @@
 import type { Diagnostic, Feature, FeatureId, ResolvedProject, Severity } from '@leathercad/domain';
 import { PathOps, RectOps, type Path, type Rect } from '@leathercad/geometry';
-import { placedText } from '@leathercad/typography';
+import { outlinesOf, placedText } from '@leathercad/typography';
 
 import {
   CAPTION_GAP_MM,
@@ -136,6 +136,12 @@ export function buildDisplayList(
         // it measures.
         if (entry.feature.kind !== 'measurement') continue;
         items.push(pathItem(entry.role, entry.path));
+        // Its number is set beyond the line, so it counts towards the part's
+        // extent too: the caption goes above it, as it does on paper.
+        const ink = RectOps.unionAll(
+          outlinesOf(entry.text).flatMap((glyph) => PathOps.bbox(glyph) ?? []),
+        );
+        if (ink !== null) drawn.push(ink);
         continue;
       }
 

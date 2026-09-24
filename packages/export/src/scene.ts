@@ -84,7 +84,8 @@ export interface ExportPart {
   /**
    * The caption, in the part's own coordinates like its paths.
    *
-   * Deliberately outside `boundsMm`, which stays the geometry's own box: the
+   * The caption is deliberately outside `boundsMm`, which is the box of
+   * everything else the part prints — its geometry and its own words: the
    * paginator packs the pieces, and a caption is allowed to sit in the gap
    * above one.
    */
@@ -114,8 +115,11 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
     for (const entry of resolvedPart.features) {
       if (!entry.ok || !entry.feature.visible) continue;
 
-      // A label prints as filled outlines, like every other string on the
-      // sheet. Its box is for selection on screen and is not drawn.
+      // Text prints as filled outlines, like every other string on the sheet.
+      // A label's path is only its box, for selection on screen, and is not
+      // drawn. A dimension's path is its dimension and extension lines, which
+      // are what say what the number measures, so they print with it — a
+      // bare "100.0" on the paper measures nothing (found preparing 7.7).
       if (entry.text !== undefined) {
         texts.push({
           role: entry.role,
@@ -123,7 +127,7 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
           glyphs: outlinesOf(entry.text),
           sizeMm: entry.text.layout.sizeMm,
         });
-        continue;
+        if (entry.feature.kind === 'text-label') continue;
       }
 
       // A hole is a mark to punch through, so it prints as a circle at a true
@@ -148,11 +152,13 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
     // full of captions with no pieces is not a template.
     if (paths.length === 0) continue;
 
+    // Everything that prints for the part, words included: a dimension's
+    // number is set beyond its line, and the paginator must not put the next
+    // piece — or this piece's own caption — on top of it.
     const bounds = RectOps.unionAll(
-      paths.flatMap((item) => {
-        const box = PathOps.bbox(item.path);
-        return box === null ? [] : [box];
-      }),
+      [...paths.map((item) => item.path), ...texts.flatMap((text) => text.glyphs)].flatMap(
+        (path) => PathOps.bbox(path) ?? [],
+      ),
     );
     if (bounds === null) continue;
 

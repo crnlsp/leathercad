@@ -12,7 +12,7 @@ import {
   type Project,
   type ProjectSettings,
 } from '@leathercad/domain';
-import { uniformRadii } from '@leathercad/geometry';
+import { PathOps, RectOps, uniformRadii } from '@leathercad/geometry';
 import { PDFDocument, PDFName, type PDFDict } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
@@ -184,6 +184,117 @@ describe('text on paper', () => {
     // More letters, more outlines, so a longer name makes a larger content
     // stream — the caption really is being drawn rather than dropped.
     expect(longer.byteLength).toBeGreaterThan(plain.byteLength);
+  });
+});
+
+describe('a dimension on paper', () => {
+  /**
+   * A panel with one edge dimensioned — by default a 100 × 50 panel with its
+   * bottom edge dimensioned, 8 mm below it.
+   */
+  function dimensioned(
+    widthMm = 100,
+    // A rectangle's sharp corners are numbered after each edge: 0 is the
+    // bottom right, 1 the top right, 2 the top left and 3 the bottom left.
+    [a, b]: readonly [number, number] = [3, 0],
+    offsetMm = -8,
+  ): Project {
+    const base = projectWithRect(widthMm, 50);
+    const part = base.parts[0]!;
+    return {
+      ...base,
+      parts: [
+        {
+          ...part,
+          features: [
+            ...part.features,
+            {
+              id: 'dim-1',
+              kind: 'measurement',
+              name: 'Width',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'measurement',
+                measure: 'horizontal',
+                a: { kind: 'anchor', featureId: 'feat-1', anchor: a },
+                b: { kind: 'anchor', featureId: 'feat-1', anchor: b },
+                offsetMm,
+                precision: 1,
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('prints the dimension line with its value, not the value alone', () => {
+    // Regression, found preparing the 7.7 print test: the scene took the
+    // measurement for a text label — whose path is only a selection box — and
+    // dropped its path, so the paper showed a bare "100.0" with nothing to
+    // say what it measured.
+    const scene = buildExportScene(evaluate(dimensioned()), 'Test');
+    const annotations = scene.parts[0]!.paths.filter((path) => path.role === 'annotation');
+    expect(scene.parts[0]!.texts.map((text) => text.source)).toContain('100.0');
+    expect(annotations.length).toBeGreaterThan(0);
+
+    // The dimension line spans the edge it measures, 8 mm below it.
+    const spans = annotations.map((path) => PathOps.bbox(path.path)!);
+    const longest = spans.reduce((a, b) => (RectOps.width(b) > RectOps.width(a) ? b : a));
+    expect(RectOps.width(longest)).toBeCloseTo(100, 6);
+  });
+
+  it('keeps the part’s caption clear of a dimension along its top edge', () => {
+    // Regression: once the dimension line counted towards the part's bounds,
+    // the caption moved up to sit just above that line, in the band where the
+    // number is set, so on a narrow part the name and "30.0" could collide.
+    const part = buildExportScene(evaluate(dimensioned(30, [2, 1], 8)), 'Test').parts[0]!;
+    const inkOf = (source: string) => {
+      const text = part.texts.find((candidate) => candidate.source === source)!;
+      return RectOps.unionAll(text.glyphs.flatMap((glyph) => PathOps.bbox(glyph) ?? []))!;
+    };
+    const number = inkOf('30.0');
+    const caption = inkOf(part.name);
+
+    // The number is inside what the paginator places, so nothing lands on it…
+    expect(RectOps.containsRect(part.boundsMm, number)).toBe(true);
+    // …and the caption, which sits above the bounds, is above the number.
+    expect(caption.minY).toBeGreaterThan(number.maxY);
+  });
+
+  it('still does not print a text label’s selection box', () => {
+    // The distinction the fix keeps: a label's path is where it can be
+    // clicked, not something drawn.
+    const base = projectWithRect(80, 50);
+    const part = base.parts[0]!;
+    const project: Project = {
+      ...base,
+      parts: [
+        {
+          ...part,
+          features: [
+            ...part.features,
+            {
+              id: 'label-1',
+              kind: 'text-label',
+              name: 'Fold',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'text',
+                text: 'Fold',
+                at: { x: 10, y: 20 },
+                sizeMm: 4,
+                rotationRad: 0,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const paths = buildExportScene(evaluate(project), 'Test').parts[0]!.paths;
+    expect(paths.filter((path) => path.role === 'annotation')).toHaveLength(0);
   });
 });
 
