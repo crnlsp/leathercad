@@ -49,7 +49,7 @@ leathercad/
 │   └── desktop/         electron main, preload, renderer entry, electron-builder config
 │
 ├── fixtures/
-│   ├── projects/        sample .lcp files: cardholder, bifold, strap, calibration-target
+│   ├── projects/        print-test.lcp, the 7.7 print test; sample projects are 8.3
 │   ├── format/          v1.lcp, v2.lcp, … one per shipped format version
 │   └── golden/          committed geometry outputs
 │
@@ -1947,10 +1947,22 @@ during implementation.
 - **7.6** ❌ **Explicitly deferred.** The user does not want the application to handle printers:
   "I dont want this app to handle the printer... for now only pdf good quality". Export opens the
   file in the system viewer and stops there. Revisit only if asked.
-- **7.7** **1.0.** **Print the calibration target, measure it with a steel rule, record the result**,
+- **7.7** **1.0.** **Print the print test, measure it with a steel rule, record the result**,
   once on each of Linux, Windows and macOS, from each platform's default PDF viewer. A viewer that
   defaults to "scale to fit" is exactly what this catches. **→ M5.** A person does this, not code.
-  `print-verification-log.md` still reads "pending".
+  - ✅ **The automated half** (2026-09-24). `fixtures/projects/print-test.lcp` is built by the app's
+    own commands (`apps/desktop/src/renderer/src/printTest.test.ts`): a panel with a 100.0 mm
+    dimension and a stitch line all round, a card pocket with a thumb scoop stitched on three
+    sides, and a 250 mm strap tiled over two sheets. `e2e/print-verification.spec.ts` exports it
+    with the Export PDF button and measures poppler's rendering of the file: the square and ruler
+    on every sheet, the panel's edge and its dimension line, the spacing of its straight run of
+    holes from the first and last centres, and the strap's halves and registration crosses across
+    the join. The packaged smoke test repeats it against the binary, on all three platforms.
+  - Preparing it found a real print bug, fixed in #69: a dimension printed its number with no
+    line. It also found the old log's procedure wrong twice — it compared ten holes with the
+    property panel's *Spacing*, which averages every run, and ten holes are nine gaps.
+  - [ ] **The physical half.** `print-verification-log.md` still reads "pending" on all three
+    platforms. The procedure is in that file.
 
 ### Phase 8 — v1.0
 *Everything between "it works" and "someone else can use it".*

@@ -357,16 +357,22 @@ Guard rails, because this feature can also *cause* the problem it solves:
 Automated tests prove the PDF contains the right numbers. They cannot prove the paper does. Every
 release, and at the end of every slice that touches export or printing:
 
-1. Open `fixtures/projects/calibration-target.lcp` — a 200 × 200 mm frame, a 100 mm cross, a 50 mm
-   square, and a stitch line at 3.5 mm inset with 3.85 mm holes.
-2. Export to PDF, A4 portrait, default margins.
-3. Print at 100 %, actual size.
-4. Measure with a **steel rule** (not a tape): the 200 mm frame both ways, the 100 mm cross both
-   ways, the 50 mm square, and the span across 20 stitch holes (should be 19 × 3.85 = 73.15 mm).
-5. Record the results in `docs/print-verification-log.md` with the date, printer, driver, and paper.
+1. Open `fixtures/projects/print-test.lcp` — a panel with a 100.0 mm dimension and a stitch line all
+   round, a card pocket with a thumb scoop stitched on three sides, and a 250 mm strap tiled over two
+   sheets.
+2. Export PDF from the app, and print from the system's PDF viewer at 100 %, actual size.
+3. Measure with a **steel rule** (not a tape), and record the readings, following the procedure in
+   `docs/print-verification-log.md`.
 
-Twenty holes rather than two, because a per-hole error of 0.05 mm is invisible individually and
-obvious across a span.
+Holes are measured across a whole straight run — 25 holes, 24 gaps — rather than between two,
+because a per-hole error of 0.05 mm is invisible individually and obvious across a span. The span
+is the run's own achieved spacing times its gaps: on the panel's straight bottom run, 24 × 3.875 =
+93.0 mm. The nominal pitch is the wrong number (glossary: *pitch* and *spacing*), and so is the
+property panel's *Spacing*, which averages every run in the hole set.
+
+`e2e/print-verification.spec.ts` makes the same measurements on the exported PDF, rasterised by
+poppler, and `e2e/packaged/packaged.spec.ts` repeats them against the packaged app on each
+platform. What neither can reach is the viewer's print dialog, the printer and the paper.
 
 ## 10. SVG export
 

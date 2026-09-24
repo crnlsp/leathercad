@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from '../closeApp.js';
+import { expectAccurate, exportPrintTest, measurePrintTest } from '../printTest.js';
 
 /**
  * The packaged app, not the development build.
@@ -17,7 +18,9 @@ import { closeApp } from '../closeApp.js';
  * fuses now forbid — are invisible to the suite. This test is where they show.
  *
  * It is a smoke test on purpose: the app starts, renders in its own typeface,
- * reaches the main process, and writes a PDF. Behaviour is the E2E suite's job.
+ * reaches the main process, and writes a PDF — the 7.7 print test, measured, so
+ * the export a release ships is the export measured. Behaviour is the E2E
+ * suite's job.
  */
 
 const DESKTOP_DIR = resolve(import.meta.dirname, '../../apps/desktop');
@@ -140,6 +143,20 @@ test('draws a panel and writes it to a PDF', async () => {
     // Independent of our own reader: poppler says it is an A4 PDF.
     const info = execFileSync('pdfinfo', [pdf], { encoding: 'utf8' });
     expect(info).toMatch(/Page size:\s+595\.276 x 841\.89 pts \(A4\)/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('exports the 7.7 print test at 1:1, measured on the page', async () => {
+  // The E2E suite's measurement (e2e/print-verification.spec.ts), against the
+  // binary a maker installs: the export a release ships is the one measured.
+  const window = await app.firstWindow();
+  const dir = mkdtempSync(join(tmpdir(), 'leathercad-packaged-7.7-'));
+  const pdf = join(dir, 'print-test.pdf');
+  try {
+    await exportPrintTest(app, window, pdf);
+    expectAccurate(measurePrintTest(pdf));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
