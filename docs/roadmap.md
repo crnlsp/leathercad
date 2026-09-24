@@ -2195,11 +2195,16 @@ stays deferred.
         polish.
   - [ ] **Linux.** The AppImage needs no signing authority. An optional GPG signature can come with
         the release checksums.
-  - [ ] **The Release workflow's permission.** It has failed on every push to `main` since #49 with
-        *"GitHub Actions is not permitted to create or approve pull requests"*. Fix it in Settings →
-        Actions → General → Workflow permissions → *Allow GitHub Actions to create and approve pull
-        requests*.
+  - [x] **The Release workflow's permission** (2026-09-24). It had failed on every push to `main`
+        since #49 with *"GitHub Actions is not permitted to create or approve pull requests"*. With
+        the setting on in crnlsp/leathercad, the workflow opened the 1.0.0 release PR and, once it
+        merged, built and attached every installer.
   - [ ] **The physical print on each platform** (7.7).
+  - [x] **v1.0.0** (2026-09-24): tag `leathercad-v1.0.0`, with the AppImage, the Windows installer
+        and the universal dmg attached, each with build provenance, and the CycloneDX SBOM. The Windows
+        installer is unsigned and the dmg ad-hoc signed and not notarised, as the two signing items
+        above record. `release-as` came out of `release-please-config.json` afterwards, so versions
+        follow the commits from here.
 
 ### Phase 9 — Beyond v1
 

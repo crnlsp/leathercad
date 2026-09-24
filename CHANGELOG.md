@@ -1,0 +1,75 @@
+# Changelog
+
+## 1.0.0 (2026-09-24)
+
+
+### Features
+
+* a control that cannot act says why, and every tool says how it is used (F.1) ([5f586b9](https://github.com/crnlsp/leathercad/commit/5f586b98cef70cd86451703f2e2512990c51b745))
+* a light drafting ground, and colour that means one thing each (F.5) ([632c647](https://github.com/crnlsp/leathercad/commit/632c647e14ca3baf23fce4daadc62e0a4318abca))
+* a number that cannot disagree with the drawing (4.10a) ([1e3152b](https://github.com/crnlsp/leathercad/commit/1e3152b88f6ed5ec6eb9e64beb33e4c02ba2a8f8))
+* a part larger than the sheet is printed across sheets at 1:1 (7.2a) ([8938bb6](https://github.com/crnlsp/leathercad/commit/8938bb6ad1e74d4497fd54425fbcb8989060b676))
+* an app icon, a desktop entry that matches its window, and a production menu (8.5a) ([7123c84](https://github.com/crnlsp/leathercad/commit/7123c84737f85c1ae212e1d645dfaab6f051ee0b))
+* anchors carried through derivations (4.4b) ([3f02dcb](https://github.com/crnlsp/leathercad/commit/3f02dcb1b5e2a87a32fa3d81861c1f24c3f66852))
+* arc segments in the polyline tool, for a pocket with a thumb scoop (3.9a) ([edc655a](https://github.com/crnlsp/leathercad/commit/edc655a111dc5a9f84080378cdf4cb9d222614b7))
+* choose the paper and its orientation, and the square is whole on every sheet (6.4a) ([bf74964](https://github.com/crnlsp/leathercad/commit/bf749646e44729a1ed50b8b8e3019db5297fd147))
+* **core:** epsilons, quantisation, guards, Result and ULIDs (slice 1.1) ([08ecc2d](https://github.com/crnlsp/leathercad/commit/08ecc2d8c0844557b7974b81aa48b7e9733d21f2))
+* deleting asks what to do with what follows it (4.2b) ([28f9d36](https://github.com/crnlsp/leathercad/commit/28f9d36894661b19fb254e61e4cd6f70c7ca9b09))
+* **desktop:** tool palette and window chrome (3.5a) ([d1fb626](https://github.com/crnlsp/leathercad/commit/d1fb6261cf09d455b2de630dd4f9e1a0d6e8c44a))
+* dimension the pocket by its opening (4.9) ([5e21827](https://github.com/crnlsp/leathercad/commit/5e2182774f5bf000d86e9eaf882ca121dcde6e55))
+* **editor:** arc tool, and the arc shape (3.6b) ([bf5a11e](https://github.com/crnlsp/leathercad/commit/bf5a11e843a0e0c0bb5c69c2ae3fe200d1db369a))
+* **editor:** circle tool, and one property editor per shape (3.6) ([062d9ca](https://github.com/crnlsp/leathercad/commit/062d9cac60791d2b9ace7e9e5157fb95381b25f2))
+* **editor:** line and polyline tools (3.5) ([ce91b29](https://github.com/crnlsp/leathercad/commit/ce91b297cf1b584d3ec0e4a5c359d4f7474904f9))
+* **editor:** points land on the geometry they are aimed at (3.3b) ([5537fe2](https://github.com/crnlsp/leathercad/commit/5537fe29b7e3934d55e12f4d7939974376395e2f))
+* **editor:** rotate and scale, and the rule for transforms that cannot (3.7) ([3f03970](https://github.com/crnlsp/leathercad/commit/3f0397010cf70d7789d88dbfecaea597417c7fea))
+* **editor:** snap engine (3.3) ([9c39d10](https://github.com/crnlsp/leathercad/commit/9c39d10d79cb66ec8ca86c561e2096b7ff7eb723))
+* Electron shell with a DPR-aware canvas (slice 0.2) ([f5f4ebe](https://github.com/crnlsp/leathercad/commit/f5f4ebe12b959c66d69c07ffc5989af1aad28fd2))
+* every line named by its mark, and no emoji left (F.6) ([e5228fa](https://github.com/crnlsp/leathercad/commit/e5228faa907acf26a2eaff342f07a5100b68e413))
+* every panel has a place of its own, and none disappears (F.2) ([780dc86](https://github.com/crnlsp/leathercad/commit/780dc869d3fe3e02782a01eb8c1beffc26a98d97))
+* every problem reachable from where it is shown (4.12) ([6f9864b](https://github.com/crnlsp/leathercad/commit/6f9864b74bfc7a9ac2df436c3d0429e5c68280fa))
+* **export:** print-ready 1:1 PDF (6.1, 6.3, 7.1, 7.3) ([f3a315e](https://github.com/crnlsp/leathercad/commit/f3a315ec24e35da18b13687137e0c3b996cafc69))
+* geometry on screen — viewport, renderer, grid and rulers (M1) ([1588192](https://github.com/crnlsp/leathercad/commit/1588192abc445ec15e12302f3cb6139b8dd7c159))
+* **geometry:** analytic offsetPath — arcs stay arcs (slice 1.9, Tier 1) ([6239549](https://github.com/crnlsp/leathercad/commit/6239549f52eb67e5876b19a11b3516d077c5e013))
+* **geometry:** close slice 1.7 — the rest of the shape constructors ([806e4b0](https://github.com/crnlsp/leathercad/commit/806e4b0aa3829d5ab72237eaee670bafd80ee942))
+* **geometry:** distributeAlongPath — holes at a pitch (slice 1.8) ([9d70197](https://github.com/crnlsp/leathercad/commit/9d70197097baf93f92b347ad403fc4714380d73e))
+* **geometry:** flattening, and three numerical bugs it uncovered (slice 1.5) ([0b7c202](https://github.com/crnlsp/leathercad/commit/0b7c202162ef59d72c98e7ef8b08fc3cac94cec3))
+* **geometry:** intersections — the last slice in Phase 1 (1.10) ([d7cd46f](https://github.com/crnlsp/leathercad/commit/d7cd46fb4d830cd8482b5dc6e2a31ba484f55647))
+* **geometry:** Path, exact area and point containment (slice 1.4) ([a775421](https://github.com/crnlsp/leathercad/commit/a77542137ea1ed346d7f97960af22313d1c4a639))
+* **geometry:** PathMeasure and arc-length parameterisation (slice 1.6) ([6d1c254](https://github.com/crnlsp/leathercad/commit/6d1c254e3fca651657f708a47870d926f766bf93))
+* **geometry:** the Segment union — line, arc, cubic (slice 1.3) ([31a9d91](https://github.com/crnlsp/leathercad/commit/31a9d9176a0e99112148c7d330105709dad0866c))
+* **geometry:** Vec2, Mat2x3 and Rect (slice 1.2) ([39b23b9](https://github.com/crnlsp/leathercad/commit/39b23b9b549a4e3a051ae5fd91e5a4b0d55f34de))
+* labels you type, printed with everything else (4.11b) ([52e9b89](https://github.com/crnlsp/leathercad/commit/52e9b890d96a051403e757f4d9265b08d297a91e))
+* one card holder from outline to paper, and a fold you can let go of (4.13) ([3066a86](https://github.com/crnlsp/leathercad/commit/3066a864b3e8de56e21b5b61a97530420bb2fdd8))
+* one channel for everything that can be wrong (4.12a) ([53d1747](https://github.com/crnlsp/leathercad/commit/53d174713066c91e62323c40d684e16c7cae3363))
+* one table for how everything looks, and screen and paper agree (F.4) ([4238042](https://github.com/crnlsp/leathercad/commit/42380420c59a7d92fd09121fd8a56b237990079f))
+* one typeface, laid out once, outlined on paper (4.11a) ([8a87360](https://github.com/crnlsp/leathercad/commit/8a873609011e28826d4cc9914ad902b55b6b8595))
+* **persist:** the .lcp project format — save and reopen (5.1) ([bec6f35](https://github.com/crnlsp/leathercad/commit/bec6f35f15069f15b8f0e260b098cc2719925d8c))
+* property panel and parts list — exact millimetre editing (3.8) ([6a115e0](https://github.com/crnlsp/leathercad/commit/6a115e0e45a96e466a943f5748783c988e4f96c8))
+* README, getting started, third-party notices and the update message (8.6b) ([dba5090](https://github.com/crnlsp/leathercad/commit/dba5090f0fc7eef15f2a852850d137dce2e1807e))
+* **render:** SVG backend for the DisplayList (2.6) — Phase 2 closed ([d036668](https://github.com/crnlsp/leathercad/commit/d03666803f28538c65284e8b134034368293c008))
+* stitching drawn as a pricking iron cuts it, and a key to the drawing (F.7) ([8fd1503](https://github.com/crnlsp/leathercad/commit/8fd15031c00e128c539ff024ce632794326952c7))
+* symmetry that keeps working — mirror across a fold (4.8b) ([5155917](https://github.com/crnlsp/leathercad/commit/51559174edeb9bcb640a2fbaae2d4093cfc7bfa0))
+* the app becomes a tool — domain, document, and drawing (M2) ([42d4f06](https://github.com/crnlsp/leathercad/commit/42d4f065b94917133c35cc9c9486d462be75d2a7))
+* the derivation chain — cut contour to stitch holes (M3) ([353faf8](https://github.com/crnlsp/leathercad/commit/353faf8fcce8368f9a88c11da65d8f14967dd2b3))
+* the drawing moves only when the maker moves it (F.3) ([5788ec1](https://github.com/crnlsp/leathercad/commit/5788ec1881345601ae4da723d4d9b79844300f23))
+* the interface speaks in the typeface the pattern prints in (F.0) ([5dc50d9](https://github.com/crnlsp/leathercad/commit/5dc50d9bd11c3d0f05a7ea9e35ca88f516bc611b))
+* the project says which paper it prints on (5.5), and the UI/UX audit ([39795f7](https://github.com/crnlsp/leathercad/commit/39795f7d467dc5c0552f8f337a9e637abec871c7))
+* unsaved work is never thrown away without asking (5.3a) ([e747012](https://github.com/crnlsp/leathercad/commit/e74701287f2114d51808c371b8a3b9626af2ffbe))
+* Windows and macOS installers, built and smoke-tested in CI (8.6a) ([30b1041](https://github.com/crnlsp/leathercad/commit/30b10410ec8852d253d8eef396aafbc84be874f0))
+* work interrupted by a crash is offered back on the next start (5.3b) ([d9438ee](https://github.com/crnlsp/leathercad/commit/d9438eef584dde5009dace79f00b605765c9db15))
+
+
+### Bug Fixes
+
+* a newer build's fields survive opening and saving a file (5.2) ([20ce0a4](https://github.com/crnlsp/leathercad/commit/20ce0a4f2cb46ed95d75a37e83d3717f46ac8290))
+* a printed dimension keeps its dimension line, not just its number ([66296b4](https://github.com/crnlsp/leathercad/commit/66296b4f61b8566da48a4f95e87ec1c0242eb22d))
+* a stitch pitch finer than any iron is refused on its hole set, not by running out of memory (5.6) ([f8345ca](https://github.com/crnlsp/leathercad/commit/f8345caa6580e8871234b1d27631cab4d726a983))
+* **desktop:** paint the first frame without waiting for an animation frame ([6dbd520](https://github.com/crnlsp/leathercad/commit/6dbd520bf307de03021adbdd8b5b1e35f36e139a))
+* **geometry:** a cubic's tangent points the way it travels at a stationary end ([68f17c5](https://github.com/crnlsp/leathercad/commit/68f17c50fc78f065af6b37a1f322c2683f279ed9))
+* **geometry:** PathMeasure collapsed every edge after the first ([0d8ef27](https://github.com/crnlsp/leathercad/commit/0d8ef2745c79a29816055193a93d7a4db436ecd3))
+* saving while a recovery copy is being written no longer leaves a stale copy ([a9fe95a](https://github.com/crnlsp/leathercad/commit/a9fe95a0f73194771d87dd25a7e3d2f216edb7f8))
+
+
+### Performance Improvements
+
+* **geometry:** adaptive quadrature for cubic length ([6bee6bf](https://github.com/crnlsp/leathercad/commit/6bee6bfb16cc49e344fe1e6925d0643942429f7e))
