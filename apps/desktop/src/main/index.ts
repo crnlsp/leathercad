@@ -2,11 +2,13 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { BrowserWindow, Menu, app, shell } from 'electron';
+import log from 'electron-log/main';
 
 import windowIcon from '../../build/icon.png?asset';
 import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
+import { mayOpenExternally } from './externalLinks.js';
 import { menuTemplate } from './menu.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
 import { RecoveryStore } from './recovery.js';
@@ -67,9 +69,11 @@ function createWindow(): void {
     mainWindow = null;
   });
 
-  // Nothing in this app should ever open a new window or navigate away.
+  // Nothing in this app should ever open a new window or navigate away. A
+  // link to the web goes to the browser; anything else goes nowhere.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    if (mayOpenExternally(url)) void shell.openExternal(url);
+    else log.warn(`refused to open ${JSON.stringify(url)}: only https: links leave the app`);
     return { action: 'deny' };
   });
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());

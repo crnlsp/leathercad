@@ -6,6 +6,7 @@ import log from 'electron-log/main';
 
 import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
+import { PathGrants, type PathUse } from './pathGrants.js';
 import type { RecoveryStore } from './recovery.js';
 
 /**
@@ -21,18 +22,23 @@ function recoveryIntervalMs(): number {
 /**
  * Implements PlatformHost in the main process. The renderer reaches these
  * through the preload bridge; it has no direct filesystem access.
+ *
+ * Nor does it get one through here: it reads, writes and opens only the paths
+ * the user chose in these dialogs this session (`PathGrants`).
  */
 export function registerPlatformHandlers(
   getWindow: () => BrowserWindow | null,
   recovery: RecoveryStore,
 ): void {
-  ipcMain.handle(IPC.readFile, async (_event, path: string) => {
-    const buffer = await readFile(path);
+  const grants = new PathGrants();
+
+  ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
+    const buffer = await readFile(guard(grants, path, 'read'));
     return new Uint8Array(buffer);
   });
 
-  ipcMain.handle(IPC.writeFile, async (_event, path: string, data: Uint8Array) => {
-    await writeFileAtomic(path, data);
+  ipcMain.handle(IPC.writeFile, async (_event, path: unknown, data: Uint8Array) => {
+    await writeFileAtomic(guard(grants, path, 'write'), data);
   });
 
   ipcMain.handle(IPC.showOpenDialog, async (_event, options: Electron.OpenDialogOptions) => {
@@ -40,7 +46,9 @@ export function registerPlatformHandlers(
     const result = window
       ? await dialog.showOpenDialog(window, { ...options, properties: ['openFile'] })
       : await dialog.showOpenDialog({ ...options, properties: ['openFile'] });
-    return result.canceled ? null : (result.filePaths[0] ?? null);
+    const chosen = result.canceled ? null : (result.filePaths[0] ?? null);
+    if (chosen !== null) grants.grant(chosen);
+    return chosen;
   });
 
   ipcMain.handle(IPC.showSaveDialog, async (_event, options: Electron.SaveDialogOptions) => {
@@ -48,11 +56,18 @@ export function registerPlatformHandlers(
     const result = window
       ? await dialog.showSaveDialog(window, options)
       : await dialog.showSaveDialog(options);
-    return result.canceled ? null : (result.filePath ?? null);
+    const chosen = result.canceled ? null : (result.filePath ?? null);
+    if (chosen !== null) {
+      grants.grant(
+        chosen,
+        (options.filters ?? []).flatMap((filter) => filter.extensions),
+      );
+    }
+    return chosen;
   });
 
-  ipcMain.handle(IPC.openInExternalViewer, async (_event, path: string) => {
-    const error = await shell.openPath(path);
+  ipcMain.handle(IPC.openInExternalViewer, async (_event, path: unknown) => {
+    const error = await shell.openPath(guard(grants, path, 'view'));
     if (error !== '') throw new Error(error);
   });
 
@@ -78,4 +93,15 @@ export function registerPlatformHandlers(
     }
   });
   ipcMain.handle(IPC.getRecoveryIntervalMs, () => recoveryIntervalMs());
+}
+
+/** The path, if the renderer may use it this way; otherwise logged and refused. */
+function guard(grants: PathGrants, path: unknown, use: PathUse): string {
+  try {
+    return grants.check(path, use);
+  } catch (error) {
+    const shown = typeof path === 'string' ? JSON.stringify(path) : `a ${typeof path}`;
+    log.warn(`refused to ${use} ${shown}: not chosen in a dialog this session`);
+    throw error;
+  }
 }

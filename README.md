@@ -53,7 +53,8 @@ from that.
 | [glossary.md](docs/glossary.md) | Leathercraft vocabulary used throughout |
 | [claude-code-setup.md](docs/claude-code-setup.md) | Skills, commands, hooks, and what to skip |
 
-[`CLAUDE.md`](CLAUDE.md) holds the invariants that must not be violated.
+[`CLAUDE.md`](CLAUDE.md) holds the invariants that must not be violated. To report a security
+problem, see [`SECURITY.md`](SECURITY.md): privately, never in a public issue.
 
 ## Development
 
