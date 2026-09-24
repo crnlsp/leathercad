@@ -170,6 +170,9 @@ exact name of the viewer's actual-size setting. Record one row per platform in t
 ## After it passes
 
 The last 1.0 items are then the release tasks in the roadmap's 8.6, which need credentials:
-- Windows signing;
-- macOS signing and notarisation;
-- the Release workflow's permission.
+- [ ] Windows signing;
+- [ ] macOS signing and notarisation;
+- [x] the Release workflow's permission (2026-09-24).
+
+v1.0.0 was released on 2026-09-24, unsigned on Windows and ad-hoc signed on macOS. The
+platform rows in [`print-verification-log.md`](print-verification-log.md) are still pending.
