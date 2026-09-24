@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
+import { devServerCsp } from './src/csp/devServerCsp.js';
 import { thirdPartyNotices } from './src/notices/thirdPartyNotices.js';
 
 // Uses electron-vite's default layout: src/main/index.ts, src/preload/index.ts,
@@ -41,6 +42,11 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin(), notices.collect('preload')],
   },
   renderer: {
-    plugins: [react(), notices.collect('renderer'), notices.write(['main', 'preload'])],
+    plugins: [
+      react(),
+      devServerCsp(),
+      notices.collect('renderer'),
+      notices.write(['main', 'preload']),
+    ],
   },
 });
