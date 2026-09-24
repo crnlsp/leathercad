@@ -169,10 +169,9 @@ exact name of the viewer's actual-size setting. Record one row per platform in t
 
 ## After it passes
 
-The last 1.0 items are then the release tasks in the roadmap's 8.6, which need credentials:
-- [ ] Windows signing;
-- [ ] macOS signing and notarisation;
+The last 1.0 item is then the release task in the roadmap's 8.6:
 - [x] the Release workflow's permission (2026-09-24).
 
-v1.0.0 was released on 2026-09-24, unsigned on Windows and ad-hoc signed on macOS. The
-platform rows in [`print-verification-log.md`](print-verification-log.md) are still pending.
+Code signing is not a requirement: the builds ship unsigned on Windows and ad-hoc signed on macOS,
+by decision (roadmap 8.6, *Code signing*). v1.0.0 was released on 2026-09-24. The platform rows in
+[`print-verification-log.md`](print-verification-log.md) are still pending.
