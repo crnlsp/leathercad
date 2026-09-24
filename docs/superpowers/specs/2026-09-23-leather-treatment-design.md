@@ -1,7 +1,7 @@
 # Leather-specific treatment (F.7) — design
 
 **Date:** 2026-09-23
-**Status:** Built in the slice's pull request ([#55](https://github.com/cornelisp/leathercad/pull/55)); §6 decided at review.
+**Status:** Built in the slice's pull request; §6 decided at review.
 **Row:** [roadmap](../../roadmap.md) § *The UI Foundations checkpoint*, F.7 ·
 [UI Foundations](2026-09-17-ui-foundations-design.md) §8, §9.3, §12, §13, §14 ·
 [decisions](2026-09-18-ui-foundations-decisions.md) §3, §6

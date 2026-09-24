@@ -9,7 +9,7 @@ bigger than the paper prints across several sheets, with join lines and registra
 
 Linux, Windows and macOS. Electron + TypeScript. Apache-2.0.
 
-**[Download](https://github.com/cornelisp/leathercad/releases/latest)** ·
+**[Download](https://github.com/crnlsp/leathercad/releases/latest)** ·
 **[Getting started](docs/getting-started.md)**
 
 ## What it does

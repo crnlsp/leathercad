@@ -5,7 +5,7 @@ From installing LeatherCAD to a pattern on paper that measures true: about fifte
 ## 1. Install
 
 Download the installer for your system from the
-[latest release](https://github.com/cornelisp/leathercad/releases/latest).
+[latest release](https://github.com/crnlsp/leathercad/releases/latest).
 
 | System | File | Then |
 |---|---|---|
@@ -80,4 +80,4 @@ changes, it asks first.
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets.
 - **Logs:** *Help → Show Log Folder*. Nothing is ever uploaded; attach the log to a bug report.
 - **Licences:** *Help → Third-Party Notices*, and `THIRD_PARTY_NOTICES.txt` beside the app.
-- **Bugs and ideas:** [GitHub issues](https://github.com/cornelisp/leathercad/issues).
+- **Bugs and ideas:** [GitHub issues](https://github.com/crnlsp/leathercad/issues).

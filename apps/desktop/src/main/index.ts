@@ -129,7 +129,7 @@ app.whenReady().then(() => {
   app.setAboutPanelOptions({
     applicationName: 'LeatherCAD',
     applicationVersion: app.getVersion(),
-    copyright: 'Copyright © 2026 cornelisp · Apache-2.0',
+    copyright: 'Copyright © 2026 crnlsp · Apache-2.0',
   });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(

@@ -1,7 +1,7 @@
 # Loader hardening: a pitch the editor cannot make (slice 5.6) — design
 
 **Date:** 2026-09-23
-**Status:** Built in [#56](https://github.com/cornelisp/leathercad/pull/56); the decision in §2 was accepted at review.
+**Status:** Built in the slice's pull request; the decision in §2 was accepted at review.
 **Row:** [roadmap](../../roadmap.md) Phase 5, slice 5.6 ·
 [engineering tooling](2026-09-23-engineering-tooling-design.md) finding F1
 

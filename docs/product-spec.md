@@ -30,7 +30,7 @@ the printed page.** Every architectural decision in these documents serves that.
 
 ## 2a. Relationship to Leathercrafto
 
-[Leathercrafto](https://github.com/cornelisp/Leathercrafto) is a separate application by the same
+[Leathercrafto](https://github.com/crnlsp/Leathercrafto) is a separate application by the same
 author: a keyboard-driven browser for a folder of existing pattern PDFs, which prints them at 1:1.
 
 **LeatherCAD is a separate application, not a successor and not a component of it.** The two are not

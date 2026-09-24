@@ -4,7 +4,7 @@
   "private": true,
   "description": "Desktop application for designing leathercraft patterns that print at exact 1:1 scale",
   "license": "Apache-2.0",
-  "author": "cornelisp",
+  "author": "crnlsp",
   "type": "module",
   "engines": {
     "node": ">=22.12.0",

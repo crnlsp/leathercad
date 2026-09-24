@@ -24,10 +24,10 @@
  * @type {import('electron-builder').Configuration}
  */
 export default {
-  appId: 'io.github.cornelisp.leathercad',
+  appId: 'io.github.crnlsp.leathercad',
   productName: 'LeatherCAD',
   executableName: 'leathercad',
-  copyright: 'Copyright © 2026 cornelisp',
+  copyright: 'Copyright © 2026 crnlsp',
   directories: { output: 'release', buildResources: 'build' },
   files: ['out/**/*', 'package.json'],
   asar: true,
