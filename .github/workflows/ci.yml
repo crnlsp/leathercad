@@ -90,9 +90,16 @@ jobs:
 
       # Runs the suite and enforces the coverage thresholds from
       # vitest.config.ts in one pass, which is why there is no separate
-      # coverage step.
+      # coverage step. Everything but the wall-clock ceilings, which follow.
       - name: Test with coverage
         run: pnpm test:coverage
+
+      # packages/domain/src/perf.test.ts times real work against ceilings in
+      # milliseconds. Instrumented, and sharing the runner with every other
+      # file, it measured 25-35 % over them; alone and uninstrumented it
+      # measures what it means to. Still a gate, just not a noisy one.
+      - name: Performance ceilings
+        run: pnpm test:perf
 
   e2e:
     name: E2E

@@ -338,6 +338,7 @@ static   pnpm typecheck         # tsc --build across the workspace
 test     pnpm test:coverage     # unit, property, golden, export, snapshot,
                                 # and the coverage thresholds in one pass
                                 # LEATHERCAD_REQUIRE_POPPLER=1
+         pnpm test:perf         # domain/perf.test.ts alone, serial, uninstrumented
 
 e2e      pnpm test:e2e          # Playwright + Electron, under xvfb, incl. the axe scan
                                 # uploads playwright-report/ on failure
@@ -359,6 +360,11 @@ is not.
 everything but E2E. It runs the coverage build deliberately: slice 1.8 shipped a property test that
 passed uninstrumented and timed out under coverage in CI, which is precisely the divergence this
 closes.
+
+The one exception is `packages/domain/src/perf.test.ts`, which asserts wall-clock ceilings.
+Instrumented and sharing the machine with every other file, it measured 25–35 % over them on GitHub
+runners, so `test:coverage` excludes it and `test:perf` runs it afterwards, alone, serially and
+without coverage — in CI and in `pnpm check` alike. `pnpm test` still runs it with everything else.
 
 Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
 a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
