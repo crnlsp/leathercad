@@ -12,6 +12,11 @@ export const IPC = {
   openInExternalViewer: 'platform:openInExternalViewer',
   getUserConfigDir: 'platform:getUserConfigDir',
   getAppVersion: 'platform:getAppVersion',
+  writeRecovery: 'platform:writeRecovery',
+  clearRecovery: 'platform:clearRecovery',
+  findRecovery: 'platform:findRecovery',
+  resolveRecovery: 'platform:resolveRecovery',
+  getRecoveryIntervalMs: 'platform:getRecoveryIntervalMs',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

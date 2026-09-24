@@ -133,6 +133,22 @@ describe('undo', () => {
 });
 
 describe('transactions', () => {
+  it('says while a transaction is open, so nothing snapshots a half-finished drag (5.3b)', () => {
+    const store = new DocumentStore(docWithRect());
+    expect(store.getState().inTransaction).toBe(false);
+
+    store.begin('Move');
+    expect(store.getState().inTransaction).toBe(true);
+    store.preview(translateFeatures(['feat-1'], { x: 5, y: 0 }));
+    expect(store.getState().inTransaction).toBe(true);
+    store.commit();
+    expect(store.getState().inTransaction).toBe(false);
+
+    store.begin('Move');
+    store.rollback();
+    expect(store.getState().inTransaction).toBe(false);
+  });
+
   it('collapses a drag into a single undo step', () => {
     // Without this, one drag of a rectangle would need three hundred presses
     // of undo to reverse.

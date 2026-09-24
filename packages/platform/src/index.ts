@@ -14,6 +14,12 @@
  * the fake lie.
  */
 
-export type { PlatformHost, OpenDialogOptions, SaveDialogOptions, FileFilter } from './host.js';
+export type {
+  PlatformHost,
+  OpenDialogOptions,
+  SaveDialogOptions,
+  FileFilter,
+  RecoveredCopy,
+} from './host.js';
 export { InMemoryPlatformHost } from './fake.js';
 export { systemIdSource } from './systemIdSource.js';

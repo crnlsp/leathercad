@@ -1,4 +1,4 @@
-import type { OpenDialogOptions, PlatformHost, SaveDialogOptions } from './host.js';
+import type { OpenDialogOptions, PlatformHost, RecoveredCopy, SaveDialogOptions } from './host.js';
 
 /**
  * A PlatformHost backed by a Map. Used by every test that would otherwise need
@@ -63,5 +63,35 @@ export class InMemoryPlatformHost implements PlatformHost {
 
   getAppVersion(): Promise<string> {
     return Promise.resolve(this.appVersion);
+  }
+
+  /** This session's recovery copy, if any. */
+  recovery: Uint8Array | null = null;
+  /** What `findRecovery` returns: a copy a crashed session left. */
+  abandoned: RecoveredCopy | null = null;
+  readonly resolved: Array<{ id: string; how: 'adopt' | 'corrupt' }> = [];
+
+  writeRecovery(data: Uint8Array): Promise<void> {
+    this.recovery = Uint8Array.from(data);
+    return Promise.resolve();
+  }
+
+  clearRecovery(): Promise<void> {
+    this.recovery = null;
+    return Promise.resolve();
+  }
+
+  findRecovery(): Promise<RecoveredCopy | null> {
+    return Promise.resolve(this.abandoned);
+  }
+
+  resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void> {
+    this.resolved.push({ id, how });
+    if (this.abandoned?.id === id) this.abandoned = null;
+    return Promise.resolve();
+  }
+
+  getRecoveryIntervalMs(): Promise<number> {
+    return Promise.resolve(60_000);
   }
 }

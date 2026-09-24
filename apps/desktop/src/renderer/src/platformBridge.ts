@@ -1,4 +1,9 @@
-import type { OpenDialogOptions, PlatformHost, SaveDialogOptions } from '@leathercad/platform';
+import type {
+  OpenDialogOptions,
+  PlatformHost,
+  RecoveredCopy,
+  SaveDialogOptions,
+} from '@leathercad/platform';
 
 /**
  * Adapts the preload bridge to the PlatformHost interface.
@@ -14,6 +19,11 @@ interface PreloadBridge {
   openInExternalViewer(path: string): Promise<void>;
   getUserConfigDir(): Promise<string>;
   getAppVersion(): Promise<string>;
+  writeRecovery(data: Uint8Array): Promise<void>;
+  clearRecovery(): Promise<void>;
+  findRecovery(): Promise<RecoveredCopy | null>;
+  resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void>;
+  getRecoveryIntervalMs(): Promise<number>;
 }
 
 declare global {

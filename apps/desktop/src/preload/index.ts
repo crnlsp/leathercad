@@ -27,6 +27,18 @@ const platformBridge = {
   getUserConfigDir: (): Promise<string> => ipcRenderer.invoke(IPC.getUserConfigDir),
 
   getAppVersion: (): Promise<string> => ipcRenderer.invoke(IPC.getAppVersion),
+
+  writeRecovery: (data: Uint8Array): Promise<void> => ipcRenderer.invoke(IPC.writeRecovery, data),
+
+  clearRecovery: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery),
+
+  findRecovery: (): Promise<{ id: string; savedAt: string; data: Uint8Array } | null> =>
+    ipcRenderer.invoke(IPC.findRecovery),
+
+  resolveRecovery: (id: string, how: 'adopt' | 'corrupt'): Promise<void> =>
+    ipcRenderer.invoke(IPC.resolveRecovery, id, how),
+
+  getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
 };
 
 export type PlatformBridge = typeof platformBridge;

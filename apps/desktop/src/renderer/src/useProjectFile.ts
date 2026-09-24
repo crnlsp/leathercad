@@ -1,5 +1,5 @@
 import type { Document, DocumentStore } from '@leathercad/document';
-import { evaluate, exportReadiness, type ExportReadiness } from '@leathercad/domain';
+import { evaluate, exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
 import { buildExportScene, describeOversized, exportPdf, pageSetupFor } from '@leathercad/export';
 import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
@@ -34,6 +34,11 @@ export function useProjectFile(
   open: () => Promise<void>;
   /** Starts an empty, untitled project. The caller asks about unsaved work first. */
   newProject: () => void;
+  /**
+   * Opens a recovered project **untitled and unsaved** (5.3b): it has no path,
+   * so *Save* asks where, and the file it once came from is never written.
+   */
+  adoptRecovered: (project: Project) => void;
   /**
    * Whether the document differs from what was last saved or opened. By
    * identity: undoing back to the saved document makes it clean again.
@@ -192,7 +197,29 @@ export function useProjectFile(
     setState({ path: null, error: null, savedAt: null });
   }, [blank, store]);
 
+  const adoptRecovered = useCallback(
+    (project: Project) => {
+      store.reset({ project }, 'Recover');
+      // Never saved in this session, and never to be saved over its original:
+      // unsaved by construction.
+      savedDocument.current = null;
+      createdUtc.current = undefined;
+      setState({ path: null, error: null, savedAt: null });
+    },
+    [store],
+  );
+
   const isDirty = useCallback(() => savedDocument.current !== store.getState().document, [store]);
 
-  return { state, save, open, newProject, isDirty, exportPdfFile, markSaved, savedDocument };
+  return {
+    state,
+    save,
+    open,
+    newProject,
+    adoptRecovered,
+    isDirty,
+    exportPdfFile,
+    markSaved,
+    savedDocument,
+  };
 }

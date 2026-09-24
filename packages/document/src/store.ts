@@ -16,6 +16,12 @@ export interface StoreState {
   readonly canRedo: boolean;
   readonly undoLabel: string | null;
   readonly redoLabel: string | null;
+  /**
+   * A gesture is under way (`begin` without its `commit` or `rollback`). The
+   * document is a preview until it ends, so crash recovery does not snapshot
+   * it (5.3b).
+   */
+  readonly inTransaction: boolean;
 }
 
 /**
@@ -57,6 +63,7 @@ export class DocumentStore {
       canRedo: this.future.length > 0,
       undoLabel: this.past.length > 0 ? this.present.label : null,
       redoLabel: this.future[this.future.length - 1]?.label ?? null,
+      inTransaction: this.transaction !== null,
     };
   }
 

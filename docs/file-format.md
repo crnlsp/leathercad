@@ -338,8 +338,11 @@ What the app writes about *itself* is state, not configuration, and goes in
 ```
 ~/.local/state/leathercad/
 ├── logs/main.log         one megabyte, then main.old.log; nothing is uploaded
-└── crashes/              native crash minidumps, kept locally
+├── crashes/              native crash minidumps, kept locally
+└── recovery/             crash-recovery copies, one per session (§7)
 ```
+
+On Windows and macOS the same tree lives in the app's user-data folder (`stateDirectory()`).
 
 The split is by lifetime and portability: **a `.lcp` sent to another leatherworker must open
 identically on their machine**. Anything that would change what they see belongs in the file;
@@ -348,13 +351,25 @@ size — belongs in preferences.
 
 ## 7. Autosave and recovery
 
-- Every 60 seconds, and on window blur, write the document to
-  `~/.local/share/leathercad/recovery/<project-id>.lcp`.
-- Write to a temporary file and `rename()` over the target. `rename` within a filesystem is atomic,
-  so a crash mid-save cannot leave a truncated file. **The same applies to normal saves** — never
-  write in place over the user's project.
-- On startup, if a recovery file is newer than the project it shadows, offer to restore it.
-- Delete the recovery file on clean save and clean exit.
+*As built in 5.3b.* See [the crash-recovery design](superpowers/specs/2026-09-23-crash-recovery-design.md).
+
+- **What and when.** While the project has unsaved changes, it is written as an ordinary `.lcp` at
+  most once a minute. It is never written in the middle of a drag, and never again until it
+  changes.
+- **Where.** `stateDirectory()/recovery/<pid>-<start>.lcp`: one file per session, never beside
+  the project, and never under a project's name. Two running copies of the app never touch each
+  other's file.
+- **How.** Every write goes through a temporary file and a `rename()` over the target. `rename`
+  within a filesystem is atomic, so a crash mid-write leaves the previous copy whole. **The same
+  applies to normal saves**: never write in place over the user's project.
+- **On startup.** A copy whose process is no longer running belongs to a session that did not end
+  cleanly, and the newest one that loads is offered.
+  - *Recover* opens it **untitled and unsaved**, so it can never be saved over the file it came
+    from.
+  - *Not now* keeps it until the next clean exit.
+  - A copy that does not load is renamed `.corrupt` and never offered again.
+- **Cleanup.** The copy is deleted when the project is clean again (saved, new or opened) and at a
+  clean exit. A renderer crash keeps it through the quit that follows.
 
 ## 8. Companion formats
 

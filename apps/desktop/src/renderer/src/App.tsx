@@ -36,6 +36,8 @@ import { PropertyPanel } from './PropertyPanel.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
+import { RecoveryDialog } from './RecoveryDialog.js';
+import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
@@ -95,6 +97,17 @@ export function App() {
   const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
   const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank);
   const dirty = file.savedDocument.current !== storeState.document;
+
+  // Crash recovery (5.3b): a copy while there is unsaved work, and an offer of
+  // what a crash left behind.
+  const recovery = useRecovery({
+    store,
+    host: getPlatformHost,
+    appVersion: version ?? '0.0.0',
+    isDirty: file.isDirty,
+    dirty,
+    adoptRecovered: file.adoptRecovered,
+  });
 
   // Never lose work silently (5.3a): closing the window, opening a project and
   // starting a new one all ask first when there is unsaved work, with one
@@ -561,6 +574,15 @@ export function App() {
 
       {exportNotice !== null && (
         <ExportNotice readiness={exportNotice} onClose={() => setExportNotice(null)} />
+      )}
+
+      {recovery.offer !== null && (
+        <RecoveryDialog
+          projectName={recovery.offer.project.name}
+          savedAt={recovery.offer.savedAt}
+          onRecover={() => void recovery.recover()}
+          onDecline={() => void recovery.decline()}
+        />
       )}
 
       {pendingDiscard !== null && (

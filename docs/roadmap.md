@@ -1606,7 +1606,7 @@ during implementation.
 | # | Slice | 1.0 item |
 |---|---|---|
 | 1 | **5.3a** ✅ | Never lose work silently: *New project*, a correct dirty state, and *Save / Don't save / Cancel* before closing, reloading, opening or starting a new project |
-| 2 | **5.3b** | Crash recovery: a recovery copy while dirty, and a restore offer after an unclean exit that never overwrites a project (robustness requirements in the 5.3b entry) |
+| 2 | **5.3b** ✅ | Crash recovery: a recovery copy while dirty, and a restore offer after an unclean exit that never overwrites a project (robustness requirements in the 5.3b entry) |
 | 3 | **6.4a** | Choose the paper and its orientation, written to the project's page setup (5.5) |
 | 4 | **3.9a** | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
 | 5 | **7.2a** | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
@@ -1749,7 +1749,32 @@ during implementation.
       which is exactly their intent.
     - Still open for release hygiene (8.5a): Electron's default menu, with Reload and Toggle
       Developer Tools, ships in the production app.
-  - **5.3b** **1.0. Crash recovery.** Accepted scope: a `.lcp` recovery copy in the app's state
+  - **5.3b** ✅ **Done** (2026-09-23) as designed in
+    [the crash-recovery design](superpowers/specs/2026-09-23-crash-recovery-design.md).
+    - **Main process: `RecoveryStore`.** It takes a directory, a session and a liveness check, and
+      no Electron, so it is unit-tested on real files. It keeps one copy per session, named
+      `<pid>-<start>.lcp`, so two running copies of the app never touch each other's. Writes go
+      through the shared `writeFileAtomic`. A dead session's temporary scraps are swept, and a
+      live session's are left alone. A clean quit deletes this session's copy and any it took
+      over. A renderer crash sets `keepOnQuit`.
+    - **Renderer: `useRecovery`.** It writes a copy at most once an interval: only while dirty,
+      never during a transaction (`StoreState.inTransaction`, new), and only when the document
+      changed. It clears the copy whenever the project is clean again. At startup it offers the
+      newest copy that loads. One that does not is set aside as `.corrupt` and logged. *Recover*
+      opens the copy untitled and unsaved, writes this session's own copy, and only then takes the
+      old one over. *Not now* takes it over too: it stays on disk until the next clean exit.
+    - **Tests:**
+      - 14 unit tests on real files, covering atomic writes, a crash mid-write, live versus dead
+        sessions, newest first, *Not now*, corrupt copies, and ids that are not session ids;
+      - five E2E tests on a killed app (SIGKILL): recover (the project file byte for byte
+        unchanged, and *Save* asks where), *Not now* then a clean exit, a save clears the copy, a
+        damaged copy at startup, and a renderer crash followed by a normal quit.
+    Gotcha:
+    - **A renderer crash reaches the main process as an event**, after `forcefullyCrashRenderer`
+      returns. The E2E test waits for `isCrashed()` before quitting. Without the wait, the quit
+      won the race and deleted the copy, which is not how a maker's crash unfolds.
+
+    The original scope: a `.lcp` recovery copy in the app's state
     directory (`stateDirectory()/recovery/`: XDG state on Linux, the user-data folder on Windows and
     macOS). It is written at most every 60 s, only while dirty, and never during a drag transaction.
     At startup a leftover copy means the last session did not end cleanly, and the app offers to

@@ -212,8 +212,9 @@ See [domain-model.md](domain-model.md) §4.
   Regenerating a derived stitch line and its holes after an edit completes in < 50 ms.
 - **Working range:** 0.1 mm to 2 000 mm in a single document, without precision artefacts.
 - **Startup:** cold start to usable canvas in under 3 s.
-- **Data safety:** autosave every 60 s to a recovery sidecar; opening a file written by a newer
-  format version must refuse rather than corrupt.
+- **Data safety:** a recovery copy at most every 60 s while there is unsaved work, in the app's
+  state directory rather than beside the project ([file-format.md](file-format.md) §7). Opening a
+  file written by a newer format version must refuse rather than corrupt.
 
 ## 8. Platform and licensing
 

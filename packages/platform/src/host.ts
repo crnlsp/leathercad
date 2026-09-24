@@ -54,4 +54,37 @@ export interface PlatformHost {
 
   /** The running application version, for the about box and file manifests. */
   getAppVersion(): Promise<string>;
+
+  /**
+   * Crash recovery (slice 5.3b). Replaces this session's recovery copy with
+   * `data`, atomically, in the app's state directory — never beside a project,
+   * never under a project's name.
+   */
+  writeRecovery(data: Uint8Array): Promise<void>;
+
+  /** Removes this session's recovery copy: the project is saved, or empty. */
+  clearRecovery(): Promise<void>;
+
+  /** The newest copy a session that did not end cleanly left behind, or null. */
+  findRecovery(): Promise<RecoveredCopy | null>;
+
+  /**
+   * Answers for a found copy. `adopt` keeps it on disk until this session
+   * exits cleanly — *Not now*, or recovered and re-copied. `corrupt` sets it
+   * aside because it did not load.
+   */
+  resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void>;
+
+  /** How often to write a recovery copy while there is unsaved work, in ms. */
+  getRecoveryIntervalMs(): Promise<number>;
+}
+
+/** A recovery copy found at startup. */
+export interface RecoveredCopy {
+  /** Which session wrote it; the handle for `resolveRecovery`. */
+  readonly id: string;
+  /** When it was last written, ISO 8601. */
+  readonly savedAt: string;
+  /** An ordinary `.lcp`, validated by `loadProject` like any other. */
+  readonly data: Uint8Array;
 }

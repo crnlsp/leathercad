@@ -2,8 +2,9 @@ import { join } from 'node:path';
 
 import { BrowserWindow, app, shell } from 'electron';
 
-import { startDiagnostics, watchWindow } from './diagnostics.js';
+import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
+import { RecoveryStore } from './recovery.js';
 
 // Electron derives userData from the npm package name, which would give
 // ~/.config/@leathercad/desktop. docs/file-format.md §6 specifies
@@ -13,6 +14,13 @@ app.setPath('userData', join(app.getPath('appData'), 'leathercad'));
 
 // The log and the crash handler, before anything else can fail.
 startDiagnostics();
+
+// Crash recovery (5.3b): this session's copy lives beside the log, in the
+// platform's state directory, named for this process and this start.
+const recovery = new RecoveryStore(join(stateDirectory(), 'recovery'), {
+  pid: process.pid,
+  startedAt: Date.now(),
+});
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -40,6 +48,11 @@ function createWindow(): void {
 
   watchWindow(mainWindow);
 
+  // A renderer that dies takes the unsaved work with it, but the main process
+  // lives on to a normal quit — which must not delete the copy that is the
+  // only way back to that work.
+  mainWindow.webContents.on('render-process-gone', () => recovery.keepOnQuit());
+
   // Avoid the white flash while the renderer boots.
   mainWindow.on('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => {
@@ -62,13 +75,17 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  registerPlatformHandlers(() => mainWindow);
+  registerPlatformHandlers(() => mainWindow, recovery);
   createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+// A clean exit: this session's recovery copy, and any it took over, go. A
+// crash never reaches here, which is exactly why the copy survives one.
+app.on('will-quit', () => recovery.releaseOnQuit());
 
 app.on('window-all-closed', () => {
   // Linux and Windows quit with the last window; macOS conventionally does not.
