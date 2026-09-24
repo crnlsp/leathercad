@@ -277,7 +277,8 @@ suite. Everything above `editor` depends on the interface, never on Electron.
 
 Electron security posture, non-negotiable: `contextIsolation: true`, `nodeIntegration: false`,
 `sandbox: true`, a preload exposing only the typed `PlatformHost` channel, and a strict CSP with no
-remote content loaded anywhere.
+remote content loaded anywhere. No window opens a second window or navigates; a request to open a
+link goes to the system browser only if it is `https:` (`apps/desktop/src/main/externalLinks.ts`).
 
 ## 6. Canvas and interaction system
 
