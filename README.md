@@ -12,6 +12,9 @@ Linux, Windows and macOS. Electron + TypeScript. Apache-2.0.
 **[Download](https://github.com/crnlsp/leathercad/releases/latest)** ·
 **[Getting started](docs/getting-started.md)**
 
+The installers are not code-signed, so Windows and macOS warn the first time you open LeatherCAD.
+[Getting started](docs/getting-started.md) says how to open it anyway, and how to check a download.
+
 ## What it does
 
 - **Parts** from rectangles, circles, arcs, lines and polylines with arc segments — a pocket with a

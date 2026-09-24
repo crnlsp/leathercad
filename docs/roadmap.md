@@ -1681,7 +1681,7 @@ stays deferred.
 | 10 | **7.4c** ✅ | The Sheets view: the same pieces on the physical sheets, exactly as the PDF places them, in ink on paper; Design and Sheets each keep their camera |
 | 11 | **7.4d** ✅ | Pointing at sheets: selection shared with Design, hover linked with Parts, the maker's workflow end to end |
 | 12 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code. Done last, on the build that ships |
-| 13 | **8.6** | Release: **Linux, Windows and macOS builds**, signing and notarisation, a current README with getting started, third-party notices, the newer-version message telling the maker to update, and v1.0.0. The checklist is in the 8.6 entry |
+| 13 | **8.6** | Release: **Linux, Windows and macOS builds** (not code-signed, by decision — see 8.6), a current README with getting started, third-party notices, the newer-version message telling the maker to update, and v1.0.0. The checklist is in the 8.6 entry |
 
 **Status after the practical-1.0 work (2026-09-24).** Items 1–11 are built.
 - **Checked:** `pnpm check` (2250 tests), E2E (100), the packaged smoke test (7) and the pixel
@@ -1689,7 +1689,8 @@ stays deferred.
 - **What is left needs a person or credentials:** the manual gate in
   [`release-1.0-validation.md`](release-1.0-validation.md), which includes the physical print on
   each platform (12, 7.7),
-  and 8.6's release tasks — signing, notarisation, the Release workflow's permission.
+  and 8.6's release task, the Release workflow's permission (done 2026-09-24). Code signing was
+  dropped as a requirement on 2026-09-24; see 8.6.
 - **The readiness pass found and fixed three things:**
   - the project bar clipping *New* and *Open* at 860 px when a project has a long name — the name
     gives way now;
@@ -2156,8 +2157,9 @@ stays deferred.
     - electron-builder targets: an NSIS installer (per user, no administrator) on Windows, and a
       universal dmg on macOS, beside the AppImage. `pnpm package` builds the current platform's
       installer.
-    - On macOS the app is signed ad hoc until the Developer ID exists. Flipping the fuses
-      invalidates Electron's own signature, and an arm64 app with none will not start.
+    - On macOS the app is signed ad hoc, since the builds are not code-signed (see *Code
+      signing* below). Flipping the fuses invalidates Electron's own signature, and an arm64 app
+      with none will not start.
     - `.github/workflows/package.yml` runs the packaged smoke test and builds the installer on
       `windows-latest` and `macos-latest`. It runs when packaging could have changed, weekly and on
       demand, not on every PR: the repository is private, where a macOS minute costs ten.
@@ -2185,16 +2187,15 @@ stays deferred.
   - ~~the newer-version message telling the maker to update.~~ 8.6b: it names the version that
     saved the file, and says *Update LeatherCAD to open it*.
 
-  **Release tasks that need credentials or settings outside the repository.** Each is recorded here
-  rather than pushed to 1.1; the release waits on them:
-  - [ ] **Windows code signing.** An OV or EV certificate, or Azure Trusted Signing, and its secrets
-        in the repository.
-  - [ ] **macOS signing and notarisation.** An Apple Developer Program membership, a Developer ID
-        Application certificate, and an App Store Connect API key for `notarytool`, as repository
-        secrets. Unsigned macOS builds are blocked by Gatekeeper, so this is a prerequisite, not
-        polish.
-  - [ ] **Linux.** The AppImage needs no signing authority. An optional GPG signature can come with
-        the release checksums.
+  **Code signing: not done, by decision (2026-09-24).** LeatherCAD is free and open source, and
+  signing costs money every year: a Windows certificate or Azure Trusted Signing, and the Apple
+  Developer Program for a Developer ID and notarisation. So the Windows installer ships unsigned,
+  the macOS dmg ad-hoc signed and not notarised, and the AppImage as it is. Each carries build
+  provenance instead, and [`getting-started.md`](getting-started.md) §1 tells the maker how to get
+  past the first-launch warning and how to check a download. It is not a release requirement. If
+  it is ever wanted, electron-builder signs when `CSC_LINK` is set, with no other change.
+
+  **Release tasks outside the repository:**
   - [x] **The Release workflow's permission** (2026-09-24). It had failed on every push to `main`
         since #49 with *"GitHub Actions is not permitted to create or approve pull requests"*. With
         the setting on in crnlsp/leathercad, the workflow opened the 1.0.0 release PR and, once it
@@ -2202,8 +2203,8 @@ stays deferred.
   - [ ] **The physical print on each platform** (7.7).
   - [x] **v1.0.0** (2026-09-24): tag `leathercad-v1.0.0`, with the AppImage, the Windows installer
         and the universal dmg attached, each with build provenance, and the CycloneDX SBOM. The Windows
-        installer is unsigned and the dmg ad-hoc signed and not notarised, as the two signing items
-        above record. `release-as` came out of `release-please-config.json` afterwards, so versions
+        installer is unsigned and the dmg ad-hoc signed and not notarised, as *Code signing* above
+        records. `release-as` came out of `release-please-config.json` afterwards, so versions
         follow the commits from here.
 
 ### Phase 9 — Beyond v1

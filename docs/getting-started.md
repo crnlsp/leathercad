@@ -13,9 +13,17 @@ Download the installer for your system from the
 | Windows | the `.exe` | Run it. It installs for your user only, with no administrator prompt. |
 | macOS | the `.dmg` | Open it and drag LeatherCAD to Applications. It runs on Apple silicon and Intel. |
 
-Until the release's signing certificates are in place, Windows and macOS warn about an unknown
-developer. On Windows choose *More info → Run anyway*; on macOS open it once from *System Settings →
-Privacy & Security → Open Anyway*.
+LeatherCAD is free and open source, and its installers are not code-signed: signing certificates
+cost money every year. So the first time you open it, Windows and macOS warn about an unknown
+developer:
+
+- **Windows:** choose *More info → Run anyway*.
+- **macOS:** open it once, then go to *System Settings → Privacy & Security* and choose *Open
+  Anyway*.
+
+To check that a download is the one this repository's release workflow built, use GitHub's build
+provenance, with the [GitHub CLI](https://cli.github.com/):
+`gh attestation verify <the file> --repo crnlsp/leathercad`.
 
 When a project was saved by a newer LeatherCAD than yours, the app says so and names the version:
 update, and it opens.

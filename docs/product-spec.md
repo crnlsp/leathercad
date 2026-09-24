@@ -223,7 +223,8 @@ See [domain-model.md](domain-model.md) §4.
 ## 8. Platform and licensing
 
 - **Linux, Windows and macOS for 1.0.** Linux was built first, as an AppImage; a Flatpak is 1.1.
-  Windows and macOS are a packaging, signing and print-path problem, not an architecture problem.
+  Windows and macOS are a packaging and print-path problem, not an architecture problem. The
+  builds are not code-signed, by decision (roadmap 8.6).
   See [architecture.md](architecture.md) §7 and roadmap 8.6.
 - **Open source.** Recommended licence: **Apache-2.0** (permissive plus an explicit patent grant).
   All dependencies must be permissively licensed — MIT, Apache-2.0, BSD, or BSL-1.0. No GPL
