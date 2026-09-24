@@ -75,7 +75,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
         label: 'Polyline',
         key: 'P',
         howTo:
-          'Click each point · click the first to close · Enter finishes · Backspace takes one back',
+          'Click each point · A arcs the next segment: click its end, then a point on it · L goes straight · click the first to close · Enter finishes · Backspace takes one back',
       },
     ],
   },

@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, evaluate, type Project } from '@leathercad/domain';
-import { PathOps, uniformRadii } from '@leathercad/geometry';
+import { PathOps, Shapes, uniformRadii } from '@leathercad/geometry';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
@@ -286,6 +286,100 @@ describe('arcs', () => {
     expect(shape.startAngle).toBeCloseTo(Math.PI / 7, 6);
     expect(shape.sweepAngle).toBeCloseTo(Math.PI / 3, 6);
     expect(shape.radius).toBe(18);
+  });
+});
+
+describe('a drawn outline with arcs in it (3.9a)', () => {
+  /**
+   * A stored path, stitched: a pocket whose outline is a path — drawn with an
+   * arc in it, or frozen from a rounded rectangle — and a stitch line with
+   * holes following it.
+   */
+  function stitched(outline: ReturnType<typeof PathOps.closed>): Project {
+    return {
+      id: 'p',
+      name: 'Pocket',
+      settings: DEFAULT_SETTINGS,
+      parts: [
+        {
+          id: 'part-1',
+          name: 'Pocket',
+          quantity: 1,
+          features: [
+            {
+              id: 'outline',
+              kind: 'cut-contour',
+              role: 'outer',
+              name: 'Outline',
+              visible: true,
+              locked: false,
+              source: { kind: 'path', path: outline },
+            },
+            {
+              id: 'stitch',
+              kind: 'stitch-line',
+              name: 'Stitch line',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'derived',
+                sourceId: 'outline',
+                op: { type: 'offset', distanceMm: 3.5, side: 'inward', run: { kind: 'whole' } },
+              },
+            },
+            {
+              id: 'holes',
+              kind: 'stitch-hole-set',
+              name: 'Stitch holes',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'derived',
+                sourceId: 'stitch',
+                op: {
+                  type: 'stitch-holes',
+                  pitchMm: 3.85,
+                  mode: 'fit-whole',
+                  corners: 'hole-at-corner',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('still stitches after a save and reopen', () => {
+    // Regression. The file rounded every number to six decimals, a stored
+    // path's too, and an arc stored as centre, radius and angles came back a
+    // few micrometres off the line beside it, with a tangent a millionth of a
+    // radian off. The offset read that as a concave corner at an arc and
+    // refused it: a frozen rounded rectangle whose stitch line built when it
+    // was saved failed with OFFSET_COLLAPSED when it was opened.
+    const outline = Shapes.roundedRect({ x: 3.3, y: 7.7 }, 95, 60, uniformRadii(6));
+    const project = stitched(outline);
+    const reopened = loadProject(saveProject(project, options)).project;
+
+    const outcome = (p: Project) =>
+      evaluate(p).parts[0]!.features.map((f) => (f.ok ? 'ok' : f.problem.code));
+    expect(outcome(project)).toEqual(['ok', 'ok', 'ok']);
+    expect(outcome(reopened)).toEqual(['ok', 'ok', 'ok']);
+  });
+
+  it('writes a stored path exactly, so it comes back as the same geometry', () => {
+    // A path is geometry, not a typed parameter: it is written at full
+    // precision, and the same numbers come back.
+    const outline = Shapes.roundedRect({ x: 3.3, y: 7.7 }, 95, 60, uniformRadii(6));
+    const project = stitched(outline);
+    expect(loadProject(saveProject(project, options)).project).toEqual(project);
+  });
+
+  it('is byte-identical on a second save, after a reopen', () => {
+    const outline = Shapes.roundedRect({ x: 3.3, y: 7.7 }, 95, 60, uniformRadii(6));
+    const once = saveProject(stitched(outline), options);
+    const twice = saveProject(loadProject(once).project, options);
+    expect(twice).toEqual(once);
   });
 });
 

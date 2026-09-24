@@ -60,8 +60,10 @@ A representative session, which the MVP must support end to end:
 
 1. "I want a card holder. Outer piece 105 × 75 mm, corners radiused 8 mm."
 2. "The card pockets are 95 × 60 mm with a curved thumb scoop." *(1.0 draws the scoop with arc
-   segments in the polyline tool (roadmap 3.9a). It stitches the pocket's three sewn sides, and a
-   stitch line across the scoop itself is a documented 1.0 limitation.)*
+   segments in the polyline tool (roadmap 3.9a): mid-run, **A** makes the next segment an arc, taken
+   as its end and then a point it passes through, and **L** goes straight again. The pocket's three
+   sewn sides are stitched with a stitch line drawn along them, and holes on it. A stitch line inset
+   across the scoop itself is a documented 1.0 limitation.)*
 3. "Stitch line runs 3.5 mm in from the edge, all the way around."
 4. "My iron is 3.85 mm pitch. Put holes on that line, with a hole exactly on each corner."
 5. "How long is that stitch line? How many holes did that give me?" *(They need to buy thread and

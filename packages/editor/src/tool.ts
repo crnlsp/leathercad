@@ -81,7 +81,13 @@ export interface Tool {
   onPointerDown?(ctx: ToolContext, event: PointerInput): void;
   onPointerMove?(ctx: ToolContext, event: PointerInput): void;
   onPointerUp?(ctx: ToolContext, event: PointerInput): void;
-  onKey?(ctx: ToolContext, event: KeyInput): void;
+  /**
+   * A key, while this tool is active. Returns `true` to **claim** it, so the
+   * application's own shortcut for that key does not also fire — how the
+   * polyline takes A and L for its next segment mid-run without switching to
+   * the Arc or Line tool (3.9a). Anything else leaves shortcuts as they are.
+   */
+  onKey?(ctx: ToolContext, event: KeyInput): boolean | void;
 
   /** Ephemeral feedback — rubber bands, previews. Never in the document. */
   buildOverlay?(ctx: ToolContext): DisplayList;
@@ -260,8 +266,9 @@ export class ToolManager {
     return this.index;
   }
 
-  key(event: KeyInput): void {
-    this.active.onKey?.(this.context, event);
+  /** Hands a key to the active tool; true when the tool claimed it. */
+  key(event: KeyInput): boolean {
+    return this.active.onKey?.(this.context, event) === true;
   }
 
   overlay(): DisplayList {

@@ -207,6 +207,8 @@ export function App() {
         return;
       }
 
+      // The active tool claimed this key (the polyline's A and L mid-run).
+      if (event.defaultPrevented) return;
       const match = ALL_TOOLS.find((tool) => tool.key.toLowerCase() === event.key.toLowerCase());
       if (match !== undefined) setToolId(match.id);
     };

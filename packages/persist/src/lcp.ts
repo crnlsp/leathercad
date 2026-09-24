@@ -193,12 +193,38 @@ function describe(error: unknown): string {
  * Stable ordering plus the 1e-4 mm input quantisation makes saving an
  * unmodified document byte-identical, which is what lets `.lcp` files diff
  * usefully in git. See docs/file-format.md §3.2.
+ *
+ * **Except a stored path, which is written exactly.** Parameters are typed and
+ * quantised, so six decimals loses nothing from them. A path — drawn with arcs
+ * in it, or frozen from a rounded shape — is geometry, and its arcs are stored
+ * as a centre, a radius and angles: rounded, they came back micrometres off
+ * the neighbouring line and a millionth of a radian off its tangent, which the
+ * stitch-line offset reads as a concave corner and refuses. Written exactly —
+ * JavaScript's shortest round-trip form — a path comes back as the same doubles,
+ * and an unchanged document still saves byte-identically.
  */
 export function stableJson(value: unknown): string {
   return `${JSON.stringify(value, replacer, 2)}\n`;
 }
 
-function replacer(_key: string, value: unknown): unknown {
+/** A number the replacer passes through as it is, rather than rounding it. */
+class Exact {
+  constructor(readonly value: number) {}
+}
+
+/** Every number in a stored path's segments, marked to be written exactly. */
+function exactly(value: unknown): unknown {
+  if (typeof value === 'number') return new Exact(value);
+  if (Array.isArray(value)) return value.map(exactly);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, exactly(inner)]));
+  }
+  return value;
+}
+
+function replacer(key: string, value: unknown): unknown {
+  if (value instanceof Exact) return value.value;
+  if (key === 'segments' && Array.isArray(value)) return exactly(value);
   if (typeof value === 'number') {
     // Six decimals is well below the storage quantum and removes the trailing
     // noise that floating point leaves behind.

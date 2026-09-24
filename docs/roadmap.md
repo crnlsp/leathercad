@@ -584,7 +584,24 @@ Slice numbers are stable identifiers — `/slice 4.3` should always mean the sam
   draft state was still set. Two identical commands meant two history entries, so the first press
   of Undo appeared to do nothing. The draft is now mirrored in a ref so the second call sees it
   already consumed.
-- **3.9a** **1.0. Arc segments in the polyline tool.** This is the smallest enabler for the product
+- **3.9a** ✅ **Done** (2026-09-24). **1.0. Arc segments in the polyline tool.**
+  - Mid-run, **A** makes the next segment an arc and **L** a straight again, the CAD convention for
+    a polyline. An arc takes two clicks, as the Arc tool does: its end, then a point it passes
+    through.
+  - The tool claims A and L only while a run is live (`Tool.onKey` may now return `true`), so they
+    still switch to the Arc and Line tools otherwise. The options bar had no room for a toggle.
+  - A scooped pocket is one closed outline. Its three sewn sides are stitched with a drawn stitch
+    line and holes, and the whole thing survives save and reopen (`e2e/edge-scoop.spec.ts`).
+  - **Found and fixed on the way:** the file rounded a stored path's numbers to six decimals, so an
+    arc came back micrometres off its neighbour and a millionth of a radian off tangent. The offset
+    then refused what it read as a concave corner at an arc, so a frozen rounded rectangle's stitch
+    line built before a save and failed after one. A stored path's segments are now written exactly
+    (`file-format.md` §3.2). No format version change.
+
+  See [the design](superpowers/specs/2026-09-24-arc-segments-design.md).
+  Before it was built, the entry read:
+
+  **1.0. Arc segments in the polyline tool.** This is the smallest enabler for the product
   spec's pocket with a curved thumb scoop, and it is contained in the editor:
   - drawn paths already store arc segments, and the schema, persistence, evaluation, stitching and
     PDF export all handle them;
@@ -1608,7 +1625,7 @@ during implementation.
 | 1 | **5.3a** ✅ | Never lose work silently: *New project*, a correct dirty state, and *Save / Don't save / Cancel* before closing, reloading, opening or starting a new project |
 | 2 | **5.3b** ✅ | Crash recovery: a recovery copy while dirty, and a restore offer after an unclean exit that never overwrites a project (robustness requirements in the 5.3b entry) |
 | 3 | **6.4a** ✅ | Choose the paper and its orientation, written to the project's page setup (5.5) |
-| 4 | **3.9a** | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
+| 4 | **3.9a** ✅ | **Arc segments in the polyline tool**, the smallest enabler for the product spec's pocket with a curved thumb scoop. No general curve editor |
 | 5 | **7.2a** | Tile a part larger than the sheet: overlap, registration marks, row/column tile labels, verification marks on every sheet, at 1:1. No print preview unless tiling proves otherwise hard to follow |
 | 6 | **7.7** | A print measured with a steel rule and recorded, **on each of Linux, Windows and macOS**. A person does this, not code |
 | 7 | **8.5a** | Production desktop integration: an app icon, a desktop entry, and a production menu, on all three platforms |

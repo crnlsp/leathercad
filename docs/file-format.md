@@ -148,6 +148,16 @@ of its ~120 hole positions. Three parameter blocks regenerate all of it.
 - **Numbers** are written with at most 6 decimal places. Combined with the 1e-4 mm input
   quantisation ([geometry.md](geometry.md) §3.3), this makes saving an unmodified file
   byte-identical and makes `.lcp` diffs readable.
+- **Except a stored path's segments, which are written exactly** (JavaScript's shortest round-trip
+  form, so the same doubles come back).
+  - A path, drawn or frozen, is geometry rather than a typed parameter, and it stores an arc as a
+    centre, a radius and two angles.
+  - Rounded to six decimals, an arc came back a few micrometres off the line beside it, and a
+    millionth of a radian off tangent. The stitch-line offset read that as a concave corner at an
+    arc and refused it, so a frozen rounded rectangle's stitch line built before a save and failed
+    after one (found in slice 3.9a).
+  - An unchanged document still saves byte-identically. Older builds read the longer numbers as
+    they read any number, so this changes no format version.
 - **Key order is stable** — serialise through an explicit writer, never `JSON.stringify` of an
   arbitrarily-ordered object. Stable ordering is what makes git diffs and round-trip tests useful.
 - **No `undefined`.** Optional fields are either present or absent, never `null` as a placeholder.

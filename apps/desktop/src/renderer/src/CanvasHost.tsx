@@ -300,7 +300,7 @@ export function CanvasHost({
     onStatus?.({ cursorMm, scale: viewportRef.current.scale, notice });
   }, [cursorMm, notice, onStatus]);
 
-  // Keyboard goes to the window: the canvas is not focusable and Escape or
+  // Keyboard goes to the document: the canvas is not focusable and Escape or
   // Delete should work wherever the pointer happens to be.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -315,15 +315,21 @@ export function CanvasHost({
         return;
       }
 
-      managerRef.current?.key({
+      const claimed = managerRef.current?.key({
         key: event.key,
         shiftKey: event.shiftKey,
         ctrlKey: event.ctrlKey,
       });
+      // A key the tool claimed is not also a shortcut: the app's tool keys
+      // skip an event whose default is prevented.
+      if (claimed === true) event.preventDefault();
     };
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    // On the document, which a key bubbles through before the window: the tool
+    // hears it before the app's shortcuts do, and a dialog that stops a key
+    // still stops it before either.
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, [store]);
 
   const toInput = useCallback((event: React.PointerEvent<HTMLCanvasElement>): PointerInput => {

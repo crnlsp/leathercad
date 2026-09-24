@@ -334,11 +334,16 @@ interface Tool {
   onPointerDown(ctx: ToolContext, e: PointerInput): void;
   onPointerMove(ctx: ToolContext, e: PointerInput): void;
   onPointerUp(ctx: ToolContext, e: PointerInput): void;
-  onKey(ctx: ToolContext, e: KeyInput): void;
+  onKey(ctx: ToolContext, e: KeyInput): boolean | void; // true claims the key
   buildOverlay(ctx: ToolContext): DisplayList;
   onDeactivate(ctx: ToolContext): void;
 }
 ```
+
+A tool hears a key before the application's tool shortcuts do: the canvas listens on `document`, the
+shortcuts on `window`. A tool that returns `true` has **claimed** the key, and the shortcut does not
+fire. That is how the polyline takes A and L mid-run for its next segment (3.9a) without switching to
+the Arc or Line tool and losing the run.
 
 `ToolContext` gives read access to the viewport, the resolved document, and the snap engine, plus
 `dispatch(command)` and the transaction API. It gives **no** write access to the document.
