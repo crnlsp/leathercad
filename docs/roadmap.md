@@ -98,6 +98,40 @@ enough to fix in 1.1; the ones marked **bug** come first.
 | **Q6** | `packages/domain/src/workloads.ts` shows 0 % coverage since the performance ceilings moved to their own step | Moving `perf.test.ts` out of the coverage run | Exclude test support from coverage, or cover it |
 | **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
 
+#### The independent QA pass (2026-09-24)
+
+An outside QA pass over `main` at `d54b2d7` (v1.0.x), on Linux under Xvfb, before the Sheets view
+landed. Its ids (B1–B7 confirmed, S1–S10 suspected) are kept in brackets so the report can be read
+beside this table; the numbers here continue the Q series, because `S1`–`S7` already name the
+structural invariants in [`domain-model.md`](domain-model.md) §8. Each confirmed bug is fixed
+alongside the 8.x slice it is nearest to, one pull request per slice.
+
+| # | What | Severity | Plan |
+|---|---|---|---|
+| **Q8** | **bug** (B1) · Mirroring an **outline** puts a second outline in the same part. It saves, and the file then **cannot be reopened** (`PART_ALREADY_HAS_OUTER`); the crash-recovery copy is set aside as corrupt too, and the PDF prints both outlines as one piece. `mirrorFeatures` never asks `additionRefusal`, and `counterpartOf` copies `role: 'outer'` | P0 | With 8.2. Refuse it with a reason, the way the fold mirror already does, and pin with a property that every document the commands can produce saves, reopens identically and paginates |
+| **Q9** | **bug** (B2) · Mirroring a **dimension** makes a `measurement` with a `derived` source, which the schema refuses on open. The panel shows *Offset NaN mm*; `mirrorRefusal` refuses only labels, and the fold mirror inherits the hole | P0 | With 8.2, the same refusal and the same property |
+| **Q10** | **bug** (B3) · **Duplicate** re-points only a derived feature's `sourceId`. A dimension's anchors and a fold mirror's `foldId` still name the original, so the copy's dimension measures the original, its caption sits over the original, a mirrored slot lands 230 mm off the copy, and the PDF tapes the copy across extra sheets | P1 | With 8.3. Re-point every reference inside the part; extend `partCommands.test.ts`'s "never points the copy at the original" to dimensions and folds |
+| **Q11** | **bug** (B4) · A dimension or a *Follows* can reach **another part**. The part's printed extent then spans the gap on the board, so moving a piece on the board changes the sheet count (4 → 7 pages), which the Sheets spec's criterion 2 forbids; readiness reports nothing | P1 | With 8.3. A dimension measures within one part and *Follows* offers the part's own features; the loader keeps accepting old files, and the extent ignores what is not on the piece |
+| **Q12** | **bug** (B5) · Packing ignores **captions**: a long caption on a narrow part prints over its neighbour's, or past the sheet edge (x = 327 mm on a 297 mm sheet) | P2 | With 8.3. Pack by the piece and its caption together |
+| **Q13** | **bug** (B6) · A piece tiled **1 × 2** always has its join on its centre line — on a bifold, exactly on the fold, where the fold mark cannot be told from the cut line | P2 | With 8.3, whose sample is that bifold. Keep the join off a fold |
+| **Q14** | **bug** (B7) · Hiding a part keeps its features **selected**: the panel edits an invisible outline, and Delete removes it unseen | P3 | With 8.2. Hiding drops the hidden features from the selection |
+| **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | Decide what a corner of a rounded outline *means* to a maker before changing it; 4.10b |
+| **Q16** | (S2) **Save race**: the saved document is recorded after the write, from the store, not from the bytes written, so an edit landing during a slow write would be marked saved | P3 | With 8.2, which touches saving: record the document the bytes were made from |
+| **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | P3 · investigate | Physical prints first (R1), then move it inside the printable area if a printer clips it |
+| **Q18** | (S4) Export suggests *Wallet v1.pdf* for a project named *Wallet v1.2*: the name is cut at its last dot | P3 | With 8.2 |
+| **Q19** | (S5) The paper menu label ignores orientation and implies the whole sheet is printable | P3 | With 8.4b, which puts the paper in the native menu |
+| **Q20** | (S6) Hidden parts, label-only parts and parts with a hidden outline are left out of the PDF without a notice | intentional | The Sheets spec's *Not printed* labels |
+| **Q21** | (S7) *Cut 2* on a mirrored pair does not say to flip the template for the second piece | deferred | The Sheets spec §11 |
+| **Q22** | (S8) Saving rounds the mirror-line angle to six decimals, so a reopened document differs in memory by ≤ 0.0003 mm per metre | negligible | Recorded in 4.8a; nothing to do |
+| **Q23** | (S9) Ink reaches up to half a stroke (0.125 mm) past the printable area, because packing uses geometry bounds | negligible | Nothing unless a printer clips it |
+| **Q24** | (S10) Horizontal and vertical dimensions read 0.0 after a 90° rotation; the UI creates only aligned ones | API only | When those kinds reach the UI |
+
+**What the QA pass could not test,** kept here until someone does: physical 1:1 prints on real
+printers and viewers, including *Actual size* and `/PrintScaling /None` (R1); whether the footer
+survives each printer's bottom dead zone (Q17); taping a multi-sheet piece physically; real OS
+dialogs (special characters, overwrite prompts, `.PDF` in capitals); crash recovery after a real
+process kill; `pnpm test:visual` and `pnpm test:packaged`; HiDPI, Windows and macOS.
+
 **Performance, recorded as information, not targets:** building the display list for the
 636-hole benchmark strap takes 87 µs (13 µs before F.7); offsetting a 500-point traced outline
 takes ~74 ms, over the 50 ms budget on its own; and a huge drawing at the smallest pitch makes
