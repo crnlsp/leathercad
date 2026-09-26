@@ -67,8 +67,9 @@ jobs:
       fail-fast: false
       matrix:
         # Linux runs on every pull request. These catch paths, line endings
-        # and locale before Phase 8 has to. Weekly, not per pull request:
-        # macOS minutes cost ten times Linux's on a private repository.
+        # and locale. Weekly, not per pull request: written while the
+        # repository was private, where macOS minutes cost ten times Linux's
+        # (see roadmap item R5).
         os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -28,7 +28,7 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
     echo "pre-push: refusing to push directly to main." >&2
     echo "" >&2
     echo "  Work lands on a slice branch through a pull request, merged when" >&2
-    echo "  CI is green. See docs/roadmap.md § 2.4." >&2
+    echo "  CI is green. See CONTRIBUTING.md." >&2
     echo "" >&2
     echo "    git switch -c slice/<number>-<name>" >&2
     echo "    gh pr create --fill" >&2

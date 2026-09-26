@@ -36,10 +36,11 @@ Violating any of these is a bug, even if tests pass.
 ```bash
 pnpm dev              # run the app (electron-vite, with HMR)
 pnpm check            # typecheck + lint + format:check + depcruise + knip + test:coverage + test:perf — before a slice is done
-pnpm test             # unit + property + golden + export + snapshot
+pnpm test             # unit + property + export + SVG snapshot + format fixtures
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
+pnpm docs:media       # retakes the README's screenshots and demo from the real app (needs a display)
 pnpm package          # this platform's installer, in apps/desktop/release/: AppImage, NSIS .exe, or dmg (ADR 0014)
 pnpm build
 pnpm typecheck        # tsc --build
@@ -60,7 +61,8 @@ recorded it.
 Two long-lived branches: **`main` is production** — what is released — and **`develop` is
 development**. Work lands on `develop`; `develop` reaches `main` through a pull request when it is
 ready to release. Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
-refuses it and runs `pnpm check` on every push. See `docs/roadmap.md` §2.4.
+refuses it and runs `pnpm check` on every push. Pull requests into `develop` are squash-merged, and
+their title is a Conventional Commit: it becomes the changelog line. See `CONTRIBUTING.md`.
 
 **pnpm and Node are pinned**: `packageManager` in `package.json`, and `.node-version`. CI reads
 both. Any installed pnpm switches itself to the pinned version. pnpm is not on PATH unless you have
@@ -87,12 +89,12 @@ document   Document, Command, undo/redo, selection                            �
 persist    .lcp container, zod schemas, migrations                            → domain
 render     DisplayList, canvas2d + svg backends                               → domain, typography
 editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
-export     ExportScene, svg/pdf/dxf writers                            → domain, render, typography
-print      paginate, registration, calibration                                → export
-ui         React panels and dialogs                                           → editor
-cli        `lcad` — used by slash commands and CI                             → everything but ui
-apps/desktop  Electron main/preload/renderer — the ONLY package importing Electron
+export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.1)          → domain, render, typography
+apps/desktop  Electron main/preload/renderer, React panels — the ONLY package importing Electron
 ```
+
+`print`, `ui` and `cli` are reserved in `.dependency-cruiser.cjs` but not created: pagination and
+tiling live in `export`, and the React UI in `apps/desktop/src/renderer`.
 
 Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run headless.
 
@@ -139,9 +141,10 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | `packages/export`, `packages/print` | `docs/printing.md` |
 | Anything structural | `docs/architecture.md` |
 | Phase 4's model (derivations, deletion, validation) | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
-| UI Foundations, F.0–F.7 | `docs/roadmap.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
+| UI Foundations, F.0–F.7 | `docs/history/roadmap-to-1.0.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
 | The paper workflow and the window's bars (F.8, 7.4a–7.4d) | `docs/superpowers/specs/2026-09-24-sheets-workflow-design.md`; Design and Sheets stay separate views |
 | Tests | `docs/testing.md` |
+| Commits, pull requests, releases | `CONTRIBUTING.md` |
 
 Run `/geo-check` and `/arch-check` before considering a slice done. If a change invalidates
 something in this file or in `docs/`, update it in the same commit.

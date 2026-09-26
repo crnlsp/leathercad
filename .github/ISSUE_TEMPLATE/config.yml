@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/crnlsp/leathercad/security/advisories/new
+    about: Privately, never in a public issue. See SECURITY.md.
+  - name: How to use LeatherCAD
+    url: https://github.com/crnlsp/leathercad/blob/main/docs/getting-started.md
+    about: Install, draw, stitch, print, and check the print.
