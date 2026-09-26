@@ -84,6 +84,29 @@ describe('intersectSegments', () => {
       expect(intersectSegments(a, b)).toHaveLength(intersectSegments(b, a).length);
     });
 
+    it('regression: collinear lines a nanometre apart touch either way round', () => {
+      // fast-check shrank to this (Q1, LEATHERCAD_FC_SEED=-1607984333). The
+      // ends are 1e-9 mm apart — well inside EPS_POINT, so they touch — but
+      // the gap was measured in parameters against EPS_PARAM, where 1e-9 is
+      // exactly the epsilon, and the last bit of |r|² decided the answer.
+      const a = line(vec(1.0000000000000005e-9, 0), vec(1.0000000010000005, 0));
+      const b = line(vec(0, 0), vec(-1.0000000000000002, 0));
+
+      expect(intersectSegments(a, b)).toHaveLength(1);
+      expect(intersectSegments(b, a)).toHaveLength(1);
+    });
+
+    it('measures the gap between collinear lines in millimetres, not parameters', () => {
+      // 1e-8 mm is a gap of 1e-10 on a 100 mm line and 1e-7 on a 0.1 mm one:
+      // either side of EPS_PARAM. In millimetres it is one point both times.
+      for (const length of [0.1, 1, 100]) {
+        const a = line(vec(0, 0), vec(length, 0));
+        const b = line(vec(length + 1e-8, 0), vec(2 * length, 0));
+
+        expect(intersectSegments(a, b)).toHaveLength(1);
+      }
+    });
+
     it('does not invent a crossing between near-parallel lines that miss', () => {
       // The determinant is tiny but the segments genuinely do not meet.
       const a = line(vec(0, 0), vec(1000, 0));
@@ -222,6 +245,46 @@ describe('intersectSegments', () => {
             expect(backward.some((g) => dist(g.point, h.point) < 1e-6)).toBe(true);
           }
         }),
+        RUNS,
+      );
+    });
+
+    it('is symmetric for collinear lines whose ends nearly meet', () => {
+      // The general arbitrary almost never lands two lines on one axis with
+      // their ends a hair apart, which is where Q1 lived. This one does, with
+      // gaps and overlaps spread across EPS_POINT and EPS_PARAM.
+      const arbGap = fc.oneof(
+        fc.double({ min: -1e-6, max: 1e-6, noNaN: true }),
+        fc.constantFrom(0, 1e-9, -1e-9, 1e-7, -1e-7, EPS_POINT, -EPS_POINT),
+      );
+      const arbLength = fc.double({ min: 1e-3, max: 1000, noNaN: true });
+
+      fc.assert(
+        fc.property(
+          arbLength,
+          arbLength,
+          arbGap,
+          fc.boolean(),
+          arbRigidTransform,
+          (lengthA, lengthB, gap, flip, m) => {
+            const a = polyline([vec(0, 0), vec(lengthA, 0)]);
+            const b = polyline(
+              flip
+                ? [vec(lengthA + gap + lengthB, 0), vec(lengthA + gap, 0)]
+                : [vec(lengthA + gap, 0), vec(lengthA + gap + lengthB, 0)],
+            );
+            const [sa] = transformPath(a, m).segments;
+            const [sb] = transformPath(b, m).segments;
+
+            const forward = intersectSegments(sa!, sb!);
+            const backward = intersectSegments(sb!, sa!);
+
+            expect(backward).toHaveLength(forward.length);
+            for (const h of forward) {
+              expect(backward.some((g) => dist(g.point, h.point) < 1e-6)).toBe(true);
+            }
+          },
+        ),
         RUNS,
       );
     });

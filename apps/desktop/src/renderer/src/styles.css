@@ -111,7 +111,7 @@ body {
  *
  * Each panel has a column of its own, so none competes with another for
  * height — the tool rail above the parts tree is how the tree used to shrink
- * to nothing (audit §3.3). Widths step down at 1280 px; below 1024 px
+ * to nothing (audit §3.3). Properties steps down at 1280 px; below 1024 px
  * Properties becomes an overlay and below 900 px so does Parts, each opened
  * from the status bar (§7.2). **No panel is ever removed**: the parts tree is
  * the only route to a locked feature.
@@ -131,9 +131,11 @@ body {
   --rail-w: var(--rail-w-collapsed);
 }
 
+/* Parts keeps its width: at 200 px, with its scrollbar, the column beside
+   the toggles was narrower than "mirrored", and a name broke inside a word
+   (Q5). The canvas gives the 20 px instead. */
 @media (max-width: 1279px) {
   .workspace {
-    --parts-w: 200px;
     --properties-w: 264px;
   }
 }

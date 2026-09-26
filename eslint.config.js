@@ -125,12 +125,12 @@ export default tseslint.config(
   },
 
   {
-    // FINDING, recorded when the plugin was added: CanvasHost reads refs during
-    // render in ten places. Most are the deliberate latest-value pattern the
-    // comment at `drawAsRef` explains. Two are not obviously safe: the cursor
-    // style reads `managerRef` and the notice bounds read `containerRef`, so
-    // neither updates until something else re-renders. Scoped to this one file
-    // so nothing new joins it. See the engineering-tooling spec §4.
+    // CanvasHost writes refs during render: the deliberate latest-value
+    // pattern the comment at `drawAsRef` explains. The two reads that could
+    // show stale state — the cursor style from `managerRef` and the notice
+    // bounds from `containerRef` — now come from props and state (Q3). Scoped
+    // to this one file so nothing new joins it. See the engineering-tooling
+    // spec §4.
     files: ['apps/desktop/src/renderer/src/CanvasHost.tsx'],
     rules: { 'react-hooks/refs': 'off' },
   },

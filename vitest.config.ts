@@ -17,6 +17,10 @@ export default defineConfig({
       // Thresholds are enforced only where correctness is invisible to the eye.
       // docs/testing.md §7 explains why UI packages are deliberately excluded.
       include: ['packages/core/src/**', 'packages/geometry/src/**', 'packages/domain/src/**'],
+      // Test support that lives in src/ beside what it serves, and is run only
+      // by the performance step the coverage run leaves out (Q6). Counting it
+      // reported a file of fixtures as 0 % covered production code.
+      exclude: ['packages/domain/src/workloads.ts'],
       thresholds: {
         lines: 90,
         branches: 85,
