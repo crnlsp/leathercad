@@ -7,6 +7,13 @@ yet is listed in the open
 [release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
 Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
 
+## [1.1.1](https://github.com/crnlsp/leathercad/compare/leathercad-v1.1.0...leathercad-v1.1.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* the known bugs on the 1.1 roadmap — Q1, Q3, Q5, Q6 and 3.11 ([#21](https://github.com/crnlsp/leathercad/issues/21)) ([6380323](https://github.com/crnlsp/leathercad/commit/6380323ddcb383481ba9fa318ce10a50eac129ed))
+
 ## [1.1.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.0.1...leathercad-v1.1.0) (2026-09-26)
 
 
