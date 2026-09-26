@@ -1,7 +1,8 @@
 # Architecture
 
-**Status:** Design — no implementation yet
-**Last updated:** 2026-09-03
+**Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
+fix it in the same change.
+**Last updated:** 2026-09-26
 
 ---
 
@@ -87,7 +88,6 @@ conformance suite for the replacement.
 | Dead code | knip | ISC | Unused files, exports and dependencies ([ADR 0016](adr/0016-quality-tooling.md)) |
 | Offsetting / booleans | Written here (analytic, 1.9) | — | No Clipper binding: both were tried and rejected ([ADR 0008](adr/0008-no-clipper-binding.md)) |
 | PDF writing | pdf-lib | MIT | Direct vector PDF, full control of coordinates |
-| PDF parsing (tests) | pdfjs-dist | Apache-2.0 | Planned for reading exported PDFs back. Unused: the print checks use poppler (`knip.jsonc`) |
 | ZIP container | fflate | MIT | Small, sync API, no native deps |
 | Schema validation | zod | MIT | Runtime validation at the file-load boundary |
 | Immutable updates | immer | MIT | Structural sharing for the undo stack |
@@ -149,6 +149,10 @@ Strict, one-directional dependency graph. An arrow means "may import".
      ui, cli  ──depend on───▶ platform, for file and dialog access
      cli      ──depends on──▶ everything except ui/editor/desktop
 ```
+
+**As built in 1.0,** `ui`, `print` and `cli` are reserved in `.dependency-cruiser.cjs` but not created.
+The React panels and dialogs live in `apps/desktop/src/renderer`; pagination, tiling and the sheet
+plan live in `export`; and there is no CLI yet. The rules below hold for them the day they exist.
 
 ### The rules, enforced by dependency-cruiser in CI
 

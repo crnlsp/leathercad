@@ -77,15 +77,15 @@ export default {
     // MIME registration for .lcp and Flatpak are slice 8.5, 1.1.
   },
   // Windows (8.6a): an NSIS installer, per user, no administrator needed.
-  // Unsigned until the release's code-signing certificate exists (roadmap
-  // 8.6); electron-builder signs when CSC_LINK is set, with no change here.
+  // Unsigned, by decision (roadmap 8.6, Code signing); electron-builder would
+  // sign if CSC_LINK were ever set, with no change here.
   win: { target: ['nsis'], icon: 'build/icon.ico' },
   nsis: { oneClick: true, perMachine: false },
   // macOS (8.6a): one dmg for Apple silicon and Intel. Flipping the fuses
   // rewrites the binary and invalidates Electron's own signature, and an
-  // arm64 app with no valid signature will not start at all — so until the
-  // Developer ID exists it is signed ad hoc ('-'). With CSC_LINK set,
-  // electron-builder finds the real identity and notarisation can follow.
+  // arm64 app with no valid signature will not start at all — so, with no
+  // Developer ID (roadmap 8.6, Code signing), it is signed ad hoc ('-'). Were
+  // CSC_LINK ever set, electron-builder would find a real identity instead.
   mac: {
     target: [{ target: 'dmg', arch: ['universal'] }],
     icon: 'build/icon.icns',

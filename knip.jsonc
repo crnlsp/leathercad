@@ -1,8 +1,8 @@
 // Dead code, unused dependencies and unlisted binaries. See ADR 0016.
 //
-// Every ignore below is either deliberate or a recorded finding, and says which.
-// A finding is listed so that CI ratchets: nothing new may join it, and removing
-// one is a decision for the owner, not a side effect of adding the tool.
+// Every ignore below is deliberate, and says why. The three findings the tool
+// raised when it was added (an unused pdfjs-dist, totalLength() and the
+// IpcChannel type) were removed after 1.0.
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
 
@@ -24,26 +24,27 @@
   // System tools the tests shell out to. poppler is required in CI
   // (LEATHERCAD_REQUIRE_POPPLER); graphviz only by `pnpm depcruise:graph`;
   // librsvg and ImageMagick only by `pnpm icons:generate`, whose output is
-  // committed (8.5a).
-  "ignoreBinaries": ["pdfinfo", "pdftoppm", "dot", "rsvg-convert", "magick"],
+  // committed (8.5a); ffmpeg, gifsicle and pngquant only by `pnpm docs:media`,
+  // whose README pictures are committed.
+  "ignoreBinaries": [
+    "pdfinfo",
+    "pdftoppm",
+    "dot",
+    "rsvg-convert",
+    "magick",
+    "ffmpeg",
+    "gifsicle",
+    "pngquant",
+  ],
 
   "ignoreDependencies": [
     // Deliberate: pins where the vendored fonts came from. ADR 0011.
     "@ibm/plex-sans",
-    // FINDING: ADR 0007 names it as the PDF parser for tests, but no test
-    // imports it — the print checks use poppler instead. Removing it amends an
-    // ADR, so it is the owner's call.
-    "pdfjs-dist",
   ],
 
   "ignoreIssues": {
     // Deliberate: the shared generator catalogue from docs/testing.md §3.1.
     // Built once and reused, so some generators wait for their first caller.
     "packages/geometry/test/arbitraries.ts": ["exports"],
-    // FINDING: `totalLength()` is exported from its module but not from the
-    // package index, and nothing calls it.
-    "packages/geometry/src/path/measure.ts": ["exports"],
-    // FINDING: the `IpcChannel` type is exported and never used.
-    "apps/desktop/src/shared/ipc.ts": ["types"],
   },
 }

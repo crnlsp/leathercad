@@ -3,9 +3,10 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   // Each has its own config and command: pixel diffs run in a pinned
-  // container (`pnpm test:visual`), and the packaged smoke test needs a
-  // packaged build (`pnpm test:packaged`).
-  testIgnore: ['**/visual/**', '**/packaged/**'],
+  // container (`pnpm test:visual`), the packaged smoke test needs a packaged
+  // build (`pnpm test:packaged`), and the README's pictures are taken on
+  // demand (`pnpm docs:media`).
+  testIgnore: ['**/visual/**', '**/packaged/**', '**/media/**'],
   timeout: 60_000,
   expect: { timeout: 10_000 },
   // Electron instances are heavyweight and contend for the display; one at a time.

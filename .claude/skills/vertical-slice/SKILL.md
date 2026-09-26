@@ -1,6 +1,6 @@
 ---
 name: vertical-slice
-description: Use when starting or finishing any numbered slice from docs/roadmap.md §4. Enforces the loop — acceptance criteria first, tests before implementation in the pure layers, verify by running, update docs in the same commit.
+description: Use when starting or finishing any numbered slice from docs/roadmap.md. Enforces the loop — acceptance criteria first, tests before implementation in the pure layers, verify by running, update docs in the same commit.
 ---
 
 # Vertical slice
@@ -10,7 +10,7 @@ slice ends with the repo broken, and no slice is "just the model layer, UI next 
 
 ## Before writing code
 
-1. **Read the slice** in `docs/roadmap.md` §4 and restate its acceptance criteria in your own words.
+1. **Read the slice** in `docs/roadmap.md` and restate its acceptance criteria in your own words.
    If the slice has no written acceptance criteria, write them first and get them confirmed — a
    slice without observable criteria cannot be finished, only abandoned.
 2. **Read the doc that governs the layer** you are about to touch:
@@ -45,7 +45,7 @@ slice ends with the repo broken, and no slice is "just the model layer, UI next 
       assertions do not — the config-path bug in slice 0.2 passed every test.
 - [ ] Docs updated **in the same commit** if the change invalidated anything in `CLAUDE.md` or
       `docs/`. A stale doc is worse than a missing one, because it will be followed.
-- [ ] `docs/roadmap.md` marked done, with any gotcha worth not rediscovering.
+- [ ] `docs/roadmap.md` item ticked (it leaves the roadmap at the next release), and any gotcha worth not rediscovering written into the slice's design spec or the doc it concerns.
 - [ ] Commit message names the slice and its user-visible effect, not the files touched.
 
 ## Never

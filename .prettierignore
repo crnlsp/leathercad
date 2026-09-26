@@ -5,7 +5,6 @@ coverage/
 pnpm-lock.yaml
 LICENSE
 *.svg
-fixtures/golden/
 **/__snapshots__/
 
 # Machine-written glyph outlines. Regenerate with `pnpm fonts:generate`.

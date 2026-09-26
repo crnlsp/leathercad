@@ -4,8 +4,10 @@ name: Package
 # the installer a user would download. Linux is packaged on every pull request
 # by ci.yml.
 #
-# Not on every pull request: the repository is private, where a macOS minute
-# costs ten and a Windows minute two. It runs when packaging could have
+# Not on every pull request: this was written while the repository was
+# private, where a macOS minute costs ten and a Windows minute two. Now it is
+# public those minutes are free, and running it on every pull request is
+# roadmap item R5. Until then it runs when packaging could have
 # changed — the desktop app, the packaged test and the 7.7 print test it
 # measures, the lockfile, this file — and weekly, and on demand, so a
 # regression from anywhere else is still caught within days. The release

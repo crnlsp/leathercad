@@ -6,8 +6,10 @@ name: Release
 # platform's installer from the tag — the AppImage, the Windows NSIS installer
 # and the macOS dmg (8.6a) — and attaches them, with an SBOM, to the release.
 #
-# Unsigned on Windows and ad-hoc signed on macOS until the certificates exist
-# (roadmap 8.6, release tasks); electron-builder signs when CSC_LINK is set.
+# Unsigned on Windows and ad-hoc signed on macOS, by decision: the project
+# does not buy signing certificates (roadmap 8.6, Code signing). Each
+# installer carries build provenance instead. electron-builder would sign if
+# CSC_LINK were ever set.
 #
 # Needs "Allow GitHub Actions to create and approve pull requests" (Settings →
 # Actions → General). A pull request opened with the workflow token does not

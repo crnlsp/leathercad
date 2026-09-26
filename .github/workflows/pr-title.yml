@@ -1,0 +1,36 @@
+name: Pull request title
+
+# Pull requests into develop are squash-merged, so the title becomes the commit
+# release-please reads and the line a maker sees in the changelog. It has to
+# follow Conventional Commits: see CONTRIBUTING.md, "Commits and pull requests".
+#
+# No action from the marketplace: a regular expression in the shell is all
+# this needs, and it adds nothing to pin or to trust.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [develop]
+
+permissions: {}
+
+jobs:
+  title:
+    name: Conventional title
+    # Bringing a release back from main is a merge, not a change of its own.
+    if: ${{ github.head_ref != 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check the title
+        env:
+          # Through the environment, never interpolated into the script.
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|perf|revert|docs|test|refactor|build|ci|chore|style)(\([a-z0-9./-]+\))?!?: [^ ].*'
+          if [[ "$TITLE" =~ $pattern ]]; then
+            echo "The title is a conventional commit: $TITLE"
+          else
+            echo "::error title=Pull request title::Squash-merging makes the title the changelog line. Write it as '<type>(<scope>): <what changes>', e.g. 'fix(export): a taped strap's halves line up again'. See CONTRIBUTING.md."
+            exit 1
+          fi
