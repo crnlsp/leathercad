@@ -71,7 +71,8 @@ export { badgesOf, worstOf, type Badge, type Badges } from './badges.js';
 export { diagnosticTarget, MIN_FRAME_MM, type DiagnosticTarget } from './diagnosticTarget.js';
 export { exportReadiness, type ExportReadiness, type OmittedFeature } from './exportReadiness.js';
 
-export { anchorsOf, cornerDistances } from './anchors.js';
+export type { CornerSite } from './anchors.js';
+export { anchorsOf, cornerDistances, cornerSites, cornersThroughEdit } from './anchors.js';
 
 export type { Material } from './material.js';
 export { allOnMaterial, distanceToEdge, isOnMaterial, materialOf } from './material.js';

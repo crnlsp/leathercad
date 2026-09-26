@@ -1,6 +1,6 @@
 # 10. Anchors are the only way to address a place on a feature
 
-**Status:** Accepted
+**Status:** Accepted; point 5 amended 2026-09-26
 **Date:** 2026-09-15
 
 ## Context
@@ -59,6 +59,31 @@ mapping of point 3, which arrives with the op in 4.8. `offsetPathTraced` returns
   `offsetPathTraced` returns more; `offsetPath` is a wrapper over it.
 - The "known hole" in `2026-09-05-stitch-derivation-design.md` §4 becomes a hard prerequisite of
   slice 3.9, not a note.
+
+## Amendment — point 5, 2026-09-26 (slice 3.9b)
+
+Point 5 is met **without vertex ids**. By the time vertex editing was built, 1.0 and 1.1 had
+shipped, so ids stored per point meant a format version, a migration of every existing reference
+from a corner index to an id, and files older builds refuse. The same guarantee is had without
+touching the file:
+
+- Only commands mutate the document (invariant 5), so every point edit passes through one place:
+  `editPathPoint` in `packages/document`.
+- The geometry op that makes the edit reports which old point and segment became which new one
+  (`PathEdit`). `cornerSites` says which point or arc each corner sits on, in anchor order, and
+  `cornersThroughEdit` follows each corner through the edit to its new index.
+- The command renumbers, in the same step, every run and dimension that names a corner of the path
+  **or of anything derived from it** — which carries the path's corners under the path's own
+  numbers (point 3).
+- An edit that takes an attached corner away is refused (`CORNER_IN_USE`), never resolved by
+  attaching to a neighbour. An index that was already missing stays exactly as missing.
+
+A property test plays random point edits against random outlines and dimensions and holds each
+accepted edit to leaving every dimension end on the same place of the drawing.
+
+**What would bring vertex ids back:** a reference that outlives a single command — a seam pair
+across two parts edited in separate steps (v1.2), or a reference from outside the document. Neither
+exists yet.
 
 ## Alternatives rejected
 

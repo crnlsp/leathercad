@@ -77,9 +77,18 @@ suggested order of work.
 
 ### Drawing and editing
 
-- ☐ **3.9 Vertex editing.** Add, remove and move a drawn path's points; corner ↔ smooth. Also
-  closes ADR 0010's open item: an anchor on a drawn path does not yet survive its points being
-  renumbered.
+- ◐ **3.9 Vertex editing.** Add, remove and move a drawn path's points; corner ↔ smooth. In three
+  slices:
+  - ✅ **3.9b Corners survive point edits.** `editPathPoint` moves, adds or removes a point of a
+    drawn path in one undoable step, and renumbers every stitch run and dimension attached to the
+    path's corners — or to anything derived from it — so each stays on the corner it was on. An
+    edit that would take an attached corner away is refused (`CORNER_IN_USE`). Closes ADR 0010's
+    open item without vertex ids or a format change (ADR 0010, amended). Commands and geometry
+    only; the tool is 3.9c.
+  - ☐ **3.9c The Edit Points tool.** A handle on each point of the selected drawn path: drag to
+    move, double-click an edge to add, Delete to remove, with the refusal said beside the pointer.
+  - ☐ **3.9d Corner ↔ smooth,** as a rounded corner with a radius — an arc, which offsets — rather
+    than a Bézier, which the stitch-line offset refuses.
 - ☐ **3.10 Guides, alignment and distribution.**
 - ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.
@@ -121,7 +130,7 @@ enough to fix in 1.1; the ones marked **bug** come first.
 | **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
 | **Q5** | The property panel's sizing, and the Parts tree cutting feature names at about ten characters | UI audit, deferred opportunities | ✅ Names had wrapped rather than truncated since F.6, but below 1280 px Parts narrowed to 200 px and a name broke inside a word (*Cut-out mirrore / d*). Parts now keeps 220 px at every width; an end-to-end test holds every word of the sample's names whole at each width band. Properties still steps down to 264 px, which fits its fields |
 | **Q6** | `packages/domain/src/workloads.ts` shows 0 % coverage since the performance ceilings moved to their own step | Moving `perf.test.ts` out of the coverage run | ✅ Fixed: excluded from coverage as the test support it is |
-| **Q25** | **bug** · `offsetPath` out and back refuses a rounded rectangle whose corner radius is about `EPS_POINT` (1e-7 mm): the two lines either side of a corner arc that small meet within the tolerance, and `selfIntersections` counts that as a crossing. Reproduces with `LEATHERCAD_FC_SEED=42 pnpm exec vitest run --project geometry offset.test`; fails the same way before Q1's fix | Checking Q1's fix across seeds, 2026-09-26 | Decide what two non-adjacent segments meeting within `EPS_POINT` across a sub-tolerance arc *are*; then either drop such arcs before the join, or skip them when finding self-intersections. Radii and offsets a maker types are quantised to 1e-4 mm, so nothing drawn in the app is known to reach it |
+| **Q25** | **bug** · `offsetPath` out and back refuses a rounded rectangle whose corner radius is about `EPS_POINT` (1e-7 mm): the two lines either side of a corner arc that small meet within the tolerance, and `selfIntersections` counts that as a crossing. Reproduces with `LEATHERCAD_FC_SEED=42 pnpm exec vitest run --project geometry offset.test`; fails the same way before Q1's fix | Checking Q1's fix across seeds, 2026-09-26 | ✅ Fixed with 3.9b, where it kept failing `pnpm check` at random. Not the offset: `intersectSegments` let a crossing sit up to `EPS_PARAM` past a line's end *as a parameter* — 2e-7 mm on a 200 mm side, wider than `EPS_POINT` — so the sides either side of a kept 1.5e-7 mm corner arc read as crossing. The slack is now `EPS_POINT` in millimetres at any length, the rule Q1 applied to the collinear case. Both seeds are regression tests |
 | **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
 
 #### The independent QA pass (2026-09-24)
@@ -134,7 +143,7 @@ alongside the 8.x slice it is nearest to, one pull request per slice.
 
 | # | What | Severity | Plan |
 |---|---|---|---|
-| **Q8** | **bug** (B1) · Mirroring an **outline** puts a second outline in the same part. It saves, and the file then **cannot be reopened** (`PART_ALREADY_HAS_OUTER`); the crash-recovery copy is set aside as corrupt too, and the PDF prints both outlines as one piece. `mirrorFeatures` never asks `additionRefusal`, and `counterpartOf` copies `role: 'outer'` | P0 | ✅ Fixed with 8.2. The outline *is* the piece, so its counterpart — with every counterpart from that part — now goes into a **new part** beside it, which is the left-and-right pair the mirror design was always about. A property (`commandRoundTrip.test.ts`) now plays random sequences of 26 commands and holds every result to saving, reopening byte-identically and paginating; it finds this bug on the old code in one step |
+| **Q8** | **bug** (B1) · Mirroring an **outline** puts a second outline in the same part. It saves, and the file then **cannot be reopened** (`PART_ALREADY_HAS_OUTER`); the crash-recovery copy is set aside as corrupt too, and the PDF prints both outlines as one piece. `mirrorFeatures` never asks `additionRefusal`, and `counterpartOf` copies `role: 'outer'` | P0 | ✅ Fixed with 8.2. The outline *is* the piece, so its counterpart — with every counterpart from that part — now goes into a **new part** beside it, which is the left-and-right pair the mirror design was always about. A property (`commandRoundTrip.test.ts`) now plays random sequences of 26 commands (29 since 3.9b) and holds every result to saving, reopening byte-identically and paginating; it finds this bug on the old code in one step |
 | **Q9** | **bug** (B2) · Mirroring a **dimension** makes a `measurement` with a `derived` source, which the schema refuses on open. The panel shows *Offset NaN mm*; `mirrorRefusal` refuses only labels, and the fold mirror inherits the hole | P0 | ✅ Fixed with 8.2. Refused, by `DIMENSION_NOT_MIRRORED` (X3), with a reason the disabled button shows; the fold mirror inherits the refusal. Held by the same property |
 | **Q10** | **bug** (B3) · **Duplicate** re-points only a derived feature's `sourceId`. A dimension's anchors and a fold mirror's `foldId` still name the original, so the copy's dimension measures the original, its caption sits over the original, a mirrored slot lands 230 mm off the copy, and the PDF tapes the copy across extra sheets | P1 | ✅ Fixed with 8.3: Duplicate re-points every reference inside the part — a derivation's source, a dimension's two ends and a fold mirror's fold |
 | **Q11** | **bug** (B4) · A dimension or a *Follows* can reach **another part**. The part's printed extent then spans the gap on the board, so moving a piece on the board changes the sheet count (4 → 7 pages), which the Sheets spec's criterion 2 forbids; readiness reports nothing | P1 | ✅ Fixed with 8.3: a derivation laid on its source (a stitch line, holes, an allowance) must follow something on its own piece (`FOLLOWS_ANOTHER_PART`), and a dimension measures one piece (`MEASURE_ACROSS_PARTS`, which the Measure tool says at the second click; it prefers the first piece's corner where two pieces touch). A mirror may still follow another piece — it is placed by its axis, and a mirrored piece is one (Q8). Commands only: a file from before holds what it holds, and opens |

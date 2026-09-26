@@ -155,6 +155,23 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     title: 'No such feature',
     describe: () => 'That feature does not exist.',
   },
+  NOT_A_DRAWN_PATH: {
+    title: 'No points to edit',
+    describe: (f) =>
+      `${f.featureName} is not a drawn path, so it has no points of its own. A shape is ` +
+      'changed by its measurements, and a derived feature follows what it was made from.',
+  },
+  POINT_EDIT_DEGENERATE: {
+    title: 'Too few points',
+    describe: (f) =>
+      `That would leave ${f.featureName} with too few points, or a side of no length.`,
+  },
+  CORNER_IN_USE: {
+    title: 'A corner in use',
+    describe: (f) =>
+      `${f.usedByName} is attached to that corner of ${f.featureName}, and this edit would take ` +
+      `the corner away. Change ${f.usedByName} first.`,
+  },
   NOT_DERIVED: {
     title: 'Follows nothing',
     describe: (f) => `${f.featureName} does not follow anything, so there is nothing to re-point.`,

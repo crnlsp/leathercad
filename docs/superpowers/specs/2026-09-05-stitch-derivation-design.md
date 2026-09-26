@@ -221,7 +221,9 @@ Resolution is mechanical:
 **Known hole.** Adding or deleting a vertex on a drawn polyline shifts anchor indices and would
 silently move a run. Vertex editing is slice 3.9 and deferred behind M3, so this cannot arise yet —
 but it must be solved *before* 3.9 ships. The likely answer is vertex ids on drawn paths, which is
-cheap while nobody has files.
+cheap while nobody has files. **Solved in 3.9b** without vertex ids: the point-editing command
+renumbers every run and dimension through the edit, and refuses one that would lose its corner
+(ADR 0010, amended).
 
 ## 5. Stitch holes have no stable ids
 

@@ -63,7 +63,7 @@ function commandFor(
   const other = features.length === 0 ? undefined : features[step.c % features.length]!;
   const size = 20 + (step.c % 120);
 
-  switch (step.kind % 26) {
+  switch (step.kind % 29) {
     case 0:
     case 1:
       return D.addPart(
@@ -159,6 +159,39 @@ function commandFor(
       return part && D.setPartVisible(part.id, step.c % 2 === 0);
     case 24:
       return feature && D.setFeatureLocked(feature.id, step.c % 3 === 0);
+    // A drawn outline, and the point edits that renumber its corners (3.9b):
+    // every attachment has to come out of them still a file the loader takes.
+    case 26:
+      return D.addPart(
+        D.pathPart(
+          fresh(),
+          fresh(),
+          'Tab',
+          PathOps.polyline(
+            [
+              at(step.x, step.y),
+              at(step.x + size, step.y),
+              at(step.x + size, step.y + 40),
+              at(step.x + size / 2, step.y + 55),
+              at(step.x, step.y + 40),
+            ],
+            true,
+          ),
+        ),
+      );
+    case 27:
+      return (
+        feature &&
+        D.editPathPoint(
+          step.c % 2 === 0
+            ? { kind: 'move', featureId: feature.id, vertex: step.a % 6, to: at(step.x, step.y) }
+            : { kind: 'insert', featureId: feature.id, segment: step.a % 6, t: 0.5 },
+        )
+      );
+    case 28:
+      return (
+        feature && D.editPathPoint({ kind: 'remove', featureId: feature.id, vertex: step.a % 6 })
+      );
     default:
       return part && D.setPartQuantity(part.id, 1 + (step.c % 3));
   }

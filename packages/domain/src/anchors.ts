@@ -1,5 +1,5 @@
 import { EPS_ANGLE, approxZero, type Mm } from '@leathercad/core';
-import { SegmentOps, type Path } from '@leathercad/geometry';
+import { SegmentOps, type Path, type PathEdit } from '@leathercad/geometry';
 
 import type { FeatureSource } from './feature.js';
 
@@ -63,6 +63,62 @@ export function anchorsOf(source: FeatureSource, path: Path): readonly Mm[] {
  * on every corner (docs/domain-model.md §6).
  */
 export function cornerDistances(path: Path): readonly Mm[] {
+  return locatedCorners(path).map((corner) => corner.at);
+}
+
+/**
+ * Where each corner is on the path's own structure, in anchor order: at a
+ * point, or on the arc that rounds it.
+ *
+ * What lets an anchor survive an edit to a drawn path. A stitch run names
+ * "corner 2"; after a point is added before it, that corner is the fourth, and
+ * the only safe way to know is to follow the point or arc it sits on through
+ * the edit — never to look for the nearest corner afterwards (ADR 0010).
+ */
+export type CornerSite =
+  | { readonly kind: 'vertex'; readonly index: number }
+  | { readonly kind: 'arc'; readonly segment: number };
+
+export function cornerSites(path: Path): readonly CornerSite[] {
+  return locatedCorners(path).map((corner) => corner.site);
+}
+
+/**
+ * For each corner of `before`, its index among the corners of the edited
+ * path, or `null` when the edit took it away — removed its point, split its
+ * arc, or straightened it.
+ *
+ * A corner the edit *made* takes an index of its own and moves the ones after
+ * it along; they still map to the corners they were.
+ */
+export function cornersThroughEdit(before: Path, edit: PathEdit): readonly (number | null)[] {
+  const after = cornerSites(edit.path);
+  const key = (site: CornerSite): string =>
+    site.kind === 'vertex' ? `v${String(site.index)}` : `a${String(site.segment)}`;
+  const indexAfter = new Map(after.map((site, k) => [key(site), k] as const));
+
+  return cornerSites(before).map((site) => {
+    const moved = siteThrough(site, edit);
+    return moved === null ? null : (indexAfter.get(key(moved)) ?? null);
+  });
+}
+
+/** The site a corner's point or arc became, or `null` if the edit took it. */
+function siteThrough(site: CornerSite, edit: PathEdit): CornerSite | null {
+  if (site.kind === 'vertex') {
+    const index = edit.vertexMap[site.index] ?? null;
+    return index === null ? null : { kind: 'vertex', index };
+  }
+  const segment = edit.segmentMap[site.segment] ?? null;
+  return segment === null ? null : { kind: 'arc', segment };
+}
+
+interface LocatedCorner {
+  readonly at: Mm;
+  readonly site: CornerSite;
+}
+
+function locatedCorners(path: Path): readonly LocatedCorner[] {
   const segments = path.segments;
   if (segments.length === 0) return [];
 
@@ -74,7 +130,7 @@ export function cornerDistances(path: Path): readonly Mm[] {
     cumulative += l;
   }
 
-  const corners: Mm[] = [];
+  const corners: LocatedCorner[] = [];
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i]!;
@@ -85,7 +141,7 @@ export function cornerDistances(path: Path): readonly Mm[] {
       const before = neighbour(segments, i - 1, path.closed);
       const after = neighbour(segments, i + 1, path.closed);
       if (before?.kind === 'line' && after?.kind === 'line') {
-        corners.push(starts[i]! + lengths[i]! / 2);
+        corners.push({ at: starts[i]! + lengths[i]! / 2, site: { kind: 'arc', segment: i } });
       }
       continue;
     }
@@ -97,11 +153,16 @@ export function cornerDistances(path: Path): readonly Mm[] {
     const turn = SegmentOps.tangentAt(segment, 1);
     const onward = SegmentOps.tangentAt(next, 0);
     if (!approxZero(turn.x * onward.y - turn.y * onward.x, EPS_ANGLE)) {
-      corners.push(starts[i]! + lengths[i]!);
+      // The point at the end of segment i, which on a closed path's last
+      // segment is its first point.
+      corners.push({
+        at: starts[i]! + lengths[i]!,
+        site: { kind: 'vertex', index: path.closed && i === segments.length - 1 ? 0 : i + 1 },
+      });
     }
   }
 
-  return corners.sort((a, b) => a - b);
+  return corners.sort((a, b) => a.at - b.at);
 }
 
 function neighbour(

@@ -88,3 +88,6 @@ export {
   transformFeatures,
   translateFeatures,
 } from './commands.js';
+
+export type { PathPointEdit } from './pathPoints.js';
+export { editPathPoint, pathPointRefusal } from './pathPoints.js';
