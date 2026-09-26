@@ -109,6 +109,13 @@ export interface PlatformHost {
    * the way to stop listening.
    */
   onOpenFile(listener: (path: string) => void): () => void;
+
+  /**
+   * The worked sample project that ships with the app (slice 8.3), as the
+   * bytes of an ordinary `.lcp`. Read-only: it opens untitled, so saving it
+   * asks where, and the copy inside the app is never written.
+   */
+  readSampleProject(): Promise<Uint8Array>;
 }
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
@@ -136,7 +143,8 @@ export type MenuAction =
   | 'redo'
   | 'view-design'
   | 'view-sheets'
-  | 'shortcuts';
+  | 'shortcuts'
+  | 'open-sample';
 
 /** A recovery copy found at startup. */
 export interface RecoveredCopy {

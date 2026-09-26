@@ -1509,22 +1509,47 @@ export function duplicatePart(
         // exactly on top of the original.
         const unlocked = { locked: false };
 
-        // A label's source is its words, so it can never be re-pointed —
-        // narrowing the feature rather than only its source is what lets the
-        // copy below be built at all.
-        if (
-          feature.kind === 'text-label' ||
-          feature.kind === 'measurement' ||
-          feature.source.kind !== 'derived'
-        ) {
-          return { ...feature, ...unlocked, id };
-        }
-
         // Inside the part: follow the copy. Outside it: unchanged, so the copy
         // points where the original pointed and no reference is created into
-        // or out of the copy.
-        const sourceId = renamed.get(feature.source.sourceId) ?? feature.source.sourceId;
-        return { ...feature, ...unlocked, id, source: { ...feature.source, sourceId } };
+        // or out of the copy. **Every** reference, not only a derivation's
+        // source: a dimension's two ends and a fold mirror's fold once kept
+        // naming the original, so the copy measured the original and folded
+        // about the original's crease, 230 mm off the copy (Q10).
+        const into = (ref: FeatureId): FeatureId => renamed.get(ref) ?? ref;
+
+        // A label's source is its words, so it has nothing to re-point.
+        if (feature.kind === 'text-label') return { ...feature, ...unlocked, id };
+
+        if (feature.kind === 'measurement') {
+          const { a, b } = feature.source;
+          return {
+            ...feature,
+            ...unlocked,
+            id,
+            source: {
+              ...feature.source,
+              a: { ...a, featureId: into(a.featureId) },
+              b: { ...b, featureId: into(b.featureId) },
+            },
+          };
+        }
+
+        if (feature.source.kind !== 'derived') return { ...feature, ...unlocked, id };
+
+        const op = feature.source.op;
+        return {
+          ...feature,
+          ...unlocked,
+          id,
+          source: {
+            ...feature.source,
+            sourceId: into(feature.source.sourceId),
+            op:
+              op.type === 'mirror' && op.axis.kind === 'fold'
+                ? { ...op, axis: { ...op.axis, foldId: into(op.axis.foldId) } }
+                : op,
+          },
+        } as Feature;
       });
 
       const copy: Part = { ...part, id: newPartId, name: `${part.name} copy`, features };

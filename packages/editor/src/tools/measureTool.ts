@@ -6,6 +6,8 @@ import {
   type MeasureKind,
   type MeasureRef,
   type Problem,
+  type ResolvedPart,
+  type ResolvedProject,
 } from '@leathercad/domain';
 import { CANVAS, dotsItem, pathItem, type DisplayList } from '@leathercad/render';
 import { polyline } from '@leathercad/geometry';
@@ -54,7 +56,25 @@ export function createMeasureTool(nextId: () => string, measure: () => MeasureKi
       refusal = null;
 
       const resolved = evaluate(ctx.store.getState().document.project);
-      const ref = anchorNear(resolved, event.at, ctx.viewport.pickToleranceMm(PICK_RADIUS_PX));
+      const tolerance = ctx.viewport.pickToleranceMm(PICK_RADIUS_PX);
+      let ref = anchorNear(resolved, event.at, tolerance);
+
+      // The second end is on the first end's piece (Q11): a corner there wins
+      // over one on a neighbour touching it, and a corner only on another
+      // piece is refused with a reason rather than measured.
+      if (ref !== null && state.kind === 'placing') {
+        const home = partOf(resolved, state.from.featureId);
+        const other = partOf(resolved, ref.featureId);
+        if (home !== undefined && other !== home) {
+          const own = anchorNear({ ...resolved, parts: [home] }, event.at, tolerance);
+          if (own === null) {
+            refusal = problem('MEASURE_ACROSS_PARTS', { otherPartName: other?.part.name ?? '' });
+            ctx.invalidate();
+            return;
+          }
+          ref = own;
+        }
+      }
 
       if (ref === null) {
         // X1: nothing happens, and the reason is on screen.
@@ -140,4 +160,9 @@ export function createMeasureTool(nextId: () => string, measure: () => MeasureKi
       reset(ctx);
     },
   };
+}
+
+/** The resolved part holding a feature. */
+function partOf(resolved: ResolvedProject, featureId: FeatureId): ResolvedPart | undefined {
+  return resolved.parts.find((part) => part.features.some((e) => e.feature.id === featureId));
 }

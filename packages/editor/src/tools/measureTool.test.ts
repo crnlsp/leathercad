@@ -54,6 +54,42 @@ const click = (x: number, y: number): PointerInput => ({
 const features = (store: DocumentStore) => store.getState().document.project.parts[0]!.features;
 
 describe('the measure tool', () => {
+  it('refuses a second end on another piece, saying so, and adds nothing (Q11)', () => {
+    const { ctx, store } = harness();
+    store.dispatch(
+      addPart(
+        rectanglePart('p2' as never, 'cut-2' as never, 'Back', rectShape(vec(400, 0), 90, 60)),
+      ),
+    );
+    const tool = createMeasureTool(nextId, () => 'aligned');
+
+    tool.onPointerDown!(ctx, click(0, 0));
+    tool.onPointerDown!(ctx, click(400, 0));
+
+    expect(tool.notice!(ctx)).toMatchObject({
+      code: 'MEASURE_ACROSS_PARTS',
+      facts: { otherPartName: 'Back' },
+    });
+    expect(features(store).some((f) => f.kind === 'measurement')).toBe(false);
+  });
+
+  it("takes the corner on the first end's piece where two pieces touch", () => {
+    const { ctx, store } = harness();
+    // A second piece whose corner (100,0) sits exactly on the panel's.
+    store.dispatch(
+      addPart(
+        rectanglePart('p2' as never, 'cut-2' as never, 'Right', rectShape(vec(100, 0), 90, 60)),
+      ),
+    );
+    const tool = createMeasureTool(nextId, () => 'aligned');
+
+    tool.onPointerDown!(ctx, click(0, 0));
+    tool.onPointerDown!(ctx, click(100, 0));
+
+    const measurement = features(store).find((f) => f.kind === 'measurement');
+    expect(measurement?.source).toMatchObject({ b: { featureId: 'cut-1' } });
+  });
+
   it('dimensions between two corners', () => {
     const { ctx, store } = harness();
     const tool = createMeasureTool(nextId, () => 'aligned');

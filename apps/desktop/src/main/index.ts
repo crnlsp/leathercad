@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { BrowserWindow, Menu, app, dialog, shell } from 'electron';
 import log from 'electron-log/main';
 
+import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
 import windowIcon from '../../build/icon.png?asset';
 import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { IPC } from '../shared/ipc.js';
@@ -200,6 +201,7 @@ app.whenReady().then(() => {
       app.addRecentDocument(path);
       buildMenu();
     },
+    sampleProject,
   );
 
   app.setAboutPanelOptions({

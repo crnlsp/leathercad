@@ -217,6 +217,11 @@ export function App() {
     if (await confirmDiscard('open')) await file.open();
   }, [confirmDiscard, file]);
 
+  // Help › Open Sample Project (8.3), and the empty Parts panel's offer of it.
+  const openSample = useCallback(async () => {
+    if (await confirmDiscard('open')) await file.openSample();
+  }, [confirmDiscard, file]);
+
   // File › Open Recent (8.2): the main process chose and granted the path;
   // unsaved work is asked about exactly as for Open.
   useEffect(
@@ -349,9 +354,12 @@ export function App() {
           case 'shortcuts':
             setShortcutsOpen(true);
             break;
+          case 'open-sample':
+            void openSample();
+            break;
         }
       }),
-    [file, exportPdf, newProject, openProject, store, showView],
+    [file, exportPdf, newProject, openProject, openSample, store, showView],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
@@ -573,6 +581,7 @@ export function App() {
           onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
           onRemovePart={requestDeletePart}
           onDuplicatePart={requestDuplicatePart}
+          onOpenSample={() => void openSample()}
         />
         {/* The drawing is what the window is for: its main landmark. */}
         <main className="canvas-column" aria-label="Drawing">

@@ -103,6 +103,12 @@ describe('the application menu', () => {
     expect(all(other).map((entry) => entry.role)).toContain('about');
   });
 
+  it('opens the sample project from Help (8.3)', () => {
+    const { template, send } = build();
+    item(template, 'Open Sample Project').click?.({} as never, undefined, {} as never);
+    expect(send).toHaveBeenCalledWith('open-sample');
+  });
+
   it('opens the log folder from Help, for reporting a problem', () => {
     const { template, openLogFolder } = build();
     item(template, 'Show Log Folder').click?.({} as never, undefined, {} as never);

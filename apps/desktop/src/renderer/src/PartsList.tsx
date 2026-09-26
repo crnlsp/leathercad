@@ -45,6 +45,7 @@ export function PartsList({
   onHoverPart,
   onRemovePart,
   onDuplicatePart,
+  onOpenSample,
 }: {
   store: DocumentStore;
   project: Project;
@@ -68,6 +69,8 @@ export function PartsList({
   onRemovePart: (partId: string) => void;
   /** Copies a part, re-pointing the derivations inside it. */
   onDuplicatePart: (partId: string) => void;
+  /** Opens the worked sample (8.3): a finished pattern to take apart. */
+  onOpenSample: () => void;
 }) {
   if (project.parts.length === 0) {
     return (
@@ -75,6 +78,18 @@ export function PartsList({
         <h2>Parts</h2>
         <p className="panel-empty">
           No parts yet. Press R, then drag or click two corners to draw one.
+        </p>
+        <p className="panel-empty">
+          Or take a finished one apart:{' '}
+          <button
+            type="button"
+            className="link-button"
+            data-testid="open-sample"
+            onClick={onOpenSample}
+          >
+            open the sample wallet
+          </button>
+          .
         </p>
       </aside>
     );

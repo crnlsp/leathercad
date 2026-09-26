@@ -35,6 +35,8 @@ export function registerPlatformHandlers(
   preferences: PreferencesStore,
   /** The recent list changed, so the menu showing it has to be rebuilt. */
   onRecentChanged: (path: string) => void,
+  /** Where the bundled sample project is (8.3): a fixed path, never the renderer's. */
+  sampleProjectPath: string,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -97,6 +99,13 @@ export function registerPlatformHandlers(
     }
   });
   ipcMain.handle(IPC.getRecoveryIntervalMs, () => recoveryIntervalMs());
+
+  // The sample (8.3). Its path is the main process's own; the renderer only
+  // ever gets the bytes, so there is nothing of it to write back to.
+  ipcMain.handle(
+    IPC.readSampleProject,
+    async () => new Uint8Array(await readFile(sampleProjectPath)),
+  );
 
   // Preferences (8.2). The renderer names a change, never the file.
   ipcMain.handle(IPC.getPreferences, () => preferences.preferences);

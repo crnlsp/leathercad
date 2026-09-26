@@ -118,6 +118,8 @@ export function menuTemplate(options: {
   const help: MenuItemConstructorOptions = {
     label: 'Help',
     submenu: [
+      // A finished pattern to take apart, in place of a tutorial (8.3).
+      { label: 'Open Sample Project', click: () => send('open-sample') },
       // Every key the app answers to, in one place (8.2).
       action('Keyboard Shortcuts', 'CmdOrCtrl+/', 'shortcuts'),
       { type: 'separator' },

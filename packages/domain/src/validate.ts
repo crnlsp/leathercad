@@ -1,4 +1,4 @@
-import { EPS_LENGTH, type Mm } from '@leathercad/core';
+import { EPS_LENGTH, QUANTUM_MM, type Mm } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
@@ -322,7 +322,12 @@ function offMaterial(
     feature.kind === 'fold-line' ||
     feature.kind === 'marking-line'
   ) {
-    const off = pointsAlong(entry.path).some((point) => !isOnMaterial(material, point));
+    // A line may run *to* the edge: a fold drawn right across the piece ends
+    // on the outline, and that is on the leather, not off it (Q2). "On the
+    // edge" is within one storage quantum, the grid every drawn point snaps to.
+    const off = pointsAlong(entry.path).some(
+      (point) => !isOnMaterial(material, point) && distanceToEdge(material, point) > QUANTUM_MM,
+    );
     if (off) found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'line' }) });
   }
 
