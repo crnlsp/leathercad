@@ -155,4 +155,13 @@ export class InMemoryPlatformHost implements PlatformHost {
   readSampleProject(): Promise<Uint8Array> {
     return Promise.resolve(Uint8Array.from(this.sampleProject));
   }
+
+  /** The project the launch names, taken once. */
+  launchFile: string | null = null;
+
+  takeLaunchFile(): Promise<string | null> {
+    const file = this.launchFile;
+    this.launchFile = null;
+    return Promise.resolve(file);
+  }
 }

@@ -56,8 +56,17 @@ suggested order of work.
   problems; bundled with the main process, and opened untitled and clean. Absorbs 5.4. Fixed
   alongside: Q2, Q10, Q11, Q12 and Q13 — the sample is a bifold, which is exactly where Q13's join
   and Q2's fold ended up.
-- ☐ **8.5 File association and Flatpak.** Double-click a `.lcp` to open it (MIME type on Linux,
-  file association on Windows and macOS), and a Flatpak beside the AppImage.
+- ✅ **8.5 File association and Flatpak.** Double-click a `.lcp` to open it: `fileAssociations`
+  register it with the NSIS installer and the dmg, and on Linux the desktop entry's `MimeType` plus
+  a shared-mime-info file that knows a project by its name and by the `mimetype` entry inside it.
+  The path arrives on the command line (Linux, Windows) or as *open-file* (macOS); the main process
+  grants it and the renderer asks for it once it is ready, so it cannot arrive before anything is
+  listening. No single-instance lock: a second project opens in a second window, as it always has.
+  A Flatpak (`pnpm package:flatpak`) on Electron's base app and the Freedesktop 24.08 runtime, with
+  the home directory and no network, built by `package.yml` and attached by the release workflow.
+  **Not verified by hand yet:** the Flatpak could not be built where it was written (Flathub was
+  unreachable), so its first install on a real desktop is still to do, and so is a double-click on
+  each platform — add both to the release checklist's manual pass.
 - ☐ **8.4b The rest of the native menu.** A Draw menu, zoom, and the paper, beyond the View menu's
   *Design / Sheets*.
 

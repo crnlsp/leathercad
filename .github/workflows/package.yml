@@ -1,8 +1,8 @@
 name: Package
 
 # Windows and macOS builds (slice 8.6a): the packaged smoke test on each, then
-# the installer a user would download. Linux is packaged on every pull request
-# by ci.yml.
+# the installer a user would download; and the Flatpak (8.5). Linux's AppImage
+# is packaged on every pull request by ci.yml.
 #
 # Not on every pull request: this was written while the repository was
 # private, where a macOS minute costs ten and a Windows minute two. Now it is
@@ -108,3 +108,43 @@ jobs:
           path: test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+  # The Flatpak (slice 8.5), built from Electron's base app on the Freedesktop
+  # runtime, both installed from Flathub by the bundler. Linux's other build,
+  # the AppImage, is packaged by ci.yml.
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install flatpak-builder
+        run: sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder
+
+      # The bundler installs the runtime, the SDK and the base app for this
+      # user, from whichever remote the user has: Flathub.
+      - name: Add Flathub
+        run: flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Flatpak
+        run: pnpm package:flatpak
+
+      - name: Upload Flatpak
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flatpak
+          path: apps/desktop/release/*.flatpak
+          retention-days: 7
+          if-no-files-found: error

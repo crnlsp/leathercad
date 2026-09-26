@@ -50,6 +50,8 @@ const platformBridge = {
 
   readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
 
+  takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),
+
   onOpenFile: (listener: (path: string) => void): (() => void) => {
     const handler = (_event: unknown, path: string): void => listener(path);
     ipcRenderer.on(IPC.openFile, handler);

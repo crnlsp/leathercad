@@ -37,6 +37,8 @@ export function registerPlatformHandlers(
   onRecentChanged: (path: string) => void,
   /** Where the bundled sample project is (8.3): a fixed path, never the renderer's. */
   sampleProjectPath: string,
+  /** The project this launch names, already granted (8.5); handed over once. */
+  takeLaunchFile: () => string | null,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -106,6 +108,8 @@ export function registerPlatformHandlers(
     IPC.readSampleProject,
     async () => new Uint8Array(await readFile(sampleProjectPath)),
   );
+
+  ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
 
   // Preferences (8.2). The renderer names a change, never the file.
   ipcMain.handle(IPC.getPreferences, () => preferences.preferences);

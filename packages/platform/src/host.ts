@@ -116,6 +116,15 @@ export interface PlatformHost {
    * asks where, and the copy inside the app is never written.
    */
   readSampleProject(): Promise<Uint8Array>;
+
+  /**
+   * The project this launch was asked to open — a `.lcp` double-clicked in
+   * the file manager (slice 8.5) — once, or null. Already a path the app may
+   * read and write. Asked for by the renderer when it is ready, so the answer
+   * cannot arrive before anything is listening for it; a project the system
+   * hands over later (macOS's *open-file*) comes through `onOpenFile`.
+   */
+  takeLaunchFile(): Promise<string | null>;
 }
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */

@@ -20,5 +20,5 @@
     "src/renderer/src/tools.ts",
     "electron.vite.config.ts"
   ],
-  "references": [{ "path": "../../packages/platform" }]
+  "references": [{ "path": "../../packages/platform" }, { "path": "../../packages/persist" }]
 }

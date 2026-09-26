@@ -32,6 +32,7 @@ interface PreloadBridge {
   noteRecentFile(path: string): Promise<void>;
   onOpenFile(listener: (path: string) => void): () => void;
   readSampleProject(): Promise<Uint8Array>;
+  takeLaunchFile(): Promise<string | null>;
 }
 
 declare global {

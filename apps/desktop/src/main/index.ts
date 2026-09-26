@@ -10,6 +10,7 @@ import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
+import { projectPathFromArgs } from './launchFile.js';
 import { menuTemplate } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
@@ -42,6 +43,26 @@ const grants = new PathGrants();
 let preferences: PreferencesStore;
 
 let mainWindow: BrowserWindow | null = null;
+
+/**
+ * A project the operating system asked this launch to open (8.5): a `.lcp`
+ * double-clicked on Linux or Windows arrives on the command line, one opened
+ * before the app was ready on macOS arrives as *open-file*. Granted — the
+ * maker chose it in their file manager, which is a dialog of its own — and
+ * held until the renderer asks for it.
+ */
+let launchFile: string | null = projectPathFromArgs(process.argv.slice(1), process.cwd());
+if (launchFile !== null) grants.grant(launchFile);
+
+// macOS hands a project to the running app rather than starting another: one
+// that arrives before the window is up waits with the launch file; after, it
+// goes to the renderer, which asks about unsaved work first, as for Open.
+app.on('open-file', (event, path) => {
+  event.preventDefault();
+  grants.grant(path);
+  if (mainWindow === null) launchFile = path;
+  else mainWindow.webContents.send(IPC.openFile, path);
+});
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -202,6 +223,11 @@ app.whenReady().then(() => {
       buildMenu();
     },
     sampleProject,
+    () => {
+      const file = launchFile;
+      launchFile = null;
+      return file;
+    },
   );
 
   app.setAboutPanelOptions({
