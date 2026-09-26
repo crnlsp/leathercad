@@ -1,8 +1,11 @@
-import { evaluate, type FeatureId, type PartId, type Project } from '@leathercad/domain';
+import { diagnose, evaluate, type FeatureId, type PartId, type Project } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import {
+  addCutOut,
+  addFoldLine,
+  addMeasurement,
   addPart,
   addStitchHoles,
   addStitchLine,
@@ -10,6 +13,9 @@ import {
   emptyDocument,
   deleteFeatures,
   isPartVisible,
+  mirrorAcrossFold,
+  mirrorAxisFor,
+  mirrorFeatures,
   rectShape,
   rectanglePart,
   setFeatureLocked,
@@ -91,20 +97,76 @@ describe('duplicatePart', () => {
 
   it('leaves a derivation to another part pointing where it did', () => {
     // §3.2: only derivations *inside* the part are re-pointed. One that
-    // reaches into another part still means the other part.
+    // reaches into another part still means the other part. A mirrored piece
+    // is the one that does (Q8): its outline mirrors the original's.
+    const document = panel(emptyDocument('proj'), A, 'cut-a');
+    const axis = mirrorAxisFor(document.project, ['cut-a' as FeatureId], 'horizontal')!;
+    const mirrored = mirrorFeatures(['cut-a'] as FeatureId[], ['cross-1'] as FeatureId[], axis, [
+      B,
+    ]).apply(document);
+
+    const next = duplicatePart(B, 'part-c' as PartId, ['copy-0'] as FeatureId[]).apply(mirrored);
+
+    expect(sourceIdOf(next.project, 'copy-0')).toBe('cut-a');
+  });
+
+  it("re-points a dimension's two ends to the copy (Q10)", () => {
     let document = panel(emptyDocument('proj'), A, 'cut-a');
-    document = panel(document, B, 'cut-b', 200);
-    // A stitch line in part B following part A's outline.
-    document = addStitchLine(B, 'cross-1' as FeatureId, 'cut-a' as FeatureId).apply(document);
+    document = addMeasurement(
+      'dim' as FeatureId,
+      'aligned',
+      { kind: 'anchor', featureId: 'cut-a' as FeatureId, anchor: 3 },
+      { kind: 'anchor', featureId: 'cut-a' as FeatureId, anchor: 0 },
+    ).apply(document);
+    const ids = idsFor(document.project, A, 'copy');
 
-    const ids = idsFor(document.project, B, 'copy');
-    const next = duplicatePart(B, 'part-c' as PartId, ids).apply(document);
+    let next = duplicatePart(A, B, ids).apply(document);
+    const [outline, , , dimension] = partIn(next.project, B)!.features;
+    expect(dimension!.source).toMatchObject({
+      a: { featureId: outline!.id },
+      b: { featureId: outline!.id },
+    });
 
-    const copied = partIn(next.project, 'part-c')!.features.find((f) => f.name === 'Stitch line');
-    // Two stitch lines in B; the cross-part one is the last feature.
-    const crossCopy = partIn(next.project, 'part-c')!.features.at(-1)!;
-    expect(sourceIdOf(next.project, crossCopy.id)).toBe('cut-a');
-    expect(copied).toBeDefined();
+    // So it reads the copy: resize the copy and its dimension follows.
+    next = setShape(outline!.id, rectShape({ x: 0, y: 0 }, 50, 60)).apply(next);
+    const read = evaluate(next.project)
+      .parts.flatMap((p) => p.features)
+      .find((e) => e.feature.id === dimension!.id);
+    expect(read?.ok === true ? read.text?.layout.text : undefined).toBe('50.0');
+  });
+
+  it("re-points a fold mirror to the copy's own fold (Q10)", () => {
+    let document = addPart(
+      rectanglePart(A, 'o' as FeatureId, 'Wallet', rectShape({ x: 0, y: 0 }, 200, 90)),
+    ).apply(emptyDocument('proj'));
+    document = addFoldLine(A, 'f' as FeatureId, {
+      kind: 'path',
+      path: PathOps.polyline(
+        [
+          { x: 100, y: 0 },
+          { x: 100, y: 90 },
+        ],
+        false,
+      ),
+    }).apply(document);
+    document = addCutOut(A, 'slot' as FeatureId, {
+      kind: 'shape',
+      shape: rectShape({ x: 20, y: 60 }, 60, 5),
+    }).apply(document);
+    document = mirrorAcrossFold(
+      ['slot'] as FeatureId[],
+      ['slotM'] as FeatureId[],
+      'f' as FeatureId,
+    ).apply(document);
+
+    const next = duplicatePart(A, B, ['o2', 'f2', 'slot2', 'slotM2'] as FeatureId[]).apply(
+      document,
+    );
+
+    const copy = partIn(next.project, B)!.features.find((f) => f.id === 'slotM2')!;
+    expect(copy.source).toMatchObject({ sourceId: 'slot2', op: { axis: { foldId: 'f2' } } });
+    // And it lands on the copy, not 230 mm off it: nothing is off the material.
+    expect(diagnose(next.project).filter((d) => d.partId === B)).toEqual([]);
   });
 
   it('places the copy clear of the original rather than exactly on top', () => {
