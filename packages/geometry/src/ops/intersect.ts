@@ -158,7 +158,11 @@ function lineLineOrdered(a: LineSegment, b: LineSegment): Intersection[] {
     const tA = cross(toB, s) / denominator;
     const tB = cross(toB, r) / denominator;
 
-    if (!inUnit(tA) || !inUnit(tB)) return [];
+    // Within the segments to EPS_POINT of their ends, in millimetres. As a
+    // parameter against EPS_PARAM the slack grew with the segment: 2e-7 mm on
+    // a 200 mm side, wider than EPS_POINT, so two sides of an outline either
+    // side of a corner rounded by 1.5e-7 mm read as crossing (Q25).
+    if (!onSegment(tA, lengthR) || !onSegment(tB, lengthS)) return [];
     return [{ point: pointAt(a, clamp01(tA)), tA: clamp01(tA), tB: clamp01(tB) }];
   }
 
@@ -376,6 +380,8 @@ function boxesOverlap(a: Rect, b: Rect): boolean {
   );
 }
 
-const inUnit = (t: number): boolean => t >= -EPS_PARAM && t <= 1 + EPS_PARAM;
+/** A parameter on a segment of this length, to within EPS_POINT of either end. */
+const onSegment = (t: number, lengthMm: number): boolean =>
+  t * lengthMm >= -EPS_POINT && (t - 1) * lengthMm <= EPS_POINT;
 const clamp01 = (t: number): number => Math.min(1, Math.max(0, t));
 const vec2 = (x: number, y: number, s: number): Vec2 => ({ x: x * s, y: y * s });
