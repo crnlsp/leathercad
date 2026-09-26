@@ -117,6 +117,18 @@ export interface Tool {
   onDeactivate?(ctx: ToolContext): void;
 }
 
+/**
+ * Told when a tool throws while the frame is being drawn: which tool, and
+ * what it threw. The default writes to the console, which the desktop app's
+ * log records (ADR 0015) — where a developer looks, and not in front of the
+ * maker, whose pattern is not what is wrong.
+ */
+export type ToolErrorReporter = (toolId: string, error: unknown) => void;
+
+const reportToConsole: ToolErrorReporter = (toolId, error) => {
+  console.error(`tool "${toolId}" failed while drawing; the frame was drawn without it`, error);
+};
+
 /** Shared because a tool that moves nothing asks for this on every event. */
 const NOTHING_EXCLUDED: readonly FeatureId[] = [];
 
@@ -154,10 +166,18 @@ export class ToolManager {
    */
   private index: { project: Project; resolved: ResolvedProject; index: SnapIndex } | null = null;
 
+  /**
+   * What already failed and was reported, so a tool that throws on every
+   * frame is reported once rather than sixty times a second. Cleared when
+   * that call succeeds again, so a second, later failure is reported too.
+   */
+  private readonly failing = new Set<'overlay' | 'notice'>();
+
   constructor(
     private readonly context: ToolContext,
     initial: Tool,
     private readonly tools: readonly Tool[],
+    private readonly reportError: ToolErrorReporter = reportToConsole,
   ) {
     this.active = initial;
   }
@@ -168,7 +188,27 @@ export class ToolManager {
 
   /** The active tool's message, if it has one right now. */
   notice(): Problem | null {
-    return this.active.notice?.(this.context) ?? null;
+    return this.isolated('notice', () => this.active.notice?.(this.context) ?? null, null);
+  }
+
+  /**
+   * Runs one of the active tool's drawing calls so that a throw costs only
+   * that tool's part of the frame (3.11). Both are called from the paint loop,
+   * where an exception used to stop the grid, the rulers and every feature
+   * painting — the whole canvas lost to one tool's rubber band.
+   */
+  private isolated<T>(call: 'overlay' | 'notice', run: () => T, fallback: T): T {
+    try {
+      const result = run();
+      this.failing.delete(call);
+      return result;
+    } catch (error) {
+      if (!this.failing.has(call)) {
+        this.failing.add(call);
+        this.reportError(this.active.id, error);
+      }
+      return fallback;
+    }
   }
 
   /**
@@ -194,6 +234,8 @@ export class ToolManager {
     // would survive into the next tool.
     this.active.onDeactivate?.(this.context);
     this.active = next;
+    // A different tool's failures are its own, and reported afresh.
+    this.failing.clear();
     // A glyph left over from the previous tool would advertise a snap the new
     // one has not been offered.
     this.caught = null;
@@ -272,7 +314,11 @@ export class ToolManager {
   }
 
   overlay(): DisplayList {
-    const items = this.active.buildOverlay?.(this.context).items ?? [];
+    const items = this.isolated(
+      'overlay',
+      () => this.active.buildOverlay?.(this.context).items ?? [],
+      [],
+    );
     if (this.caught === null) return { items };
 
     // The glyph rides on top of the tool's own feedback: which kind of snap is

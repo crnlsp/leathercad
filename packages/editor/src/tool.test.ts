@@ -244,3 +244,75 @@ function snappedAt(scale: number, offsetPx: number): Vec2 | null {
   const got = tool.points[0]!;
   return got.x === 0 && got.y === 0 ? got : null;
 }
+
+describe('ToolManager isolating a failing tool (3.11)', () => {
+  /** A manager whose only tool throws from its overlay and its notice. */
+  function throwing(): {
+    manager: ToolManager;
+    store: DocumentStore;
+    reports: { toolId: string; error: unknown }[];
+    fail: { overlay: boolean; notice: boolean };
+  } {
+    const store = new DocumentStore(emptyDocument('proj'));
+    const viewport = new Viewport();
+    viewport.resize(800, 600, 1);
+    viewport.scale = 4;
+    const fail = { overlay: true, notice: true };
+    const tool = recorder({
+      id: 'broken',
+      buildOverlay: () => {
+        if (fail.overlay) throw new Error('overlay broke');
+        return { items: [] };
+      },
+      notice: () => {
+        if (fail.notice) throw new Error('notice broke');
+        return null;
+      },
+    });
+    const reports: { toolId: string; error: unknown }[] = [];
+    const manager = new ToolManager(
+      { viewport, store, dispatch: (command) => store.dispatch(command), invalidate: () => {} },
+      tool,
+      [tool],
+      (toolId, error) => reports.push({ toolId, error }),
+    );
+    return { manager, store, reports, fail };
+  }
+
+  it('draws the rest of the overlay when the tool throws, and says which tool', () => {
+    const { manager, store, reports } = throwing();
+    addSquare(store);
+    // Caught a snap, so there is something of the manager's own to draw.
+    manager.pointerMove(pointer(vec(0.2, 0.2)));
+
+    const items = manager.overlay().items;
+
+    // The snap glyph still draws: the frame goes on without the tool's part.
+    expect(items.length).toBeGreaterThan(0);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]!.toolId).toBe('broken');
+    expect((reports[0]!.error as Error).message).toBe('overlay broke');
+  });
+
+  it('treats a throwing notice as no notice', () => {
+    const { manager, reports } = throwing();
+
+    expect(manager.notice()).toBeNull();
+    expect(reports.map((r) => (r.error as Error).message)).toEqual(['notice broke']);
+  });
+
+  it('reports a failure once, not once a frame, until the tool recovers', () => {
+    const { manager, reports, fail } = throwing();
+
+    for (let frame = 0; frame < 5; frame++) manager.overlay();
+    expect(reports).toHaveLength(1);
+
+    // Recovered, then broken again: a new failure, so a new report.
+    fail.overlay = false;
+    manager.overlay();
+    fail.overlay = true;
+    manager.overlay();
+    manager.overlay();
+    expect(reports).toHaveLength(2);
+  });
+});

@@ -1,4 +1,4 @@
-import { approxZero, EPS_ANGLE, EPS_PARAM, EPS_POINT } from '@leathercad/core';
+import { approxLte, approxZero, EPS_ANGLE, EPS_PARAM, EPS_POINT } from '@leathercad/core';
 
 import { flattenSegment, type Path } from '../path/index.js';
 import {
@@ -108,7 +108,37 @@ export function selfIntersections(p: Path): Intersection[] {
   return out;
 }
 
+/**
+ * Line against line, symmetric by construction.
+ *
+ * Every tolerance below is a threshold, and a quantity computed from `a`'s
+ * side lands on the other side of it from the same quantity computed from
+ * `b`'s often enough for fast-check to find (Q1). Solving the pair in one
+ * canonical order and swapping the parameters back makes `(a, b)` and
+ * `(b, a)` the same arithmetic, so they cannot disagree.
+ */
 function lineLine(a: LineSegment, b: LineSegment): Intersection[] {
+  if (!precedes(a, b))
+    return lineLineOrdered(b, a).map(({ point, tA, tB }) => ({ point, tA: tB, tB: tA }));
+  return lineLineOrdered(a, b);
+}
+
+/**
+ * A total order on lines by their coordinates. Exact comparison, not
+ * tolerant: it only picks which argument goes first, and two lines equal in
+ * every bit give the same answer in either order anyway.
+ */
+function precedes(a: LineSegment, b: LineSegment): boolean {
+  const ka = [a.a.x, a.a.y, a.b.x, a.b.y];
+  const kb = [b.a.x, b.a.y, b.b.x, b.b.y];
+  for (let i = 0; i < ka.length; i++) {
+    if (ka[i]! < kb[i]!) return true;
+    if (ka[i]! > kb[i]!) return false;
+  }
+  return true;
+}
+
+function lineLineOrdered(a: LineSegment, b: LineSegment): Intersection[] {
   const r = sub(a.b, a.a);
   const s = sub(b.b, b.a);
   const toB = sub(b.a, a.a);
@@ -150,7 +180,12 @@ function lineLine(a: LineSegment, b: LineSegment): Intersection[] {
   const low = Math.max(0, Math.min(t0, t1));
   const high = Math.min(1, Math.max(t0, t1));
 
-  if (low > high + EPS_PARAM) return [];
+  // The overlap's length in millimetres: negative is a gap. Measured against
+  // EPS_POINT, not as a parameter against EPS_PARAM — a parameter is a
+  // fraction of a's length, so the same 1e-8 mm gap was a touch on a 100 mm
+  // line and a miss on a 0.1 mm one.
+  const overlap = (high - low) * lengthR;
+  if (overlap < -EPS_POINT) return [];
 
   const at = (t: number): Intersection => ({
     point: pointAt(a, t),
@@ -158,8 +193,11 @@ function lineLine(a: LineSegment, b: LineSegment): Intersection[] {
     tB: parameterOnLine(b, pointAt(a, t)),
   });
 
-  // Touching end to end is one point, not a zero-length overlap.
-  return approxZero(high - low, EPS_PARAM) ? [at(low)] : [at(low), at(high)];
+  // Touching end to end, or a gap too small to be one, is one point, not a
+  // zero-length overlap.
+  return approxLte(overlap, 0, EPS_POINT)
+    ? [at(clamp01(Math.min(low, high)))]
+    : [at(low), at(high)];
 }
 
 function lineArc(l: LineSegment, a: ArcSegment, swap: boolean): Intersection[] {

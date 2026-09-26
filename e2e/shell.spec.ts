@@ -1356,6 +1356,25 @@ test('drawing a fold line with nothing selected changes nothing, and says why', 
   });
 });
 
+test('the canvas cursor follows the tool at once, without a pointer move (Q3)', async () => {
+  // The cursor was read off the tool manager during render, before the effect
+  // that switches the manager ran, so it was right only because something
+  // else re-rendered straight after. It now comes from the tool the props
+  // name; this holds the behaviour, not the race, which no test can force.
+  await withFreshApp(async (window) => {
+    const canvas = window.getByTestId('editor-canvas');
+    // The app opens on Rectangle, while the manager starts on Select.
+    await expect(canvas).toHaveCSS('cursor', 'crosshair');
+
+    await window.getByTestId('tool-select').click();
+    await expect(window.getByTestId('tool-select')).toHaveClass(/active/);
+    await expect(canvas).toHaveCSS('cursor', 'default');
+
+    await window.getByTestId('tool-text').click();
+    await expect(canvas).toHaveCSS('cursor', 'text');
+  });
+});
+
 test('every two-point tool takes a drag or two clicks (F.1)', async () => {
   // Rectangle and Circle were drag-only and Line click-only, while the header
   // said "drag to draw" for all of them. Now each takes either gesture, and the

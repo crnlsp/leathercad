@@ -50,3 +50,54 @@ test('the sample wallet opens from the empty Parts panel and from Help, clean an
     await closeApp(app);
   }
 });
+
+test('no feature name in Parts breaks inside a word, at any window width (Q5)', async () => {
+  // Names wrap rather than truncate (F.6), but in the narrower layout the
+  // column left beside the toggles was narrower than "mirrored", so the name
+  // read "Cut-out mirrore / d". The sample's names are the ones a maker meets
+  // first. A word broken across lines has one client rect per line.
+  const app = await electron.launch({
+    args: ['.'],
+    cwd: DESKTOP_DIR,
+    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
+  });
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await window.getByTestId('open-sample').click();
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+
+    const brokenWords = (): Promise<string[]> =>
+      window.evaluate(() => {
+        const broken: string[] = [];
+        for (const name of document.querySelectorAll('.feature-name')) {
+          const text = name.firstChild;
+          if (text === null || text.nodeType !== Node.TEXT_NODE) continue;
+          for (const word of (text.textContent ?? '').matchAll(/\S+/g)) {
+            const range = document.createRange();
+            range.setStart(text, word.index);
+            range.setEnd(text, word.index + word[0].length);
+            if (range.getClientRects().length > 1) broken.push(word[0]);
+          }
+        }
+        return broken;
+      });
+
+    // Each width band the frame steps through: wide, the step at 1280, the
+    // Properties overlay below 1024, and the Parts overlay below 900.
+    for (const width of [1440, 1200, 1000, 880]) {
+      await app.evaluate(({ BrowserWindow }, size) => {
+        BrowserWindow.getAllWindows()[0]?.setContentSize(size, 640);
+      }, width);
+      await expect.poll(() => window.evaluate(() => window.innerWidth)).toBe(width);
+      if (width < 900) {
+        await window.getByTestId('toggle-parts').click();
+        await expect(window.getByTestId('parts-list')).toBeVisible();
+      }
+      await expect.poll(brokenWords, { message: `at ${String(width)} px` }).toEqual([]);
+    }
+  } finally {
+    await closeApp(app);
+  }
+});

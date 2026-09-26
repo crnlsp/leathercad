@@ -177,6 +177,14 @@ export function CanvasHost({
   );
   /** A piece dragged on the Sheets view: said beside the pointer, never moved. */
   const [sheetsNotice, setSheetsNotice] = useState(false);
+  /**
+   * The container's size in CSS pixels, for turning the notice back from the
+   * canvas edge. State, set by the resize observer, rather than read off
+   * `containerRef` during render: a ref read there only updates when
+   * something else happens to re-render, so a resize left the notice
+   * measuring the old canvas (Q3).
+   */
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const hoveredPartPropRef = useRef<string | null>(hoveredPart);
   const onHoverPartRef = useRef(onHoverPart);
   useEffect(() => {
@@ -275,6 +283,12 @@ export function CanvasHost({
       tools,
     );
   }
+
+  // The pointer the tool asks for, from the tool the props name. Not
+  // `managerRef.current.activeTool`: the manager only switches in the effect
+  // below, after this render, so reading it here showed the previous tool's
+  // cursor until something else re-rendered (Q3).
+  const toolCursor = tools.find((tool) => tool.id === toolId)?.cursor ?? 'default';
 
   useEffect(() => {
     managerRef.current?.activate(toolId);
@@ -462,6 +476,12 @@ export function CanvasHost({
         }
       }
       placedRef.current = { left, top, dpr };
+      const { clientWidth, clientHeight } = container;
+      setContainerSize((current) =>
+        current.width === clientWidth && current.height === clientHeight
+          ? current
+          : { width: clientWidth, height: clientHeight },
+      );
 
       if (!hasFittedRef.current) {
         hasFittedRef.current = true;
@@ -693,10 +713,7 @@ export function CanvasHost({
         ref={canvasRef}
         data-testid="editor-canvas"
         data-view={view}
-        style={{
-          cursor:
-            view === 'sheets' ? 'default' : (managerRef.current?.activeTool.cursor ?? 'default'),
-        }}
+        style={{ cursor: view === 'sheets' ? 'default' : toolCursor }}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -726,14 +743,7 @@ export function CanvasHost({
         </div>
       )}
       {notice !== null && pointerCss !== null && (
-        <CanvasNotice
-          problem={notice}
-          at={pointerCss}
-          bounds={{
-            width: containerRef.current?.clientWidth ?? 0,
-            height: containerRef.current?.clientHeight ?? 0,
-          }}
-        />
+        <CanvasNotice problem={notice} at={pointerCss} bounds={containerSize} />
       )}
     </div>
   );

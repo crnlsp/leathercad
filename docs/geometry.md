@@ -446,6 +446,11 @@ Edge cases that need explicit tests: collinear overlapping segments (infinitely 
 — return the overlap endpoints), tangent circles (one intersection, numerically fragile), endpoints
 touching exactly, and near-parallel lines where the determinant approaches zero.
 
+`intersectSegments(a, b)` and `intersectSegments(b, a)` must agree. Line/line is solved in one
+canonical argument order so they are the same arithmetic, and two collinear segments whose ends are
+less than `EPS_POINT` apart touch at one point — a gap measured in millimetres, never as a parameter,
+which would make the answer depend on the segments' lengths.
+
 Intersections feed snapping, trimming, and self-intersection detection in offsetting.
 
 ## 8. Boolean operations

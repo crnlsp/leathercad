@@ -84,9 +84,11 @@ suggested order of work.
 - ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.
   Until then, 3.7 refuses those transforms.
-- ☐ **3.11 Isolate a tool's overlay from the draw loop.** An overlay that throws stops the whole
-  canvas painting (grid, rulers, every feature). Catch per tool, draw the rest of the frame, and
-  report the failure where a developer sees it; test it with a deliberately throwing tool.
+- ✅ **3.11 Isolate a tool's overlay from the draw loop.** An overlay that throws stopped the whole
+  canvas painting (grid, rulers, every feature). `ToolManager` now runs a tool's overlay and notice
+  so that a throw costs only that tool's part of the frame — the snap glyph, the rulers and the
+  drawing still paint — and reports it once, naming the tool, to the console, which the app's log
+  records (ADR 0015). Held by a deliberately throwing tool in `tool.test.ts`.
 - ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
@@ -113,12 +115,13 @@ enough to fix in 1.1; the ones marked **bug** come first.
 
 | # | What | Where it was found | Plan |
 |---|---|---|---|
-| **Q1** | **bug** · `intersectSegments` is not symmetric: two collinear lines whose ends are 1e-9 mm apart give one intersection in one argument order and none in the other. Reproduces with `LEATHERCAD_FC_SEED=-1607984333 pnpm exec vitest run --project geometry intersect.test` | A local property-test run, 2026-09-24; the same "order-dependent `intersectSegments`" Phase 4 recorded | Add the counterexample as an example test, fix the collinear branch |
+| **Q1** | **bug** · `intersectSegments` is not symmetric: two collinear lines whose ends are 1e-9 mm apart give one intersection in one argument order and none in the other. Reproduces with `LEATHERCAD_FC_SEED=-1607984333 pnpm exec vitest run --project geometry intersect.test` | A local property-test run, 2026-09-24; the same "order-dependent `intersectSegments`" Phase 4 recorded | ✅ Fixed: the gap between collinear lines is measured in millimetres against `EPS_POINT`, not as a parameter against `EPS_PARAM` (which made the same gap a touch on a long line and a miss on a short one), and line/line is solved in one canonical argument order, so `(a, b)` and `(b, a)` are the same arithmetic. The counterexample is an example test, and a new property aims collinear pairs at the tolerance |
 | **Q2** | **bug** · A fold drawn edge to edge is reported as off the material (DR2's sampled containment) | Phase 4 close-out; met again drawing the README demo, whose folds stop short of the edges | ✅ Fixed with 8.3: a line's point within one storage quantum of the edge is on the leather |
-| **Q3** | Two reads of refs during render in `CanvasHost.tsx` can show stale state: the cursor style and the canvas notice's bounds | The engineering-tooling checkpoint | Look at both; the other eight are the deliberate latest-value pattern |
+| **Q3** | Two reads of refs during render in `CanvasHost.tsx` can show stale state: the cursor style and the canvas notice's bounds | The engineering-tooling checkpoint | ✅ Fixed: the cursor comes from the tool the props name, not the manager (which switches only after the render), and the notice's bounds are state set by the resize observer. The other eight are the deliberate latest-value pattern |
 | **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
-| **Q5** | The property panel's sizing, and the Parts tree cutting feature names at about ten characters | UI audit, deferred opportunities | One layout pass |
-| **Q6** | `packages/domain/src/workloads.ts` shows 0 % coverage since the performance ceilings moved to their own step | Moving `perf.test.ts` out of the coverage run | Exclude test support from coverage, or cover it |
+| **Q5** | The property panel's sizing, and the Parts tree cutting feature names at about ten characters | UI audit, deferred opportunities | ✅ Names had wrapped rather than truncated since F.6, but below 1280 px Parts narrowed to 200 px and a name broke inside a word (*Cut-out mirrore / d*). Parts now keeps 220 px at every width; an end-to-end test holds every word of the sample's names whole at each width band. Properties still steps down to 264 px, which fits its fields |
+| **Q6** | `packages/domain/src/workloads.ts` shows 0 % coverage since the performance ceilings moved to their own step | Moving `perf.test.ts` out of the coverage run | ✅ Fixed: excluded from coverage as the test support it is |
+| **Q25** | **bug** · `offsetPath` out and back refuses a rounded rectangle whose corner radius is about `EPS_POINT` (1e-7 mm): the two lines either side of a corner arc that small meet within the tolerance, and `selfIntersections` counts that as a crossing. Reproduces with `LEATHERCAD_FC_SEED=42 pnpm exec vitest run --project geometry offset.test`; fails the same way before Q1's fix | Checking Q1's fix across seeds, 2026-09-26 | Decide what two non-adjacent segments meeting within `EPS_POINT` across a sub-tolerance arc *are*; then either drop such arcs before the join, or skip them when finding self-intersections. Radii and offsets a maker types are quantised to 1e-4 mm, so nothing drawn in the app is known to reach it |
 | **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
 
 #### The independent QA pass (2026-09-24)
