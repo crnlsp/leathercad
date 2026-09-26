@@ -8,5 +8,9 @@ export default defineConfig({
     name: '@leathercad/desktop',
     include: ['src/**/*.test.ts'],
     setupFiles: ['../../vitest.setup.ts'],
+    // As every package has it: a property test plays hundreds of cases, and
+    // under coverage on a CI runner that outlasts the 5 s default (the
+    // command round-trip property, 8.2).
+    testTimeout: 30_000,
   },
 });
