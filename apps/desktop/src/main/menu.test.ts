@@ -2,7 +2,7 @@ import type { MenuAction } from '@leathercad/platform';
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 
-import { menuTemplate } from './menu.js';
+import { menuTemplate, recentLabel } from './menu.js';
 
 /**
  * The production menu (slice 8.5a).
@@ -13,18 +13,26 @@ import { menuTemplate } from './menu.js';
  * is now the app's own, and its items run the renderer's own handlers.
  */
 
-function build(options: { isMac?: boolean; packaged?: boolean } = {}) {
+function build(
+  options: { isMac?: boolean; packaged?: boolean; recentFiles?: readonly string[] } = {},
+) {
   const send = vi.fn<(action: MenuAction) => void>();
   const openLogFolder = vi.fn();
   const openNotices = vi.fn();
+  const openRecent = vi.fn<(path: string) => void>();
+  const clearRecent = vi.fn();
   const template = menuTemplate({
     isMac: options.isMac ?? false,
     packaged: options.packaged ?? true,
     send,
     openLogFolder,
     openNotices,
+    recentFiles: options.recentFiles ?? [],
+    home: '/home/maker',
+    openRecent,
+    clearRecent,
   });
-  return { template, send, openLogFolder, openNotices };
+  return { template, send, openLogFolder, openNotices, openRecent, clearRecent };
 }
 
 /** Every item, at any depth. */
@@ -67,6 +75,7 @@ describe('the application menu', () => {
     ['Redo', 'redo', 'CmdOrCtrl+Shift+Z'],
     ['Design', 'view-design', 'CmdOrCtrl+1'],
     ['Sheets', 'view-sheets', 'CmdOrCtrl+2'],
+    ['Keyboard Shortcuts', 'shortcuts', 'CmdOrCtrl+/'],
   ] as const)('%s asks the renderer for %s, and shows %s', (label, action, accelerator) => {
     const { template, send } = build();
     const entry = item(template, label);
@@ -106,5 +115,35 @@ describe('the application menu', () => {
       item(template, 'Third-Party Notices').click?.({} as never, undefined, {} as never);
       expect(openNotices).toHaveBeenCalledOnce();
     }
+  });
+});
+
+describe('File › Open Recent (8.2)', () => {
+  it('says so when there is nothing to reopen', () => {
+    const { template } = build();
+    expect(item(template, 'No Recent Projects').enabled).toBe(false);
+    expect(item(template, 'Clear Recent').enabled).toBe(false);
+  });
+
+  it('lists the projects by their whole path, and opens the one chosen', () => {
+    const { template, openRecent, clearRecent } = build({
+      recentFiles: ['/home/maker/Patterns/Wallet.lcp', '/mnt/shared/Belt & strap.lcp'],
+    });
+
+    const recent = item(template, 'Open Recent').submenu as MenuItemConstructorOptions[];
+    expect(recent.map((entry) => entry.label).filter(Boolean)).toEqual([
+      '~/Patterns/Wallet.lcp',
+      '/mnt/shared/Belt && strap.lcp',
+      'Clear Recent',
+    ]);
+
+    recent[1]!.click?.({} as never, undefined, {} as never);
+    expect(openRecent).toHaveBeenCalledWith('/mnt/shared/Belt & strap.lcp');
+    item(template, 'Clear Recent').click?.({} as never, undefined, {} as never);
+    expect(clearRecent).toHaveBeenCalledOnce();
+  });
+
+  it('shortens only the home directory itself, not a sibling that starts the same', () => {
+    expect(recentLabel('/home/maker2/a.lcp', '/home/maker')).toBe('/home/maker2/a.lcp');
   });
 });

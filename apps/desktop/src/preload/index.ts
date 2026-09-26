@@ -40,6 +40,20 @@ const platformBridge = {
 
   getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
 
+  getPreferences: (): Promise<{ legendOpen: boolean; toolRailCollapsed: boolean }> =>
+    ipcRenderer.invoke(IPC.getPreferences),
+
+  setPreferences: (changes: unknown): Promise<void> =>
+    ipcRenderer.invoke(IPC.setPreferences, changes),
+
+  noteRecentFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.noteRecentFile, path),
+
+  onOpenFile: (listener: (path: string) => void): (() => void) => {
+    const handler = (_event: unknown, path: string): void => listener(path);
+    ipcRenderer.on(IPC.openFile, handler);
+    return () => ipcRenderer.removeListener(IPC.openFile, handler);
+  },
+
   onMenuAction: (listener: (action: string) => void): (() => void) => {
     const handler = (_event: unknown, action: string): void => listener(action);
     ipcRenderer.on(IPC.menuAction, handler);

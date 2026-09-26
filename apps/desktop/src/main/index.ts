@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { BrowserWindow, Menu, app, shell } from 'electron';
+import { BrowserWindow, Menu, app, dialog, shell } from 'electron';
 import log from 'electron-log/main';
 
 import windowIcon from '../../build/icon.png?asset';
@@ -10,7 +10,9 @@ import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
 import { menuTemplate } from './menu.js';
+import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
+import { PreferencesStore } from './preferences.js';
 import { RecoveryStore } from './recovery.js';
 
 // Electron derives userData from the npm package name, which would give
@@ -28,6 +30,15 @@ const recovery = new RecoveryStore(join(stateDirectory(), 'recovery'), {
   pid: process.pid,
   startedAt: Date.now(),
 });
+
+// The files the renderer may touch: those chosen in the app's dialogs, or
+// from Open Recent (8.2). Shared by the handlers and the menu.
+const grants = new PathGrants();
+
+// preferences.json, beside nothing but the app's other settings
+// (docs/file-format.md §6). Read once, before the menu that lists its recent
+// projects is built.
+let preferences: PreferencesStore;
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -124,17 +135,13 @@ function openNotices(): void {
   }
 }
 
-app.whenReady().then(() => {
-  registerPlatformHandlers(() => mainWindow, recovery);
-
-  // The app's own menu, not Electron's default: no Reload and no developer
-  // tools in a packaged build (8.5a). Each item asks the renderer, which runs
-  // the same handler as the keyboard shortcut.
-  app.setAboutPanelOptions({
-    applicationName: 'LeatherCAD',
-    applicationVersion: app.getVersion(),
-    copyright: 'Copyright © 2026 crnlsp · Apache-2.0',
-  });
+/**
+ * The app's own menu, not Electron's default: no Reload and no developer
+ * tools in a packaged build (8.5a). Each item asks the renderer, which runs
+ * the same handler as the keyboard shortcut. Rebuilt whenever the recent list
+ * changes, since the menu is where it is shown.
+ */
+function buildMenu(): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       menuTemplate({
@@ -143,9 +150,64 @@ app.whenReady().then(() => {
         send: (action) => mainWindow?.webContents.send(IPC.menuAction, action),
         openLogFolder: () => void shell.openPath(stateDirectory()),
         openNotices,
+        recentFiles: preferences.recentFiles,
+        home: app.getPath('home'),
+        openRecent: (path) => void openRecent(path),
+        clearRecent: () => {
+          void preferences.clearRecent();
+          app.clearRecentDocuments();
+          buildMenu();
+        },
       }),
     ),
   );
+}
+
+/**
+ * File › Open Recent: grants the project, then asks the renderer to open it,
+ * which asks about unsaved work first exactly as Open does. A project that is
+ * gone is taken off the list, and the maker is told why it vanished.
+ */
+async function openRecent(path: string): Promise<void> {
+  if (!preferences.recentFiles.includes(path)) return;
+  if (!existsSync(path)) {
+    await preferences.forgetRecent(path);
+    buildMenu();
+    const message = {
+      type: 'info' as const,
+      message: 'That project is no longer there',
+      detail: `${path}\n\nIt was moved, renamed or deleted, so it has been taken off Open Recent.`,
+    };
+    if (mainWindow === null) await dialog.showMessageBox(message);
+    else await dialog.showMessageBox(mainWindow, message);
+    return;
+  }
+  grants.grant(path);
+  mainWindow?.webContents.send(IPC.openFile, path);
+}
+
+app.whenReady().then(() => {
+  preferences = new PreferencesStore(join(app.getPath('userData'), 'preferences.json'));
+
+  registerPlatformHandlers(
+    () => mainWindow,
+    recovery,
+    grants,
+    preferences,
+    (path) => {
+      // The operating system's own list too: the dock on macOS, the jump list
+      // on Windows.
+      app.addRecentDocument(path);
+      buildMenu();
+    },
+  );
+
+  app.setAboutPanelOptions({
+    applicationName: 'LeatherCAD',
+    applicationVersion: app.getVersion(),
+    copyright: 'Copyright © 2026 crnlsp · Apache-2.0',
+  });
+  buildMenu();
 
   createWindow();
 
