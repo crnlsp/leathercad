@@ -85,7 +85,9 @@ changes, it asks first.
 ## Where things are
 
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
-  **Ctrl+1** and **Ctrl+2** switch between Design and Sheets.
+  **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Help → Keyboard Shortcuts*
+  (**Ctrl+/** or **?**) lists every key.
+- **Recent projects:** *File → Open Recent*. The legend and the tool rail stay as you left them.
 - **Logs:** *Help → Show Log Folder*. Nothing is ever uploaded; attach the log to a bug report.
 - **Licences:** *Help → Third-Party Notices*, and `THIRD_PARTY_NOTICES.txt` beside the app.
 - **Bugs and ideas:** [GitHub issues](https://github.com/crnlsp/leathercad/issues).
