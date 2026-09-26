@@ -302,18 +302,22 @@ function mirrorButton(
   nextId: () => string,
 ): ReasonedButtonProps {
   const horizontal = axis === 'horizontal';
+  // An outline is the piece itself: its counterpart is a second piece, so it
+  // goes into a part of its own (a piece of leather has one edge).
+  const wholePiece = feature.kind === 'cut-contour' && feature.role === 'outer';
   return {
     testId: horizontal ? 'mirror-horizontal' : 'mirror-vertical',
     reason: mirrorRefusal(project, [feature.id], axis),
     hint:
-      `A counterpart ${horizontal ? 'to the right' : 'below'}, mirrored across this piece's ` +
+      `${wholePiece ? 'A mirrored piece, as a new part,' : 'A counterpart'} ` +
+      `${horizontal ? 'to the right' : 'below'}, mirrored across this piece's ` +
       `${horizontal ? 'right' : 'bottom'} edge as it is now. It keeps following this piece's ` +
       'shape; the mirror line stays where it is put.',
     onClick: () => {
       const placement = mirrorAxisFor(project, [feature.id], axis);
       if (placement === null) return;
       const id = nextId();
-      store.dispatch(mirrorFeatures([feature.id], [id], placement));
+      store.dispatch(mirrorFeatures([feature.id], [id], placement, [nextId()]));
       store.select([id]);
     },
     children: horizontal ? 'Mirror ↔' : 'Mirror ↕',

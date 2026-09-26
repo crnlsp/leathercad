@@ -1,8 +1,16 @@
-import { evaluate, type FeatureId, type PartId, type Project } from '@leathercad/domain';
+import {
+  evaluate,
+  partStructureProblems,
+  type FeatureId,
+  type PartId,
+  type Project,
+} from '@leathercad/domain';
 import { MatOps, PathOps, glideMatrix } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import {
+  addCutOut,
+  addMeasurement,
   addPart,
   addStitchHoles,
   addStitchLine,
@@ -23,6 +31,7 @@ import type { Document } from './document.js';
 const PART = 'part-1' as PartId;
 const CUT = 'cut-1' as FeatureId;
 const COPY = 'copy-1' as FeatureId;
+const MIRRORED_PART = 'part-2' as PartId;
 
 /** A 100 × 60 panel at the origin. */
 function panel(): Document {
@@ -34,9 +43,9 @@ function panel(): Document {
 /** That panel, with a counterpart mirrored across its right edge. */
 function pair(): Document {
   const document = panel();
-  return mirrorFeatures([CUT], [COPY], mirrorAxisFor(document.project, [CUT], 'horizontal')!).apply(
-    document,
-  );
+  return mirrorFeatures([CUT], [COPY], mirrorAxisFor(document.project, [CUT], 'horizontal')!, [
+    MIRRORED_PART,
+  ]).apply(document);
 }
 
 const boxOf = (project: Project, id: string) => {
@@ -59,14 +68,68 @@ const featureIn = (project: Project, id: string) =>
   project.parts.flatMap((p) => p.features).find((f) => f.id === id);
 
 describe('mirroring a feature', () => {
-  it('puts the counterpart beside the original, in the same part', () => {
+  it('puts a mirrored outline beside the original, as a new piece', () => {
     const next = pair();
 
-    // One part, two features: a paired pair of slots belongs to the panel they
-    // are cut in.
-    expect(next.project.parts).toHaveLength(1);
+    // The outline is the piece: mirroring it is a left made from a right, and a
+    // piece of leather has one edge (S5), so the counterpart is a part of its own.
+    expect(next.project.parts.map((part) => part.id)).toEqual([PART, MIRRORED_PART]);
+    expect(next.project.parts[1]!.name).toBe('Panel mirrored');
+    expect(next.project.parts[1]!.features.map((f) => f.id)).toEqual([COPY]);
     expect(boxOf(next.project, COPY)).toMatchObject({ minX: 100, maxX: 200 });
     expect(boxOf(next.project, CUT)).toMatchObject({ minX: 0, maxX: 100 });
+  });
+
+  it('never leaves a part with two outlines, which the loader would refuse (Q8)', () => {
+    expect(partStructureProblems(pair().project)).toEqual([]);
+  });
+
+  it('refuses, changing nothing, without a part to put a mirrored outline in', () => {
+    const before = panel();
+    const axis = mirrorAxisFor(before.project, [CUT], 'horizontal')!;
+
+    expect(mirrorFeatures([CUT], [COPY], axis).apply(before).project).toBe(before.project);
+  });
+
+  it('puts a counterpart of anything else in the same part: a pair of slots is one panel', () => {
+    let document = panel();
+    document = addCutOut(PART, 'slot' as FeatureId, {
+      kind: 'shape',
+      shape: rectShape({ x: 10, y: 10 }, 30, 5),
+    }).apply(document);
+    const axis = mirrorAxisFor(document.project, ['slot' as FeatureId], 'horizontal')!;
+
+    const next = mirrorFeatures(['slot'] as FeatureId[], ['slot-m'] as FeatureId[], axis).apply(
+      document,
+    );
+
+    expect(next.project.parts).toHaveLength(1);
+    expect(next.project.parts[0]!.features.map((f) => f.id)).toEqual([CUT, 'slot', 'slot-m']);
+    expect(partStructureProblems(next.project)).toEqual([]);
+  });
+
+  it('refuses a dimension, changing nothing, and says why (Q9)', () => {
+    let document = panel();
+    document = addMeasurement(
+      'dim' as FeatureId,
+      'aligned',
+      { kind: 'anchor', featureId: CUT, anchor: 3 },
+      { kind: 'anchor', featureId: CUT, anchor: 0 },
+    ).apply(document);
+    const ids = ['dim'] as FeatureId[];
+    const axis = mirrorAxisFor(document.project, ids, 'horizontal')!;
+
+    expect(mirrorRefusal(document.project, ids)).toMatchObject({
+      code: 'DIMENSION_NOT_MIRRORED',
+      facts: { featureId: 'dim' },
+    });
+    expect(mirrorFeatures(ids, ['dim-m'] as FeatureId[], axis).apply(document).project).toBe(
+      document.project,
+    );
+    // Not even alongside something that could be mirrored.
+    expect(mirrorRefusal(document.project, [CUT, ...ids])).toMatchObject({
+      code: 'DIMENSION_NOT_MIRRORED',
+    });
   });
 
   it('keeps the kind and the role', () => {
@@ -226,11 +289,9 @@ describe('the axis Mirror ↔ and Mirror ↕ choose (§8)', () => {
   });
 
   it('runs along the bottom edge for a vertical mirror', () => {
-    const next = mirrorFeatures(
-      [CUT],
-      [COPY],
-      mirrorAxisFor(panel().project, [CUT], 'vertical')!,
-    ).apply(panel());
+    const next = mirrorFeatures([CUT], [COPY], mirrorAxisFor(panel().project, [CUT], 'vertical')!, [
+      MIRRORED_PART,
+    ]).apply(panel());
 
     // The panel is 0..60 in y, so its reflection below is -60..0.
     expect(boxOf(next.project, COPY).maxY).toBeCloseTo(0, 6);
@@ -261,7 +322,9 @@ describe('the axis Mirror ↔ and Mirror ↕ choose (§8)', () => {
 
     const ids = [CUT, 'stitch-1' as FeatureId, 'holes-1' as FeatureId];
     const axis = mirrorAxisFor(document.project, ids, 'horizontal')!;
-    const next = mirrorFeatures(ids, ['m-0', 'm-1', 'm-2'] as FeatureId[], axis).apply(document);
+    const next = mirrorFeatures(ids, ['m-0', 'm-1', 'm-2'] as FeatureId[], axis, [
+      MIRRORED_PART,
+    ]).apply(document);
 
     // Each counterpart mirrors its own original, so the holes are the
     // original's holes reflected and the counts match by construction.
@@ -301,6 +364,7 @@ describe('the contract: the counterpart is the original, reflected, placed here'
       ids,
       ['m-cut', 'm-stitch', 'm-holes'] as FeatureId[],
       mirrorAxisFor(document.project, ids, 'horizontal')!,
+      [MIRRORED_PART],
     ).apply(document);
   }
 

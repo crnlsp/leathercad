@@ -113,6 +113,14 @@ export interface ProblemFacts {
   /** X3: nothing to take a mirror axis from. */
   readonly MIRROR_NO_AXIS: Record<string, never>;
   /**
+   * X3: a dimension measures the drawing, so it is never a reflected copy.
+   *
+   * A mirror is a derivation, and a dimension has nowhere to hold one: its
+   * source is the two places it measures. Mirroring it would convert it into
+   * something that is neither, which is what X3 forbids.
+   */
+  readonly DIMENSION_NOT_MIRRORED: About;
+  /**
    * X3: a dimension end needs a durable place, and this is not one.
    *
    * Empty space, a point along an edge, a grid position — none of them survive

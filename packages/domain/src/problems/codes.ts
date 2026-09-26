@@ -75,6 +75,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   MIRROR_WOULD_SCALE: interaction('X3'),
   MIRROR_PLACED_BY_FOLD: interaction('X3'),
   MIRROR_NO_AXIS: interaction('X3'),
+  DIMENSION_NOT_MIRRORED: interaction('X3'),
   MEASURE_NEEDS_ANCHOR: interaction('X3'),
   NO_TARGET_PART: interaction('X4'),
   TARGET_SPANS_PARTS: interaction('X4'),

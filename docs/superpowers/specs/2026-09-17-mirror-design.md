@@ -62,6 +62,11 @@ a design failure in 4.8a to report, not to paper over.
 
 1. **Mirror ↔ and Mirror ↕** create a counterpart of the selected feature — same kind, a cut contour
    keeping its role — in the **same part**, whose geometry is the original's reflected.
+   *Amended 2026-09-26 (Q8):* except a part's **outline**. A part has one edge (S5), and a
+   counterpart outline in the same part saved a file the loader refused; mirroring the outline is
+   mirroring the piece, so its counterparts go into a **new part** beside it. A **dimension** is
+   refused (`DIMENSION_NOT_MIRRORED`, Q9): it measures, and a reflected copy would quote its
+   original's number.
 2. **Editing the original reaches the counterpart**: change its shape, move it, change a stitch
    margin, and the counterpart follows, holes included.
 3. **The counterpart behaves like a normal piece**: drag it and it moves, turn it and it turns, and

@@ -37,6 +37,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   DERIVED_MOVED_ALONE: { ...named, rootId: 'f-2', rootName: 'Outline' },
   MIRROR_WOULD_SCALE: { ...named, sourceName: 'Outline' },
   MIRROR_NO_AXIS: {},
+  DIMENSION_NOT_MIRRORED: named,
   MIRROR_FOLD_MISSING: { ...named, foldId: 'f-9' },
   MEASURE_REF_MISSING: named,
   MEASURE_NEEDS_ANCHOR: {},
