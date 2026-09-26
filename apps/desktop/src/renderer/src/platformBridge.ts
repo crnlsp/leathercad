@@ -31,6 +31,7 @@ interface PreloadBridge {
   setPreferences(changes: Partial<Preferences>): Promise<void>;
   noteRecentFile(path: string): Promise<void>;
   onOpenFile(listener: (path: string) => void): () => void;
+  readSampleProject(): Promise<Uint8Array>;
 }
 
 declare global {

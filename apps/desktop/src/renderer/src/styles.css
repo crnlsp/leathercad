@@ -698,6 +698,24 @@ body {
   font: var(--t-body);
 }
 
+/* An action inside a sentence, such as the empty Parts panel's offer of the
+   sample (8.3): reads as the words it is, in the accent. */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tan);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:focus-visible {
+  outline: 1px solid var(--tan);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
 .panel-error {
   max-width: 44ch;
   margin: 0;

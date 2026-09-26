@@ -45,6 +45,12 @@ export function useProjectFile(
    * The caller asks about unsaved work first, as for `open`.
    */
   openPath: (target: string) => Promise<void>;
+  /**
+   * Opens the sample project that ships with the app (8.3), **untitled** and
+   * unchanged: *Save* asks where, and closing it untouched asks nothing. The
+   * caller asks about unsaved work first, as for `open`.
+   */
+  openSample: () => Promise<void>;
   /** Starts an empty, untitled project. The caller asks about unsaved work first. */
   newProject: () => void;
   /**
@@ -143,6 +149,21 @@ export function useProjectFile(
     },
     [host, store],
   );
+
+  const openSample = useCallback(async () => {
+    try {
+      const loaded = loadProject(await host().readSampleProject());
+      store.reset({ project: loaded.project }, 'Open sample');
+      savedDocument.current = store.getState().document;
+      createdUtc.current = undefined;
+      setState({ path: null, error: null, savedAt: null });
+    } catch (error) {
+      setState((previous) => ({
+        ...previous,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  }, [host, store]);
 
   const open = useCallback(async () => {
     let target: string | null;
@@ -249,6 +270,7 @@ export function useProjectFile(
     save,
     open,
     openPath,
+    openSample,
     newProject,
     adoptRecovered,
     isDirty,

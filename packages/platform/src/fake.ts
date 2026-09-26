@@ -148,4 +148,11 @@ export class InMemoryPlatformHost implements PlatformHost {
   openFile(path: string): void {
     for (const listener of this.openFileListeners) listener(path);
   }
+
+  /** What `readSampleProject` returns; empty until a test sets it. */
+  sampleProject: Uint8Array = new Uint8Array();
+
+  readSampleProject(): Promise<Uint8Array> {
+    return Promise.resolve(Uint8Array.from(this.sampleProject));
+  }
 }
