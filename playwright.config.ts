@@ -1,4 +1,14 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { defineConfig } from '@playwright/test';
+
+// Every app a test launches keeps its preferences and recent projects (8.2)
+// here — never in the developer's own ~/.config/leathercad, and never carried
+// from one run into the next. Tests that change a preference launch with a
+// directory of their own as well, so the order they run in cannot matter.
+process.env['XDG_CONFIG_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-config-'));
 
 export default defineConfig({
   testDir: './e2e',

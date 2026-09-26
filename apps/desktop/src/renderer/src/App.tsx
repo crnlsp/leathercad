@@ -18,7 +18,7 @@ import {
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import { systemIdSource } from '@leathercad/platform';
+import { DEFAULT_PREFERENCES, systemIdSource, type Preferences } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_HARDWARE, type DrawMode, type HardwareOptions } from '@leathercad/editor';
@@ -38,6 +38,7 @@ import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
+import { ShortcutsDialog } from './ShortcutsDialog.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
@@ -103,21 +104,44 @@ export function App() {
   // The frame's own state (UI Foundations §7.1–7.2). None of it is the
   // document's, and none of it is persisted with it.
   //
+  // How the maker likes the frame, kept in preferences.json (8.2) — not
+  // localStorage, which a second window blocks on for seconds because both
+  // share one profile. The defaults show until the file has been read.
+  const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
+  const changePreferences = useCallback((changes: Partial<Preferences>) => {
+    setPreferences((previous) => ({ ...previous, ...changes }));
+    // A preference that could not be kept still applies to this session.
+    void getPlatformHost()
+      .setPreferences(changes)
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    void getPlatformHost()
+      .getPreferences()
+      .then(setPreferences)
+      .catch(() => undefined);
+  }, []);
+
   // The rail collapses by itself below 1200 px, and follows the maker's own
-  // choice above it. The choice lasts the session: persisting it belongs in
-  // preferences.json (slice 8.2) — not localStorage, which a second window
-  // blocks on for seconds because both share one profile.
+  // remembered choice above it. Opening it while narrow lasts the session:
+  // it answers the window being small, not a liking.
   const railAutoCollapsed = useMediaQuery('(max-width: 1199px)');
-  const [railPreferCollapsed, setRailPreferCollapsed] = useState(false);
   const [railExpandedWhileNarrow, setRailExpandedWhileNarrow] = useState(false);
-  const railCollapsed = railAutoCollapsed ? !railExpandedWhileNarrow : railPreferCollapsed;
+  const railCollapsed = railAutoCollapsed
+    ? !railExpandedWhileNarrow
+    : preferences.toolRailCollapsed;
   const toggleRail = useCallback(() => {
     if (railAutoCollapsed) {
       setRailExpandedWhileNarrow((expanded) => !expanded);
       return;
     }
-    setRailPreferCollapsed((collapsed) => !collapsed);
-  }, [railAutoCollapsed]);
+    changePreferences({ toolRailCollapsed: !preferences.toolRailCollapsed });
+  }, [railAutoCollapsed, changePreferences, preferences.toolRailCollapsed]);
+  const toggleLegend = useCallback(
+    () => changePreferences({ legendOpen: !preferences.legendOpen }),
+    [changePreferences, preferences.legendOpen],
+  );
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const [problemsOpen, setProblemsOpen] = useState(false);
   // Below these widths a panel stops taking a column and becomes an overlay
@@ -193,6 +217,16 @@ export function App() {
     if (await confirmDiscard('open')) await file.open();
   }, [confirmDiscard, file]);
 
+  // File › Open Recent (8.2): the main process chose and granted the path;
+  // unsaved work is asked about exactly as for Open.
+  useEffect(
+    () =>
+      getPlatformHost().onOpenFile((path) => {
+        void confirmDiscard('open').then((proceed) => (proceed ? file.openPath(path) : undefined));
+      }),
+    [confirmDiscard, file],
+  );
+
   // The window's close button, Ctrl+Q and a reload all unload the page. With
   // unsaved work the unload is refused — Electron then keeps the window — and
   // the question is asked instead. An answer that lets it go closes the window
@@ -256,7 +290,17 @@ export function App() {
         } else if (key === '2') {
           event.preventDefault();
           showView('sheets');
+        } else if (key === '/') {
+          event.preventDefault();
+          setShortcutsOpen(true);
         }
+        return;
+      }
+
+      // The shortcut map (8.2), where many apps keep it.
+      if (event.key === '?') {
+        event.preventDefault();
+        setShortcutsOpen(true);
         return;
       }
 
@@ -301,6 +345,9 @@ export function App() {
             break;
           case 'view-sheets':
             showView('sheets');
+            break;
+          case 'shortcuts':
+            setShortcutsOpen(true);
             break;
         }
       }),
@@ -543,7 +590,13 @@ export function App() {
             requestDelete={requestDelete}
           >
             {/* The legend explains the board's marks; the sheets are ink. */}
-            {view === 'design' && <CanvasLegend project={storeState.document.project} />}
+            {view === 'design' && (
+              <CanvasLegend
+                project={storeState.document.project}
+                open={preferences.legendOpen}
+                onToggle={toggleLegend}
+              />
+            )}
           </CanvasHost>
           <ProblemsPanel
             project={storeState.document.project}
@@ -638,6 +691,8 @@ export function App() {
               : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
         </span>
       </footer>
+
+      {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
 
       {exportNotice !== null && (
         <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />

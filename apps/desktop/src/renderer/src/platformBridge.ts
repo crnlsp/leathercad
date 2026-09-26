@@ -2,6 +2,7 @@ import type {
   MenuAction,
   OpenDialogOptions,
   PlatformHost,
+  Preferences,
   RecoveredCopy,
   SaveDialogOptions,
 } from '@leathercad/platform';
@@ -26,6 +27,10 @@ interface PreloadBridge {
   resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void>;
   getRecoveryIntervalMs(): Promise<number>;
   onMenuAction(listener: (action: MenuAction) => void): () => void;
+  getPreferences(): Promise<Preferences>;
+  setPreferences(changes: Partial<Preferences>): Promise<void>;
+  noteRecentFile(path: string): Promise<void>;
+  onOpenFile(listener: (path: string) => void): () => void;
 }
 
 declare global {

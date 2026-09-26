@@ -755,6 +755,7 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `MIRROR_WOULD_SCALE` | interaction | X3 | Commands |
 | `MIRROR_PLACED_BY_FOLD` | interaction | X3 | Commands |
 | `MIRROR_NO_AXIS` | interaction | X3 | Commands |
+| `DIMENSION_NOT_MIRRORED` | interaction | X3 | Commands |
 | `MEASURE_NEEDS_ANCHOR` | interaction | X3 | The measure tool |
 | `NO_TARGET_PART` | interaction | X4 | Drawing modes |
 | `TARGET_SPANS_PARTS` | interaction | X4 | Drawing modes |

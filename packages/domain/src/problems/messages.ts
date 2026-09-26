@@ -175,6 +175,13 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
       'Hold Shift, or set the size in the panel.',
   },
 
+  DIMENSION_NOT_MIRRORED: {
+    title: 'A dimension is measured, not mirrored',
+    describe: (f) =>
+      `${f.featureName} measures the drawing, so a mirrored copy would quote a number that is ` +
+      "not the counterpart's. Mirror the shapes, then measure the counterpart.",
+  },
+
   TEXT_WOULD_READ_BACKWARDS: {
     title: 'Would read backwards',
     describe: () =>

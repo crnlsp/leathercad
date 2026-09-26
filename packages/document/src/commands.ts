@@ -1738,6 +1738,15 @@ export function mirrorRefusal(
   for (const id of wanted) {
     const feature = byId.get(id);
     if (feature?.kind === 'text-label') return problem('TEXT_WOULD_READ_BACKWARDS', {});
+    // A dimension measures the drawing; a reflected copy of one would go on
+    // quoting its original's number beside the counterpart. Measuring the
+    // counterpart is the honest way to get the same line on the other side.
+    if (feature?.kind === 'measurement') {
+      return problem('DIMENSION_NOT_MIRRORED', {
+        featureId: feature.id,
+        featureName: feature.name,
+      });
+    }
   }
 
   return mirrorAxisFor(project, wanted, axis) === null ? problem('MIRROR_NO_AXIS', {}) : null;
@@ -1753,15 +1762,21 @@ export function mirrorRefusal(
  * have to match (ADR 0012).
  *
  * The counterparts join **the same part**: a pair of card slots belongs to the
- * panel they are cut in. Mirroring a whole part into a new one is 4.8b.
+ * panel they are cut in. The exception is a selection holding a part's
+ * **outline**: that is the piece itself being mirrored — a left made from a
+ * right — and a piece of leather has one edge (S5), so every counterpart from
+ * that part goes into a **new part** beside it instead, one per such part, in
+ * document order. Joining the original would save a file the loader refuses.
  *
  * The ids are given rather than made, so the command stays a pure description
- * of an edit; too few refuses and changes nothing.
+ * of an edit; too few feature ids, or too few part ids for the outlines
+ * selected, refuses and changes nothing.
  */
 export function mirrorFeatures(
   ids: readonly FeatureId[],
   newIds: readonly FeatureId[],
   axis: Axis,
+  newPartIds: readonly PartId[] = [],
 ): Command {
   return {
     label: ids.length === 1 ? 'Mirror' : `Mirror ${String(ids.length)} features`,
@@ -1771,20 +1786,38 @@ export function mirrorFeatures(
       if (mirrorRefusal(document.project, wanted) !== null) return document;
 
       const renamed = new Map(wanted.map((id, i) => [id, newIds[i]!] as const));
+      const piecesMirrored = document.project.parts.filter((part) =>
+        part.features.some(
+          (feature) =>
+            renamed.has(feature.id) && feature.kind === 'cut-contour' && feature.role === 'outer',
+        ),
+      );
+      if (newPartIds.length < piecesMirrored.length) return document;
+      const newPartFor = new Map(piecesMirrored.map((part, i) => [part.id, newPartIds[i]!]));
 
-      return {
-        project: {
-          ...document.project,
-          parts: document.project.parts.map((part) => {
-            const made = part.features.flatMap((feature) => {
-              const newId = renamed.get(feature.id);
-              if (newId === undefined || feature.kind === 'text-label') return [];
-              return [counterpartOf(feature, newId, { kind: 'line', ...axis })];
-            });
-            return made.length === 0 ? part : { ...part, features: [...part.features, ...made] };
-          }),
-        },
-      };
+      const newParts: Part[] = [];
+      const parts = document.project.parts.map((part) => {
+        const made = part.features.flatMap((feature) => {
+          const newId = renamed.get(feature.id);
+          if (
+            newId === undefined ||
+            feature.kind === 'text-label' ||
+            feature.kind === 'measurement'
+          ) {
+            return [];
+          }
+          return [counterpartOf(feature, newId, { kind: 'line', ...axis })];
+        });
+        if (made.length === 0) return part;
+
+        const newPartId = newPartFor.get(part.id);
+        if (newPartId === undefined) return { ...part, features: [...part.features, ...made] };
+
+        newParts.push({ ...part, id: newPartId, name: `${part.name} mirrored`, features: made });
+        return part;
+      });
+
+      return { project: { ...document.project, parts: [...parts, ...newParts] } };
     },
   };
 }
@@ -1876,7 +1909,13 @@ export function mirrorAcrossFold(
           parts: document.project.parts.map((part) => {
             const made = part.features.flatMap((feature) => {
               const newId = renamed.get(feature.id);
-              if (newId === undefined || feature.kind === 'text-label') return [];
+              if (
+                newId === undefined ||
+                feature.kind === 'text-label' ||
+                feature.kind === 'measurement'
+              ) {
+                return [];
+              }
               return [counterpartOf(feature, newId, { kind: 'fold', foldId })];
             });
             return made.length === 0 ? part : { ...part, features: [...part.features, ...made] };
@@ -1895,7 +1934,7 @@ export function mirrorAcrossFold(
  * one away before this is reached.
  */
 function counterpartOf(
-  feature: Exclude<Feature, { kind: 'text-label' }>,
+  feature: Exclude<Feature, { kind: 'text-label' | 'measurement' }>,
   id: FeatureId,
   axis: MirrorAxis,
 ): Feature {

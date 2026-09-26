@@ -85,7 +85,45 @@ export interface PlatformHost {
    * the way to stop listening.
    */
   onMenuAction(listener: (action: MenuAction) => void): () => void;
+
+  /**
+   * The maker's preferences (slice 8.2), from `preferences.json` in the config
+   * directory. Never project data, and never in the project file: a
+   * preference is how this person likes the app, not part of a pattern.
+   */
+  getPreferences(): Promise<Preferences>;
+
+  /** Changes some preferences and keeps them for the next launch. */
+  setPreferences(changes: Partial<Preferences>): Promise<void>;
+
+  /**
+   * Adds a project to *File › Open Recent*, most recent first. Only a project
+   * the maker opened or saved through the app's own dialogs is taken.
+   */
+  noteRecentFile(path: string): Promise<void>;
+
+  /**
+   * Listens for a project the operating system side asks the app to open —
+   * *File › Open Recent* (8.2). The path is already one the app may read and
+   * write; the renderer asks about unsaved work first, as for *Open*. Returns
+   * the way to stop listening.
+   */
+  onOpenFile(listener: (path: string) => void): () => void;
 }
+
+/** How the maker likes the app (slice 8.2). None of it is the document's. */
+export interface Preferences {
+  /** Whether the canvas legend is open, rather than a strip of marks. */
+  readonly legendOpen: boolean;
+  /** Whether the tool rail is collapsed to icons on a wide window. */
+  readonly toolRailCollapsed: boolean;
+}
+
+/** What a first launch starts with, and what a damaged file falls back to. */
+export const DEFAULT_PREFERENCES: Preferences = {
+  legendOpen: false,
+  toolRailCollapsed: false,
+};
 
 /** What the application menu can ask the renderer to do. */
 export type MenuAction =
@@ -97,7 +135,8 @@ export type MenuAction =
   | 'undo'
   | 'redo'
   | 'view-design'
-  | 'view-sheets';
+  | 'view-sheets'
+  | 'shortcuts';
 
 /** A recovery copy found at startup. */
 export interface RecoveredCopy {

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -42,7 +42,14 @@ async function withFreshApp(
     instance: ElectronApplication,
   ) => Promise<void>,
 ): Promise<void> {
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  // A config directory of its own: a test that collapses the rail or opens
+  // the legend changes a remembered preference (8.2), which must not reach
+  // the next test.
+  const instance = await electron.launch({
+    args: ['.'],
+    cwd: DESKTOP_DIR,
+    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
+  });
   try {
     const window = await instance.firstWindow();
     await window.waitForLoadState('domcontentloaded');
@@ -2128,9 +2135,10 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('mirror-horizontal').click();
 
-    // The counterpart joins the same part — a pair belongs to the piece it is
-    // cut in — and is selected, because it is what you are now placing.
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    // An outline is the piece itself, so its counterpart is a second piece — a
+    // part of its own, since a piece of leather has one edge (Q8) — and it is
+    // selected, because it is what you are now placing.
+    await expect(window.getByTestId('part-count')).toHaveText('2');
     await expect(window.getByTestId('feature-count')).toHaveText('2');
     await expect(window.getByTestId('parts-list')).toContainText('mirrored');
 
