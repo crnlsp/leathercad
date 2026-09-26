@@ -97,6 +97,16 @@ export interface ProblemFacts {
   readonly MEASURE_REF_MISSING: About;
   /** S5: a part has one edge, so its outline cannot be mirrored into itself. */
   readonly MIRROR_OUTLINE_ACROSS_FOLD: About & { readonly partName: string };
+  /**
+   * S4: what a feature is laid on has to be in its own part.
+   *
+   * A stitch line offset from another part's outline lies on that other part,
+   * so the piece it belongs to printed across the board to reach it (Q11).
+   */
+  readonly FOLLOWS_ANOTHER_PART: About & {
+    readonly sourceName: string;
+    readonly otherPartName: string;
+  };
 
   // ——— Interaction (X): refused at a gesture ———
   readonly FEATURE_MISSING: { readonly featureId: FeatureId };
@@ -128,6 +138,8 @@ export interface ProblemFacts {
    * while quietly going stale (ADR 0010).
    */
   readonly MEASURE_NEEDS_ANCHOR: Record<string, never>;
+  /** X3: a dimension measures one piece; both its ends are on it (Q11). */
+  readonly MEASURE_ACROSS_PARTS: { readonly otherPartName: string };
   /**
    * X3: a fold-tracked counterpart is placed by its fold, not by dragging.
    *

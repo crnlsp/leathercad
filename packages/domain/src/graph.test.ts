@@ -3,7 +3,13 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_SETTINGS, type Feature, type Project, type Run } from './feature.js';
-import { dependentsOf, derivationRefusal, followRefusal, graphProblems } from './graph.js';
+import {
+  crossPartRefusal,
+  dependentsOf,
+  derivationRefusal,
+  followRefusal,
+  graphProblems,
+} from './graph.js';
 
 // ——— Builders ————————————————————————————————————————————————————————————
 
@@ -231,9 +237,13 @@ describe('derivationRefusal', () => {
 // ——— followRefusal: re-pointing ——————————————————————————————————————————
 
 describe('followRefusal', () => {
-  it('allows re-pointing a stitch line at another outline', () => {
+  it("refuses re-pointing a stitch line at another part's outline (Q11)", () => {
+    // It would be drawn on the other piece, and print with this one.
     const p = project([outline('cut'), inset('stitch', 'cut')], [outline('other')]);
-    expect(followRefusal(p, 'stitch', 'other')).toBeNull();
+    expect(followRefusal(p, 'stitch', 'other')).toMatchObject({
+      code: 'FOLLOWS_ANOTHER_PART',
+      facts: { featureId: 'stitch', sourceName: 'Outline other' },
+    });
   });
 
   it('refuses a re-point that would close a loop, naming both', () => {
@@ -508,5 +518,57 @@ describe('the compatibility table, branch by branch', () => {
       [allowance('out', 's')],
     );
     expect(ruleOf(p, 'out')).toBe('allowance-needs-closed-line');
+  });
+});
+
+describe('crossPartRefusal (Q11)', () => {
+  const dimension = (id: string, a: string, b: string): Feature => ({
+    ...base(id, 'Dimension'),
+    kind: 'measurement',
+    source: {
+      kind: 'measurement',
+      measure: 'aligned',
+      a: { kind: 'anchor', featureId: a, anchor: 0 },
+      b: { kind: 'anchor', featureId: b, anchor: 1 },
+      offsetMm: 8,
+      precision: 1,
+    },
+  });
+
+  it('refuses a dimension with an end on another part, naming that part', () => {
+    const p = project([outline('front')], [outline('back')]);
+    expect(crossPartRefusal(p, 'part-0', dimension('d', 'front', 'back'))).toMatchObject({
+      code: 'MEASURE_ACROSS_PARTS',
+      facts: { otherPartName: 'Part 1' },
+    });
+    expect(crossPartRefusal(p, 'part-0', dimension('d', 'front', 'front'))).toBeNull();
+  });
+
+  it('allows a mirror to follow another part: it is placed by its axis, not laid on it', () => {
+    const p = project([outline('left')], []);
+    const counterpart: Feature = {
+      ...base('right', 'Outline right'),
+      kind: 'cut-contour',
+      role: 'outer',
+      source: {
+        kind: 'derived',
+        sourceId: 'left',
+        op: {
+          type: 'mirror',
+          axis: { kind: 'line', origin: { x: 100, y: 0 }, angleRad: Math.PI / 2 },
+          glideMm: 0,
+        },
+      },
+    };
+    expect(crossPartRefusal(p, 'part-1', counterpart)).toBeNull();
+    expect(crossPartRefusal(p, 'part-1', inset('stitch', 'left'))).toMatchObject({
+      code: 'FOLLOWS_ANOTHER_PART',
+    });
+  });
+
+  it('has nothing to say about what never reaches another part', () => {
+    const p = project([outline('cut'), inset('stitch', 'cut')]);
+    expect(crossPartRefusal(p, 'part-0', inset('more', 'cut'))).toBeNull();
+    expect(crossPartRefusal(p, 'part-0', outline('drawn', 'inner'))).toBeNull();
   });
 });

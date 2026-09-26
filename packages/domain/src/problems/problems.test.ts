@@ -41,6 +41,8 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   MIRROR_FOLD_MISSING: { ...named, foldId: 'f-9' },
   MEASURE_REF_MISSING: named,
   MEASURE_NEEDS_ANCHOR: {},
+  MEASURE_ACROSS_PARTS: { otherPartName: 'Back' },
+  FOLLOWS_ANOTHER_PART: { ...named, sourceName: 'Outline', otherPartName: 'Back' },
   MIRROR_OUTLINE_ACROSS_FOLD: { ...named, partName: 'Shell' },
   MIRROR_PLACED_BY_FOLD: { ...named, foldName: 'Fold', sourceName: 'Card slot' },
   FOLD_NOT_STRAIGHT: {},

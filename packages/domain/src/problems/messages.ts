@@ -95,6 +95,19 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
       'changes. Point at one.',
   },
 
+  MEASURE_ACROSS_PARTS: {
+    title: 'A dimension measures one piece',
+    describe: (f) =>
+      `That corner is on ${f.otherPartName}. A dimension prints with the piece it measures, so ` +
+      'both of its ends have to be on that piece.',
+  },
+  FOLLOWS_ANOTHER_PART: {
+    title: 'On another piece',
+    describe: (f) =>
+      `${f.sourceName} is on ${f.otherPartName}, so ${f.featureName} would be drawn there and ` +
+      'print with the wrong piece. Follow something on this piece.',
+  },
+
   MIRROR_FOLD_MISSING: {
     title: 'The fold is gone',
     describe: (f) => `${f.featureName} is mirrored across a fold that no longer exists.`,

@@ -1,5 +1,5 @@
 import type { Feature, Part, PartId, Project } from './feature.js';
-import { enclosesArea } from './graph.js';
+import { crossPartRefusal, enclosesArea } from './graph.js';
 import { problem, type Problem } from './problems/index.js';
 
 /**
@@ -48,6 +48,9 @@ export function additionRefusal(
   partId: PartId,
   feature: Feature,
 ): Problem | null {
+  const reach = crossPartRefusal(project, partId, feature);
+  if (reach !== null) return reach;
+
   if (feature.kind !== 'cut-contour') return null;
 
   const about = { featureId: feature.id, featureName: feature.name };

@@ -78,6 +78,7 @@ export { allOnMaterial, distanceToEdge, isOnMaterial, materialOf } from './mater
 
 export {
   dependentsOf,
+  crossPartRefusal,
   derivationRefusal,
   enclosesArea,
   followRefusal,
