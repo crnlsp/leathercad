@@ -171,6 +171,14 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 Repeat checks 1–4 and 7 on Windows and on macOS, each from its own default PDF viewer. Note the
 exact name of the viewer's actual-size setting. Record one row per platform in the log.
 
+### 11. Opening a project from the file manager
+
+Since 8.5. On each platform — the Windows installer, the macOS dmg, and on Linux the `.flatpak`
+installed with `flatpak install --user` — double-click a saved `.lcp`. The app starts with it open,
+and **Save** writes back to it without asking where. With the app already open and unsaved work, a
+second double-click on macOS asks about the unsaved work first; on Linux and Windows it opens a
+second window. On Linux, the file manager calls the file a *LeatherCAD project*.
+
 ## After it passes
 
 - Record one row per platform in [`print-verification-log.md`](print-verification-log.md), with

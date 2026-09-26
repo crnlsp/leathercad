@@ -1,4 +1,6 @@
 // @ts-check
+import { join } from 'node:path';
+
 /**
  * Packaging. See ADR 0014 and docs/architecture.md §5.
  *
@@ -23,6 +25,10 @@
  *
  * @type {import('electron-builder').Configuration}
  */
+
+/** The .lcp type, as `LCP_MIME` in packages/persist writes it into every file. */
+const LCP_MIME = 'application/vnd.leathercad.project';
+
 export default {
   appId: 'io.github.crnlsp.leathercad',
   productName: 'LeatherCAD',
@@ -55,6 +61,18 @@ export default {
     { from: 'out/renderer/THIRD_PARTY_NOTICES.txt', to: 'THIRD_PARTY_NOTICES.txt' },
   ],
   artifactName: '${productName}-${version}-${arch}.${ext}',
+  // Double-click a .lcp to open it (slice 8.5): the NSIS installer registers
+  // it for this user, the dmg's Info.plist declares it, and on Linux it is the
+  // desktop entry's MimeType plus the shared-mime-info file below.
+  fileAssociations: [
+    {
+      ext: 'lcp',
+      name: 'LeatherCAD project',
+      description: 'LeatherCAD project',
+      mimeType: LCP_MIME,
+      role: 'Editor',
+    },
+  ],
   // The icon is drawn once, in build/icon.svg, and rendered to each format by
   // `pnpm icons:generate` (slice 8.5a); the files are committed.
   linux: {
@@ -74,7 +92,36 @@ export default {
         Keywords: 'leather;leathercraft;pattern;stitch;sewing;template;print;',
       },
     },
-    // MIME registration for .lcp and Flatpak are slice 8.5, 1.1.
+  },
+  // The Flatpak (slice 8.5), built by `pnpm package:flatpak` — separately from
+  // `pnpm package`, because it needs flatpak-builder and the Flathub runtimes.
+  // Electron's own base app, on the current Freedesktop runtime.
+  flatpak: {
+    runtime: 'org.freedesktop.Platform',
+    runtimeVersion: '24.08',
+    sdk: 'org.freedesktop.Sdk',
+    base: 'org.electronjs.Electron2.BaseApp',
+    baseVersion: '24.08',
+    // What the sandbox lets it reach. The display — Wayland and X11 both, as
+    // Electron picks between them at start-up — and the GPU for drawing;
+    // the home directory, because a pattern is saved wherever the maker keeps
+    // it and Open Recent reopens it from there after a restart, which a
+    // portal's per-session grant cannot; nothing else. No network — the app
+    // never goes online — and no audio.
+    finishArgs: [
+      '--socket=wayland',
+      '--socket=x11',
+      '--share=ipc',
+      '--device=dri',
+      '--filesystem=home',
+    ],
+    // The .lcp type, where a Flatpak exports shared-mime-info from.
+    files: [
+      [
+        join(import.meta.dirname, 'build/linux/io.github.crnlsp.leathercad.xml'),
+        '/share/mime/packages/io.github.crnlsp.leathercad.xml',
+      ],
+    ],
   },
   // Windows (8.6a): an NSIS installer, per user, no administrator needed.
   // Unsigned, by decision (roadmap 8.6, Code signing); electron-builder would

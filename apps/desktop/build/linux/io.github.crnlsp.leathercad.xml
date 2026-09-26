@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The .lcp project file, for shared-mime-info (slice 8.5): what lets a Linux
+  desktop call it "LeatherCAD project" and open it with LeatherCAD.
+
+  An .lcp is a zip whose first entry is an uncompressed `mimetype` holding this
+  type, the ODF convention (docs/file-format.md §1), so it is recognised by its
+  contents as well as by its name: byte 30 is where the first entry's name
+  starts, and its contents follow the name.
+-->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.leathercad.project">
+    <comment>LeatherCAD project</comment>
+    <sub-class-of type="application/zip"/>
+    <generic-icon name="x-office-drawing"/>
+    <glob pattern="*.lcp"/>
+    <magic priority="70">
+      <match type="string" offset="30" value="mimetypeapplication/vnd.leathercad.project"/>
+    </magic>
+  </mime-type>
+</mime-info>

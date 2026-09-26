@@ -21,6 +21,7 @@ export const IPC = {
   setPreferences: 'platform:setPreferences',
   noteRecentFile: 'platform:noteRecentFile',
   readSampleProject: 'platform:readSampleProject',
+  takeLaunchFile: 'platform:takeLaunchFile',
   /** Main → renderer: an application-menu item was chosen (8.5a). */
   menuAction: 'menu:action',
   /** Main → renderer: open this project, which the main process granted (8.2). */

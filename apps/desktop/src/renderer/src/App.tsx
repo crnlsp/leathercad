@@ -222,6 +222,17 @@ export function App() {
     if (await confirmDiscard('open')) await file.openSample();
   }, [confirmDiscard, file]);
 
+  // A project double-clicked in the file manager (8.5), asked for once the
+  // app is ready to open it.
+  // `openPath` is stable, and the main process hands the file over once.
+  const openPath = file.openPath;
+  useEffect(() => {
+    void getPlatformHost()
+      .takeLaunchFile()
+      .then((path) => (path === null ? undefined : openPath(path)))
+      .catch(() => undefined);
+  }, [openPath]);
+
   // File › Open Recent (8.2): the main process chose and granted the path;
   // unsaved work is asked about exactly as for Open.
   useEffect(

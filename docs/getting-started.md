@@ -10,6 +10,7 @@ Download the installer for your system from the
 | System | File | Then |
 |---|---|---|
 | Linux | the `.AppImage` | Make it executable (`chmod +x`) and run it. It installs nothing; keep it anywhere. |
+| Linux | or the `.flatpak` | `flatpak install --user LeatherCAD-*.flatpak`. It adds LeatherCAD to your applications menu and opens `.lcp` files by double-click. It needs the Flathub remote, which most distributions have. |
 | Windows | the `.exe` | Run it. It installs for your user only, with no administrator prompt. |
 | macOS | the `.dmg` | Open it and drag LeatherCAD to Applications. It runs on Apple silicon and Intel. |
 
@@ -20,6 +21,10 @@ developer:
 - **Windows:** choose *More info → Run anyway*.
 - **macOS:** open it once, then go to *System Settings → Privacy & Security* and choose *Open
   Anyway*.
+
+Once installed, **double-click a `.lcp` project to open it**: the Windows installer, the macOS app
+and the Flatpak all register the file type. An AppImage registers nothing by itself; a tool such as
+AppImageLauncher adds it to your menu, and then it opens projects too.
 
 To check that a download is the one this repository's release workflow built, use GitHub's build
 provenance, with the [GitHub CLI](https://cli.github.com/):
