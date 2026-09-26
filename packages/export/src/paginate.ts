@@ -1,5 +1,5 @@
-import { formatMm, formatNumber, type Mm } from '@leathercad/core';
-import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
+import { approxEq, approxGte, formatMm, formatNumber, type Mm } from '@leathercad/core';
+import { PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 
 import { contentAreaMm, paperOptionsFitting, type PageSetup } from './paper.js';
 import type { ExportPart, ExportScene } from './scene.js';
@@ -89,6 +89,15 @@ export interface TiledPart {
 export const TILE_OVERLAP_MM = 10;
 
 /**
+ * How far a tape join is kept from a fold, where the grid has the room.
+ *
+ * A join is a line the maker cuts along and tapes over; a fold is a line they
+ * crease. One on top of the other cannot be told apart on the sheet, and the
+ * tape stiffens exactly where the leather has to bend (Q13).
+ */
+export const FOLD_CLEARANCE_MM = 15;
+
+/**
  * Packs whole parts onto sheets.
  *
  * This is **part packing, not tiling**: each part is placed complete on one
@@ -152,7 +161,7 @@ export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult
   };
 
   for (const part of ordered) {
-    const width = RectOps.width(part.boundsMm);
+    const width = packingWidth(part, area.widthMm);
     const height = RectOps.height(part.boundsMm) + LABEL_HEIGHT_MM;
 
     // Wrap to the next row when this part would run off the right edge.
@@ -204,6 +213,30 @@ export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult
 }
 
 /**
+ * How wide a part is on the sheet: its geometry, or its caption where the
+ * caption runs further.
+ *
+ * The caption is set from the piece's left edge and can be longer than a
+ * narrow piece is wide. Packing by the geometry alone printed a keeper's long
+ * name over the next piece's, or past the edge of the paper (Q12). Never more
+ * than the printable width: a name longer than the paper is not a reason to
+ * give it a sheet of its own, and a piece is only ever tiled for its size.
+ */
+function packingWidth(part: ExportPart, printableWidthMm: Mm): Mm {
+  let right = part.boundsMm.maxX;
+  for (const text of part.texts) {
+    for (const glyph of text.glyphs) {
+      const box = PathOps.bbox(glyph);
+      if (box !== null) right = Math.max(right, box.maxX);
+    }
+  }
+  return Math.max(
+    RectOps.width(part.boundsMm),
+    Math.min(right - part.boundsMm.minX, printableWidthMm),
+  );
+}
+
+/**
  * The tiles of one part: a grid of windows the size of the printable area,
  * overlapping by `TILE_OVERLAP_MM` and centred on the part and its name
  * (docs/printing.md §5.2). Row by row from the top left. Nothing rotates:
@@ -224,9 +257,25 @@ function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
   const columns = Math.max(1, Math.ceil((width - TILE_OVERLAP_MM) / stepX));
   const rows = Math.max(1, Math.ceil((height - TILE_OVERLAP_MM) / stepY));
 
-  // Centred: the grid's spare falls evenly on every side, not all at one.
-  const left = region.minX - ((columns - 1) * stepX + area.widthMm - width) / 2;
-  const top = region.maxY + ((rows - 1) * stepY + area.heightMm - height) / 2;
+  // Centred — the grid's spare falls evenly on every side, not all at one —
+  // unless that puts a join on a fold, when the grid slides along its spare.
+  const spareX = (columns - 1) * stepX + area.widthMm - width;
+  const spareY = (rows - 1) * stepY + area.heightMm - height;
+  const folds = straightFolds(part);
+  const left = clearOfFolds(
+    region.minX - spareX / 2,
+    region.minX - spareX,
+    region.minX,
+    Array.from({ length: columns - 1 }, (_, i) => (i + 1) * stepX + TILE_OVERLAP_MM / 2),
+    folds.x,
+  );
+  const top = clearOfFolds(
+    region.maxY + spareY / 2,
+    region.maxY,
+    region.maxY + spareY,
+    Array.from({ length: rows - 1 }, (_, i) => -((i + 1) * stepY + TILE_OVERLAP_MM / 2)),
+    folds.y,
+  );
 
   const tiles: Tile[] = [];
   for (let r = 0; r < rows; r++) {
@@ -255,6 +304,58 @@ function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
     }
   }
   return tiles;
+}
+
+/** Where a part's straight, square folds run: x for an upright one, y for a level one. */
+function straightFolds(part: ExportPart): { x: Mm[]; y: Mm[] } {
+  const x: Mm[] = [];
+  const y: Mm[] = [];
+  for (const item of part.paths) {
+    if (item.role !== 'fold') continue;
+    const box = PathOps.bbox(item.path);
+    if (box === null || item.path.segments.some((segment) => segment.kind !== 'line')) continue;
+    if (approxEq(box.minX, box.maxX)) x.push(box.minX);
+    else if (approxEq(box.minY, box.maxY)) y.push(box.minY);
+  }
+  return { x, y };
+}
+
+/**
+ * Where to start a grid so that no join lands on a fold.
+ *
+ * The grid may start anywhere in `[lo, hi]` and still cover the piece; its
+ * joins are at `start + offset`. The centred start is kept when it is clear;
+ * otherwise the clear start nearest the centre, trying each place that puts a
+ * join exactly the clearance away from a fold. With no clear start — the grid
+ * has no room to move — it stays centred: covering the piece comes first.
+ */
+function clearOfFolds(
+  centred: Mm,
+  lo: Mm,
+  hi: Mm,
+  offsets: readonly Mm[],
+  folds: readonly Mm[],
+): Mm {
+  const clear = (start: Mm): boolean =>
+    offsets.every((offset) =>
+      folds.every((fold) => approxGte(Math.abs(start + offset - fold), FOLD_CLEARANCE_MM)),
+    );
+  if (folds.length === 0 || offsets.length === 0 || clear(centred)) return centred;
+
+  const candidates = offsets.flatMap((offset) =>
+    folds.flatMap((fold) => [fold - offset - FOLD_CLEARANCE_MM, fold - offset + FOLD_CLEARANCE_MM]),
+  );
+  let best = centred;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const start of candidates) {
+    if (start < lo || start > hi || !clear(start)) continue;
+    const distance = Math.abs(start - centred);
+    if (distance < bestDistance) {
+      best = start;
+      bestDistance = distance;
+    }
+  }
+  return best;
 }
 
 /** A sentence a user can act on: what was tiled, and what would hold it whole. */

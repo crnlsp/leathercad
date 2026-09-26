@@ -85,7 +85,78 @@ export interface PlatformHost {
    * the way to stop listening.
    */
   onMenuAction(listener: (action: MenuAction) => void): () => void;
+
+  /**
+   * The maker's preferences (slice 8.2), from `preferences.json` in the config
+   * directory. Never project data, and never in the project file: a
+   * preference is how this person likes the app, not part of a pattern.
+   */
+  getPreferences(): Promise<Preferences>;
+
+  /** Changes some preferences and keeps them for the next launch. */
+  setPreferences(changes: Partial<Preferences>): Promise<void>;
+
+  /**
+   * Adds a project to *File › Open Recent*, most recent first. Only a project
+   * the maker opened or saved through the app's own dialogs is taken.
+   */
+  noteRecentFile(path: string): Promise<void>;
+
+  /**
+   * Listens for a project the operating system side asks the app to open —
+   * *File › Open Recent* (8.2). The path is already one the app may read and
+   * write; the renderer asks about unsaved work first, as for *Open*. Returns
+   * the way to stop listening.
+   */
+  onOpenFile(listener: (path: string) => void): () => void;
+
+  /**
+   * The worked sample project that ships with the app (slice 8.3), as the
+   * bytes of an ordinary `.lcp`. Read-only: it opens untitled, so saving it
+   * asks where, and the copy inside the app is never written.
+   */
+  readSampleProject(): Promise<Uint8Array>;
+
+  /**
+   * The project this launch was asked to open — a `.lcp` double-clicked in
+   * the file manager (slice 8.5) — once, or null. Already a path the app may
+   * read and write. Asked for by the renderer when it is ready, so the answer
+   * cannot arrive before anything is listening for it; a project the system
+   * hands over later (macOS's *open-file*) comes through `onOpenFile`.
+   */
+  takeLaunchFile(): Promise<string | null>;
+
+  /**
+   * What the application menu's *Paper* menu lists (slice 8.4b): the same
+   * choices as the paper list beside Export PDF, worded the same way, the
+   * current one checked. The renderer knows the pattern and so the words;
+   * the menu belongs to the operating system, so it is told.
+   */
+  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void>;
 }
+
+/** One paper and orientation, as the Paper menu shows it. */
+export interface PaperMenuChoice {
+  /** `A4 portrait`: what choosing it sends back, as `paper:A4 portrait`. */
+  readonly value: string;
+  /** `3 sheets of A4, portrait (Strap taped)`. */
+  readonly label: string;
+  readonly checked: boolean;
+}
+
+/** How the maker likes the app (slice 8.2). None of it is the document's. */
+export interface Preferences {
+  /** Whether the canvas legend is open, rather than a strip of marks. */
+  readonly legendOpen: boolean;
+  /** Whether the tool rail is collapsed to icons on a wide window. */
+  readonly toolRailCollapsed: boolean;
+}
+
+/** What a first launch starts with, and what a damaged file falls back to. */
+export const DEFAULT_PREFERENCES: Preferences = {
+  legendOpen: false,
+  toolRailCollapsed: false,
+};
 
 /** What the application menu can ask the renderer to do. */
 export type MenuAction =
@@ -97,7 +168,16 @@ export type MenuAction =
   | 'undo'
   | 'redo'
   | 'view-design'
-  | 'view-sheets';
+  | 'view-sheets'
+  | 'shortcuts'
+  | 'open-sample'
+  | 'zoom-in'
+  | 'zoom-out'
+  | 'zoom-fit'
+  /** A tool from the Tools menu, by its id (8.4b). */
+  | `tool:${string}`
+  /** A paper from the Paper menu: `paper:A4 landscape` (8.4b). */
+  | `paper:${string}`;
 
 /** A recovery copy found at startup. */
 export interface RecoveredCopy {

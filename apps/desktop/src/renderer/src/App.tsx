@@ -6,6 +6,7 @@ import {
   duplicatePart,
   emptyDocument,
   planDelete,
+  setPageSetup,
   type DeleteResolution,
 } from '@leathercad/document';
 import {
@@ -15,10 +16,12 @@ import {
   diagnosticTarget,
   evaluate,
   lockRefusal,
+  ORIENTATIONS,
+  PAPER_NAMES,
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import { systemIdSource } from '@leathercad/platform';
+import { DEFAULT_PREFERENCES, systemIdSource, type Preferences } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_HARDWARE, type DrawMode, type HardwareOptions } from '@leathercad/editor';
@@ -29,7 +32,8 @@ import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile, type ExportReport } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
-import { printStatusFor } from './sheets.js';
+import { paperOptionsFor, printStatusFor } from './sheets.js';
+import { describeChoice } from './SheetIndicator.js';
 import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -38,6 +42,7 @@ import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
+import { ShortcutsDialog } from './ShortcutsDialog.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
@@ -47,6 +52,9 @@ import { useMediaQuery } from './useMediaQuery.js';
 function fileName(path: string): string {
   return path.split('/').pop() ?? path;
 }
+
+/** How far one step of View › Zoom In or Zoom Out goes (8.4b). */
+const ZOOM_STEP = 1.25;
 
 export function App() {
   const [version, setVersion] = useState<string | null>(null);
@@ -103,21 +111,44 @@ export function App() {
   // The frame's own state (UI Foundations §7.1–7.2). None of it is the
   // document's, and none of it is persisted with it.
   //
+  // How the maker likes the frame, kept in preferences.json (8.2) — not
+  // localStorage, which a second window blocks on for seconds because both
+  // share one profile. The defaults show until the file has been read.
+  const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
+  const changePreferences = useCallback((changes: Partial<Preferences>) => {
+    setPreferences((previous) => ({ ...previous, ...changes }));
+    // A preference that could not be kept still applies to this session.
+    void getPlatformHost()
+      .setPreferences(changes)
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    void getPlatformHost()
+      .getPreferences()
+      .then(setPreferences)
+      .catch(() => undefined);
+  }, []);
+
   // The rail collapses by itself below 1200 px, and follows the maker's own
-  // choice above it. The choice lasts the session: persisting it belongs in
-  // preferences.json (slice 8.2) — not localStorage, which a second window
-  // blocks on for seconds because both share one profile.
+  // remembered choice above it. Opening it while narrow lasts the session:
+  // it answers the window being small, not a liking.
   const railAutoCollapsed = useMediaQuery('(max-width: 1199px)');
-  const [railPreferCollapsed, setRailPreferCollapsed] = useState(false);
   const [railExpandedWhileNarrow, setRailExpandedWhileNarrow] = useState(false);
-  const railCollapsed = railAutoCollapsed ? !railExpandedWhileNarrow : railPreferCollapsed;
+  const railCollapsed = railAutoCollapsed
+    ? !railExpandedWhileNarrow
+    : preferences.toolRailCollapsed;
   const toggleRail = useCallback(() => {
     if (railAutoCollapsed) {
       setRailExpandedWhileNarrow((expanded) => !expanded);
       return;
     }
-    setRailPreferCollapsed((collapsed) => !collapsed);
-  }, [railAutoCollapsed]);
+    changePreferences({ toolRailCollapsed: !preferences.toolRailCollapsed });
+  }, [railAutoCollapsed, changePreferences, preferences.toolRailCollapsed]);
+  const toggleLegend = useCallback(
+    () => changePreferences({ legendOpen: !preferences.legendOpen }),
+    [changePreferences, preferences.legendOpen],
+  );
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const [problemsOpen, setProblemsOpen] = useState(false);
   // Below these widths a panel stops taking a column and becomes an overlay
@@ -127,6 +158,10 @@ export function App() {
   const partsOverlay = useMediaQuery('(max-width: 899px)');
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [partsOpen, setPartsOpen] = useState(false);
+
+  // The canvas owns the viewport; this is the only handle on it. Anyone may
+  // ask it to show a rectangle, zoom about its centre, or fit the pattern.
+  const canvasRef = useRef<CanvasHandle>(null);
 
   const nextId = useMemo(() => createIdFactory(systemIdSource), []);
   const store = useMemo(() => new DocumentStore(emptyDocument(nextId(), 'Untitled')), [nextId]);
@@ -193,6 +228,47 @@ export function App() {
     if (await confirmDiscard('open')) await file.open();
   }, [confirmDiscard, file]);
 
+  // Help › Open Sample Project (8.3), and the empty Parts panel's offer of it.
+  const openSample = useCallback(async () => {
+    if (await confirmDiscard('open')) await file.openSample();
+  }, [confirmDiscard, file]);
+
+  // A project double-clicked in the file manager (8.5), asked for once the
+  // app is ready to open it.
+  // `openPath` is stable, and the main process hands the file over once.
+  const openPath = file.openPath;
+  useEffect(() => {
+    void getPlatformHost()
+      .takeLaunchFile()
+      .then((path) => (path === null ? undefined : openPath(path)))
+      .catch(() => undefined);
+  }, [openPath]);
+
+  // The Paper menu (8.4b) lists what the paper list lists, in its words, with
+  // the current choice checked; the main process rebuilds it when it changes.
+  const project = storeState.document.project;
+  useEffect(() => {
+    const { paper, orientation } = project.settings;
+    const choices = paperOptionsFor(project).map((option) => ({
+      value: `${option.paper} ${option.orientation}`,
+      label: describeChoice(option.plan),
+      checked: option.paper === paper && option.orientation === orientation,
+    }));
+    void getPlatformHost()
+      .setPaperMenu(choices)
+      .catch(() => undefined);
+  }, [project]);
+
+  // File › Open Recent (8.2): the main process chose and granted the path;
+  // unsaved work is asked about exactly as for Open.
+  useEffect(
+    () =>
+      getPlatformHost().onOpenFile((path) => {
+        void confirmDiscard('open').then((proceed) => (proceed ? file.openPath(path) : undefined));
+      }),
+    [confirmDiscard, file],
+  );
+
   // The window's close button, Ctrl+Q and a reload all unload the page. With
   // unsaved work the unload is refused — Electron then keeps the window — and
   // the question is asked instead. An answer that lets it go closes the window
@@ -256,7 +332,27 @@ export function App() {
         } else if (key === '2') {
           event.preventDefault();
           showView('sheets');
+        } else if (key === '/') {
+          event.preventDefault();
+          setShortcutsOpen(true);
+        } else if (key === '=' || key === '+') {
+          // The view (8.4b), as View › Zoom In, Zoom Out and Fit to Pattern.
+          event.preventDefault();
+          canvasRef.current?.zoom(ZOOM_STEP);
+        } else if (key === '-') {
+          event.preventDefault();
+          canvasRef.current?.zoom(1 / ZOOM_STEP);
+        } else if (key === '0') {
+          event.preventDefault();
+          canvasRef.current?.fit();
         }
+        return;
+      }
+
+      // The shortcut map (8.2), where many apps keep it.
+      if (event.key === '?') {
+        event.preventDefault();
+        setShortcutsOpen(true);
         return;
       }
 
@@ -302,16 +398,41 @@ export function App() {
           case 'view-sheets':
             showView('sheets');
             break;
+          case 'shortcuts':
+            setShortcutsOpen(true);
+            break;
+          case 'open-sample':
+            void openSample();
+            break;
+          case 'zoom-in':
+            canvasRef.current?.zoom(ZOOM_STEP);
+            break;
+          case 'zoom-out':
+            canvasRef.current?.zoom(1 / ZOOM_STEP);
+            break;
+          case 'zoom-fit':
+            canvasRef.current?.fit();
+            break;
+          default:
+            // Tools › (8.4b): the same as the tool's key.
+            if (action.startsWith('tool:')) {
+              const id = action.slice('tool:'.length);
+              if (ALL_TOOLS.some((tool) => tool.id === id)) chooseTool(id);
+            } else if (action.startsWith('paper:')) {
+              // Paper › (8.4b): the same single edit as the paper list.
+              const [name, turn] = action.slice('paper:'.length).split(' ');
+              const paper = PAPER_NAMES.find((candidate) => candidate === name);
+              const orientation = ORIENTATIONS.find((candidate) => candidate === turn);
+              if (paper !== undefined && orientation !== undefined) {
+                store.dispatch(setPageSetup(paper, orientation));
+              }
+            }
         }
       }),
-    [file, exportPdf, newProject, openProject, store, showView],
+    [file, exportPdf, newProject, openProject, openSample, store, showView, chooseTool],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
-
-  // The canvas owns the viewport; this is the only handle on it, and the only
-  // thing anyone asks it for is "show me this rectangle".
-  const canvasRef = useRef<CanvasHandle>(null);
 
   /**
    * Going to a problem: **select the subject, frame the evidence.**
@@ -526,6 +647,7 @@ export function App() {
           onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
           onRemovePart={requestDeletePart}
           onDuplicatePart={requestDuplicatePart}
+          onOpenSample={() => void openSample()}
         />
         {/* The drawing is what the window is for: its main landmark. */}
         <main className="canvas-column" aria-label="Drawing">
@@ -543,7 +665,13 @@ export function App() {
             requestDelete={requestDelete}
           >
             {/* The legend explains the board's marks; the sheets are ink. */}
-            {view === 'design' && <CanvasLegend project={storeState.document.project} />}
+            {view === 'design' && (
+              <CanvasLegend
+                project={storeState.document.project}
+                open={preferences.legendOpen}
+                onToggle={toggleLegend}
+              />
+            )}
           </CanvasHost>
           <ProblemsPanel
             project={storeState.document.project}
@@ -638,6 +766,8 @@ export function App() {
               : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
         </span>
       </footer>
+
+      {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
 
       {exportNotice !== null && (
         <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />

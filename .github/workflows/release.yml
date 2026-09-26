@@ -75,6 +75,16 @@ jobs:
       - name: Installer
         run: pnpm package
 
+      # The Flatpak beside the AppImage (8.5). Its runtimes come from Flathub,
+      # installed for this user by the bundler.
+      - name: Flatpak
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder &&
+          flatpak remote-add --user --if-not-exists flathub
+          https://dl.flathub.org/repo/flathub.flatpakrepo &&
+          pnpm package:flatpak
+
       # A build SBOM: everything that went into the installers, build tooling
       # included. The app ships no node_modules — Vite bundles its runtime
       # code — so a production-only SBOM would be empty. One is enough: the
@@ -94,6 +104,7 @@ jobs:
         with:
           subject-path: |
             apps/desktop/release/*.AppImage
+            apps/desktop/release/*.flatpak
             apps/desktop/release/*.exe
             apps/desktop/release/*.dmg
 
@@ -105,5 +116,5 @@ jobs:
         run: >-
           shopt -s nullglob;
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber
-          apps/desktop/release/*.AppImage apps/desktop/release/*.exe
+          apps/desktop/release/*.AppImage apps/desktop/release/*.flatpak apps/desktop/release/*.exe
           apps/desktop/release/*.dmg apps/desktop/release/*.cdx.json

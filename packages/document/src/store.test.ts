@@ -6,12 +6,14 @@ import { describe, expect, it } from 'vitest';
 import {
   addPart,
   deleteFeatures,
+  deletePart,
   emptyDocument,
   rectShape,
   rectanglePart,
   renameFeature,
   setPartName,
   setPartQuantity,
+  setPartVisible,
   setPageSetup,
   setProjectName,
   setShape,
@@ -248,6 +250,46 @@ describe('selection', () => {
     store.undo();
     // Undoing a delete brings the feature back, still selected.
     expect([...store.getState().selection.features]).toEqual(['feat-1']);
+  });
+
+  it('drops what an edit hid, so Delete cannot act on it unseen (Q14)', () => {
+    const store = new DocumentStore(docWithRect());
+    store.select(['feat-1']);
+
+    store.dispatch(setPartVisible('part-1', false));
+
+    expect(store.getState().selection.features.size).toBe(0);
+    // Undo brings the part back, and with it the selection it had.
+    store.undo();
+    expect([...store.getState().selection.features]).toEqual(['feat-1']);
+  });
+
+  it('keeps a hidden feature picked from the panel through later edits', () => {
+    // Picking a hidden feature in the parts panel is how it is shown again, so
+    // an unrelated edit must not take it away.
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(setPartVisible('part-1', false));
+    store.select(['feat-1']);
+
+    store.dispatch(renameFeature('feat-1', 'Back'));
+
+    expect([...store.getState().selection.features]).toEqual(['feat-1']);
+  });
+
+  it('drops what an edit removed, and a part that is gone', () => {
+    const store = new DocumentStore(docWithRect());
+    store.selectParts(['part-1']);
+    store.dispatch(deletePart('part-1'));
+    expect(store.getState().selection.parts.size).toBe(0);
+  });
+
+  it('drops what a gesture hid when the gesture is committed', () => {
+    const store = new DocumentStore(docWithRect());
+    store.select(['feat-1']);
+    store.begin('Hide');
+    store.preview(setPartVisible('part-1', false));
+    store.commit();
+    expect(store.getState().selection.features.size).toBe(0);
   });
 
   it('does not consume a step of undo on its own', () => {

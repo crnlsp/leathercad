@@ -40,6 +40,17 @@ export function useProjectFile(
   /** True once the project is written; false when the maker cancelled or the write failed. */
   save: (forcePrompt?: boolean) => Promise<boolean>;
   open: () => Promise<void>;
+  /**
+   * Opens a project the main process already granted — *Open Recent* (8.2).
+   * The caller asks about unsaved work first, as for `open`.
+   */
+  openPath: (target: string) => Promise<void>;
+  /**
+   * Opens the sample project that ships with the app (8.3), **untitled** and
+   * unchanged: *Save* asks where, and closing it untouched asks nothing. The
+   * caller asks about unsaved work first, as for `open`.
+   */
+  openSample: () => Promise<void>;
   /** Starts an empty, untitled project. The caller asks about unsaved work first. */
   newProject: () => void;
   /**
@@ -93,15 +104,20 @@ export function useProjectFile(
           if (!target.endsWith(`.${LCP_EXTENSION}`)) target = `${target}.${LCP_EXTENSION}`;
         }
 
-        const bytes = saveProject(store.getState().document.project, {
+        // The document these bytes are made from is the one marked saved — not
+        // whatever the store holds once the write returns. An edit landing
+        // during a slow write is not on disk, so it must stay unsaved (Q16).
+        const written = store.getState().document;
+        const bytes = saveProject(written.project, {
           applicationVersion: appVersion,
           now: () => new Date(),
           ...(createdUtc.current === undefined ? {} : { createdUtc: createdUtc.current }),
         });
 
         await platform.writeFile(target, bytes);
-        savedDocument.current = store.getState().document;
+        savedDocument.current = written;
         setState({ path: target, error: null, savedAt: new Date().toLocaleTimeString() });
+        void noteRecent(platform, target);
         return true;
       } catch (error) {
         setState((previous) => ({
@@ -114,20 +130,33 @@ export function useProjectFile(
     [appVersion, host, state.path, store],
   );
 
-  const open = useCallback(async () => {
-    try {
-      const platform = host();
-      const target = await platform.showOpenDialog({
-        title: 'Open project',
-        filters: FILTERS,
-      });
-      if (target === null) return;
+  const openPath = useCallback(
+    async (target: string) => {
+      try {
+        const platform = host();
+        const loaded = loadProject(await platform.readFile(target));
+        store.reset({ project: loaded.project });
+        savedDocument.current = store.getState().document;
+        createdUtc.current = loaded.manifest.createdUtc;
+        setState({ path: target, error: null, savedAt: null });
+        void noteRecent(platform, target);
+      } catch (error) {
+        setState((previous) => ({
+          ...previous,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      }
+    },
+    [host, store],
+  );
 
-      const loaded = loadProject(await platform.readFile(target));
-      store.reset({ project: loaded.project });
+  const openSample = useCallback(async () => {
+    try {
+      const loaded = loadProject(await host().readSampleProject());
+      store.reset({ project: loaded.project }, 'Open sample');
       savedDocument.current = store.getState().document;
-      createdUtc.current = loaded.manifest.createdUtc;
-      setState({ path: target, error: null, savedAt: null });
+      createdUtc.current = undefined;
+      setState({ path: null, error: null, savedAt: null });
     } catch (error) {
       setState((previous) => ({
         ...previous,
@@ -135,6 +164,23 @@ export function useProjectFile(
       }));
     }
   }, [host, store]);
+
+  const open = useCallback(async () => {
+    let target: string | null;
+    try {
+      target = await host().showOpenDialog({
+        title: 'Open project',
+        filters: FILTERS,
+      });
+    } catch (error) {
+      setState((previous) => ({
+        ...previous,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+      return;
+    }
+    if (target !== null) await openPath(target);
+  }, [host, openPath]);
 
   /**
    * Writes a print-ready PDF and opens it in the system viewer.
@@ -148,7 +194,9 @@ export function useProjectFile(
       const platform = host();
       const project = store.getState().document.project;
 
-      const suggested = (project.name || 'Untitled').replace(/\.[^.]+$/, '');
+      // Only a project extension is taken off: "Wallet v1.2" is a name, and
+      // cutting it at its last dot suggested "Wallet v1.pdf" (Q18).
+      const suggested = (project.name || 'Untitled').replace(/\.lcp$/i, '');
       const target = await platform.showSaveDialog({
         title: 'Export PDF',
         defaultPath: `${suggested}.pdf`,
@@ -221,6 +269,8 @@ export function useProjectFile(
     state,
     save,
     open,
+    openPath,
+    openSample,
     newProject,
     adoptRecovered,
     isDirty,
@@ -228,4 +278,16 @@ export function useProjectFile(
     markSaved,
     savedDocument,
   };
+}
+
+/**
+ * Puts a project on *File › Open Recent*. A list that could not be updated
+ * costs nothing that matters, so it never becomes an error on screen.
+ */
+async function noteRecent(platform: PlatformHost, path: string): Promise<void> {
+  try {
+    await platform.noteRecentFile(path);
+  } catch {
+    // The project itself is saved or open; only the menu is behind.
+  }
 }

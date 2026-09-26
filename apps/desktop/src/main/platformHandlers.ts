@@ -3,10 +3,13 @@ import { join } from 'node:path';
 
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
+import type { PaperMenuChoice } from '@leathercad/platform';
 
 import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
-import { PathGrants, type PathUse } from './pathGrants.js';
+import { validPaperChoices } from './menu.js';
+import type { PathGrants, PathUse } from './pathGrants.js';
+import type { PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
 
 /**
@@ -24,14 +27,23 @@ function recoveryIntervalMs(): number {
  * through the preload bridge; it has no direct filesystem access.
  *
  * Nor does it get one through here: it reads, writes and opens only the paths
- * the user chose in these dialogs this session (`PathGrants`).
+ * the user chose in these dialogs this session (`PathGrants`), or chose from
+ * *File › Open Recent*, whose list only ever holds such paths.
  */
 export function registerPlatformHandlers(
   getWindow: () => BrowserWindow | null,
   recovery: RecoveryStore,
+  grants: PathGrants,
+  preferences: PreferencesStore,
+  /** The recent list changed, so the menu showing it has to be rebuilt. */
+  onRecentChanged: (path: string) => void,
+  /** Where the bundled sample project is (8.3): a fixed path, never the renderer's. */
+  sampleProjectPath: string,
+  /** The project this launch names, already granted (8.5); handed over once. */
+  takeLaunchFile: () => string | null,
+  /** The Paper menu's choices changed (8.4b), already validated. */
+  onPaperChoices: (choices: readonly PaperMenuChoice[]) => void,
 ): void {
-  const grants = new PathGrants();
-
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
     return new Uint8Array(buffer);
@@ -93,6 +105,31 @@ export function registerPlatformHandlers(
     }
   });
   ipcMain.handle(IPC.getRecoveryIntervalMs, () => recoveryIntervalMs());
+
+  // The sample (8.3). Its path is the main process's own; the renderer only
+  // ever gets the bytes, so there is nothing of it to write back to.
+  ipcMain.handle(
+    IPC.readSampleProject,
+    async () => new Uint8Array(await readFile(sampleProjectPath)),
+  );
+
+  ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
+  ipcMain.handle(IPC.setPaperMenu, (_event, choices: unknown) => {
+    onPaperChoices(validPaperChoices(choices));
+  });
+
+  // Preferences (8.2). The renderer names a change, never the file.
+  ipcMain.handle(IPC.getPreferences, () => preferences.preferences);
+  ipcMain.handle(IPC.setPreferences, async (_event, changes: unknown) => {
+    await preferences.update(changes);
+  });
+  // Only a project the maker chose in a dialog this session joins the list,
+  // so *Open Recent* can never become a way to reach any other file.
+  ipcMain.handle(IPC.noteRecentFile, async (_event, path: unknown) => {
+    if (!grants.allows(path, 'write')) return;
+    await preferences.noteRecent(path as string);
+    onRecentChanged(path as string);
+  });
 }
 
 /** The path, if the renderer may use it this way; otherwise logged and refused. */

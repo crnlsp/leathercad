@@ -1,5 +1,9 @@
-import type { MenuAction } from '@leathercad/platform';
+import type { MenuAction, PaperMenuChoice } from '@leathercad/platform';
+import { sep } from 'node:path';
+
 import type { MenuItemConstructorOptions } from 'electron';
+
+import { TOOL_GROUPS } from '../renderer/src/tools.js';
 
 /**
  * The application menu (slice 8.5a).
@@ -23,8 +27,17 @@ export function menuTemplate(options: {
   readonly send: (action: MenuAction) => void;
   readonly openLogFolder: () => void;
   readonly openNotices: () => void;
+  /** *File › Open Recent* (8.2): absolute paths, most recent first. */
+  readonly recentFiles?: readonly string[];
+  /** The home directory, shown as `~` in a recent path. */
+  readonly home?: string;
+  readonly openRecent?: (path: string) => void;
+  readonly clearRecent?: () => void;
+  /** *Paper* (8.4b): the renderer's paper list, worded as it words it. */
+  readonly paperChoices?: readonly PaperMenuChoice[];
 }): MenuItemConstructorOptions[] {
   const { isMac, packaged, send } = options;
+  const recentFiles = options.recentFiles ?? [];
 
   const action = (
     label: string,
@@ -42,6 +55,23 @@ export function menuTemplate(options: {
     submenu: [
       action('New', 'CmdOrCtrl+N', 'new'),
       action('Open…', 'CmdOrCtrl+O', 'open'),
+      {
+        label: 'Open Recent',
+        submenu: [
+          ...(recentFiles.length === 0
+            ? [{ label: 'No Recent Projects', enabled: false }]
+            : recentFiles.map((path) => ({
+                label: recentLabel(path, options.home),
+                click: () => options.openRecent?.(path),
+              }))),
+          { type: 'separator' },
+          {
+            label: 'Clear Recent',
+            enabled: recentFiles.length > 0,
+            click: () => options.clearRecent?.(),
+          },
+        ],
+      },
       { type: 'separator' },
       action('Save', 'CmdOrCtrl+S', 'save'),
       action('Save As…', 'CmdOrCtrl+Shift+S', 'save-as'),
@@ -77,6 +107,11 @@ export function menuTemplate(options: {
       action('Design', 'CmdOrCtrl+1', 'view-design'),
       action('Sheets', 'CmdOrCtrl+2', 'view-sheets'),
       { type: 'separator' },
+      // The view, not the document: nothing here is undoable (8.4b).
+      action('Zoom In', 'CmdOrCtrl+=', 'zoom-in'),
+      action('Zoom Out', 'CmdOrCtrl+-', 'zoom-out'),
+      action('Fit to Pattern', 'CmdOrCtrl+0', 'zoom-fit'),
+      { type: 'separator' },
       { role: 'togglefullscreen' },
       ...(packaged
         ? []
@@ -89,9 +124,41 @@ export function menuTemplate(options: {
     ],
   };
 
+  // Every tool, grouped as the rail groups them, each showing its key (8.4b).
+  // "Tools" rather than "Draw": Select, Rotate and Scale draw nothing.
+  const tools: MenuItemConstructorOptions = {
+    label: 'Tools',
+    submenu: TOOL_GROUPS.filter((group) => group.tools.length > 0).flatMap((group, index) => [
+      ...(index === 0 ? [] : [{ type: 'separator' } as const]),
+      ...group.tools.map((tool) => action(tool.label, tool.key, `tool:${tool.id}`)),
+    ]),
+  };
+
+  // The paper, said as what it produces, as the list beside Export PDF says
+  // it; the current one checked. Choosing one is the same single undoable
+  // edit as choosing it there.
+  const paperChoices = options.paperChoices ?? [];
+  const paper: MenuItemConstructorOptions = {
+    label: 'Paper',
+    submenu:
+      paperChoices.length === 0
+        ? [{ label: 'No paper to choose yet', enabled: false }]
+        : paperChoices.map((choice) => ({
+            label: choice.label.replaceAll('&', '&&'),
+            type: 'radio' as const,
+            checked: choice.checked,
+            click: () => send(`paper:${choice.value}`),
+          })),
+  };
+
   const help: MenuItemConstructorOptions = {
     label: 'Help',
     submenu: [
+      // A finished pattern to take apart, in place of a tutorial (8.3).
+      { label: 'Open Sample Project', click: () => send('open-sample') },
+      // Every key the app answers to, in one place (8.2).
+      action('Keyboard Shortcuts', 'CmdOrCtrl+/', 'shortcuts'),
+      { type: 'separator' },
       { label: 'Show Log Folder', click: () => options.openLogFolder() },
       // The licences of what the app ships (8.6b), written by the build.
       { label: 'Third-Party Notices', click: () => options.openNotices() },
@@ -100,6 +167,44 @@ export function menuTemplate(options: {
   };
 
   return isMac
-    ? [{ role: 'appMenu' }, file, edit, view, { role: 'windowMenu' }, help]
-    : [file, edit, view, help];
+    ? [{ role: 'appMenu' }, file, edit, view, tools, paper, { role: 'windowMenu' }, help]
+    : [file, edit, view, tools, paper, help];
+}
+
+/** At most this many papers: every size in both orientations, and room to spare. */
+const MAX_PAPER_CHOICES = 32;
+
+/**
+ * The Paper menu's choices as the renderer sent them, or none.
+ *
+ * The renderer is sandboxed, but what it sends lands in a native menu, so
+ * only the shape the menu needs is taken: a short value naming a paper and an
+ * orientation, a short label, and a flag.
+ */
+export function validPaperChoices(sent: unknown): PaperMenuChoice[] {
+  if (!Array.isArray(sent)) return [];
+  const choices: PaperMenuChoice[] = [];
+  for (const entry of sent.slice(0, MAX_PAPER_CHOICES)) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const { value, label, checked } = entry as Record<string, unknown>;
+    if (typeof value !== 'string' || !/^[A-Za-z0-9]{1,16} (portrait|landscape)$/.test(value))
+      continue;
+    if (typeof label !== 'string' || label.length === 0 || label.length > 200) continue;
+    choices.push({ value, label, checked: checked === true });
+  }
+  return choices;
+}
+
+/**
+ * A recent project as the menu shows it: the whole path, so two projects
+ * with one name in different folders can be told apart, with the home
+ * directory as `~` to keep it short. Ampersands are doubled because Windows
+ * reads a single one as a mnemonic and swallows it.
+ */
+export function recentLabel(path: string, home?: string): string {
+  const shown =
+    home !== undefined && home !== '' && path.startsWith(home + sep)
+      ? `~${path.slice(home.length)}`
+      : path;
+  return shown.replaceAll('&', '&&');
 }

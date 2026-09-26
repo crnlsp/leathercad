@@ -1,9 +1,12 @@
-import type {
-  MenuAction,
-  OpenDialogOptions,
-  PlatformHost,
-  RecoveredCopy,
-  SaveDialogOptions,
+import {
+  DEFAULT_PREFERENCES,
+  type MenuAction,
+  type OpenDialogOptions,
+  type PaperMenuChoice,
+  type PlatformHost,
+  type Preferences,
+  type RecoveredCopy,
+  type SaveDialogOptions,
 } from './host.js';
 
 /**
@@ -111,5 +114,63 @@ export class InMemoryPlatformHost implements PlatformHost {
   /** A test choosing an item from the application menu. */
   chooseMenu(action: MenuAction): void {
     for (const listener of this.menuListeners) listener(action);
+  }
+
+  /** The preferences as the app last kept them. */
+  preferences: Preferences = DEFAULT_PREFERENCES;
+
+  getPreferences(): Promise<Preferences> {
+    return Promise.resolve(this.preferences);
+  }
+
+  setPreferences(changes: Partial<Preferences>): Promise<void> {
+    this.preferences = { ...this.preferences, ...changes };
+    return Promise.resolve();
+  }
+
+  /** *File › Open Recent*, most recent first. */
+  readonly recentFiles: string[] = [];
+
+  noteRecentFile(path: string): Promise<void> {
+    const at = this.recentFiles.indexOf(path);
+    if (at !== -1) this.recentFiles.splice(at, 1);
+    this.recentFiles.unshift(path);
+    return Promise.resolve();
+  }
+
+  private readonly openFileListeners = new Set<(path: string) => void>();
+
+  onOpenFile(listener: (path: string) => void): () => void {
+    this.openFileListeners.add(listener);
+    return () => this.openFileListeners.delete(listener);
+  }
+
+  /** A test choosing a project from *Open Recent*. */
+  openFile(path: string): void {
+    for (const listener of this.openFileListeners) listener(path);
+  }
+
+  /** What `readSampleProject` returns; empty until a test sets it. */
+  sampleProject: Uint8Array = new Uint8Array();
+
+  readSampleProject(): Promise<Uint8Array> {
+    return Promise.resolve(Uint8Array.from(this.sampleProject));
+  }
+
+  /** The project the launch names, taken once. */
+  launchFile: string | null = null;
+
+  takeLaunchFile(): Promise<string | null> {
+    const file = this.launchFile;
+    this.launchFile = null;
+    return Promise.resolve(file);
+  }
+
+  /** The Paper menu as the app last described it. */
+  paperMenu: readonly PaperMenuChoice[] = [];
+
+  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void> {
+    this.paperMenu = choices;
+    return Promise.resolve();
   }
 }

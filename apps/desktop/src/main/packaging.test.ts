@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { LCP_EXTENSION, LCP_MIME } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -17,6 +18,8 @@ interface BuilderConfig {
   linux: { icon: string; syncDesktopName: boolean };
   win: { icon: string };
   mac: { icon: string };
+  fileAssociations: { ext: string; mimeType: string; name: string }[];
+  flatpak: { files: [string, string][]; finishArgs: string[] };
 }
 
 async function config(): Promise<BuilderConfig> {
@@ -67,5 +70,32 @@ describe('desktop integration', () => {
       types.push(icns.subarray(at, at + 4).toString('ascii'));
     }
     expect(types).toEqual(expect.arrayContaining(['icp4', 'ic07', 'ic09', 'ic10']));
+  });
+});
+
+describe('opening a project from the file manager (8.5)', () => {
+  it('associates the extension and the type the app writes into every project', async () => {
+    const { fileAssociations } = await config();
+    expect(fileAssociations).toEqual([
+      expect.objectContaining({ ext: LCP_EXTENSION, mimeType: LCP_MIME }),
+    ]);
+  });
+
+  it('describes that type to Linux, by name and by the mimetype entry inside the file', async () => {
+    const { flatpak } = await config();
+    const [source, target] = flatpak.files.find(([, to]) => to.includes('/share/mime/'))!;
+    expect(target).toBe('/share/mime/packages/io.github.crnlsp.leathercad.xml');
+
+    const xml = readFileSync(source, 'utf8');
+    expect(xml).toContain(`<mime-type type="${LCP_MIME}">`);
+    expect(xml).toContain(`<glob pattern="*.${LCP_EXTENSION}"/>`);
+    // The ODF convention: the first entry's name at byte 30, its contents after.
+    expect(xml).toContain(`offset="30" value="mimetype${LCP_MIME}"`);
+  });
+
+  it('gives the Flatpak no network: the app never goes online', async () => {
+    const { flatpak } = await config();
+    expect(flatpak.finishArgs).not.toContain('--share=network');
+    expect(flatpak.finishArgs).toContain('--filesystem=home');
   });
 });

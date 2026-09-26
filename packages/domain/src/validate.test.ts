@@ -556,6 +556,44 @@ describe('the rules about a part and its material', () => {
     it('says nothing when everything sits on the leather', () => {
       expect(codes(evaluate(project([panel(), slot(), rivet({ x: 12, y: 12 })])))).toEqual([]);
     });
+
+    it('takes a fold drawn edge to edge as on the leather (Q2)', () => {
+      // A fold runs right across the piece: its ends are on the outline, which
+      // is the edge of the leather, not off it.
+      const fold = (x: number): Feature => ({
+        ...base(`fold-${String(x)}`, 'Fold'),
+        kind: 'fold-line',
+        direction: 'valley',
+        source: {
+          kind: 'path',
+          path: PathOps.polyline(
+            [
+              { x, y: 0 },
+              { x, y: 75 },
+            ],
+            false,
+          ),
+        },
+      });
+      expect(codes(evaluate(project([panel(105, 75, 0), fold(52.5)])))).toEqual([]);
+      // Still reported one storage quantum past the edge and beyond.
+      const over: Feature = {
+        ...base('fold-over', 'Fold'),
+        kind: 'fold-line',
+        direction: 'valley',
+        source: {
+          kind: 'path',
+          path: PathOps.polyline(
+            [
+              { x: 60, y: -1 },
+              { x: 60, y: 75 },
+            ],
+            false,
+          ),
+        },
+      };
+      expect(codes(evaluate(project([panel(105, 75, 0), over])))).toContain('OUTSIDE_PART');
+    });
   });
 
   describe('HOLE_TOO_CLOSE_TO_EDGE', () => {

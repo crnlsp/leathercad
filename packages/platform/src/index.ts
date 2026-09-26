@@ -20,7 +20,10 @@ export type {
   SaveDialogOptions,
   FileFilter,
   MenuAction,
+  PaperMenuChoice,
+  Preferences,
   RecoveredCopy,
 } from './host.js';
+export { DEFAULT_PREFERENCES } from './host.js';
 export { InMemoryPlatformHost } from './fake.js';
 export { systemIdSource } from './systemIdSource.js';

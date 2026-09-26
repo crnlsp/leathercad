@@ -1,4 +1,4 @@
-import type { Feature, FeatureId, Project } from './feature.js';
+import type { Feature, FeatureId, Part, PartId, Project } from './feature.js';
 import { problem, problemKey, type CompatibilityRule, type Problem } from './problems/index.js';
 
 /**
@@ -142,6 +142,10 @@ export function followRefusal(
   const candidate: Feature = { ...feature, source: { ...feature.source, sourceId } };
   const direct = derivationRefusal(project, candidate);
   if (direct !== null) return direct;
+
+  const home = project.parts.find((part) => part.features.some((f) => f.id === featureId));
+  const reach = home === undefined ? null : crossPartRefusal(project, home.id, candidate);
+  if (reach !== null) return reach;
 
   const before = new Set(graphProblems(project).map(problemKey));
   const after = graphProblems(replaceFeature(project, candidate));
@@ -375,4 +379,53 @@ function replaceFeature(project: Project, replacement: Feature): Project {
       features: part.features.map((f) => (f.id === replacement.id ? replacement : f)),
     })),
   };
+}
+
+/**
+ * Why this feature, in this part, may not reach into another part, or `null`.
+ *
+ * A piece prints as everything it draws. A stitch line offset from another
+ * part's outline, or a dimension to another part's corner, lies where *that*
+ * part sits on the board — so the piece printed as far as the other one, and
+ * moving a piece on the board changed how many sheets the pattern took (Q11).
+ *
+ * A **mirror** is the exception: its geometry is placed by its own axis, not
+ * laid on its source, so a mirrored piece may follow the piece it mirrors
+ * (Q8). Refused by commands only. A file from before this rule holds what it
+ * holds, and opens.
+ */
+export function crossPartRefusal(
+  project: Project,
+  partId: PartId,
+  feature: Feature,
+): Problem | null {
+  const partOf = new Map<string, Part>();
+  for (const part of project.parts) {
+    for (const existing of part.features) partOf.set(existing.id, part);
+  }
+  const elsewhere = (id: string): Part | undefined => {
+    const part = partOf.get(id);
+    return part === undefined || part.id === partId ? undefined : part;
+  };
+
+  if (feature.kind === 'measurement') {
+    const other = elsewhere(feature.source.a.featureId) ?? elsewhere(feature.source.b.featureId);
+    return other === undefined
+      ? null
+      : problem('MEASURE_ACROSS_PARTS', { otherPartName: other.name });
+  }
+
+  if (feature.kind === 'text-label' || feature.source.kind !== 'derived') return null;
+  if (feature.source.op.type === 'mirror') return null;
+
+  const sourceId = feature.source.sourceId;
+  const other = elsewhere(sourceId);
+  if (other === undefined) return null;
+  const source = other.features.find((f) => f.id === sourceId);
+  return problem('FOLLOWS_ANOTHER_PART', {
+    featureId: feature.id,
+    featureName: feature.name,
+    sourceName: source?.name ?? 'That feature',
+    otherPartName: other.name,
+  });
 }

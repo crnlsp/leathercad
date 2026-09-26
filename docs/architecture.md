@@ -92,7 +92,7 @@ conformance suite for the replacement.
 | Schema validation | zod | MIT | Runtime validation at the file-load boundary |
 | Immutable updates | immer | MIT | Structural sharing for the undo stack |
 | Layering enforcement | dependency-cruiser | MIT | Fails CI on an illegal import |
-| Packaging | electron-builder | MIT | AppImage today, with fuses set; Flatpak in 8.5 ([ADR 0014](adr/0014-electron-builder-and-release-please.md)) |
+| Packaging | electron-builder | MIT | AppImage, NSIS and dmg, with fuses set; a Flatpak since 8.5, and `.lcp` associated on all three ([ADR 0014](adr/0014-electron-builder-and-release-please.md)) |
 | Releases | release-please (Action) | Apache-2.0 | Version, changelog and tag from conventional commits ([ADR 0014](adr/0014-electron-builder-and-release-please.md)) |
 | Logging | electron-log | MIT | A local log and local crash dumps, nothing uploaded ([ADR 0015](adr/0015-local-logs-and-crash-dumps.md)) |
 

@@ -86,7 +86,7 @@ export class DocumentStore {
     this.future = [];
     this.present = {
       document: next,
-      selection: this.present.selection,
+      selection: keptSelection(this.present.selection, this.present.document, next),
       label,
     };
     this.emit();
@@ -126,7 +126,15 @@ export class DocumentStore {
     this.past.push(transaction.base);
     if (this.past.length > DocumentStore.HISTORY_LIMIT) this.past.shift();
     this.future = [];
-    this.present = { ...this.present, label: transaction.label };
+    this.present = {
+      ...this.present,
+      selection: keptSelection(
+        this.present.selection,
+        transaction.base.document,
+        this.present.document,
+      ),
+      label: transaction.label,
+    };
     this.emit();
   }
 
@@ -208,4 +216,40 @@ export class DocumentStore {
   private emit(): void {
     for (const listener of this.listeners) listener();
   }
+}
+
+/**
+ * The selection an edit leaves behind: what it removed, or hid, is dropped.
+ *
+ * A selection that outlives its features is one the next keypress acts on
+ * unseen — hiding a part once left its outline selected, so Delete removed it
+ * with nothing on the canvas to show for it (Q14). Only what the edit itself
+ * hid is dropped: a feature the maker picked while already hidden, from the
+ * parts panel, stays picked through later edits, because picking it there is
+ * how it is shown again.
+ */
+function keptSelection(selection: Selection, before: Document, after: Document): Selection {
+  if (selection.parts.size === 0 && selection.features.size === 0) return selection;
+
+  const visibleBefore = new Map<FeatureId, boolean>();
+  for (const part of before.project.parts) {
+    for (const feature of part.features) visibleBefore.set(feature.id, feature.visible);
+  }
+  const visibleAfter = new Map<FeatureId, boolean>();
+  for (const part of after.project.parts) {
+    for (const feature of part.features) visibleAfter.set(feature.id, feature.visible);
+  }
+  const partsAfter = new Set<PartId>(after.project.parts.map((part) => part.id));
+
+  const features = [...selection.features].filter((id) => {
+    const now = visibleAfter.get(id);
+    if (now === undefined) return false;
+    return now || visibleBefore.get(id) === false;
+  });
+  const parts = [...selection.parts].filter((id) => partsAfter.has(id));
+
+  if (features.length === selection.features.size && parts.length === selection.parts.size) {
+    return selection;
+  }
+  return { parts: new Set(parts), features: new Set(features) };
 }

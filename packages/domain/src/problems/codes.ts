@@ -63,6 +63,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   MIRROR_FOLD_MISSING: structural('S2'),
   MEASURE_REF_MISSING: structural('S2'),
   MIRROR_OUTLINE_ACROSS_FOLD: structural('S5'),
+  FOLLOWS_ANOTHER_PART: structural('S4'),
 
   FEATURE_MISSING: interaction('X1'),
   NOT_DERIVED: interaction('X1'),
@@ -75,7 +76,9 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   MIRROR_WOULD_SCALE: interaction('X3'),
   MIRROR_PLACED_BY_FOLD: interaction('X3'),
   MIRROR_NO_AXIS: interaction('X3'),
+  DIMENSION_NOT_MIRRORED: interaction('X3'),
   MEASURE_NEEDS_ANCHOR: interaction('X3'),
+  MEASURE_ACROSS_PARTS: interaction('X3'),
   NO_TARGET_PART: interaction('X4'),
   TARGET_SPANS_PARTS: interaction('X4'),
 

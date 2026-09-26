@@ -10,6 +10,7 @@ Download the installer for your system from the
 | System | File | Then |
 |---|---|---|
 | Linux | the `.AppImage` | Make it executable (`chmod +x`) and run it. It installs nothing; keep it anywhere. |
+| Linux | or the `.flatpak` | `flatpak install --user LeatherCAD-*.flatpak`. It adds LeatherCAD to your applications menu and opens `.lcp` files by double-click. It needs the Flathub remote, which most distributions have. |
 | Windows | the `.exe` | Run it. It installs for your user only, with no administrator prompt. |
 | macOS | the `.dmg` | Open it and drag LeatherCAD to Applications. It runs on Apple silicon and Intel. |
 
@@ -21,12 +22,21 @@ developer:
 - **macOS:** open it once, then go to *System Settings → Privacy & Security* and choose *Open
   Anyway*.
 
+Once installed, **double-click a `.lcp` project to open it**: the Windows installer, the macOS app
+and the Flatpak all register the file type. An AppImage registers nothing by itself; a tool such as
+AppImageLauncher adds it to your menu, and then it opens projects too.
+
 To check that a download is the one this repository's release workflow built, use GitHub's build
 provenance, with the [GitHub CLI](https://cli.github.com/):
 `gh attestation verify <the file> --repo crnlsp/leathercad`.
 
 When a project was saved by a newer LeatherCAD than yours, the app says so and names the version:
 update, and it opens.
+
+**To see a finished pattern first,** choose *Help → Open Sample Project*, or *open the sample
+wallet* in the empty **Parts** panel: the bifold wallet this page draws, with its lining and card
+pocket. It opens untitled, so saving it asks where, and nothing you change reaches the copy inside
+the app.
 
 ## 2. Draw a part
 
@@ -85,7 +95,12 @@ changes, it asks first.
 ## Where things are
 
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
-  **Ctrl+1** and **Ctrl+2** switch between Design and Sheets.
+  **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Help → Keyboard Shortcuts*
+  (**Ctrl+/** or **?**) lists every key. **Ctrl+=** and **Ctrl+−** zoom, **Ctrl+0** fits the
+  pattern in the window.
+- **Menus:** every tool is in *Tools*, and the paper is in *Paper* as well as in the list beside
+  **Export PDF**.
+- **Recent projects:** *File → Open Recent*. The legend and the tool rail stay as you left them.
 - **Logs:** *Help → Show Log Folder*. Nothing is ever uploaded; attach the log to a bug report.
 - **Licences:** *Help → Third-Party Notices*, and `THIRD_PARTY_NOTICES.txt` beside the app.
 - **Bugs and ideas:** [GitHub issues](https://github.com/crnlsp/leathercad/issues).

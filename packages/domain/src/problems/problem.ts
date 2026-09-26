@@ -97,6 +97,16 @@ export interface ProblemFacts {
   readonly MEASURE_REF_MISSING: About;
   /** S5: a part has one edge, so its outline cannot be mirrored into itself. */
   readonly MIRROR_OUTLINE_ACROSS_FOLD: About & { readonly partName: string };
+  /**
+   * S4: what a feature is laid on has to be in its own part.
+   *
+   * A stitch line offset from another part's outline lies on that other part,
+   * so the piece it belongs to printed across the board to reach it (Q11).
+   */
+  readonly FOLLOWS_ANOTHER_PART: About & {
+    readonly sourceName: string;
+    readonly otherPartName: string;
+  };
 
   // ——— Interaction (X): refused at a gesture ———
   readonly FEATURE_MISSING: { readonly featureId: FeatureId };
@@ -113,6 +123,14 @@ export interface ProblemFacts {
   /** X3: nothing to take a mirror axis from. */
   readonly MIRROR_NO_AXIS: Record<string, never>;
   /**
+   * X3: a dimension measures the drawing, so it is never a reflected copy.
+   *
+   * A mirror is a derivation, and a dimension has nowhere to hold one: its
+   * source is the two places it measures. Mirroring it would convert it into
+   * something that is neither, which is what X3 forbids.
+   */
+  readonly DIMENSION_NOT_MIRRORED: About;
+  /**
    * X3: a dimension end needs a durable place, and this is not one.
    *
    * Empty space, a point along an edge, a grid position — none of them survive
@@ -120,6 +138,8 @@ export interface ProblemFacts {
    * while quietly going stale (ADR 0010).
    */
   readonly MEASURE_NEEDS_ANCHOR: Record<string, never>;
+  /** X3: a dimension measures one piece; both its ends are on it (Q11). */
+  readonly MEASURE_ACROSS_PARTS: { readonly otherPartName: string };
   /**
    * X3: a fold-tracked counterpart is placed by its fold, not by dragging.
    *

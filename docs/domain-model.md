@@ -747,6 +747,7 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `DERIVATION_INCOMPATIBLE` | structural | S4 | Commands; loader |
 | `PART_ALREADY_HAS_OUTER` | structural | S5 | Commands; loader |
 | `MIRROR_OUTLINE_ACROSS_FOLD` | structural | S5 | Commands |
+| `FOLLOWS_ANOTHER_PART` | structural | S4 | Commands; not the loader, so a file from before the rule opens |
 | `CONTOUR_NOT_CLOSED` | structural | S6 | Drawing modes; loader |
 | `FEATURE_LOCKED` | structural | S7 | Commands |
 | `FEATURE_MISSING` | interaction | X1 | Commands |
@@ -755,7 +756,9 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `MIRROR_WOULD_SCALE` | interaction | X3 | Commands |
 | `MIRROR_PLACED_BY_FOLD` | interaction | X3 | Commands |
 | `MIRROR_NO_AXIS` | interaction | X3 | Commands |
+| `DIMENSION_NOT_MIRRORED` | interaction | X3 | Commands |
 | `MEASURE_NEEDS_ANCHOR` | interaction | X3 | The measure tool |
+| `MEASURE_ACROSS_PARTS` | interaction | X3 | Commands; the measure tool |
 | `NO_TARGET_PART` | interaction | X4 | Drawing modes |
 | `TARGET_SPANS_PARTS` | interaction | X4 | Drawing modes |
 | `TRANSFORM_FLATTENS` | interaction | X9 | Transform tools |

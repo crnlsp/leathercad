@@ -1,7 +1,7 @@
 import type { Project } from '@leathercad/domain';
 import { CANVAS, GROUND, linkTickShape } from '@leathercad/render';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { Icon } from './icons/Icon.js';
 import { FeatureMark } from './icons/marks.js';
@@ -16,14 +16,20 @@ import { Tooltip } from './Tooltip.js';
  * sets them. It teaches the language where the language is used.
  *
  * **Collapsed by default**, as a strip of marks: a key that opened on every
- * launch would cost an experienced maker a click every time, and the choice
- * cannot be remembered yet — `localStorage` stalls a second window, and a
- * remembered preference belongs in `preferences.json` (8.2). Open, each mark
- * gains its name. It floats over the canvas, so opening it never moves the
- * drawing (§9.4).
+ * launch would cost an experienced maker a click every time. Whether it is
+ * open is remembered in `preferences.json` (8.2), so the owner passes it in.
+ * Open, each mark gains its name. It floats over the canvas, so opening it
+ * never moves the drawing (§9.4).
  */
-export function CanvasLegend({ project }: { project: Project }) {
-  const [open, setOpen] = useState(false);
+export function CanvasLegend({
+  project,
+  open,
+  onToggle,
+}: {
+  project: Project;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const entries = useMemo(() => legendEntries(project), [project]);
   if (entries.length === 0) return null;
 
@@ -39,7 +45,7 @@ export function CanvasLegend({ project }: { project: Project }) {
           // The strip's marks are pictures; the name is said here, and the
           // tooltip says what they are.
           aria-label="Legend"
-          onClick={() => setOpen((was) => !was)}
+          onClick={onToggle}
         >
           {open ? (
             <span className="canvas-legend-title">Legend</span>

@@ -6,6 +6,7 @@ import {
   addFeature,
   addPart,
   addStitchHoles,
+  addCutOut,
   addStitchLine,
   deleteFeatures,
   deletePart,
@@ -162,11 +163,30 @@ describe('deletePart', () => {
 
   it('asks when something outside the part depends on it', () => {
     const store = storeWithChain();
+    // A stitch line in the pocket that follows the panel's outline. No command
+    // makes one any more (Q11), but a file from before that rule can hold one,
+    // so the part is added whole, as opening it would.
+    const pocket = shapePart('part-2', 'cut-2', 'Pocket', rectShape({ x: 200, y: 0 }, 60, 40));
     store.dispatch(
-      addPart(shapePart('part-2', 'cut-2', 'Pocket', rectShape({ x: 200, y: 0 }, 60, 40))),
+      addPart({
+        ...pocket,
+        features: [
+          ...pocket.features,
+          {
+            id: 'stitch-2',
+            kind: 'stitch-line',
+            name: 'Stitch line',
+            visible: true,
+            locked: false,
+            source: {
+              kind: 'derived',
+              sourceId: 'cut-1',
+              op: { type: 'offset', distanceMm: 3.5, side: 'inward', run: { kind: 'whole' } },
+            },
+          },
+        ],
+      }),
     );
-    // A stitch line in the pocket that follows the panel's outline.
-    store.dispatch(addStitchLine('part-2', 'stitch-2', 'cut-1', 3.5));
     const before = store.getState().document;
 
     store.dispatch(deletePart('part-1'));
@@ -188,15 +208,27 @@ describe('setSource', () => {
     return store;
   }
 
-  it('points a stitch line at another outline, keeping its inset', () => {
-    const store = storeWithTwoOutlines();
-    store.dispatch(setSource('stitch-1', 'cut-2'));
+  it('points a stitch line at another contour on its piece, keeping its inset', () => {
+    const store = storeWithChain();
+    store.dispatch(
+      addCutOut('part-1', 'window', { kind: 'shape', shape: rectShape({ x: 20, y: 10 }, 30, 20) }),
+    );
+    store.dispatch(setSource('stitch-1', 'window'));
 
     expect(feature(store, 'stitch-1')!.source).toMatchObject({
       kind: 'derived',
-      sourceId: 'cut-2',
+      sourceId: 'window',
       op: { type: 'offset', distanceMm: 3.5 },
     });
+  });
+
+  it("refuses another piece's outline, which would print it with the wrong piece (Q11)", () => {
+    const store = storeWithTwoOutlines();
+    const before = store.getState().document;
+
+    store.dispatch(setSource('stitch-1', 'cut-2'));
+
+    expect(store.getState().document).toBe(before);
   });
 
   it('refuses anything the graph would not allow, changing nothing', () => {

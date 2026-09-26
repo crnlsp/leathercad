@@ -698,6 +698,24 @@ body {
   font: var(--t-body);
 }
 
+/* An action inside a sentence, such as the empty Parts panel's offer of the
+   sample (8.3): reads as the words it is, in the accent. */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tan);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:focus-visible {
+  outline: 1px solid var(--tan);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
 .panel-error {
   max-width: 44ch;
   margin: 0;
@@ -959,6 +977,56 @@ body {
 
 .dialog-note {
   color: var(--text-dim);
+}
+
+/* The keyboard shortcut map (8.2): wider than a question, in columns. */
+.shortcuts-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.shortcuts-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.shortcuts-groups h4 {
+  margin: 0 0 6px;
+  font: var(--t-strong);
+}
+
+.shortcuts-groups dl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.shortcut-row {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.shortcut-row dd {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.shortcut-row kbd {
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+  white-space: nowrap;
+}
+
+.shortcut-or {
+  color: var(--text-mute);
+  font: var(--t-micro);
 }
 
 .dialog-actions {

@@ -1,9 +1,9 @@
 import { DEFAULT_SETTINGS, ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
-import { RectOps } from '@leathercad/geometry';
+import { PathOps, RectOps } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { TILE_OVERLAP_MM, describeTiled, paginate } from './paginate.js';
+import { FOLD_CLEARANCE_MM, TILE_OVERLAP_MM, describeTiled, paginate } from './paginate.js';
 import {
   DEFAULT_PAGE_SETUP,
   PAPER_SIZES,
@@ -27,10 +27,65 @@ function part(id: string, widthMm: number, heightMm: number, name = id): ExportP
         path: { segments: [], closed: true },
       },
     ],
-    // Pagination packs geometry; a caption rides along with its part and does
-    // not affect where the piece goes.
+    // No caption unless a test gives it one: see `captioned`.
     texts: [],
   };
+}
+
+/** The part with a straight fold across it, at `at` along `axis`. */
+function withFold(plain: ExportPart, axis: 'x' | 'y', at: number): ExportPart {
+  const b = plain.boundsMm;
+  const path =
+    axis === 'x'
+      ? PathOps.polyline(
+          [
+            { x: at, y: b.minY },
+            { x: at, y: b.maxY },
+          ],
+          false,
+        )
+      : PathOps.polyline(
+          [
+            { x: b.minX, y: at },
+            { x: b.maxX, y: at },
+          ],
+          false,
+        );
+  return { ...plain, paths: [...plain.paths, { role: 'fold', style: PRINT_STYLES.fold, path }] };
+}
+
+/**
+ * A part whose caption is `captionMm` wide, set above it from its left edge
+ * the way `captionFor` sets one.
+ */
+function captioned(id: string, widthMm: number, heightMm: number, captionMm: number): ExportPart {
+  const plain = part(id, widthMm, heightMm);
+  const box = PathOps.polyline(
+    [
+      { x: 0, y: heightMm + 1 },
+      { x: captionMm, y: heightMm + 1 },
+      { x: captionMm, y: heightMm + 3.5 },
+      { x: 0, y: heightMm + 3.5 },
+    ],
+    true,
+  );
+  return {
+    ...plain,
+    texts: [{ role: 'annotation', source: id, glyphs: [box], sizeMm: 3.5 }],
+  };
+}
+
+/** Everything a placed part prints — geometry and every word — on the sheet. */
+function inkOnSheet(placement: { part: ExportPart; offsetMm: { x: number; y: number } }) {
+  const boxes = [
+    placement.part.boundsMm,
+    ...placement.part.texts.flatMap((text) => text.glyphs.map((g) => PathOps.bbox(g)!)),
+  ];
+  const box = RectOps.unionAll(boxes)!;
+  return RectOps.fromCorners(
+    { x: box.minX + placement.offsetMm.x, y: box.minY + placement.offsetMm.y },
+    { x: box.maxX + placement.offsetMm.x, y: box.maxY + placement.offsetMm.y },
+  );
 }
 
 function scene(parts: ExportPart[]): ExportScene {
@@ -165,6 +220,99 @@ describe('paginate', () => {
     expect(result.pages[0]!.placements[0]!.part.id).toBe('small');
     expect(result.pages.slice(1).every((page) => page.tile?.part.id === 'big')).toBe(true);
     expect(result.pages.map((page) => page.index)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it('keeps a tape join off a fold (Q13)', () => {
+    // A bifold wallet body, 200 × 90 with its fold down the middle: on A4
+    // portrait it tiles 1 × 2, and a centred grid put the join on the fold.
+    const body = withFold(part('wallet', 200, 90), 'x', 100);
+    const tiles = paginate(scene([body]), DEFAULT_PAGE_SETUP).pages.flatMap((p) => p.tile ?? []);
+
+    expect(tiles.map((t) => t.label)).toEqual(['R1 C1', 'R1 C2']);
+    for (const join of tiles.flatMap((t) => t.joinsMm.x)) {
+      expect(Math.abs(join - 100)).toBeGreaterThanOrEqual(FOLD_CLEARANCE_MM - 1e-9);
+    }
+  });
+
+  it('keeps the joins off every straight fold, and still covers the piece, as a property (Q13)', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 200, max: 700 }),
+        fc.integer({ min: 40, max: 500 }),
+        fc.double({ min: 0.1, max: 0.9, noNaN: true }),
+        fc.boolean(),
+        (width, height, at, vertical) => {
+          const plain = part('p', width, height);
+          const fold = vertical ? width * at : height * at;
+          const folded = withFold(plain, vertical ? 'x' : 'y', fold);
+          const tiles = paginate(scene([folded]), DEFAULT_PAGE_SETUP).pages.flatMap(
+            (p) => p.tile ?? [],
+          );
+          const joins = tiles.flatMap((t) => (vertical ? t.joinsMm.x : t.joinsMm.y));
+          const grid = RectOps.unionAll(tiles.map((t) => t.windowMm))!;
+          // Covered whatever happens: moving a join never uncovers the piece.
+          expect(RectOps.containsRect(grid, folded.boundsMm)).toBe(true);
+          // And off the fold whenever the grid has the room to move.
+          const cells = vertical ? tiles[0]!.columns : tiles[0]!.rows;
+          const printable = vertical ? AREA.widthMm : AREA.heightMm;
+          const size = vertical ? width : height + 5;
+          const room = (cells - 1) * (printable - TILE_OVERLAP_MM) + printable - size;
+          if (room >= 2 * FOLD_CLEARANCE_MM + TILE_OVERLAP_MM) {
+            for (const join of joins) {
+              expect(Math.abs(join - fold)).toBeGreaterThanOrEqual(FOLD_CLEARANCE_MM - 1e-9);
+            }
+          }
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
+
+  it('never prints a caption over the next piece (Q12)', () => {
+    // The QA case: a 20 mm keeper with a long name, then a pocket beside it.
+    const result = paginate(
+      scene([captioned('keeper', 20, 90, 80), captioned('pocket', 100, 60, 12)]),
+      DEFAULT_PAGE_SETUP,
+    );
+    const [keeper, pocket] = result.pages[0]!.placements.map(inkOnSheet);
+    expect(RectOps.intersects(keeper!, pocket!)).toBe(false);
+  });
+
+  it('keeps every caption on the paper, as a property (Q12)', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            width: fc.integer({ min: 5, max: 150 }),
+            height: fc.integer({ min: 5, max: 150 }),
+            caption: fc.integer({ min: 5, max: 160 }),
+          }),
+          { minLength: 1, maxLength: 12 },
+        ),
+        fc.constantFrom(...PAPER_NAMES),
+        fc.constantFrom(...ORIENTATIONS),
+        (specs, paper, orientation) => {
+          const setup = pageSetupFor({ ...DEFAULT_SETTINGS, paper, orientation });
+          const area = contentAreaMm(setup);
+          const parts = specs.map((s, i) => captioned(`p${i}`, s.width, s.height, s.caption));
+          for (const page of paginate(scene(parts), setup).pages) {
+            if (page.tile !== undefined) continue;
+            const inks = page.placements.map(inkOnSheet);
+            for (const [i, ink] of inks.entries()) {
+              // A caption no wider than the printable area stays on it.
+              if (RectOps.width(ink) <= area.widthMm) {
+                expect(ink.minX).toBeGreaterThanOrEqual(area.x - 1e-9);
+                expect(ink.maxX).toBeLessThanOrEqual(area.x + area.widthMm + 1e-9);
+              }
+              for (const other of inks.slice(i + 1)) {
+                expect(RectOps.intersects(ink, other)).toBe(false);
+              }
+            }
+          }
+        },
+      ),
+      { numRuns: 300 },
+    );
   });
 
   it('fits more on A3 than on A4', () => {
