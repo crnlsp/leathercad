@@ -1,4 +1,4 @@
-import { EPS_POINT, type Mm } from '@leathercad/core';
+import { assertFinite, EPS_POINT, type Mm } from '@leathercad/core';
 
 import { solveCubic } from '../polynomial.js';
 import * as Seg from '../segment/index.js';
@@ -227,7 +227,39 @@ export function distanceToPath(p: Path, point: Vec2): Mm {
 }
 
 /**
- * Shortest distance from a point to a segment.
+ * The place on a path nearest a point: which segment, how far along it as
+ * `t`, the point itself, and the distance.
+ *
+ * What an editing tool needs to put a new point where the pointer pressed an
+ * edge — `distanceToPath` answers only how far. `null` for a path with no
+ * segments. Where two segments are equally near, the earlier one wins, so
+ * the answer is deterministic.
+ */
+export function closestPointOnPath(
+  p: Path,
+  point: Vec2,
+): { segmentIndex: number; t: number; point: Vec2; distance: Mm } | null {
+  assertFinite(point.x, 'closestPointOnPath point.x');
+  assertFinite(point.y, 'closestPointOnPath point.y');
+
+  let best: { segmentIndex: number; t: number; point: Vec2; distance: Mm } | null = null;
+  for (const [segmentIndex, s] of p.segments.entries()) {
+    const near = closestOnSegment(s, point);
+    const distance = Math.hypot(near.point.x - point.x, near.point.y - point.y);
+    if (best === null || distance < best.distance) {
+      best = { segmentIndex, t: near.t, point: near.point, distance };
+    }
+  }
+  return best;
+}
+
+function distanceToSegment(s: Seg.Segment, point: Vec2): number {
+  const near = closestOnSegment(s, point).point;
+  return Math.hypot(near.x - point.x, near.y - point.y);
+}
+
+/**
+ * The nearest point of a segment, and its parameter.
  *
  * Exact for lines and arcs. Cubics are bracketed by a coarse sweep and then
  * narrowed by ternary search on the squared distance, which is unimodal
@@ -237,33 +269,38 @@ export function distanceToPath(p: Path, point: Vec2): Mm {
  * 8 mm quarter arc leave gaps of 0.2 mm, so the answer carries 0.1 mm of
  * error — larger than a stitch hole.
  */
-function distanceToSegment(s: Seg.Segment, point: Vec2): number {
+function closestOnSegment(s: Seg.Segment, point: Vec2): { t: number; point: Vec2 } {
   switch (s.kind) {
     case 'line': {
       const closest = closestPointOnSegment(point, s.a, s.b);
-      return Math.hypot(closest.x - point.x, closest.y - point.y);
+      const along = { x: s.b.x - s.a.x, y: s.b.y - s.a.y };
+      const lengthSq = along.x * along.x + along.y * along.y;
+      // A degenerate line is its start, which is where `closestPointOnSegment`
+      // puts the answer too.
+      const t =
+        lengthSq <= EPS_POINT * EPS_POINT
+          ? 0
+          : ((closest.x - s.a.x) * along.x + (closest.y - s.a.y) * along.y) / lengthSq;
+      return { t: Math.min(1, Math.max(0, t)), point: closest };
     }
 
     case 'arc': {
-      const toPoint = { x: point.x - s.centre.x, y: point.y - s.centre.y };
-      const radial = Math.hypot(toPoint.x, toPoint.y);
-
-      // Degenerate arc: it is just its centre.
-      if (radial <= EPS_POINT) return Math.abs(s.radius);
+      const angle = Math.atan2(point.y - s.centre.y, point.x - s.centre.x);
 
       // If the point projects onto the swept part of the circle, the nearest
-      // point is radially outward and the distance is exact.
-      if (Seg.ArcOps.containsAngle(s, Math.atan2(toPoint.y, toPoint.x))) {
-        return Math.abs(radial - s.radius);
+      // point is radially outward and exact. Even a hair from the centre has
+      // a direction, and the centre itself — `atan2(0, 0)` is 0 — is equally
+      // near everywhere, so any answer on the arc is right.
+      if (Seg.ArcOps.containsAngle(s, angle)) {
+        return { t: arcParameter(s, angle), point: Seg.pointAt(s, arcParameter(s, angle)) };
       }
 
       // Otherwise it is one of the two endpoints.
       const start = Seg.start(s);
       const end = Seg.end(s);
-      return Math.min(
-        Math.hypot(start.x - point.x, start.y - point.y),
-        Math.hypot(end.x - point.x, end.y - point.y),
-      );
+      const toStart = Math.hypot(start.x - point.x, start.y - point.y);
+      const toEnd = Math.hypot(end.x - point.x, end.y - point.y);
+      return toEnd < toStart ? { t: 1, point: end } : { t: 0, point: start };
     }
 
     case 'cubic': {
@@ -295,7 +332,16 @@ function distanceToSegment(s: Seg.Segment, point: Vec2): number {
         else low = a;
       }
 
-      return Math.sqrt(squaredAt((low + high) / 2));
+      const t = (low + high) / 2;
+      return { t, point: Seg.CubicOps.pointAt(s, t) };
     }
   }
+}
+
+/** How far through an arc's sweep an angle lies, as `t` in `[0, 1]`. */
+function arcParameter(s: Seg.ArcSegment, angle: number): number {
+  let delta = (angle - s.startAngle) % Seg.FULL_TURN;
+  if (s.sweepAngle >= 0 && delta < 0) delta += Seg.FULL_TURN;
+  if (s.sweepAngle < 0 && delta > 0) delta -= Seg.FULL_TURN;
+  return Math.min(1, Math.max(0, delta / s.sweepAngle));
 }

@@ -229,11 +229,18 @@ body {
 .rail.collapsed .tool {
   position: relative;
   justify-content: center;
-  /* 30 px: room for the 20 px icon and its corner badge, and short enough for
-     all eleven tools to fit the rail at the smallest supported window,
-     860 × 600 (§7.2). At 36 px the rail ran over the status bar there. */
-  min-height: 30px;
+  /* 28 px: room for the 20 px icon and its corner badge, and short enough for
+     all twelve tools to fit the rail at the smallest supported window,
+     860 × 600 (§7.2). At 36 px the rail ran over the status bar there, and
+     Edit Points (3.9c) took it 30 px over again at 30. */
+  min-height: 28px;
   padding: 0;
+}
+
+/* Collapsed, the groups are told apart by their rules; the space beside them
+   can be tighter than the headings need. */
+.rail.collapsed .rail-group + .rail-group {
+  margin-top: 8px;
 }
 
 .rail.collapsed .tool kbd {

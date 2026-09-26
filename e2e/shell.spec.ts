@@ -545,7 +545,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
     await expect(window.getByTestId('toggle-parts')).toBeVisible();
     await expect(window.getByTestId('toggle-properties')).toBeVisible();
     await expect(window.getByTestId('tool-rail')).toBeVisible();
-    // All eleven tools fit the collapsed rail here, without scrolling. At
+    // All twelve tools fit the collapsed rail here, without scrolling. At
     // 36 px rows (F.6) it ran over the status bar and hid its buttons.
     const rail = await window
       .getByTestId('tool-rail')
@@ -2464,5 +2464,74 @@ test('a dimension is listed when what it measures is deleted, and cannot be froz
 
     await dialog.getByTestId('delete-all').click();
     await expect(window.getByTestId('feature-count')).toHaveText('0');
+  });
+});
+
+test('Edit Points moves, adds and removes the points of a drawn outline (3.9c)', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const at = (x: number, y: number) => ({ x: box!.x + x, y: box!.y + y });
+    const click = async (x: number, y: number) => {
+      await window.mouse.move(at(x, y).x, at(x, y).y);
+      await window.mouse.down();
+      await window.mouse.up();
+    };
+
+    // A drawn triangle, closed on its first point: an outline made of points.
+    await window.getByTestId('tool-polyline').click();
+    await click(250, 200);
+    await click(500, 200);
+    await click(500, 400);
+    await click(250, 200);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await window.getByTestId('parts-list').getByText('Outline').click();
+
+    const panel = window.getByTestId('property-panel');
+    const area = panel.locator('.readout', { hasText: 'Area' });
+    const before = await area.textContent();
+
+    // N, the key the rail and the menu show.
+    await window.keyboard.press('n');
+    await expect(window.getByTestId('tool-points')).toHaveClass(/active/);
+    await expect(window.getByTestId('tool-how-to')).toContainText('Drag a point');
+
+    // Drag the right-angle corner out: the outline grows.
+    await window.mouse.move(at(500, 400).x, at(500, 400).y);
+    await window.mouse.down();
+    await window.mouse.move(at(560, 460).x, at(560, 460).y, { steps: 6 });
+    await window.mouse.up();
+    await expect(area).not.toHaveText(before!);
+
+    // One step to undo the whole drag.
+    await window.getByTestId('undo').click();
+    await expect(area).toHaveText(before!);
+
+    // Press the top edge to add a point there, pull it up, then remove it
+    // again with Delete: the triangle is back.
+    await window.mouse.move(at(375, 200).x, at(375, 200).y);
+    await window.mouse.down();
+    await window.mouse.move(at(375, 150).x, at(375, 150).y, { steps: 6 });
+    await window.mouse.up();
+    await expect(area).not.toHaveText(before!);
+    await window.keyboard.press('Delete');
+    await expect(area).toHaveText(before!);
+    // Delete took the point, not the outline.
+    await expect(window.getByTestId('feature-count')).toHaveText('1');
+  });
+});
+
+test('Edit Points says a rectangle is changed by its measurements (3.9c)', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 200, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 400, box!.y + 320, { steps: 5 });
+    await window.mouse.up();
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+
+    await window.getByTestId('tool-points').click();
+    await window.mouse.move(box!.x + 300, box!.y + 250);
+    await expect(window.getByTestId('canvas-notice')).toContainText('not a drawn path');
   });
 });

@@ -56,6 +56,27 @@ export function pathPointRefusal(project: Project, edit: PathPointEdit): Problem
 }
 
 /**
+ * Why this feature's points cannot be edited at all, or `null` when they can.
+ *
+ * Asked before any particular edit — it is what the Edit Points tool says
+ * while a shape or a locked outline is selected (3.9c) — and it is the first
+ * question every edit asks, so the two cannot disagree.
+ */
+export function pointEditingRefusal(project: Project, featureId: FeatureId): Problem | null {
+  const found = findFeature(project, featureId);
+  if (found === null) return problem('FEATURE_MISSING', { featureId });
+
+  const locked = lockRefusal(project, [featureId]);
+  if (locked !== null) return locked;
+
+  const { feature } = found;
+  if (feature.kind === 'text-label' || feature.source.kind !== 'path') {
+    return problem('NOT_A_DRAWN_PATH', { featureId: feature.id, featureName: feature.name });
+  }
+  return null;
+}
+
+/**
  * Moves, adds or removes a point of a drawn path, in one undoable step.
  *
  * Everything attached to the path's corners — a stitch run between two of
@@ -80,14 +101,12 @@ export function editPathPoint(edit: PathPointEdit): Command {
 type Plan = { readonly project: Project } | { readonly problem: Problem };
 
 function plan(project: Project, edit: PathPointEdit): Plan {
-  const found = findFeature(project, edit.featureId);
-  if (found === null) return { problem: problem('FEATURE_MISSING', { featureId: edit.featureId }) };
+  const refused = pointEditingRefusal(project, edit.featureId);
+  if (refused !== null) return { problem: refused };
 
-  const locked = lockRefusal(project, [edit.featureId]);
-  if (locked !== null) return { problem: locked };
-
-  const { feature } = found;
+  const { feature } = findFeature(project, edit.featureId)!;
   const about = { featureId: feature.id, featureName: feature.name };
+  // Narrowed again for the compiler; `pointEditingRefusal` has already said so.
   if (feature.kind === 'text-label' || feature.source.kind !== 'path') {
     return { problem: problem('NOT_A_DRAWN_PATH', about) };
   }

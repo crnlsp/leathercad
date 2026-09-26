@@ -22,7 +22,13 @@ export type { Orientation } from './area.js';
 export { area, isCounterClockwise, orientation, signedArea, withOrientation } from './area.js';
 
 export type { FillRule } from './contains.js';
-export { containsPoint, distanceToPath, isPointOnPath, windingNumber } from './contains.js';
+export {
+  closestPointOnPath,
+  containsPoint,
+  distanceToPath,
+  isPointOnPath,
+  windingNumber,
+} from './contains.js';
 
 export {
   flattenPath,

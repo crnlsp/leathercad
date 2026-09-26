@@ -27,6 +27,7 @@ import {
   createLineTool,
   createPolylineTool,
   createRectangleTool,
+  createEditPointsTool,
   createRotateTool,
   createMeasureTool,
   createScaleTool,
@@ -262,6 +263,7 @@ export function CanvasHost({
       // Linear only in 4.10a; the kind is fixed rather than chosen, because a
       // mode that asked would be a mode with more than one result (X4).
       createMeasureTool(nextId, () => 'aligned'),
+      createEditPointsTool(),
       createRotateTool(),
       createScaleTool(),
     ],

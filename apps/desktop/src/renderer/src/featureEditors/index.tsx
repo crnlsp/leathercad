@@ -105,8 +105,11 @@ export function FeatureEditor({
   if (own !== null) return own;
 
   return (
+    // Said in the maker's words, with the key the rail shows (3.9c): the
+    // points are the parameters of a drawn path.
     <p className="panel-empty">
-      Freehand geometry has no parameters to edit yet — vertex editing is slice 3.9.
+      Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit
+      Points (N).
     </p>
   );
 }
