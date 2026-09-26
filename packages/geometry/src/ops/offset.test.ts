@@ -157,6 +157,19 @@ describe('offsetPath', () => {
     });
   });
 
+  it('regression: out and back keeps a corner rounded by a hair (Q25)', () => {
+    // fast-check found this twice (LEATHERCAD_FC_SEED=42, and 1170594252): a
+    // corner radius just over EPS_POINT survives the round trip as a tiny
+    // arc, and the sides either side of it were read as crossing, because the
+    // crossing test's slack was a parameter — 2e-7 mm on a 200 mm side.
+    const p = roundedRect(vec(0, 0), 200, 200, 1.5e-7);
+    const [out] = offsetPath(p, -0.5, ROUND);
+    const [back] = offsetPath(out!, 0.5, ROUND);
+
+    expect(back).toBeDefined();
+    expect(area(back!)).toBeCloseTo(area(p), 4);
+  });
+
   describe('properties', () => {
     const arbConvex = fc
       .tuple(

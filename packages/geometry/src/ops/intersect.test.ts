@@ -107,6 +107,27 @@ describe('intersectSegments', () => {
       }
     });
 
+    it('measures how far past an end a crossing may be in millimetres (Q25)', () => {
+      // Two sides meeting at a right angle, stopped short of the corner. The
+      // lines would cross 1.5e-7 mm past each end — more than EPS_POINT, so
+      // they do not touch, however long they are. As a parameter, the slack
+      // was 2e-7 mm on a 200 mm side and they did.
+      for (const lengthMm of [1, 100, 200, 2000]) {
+        const gap = 1.5e-7;
+        const across = line(vec(-lengthMm, 0), vec(-gap, 0));
+        const up = line(vec(0, gap), vec(0, lengthMm));
+        expect(intersectSegments(across, up)).toEqual([]);
+
+        // Within EPS_POINT they are one point, at every length.
+        const near = 5e-8;
+        const touching = intersectSegments(
+          line(vec(-lengthMm, 0), vec(-near, 0)),
+          line(vec(0, near), vec(0, lengthMm)),
+        );
+        expect(touching).toHaveLength(1);
+      }
+    });
+
     it('does not invent a crossing between near-parallel lines that miss', () => {
       // The determinant is tiny but the segments genuinely do not meet.
       const a = line(vec(0, 0), vec(1000, 0));

@@ -141,6 +141,23 @@ export interface ProblemFacts {
   /** X3: a dimension measures one piece; both its ends are on it (Q11). */
   readonly MEASURE_ACROSS_PARTS: { readonly otherPartName: string };
   /**
+   * X1: only a drawn path has points to move, add or remove (3.9b). A shape is
+   * edited by its measurements, and a derived feature follows its source.
+   */
+  readonly NOT_A_DRAWN_PATH: About;
+  /**
+   * X1: a point edit that would leave too few points — three for a closed
+   * path, two for an open one — or a side of no length (3.9b).
+   */
+  readonly POINT_EDIT_DEGENERATE: About;
+  /**
+   * X3: a stitch run or a dimension is attached to a corner the point edit
+   * would take away — by removing its point, splitting its rounding, or
+   * straightening it. Moving the attachment to another corner is the silent
+   * wrongness ADR 0010 exists to prevent, so the edit is refused (3.9b).
+   */
+  readonly CORNER_IN_USE: About & { readonly usedByName: string };
+  /**
    * X3: a fold-tracked counterpart is placed by its fold, not by dragging.
    *
    * The general rule this is the first instance of: dragging a derived, linked

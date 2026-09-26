@@ -218,9 +218,12 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
 - **Never freezable.** Deleting what it measures offers no "keep it": a frozen dimension is a number
   that no longer means anything, which is the stale label this feature exists to replace.
 - **Durability.** An anchor on a parametric shape survives every ordinary edit. An anchor on a *drawn
-  path* survives move, rotate and scale but **not vertex editing**, which renumbers corners — ADR 0010
-  point 5's open item, cleared by slice 3.9. That is a property of anchors, not of measurements, and
-  the implementation deliberately does not hide it.
+  path* survives move, rotate and scale, and since 3.9b **point editing** too: moving, adding or
+  removing a point renumbers the path's corners, and the edit renumbers every run and dimension
+  attached to them — on the path or on anything derived from it — in the same undoable step. An edit
+  that would take an attached corner away (removing its point, splitting its rounding, straightening
+  it) is refused with `CORNER_IN_USE` rather than letting the attachment slide to a neighbour. See
+  ADR 0010, amended.
 
 **Later:** `radial`, and with it `centre` references; `extent` references, which are the least durable
 kind because they follow evaluated bounds rather than a place; angular measurements.
@@ -752,6 +755,9 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `FEATURE_LOCKED` | structural | S7 | Commands |
 | `FEATURE_MISSING` | interaction | X1 | Commands |
 | `NOT_DERIVED` | interaction | X1 | Commands |
+| `NOT_A_DRAWN_PATH` | interaction | X1 | Point-editing commands |
+| `POINT_EDIT_DEGENERATE` | interaction | X1 | Point-editing commands |
+| `CORNER_IN_USE` | interaction | X3 | Point-editing commands |
 | `DERIVED_MOVED_ALONE` | interaction | X3 | Commands |
 | `MIRROR_WOULD_SCALE` | interaction | X3 | Commands |
 | `MIRROR_PLACED_BY_FOLD` | interaction | X3 | Commands |

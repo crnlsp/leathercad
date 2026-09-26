@@ -259,6 +259,28 @@ Rounded rectangles with per-corner radii are the workhorse of leathercraft, so `
 deserves care: it must clamp radii that exceed half the shorter side, handle zero radii by emitting
 no arc, and produce line-arc-line-arc-… in a consistent winding.
 
+### 4.1 Editing a drawn path's points (3.9b)
+
+```ts
+movePathVertex(p, index, to): PathEdit | null;
+insertPathVertex(p, segmentIndex, t): (PathEdit & { inserted: number }) | null;
+removePathVertex(p, index): PathEdit | null;
+
+interface PathEdit { path: Path; vertexMap: (number | null)[]; segmentMap: (number | null)[] }
+```
+
+Point `i` is where segment `i` starts, as `vertices` numbers them. Moving a point carries both
+segments that meet there: a line's end moves, an arc keeps its **sweep** and is re-hung between its
+new ends (`arcFromChord`), and a cubic's handle moves with the point. Inserting splits a segment
+where it already runs, so the outline does not change. Removing joins the two sides at the point
+with one straight side, and at an end of an open path drops the end side. Each returns `null`
+rather than a degenerate path: too few points left (three closed, two open), a side of no length,
+or a whole-circle arc with no second end.
+
+The maps say which old point and segment became which new one — `null` for one that is gone, or a
+segment that was split or merged. They are what lets the domain follow a corner through an edit
+(ADR 0010), so they come from the op that made the edit, never from looking for the nearest point.
+
 ## 5. Flattening and arc length
 
 ### 5.1 Flattening

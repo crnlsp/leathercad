@@ -34,6 +34,9 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
 
   FEATURE_MISSING: { featureId: 'f-1' },
   NOT_DERIVED: named,
+  NOT_A_DRAWN_PATH: named,
+  POINT_EDIT_DEGENERATE: named,
+  CORNER_IN_USE: { ...named, usedByName: 'Stitch line' },
   DERIVED_MOVED_ALONE: { ...named, rootId: 'f-2', rootName: 'Outline' },
   MIRROR_WOULD_SCALE: { ...named, sourceName: 'Outline' },
   MIRROR_NO_AXIS: {},
