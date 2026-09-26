@@ -52,6 +52,8 @@ const platformBridge = {
 
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),
 
+  setPaperMenu: (choices: unknown): Promise<void> => ipcRenderer.invoke(IPC.setPaperMenu, choices),
+
   onOpenFile: (listener: (path: string) => void): (() => void) => {
     const handler = (_event: unknown, path: string): void => listener(path);
     ipcRenderer.on(IPC.openFile, handler);

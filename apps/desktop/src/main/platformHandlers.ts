@@ -3,9 +3,11 @@ import { join } from 'node:path';
 
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
+import type { PaperMenuChoice } from '@leathercad/platform';
 
 import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
+import { validPaperChoices } from './menu.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
 import type { PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
@@ -39,6 +41,8 @@ export function registerPlatformHandlers(
   sampleProjectPath: string,
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
+  /** The Paper menu's choices changed (8.4b), already validated. */
+  onPaperChoices: (choices: readonly PaperMenuChoice[]) => void,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -110,6 +114,9 @@ export function registerPlatformHandlers(
   );
 
   ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
+  ipcMain.handle(IPC.setPaperMenu, (_event, choices: unknown) => {
+    onPaperChoices(validPaperChoices(choices));
+  });
 
   // Preferences (8.2). The renderer names a change, never the file.
   ipcMain.handle(IPC.getPreferences, () => preferences.preferences);

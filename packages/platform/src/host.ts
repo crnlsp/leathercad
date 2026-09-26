@@ -125,6 +125,23 @@ export interface PlatformHost {
    * hands over later (macOS's *open-file*) comes through `onOpenFile`.
    */
   takeLaunchFile(): Promise<string | null>;
+
+  /**
+   * What the application menu's *Paper* menu lists (slice 8.4b): the same
+   * choices as the paper list beside Export PDF, worded the same way, the
+   * current one checked. The renderer knows the pattern and so the words;
+   * the menu belongs to the operating system, so it is told.
+   */
+  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void>;
+}
+
+/** One paper and orientation, as the Paper menu shows it. */
+export interface PaperMenuChoice {
+  /** `A4 portrait`: what choosing it sends back, as `paper:A4 portrait`. */
+  readonly value: string;
+  /** `3 sheets of A4, portrait (Strap taped)`. */
+  readonly label: string;
+  readonly checked: boolean;
 }
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
@@ -153,7 +170,14 @@ export type MenuAction =
   | 'view-design'
   | 'view-sheets'
   | 'shortcuts'
-  | 'open-sample';
+  | 'open-sample'
+  | 'zoom-in'
+  | 'zoom-out'
+  | 'zoom-fit'
+  /** A tool from the Tools menu, by its id (8.4b). */
+  | `tool:${string}`
+  /** A paper from the Paper menu: `paper:A4 landscape` (8.4b). */
+  | `paper:${string}`;
 
 /** A recovery copy found at startup. */
 export interface RecoveredCopy {

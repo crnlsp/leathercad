@@ -2,6 +2,7 @@ import {
   DEFAULT_PREFERENCES,
   type MenuAction,
   type OpenDialogOptions,
+  type PaperMenuChoice,
   type PlatformHost,
   type Preferences,
   type RecoveredCopy,
@@ -163,5 +164,13 @@ export class InMemoryPlatformHost implements PlatformHost {
     const file = this.launchFile;
     this.launchFile = null;
     return Promise.resolve(file);
+  }
+
+  /** The Paper menu as the app last described it. */
+  paperMenu: readonly PaperMenuChoice[] = [];
+
+  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void> {
+    this.paperMenu = choices;
+    return Promise.resolve();
   }
 }

@@ -48,6 +48,9 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
     shortcuts: [
       { keys: ['CmdOrCtrl+1'], does: 'Design: the board you draw on' },
       { keys: ['CmdOrCtrl+2'], does: 'Sheets: the paper it prints on' },
+      { keys: ['CmdOrCtrl+='], does: 'Zoom in' },
+      { keys: ['CmdOrCtrl+-'], does: 'Zoom out' },
+      { keys: ['CmdOrCtrl+0'], does: 'Fit the pattern in the window' },
       { keys: ['Scroll'], does: 'Zoom about the pointer' },
       { keys: ['Middle-drag', 'Alt+drag'], does: 'Pan' },
       { keys: ['CmdOrCtrl+/', '?'], does: 'This list' },

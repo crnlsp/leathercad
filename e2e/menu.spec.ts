@@ -57,7 +57,7 @@ test('the menu is the app’s own, and its items do what their keys do', async (
     const top = await app.evaluate(({ Menu }) =>
       Menu.getApplicationMenu()?.items.map((entry) => entry.label),
     );
-    expect(top).toEqual(['File', 'Edit', 'View', 'Help']);
+    expect(top).toEqual(['File', 'Edit', 'View', 'Tools', 'Paper', 'Help']);
 
     await drawAPanel(window);
 
@@ -101,6 +101,61 @@ test('Help › Third-Party Notices shows the licences of what the app ships (8.6
       expect(text).toContain(name);
     }
     expect(text).toContain('SIL OPEN FONT LICENSE');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('Tools, zoom and the paper work from the menu as from the window (8.4b)', async () => {
+  const { app, window } = await launch();
+  try {
+    // A tool from the menu is the tool its key chooses.
+    await choose(app, 'Tools', 'Circle');
+    await expect(window.getByTestId('tool-circle')).toHaveClass(/active/);
+    await choose(app, 'Tools', 'Rectangle');
+    await drawAPanel(window);
+
+    // Zoom changes which millimetre is under a fixed point off the centre, and
+    // fitting brings it back.
+    await choose(app, 'Tools', 'Select');
+    const board = (await window.getByTestId('editor-canvas').boundingBox())!;
+    const scale = async (): Promise<string> => {
+      await window.mouse.move(board.x + 60, board.y + 60);
+      await window.mouse.move(board.x + 61, board.y + 61);
+      return (await window.getByTestId('cursor-readout').textContent()) ?? '';
+    };
+    await choose(app, 'View', 'Fit to Pattern');
+    const fitted = await scale();
+    await choose(app, 'View', 'Zoom In');
+    await expect.poll(scale).not.toBe(fitted);
+    await choose(app, 'View', 'Fit to Pattern');
+    await expect.poll(scale).toBe(fitted);
+    // The keys the menu shows do the same.
+    await window.keyboard.press('Control+Equal');
+    await expect.poll(scale).not.toBe(fitted);
+    await window.keyboard.press('Control+0');
+    await expect.poll(scale).toBe(fitted);
+
+    // The Paper menu says what the paper list says, and choosing from it is
+    // the same one undoable edit.
+    const paperItems = () =>
+      app.evaluate(
+        ({ Menu }) =>
+          Menu.getApplicationMenu()
+            ?.items.find((entry) => entry.label === 'Paper')
+            ?.submenu?.items.map((entry) => ({ label: entry.label, checked: entry.checked })) ?? [],
+      );
+    await expect
+      .poll(async () => (await paperItems()).find((p) => p.checked)?.label)
+      .toBe(await window.getByTestId('paper').locator('option:checked').textContent());
+    const landscape = (await paperItems()).find((p) => p.label.includes('A4, landscape'))!;
+    await choose(app, 'Paper', landscape.label);
+    await expect(window.getByTestId('paper')).toHaveValue('A4 landscape');
+    await expect
+      .poll(async () => (await paperItems()).find((p) => p.checked)?.label)
+      .toBe(landscape.label);
+    await choose(app, 'Edit', 'Undo');
+    await expect(window.getByTestId('paper')).toHaveValue('A4 portrait');
   } finally {
     await closeApp(app);
   }
