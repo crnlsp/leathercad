@@ -162,3 +162,7 @@ something in this file or in `docs/`, update it in the same commit.
 - Do not add a Clipper binding. `pnpm depcruise` refuses one.
 - Do not claim print accuracy is verified without a physical measurement recorded in
   `docs/print-verification-log.md`.
+- Do not put private data in anything that leaves the machine — commits, pull requests, comments,
+  docs, fixtures, screenshots. That means no `claude.ai/code/session_…` links, email addresses,
+  home-directory paths, hostnames, or tokens. A `Co-Authored-By` trailer or a "Generated with
+  Claude Code" line is fine.
