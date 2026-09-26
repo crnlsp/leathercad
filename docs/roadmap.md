@@ -67,8 +67,13 @@ suggested order of work.
   **Not verified by hand yet:** the Flatpak could not be built where it was written (Flathub was
   unreachable), so its first install on a real desktop is still to do, and so is a double-click on
   each platform — add both to the release checklist's manual pass.
-- ☐ **8.4b The rest of the native menu.** A Draw menu, zoom, and the paper, beyond the View menu's
-  *Design / Sheets*.
+- ✅ **8.4b The rest of the native menu.** *Tools* (every tool with its key, grouped as the rail
+  groups them — "Tools" rather than "Draw", since Select, Rotate and Scale draw nothing); *View →
+  Zoom In, Zoom Out, Fit to Pattern* (Ctrl+=, Ctrl+−, Ctrl+0, also in the window and the shortcut
+  map); and *Paper*, which lists the paper list's own choices in its own words with the current
+  one checked. The renderer sends the list when it changes and the main process validates it and
+  rebuilds the menu; choosing one is the same single undoable edit as the list. Q19 turned out to be
+  7.4a's already.
 
 ### Drawing and editing
 
@@ -137,7 +142,7 @@ alongside the 8.x slice it is nearest to, one pull request per slice.
 | **Q16** | (S2) **Save race**: the saved document is recorded after the write, from the store, not from the bytes written, so an edit landing during a slow write would be marked saved | P3 | ✅ Fixed with 8.2: the document marked saved is the one the bytes were made from |
 | **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | P3 · investigate | Physical prints first (R1), then move it inside the printable area if a printer clips it |
 | **Q18** | (S4) Export suggests *Wallet v1.pdf* for a project named *Wallet v1.2*: the name is cut at its last dot | P3 | ✅ Fixed with 8.2: only a trailing `.lcp` is taken off |
-| **Q19** | (S5) The paper menu label ignores orientation and implies the whole sheet is printable | P3 | With 8.4b, which puts the paper in the native menu |
+| **Q19** | (S5) The paper menu label ignores orientation and implies the whole sheet is printable | P3 | ✅ Already fixed by 7.4a, found checking it in 8.4b: the list reads *1 sheet of A4, landscape*, and its tooltip gives the printable area. The native Paper menu uses the same words |
 | **Q20** | (S6) Hidden parts, label-only parts and parts with a hidden outline are left out of the PDF without a notice | intentional | The Sheets spec's *Not printed* labels |
 | **Q21** | (S7) *Cut 2* on a mirrored pair does not say to flip the template for the second piece | deferred | The Sheets spec §11 |
 | **Q22** | (S8) Saving rounds the mirror-line angle to six decimals, so a reopened document differs in memory by ≤ 0.0003 mm per metre | negligible | Recorded in 4.8a; nothing to do |

@@ -20,6 +20,7 @@ export type {
   SaveDialogOptions,
   FileFilter,
   MenuAction,
+  PaperMenuChoice,
   Preferences,
   RecoveredCopy,
 } from './host.js';

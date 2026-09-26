@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import { BrowserWindow, Menu, app, dialog, shell } from 'electron';
 import log from 'electron-log/main';
+import type { PaperMenuChoice } from '@leathercad/platform';
 
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
 import windowIcon from '../../build/icon.png?asset';
@@ -43,6 +44,9 @@ const grants = new PathGrants();
 let preferences: PreferencesStore;
 
 let mainWindow: BrowserWindow | null = null;
+
+/** The Paper menu as the renderer last described it (8.4b). */
+let paperChoices: readonly PaperMenuChoice[] = [];
 
 /**
  * A project the operating system asked this launch to open (8.5): a `.lcp`
@@ -175,6 +179,7 @@ function buildMenu(): void {
         recentFiles: preferences.recentFiles,
         home: app.getPath('home'),
         openRecent: (path) => void openRecent(path),
+        paperChoices,
         clearRecent: () => {
           void preferences.clearRecent();
           app.clearRecentDocuments();
@@ -227,6 +232,13 @@ app.whenReady().then(() => {
       const file = launchFile;
       launchFile = null;
       return file;
+    },
+    (choices) => {
+      // Rebuilt only when it says something new: the renderer sends the list
+      // after every edit, and most edits change no sheet count.
+      if (JSON.stringify(choices) === JSON.stringify(paperChoices)) return;
+      paperChoices = choices;
+      buildMenu();
     },
   );
 

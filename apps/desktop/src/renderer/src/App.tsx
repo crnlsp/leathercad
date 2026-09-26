@@ -6,6 +6,7 @@ import {
   duplicatePart,
   emptyDocument,
   planDelete,
+  setPageSetup,
   type DeleteResolution,
 } from '@leathercad/document';
 import {
@@ -15,6 +16,8 @@ import {
   diagnosticTarget,
   evaluate,
   lockRefusal,
+  ORIENTATIONS,
+  PAPER_NAMES,
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
@@ -29,7 +32,8 @@ import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile, type ExportReport } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
-import { printStatusFor } from './sheets.js';
+import { paperOptionsFor, printStatusFor } from './sheets.js';
+import { describeChoice } from './SheetIndicator.js';
 import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -48,6 +52,9 @@ import { useMediaQuery } from './useMediaQuery.js';
 function fileName(path: string): string {
   return path.split('/').pop() ?? path;
 }
+
+/** How far one step of View › Zoom In or Zoom Out goes (8.4b). */
+const ZOOM_STEP = 1.25;
 
 export function App() {
   const [version, setVersion] = useState<string | null>(null);
@@ -152,6 +159,10 @@ export function App() {
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [partsOpen, setPartsOpen] = useState(false);
 
+  // The canvas owns the viewport; this is the only handle on it. Anyone may
+  // ask it to show a rectangle, zoom about its centre, or fit the pattern.
+  const canvasRef = useRef<CanvasHandle>(null);
+
   const nextId = useMemo(() => createIdFactory(systemIdSource), []);
   const store = useMemo(() => new DocumentStore(emptyDocument(nextId(), 'Untitled')), [nextId]);
 
@@ -233,6 +244,21 @@ export function App() {
       .catch(() => undefined);
   }, [openPath]);
 
+  // The Paper menu (8.4b) lists what the paper list lists, in its words, with
+  // the current choice checked; the main process rebuilds it when it changes.
+  const project = storeState.document.project;
+  useEffect(() => {
+    const { paper, orientation } = project.settings;
+    const choices = paperOptionsFor(project).map((option) => ({
+      value: `${option.paper} ${option.orientation}`,
+      label: describeChoice(option.plan),
+      checked: option.paper === paper && option.orientation === orientation,
+    }));
+    void getPlatformHost()
+      .setPaperMenu(choices)
+      .catch(() => undefined);
+  }, [project]);
+
   // File › Open Recent (8.2): the main process chose and granted the path;
   // unsaved work is asked about exactly as for Open.
   useEffect(
@@ -309,6 +335,16 @@ export function App() {
         } else if (key === '/') {
           event.preventDefault();
           setShortcutsOpen(true);
+        } else if (key === '=' || key === '+') {
+          // The view (8.4b), as View › Zoom In, Zoom Out and Fit to Pattern.
+          event.preventDefault();
+          canvasRef.current?.zoom(ZOOM_STEP);
+        } else if (key === '-') {
+          event.preventDefault();
+          canvasRef.current?.zoom(1 / ZOOM_STEP);
+        } else if (key === '0') {
+          event.preventDefault();
+          canvasRef.current?.fit();
         }
         return;
       }
@@ -368,16 +404,35 @@ export function App() {
           case 'open-sample':
             void openSample();
             break;
+          case 'zoom-in':
+            canvasRef.current?.zoom(ZOOM_STEP);
+            break;
+          case 'zoom-out':
+            canvasRef.current?.zoom(1 / ZOOM_STEP);
+            break;
+          case 'zoom-fit':
+            canvasRef.current?.fit();
+            break;
+          default:
+            // Tools › (8.4b): the same as the tool's key.
+            if (action.startsWith('tool:')) {
+              const id = action.slice('tool:'.length);
+              if (ALL_TOOLS.some((tool) => tool.id === id)) chooseTool(id);
+            } else if (action.startsWith('paper:')) {
+              // Paper › (8.4b): the same single edit as the paper list.
+              const [name, turn] = action.slice('paper:'.length).split(' ');
+              const paper = PAPER_NAMES.find((candidate) => candidate === name);
+              const orientation = ORIENTATIONS.find((candidate) => candidate === turn);
+              if (paper !== undefined && orientation !== undefined) {
+                store.dispatch(setPageSetup(paper, orientation));
+              }
+            }
         }
       }),
-    [file, exportPdf, newProject, openProject, openSample, store, showView],
+    [file, exportPdf, newProject, openProject, openSample, store, showView, chooseTool],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
-
-  // The canvas owns the viewport; this is the only handle on it, and the only
-  // thing anyone asks it for is "show me this rectangle".
-  const canvasRef = useRef<CanvasHandle>(null);
 
   /**
    * Going to a problem: **select the subject, frame the evidence.**

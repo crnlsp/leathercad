@@ -2,7 +2,8 @@ import type { MenuAction } from '@leathercad/platform';
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 
-import { menuTemplate, recentLabel } from './menu.js';
+import { TOOL_GROUPS } from '../renderer/src/tools.js';
+import { menuTemplate, recentLabel, validPaperChoices } from './menu.js';
 
 /**
  * The production menu (slice 8.5a).
@@ -76,6 +77,11 @@ describe('the application menu', () => {
     ['Design', 'view-design', 'CmdOrCtrl+1'],
     ['Sheets', 'view-sheets', 'CmdOrCtrl+2'],
     ['Keyboard Shortcuts', 'shortcuts', 'CmdOrCtrl+/'],
+    ['Zoom In', 'zoom-in', 'CmdOrCtrl+='],
+    ['Zoom Out', 'zoom-out', 'CmdOrCtrl+-'],
+    ['Fit to Pattern', 'zoom-fit', 'CmdOrCtrl+0'],
+    ['Rectangle', 'tool:rectangle', 'R'],
+    ['Measure', 'tool:measure', 'M'],
   ] as const)('%s asks the renderer for %s, and shows %s', (label, action, accelerator) => {
     const { template, send } = build();
     const entry = item(template, label);
@@ -97,7 +103,14 @@ describe('the application menu', () => {
     expect(mac[0]!.role).toBe('appMenu');
 
     const other = build({ isMac: false }).template;
-    expect(other.map((entry) => entry.label)).toEqual(['File', 'Edit', 'View', 'Help']);
+    expect(other.map((entry) => entry.label)).toEqual([
+      'File',
+      'Edit',
+      'View',
+      'Tools',
+      'Paper',
+      'Help',
+    ]);
     const file = other[0]!.submenu as MenuItemConstructorOptions[];
     expect(file.at(-1)!.role).toBe('quit');
     expect(all(other).map((entry) => entry.role)).toContain('about');
@@ -151,5 +164,60 @@ describe('File › Open Recent (8.2)', () => {
 
   it('shortens only the home directory itself, not a sibling that starts the same', () => {
     expect(recentLabel('/home/maker2/a.lcp', '/home/maker')).toBe('/home/maker2/a.lcp');
+  });
+});
+
+describe('Tools and Paper (8.4b)', () => {
+  it('lists every tool, grouped as the rail groups them', () => {
+    const tools = item(build().template, 'Tools').submenu as MenuItemConstructorOptions[];
+    const labels = tools.filter((entry) => entry.type !== 'separator').map((e) => e.label);
+    expect(labels).toEqual(TOOL_GROUPS.flatMap((group) => group.tools).map((tool) => tool.label));
+    expect(tools.filter((entry) => entry.type === 'separator')).toHaveLength(
+      TOOL_GROUPS.filter((group) => group.tools.length > 0).length - 1,
+    );
+  });
+
+  it("lists the papers in the paper list's own words, the current one checked", () => {
+    const send = vi.fn<(action: MenuAction) => void>();
+    const template = menuTemplate({
+      isMac: false,
+      packaged: true,
+      send,
+      openLogFolder: () => undefined,
+      openNotices: () => undefined,
+      paperChoices: [
+        { value: 'A4 portrait', label: '3 sheets of A4, portrait (Strap taped)', checked: true },
+        { value: 'A4 landscape', label: '1 sheet of A4, landscape', checked: false },
+      ],
+    });
+    const paper = item(template, 'Paper').submenu as MenuItemConstructorOptions[];
+
+    expect(paper.map((entry) => [entry.label, entry.type, entry.checked])).toEqual([
+      ['3 sheets of A4, portrait (Strap taped)', 'radio', true],
+      ['1 sheet of A4, landscape', 'radio', false],
+    ]);
+    paper[1]!.click?.({} as never, undefined, {} as never);
+    expect(send).toHaveBeenCalledWith('paper:A4 landscape');
+  });
+
+  it('says so before the renderer has described the paper', () => {
+    expect(item(build().template, 'No paper to choose yet').enabled).toBe(false);
+  });
+
+  it('takes only well-formed choices from the renderer', () => {
+    expect(
+      validPaperChoices([
+        { value: 'A4 portrait', label: 'One', checked: true },
+        { value: 'A4 sideways', label: 'Two', checked: false },
+        { value: 'A4 landscape', label: '', checked: false },
+        { value: 'A3 landscape', label: 'x'.repeat(201), checked: false },
+        'A5 portrait',
+        { value: 'Letter landscape', label: 'Three', checked: 'yes' },
+      ]),
+    ).toEqual([
+      { value: 'A4 portrait', label: 'One', checked: true },
+      { value: 'Letter landscape', label: 'Three', checked: false },
+    ]);
+    expect(validPaperChoices('A4')).toEqual([]);
   });
 });

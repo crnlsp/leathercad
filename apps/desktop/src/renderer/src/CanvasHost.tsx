@@ -79,6 +79,10 @@ export type CanvasView = 'design' | 'sheets';
 export interface CanvasHandle {
   /** Frames a millimetre rectangle, leaving the usual margin. */
   frame(bounds: Rect): void;
+  /** *View › Zoom In / Out* (8.4b): zooms the current view about its centre. */
+  zoom(factor: number): void;
+  /** *View › Fit to Pattern* (8.4b): what a double-click on empty board does. */
+  fit(): void;
 }
 
 export interface CanvasStatus {
@@ -187,6 +191,27 @@ export function CanvasHost({
     dirtyRef.current = true;
   }, []);
 
+  const handleDoubleClick = useCallback(() => {
+    if (viewRef.current === 'sheets') {
+      const viewport = sheetsViewportRef.current;
+      const extent = layoutSheets(sheetPlanFor(store.getState().document.project)).extent;
+      viewport.fitTo(extent, FIT_PADDING_PX * viewport.dpr);
+      invalidate();
+      return;
+    }
+    const resolved = evaluate(store.getState().document.project);
+    const boxes = resolved.parts
+      .flatMap((part) => part.features)
+      .flatMap((entry) => (entry.ok ? [PathOps.bbox(entry.path)] : []))
+      .filter((box): box is NonNullable<typeof box> => box !== null);
+
+    viewportRef.current.fitTo(
+      RectOps.unionAll(boxes) ?? RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
+      FIT_PADDING_PX * viewportRef.current.dpr,
+    );
+    invalidate();
+  }, [store, invalidate]);
+
   useImperativeHandle(
     ref,
     (): CanvasHandle => ({
@@ -196,8 +221,14 @@ export function CanvasHost({
         viewportRef.current.fitTo(bounds, FIT_PADDING_PX * viewportRef.current.dpr);
         invalidate();
       },
+      zoom(factor) {
+        const viewport = camera();
+        viewport.zoomAt({ x: viewport.widthPx / 2, y: viewport.heightPx / 2 }, factor);
+        invalidate();
+      },
+      fit: handleDoubleClick,
     }),
-    [invalidate],
+    [camera, handleDoubleClick, invalidate],
   );
 
   // Settings the tools read at the moment they act. Refs rather than props
@@ -655,27 +686,6 @@ export function CanvasHost({
     },
     [store, toInput],
   );
-
-  const handleDoubleClick = useCallback(() => {
-    if (viewRef.current === 'sheets') {
-      const viewport = sheetsViewportRef.current;
-      const extent = layoutSheets(sheetPlanFor(store.getState().document.project)).extent;
-      viewport.fitTo(extent, FIT_PADDING_PX * viewport.dpr);
-      invalidate();
-      return;
-    }
-    const resolved = evaluate(store.getState().document.project);
-    const boxes = resolved.parts
-      .flatMap((part) => part.features)
-      .flatMap((entry) => (entry.ok ? [PathOps.bbox(entry.path)] : []))
-      .filter((box): box is NonNullable<typeof box> => box !== null);
-
-    viewportRef.current.fitTo(
-      RectOps.unionAll(boxes) ?? RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
-      FIT_PADDING_PX * viewportRef.current.dpr,
-    );
-    invalidate();
-  }, [store, invalidate]);
 
   return (
     <div className="canvas-host" ref={containerRef}>

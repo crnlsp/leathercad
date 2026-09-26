@@ -96,7 +96,10 @@ changes, it asks first.
 
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Help → Keyboard Shortcuts*
-  (**Ctrl+/** or **?**) lists every key.
+  (**Ctrl+/** or **?**) lists every key. **Ctrl+=** and **Ctrl+−** zoom, **Ctrl+0** fits the
+  pattern in the window.
+- **Menus:** every tool is in *Tools*, and the paper is in *Paper* as well as in the list beside
+  **Export PDF**.
 - **Recent projects:** *File → Open Recent*. The legend and the tool rail stay as you left them.
 - **Logs:** *Help → Show Log Folder*. Nothing is ever uploaded; attach the log to a bug report.
 - **Licences:** *Help → Third-Party Notices*, and `THIRD_PARTY_NOTICES.txt` beside the app.
