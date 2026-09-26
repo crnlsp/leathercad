@@ -3,7 +3,7 @@ import { EPS_LENGTH, type Mm } from '@leathercad/core';
 import * as Seg from '../segment/index.js';
 import { EXPORT_TOLERANCE_MM } from '../tolerance.js';
 import { perp, tryNormalise, ZERO, type Vec2 } from '../vec2.js';
-import { length as pathLength, type Path } from './path.js';
+import type { Path } from './path.js';
 
 /** Where a distance along the path lands. */
 export interface PathLocation {
@@ -213,9 +213,4 @@ function stepsFor(s: Seg.Segment, tolerance: Mm): number {
 /** Convenience for a one-off query; build a PathMeasure for repeated use. */
 export function measure(path: Path, tolerance?: Mm): PathMeasure {
   return new PathMeasure(path, tolerance);
-}
-
-/** Exact total length, without building a table. */
-export function totalLength(path: Path): Mm {
-  return pathLength(path);
 }

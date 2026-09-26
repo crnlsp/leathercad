@@ -21,9 +21,9 @@ invisible and expensive.
 |---|---|---|---|---|
 | Unit — geometry, domain | Vitest | ~600 | < 5 s | Arithmetic correctness |
 | Property-based | Vitest + fast-check | ~50 | < 20 s | Correctness across inputs nobody thought of |
-| Golden / approval | Vitest + JSON fixtures | ~40 | < 2 s | Unintended algorithm drift |
+| Golden / approval | Vitest + JSON fixtures | ~40 | < 2 s | Unintended algorithm drift — **not built yet** (roadmap Q7); the committed `.lcp` format fixtures and the SVG snapshots cover part of it |
 | Document & command | Vitest | ~80 | < 3 s | Undo, evaluation, serialisation |
-| Export accuracy | Vitest + pdfjs-dist | ~40 | < 10 s | The 1:1 promise |
+| Export accuracy | Vitest + poppler (`pdftoppm`, `pdfinfo`) | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
 | Rendering (pixel diff) | Playwright `toHaveScreenshot`, in the pinned container | ~12 | ~60 s | Anti-aliasing, hairlines, grid |
 | E2E | Playwright + Electron, with an axe scan | ~4 | ~90 s | The app actually runs |
@@ -264,14 +264,17 @@ mean the logic is entangled with the canvas.
 The tests that most directly protect the product's promise.
 
 ```ts
-it('exports a 100 × 50 mm rectangle at exactly 1:1', async () => {
-  const pdf   = await exportPdf(rectFixture(100, 50), { paper: 'A4', mode: 'fit-single-page' });
-  const paths = await extractVectorPaths(pdf);          // pdfjs-dist
-  const bbox  = boundsOf(paths).map(pt => pt * 25.4 / 72);
-  expect(bbox.width ).toBeCloseTo(100, 2);              // within 0.01 mm
-  expect(bbox.height).toBeCloseTo( 50, 2);
+it('prints the 50 mm square at 50 mm', async () => {
+  const pdf    = await exportPdf(planFor(project), options);
+  const pixels = rasterise(pdf, { dpi: 254 });          // poppler's pdftoppm: 10 px per mm
+  const widthMm = measureSquare(pixels).width / 10;    // outer edge to outer edge
+  expect(widthMm).toBeGreaterThan(49.8);                // 50 mm, plus up to the stroke
+  expect(widthMm).toBeLessThan(50.4);
 });
 ```
+
+(A sketch of `packages/export/src/pdf/writer.test.ts`, which measures poppler's rendering of the
+real file. An independent renderer is a stronger witness than parsing our own numbers back.)
 
 The full obligation list lives in [printing.md](printing.md) §14. The ones worth restating as
 principles:
@@ -368,8 +371,9 @@ without coverage — in CI and in `pnpm check` alike. `pnpm test` still runs it 
 
 Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
 a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
-testing of `geometry` and `domain`, and the unit tests on Windows and macOS. CodeQL and OpenSSF
-Scorecard are wired, and skip themselves while the repository is private.
+testing of `geometry` and `domain`, and the unit tests on Windows and macOS. CodeQL runs on every
+pull request and push, and OpenSSF Scorecard on `main`; both skipped themselves while the
+repository was private.
 
 `pnpm bench` runs the benchmarks. `pnpm bench:compare` sets each against the baseline committed
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the

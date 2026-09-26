@@ -1,12 +1,16 @@
-# 1.0 production validation
+# Release checklist
 
-The manual gate for 1.0, done by a person on the **packaged** build, on Linux, Windows and macOS.
-Everything automated is green before this starts (`pnpm check`, E2E, the packaged smoke test, the
-pixel references). What they cannot prove is the printer, its driver, the viewer's print dialog and
-the paper — and whether the workflow makes sense to a leatherworker holding the result.
+The manual gate before a release, done by a person on the **packaged** build, on Linux, Windows and
+macOS. Everything automated is green before this starts (`pnpm check`, E2E, the packaged smoke
+test, the pixel references). What they cannot prove is the printer, its driver, the viewer's print
+dialog and the paper — and whether the workflow makes sense to a leatherworker holding the result.
 
-**Last updated:** 2026-09-24, for the practical-1.0 build (sheet plan, Sheets view, project and
-work bars).
+**When:** before every release that changes what is drawn, exported or printed, or how a maker
+gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
+is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
+
+**Last updated:** 2026-09-26. First written for 1.0 (sheet plan, Sheets view, project and work
+bars), and passed for it on 2026-09-24.
 
 ---
 
@@ -169,9 +173,10 @@ exact name of the viewer's actual-size setting. Record one row per platform in t
 
 ## After it passes
 
-The last 1.0 item is then the release task in the roadmap's 8.6:
-- [x] the Release workflow's permission (2026-09-24).
-
-Code signing is not a requirement: the builds ship unsigned on Windows and ad-hoc signed on macOS,
-by decision (roadmap 8.6, *Code signing*). v1.0.0 was released on 2026-09-24. The platform rows in
-[`print-verification-log.md`](print-verification-log.md) are still pending.
+- Record one row per platform in [`print-verification-log.md`](print-verification-log.md), with
+  the readings. A release never claims print accuracy without them.
+- Merge the release pull request (see
+  [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)), and check that the release has
+  the AppImage, the Windows installer, the macOS dmg and the SBOM attached.
+- The installers are not code-signed, by decision ([`roadmap.md`](roadmap.md), *Release
+  engineering*); [`getting-started.md`](getting-started.md) tells makers how to open them.

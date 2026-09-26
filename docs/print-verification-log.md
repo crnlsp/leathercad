@@ -30,7 +30,7 @@ handling. That is what this file is for.
 
 ## The procedure
 
-This is step 3 of the full 1.0 gate, [`release-1.0-validation.md`](release-1.0-validation.md).
+This is check 3 of the [release checklist](release-checklist.md).
 
 About ten minutes, with a **steel rule** (not a tape) graduated in half millimetres. Once on each of
 Linux, Windows and macOS, from that platform's default PDF viewer.

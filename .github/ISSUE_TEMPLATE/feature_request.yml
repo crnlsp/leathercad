@@ -1,0 +1,24 @@
+name: An idea
+description: Something LeatherCAD should do, or do differently.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [the roadmap](https://github.com/crnlsp/leathercad/blob/main/docs/roadmap.md) first: it may already be planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to make
+      description: The piece, and where LeatherCAD gets in the way. The problem matters more than a proposed solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+  - type: textarea
+    id: today
+    attributes:
+      label: How you do it today
+      description: In LeatherCAD, another program, or on paper.

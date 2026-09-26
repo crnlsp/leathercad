@@ -1,0 +1,66 @@
+name: Something is wrong
+description: The app does something it should not, or a print does not measure true.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. A `.lcp` file that shows the problem is the most useful thing you can attach.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      placeholder: |
+        1. Draw a rectangle, 200 × 95 mm
+        2. Add a stitch line
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - Drawing and editing
+        - Stitching and holes
+        - Problems panel
+        - Sheets and printing
+        - The exported PDF, or a print that does not measure true
+        - Saving, opening, or recovering work
+        - Installing or starting the app
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: LeatherCAD version
+      description: Shown at the bottom left of the window.
+      placeholder: v1.0.1
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Arch Linux, Windows 11, macOS 15, …
+    validations:
+      required: true
+  - type: textarea
+    id: print
+    attributes:
+      label: For a print problem
+      description: The PDF viewer and its scale setting, the printer, the paper, and what the 50 mm square and 100 mm ruler measured.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Help → Show Log Folder opens it. It never leaves your machine unless you attach it here.
+      render: text

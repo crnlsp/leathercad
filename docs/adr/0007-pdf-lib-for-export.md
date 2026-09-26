@@ -45,3 +45,16 @@ converting points back to millimetres does.
 - **Generating PostScript or raw PDF by hand.** No dependency, but object numbering, the xref table
   and stream lengths are all places to introduce a corrupt file that some viewers open and others
   do not.
+
+## Amended 2026-09-26
+
+Two consequences above changed after the decision; the decision itself, pdf-lib, stands.
+
+- **pdfjs-dist was never used, and is removed.** The export tests parse the artefact back as this
+  ADR asks, but through poppler: `pdftoppm` rasterises the PDF and the tests measure pixels, and
+  `pdfinfo` reads the page size. That is a stronger check than reading our own numbers back, because
+  an independent renderer produces what a printer would be sent. See `docs/testing.md` §6 and
+  `packages/export/src/pdf/writer.test.ts`.
+- **No font is embedded.** Text is drawn as glyph outlines from the one vendored typeface
+  ([ADR 0011](0011-one-vendored-typeface-outlined-on-paper.md)), which is what makes a Polish name
+  print at all: pdf-lib's standard fonts cannot encode `ł`.

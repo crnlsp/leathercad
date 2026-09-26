@@ -20,5 +20,3 @@ export const IPC = {
   /** Main → renderer: an application-menu item was chosen (8.5a). */
   menuAction: 'menu:action',
 } as const;
-
-export type IpcChannel = (typeof IPC)[keyof typeof IPC];

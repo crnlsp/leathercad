@@ -1,6 +1,6 @@
 {
   "name": "leathercad",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Desktop application for designing leathercraft patterns that print at exact 1:1 scale",
   "license": "Apache-2.0",
@@ -37,6 +37,7 @@
     "test:mutation:geometry": "cd packages/geometry && stryker run ../../stryker.config.mjs",
     "test:mutation:domain": "cd packages/domain && stryker run ../../stryker.config.mjs",
     "package": "pnpm --filter @leathercad/desktop package",
+    "docs:media": "pnpm build && playwright test --config playwright.media.config.ts",
     "test:packaged": "pnpm --filter @leathercad/desktop package:e2e && playwright test --config playwright.packaged.config.ts"
   },
   "packageManager": "pnpm@11.25.0",
@@ -55,7 +56,6 @@
     "fast-check": "^4.10.1",
     "knip": "^6.37.0",
     "opentype.js": "2.0.0",
-    "pdfjs-dist": "^6.3.289",
     "prettier": "^3.9.7",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.70.0",

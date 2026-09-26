@@ -19,8 +19,8 @@ Four development dependencies. None of them ships.
 listed. It runs in `pnpm check` and in CI's static job. Every exception in `knip.jsonc` says whether
 it is deliberate or a recorded finding. So the list is a ratchet: nothing new can join it, and
 removing an entry is the owner's decision. On its first run it found two unused dependencies. One
-(`@leathercad/core` in persist) was removed. The other (`pdfjs-dist`) is recorded, because ADR 0007
-names it.
+(`@leathercad/core` in persist) was removed. The other (`pdfjs-dist`) was recorded, because ADR 0007
+names it, and removed after 1.0 with the other two findings (ADR 0007, *Amended*).
 
 **eslint-plugin-react-hooks** (v7, recommended) runs on the renderer. It covers the rules of hooks
 and the React Compiler's checks. It found ten reads of refs during render in `CanvasHost.tsx`.

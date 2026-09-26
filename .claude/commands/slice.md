@@ -3,7 +3,7 @@ description: Start a numbered slice from the roadmap — read it, plan it, then 
 argument-hint: "<slice number, e.g. 1.4>"
 ---
 
-Start slice **$1** from `docs/roadmap.md` §4.
+Start slice **$1** from `docs/roadmap.md` (the 1.0 slices are in `docs/history/roadmap-to-1.0.md`).
 
 Use the `vertical-slice` skill and follow it exactly.
 
@@ -23,6 +23,6 @@ contract.
 Finish by running `pnpm check`, reporting the real output, walking the `geometry-review` checklist
 if the pure layers were touched, and updating `docs/roadmap.md`.
 
-Then land it the way `docs/roadmap.md` §2.4 says: commit on the slice branch, push it — the
+Then land it the way `CONTRIBUTING.md` says: commit on the slice branch, push it — the
 pre-push hook runs `pnpm check` again — and open the pull request with `gh pr create --fill`. Do not
 merge it; report the run and let the human decide.

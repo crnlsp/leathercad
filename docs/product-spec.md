@@ -1,8 +1,8 @@
 # Product Specification
 
-**Project codename:** LeatherCAD (working title)
-**Status:** Design — no implementation yet
-**Last updated:** 2026-09-03
+**Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
+fix it in the same change.
+**Last updated:** 2026-09-26
 
 ---
 

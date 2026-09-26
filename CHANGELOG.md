@@ -1,5 +1,21 @@
 # Changelog
 
+Every change a maker can notice, newest first. Written by
+[release-please](https://github.com/googleapis/release-please) from the commit titles on `main`
+([how to write one](CONTRIBUTING.md#commits-and-pull-requests)). What is merged but not released
+yet is listed in the open
+[release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
+Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
+
+## [1.0.1](https://github.com/crnlsp/leathercad/compare/leathercad-v1.0.0...leathercad-v1.0.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **desktop:** no socket or localhost in the shipped CSP ([#7](https://github.com/crnlsp/leathercad/pull/7)) ([d64a9c6](https://github.com/crnlsp/leathercad/commit/d64a9c6cb1a11091116dbd059ac3ada27576abcf))
+* **desktop:** open only https: links outside the app ([#5](https://github.com/crnlsp/leathercad/pull/5)) ([f0d81a1](https://github.com/crnlsp/leathercad/commit/f0d81a1240395e549012e13135c36a763206ee5c))
+* **desktop:** read, write and open only the files the user chose ([#6](https://github.com/crnlsp/leathercad/pull/6)) ([7930906](https://github.com/crnlsp/leathercad/commit/7930906f31c76b6d3351d2199b3b5a7e381cf731))
+
 ## 1.0.0 (2026-09-24)
 
 

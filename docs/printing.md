@@ -1,8 +1,9 @@
 # Export and Printing
 
 **Packages:** `packages/export`, `packages/print`
-**Status:** Design — no implementation yet
-**Last updated:** 2026-09-03
+**Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
+fix it in the same change.
+**Last updated:** 2026-09-26
 
 ---
 
@@ -452,7 +453,7 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 
 | Test | Asserts |
 |---|---|
-| PDF dimension round trip | Export a 100 × 50 mm rectangle, parse with `pdfjs-dist`, convert points back to mm, assert within 0.01 mm |
+| PDF dimension round trip | Export, rasterise with poppler's `pdftoppm` at 254 dpi, and measure the square, the ruler and the pattern in pixels, within a pixel (0.1 mm) |
 | MediaBox exactness | A4 page MediaBox equals 595.276 × 841.890 pt within 0.001 pt |
 | No scaling transform | The content stream contains no `cm` operator with non-unit scale factors |
 | Tiling coverage | For a 400 × 300 mm scene on A4, exactly 6 pages; the union of content rects covers the bounds with no gap; every adjacent pair overlaps by exactly 10 mm |
