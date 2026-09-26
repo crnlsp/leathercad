@@ -7,6 +7,16 @@ yet is listed in the open
 [release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
 Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
 
+## [1.1.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.0.1...leathercad-v1.1.0) (2026-09-26)
+
+
+### Features
+
+* **desktop:** a worked sample project, from Help or the empty Parts panel ([#15](https://github.com/crnlsp/leathercad/issues/15)) ([aab1ffe](https://github.com/crnlsp/leathercad/commit/aab1ffe83132af55e51850d60ef161fca987c717))
+* **desktop:** double-click a project to open it, and a Flatpak ([#16](https://github.com/crnlsp/leathercad/issues/16)) ([7274055](https://github.com/crnlsp/leathercad/commit/72740552d8c0c570b6697857c579afc017cfedd7))
+* **desktop:** preferences, File › Open Recent and a keyboard shortcut map ([#14](https://github.com/crnlsp/leathercad/issues/14)) ([d4fcf88](https://github.com/crnlsp/leathercad/commit/d4fcf888546c5b9ef357f70d24b94f8e6febdbfa))
+* **desktop:** Tools, zoom and the paper in the application menu ([#17](https://github.com/crnlsp/leathercad/issues/17)) ([1bf6dbf](https://github.com/crnlsp/leathercad/commit/1bf6dbf6b6b134d00494bbe66114a8cbf5c0b21e))
+
 ## [1.0.1](https://github.com/crnlsp/leathercad/compare/leathercad-v1.0.0...leathercad-v1.0.1) (2026-09-24)
 
 
