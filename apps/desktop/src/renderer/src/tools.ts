@@ -126,7 +126,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
         label: 'Edit Points',
         key: 'N',
         howTo:
-          'Drag a point of the selected drawn path to move it · press an edge to add one · Del removes the point last pressed',
+          'Drag a point of the selected drawn path to move it · press an edge to add one · Del removes the point last pressed · R rounds that corner, or sharpens a rounded one',
       },
       {
         id: 'rotate',

@@ -6,6 +6,7 @@ import {
   type PathPointEdit,
 } from '@leathercad/document';
 import {
+  cornerSites,
   evaluate,
   findFeature,
   type FeatureId,
@@ -63,7 +64,17 @@ type State =
  * dimensions on the corners they were attached to, or refuses (3.9b). The
  * refusal is said beside the pointer, from the same check that refused.
  */
-export function createEditPointsTool(): Tool {
+/** What the work bar sets for Edit Points (3.9d). */
+export interface EditPointsOptions {
+  /** The radius R rounds a picked corner to, in millimetres. */
+  readonly cornerRadiusMm: number;
+}
+
+export const DEFAULT_EDIT_POINTS: EditPointsOptions = { cornerRadiusMm: 3 };
+
+export function createEditPointsTool(
+  options: () => EditPointsOptions = () => DEFAULT_EDIT_POINTS,
+): Tool {
   let state: State = { kind: 'idle', picked: null, refusal: null };
 
   const reset = (ctx: ToolContext): void => {
@@ -168,6 +179,30 @@ export function createEditPointsTool(): Tool {
         return;
       }
 
+      // R reshapes the picked corner: rounds a sharp one to the work bar's
+      // radius, sharpens a rounded one (3.9d). Only when a corner is picked —
+      // otherwise R is the Rectangle tool's, as the polyline leaves A and L
+      // to their tools outside a run.
+      if (event.key.toLowerCase() === 'r') {
+        if (state.kind !== 'idle' || state.picked === null) return;
+        const target = editable(ctx);
+        if (target === null) return;
+        const reshape = reshapeAt(target.path, state.picked, options().cornerRadiusMm);
+        if (reshape === null) return;
+
+        const edit: PathPointEdit = { ...reshape.edit, featureId: target.id };
+        const refusal = pathPointRefusal(ctx.store.getState().document.project, edit);
+        if (refusal === null) ctx.dispatch(editPathPoint(edit));
+        // The corner stays picked in its new shape, so R again undoes it.
+        state = {
+          kind: 'idle',
+          picked: refusal === null ? reshape.pickedAfter : state.picked,
+          refusal,
+        };
+        ctx.invalidate();
+        return true;
+      }
+
       if (event.key !== 'Delete' && event.key !== 'Backspace') return;
       if (state.kind !== 'idle' || state.picked === null) return;
       const target = editable(ctx);
@@ -229,6 +264,43 @@ export function createEditPointsTool(): Tool {
       reset(ctx);
     },
   };
+}
+
+/**
+ * What R does to point `vertex`: round it, if it is a sharp corner; sharpen
+ * the rounding it ends, if it is an end of one; nothing otherwise. With the
+ * point to keep picked afterwards — the rounding's start, or the corner.
+ */
+function reshapeAt(
+  path: Path,
+  vertex: number,
+  radiusMm: number,
+): {
+  edit: { kind: 'round'; vertex: number; radiusMm: number } | { kind: 'sharpen'; segment: number };
+  pickedAfter: number;
+} | null {
+  const n = path.segments.length;
+  const sites = cornerSites(path);
+
+  if (sites.some((site) => site.kind === 'vertex' && site.index === vertex)) {
+    // Rounding point i starts the rounding at i; a closed path's first point
+    // puts it last, after the side coming in.
+    return { edit: { kind: 'round', vertex, radiusMm }, pickedAfter: vertex > 0 ? vertex : n };
+  }
+
+  // A point is an end of the rounding that starts at it or the one that ends
+  // at it.
+  const leaving = vertex < n ? vertex : null;
+  const arriving = vertex > 0 ? vertex - 1 : path.closed ? n - 1 : null;
+  for (const segment of [leaving, arriving]) {
+    if (segment === null) continue;
+    if (!sites.some((site) => site.kind === 'arc' && site.segment === segment)) continue;
+    // Sharpening removes the arc: the corner takes its start's place, except
+    // at a closed path's ends, where it becomes the first point.
+    const corner = segment > 0 && segment < n - 1 ? segment : 0;
+    return { edit: { kind: 'sharpen', segment }, pickedAfter: corner };
+  }
+  return null;
 }
 
 /** The one selected feature, if exactly one is. */

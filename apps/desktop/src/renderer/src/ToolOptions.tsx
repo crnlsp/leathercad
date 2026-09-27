@@ -1,5 +1,7 @@
 import { formatEditable } from '@leathercad/core';
-import type { DrawMode, HardwareOptions } from '@leathercad/editor';
+import type { DrawMode, EditPointsOptions, HardwareOptions } from '@leathercad/editor';
+
+import { NumberField } from './NumberField.js';
 
 import { PUNCH_SIZES_MM } from './punches.js';
 import { FeatureMark } from './icons/marks.js';
@@ -54,13 +56,33 @@ export function ToolOptions({
   onDrawAs,
   hardware,
   onHardware,
+  points,
+  onPoints,
 }: {
   toolId: string;
   drawAs: DrawMode;
   onDrawAs: (next: DrawMode) => void;
   hardware: HardwareOptions;
   onHardware: (next: HardwareOptions) => void;
+  points: EditPointsOptions;
+  onPoints: (next: EditPointsOptions) => void;
 }) {
+  // The radius R rounds a picked corner to (3.9d). Asked here rather than
+  // after the key, so rounding stays one keystroke, like the punch size.
+  if (toolId === 'points') {
+    return (
+      <div className="tool-options" data-testid="tool-options">
+        <NumberField
+          label="Corner radius"
+          value={points.cornerRadiusMm}
+          min={0.1}
+          step={0.5}
+          onCommit={(cornerRadiusMm) => onPoints({ ...points, cornerRadiusMm })}
+        />
+      </div>
+    );
+  }
+
   if (toolId !== 'hardware') {
     if (!DRAWING_TOOL_IDS.has(toolId)) {
       return <div className="tool-options" data-testid="tool-options" />;

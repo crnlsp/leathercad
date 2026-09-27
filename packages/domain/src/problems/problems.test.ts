@@ -36,6 +36,8 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   NOT_DERIVED: named,
   NOT_A_DRAWN_PATH: named,
   POINT_EDIT_DEGENERATE: named,
+  ROUNDING_DOES_NOT_FIT: { ...named, radiusMm: 60 },
+  NOT_A_ROUNDED_CORNER: named,
   CORNER_IN_USE: { ...named, usedByName: 'Stitch line' },
   DERIVED_MOVED_ALONE: { ...named, rootId: 'f-2', rootName: 'Outline' },
   MIRROR_WOULD_SCALE: { ...named, sourceName: 'Outline' },

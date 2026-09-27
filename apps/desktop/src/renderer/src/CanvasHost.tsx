@@ -27,6 +27,7 @@ import {
   createLineTool,
   createPolylineTool,
   createRectangleTool,
+  DEFAULT_EDIT_POINTS,
   createEditPointsTool,
   createRotateTool,
   createMeasureTool,
@@ -35,6 +36,7 @@ import {
   createTextTool,
   hitTest,
   type DrawMode,
+  type EditPointsOptions,
   type HardwareOptions,
   type PointerInput,
 } from '@leathercad/editor';
@@ -111,6 +113,7 @@ export function CanvasHost({
   toolId,
   drawAs,
   hardware,
+  pointOptions = DEFAULT_EDIT_POINTS,
   requestDelete,
   nextId,
   onStatus,
@@ -126,6 +129,8 @@ export function CanvasHost({
   toolId: string;
   drawAs: DrawMode;
   hardware: HardwareOptions;
+  /** The corner radius Edit Points rounds to (3.9d). */
+  pointOptions?: EditPointsOptions;
   requestDelete: (ids: readonly string[]) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
@@ -247,6 +252,8 @@ export function CanvasHost({
   drawAsRef.current = drawAs;
   const hardwareRef = useRef(hardware);
   hardwareRef.current = hardware;
+  const pointOptionsRef = useRef(pointOptions);
+  pointOptionsRef.current = pointOptions;
   const requestDeleteRef = useRef(requestDelete);
   requestDeleteRef.current = requestDelete;
 
@@ -263,7 +270,7 @@ export function CanvasHost({
       // Linear only in 4.10a; the kind is fixed rather than chosen, because a
       // mode that asked would be a mode with more than one result (X4).
       createMeasureTool(nextId, () => 'aligned'),
-      createEditPointsTool(),
+      createEditPointsTool(() => pointOptionsRef.current),
       createRotateTool(),
       createScaleTool(),
     ],

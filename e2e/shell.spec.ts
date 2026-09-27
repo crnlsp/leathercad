@@ -2535,3 +2535,47 @@ test('Edit Points says a rectangle is changed by its measurements (3.9c)', async
     await expect(window.getByTestId('canvas-notice')).toContainText('not a drawn path');
   });
 });
+
+test('Edit Points rounds a corner to the radius in the work bar, and R again sharpens it (3.9d)', async () => {
+  await withFreshApp(async (window) => {
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    const at = (x: number, y: number) => ({ x: box!.x + x, y: box!.y + y });
+    const click = async (x: number, y: number) => {
+      await window.mouse.move(at(x, y).x, at(x, y).y);
+      await window.mouse.down();
+      await window.mouse.up();
+    };
+
+    // A drawn square, 250 px a side.
+    await window.getByTestId('tool-polyline').click();
+    await click(250, 150);
+    await click(500, 150);
+    await click(500, 400);
+    await click(250, 400);
+    await click(250, 150);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await window.getByTestId('parts-list').getByText('Outline').click();
+
+    const area = window.getByTestId('property-panel').locator('.readout', { hasText: 'Area' });
+    const square = await area.textContent();
+
+    await window.keyboard.press('n');
+    const radius = window
+      .getByTestId('tool-options')
+      .locator('label', { hasText: 'Corner radius' })
+      .locator('input');
+    await radius.fill('10');
+    await radius.press('Enter');
+
+    // Pick the corner, then R: the corner is rounded, the area a little less.
+    await click(500, 400);
+    await window.keyboard.press('r');
+    await expect(area).not.toHaveText(square!);
+    // R was the rounding's, not the Rectangle tool's.
+    await expect(window.getByTestId('tool-points')).toHaveClass(/active/);
+
+    // R again, on the rounding still picked: the square is back.
+    await window.keyboard.press('r');
+    await expect(area).toHaveText(square!);
+  });
+});

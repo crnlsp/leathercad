@@ -105,6 +105,23 @@ export function cornersThroughEdit(before: Path, edit: PathEdit): readonly (numb
 
 /** The site a corner's point or arc became, or `null` if the edit took it. */
 function siteThrough(site: CornerSite, edit: PathEdit): CornerSite | null {
+  // A corner rounded or sharpened is the same corner in a new shape (3.9d):
+  // the point became the arc that rounds it, or the arc the point.
+  const reshaped = edit.reshaped;
+  if (
+    reshaped?.kind === 'rounded' &&
+    site.kind === 'vertex' &&
+    site.index === reshaped.fromVertex
+  ) {
+    return { kind: 'arc', segment: reshaped.toSegment };
+  }
+  if (
+    reshaped?.kind === 'sharpened' &&
+    site.kind === 'arc' &&
+    site.segment === reshaped.fromSegment
+  ) {
+    return { kind: 'vertex', index: reshaped.toVertex };
+  }
   if (site.kind === 'vertex') {
     const index = edit.vertexMap[site.index] ?? null;
     return index === null ? null : { kind: 'vertex', index };

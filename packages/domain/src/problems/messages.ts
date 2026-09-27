@@ -166,6 +166,18 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     describe: (f) =>
       `That would leave ${f.featureName} with too few points, or a side of no length.`,
   },
+  ROUNDING_DOES_NOT_FIT: {
+    title: 'The rounding does not fit',
+    describe: (f) =>
+      `A ${formatEditable(f.radiusMm, 2)} mm rounding does not fit that point of ${f.featureName}: ` +
+      'it has to be a corner between two straight sides, each longer than the rounding takes.',
+  },
+  NOT_A_ROUNDED_CORNER: {
+    title: 'Nothing to sharpen',
+    describe: (f) =>
+      `That is not a rounded corner between two straight sides of ${f.featureName}, so there is ` +
+      'no corner to sharpen it back to.',
+  },
   CORNER_IN_USE: {
     title: 'A corner in use',
     describe: (f) =>

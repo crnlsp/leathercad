@@ -9,10 +9,13 @@ import {
 } from '@leathercad/domain';
 import {
   PathOps,
+  SegmentOps,
   insertPathVertex,
   movePathVertex,
   polyline,
   removePathVertex,
+  roundPathVertex,
+  sharpenPathArc,
   vec,
   type Path,
   type Vec2,
@@ -205,6 +208,73 @@ describe('editing a drawn path keeps what is attached to its corners', () => {
   });
 });
 
+describe('rounding and sharpening a corner (3.9d)', () => {
+  it('rounds a corner something is attached to, and it stays attached', () => {
+    const before = wallet();
+    // The top-right point is corner 1, where the stitch run starts.
+    const after = editPathPoint({
+      kind: 'round',
+      featureId: OUTLINE,
+      vertex: 2,
+      radiusMm: 8,
+    }).apply(before);
+
+    const kinds = outlinePath(after.project).segments.map((s) => s.kind);
+    expect(kinds).toEqual(['line', 'line', 'arc', 'line', 'line']);
+    expect(refs(after.project, STITCH)).toEqual([1, 3]);
+    expect(refs(after.project, DIMENSION)).toEqual([0, 2]);
+    // The corner is now the middle of its rounding, which is where a rounded
+    // corner's anchor has always been.
+    const middle = anchorAt(after.project, OUTLINE, 1)!;
+    const inset = 8 - 8 / Math.SQRT2;
+    expect(close(middle, vec(100 - inset, 50 - inset))).toBe(true);
+  });
+
+  it('sharpens it back to the corner it was', () => {
+    const rounded = editPathPoint({
+      kind: 'round',
+      featureId: OUTLINE,
+      vertex: 2,
+      radiusMm: 8,
+    }).apply(wallet());
+    const after = editPathPoint({ kind: 'sharpen', featureId: OUTLINE, segment: 2 }).apply(rounded);
+
+    const now = PathOps.vertices(outlinePath(after.project));
+    expect(now).toHaveLength(4);
+    for (const [i, v] of PathOps.vertices(box()).entries()) expect(close(now[i]!, v)).toBe(true);
+    expect(refs(after.project, STITCH)).toEqual([1, 3]);
+  });
+
+  it('stores the radius quantised, as it stores every typed value', () => {
+    const after = editPathPoint({
+      kind: 'round',
+      featureId: OUTLINE,
+      vertex: 1,
+      radiusMm: 5.000049,
+    }).apply(wallet());
+    const rounding = outlinePath(after.project).segments[1]!;
+
+    expect(rounding.kind === 'arc' && rounding.radius).toBeCloseTo(5, 9);
+  });
+
+  it('says why a rounding does not fit, and why there is nothing to sharpen', () => {
+    const document = wallet();
+
+    const tooBig = pathPointRefusal(document.project, {
+      kind: 'round',
+      featureId: OUTLINE,
+      vertex: 2,
+      radiusMm: 60,
+    });
+    expect(tooBig?.code).toBe('ROUNDING_DOES_NOT_FIT');
+    expect(tooBig?.code === 'ROUNDING_DOES_NOT_FIT' && tooBig.facts.radiusMm).toBe(60);
+
+    expect(
+      pathPointRefusal(document.project, { kind: 'sharpen', featureId: OUTLINE, segment: 1 })?.code,
+    ).toBe('NOT_A_ROUNDED_CORNER');
+  });
+});
+
 describe('refusing a point edit', () => {
   const refusal = (document: Document, edit: PathPointEdit) =>
     pathPointRefusal(document.project, edit)?.code;
@@ -357,6 +427,14 @@ describe('every point edit, on any drawn outline', () => {
           fc
             .integer({ min: 0, max: count - 1 })
             .map((vertex): PathPointEdit => ({ kind: 'remove', featureId: OUTLINE, vertex })),
+          fc
+            .tuple(fc.integer({ min: 0, max: count - 1 }), fc.constantFrom(0.5, 2, 5))
+            .map(([vertex, radiusMm]): PathPointEdit => ({
+              kind: 'round',
+              featureId: OUTLINE,
+              vertex,
+              radiusMm,
+            })),
         ),
       });
     });
@@ -388,14 +466,23 @@ describe('every point edit, on any drawn outline', () => {
 
         const [a2, b2] = refs(after.project, DIMENSION);
         const moved = edit.kind === 'move' ? edit.to : null;
+        // A rounded corner's anchor is the middle of its rounding: the same
+        // corner, now on the arc the edit made.
+        const made = edit.kind === 'round' ? geometryOf(outline, edit) : null;
+        const rounding =
+          made?.reshaped?.kind === 'rounded'
+            ? made.path.segments[made.reshaped.toSegment]
+            : undefined;
+        const roundingMiddle = rounding === undefined ? null : SegmentOps.pointAt(rounding, 0.5);
         for (const [k, j] of [
           [a, a2],
           [b, b2],
         ] as const) {
           const was = anchorAt(before.project, OUTLINE, k);
           const is = anchorAt(after.project, OUTLINE, j);
-          // The same place — or, for the point that was moved, where it went.
-          expect(close(was, is) || close(is, moved)).toBe(true);
+          // The same place — or, for the point that was moved, where it went,
+          // or for the corner that was rounded, the middle of its rounding.
+          expect(close(was, is) || close(is, moved) || close(is, roundingMiddle)).toBe(true);
         }
       }),
       { numRuns: 200 },
@@ -405,6 +492,10 @@ describe('every point edit, on any drawn outline', () => {
 
 function geometryOf(outline: Path, edit: PathPointEdit) {
   switch (edit.kind) {
+    case 'round':
+      return roundPathVertex(outline, edit.vertex, edit.radiusMm);
+    case 'sharpen':
+      return sharpenPathArc(outline, edit.segment);
     case 'move':
       return movePathVertex(outline, edit.vertex, edit.to);
     case 'insert':
