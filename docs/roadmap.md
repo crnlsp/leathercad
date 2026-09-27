@@ -85,8 +85,13 @@ suggested order of work.
     edit that would take an attached corner away is refused (`CORNER_IN_USE`). Closes ADR 0010's
     open item without vertex ids or a format change (ADR 0010, amended). Commands and geometry
     only; the tool is 3.9c.
-  - ☐ **3.9c The Edit Points tool.** A handle on each point of the selected drawn path: drag to
-    move, double-click an edge to add, Delete to remove, with the refusal said beside the pointer.
+  - ✅ **3.9c The Edit Points tool** (N, under Modify). A handle on each point of the selected
+    drawn path: drag one to move its point, press an edge to add a point there and drag it in the
+    same gesture, and Delete removes the point last pressed — each one step to undo. A refusal is
+    said beside the pointer; a shape or a locked outline says why it has no points to edit, and a
+    press on another drawn path picks it. Built on `closestPointOnPath`, new in `packages/geometry`.
+    Pressing an edge replaced the double-click first written here: the canvas's double-click
+    already fits the view, and one gesture that adds and places a point is fewer steps.
   - ☐ **3.9d Corner ↔ smooth,** as a rounded corner with a radius — an arc, which offsets — rather
     than a Bézier, which the stitch-line offset refuses.
 - ☐ **3.10 Guides, alignment and distribution.**

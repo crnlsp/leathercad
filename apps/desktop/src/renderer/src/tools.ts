@@ -117,7 +117,17 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       // Move is not here on purpose. The select tool already moves a selection
       // by dragging it, and a second mode that did the same thing would teach
       // the user that modes are not distinct — the opposite of what this
-      // palette exists to say. Reserved keys remaining: N, G.
+      // palette exists to say. Reserved key remaining: G.
+      //
+      // Edit Points changes the shape of one drawn path rather than moving the
+      // selection whole (3.9c). N for "node", the drafting name for a point.
+      {
+        id: 'points',
+        label: 'Edit Points',
+        key: 'N',
+        howTo:
+          'Drag a point of the selected drawn path to move it · press an edge to add one · Del removes the point last pressed',
+      },
       {
         id: 'rotate',
         label: 'Rotate',

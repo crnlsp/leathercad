@@ -401,16 +401,20 @@ Separately: **angle constraint** (Shift → 15° increments) and **numeric entry
 
 ### 6.5 Selection
 
-Two levels now, a third with vertex editing:
+Two levels:
 
 ```ts
 type Selection = {
   parts: ReadonlySet<PartId>;        // from the parts panel (built 4.3b)
   features: ReadonlySet<FeatureId>;  // from the canvas and the parts panel
-  // vertices arrive with slice 3.9, addressed by vertex id — never by segment index,
-  // which renumbers when a vertex is inserted (ADR 0010)
 };
 ```
+
+A point of a drawn path is **not** a third level. The Edit Points tool (3.9c) keeps the point last
+pressed in its own state, by index, for as long as the path is unchanged — it is tool state, like a
+half-drawn polyline, and never reaches the document or the shared selection. What must survive a
+point being inserted is what is *attached* to a corner, and the edit command renumbers that (ADR
+0010, amended).
 
 A canvas click selects a feature; clicking a part's heading in the parts panel selects the part. The
 panel sets one and clears the other: a selection that is quietly both is one nobody can reason

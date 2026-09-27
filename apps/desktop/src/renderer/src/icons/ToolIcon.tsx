@@ -59,6 +59,15 @@ const GEOMETRY: Readonly<Record<string, ReactElement>> = {
       <Node x={13.5} y={4} />
     </>
   ),
+  // A path and its points, one of them grabbed: the nodes are the subject.
+  points: (
+    <>
+      <path d="M2.5 12.5 7 4.5l6.5 6" />
+      <Node x={2.5} y={12.5} />
+      <Node x={13.5} y={10.5} />
+      <rect x="5" y="2.5" width="4" height="4" strokeWidth="1.25" />
+    </>
+  ),
   // A turn about a pivot: the pivot is the node.
   rotate: (
     <>

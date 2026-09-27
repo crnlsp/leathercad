@@ -32,7 +32,12 @@ import {
   setFeatureLocked,
 } from './commands.js';
 import type { Document } from './document.js';
-import { editPathPoint, pathPointRefusal, type PathPointEdit } from './pathPoints.js';
+import {
+  editPathPoint,
+  pathPointRefusal,
+  pointEditingRefusal,
+  type PathPointEdit,
+} from './pathPoints.js';
 import { DocumentStore } from './store.js';
 
 const OUTLINE = 'outline' as FeatureId;
@@ -270,7 +275,14 @@ describe('refusing a point edit', () => {
       'POINT_EDIT_DEGENERATE',
     );
 
+    // Asked before any particular edit, the same answers.
+    expect(pointEditingRefusal(document.project, OUTLINE)).toBeNull();
+    expect(pointEditingRefusal(document.project, 'rect' as FeatureId)?.code).toBe(
+      'NOT_A_DRAWN_PATH',
+    );
+
     const locked = setFeatureLocked(OUTLINE, true).apply(document);
+    expect(pointEditingRefusal(locked.project, OUTLINE)?.code).toBe('FEATURE_LOCKED');
     expect(refusal(locked, { kind: 'insert', featureId: OUTLINE, segment: 0, t: 0.5 })).toBe(
       'FEATURE_LOCKED',
     );
