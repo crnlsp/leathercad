@@ -69,6 +69,70 @@ function points(store: DocumentStore, id: FeatureId = OUTLINE): Vec2[] {
 
 const key = (k: string) => ({ key: k, shiftKey: false, ctrlKey: false });
 
+function kinds(store: DocumentStore): string[] {
+  const source = findFeature(store.getState().document.project, OUTLINE)!.feature.source;
+  if (source.kind !== 'path') throw new Error('not drawn');
+  return source.path.segments.map((s) => s.kind);
+}
+
+describe('rounding and sharpening with R (3.9d)', () => {
+  it('rounds the picked corner to the radius in the work bar, and sharpens it again', () => {
+    const { ctx, store } = harness();
+    const tool = createEditPointsTool(() => ({ cornerRadiusMm: 10 }));
+
+    click(tool, ctx, vec(100, 50));
+    expect(tool.onKey?.(ctx, key('r'))).toBe(true);
+    expect(kinds(store)).toEqual(['line', 'line', 'arc', 'line', 'line']);
+    expect(points(store)[2]).toEqual(vec(100, 40));
+
+    // The rounding stays picked: R again puts the corner back.
+    expect(tool.onKey?.(ctx, key('R'))).toBe(true);
+    expect(kinds(store)).toEqual(['line', 'line', 'line', 'line']);
+    expect(points(store)[2]!.x).toBeCloseTo(100, 9);
+    expect(points(store)[2]!.y).toBeCloseTo(50, 9);
+
+    // Each is one step to undo.
+    store.undo();
+    expect(kinds(store)).toContain('arc');
+  });
+
+  it('sharpens a rounding picked by either of its ends', () => {
+    const { ctx, store } = harness();
+    const tool = createEditPointsTool(() => ({ cornerRadiusMm: 10 }));
+    click(tool, ctx, vec(100, 50));
+    tool.onKey?.(ctx, key('r'));
+
+    // The rounding runs from (100, 40) to (90, 50); pick its far end.
+    click(tool, ctx, vec(90, 50));
+    expect(tool.onKey?.(ctx, key('r'))).toBe(true);
+    expect(kinds(store)).not.toContain('arc');
+  });
+
+  it('says why a rounding does not fit, and changes nothing', () => {
+    const { ctx, store } = harness();
+    const tool = createEditPointsTool(() => ({ cornerRadiusMm: 80 }));
+    const before = store.getState().document;
+
+    click(tool, ctx, vec(100, 50));
+    expect(tool.onKey?.(ctx, key('r'))).toBe(true);
+
+    expect(store.getState().document).toBe(before);
+    expect(tool.notice?.(ctx)?.code).toBe('ROUNDING_DOES_NOT_FIT');
+  });
+
+  it('leaves R to pick the Rectangle tool when no corner is picked', () => {
+    const { ctx } = harness();
+    const tool = createEditPointsTool(() => ({ cornerRadiusMm: 10 }));
+
+    expect(tool.onKey?.(ctx, key('r'))).not.toBe(true);
+
+    // A point along a straight side is no corner either.
+    click(tool, ctx, vec(50, 0));
+    click(tool, ctx, vec(50, 0));
+    expect(tool.onKey?.(ctx, key('r'))).not.toBe(true);
+  });
+});
+
 describe('the Edit Points tool', () => {
   it('shows a handle on every point of the selected drawn path', () => {
     const { tool, ctx } = harness();

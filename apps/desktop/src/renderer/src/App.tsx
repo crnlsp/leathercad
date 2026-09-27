@@ -24,7 +24,13 @@ import {
 import { DEFAULT_PREFERENCES, systemIdSource, type Preferences } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { DEFAULT_HARDWARE, type DrawMode, type HardwareOptions } from '@leathercad/editor';
+import {
+  DEFAULT_EDIT_POINTS,
+  DEFAULT_HARDWARE,
+  type DrawMode,
+  type EditPointsOptions,
+  type HardwareOptions,
+} from '@leathercad/editor';
 
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
@@ -107,6 +113,7 @@ export function App() {
   // tool and back must not silently put the user back on 'Cut'.
   const [drawAs, setDrawAs] = useState<DrawMode>('outline');
   const [hardware, setHardware] = useState<HardwareOptions>(DEFAULT_HARDWARE);
+  const [pointOptions, setPointOptions] = useState<EditPointsOptions>(DEFAULT_EDIT_POINTS);
 
   // The frame's own state (UI Foundations §7.1–7.2). None of it is the
   // document's, and none of it is persisted with it.
@@ -605,6 +612,8 @@ export function App() {
               onDrawAs={setDrawAs}
               hardware={hardware}
               onHardware={setHardware}
+              points={pointOptions}
+              onPoints={setPointOptions}
             />
             {/* What the active tool does with a click or a drag, true for that
                 tool and no other (F.1). It is what gives way when the bar narrows. */}
@@ -662,6 +671,7 @@ export function App() {
             onStatus={handleStatus}
             drawAs={drawAs}
             hardware={hardware}
+            pointOptions={pointOptions}
             requestDelete={requestDelete}
           >
             {/* The legend explains the board's marks; the sheets are ink. */}

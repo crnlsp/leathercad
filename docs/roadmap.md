@@ -77,7 +77,7 @@ suggested order of work.
 
 ### Drawing and editing
 
-- ◐ **3.9 Vertex editing.** Add, remove and move a drawn path's points; corner ↔ smooth. In three
+- ✅ **3.9 Vertex editing.** Add, remove and move a drawn path's points; corner ↔ smooth. In three
   slices:
   - ✅ **3.9b Corners survive point edits.** `editPathPoint` moves, adds or removes a point of a
     drawn path in one undoable step, and renumbers every stitch run and dimension attached to the
@@ -92,8 +92,13 @@ suggested order of work.
     press on another drawn path picks it. Built on `closestPointOnPath`, new in `packages/geometry`.
     Pressing an edge replaced the double-click first written here: the canvas's double-click
     already fits the view, and one gesture that adds and places a point is fewer steps.
-  - ☐ **3.9d Corner ↔ smooth,** as a rounded corner with a radius — an arc, which offsets — rather
-    than a Bézier, which the stitch-line offset refuses.
+  - ✅ **3.9d Corner ↔ smooth,** as a rounded corner with a radius — an arc, which offsets — rather
+    than a Bézier, which the stitch-line offset refuses. In Edit Points, **R** rounds the picked
+    corner to the *Corner radius* in the work bar, and sharpens a rounded one picked by either end;
+    R is left to the Rectangle tool when no corner is picked. A stitch run or dimension on that
+    corner stays on it, now at the middle of its rounding. Refusals say why: the rounding does not
+    fit (`ROUNDING_DOES_NOT_FIT`), or there is no rounding to sharpen (`NOT_A_ROUNDED_CORNER`).
+    Built on `roundPathVertex` and `sharpenPathArc`, which are inverses and property-tested as such.
 - ☐ **3.10 Guides, alignment and distribution.**
 - ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.

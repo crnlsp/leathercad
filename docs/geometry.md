@@ -277,8 +277,22 @@ with one straight side, and at an end of an open path drops the end side. Each r
 rather than a degenerate path: too few points left (three closed, two open), a side of no length,
 or a whole-circle arc with no second end.
 
+Two more reshape a corner rather than moving a point (3.9d):
+
+```ts
+roundPathVertex(p, index, radiusMm): PathEdit | null;   // sharp corner → tangent arc
+sharpenPathArc(p, segmentIndex): PathEdit | null;       // rounding → the corner its sides meet at
+```
+
+Rounding shortens the two straight sides meeting at the point by `r·tan(θ/2)` (θ the turn) and joins
+them with an arc of radius `r` and sweep θ — a rounded rectangle's corner, at any angle, and one the
+stitch-line offset handles. It needs a corner between two straight sides and a radius that leaves
+both some length. Sharpening extends the sides either side of an arc to where they meet, and needs
+sides that meet ahead of both (a stadium's parallel sides never do). The two are inverses.
+
 The maps say which old point and segment became which new one — `null` for one that is gone, or a
-segment that was split or merged. They are what lets the domain follow a corner through an edit
+segment that was split or merged. A reshaped corner is reported separately (`reshaped`), because a
+point became a segment or a segment a point, which the maps alone cannot say. They are what lets the domain follow a corner through an edit
 (ADR 0010), so they come from the op that made the edit, never from looking for the nearest point.
 
 ## 5. Flattening and arc length

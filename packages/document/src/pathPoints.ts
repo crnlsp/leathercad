@@ -14,6 +14,8 @@ import {
   insertPathVertex,
   movePathVertex,
   removePathVertex,
+  roundPathVertex,
+  sharpenPathArc,
   type Path,
   type PathEdit,
   type Vec2,
@@ -42,7 +44,16 @@ export type PathPointEdit =
       readonly segment: number;
       readonly t: number;
     }
-  | { readonly kind: 'remove'; readonly featureId: FeatureId; readonly vertex: number };
+  | { readonly kind: 'remove'; readonly featureId: FeatureId; readonly vertex: number }
+  /** The corner at a point, rounded to a radius (3.9d). */
+  | {
+      readonly kind: 'round';
+      readonly featureId: FeatureId;
+      readonly vertex: number;
+      readonly radiusMm: number;
+    }
+  /** A rounded corner — its arc, by segment — sharpened back to a point (3.9d). */
+  | { readonly kind: 'sharpen'; readonly featureId: FeatureId; readonly segment: number };
 
 /**
  * Why this point edit cannot be made, or `null`.
@@ -87,8 +98,7 @@ export function pointEditingRefusal(project: Project, featureId: FeatureId): Pro
  * attachment slide to a neighbour.
  */
 export function editPathPoint(edit: PathPointEdit): Command {
-  const label =
-    edit.kind === 'move' ? 'Move point' : edit.kind === 'insert' ? 'Add point' : 'Remove point';
+  const label = LABELS[edit.kind];
   return {
     label,
     apply: (document) => {
@@ -97,6 +107,14 @@ export function editPathPoint(edit: PathPointEdit): Command {
     },
   };
 }
+
+const LABELS: { readonly [K in PathPointEdit['kind']]: string } = {
+  move: 'Move point',
+  insert: 'Add point',
+  remove: 'Remove point',
+  round: 'Round corner',
+  sharpen: 'Sharpen corner',
+};
 
 type Plan = { readonly project: Project } | { readonly problem: Problem };
 
@@ -113,7 +131,17 @@ function plan(project: Project, edit: PathPointEdit): Plan {
 
   const before = feature.source.path;
   const edited = applyEdit(before, edit);
-  if (edited === null) return { problem: problem('POINT_EDIT_DEGENERATE', about) };
+  if (edited === null) {
+    // Said as what was asked: a rounding that does not fit is not a path with
+    // too few points, and sharpening a sharp corner is neither.
+    if (edit.kind === 'round') {
+      return {
+        problem: problem('ROUNDING_DOES_NOT_FIT', { ...about, radiusMm: quantise(edit.radiusMm) }),
+      };
+    }
+    if (edit.kind === 'sharpen') return { problem: problem('NOT_A_ROUNDED_CORNER', about) };
+    return { problem: problem('POINT_EDIT_DEGENERATE', about) };
+  }
 
   const corners = cornersThroughEdit(before, edited);
   const family = carriesCornersOf(project, feature.id);
@@ -200,6 +228,11 @@ function applyEdit(path: Path, edit: PathPointEdit): PathEdit | null {
       return insertPathVertex(path, edit.segment, edit.t);
     case 'remove':
       return removePathVertex(path, edit.vertex);
+    case 'round':
+      // Typed, so stored to the quantum like every other typed length.
+      return roundPathVertex(path, edit.vertex, quantise(edit.radiusMm));
+    case 'sharpen':
+      return sharpenPathArc(path, edit.segment);
   }
 }
 

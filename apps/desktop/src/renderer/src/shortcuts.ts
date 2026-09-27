@@ -72,6 +72,16 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
       { keys: ['A', 'L'], does: 'Polyline: the next segment is an arc, or straight' },
     ],
   },
+  {
+    title: 'While editing points',
+    shortcuts: [
+      { keys: ['Delete', 'Backspace'], does: 'Remove the point last pressed' },
+      {
+        keys: ['R'],
+        does: 'Round the corner last pressed to the corner radius, or sharpen a rounded one',
+      },
+    ],
+  },
 ];
 
 /** A key combination as this platform writes it. */

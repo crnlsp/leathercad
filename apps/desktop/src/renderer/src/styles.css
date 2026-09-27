@@ -1625,6 +1625,19 @@ button.problem-row,
   color: var(--text-dim);
 }
 
+/* A measurement in the work bar (the corner radius, 3.9d): its label on one
+   line at its own width, and the field sized for a few digits and "mm" — the
+   bar is a row, not the property panel's column. */
+.tool-options .field-label {
+  flex: none;
+  white-space: nowrap;
+}
+
+.tool-options .field-input {
+  flex: none;
+  width: 88px;
+}
+
 .text-mark {
   display: inline-flex;
   color: var(--text-dim);

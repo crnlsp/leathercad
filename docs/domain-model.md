@@ -223,7 +223,9 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
   attached to them — on the path or on anything derived from it — in the same undoable step. An edit
   that would take an attached corner away (removing its point, splitting its rounding, straightening
   it) is refused with `CORNER_IN_USE` rather than letting the attachment slide to a neighbour. See
-  ADR 0010, amended.
+  ADR 0010, amended. Rounding a corner (3.9d) keeps it: the corner is now the middle of its
+  rounding, which is where a rounded rectangle's corner anchor has always been, and sharpening it
+  brings it back to the point.
 
 **Later:** `radial`, and with it `centre` references; `extent` references, which are the least durable
 kind because they follow evaluated bounds rather than a place; angular measurements.
@@ -757,6 +759,8 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `NOT_DERIVED` | interaction | X1 | Commands |
 | `NOT_A_DRAWN_PATH` | interaction | X1 | Point-editing commands |
 | `POINT_EDIT_DEGENERATE` | interaction | X1 | Point-editing commands |
+| `ROUNDING_DOES_NOT_FIT` | interaction | X1 | Point-editing commands |
+| `NOT_A_ROUNDED_CORNER` | interaction | X1 | Point-editing commands |
 | `CORNER_IN_USE` | interaction | X3 | Point-editing commands |
 | `DERIVED_MOVED_ALONE` | interaction | X3 | Commands |
 | `MIRROR_WOULD_SCALE` | interaction | X3 | Commands |

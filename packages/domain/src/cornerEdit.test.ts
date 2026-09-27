@@ -5,6 +5,8 @@ import {
   path,
   polyline,
   removePathVertex,
+  roundPathVertex,
+  sharpenPathArc,
   vec,
   type Path,
   type PathEdit,
@@ -110,6 +112,20 @@ describe('cornersThroughEdit', () => {
     expect(cornersThroughEdit(rounded, insertPathVertex(rounded, 2, 0.5)!)[1]).toBeNull();
   });
 
+  it('keeps a corner its number when it is rounded, and again when it is sharpened (3.9d)', () => {
+    // The top-right corner (anchor 1) rounded: it is now the arc between two
+    // straights, still anchor 1, and every other corner keeps its number.
+    const rounding = roundPathVertex(box, 2, 8)!;
+    expect(cornerSites(rounding.path)[1]).toEqual({ kind: 'arc', segment: 2 });
+    expect(cornersThroughEdit(box, rounding)).toEqual([0, 1, 2, 3]);
+
+    const sharpening = sharpenPathArc(rounding.path, 2)!;
+    expect(cornersThroughEdit(rounding.path, sharpening)).toEqual([0, 1, 2, 3]);
+
+    // Rounding the start: the corner met last stays the one met last.
+    expect(cornersThroughEdit(box, roundPathVertex(box, 0, 8)!)).toEqual([0, 1, 2, 3]);
+  });
+
   it('sends each corner that survives to the same site, and no two to one', () => {
     const arbSquareish = fc
       .array(
@@ -134,6 +150,9 @@ describe('cornersThroughEdit', () => {
           .tuple(fc.integer({ min: 0, max: count - 1 }), fc.constantFrom(0.25, 0.5, 0.75))
           .map(([s, t]) => ({ p, edit: insertPathVertex(p, s, t) })),
         fc.integer({ min: 0, max: count - 1 }).map((i) => ({ p, edit: removePathVertex(p, i) })),
+        fc
+          .tuple(fc.integer({ min: 0, max: count - 1 }), fc.constantFrom(0.5, 2, 5))
+          .map(([i, radius]) => ({ p, edit: roundPathVertex(p, i, radius) })),
       );
     });
 
@@ -168,6 +187,21 @@ function siteAt(p: Path, site: CornerSite): { x: number; y: number } {
 }
 
 function through(site: CornerSite, edit: PathEdit): CornerSite | null {
+  const reshaped = edit.reshaped;
+  if (
+    reshaped?.kind === 'rounded' &&
+    site.kind === 'vertex' &&
+    site.index === reshaped.fromVertex
+  ) {
+    return { kind: 'arc', segment: reshaped.toSegment };
+  }
+  if (
+    reshaped?.kind === 'sharpened' &&
+    site.kind === 'arc' &&
+    site.segment === reshaped.fromSegment
+  ) {
+    return { kind: 'vertex', index: reshaped.toVertex };
+  }
   if (site.kind === 'vertex') {
     const index = edit.vertexMap[site.index];
     return index === null || index === undefined ? null : { kind: 'vertex', index };

@@ -151,6 +151,13 @@ export interface ProblemFacts {
    */
   readonly POINT_EDIT_DEGENERATE: About;
   /**
+   * X1: a corner rounded to this radius would use up a side, or the point is
+   * not a corner between two straight sides (3.9d).
+   */
+  readonly ROUNDING_DOES_NOT_FIT: About & { readonly radiusMm: number };
+  /** X1: sharpening asked of something that is not a rounded corner (3.9d). */
+  readonly NOT_A_ROUNDED_CORNER: About;
+  /**
    * X3: a stitch run or a dimension is attached to a corner the point edit
    * would take away — by removing its point, splitting its rounding, or
    * straightening it. Moving the attachment to another corner is the silent
