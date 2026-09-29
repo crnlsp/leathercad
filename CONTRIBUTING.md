@@ -103,11 +103,12 @@ refuses. Scopes are the package or area: `geometry`, `domain`, `export`, `deskto
 A pull request fills in the template: what changes and why, how it was checked, and whether the
 docs moved with it.
 
-[CodeRabbit](https://www.coderabbit.ai/) reviews every pull request into `develop` and `main`,
-against the invariants in [`CLAUDE.md`](CLAUDE.md) and the path instructions in
-[`.coderabbit.yaml`](.coderabbit.yaml). It is a second reviewer, not a gate: answer each comment —
-fix it, or say why not — before merging. It is not a required check, and it never replaces the
-tests, running the app, or a physical print.
+[CodeRabbit](https://www.coderabbit.ai/) reviews pull requests into `develop` and `main`, against
+the invariants in [`CLAUDE.md`](CLAUDE.md) and the path instructions in
+[`.coderabbit.yaml`](.coderabbit.yaml). It reviews automatically only once the repository has ten
+stars; until then, ask for a review with a comment of `@coderabbitai review`. It is a second
+reviewer, not a gate: answer each comment — fix it, or say why not — before merging. It is not a
+required check, and it never replaces the tests, running the app, or a physical print.
 
 ## Changelog and releases
 
@@ -132,8 +133,9 @@ release. The *Release gate* check holds this on every pull request into `main`; 
    `feat` in it is the next minor — and that no entry appears twice.
 3. Merging it tags the release. The release workflow then builds the AppImage, the Windows
    installer and the macOS dmg, attests their provenance, and attaches them with an SBOM.
-4. Bring the release commit back: a pull request from `main` into `develop`, merged with a **merge
-   commit** — the one pull request into `develop` that is not squashed.
+4. Bring the release commit back: a pull request from `main` into `develop`, squash-merged like
+   every other, titled for the changelog it will never reach — *chore(release): bring 1.3.0 back
+   into develop*.
 5. Start the next section: move the released items from the roadmap into its record in
    [`docs/history/`](docs/history/), name the next release, and update the roadmap's *Released* and
    *Next* line.
