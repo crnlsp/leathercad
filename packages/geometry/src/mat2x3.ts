@@ -161,8 +161,17 @@ export function isSimilarity(m: Mat2x3, eps: number = 1e-9): boolean {
  *
  * Used to convert a tolerance across a transform: a 0.005 mm flattening
  * tolerance is only 0.005 mm on the other side if the scale is 1.
+ *
+ * **Exactly 1 for a turn, a move or a mirror.** A rotation's determinant is
+ * cos² + sin², which rounds below 1 for about one angle in five, and every
+ * size scaled by its root came out a hair short: a turned 100 mm panel stored
+ * as 99.99999999999999 mm, a 3 mm label as 2.9999999999999996 (Q30). A
+ * scale within `isIsometry`'s tolerance of 1 therefore reads as 1: a
+ * difference of 1e-9 is a nanometre in a metre, far under the 1e-4 mm every
+ * typed length is quantised to. A singular matrix still answers 0.
  */
 export function uniformScaleOf(m: Mat2x3): number {
+  if (isIsometry(m)) return 1;
   return Math.sqrt(Math.abs(determinant(m)));
 }
 

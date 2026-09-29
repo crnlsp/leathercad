@@ -43,6 +43,17 @@ export function isPartSelected(selection: Selection, id: PartId): boolean {
   return selection.parts.has(id);
 }
 
+/**
+ * Every feature the selection stands for: the ones picked, and all of each
+ * part picked by its heading — what a gesture on the selection acts on (Q30).
+ */
+export function selectedFeatureIds(project: Project, selection: Selection): FeatureId[] {
+  const fromParts = project.parts
+    .filter((part) => selection.parts.has(part.id))
+    .flatMap((part) => part.features.map((feature) => feature.id));
+  return [...new Set([...selection.features, ...fromParts])];
+}
+
 /** Whether anything at all is picked, of either kind. */
 export function isEmptySelection(selection: Selection): boolean {
   return selection.parts.size === 0 && selection.features.size === 0;

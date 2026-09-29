@@ -491,6 +491,15 @@ that names it fails with `ANCHOR_MISSING`.
   lines and holes follow; a piece picked by its heading flips the same way. Flipping the outline alone
   once left the slots of an asymmetric piece where they were: a wrong pattern, with nothing to say so.
   Anything in the part that is locked refuses the whole flip. Any other feature still flips alone.
+- **Moving and turning follow the same rule** (Q30): dragging an outline, turning it with Rotate, or
+  typing its X, Y or Turn takes the whole piece, hidden features included, and a dragged piece never
+  snaps to its own slots. Rotate takes a part picked by its heading as its piece. A typed width or
+  corner reshapes the outline alone — a reshape is not a move. One helper, `pieceScope`, answers
+  what every gesture moves. **Scale does not follow it:** what resizing a piece should do to its
+  rivet holes and card slots is a decision still to make (Q31), so Scale acts on what is selected.
+- **A gesture part of the selection refuses is refused whole** (Q30), as a lock already was, and
+  `transformRefusal` says why, lock first. It used to move what it could: a piece stretched with its
+  rivets selected left them behind.
 - **A label refuses to be mirrored**, with `TEXT_WOULD_READ_BACKWARDS`: a mirror is a similarity, so
   without refusing it the words would come out rotated rather than reflected. In a flipped piece it
   goes to its mirrored place instead: its text box onto the mirror of its box, turned rather than

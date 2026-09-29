@@ -29,6 +29,7 @@ import {
   findFeature,
   followRefusal,
   lockRefusal,
+  motionBetween,
   problem,
   transformShape,
   transformTextSource,
@@ -184,8 +185,8 @@ function withFlag(
 
 /** Replaces a parametric shape — the path is regenerated on evaluation. */
 export function setShape(id: FeatureId, shape: ParametricShape): Command {
-  return command('Edit shape', (document) => ({
-    project: mapFeature(document.project, id, (feature) => {
+  const reshape = (project: Project): Project =>
+    mapFeature(project, id, (feature) => {
       // A label is made of words; it has no shape to replace, and asking for
       // one is a no-op rather than a way to turn it into a rectangle.
       if (feature.kind === 'text-label') return feature;
@@ -204,8 +205,29 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
         source:
           feature.source.kind === 'shape' ? { ...feature.source, shape } : { kind: 'shape', shape },
       };
-    }),
-  }));
+    });
+
+  return command('Edit shape', (document) => {
+    // A piece's outline typed somewhere else, or turned, is the piece moved or
+    // turned (Q30): the rule dragging and flipping follow. Everything in the
+    // piece goes the way the outline did, refused whole if any of it cannot,
+    // and the outline then takes exactly the numbers typed. A new width or
+    // corner is a reshape of the outline alone, as it always was.
+    const motion = outlineMotion(document.project, id, shape);
+    if (motion === null) return { project: reshape(document.project) };
+
+    const { features } = pieceScope(document.project, [id]);
+    if (transformRefusal(document.project, features, motion) !== null) return document;
+    return { project: reshape(transformFeatures(features, motion).apply(document).project) };
+  });
+}
+
+/** The move or turn a new shape for `id` would be, if `id` is a piece's outline. */
+function outlineMotion(project: Project, id: FeatureId, shape: ParametricShape): Mat2x3 | null {
+  const feature = project.parts.flatMap((part) => part.features).find((f) => f.id === id);
+  if (feature === undefined || !isOutline(feature) || feature.source.kind !== 'shape') return null;
+  const motion = motionBetween(feature.source.shape, shape);
+  return motion === null || MatOps.isIdentity(motion) ? null : motion;
 }
 
 /**
@@ -242,8 +264,11 @@ export function transformFeatures(
     if (targets.size === 0) return document;
     // A mixed selection is refused whole (S7). Moving the free half would
     // leave the drawing somewhere the user did not ask for and cannot see at
-    // a glance — worse than not moving at all.
-    if (lockRefusal(document.project, targets) !== null) return document;
+    // a glance — worse than not moving at all. The same for anything that
+    // cannot take the transform (Q30): a stretched piece once left its rivet
+    // and its labels where they were, and said so only while the mouse was
+    // down.
+    if (transformRefusal(document.project, targets, matrix) !== null) return document;
 
     const next = {
       project: {
@@ -351,40 +376,59 @@ export function flipRefusal(
   return refusedTransforms(project, targets, mirrorAbout(centre, axis))[0]?.problem ?? null;
 }
 
+/** What a gesture on a selection moves (Q28, Q30): see `pieceScope`. */
+export interface PieceScope {
+  /** Everything the gesture moves: the selection, each piece in it made whole. */
+  readonly features: readonly FeatureId[];
+  /** The labels of those whole pieces, which a mirror moves readably instead. */
+  readonly labels: readonly FeatureId[];
+  /** What the gesture is centred on: a piece by its outline, anything else by itself. */
+  readonly about: readonly FeatureId[];
+}
+
 /**
- * What a flip of `ids` moves, and what it turns about (Q28).
+ * What a gesture on `ids` moves — a flip (Q28), a move or a turn (Q30) — and
+ * what it is centred on.
  *
- * A piece's outline stands for the piece. Flipping it flips everything in its
- * part — cut-outs, holes, folds, markings, mirrored counterparts — about the
- * outline's centre, so an asymmetric piece comes out as its mirror image, not
- * as a mirrored outline around slots left where they were: the pattern a
- * maker would cut the wrong leather to. Its labels go to their mirrored
- * places still reading forwards (`readablePlaces`), since mirrored text reads
- * backwards. Anything else flips on its own, as it always has.
+ * A piece's outline stands for the piece. A gesture on it takes everything in
+ * its part — cut-outs, holes, folds, markings, counterparts, labels, hidden
+ * features too — so an asymmetric piece keeps its slots where they belong
+ * rather than leaving them where the outline was: the pattern a maker would
+ * cut the wrong leather to. A part picked by its heading is its features, so
+ * it comes out the same. Anything else moves on its own, as it always has.
  */
-function flipScope(
-  project: Project,
-  ids: readonly FeatureId[],
-): { targets: FeatureId[]; labels: FeatureId[]; about: FeatureId[] } {
+export function pieceScope(project: Project, ids: readonly FeatureId[]): PieceScope {
   const wanted = new Set(ids);
-  const isOutline = (feature: Feature): boolean =>
-    feature.kind === 'cut-contour' && feature.role === 'outer';
   const pieces = project.parts.filter((part) =>
     part.features.some((feature) => wanted.has(feature.id) && isOutline(feature)),
   );
-  if (pieces.length === 0) return { targets: [...ids], labels: [], about: [...ids] };
+  if (pieces.length === 0) return { features: [...ids], labels: [], about: [...ids] };
 
   const inPieces = new Set(pieces.flatMap((part) => part.features.map((feature) => feature.id)));
   const loose = ids.filter((id) => !inPieces.has(id));
   const features = pieces.flatMap((part) => part.features);
   return {
-    targets: [
-      ...loose,
-      ...features.filter((feature) => feature.kind !== 'text-label').map((f) => f.id),
-    ],
+    features: [...loose, ...features.map((feature) => feature.id)],
     labels: features.filter((feature) => feature.kind === 'text-label').map((f) => f.id),
     about: [...loose, ...features.filter(isOutline).map((feature) => feature.id)],
   };
+}
+
+function isOutline(feature: Feature): boolean {
+  return feature.kind === 'cut-contour' && feature.role === 'outer';
+}
+
+/**
+ * What a flip mirrors, and the labels it moves readably instead (Q28):
+ * mirrored text reads backwards.
+ */
+function flipScope(
+  project: Project,
+  ids: readonly FeatureId[],
+): { targets: FeatureId[]; labels: readonly FeatureId[]; about: readonly FeatureId[] } {
+  const { features, labels, about } = pieceScope(project, ids);
+  const readable = new Set(labels);
+  return { targets: features.filter((id) => !readable.has(id)), labels, about };
 }
 
 /**
@@ -479,6 +523,23 @@ export interface RefusedTransform {
  * same `transformShape` underneath, so the answer cannot disagree with what
  * actually happens.
  */
+/**
+ * Why transforming `ids` by `matrix` would refuse, or `null` — the question
+ * Move, Rotate and Scale ask as they go, so a gesture that does nothing says
+ * why (X1, X3). The lock first: it refuses the whole gesture, so it is the
+ * reason, not one of several.
+ */
+export function transformRefusal(
+  project: Project,
+  ids: Iterable<FeatureId>,
+  matrix: Mat2x3,
+): Problem | null {
+  const targets = [...new Set(ids)];
+  return (
+    lockRefusal(project, targets) ?? refusedTransforms(project, targets, matrix)[0]?.problem ?? null
+  );
+}
+
 export function refusedTransforms(
   project: Project,
   ids: Iterable<FeatureId>,

@@ -1,9 +1,10 @@
 import { evaluate, type FeatureId, type Project } from '@leathercad/domain';
-import { PathOps, RectOps, type Rect } from '@leathercad/geometry';
+import { MatOps, PathOps, RectOps, type Rect } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  addAllowancePart,
   addCutOut,
   addFoldLine,
   addHardwareHole,
@@ -17,15 +18,28 @@ import {
   flipRefusal,
   mirrorAcrossFold,
   mirrorFeatures,
+  pieceScope,
   rectShape,
   rectanglePart,
   setFeatureLocked,
+  setFeatureVisible,
+  setShape,
+  transformFeatures,
+  transformRefusal,
+  translateFeatures,
   type FlipAxis,
 } from './commands.js';
-import type { Command, Document } from './document.js';
+import {
+  partSelectionOf,
+  selectedFeatureIds,
+  selectionOf,
+  type Command,
+  type Document,
+} from './document.js';
 
 /**
- * Q28: flipping a piece flips all of it. A 100 × 60 panel at the origin, its
+ * A piece's outline stands for the piece: flipping it (Q28), moving or
+ * turning it (Q30) takes all of it. A 100 × 60 panel at the origin, its
  * centre at (50, 30), with a slot near its left edge, the slot's mirror
  * across a fixed line and across a fold, a rivet and a marking near its
  * right, and a label.
@@ -275,5 +289,174 @@ describe('flipping a piece flips all of it (Q28)', () => {
       expectBoxClose(after.get(id), mirrored(before.get(id)!, 'horizontal', 150, 30), id);
     }
     expect(RectOps.width(after.get('slot')!)).toBeCloseTo(20, 6);
+  });
+});
+
+const outlineShape = (document: Document) => {
+  const source = featureIn(document, 'outline').source;
+  if (source.kind !== 'shape') throw new Error('outline is not a shape');
+  return source.shape;
+};
+
+describe('what a gesture on a selection moves (Q30)', () => {
+  it('makes a piece whole from its outline, hidden and label features included', () => {
+    const document = setFeatureVisible(['mark'], false).apply(piece());
+
+    const scope = pieceScope(document.project, ['outline']);
+
+    expect(new Set(scope.features)).toEqual(new Set(EVERYTHING));
+    expect(scope.about).toEqual(['outline']);
+    expect(new Set(scope.labels)).toEqual(new Set(['label', 'edge']));
+  });
+
+  it('makes the same piece from a part picked by its heading', () => {
+    expect(new Set(pieceScope(piece().project, EVERYTHING).features)).toEqual(new Set(EVERYTHING));
+    expect(pieceScope(piece().project, EVERYTHING).about).toEqual(['outline']);
+  });
+
+  it('takes a part picked by its heading as every feature in it, for Rotate and the board', () => {
+    const project = piece().project;
+
+    expect(new Set(selectedFeatureIds(project, partSelectionOf(['p'])))).toEqual(
+      new Set(EVERYTHING),
+    );
+    expect(selectedFeatureIds(project, selectionOf(['slot', 'rivet']))).toEqual(['slot', 'rivet']);
+  });
+
+  it('leaves anything but an outline on its own', () => {
+    expect(pieceScope(piece().project, ['slot'])).toEqual({
+      features: ['slot'],
+      labels: [],
+      about: ['slot'],
+    });
+  });
+});
+
+describe('a gesture something refuses changes nothing (Q30)', () => {
+  const stretch = MatOps.composeAll(
+    MatOps.fromTranslation({ x: -50, y: -30 }),
+    MatOps.fromScale(1.5, 1),
+    MatOps.fromTranslation({ x: 50, y: 30 }),
+  );
+
+  it('stretches nothing rather than leaving the rivet and the labels behind', () => {
+    const document = piece();
+
+    expect(transformFeatures(EVERYTHING, stretch).apply(document)).toBe(document);
+    expect(transformRefusal(document.project, EVERYTHING, stretch)?.code).toBe(
+      'WOULD_BECOME_ELLIPSE',
+    );
+  });
+
+  it('gives the lock as the reason first, since it refuses the whole gesture', () => {
+    const document = setFeatureLocked(['rivet'], true).apply(piece());
+    const move = MatOps.fromTranslation({ x: 10, y: 0 });
+
+    expect(transformRefusal(document.project, EVERYTHING, move)).toMatchObject({
+      code: 'FEATURE_LOCKED',
+      facts: { featureId: 'rivet' },
+    });
+    expect(transformFeatures(EVERYTHING, move).apply(document)).toBe(document);
+  });
+
+  it('says nothing about a piece that can move', () => {
+    expect(
+      transformRefusal(piece().project, EVERYTHING, MatOps.fromTranslation({ x: 1, y: 2 })),
+    ).toBeNull();
+  });
+});
+
+describe('typing where a piece’s outline is moves or turns the piece (Q30)', () => {
+  const motions = fc
+    .tuple(
+      fc.integer({ min: -180, max: 180 }).map((deg) => (deg * Math.PI) / 180),
+      fc.integer({ min: -2000, max: 2000 }).map((i) => i / 10),
+      fc.integer({ min: -2000, max: 2000 }).map((i) => i / 10),
+    )
+    .map(([turn, x, y]) => ({ turn, x, y }));
+
+  it('carries every part of the piece exactly as the outline went, hidden ones too', () => {
+    fc.assert(
+      fc.property(motions, ({ turn, x, y }) => {
+        const document = setFeatureVisible(['mark'], false).apply(piece());
+        const before = outlineShape(document);
+        if (before.type !== 'rect') throw new Error('expected a rectangle');
+        const typed = {
+          ...before,
+          origin: { x: before.origin.x + x, y: before.origin.y + y },
+          rotation: before.rotation + turn,
+        };
+
+        const next = setShape('outline', typed).apply(document);
+
+        // The outline holds exactly what was typed…
+        expect(outlineShape(next)).toEqual(typed);
+        // …and the piece is where turning and moving it by hand puts it.
+        const motion = MatOps.composeAll(
+          MatOps.fromRotationAround({ x: 50, y: 30 }, turn),
+          MatOps.fromTranslation({ x, y }),
+        );
+        const byHand = boxes(transformFeatures(EVERYTHING, motion).apply(document).project);
+        const now = boxes(next.project);
+        for (const id of EVERYTHING) expectBoxClose(now.get(id), byHand.get(id)!, id);
+        expect(featureIn(next, 'mark').visible).toBe(false);
+      }),
+    );
+  });
+
+  it('resizes the outline alone when its width is typed, which is a reshape, not a move', () => {
+    const document = piece();
+    const before = outlineShape(document);
+    if (before.type !== 'rect') throw new Error('expected a rectangle');
+
+    const next = setShape('outline', { ...before, width: 120 }).apply(document);
+
+    expect(featureIn(next, 'slot')).toBe(featureIn(document, 'slot'));
+    expect(featureIn(next, 'rivet')).toBe(featureIn(document, 'rivet'));
+  });
+
+  it('refuses the whole move when anything in the piece is locked', () => {
+    const document = setFeatureLocked(['slot'], true).apply(piece());
+    const before = outlineShape(document);
+    if (before.type !== 'rect') throw new Error('expected a rectangle');
+
+    const next = setShape('outline', { ...before, origin: { x: 5, y: 0 } }).apply(document);
+
+    expect(next.project).toBe(document.project);
+  });
+
+  it('moves a cut-out typed on its own, and nothing else', () => {
+    const document = piece();
+    const slot = featureIn(document, 'slot').source;
+    if (slot.kind !== 'shape' || slot.shape.type !== 'rect') throw new Error('no slot');
+
+    const next = setShape('slot', { ...slot.shape, origin: { x: 50, y: 20 } }).apply(document);
+
+    expect(featureIn(next, 'outline')).toBe(featureIn(document, 'outline'));
+    expect(featureIn(next, 'rivet')).toBe(featureIn(document, 'rivet'));
+  });
+});
+
+describe('a piece drawn stitch-first moves by its outline too (Q30)', () => {
+  it('carries its stitch line, which the outline follows, instead of refusing', () => {
+    let document = emptyDocument('doc');
+    document = addAllowancePart('a', 'seam', 'edge', {
+      kind: 'shape',
+      shape: rectShape({ x: 0, y: 0 }, 80, 40),
+    }).apply(document);
+    document = addCutOut('a', 'hole', {
+      kind: 'shape',
+      shape: rectShape({ x: 10, y: 10 }, 10, 5),
+    }).apply(document);
+    const before = boxes(document.project);
+
+    const { features } = pieceScope(document.project, ['edge']);
+    const next = translateFeatures(features, { x: 25, y: 0 }).apply(document);
+
+    const after = boxes(next.project);
+    for (const id of ['edge', 'seam', 'hole']) {
+      const was = before.get(id)!;
+      expectBoxClose(after.get(id), { ...was, minX: was.minX + 25, maxX: was.maxX + 25 }, id);
+    }
   });
 });

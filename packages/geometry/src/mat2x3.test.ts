@@ -244,6 +244,26 @@ describe('uniformScaleOf', () => {
     fc.assert(fc.property(arbRigidTransform, (m) => closeTo(uniformScaleOf(m), 1, 1e-9)));
   });
 
+  it('is exactly 1 for any turn, move or mirror, so a turned 100 mm panel stays 100 mm (Q30)', () => {
+    // Angles drawn evenly: cos² + sin² rounds below 1 for about one in five,
+    // and the square root of that scaled every size it touched.
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -1_000_000, max: 1_000_000 }).map((i) => (i / 1_000_000) * Math.PI),
+        arbVec2,
+        fc.boolean(),
+        (angle, shift, mirrored) => {
+          const m = composeAll(
+            fromRotation(angle),
+            mirrored ? fromScale(-1, 1) : fromScale(1, 1),
+            fromTranslation(shift),
+          );
+          expect(uniformScaleOf(m)).toBe(1);
+        },
+      ),
+    );
+  });
+
   it('recovers the factor from a uniform scale', () => {
     fc.assert(
       fc.property(arbScaleFactor, (s) =>
