@@ -58,7 +58,7 @@ export {
 export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.js';
 export { evaluate, evaluationErrors, pathForShape, resolvedFeatures } from './evaluate.js';
 
-export { transformShape, transformTextSource } from './transformShape.js';
+export { motionBetween, transformShape, transformTextSource } from './transformShape.js';
 
 export {
   MIN_HOLES_IN_A_SET,

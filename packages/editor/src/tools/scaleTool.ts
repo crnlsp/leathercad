@@ -1,5 +1,5 @@
 import { formatNumber } from '@leathercad/core';
-import { refusedTransforms, transformFeatures } from '@leathercad/document';
+import { transformFeatures, transformRefusal } from '@leathercad/document';
 import type { Problem } from '@leathercad/domain';
 import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, textItem, type DisplayList } from '@leathercad/render';
@@ -70,9 +70,13 @@ export function createScaleTool(): Tool {
 
       const matrix = scaleAbout(state.pivot, factors);
       const { document, selection } = ctx.store.getState();
-      const refused = refusedTransforms(document.project, selection.features, matrix);
-
-      state = { ...state, factors, refusal: refused[0]?.problem ?? null };
+      // Refused whole (Q30), and said: a stretch the rivet cannot take leaves
+      // the whole piece as it was rather than the rivet behind.
+      state = {
+        ...state,
+        factors,
+        refusal: transformRefusal(document.project, selection.features, matrix),
+      };
       ctx.store.preview(transformFeatures(selection.features, matrix, 'Scale'));
       ctx.invalidate();
     },

@@ -1,4 +1,4 @@
-import { type DocumentStore } from '@leathercad/document';
+import { selectedFeatureIds, type DocumentStore } from '@leathercad/document';
 import {
   describeProblem,
   diagnose,
@@ -260,12 +260,7 @@ export function CanvasHost({
         if (viewRef.current === 'sheets') return middle;
 
         const { document, selection } = store.getState();
-        const selectedIds = new Set([
-          ...selection.features,
-          ...document.project.parts
-            .filter((part) => selection.parts.has(part.id))
-            .flatMap((part) => part.features.map((feature) => feature.id)),
-        ]);
+        const selectedIds = new Set(selectedFeatureIds(document.project, selection));
         const box = RectOps.unionAll(
           evaluate(document.project)
             .parts.flatMap((part) => part.features)
@@ -455,7 +450,12 @@ export function CanvasHost({
     renderDisplayList(
       context,
       buildDisplayList(evaluate(document.project), {
-        selected: selection.features,
+        // A part picked by its heading shows as picked (Q30): Rotate turns it,
+        // so the board has to say what will turn.
+        selected:
+          selection.parts.size === 0
+            ? selection.features
+            : new Set(selectedFeatureIds(document.project, selection)),
         hovered: hoveredRef.current,
         // The same list the panels read (X7), so a feature that failed is
         // marked here instead of silently disappearing.
