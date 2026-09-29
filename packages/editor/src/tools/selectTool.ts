@@ -1,6 +1,8 @@
 import {
   deleteFeatures,
+  deletePart,
   pieceScope,
+  selectedFeatureIds,
   transformRefusal,
   translateFeatures,
 } from '@leathercad/document';
@@ -58,9 +60,11 @@ export function createSelectTool(): Tool {
         return;
       }
 
-      const selection = ctx.store.getState().selection;
+      const { selection, document } = ctx.store.getState();
       if (event.shiftKey) {
-        const next = new Set(selection.features);
+        // Added to what is picked — a part picked by its heading included, as
+        // the features it stands for, rather than dropped (Q29).
+        const next = new Set(selectedFeatureIds(document.project, selection));
         if (next.has(hit)) next.delete(hit);
         else next.add(hit);
         ctx.store.select(next);
@@ -109,7 +113,8 @@ export function createSelectTool(): Tool {
       if (state.kind === 'band') {
         const band = RectOps.fromCorners(state.startMm, event.at);
         const found = featuresWithin(evaluate(ctx.store.getState().document.project), band);
-        const existing = event.shiftKey ? [...ctx.store.getState().selection.features] : [];
+        const { selection, document } = ctx.store.getState();
+        const existing = event.shiftKey ? selectedFeatureIds(document.project, selection) : [];
         ctx.store.select([...existing, ...found]);
       } else if (state.kind === 'moving') {
         ctx.store.commit();
@@ -127,7 +132,22 @@ export function createSelectTool(): Tool {
       }
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        const selected = [...ctx.store.getState().selection.features];
+        const { selection } = ctx.store.getState();
+        // A part picked by its heading goes whole, as its menu's Delete part
+        // does (Q29), not feature by feature into an empty part.
+        const [partId] = selection.parts;
+        if (partId !== undefined && selection.features.size === 0) {
+          if (ctx.requestDeletePart !== undefined) {
+            ctx.requestDeletePart(partId);
+            return;
+          }
+          const before = ctx.store.getState().document;
+          ctx.dispatch(deletePart(partId));
+          if (ctx.store.getState().document !== before) ctx.store.clearSelection();
+          return;
+        }
+
+        const selected = [...selection.features];
         if (selected.length === 0) return;
 
         if (ctx.requestDelete !== undefined) {

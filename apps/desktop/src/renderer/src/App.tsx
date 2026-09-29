@@ -666,6 +666,7 @@ export function App() {
             hardware={hardware}
             pointOptions={pointOptions}
             requestDelete={requestDelete}
+            requestDeletePart={requestDeletePart}
             onContextMenu={openContextMenu}
           >
             {/* The legend explains the board's marks; the sheets are ink. */}
@@ -689,9 +690,11 @@ export function App() {
           store={store}
           project={storeState.document.project}
           selected={storeState.selection.features}
+          selectedParts={storeState.selection.parts}
           diagnostics={diagnostics}
           nextId={nextId}
           requestDelete={requestDelete}
+          requestDeletePart={requestDeletePart}
         />
       </div>
 
@@ -734,7 +737,17 @@ export function App() {
             <span className="sep">·</span>
             <b data-testid="feature-count">{featureCount}</b> features
             <span className="sep">·</span>
-            <b data-testid="selected-count">{storeState.selection.features.size}</b> selected
+            {/* A part picked by its heading is a selection too (Q29), and says so. */}
+            {storeState.selection.features.size === 0 && storeState.selection.parts.size > 0 ? (
+              <>
+                <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
+                {storeState.selection.parts.size === 1 ? 'part' : 'parts'} selected
+              </>
+            ) : (
+              <>
+                <b data-testid="selected-count">{storeState.selection.features.size}</b> selected
+              </>
+            )}
             {diagnostics.length > 0 && (
               <>
                 <span className="sep">·</span>

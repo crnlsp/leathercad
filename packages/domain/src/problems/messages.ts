@@ -240,6 +240,12 @@ const CATALOGUE: { readonly [K in ProblemCode]: Entry<K> } = {
     describe: () =>
       'Select one part: this belongs to a single panel, and the selection spans more than one.',
   },
+  WHOLE_PART_NOT_SCALED: {
+    title: 'A whole part is not scaled',
+    describe: () =>
+      'Scale resizes the shapes you pick, not a whole part: that would resize its rivet holes and ' +
+      'labels too. Pick its outline on the board to resize the edge alone.',
+  },
 
   PARAMETER_INVALID: {
     title: 'Unusable number',
