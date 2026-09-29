@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit is a second reviewer on every pull request into develop and main.
+# It is advisory — not a required check — and tuned to say little: CI already
+# enforces format, lint, layering, dead code and tests, and the pull request
+# template already says what changed. It reads CLAUDE.md for the invariants
+# (its default code-guideline files); the path instructions below point at
+# the docs that hold the detail. See CONTRIBUTING.md, "Commits and pull
+# requests".
+
+language: en-GB
+tone_instructions: >-
+  Be brief. Comment on correctness, the invariants in CLAUDE.md, and security.
+  No style or formatting remarks: Prettier and ESLint own those. Say when you
+  are unsure.
+
+reviews:
+  profile: chill
+  # The description is written by hand from the template, and is the record.
+  high_level_summary: false
+  changed_files_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+  poem: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    # Work lands on develop; main, the default branch, is always included.
+    base_branches:
+      - develop
+
+  path_filters:
+    - '!pnpm-lock.yaml'
+    # Written by release-please.
+    - '!CHANGELOG.md'
+    # Machine-written glyph outlines, snapshots and benchmark baselines.
+    - '!packages/typography/src/generated/**'
+    - '!**/__snapshots__/**'
+    - '!packages/*/bench/**'
+    # Archived records, no longer updated.
+    - '!docs/history/**'
+
+  path_instructions:
+    - path: 'packages/{core,geometry,domain}/**'
+      instructions: >-
+        The pure layers, where a wrong answer is invisible until leather is
+        cut. Hold the change to the done-checklist in docs/geometry.md §12:
+        millimetres only; no float equality — approxEq and the epsilons from
+        @leathercad/core, never a local epsilon; NaN and Infinity refused at
+        public entry points; degenerate input (a zero-length segment, a
+        cubic with collinear controls or a cusp, a zero-radius arc, an empty
+        path) handled or documented. Every geometry or domain change needs a
+        property test, not only examples (docs/testing.md §3). geometry
+        imports only core: no DOM, pixels, colour, clock or randomness.
+    - path: 'packages/{geometry,domain}/**/*.test.ts'
+      instructions: >-
+        A counterexample fast-check shrank to belongs in a named regression
+        test. Check that a property really constrains the result, and that a
+        tolerance is not looser than the code's own epsilon.
+    - path: 'packages/persist/**'
+      instructions: >-
+        Files store parameters, never derived geometry (paths, hole
+        positions, lengths, bounds). A shipped migration is never edited or
+        deleted. See docs/file-format.md.
+    - path: 'packages/{export,render}/**'
+      instructions: >-
+        Output prints at exact 1:1 scale: never scale content to fit a page
+        (add a page), never print through the webview. The Y flip lives only
+        in worldToScreen and export/svg. See docs/printing.md.
+    - path: 'apps/desktop/src/**'
+      instructions: >-
+        Only commands mutate the document: components read, tools dispatch.
+        No viewport, selection or tool state in the persisted document, and
+        no document in React, Zustand or Redux state. The main process grants
+        file paths only from a dialog or the recent-files list; renderer
+        input to it is untrusted.
+    - path: '.github/workflows/**'
+      instructions: >-
+        Actions pinned to a commit with the version in a comment, the least
+        permissions per job, and expressions passed through env rather than
+        interpolated into run scripts.
+
+  # Generated docstrings and tests would not meet this project's bar for
+  # either; the pull request title is checked by CI (pr-title.yml).
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: 'off'
+    title:
+      mode: 'off'
+    description:
+      mode: 'off'
+
+  tools:
+    # Markdown is hand-formatted and the prose is British: these only nag.
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
+    vale:
+      enabled: false
+    # ESLint and Prettier are this project's linters; these disagree with them.
+    biome:
+      enabled: false
+    oxc:
+      enabled: false
