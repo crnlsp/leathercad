@@ -154,11 +154,11 @@ function commandFor(
         feature && D.setShape(feature.id, D.rectShape(at(step.x, step.y), size, 40, step.c % 6))
       );
     case 22:
-      return feature && D.setFeatureVisible(feature.id, step.c % 2 === 0);
+      return feature && D.setFeatureVisible([feature.id], step.c % 2 === 0);
     case 23:
       return part && D.setPartVisible(part.id, step.c % 2 === 0);
     case 24:
-      return feature && D.setFeatureLocked(feature.id, step.c % 3 === 0);
+      return feature && D.setFeatureLocked([feature.id], step.c % 3 === 0);
     // A drawn outline, and the point edits that renumber its corners (3.9b):
     // every attachment has to come out of them still a file the loader takes.
     case 26:

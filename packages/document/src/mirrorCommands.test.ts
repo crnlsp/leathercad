@@ -264,14 +264,14 @@ describe('what a counterpart refuses', () => {
   });
 
   it('refuses to move while locked, like anything else (S7)', () => {
-    const locked = setFeatureLocked(COPY, true).apply(pair());
+    const locked = setFeatureLocked([COPY], true).apply(pair());
 
     expect(translateFeatures([COPY], { x: 10, y: 0 }).apply(locked).project).toBe(locked.project);
   });
 
   it('still follows its original while locked', () => {
     // Its dependents follow it; it simply cannot change itself.
-    const locked = setFeatureLocked(COPY, true).apply(pair());
+    const locked = setFeatureLocked([COPY], true).apply(pair());
 
     const next = setShape(CUT, rectShape({ x: 0, y: 0 }, 140, 60)).apply(locked);
 

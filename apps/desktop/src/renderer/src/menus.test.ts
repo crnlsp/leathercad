@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { focusAfter, helpMenu, projectMenu, recentParts } from './menus.js';
+import {
+  focusAfter,
+  helpMenu,
+  projectMenu,
+  recentParts,
+  sharedReasons,
+  type MenuEntry,
+} from './menus.js';
 
 describe('moving through a menu by keyboard (8.7)', () => {
   it('goes down and up, wrapping at either end, as menus do', () => {
@@ -87,5 +94,41 @@ describe('the Project and Help menus (8.7)', () => {
       entry.kind === 'item' ? [entry.label] : [],
     );
     expect(labels).toEqual(['Open sample project', 'About LeatherCAD']);
+  });
+});
+
+describe('a reason several items share (8.8)', () => {
+  const noop = (): void => undefined;
+  const refused = (id: string, refusal?: string): MenuEntry => ({
+    kind: 'item',
+    id,
+    label: id,
+    onChoose: noop,
+    refusal,
+  });
+
+  it('is said once, under the last of a run, and the others point to it', () => {
+    const said = sharedReasons([
+      refused('a', 'Locked'),
+      refused('b', 'Locked'),
+      refused('c', 'Locked'),
+      refused('d'),
+    ]);
+    expect(said).toEqual(
+      new Map([
+        ['a', 'c'],
+        ['b', 'c'],
+      ]),
+    );
+  });
+
+  it('is said again after a separator, or for a different reason', () => {
+    const said = sharedReasons([
+      refused('a', 'Locked'),
+      { kind: 'separator' },
+      refused('b', 'Locked'),
+      refused('c', 'Empty'),
+    ]);
+    expect(said.size).toBe(0);
   });
 });

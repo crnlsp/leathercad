@@ -249,7 +249,7 @@ describe('part visibility', () => {
 
   it('reads as hidden only when nothing in it is visible', () => {
     const document = panel(emptyDocument('proj'), A, 'cut-a');
-    const one = setFeatureVisible('cut-a' as FeatureId, false).apply(document);
+    const one = setFeatureVisible(['cut-a' as FeatureId], false).apply(document);
 
     expect(isPartVisible(partIn(one.project, A)!)).toBe(true);
   });
@@ -370,7 +370,7 @@ describe('duplicating a part that is locked', () => {
     expect(deleteFeatures([outlineId!]).apply(next).project).toBe(next.project);
 
     // Unlocking the copy releases it, and the original stays pinned down.
-    const freed = setFeatureLocked(outlineId!, false).apply(next);
+    const freed = setFeatureLocked([outlineId!], false).apply(next);
     expect(translateFeatures([outlineId!], { x: 25, y: 0 }).apply(freed).project).not.toBe(
       freed.project,
     );

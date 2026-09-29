@@ -120,34 +120,66 @@ export function renameFeature(id: FeatureId, name: string): Command {
 }
 
 /**
- * Shows or hides a feature.
+ * Shows or hides features — one, or a whole selection as one step (8.8).
  *
  * Allowed on a locked feature on purpose: the lock protects the piece, not the
  * view. You pin the outline down so you cannot nudge it, and you still want to
  * hide it to see what is underneath. See `domain/lock.ts`.
+ *
+ * An array, not an `Iterable`: a `FeatureId` is a string, and a string is
+ * iterable, so one id passed bare would be read as its characters.
  */
-export function setFeatureVisible(id: FeatureId, visible: boolean): Command {
-  return command(visible ? 'Show feature' : 'Hide feature', (document) => ({
-    project: mapFeature(document.project, id, (feature) => ({ ...feature, visible }), {
-      evenIfLocked: true,
-    }),
-  }));
+export function setFeatureVisible(ids: readonly FeatureId[], visible: boolean): Command {
+  const verb = visible ? 'Show' : 'Hide';
+  return command(
+    ids.length === 1 ? `${verb} feature` : `${verb} ${String(ids.length)} features`,
+    (document) => withFlag(document, ids, 'visible', visible),
+  );
 }
 
 /**
- * Pins a feature down, or lets it go (S7).
+ * Pins features down, or lets them go (S7) — one, or a whole selection as one
+ * step (8.8).
  *
  * The one command that may change a locked feature, because it is the only way
  * back: `hitTest` and `snap` already skip a locked feature, so without this —
  * and without the parts panel it is reached from — locking an outline would
  * put it permanently out of reach (defect D8).
  */
-export function setFeatureLocked(id: FeatureId, locked: boolean): Command {
-  return command(locked ? 'Lock' : 'Unlock', (document) => ({
-    project: mapFeature(document.project, id, (feature) => ({ ...feature, locked }), {
-      evenIfLocked: true,
-    }),
-  }));
+export function setFeatureLocked(ids: readonly FeatureId[], locked: boolean): Command {
+  const verb = locked ? 'Lock' : 'Unlock';
+  return command(ids.length === 1 ? verb : `${verb} ${String(ids.length)} features`, (document) =>
+    withFlag(document, ids, 'locked', locked),
+  );
+}
+
+/**
+ * Sets one of a feature's two view-and-pick flags on each of `ids`. Returns
+ * the document itself when nothing changes: the store decides by identity, so
+ * a no-op earns no undo entry.
+ */
+function withFlag(
+  document: Document,
+  ids: readonly FeatureId[],
+  flag: 'visible' | 'locked',
+  value: boolean,
+): Document {
+  const { project } = document;
+  const wanted = new Set(ids);
+  const changes = (feature: Feature): boolean => wanted.has(feature.id) && feature[flag] !== value;
+  if (!project.parts.some((part) => part.features.some(changes))) return document;
+
+  const parts = project.parts.map((part) =>
+    part.features.some(changes)
+      ? {
+          ...part,
+          features: part.features.map((feature) =>
+            changes(feature) ? { ...feature, [flag]: value } : feature,
+          ),
+        }
+      : part,
+  );
+  return { project: { ...project, parts } };
 }
 
 /** Replaces a parametric shape — the path is regenerated on evaluation. */
@@ -1400,6 +1432,20 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
 }
 
 /**
+ * Why deleting `ids` would refuse, or `null` — asked first by the Delete key,
+ * the panel and the right-click menu (8.8), so none of them offers a delete
+ * that was never going to happen (X1, ADR 0013).
+ *
+ * S7, over the cascade rather than only the request: deleting an outline would
+ * delete or freeze the stitch line that follows it, and if *that* is locked
+ * the user pinned it down precisely so this could not happen to it.
+ */
+export function deleteRefusal(project: Project, ids: Iterable<FeatureId>): Problem | null {
+  const plan = planDelete(project, ids);
+  return lockRefusal(project, [...plan.requested, ...plan.dependents.map((d) => d.featureId)]);
+}
+
+/**
  * Deletes a part and its features.
  *
  * Planned exactly like `deleteFeatures`: anything outside the part that depends
@@ -2030,13 +2076,8 @@ function resolveDelete(
   ids: readonly FeatureId[],
   resolution: DeleteResolution | undefined,
 ): DeleteOutcome | null {
+  if (deleteRefusal(project, ids) !== null) return null;
   const plan = planDelete(project, ids);
-
-  // S7, over the cascade rather than only the request: deleting an outline
-  // would delete or freeze the stitch line that follows it, and if *that* is
-  // locked the user pinned it down precisely so this could not happen to it.
-  const touched = [...plan.requested, ...plan.dependents.map((d) => d.featureId)];
-  if (lockRefusal(project, touched) !== null) return null;
 
   const gone = new Set(plan.requested);
   const frozen = new Map<FeatureId, Feature>();

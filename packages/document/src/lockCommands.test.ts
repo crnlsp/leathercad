@@ -1,4 +1,5 @@
 import { lockRefusal, type FeatureId, type Project } from '@leathercad/domain';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -6,6 +7,7 @@ import {
   addStitchLine,
   deleteFeatures,
   deletePart,
+  deleteRefusal,
   emptyDocument,
   flipFeatures,
   flipRefusal,
@@ -53,7 +55,7 @@ function chain(): Document {
 }
 
 const lock = (document: Document, id: string): Document =>
-  setFeatureLocked(id as FeatureId, true).apply(document);
+  setFeatureLocked([id as FeatureId], true).apply(document);
 
 const featureIn = (project: Project, id: string) =>
   project.parts.flatMap((p) => p.features).find((f) => f.id === id);
@@ -158,7 +160,7 @@ describe('what the lock deliberately does not cover', () => {
     // cannot nudge it, and still want to hide it to see underneath.
     const document = lock(chain(), CUT);
 
-    const hidden = setFeatureVisible(CUT, false).apply(document);
+    const hidden = setFeatureVisible([CUT], false).apply(document);
 
     expect(featureIn(hidden.project, CUT)?.visible).toBe(false);
     expect(featureIn(hidden.project, CUT)?.locked).toBe(true);
@@ -167,7 +169,7 @@ describe('what the lock deliberately does not cover', () => {
   it('lets a locked feature be unlocked, which is the way out', () => {
     const document = lock(chain(), CUT);
 
-    const freed = setFeatureLocked(CUT, false).apply(document);
+    const freed = setFeatureLocked([CUT], false).apply(document);
 
     expect(featureIn(freed.project, CUT)?.locked).toBe(false);
     // And then it moves.
@@ -189,16 +191,71 @@ describe('setFeatureLocked', () => {
   it('locks and unlocks, and says so in the undo menu', () => {
     const document = chain();
 
-    expect(setFeatureLocked(CUT, true).label).toBe('Lock');
-    expect(setFeatureLocked(CUT, false).label).toBe('Unlock');
-    expect(featureIn(setFeatureLocked(CUT, true).apply(document).project, CUT)?.locked).toBe(true);
+    expect(setFeatureLocked([CUT], true).label).toBe('Lock');
+    expect(setFeatureLocked([CUT], false).label).toBe('Unlock');
+    expect(featureIn(setFeatureLocked([CUT], true).apply(document).project, CUT)?.locked).toBe(
+      true,
+    );
   });
 
   it('is a no-op for a feature that is not there', () => {
     const document = chain();
 
-    expect(setFeatureLocked('nobody' as FeatureId, true).apply(document).project).toBe(
+    expect(setFeatureLocked(['nobody' as FeatureId], true).apply(document).project).toBe(
       document.project,
+    );
+  });
+});
+
+describe('locking and hiding several features at once (8.8)', () => {
+  const IDS = [CUT, 'stitch-1', 'holes-1', 'mark-1'] as FeatureId[];
+
+  it('is one command, so a right-click on five features is one step of undo', () => {
+    const document = chain();
+
+    const locked = setFeatureLocked([CUT, 'mark-1' as FeatureId], true).apply(document);
+
+    expect(featureIn(locked.project, CUT)?.locked).toBe(true);
+    expect(featureIn(locked.project, 'mark-1')?.locked).toBe(true);
+    expect(featureIn(locked.project, 'stitch-1')?.locked).toBe(false);
+    expect(setFeatureLocked([CUT, 'mark-1' as FeatureId], true).label).toBe('Lock 2 features');
+    expect(setFeatureVisible([CUT, 'mark-1' as FeatureId], false).label).toBe('Hide 2 features');
+  });
+
+  it('changes exactly the features named, to exactly the value asked, and nothing else', () => {
+    fc.assert(
+      fc.property(
+        fc.subarray(IDS),
+        fc.boolean(),
+        fc.constantFrom('locked', 'visible'),
+        (ids, value, flag) => {
+          const document = chain();
+          const set = flag === 'locked' ? setFeatureLocked : setFeatureVisible;
+
+          const next = set(ids, value).apply(document);
+
+          for (const id of IDS) {
+            const was = featureIn(document.project, id)!;
+            const now = featureIn(next.project, id)!;
+            expect(now[flag]).toBe(ids.includes(id) ? value : was[flag]);
+            // The other flag is never touched: hiding does not unlock.
+            const other = flag === 'locked' ? 'visible' : 'locked';
+            expect(now[other]).toBe(was[other]);
+          }
+        },
+      ),
+    );
+  });
+
+  it('is a no-op, earning no undo entry, when every feature already has the value', () => {
+    fc.assert(
+      fc.property(fc.subarray(IDS), fc.boolean(), (ids, value) => {
+        const once = setFeatureLocked(ids, value).apply(chain());
+        expect(setFeatureLocked(ids, value).apply(once)).toBe(once);
+
+        const shown = setFeatureVisible(ids, value).apply(chain());
+        expect(setFeatureVisible(ids, value).apply(shown)).toBe(shown);
+      }),
     );
   });
 });
@@ -217,5 +274,39 @@ describe('the interface asks the same question the command does (ADR 0013)', () 
 
   it('says nothing about an unlocked piece that can be flipped', () => {
     expect(flipRefusal(chain().project, [CUT], 'horizontal')).toBeNull();
+  });
+
+  it('gives the lock as the reason a delete is refused, over the whole cascade', () => {
+    // Deleting the outline would take the locked holes that follow it.
+    const document = lock(chain(), 'holes-1');
+
+    expect(deleteRefusal(document.project, [CUT])).toMatchObject({
+      code: 'FEATURE_LOCKED',
+      facts: { featureId: 'holes-1' },
+    });
+    expect(deleteRefusal(document.project, ['mark-1' as FeatureId])).toBeNull();
+  });
+
+  it('refuses a delete exactly when the command would (8.8)', () => {
+    const IDS = [CUT, 'stitch-1', 'holes-1', 'mark-1'] as FeatureId[];
+    fc.assert(
+      fc.property(
+        fc.subarray(IDS),
+        fc.subarray(IDS, { minLength: 1 }),
+        fc.constantFrom('delete-dependents', 'freeze-dependents') as fc.Arbitrary<
+          'delete-dependents' | 'freeze-dependents'
+        >,
+        (locked, doomed, resolution) => {
+          const document = setFeatureLocked(locked, true).apply(chain());
+          const deleted = deleteFeatures(doomed, resolution).apply(document);
+
+          if (deleteRefusal(document.project, doomed) === null) {
+            expect(deleted).not.toBe(document);
+          } else {
+            expect(deleted).toBe(document);
+          }
+        },
+      ),
+    );
   });
 });

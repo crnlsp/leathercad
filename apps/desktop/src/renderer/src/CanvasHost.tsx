@@ -52,6 +52,7 @@ import {
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
+import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
 import { isTyping } from './shortcuts.js';
 
@@ -87,6 +88,12 @@ export interface CanvasHandle {
   zoom(factor: number): void;
   /** Ctrl+0 (8.4b): fits the pattern, as a double-click on empty board does. */
   fit(): void;
+  /**
+   * Where a menu about the selection opens from the keyboard (8.8), in CSS
+   * pixels of the window: the middle of what is selected, when it is on the
+   * board in view, otherwise the middle of the canvas.
+   */
+  selectionPoint(): { x: number; y: number } | null;
 }
 
 export interface CanvasStatus {
@@ -116,6 +123,7 @@ export function CanvasHost({
   hardware,
   pointOptions = DEFAULT_EDIT_POINTS,
   requestDelete,
+  onContextMenu,
   nextId,
   onStatus,
   ref,
@@ -133,6 +141,8 @@ export function CanvasHost({
   /** The corner radius Edit Points rounds to (3.9d). */
   pointOptions?: EditPointsOptions;
   requestDelete: (ids: readonly string[]) => void;
+  /** A right-click on a feature (8.8): the app selects it, unless it already is, and opens the menu. */
+  onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
   ref?: React.Ref<CanvasHandle>;
@@ -242,8 +252,43 @@ export function CanvasHost({
         invalidate();
       },
       fit: handleDoubleClick,
+      selectionPoint() {
+        const canvas = canvasRef.current;
+        if (canvas === null) return null;
+        const rect = canvas.getBoundingClientRect();
+        const middle = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        if (viewRef.current === 'sheets') return middle;
+
+        const { document, selection } = store.getState();
+        const selectedIds = new Set([
+          ...selection.features,
+          ...document.project.parts
+            .filter((part) => selection.parts.has(part.id))
+            .flatMap((part) => part.features.map((feature) => feature.id)),
+        ]);
+        const box = RectOps.unionAll(
+          evaluate(document.project)
+            .parts.flatMap((part) => part.features)
+            .filter(
+              (entry) => entry.ok && entry.feature.visible && selectedIds.has(entry.feature.id),
+            )
+            .flatMap((entry) => (entry.ok ? [PathOps.bbox(entry.path)] : []))
+            .filter((b): b is NonNullable<typeof b> => b !== null),
+        );
+        if (box === null) return middle;
+
+        const viewport = viewportRef.current;
+        const at = viewport.toScreen({
+          x: (box.minX + box.maxX) / 2,
+          y: (box.minY + box.maxY) / 2,
+        });
+        const x = rect.left + at.x / viewport.dpr;
+        const y = rect.top + at.y / viewport.dpr;
+        const inView = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        return inView ? { x, y } : middle;
+      },
     }),
-    [camera, handleDoubleClick, invalidate],
+    [camera, handleDoubleClick, invalidate, store],
   );
 
   // Settings the tools read at the moment they act. Refs rather than props
@@ -257,6 +302,8 @@ export function CanvasHost({
   pointOptionsRef.current = pointOptions;
   const requestDeleteRef = useRef(requestDelete);
   requestDeleteRef.current = requestDelete;
+  const onContextMenuRef = useRef(onContextMenu);
+  onContextMenuRef.current = onContextMenu;
 
   const tools = useMemo(
     () => [
@@ -683,6 +730,36 @@ export function CanvasHost({
     [camera, invalidate, pickOnSheets, store, toInput],
   );
 
+  /**
+   * A right-click on the board (8.8): what a click would pick, with any tool,
+   * since the panels already run these commands whatever tool is active.
+   * Nothing on the sheets — no tool acts there — and nothing mid-drag, or with
+   * Alt, which pans. On empty board there is no menu and the selection stays:
+   * a right-click that missed an edge must not undo a multi-selection. A
+   * locked piece is found, unlike by a click: this is where it is unlocked.
+   */
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      event.preventDefault();
+      if (viewRef.current === 'sheets' || store.inTransaction || event.altKey) return;
+      const viewport = viewportRef.current;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const at = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
+      const hit = hitTest(
+        evaluate(store.getState().document.project),
+        at,
+        viewport.pickToleranceMm(),
+        { locked: true },
+      );
+      if (hit === null) return;
+      onContextMenuRef.current?.(
+        { kind: 'feature', id: hit },
+        { x: event.clientX, y: event.clientY },
+      );
+    },
+    [store],
+  );
+
   const handlePointerUp = useCallback(
     (event: React.PointerEvent<HTMLCanvasElement>) => {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -739,6 +816,7 @@ export function CanvasHost({
           invalidate();
         }}
         onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
       />
       {children}
       {sheetsNotice && pointerCss !== null && (

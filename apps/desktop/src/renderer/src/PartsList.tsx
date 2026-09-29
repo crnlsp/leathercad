@@ -15,10 +15,11 @@ import {
 } from '@leathercad/domain';
 
 import { Copy, Ellipsis, Eye, EyeOff, FlipHorizontal2, Lock, LockOpen, Trash2 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 
 import { describePrintStatus, type PartPrintStatus } from '@leathercad/export';
 
+import type { RightClicked } from './contextMenu.js';
 import { CountBadge } from './CountBadge.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
@@ -46,6 +47,7 @@ export function PartsList({
   onHoverPart,
   onRemovePart,
   onDuplicatePart,
+  onContextMenu,
   onOpenSample,
 }: {
   store: DocumentStore;
@@ -70,6 +72,8 @@ export function PartsList({
   onRemovePart: (partId: string) => void;
   /** Copies a part, re-pointing the derivations inside it. */
   onDuplicatePart: (partId: string) => void;
+  /** A right-click on a row or a heading (8.8): the same menu as on the board. */
+  onContextMenu: OpenMenu;
   /** Opens the worked sample (8.3): a finished pattern to take apart. */
   onOpenSample: () => void;
 }) {
@@ -112,6 +116,7 @@ export function PartsList({
           onHoverPart={onHoverPart}
           onRemovePart={onRemovePart}
           onDuplicatePart={onDuplicatePart}
+          onContextMenu={onContextMenu}
         />
       ))}
     </aside>
@@ -129,6 +134,7 @@ function PartSection({
   onHoverPart,
   onRemovePart,
   onDuplicatePart,
+  onContextMenu,
 }: {
   store: DocumentStore;
   part: Part;
@@ -140,6 +146,7 @@ function PartSection({
   printStatus: PartPrintStatus | null;
   onRemovePart: (partId: string) => void;
   onDuplicatePart: (partId: string) => void;
+  onContextMenu: OpenMenu;
 }) {
   const visible = isPartVisible(part);
 
@@ -162,6 +169,7 @@ function PartSection({
           // cut-out or fold line, without having to pick something inside it
           // first (§3.1).
           onClick={() => store.selectParts([part.id])}
+          onContextMenu={(event) => onContextMenu({ kind: 'part', id: part.id }, menuPoint(event))}
         >
           <FeatureMark mark="piece" />
           {part.name}
@@ -207,6 +215,7 @@ function PartSection({
             selected={selected}
             badges={badges}
             depth={0}
+            onContextMenu={onContextMenu}
           />
         ))
       )}
@@ -278,12 +287,14 @@ function FeatureRow({
   selected,
   badges,
   depth,
+  onContextMenu,
 }: {
   store: DocumentStore;
   node: FeatureNode;
   selected: ReadonlySet<string>;
   badges: Badges;
   depth: number;
+  onContextMenu: OpenMenu;
 }) {
   const { feature } = node;
 
@@ -298,6 +309,10 @@ function FeatureRow({
           // of hit-testing on the canvas, so this is the only way to reach it
           // and unlock it.
           onClick={() => store.select([feature.id])}
+          // Locked and hidden ones too: this is where they are reached.
+          onContextMenu={(event) =>
+            onContextMenu({ kind: 'feature', id: feature.id }, menuPoint(event))
+          }
         >
           <MarkOf feature={feature} />
           <span className="feature-name">{feature.name}</span>
@@ -325,7 +340,7 @@ function FeatureRow({
           onLabel="Unlock"
           offLabel="Lock"
           glyph={<Icon of={feature.locked ? Lock : LockOpen} />}
-          onToggle={() => store.dispatch(setFeatureLocked(feature.id, !feature.locked))}
+          onToggle={() => store.dispatch(setFeatureLocked([feature.id], !feature.locked))}
         />
         <IconToggle
           testId={`feature-visible-${feature.id}`}
@@ -333,7 +348,7 @@ function FeatureRow({
           onLabel="Hide"
           offLabel="Show"
           glyph={<Icon of={feature.visible ? Eye : EyeOff} />}
-          onToggle={() => store.dispatch(setFeatureVisible(feature.id, !feature.visible))}
+          onToggle={() => store.dispatch(setFeatureVisible([feature.id], !feature.visible))}
         />
       </div>
       {node.children.map((child) => (
@@ -344,10 +359,22 @@ function FeatureRow({
           selected={selected}
           badges={badges}
           depth={depth + 1}
+          onContextMenu={onContextMenu}
         />
       ))}
     </>
   );
+}
+
+type OpenMenu = (clicked: RightClicked, at: { x: number; y: number }) => void;
+
+/**
+ * Where a row's right-click menu opens: at the pointer. The Menu key and
+ * Shift+F10 on a focused row arrive here too, with a point on the row.
+ */
+function menuPoint(event: MouseEvent<HTMLElement>): { x: number; y: number } {
+  event.preventDefault();
+  return { x: event.clientX, y: event.clientY };
 }
 
 /** Whether a counterpart is mirrored across a fold, rather than a fixed axis. */

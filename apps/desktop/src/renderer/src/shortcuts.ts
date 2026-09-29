@@ -40,6 +40,10 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
       { keys: ['CmdOrCtrl+Z'], does: 'Undo' },
       { keys: ['CmdOrCtrl+Shift+Z'], does: 'Redo' },
       { keys: ['Delete', 'Backspace'], does: 'Delete what is selected (Select tool)' },
+      {
+        keys: ['Shift+F10', 'Menu'],
+        does: 'The menu of what is selected, as a right-click opens it',
+      },
       { keys: ['Escape'], does: 'Cancel what the tool is doing, or clear the selection' },
     ],
   },

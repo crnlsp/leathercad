@@ -50,6 +50,7 @@ export {
   circleShape,
   deleteFeatures,
   deletePart,
+  deleteRefusal,
   duplicatePart,
   isPartVisible,
   foldMirrorRefusal,

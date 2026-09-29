@@ -1463,6 +1463,11 @@ button.problem-row:hover {
   right: 0;
 }
 
+/* The right-click menu (8.8): at the pointer, over everything but a dialog. */
+.menu.context {
+  position: fixed;
+}
+
 /* The Parts panel scrolls, and so clips a menu wider than itself. */
 .parts .menu {
   width: 200px;
@@ -1478,14 +1483,6 @@ button.problem-row:hover {
   padding: 6px 8px 2px;
   color: var(--text-dim);
   font: var(--t-label);
-}
-
-/* Two classes, to outrank `.menu-item`'s own colour below. Dim, not muted,
-   so it reads as a note and stays legible. */
-.menu-item.menu-empty {
-  color: var(--text-dim);
-  font-weight: 400;
-  cursor: default;
 }
 
 .menu-item {
@@ -1510,6 +1507,21 @@ button.problem-row:hover {
 
 .menu-item.danger {
   color: var(--error);
+}
+
+/* What cannot be chosen now — an empty group's line, or an action the
+   selection refuses (8.8), danger included. After `.danger`, to outrank it.
+   Dim, not muted, so it reads as a note and stays legible. */
+.menu-item[aria-disabled='true'] {
+  color: var(--text-dim);
+  font-weight: 400;
+  cursor: default;
+}
+
+/* Not lit by the pointer, which would say it can be chosen; still by the
+   keyboard, which has to show where it is. */
+.menu-item[aria-disabled='true']:hover:not(:focus-visible) {
+  background: transparent;
 }
 
 .menu-note {
