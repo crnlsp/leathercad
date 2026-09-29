@@ -334,7 +334,7 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
 
 ```
 ~/.config/leathercad/
-├── preferences.json      the frame as the maker left it, and File › Open Recent (8.2)
+├── preferences.json      the frame as the maker left it, and the recent projects (8.2, 8.7)
 ├── printers.json         per-printer calibration factors — see printing.md §8
 └── library/
     ├── parts/*.lcpart    saved part templates
@@ -356,7 +356,7 @@ and read once at start-up:
 Unlike a project, **nothing in it is worth refusing to start over**: a damaged file, a wrong type
 or an unknown field falls back field by field to the defaults, and a newer version's extra fields
 are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent first, and only
-paths the maker chose in the app's own dialogs — *Open Recent* grants a path because it is on
+paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
 has gone is taken off the list when it is chosen. The rail's collapse applies to a wide window
 only; below 1200 px it collapses by itself, and opening it there lasts the session.

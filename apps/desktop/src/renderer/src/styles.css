@@ -1148,8 +1148,9 @@ body {
   white-space: nowrap;
 }
 
+/* Dim, not muted: muted fails contrast on the dialog's surface (8.7's scan). */
 .shortcut-or {
-  color: var(--text-mute);
+  color: var(--text-dim);
   font: var(--t-micro);
 }
 
@@ -1479,9 +1480,10 @@ button.problem-row:hover {
   font: var(--t-label);
 }
 
-/* Two classes, to outrank `.menu-item`'s own colour below. */
+/* Two classes, to outrank `.menu-item`'s own colour below. Dim, not muted,
+   so it reads as a note and stays legible. */
 .menu-item.menu-empty {
-  color: var(--text-mute);
+  color: var(--text-dim);
   font-weight: 400;
   cursor: default;
 }

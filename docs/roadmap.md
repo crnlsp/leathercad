@@ -52,12 +52,15 @@ the suggested order of work, and *The window* comes before the other groups.
 Set first on 2026-09-29, in this order, one pull request each: the window's own frame was still
 Electron's default menu, a right-click did nothing, and nothing said a new release existed.
 
-- ◐ **8.7 The top bar and Settings.** No application menu on Linux and Windows, and the minimal one
+- ✅ **8.7 The top bar and Settings.** No application menu on Linux and Windows, and the minimal one
   macOS requires. The project bar gains a Project menu (New, Open, Save as, recent projects), Settings
   and Help (the sample project, About). Settings is a sidebar window — General, Appearance, Keyboard
   shortcuts — that grows a section only when it has a real control. The Paper menu, a copy of the
   sheet indicator, goes with its IPC. Design:
   [`2026-09-29-top-bar-and-settings-design.md`](superpowers/specs/2026-09-29-top-bar-and-settings-design.md).
+  ✅ Built as designed. On the way: a menu closed by Escape never gave its button focus back, and
+  the shortcut map's "or" failed contrast; both fixed. The README's pictures still show the bar
+  before 8.7 (Q27).
 - ☐ **8.8 The right-click menu.** Selecting several features already works — Shift-click, and
   dragging a box. A right-click selects what is under the pointer unless it is already selected,
   then offers what the selection can take: Delete, Flip, Lock, Hide and Duplicate part, through the
@@ -104,6 +107,7 @@ Everything found along the way that is not fixed yet, with where it was found. T
 |---|---|---|---|
 | ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
 | ☐ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
+| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
 | ✅ **Q26** | **bug** · Two findings of the nightly property run ([issue #27](https://github.com/crnlsp/leathercad/issues/27)). A cubic that doubles back on itself measured short — 4 µm on a 94 mm curve, against a 1e-7 mm tolerance — because its speed kinks where it turns, and a kink can make adaptive quadrature's halves agree with the whole while both are wrong. And the nearest point of a line shorter than `EPS_POINT` was always its start, a hair from its other end | The nightly runs of 2026-09-27 to 2026-09-29 (seeds 267645448, 1303645 and 285059694) | ✅ Fixed: a cubic is measured in pieces cut at every turning point of x and of y, where its speed is smooth, and a line is projected on exactly at any length but zero. Both counterexamples are regression tests, and a new property measures cubics along a line against the distance they travel |
 
 #### Left from the independent QA pass (2026-09-24)

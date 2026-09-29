@@ -67,7 +67,8 @@ export function SettingsDialog(props: Props) {
           if (event.key === 'Escape') onClose();
         }}
       >
-        <header className="settings-header">
+        {/* A div, not a header: a header here would be a second banner. */}
+        <div className="settings-header">
           <h3 id="settings-dialog-title">Settings</h3>
           <button
             type="button"
@@ -78,7 +79,7 @@ export function SettingsDialog(props: Props) {
           >
             <Icon of={X} />
           </button>
-        </header>
+        </div>
         <div className="settings-body">
           <div
             className="settings-sections"

@@ -159,5 +159,5 @@ Report it privately — see [`SECURITY.md`](SECURITY.md).
 ## Licence
 
 [Apache-2.0](LICENSE). The interface and every printed word use IBM Plex Sans, under the
-[SIL Open Font Licence](assets/fonts/OFL.txt). *Help → Third-Party Notices* lists everything else the
-app ships.
+[SIL Open Font Licence](assets/fonts/OFL.txt). *Help → About LeatherCAD → Third-party notices*
+lists everything else the app ships.

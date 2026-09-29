@@ -133,3 +133,39 @@ test('About says the version, and shows the log folder and the notices (8.7, 8.6
     await closeApp(app);
   }
 });
+
+test('the project bar fits the smallest window, with the longest paper it says (8.7)', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    // The sample's paper reads '5 sheets of A4, portrait (Outer and Lining
+    // taped)', and a changed name adds 'Unsaved changes': the widest the bar gets.
+    await window.getByTestId('help-menu').click();
+    await window.getByTestId('help-open-sample').click();
+    await expect(window.getByTestId('project-name')).toHaveValue('Bifold wallet');
+    await window.getByTestId('project-name').fill('Bifold wallet, lined');
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    const tall = (await window.getByTestId('project-bar').boundingBox())!.height;
+
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(860, 600));
+    await expect.poll(() => window.evaluate(() => window.innerWidth)).toBeLessThanOrEqual(860);
+
+    const bar = (await window.getByTestId('project-bar').boundingBox())!;
+    expect(bar.height, 'nothing wrapped onto a second row').toBe(tall);
+    for (const id of [
+      'project-menu',
+      'project-name',
+      'save-state',
+      'save',
+      'paper',
+      'export-pdf',
+      'settings',
+      'help-menu',
+    ]) {
+      const box = (await window.getByTestId(id).boundingBox())!;
+      expect(box.x, id).toBeGreaterThanOrEqual(bar.x);
+      expect(box.x + box.width, id).toBeLessThanOrEqual(bar.x + bar.width);
+    }
+  } finally {
+    await closeApp(app);
+  }
+});

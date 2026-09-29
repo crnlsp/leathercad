@@ -111,7 +111,7 @@ export class InMemoryPlatformHost implements PlatformHost {
     return () => this.menuListeners.delete(listener);
   }
 
-  /** A test choosing an item from the application menu. */
+  /** A test choosing an item from macOS's menu (8.7). */
   chooseMenu(action: MenuAction): void {
     for (const listener of this.menuListeners) listener(action);
   }
