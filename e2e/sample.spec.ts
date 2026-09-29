@@ -1,10 +1,11 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 
 /**
  * Slice 8.3: a finished pattern to take apart, from Help or from the empty
@@ -12,13 +13,9 @@ import { closeApp } from './closeApp.js';
  * inside the app is never written.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 test('the sample wallet opens from the empty Parts panel and from Help, clean and untitled', async () => {
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
+  const app = await launchApp({
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
   });
   try {
     const window = await app.firstWindow();
@@ -54,10 +51,8 @@ test('no feature name in Parts breaks inside a word, at any window width (Q5)', 
   // column left beside the toggles was narrower than "mirrored", so the name
   // read "Cut-out mirrore / d". The sample's names are the ones a maker meets
   // first. A word broken across lines has one client rect per line.
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
+  const app = await launchApp({
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
   });
   try {
     const window = await app.firstWindow();

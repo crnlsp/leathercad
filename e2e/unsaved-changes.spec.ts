@@ -1,16 +1,11 @@
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -23,10 +18,8 @@ import { fromProjectMenu } from './projectMenu.js';
  * a blank page. See the pre-1.0 audit §2.2 and §5.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
   const window = await app.firstWindow();
   // A refused unload makes Chromium report a "leave page?" dialog over the
   // debugging protocol, which Electron never shows — the window just stays.

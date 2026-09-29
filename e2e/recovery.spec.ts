@@ -1,24 +1,10 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { freshStateHome, launchApp } from './launchApp.js';
 
 /**
  * Slice 5.3b: crash recovery.
@@ -29,14 +15,8 @@ import { closeApp } from './closeApp.js';
  * ~/.local/state/leathercad.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 async function launch(state: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_STATE_HOME: state, LEATHERCAD_RECOVERY_INTERVAL_MS: '250' },
-  });
+  const app = await launchApp({ state, env: { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' } });
   const window = await app.firstWindow();
   // See unsaved-changes.spec.ts: a refused unload reports a phantom dialog.
   window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
@@ -70,7 +50,7 @@ async function drawAPanel(window: Page, at: number): Promise<void> {
 
 let state: string;
 test.beforeEach(() => {
-  state = mkdtempSync(join(tmpdir(), 'leathercad-e2e-state-'));
+  state = freshStateHome();
 });
 test.afterEach(() => {
   rmSync(state, { recursive: true, force: true });

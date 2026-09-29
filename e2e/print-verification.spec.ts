@@ -1,10 +1,11 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { expectAccurate, exportPrintTest, measurePrintTest } from './printTest.js';
 
 /**
@@ -23,12 +24,10 @@ import { expectAccurate, exportPrintTest, measurePrintTest } from './printTest.j
  * measured with a steel rule and recorded in `docs/print-verification-log.md`.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 test('the print test measures true on every sheet: square, ruler, dimension, holes and tiles', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'leathercad-e2e-7.7-'));
   const pdf = join(dir, 'print-test.pdf');
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
 
   try {
     const window = await app.firstWindow();

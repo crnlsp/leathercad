@@ -9,6 +9,10 @@ import { defineConfig } from '@playwright/test';
 // from one run into the next. Tests that change a preference launch with a
 // directory of their own as well, so the order they run in cannot matter.
 process.env['XDG_CONFIG_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-config-'));
+// Nor its log, crash dumps and crash-recovery copies (5.3b) in the developer's
+// own ~/.local/state/leathercad. e2e/launchApp.ts gives every launch a state
+// directory of its own; this catches one that does not go through it.
+process.env['XDG_STATE_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-state-'));
 
 export default defineConfig({
   testDir: './e2e',

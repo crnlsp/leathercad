@@ -1,16 +1,11 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -18,16 +13,10 @@ import { fromProjectMenu } from './projectMenu.js';
  * a config directory of its own, so no test sees another's recent projects.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-bar-'));
 
 async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: configHome },
-  });
+  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
   const window = await app.firstWindow();
   window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
   await window.waitForLoadState('domcontentloaded');

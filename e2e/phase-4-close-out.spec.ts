@@ -1,11 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
+import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -18,8 +19,6 @@ import { fromProjectMenu } from './projectMenu.js';
  * docs/superpowers/specs/2026-09-23-phase-4-close-out-design.md; the A-numbers
  * below are its acceptance criteria.
  */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 type Window = Awaited<ReturnType<ElectronApplication['firstWindow']>>;
 
@@ -119,7 +118,7 @@ test('a card holder, from the first outline to the printed page', async () => {
   let holes: string;
   let spacing: string;
 
-  const first = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const first = await launchApp();
   try {
     const window = await first.firstWindow();
     await window.waitForLoadState('domcontentloaded');
@@ -298,7 +297,7 @@ test('a card holder, from the first outline to the printed page', async () => {
   }
 
   // ── Reopened in a fresh instance: parameters in, the same numbers out (A7) ─
-  const second = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const second = await launchApp();
   try {
     const window = await second.firstWindow();
     await window.waitForLoadState('domcontentloaded');
