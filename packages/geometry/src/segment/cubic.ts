@@ -180,7 +180,30 @@ export function lengthBetween(
   tolerance: Mm = EPS_LENGTH,
 ): Mm {
   if (t1 < t0) return lengthBetween(s, t1, t0, tolerance);
-  return adaptiveLength(s, t0, t1, quadratureLength(s, t0, t1), tolerance, 0);
+
+  // Where the curve stops dead and turns back, its speed has a kink, and a
+  // kink can make the halves agree with the whole while both are wrong — a
+  // cubic doubling back along a line read 4 µm short (issue 27). The speed
+  // can only kink where x' and y' are both zero, so cutting at every root of
+  // either leaves pieces whose speed is smooth.
+  const cuts = [
+    t0,
+    ...[
+      ...derivativeRoots(s.p0.x, s.p1.x, s.p2.x, s.p3.x),
+      ...derivativeRoots(s.p0.y, s.p1.y, s.p2.y, s.p3.y),
+    ]
+      .filter((t) => t > t0 && t < t1)
+      .sort((a, b) => a - b),
+    t1,
+  ];
+  const share = tolerance / (cuts.length - 1);
+
+  let total = 0;
+  for (let i = 1; i < cuts.length; i++) {
+    const [from, to] = [cuts[i - 1]!, cuts[i]!];
+    total += adaptiveLength(s, from, to, quadratureLength(s, from, to), share, 0);
+  }
+  return total;
 }
 
 function adaptiveLength(

@@ -92,6 +92,8 @@ uniform values with a pool of "interesting" ones: 0, ±1, ±0.1, ±100, and valu
 - `distance(pointAtDistance(d1), pointAtDistance(d2)) ≤ |d2 − d1|` — a chord is never longer than
   its arc
 - `pointAtDistance` is monotonic in `d` along the path
+- A cubic along a line measures the distance it travels, turns and all — the speed kinks where it
+  turns back, which once fooled the quadrature (issue 27)
 
 **Offsetting** — the most important group
 - Every point on `offsetPath(p, d)` is at distance `≈ |d|` from `p`, and never *closer* than

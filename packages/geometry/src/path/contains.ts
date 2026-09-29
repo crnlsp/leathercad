@@ -1,8 +1,8 @@
-import { assertFinite, EPS_POINT, type Mm } from '@leathercad/core';
+import { assertFinite, type Mm } from '@leathercad/core';
 
 import { solveCubic } from '../polynomial.js';
 import * as Seg from '../segment/index.js';
-import { closestPointOnSegment, type Vec2 } from '../vec2.js';
+import type { Vec2 } from '../vec2.js';
 import type { Path } from './path.js';
 
 export type FillRule = 'nonzero' | 'evenodd';
@@ -272,16 +272,20 @@ function distanceToSegment(s: Seg.Segment, point: Vec2): number {
 function closestOnSegment(s: Seg.Segment, point: Vec2): { t: number; point: Vec2 } {
   switch (s.kind) {
     case 'line': {
-      const closest = closestPointOnSegment(point, s.a, s.b);
+      // Projected exactly even when the line is shorter than EPS_POINT: taking
+      // one that short as only its start put the answer a hair from its other
+      // end (issue 27), as the arc's centre once did. Only a line with no
+      // length at all has no direction, and is its start.
       const along = { x: s.b.x - s.a.x, y: s.b.y - s.a.y };
       const lengthSq = along.x * along.x + along.y * along.y;
-      // A degenerate line is its start, which is where `closestPointOnSegment`
-      // puts the answer too.
       const t =
-        lengthSq <= EPS_POINT * EPS_POINT
-          ? 0
-          : ((closest.x - s.a.x) * along.x + (closest.y - s.a.y) * along.y) / lengthSq;
-      return { t: Math.min(1, Math.max(0, t)), point: closest };
+        lengthSq > 0
+          ? Math.min(
+              1,
+              Math.max(0, ((point.x - s.a.x) * along.x + (point.y - s.a.y) * along.y) / lengthSq),
+            )
+          : 0;
+      return { t, point: Seg.pointAt(s, t) };
     }
 
     case 'arc': {
