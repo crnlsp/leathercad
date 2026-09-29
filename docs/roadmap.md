@@ -45,7 +45,30 @@ and what shipped in 1.1.0 to 1.2.0 in [`history/roadmap-1.1-and-1.2.md`](history
 
 The theme is still the one the roadmap gave 1.1 — from a tool that works to one you can live in.
 Its first half shipped early, as 1.1.0 to 1.2.0; this is the rest. The order within each group is
-the suggested order of work.
+the suggested order of work, and *The window* comes before the other groups.
+
+### The window
+
+Set first on 2026-09-29, in this order, one pull request each: the window's own frame was still
+Electron's default menu, a right-click did nothing, and nothing said a new release existed.
+
+- ◐ **8.7 The top bar and Settings.** No application menu on Linux and Windows, and the minimal one
+  macOS requires. The project bar gains a Project menu (New, Open, Save as, recent projects), Settings
+  and Help (the sample project, About). Settings is a sidebar window — General, Appearance, Keyboard
+  shortcuts — that grows a section only when it has a real control. The Paper menu, a copy of the
+  sheet indicator, goes with its IPC. Design:
+  [`2026-09-29-top-bar-and-settings-design.md`](superpowers/specs/2026-09-29-top-bar-and-settings-design.md).
+- ☐ **8.8 The right-click menu.** Selecting several features already works — Shift-click, and
+  dragging a box. A right-click selects what is under the pointer unless it is already selected,
+  then offers what the selection can take: Delete, Flip, Lock, Hide and Duplicate part, through the
+  commands that exist, as one undo step. The same menu on a row of the parts list. It reuses 8.7's
+  menu component. Copy and Paste are not in it: see *Later*.
+- ☐ **8.9 Update discovery.** The main process asks GitHub for the latest release and compares it
+  with the running version: *Check for updates* in Settings › Updates, the result in About, and a
+  quiet mark on Settings when one exists. It links to the release page and installs nothing (see
+  *Not planned*). The app's first network request, so `SECURITY.md`'s "no network connections"
+  changes with it, in an ADR; the Flatpak skips it, as Flathub updates it. Reads tags in both
+  forms (R4).
 
 ### Drawing and editing
 
@@ -148,6 +171,9 @@ Also later, each already decided in principle:
 - **Radial, angular, chained and baseline dimensions,** and dimensions between parts.
 - **A screen-calibration step,** which would make 1:1 literal on screen too.
 - **Draw tools in their role's colour** — still an open question in the UI decisions record.
+- **8.8b Copy, Paste and Duplicate of features,** after 8.8. Neither exists, and they carry a
+  domain question: what a pasted stitch line follows when its outline was not copied with it. A
+  command with property tests, not a menu item.
 
 Recorded from the QA pass (2026-09-24), with no work planned:
 
@@ -161,6 +187,7 @@ Recorded from the QA pass (2026-09-24), with no work planned:
 
 ## Not planned
 
-Auto-update; material, cost or bill-of-materials metadata; a notes field separate from labels;
-3D; an onboarding wizard; drag handles for values that are already typed; driving a printer
-directly — LeatherCAD writes a PDF and the maker prints it from their own viewer.
+Auto-update, meaning a release installed from inside the app (8.9 only says one exists); material,
+cost or bill-of-materials metadata; a notes field separate from labels; 3D; an onboarding wizard;
+drag handles for values that are already typed; driving a printer directly — LeatherCAD writes a
+PDF and the maker prints it from their own viewer.
