@@ -107,7 +107,8 @@ parameters. How an outline is replaced without losing its stitching.
 `(featureId, index)`. Carried through derivations. Never a segment index
 ([ADR 0010](adr/0010-anchors-address-geometry.md)).
 
-**Flip** — Reflecting selected geometry in place. Leaves no relationship behind.
+**Flip** — Reflecting selected geometry in place. Leaves no relationship behind. Flipping a piece's
+outline flips the whole piece; its labels move with it and still read forwards.
 
 **Mirror** (linked mirror) — A counterpart derived from its original by a reflection. It follows the
 original, and has the same kind, role and hole count ([ADR 0012](adr/0012-mirror-is-a-derivation.md)).
