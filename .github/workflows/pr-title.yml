@@ -1,6 +1,7 @@
 name: Pull request title
 
-# Pull requests into develop are squash-merged, so the title becomes the commit
+# Every pull request into develop is squash-merged — bringing a release back from
+# main included — so the title becomes the commit
 # release-please reads and the line a maker sees in the changelog. It has to
 # follow Conventional Commits: see CONTRIBUTING.md, "Commits and pull requests".
 #
@@ -17,8 +18,6 @@ permissions: {}
 jobs:
   title:
     name: Conventional title
-    # Bringing a release back from main is a merge, not a change of its own.
-    if: ${{ github.head_ref != 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
