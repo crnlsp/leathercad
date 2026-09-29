@@ -287,20 +287,35 @@ export type FlipAxis = 'horizontal' | 'vertical';
  * other way. Mirroring a feature *to* somewhere — a linked counterpart across
  * a fold — is a derivation, and that is slice 4.8 (ADR 0012), not this.
  *
+ * A piece's outline stands for the whole piece (Q28): see `flipScope`.
+ *
  * Nothing moves if the selection has no geometry to measure, and whatever
  * cannot survive a mirror refuses through the usual path: a derived feature
  * follows its source, and a label would read backwards.
  */
 export function flipFeatures(ids: Iterable<FeatureId>, axis: FlipAxis): Command {
-  const targets = [...new Set(ids)];
+  const requested = [...new Set(ids)];
 
   return {
     label: axis === 'horizontal' ? 'Flip horizontal' : 'Flip vertical',
     apply: (document) => {
-      const centre = centreOf(document.project, targets);
+      const { targets, labels, about } = flipScope(document.project, requested);
+      const centre = centreOf(document.project, about);
       if (centre === null) return document;
+      // Refused whole, labels included: they move with the piece now.
+      if (lockRefusal(document.project, [...targets, ...labels]) !== null) return document;
 
-      const next = transformFeatures(targets, mirrorAbout(centre, axis)).apply(document);
+      const mirror = mirrorAbout(centre, axis);
+      let next = transformFeatures(targets, mirror).apply(document);
+      for (const [id, place] of readablePlaces(document.project, labels, mirror)) {
+        next = {
+          project: mapFeature(next.project, id, (feature) =>
+            feature.source.kind === 'text'
+              ? ({ ...feature, source: { ...feature.source, ...place } } as Feature)
+              : feature,
+          ),
+        };
+      }
 
       // A flip everything refused is a no-op, and a no-op earns no history:
       // "Flip horizontal" in the undo menu with nothing behind it is worse
@@ -322,18 +337,92 @@ export function flipRefusal(
   ids: Iterable<FeatureId>,
   axis: FlipAxis,
 ): Problem | null {
-  const targets = [...new Set(ids)];
+  const { targets, labels, about } = flipScope(project, [...new Set(ids)]);
 
   // The lock first: it refuses the whole selection, so it is the reason, not
   // one of several. Without it the button stays enabled on a locked piece and
   // pressing it does nothing (S7, X1).
-  const locked = lockRefusal(project, targets);
+  const locked = lockRefusal(project, [...targets, ...labels]);
   if (locked !== null) return locked;
 
-  const centre = centreOf(project, targets);
+  const centre = centreOf(project, about);
   if (centre === null) return null;
 
   return refusedTransforms(project, targets, mirrorAbout(centre, axis))[0]?.problem ?? null;
+}
+
+/**
+ * What a flip of `ids` moves, and what it turns about (Q28).
+ *
+ * A piece's outline stands for the piece. Flipping it flips everything in its
+ * part — cut-outs, holes, folds, markings, mirrored counterparts — about the
+ * outline's centre, so an asymmetric piece comes out as its mirror image, not
+ * as a mirrored outline around slots left where they were: the pattern a
+ * maker would cut the wrong leather to. Its labels go to their mirrored
+ * places still reading forwards (`readablePlaces`), since mirrored text reads
+ * backwards. Anything else flips on its own, as it always has.
+ */
+function flipScope(
+  project: Project,
+  ids: readonly FeatureId[],
+): { targets: FeatureId[]; labels: FeatureId[]; about: FeatureId[] } {
+  const wanted = new Set(ids);
+  const isOutline = (feature: Feature): boolean =>
+    feature.kind === 'cut-contour' && feature.role === 'outer';
+  const pieces = project.parts.filter((part) =>
+    part.features.some((feature) => wanted.has(feature.id) && isOutline(feature)),
+  );
+  if (pieces.length === 0) return { targets: [...ids], labels: [], about: [...ids] };
+
+  const inPieces = new Set(pieces.flatMap((part) => part.features.map((feature) => feature.id)));
+  const loose = ids.filter((id) => !inPieces.has(id));
+  const features = pieces.flatMap((part) => part.features);
+  return {
+    targets: [
+      ...loose,
+      ...features.filter((feature) => feature.kind !== 'text-label').map((f) => f.id),
+    ],
+    labels: features.filter((feature) => feature.kind === 'text-label').map((f) => f.id),
+    about: [...loose, ...features.filter(isOutline).map((feature) => feature.id)],
+  };
+}
+
+/**
+ * Where each label in a flipped piece goes (Q28): its box onto the mirror of
+ * its box, still reading forwards. A label's path is its text box, so the
+ * box's centre is exact. Turned by −2θ about that centre, then slid to the
+ * centre's mirror — a turn and a slide, never a mirror, so the words keep
+ * reading; and its tops face the way the mirror sends them, so a label run
+ * along an edge still faces out. Written as a place and a turn rather than
+ * put through a matrix, which would rescale the size by a rounding error.
+ */
+function readablePlaces(
+  project: Project,
+  labels: readonly FeatureId[],
+  mirror: Mat2x3,
+): [FeatureId, { at: Vec2; rotationRad: number }][] {
+  const wanted = new Set(labels);
+  const places: [FeatureId, { at: Vec2; rotationRad: number }][] = [];
+  for (const entry of evaluate(project).parts.flatMap((part) => part.features)) {
+    const { feature } = entry;
+    if (!entry.ok || !wanted.has(feature.id) || feature.source.kind !== 'text') continue;
+    const box = PathOps.bbox(entry.path);
+    if (box === null) continue;
+    const centre = RectOps.centre(box);
+    const to = MatOps.apply(mirror, centre);
+    const turned = MatOps.apply(
+      MatOps.fromRotationAround(centre, -2 * feature.source.rotationRad),
+      feature.source.at,
+    );
+    places.push([
+      feature.id,
+      {
+        at: { x: turned.x + to.x - centre.x, y: turned.y + to.y - centre.y },
+        rotationRad: -feature.source.rotationRad,
+      },
+    ]);
+  }
+  return places;
 }
 
 /** Whether any feature actually changed — by identity, so it is exact. */

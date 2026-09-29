@@ -143,6 +143,42 @@ test('Shift+F10 opens the menu about what is selected on the board, wherever foc
   }
 });
 
+test('flipping a piece from its outline takes its rivet to the mirrored place, as one undo (Q28)', async () => {
+  const { app, window } = await launch();
+  try {
+    await drawAPanel(window, 150);
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.getByTestId('tool-hardware').click();
+    await window.mouse.click(box.x + 170, box.y + 205);
+    const read = async (label: string) =>
+      Number(await window.getByTestId('property-panel').getByLabel(label).inputValue());
+    const rows = window.locator('[data-testid^="feature-row-"]');
+    await expect(rows).toHaveCount(2);
+
+    await rows.nth(0).click();
+    const left = await read('X');
+    const width = await read('Width');
+    await rows.nth(1).click();
+    const rivet = await read('X');
+
+    await window.getByTestId('tool-select').click();
+    await rightClick(window, 150, 200);
+    await window.getByTestId('context-flip-horizontal').click();
+
+    await rows.nth(1).click();
+    // Three readings each shown to 0.01 mm; the unit tests hold the exact place.
+    expect(await read('X')).toBeCloseTo(2 * (left + width / 2) - rivet, 1);
+    await rows.nth(0).click();
+    expect(await read('X')).toBeCloseTo(left, 2);
+
+    await window.getByTestId('undo').click();
+    await rows.nth(1).click();
+    expect(await read('X')).toBeCloseTo(rivet, 2);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('the menu opens from the keyboard on a Parts row, and Escape gives focus back (8.8)', async () => {
   const { app, window } = await launch();
   try {

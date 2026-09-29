@@ -472,7 +472,7 @@ that names it fails with `ANCHOR_MISSING`.
 | Operation | Result | Relationship afterwards |
 |---|---|---|
 | **Duplicate part** | A new part beside the original | None. Derivations inside the part re-point to the copies; derivations to other parts keep pointing there |
-| **Flip** | The selected geometry, reflected in place | None |
+| **Flip** | The selected geometry, reflected in place; a piece's outline takes the whole piece with it | None |
 | **Mirror** | A new feature or part, reflected | Linked ([ADR 0012](adr/0012-mirror-is-a-derivation.md)) |
 
 - A mirror keeps kind and role. Mirroring a part mirrors every feature in it, so the counterpart's
@@ -486,8 +486,15 @@ that names it fails with `ANCHOR_MISSING`.
   on the other side of the axis, the same way up, with its rounded corners swapped **across** the
   axis rather than diagonally opposite. Judged against transforming the evaluated path, which is the
   comparison the old round-trip test could not make.
+- **A piece's outline stands for the piece** (Q28). Flipping it flips everything in its part — cut-outs,
+  hardware holes, folds, markings, counterparts, labels — about the outline's centre, and the derived stitch
+  lines and holes follow; a piece picked by its heading flips the same way. Flipping the outline alone
+  once left the slots of an asymmetric piece where they were: a wrong pattern, with nothing to say so.
+  Anything in the part that is locked refuses the whole flip. Any other feature still flips alone.
 - **A label refuses to be mirrored**, with `TEXT_WOULD_READ_BACKWARDS`: a mirror is a similarity, so
-  without refusing it the words would come out rotated rather than reflected.
+  without refusing it the words would come out rotated rather than reflected. In a flipped piece it
+  goes to its mirrored place instead: its text box onto the mirror of its box, turned rather than
+  mirrored, so it still reads forwards and a label along an edge still faces out.
 - **A counterpart owns its placement and nothing else** (built 4.8a,
   [design](superpowers/specs/2026-09-17-mirror-design.md)). The axis and glide are its own; the path,
   the holes, the anchors, the kind and the role all come from its original. A gesture the placement
