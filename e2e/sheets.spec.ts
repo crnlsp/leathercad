@@ -1,18 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Locator,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
 import { fromProjectMenu } from './projectMenu.js';
 
@@ -24,8 +18,6 @@ import { fromProjectMenu } from './projectMenu.js';
  * Every test opens the 7.7 print test: an outer panel and a card pocket that
  * pack onto one sheet of A4 portrait, and a 250 mm strap taped across two more.
  */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 /** The screen-only furniture colour, `SHEET.furniture` (#c22a8c). */
 const FURNITURE = [0xc2, 0x2a, 0x8c] as const;
@@ -39,7 +31,7 @@ interface Session {
 async function withPrintTest(body: (session: Session) => Promise<void>): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), 'leathercad-e2e-sheets-'));
   const pdf = join(dir, 'print-test.pdf');
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');

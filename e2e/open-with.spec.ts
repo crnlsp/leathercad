@@ -2,9 +2,10 @@ import { copyFileSync, mkdtempSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { _electron as electron, expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 
 /**
  * Slice 8.5: a `.lcp` double-clicked in the file manager starts the app with
@@ -13,17 +14,15 @@ import { closeApp } from './closeApp.js';
  */
 
 const ROOT = resolve(import.meta.dirname, '..');
-const DESKTOP_DIR = resolve(ROOT, 'apps/desktop');
 
 test('a project named on the command line opens, and saves back where it came from', async () => {
   const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet from Files.lcp');
   copyFileSync(resolve(ROOT, 'fixtures/projects/bifold-wallet.lcp'), project);
   const before = statSync(project).mtimeMs;
 
-  const app = await electron.launch({
-    args: ['.', project],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
+  const app = await launchApp({
+    args: [project],
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
   });
   try {
     const window = await app.firstWindow();

@@ -1,16 +1,7 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 
 /**
  * Slice 8.7: Linux and Windows have no application menu — the project bar
@@ -19,15 +10,8 @@ import { closeApp } from './closeApp.js';
  * checked on the packaged app, where it is true.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    // A crash-recovery copy left by one test must not greet the next.
-    env: { ...process.env, XDG_STATE_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
-  });
+  const app = await launchApp();
   const window = await app.firstWindow();
   window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
   await window.waitForLoadState('domcontentloaded');

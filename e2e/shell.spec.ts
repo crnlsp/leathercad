@@ -1,14 +1,13 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
+import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 let app: ElectronApplication;
 
@@ -22,7 +21,7 @@ function num(text: string | null): number {
 }
 
 test.beforeAll(async () => {
-  app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  app = await launchApp();
 });
 
 test.afterAll(async () => {
@@ -46,10 +45,8 @@ async function withFreshApp(
   // A config directory of its own: a test that collapses the rail or opens
   // the legend changes a remembered preference (8.2), which must not reach
   // the next test.
-  const instance = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
+  const instance = await launchApp({
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
   });
   try {
     const window = await instance.firstWindow();
@@ -318,7 +315,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
   // pattern comes back as an editable 105 x 75 rectangle with named parts,
   // not as anonymous curves.
   const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.lcp`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -391,7 +388,7 @@ test('exports a print-ready PDF at 1:1', async () => {
   // in someone else's viewer. This checks the page really is A4 and that the
   // verification square really measures 50 mm, by rendering through poppler.
   const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.pdf`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -1668,7 +1665,7 @@ test('export says what did not make it onto the paper', async () => {
   // to build is absent from the template, and a maker cutting from that
   // template has no way to know it was ever meant to be there.
   const target = join(tmpdir(), `leathercad-e2e-omitted-${Date.now()}.pdf`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -1710,7 +1707,7 @@ test('exports a part named in Polish, which used to be impossible', async () => 
   // all. Text is glyph outlines now, and an outline has no encoding to fall
   // outside of.
   const target = join(tmpdir(), `leathercad-e2e-pl-${Date.now()}.pdf`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -1749,7 +1746,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
   // Slice 4.11b. The words are the user's own, so unlike a part caption they
   // are stored — as words, a place and a size, never as outlines.
   const target = join(tmpdir(), `leathercad-e2e-label-${Date.now()}.lcp`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();

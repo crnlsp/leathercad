@@ -1,10 +1,11 @@
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -17,8 +18,6 @@ import { fromProjectMenu } from './projectMenu.js';
  * L goes straight again. A and L are the Arc and Line tools' own shortcuts, so
  * the polyline claims them only while a run is live.
  */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 function num(text: string | null): number {
   return Number.parseFloat((text ?? '').trim().replace('−', '-'));
@@ -47,7 +46,7 @@ async function viewOf(window: Page): Promise<(xMm: number, yMm: number) => [numb
 
 test('a card pocket with a thumb scoop is drawn, stitched on three sides, and reopened', async () => {
   const file = join(tmpdir(), `leathercad-e2e-scoop-${Date.now()}.lcp`);
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
 
   try {
     const window = await app.firstWindow();

@@ -1,11 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -17,8 +18,6 @@ import { fromProjectMenu } from './projectMenu.js';
  * since 7.2a — the paper turned, exported again whole at 1:1, and the choice
  * kept with the project.
  */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 function field(window: Page, label: string) {
   return window
@@ -47,7 +46,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
   const stamp = Date.now();
   const pdf = join(tmpdir(), `leathercad-e2e-paper-${stamp}.pdf`);
   const project = join(tmpdir(), `leathercad-e2e-paper-${stamp}.lcp`);
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
 
   try {
     const window = await app.firstWindow();
