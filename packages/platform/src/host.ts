@@ -79,10 +79,10 @@ export interface PlatformHost {
   getRecoveryIntervalMs(): Promise<number>;
 
   /**
-   * Listens for a choice from the application menu (slice 8.5a). The menu
-   * belongs to the operating system; what each item does belongs to the
-   * renderer, which runs the same handler its keyboard shortcut does. Returns
-   * the way to stop listening.
+   * Listens for a choice from macOS's native menu (8.5a, 8.7) — Linux and
+   * Windows have none. The menu belongs to the operating system; what each
+   * item does belongs to the renderer, which runs the same handler its key and
+   * its button run. Returns the way to stop listening.
    */
   onMenuAction(listener: (action: MenuAction) => void): () => void;
 
@@ -97,7 +97,7 @@ export interface PlatformHost {
   setPreferences(changes: Partial<Preferences>): Promise<void>;
 
   /**
-   * Adds a project to *File › Open Recent*, most recent first. Only a project
+   * Adds a project to the recent projects, most recent first. Only a project
    * the maker opened or saved through the app's own dialogs is taken.
    */
   noteRecentFile(path: string): Promise<void>;
@@ -124,7 +124,7 @@ export interface PlatformHost {
 
   /**
    * Listens for a project the operating system side asks the app to open —
-   * *File › Open Recent* (8.2). The path is already one the app may read and
+   * one of the recent projects (8.2, 8.7), or a file macOS hands over. The path is already one the app may read and
    * write; the renderer asks about unsaved work first, as for *Open*. Returns
    * the way to stop listening.
    */
@@ -145,14 +145,6 @@ export interface PlatformHost {
    * hands over later (macOS's *open-file*) comes through `onOpenFile`.
    */
   takeLaunchFile(): Promise<string | null>;
-
-  /**
-   * What the application menu's *Paper* menu lists (slice 8.4b): the same
-   * choices as the paper list beside Export PDF, worded the same way, the
-   * current one checked. The renderer knows the pattern and so the words;
-   * the menu belongs to the operating system, so it is told.
-   */
-  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void>;
 }
 
 /** A project on the recent list (8.7). */
@@ -161,15 +153,6 @@ export interface RecentFile {
   readonly path: string;
   /** As the maker reads it, with the home directory as `~`. */
   readonly shown: string;
-}
-
-/** One paper and orientation, as the Paper menu shows it. */
-export interface PaperMenuChoice {
-  /** `A4 portrait`: what choosing it sends back, as `paper:A4 portrait`. */
-  readonly value: string;
-  /** `3 sheets of A4, portrait (Strap taped)`. */
-  readonly label: string;
-  readonly checked: boolean;
 }
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
@@ -186,26 +169,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   toolRailCollapsed: false,
 };
 
-/** What the application menu can ask the renderer to do. */
-export type MenuAction =
-  | 'new'
-  | 'open'
-  | 'save'
-  | 'save-as'
-  | 'export-pdf'
-  | 'undo'
-  | 'redo'
-  | 'view-design'
-  | 'view-sheets'
-  | 'shortcuts'
-  | 'open-sample'
-  | 'zoom-in'
-  | 'zoom-out'
-  | 'zoom-fit'
-  /** A tool from the Tools menu, by its id (8.4b). */
-  | `tool:${string}`
-  /** A paper from the Paper menu: `paper:A4 landscape` (8.4b). */
-  | `paper:${string}`;
+/** What macOS's native menu can ask the renderer to do (8.7). */
+export type MenuAction = 'undo' | 'redo' | 'about' | 'settings';
 
 /** A recovery copy found at startup. */
 export interface RecoveredCopy {

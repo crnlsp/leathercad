@@ -5,7 +5,7 @@ import { DEFAULT_PREFERENCES, type Preferences } from '@leathercad/platform';
 
 import { writeFileAtomic } from './atomicWrite.js';
 
-/** How many projects *File › Open Recent* lists. */
+/** How many recent projects the Project menu lists (8.2, 8.7). */
 export const RECENT_LIMIT = 10;
 
 /** `preferences.json` as it is on disk (docs/file-format.md §6). */
@@ -64,7 +64,7 @@ export function validChanges(changes: unknown): Partial<Preferences> {
   return out;
 }
 
-/** A path *Open Recent* may hold: an absolute path to a project file. */
+/** A path the recent list may hold: an absolute path to a project file. */
 export function isProjectPath(path: unknown): path is string {
   return typeof path === 'string' && isAbsolute(path) && extname(path).toLowerCase() === '.lcp';
 }

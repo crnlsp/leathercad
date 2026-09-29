@@ -2,7 +2,6 @@ import {
   DEFAULT_PREFERENCES,
   type MenuAction,
   type OpenDialogOptions,
-  type PaperMenuChoice,
   type PlatformHost,
   type Preferences,
   type RecentFile,
@@ -129,7 +128,7 @@ export class InMemoryPlatformHost implements PlatformHost {
     return Promise.resolve();
   }
 
-  /** *File › Open Recent*, most recent first. */
+  /** The recent projects, most recent first. */
   readonly recentFiles: string[] = [];
 
   noteRecentFile(path: string): Promise<void> {
@@ -168,7 +167,7 @@ export class InMemoryPlatformHost implements PlatformHost {
     return () => this.openFileListeners.delete(listener);
   }
 
-  /** A test choosing a project from *Open Recent*. */
+  /** A test choosing one of the recent projects. */
   openFile(path: string): void {
     for (const listener of this.openFileListeners) listener(path);
   }
@@ -187,13 +186,5 @@ export class InMemoryPlatformHost implements PlatformHost {
     const file = this.launchFile;
     this.launchFile = null;
     return Promise.resolve(file);
-  }
-
-  /** The Paper menu as the app last described it. */
-  paperMenu: readonly PaperMenuChoice[] = [];
-
-  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void> {
-    this.paperMenu = choices;
-    return Promise.resolve();
   }
 }

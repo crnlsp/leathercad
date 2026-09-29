@@ -14,8 +14,10 @@
     "src/shared/**/*.ts",
     "src/notices/**/*.ts",
     "src/csp/**/*.ts",
-    // The shortcut map and the tool list are plain data, compiled here too so
-    // src/main/shortcuts.test.ts can hold the map to the menu (8.2).
+    // The shortcut map, the tool list and the top bar's menus are plain data,
+    // compiled here too so src/main/shortcuts.test.ts can hold the map to the
+    // menus (8.2, 8.7).
+    "src/renderer/src/menus.ts",
     "src/renderer/src/shortcuts.ts",
     "src/renderer/src/tools.ts",
     "electron.vite.config.ts"

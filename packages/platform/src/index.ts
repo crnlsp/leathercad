@@ -20,7 +20,6 @@ export type {
   SaveDialogOptions,
   FileFilter,
   MenuAction,
-  PaperMenuChoice,
   Preferences,
   RecentFile,
   RecoveredCopy,

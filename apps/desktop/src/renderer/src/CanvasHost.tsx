@@ -83,9 +83,9 @@ export type CanvasView = 'design' | 'sheets';
 export interface CanvasHandle {
   /** Frames a millimetre rectangle, leaving the usual margin. */
   frame(bounds: Rect): void;
-  /** *View › Zoom In / Out* (8.4b): zooms the current view about its centre. */
+  /** The zoom keys (8.4b): zooms the current view about its centre. */
   zoom(factor: number): void;
-  /** *View › Fit to Pattern* (8.4b): what a double-click on empty board does. */
+  /** Ctrl+0 (8.4b): fits the pattern, as a double-click on empty board does. */
   fit(): void;
 }
 

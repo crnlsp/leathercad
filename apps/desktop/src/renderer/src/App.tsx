@@ -6,7 +6,6 @@ import {
   duplicatePart,
   emptyDocument,
   planDelete,
-  setPageSetup,
   type DeleteResolution,
 } from '@leathercad/document';
 import {
@@ -16,8 +15,6 @@ import {
   diagnosticTarget,
   evaluate,
   lockRefusal,
-  ORIENTATIONS,
-  PAPER_NAMES,
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
@@ -44,8 +41,7 @@ import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile, type ExportReport } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
-import { paperOptionsFor, printStatusFor } from './sheets.js';
-import { describeChoice } from './SheetIndicator.js';
+import { printStatusFor } from './sheets.js';
 import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -66,7 +62,7 @@ function fileName(path: string): string {
   return path.split('/').pop() ?? path;
 }
 
-/** How far one step of View › Zoom In or Zoom Out goes (8.4b). */
+/** How far one step of the zoom keys goes (8.4b). */
 const ZOOM_STEP = 1.25;
 
 export function App() {
@@ -243,7 +239,7 @@ export function App() {
     if (await confirmDiscard('open')) await file.open();
   }, [confirmDiscard, file]);
 
-  // Help › Open Sample Project (8.3), and the empty Parts panel's offer of it.
+  // Help's *Open sample project* (8.3, 8.7), and the empty Parts panel's offer of it.
   const openSample = useCallback(async () => {
     if (await confirmDiscard('open')) await file.openSample();
   }, [confirmDiscard, file]);
@@ -274,22 +270,7 @@ export function App() {
       .catch(() => undefined);
   }, [openPath]);
 
-  // The Paper menu (8.4b) lists what the paper list lists, in its words, with
-  // the current choice checked; the main process rebuilds it when it changes.
-  const project = storeState.document.project;
-  useEffect(() => {
-    const { paper, orientation } = project.settings;
-    const choices = paperOptionsFor(project).map((option) => ({
-      value: `${option.paper} ${option.orientation}`,
-      label: describeChoice(option.plan),
-      checked: option.paper === paper && option.orientation === orientation,
-    }));
-    void getPlatformHost()
-      .setPaperMenu(choices)
-      .catch(() => undefined);
-  }, [project]);
-
-  // File › Open Recent (8.2): the main process chose and granted the path;
+  // A recent project (8.2, 8.7): the main process chose and granted the path;
   // unsaved work is asked about exactly as for Open.
   useEffect(
     () =>
@@ -368,7 +349,7 @@ export function App() {
           event.preventDefault();
           setSettings('general');
         } else if (key === '=' || key === '+') {
-          // The view (8.4b), as View › Zoom In, Zoom Out and Fit to Pattern.
+          // The view (8.4b): zoom in, zoom out, and fit the pattern.
           event.preventDefault();
           canvasRef.current?.zoom(ZOOM_STEP);
         } else if (key === '-') {
@@ -397,71 +378,17 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [file, exportPdf, newProject, openProject, showView, chooseTool]);
 
-  // The application menu (8.5a) runs the same handlers as the keys above, so
-  // a menu choice and a shortcut cannot come to mean different things.
+  // macOS's native menu (8.7) sends what the platform keeps there; each runs
+  // the handler its key and its button run.
   useEffect(
     () =>
       getPlatformHost().onMenuAction((action) => {
-        switch (action) {
-          case 'new':
-            void newProject();
-            break;
-          case 'open':
-            void openProject();
-            break;
-          case 'save':
-            void file.save();
-            break;
-          case 'save-as':
-            void file.save(true);
-            break;
-          case 'export-pdf':
-            void exportPdf();
-            break;
-          case 'undo':
-            store.undo();
-            break;
-          case 'redo':
-            store.redo();
-            break;
-          case 'view-design':
-            showView('design');
-            break;
-          case 'view-sheets':
-            showView('sheets');
-            break;
-          case 'shortcuts':
-            setSettings('shortcuts');
-            break;
-          case 'open-sample':
-            void openSample();
-            break;
-          case 'zoom-in':
-            canvasRef.current?.zoom(ZOOM_STEP);
-            break;
-          case 'zoom-out':
-            canvasRef.current?.zoom(1 / ZOOM_STEP);
-            break;
-          case 'zoom-fit':
-            canvasRef.current?.fit();
-            break;
-          default:
-            // Tools › (8.4b): the same as the tool's key.
-            if (action.startsWith('tool:')) {
-              const id = action.slice('tool:'.length);
-              if (ALL_TOOLS.some((tool) => tool.id === id)) chooseTool(id);
-            } else if (action.startsWith('paper:')) {
-              // Paper › (8.4b): the same single edit as the paper list.
-              const [name, turn] = action.slice('paper:'.length).split(' ');
-              const paper = PAPER_NAMES.find((candidate) => candidate === name);
-              const orientation = ORIENTATIONS.find((candidate) => candidate === turn);
-              if (paper !== undefined && orientation !== undefined) {
-                store.dispatch(setPageSetup(paper, orientation));
-              }
-            }
-        }
+        if (action === 'undo') store.undo();
+        else if (action === 'redo') store.redo();
+        else if (action === 'about') setAboutOpen(true);
+        else setSettings('general');
       }),
-    [file, exportPdf, newProject, openProject, openSample, store, showView, chooseTool],
+    [store],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);

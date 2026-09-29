@@ -3,11 +3,9 @@ import { join } from 'node:path';
 
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
-import type { PaperMenuChoice } from '@leathercad/platform';
 
 import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
-import { validPaperChoices } from './menu.js';
 import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
 import { shownPath, type PreferencesStore } from './preferences.js';
@@ -29,14 +27,14 @@ function recoveryIntervalMs(): number {
  *
  * Nor does it get one through here: it reads, writes and opens only the paths
  * the user chose in these dialogs this session (`PathGrants`), or chose from
- * *File › Open Recent*, whose list only ever holds such paths.
+ * the recent projects, whose list only ever holds such paths.
  */
 export function registerPlatformHandlers(
   getWindow: () => BrowserWindow | null,
   recovery: RecoveryStore,
   grants: PathGrants,
   preferences: PreferencesStore,
-  /** The recent list changed, so the menu showing it has to be rebuilt. */
+  /** A project joined the recent list: the operating system's list is told too. */
   onRecentChanged: (path: string) => void,
   /** Where the bundled sample project is (8.3): a fixed path, never the renderer's. */
   sampleProjectPath: string,
@@ -46,8 +44,6 @@ export function registerPlatformHandlers(
   openRecent: (path: string) => Promise<void>,
   /** Shows the third-party notices window (8.6b). */
   openNotices: () => void,
-  /** The Paper menu's choices changed (8.4b), already validated. */
-  onPaperChoices: (choices: readonly PaperMenuChoice[]) => void,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -119,9 +115,6 @@ export function registerPlatformHandlers(
   );
 
   ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
-  ipcMain.handle(IPC.setPaperMenu, (_event, choices: unknown) => {
-    onPaperChoices(validPaperChoices(choices));
-  });
 
   // Preferences (8.2). The renderer names a change, never the file.
   ipcMain.handle(IPC.getPreferences, () => preferences.preferences);
@@ -129,7 +122,7 @@ export function registerPlatformHandlers(
     await preferences.update(changes);
   });
   // Only a project the maker chose in a dialog this session joins the list,
-  // so *Open Recent* can never become a way to reach any other file.
+  // so the recent projects can never become a way to reach any other file.
   ipcMain.handle(IPC.noteRecentFile, async (_event, path: unknown) => {
     if (!grants.allows(path, 'write')) return;
     await preferences.noteRecent(path as string);

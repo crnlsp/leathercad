@@ -22,13 +22,12 @@ export const IPC = {
   noteRecentFile: 'platform:noteRecentFile',
   readSampleProject: 'platform:readSampleProject',
   takeLaunchFile: 'platform:takeLaunchFile',
-  setPaperMenu: 'platform:setPaperMenu',
   getRecentFiles: 'platform:getRecentFiles',
   openRecent: 'platform:openRecent',
   clearRecent: 'platform:clearRecent',
   showLogFolder: 'platform:showLogFolder',
   openNotices: 'platform:openNotices',
-  /** Main → renderer: an application-menu item was chosen (8.5a). */
+  /** Main → renderer: an item of macOS's menu was chosen (8.5a, 8.7). */
   menuAction: 'menu:action',
   /** Main → renderer: open this project, which the main process granted (8.2). */
   openFile: 'platform:openFile',

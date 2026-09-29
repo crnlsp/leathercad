@@ -27,7 +27,7 @@ import { describe, expect, it } from 'vitest';
 import { sheetPlanFor } from './sheets.js';
 
 /**
- * The worked sample (slice 8.3): *Help › Open Sample*.
+ * The worked sample (slice 8.3): Help's *Open sample project* (8.7).
  *
  * The bifold wallet `docs/getting-started.md` walks through and the README's
  * demo draws — an outer with its stitching and a centre fold, a lining 2 mm

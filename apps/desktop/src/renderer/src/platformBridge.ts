@@ -1,7 +1,6 @@
 import type {
   MenuAction,
   OpenDialogOptions,
-  PaperMenuChoice,
   PlatformHost,
   Preferences,
   RecentFile,
@@ -40,7 +39,6 @@ interface PreloadBridge {
   onOpenFile(listener: (path: string) => void): () => void;
   readSampleProject(): Promise<Uint8Array>;
   takeLaunchFile(): Promise<string | null>;
-  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void>;
 }
 
 declare global {
