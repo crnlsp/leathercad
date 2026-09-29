@@ -59,8 +59,9 @@ before committing it. A baseline from `pnpm bench:baseline` only compares on the
 recorded it.
 
 Two long-lived branches: **`main` is production** — what is released — and **`develop` is
-development**. Work lands on `develop`; `develop` reaches `main` through a pull request when it is
-ready to release. Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
+development**. Work lands on `develop`; `develop` reaches `main` through a pull request only when
+every item under the roadmap's next release is ✅ — a release is its whole section, and the
+*Release gate* check refuses anything else. Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
 refuses it and runs `pnpm check` on every push. Pull requests into `develop` are squash-merged, and
 their title is a Conventional Commit: it becomes the changelog line. See `CONTRIBUTING.md`.
 
@@ -89,7 +90,7 @@ document   Document, Command, undo/redo, selection                            �
 persist    .lcp container, zod schemas, migrations                            → domain
 render     DisplayList, canvas2d + svg backends                               → domain, typography
 editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
-export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.1)          → domain, render, typography
+export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.3)          → domain, render, typography
 apps/desktop  Electron main/preload/renderer, React panels — the ONLY package importing Electron
 ```
 

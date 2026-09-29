@@ -12,11 +12,8 @@ Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releas
 
 ### Features
 
-* **desktop:** round a drawn path's corner to a radius, and sharpen it again (3.9d) ([2c1a8a9](https://github.com/crnlsp/leathercad/commit/2c1a8a94e7bcfae5ccae3e84b574d7b76a22450c))
 * **desktop:** round a drawn path's corner to a radius, and sharpen it again (3.9d) ([ea0c45b](https://github.com/crnlsp/leathercad/commit/ea0c45b2dc75099e7dd164582c632bf97b554907))
-* **desktop:** the Edit Points tool moves, adds and removes a drawn path's points (3.9c) ([a9c99f9](https://github.com/crnlsp/leathercad/commit/a9c99f9aa9463c554af70f10d6f8ead3c7243c8b))
 * **desktop:** the Edit Points tool moves, adds and removes a drawn path's points (3.9c) ([2f1132a](https://github.com/crnlsp/leathercad/commit/2f1132a00041ce02079e0030e483c39305f18f40))
-* **document:** drawn paths' points can be moved, added and removed without losing what is attached (3.9b) ([f4edb37](https://github.com/crnlsp/leathercad/commit/f4edb37fdad2131c130b43dea0ffff0ab84344c4))
 * **document:** drawn paths' points can be moved, added and removed without losing what is attached (3.9b) ([cfe6179](https://github.com/crnlsp/leathercad/commit/cfe61794f34d679bfc103210a390df8b8c299129))
 
 

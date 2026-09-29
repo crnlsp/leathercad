@@ -16,6 +16,9 @@ bars), and passed for it on 2026-09-24.
 
 ## Before you start
 
+- **The scope.** Every item under *the next release* in [`roadmap.md`](roadmap.md) is ✅:
+  `tools/release-gate.sh` says so, and so does the *Release gate* check on the `develop` → `main`
+  pull request. A release never ships part of its section.
 - **The build.** The installer or AppImage from `pnpm package` (or the release workflow) at the
   commit under test. Note the version shown in the status bar.
 - **Tools:**

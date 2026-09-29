@@ -37,8 +37,13 @@ violation fails the build, deliberately.
 ## Branches
 
 - **`main` is production.** What is on it is what is released. Nothing is pushed to it directly;
-  it changes only through a pull request from `develop`.
+  it changes only through a pull request from `develop`, and only for a release. The *Release gate*
+  check refuses a pull request into `main` from any other branch.
 - **`develop` is development.** Work lands here, through pull requests from short-lived branches.
+
+Both are protected by a ruleset each: no deletion, no force push, pull requests only, CI required.
+Without one, GitHub's *Automatically delete head branches* deletes `develop` the moment a release
+merges — which is how it was lost twice (roadmap R2).
 
 ```bash
 git switch develop && git pull
@@ -105,13 +110,27 @@ docs moved with it.
 edits it by hand except to correct a mistake in an entry. See
 [ADR 0014](docs/adr/0014-electron-builder-and-release-please.md).
 
-1. When `develop` is ready, open a pull request from `develop` into `main`, and merge it with a
-   **merge commit** (not a squash, which would flatten every change into one entry).
+**A release is a whole section of the roadmap.** Everything under *the next release* in
+[`docs/roadmap.md`](docs/roadmap.md) ships together, and nothing ships until all of it is ✅.
+When an item will not make it, move it to the release after, or to *Later*, in a pull request of
+its own — the release waits for the roadmap, and the roadmap changes on purpose, never because a
+release happened. A fix that cannot wait ships the same way: move what is unfinished out, then
+release. The *Release gate* check holds this on every pull request into `main`; run
+`tools/release-gate.sh` to see what the next release still waits for.
+
+1. When every item under *the next release* is ✅, open a pull request from `develop` into `main`,
+   and merge it with a **merge commit** (not a squash, which would flatten every change into one
+   entry).
 2. release-please opens or updates a *release* pull request on `main`. Its description is the
-   changelog of the next version: **that pull request is the list of unreleased changes.**
+   changelog of the next version. Check it names the version the roadmap does — a section with a
+   `feat` in it is the next minor — and that no entry appears twice.
 3. Merging it tags the release. The release workflow then builds the AppImage, the Windows
    installer and the macOS dmg, attests their provenance, and attaches them with an SBOM.
-4. Bring the release commit back: merge `main` into `develop`.
+4. Bring the release commit back: a pull request from `main` into `develop`, merged with a **merge
+   commit** — the one pull request into `develop` that is not squashed.
+5. Start the next section: move the released items from the roadmap into its record in
+   [`docs/history/`](docs/history/), name the next release, and update the roadmap's *Released* and
+   *Next* line.
 
 Before a release that changes what prints, run the manual checks in
 [`docs/release-checklist.md`](docs/release-checklist.md), and record the physical measurements in
