@@ -54,7 +54,8 @@ import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
-import { ShortcutsDialog } from './ShortcutsDialog.js';
+import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
+import { isTyping } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
@@ -161,7 +162,8 @@ export function App() {
     () => changePreferences({ legendOpen: !preferences.legendOpen }),
     [changePreferences, preferences.legendOpen],
   );
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Settings (8.7), open on a section, or closed.
+  const [settings, setSettings] = useState<SettingsSection | null>(null);
 
   const [problemsOpen, setProblemsOpen] = useState(false);
   // Below these widths a panel stops taking a column and becomes an overlay
@@ -256,6 +258,10 @@ export function App() {
       .catch(() => undefined);
   }, []);
   const [aboutOpen, setAboutOpen] = useState(false);
+  // General says how many are listed, so it asks as Settings opens.
+  useEffect(() => {
+    if (settings !== null) refreshRecent();
+  }, [settings, refreshRecent]);
 
   // A project double-clicked in the file manager (8.5), asked for once the
   // app is ready to open it.
@@ -333,8 +339,7 @@ export function App() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      const target = event.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+      if (isTyping(event.target)) return;
 
       if (event.ctrlKey || event.metaKey) {
         const key = event.key.toLowerCase();
@@ -358,7 +363,10 @@ export function App() {
           showView('sheets');
         } else if (key === '/') {
           event.preventDefault();
-          setShortcutsOpen(true);
+          setSettings('shortcuts');
+        } else if (key === ',') {
+          event.preventDefault();
+          setSettings('general');
         } else if (key === '=' || key === '+') {
           // The view (8.4b), as View › Zoom In, Zoom Out and Fit to Pattern.
           event.preventDefault();
@@ -373,10 +381,10 @@ export function App() {
         return;
       }
 
-      // The shortcut map (8.2), where many apps keep it.
+      // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
       if (event.key === '?') {
         event.preventDefault();
-        setShortcutsOpen(true);
+        setSettings('shortcuts');
         return;
       }
 
@@ -423,7 +431,7 @@ export function App() {
             showView('sheets');
             break;
           case 'shortcuts':
-            setShortcutsOpen(true);
+            setSettings('shortcuts');
             break;
           case 'open-sample':
             void openSample();
@@ -601,6 +609,7 @@ export function App() {
         }
         onOpenSample={() => void openSample()}
         onAbout={() => setAboutOpen(true)}
+        onSettings={() => setSettings('general')}
         onSave={() => void file.save()}
         onExport={() => void exportPdf()}
       />
@@ -806,7 +815,22 @@ export function App() {
         </span>
       </footer>
 
-      {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
+      {settings !== null && (
+        <SettingsDialog
+          section={settings}
+          onSection={setSettings}
+          preferences={preferences}
+          onPreferences={changePreferences}
+          recentCount={recent.length}
+          onClearRecent={() =>
+            void getPlatformHost()
+              .clearRecent()
+              .then(refreshRecent)
+              .catch(() => undefined)
+          }
+          onClose={() => setSettings(null)}
+        />
+      )}
 
       {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
 

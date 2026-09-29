@@ -2,7 +2,7 @@ import { setProjectName, type DocumentStore } from '@leathercad/document';
 import type { Project } from '@leathercad/domain';
 import type { RecentFile } from '@leathercad/platform';
 import { describeSheets } from '@leathercad/export';
-import { ChevronDown, CircleHelp } from 'lucide-react';
+import { ChevronDown, CircleHelp, Settings } from 'lucide-react';
 
 import { Icon } from './icons/Icon.js';
 import { MenuButton } from './Menu.js';
@@ -19,7 +19,7 @@ import { Tooltip } from './Tooltip.js';
  * projects — its name as the window's one title, and whether it is saved.
  * Right, where the workflow ends: the sheets it will print on, and *Export
  * PDF* — the one primary action in the window. Past a rule, the application:
- * Help. Nothing here edits the pattern; that is the work bar's.
+ * Settings and Help. Nothing here edits the pattern; that is the work bar's.
  */
 export function ProjectBar({
   project,
@@ -34,6 +34,7 @@ export function ProjectBar({
   onOpenRecent,
   onOpenSample,
   onAbout,
+  onSettings,
   onSave,
   onExport,
 }: {
@@ -52,6 +53,7 @@ export function ProjectBar({
   onOpenRecent: (path: string) => void;
   onOpenSample: () => void;
   onAbout: () => void;
+  onSettings: () => void;
   onSave: () => void;
   onExport: () => void;
 }) {
@@ -118,6 +120,17 @@ export function ProjectBar({
 
       {/* Past the rule is the application, not this project (8.7). */}
       <div className="project-app" role="group" aria-label="Application">
+        <Tooltip text="Settings (Ctrl+,)">
+          <button
+            type="button"
+            className="tool quiet icon-only"
+            data-testid="settings"
+            aria-label="Settings"
+            onClick={onSettings}
+          >
+            <Icon of={Settings} />
+          </button>
+        </Tooltip>
         <MenuButton
           label="Help"
           testId="help-menu"

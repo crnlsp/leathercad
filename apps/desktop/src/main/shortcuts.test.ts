@@ -1,7 +1,7 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
 
-import { SHORTCUT_GROUPS, keysFor } from '../renderer/src/shortcuts.js';
+import { SHORTCUT_GROUPS, isTyping, keysFor } from '../renderer/src/shortcuts.js';
 import { TOOL_GROUPS } from '../renderer/src/tools.js';
 import { menuTemplate } from './menu.js';
 
@@ -49,5 +49,20 @@ describe('the keyboard shortcut map', () => {
     expect(keysFor('CmdOrCtrl+Shift+S', false)).toBe('Ctrl+Shift+S');
     expect(keysFor('CmdOrCtrl+Shift+S', true)).toBe('⌘⇧S');
     expect(keysFor('Delete', true)).toBe('Delete');
+  });
+});
+
+describe('what counts as typing (8.7)', () => {
+  const at = (tagName: string, isContentEditable = false): EventTarget =>
+    ({ tagName, isContentEditable }) as unknown as EventTarget;
+
+  it('is a field, a text area, a list or anything editable', () => {
+    for (const tag of ['INPUT', 'TEXTAREA', 'SELECT']) expect(isTyping(at(tag)), tag).toBe(true);
+    expect(isTyping(at('DIV', true))).toBe(true);
+  });
+
+  it('is not the canvas, a button, the page, or nothing', () => {
+    for (const tag of ['CANVAS', 'BUTTON', 'BODY']) expect(isTyping(at(tag)), tag).toBe(false);
+    expect(isTyping(null)).toBe(false);
   });
 });

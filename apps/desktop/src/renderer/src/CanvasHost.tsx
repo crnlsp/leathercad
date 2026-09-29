@@ -53,6 +53,7 @@ import {
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
 import { sheetPlanFor } from './sheets.js';
+import { isTyping } from './shortcuts.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -518,9 +519,8 @@ export function CanvasHost({
   // Delete should work wherever the pointer happens to be.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      const target = event.target;
-      // Never steal keys from a text field.
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+      // Never steal keys from a field, a list or anything editable (8.7).
+      if (isTyping(event.target)) return;
 
       // Ctrl on Linux and Windows, Cmd on macOS — as the menu shows it.
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {

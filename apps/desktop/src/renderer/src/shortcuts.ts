@@ -53,7 +53,13 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
       { keys: ['CmdOrCtrl+0'], does: 'Fit the pattern in the window' },
       { keys: ['Scroll'], does: 'Zoom about the pointer' },
       { keys: ['Middle-drag', 'Alt+drag'], does: 'Pan' },
-      { keys: ['CmdOrCtrl+/', '?'], does: 'This list' },
+    ],
+  },
+  {
+    title: 'Window',
+    shortcuts: [
+      { keys: ['CmdOrCtrl+,'], does: 'Settings' },
+      { keys: ['CmdOrCtrl+/', '?'], does: 'Keyboard shortcuts' },
     ],
   },
   {
@@ -83,6 +89,20 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
     ],
   },
 ];
+
+/**
+ * Whether a key is going into something the maker is typing in (8.7): a
+ * field, a text area, a list — whose letters are its type-ahead — or anything
+ * editable. The window's shortcuts leave those keys alone, so a `?` typed in
+ * a name is a question mark.
+ */
+export function isTyping(target: EventTarget | null): boolean {
+  if (target === null || !('tagName' in target)) return false;
+  const element = target as { readonly tagName: string; readonly isContentEditable?: boolean };
+  return (
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) || element.isContentEditable === true
+  );
+}
 
 /** A key combination as this platform writes it. */
 export function keysFor(keys: string, isMac: boolean): string {

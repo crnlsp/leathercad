@@ -478,6 +478,7 @@ test('the project bar holds the project and its output; the work bar holds the w
       'save',
       'paper',
       'export-pdf',
+      'settings',
       'help-menu',
     ]) {
       await expect(project.getByTestId(id), id).toHaveCount(1);

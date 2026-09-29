@@ -1006,18 +1006,115 @@ body {
   color: var(--text-dim);
 }
 
-/* The keyboard shortcut map (8.2): wider than a question, in columns. */
-.shortcuts-dialog {
+/* Settings (8.7): a sidebar of sections and the pane they show. A fixed
+   height, so moving between sections never resizes the dialog. */
+.settings-dialog {
+  gap: 0;
   width: min(760px, calc(100vw - 32px));
+  height: min(520px, calc(100vh - 64px));
+  padding: 0;
+  overflow: hidden;
 }
 
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.settings-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.settings-sections {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 190px;
+  padding: var(--space-2);
+  border-right: 1px solid var(--shell-line);
+  background: var(--shell-800);
+}
+
+/* The current section looks as the current tool does on the rail. */
+.settings-tab {
+  min-height: var(--h-control);
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font: var(--t-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab.active {
+  border-color: var(--tan);
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.settings-pane {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.settings-pane h4 {
+  margin: 0 0 var(--space-2);
+  font: var(--t-panel);
+}
+
+/* One setting: its name and what it changes, then its control. */
+.setting {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setting-name {
+  font: var(--t-body);
+}
+
+.setting-note {
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+.setting input[type='checkbox'] {
+  flex: none;
+  accent-color: var(--tan);
+}
+
+/* The keyboard shortcut map (8.2), in Settings (8.7): in columns. */
 .shortcuts-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--space-4);
 }
 
-.shortcuts-groups h4 {
+.shortcuts-groups h5 {
   margin: 0 0 6px;
   font: var(--t-strong);
 }
@@ -1105,7 +1202,8 @@ body {
    the dialog it shows even after a mouse click opened it, which :focus-visible
    alone would not guarantee. */
 .tool:focus-visible,
-.dialog .tool:focus {
+.dialog .tool:focus,
+.settings-tab:focus-visible {
   outline: 1px solid var(--tan);
   outline-offset: 1px;
 }
