@@ -787,6 +787,7 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `MEASURE_ACROSS_PARTS` | interaction | X3 | Commands; the measure tool |
 | `NO_TARGET_PART` | interaction | X4 | Drawing modes |
 | `TARGET_SPANS_PARTS` | interaction | X4 | Drawing modes |
+| `WHOLE_PART_NOT_SCALED` | interaction | X4 | Scale, with a part picked by its heading (Q29) |
 | `TRANSFORM_FLATTENS` | interaction | X9 | Transform tools |
 | `WOULD_BECOME_ELLIPSE` | interaction | X9 | Transform tools |
 | `WOULD_SHEAR` | interaction | X9 | Transform tools |

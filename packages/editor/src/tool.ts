@@ -4,6 +4,7 @@ import type { Command, DocumentStore } from '@leathercad/document';
 import {
   evaluate,
   type FeatureId,
+  type PartId,
   type Problem,
   type Project,
   type ResolvedProject,
@@ -64,6 +65,12 @@ export interface ToolContext {
    * refuses — changing nothing — when there are dependents.
    */
   readonly requestDelete?: (ids: readonly FeatureId[]) => void;
+  /**
+   * Asks the application to delete a part picked by its heading (Q29), which
+   * asks about anything outside it that depends on it. Absent means dispatch
+   * `deletePart` directly, which refuses when something does.
+   */
+  readonly requestDeletePart?: (partId: PartId) => void;
 }
 
 /**

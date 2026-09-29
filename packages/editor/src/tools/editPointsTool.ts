@@ -1,7 +1,9 @@
 import {
   editPathPoint,
   pathPointRefusal,
+  pieceScope,
   pointEditingRefusal,
+  selectedFeatureIds,
   type Command,
   type PathPointEdit,
 } from '@leathercad/document';
@@ -303,12 +305,17 @@ function reshapeAt(
   return null;
 }
 
-/** The one selected feature, if exactly one is. */
+/**
+ * The one selected feature, if exactly one is — or, for a part picked by its
+ * heading, the outline that stands for it (Q29).
+ */
 function soleSelected(ctx: ToolContext): FeatureId | null {
-  const selected = ctx.store.getState().selection.features;
-  if (selected.size !== 1) return null;
-  const [id] = selected;
-  return id ?? null;
+  const { selection, document } = ctx.store.getState();
+  const selected =
+    selection.features.size === 0 && selection.parts.size === 1
+      ? pieceScope(document.project, selectedFeatureIds(document.project, selection)).about
+      : [...selection.features];
+  return selected.length === 1 ? selected[0]! : null;
 }
 
 /** The selected feature's drawn path, when its points can be edited. */

@@ -123,6 +123,7 @@ export function CanvasHost({
   hardware,
   pointOptions = DEFAULT_EDIT_POINTS,
   requestDelete,
+  requestDeletePart,
   onContextMenu,
   nextId,
   onStatus,
@@ -141,6 +142,8 @@ export function CanvasHost({
   /** The corner radius Edit Points rounds to (3.9d). */
   pointOptions?: EditPointsOptions;
   requestDelete: (ids: readonly string[]) => void;
+  /** The Delete key on a part picked by its heading (Q29). */
+  requestDeletePart: (partId: string) => void;
   /** A right-click on a feature (8.8): the app selects it, unless it already is, and opens the menu. */
   onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
   nextId: () => string;
@@ -297,6 +300,8 @@ export function CanvasHost({
   pointOptionsRef.current = pointOptions;
   const requestDeleteRef = useRef(requestDelete);
   requestDeleteRef.current = requestDelete;
+  const requestDeletePartRef = useRef(requestDeletePart);
+  requestDeletePartRef.current = requestDeletePart;
   const onContextMenuRef = useRef(onContextMenu);
   onContextMenuRef.current = onContextMenu;
 
@@ -330,6 +335,7 @@ export function CanvasHost({
         invalidate,
         drawAs: () => drawAsRef.current,
         requestDelete: (ids) => requestDeleteRef.current(ids),
+        requestDeletePart: (partId) => requestDeletePartRef.current(partId),
       },
       tools[0]!,
       tools,

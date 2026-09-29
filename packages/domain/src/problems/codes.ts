@@ -86,6 +86,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   MEASURE_ACROSS_PARTS: interaction('X3'),
   NO_TARGET_PART: interaction('X4'),
   TARGET_SPANS_PARTS: interaction('X4'),
+  WHOLE_PART_NOT_SCALED: interaction('X4'),
 
   PARAMETER_INVALID: outcome('E1'),
   OFFSET_COLLAPSED: outcome('E1'),
