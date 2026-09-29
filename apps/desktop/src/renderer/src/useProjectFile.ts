@@ -41,7 +41,7 @@ export function useProjectFile(
   save: (forcePrompt?: boolean) => Promise<boolean>;
   open: () => Promise<void>;
   /**
-   * Opens a project the main process already granted — *Open Recent* (8.2).
+   * Opens a project the main process already granted — a recent project (8.2, 8.7).
    * The caller asks about unsaved work first, as for `open`.
    */
   openPath: (target: string) => Promise<void>;
@@ -281,7 +281,7 @@ export function useProjectFile(
 }
 
 /**
- * Puts a project on *File › Open Recent*. A list that could not be updated
+ * Puts a project on the recent projects (8.2, 8.7). A list that could not be updated
  * costs nothing that matters, so it never becomes an error on screen.
  */
 async function noteRecent(platform: PlatformHost, path: string): Promise<void> {

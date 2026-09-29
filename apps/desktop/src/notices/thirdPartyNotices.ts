@@ -13,7 +13,7 @@ import type { Plugin } from 'vite';
  * dependency added, removed or tree-shaken away changes the notices with it.
  *
  * Each build collects; the renderer's, the last, writes `THIRD_PARTY_NOTICES.txt`
- * beside its `index.html`. The app shows it from Help › Third-Party Notices, and
+ * beside its `index.html`. The app shows it from About's *Third-party notices*, and
  * the packager copies it into the release beside `app.asar`.
  */
 

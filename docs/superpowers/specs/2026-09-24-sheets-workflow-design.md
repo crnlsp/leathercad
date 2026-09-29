@@ -144,6 +144,8 @@ Project ──evaluate──▶ ResolvedProject ──buildExportScene──▶ 
   and the status bar's "unsaved" go, so the state is said once, where the project is.
 - ***New* and *Open*** stay as quiet buttons in the project zone. They are project management, which
   is this bar's job. The File menu keeps them with their shortcuts.
+  *Superseded by 8.7:* New and Open live in the Project menu, and there is no File menu
+  ([the top bar and Settings](2026-09-29-top-bar-and-settings-design.md)).
 - **Output, at the right, where the workflow ends:**
   - The **sheet indicator** replaces the paper select and the two orientation buttons. It is one
     native select, and every option states its consequence (§5.1).

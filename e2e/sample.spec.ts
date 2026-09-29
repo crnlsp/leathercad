@@ -38,10 +38,8 @@ test('the sample wallet opens from the empty Parts panel and from Help, clean an
 
     // From Help, over unsaved work: asked first, like any other open.
     await window.getByTestId('project-name').fill('My changes');
-    await app.evaluate(({ Menu }) => {
-      const help = Menu.getApplicationMenu()?.items.find((entry) => entry.label === 'Help');
-      help?.submenu?.items.find((entry) => entry.label === 'Open Sample Project')?.click();
-    });
+    await window.getByTestId('help-menu').click();
+    await window.getByTestId('help-open-sample').click();
     const dialog = window.getByTestId('unsaved-dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('unsaved-discard').click();

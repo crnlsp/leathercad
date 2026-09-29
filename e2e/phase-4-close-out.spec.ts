@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 4.13: one card holder, drafted the way a maker would, through every
@@ -314,7 +315,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     );
 
     const panel = window.getByTestId('property-panel');
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
 
     await expect(window.getByTestId('part-count')).toHaveText('2');
     await expect(window.getByTestId('feature-count')).toHaveText('10');

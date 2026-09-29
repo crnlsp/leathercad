@@ -1,13 +1,15 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
 
-import { SHORTCUT_GROUPS, keysFor } from '../renderer/src/shortcuts.js';
+import { helpMenu, projectMenu } from '../renderer/src/menus.js';
+import { SHORTCUT_GROUPS, isTyping, keysFor } from '../renderer/src/shortcuts.js';
 import { TOOL_GROUPS } from '../renderer/src/tools.js';
-import { menuTemplate } from './menu.js';
+import { macMenuTemplate } from './menu.js';
 
 /**
  * The shortcut map (8.2) is only useful while it is true, so it is held to
- * the two places keys are defined: the application menu and the tool list.
+ * the places keys are shown: the top bar's menus, macOS's menu (8.7) and the
+ * tool list.
  */
 
 const listed = SHORTCUT_GROUPS.flatMap((group) => group.shortcuts);
@@ -23,15 +25,15 @@ function accelerators(items: readonly MenuItemConstructorOptions[]): string[] {
 }
 
 describe('the keyboard shortcut map', () => {
-  it.each([false, true])('lists every shortcut the menu shows (mac: %s)', (isMac) => {
-    const template = menuTemplate({
-      isMac,
-      packaged: true,
-      send: () => undefined,
-      openLogFolder: () => undefined,
-      openNotices: () => undefined,
-    });
-    for (const accelerator of accelerators(template)) expect(listedKeys).toContain(accelerator);
+  it('lists every shortcut a menu shows', () => {
+    const noop = (): void => undefined;
+    const shown = [
+      ...projectMenu({ newProject: noop, open: noop, saveAs: noop, openRecent: noop }, []),
+      ...helpMenu({ openSample: noop, about: noop }),
+    ].flatMap((entry) => (entry.kind === 'item' && entry.keys !== undefined ? [entry.keys] : []));
+    shown.push(...accelerators(macMenuTemplate({ send: noop })));
+    expect(shown.length).toBeGreaterThan(0);
+    for (const keys of shown) expect(listedKeys).toContain(keys);
   });
 
   it('lists every tool by its key', () => {
@@ -49,5 +51,20 @@ describe('the keyboard shortcut map', () => {
     expect(keysFor('CmdOrCtrl+Shift+S', false)).toBe('Ctrl+Shift+S');
     expect(keysFor('CmdOrCtrl+Shift+S', true)).toBe('⌘⇧S');
     expect(keysFor('Delete', true)).toBe('Delete');
+  });
+});
+
+describe('what counts as typing (8.7)', () => {
+  const at = (tagName: string, isContentEditable = false): EventTarget =>
+    ({ tagName, isContentEditable }) as unknown as EventTarget;
+
+  it('is a field, a text area, a list or anything editable', () => {
+    for (const tag of ['INPUT', 'TEXTAREA', 'SELECT']) expect(isTyping(at(tag)), tag).toBe(true);
+    expect(isTyping(at('DIV', true))).toBe(true);
+  });
+
+  it('is not the canvas, a button, the page, or nothing', () => {
+    for (const tag of ['CANVAS', 'BUTTON', 'BODY']) expect(isTyping(at(tag)), tag).toBe(false);
+    expect(isTyping(null)).toBe(false);
   });
 });

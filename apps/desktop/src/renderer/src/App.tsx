@@ -6,7 +6,6 @@ import {
   duplicatePart,
   emptyDocument,
   planDelete,
-  setPageSetup,
   type DeleteResolution,
 } from '@leathercad/document';
 import {
@@ -16,12 +15,15 @@ import {
   diagnosticTarget,
   evaluate,
   lockRefusal,
-  ORIENTATIONS,
-  PAPER_NAMES,
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import { DEFAULT_PREFERENCES, systemIdSource, type Preferences } from '@leathercad/platform';
+import {
+  DEFAULT_PREFERENCES,
+  systemIdSource,
+  type Preferences,
+  type RecentFile,
+} from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -32,14 +34,14 @@ import {
   type HardwareOptions,
 } from '@leathercad/editor';
 
+import { AboutDialog } from './AboutDialog.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile, type ExportReport } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
-import { paperOptionsFor, printStatusFor } from './sheets.js';
-import { describeChoice } from './SheetIndicator.js';
+import { printStatusFor } from './sheets.js';
 import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -48,7 +50,8 @@ import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
-import { ShortcutsDialog } from './ShortcutsDialog.js';
+import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
+import { isTyping } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
@@ -59,7 +62,7 @@ function fileName(path: string): string {
   return path.split('/').pop() ?? path;
 }
 
-/** How far one step of View › Zoom In or Zoom Out goes (8.4b). */
+/** How far one step of the zoom keys goes (8.4b). */
 const ZOOM_STEP = 1.25;
 
 export function App() {
@@ -155,7 +158,8 @@ export function App() {
     () => changePreferences({ legendOpen: !preferences.legendOpen }),
     [changePreferences, preferences.legendOpen],
   );
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Settings (8.7), open on a section, or closed.
+  const [settings, setSettings] = useState<SettingsSection | null>(null);
 
   const [problemsOpen, setProblemsOpen] = useState(false);
   // Below these widths a panel stops taking a column and becomes an overlay
@@ -235,10 +239,25 @@ export function App() {
     if (await confirmDiscard('open')) await file.open();
   }, [confirmDiscard, file]);
 
-  // Help › Open Sample Project (8.3), and the empty Parts panel's offer of it.
+  // Help's *Open sample project* (8.3, 8.7), and the empty Parts panel's offer of it.
   const openSample = useCallback(async () => {
     if (await confirmDiscard('open')) await file.openSample();
   }, [confirmDiscard, file]);
+
+  // The Project menu's recent projects (8.7), asked for each time it opens,
+  // since saving and opening change them.
+  const [recent, setRecent] = useState<readonly RecentFile[]>([]);
+  const refreshRecent = useCallback(() => {
+    void getPlatformHost()
+      .getRecentFiles()
+      .then(setRecent)
+      .catch(() => undefined);
+  }, []);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  // General says how many are listed, so it asks as Settings opens.
+  useEffect(() => {
+    if (settings !== null) refreshRecent();
+  }, [settings, refreshRecent]);
 
   // A project double-clicked in the file manager (8.5), asked for once the
   // app is ready to open it.
@@ -251,22 +270,7 @@ export function App() {
       .catch(() => undefined);
   }, [openPath]);
 
-  // The Paper menu (8.4b) lists what the paper list lists, in its words, with
-  // the current choice checked; the main process rebuilds it when it changes.
-  const project = storeState.document.project;
-  useEffect(() => {
-    const { paper, orientation } = project.settings;
-    const choices = paperOptionsFor(project).map((option) => ({
-      value: `${option.paper} ${option.orientation}`,
-      label: describeChoice(option.plan),
-      checked: option.paper === paper && option.orientation === orientation,
-    }));
-    void getPlatformHost()
-      .setPaperMenu(choices)
-      .catch(() => undefined);
-  }, [project]);
-
-  // File › Open Recent (8.2): the main process chose and granted the path;
+  // A recent project (8.2, 8.7): the main process chose and granted the path;
   // unsaved work is asked about exactly as for Open.
   useEffect(
     () =>
@@ -316,8 +320,7 @@ export function App() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      const target = event.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+      if (isTyping(event.target)) return;
 
       if (event.ctrlKey || event.metaKey) {
         const key = event.key.toLowerCase();
@@ -341,9 +344,12 @@ export function App() {
           showView('sheets');
         } else if (key === '/') {
           event.preventDefault();
-          setShortcutsOpen(true);
+          setSettings('shortcuts');
+        } else if (key === ',') {
+          event.preventDefault();
+          setSettings('general');
         } else if (key === '=' || key === '+') {
-          // The view (8.4b), as View › Zoom In, Zoom Out and Fit to Pattern.
+          // The view (8.4b): zoom in, zoom out, and fit the pattern.
           event.preventDefault();
           canvasRef.current?.zoom(ZOOM_STEP);
         } else if (key === '-') {
@@ -356,10 +362,10 @@ export function App() {
         return;
       }
 
-      // The shortcut map (8.2), where many apps keep it.
+      // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
       if (event.key === '?') {
         event.preventDefault();
-        setShortcutsOpen(true);
+        setSettings('shortcuts');
         return;
       }
 
@@ -372,71 +378,17 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [file, exportPdf, newProject, openProject, showView, chooseTool]);
 
-  // The application menu (8.5a) runs the same handlers as the keys above, so
-  // a menu choice and a shortcut cannot come to mean different things.
+  // macOS's native menu (8.7) sends what the platform keeps there; each runs
+  // the handler its key and its button run.
   useEffect(
     () =>
       getPlatformHost().onMenuAction((action) => {
-        switch (action) {
-          case 'new':
-            void newProject();
-            break;
-          case 'open':
-            void openProject();
-            break;
-          case 'save':
-            void file.save();
-            break;
-          case 'save-as':
-            void file.save(true);
-            break;
-          case 'export-pdf':
-            void exportPdf();
-            break;
-          case 'undo':
-            store.undo();
-            break;
-          case 'redo':
-            store.redo();
-            break;
-          case 'view-design':
-            showView('design');
-            break;
-          case 'view-sheets':
-            showView('sheets');
-            break;
-          case 'shortcuts':
-            setShortcutsOpen(true);
-            break;
-          case 'open-sample':
-            void openSample();
-            break;
-          case 'zoom-in':
-            canvasRef.current?.zoom(ZOOM_STEP);
-            break;
-          case 'zoom-out':
-            canvasRef.current?.zoom(1 / ZOOM_STEP);
-            break;
-          case 'zoom-fit':
-            canvasRef.current?.fit();
-            break;
-          default:
-            // Tools › (8.4b): the same as the tool's key.
-            if (action.startsWith('tool:')) {
-              const id = action.slice('tool:'.length);
-              if (ALL_TOOLS.some((tool) => tool.id === id)) chooseTool(id);
-            } else if (action.startsWith('paper:')) {
-              // Paper › (8.4b): the same single edit as the paper list.
-              const [name, turn] = action.slice('paper:'.length).split(' ');
-              const paper = PAPER_NAMES.find((candidate) => candidate === name);
-              const orientation = ORIENTATIONS.find((candidate) => candidate === turn);
-              if (paper !== undefined && orientation !== undefined) {
-                store.dispatch(setPageSetup(paper, orientation));
-              }
-            }
-        }
+        if (action === 'undo') store.undo();
+        else if (action === 'redo') store.redo();
+        else if (action === 'about') setAboutOpen(true);
+        else setSettings('general');
       }),
-    [file, exportPdf, newProject, openProject, openSample, store, showView, chooseTool],
+    [store],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
@@ -572,6 +524,19 @@ export function App() {
         saved={file.state.path !== null}
         onNew={() => void newProject()}
         onOpen={() => void openProject()}
+        onSaveAs={() => void file.save(true)}
+        recent={recent}
+        onProjectMenuOpen={refreshRecent}
+        // The main process checks it is on the list, grants it, and hands it
+        // back through onOpenFile, which asks about unsaved work.
+        onOpenRecent={(path) =>
+          void getPlatformHost()
+            .openRecent(path)
+            .catch(() => undefined)
+        }
+        onOpenSample={() => void openSample()}
+        onAbout={() => setAboutOpen(true)}
+        onSettings={() => setSettings('general')}
         onSave={() => void file.save()}
         onExport={() => void exportPdf()}
       />
@@ -777,7 +742,24 @@ export function App() {
         </span>
       </footer>
 
-      {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
+      {settings !== null && (
+        <SettingsDialog
+          section={settings}
+          onSection={setSettings}
+          preferences={preferences}
+          onPreferences={changePreferences}
+          recentCount={recent.length}
+          onClearRecent={() =>
+            void getPlatformHost()
+              .clearRecent()
+              .then(refreshRecent)
+              .catch(() => undefined)
+          }
+          onClose={() => setSettings(null)}
+        />
+      )}
+
+      {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
 
       {exportNotice !== null && (
         <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />

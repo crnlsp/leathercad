@@ -15,13 +15,14 @@ import {
 } from '@leathercad/domain';
 
 import { Copy, Ellipsis, Eye, EyeOff, FlipHorizontal2, Lock, LockOpen, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { describePrintStatus, type PartPrintStatus } from '@leathercad/export';
 
 import { CountBadge } from './CountBadge.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
+import { MenuButton } from './Menu.js';
 import { Tooltip } from './Tooltip.js';
 
 /**
@@ -230,85 +231,37 @@ function PartMenu({
   onDuplicatePart: (partId: string) => void;
   onRemovePart: (partId: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-
-  // A menu takes focus when it opens, and gives it back when Escape closes it
-  // — heard wherever focus is, since a click does not always leave it here.
-  useEffect(() => {
-    if (!open) return;
-    root.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
-    const away = (event: PointerEvent): void => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return;
-      event.stopPropagation();
-      setOpen(false);
-      trigger.current?.focus();
-    };
-    document.addEventListener('pointerdown', away);
-    document.addEventListener('keydown', escape, true);
-    return () => {
-      document.removeEventListener('pointerdown', away);
-      document.removeEventListener('keydown', escape, true);
-    };
-  }, [open]);
-
-  const choose = (action: () => void) => () => {
-    setOpen(false);
-    action();
-  };
-
   return (
-    <div className="part-menu-anchor" ref={root}>
-      <Tooltip text={open ? null : `Actions for ${part.name}`}>
-        <button
-          ref={trigger}
-          type="button"
-          className="icon-toggle"
-          data-testid={`part-menu-${part.id}`}
-          aria-label={`Actions for ${part.name}`}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen((was) => !was)}
-        >
-          <Icon of={Ellipsis} />
-        </button>
-      </Tooltip>
-      {open && (
-        <div className="part-menu" role="menu" aria-label={`Actions for ${part.name}`}>
-          <button
-            type="button"
-            role="menuitem"
-            className="menu-item"
-            data-testid={`duplicate-part-${part.id}`}
-            onClick={choose(() => onDuplicatePart(part.id))}
-          >
-            <span className="menu-label">
-              <Icon of={Copy} />
-              Duplicate
-            </span>
-            <span className="menu-note">A copy beside this one, with its own stitching</span>
-          </button>
-          {part.features.length > 0 && (
-            <button
-              type="button"
-              role="menuitem"
-              className="menu-item danger"
-              data-testid={`delete-part-${part.id}`}
-              onClick={choose(() => onRemovePart(part.id))}
-            >
-              <span className="menu-label">
-                <Icon of={Trash2} />
-                Delete part
-              </span>
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+    <MenuButton
+      label={`Actions for ${part.name}`}
+      testId={`part-menu-${part.id}`}
+      className="icon-toggle"
+      align="end"
+      entries={[
+        {
+          kind: 'item',
+          id: `duplicate-part-${part.id}`,
+          label: 'Duplicate',
+          icon: Copy,
+          note: 'A copy beside this one, with its own stitching',
+          onChoose: () => onDuplicatePart(part.id),
+        },
+        ...(part.features.length > 0
+          ? [
+              {
+                kind: 'item' as const,
+                id: `delete-part-${part.id}`,
+                label: 'Delete part',
+                icon: Trash2,
+                danger: true,
+                onChoose: () => onRemovePart(part.id),
+              },
+            ]
+          : []),
+      ]}
+    >
+      <Icon of={Ellipsis} />
+    </MenuButton>
   );
 }
 

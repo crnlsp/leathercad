@@ -2,9 +2,9 @@ import {
   DEFAULT_PREFERENCES,
   type MenuAction,
   type OpenDialogOptions,
-  type PaperMenuChoice,
   type PlatformHost,
   type Preferences,
+  type RecentFile,
   type RecoveredCopy,
   type SaveDialogOptions,
 } from './host.js';
@@ -111,7 +111,7 @@ export class InMemoryPlatformHost implements PlatformHost {
     return () => this.menuListeners.delete(listener);
   }
 
-  /** A test choosing an item from the application menu. */
+  /** A test choosing an item from macOS's menu (8.7). */
   chooseMenu(action: MenuAction): void {
     for (const listener of this.menuListeners) listener(action);
   }
@@ -128,13 +128,35 @@ export class InMemoryPlatformHost implements PlatformHost {
     return Promise.resolve();
   }
 
-  /** *File › Open Recent*, most recent first. */
+  /** The recent projects, most recent first. */
   readonly recentFiles: string[] = [];
 
   noteRecentFile(path: string): Promise<void> {
     const at = this.recentFiles.indexOf(path);
     if (at !== -1) this.recentFiles.splice(at, 1);
     this.recentFiles.unshift(path);
+    return Promise.resolve();
+  }
+
+  getRecentFiles(): Promise<readonly RecentFile[]> {
+    return Promise.resolve(this.recentFiles.map((path) => ({ path, shown: path })));
+  }
+
+  openRecent(path: string): Promise<void> {
+    if (this.recentFiles.includes(path)) this.openFile(path);
+    return Promise.resolve();
+  }
+
+  clearRecent(): Promise<void> {
+    this.recentFiles.length = 0;
+    return Promise.resolve();
+  }
+
+  showLogFolder(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  openNotices(): Promise<void> {
     return Promise.resolve();
   }
 
@@ -145,7 +167,7 @@ export class InMemoryPlatformHost implements PlatformHost {
     return () => this.openFileListeners.delete(listener);
   }
 
-  /** A test choosing a project from *Open Recent*. */
+  /** A test choosing one of the recent projects. */
   openFile(path: string): void {
     for (const listener of this.openFileListeners) listener(path);
   }
@@ -164,13 +186,5 @@ export class InMemoryPlatformHost implements PlatformHost {
     const file = this.launchFile;
     this.launchFile = null;
     return Promise.resolve(file);
-  }
-
-  /** The Paper menu as the app last described it. */
-  paperMenu: readonly PaperMenuChoice[] = [];
-
-  setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void> {
-    this.paperMenu = choices;
-    return Promise.resolve();
   }
 }

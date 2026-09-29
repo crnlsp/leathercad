@@ -1,44 +1,22 @@
-import type { MenuAction, PaperMenuChoice } from '@leathercad/platform';
-import { sep } from 'node:path';
-
-import type { MenuItemConstructorOptions } from 'electron';
-
-import { TOOL_GROUPS } from '../renderer/src/tools.js';
+import type { MenuAction } from '@leathercad/platform';
+import type { Input, MenuItemConstructorOptions } from 'electron';
 
 /**
- * The application menu (slice 8.5a).
+ * The application menu — on macOS only (8.7).
  *
- * Electron's default menu offered View › Reload and Toggle Developer Tools in
- * the shipped app. A packaged build has neither; a development build keeps
- * them, where they are the point.
+ * Linux and Windows have none: the project bar holds the project's actions,
+ * Settings and Help, each once. macOS keeps what the platform itself expects:
+ * the app menu, Edit — whose roles are what give a text field copy and paste
+ * there — and Window. Its About and Settings open the renderer's own dialogs,
+ * the ones the project bar opens.
  *
- * What an item *does* belongs to the renderer: it is sent the action and runs
- * the same handler as the keyboard shortcut, so a menu choice and a key press
- * cannot drift apart. The shortcut is **shown but not registered** — the
- * renderer already handles the key, and a registered accelerator would run
- * the action a second time.
- *
- * Pure, so it is tested without Electron running: the caller supplies where
- * actions go, and how to show the log folder and the third-party notices.
+ * Shortcuts are shown but not registered: the renderer handles the keys, and
+ * a registered accelerator would run the action a second time.
  */
-export function menuTemplate(options: {
-  readonly isMac: boolean;
-  readonly packaged: boolean;
+export function macMenuTemplate(options: {
   readonly send: (action: MenuAction) => void;
-  readonly openLogFolder: () => void;
-  readonly openNotices: () => void;
-  /** *File › Open Recent* (8.2): absolute paths, most recent first. */
-  readonly recentFiles?: readonly string[];
-  /** The home directory, shown as `~` in a recent path. */
-  readonly home?: string;
-  readonly openRecent?: (path: string) => void;
-  readonly clearRecent?: () => void;
-  /** *Paper* (8.4b): the renderer's paper list, worded as it words it. */
-  readonly paperChoices?: readonly PaperMenuChoice[];
 }): MenuItemConstructorOptions[] {
-  const { isMac, packaged, send } = options;
-  const recentFiles = options.recentFiles ?? [];
-
+  const { send } = options;
   const action = (
     label: string,
     accelerator: string,
@@ -50,161 +28,60 @@ export function menuTemplate(options: {
     click: () => send(sent),
   });
 
-  const file: MenuItemConstructorOptions = {
-    label: 'File',
-    submenu: [
-      action('New', 'CmdOrCtrl+N', 'new'),
-      action('Open…', 'CmdOrCtrl+O', 'open'),
-      {
-        label: 'Open Recent',
-        submenu: [
-          ...(recentFiles.length === 0
-            ? [{ label: 'No Recent Projects', enabled: false }]
-            : recentFiles.map((path) => ({
-                label: recentLabel(path, options.home),
-                click: () => options.openRecent?.(path),
-              }))),
-          { type: 'separator' },
-          {
-            label: 'Clear Recent',
-            enabled: recentFiles.length > 0,
-            click: () => options.clearRecent?.(),
-          },
-        ],
-      },
-      { type: 'separator' },
-      action('Save', 'CmdOrCtrl+S', 'save'),
-      action('Save As…', 'CmdOrCtrl+Shift+S', 'save-as'),
-      { type: 'separator' },
-      action('Export PDF…', 'CmdOrCtrl+E', 'export-pdf'),
-      // Closing goes through the window, so unsaved work is asked about
-      // (5.3a). On macOS Quit lives in the app menu.
-      ...(isMac ? [] : [{ type: 'separator' } as const, { role: 'quit' } as const]),
-    ],
-  };
-
-  const edit: MenuItemConstructorOptions = {
-    label: 'Edit',
-    submenu: [
-      // The document's history, not a text field's.
-      action('Undo', 'CmdOrCtrl+Z', 'undo'),
-      action('Redo', 'CmdOrCtrl+Shift+Z', 'redo'),
-      { type: 'separator' },
-      // Text fields — the project name, every number — need these: on macOS a
-      // field has no copy and paste without them.
-      { role: 'cut' },
-      { role: 'copy' },
-      { role: 'paste' },
-      { role: 'selectAll' },
-    ],
-  };
-
-  const view: MenuItemConstructorOptions = {
-    label: 'View',
-    submenu: [
-      // The two views of one pattern (7.4c): how it is designed, and the
-      // sheets it will print on.
-      action('Design', 'CmdOrCtrl+1', 'view-design'),
-      action('Sheets', 'CmdOrCtrl+2', 'view-sheets'),
-      { type: 'separator' },
-      // The view, not the document: nothing here is undoable (8.4b).
-      action('Zoom In', 'CmdOrCtrl+=', 'zoom-in'),
-      action('Zoom Out', 'CmdOrCtrl+-', 'zoom-out'),
-      action('Fit to Pattern', 'CmdOrCtrl+0', 'zoom-fit'),
-      { type: 'separator' },
-      { role: 'togglefullscreen' },
-      ...(packaged
-        ? []
-        : [
-            { type: 'separator' } as const,
-            { role: 'reload' } as const,
-            { role: 'forceReload' } as const,
-            { role: 'toggleDevTools' } as const,
-          ]),
-    ],
-  };
-
-  // Every tool, grouped as the rail groups them, each showing its key (8.4b).
-  // "Tools" rather than "Draw": Select, Rotate and Scale draw nothing.
-  const tools: MenuItemConstructorOptions = {
-    label: 'Tools',
-    submenu: TOOL_GROUPS.filter((group) => group.tools.length > 0).flatMap((group, index) => [
-      ...(index === 0 ? [] : [{ type: 'separator' } as const]),
-      ...group.tools.map((tool) => action(tool.label, tool.key, `tool:${tool.id}`)),
-    ]),
-  };
-
-  // The paper, said as what it produces, as the list beside Export PDF says
-  // it; the current one checked. Choosing one is the same single undoable
-  // edit as choosing it there.
-  const paperChoices = options.paperChoices ?? [];
-  const paper: MenuItemConstructorOptions = {
-    label: 'Paper',
-    submenu:
-      paperChoices.length === 0
-        ? [{ label: 'No paper to choose yet', enabled: false }]
-        : paperChoices.map((choice) => ({
-            label: choice.label.replaceAll('&', '&&'),
-            type: 'radio' as const,
-            checked: choice.checked,
-            click: () => send(`paper:${choice.value}`),
-          })),
-  };
-
-  const help: MenuItemConstructorOptions = {
-    label: 'Help',
-    submenu: [
-      // A finished pattern to take apart, in place of a tutorial (8.3).
-      { label: 'Open Sample Project', click: () => send('open-sample') },
-      // Every key the app answers to, in one place (8.2).
-      action('Keyboard Shortcuts', 'CmdOrCtrl+/', 'shortcuts'),
-      { type: 'separator' },
-      { label: 'Show Log Folder', click: () => options.openLogFolder() },
-      // The licences of what the app ships (8.6b), written by the build.
-      { label: 'Third-Party Notices', click: () => options.openNotices() },
-      ...(isMac ? [] : [{ type: 'separator' } as const, { role: 'about' } as const]),
-    ],
-  };
-
-  return isMac
-    ? [{ role: 'appMenu' }, file, edit, view, tools, paper, { role: 'windowMenu' }, help]
-    : [file, edit, view, tools, paper, help];
+  return [
+    {
+      // The first menu is the app menu, whatever its label says.
+      label: 'LeatherCAD',
+      submenu: [
+        { label: 'About LeatherCAD', click: () => send('about') },
+        { type: 'separator' },
+        action('Settings…', 'CmdOrCtrl+,', 'settings'),
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        // Closing goes through the window, so unsaved work is asked about (5.3a).
+        { role: 'quit' },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        // The document's history, not a text field's.
+        action('Undo', 'CmdOrCtrl+Z', 'undo'),
+        action('Redo', 'CmdOrCtrl+Shift+Z', 'redo'),
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    { role: 'windowMenu' },
+  ];
 }
 
-/** At most this many papers: every size in both orientations, and room to spare. */
-const MAX_PAPER_CHOICES = 32;
+/** What a key the native menu's roles used to give does, now there is no menu (8.7). */
+export type WindowKey = 'full-screen' | 'quit' | 'developer-tools';
 
 /**
- * The Paper menu's choices as the renderer sent them, or none.
- *
- * The renderer is sandboxed, but what it sends lands in a native menu, so
- * only the shape the menu needs is taken: a short value naming a paper and an
- * orientation, a short label, and a flag.
+ * The window's own keys (8.7): full screen everywhere, Quit off macOS — where
+ * the app menu has it — and the developer tools only in a development build,
+ * as the menu offered them only there (8.5a).
  */
-export function validPaperChoices(sent: unknown): PaperMenuChoice[] {
-  if (!Array.isArray(sent)) return [];
-  const choices: PaperMenuChoice[] = [];
-  for (const entry of sent.slice(0, MAX_PAPER_CHOICES)) {
-    if (typeof entry !== 'object' || entry === null) continue;
-    const { value, label, checked } = entry as Record<string, unknown>;
-    if (typeof value !== 'string' || !/^[A-Za-z0-9]{1,16} (portrait|landscape)$/.test(value))
-      continue;
-    if (typeof label !== 'string' || label.length === 0 || label.length > 200) continue;
-    choices.push({ value, label, checked: checked === true });
+export function windowKeyFor(
+  input: Pick<Input, 'type' | 'key' | 'control' | 'shift' | 'alt'>,
+  platform: { readonly isMac: boolean; readonly packaged: boolean },
+): WindowKey | null {
+  if (input.type !== 'keyDown') return null;
+  const key = input.key.toLowerCase();
+  if (key === 'f11') return 'full-screen';
+  if (!platform.isMac && input.control && !input.shift && !input.alt && key === 'q') return 'quit';
+  if (!platform.packaged && (key === 'f12' || (input.control && input.shift && key === 'i'))) {
+    return 'developer-tools';
   }
-  return choices;
-}
-
-/**
- * A recent project as the menu shows it: the whole path, so two projects
- * with one name in different folders can be told apart, with the home
- * directory as `~` to keep it short. Ampersands are doubled because Windows
- * reads a single one as a mnemonic and swallows it.
- */
-export function recentLabel(path: string, home?: string): string {
-  const shown =
-    home !== undefined && home !== '' && path.startsWith(home + sep)
-      ? `~${path.slice(home.length)}`
-      : path;
-  return shown.replaceAll('&', '&&');
+  return null;
 }

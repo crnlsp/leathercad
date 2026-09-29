@@ -286,7 +286,6 @@ body {
 .project-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
   padding: 4px 14px;
   background: var(--shell-900);
@@ -316,8 +315,26 @@ body {
   min-width: 6ch;
 }
 
+/* The output and the application sit at the right, the project at the left. */
 .project-output {
   flex: none;
+  margin-left: auto;
+}
+
+/* The application (8.7): past a rule, because none of it is this project. */
+.project-app {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+  align-items: center;
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--shell-line);
+}
+
+/* The Project menu's face: the pocket mark and its chevron, close together. */
+.project-menu-button {
+  gap: 2px;
+  padding: 0 6px;
 }
 
 /* Said once, beside the project it is about. */
@@ -611,7 +628,8 @@ body {
   cursor: not-allowed;
 }
 
-.tool kbd {
+.tool kbd,
+.menu-item kbd {
   padding: 0 4px;
   border-radius: var(--r-sm);
   background: var(--shell-900);
@@ -988,18 +1006,115 @@ body {
   color: var(--text-dim);
 }
 
-/* The keyboard shortcut map (8.2): wider than a question, in columns. */
-.shortcuts-dialog {
+/* Settings (8.7): a sidebar of sections and the pane they show. A fixed
+   height, so moving between sections never resizes the dialog. */
+.settings-dialog {
+  gap: 0;
   width: min(760px, calc(100vw - 32px));
+  height: min(520px, calc(100vh - 64px));
+  padding: 0;
+  overflow: hidden;
 }
 
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.settings-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.settings-sections {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 190px;
+  padding: var(--space-2);
+  border-right: 1px solid var(--shell-line);
+  background: var(--shell-800);
+}
+
+/* The current section looks as the current tool does on the rail. */
+.settings-tab {
+  min-height: var(--h-control);
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font: var(--t-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab.active {
+  border-color: var(--tan);
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.settings-pane {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.settings-pane h4 {
+  margin: 0 0 var(--space-2);
+  font: var(--t-panel);
+}
+
+/* One setting: its name and what it changes, then its control. */
+.setting {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setting-name {
+  font: var(--t-body);
+}
+
+.setting-note {
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+.setting input[type='checkbox'] {
+  flex: none;
+  accent-color: var(--tan);
+}
+
+/* The keyboard shortcut map (8.2), in Settings (8.7): in columns. */
 .shortcuts-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--space-4);
 }
 
-.shortcuts-groups h4 {
+.shortcuts-groups h5 {
   margin: 0 0 6px;
   font: var(--t-strong);
 }
@@ -1033,9 +1148,21 @@ body {
   white-space: nowrap;
 }
 
+/* Dim, not muted: muted fails contrast on the dialog's surface (8.7's scan). */
 .shortcut-or {
-  color: var(--text-mute);
+  color: var(--text-dim);
   font: var(--t-micro);
+}
+
+/* About (8.7): the icon beside the name and the version. */
+.about-identity {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.dialog a {
+  color: var(--text);
 }
 
 .dialog-actions {
@@ -1076,7 +1203,8 @@ body {
    the dialog it shows even after a mouse click opened it, which :focus-visible
    alone would not guarantee. */
 .tool:focus-visible,
-.dialog .tool:focus {
+.dialog .tool:focus,
+.settings-tab:focus-visible {
   outline: 1px solid var(--tan);
   outline-offset: 1px;
 }
@@ -1301,25 +1429,63 @@ button.problem-row:hover {
   opacity: 0.4;
 }
 
-/* A part's actions, in an overflow on its heading row (§7.1). */
-.part-menu-anchor {
+/* A button's menu (8.7): the Project and Help menus, and a part's actions in
+   an overflow on its heading row (§7.1). One look for every menu in the
+   window. */
+.menu-anchor {
   position: relative;
   flex: none;
 }
 
-.part-menu {
+.menu {
   position: absolute;
   top: 100%;
-  right: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  width: 200px;
+  width: max-content;
+  min-width: 200px;
+  max-width: 360px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
   padding: 4px;
   border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
   background: var(--shell-900);
   box-shadow: var(--elevation-raised);
+}
+
+.menu.start {
+  left: 0;
+}
+
+.menu.end {
+  right: 0;
+}
+
+/* The Parts panel scrolls, and so clips a menu wider than itself. */
+.parts .menu {
+  width: 200px;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--shell-line);
+}
+
+.menu-heading {
+  padding: 6px 8px 2px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+/* Two classes, to outrank `.menu-item`'s own colour below. Dim, not muted,
+   so it reads as a note and stays legible. */
+.menu-item.menu-empty {
+  color: var(--text-dim);
+  font-weight: 400;
+  cursor: default;
 }
 
 .menu-item {
@@ -1349,6 +1515,12 @@ button.problem-row:hover {
 .menu-note {
   color: var(--text-dim);
   font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+/* A shortcut at the item's right, in the look keys have on the rail. */
+.menu-item kbd {
+  margin-left: auto;
 }
 
 /* A fieldset only to carry `disabled` down to every control inside it, so a
@@ -1661,8 +1833,9 @@ button.problem-row,
   align-items: center;
 }
 
+/* The whole width of the item, so a shortcut can sit at its right. */
 .menu-label {
-  display: inline-flex;
+  display: flex;
   gap: var(--space-2);
   align-items: center;
 }

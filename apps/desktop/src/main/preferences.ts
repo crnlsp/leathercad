@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { extname, isAbsolute } from 'node:path';
+import { extname, isAbsolute, sep } from 'node:path';
 
 import { DEFAULT_PREFERENCES, type Preferences } from '@leathercad/platform';
 
 import { writeFileAtomic } from './atomicWrite.js';
 
-/** How many projects *File › Open Recent* lists. */
+/** How many recent projects the Project menu lists (8.2, 8.7). */
 export const RECENT_LIMIT = 10;
 
 /** `preferences.json` as it is on disk (docs/file-format.md §6). */
@@ -64,9 +64,17 @@ export function validChanges(changes: unknown): Partial<Preferences> {
   return out;
 }
 
-/** A path *Open Recent* may hold: an absolute path to a project file. */
+/** A path the recent list may hold: an absolute path to a project file. */
 export function isProjectPath(path: unknown): path is string {
   return typeof path === 'string' && isAbsolute(path) && extname(path).toLowerCase() === '.lcp';
+}
+
+/**
+ * A path as the maker reads it (8.7): the home directory as `~`, and only the
+ * home directory itself — not a sibling whose name starts the same.
+ */
+export function shownPath(path: string, home: string): string {
+  return home !== '' && path.startsWith(home + sep) ? `~${path.slice(home.length)}` : path;
 }
 
 /** The recent list with `path` put first, once, and the oldest let go. */

@@ -77,10 +77,12 @@ test('starts, and reports the packaged version through the bridge', async () => 
   await expect(window.getByTestId('app-version')).toContainText(VERSION);
 });
 
-test('has its own menu, with no Reload and no developer tools (8.5a)', async () => {
+test('has no menu off macOS, and no Reload or developer tools anywhere (8.5a, 8.7)', async () => {
   // Electron's default menu shipped both: a reload throws unsaved work at the
   // 5.3a question, and the developer tools are a console into the renderer.
   const roles = await app.evaluate(({ Menu }) => {
+    const menu = Menu.getApplicationMenu();
+    if (menu === null) return null;
     const found: string[] = [];
     const walk = (items: Electron.MenuItem[]): void => {
       for (const entry of items) {
@@ -88,13 +90,35 @@ test('has its own menu, with no Reload and no developer tools (8.5a)', async () 
         if (entry.submenu) walk(entry.submenu.items);
       }
     };
-    walk(Menu.getApplicationMenu()?.items ?? []);
+    walk(menu.items);
     return found;
   });
-  expect(roles).toContain('quit');
-  for (const role of ['reload', 'forcereload', 'toggledevtools']) {
-    expect(roles).not.toContain(role);
+  if (process.platform === 'darwin') {
+    expect(roles).toContain('quit');
+    for (const role of ['reload', 'forcereload', 'toggledevtools']) {
+      expect(roles).not.toContain(role);
+    }
+  } else {
+    expect(roles).toBeNull();
   }
+
+  // The developer tools' keys do nothing in the shipped build — sent as the
+  // operating system sends them, where the main process hears keys.
+  await app.evaluate(({ BrowserWindow }) => {
+    const contents = BrowserWindow.getAllWindows()[0]!.webContents;
+    for (const [keyCode, modifiers] of [
+      ['F12', []],
+      ['I', ['control', 'shift']],
+    ] as const) {
+      contents.sendInputEvent({ type: 'keyDown', keyCode, modifiers: [...modifiers] });
+      contents.sendInputEvent({ type: 'keyUp', keyCode, modifiers: [...modifiers] });
+    }
+  });
+  expect(
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]!.webContents.isDevToolsOpened(),
+    ),
+  ).toBe(false);
 });
 
 test('ships its licence and the third-party notices beside the archive (8.6b)', async () => {

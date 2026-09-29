@@ -45,7 +45,33 @@ and what shipped in 1.1.0 to 1.2.0 in [`history/roadmap-1.1-and-1.2.md`](history
 
 The theme is still the one the roadmap gave 1.1 — from a tool that works to one you can live in.
 Its first half shipped early, as 1.1.0 to 1.2.0; this is the rest. The order within each group is
-the suggested order of work.
+the suggested order of work, and *The window* comes before the other groups.
+
+### The window
+
+Set first on 2026-09-29, in this order, one pull request each: the window's own frame was still
+Electron's default menu, a right-click did nothing, and nothing said a new release existed.
+
+- ✅ **8.7 The top bar and Settings.** No application menu on Linux and Windows, and the minimal one
+  macOS requires. The project bar gains a Project menu (New, Open, Save as, recent projects), Settings
+  and Help (the sample project, About). Settings is a sidebar window — General, Appearance, Keyboard
+  shortcuts — that grows a section only when it has a real control. The Paper menu, a copy of the
+  sheet indicator, goes with its IPC. Design:
+  [`2026-09-29-top-bar-and-settings-design.md`](superpowers/specs/2026-09-29-top-bar-and-settings-design.md).
+  ✅ Built as designed. On the way: a menu closed by Escape never gave its button focus back, and
+  the shortcut map's "or" failed contrast; both fixed. The README's pictures still show the bar
+  before 8.7 (Q27).
+- ☐ **8.8 The right-click menu.** Selecting several features already works — Shift-click, and
+  dragging a box. A right-click selects what is under the pointer unless it is already selected,
+  then offers what the selection can take: Delete, Flip, Lock, Hide and Duplicate part, through the
+  commands that exist, as one undo step. The same menu on a row of the parts list. It reuses 8.7's
+  menu component. Copy and Paste are not in it: see *Later*.
+- ☐ **8.9 Update discovery.** The main process asks GitHub for the latest release and compares it
+  with the running version: *Check for updates* in Settings › Updates, the result in About, and a
+  quiet mark on Settings when one exists. It links to the release page and installs nothing (see
+  *Not planned*). The app's first network request, so `SECURITY.md`'s "no network connections"
+  changes with it, in an ADR; the Flatpak skips it, as Flathub updates it. Reads tags in both
+  forms (R4).
 
 ### Drawing and editing
 
@@ -81,6 +107,7 @@ Everything found along the way that is not fixed yet, with where it was found. T
 |---|---|---|---|
 | ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
 | ☐ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
+| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
 | ✅ **Q26** | **bug** · Two findings of the nightly property run ([issue #27](https://github.com/crnlsp/leathercad/issues/27)). A cubic that doubles back on itself measured short — 4 µm on a 94 mm curve, against a 1e-7 mm tolerance — because its speed kinks where it turns, and a kink can make adaptive quadrature's halves agree with the whole while both are wrong. And the nearest point of a line shorter than `EPS_POINT` was always its start, a hair from its other end | The nightly runs of 2026-09-27 to 2026-09-29 (seeds 267645448, 1303645 and 285059694) | ✅ Fixed: a cubic is measured in pieces cut at every turning point of x and of y, where its speed is smooth, and a line is projected on exactly at any length but zero. Both counterexamples are regression tests, and a new property measures cubics along a line against the distance they travel |
 
 #### Left from the independent QA pass (2026-09-24)
@@ -148,6 +175,9 @@ Also later, each already decided in principle:
 - **Radial, angular, chained and baseline dimensions,** and dimensions between parts.
 - **A screen-calibration step,** which would make 1:1 literal on screen too.
 - **Draw tools in their role's colour** — still an open question in the UI decisions record.
+- **8.8b Copy, Paste and Duplicate of features,** after 8.8. Neither exists, and they carry a
+  domain question: what a pasted stitch line follows when its outline was not copied with it. A
+  command with property tests, not a menu item.
 
 Recorded from the QA pass (2026-09-24), with no work planned:
 
@@ -161,6 +191,7 @@ Recorded from the QA pass (2026-09-24), with no work planned:
 
 ## Not planned
 
-Auto-update; material, cost or bill-of-materials metadata; a notes field separate from labels;
-3D; an onboarding wizard; drag handles for values that are already typed; driving a printer
-directly — LeatherCAD writes a PDF and the maker prints it from their own viewer.
+Auto-update, meaning a release installed from inside the app (8.9 only says one exists); material,
+cost or bill-of-materials metadata; a notes field separate from labels; 3D; an onboarding wizard;
+drag handles for values that are already typed; driving a printer directly — LeatherCAD writes a
+PDF and the maker prints it from their own viewer.

@@ -3,7 +3,6 @@ import { join } from 'node:path';
 
 import { BrowserWindow, Menu, app, dialog, shell } from 'electron';
 import log from 'electron-log/main';
-import type { PaperMenuChoice } from '@leathercad/platform';
 
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
 import windowIcon from '../../build/icon.png?asset';
@@ -12,7 +11,7 @@ import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
 import { projectPathFromArgs } from './launchFile.js';
-import { menuTemplate } from './menu.js';
+import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
 import { PreferencesStore } from './preferences.js';
@@ -35,18 +34,14 @@ const recovery = new RecoveryStore(join(stateDirectory(), 'recovery'), {
 });
 
 // The files the renderer may touch: those chosen in the app's dialogs, or
-// from Open Recent (8.2). Shared by the handlers and the menu.
+// from the recent projects (8.2). Shared by the handlers and the launch.
 const grants = new PathGrants();
 
 // preferences.json, beside nothing but the app's other settings
-// (docs/file-format.md §6). Read once, before the menu that lists its recent
-// projects is built.
+// (docs/file-format.md §6). Read once, when the app is ready.
 let preferences: PreferencesStore;
 
 let mainWindow: BrowserWindow | null = null;
-
-/** The Paper menu as the renderer last described it (8.4b). */
-let paperChoices: readonly PaperMenuChoice[] = [];
 
 /**
  * A project the operating system asked this launch to open (8.5): a `.lcp`
@@ -95,6 +90,21 @@ function createWindow(): void {
 
   watchWindow(mainWindow);
 
+  // The keys the native menu's roles used to give (8.7), now Linux and
+  // Windows have no menu: full screen, Quit, and in development the tools.
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const key = windowKeyFor(input, {
+      isMac: process.platform === 'darwin',
+      packaged: app.isPackaged,
+    });
+    if (key === null) return;
+    event.preventDefault();
+    if (key === 'full-screen') mainWindow?.setFullScreen(!mainWindow.isFullScreen());
+    // Through the window's close, so unsaved work is asked about (5.3a).
+    else if (key === 'quit') app.quit();
+    else mainWindow?.webContents.toggleDevTools();
+  });
+
   // A renderer that dies takes the unsaved work with it, but the main process
   // lives on to a normal quit — which must not delete the copy that is the
   // only way back to that work.
@@ -124,7 +134,7 @@ function createWindow(): void {
 }
 
 /**
- * Help › Third-Party Notices: the file the build wrote beside the renderer
+ * The third-party notices, from About (8.7): the file the build wrote beside the renderer
  * (8.6b), in a window of its own. Plain text, no preload, nothing to run, and
  * nowhere to navigate to.
  */
@@ -162,48 +172,37 @@ function openNotices(): void {
 }
 
 /**
- * The app's own menu, not Electron's default: no Reload and no developer
- * tools in a packaged build (8.5a). Each item asks the renderer, which runs
- * the same handler as the keyboard shortcut. Rebuilt whenever the recent list
- * changes, since the menu is where it is shown.
+ * The application menu (8.7): none on Linux and Windows — the project bar
+ * holds its actions, Settings and Help — and the platform's minimal one on
+ * macOS, whose About and Settings open the renderer's dialogs. Not Electron's
+ * default, which shipped Reload and the developer tools (8.5a).
  */
 function buildMenu(): void {
   Menu.setApplicationMenu(
-    Menu.buildFromTemplate(
-      menuTemplate({
-        isMac: process.platform === 'darwin',
-        packaged: app.isPackaged,
-        send: (action) => mainWindow?.webContents.send(IPC.menuAction, action),
-        openLogFolder: () => void shell.openPath(stateDirectory()),
-        openNotices,
-        recentFiles: preferences.recentFiles,
-        home: app.getPath('home'),
-        openRecent: (path) => void openRecent(path),
-        paperChoices,
-        clearRecent: () => {
-          void preferences.clearRecent();
-          app.clearRecentDocuments();
-          buildMenu();
-        },
-      }),
-    ),
+    process.platform === 'darwin'
+      ? Menu.buildFromTemplate(
+          macMenuTemplate({
+            send: (action) => mainWindow?.webContents.send(IPC.menuAction, action),
+          }),
+        )
+      : null,
   );
 }
 
 /**
- * File › Open Recent: grants the project, then asks the renderer to open it,
- * which asks about unsaved work first exactly as Open does. A project that is
- * gone is taken off the list, and the maker is told why it vanished.
+ * A recent project, chosen in the Project menu (8.2, 8.7): grants it, then
+ * asks the renderer to open it, which asks about unsaved work first exactly
+ * as Open does. Only a path on the list is opened. A project that is gone is
+ * taken off the list, and the maker is told why it vanished.
  */
 async function openRecent(path: string): Promise<void> {
   if (!preferences.recentFiles.includes(path)) return;
   if (!existsSync(path)) {
     await preferences.forgetRecent(path);
-    buildMenu();
     const message = {
       type: 'info' as const,
       message: 'That project is no longer there',
-      detail: `${path}\n\nIt was moved, renamed or deleted, so it has been taken off Open Recent.`,
+      detail: `${path}\n\nIt was moved, renamed or deleted, so it has been taken off the recent projects.`,
     };
     if (mainWindow === null) await dialog.showMessageBox(message);
     else await dialog.showMessageBox(mainWindow, message);
@@ -225,7 +224,6 @@ app.whenReady().then(() => {
       // The operating system's own list too: the dock on macOS, the jump list
       // on Windows.
       app.addRecentDocument(path);
-      buildMenu();
     },
     sampleProject,
     () => {
@@ -233,20 +231,10 @@ app.whenReady().then(() => {
       launchFile = null;
       return file;
     },
-    (choices) => {
-      // Rebuilt only when it says something new: the renderer sends the list
-      // after every edit, and most edits change no sheet count.
-      if (JSON.stringify(choices) === JSON.stringify(paperChoices)) return;
-      paperChoices = choices;
-      buildMenu();
-    },
+    (path) => openRecent(path),
+    openNotices,
   );
 
-  app.setAboutPanelOptions({
-    applicationName: 'LeatherCAD',
-    applicationVersion: app.getVersion(),
-    copyright: 'Copyright © 2026 crnlsp · Apache-2.0',
-  });
   buildMenu();
 
   createWindow();

@@ -3,7 +3,7 @@ import { TOOL_GROUPS } from './tools.js';
 /** One key, or a key with a modifier, and what it does. */
 export interface Shortcut {
   /**
-   * The keys, as the menu writes them: `CmdOrCtrl+S`, `Shift+Z`, `Delete`.
+   * The keys, as Electron writes them: `CmdOrCtrl+S`, `Shift+Z`, `Delete`.
    * `CmdOrCtrl` is shown as Ctrl, or ⌘ on macOS, by `keysFor`.
    */
   readonly keys: readonly string[];
@@ -19,8 +19,8 @@ export interface ShortcutGroup {
  * Every key the app answers to, in one place (slice 8.2).
  *
  * Written down rather than discovered, because a shortcut nobody can find is
- * one nobody uses. The menu's shortcuts and the tool keys are read from where
- * they are defined — the tool list here, the menu by a test — so this map
+ * one nobody uses. The tool keys are read from where they are defined, and a
+ * test holds the map to the top bar's menus and macOS's menu (8.7), so it
  * cannot come to describe a key the app no longer has.
  */
 export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
@@ -53,7 +53,15 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
       { keys: ['CmdOrCtrl+0'], does: 'Fit the pattern in the window' },
       { keys: ['Scroll'], does: 'Zoom about the pointer' },
       { keys: ['Middle-drag', 'Alt+drag'], does: 'Pan' },
-      { keys: ['CmdOrCtrl+/', '?'], does: 'This list' },
+    ],
+  },
+  {
+    title: 'Window',
+    shortcuts: [
+      { keys: ['CmdOrCtrl+,'], does: 'Settings' },
+      { keys: ['CmdOrCtrl+/', '?'], does: 'Keyboard shortcuts' },
+      { keys: ['F11'], does: 'Full screen' },
+      { keys: ['CmdOrCtrl+Q'], does: 'Quit' },
     ],
   },
   {
@@ -83,6 +91,20 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
     ],
   },
 ];
+
+/**
+ * Whether a key is going into something the maker is typing in (8.7): a
+ * field, a text area, a list — whose letters are its type-ahead — or anything
+ * editable. The window's shortcuts leave those keys alone, so a `?` typed in
+ * a name is a question mark.
+ */
+export function isTyping(target: EventTarget | null): boolean {
+  if (target === null || !('tagName' in target)) return false;
+  const element = target as { readonly tagName: string; readonly isContentEditable?: boolean };
+  return (
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) || element.isContentEditable === true
+  );
+}
 
 /** A key combination as this platform writes it. */
 export function keysFor(keys: string, isMac: boolean): string {

@@ -11,6 +11,7 @@ import {
 } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 5.3a: never lose work silently.
@@ -98,9 +99,10 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
 
-    // Escape is Cancel too.
+    // Escape is Cancel too — once the dialog has taken focus, which it does
+    // just after it appears; a key pressed in between goes to the window.
     await requestClose(app);
-    await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId('unsaved-save')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
@@ -119,7 +121,7 @@ test('New asks first, and starts a clean, empty project', async () => {
   try {
     await drawAPanel(window);
 
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     const dialog = window.getByTestId('unsaved-dialog');
     await expect(dialog).toContainText('new project');
     await dialog.getByTestId('unsaved-cancel').click();
@@ -136,7 +138,7 @@ test('New asks first, and starts a clean, empty project', async () => {
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // A new, untouched project asks nothing of the next New.
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await expect(dialog).toHaveCount(0);
   } finally {
     await closeApp(app);
@@ -154,7 +156,7 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
     await app.evaluate(({ dialog: native }) => {
       native.showSaveDialog = async () => ({ canceled: true, filePath: '' });
     });
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await dialog.getByTestId('unsaved-save').click();
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
@@ -164,7 +166,7 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
     await app.evaluate(({ dialog: native }, path) => {
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await dialog.getByTestId('unsaved-save').click();
     await expect(window.getByTestId('part-count')).toHaveText('0');
     expect(existsSync(file)).toBe(true);
@@ -173,14 +175,14 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
     await app.evaluate(({ dialog: native }, path) => {
       native.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, file);
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
 
     // …and a dirty one asks, with the same question.
     await drawAPanel(window, '2');
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await expect(dialog).toContainText('Opening another project');
     await dialog.getByTestId('unsaved-cancel').click();
     await expect(window.getByTestId('part-count')).toHaveText('2');
