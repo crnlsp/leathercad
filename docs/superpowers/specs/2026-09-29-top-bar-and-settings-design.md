@@ -49,8 +49,9 @@ settings surface that can grow.
   primary action.
 - **Then a 1 px `--shell-line` rule, and the application:** Settings (⚙) and Help (?), icon-only
   quiet buttons. The rule is information: past it is the application, not this project.
-- At the 860 px minimum width the bar fits as before: New and Open give back about the space the
-  three new buttons take.
+- **At the 860 px minimum width the bar still fits** — no control clipped or wrapped. New and Open
+  give back about the space the three new buttons take, but that is an estimate: an end-to-end test
+  at 860 px holds it (§10).
 - **The same on every platform.** On macOS the native menu's *About* and *Settings…* open the same
   dialogs as these buttons.
 
@@ -109,12 +110,13 @@ Each menu owns one kind of thing. An item that belongs to none of them is not ad
 ┌─ Settings ───────────────────────────────────────────────────────── ✕ ┐
 │ General            │ Appearance                                       │
 │┃Appearance         │                                                  │
-│ Keyboard shortcuts │ Show the legend on the canvas              [✓]   │
-│                    │ Explains the marks on the drawing.               │
+│ Keyboard shortcuts │ Name the marks in the canvas legend        [ ]   │
+│                    │ Off, the legend is a strip of marks until you    │
+│                    │ open it.                                         │
 │                    │                                                  │
-│                    │ Keep the tool rail collapsed               [ ]   │
-│                    │ Shows the tools as icons. Below 1200 px wide the │
-│                    │ rail collapses anyway.                           │
+│                    │ Show tool names in the rail                [✓]   │
+│                    │ Off, each tool shows only its key. Below 1200 px │
+│                    │ wide the rail shows only keys anyway.            │
 │                    │                                                  │
 └────────────────────┴──────────────────────────────────────────────────┘
 ```
@@ -130,19 +132,25 @@ Each menu owns one kind of thing. An item that belongs to none of them is not ad
   store as the in-place toggles already do. Escape, ✕ and a click on the scrim close it.
 - **It opens on General**, or on the section asked for: Ctrl+/ and `?` open Keyboard shortcuts.
   **Ctrl+,** (⌘, on macOS) opens it, the convention across desktop apps.
+- **No window shortcut fires while the maker is typing.** The global key handler already ignores
+  keys aimed at an `input` or a `textarea`; it also ignores a `select` and anything
+  `contenteditable`, so a `?` typed into a name is a question mark and a letter typed on the sheet
+  indicator is its own type-ahead. One pure function decides what counts as typing, and a unit test
+  holds it.
 
 ### 5.2 Sections
 
 | Section | Controls | Backed by |
 |---|---|---|
 | **General** | *Recent projects* — "The Project menu lists the last 10 projects you opened or saved." with how many are listed, and *Clear list* (disabled when there are none) | `PreferencesStore.clearRecent`, and the operating system's list, as the native menu cleared both |
-| **Appearance** | *Show the legend on the canvas*; *Keep the tool rail collapsed* | the existing `legendOpen` and `toolRailCollapsed` preferences |
-| **Keyboard shortcuts** | the shortcut map, read-only, which gains *Ctrl+, Settings*; its *Ctrl+/ or ? This list* row stays | `SHORTCUT_GROUPS`, as the dialog shows it today |
+| **Appearance** | *Name the marks in the canvas legend*; *Show tool names in the rail* | the existing `legendOpen`, and `toolRailCollapsed` inverted — the same state the legend's own toggle and the rail's toggle change |
+| **Keyboard shortcuts** | the shortcut map, **read-only** — rebinding keys would change this pane, not the Settings structure around it — which gains *Ctrl+, Settings*; its *Ctrl+/ or ? This list* row stays | `SHORTCUT_GROUPS`, as the dialog shows it today |
 
-**How it grows.** The sections are one list in one file (`settingsSections.ts`): an id, a title
-and the component that draws the pane. A new section is one entry. A section with nothing real in
-it is not written. Editor, Canvas, Files and Printing — the categories this surface is expected to
-reach — are added when a real setting exists for them, not before. 8.9 adds **Updates**.
+**How it grows.** The sections are one list at the top of `SettingsDialog.tsx`: an id, a title and
+the component that draws the pane. A new section is one entry. **No section is written before
+LeatherCAD has a real, user-facing setting that belongs in it** — no placeholder, no "coming soon".
+Editor, Canvas, Files and Printing are where this surface is expected to go, and each waits for its
+first real setting. 8.9 adds **Updates**, with its first real setting.
 
 ## 6. About LeatherCAD
 
@@ -177,7 +185,8 @@ reach — are added when a real setting exists for them, not before. 8.9 adds **
 ### 7.1 The native menu
 
 - **Linux and Windows:** `Menu.setApplicationMenu(null)`.
-- **macOS:** the app menu (*About LeatherCAD*, *Settings…* ⌘,, Hide, Hide Others, Quit), *Edit*
+- **macOS:** the app menu (*About LeatherCAD*, *Settings…* ⌘,, Services, Hide, Hide Others, Show
+  All, Quit), *Edit*
   (Undo and Redo as today, then the roles cut, copy, paste and select all, without which a text
   field has no copy and paste on macOS) and *Window*. About and Settings are sent to the renderer
   as menu actions, like every item now.
@@ -241,11 +250,13 @@ defines no value of its own.
   *Export PDF*. This is the bar's one new expressive element; every other addition is quiet.
 - **Settings and Help** are Lucide's `Settings` and `CircleHelp` (ADR 0017), 16 px, icon-only
   quiet buttons at `--h-control`, each with a tooltip naming it and its key.
-- **Menus** are raised surfaces, the only kind that casts a shadow: `--shell-700`, a
-  `--shell-line` border, `--r-md`, `--elevation-raised`, `--space-1` inset, at least 240 px wide. Items are
-  `--h-control` high in `--t-body`; a shortcut sits at the right in the rail's `kbd` style. Hover
-  and the keyboard's current item share one state, `--shell-600`. *Recent projects* is a heading in
-  `--t-label`, `--text-dim`, sentence case, as the rail's group headings are.
+- **Menus look as the parts list's ⋯ menu already does** — the one popup menu the window has: a
+  raised surface on `--shell-900`, a `--shell-line` border, `--r-sm`, `--elevation-raised`, items in
+  `--t-label` with an optional second line in `--text-dim`, hover and keyboard focus sharing
+  `--shell-600`. Its styles become the shared `.menu` ones and the part menu moves onto the
+  component, so the window keeps one menu, not two. New: a shortcut at the item's right in the
+  rail's `kbd` style; separators; and *Recent projects* as a heading in `--t-label` `--text-dim`,
+  sentence case, as the rail's group headings are.
 - **Settings:** the sidebar on `--shell-800`, a step darker than the pane on `--shell-700`. The
   current section looks as the current tool does on the rail — `--shell-600` with a tan border —
   so "current" looks the same everywhere in the window. A setting is a row: its name in
@@ -259,20 +270,25 @@ defines no value of its own.
 ## 10. Testing
 
 - **Unit:**
+  - What counts as typing: `input`, `textarea`, `select` and `contenteditable` targets do; the
+    canvas, a button and the document body do not.
   - The macOS menu template: its items, that About and Settings send their actions, and that there
     is no File, View, Tools, Paper or Help menu.
-  - `openRecent` refuses a path that is not on the list.
+  - `openRecent` refuses a path that is not on the list — held end to end, in
+    `platform-boundary.spec.ts`, against the real IPC handler.
   - The shortcut map test (`main/shortcuts.test.ts`) reads the React menus' data instead of the
     native menu: every shortcut a menu shows is in the map.
 - **End to end** (Playwright, the real app):
   - `menu.spec` is rewritten for the new menus: on Linux there is no application menu; the Project
     menu opens by mouse and by keyboard; a recent project opens through it; *Save as…* opens the
     save dialog; About shows the version.
-  - Settings: each section opens; *Show the legend on the canvas* changes the canvas at once and
-    is still set after a restart; *Clear list* empties the Project menu's recent projects; Ctrl+/
+  - Settings: each section opens; *Name the marks in the canvas legend* opens the legend at once
+    and is still set after a restart; *Clear list* empties the Project menu's recent projects; Ctrl+/
     and `?` open Keyboard shortcuts; Ctrl+, opens General.
   - `sample.spec` and `sheets.spec` stop reading the native menu.
   - Copy and paste in the project name still work with no menu.
+  - Typing `?` into the project name, or pressing Ctrl+/ or Ctrl+, there, types and opens nothing.
+  - At an 860 × 600 window, every control of the project bar is inside the bar and none wraps.
   - The accessibility scan covers the open menus, Settings and About.
 - **Visual:** the project bar baselines are retaken, and every changed image looked at.
 - **README:** `pnpm docs:media` retakes the screenshots, which show the old bar.

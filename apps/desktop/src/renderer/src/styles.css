@@ -611,7 +611,8 @@ body {
   cursor: not-allowed;
 }
 
-.tool kbd {
+.tool kbd,
+.menu-item kbd {
   padding: 0 4px;
   border-radius: var(--r-sm);
   background: var(--shell-900);
@@ -1301,25 +1302,61 @@ button.problem-row:hover {
   opacity: 0.4;
 }
 
-/* A part's actions, in an overflow on its heading row (§7.1). */
-.part-menu-anchor {
+/* A button's menu (8.7): the Project and Help menus, and a part's actions in
+   an overflow on its heading row (§7.1). One look for every menu in the
+   window. */
+.menu-anchor {
   position: relative;
   flex: none;
 }
 
-.part-menu {
+.menu {
   position: absolute;
   top: 100%;
-  right: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  width: 200px;
+  width: max-content;
+  min-width: 200px;
+  max-width: 360px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
   padding: 4px;
   border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
   background: var(--shell-900);
   box-shadow: var(--elevation-raised);
+}
+
+.menu.start {
+  left: 0;
+}
+
+.menu.end {
+  right: 0;
+}
+
+/* The Parts panel scrolls, and so clips a menu wider than itself. */
+.parts .menu {
+  width: 200px;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--shell-line);
+}
+
+.menu-heading {
+  padding: 6px 8px 2px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.menu-empty {
+  color: var(--text-mute);
+  font-weight: 400;
+  cursor: default;
 }
 
 .menu-item {
@@ -1349,6 +1386,12 @@ button.problem-row:hover {
 .menu-note {
   color: var(--text-dim);
   font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+/* A shortcut at the item's right, in the look keys have on the rail. */
+.menu-item kbd {
+  margin-left: auto;
 }
 
 /* A fieldset only to carry `disabled` down to every control inside it, so a
@@ -1661,8 +1704,9 @@ button.problem-row,
   align-items: center;
 }
 
+/* The whole width of the item, so a shortcut can sit at its right. */
 .menu-label {
-  display: inline-flex;
+  display: flex;
   gap: var(--space-2);
   align-items: center;
 }
