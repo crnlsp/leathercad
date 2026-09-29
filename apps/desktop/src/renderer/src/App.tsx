@@ -3,8 +3,10 @@ import {
   DocumentStore,
   deleteFeatures,
   deletePart,
+  deleteRefusal,
   duplicatePart,
   emptyDocument,
+  isEmptySelection,
   planDelete,
   type DeleteResolution,
 } from '@leathercad/document';
@@ -14,7 +16,6 @@ import {
   diagnose,
   diagnosticTarget,
   evaluate,
-  lockRefusal,
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
@@ -37,7 +38,9 @@ import {
 import { AboutDialog } from './AboutDialog.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
+import { selectionForRightClick, selectionMenu, type RightClicked } from './contextMenu.js';
 import { DeleteDialog } from './DeleteDialog.js';
+import { ContextMenu } from './Menu.js';
 import { ExportNotice } from './ExportNotice.js';
 import { useProjectFile, type ExportReport } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
@@ -434,12 +437,7 @@ export function App() {
       // question about a delete that was never going to happen is worse than
       // no question. The command refuses it too — this is what keeps the user
       // from being asked (S7).
-      if (
-        lockRefusal(project, [...plan.requested, ...plan.dependents.map((d) => d.featureId)]) !==
-        null
-      ) {
-        return;
-      }
+      if (deleteRefusal(project, ids) !== null) return;
       if (plan.dependents.length === 0) {
         store.dispatch(deleteFeatures(ids));
         store.clearSelection();
@@ -456,13 +454,8 @@ export function App() {
       if (part === undefined) return;
       const ids = part.features.map((f) => f.id);
       const project = store.getState().document.project;
+      if (deleteRefusal(project, ids) !== null) return;
       const plan = planDelete(project, ids);
-      if (
-        lockRefusal(project, [...plan.requested, ...plan.dependents.map((d) => d.featureId)]) !==
-        null
-      ) {
-        return;
-      }
       if (plan.dependents.length === 0) {
         store.dispatch(deletePart(partId));
         store.clearSelection();
@@ -488,6 +481,40 @@ export function App() {
     },
     [store, nextId],
   );
+
+  /**
+   * The right-click menu (8.8), open at a point, or closed. One for the board
+   * and the Parts list: both right-clicks come here.
+   */
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const openContextMenu = useCallback(
+    (clicked: RightClicked, at: { x: number; y: number }) => {
+      store.setSelection(selectionForRightClick(store.getState().selection, clicked));
+      setContextMenu(at);
+    },
+    [store],
+  );
+
+  // The Menu key and Shift+F10 (8.8). A Parts row answers for itself; from
+  // anywhere else — the tool just chosen has focus, and the canvas cannot —
+  // the menu is about the selection, opened where it is on the board. A
+  // keyboard's menu comes with no button (-1); a right-click with the mouse
+  // somewhere that has no menu of its own opens nothing.
+  useEffect(() => {
+    const onKeyboardMenu = (event: MouseEvent): void => {
+      if (event.button !== -1 || event.defaultPrevented || isTyping(event.target)) return;
+      if (event.target instanceof Element && event.target.closest('dialog, [role="dialog"]')) {
+        return;
+      }
+      if (isEmptySelection(store.getState().selection)) return;
+      const at = canvasRef.current?.selectionPoint() ?? null;
+      if (at === null) return;
+      event.preventDefault();
+      setContextMenu(at);
+    };
+    window.addEventListener('contextmenu', onKeyboardMenu);
+    return () => window.removeEventListener('contextmenu', onKeyboardMenu);
+  }, [store]);
 
   const resolvePendingDelete = (resolution: DeleteResolution): void => {
     if (pendingDelete === null) return;
@@ -621,6 +648,7 @@ export function App() {
           onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
           onRemovePart={requestDeletePart}
           onDuplicatePart={requestDuplicatePart}
+          onContextMenu={openContextMenu}
           onOpenSample={() => void openSample()}
         />
         {/* The drawing is what the window is for: its main landmark. */}
@@ -638,6 +666,7 @@ export function App() {
             hardware={hardware}
             pointOptions={pointOptions}
             requestDelete={requestDelete}
+            onContextMenu={openContextMenu}
           >
             {/* The legend explains the board's marks; the sheets are ink. */}
             {view === 'design' && (
@@ -741,6 +770,23 @@ export function App() {
               : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
         </span>
       </footer>
+
+      {/* A menu about nothing is not shown. */}
+      {contextMenu !== null && !isEmptySelection(storeState.selection) && (
+        <ContextMenu
+          key={`${String(contextMenu.x)},${String(contextMenu.y)}`}
+          at={contextMenu}
+          label="Selection"
+          testId="context-menu"
+          entries={selectionMenu(storeState.document.project, storeState.selection, {
+            dispatch: (command) => store.dispatch(command),
+            duplicatePart: requestDuplicatePart,
+            deleteFeatures: requestDelete,
+            deletePart: requestDeletePart,
+          })}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       {settings !== null && (
         <SettingsDialog

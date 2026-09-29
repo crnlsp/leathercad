@@ -13,13 +13,20 @@ export function hitTest(
   resolved: ResolvedProject,
   pointMm: Vec2,
   toleranceMm: number,
+  /**
+   * `locked` finds a locked feature too — for the right-click menu alone
+   * (8.8), which is how a piece locked on the board is unlocked there. A click,
+   * a drag and a snap still pass over it: the lock is what keeps it still.
+   */
+  options: { readonly locked?: boolean } = {},
 ): FeatureId | null {
   // Later features sit on top, so search backwards and take the first match.
   for (let p = resolved.parts.length - 1; p >= 0; p--) {
     const part = resolved.parts[p]!;
     for (let f = part.features.length - 1; f >= 0; f--) {
       const entry = part.features[f]!;
-      if (!entry.ok || !entry.feature.visible || entry.feature.locked) continue;
+      if (!entry.ok || !entry.feature.visible) continue;
+      if (entry.feature.locked && options.locked !== true) continue;
 
       // Cheap rejection first: most features are nowhere near the cursor.
       const bounds = PathOps.bbox(entry.path);

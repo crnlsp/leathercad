@@ -55,9 +55,9 @@ describe('unknown fields through a session of edits', () => {
     const feature = part.features[0]!;
     store.dispatch(setPartName(part.id, 'Front panel'));
     store.dispatch(renameFeature(feature.id, 'Edge'));
-    store.dispatch(setFeatureVisible(feature.id, false));
-    store.dispatch(setFeatureLocked(feature.id, true));
-    store.dispatch(setFeatureLocked(feature.id, false));
+    store.dispatch(setFeatureVisible([feature.id], false));
+    store.dispatch(setFeatureLocked([feature.id], true));
+    store.dispatch(setFeatureLocked([feature.id], false));
     store.dispatch(translateFeatures([feature.id], { x: 5, y: 0 }));
 
     const reopened = loadProject(saveProject(store.getState().document.project, SAVE)).project;

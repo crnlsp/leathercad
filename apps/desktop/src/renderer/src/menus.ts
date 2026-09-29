@@ -18,6 +18,12 @@ export interface MenuItem {
   readonly note?: string;
   readonly icon?: LucideIcon;
   readonly danger?: boolean;
+  /**
+   * Why it cannot be chosen now (8.8). The item stays, greyed, and says this
+   * in place of its note — a menu that drops what it cannot do moves the rest
+   * about, and never says why (X1).
+   */
+  readonly refusal?: string | undefined;
 }
 
 export type MenuEntry =
@@ -30,6 +36,26 @@ export type MenuEntry =
       readonly items: readonly MenuItem[];
       readonly empty: string;
     };
+
+/**
+ * Items whose reason the item after them gives too (8.8): each maps to the
+ * last of its run, which says it for all of them — two Flips refused for one
+ * reason say it once, not twice. A separator ends a run.
+ */
+export function sharedReasons(entries: readonly MenuEntry[]): Map<string, string> {
+  const said = new Map<string, string>();
+  let after: MenuItem | null = null;
+  for (let index = entries.length - 1; index >= 0; index--) {
+    const entry = entries[index]!;
+    if (entry.kind !== 'item' || entry.refusal === undefined) {
+      after = null;
+      continue;
+    }
+    if (after?.refusal === entry.refusal) said.set(entry.id, said.get(after.id) ?? after.id);
+    after = entry;
+  }
+  return said;
+}
 
 /**
  * Where the arrow keys, Home and End move a menu's focus, among `count`
