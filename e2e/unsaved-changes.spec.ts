@@ -99,9 +99,10 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
 
-    // Escape is Cancel too.
+    // Escape is Cancel too — once the dialog has taken focus, which it does
+    // just after it appears; a key pressed in between goes to the window.
     await requestClose(app);
-    await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId('unsaved-save')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('part-count')).toHaveText('1');
