@@ -8,8 +8,9 @@ import type { PaperMenuChoice } from '@leathercad/platform';
 import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
 import { validPaperChoices } from './menu.js';
+import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
-import type { PreferencesStore } from './preferences.js';
+import { shownPath, type PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
 
 /**
@@ -41,6 +42,10 @@ export function registerPlatformHandlers(
   sampleProjectPath: string,
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
+  /** Opens a project from the recent list, if it is on it (8.7). */
+  openRecent: (path: string) => Promise<void>,
+  /** Shows the third-party notices window (8.6b). */
+  openNotices: () => void,
   /** The Paper menu's choices changed (8.4b), already validated. */
   onPaperChoices: (choices: readonly PaperMenuChoice[]) => void,
 ): void {
@@ -130,6 +135,24 @@ export function registerPlatformHandlers(
     await preferences.noteRecent(path as string);
     onRecentChanged(path as string);
   });
+
+  // The recent list as the Project menu shows it (8.7). A path is only
+  // opened because it is on this list — `openRecent` checks — so the
+  // renderer cannot name its way to any other file.
+  ipcMain.handle(IPC.getRecentFiles, () =>
+    preferences.recentFiles.map((path) => ({ path, shown: shownPath(path, app.getPath('home')) })),
+  );
+  ipcMain.handle(IPC.openRecent, async (_event, path: unknown) => {
+    if (typeof path === 'string') await openRecent(path);
+  });
+  ipcMain.handle(IPC.clearRecent, async () => {
+    await preferences.clearRecent();
+    app.clearRecentDocuments();
+  });
+  ipcMain.handle(IPC.showLogFolder, async () => {
+    await shell.openPath(stateDirectory());
+  });
+  ipcMain.handle(IPC.openNotices, () => openNotices());
 }
 
 /** The path, if the renderer may use it this way; otherwise logged and refused. */

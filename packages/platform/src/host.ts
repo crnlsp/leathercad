@@ -102,6 +102,26 @@ export interface PlatformHost {
    */
   noteRecentFile(path: string): Promise<void>;
 
+  /** The recent projects (8.2), most recent first, as the Project menu lists them (8.7). */
+  getRecentFiles(): Promise<readonly RecentFile[]>;
+
+  /**
+   * Opens a project from the recent list (8.7). The main process opens only a
+   * path on its own list: it grants it and hands it back through
+   * `onOpenFile`, so unsaved work is asked about as for *Open*. One that is
+   * gone is taken off the list, and the maker told why.
+   */
+  openRecent(path: string): Promise<void>;
+
+  /** Empties the recent list, and the operating system's (8.7). */
+  clearRecent(): Promise<void>;
+
+  /** Opens the folder the log is in, to attach to a report (ADR 0015). */
+  showLogFolder(): Promise<void>;
+
+  /** Shows the licences of what the app ships (8.6b). */
+  openNotices(): Promise<void>;
+
   /**
    * Listens for a project the operating system side asks the app to open —
    * *File › Open Recent* (8.2). The path is already one the app may read and
@@ -133,6 +153,14 @@ export interface PlatformHost {
    * the menu belongs to the operating system, so it is told.
    */
   setPaperMenu(choices: readonly PaperMenuChoice[]): Promise<void>;
+}
+
+/** A project on the recent list (8.7). */
+export interface RecentFile {
+  /** Absolute: what `openRecent` is given back. */
+  readonly path: string;
+  /** As the maker reads it, with the home directory as `~`. */
+  readonly shown: string;
 }
 
 /** One paper and orientation, as the Paper menu shows it. */

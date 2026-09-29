@@ -1,9 +1,9 @@
 import type { MenuAction, PaperMenuChoice } from '@leathercad/platform';
-import { sep } from 'node:path';
 
 import type { MenuItemConstructorOptions } from 'electron';
 
 import { TOOL_GROUPS } from '../renderer/src/tools.js';
+import { shownPath } from './preferences.js';
 
 /**
  * The application menu (slice 8.5a).
@@ -202,9 +202,5 @@ export function validPaperChoices(sent: unknown): PaperMenuChoice[] {
  * reads a single one as a mnemonic and swallows it.
  */
 export function recentLabel(path: string, home?: string): string {
-  const shown =
-    home !== undefined && home !== '' && path.startsWith(home + sep)
-      ? `~${path.slice(home.length)}`
-      : path;
-  return shown.replaceAll('&', '&&');
+  return shownPath(path, home ?? '').replaceAll('&', '&&');
 }

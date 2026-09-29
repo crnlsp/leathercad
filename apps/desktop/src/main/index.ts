@@ -233,6 +233,8 @@ app.whenReady().then(() => {
       launchFile = null;
       return file;
     },
+    (path) => openRecent(path),
+    openNotices,
     (choices) => {
       // Rebuilt only when it says something new: the renderer sends the list
       // after every edit, and most edits change no sheet count.

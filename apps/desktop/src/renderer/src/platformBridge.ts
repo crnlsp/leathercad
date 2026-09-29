@@ -4,6 +4,7 @@ import type {
   PaperMenuChoice,
   PlatformHost,
   Preferences,
+  RecentFile,
   RecoveredCopy,
   SaveDialogOptions,
 } from '@leathercad/platform';
@@ -31,6 +32,11 @@ interface PreloadBridge {
   getPreferences(): Promise<Preferences>;
   setPreferences(changes: Partial<Preferences>): Promise<void>;
   noteRecentFile(path: string): Promise<void>;
+  getRecentFiles(): Promise<readonly RecentFile[]>;
+  openRecent(path: string): Promise<void>;
+  clearRecent(): Promise<void>;
+  showLogFolder(): Promise<void>;
+  openNotices(): Promise<void>;
   onOpenFile(listener: (path: string) => void): () => void;
   readSampleProject(): Promise<Uint8Array>;
   takeLaunchFile(): Promise<string | null>;

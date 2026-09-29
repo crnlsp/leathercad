@@ -48,6 +48,17 @@ const platformBridge = {
 
   noteRecentFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.noteRecentFile, path),
 
+  getRecentFiles: (): Promise<{ path: string; shown: string }[]> =>
+    ipcRenderer.invoke(IPC.getRecentFiles),
+
+  openRecent: (path: string): Promise<void> => ipcRenderer.invoke(IPC.openRecent, path),
+
+  clearRecent: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecent),
+
+  showLogFolder: (): Promise<void> => ipcRenderer.invoke(IPC.showLogFolder),
+
+  openNotices: (): Promise<void> => ipcRenderer.invoke(IPC.openNotices),
+
   readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
 
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),

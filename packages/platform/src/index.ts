@@ -22,6 +22,7 @@ export type {
   MenuAction,
   PaperMenuChoice,
   Preferences,
+  RecentFile,
   RecoveredCopy,
 } from './host.js';
 export { DEFAULT_PREFERENCES } from './host.js';

@@ -5,6 +5,7 @@ import {
   type PaperMenuChoice,
   type PlatformHost,
   type Preferences,
+  type RecentFile,
   type RecoveredCopy,
   type SaveDialogOptions,
 } from './host.js';
@@ -135,6 +136,28 @@ export class InMemoryPlatformHost implements PlatformHost {
     const at = this.recentFiles.indexOf(path);
     if (at !== -1) this.recentFiles.splice(at, 1);
     this.recentFiles.unshift(path);
+    return Promise.resolve();
+  }
+
+  getRecentFiles(): Promise<readonly RecentFile[]> {
+    return Promise.resolve(this.recentFiles.map((path) => ({ path, shown: path })));
+  }
+
+  openRecent(path: string): Promise<void> {
+    if (this.recentFiles.includes(path)) this.openFile(path);
+    return Promise.resolve();
+  }
+
+  clearRecent(): Promise<void> {
+    this.recentFiles.length = 0;
+    return Promise.resolve();
+  }
+
+  showLogFolder(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  openNotices(): Promise<void> {
     return Promise.resolve();
   }
 
