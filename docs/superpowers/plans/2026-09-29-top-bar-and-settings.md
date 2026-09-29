@@ -944,6 +944,8 @@ If `pnpm typecheck` rejects the `.svg` import, `vite/client` (already in `tsconf
 
 - [ ] **Step 5: The project bar**
 
+> **As built:** `ProjectBar` takes the handlers (`onNew`, `onOpen`, `onSaveAs`, `recent`, `onProjectMenuOpen`, `onOpenRecent`, `onOpenSample`, `onAbout`) and calls `projectMenu` / `helpMenu` itself. Building the entries in `App.tsx` fails the React compiler's `react-hooks/refs` lint: those handlers close over refs, and the builders run during render.
+
 `ProjectBar.tsx`: replace the `onNew` / `onOpen` props with `projectMenu: readonly MenuEntry[]`, `onProjectMenuOpen: () => void` and `helpMenu: readonly MenuEntry[]`; delete the *New* and *Open* buttons; update the component's doc comment (the bar is now: the project with its menu, the output, then the application). New markup:
 
 ```tsx

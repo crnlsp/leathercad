@@ -9,6 +9,7 @@ import {
 } from '@playwright/test';
 
 import { closeApp } from '../closeApp.js';
+import { fromProjectMenu } from '../projectMenu.js';
 
 /**
  * What the app looks like, pixel for pixel. See docs/testing.md §5.2.
@@ -132,7 +133,7 @@ test('the print test on its sheets (7.4c)', async () => {
       },
       resolve(import.meta.dirname, '../../fixtures/projects/print-test.lcp'),
     );
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('part-count')).toHaveText('3');
 
     await window.getByTestId('view-sheets').click();

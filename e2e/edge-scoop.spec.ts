@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 3.9a: the product spec's own example — "the card pockets are 95 × 60 mm
@@ -123,9 +124,9 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
     // ── Saved, and the same pocket when it is opened again ──────────────────
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save')).toHaveText('Save');
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('part-count')).toHaveText('0');
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
 
     await expect(window.getByTestId('feature-count')).toHaveText('3');
     await window.getByTestId('parts-list').getByText('Outline').click();

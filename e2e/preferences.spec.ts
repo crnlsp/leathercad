@@ -47,15 +47,15 @@ async function drawAPanel(window: Page): Promise<void> {
   await expect(window.getByTestId('part-count')).toHaveText('1');
 }
 
-/** The labels under File › Open Recent, as the menu has them now. */
-async function recentLabels(app: ElectronApplication): Promise<string[]> {
-  return app.evaluate(({ Menu }) => {
-    const file = Menu.getApplicationMenu()?.items.find((entry) => entry.label === 'File');
-    const recent = file?.submenu?.items.find((entry) => entry.label === 'Open Recent');
-    return (recent?.submenu?.items ?? [])
-      .filter((entry) => entry.type !== 'separator')
-      .map((entry) => entry.label);
-  });
+/** The names under the Project menu's *Recent projects* (8.7), as it shows them now. */
+async function recentNames(window: Page): Promise<string[]> {
+  await window.getByTestId('project-menu').click();
+  const names = await window
+    .getByRole('group', { name: 'Recent projects' })
+    .locator('.menu-label')
+    .allTextContents();
+  await window.keyboard.press('Escape');
+  return names;
 }
 
 test('the legend and the tool rail are as the maker left them', async () => {
@@ -89,13 +89,13 @@ test('the legend and the tool rail are as the maker left them', async () => {
   }
 });
 
-test('File › Open Recent reopens a saved project after a restart', async () => {
+test('a recent project reopens from the Project menu after a restart (8.7)', async () => {
   const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-recent-'));
   const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet v1.2.lcp');
 
   const first = await launch(configHome);
   try {
-    expect(await recentLabels(first.app)).toEqual(['No Recent Projects', 'Clear Recent']);
+    expect(await recentNames(first.window)).toEqual([]);
 
     await first.app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
@@ -103,7 +103,7 @@ test('File › Open Recent reopens a saved project after a restart', async () =>
     await drawAPanel(first.window);
     await first.window.keyboard.press('Control+s');
     await expect(first.window.getByTestId('file-path')).toContainText('Wallet v1.2');
-    await expect.poll(() => recentLabels(first.app)).toContain(project);
+    await expect.poll(() => recentNames(first.window)).toEqual(['Wallet v1.2']);
   } finally {
     await closeApp(first.app);
   }
@@ -113,13 +113,8 @@ test('File › Open Recent reopens a saved project after a restart', async () =>
     // Chosen from the menu, not a dialog: the main process grants the path
     // because it is on its own list.
     await expect(second.window.getByTestId('part-count')).toHaveText('0');
-    await second.app.evaluate(({ Menu }, path) => {
-      const file = Menu.getApplicationMenu()?.items.find((entry) => entry.label === 'File');
-      const recent = file?.submenu?.items.find((entry) => entry.label === 'Open Recent');
-      const item = recent?.submenu?.items.find((entry) => entry.label === path);
-      if (item === undefined) throw new Error(`${path} is not on Open Recent`);
-      item.click();
-    }, project);
+    await second.window.getByTestId('project-menu').click();
+    await second.window.getByRole('menuitem', { name: /Wallet v1\.2/ }).click();
 
     await expect(second.window.getByTestId('part-count')).toHaveText('1');
     await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');

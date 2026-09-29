@@ -41,9 +41,17 @@ export function MenuButton({
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  // Escape gives focus back to the button — once the menu has closed. The
+  // tooltip is off while the menu is open, which changes the button's
+  // wrapping, so the button focused before the render is not the one after.
+  const giveBack = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      if (giveBack.current) trigger.current?.focus();
+      giveBack.current = false;
+      return;
+    }
     root.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const away = (event: PointerEvent): void => {
       if (!root.current?.contains(event.target as Node)) setOpen(false);
@@ -51,8 +59,8 @@ export function MenuButton({
     const escape = (event: globalThis.KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
       event.stopPropagation();
+      giveBack.current = true;
       setOpen(false);
-      trigger.current?.focus();
     };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', escape, true);

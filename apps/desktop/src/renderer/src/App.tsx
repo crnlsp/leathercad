@@ -21,7 +21,12 @@ import {
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import { DEFAULT_PREFERENCES, systemIdSource, type Preferences } from '@leathercad/platform';
+import {
+  DEFAULT_PREFERENCES,
+  systemIdSource,
+  type Preferences,
+  type RecentFile,
+} from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -32,6 +37,7 @@ import {
   type HardwareOptions,
 } from '@leathercad/editor';
 
+import { AboutDialog } from './AboutDialog.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
 import { DeleteDialog } from './DeleteDialog.js';
@@ -239,6 +245,17 @@ export function App() {
   const openSample = useCallback(async () => {
     if (await confirmDiscard('open')) await file.openSample();
   }, [confirmDiscard, file]);
+
+  // The Project menu's recent projects (8.7), asked for each time it opens,
+  // since saving and opening change them.
+  const [recent, setRecent] = useState<readonly RecentFile[]>([]);
+  const refreshRecent = useCallback(() => {
+    void getPlatformHost()
+      .getRecentFiles()
+      .then(setRecent)
+      .catch(() => undefined);
+  }, []);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   // A project double-clicked in the file manager (8.5), asked for once the
   // app is ready to open it.
@@ -572,6 +589,18 @@ export function App() {
         saved={file.state.path !== null}
         onNew={() => void newProject()}
         onOpen={() => void openProject()}
+        onSaveAs={() => void file.save(true)}
+        recent={recent}
+        onProjectMenuOpen={refreshRecent}
+        // The main process checks it is on the list, grants it, and hands it
+        // back through onOpenFile, which asks about unsaved work.
+        onOpenRecent={(path) =>
+          void getPlatformHost()
+            .openRecent(path)
+            .catch(() => undefined)
+        }
+        onOpenSample={() => void openSample()}
+        onAbout={() => setAboutOpen(true)}
         onSave={() => void file.save()}
         onExport={() => void exportPdf()}
       />
@@ -778,6 +807,8 @@ export function App() {
       </footer>
 
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
+
+      {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
 
       {exportNotice !== null && (
         <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />

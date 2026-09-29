@@ -286,7 +286,6 @@ body {
 .project-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
   padding: 4px 14px;
   background: var(--shell-900);
@@ -316,8 +315,26 @@ body {
   min-width: 6ch;
 }
 
+/* The output and the application sit at the right, the project at the left. */
 .project-output {
   flex: none;
+  margin-left: auto;
+}
+
+/* The application (8.7): past a rule, because none of it is this project. */
+.project-app {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+  align-items: center;
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--shell-line);
+}
+
+/* The Project menu's face: the pocket mark and its chevron, close together. */
+.project-menu-button {
+  gap: 2px;
+  padding: 0 6px;
 }
 
 /* Said once, beside the project it is about. */
@@ -1039,6 +1056,17 @@ body {
   font: var(--t-micro);
 }
 
+/* About (8.7): the icon beside the name and the version. */
+.about-identity {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.dialog a {
+  color: var(--text);
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -1353,7 +1381,8 @@ button.problem-row:hover {
   font: var(--t-label);
 }
 
-.menu-empty {
+/* Two classes, to outrank `.menu-item`'s own colour below. */
+.menu-item.menu-empty {
   color: var(--text-mute);
   font-weight: 400;
   cursor: default;

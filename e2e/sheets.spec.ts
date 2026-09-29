@@ -14,6 +14,7 @@ import {
 
 import { closeApp } from './closeApp.js';
 import { PRINT_TEST } from './printTest.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * The sheet workflow (7.4a–7.4d): the maker's question, answered before
@@ -53,7 +54,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
       },
       { project: PRINT_TEST, pdf },
     );
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await body({ app, window, pdf });
   } finally {
@@ -428,7 +429,7 @@ test('what does not print is said, in Parts, in the sheets and in the PDF (7.4d)
 
 test('an empty project is one scale-check sheet, on screen and in the PDF (7.4d)', async () => {
   await withPrintTest(async ({ window, pdf }) => {
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await expect(window.getByTestId('paper').locator('option:checked')).toHaveText(
       '1 sheet of A4, portrait, scale check only',

@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
@@ -365,7 +366,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
 
     // The delete is unsaved work, so opening asks first (5.3a); throwing it
     // away is the point of this step.
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(window.getByTestId('parts-list')).toContainText('Card holder');
@@ -468,8 +469,17 @@ test('the project bar holds the project and its output; the work bar holds the w
     const project = window.getByTestId('project-bar');
     const work = window.getByTestId('work-bar');
 
-    // The project, its file actions, the sheets it prints on, and printing.
-    for (const id of ['project-name', 'save-state', 'save', 'new', 'open', 'paper', 'export-pdf']) {
+    // The project and its menu, the sheets it prints on, printing, and — past
+    // a rule — the application (8.7).
+    for (const id of [
+      'project-menu',
+      'project-name',
+      'save-state',
+      'save',
+      'paper',
+      'export-pdf',
+      'help-menu',
+    ]) {
       await expect(project.getByTestId(id), id).toHaveCount(1);
       await expect(work.getByTestId(id), id).toHaveCount(0);
     }
@@ -1784,7 +1794,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await expect(window.getByTestId('feature-count')).toHaveText('1');
 
     // Unsaved, so opening asks first (5.3a), and throwing it away is the point.
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('feature-count')).toHaveText('2');
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');

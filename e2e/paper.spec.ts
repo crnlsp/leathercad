@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 6.4a: choose the paper.
@@ -148,10 +149,10 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     // Saved with the project, and back when it is opened again.
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await expect(paper).toHaveValue('A4 portrait');
 
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(paper).toHaveValue('Letter landscape');
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
