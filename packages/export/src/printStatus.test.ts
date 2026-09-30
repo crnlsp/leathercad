@@ -9,7 +9,7 @@ import { uniformRadii } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_PAGE_SETUP } from './paper.js';
-import { describePrintStatus, printStatusOf } from './printStatus.js';
+import { printStatusOf } from './printStatus.js';
 import { buildExportScene } from './scene.js';
 import { planSheets } from './sheetPlan.js';
 
@@ -79,11 +79,8 @@ describe('what of each part reaches paper (7.4b)', () => {
     ]);
     const panel = statuses.get('panel')!;
     expect(panel.sheets).toBe(plan.parts.get('panel'));
-    expect(describePrintStatus(panel)).toEqual({ label: 'Sheet 1', note: null });
-    expect(describePrintStatus(statuses.get('strap')!)).toEqual({
-      label: 'Sheets 2–3, taped',
-      note: null,
-    });
+    expect(panel.sheets).toMatchObject({ sheets: [1], taped: false });
+    expect(statuses.get('strap')!.sheets).toMatchObject({ sheets: [2, 3], taped: true });
   });
 
   it('says why a part does not print, and agrees with the plan that it does not', () => {
@@ -101,13 +98,6 @@ describe('what of each part reaches paper (7.4b)', () => {
     expect(statuses.get('hidden')!.notPrinted).toBe('hidden');
     expect(statuses.get('broken')!.notPrinted).toBe('problems');
     expect(statuses.get('words')!.notPrinted).toBe('nothing-to-cut');
-    expect(describePrintStatus(statuses.get('hidden')!)).toEqual({
-      label: 'Not printed',
-      note: 'It is hidden.',
-    });
-    expect(describePrintStatus(statuses.get('words')!).note).toBe(
-      'It has only words, no lines to cut.',
-    );
   });
 
   it('counts what a printing part leaves off the paper', () => {
@@ -120,10 +110,7 @@ describe('what of each part reaches paper (7.4b)', () => {
     ]);
     const panel = statuses.get('panel')!;
     expect([panel.hiddenFeatures, panel.failedFeatures]).toEqual([1, 1]);
-    expect(describePrintStatus(panel)).toEqual({
-      label: 'Sheet 1',
-      note: "1 hidden feature and 1 feature with a problem aren't printed.",
-    });
+    expect(panel.sheets?.sheets).toEqual([1]);
   });
 
   it('covers every part, in document order', () => {

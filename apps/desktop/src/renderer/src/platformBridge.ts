@@ -30,6 +30,7 @@ interface PreloadBridge {
   onMenuAction(listener: (action: MenuAction) => void): () => void;
   getPreferences(): Promise<Preferences>;
   setPreferences(changes: Partial<Preferences>): Promise<void>;
+  getSystemLanguages(): Promise<readonly string[]>;
   noteRecentFile(path: string): Promise<void>;
   getRecentFiles(): Promise<readonly RecentFile[]>;
   openRecent(path: string): Promise<void>;

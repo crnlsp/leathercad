@@ -1,7 +1,7 @@
-import { approxEq, approxGte, formatMm, formatNumber, type Mm } from '@leathercad/core';
+import { approxEq, approxGte, formatMm, type Mm } from '@leathercad/core';
 import { PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 
-import { contentAreaMm, paperOptionsFitting, type PageSetup } from './paper.js';
+import { contentAreaMm, paperOptionsFitting, type Orientation, type PageSetup } from './paper.js';
 import type { ExportPart, ExportScene } from './scene.js';
 
 /** Space left between parts on a sheet, so cut lines never touch. */
@@ -72,13 +72,13 @@ export interface TiledPart {
   readonly rows: number;
   readonly columns: number;
   /** The paper it was measured against: the one the maker chose. */
-  readonly on: { paper: { name: string }; orientation: string };
+  readonly on: { paper: { name: string }; orientation: Orientation };
   /**
    * Papers that would hold it whole, for telling the user. The chosen paper
    * turned comes first when it fits, since that is the paper in their
    * printer; then the rest in the order of `PAPER_SIZES`.
    */
-  readonly fitsOn: ReadonlyArray<{ paper: { name: string }; orientation: string }>;
+  readonly fitsOn: ReadonlyArray<{ paper: { name: string }; orientation: Orientation }>;
 }
 
 /**
@@ -356,15 +356,4 @@ function clearOfFolds(
     }
   }
   return best;
-}
-
-/** A sentence a user can act on: what was tiled, and what would hold it whole. */
-export function describeTiled(entry: TiledPart): string {
-  const size = `${formatNumber(entry.widthMm, 1)} × ${formatMm(entry.heightMm, 1)}`;
-  const sheets = entry.rows * entry.columns;
-  const printed = `"${entry.part.name}" is ${size}, larger than ${entry.on.paper.name} ${entry.on.orientation}: printed on ${String(sheets)} sheets, ${String(entry.rows)} × ${String(entry.columns)}.`;
-  const best = entry.fitsOn[0];
-  return best === undefined
-    ? `${printed} No supported paper holds it whole.`
-    : `${printed} It fits whole on ${best.paper.name} ${best.orientation}.`;
 }

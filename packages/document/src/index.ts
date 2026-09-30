@@ -15,7 +15,7 @@ export type {
   PieceScope,
   RefusedTransform,
 } from './commands.js';
-export type { Command, Document, Selection } from './document.js';
+export type { Command, Document, HistoryAction, HistoryLabel, Selection } from './document.js';
 export {
   EMPTY_SELECTION,
   command,

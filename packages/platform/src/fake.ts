@@ -128,6 +128,13 @@ export class InMemoryPlatformHost implements PlatformHost {
     return Promise.resolve();
   }
 
+  /** What the operating system says its languages are, most preferred first. */
+  systemLanguages: readonly string[] = ['en-US'];
+
+  getSystemLanguages(): Promise<readonly string[]> {
+    return Promise.resolve(this.systemLanguages);
+  }
+
   /** The recent projects, most recent first. */
   readonly recentFiles: string[] = [];
 

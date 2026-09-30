@@ -47,7 +47,7 @@ import {
   type Vec2,
 } from '@leathercad/geometry';
 
-import { command, type Command, type Document } from './document.js';
+import { command, type Command, type Document, type HistoryLabel } from './document.js';
 
 export function emptyProject(id: Ulid, name = 'Untitled'): Project {
   return { id, name, settings: DEFAULT_SETTINGS, parts: [] };
@@ -59,7 +59,7 @@ export function emptyDocument(id: Ulid, name?: string): Document {
 
 /** Adds a part, optionally with its features already in place. */
 export function addPart(part: Part): Command {
-  return command(`Add ${part.name}`, (document) => ({
+  return command({ action: 'add', name: part.name }, (document) => ({
     project: { ...document.project, parts: [...document.project.parts, part] },
   }));
 }
@@ -72,7 +72,7 @@ export function addPart(part: Part): Command {
  * left exactly as it was (S2–S4). The UI asks `derivationRefusal` for the reason.
  */
 export function addFeature(partId: PartId, feature: Feature): Command {
-  return command(`Add ${feature.name}`, (document) => {
+  return command({ action: 'add', name: feature.name }, (document) => {
     if (derivationRefusal(document.project, feature) !== null) return document;
     // S5 and S6: one outline per part, and an outline that encloses something.
     // The UI asks `additionRefusal` for the reason.
@@ -103,7 +103,7 @@ export function deleteFeatures(ids: Iterable<FeatureId>, resolution?: DeleteReso
   const requested = [...new Set(ids)];
 
   return {
-    label: requested.length === 1 ? 'Delete feature' : `Delete ${requested.length} features`,
+    label: { action: 'delete', count: requested.length },
     labelFor: (document) => deleteLabel(document.project, requested, resolution),
     apply: (document) => {
       if (requested.length === 0) return document;
@@ -115,7 +115,7 @@ export function deleteFeatures(ids: Iterable<FeatureId>, resolution?: DeleteReso
 }
 
 export function renameFeature(id: FeatureId, name: string): Command {
-  return command('Rename', (document) => ({
+  return command({ action: 'rename' }, (document) => ({
     project: mapFeature(document.project, id, (feature) => ({ ...feature, name })),
   }));
 }
@@ -131,10 +131,8 @@ export function renameFeature(id: FeatureId, name: string): Command {
  * iterable, so one id passed bare would be read as its characters.
  */
 export function setFeatureVisible(ids: readonly FeatureId[], visible: boolean): Command {
-  const verb = visible ? 'Show' : 'Hide';
-  return command(
-    ids.length === 1 ? `${verb} feature` : `${verb} ${String(ids.length)} features`,
-    (document) => withFlag(document, ids, 'visible', visible),
+  return command({ action: visible ? 'show' : 'hide', count: ids.length }, (document) =>
+    withFlag(document, ids, 'visible', visible),
   );
 }
 
@@ -148,8 +146,7 @@ export function setFeatureVisible(ids: readonly FeatureId[], visible: boolean): 
  * put it permanently out of reach (defect D8).
  */
 export function setFeatureLocked(ids: readonly FeatureId[], locked: boolean): Command {
-  const verb = locked ? 'Lock' : 'Unlock';
-  return command(ids.length === 1 ? verb : `${verb} ${String(ids.length)} features`, (document) =>
+  return command({ action: locked ? 'lock' : 'unlock', count: ids.length }, (document) =>
     withFlag(document, ids, 'locked', locked),
   );
 }
@@ -207,7 +204,7 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
       };
     });
 
-  return command('Edit shape', (document) => {
+  return command({ action: 'edit-shape' }, (document) => {
     // A piece's outline typed somewhere else, or turned, is the piece moved or
     // turned (Q30): the rule dragging and flipping follow. Everything in the
     // piece goes the way the outline did, refused whole if any of it cannot,
@@ -237,7 +234,7 @@ function outlineMotion(project: Project, id: FeatureId, shape: ParametricShape):
  * common thing and a matrix is a poor way to ask for it.
  */
 export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Command {
-  return transformFeatures(ids, MatOps.fromTranslation(deltaMm), 'Move');
+  return transformFeatures(ids, MatOps.fromTranslation(deltaMm), { action: 'move' });
 }
 
 /**
@@ -256,7 +253,7 @@ export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Comm
 export function transformFeatures(
   ids: Iterable<FeatureId>,
   matrix: Mat2x3,
-  label = 'Transform',
+  label: HistoryLabel = { action: 'transform' },
 ): Command {
   const targets = new Set(ids);
 
@@ -322,7 +319,7 @@ export function flipFeatures(ids: Iterable<FeatureId>, axis: FlipAxis): Command 
   const requested = [...new Set(ids)];
 
   return {
-    label: axis === 'horizontal' ? 'Flip horizontal' : 'Flip vertical',
+    label: { action: axis === 'horizontal' ? 'flip-horizontal' : 'flip-vertical' },
     apply: (document) => {
       const { targets, labels, about } = flipScope(document.project, requested);
       const centre = centreOf(document.project, about);
@@ -868,7 +865,7 @@ export function addStitchLine(
   run: Run = { kind: 'whole' },
 ): Command {
   return {
-    label: 'Add Stitch line',
+    label: { action: 'add', name: 'Stitch line' },
     apply: (document) => {
       // The project's stitch margin unless the caller insists (D7, X8). The
       // panel used to hard-code 3.5 mm, so a project set up for 4 mm quietly
@@ -921,7 +918,7 @@ export function addStitchHoles(
   op?: Partial<Extract<Derivation, { type: 'stitch-holes' }>>,
 ): Command {
   return {
-    label: 'Add Stitch holes',
+    label: { action: 'add', name: 'Stitch holes' },
     apply: (document) => {
       // The iron the project is set up for, unless the caller names another.
       const pitchMm = op?.pitchMm ?? document.project.settings.defaultIronPitchMm;
@@ -952,7 +949,7 @@ export function addStitchHoles(
 
 /** Changes what a derived feature does — the inset, the pitch, the run. */
 export function setDerivation(id: FeatureId, op: Derivation): Command {
-  return command('Edit derivation', (document) => ({
+  return command({ action: 'edit-derivation' }, (document) => ({
     project: mapFeature(document.project, id, (feature) =>
       feature.kind !== 'text-label' &&
       feature.kind !== 'measurement' &&
@@ -975,7 +972,7 @@ function addDerived(partId: PartId, _sourceId: FeatureId, feature: Feature): Com
 }
 
 export function setProjectName(name: string): Command {
-  return command('Rename project', (document) => ({
+  return command({ action: 'rename-project' }, (document) => ({
     project: { ...document.project, name },
   }));
 }
@@ -991,7 +988,7 @@ export function setProjectName(name: string): Command {
  * kept as it was, including one a newer build wrote (5.2).
  */
 export function setPageSetup(paper: PaperName, orientation: Orientation): Command {
-  return command('Change paper', (document) => {
+  return command({ action: 'change-paper' }, (document) => {
     const { settings } = document.project;
     return settings.paper === paper && settings.orientation === orientation
       ? document
@@ -1000,13 +997,13 @@ export function setPageSetup(paper: PaperName, orientation: Orientation): Comman
 }
 
 export function setPartName(id: PartId, name: string): Command {
-  return command('Rename part', (document) => ({
+  return command({ action: 'rename-part' }, (document) => ({
     project: mapPart(document.project, id, (part) => ({ ...part, name })),
   }));
 }
 
 export function setPartQuantity(id: PartId, quantity: number): Command {
-  return command('Set quantity', (document) => ({
+  return command({ action: 'set-quantity' }, (document) => ({
     project: mapPart(document.project, id, (part) => ({
       ...part,
       // A part you cut zero of is a part you should delete instead.
@@ -1120,7 +1117,7 @@ export function addMeasurement(
   precision: 0 | 1 | 2 = 1,
 ): Command {
   return {
-    label: 'Add dimension',
+    label: { action: 'add-dimension' },
     apply: (document) => {
       const home = findFeature(document.project, a.featureId);
       if (home === null || findFeature(document.project, b.featureId) === null) return document;
@@ -1144,7 +1141,7 @@ export function setMeasurement(
   id: FeatureId,
   change: { readonly offsetMm?: Mm; readonly precision?: 0 | 1 | 2 },
 ): Command {
-  return command('Edit dimension', (document) => ({
+  return command({ action: 'edit-dimension' }, (document) => ({
     project: mapFeature(document.project, id, (feature) =>
       feature.kind === 'measurement'
         ? {
@@ -1204,7 +1201,7 @@ export function addAllowance(
   allowanceMm?: Mm,
 ): Command {
   return {
-    label: 'Add seam allowance',
+    label: { action: 'add-seam-allowance' },
     apply: (document) => {
       if (allowanceRefusal(document.project, stitchId) !== null) return document;
 
@@ -1234,7 +1231,7 @@ export function addAllowancePart(
   allowanceMm?: Mm,
 ): Command {
   return {
-    label: 'Add Pocket',
+    label: { action: 'add', name: 'Pocket' },
     apply: (document) => {
       const allowance = allowanceMm ?? document.project.settings.defaultStitchInsetMm;
 
@@ -1384,26 +1381,29 @@ export function addTextLabel(
 ): Command {
   const words = text.trim();
 
-  return command(`Add ${words === '' ? 'label' : words}`, (document) => {
-    if (words === '' || !(sizeMm > 0)) return document;
+  return command(
+    words === '' ? { action: 'add-label' } : { action: 'add', name: words },
+    (document) => {
+      if (words === '' || !(sizeMm > 0)) return document;
 
-    return {
-      project: mapPart(document.project, partId, (part) => ({
-        ...part,
-        features: [
-          ...part.features,
-          {
-            id: featureId,
-            kind: 'text-label',
-            name: words,
-            visible: true,
-            locked: false,
-            source: { kind: 'text', text: words, at, sizeMm, rotationRad: 0 },
-          },
-        ],
-      })),
-    };
-  });
+      return {
+        project: mapPart(document.project, partId, (part) => ({
+          ...part,
+          features: [
+            ...part.features,
+            {
+              id: featureId,
+              kind: 'text-label',
+              name: words,
+              visible: true,
+              locked: false,
+              source: { kind: 'text', text: words, at, sizeMm, rotationRad: 0 },
+            },
+          ],
+        })),
+      };
+    },
+  );
 }
 
 /**
@@ -1415,7 +1415,7 @@ export function addTextLabel(
 export function setLabelText(id: FeatureId, text: string): Command {
   const words = text.trim();
 
-  return command('Edit label', (document) => {
+  return command({ action: 'edit-label' }, (document) => {
     if (words === '') return document;
 
     return {
@@ -1430,7 +1430,7 @@ export function setLabelText(id: FeatureId, text: string): Command {
 
 /** Resizes a label, in millimetres, like everything else that can be printed. */
 export function setLabelSize(id: FeatureId, sizeMm: Mm): Command {
-  return command('Resize label', (document) => {
+  return command({ action: 'resize-label' }, (document) => {
     if (!(sizeMm > 0)) return document;
 
     return {
@@ -1463,7 +1463,7 @@ const HARDWARE_NAMES: Readonly<Record<HardwareHole['hardwareType'], string>> = {
 function setFeatureField<K extends Feature['kind']>(
   id: FeatureId,
   kind: K,
-  label: string,
+  label: HistoryLabel,
   update: (feature: Extract<Feature, { kind: K }>) => Extract<Feature, { kind: K }>,
 ): Command {
   return command(label, (document) => ({
@@ -1474,7 +1474,7 @@ function setFeatureField<K extends Feature['kind']>(
 }
 
 export function setFoldDirection(id: FeatureId, direction: FoldLine['direction']): Command {
-  return setFeatureField(id, 'fold-line', 'Change fold direction', (fold) => ({
+  return setFeatureField(id, 'fold-line', { action: 'change-fold-direction' }, (fold) => ({
     ...fold,
     direction,
   }));
@@ -1482,7 +1482,7 @@ export function setFoldDirection(id: FeatureId, direction: FoldLine['direction']
 
 /** Undefined means "inherit from the part" — see `FoldLineEditor`. */
 export function setFoldThickness(id: FeatureId, materialThicknessMm: Mm | undefined): Command {
-  return setFeatureField(id, 'fold-line', 'Change fold thickness', (fold) => {
+  return setFeatureField(id, 'fold-line', { action: 'change-fold-thickness' }, (fold) => {
     if (materialThicknessMm === undefined) {
       const { materialThicknessMm: _dropped, ...rest } = fold;
       return rest;
@@ -1492,7 +1492,7 @@ export function setFoldThickness(id: FeatureId, materialThicknessMm: Mm | undefi
 }
 
 export function setMarkingPurpose(id: FeatureId, purpose: MarkingLine['purpose']): Command {
-  return setFeatureField(id, 'marking-line', 'Change marking purpose', (mark) => ({
+  return setFeatureField(id, 'marking-line', { action: 'change-marking-purpose' }, (mark) => ({
     ...mark,
     purpose,
   }));
@@ -1502,7 +1502,7 @@ export function setHardwareType(
   id: FeatureId,
   hardwareType: HardwareHole['hardwareType'],
 ): Command {
-  return setFeatureField(id, 'hardware-hole', 'Change hardware type', (hole) => ({
+  return setFeatureField(id, 'hardware-hole', { action: 'change-hardware-type' }, (hole) => ({
     ...hole,
     hardwareType,
   }));
@@ -1603,10 +1603,10 @@ export function deleteRefusal(project: Project, ids: Iterable<FeatureId>): Probl
  */
 export function deletePart(partId: PartId, resolution?: DeleteResolution): Command {
   return {
-    label: 'Delete part',
+    label: { action: 'delete-part' },
     labelFor: (document) => {
       const part = document.project.parts.find((p) => p.id === partId);
-      if (part === undefined) return 'Delete part';
+      if (part === undefined) return { action: 'delete-part' };
       const ids = part.features.map((f) => f.id);
       return deleteLabel(document.project, ids, resolution, part.name);
     },
@@ -1649,7 +1649,7 @@ export function isPartVisible(part: Part): boolean {
  * Locked features included: the lock protects the piece, not the view.
  */
 export function setPartVisible(partId: PartId, visible: boolean): Command {
-  return command(visible ? 'Show part' : 'Hide part', (document) => ({
+  return command({ action: visible ? 'show-part' : 'hide-part' }, (document) => ({
     project: mapPart(document.project, partId, (part) => ({
       ...part,
       features: part.features.map((feature) => ({ ...feature, visible })),
@@ -1682,10 +1682,12 @@ export function duplicatePart(
   featureIds: readonly FeatureId[],
 ): Command {
   return {
-    label: 'Duplicate part',
+    label: { action: 'duplicate-part' },
     labelFor: (document) => {
       const part = document.project.parts.find((p) => p.id === partId);
-      return part === undefined ? 'Duplicate part' : `Duplicate ${part.name}`;
+      return part === undefined
+        ? { action: 'duplicate-part' }
+        : { action: 'duplicate', name: part.name };
     },
     apply: (document) => {
       const part = document.project.parts.find((p) => p.id === partId);
@@ -2000,7 +2002,7 @@ export function mirrorFeatures(
   newPartIds: readonly PartId[] = [],
 ): Command {
   return {
-    label: ids.length === 1 ? 'Mirror' : `Mirror ${String(ids.length)} features`,
+    label: { action: 'mirror', count: ids.length },
     apply: (document) => {
       const wanted = [...new Set(ids)];
       if (wanted.length === 0 || newIds.length < wanted.length) return document;
@@ -2116,7 +2118,7 @@ export function mirrorAcrossFold(
   foldId: FeatureId,
 ): Command {
   return {
-    label: ids.length === 1 ? 'Mirror across fold' : `Mirror ${String(ids.length)} across fold`,
+    label: { action: 'mirror-across-fold', count: ids.length },
     apply: (document) => {
       const wanted = [...new Set(ids)];
       if (wanted.length === 0 || newIds.length < wanted.length) return document;
@@ -2185,12 +2187,14 @@ function counterpartOf(
  */
 export function setSource(id: FeatureId, sourceId: FeatureId): Command {
   return {
-    label: 'Follow another feature',
+    label: { action: 'follow-another' },
     labelFor: (document) => {
       const source = document.project.parts
         .flatMap((p) => p.features)
         .find((f) => f.id === sourceId);
-      return source === undefined ? 'Follow another feature' : `Follow ${source.name}`;
+      return source === undefined
+        ? { action: 'follow-another' }
+        : { action: 'follow', name: source.name };
     },
     apply: (document) => {
       if (followRefusal(document.project, id, sourceId) !== null) return document;
@@ -2322,23 +2326,20 @@ function deleteLabel(
   ids: readonly FeatureId[],
   resolution: DeleteResolution | undefined,
   partName?: string,
-): string {
+): HistoryLabel {
   const names = project.parts.flatMap((p) => p.features).filter((f) => ids.includes(f.id));
-  const what =
-    partName ?? (names.length === 1 ? names[0]!.name : `${String(names.length)} features`);
+  // Named when it is one thing — the part, or its one feature — and counted otherwise.
+  const name = partName ?? (names.length === 1 ? names[0]!.name : undefined);
+  const what = name === undefined ? { count: names.length } : { name };
 
   const outcome = resolveDelete(project, ids, resolution);
-  if (outcome === null) return `Delete ${what}`;
-
-  const deleted = outcome.gone.size - outcome.requestedCount;
-  const kept = outcome.frozen.size;
-  const dependents = (n: number): string => `${String(n)} dependent${n === 1 ? '' : 's'}`;
-
-  if (kept > 0 && deleted > 0)
-    return `Delete ${what} and ${dependents(deleted)}, keep ${String(kept)} frozen`;
-  if (kept > 0) return `Delete ${what}, keep ${String(kept)} frozen`;
-  if (deleted > 0) return `Delete ${what} and ${dependents(deleted)}`;
-  return `Delete ${what}`;
+  if (outcome === null) return { action: 'delete', ...what };
+  return {
+    action: 'delete',
+    ...what,
+    dependents: outcome.gone.size - outcome.requestedCount,
+    frozen: outcome.frozen.size,
+  };
 }
 
 /** Whether anything upstream of `feature` is among the features being moved. */

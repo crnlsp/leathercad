@@ -75,7 +75,7 @@ function piece(slot = { x: 10, y: 20, width: 20, height: 6 }, foldX = 40, turn =
   apply(addTextLabel('p', 'edge', { x: 3, y: 10 }, 'Grain'));
   // Turned, as a label run along an edge is.
   apply({
-    label: 'turn',
+    label: { action: 'transform' },
     apply: (d) => ({
       project: {
         ...d.project,

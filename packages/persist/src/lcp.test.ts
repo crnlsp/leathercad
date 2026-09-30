@@ -1,10 +1,21 @@
-import { DEFAULT_SETTINGS, evaluate, type Project } from '@leathercad/domain';
+import { DEFAULT_SETTINGS, evaluate, type Problem, type Project } from '@leathercad/domain';
 import { PathOps, Shapes, uniformRadii } from '@leathercad/geometry';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
 import { InvalidProjectFileError, loadProject, readManifest, saveProject } from './lcp.js';
 import { CURRENT_FORMAT_VERSION, NewerFormatError, migrate } from './migrations/index.js';
+
+/** What a file's reference graph broke, as the loader reports it: facts, for the app to word. */
+function problemsOf(bytes: Uint8Array): readonly Problem[] {
+  try {
+    loadProject(bytes);
+  } catch (error) {
+    if (error instanceof InvalidProjectFileError) return error.problems;
+    throw error;
+  }
+  return [];
+}
 
 const FIXED_CLOCK = (): Date => new Date('2026-09-04T10:00:00.000Z');
 const options = { applicationVersion: '0.0.0', now: FIXED_CLOCK };
@@ -460,12 +471,16 @@ describe('loading a project whose reference graph is broken', () => {
   it('refuses a feature that follows something that does not exist, naming it', () => {
     const bytes = withFeatures([stitchFrom('s1', 'Orphan stitch', 'nowhere')]);
     expect(() => loadProject(bytes)).toThrow(InvalidProjectFileError);
-    expect(() => loadProject(bytes)).toThrow(/Orphan stitch.*does not exist/);
+    expect(() => loadProject(bytes)).toThrow(/SOURCE_MISSING \(Orphan stitch\)/);
+    expect(problemsOf(bytes)).toContainEqual({
+      code: 'SOURCE_MISSING',
+      facts: { featureId: 's1', featureName: 'Orphan stitch' },
+    });
   });
 
   it('refuses a loop', () => {
     const bytes = withFeatures([stitchFrom('a', 'Loop A', 'b'), stitchFrom('b', 'Loop B', 'a')]);
-    expect(() => loadProject(bytes)).toThrow(/leads back to itself/);
+    expect(problemsOf(bytes).map((p) => p.code)).toContain('CYCLE');
   });
 
   it('refuses a derivation the compatibility table does not allow', () => {
@@ -483,13 +498,19 @@ describe('loading a project whose reference graph is broken', () => {
         },
       },
     ]);
-    expect(() => loadProject(bytes)).toThrow(/Holes on an outline.*stitch line/);
+    expect(problemsOf(bytes)).toContainEqual({
+      code: 'DERIVATION_INCOMPATIBLE',
+      facts: { featureId: 'h', featureName: 'Holes on an outline', rule: 'holes-need-stitch-line' },
+    });
   });
 
   it('refuses two features sharing an id', () => {
     const outline = sampleProject().parts[0]!.features[0]!;
     const bytes = withFeatures([{ ...outline, name: 'Copy' }]);
-    expect(() => loadProject(bytes)).toThrow(/share the id feat-1/);
+    expect(problemsOf(bytes)).toContainEqual({
+      code: 'DUPLICATE_ID',
+      facts: { featureId: 'feat-1' },
+    });
   });
 });
 
@@ -549,8 +570,12 @@ describe('the loader refuses a part it could not have made (S5, S6)', () => {
     const bytes = fileWith([outline('cut-1', 'Outline'), outline('cut-2', 'Another outline')]);
 
     expect(() => loadProject(bytes)).toThrow(InvalidProjectFileError);
-    expect(() => loadProject(bytes)).toThrow(/Another outline/);
-    expect(() => loadProject(bytes)).toThrow(/one outline/);
+    expect(problemsOf(bytes)).toContainEqual(
+      expect.objectContaining({
+        code: 'PART_ALREADY_HAS_OUTER',
+        facts: expect.objectContaining({ featureName: 'Another outline' }),
+      }),
+    );
   });
 
   it('refuses an outline that encloses nothing', () => {
@@ -567,8 +592,12 @@ describe('the loader refuses a part it could not have made (S5, S6)', () => {
       },
     ]);
 
-    expect(() => loadProject(bytes)).toThrow(/Open edge/);
-    expect(() => loadProject(bytes)).toThrow(/nothing to cut/);
+    expect(problemsOf(bytes)).toContainEqual(
+      expect.objectContaining({
+        code: 'CONTOUR_NOT_CLOSED',
+        facts: expect.objectContaining({ featureName: 'Open edge' }),
+      }),
+    );
   });
 
   it('opens a part with one outline and a cut-out in it', () => {

@@ -80,7 +80,12 @@ describe('deleteFeatures', () => {
     const store = storeWithChain();
     store.dispatch(deleteFeatures(['holes-1']));
     expect(features(store).map((f) => f.id)).toEqual(['cut-1', 'stitch-1']);
-    expect(store.getState().undoLabel).toBe('Delete Stitch holes');
+    expect(store.getState().undoLabel).toEqual({
+      action: 'delete',
+      name: 'Stitch holes',
+      dependents: 0,
+      frozen: 0,
+    });
   });
 
   it('refuses, changing nothing and recording nothing, when dependents need a decision', () => {
@@ -100,7 +105,12 @@ describe('deleteFeatures', () => {
     store.dispatch(deleteFeatures(['cut-1'], 'delete-dependents'));
 
     expect(features(store)).toEqual([]);
-    expect(store.getState().undoLabel).toBe('Delete Outline and 2 dependents');
+    expect(store.getState().undoLabel).toEqual({
+      action: 'delete',
+      name: 'Outline',
+      dependents: 2,
+      frozen: 0,
+    });
 
     store.undo();
     expect(features(store).map((f) => f.id)).toEqual(['cut-1', 'stitch-1', 'holes-1']);
@@ -127,7 +137,12 @@ describe('deleteFeatures', () => {
       kind: 'derived',
       sourceId: 'stitch-1',
     });
-    expect(store.getState().undoLabel).toBe('Delete Outline, keep 1 frozen');
+    expect(store.getState().undoLabel).toEqual({
+      action: 'delete',
+      name: 'Outline',
+      dependents: 0,
+      frozen: 1,
+    });
 
     store.undo();
     expect(feature(store, 'stitch-1')!.source.kind).toBe('derived');

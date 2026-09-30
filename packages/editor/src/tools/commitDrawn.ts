@@ -212,7 +212,7 @@ export function drawRefusal(ctx: ToolContext, source: DrawnSource): Problem | nu
   // something. An open path used to be filed silently as a marking line.
   if (ENCLOSING.has(mode) && !enclosesArea(source)) {
     return problem('CONTOUR_NOT_CLOSED', {
-      featureName: NOT_ENCLOSING[mode] ?? 'This',
+      drawing: mode === 'stitch-allowance' ? 'seam' : mode === 'cut-out' ? 'cut-out' : 'outline',
       role: mode === 'cut-out' ? 'inner' : 'outer',
       // A run of points can be closed with another click; an arc cannot, ever,
       // so it must not be told to try.
@@ -235,13 +235,6 @@ export function drawTargetNotice(ctx: ToolContext): Problem | null {
   const spansParts = selection.features.size > 0 || selection.parts.size > 0;
   return spansParts ? problem('TARGET_SPANS_PARTS', { what }) : problem('NO_TARGET_PART', { what });
 }
-
-/** What to call the thing that did not enclose anything, per mode. */
-const NOT_ENCLOSING: Readonly<Record<string, string>> = {
-  outline: 'An outline',
-  'stitch-allowance': 'A seam',
-  'cut-out': 'A cut-out',
-};
 
 /** Whether drawn geometry encloses an area, by what it is rather than by area. */
 function enclosesArea(source: DrawnSource): boolean {

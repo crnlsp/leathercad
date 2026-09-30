@@ -92,38 +92,23 @@ export function planEveryPaper(
 }
 
 /**
- * What the plan comes to, as a maker would say it: `3 sheets of A4, portrait`.
- * The number is the PDF's page count, and nothing else.
+ * Whether sheet numbers, in order, run without a gap — so they are said as
+ * `2–3` rather than `2, 4`. The one rule for both the paper's words and the
+ * interface's (ADR 0018).
  */
-export function describeSheets(plan: SheetPlan): string {
-  const count = plan.sheets.length;
-  const noun = count === 1 ? 'sheet' : 'sheets';
-  const paper = `${plan.setup.paper.name}, ${plan.setup.orientation}`;
-  const base = `${String(count)} ${noun} of ${paper}`;
-  return isScaleCheckOnly(plan) ? `${base}, scale check only` : base;
+export function isContiguous(sheets: readonly number[]): boolean {
+  return sheets.length > 0 && sheets[sheets.length - 1]! - sheets[0]! + 1 === sheets.length;
 }
 
 /**
- * Which pieces the plan tapes across sheets, for the paper list:
- * `Strap taped`, `Outer panel and Strap taped`, `3 pieces taped`. Null when
- * everything prints whole.
+ * "Sheet 2", "Sheets 2–3": the sheets a part prints on, as the Sheets view
+ * draws them beside the paper. In the paper's language, English, like the
+ * footer; the interface says it in its own (ADR 0018).
  */
-export function describeTaped(plan: SheetPlan): string | null {
-  const names = plan.pagination.tiled.map((entry) => entry.part.name);
-  if (names.length === 0) return null;
-  if (names.length === 1) return `${names[0]!} taped`;
-  if (names.length === 2) return `${names[0]!} and ${names[1]!} taped`;
-  return `${String(names.length)} pieces taped`;
-}
-
-/** "Sheet 2", "Sheets 2–3": the sheets a part prints on, as Parts and the Sheets view say it. */
 export function describeSheetNumbers(sheets: readonly number[]): string {
   if (sheets.length === 1) return `Sheet ${String(sheets[0]!)}`;
-  const first = sheets[0]!;
-  const last = sheets[sheets.length - 1]!;
-  const contiguous = last - first + 1 === sheets.length;
-  return contiguous
-    ? `Sheets ${String(first)}–${String(last)}`
+  return isContiguous(sheets)
+    ? `Sheets ${String(sheets[0]!)}–${String(sheets[sheets.length - 1]!)}`
     : `Sheets ${sheets.map(String).join(', ')}`;
 }
 

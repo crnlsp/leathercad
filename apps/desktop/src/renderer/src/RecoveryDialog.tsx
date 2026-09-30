@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+import { useI18n } from './i18n.js';
+
 /**
  * Offers back the work a crash interrupted (slice 5.3b).
  *
@@ -19,13 +21,15 @@ export function RecoveryDialog({
   onRecover: () => void;
   onDecline: () => void;
 }) {
+  const { t, locale } = useI18n();
   const recoverRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     recoverRef.current?.focus();
   }, []);
 
-  const name = projectName.trim() === '' ? 'Untitled' : projectName.trim();
-  const when = new Date(savedAt).toLocaleString();
+  const name = projectName.trim() === '' ? t('app.untitled') : projectName.trim();
+  // In the interface's language, and the system's regional form of it.
+  const when = new Date(savedAt).toLocaleString(locale);
   return (
     <div className="dialog-backdrop">
       <div
@@ -40,14 +44,11 @@ export function RecoveryDialog({
           if (event.key === 'Escape') onDecline();
         }}
       >
-        <h3 id="recovery-dialog-title">LeatherCAD did not close properly</h3>
-        <p id="recovery-dialog-detail">
-          Unsaved work on “{name}” was kept at {when}. Recovering opens it as a new, unsaved
-          project; the file it came from is not changed.
-        </p>
+        <h3 id="recovery-dialog-title">{t('recovery.title')}</h3>
+        <p id="recovery-dialog-detail">{t('recovery.detail', { name, when })}</p>
         <div className="dialog-actions">
           <button type="button" className="tool" data-testid="recovery-decline" onClick={onDecline}>
-            Not now
+            {t('recovery.decline')}
           </button>
           <button
             ref={recoverRef}
@@ -56,7 +57,7 @@ export function RecoveryDialog({
             data-testid="recovery-recover"
             onClick={onRecover}
           >
-            Recover
+            {t('recovery.recover')}
           </button>
         </div>
       </div>

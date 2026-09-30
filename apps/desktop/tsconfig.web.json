@@ -2,12 +2,18 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist/web",
-    "rootDir": "src/renderer",
+    "rootDir": "src",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "types": ["vite/client"]
   },
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    // The interface's words (ADR 0018), shared with the main process.
+    "src/shared/i18n.ts",
+    "src/locales/*.json"
+  ],
   "references": [
     {
       "path": "../../packages/core"

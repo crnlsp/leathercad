@@ -41,7 +41,12 @@ import { mapAnchorsThroughOffset } from './derivedAnchors.js';
 import { keepLargestPiece } from './offsetPieces.js';
 import { MIN_PITCH_MM, distributeHoles, type StitchHoles } from './stitch.js';
 import type { LayerRole } from './layerRole.js';
-import { problem, type Problem, type ProblemLocation } from './problems/index.js';
+import {
+  problem,
+  type ParameterName,
+  type Problem,
+  type ProblemLocation,
+} from './problems/index.js';
 
 export type ResolvedFeature =
   | {
@@ -881,7 +886,7 @@ function runOf(
  * layer's guard, which speaks in function names.
  */
 function parameterProblem(feature: Feature): Problem | null {
-  const checks: Array<[string, number, Requirement]> = [];
+  const checks: Array<[ParameterName, number, Requirement]> = [];
   const source = feature.source;
 
   switch (source.kind) {

@@ -52,6 +52,7 @@ describe('reading preferences.json', () => {
       JSON.stringify({
         legendOpen: true,
         toolRailCollapsed: 'yes',
+        language: 'xx',
         recentFiles: ['/p/a.lcp', 'relative.lcp', '/p/notes.txt', 7, '/p/a.lcp', '/p/b.LCP'],
         fromANewerVersion: { anything: 1 },
       }),
@@ -59,6 +60,8 @@ describe('reading preferences.json', () => {
 
     expect(parsed.legendOpen).toBe(true);
     expect(parsed.toolRailCollapsed).toBe(DEFAULT_PREFERENCES.toolRailCollapsed);
+    // A language this version does not ship follows the system.
+    expect(parsed.language).toBe('system');
     // Only absolute project paths, once each.
     expect(parsed.recentFiles).toEqual(['/p/a.lcp', '/p/b.LCP']);
   });
@@ -68,6 +71,15 @@ describe('reading preferences.json', () => {
       legendOpen: true,
     });
     expect(validChanges('legendOpen')).toEqual({});
+  });
+
+  it('keeps the interface language: following the system, or one the app ships', () => {
+    expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
+    expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');
+    expect(validChanges({ language: 'en' })).toEqual({ language: 'en' });
+    expect(validChanges({ language: 'system' })).toEqual({ language: 'system' });
+    expect(validChanges({ language: 'xx' })).toEqual({});
+    expect(validChanges({ language: 7 })).toEqual({});
   });
 });
 

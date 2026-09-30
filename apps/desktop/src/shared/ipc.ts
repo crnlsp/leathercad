@@ -19,6 +19,7 @@ export const IPC = {
   getRecoveryIntervalMs: 'platform:getRecoveryIntervalMs',
   getPreferences: 'platform:getPreferences',
   setPreferences: 'platform:setPreferences',
+  getSystemLanguages: 'platform:getSystemLanguages',
   noteRecentFile: 'platform:noteRecentFile',
   readSampleProject: 'platform:readSampleProject',
   takeLaunchFile: 'platform:takeLaunchFile',

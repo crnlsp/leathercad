@@ -763,8 +763,9 @@ body {
 }
 
 /* A select holds words, not a measurement, and must shrink with the panel
-   rather than push past its edge. */
-.field select {
+   rather than push past its edge. A setting's is the same control. */
+.field select,
+.setting select {
   flex: 1;
   min-width: 0;
   padding: 4px 4px;
@@ -776,7 +777,8 @@ body {
   font-weight: 400;
 }
 
-.field select:focus {
+.field select:focus,
+.setting select:focus {
   border-color: var(--tan);
   outline: none;
 }
@@ -1100,6 +1102,11 @@ body {
   color: var(--text-dim);
   font: var(--t-label);
   font-weight: 400;
+}
+
+.setting select {
+  flex: 0 1 240px;
+  padding: 4px 6px;
 }
 
 .setting input[type='checkbox'] {
@@ -1720,7 +1727,8 @@ button.problem-row:hover {
 .drawer-handle,
 button.problem-row,
 .field input,
-.field select {
+.field select,
+.setting select {
   transition:
     background-color var(--motion),
     border-color var(--motion),

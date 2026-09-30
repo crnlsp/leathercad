@@ -27,7 +27,7 @@ function storeWithPanel() {
     radii: { bottomLeft: 8, bottomRight: 0, topLeft: 0, topRight: 0 },
   };
   store.dispatch({
-    label: 'Add part',
+    label: { action: 'transform' },
     apply: (document) => ({
       project: {
         ...document.project,
@@ -57,7 +57,7 @@ describe('flipFeatures, corner by corner', () => {
       radii: { bottomLeft: 2, bottomRight: 4, topLeft: 6, topRight: 8 },
     };
     store.dispatch({
-      label: 'Add part',
+      label: { action: 'transform' },
       apply: (document) => ({
         project: {
           ...document.project,
@@ -235,7 +235,7 @@ describe('flipFeatures', () => {
       // turn on top, which is how the defect looked from the panel.
       const store = storeWithPanel();
       store.dispatch({
-        label: 'Turn it',
+        label: { action: 'transform' },
         apply: (document) => ({
           project: {
             ...document.project,
@@ -270,7 +270,7 @@ describe('flipFeatures', () => {
     const store = storeWithPanel();
     store.dispatch(flipFeatures(['feat-0' as Ulid], 'horizontal'));
 
-    expect(store.getState().undoLabel).toBe('Flip horizontal');
+    expect(store.getState().undoLabel).toEqual({ action: 'flip-horizontal' });
     store.undo();
     expect(shapeOf(store.getState().document.project).radii.bottomLeft).toBe(8);
   });
@@ -302,7 +302,7 @@ describe('flipFeatures', () => {
   it('refuses a label rather than quietly turning it round, and changes nothing', () => {
     const store = new DocumentStore(emptyDocument('doc' as Ulid));
     store.dispatch({
-      label: 'Add part',
+      label: { action: 'transform' },
       apply: (document) => ({
         project: {
           ...document.project,
@@ -343,7 +343,7 @@ describe('flipFeatures', () => {
     // Identity: the label is untouched, down to the object — and a refusal
     // that changed nothing leaves nothing in the undo history either.
     expect(store.getState().document).toBe(before);
-    expect(store.getState().undoLabel).not.toBe('Flip horizontal');
+    expect(store.getState().undoLabel).not.toEqual({ action: 'flip-horizontal' });
 
     const label = store
       .getState()
@@ -377,7 +377,7 @@ describe('flipFeatures', () => {
   it('flips a group about the group’s centre, not each piece’s own', () => {
     const store = storeWithPanel();
     store.dispatch({
-      label: 'Add second part',
+      label: { action: 'transform' },
       apply: (document) => ({
         project: {
           ...document.project,

@@ -1,12 +1,14 @@
 import type { ParametricShape } from '@leathercad/domain';
 import type { CornerRadii } from '@leathercad/geometry';
 
+import { useI18n } from '../i18n.js';
 import { NumberField } from '../NumberField.js';
 
 type Rect = Extract<ParametricShape, { type: 'rect' }>;
 
 /** Position, size, and a radius per corner. */
 export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape: Rect) => void }) {
+  const { t } = useI18n();
   const setRadius = (corner: keyof CornerRadii, value: number): void => {
     onChange({ ...shape, radii: { ...shape.radii, [corner]: value } });
   };
@@ -27,13 +29,13 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
       </div>
       <div className="field-pair">
         <NumberField
-          label="Width"
+          label={t('editor.width')}
           value={shape.width}
           min={0.01}
           onCommit={(width) => onChange({ ...shape, width })}
         />
         <NumberField
-          label="Height"
+          label={t('editor.height')}
           value={shape.height}
           min={0.01}
           onCommit={(height) => onChange({ ...shape, height })}
@@ -41,7 +43,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
       </div>
 
       <NumberField
-        label="Turn"
+        label={t('editor.turn')}
         value={(shape.rotation * 180) / Math.PI}
         suffix="°"
         step={5}
@@ -49,7 +51,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
         onCommit={(deg) => onChange({ ...shape, rotation: (deg * Math.PI) / 180 })}
       />
 
-      <div className="panel-heading small">Corner radii</div>
+      <div className="panel-heading small">{t('editor.cornerRadii')}</div>
       {/* Laid out to match the corners on screen: top row above, bottom below. */}
       <div className="field-pair">
         <NumberField

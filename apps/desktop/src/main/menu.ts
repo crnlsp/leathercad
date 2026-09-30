@@ -1,6 +1,8 @@
 import type { MenuAction } from '@leathercad/platform';
 import type { Input, MenuItemConstructorOptions } from 'electron';
 
+import type { Translate } from '../shared/i18n.js';
+
 /**
  * The application menu — on macOS only (8.7).
  *
@@ -11,12 +13,14 @@ import type { Input, MenuItemConstructorOptions } from 'electron';
  * the ones the project bar opens.
  *
  * Shortcuts are shown but not registered: the renderer handles the keys, and
- * a registered accelerator would run the action a second time.
+ * a registered accelerator would run the action a second time. In the
+ * interface's language (ADR 0018); macOS names the roles' items itself.
  */
 export function macMenuTemplate(options: {
   readonly send: (action: MenuAction) => void;
+  readonly t: Translate;
 }): MenuItemConstructorOptions[] {
-  const { send } = options;
+  const { send, t } = options;
   const action = (
     label: string,
     accelerator: string,
@@ -33,9 +37,9 @@ export function macMenuTemplate(options: {
       // The first menu is the app menu, whatever its label says.
       label: 'LeatherCAD',
       submenu: [
-        { label: 'About LeatherCAD', click: () => send('about') },
+        { label: t('menu.about'), click: () => send('about') },
         { type: 'separator' },
-        action('Settings…', 'CmdOrCtrl+,', 'settings'),
+        action(t('menu.settings'), 'CmdOrCtrl+,', 'settings'),
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -48,11 +52,11 @@ export function macMenuTemplate(options: {
       ],
     },
     {
-      label: 'Edit',
+      label: t('macMenu.edit'),
       submenu: [
         // The document's history, not a text field's.
-        action('Undo', 'CmdOrCtrl+Z', 'undo'),
-        action('Redo', 'CmdOrCtrl+Shift+Z', 'redo'),
+        action(t('macMenu.undo'), 'CmdOrCtrl+Z', 'undo'),
+        action(t('macMenu.redo'), 'CmdOrCtrl+Shift+Z', 'redo'),
         { type: 'separator' },
         { role: 'cut' },
         { role: 'copy' },

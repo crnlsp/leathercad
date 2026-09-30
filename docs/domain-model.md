@@ -748,8 +748,10 @@ interface Diagnostic {                // a problem found in the design, placed
 }
 
 function diagnose(project: Project): readonly Diagnostic[];   // the one list (X7)
-function describeProblem(problem: Problem): string;           // the one catalogue of words
 ```
+
+The words for a problem are not the domain's: the app puts a code and its facts into the interface's
+language, from one catalogue (`renderer/src/problemText.ts`, ADR 0018).
 
 **Refusals are problems too**, with the same codes and catalogue, but they are never diagnostics:
 they are refused at the gesture or by the loader, so they never exist in a document to be listed.

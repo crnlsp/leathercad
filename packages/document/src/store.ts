@@ -1,12 +1,18 @@
 import type { FeatureId, PartId } from '@leathercad/domain';
 
-import { EMPTY_SELECTION, type Command, type Document, type Selection } from './document.js';
+import {
+  EMPTY_SELECTION,
+  type Command,
+  type Document,
+  type HistoryLabel,
+  type Selection,
+} from './document.js';
 
 interface HistoryEntry {
   readonly document: Document;
   readonly selection: Selection;
   /** What produced this state; shown as "Undo <label>". */
-  readonly label: string;
+  readonly label: HistoryLabel;
 }
 
 export interface StoreState {
@@ -14,8 +20,8 @@ export interface StoreState {
   readonly selection: Selection;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  readonly undoLabel: string | null;
-  readonly redoLabel: string | null;
+  readonly undoLabel: HistoryLabel | null;
+  readonly redoLabel: HistoryLabel | null;
   /**
    * A gesture is under way (`begin` without its `commit` or `rollback`). The
    * document is a preview until it ends, so crash recovery does not snapshot
@@ -23,6 +29,9 @@ export interface StoreState {
    */
   readonly inTransaction: boolean;
 }
+
+const NEW_DOCUMENT: HistoryLabel = { action: 'new-document' };
+const OPEN: HistoryLabel = { action: 'open' };
 
 /**
  * Owns the document. The only thing that mutates it.
@@ -39,7 +48,7 @@ export class DocumentStore {
   private present: HistoryEntry;
 
   /** Set while a drag is in progress; not yet in history. */
-  private transaction: { label: string; base: HistoryEntry } | null = null;
+  private transaction: { label: HistoryLabel; base: HistoryEntry } | null = null;
 
   private listeners = new Set<() => void>();
 
@@ -52,7 +61,7 @@ export class DocumentStore {
   static readonly HISTORY_LIMIT = 200;
 
   constructor(initial: Document) {
-    this.present = { document: initial, selection: EMPTY_SELECTION, label: 'New document' };
+    this.present = { document: initial, selection: EMPTY_SELECTION, label: NEW_DOCUMENT };
   }
 
   getState(): StoreState {
@@ -99,7 +108,7 @@ export class DocumentStore {
    * in history. Without this, one drag of a rectangle would need three hundred
    * presses of undo to reverse.
    */
-  begin(label: string): void {
+  begin(label: HistoryLabel): void {
     if (this.transaction !== null) this.rollback();
     this.transaction = { label, base: this.present };
   }
@@ -181,7 +190,7 @@ export class DocumentStore {
    * into — the previous project is a different document, and letting Ctrl+Z
    * walk from one into the other would be worse than useless.
    */
-  reset(document: Document, label = 'Open'): void {
+  reset(document: Document, label: HistoryLabel = OPEN): void {
     this.transaction = null;
     this.past = [];
     this.future = [];

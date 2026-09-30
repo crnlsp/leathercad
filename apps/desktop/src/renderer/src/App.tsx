@@ -12,19 +12,13 @@ import {
 } from '@leathercad/document';
 import {
   badgesOf,
-  describeProblem,
   diagnose,
   diagnosticTarget,
   evaluate,
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import {
-  DEFAULT_PREFERENCES,
-  systemIdSource,
-  type Preferences,
-  type RecentFile,
-} from '@leathercad/platform';
+import { systemIdSource, type Preferences, type RecentFile } from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -35,6 +29,7 @@ import {
   type HardwareOptions,
 } from '@leathercad/editor';
 
+import { createI18n, resolveLocale, type Translate } from '../../shared/i18n.js';
 import { AboutDialog } from './AboutDialog.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
@@ -42,16 +37,19 @@ import { selectionForRightClick, selectionMenu, type RightClicked } from './cont
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { ExportNotice } from './ExportNotice.js';
-import { useProjectFile, type ExportReport } from './useProjectFile.js';
+import { fileErrorText, useProjectFile, type ExportReport } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { printStatusFor } from './sheets.js';
 import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
+import { historyText } from './historyText.js';
+import { describeProblem } from './problemText.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
+import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
 import { isTyping } from './shortcuts.js';
@@ -68,7 +66,15 @@ function fileName(path: string): string {
 /** How far one step of the zoom keys goes (8.4b). */
 const ZOOM_STEP = 1.25;
 
-export function App() {
+export function App({
+  initialPreferences,
+  systemLanguages,
+}: {
+  /** Read before the first render, so the window opens in its own language. */
+  initialPreferences: Preferences;
+  /** The operating system's languages, most preferred first: what *Follow system* follows. */
+  systemLanguages: readonly string[];
+}) {
   const [version, setVersion] = useState<string | null>(null);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
@@ -126,8 +132,8 @@ export function App() {
   //
   // How the maker likes the frame, kept in preferences.json (8.2) — not
   // localStorage, which a second window blocks on for seconds because both
-  // share one profile. The defaults show until the file has been read.
-  const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
+  // share one profile. Read before the first render (main.tsx).
+  const [preferences, setPreferences] = useState<Preferences>(initialPreferences);
   const changePreferences = useCallback((changes: Partial<Preferences>) => {
     setPreferences((previous) => ({ ...previous, ...changes }));
     // A preference that could not be kept still applies to this session.
@@ -135,12 +141,18 @@ export function App() {
       .setPreferences(changes)
       .catch(() => undefined);
   }, []);
+
+  // The interface's language (ADR 0018): a preference like any other, so a
+  // change in Settings re-renders every word at once. The document's `lang`
+  // follows, for the screen reader's voice and the browser's hyphenation.
+  const i18n = useMemo(
+    () => createI18n(resolveLocale(preferences.language, systemLanguages)),
+    [preferences.language, systemLanguages],
+  );
+  const { t } = i18n;
   useEffect(() => {
-    void getPlatformHost()
-      .getPreferences()
-      .then(setPreferences)
-      .catch(() => undefined);
-  }, []);
+    document.documentElement.lang = i18n.locale;
+  }, [i18n]);
 
   // The rail collapses by itself below 1200 px, and follows the maker's own
   // remembered choice above it. Opening it while narrow lasts the session:
@@ -186,14 +198,14 @@ export function App() {
   useEffect(() => store.subscribe(() => setStoreState(store.getState())), [store]);
 
   const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
-  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank);
+  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank, t);
   const dirty = file.savedDocument.current !== storeState.document;
 
   // The window says which project it holds, and whether it has unsaved work
   // (F.8): the taskbar and the window switcher read this title.
   useEffect(() => {
-    document.title = windowTitle(storeState.document.project, dirty);
-  }, [storeState.document.project, dirty]);
+    document.title = windowTitle(storeState.document.project, dirty, t);
+  }, [storeState.document.project, dirty, t]);
 
   // Crash recovery (5.3b): a copy while there is unsaved work, and an offer of
   // what a crash left behind.
@@ -543,317 +555,336 @@ export function App() {
   );
 
   return (
-    <div className="app">
-      <ProjectBar
-        project={storeState.document.project}
-        store={store}
-        dirty={dirty}
-        saved={file.state.path !== null}
-        onNew={() => void newProject()}
-        onOpen={() => void openProject()}
-        onSaveAs={() => void file.save(true)}
-        recent={recent}
-        onProjectMenuOpen={refreshRecent}
-        // The main process checks it is on the list, grants it, and hands it
-        // back through onOpenFile, which asks about unsaved work.
-        onOpenRecent={(path) =>
-          void getPlatformHost()
-            .openRecent(path)
-            .catch(() => undefined)
-        }
-        onOpenSample={() => void openSample()}
-        onAbout={() => setAboutOpen(true)}
-        onSettings={() => setSettings('general')}
-        onSave={() => void file.save()}
-        onExport={() => void exportPdf()}
-      />
+    <I18nProvider value={i18n}>
+      <div className="app">
+        <ProjectBar
+          project={storeState.document.project}
+          store={store}
+          dirty={dirty}
+          saved={file.state.path !== null}
+          onNew={() => void newProject()}
+          onOpen={() => void openProject()}
+          onSaveAs={() => void file.save(true)}
+          recent={recent}
+          onProjectMenuOpen={refreshRecent}
+          // The main process checks it is on the list, grants it, and hands it
+          // back through onOpenFile, which asks about unsaved work.
+          onOpenRecent={(path) =>
+            void getPlatformHost()
+              .openRecent(path)
+              .catch(() => undefined)
+          }
+          onOpenSample={() => void openSample()}
+          onAbout={() => setAboutOpen(true)}
+          onSettings={() => setSettings('general')}
+          onSave={() => void file.save()}
+          onExport={() => void exportPdf()}
+        />
 
-      {/* The work bar (F.8): what the maker is doing right now — history, the
+        {/* The work bar (F.8): what the maker is doing right now — history, the
           active tool's options and its one line of guidance. The project and
           its output are the bar above's; nothing here is about files. */}
-      <div className="work-bar" data-testid="work-bar" role="region" aria-label="Work">
-        <div className="toolbar history" data-testid="history-group">
-          {/* Names what it will undo. Disabled needs no reason beyond its own
+        <div
+          className="work-bar"
+          data-testid="work-bar"
+          role="region"
+          aria-label={t('work.region')}
+        >
+          <div className="toolbar history" data-testid="history-group">
+            {/* Names what it will undo. Disabled needs no reason beyond its own
               label: there is nothing to undo. */}
-          <Tooltip text={storeState.undoLabel === null ? null : `Undo ${storeState.undoLabel}`}>
+            <Tooltip
+              text={
+                storeState.undoLabel === null
+                  ? null
+                  : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
+              }
+            >
+              <button
+                type="button"
+                className="tool"
+                data-testid="undo"
+                disabled={!storeState.canUndo}
+                onClick={() => store.undo()}
+              >
+                {t('work.undo')}
+              </button>
+            </Tooltip>
             <button
               type="button"
               className="tool"
-              data-testid="undo"
-              disabled={!storeState.canUndo}
-              onClick={() => store.undo()}
+              data-testid="redo"
+              disabled={!storeState.canRedo}
+              onClick={() => store.redo()}
             >
-              Undo
+              {t('work.redo')}
             </button>
-          </Tooltip>
-          <button
-            type="button"
-            className="tool"
-            data-testid="redo"
-            disabled={!storeState.canRedo}
-            onClick={() => store.redo()}
-          >
-            Redo
-          </button>
-        </div>
-        {view === 'design' ? (
-          <>
-            <ToolOptions
-              toolId={toolId}
-              drawAs={drawAs}
-              onDrawAs={setDrawAs}
-              hardware={hardware}
-              onHardware={setHardware}
-              points={pointOptions}
-              onPoints={setPointOptions}
-            />
-            {/* What the active tool does with a click or a drag, true for that
+          </div>
+          {view === 'design' ? (
+            <>
+              <ToolOptions
+                toolId={toolId}
+                drawAs={drawAs}
+                onDrawAs={setDrawAs}
+                hardware={hardware}
+                onHardware={setHardware}
+                points={pointOptions}
+                onPoints={setPointOptions}
+              />
+              {/* What the active tool does with a click or a drag, true for that
                 tool and no other (F.1). It is what gives way when the bar narrows. */}
-            <span className="work-hint" data-testid="tool-how-to">
-              {howToFor(toolId)} · scroll zooms · middle-drag pans
-            </span>
-          </>
-        ) : (
-          <SheetsSummary project={storeState.document.project} />
-        )}
-        <ViewSwitch view={view} onView={showView} />
-      </div>
+              <span className="work-hint" data-testid="tool-how-to">
+                {t('work.howTo', { howTo: howToFor(toolId, t) })}
+              </span>
+            </>
+          ) : (
+            <SheetsSummary project={storeState.document.project} />
+          )}
+          <ViewSwitch view={view} onView={showView} />
+        </div>
 
-      <div
-        className={[
-          'workspace',
-          railCollapsed ? 'rail-collapsed' : '',
-          propertiesOverlay ? 'properties-overlay' : '',
-          propertiesOverlay && propertiesOpen ? 'properties-open' : '',
-          partsOverlay ? 'parts-overlay' : '',
-          partsOverlay && partsOpen ? 'parts-open' : '',
-        ]
-          .filter((name) => name !== '')
-          .join(' ')}
-      >
-        <ToolPalette
-          activeId={toolId}
-          onSelect={chooseTool}
-          collapsed={railCollapsed}
-          onToggleCollapsed={toggleRail}
-        />
-        <PartsList
-          store={store}
-          project={storeState.document.project}
-          selected={storeState.selection.features}
-          selectedParts={storeState.selection.parts}
-          badges={badges}
-          printStatus={printStatusFor(storeState.document.project)}
-          hoveredPart={view === 'sheets' ? hoveredPart : null}
-          onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
-          onRemovePart={requestDeletePart}
-          onDuplicatePart={requestDuplicatePart}
-          onContextMenu={openContextMenu}
-          onOpenSample={() => void openSample()}
-        />
-        {/* The drawing is what the window is for: its main landmark. */}
-        <main className="canvas-column" aria-label="Drawing">
-          <CanvasHost
-            ref={canvasRef}
+        <div
+          className={[
+            'workspace',
+            railCollapsed ? 'rail-collapsed' : '',
+            propertiesOverlay ? 'properties-overlay' : '',
+            propertiesOverlay && propertiesOpen ? 'properties-open' : '',
+            partsOverlay ? 'parts-overlay' : '',
+            partsOverlay && partsOpen ? 'parts-open' : '',
+          ]
+            .filter((name) => name !== '')
+            .join(' ')}
+        >
+          <ToolPalette
+            activeId={toolId}
+            onSelect={chooseTool}
+            collapsed={railCollapsed}
+            onToggleCollapsed={toggleRail}
+          />
+          <PartsList
             store={store}
-            view={view}
-            hoveredPart={hoveredPart}
-            onHoverPart={setHoveredPart}
-            toolId={toolId}
+            project={storeState.document.project}
+            selected={storeState.selection.features}
+            selectedParts={storeState.selection.parts}
+            badges={badges}
+            printStatus={printStatusFor(storeState.document.project)}
+            hoveredPart={view === 'sheets' ? hoveredPart : null}
+            onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
+            onRemovePart={requestDeletePart}
+            onDuplicatePart={requestDuplicatePart}
+            onContextMenu={openContextMenu}
+            onOpenSample={() => void openSample()}
+          />
+          {/* The drawing is what the window is for: its main landmark. */}
+          <main className="canvas-column" aria-label={t('app.drawing')}>
+            <CanvasHost
+              ref={canvasRef}
+              store={store}
+              view={view}
+              hoveredPart={hoveredPart}
+              onHoverPart={setHoveredPart}
+              toolId={toolId}
+              nextId={nextId}
+              onStatus={handleStatus}
+              drawAs={drawAs}
+              hardware={hardware}
+              pointOptions={pointOptions}
+              requestDelete={requestDelete}
+              requestDeletePart={requestDeletePart}
+              onContextMenu={openContextMenu}
+            >
+              {/* The legend explains the board's marks; the sheets are ink. */}
+              {view === 'design' && (
+                <CanvasLegend
+                  project={storeState.document.project}
+                  open={preferences.legendOpen}
+                  onToggle={toggleLegend}
+                />
+              )}
+            </CanvasHost>
+            <ProblemsPanel
+              project={storeState.document.project}
+              diagnostics={diagnostics}
+              onGoTo={goToDiagnostic}
+              open={problemsOpen}
+              onToggle={() => setProblemsOpen((open) => !open)}
+            />
+          </main>
+          <PropertyPanel
+            store={store}
+            project={storeState.document.project}
+            selected={storeState.selection.features}
+            selectedParts={storeState.selection.parts}
+            diagnostics={diagnostics}
             nextId={nextId}
-            onStatus={handleStatus}
-            drawAs={drawAs}
-            hardware={hardware}
-            pointOptions={pointOptions}
             requestDelete={requestDelete}
             requestDeletePart={requestDeletePart}
-            onContextMenu={openContextMenu}
-          >
-            {/* The legend explains the board's marks; the sheets are ink. */}
-            {view === 'design' && (
-              <CanvasLegend
-                project={storeState.document.project}
-                open={preferences.legendOpen}
-                onToggle={toggleLegend}
-              />
-            )}
-          </CanvasHost>
-          <ProblemsPanel
-            project={storeState.document.project}
-            diagnostics={diagnostics}
-            onGoTo={goToDiagnostic}
-            open={problemsOpen}
-            onToggle={() => setProblemsOpen((open) => !open)}
           />
-        </main>
-        <PropertyPanel
-          store={store}
-          project={storeState.document.project}
-          selected={storeState.selection.features}
-          selectedParts={storeState.selection.parts}
-          diagnostics={diagnostics}
-          nextId={nextId}
-          requestDelete={requestDelete}
-          requestDeletePart={requestDeletePart}
-        />
-      </div>
+        </div>
 
-      <footer className="app-status" data-testid="status-bar">
-        {/*
+        <footer className="app-status" data-testid="status-bar">
+          {/*
           The counts stay put whatever else is being said. A notice used to
           replace them, which was harmless while every notice was a momentary
           refusal — but "select a part first" stands for as long as it is true,
           and hiding how many parts exist while telling the user to pick one is
           the wrong way round.
         */}
-        <span className="status-left">
-          {/* Only where a panel has become an overlay: the way back to it. */}
-          {partsOverlay && (
-            <button
-              type="button"
-              className="chip"
-              data-testid="toggle-parts"
-              aria-pressed={partsOpen}
-              onClick={() => setPartsOpen((open) => !open)}
-            >
-              Parts
-            </button>
-          )}
-          {propertiesOverlay && (
-            <button
-              type="button"
-              className="chip"
-              data-testid="toggle-properties"
-              aria-pressed={propertiesOpen}
-              onClick={() => setPropertiesOpen((open) => !open)}
-            >
-              Properties
-            </button>
-          )}
-          <span data-testid="status-counts">
-            v<span data-testid="app-version">{version ?? '…'}</span>
-            <span className="sep">·</span>
-            <b data-testid="part-count">{storeState.document.project.parts.length}</b> parts
-            <span className="sep">·</span>
-            <b data-testid="feature-count">{featureCount}</b> features
-            <span className="sep">·</span>
-            {/* A part picked by its heading is a selection too (Q29), and says so. */}
-            {storeState.selection.features.size === 0 && storeState.selection.parts.size > 0 ? (
-              <>
-                <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
-                {storeState.selection.parts.size === 1 ? 'part' : 'parts'} selected
-              </>
-            ) : (
-              <>
-                <b data-testid="selected-count">{storeState.selection.features.size}</b> selected
-              </>
+          <span className="status-left">
+            {/* Only where a panel has become an overlay: the way back to it. */}
+            {partsOverlay && (
+              <button
+                type="button"
+                className="chip"
+                data-testid="toggle-parts"
+                aria-pressed={partsOpen}
+                onClick={() => setPartsOpen((open) => !open)}
+              >
+                {t('status.parts')}
+              </button>
             )}
-            {diagnostics.length > 0 && (
-              <>
-                <span className="sep">·</span>
-                <b className="status-error" data-testid="problem-count">
-                  {diagnostics.length}
-                </b>{' '}
-                {diagnostics.length === 1 ? 'problem' : 'problems'}
-              </>
+            {propertiesOverlay && (
+              <button
+                type="button"
+                className="chip"
+                data-testid="toggle-properties"
+                aria-pressed={propertiesOpen}
+                onClick={() => setPropertiesOpen((open) => !open)}
+              >
+                {t('status.properties')}
+              </button>
             )}
-            {file.state.path !== null && (
-              <>
-                <span className="sep">·</span>
-                <span data-testid="file-path">{fileName(file.state.path)}</span>
-              </>
-            )}
+            <span data-testid="status-counts">
+              v<span data-testid="app-version">{version ?? '…'}</span>
+              <span className="sep">·</span>
+              <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
+              {t('status.partsCount', { count: storeState.document.project.parts.length })}
+              <span className="sep">·</span>
+              <b data-testid="feature-count">{featureCount}</b>{' '}
+              {t('status.features', { count: featureCount })}
+              <span className="sep">·</span>
+              {/* A part picked by its heading is a selection too (Q29), and says so. */}
+              {storeState.selection.features.size === 0 && storeState.selection.parts.size > 0 ? (
+                <>
+                  <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
+                  {t('status.partsSelected', { count: storeState.selection.parts.size })}
+                </>
+              ) : (
+                <>
+                  <b data-testid="selected-count">{storeState.selection.features.size}</b>{' '}
+                  {t('status.selected')}
+                </>
+              )}
+              {diagnostics.length > 0 && (
+                <>
+                  <span className="sep">·</span>
+                  <b className="status-error" data-testid="problem-count">
+                    {diagnostics.length}
+                  </b>{' '}
+                  {t('status.problems', { count: diagnostics.length })}
+                </>
+              )}
+              {file.state.path !== null && (
+                <>
+                  <span className="sep">·</span>
+                  <span data-testid="file-path">{fileName(file.state.path)}</span>
+                </>
+              )}
+            </span>
+            {status?.notice !== null && status?.notice !== undefined ? (
+              <span className="status-error" data-testid="tool-notice">
+                {describeProblem(status.notice, t)}
+              </span>
+            ) : bridgeError !== null || file.state.error !== null ? (
+              <span className="status-error" data-testid="file-error">
+                {bridgeError ?? fileErrorText(file.state.error, t)}
+              </span>
+            ) : null}
           </span>
-          {status?.notice !== null && status?.notice !== undefined ? (
-            <span className="status-error" data-testid="tool-notice">
-              {describeProblem(status.notice)}
-            </span>
-          ) : bridgeError !== null || file.state.error !== null ? (
-            <span className="status-error" data-testid="file-error">
-              {bridgeError ?? file.state.error}
-            </span>
-          ) : null}
-        </span>
 
-        <span className="status-right" data-testid="cursor-readout">
-          {view === 'sheets'
-            ? (status?.sheet ?? '—')
-            : status === null || status.cursorMm === null
-              ? '— , —'
-              : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
-        </span>
-      </footer>
+          <span className="status-right" data-testid="cursor-readout">
+            {view === 'sheets'
+              ? status?.sheet === null || status?.sheet === undefined
+                ? '—'
+                : t('status.sheetOf', status.sheet)
+              : status === null || status.cursorMm === null
+                ? '— , —'
+                : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
+          </span>
+        </footer>
 
-      {/* A menu about nothing is not shown. */}
-      {contextMenu !== null && !isEmptySelection(storeState.selection) && (
-        <ContextMenu
-          key={`${String(contextMenu.x)},${String(contextMenu.y)}`}
-          at={contextMenu}
-          label="Selection"
-          testId="context-menu"
-          entries={selectionMenu(storeState.document.project, storeState.selection, {
-            dispatch: (command) => store.dispatch(command),
-            duplicatePart: requestDuplicatePart,
-            deleteFeatures: requestDelete,
-            deletePart: requestDeletePart,
-          })}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
+        {/* A menu about nothing is not shown. */}
+        {contextMenu !== null && !isEmptySelection(storeState.selection) && (
+          <ContextMenu
+            key={`${String(contextMenu.x)},${String(contextMenu.y)}`}
+            at={contextMenu}
+            label={t('contextMenu.label')}
+            testId="context-menu"
+            entries={selectionMenu(i18n, storeState.document.project, storeState.selection, {
+              dispatch: (command) => store.dispatch(command),
+              duplicatePart: requestDuplicatePart,
+              deleteFeatures: requestDelete,
+              deletePart: requestDeletePart,
+            })}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
 
-      {settings !== null && (
-        <SettingsDialog
-          section={settings}
-          onSection={setSettings}
-          preferences={preferences}
-          onPreferences={changePreferences}
-          recentCount={recent.length}
-          onClearRecent={() =>
-            void getPlatformHost()
-              .clearRecent()
-              .then(refreshRecent)
-              .catch(() => undefined)
-          }
-          onClose={() => setSettings(null)}
-        />
-      )}
+        {settings !== null && (
+          <SettingsDialog
+            section={settings}
+            onSection={setSettings}
+            preferences={preferences}
+            onPreferences={changePreferences}
+            systemLanguages={systemLanguages}
+            recentCount={recent.length}
+            onClearRecent={() =>
+              void getPlatformHost()
+                .clearRecent()
+                .then(refreshRecent)
+                .catch(() => undefined)
+            }
+            onClose={() => setSettings(null)}
+          />
+        )}
 
-      {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
+        {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
 
-      {exportNotice !== null && (
-        <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />
-      )}
+        {exportNotice !== null && (
+          <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />
+        )}
 
-      {recovery.offer !== null && (
-        <RecoveryDialog
-          projectName={recovery.offer.project.name}
-          savedAt={recovery.offer.savedAt}
-          onRecover={() => void recovery.recover()}
-          onDecline={() => void recovery.decline()}
-        />
-      )}
+        {recovery.offer !== null && (
+          <RecoveryDialog
+            projectName={recovery.offer.project.name}
+            savedAt={recovery.offer.savedAt}
+            onRecover={() => void recovery.recover()}
+            onDecline={() => void recovery.decline()}
+          />
+        )}
 
-      {pendingDiscard !== null && (
-        <UnsavedChangesDialog
-          projectName={storeState.document.project.name}
-          action={pendingDiscard.action}
-          // Saving an untitled project asks where; backing out of that asks
-          // nothing further and changes nothing.
-          onSave={() => void file.save().then((saved) => pendingDiscard.resolve(saved))}
-          onDiscard={() => pendingDiscard.resolve(true)}
-          onCancel={() => pendingDiscard.resolve(false)}
-        />
-      )}
+        {pendingDiscard !== null && (
+          <UnsavedChangesDialog
+            projectName={storeState.document.project.name}
+            action={pendingDiscard.action}
+            // Saving an untitled project asks where; backing out of that asks
+            // nothing further and changes nothing.
+            onSave={() => void file.save().then((saved) => pendingDiscard.resolve(saved))}
+            onDiscard={() => pendingDiscard.resolve(true)}
+            onCancel={() => pendingDiscard.resolve(false)}
+          />
+        )}
 
-      {pendingDelete !== null && (
-        <DeleteDialog
-          what={describeDelete(storeState.document.project, pendingDelete)}
-          plan={planDelete(storeState.document.project, pendingDelete.ids)}
-          onResolve={resolvePendingDelete}
-          onCancel={() => setPendingDelete(null)}
-        />
-      )}
-    </div>
+        {pendingDelete !== null && (
+          <DeleteDialog
+            what={describeDelete(storeState.document.project, pendingDelete, t)}
+            plan={planDelete(storeState.document.project, pendingDelete.ids)}
+            onResolve={resolvePendingDelete}
+            onCancel={() => setPendingDelete(null)}
+          />
+        )}
+      </div>
+    </I18nProvider>
   );
 }
 
@@ -864,17 +895,20 @@ interface PendingDelete {
 }
 
 /** "Outline", "3 features" or the part's name, for the dialog's question. */
-function describeDelete(project: Project, pending: PendingDelete): string {
+function describeDelete(project: Project, pending: PendingDelete, t: Translate): string {
   if (pending.partId !== undefined) {
-    return project.parts.find((part) => part.id === pending.partId)?.name ?? 'this part';
+    return (
+      project.parts.find((part) => part.id === pending.partId)?.name ?? t('deleteDialog.thisPart')
+    );
   }
   const named = project.parts
     .flatMap((part) => part.features)
     .filter((f) => pending.ids.includes(f.id));
-  return named.length === 1 ? named[0]!.name : `${String(named.length)} features`;
+  return named.length === 1 ? named[0]!.name : t('deleteDialog.features', { count: named.length });
 }
 
 /** The active tool's one line of guidance. */
-function howToFor(toolId: string): string {
-  return ALL_TOOLS.find((tool) => tool.id === toolId)?.howTo ?? '';
+function howToFor(toolId: string, t: Translate): string {
+  const tool = ALL_TOOLS.find((entry) => entry.id === toolId);
+  return tool === undefined ? '' : t(`tools.${tool.id}.howTo`);
 }

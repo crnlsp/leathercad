@@ -1,6 +1,7 @@
 import { formatEditable } from '@leathercad/core';
 import type { DrawMode, EditPointsOptions, HardwareOptions } from '@leathercad/editor';
 
+import { useI18n } from './i18n.js';
 import { NumberField } from './NumberField.js';
 
 import { PUNCH_SIZES_MM } from './punches.js';
@@ -17,17 +18,13 @@ import { DRAWING_TOOL_IDS } from './tools.js';
  * direction a maker wants when the inside measurement is the one that matters
  * (§3.4).
  */
-const DRAW_MODES: readonly {
-  readonly id: DrawMode;
-  readonly label: string;
-  readonly mark: Mark;
-}[] = [
-  { id: 'outline', label: 'Outline', mark: 'cut-edge' },
-  { id: 'stitch-allowance', label: 'Stitch + allowance', mark: 'seam-allowance' },
-  { id: 'cut-out', label: 'Cut-out', mark: 'cut-out' },
-  { id: 'stitch', label: 'Stitch', mark: 'stitch-line' },
-  { id: 'fold', label: 'Fold', mark: 'fold-valley' },
-  { id: 'marking', label: 'Marking', mark: 'marking' },
+const DRAW_MODES: readonly { readonly id: DrawMode; readonly mark: Mark }[] = [
+  { id: 'outline', mark: 'cut-edge' },
+  { id: 'stitch-allowance', mark: 'seam-allowance' },
+  { id: 'cut-out', mark: 'cut-out' },
+  { id: 'stitch', mark: 'stitch-line' },
+  { id: 'fold', mark: 'fold-valley' },
+  { id: 'marking', mark: 'marking' },
 ];
 
 const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
@@ -67,13 +64,14 @@ export function ToolOptions({
   points: EditPointsOptions;
   onPoints: (next: EditPointsOptions) => void;
 }) {
+  const { t } = useI18n();
   // The radius R rounds a picked corner to (3.9d). Asked here rather than
   // after the key, so rounding stays one keystroke, like the punch size.
   if (toolId === 'points') {
     return (
       <div className="tool-options" data-testid="tool-options">
         <NumberField
-          label="Corner radius"
+          label={t('toolOptions.cornerRadius')}
           value={points.cornerRadiusMm}
           min={0.1}
           step={0.5}
@@ -89,7 +87,7 @@ export function ToolOptions({
     }
     return (
       <div className="tool-options" data-testid="tool-options">
-        <span className="draw-as-label">Draw as</span>
+        <span className="draw-as-label">{t('toolOptions.drawAs')}</span>
         {DRAW_MODES.map((choice) => (
           <button
             key={choice.id}
@@ -101,7 +99,7 @@ export function ToolOptions({
           >
             {/* Each chip shows the line it makes (decisions §4.1). */}
             <FeatureMark mark={choice.mark} />
-            {choice.label}
+            {t(`drawMode.${choice.id}`)}
           </button>
         ))}
       </div>
@@ -111,7 +109,7 @@ export function ToolOptions({
   return (
     <div className="tool-options" data-testid="tool-options">
       <label className="field">
-        <span className="field-label">Punch</span>
+        <span className="field-label">{t('toolOptions.punch')}</span>
         <select
           data-testid="hardware-diameter"
           value={String(hardware.diameterMm)}
@@ -125,7 +123,7 @@ export function ToolOptions({
         </select>
       </label>
       <label className="field">
-        <span className="field-label">For</span>
+        <span className="field-label">{t('toolOptions.for')}</span>
         <select
           data-testid="hardware-type"
           value={hardware.hardwareType}
@@ -138,7 +136,7 @@ export function ToolOptions({
         >
           {HARDWARE_TYPES.map((type) => (
             <option key={type} value={type}>
-              {type[0]!.toUpperCase() + type.slice(1)}
+              {t(`hardware.${type}`)}
             </option>
           ))}
         </select>

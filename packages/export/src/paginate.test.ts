@@ -3,7 +3,7 @@ import { PathOps, RectOps } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { FOLD_CLEARANCE_MM, TILE_OVERLAP_MM, describeTiled, paginate } from './paginate.js';
+import { FOLD_CLEARANCE_MM, TILE_OVERLAP_MM, paginate } from './paginate.js';
 import {
   DEFAULT_PAGE_SETUP,
   PAPER_SIZES,
@@ -184,9 +184,15 @@ describe('paginate', () => {
 
   it('says what was tiled, on which paper, and which paper would hold it whole', () => {
     const result = paginate(scene([part('big', 250, 180, 'Panel')]), DEFAULT_PAGE_SETUP);
-    expect(describeTiled(result.tiled[0]!)).toBe(
-      '"Panel" is 250.0 × 180.0 mm, larger than A4 portrait: printed on 2 sheets, 1 × 2. It fits whole on A3 portrait.',
-    );
+    expect(result.tiled[0]).toMatchObject({
+      part: { name: 'Panel' },
+      widthMm: 250,
+      heightMm: 180,
+      on: { paper: { name: 'A4' }, orientation: 'portrait' },
+      rows: 1,
+      columns: 2,
+    });
+    expect(result.tiled[0]!.fitsOn[0]).toEqual({ paper: { name: 'A3' }, orientation: 'portrait' });
   });
 
   it('suggests turning the chosen paper before changing it', () => {
@@ -201,14 +207,11 @@ describe('paginate', () => {
       paper: { name: 'Letter' },
       orientation: 'landscape',
     });
-    expect(describeTiled(result.tiled[0]!)).toBe(
-      '"Strap" is 250.0 × 100.0 mm, larger than Letter portrait: printed on 2 sheets, 1 × 2. It fits whole on Letter landscape.',
-    );
   });
 
   it('says so when no paper would hold it whole', () => {
     const result = paginate(scene([part('big', 900, 700, 'Tote side')]), DEFAULT_PAGE_SETUP);
-    expect(describeTiled(result.tiled[0]!)).toMatch(/No supported paper holds it whole\.$/);
+    expect(result.tiled[0]!.fitsOn).toEqual([]);
   });
 
   it('packs the parts that fit first, then tiles the one that does not', () => {

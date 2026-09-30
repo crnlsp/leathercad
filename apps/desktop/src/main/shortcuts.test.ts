@@ -2,6 +2,7 @@ import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
 
 import { helpMenu, projectMenu } from '../renderer/src/menus.js';
+import { createI18n } from '../shared/i18n.js';
 import { SHORTCUT_GROUPS, isTyping, keysFor } from '../renderer/src/shortcuts.js';
 import { TOOL_GROUPS } from '../renderer/src/tools.js';
 import { macMenuTemplate } from './menu.js';
@@ -12,6 +13,7 @@ import { macMenuTemplate } from './menu.js';
  * tool list.
  */
 
+const { t } = createI18n('en');
 const listed = SHORTCUT_GROUPS.flatMap((group) => group.shortcuts);
 const listedKeys = new Set(listed.flatMap((shortcut) => shortcut.keys));
 
@@ -28,17 +30,17 @@ describe('the keyboard shortcut map', () => {
   it('lists every shortcut a menu shows', () => {
     const noop = (): void => undefined;
     const shown = [
-      ...projectMenu({ newProject: noop, open: noop, saveAs: noop, openRecent: noop }, []),
-      ...helpMenu({ openSample: noop, about: noop }),
+      ...projectMenu({ newProject: noop, open: noop, saveAs: noop, openRecent: noop }, [], t),
+      ...helpMenu({ openSample: noop, about: noop }, t),
     ].flatMap((entry) => (entry.kind === 'item' && entry.keys !== undefined ? [entry.keys] : []));
-    shown.push(...accelerators(macMenuTemplate({ send: noop })));
+    shown.push(...accelerators(macMenuTemplate({ send: noop, t })));
     expect(shown.length).toBeGreaterThan(0);
     for (const keys of shown) expect(listedKeys).toContain(keys);
   });
 
   it('lists every tool by its key', () => {
     for (const tool of TOOL_GROUPS.flatMap((group) => group.tools)) {
-      expect(listed).toContainEqual({ keys: [tool.key], does: tool.label });
+      expect(listed).toContainEqual({ keys: [tool.key], does: `tools.${tool.id}.name` });
     }
   });
 
@@ -48,9 +50,22 @@ describe('the keyboard shortcut map', () => {
   });
 
   it('writes keys as each platform does', () => {
-    expect(keysFor('CmdOrCtrl+Shift+S', false)).toBe('Ctrl+Shift+S');
-    expect(keysFor('CmdOrCtrl+Shift+S', true)).toBe('⌘⇧S');
-    expect(keysFor('Delete', true)).toBe('Delete');
+    expect(keysFor('CmdOrCtrl+Shift+S', false, t)).toBe('Ctrl+Shift+S');
+    expect(keysFor('CmdOrCtrl+Shift+S', true, t)).toBe('⌘⇧S');
+    expect(keysFor('Delete', true, t)).toBe('Delete');
+    expect(keysFor('Alt+drag', false, t)).toBe('Alt+drag');
+  });
+
+  it('names its keys in the interface’s language', () => {
+    const named = (part: string): string => `«${part}»`;
+    expect(keysFor('CmdOrCtrl+Shift+S', false, named as typeof t)).toBe(
+      '«keys.Ctrl»+«keys.Shift»+S',
+    );
+    expect(keysFor('Middle-drag', true, named as typeof t)).toBe('«keys.Middle-drag»');
+  });
+
+  it('has words for every shortcut, in English', () => {
+    for (const shortcut of listed) expect(t(shortcut.does)).not.toBe(shortcut.does);
   });
 });
 

@@ -1,11 +1,7 @@
 import type { Project } from '@leathercad/domain';
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 
-import {
-  describeProblemWithSubject,
-  graphProblems,
-  partStructureProblems,
-} from '@leathercad/domain';
+import { graphProblems, partStructureProblems, type Problem } from '@leathercad/domain';
 
 import { CURRENT_FORMAT_VERSION, NewerFormatError, migrate } from './migrations/index.js';
 import { ManifestSchema, ProjectSchema, type Manifest } from './schema.js';
@@ -28,7 +24,15 @@ export interface SaveOptions {
 }
 
 export class InvalidProjectFileError extends Error {
-  constructor(message: string) {
+  /**
+   * `problems` are the design's, when its reference graph is what is broken —
+   * facts the app puts into the maker's words (ADR 0018). Empty for a file
+   * broken below that: bytes, JSON, the schema, which the message describes.
+   */
+  constructor(
+    message: string,
+    readonly problems: readonly Problem[] = [],
+  ) {
     super(message);
     this.name = 'InvalidProjectFileError';
   }
@@ -129,11 +133,19 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
   ];
   if (problems.length > 0) {
     throw new InvalidProjectFileError(
-      `document.json is not valid: ${problems.map(describeProblemWithSubject).join(' ')}`,
+      `document.json is not valid: ${problems.map(named).join('; ')}`,
+      problems,
     );
   }
 
   return { project: result.data as Project, manifest };
+}
+
+/** A problem for the log: its code, and the feature or part it is about. */
+function named(p: Problem): string {
+  const facts = p.facts as Partial<Record<'featureName' | 'partName', string>>;
+  const name = facts.featureName ?? facts.partName;
+  return name === undefined ? p.code : `${p.code} (${name})`;
 }
 
 /** Reads only the manifest — cheap, and enough for a version check. */

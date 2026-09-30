@@ -135,6 +135,36 @@ A line drawn as 100 mm measures 100 mm on paper. Everything in LeatherCAD's desi
 - **Measured on paper.** Before a release, a person prints it and measures it with a steel rule
   ([`docs/print-verification-log.md`](docs/print-verification-log.md)).
 
+## Translations
+
+LeatherCAD can be translated into any language: a translation is one file, and needs no
+programming.
+
+| Language | |
+|---|---|
+| English | ✅ Supported |
+
+**Translate LeatherCAD into your language.** Every word the app says is in one file:
+
+1. Copy [`apps/desktop/src/locales/en.json`](apps/desktop/src/locales/en.json) to a file named for
+   your language: `pl.json`, `de.json`, `es.json`, `ru.json`, `pt-BR.json`.
+2. Translate each text after the `:`. Keep the keys before it, and anything in `{{double braces}}`,
+   exactly as they are: the app fills those in with a name or a number. Where English has `_one`
+   and `_other`, give every form your language uses — Polish and Russian also have `_few` and
+   `_many`. The [glossary](docs/glossary.md) explains the leathercraft words.
+3. Run `pnpm test locales` ([setting up](CONTRIBUTING.md#set-up)). It names anything misspelt or in
+   the wrong form, and lists what is still in English.
+4. Try it: run `pnpm dev`, and choose your language in *Settings › Language*, where it is marked
+   *preview*.
+5. Open a pull request. A part-finished translation is welcome too: it can be completed later.
+
+A translation becomes a supported language — offered in every release — once it is complete and has
+been reviewed, when the maintainers add it to the list of supported languages. Until then it is
+there to try in `pnpm dev`, and nowhere else.
+
+Printed patterns stay in English for now: their lettering is drawn from Latin glyphs, so they read
+the same on every printer.
+
 ## Documentation
 
 **For makers:** [Getting started](docs/getting-started.md) — install, draw, stitch, print, and check

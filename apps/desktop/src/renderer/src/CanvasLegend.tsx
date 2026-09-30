@@ -3,13 +3,16 @@ import { CANVAS, GROUND, linkTickShape } from '@leathercad/render';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo } from 'react';
 
+import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark } from './icons/marks.js';
-import { LEGEND_NAMES, legendEntries, type LegendKey } from './legend.js';
+import { legendEntries, type LegendKey } from './legend.js';
 import { Tooltip } from './Tooltip.js';
 
 /**
- * The key to the drawing, on the drawing (UI Foundations §8.6, F.7).
+ * The key to the drawing, on the drawing (UI Foundations §8.6, F.7). Each
+ * mark is named in the maker's words, the ones the panels already use —
+ * *Outline*, not *cut line (outer)* (F.1): `legend.names.<mark>`.
  *
  * It lists the lines this document draws, each by the mark the tree, the
  * property header and the problem rows use, set on the ground as the canvas
@@ -30,13 +33,18 @@ export function CanvasLegend({
   open: boolean;
   onToggle: () => void;
 }) {
+  const i18n = useI18n();
+  const { t } = i18n;
   const entries = useMemo(() => legendEntries(project), [project]);
   if (entries.length === 0) return null;
 
-  const names = entries.map((key) => LEGEND_NAMES[key]).join(', ');
+  const names = i18n.list(
+    entries.map((key) => t(`legend.names.${key}`)),
+    'unit',
+  );
   return (
-    <section className="canvas-legend" aria-label="Legend" data-testid="canvas-legend">
-      <Tooltip text={open ? 'Hide the legend' : `Legend: ${names}`}>
+    <section className="canvas-legend" aria-label={t('legend.title')} data-testid="canvas-legend">
+      <Tooltip text={open ? t('legend.hide') : t('legend.tooltip', { names })}>
         <button
           type="button"
           className="canvas-legend-toggle"
@@ -44,11 +52,11 @@ export function CanvasLegend({
           aria-expanded={open}
           // The strip's marks are pictures; the name is said here, and the
           // tooltip says what they are.
-          aria-label="Legend"
+          aria-label={t('legend.title')}
           onClick={onToggle}
         >
           {open ? (
-            <span className="canvas-legend-title">Legend</span>
+            <span className="canvas-legend-title">{t('legend.title')}</span>
           ) : (
             <span className="canvas-legend-strip">
               {entries.map((key) => (
@@ -64,7 +72,7 @@ export function CanvasLegend({
           {entries.map((key) => (
             <li key={key} data-legend={key}>
               <LegendMark entry={key} />
-              <span>{LEGEND_NAMES[key]}</span>
+              <span>{t(`legend.names.${key}`)}</span>
             </li>
           ))}
         </ul>

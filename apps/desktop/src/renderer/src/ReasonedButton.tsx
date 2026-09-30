@@ -1,6 +1,8 @@
-import { describeProblem, type Problem } from '@leathercad/domain';
+import type { Problem } from '@leathercad/domain';
 import { useId, type ReactNode } from 'react';
 
+import { useI18n } from './i18n.js';
+import { describeProblem } from './problemText.js';
 import { Tooltip } from './Tooltip.js';
 
 export interface ReasonedButtonProps {
@@ -29,13 +31,14 @@ export interface ReasonedButtonProps {
  * tied to the button with `aria-describedby`.
  */
 export function ReasonedButton(props: ReasonedButtonProps) {
+  const { t } = useI18n();
   const reasonId = useId();
   return (
     <span className="reasoned">
       <Button {...props} reasonId={reasonId} />
       {props.reason !== null && (
         <span id={reasonId} className="reason" data-testid={`${props.testId}-reason`}>
-          {describeProblem(props.reason)}
+          {describeProblem(props.reason, t)}
         </span>
       )}
     </span>
@@ -49,12 +52,15 @@ export function ReasonedButton(props: ReasonedButtonProps) {
  * one cause — so a reason is said once, however many buttons it disables.
  */
 export function ReasonedRow({ buttons }: { buttons: readonly ReasonedButtonProps[] }) {
+  const { t } = useI18n();
   const baseId = useId();
   const sentences = [
-    ...new Set(buttons.flatMap((b) => (b.reason === null ? [] : [describeProblem(b.reason)]))),
+    ...new Set(buttons.flatMap((b) => (b.reason === null ? [] : [describeProblem(b.reason, t)]))),
   ];
   const idFor = (reason: Problem | null): string | undefined =>
-    reason === null ? undefined : `${baseId}-${String(sentences.indexOf(describeProblem(reason)))}`;
+    reason === null
+      ? undefined
+      : `${baseId}-${String(sentences.indexOf(describeProblem(reason, t)))}`;
 
   return (
     <div className="reasoned-row">

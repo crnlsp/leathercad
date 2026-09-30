@@ -1,6 +1,7 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
 
+import { createI18n } from '../shared/i18n.js';
 import { macMenuTemplate, windowKeyFor } from './menu.js';
 
 /**
@@ -14,7 +15,7 @@ const labels = (items: readonly MenuItemConstructorOptions[]): string[] =>
 
 describe('the macOS menu (8.7)', () => {
   const sent: string[] = [];
-  const template = macMenuTemplate({ send: (action) => sent.push(action) });
+  const template = macMenuTemplate({ send: (action) => sent.push(action), t: createI18n('en').t });
 
   it('is only what the platform expects: the app menu, Edit and Window', () => {
     expect(labels(template)).toEqual(['LeatherCAD', 'Edit', 'windowMenu']);

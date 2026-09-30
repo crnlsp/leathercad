@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Feature, FeatureKind } from './feature.js';
 import { roleOf } from './feature.js';
-import { isCutting, LAYER_ROLE_LABELS } from './layerRole.js';
+import { isCutting, LAYER_ROLES } from './layerRole.js';
 
 const base = {
   id: 'f1' as Feature['id'],
@@ -41,7 +41,7 @@ describe('roleOf', () => {
 
     expect([...covered].sort()).toEqual([...known].sort());
     for (const feature of ONE_OF_EACH) {
-      expect(LAYER_ROLE_LABELS[roleOf(feature)]).toBeTruthy();
+      expect(LAYER_ROLES).toContain(roleOf(feature));
     }
   });
 

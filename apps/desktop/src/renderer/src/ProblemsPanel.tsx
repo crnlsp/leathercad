@@ -1,6 +1,7 @@
 import { badgesOf, type Diagnostic, type Project } from '@leathercad/domain';
 
 import { CountBadge } from './CountBadge.js';
+import { useI18n } from './i18n.js';
 import { ProblemRows } from './ProblemList.js';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Icon } from './icons/Icon.js';
@@ -33,6 +34,7 @@ export function ProblemsPanel({
   open: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useI18n();
   const badge = badgesOf(diagnostics).project;
   const count = diagnostics.length;
 
@@ -40,7 +42,7 @@ export function ProblemsPanel({
     <section
       className={open ? 'problems-drawer open' : 'problems-drawer'}
       data-testid="problems-panel"
-      aria-label="Problems"
+      aria-label={t('problems.panel.title')}
     >
       <button
         type="button"
@@ -50,10 +52,10 @@ export function ProblemsPanel({
         aria-controls={open && count > 0 ? 'problems-body' : undefined}
         onClick={onToggle}
       >
-        <span className="drawer-title">Problems</span>
+        <span className="drawer-title">{t('problems.panel.title')}</span>
         <CountBadge badge={badge} />
         <span className="drawer-verdict">
-          {count === 0 ? 'Nothing to fix.' : `${count} ${count === 1 ? 'problem' : 'problems'}`}
+          {count === 0 ? t('problems.panel.none') : t('problems.panel.count', { count })}
         </span>
         <span className="drawer-chevron" aria-hidden="true">
           <Icon of={open ? ChevronDown : ChevronUp} />

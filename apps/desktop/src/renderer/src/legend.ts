@@ -8,26 +8,6 @@ import { MARKS, markFor, type Mark } from './icons/markFor.js';
 export type LegendKey = Mark | 'linked';
 
 /**
- * What each mark is called in the legend: the maker's words, the ones the
- * panels already use — *Outline*, not *cut line (outer)* (F.1).
- */
-export const LEGEND_NAMES: Readonly<Record<LegendKey, string>> = {
-  piece: 'Piece',
-  'cut-edge': 'Outline',
-  'cut-out': 'Cut-out',
-  'stitch-line': 'Stitch line',
-  'stitch-holes': 'Stitch holes',
-  'fold-valley': 'Valley fold',
-  'fold-mountain': 'Mountain fold',
-  marking: 'Marking line',
-  'seam-allowance': 'Seam allowance',
-  'mirror-across-fold': 'Mirror across fold',
-  'hardware-hole': 'Hardware hole',
-  measurement: 'Dimension',
-  linked: 'Follows or mirrors another line',
-};
-
-/**
  * The legend's rows: one per mark among the features that are drawn, in the
  * marks' own order, and the link tick last when anything drawn is derived
  * (UI Foundations §8.6, F.7).

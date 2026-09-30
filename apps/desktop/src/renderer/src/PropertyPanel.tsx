@@ -23,6 +23,8 @@ import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
 import { evaluate, followRefusal, type ResolvedFeature } from '@leathercad/domain';
 
+import type { Translate } from '../../shared/i18n.js';
+import { useI18n } from './i18n.js';
 import { IRON_PRESETS } from './irons.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
@@ -59,6 +61,7 @@ export function PropertyPanel({
   /** The same for a whole part, picked by its heading. */
   requestDeletePart: (partId: string) => void;
 }) {
+  const { t } = useI18n();
   const found = findSelected(project, selected);
   const parts = selected.size === 0 ? project.parts.filter((p) => selectedParts.has(p.id)) : [];
 
@@ -76,16 +79,20 @@ export function PropertyPanel({
 
   if (found === null) {
     return (
-      <aside className="panel properties" data-testid="property-panel" aria-label="Properties">
+      <aside
+        className="panel properties"
+        data-testid="property-panel"
+        aria-label={t('properties.title')}
+      >
         <header className="panel-header">
-          <h2>Properties</h2>
+          <h2>{t('properties.title')}</h2>
         </header>
         <p className="panel-empty">
           {selected.size > 1
-            ? `${selected.size} features selected. Editing more than one at a time comes later.`
+            ? t('properties.manySelected', { count: selected.size })
             : parts.length > 1
-              ? `${parts.length} parts selected. Editing more than one at a time comes later.`
-              : 'Nothing selected. Draw with R, or pick something with V.'}
+              ? t('properties.manyPartsSelected', { count: parts.length })
+              : t('properties.nothingSelected')}
         </p>
       </aside>
     );
@@ -98,7 +105,11 @@ export function PropertyPanel({
     .find((entry) => entry.feature.id === feature.id);
 
   return (
-    <aside className="panel properties" data-testid="property-panel" aria-label="Properties">
+    <aside
+      className="panel properties"
+      data-testid="property-panel"
+      aria-label={t('properties.title')}
+    >
       {/*
         What is selected stays in view however far the fields scroll: its mark,
         its name and what it is (UI Foundations §7.1) — named by the same mark
@@ -112,12 +123,12 @@ export function PropertyPanel({
           // feature. What it *is* belongs beside its name, not three fields
           // down.
           <span className="badge" data-testid="mirrored-badge">
-            Mirrors
+            {t('properties.mirrors')}
           </span>
         )}
         {feature.locked && (
           <span className="badge" data-testid="locked-badge">
-            Locked
+            {t('properties.locked')}
           </span>
         )}
       </header>
@@ -125,7 +136,7 @@ export function PropertyPanel({
       <PartFields store={store} part={part} />
 
       <section className="panel-section">
-        <div className="panel-heading">{labelFor(feature)}</div>
+        <div className="panel-heading">{t(`featureKind.${kindOf(feature)}`)}</div>
         {/*
           A `fieldset` rather than a `disabled` on each control: every field in
           here, and every field a later editor adds, is disabled by the fact of
@@ -136,11 +147,11 @@ export function PropertyPanel({
         <fieldset className="field-group" disabled={feature.locked}>
           {feature.locked && (
             <p className="panel-note" data-testid="locked-note">
-              Locked, so nothing here can be changed. Unlock it in the parts panel.
+              {t('properties.lockedNote')}
             </p>
           )}
           <label className="field">
-            <span className="field-label">Name</span>
+            <span className="field-label">{t('properties.name')}</span>
             <span className="field-input">
               <input
                 type="text"
@@ -152,7 +163,7 @@ export function PropertyPanel({
 
           {feature.frozenFrom !== undefined && (
             <p className="panel-note" data-testid="frozen-note">
-              Frozen from {feature.frozenFrom}: drawn geometry now, no longer following it.
+              {t('properties.frozenNote', { source: feature.frozenFrom })}
             </p>
           )}
 
@@ -173,23 +184,14 @@ export function PropertyPanel({
               */
               <p className="panel-note" data-testid="mirror-note">
                 {/* One word per relationship (F.1): Mirrors, and Mirrors … across. */}
-                {feature.source.op.axis.kind === 'fold' ? (
-                  <>
-                    Mirrors {sourceNameOf(project, feature.source.sourceId)} across{' '}
-                    {sourceNameOf(project, feature.source.op.axis.foldId)}. Move that fold and this
-                    follows it; move {sourceNameOf(project, feature.source.sourceId)} and this stays
-                    its mirror. It cannot be dragged on its own.
-                  </>
-                ) : (
-                  <>
-                    Mirrors {sourceNameOf(project, feature.source.sourceId)} across a line fixed
-                    where this was made — it does not follow{' '}
-                    {sourceNameOf(project, feature.source.sourceId)} about. Moving{' '}
-                    {sourceNameOf(project, feature.source.sourceId)} moves this the opposite way,
-                    and resizing it changes the gap between the two. Drag this piece to place the
-                    pair.
-                  </>
-                )}
+                {feature.source.op.axis.kind === 'fold'
+                  ? t('properties.mirrorFoldNote', {
+                      source: sourceNameOf(project, feature.source.sourceId, t),
+                      fold: sourceNameOf(project, feature.source.op.axis.foldId, t),
+                    })
+                  : t('properties.mirrorLineNote', {
+                      source: sourceNameOf(project, feature.source.sourceId, t),
+                    })}
               </p>
             )}
 
@@ -207,7 +209,9 @@ export function PropertyPanel({
 
       {problems.length > 0 && (
         <section className="panel-section" data-testid="feature-problems">
-          <div className="panel-heading">{problems.length === 1 ? 'Problem' : 'Problems'}</div>
+          <div className="panel-heading">
+            {t('properties.problems', { count: problems.length })}
+          </div>
           <ProblemRows diagnostics={problems} project={project} showWhere={false} />
         </section>
       )}
@@ -222,11 +226,11 @@ export function PropertyPanel({
         checks, so a button that would do nothing says why instead (X1).
       */}
       <section className="panel-section">
-        <div className="panel-heading small">Flip this piece</div>
+        <div className="panel-heading small">{t('properties.flipHeading')}</div>
         <ReasonedRow
           buttons={[
-            flipButton(store, project, [feature.id], 'horizontal'),
-            flipButton(store, project, [feature.id], 'vertical'),
+            flipButton(store, project, [feature.id], 'horizontal', t),
+            flipButton(store, project, [feature.id], 'vertical', t),
           ]}
         />
       </section>
@@ -238,11 +242,11 @@ export function PropertyPanel({
         because they are not variants of each other.
       */}
       <section className="panel-section">
-        <div className="panel-heading small">Mirror into a counterpart</div>
+        <div className="panel-heading small">{t('properties.mirrorHeading')}</div>
         <ReasonedRow
           buttons={[
-            mirrorButton(store, project, feature, 'horizontal', nextId),
-            mirrorButton(store, project, feature, 'vertical', nextId),
+            mirrorButton(store, project, feature, 'horizontal', nextId, t),
+            mirrorButton(store, project, feature, 'vertical', nextId, t),
           ]}
         />
         {/*
@@ -281,11 +285,12 @@ export function PropertyPanel({
 
 /** A part's own fields: what it is called and how many to cut. */
 function PartFields({ store, part }: { store: DocumentStore; part: Part }) {
+  const { t } = useI18n();
   return (
     <section className="panel-section">
-      <div className="panel-heading">Part</div>
+      <div className="panel-heading">{t('properties.part')}</div>
       <label className="field">
-        <span className="field-label">Name</span>
+        <span className="field-label">{t('properties.name')}</span>
         <span className="field-input">
           <input
             type="text"
@@ -296,9 +301,9 @@ function PartFields({ store, part }: { store: DocumentStore; part: Part }) {
         </span>
       </label>
       <NumberField
-        label="Cut"
+        label={t('properties.cut')}
         value={part.quantity}
-        suffix="off"
+        suffix={t('properties.cutSuffix')}
         min={1}
         precision={0}
         onCommit={(value) => store.dispatch(setPartQuantity(part.id, value))}
@@ -325,6 +330,7 @@ function PartProperties({
   diagnostics: readonly Diagnostic[];
   requestDeletePart: (partId: string) => void;
 }) {
+  const { t } = useI18n();
   const ids = part.features.map((feature) => feature.id);
   const outline = part.features.find(
     (feature) => feature.kind === 'cut-contour' && feature.role === 'outer',
@@ -338,7 +344,11 @@ function PartProperties({
   const problems = diagnostics.filter((d) => d.partId === part.id);
 
   return (
-    <aside className="panel properties" data-testid="property-panel" aria-label="Properties">
+    <aside
+      className="panel properties"
+      data-testid="property-panel"
+      aria-label={t('properties.title')}
+    >
       <header className="panel-header" data-testid="property-header">
         <FeatureMark mark="piece" />
         <h2 className="header-name">{part.name}</h2>
@@ -353,18 +363,20 @@ function PartProperties({
 
       {problems.length > 0 && (
         <section className="panel-section" data-testid="part-problems">
-          <div className="panel-heading">{problems.length === 1 ? 'Problem' : 'Problems'}</div>
+          <div className="panel-heading">
+            {t('properties.problems', { count: problems.length })}
+          </div>
           <ProblemRows diagnostics={problems} project={project} />
         </section>
       )}
 
       {ids.length > 0 && (
         <section className="panel-section">
-          <div className="panel-heading small">Flip this piece</div>
+          <div className="panel-heading small">{t('properties.flipHeading')}</div>
           <ReasonedRow
             buttons={[
-              flipButton(store, project, ids, 'horizontal'),
-              flipButton(store, project, ids, 'vertical'),
+              flipButton(store, project, ids, 'horizontal', t),
+              flipButton(store, project, ids, 'vertical', t),
             ]}
           />
         </section>
@@ -376,7 +388,7 @@ function PartProperties({
         reason={deleteRefusal(project, ids)}
         onClick={() => requestDeletePart(part.id)}
       >
-        Delete part
+        {t('actions.deletePart')}
       </ReasonedButton>
     </aside>
   );
@@ -392,9 +404,9 @@ function isMirrored(feature: Feature): boolean {
 }
 
 /** What a feature follows, by name, for the sentence that explains a mirror. */
-function sourceNameOf(project: Project, sourceId: string): string {
+function sourceNameOf(project: Project, sourceId: string, t: Translate): string {
   const found = project.parts.flatMap((part) => part.features).find((f) => f.id === sourceId);
-  return found?.name ?? 'its original';
+  return found?.name ?? t('properties.itsOriginal');
 }
 
 /** A counterpart that stays matched, or saying why one cannot be made. */
@@ -404,6 +416,7 @@ function mirrorButton(
   feature: Feature,
   axis: MirrorDirection,
   nextId: () => string,
+  t: Translate,
 ): ReasonedButtonProps {
   const horizontal = axis === 'horizontal';
   // An outline is the piece itself: its counterpart is a second piece, so it
@@ -412,11 +425,7 @@ function mirrorButton(
   return {
     testId: horizontal ? 'mirror-horizontal' : 'mirror-vertical',
     reason: mirrorRefusal(project, [feature.id], axis),
-    hint:
-      `${wholePiece ? 'A mirrored piece, as a new part,' : 'A counterpart'} ` +
-      `${horizontal ? 'to the right' : 'below'}, mirrored across this piece's ` +
-      `${horizontal ? 'right' : 'bottom'} edge as it is now. It keeps following this piece's ` +
-      'shape; the mirror line stays where it is put.',
+    hint: t(`properties.mirrorHint.${wholePiece ? 'piece' : 'counterpart'}.${axis}`),
     onClick: () => {
       const placement = mirrorAxisFor(project, [feature.id], axis);
       if (placement === null) return;
@@ -424,7 +433,7 @@ function mirrorButton(
       store.dispatch(mirrorFeatures([feature.id], [id], placement, [nextId()]));
       store.select([id]);
     },
-    children: horizontal ? 'Mirror ↔' : 'Mirror ↕',
+    children: t(`properties.mirror.${axis}`),
   };
 }
 
@@ -450,6 +459,7 @@ function FoldMirrorButton({
   feature: Feature;
   nextId: () => string;
 }) {
+  const { t } = useI18n();
   const folds = part.features.filter((candidate) => candidate.kind === 'fold-line');
   if (folds.length !== 1) return null;
 
@@ -459,14 +469,14 @@ function FoldMirrorButton({
     <ReasonedButton
       testId="mirror-across-fold"
       reason={foldMirrorRefusal(project, [feature.id], fold.id)}
-      hint={`A counterpart across ${fold.name}, which re-mirrors whenever that fold moves`}
+      hint={t('properties.foldMirrorHint', { fold: fold.name })}
       onClick={() => {
         const id = nextId();
         store.dispatch(mirrorAcrossFold([feature.id], [id], fold.id));
         store.select([id]);
       }}
     >
-      Mirror across fold
+      {t('properties.foldMirror')}
     </ReasonedButton>
   );
 }
@@ -481,6 +491,7 @@ function DeleteButton({
   feature: Feature;
   requestDelete: (ids: readonly string[]) => void;
 }) {
+  const { t } = useI18n();
   return (
     <ReasonedButton
       testId="delete-feature"
@@ -491,7 +502,7 @@ function DeleteButton({
       reason={deleteRefusal(project, [feature.id])}
       onClick={() => requestDelete([feature.id])}
     >
-      Delete
+      {t('actions.delete')}
     </ReasonedButton>
   );
 }
@@ -502,14 +513,14 @@ function flipButton(
   project: Project,
   ids: readonly string[],
   axis: FlipAxis,
+  t: Translate,
 ): ReasonedButtonProps {
-  const horizontal = axis === 'horizontal';
   return {
-    testId: horizontal ? 'flip-horizontal' : 'flip-vertical',
+    testId: axis === 'horizontal' ? 'flip-horizontal' : 'flip-vertical',
     reason: flipRefusal(project, ids, axis),
-    hint: `Turn it over ${horizontal ? 'left to right' : 'top to bottom'}, about its own centre. Nothing stays linked.`,
+    hint: t(`properties.flipHint.${axis}`),
     onClick: () => store.dispatch(flipFeatures(ids, axis)),
-    children: horizontal ? 'Flip ↔' : 'Flip ↕',
+    children: t(`properties.flip.${axis}`),
   };
 }
 
@@ -534,12 +545,13 @@ function DeriveActions({
   feature: Feature;
   nextId: () => string;
 }) {
+  const { t } = useI18n();
   if (feature.kind === 'cut-contour') {
     return (
       <ReasonedButton
         testId="add-stitch-line"
         reason={null}
-        hint="A stitch line that follows this edge at a fixed margin, and keeps following it"
+        hint={t('properties.addStitchLineHint')}
         onClick={() => {
           const id = nextId();
           // No inset given: the command reads the project's stitch margin, so
@@ -548,7 +560,7 @@ function DeriveActions({
           store.select([id]);
         }}
       >
-        Add stitch line
+        {t('properties.addStitchLine')}
       </ReasonedButton>
     );
   }
@@ -566,7 +578,7 @@ function DeriveActions({
         <ReasonedButton
           testId="add-stitch-holes"
           reason={null}
-          hint="Holes along this line, at the pitch of your iron"
+          hint={t('properties.addHolesHint')}
           onClick={() => {
             const id = nextId();
             store.dispatch(
@@ -582,7 +594,7 @@ function DeriveActions({
             store.select([id]);
           }}
         >
-          Add holes
+          {t('properties.addHoles')}
         </ReasonedButton>
       </>
     );
@@ -612,18 +624,19 @@ function AllowanceButton({
   feature: Feature;
   nextId: () => string;
 }) {
+  const { t } = useI18n();
   return (
     <ReasonedButton
       testId="add-allowance"
       reason={allowanceRefusal(project, feature.id)}
-      hint="The cut edge, that far outside this seam — and it follows the seam's shape"
+      hint={t('properties.addAllowanceHint')}
       onClick={() => {
         const id = nextId();
         store.dispatch(addAllowance(part.id, id, feature.id));
         store.select([id]);
       }}
     >
-      Add seam allowance
+      {t('properties.addAllowance')}
     </ReasonedButton>
   );
 }
@@ -647,27 +660,14 @@ function findSelected(
   return null;
 }
 
-function labelFor(feature: Feature): string {
-  switch (feature.kind) {
-    // The maker's words, the ones the drawing modes already use — not the
-    // model's "cut line (outer)" beside a feature named "Outline" (F.1).
-    case 'cut-contour':
-      return feature.role === 'outer' ? 'Outline' : 'Cut-out';
-    case 'stitch-line':
-      return 'Stitch line';
-    case 'measurement':
-      return 'Dimension';
-    case 'fold-line':
-      return 'Fold line';
-    case 'marking-line':
-      return 'Marking line';
-    case 'stitch-hole-set':
-      return 'Stitch holes';
-    case 'hardware-hole':
-      return 'Hardware hole';
-    case 'text-label':
-      return 'Text label';
-  }
+/**
+ * What a feature is, for its heading: in the maker's words, the ones the
+ * drawing modes already use — not the model's "cut line (outer)" beside a
+ * feature named "Outline" (F.1). A cut contour is two things to a maker.
+ */
+function kindOf(feature: Feature): Exclude<Feature['kind'], 'cut-contour'> | 'outline' | 'cut-out' {
+  if (feature.kind !== 'cut-contour') return feature.kind;
+  return feature.role === 'outer' ? 'outline' : 'cut-out';
 }
 
 /**
@@ -686,6 +686,7 @@ function FollowsField({
   project: Project;
   feature: Feature;
 }) {
+  const { t } = useI18n();
   if (feature.source.kind !== 'derived') return null;
   const current = feature.source.sourceId;
 
@@ -706,7 +707,9 @@ function FollowsField({
 
   return (
     <label className="field">
-      <span className="field-label">{mirrored ? 'Mirrors' : 'Follows'}</span>
+      <span className="field-label">
+        {mirrored ? t('properties.mirrors') : t('properties.follows')}
+      </span>
       <select
         data-testid="follows"
         value={current}
@@ -741,6 +744,7 @@ function Measured({
   feature: Feature;
   resolved: Extract<ResolvedFeature, { ok: true }>;
 }) {
+  const { t } = useI18n();
   if (
     feature.kind === 'text-label' ||
     feature.kind === 'hardware-hole' ||
@@ -754,20 +758,20 @@ function Measured({
     const names = [
       ...new Set(
         source.kind === 'measurement'
-          ? [source.a.featureId, source.b.featureId].map((id) => sourceNameOf(project, id))
+          ? [source.a.featureId, source.b.featureId].map((id) => sourceNameOf(project, id, t))
           : [],
       ),
     ];
     return (
       <section className="panel-section">
         <div className="readout key">
-          <span>Reads</span>
+          <span>{t('properties.reads')}</span>
           <b data-testid="dimension-value">
             {resolved.text === undefined ? '—' : `${resolved.text.layout.text} mm`}
           </b>
         </div>
         <div className="readout">
-          <span>Measures</span>
+          <span>{t('properties.measures')}</span>
           <b className="readout-words">{names.join(' · ')}</b>
         </div>
       </section>
@@ -778,9 +782,9 @@ function Measured({
   if (!resolved.path.closed || feature.kind === 'stitch-line') {
     return (
       <section className="panel-section">
-        <div className="panel-heading">Measured</div>
+        <div className="panel-heading">{t('properties.measured')}</div>
         <div className="readout">
-          <span>Length</span>
+          <span>{t('properties.length')}</span>
           {length}
         </div>
       </section>
@@ -789,13 +793,13 @@ function Measured({
 
   return (
     <section className="panel-section">
-      <div className="panel-heading">Measured</div>
+      <div className="panel-heading">{t('properties.measured')}</div>
       <div className="readout">
-        <span>Perimeter</span>
+        <span>{t('properties.perimeter')}</span>
         {length}
       </div>
       <div className="readout">
-        <span>Area</span>
+        <span>{t('properties.area')}</span>
         <b>{formatNumber(PathOps.area(resolved.path) / 100, 2)} cm²</b>
       </div>
     </section>

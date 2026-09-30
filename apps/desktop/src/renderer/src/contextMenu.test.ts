@@ -14,6 +14,7 @@ import {
 } from '@leathercad/document';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createI18n } from '../../shared/i18n.js';
 import { selectionForRightClick, selectionMenu, type SelectionActions } from './contextMenu.js';
 import type { MenuEntry, MenuItem } from './menus.js';
 
@@ -74,7 +75,7 @@ describe('what a right-click selects (8.8)', () => {
 
 describe('the right-click menu (8.8)', () => {
   const menu = (selection: Selection, document = project(), on = actions()) => ({
-    entries: selectionMenu(document.project, selection, on),
+    entries: selectionMenu(createI18n('en'), document.project, selection, on),
     on,
     document,
   });

@@ -3,11 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PROBLEM_CODES,
-  describeProblem,
-  describeProblemWithSubject,
   problem,
   problemKey,
-  problemTitle,
   sameProblem,
   subjectOf,
   type Problem,
@@ -19,7 +16,8 @@ const named = { featureId: 'f-1', featureName: 'Stitch line' };
 
 /**
  * One sample per code, typed over every code: a code added without a sample
- * here does not compile, so it cannot ship undescribed.
+ * here does not compile. The words for each are the app's, and tested there
+ * (apps/desktop/src/renderer/src/problemText.test.ts).
  */
 const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   DUPLICATE_ID: { featureId: 'f-1' },
@@ -157,176 +155,5 @@ describe('sameProblem', () => {
         return sameProblem(a, a) && sameProblem(a, b) === sameProblem(b, a);
       }),
     );
-  });
-});
-
-describe('the message catalogue', () => {
-  it.each(everyCode)('describes %s in a sentence', (code) => {
-    const sentence = describeProblem(sample(code));
-    expect(sentence.length).toBeGreaterThan(10);
-    expect(sentence).not.toMatch(/undefined|\[object/);
-    expect(sentence).toMatch(/[.!?]$/);
-  });
-
-  it.each(everyCode)('gives %s a short title', (code) => {
-    const title = problemTitle(code);
-    expect(title.length).toBeGreaterThan(3);
-    expect(title.length).toBeLessThan(40);
-  });
-
-  // The words the app already shows. Moving them into the catalogue must not
-  // change one: E2E reads some of them off the screen.
-  const unchanged: Array<[Problem, string]> = [
-    [
-      problem('WOULD_BECOME_ELLIPSE', { shape: 'circle' }),
-      'A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this ' +
-        'editor cannot represent. Scale it evenly instead.',
-    ],
-    [
-      problem('WOULD_SHEAR', {}),
-      'A turned rectangle cannot be stretched along one axis — it would shear, and its corners ' +
-        'would stop being square. Rotate it back to 0°, or scale it evenly.',
-    ],
-    [problem('TRANSFORM_FLATTENS', {}), 'That would flatten the shape to nothing.'],
-    [
-      problem('DERIVED_MOVED_ALONE', { ...named, rootId: 'r', rootName: 'Outline' }),
-      'Stitch line follows Outline, so it moves when Outline does. Move Outline instead.',
-    ],
-    [
-      problem('NO_TARGET_PART', { what: 'line' }),
-      'Select a part first — a fold or marking line belongs to the panel it is drawn on.',
-    ],
-    [
-      problem('NO_TARGET_PART', { what: 'label' }),
-      'Select a part first — a label belongs to the panel it is drawn on.',
-    ],
-    [
-      problem('TARGET_SPANS_PARTS', { what: 'line' }),
-      'Select one part: this belongs to a single panel, and the selection spans more than one.',
-    ],
-    [problem('FOLLOWS_ITSELF', named), 'Stitch line cannot follow itself.'],
-    [
-      problem('WOULD_LOOP', { ...named, sourceId: 'o', sourceName: 'Outline' }),
-      'Stitch line would end up following itself, through Outline.',
-    ],
-    [
-      problem('NOT_DERIVED', named),
-      'Stitch line does not follow anything, so there is nothing to re-point.',
-    ],
-    [problem('FEATURE_MISSING', { featureId: 'x' }), 'That feature does not exist.'],
-    [problem('DUPLICATE_ID', { featureId: 'cut' }), 'Two features share the id cut.'],
-    [problem('CYCLE', named), 'Stitch line follows a chain that leads back to itself.'],
-    [problem('SOURCE_MISSING', named), 'Stitch line follows a feature that does not exist.'],
-    [
-      problem('OFFSET_COLLAPSED', { ...named, distanceMm: 60, side: 'inward' }),
-      'A 60 mm edge margin is deeper than this edge can hold.',
-    ],
-    [
-      problem('SOURCE_FAILED', { ...named, sourceId: 'o', sourceName: 'Outline' }),
-      'The Outline it follows could not be built.',
-    ],
-    [
-      problem('ANCHOR_MISSING', { ...named, anchor: 9, available: 4 }),
-      'That run named corner 9, and this outline has 4.',
-    ],
-    [
-      problem('ANCHOR_MISSING', { ...named, anchor: 1, available: 0 }),
-      'This outline has no corners to run between, so it can only be followed whole.',
-    ],
-    [
-      problem('HOLE_SPACING_DEVIATION', { ...named, achievedMm: 5, pitchMm: 3.85 }),
-      'The spacing came out 5.00 mm against a 3.85 mm iron. Change the pitch, or the edge ' +
-        'margin, to bring them together.',
-    ],
-  ];
-
-  it.each(unchanged)('keeps the existing words: %#', (p, words) => {
-    expect(describeProblem(p)).toBe(words);
-  });
-
-  it.each([
-    ['holes-need-hole-set', 'Only a stitch hole set can follow a stitch line at a pitch.'],
-    ['holes-need-stitch-line', 'Holes can only follow a stitch line.'],
-    ['inset-needs-stitch-line', 'Only a stitch line can be inset from an outline.'],
-    ['inset-needs-outline', 'A stitch line can only be inset from an outline or a cut-out.'],
-    ['allowance-needs-outline', 'Only an outline can be offset outward from a stitch line.'],
-    ['allowance-needs-stitch-line', 'An outline can only be offset outward from a stitch line.'],
-    [
-      'allowance-needs-outer',
-      "Only a part's outer outline can be derived from its stitch line, not a cut-out.",
-    ],
-    [
-      'allowance-needs-whole-run',
-      'A seam allowance follows the whole stitch line, so the outline it makes is closed.',
-    ],
-    [
-      'allowance-needs-closed-line',
-      'A seam allowance needs a closed stitch line: an outline has to enclose the part.',
-    ],
-  ] as const)('keeps the compatibility table’s words for %s', (rule, words) => {
-    expect(describeProblem(problem('DERIVATION_INCOMPATIBLE', { ...named, rule }))).toBe(words);
-  });
-
-  it('names the subject when the sentence does not already', () => {
-    // What the loader shows: a file can hold many features, and a reason with
-    // no name attached tells the user nothing about where to look.
-    const table = problem('DERIVATION_INCOMPATIBLE', { ...named, rule: 'holes-need-stitch-line' });
-    expect(describeProblemWithSubject(table)).toBe(
-      'Stitch line: Holes can only follow a stitch line.',
-    );
-    expect(describeProblemWithSubject(problem('CYCLE', named))).toBe(
-      describeProblem(problem('CYCLE', named)),
-    );
-  });
-
-  it('describes an unusable number without printing a JavaScript-ism', () => {
-    const nan = describeProblem(
-      problem('PARAMETER_INVALID', {
-        ...named,
-        parameter: 'width',
-        requirement: 'finite',
-        value: Number.NaN,
-      }),
-    );
-    expect(nan).toMatch(/width/);
-    expect(nan).not.toMatch(/NaN|Infinity/);
-
-    const negative = describeProblem(
-      problem('PARAMETER_INVALID', {
-        ...named,
-        parameter: 'radius',
-        requirement: 'non-negative',
-        value: -2,
-      }),
-    );
-    expect(negative).toMatch(/radius/);
-    expect(negative).toMatch(/negative/);
-  });
-
-  it('says the floor a number is under, never a value rounded away to zero (5.6)', () => {
-    // 1e-300 rounds to "0" at the catalogue's precision, which would tell the
-    // maker their positive pitch is zero. The sentence says the rule instead.
-    const tiny = describeProblem(
-      problem('PARAMETER_INVALID', {
-        ...named,
-        parameter: 'pitch',
-        requirement: 'at-least',
-        minimum: 0.5,
-        value: 1e-300,
-      }),
-    );
-    expect(tiny).toMatch(/pitch/);
-    // Pitch moved to the floor; a size of zero still says "more than zero".
-    const zero = describeProblem(
-      problem('PARAMETER_INVALID', {
-        ...named,
-        parameter: 'text size',
-        requirement: 'positive',
-        value: 0,
-      }),
-    );
-    expect(zero).toMatch(/text size is 0, and it must be more than zero/);
-    expect(tiny).toMatch(/0\.50 mm/);
-    expect(tiny).not.toMatch(/\b0\b(?!\.)|e-/);
   });
 });
