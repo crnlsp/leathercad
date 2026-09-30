@@ -7,6 +7,23 @@ yet is listed in the open
 [release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
 Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
 
+## [1.3.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.2.0...leathercad-v1.3.0) (2026-09-30)
+
+
+### Features
+
+* **desktop:** a Language setting, and an interface ready to be translated (8.10) ([#40](https://github.com/crnlsp/leathercad/issues/40)) ([ae6c9b2](https://github.com/crnlsp/leathercad/commit/ae6c9b26b202ab86d32016fb6d6a9efa6bfec04c))
+* **desktop:** a right-click menu for what is selected, on the board and in Parts (8.8) ([#34](https://github.com/crnlsp/leathercad/issues/34)) ([26b69d6](https://github.com/crnlsp/leathercad/commit/26b69d6cd6ae9e6cc468ec64eb18197375fa66e9))
+* **desktop:** the window has its own top bar, with a Project menu, Settings and Help ([#33](https://github.com/crnlsp/leathercad/issues/33)) ([9b252d3](https://github.com/crnlsp/leathercad/commit/9b252d3e5489716a369b969d05dd78cef9966aaf))
+
+
+### Bug Fixes
+
+* a part picked by its heading is a real selection everywhere (Q29) ([#38](https://github.com/crnlsp/leathercad/issues/38)) ([292171e](https://github.com/crnlsp/leathercad/commit/292171e2238409e25a2a16ebfe15e3277ad0893c))
+* **document:** flipping a piece flips all of it, not its outline alone (Q28) ([#35](https://github.com/crnlsp/leathercad/issues/35)) ([1515adb](https://github.com/crnlsp/leathercad/commit/1515adbdd0d3f12ec3860a6263119e1b43cd5db3))
+* **geometry:** a curve that turns back on itself measures its whole length ([#28](https://github.com/crnlsp/leathercad/issues/28)) ([a003485](https://github.com/crnlsp/leathercad/commit/a003485831beca0a37d3cd509468b8f0794b7b08)), closes [#27](https://github.com/crnlsp/leathercad/issues/27)
+* moving or turning a piece moves all of it, and a refused gesture moves nothing (Q30) ([#37](https://github.com/crnlsp/leathercad/issues/37)) ([deb9f75](https://github.com/crnlsp/leathercad/commit/deb9f756587b70da12a2b76090076fb3392f4002))
+
 ## [1.2.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.1.1...leathercad-v1.2.0) (2026-09-27)
 
 
