@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
@@ -38,18 +39,12 @@ function num(text: string | null): number {
  */
 async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  const readout = window.getByTestId('cursor-readout');
 
   const readAt = async (px: number, py: number): Promise<{ x: number; y: number }> => {
-    const previous = (await readout.textContent()) ?? '';
-    await window.mouse.move(box.x + px, box.y + py);
-    await expect.poll(async () => (await readout.textContent()) ?? '').not.toBe(previous);
-    const [x, y] = ((await readout.textContent()) ?? '').split(',').map(num);
+    const [x, y] = (await readoutAt(window, box.x + px, box.y + py)).split(',').map(num);
     return { x: x!, y: y! };
   };
 
-  // A first move so the readout is not already showing the first probe's value.
-  await window.mouse.move(box.x + 60, box.y + box.height - 60);
   const a = await readAt(20, box.height - 20);
   const b = await readAt(220, box.height - 220);
   const mmPerPx = (b.x - a.x) / 200;
