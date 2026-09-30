@@ -1,5 +1,7 @@
 import type { Severity } from '@leathercad/domain';
 
+import { useI18n } from './i18n.js';
+
 /**
  * The shape that goes with a severity's colour (UI Foundations §5.4, F.5):
  * error a filled triangle, warning a hollow one, info a dot — the same three
@@ -12,6 +14,7 @@ import type { Severity } from '@leathercad/domain';
  * would be a system font.
  */
 export function SeverityGlyph({ severity }: { severity: Severity }) {
+  const { t } = useI18n();
   return (
     <svg
       className={`severity-glyph severity-${severity}`}
@@ -20,7 +23,7 @@ export function SeverityGlyph({ severity }: { severity: Severity }) {
       height="10"
       viewBox="0 0 10 10"
       role="img"
-      aria-label={severity}
+      aria-label={t(`problems.severity.${severity}`)}
     >
       {severity === 'info' ? (
         <circle cx="5" cy="5" r="3" fill="currentColor" />

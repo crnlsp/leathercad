@@ -1,13 +1,9 @@
 import { useEffect, useRef } from 'react';
 
-/** What the maker was doing when they were asked. */
-export type DiscardingAction = 'close' | 'open' | 'new';
+import { useI18n } from './i18n.js';
 
-const CONSEQUENCE: Readonly<Record<DiscardingAction, string>> = {
-  close: 'If you close without saving, your changes are lost.',
-  open: 'Opening another project replaces this one, and your changes are lost.',
-  new: 'Starting a new project replaces this one, and your changes are lost.',
-};
+/** What the maker was doing when they were asked; its consequence is `unsaved.consequence.<action>`. */
+export type DiscardingAction = 'close' | 'open' | 'new';
 
 /**
  * Asks before unsaved work is thrown away (slice 5.3a).
@@ -31,12 +27,13 @@ export function UnsavedChangesDialog({
   onDiscard: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const saveRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     saveRef.current?.focus();
   }, []);
 
-  const name = projectName.trim() === '' ? 'Untitled' : projectName.trim();
+  const name = projectName.trim() === '' ? t('app.untitled') : projectName.trim();
   return (
     <div className="dialog-backdrop">
       <div
@@ -51,12 +48,12 @@ export function UnsavedChangesDialog({
           if (event.key === 'Escape') onCancel();
         }}
       >
-        <h3 id="unsaved-dialog-title">Save changes to “{name}”?</h3>
-        <p id="unsaved-dialog-consequence">{CONSEQUENCE[action]}</p>
+        <h3 id="unsaved-dialog-title">{t('unsaved.title', { name })}</h3>
+        <p id="unsaved-dialog-consequence">{t(`unsaved.consequence.${action}`)}</p>
 
         <div className="dialog-actions">
           <button type="button" className="tool" data-testid="unsaved-cancel" onClick={onCancel}>
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             type="button"
@@ -64,7 +61,7 @@ export function UnsavedChangesDialog({
             data-testid="unsaved-discard"
             onClick={onDiscard}
           >
-            Don’t save
+            {t('unsaved.discard')}
           </button>
           <button
             ref={saveRef}
@@ -73,7 +70,7 @@ export function UnsavedChangesDialog({
             data-testid="unsaved-save"
             onClick={onSave}
           >
-            Save
+            {t('actions.save')}
           </button>
         </div>
       </div>

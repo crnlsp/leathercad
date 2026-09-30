@@ -13,8 +13,8 @@ import type { FeatureId, PartId } from '../feature.js';
  * error, and what lets a test assert `{ code: 'OFFSET_COLLAPSED', facts: {
  * distanceMm: 60 } }` and survive every rewording.
  *
- * Sentences live in `messages.ts`, and a dependency rule keeps every other
- * domain module from reaching them. See
+ * Sentences are the app's, in the interface's language (ADR 0018): the domain
+ * has none to reach for. See
  * docs/superpowers/specs/2026-09-15-diagnostic-channel-design.md.
  */
 
@@ -26,13 +26,39 @@ export type Severity = 'error' | 'warning' | 'info';
  * A name is the user's data rather than presentation, and capturing it here
  * means a message never needs the project to look it up in.
  */
-interface About {
+type About = {
   readonly featureId: FeatureId;
   readonly featureName: string;
-}
+};
 
 /** What a tool was about to put on a part. */
 export type PlacedThing = 'line' | 'label' | 'cut-out';
+
+/**
+ * A number of a feature's that no geometry could be built from, by the name
+ * the maker knows it by. An id, not words: the app says it in its language.
+ */
+export type ParameterName =
+  | 'position'
+  | 'width'
+  | 'height'
+  | 'rotation'
+  | 'corner radius'
+  | 'radius'
+  | 'start angle'
+  | 'sweep'
+  | 'text size'
+  | 'inset'
+  | 'allowance'
+  | 'glide'
+  | 'mirror axis'
+  | 'mirror angle'
+  | 'pitch'
+  | 'start offset'
+  | 'end offset';
+
+/** A contour still being drawn, by what it is being drawn as: it has no name yet. */
+export type DrawnContour = 'outline' | 'seam' | 'cut-out';
 
 /** The row of the derivation compatibility table (domain-model.md §4.2) that refused. */
 export type CompatibilityRule =
@@ -73,11 +99,9 @@ export interface ProblemFacts {
    *
    * Raised by the loader about a feature, and by a drawing mode about one the
    * user is in the middle of drawing — which does not exist yet, and so has no
-   * id.
+   * id or name: it is named by what it is being drawn as.
    */
-  readonly CONTOUR_NOT_CLOSED: {
-    readonly featureId?: FeatureId;
-    readonly featureName: string;
+  readonly CONTOUR_NOT_CLOSED: (About | { readonly drawing: DrawnContour }) & {
     readonly role: 'outer' | 'inner';
     /**
      * Whether closing it is a correction the user can actually make.
@@ -188,7 +212,7 @@ export interface ProblemFacts {
 
   // ——— Evaluation outcomes (E): a feature that did not resolve ———
   readonly PARAMETER_INVALID: About & {
-    readonly parameter: string;
+    readonly parameter: ParameterName;
     readonly value: number;
   } & (
       | { readonly requirement: 'finite' | 'positive' | 'non-negative' }

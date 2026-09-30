@@ -7,6 +7,7 @@ import log from 'electron-log/main';
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
 import windowIcon from '../../build/icon.png?asset';
 import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
+import { SOURCE_LOCALE, createI18n, resolveLocale, type I18n } from '../shared/i18n.js';
 import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
@@ -40,6 +41,18 @@ const grants = new PathGrants();
 // preferences.json, beside nothing but the app's other settings
 // (docs/file-format.md §6). Read once, when the app is ready.
 let preferences: PreferencesStore;
+
+// The main process's own words — macOS's menu, its dialogs — in the
+// interface's language (ADR 0018), the one the renderer resolves the same way.
+let i18n: I18n = createI18n(SOURCE_LOCALE);
+
+/** Follows the language preference; true when the words changed. */
+function followLanguage(): boolean {
+  const locale = resolveLocale(preferences.preferences.language, app.getPreferredSystemLanguages());
+  if (locale === i18n.locale) return false;
+  i18n = createI18n(locale);
+  return true;
+}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -148,7 +161,7 @@ function openNotices(): void {
   noticesWindow = new BrowserWindow({
     width: 720,
     height: 640,
-    title: 'Third-Party Notices',
+    title: i18n.t('main.noticesTitle'),
     icon: windowIcon,
     ...(mainWindow === null ? {} : { parent: mainWindow }),
     autoHideMenuBar: true,
@@ -166,7 +179,7 @@ function openNotices(): void {
     void noticesWindow.loadFile(file);
   } else {
     void noticesWindow.loadURL(
-      `data:text/plain;charset=utf-8,${encodeURIComponent('Third-party notices are written by a production build (pnpm build).')}`,
+      `data:text/plain;charset=utf-8,${encodeURIComponent(i18n.t('main.noticesInDevelopment'))}`,
     );
   }
 }
@@ -183,6 +196,7 @@ function buildMenu(): void {
       ? Menu.buildFromTemplate(
           macMenuTemplate({
             send: (action) => mainWindow?.webContents.send(IPC.menuAction, action),
+            t: i18n.t,
           }),
         )
       : null,
@@ -201,8 +215,8 @@ async function openRecent(path: string): Promise<void> {
     await preferences.forgetRecent(path);
     const message = {
       type: 'info' as const,
-      message: 'That project is no longer there',
-      detail: `${path}\n\nIt was moved, renamed or deleted, so it has been taken off the recent projects.`,
+      message: i18n.t('main.recentGone'),
+      detail: i18n.t('main.recentGoneDetail', { path }),
     };
     if (mainWindow === null) await dialog.showMessageBox(message);
     else await dialog.showMessageBox(mainWindow, message);
@@ -233,8 +247,14 @@ app.whenReady().then(() => {
     },
     (path) => openRecent(path),
     openNotices,
+    // A new language rebuilds macOS's menu in it, at once, as the window's
+    // own words change (8.7's Settings apply immediately).
+    () => {
+      if (followLanguage()) buildMenu();
+    },
   );
 
+  followLanguage();
   buildMenu();
 
   createWindow();

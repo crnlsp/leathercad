@@ -25,15 +25,14 @@ export { PRINT_STYLES, buildExportScene } from './scene.js';
 export { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from '@leathercad/render';
 
 export type { Page, PaginationResult, PlacedPart, Tile, TiledPart } from './paginate.js';
-export { TILE_OVERLAP_MM, describeTiled, paginate } from './paginate.js';
+export { TILE_OVERLAP_MM, paginate } from './paginate.js';
 
 // The one derived answer to "what will be printed" (7.4a): the PDF writes it,
 // and the sheet count, Parts and the Sheets view read it.
 export type { PartSheets, SheetPlan } from './sheetPlan.js';
 export {
   describeSheetNumbers,
-  describeSheets,
-  describeTaped,
+  isContiguous,
   isScaleCheckOnly,
   planEveryPaper,
   planSheets,
@@ -42,7 +41,7 @@ export {
 
 // What of each part reaches paper, from the same plan (7.4b).
 export type { NotPrintedReason, PartPrintStatus } from './printStatus.js';
-export { describePrintStatus, printStatusOf } from './printStatus.js';
+export { printStatusOf } from './printStatus.js';
 
 // The sheet plan drawn on screen: tape joins on the design board (7.4b), and
 // the Sheets view (7.4c) — drawn from the same `sheetInk` the PDF prints.

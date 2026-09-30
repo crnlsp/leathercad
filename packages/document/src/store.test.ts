@@ -114,7 +114,7 @@ describe('undo', () => {
     const store = new DocumentStore(docWithRect());
     store.dispatch(deleteFeatures(['feat-1']));
     // Names what went, so the undo menu says what it will bring back.
-    expect(store.getState().undoLabel).toBe('Delete Outline');
+    expect(store.getState().undoLabel).toMatchObject({ action: 'delete', name: 'Outline' });
   });
 
   it('a no-op command earns no history entry', () => {
@@ -144,14 +144,14 @@ describe('transactions', () => {
     const store = new DocumentStore(docWithRect());
     expect(store.getState().inTransaction).toBe(false);
 
-    store.begin('Move');
+    store.begin({ action: 'move' });
     expect(store.getState().inTransaction).toBe(true);
     store.preview(translateFeatures(['feat-1'], { x: 5, y: 0 }));
     expect(store.getState().inTransaction).toBe(true);
     store.commit();
     expect(store.getState().inTransaction).toBe(false);
 
-    store.begin('Move');
+    store.begin({ action: 'move' });
     store.rollback();
     expect(store.getState().inTransaction).toBe(false);
   });
@@ -162,7 +162,7 @@ describe('transactions', () => {
     const store = new DocumentStore(docWithRect());
     const start = store.getState().document;
 
-    store.begin('Move');
+    store.begin({ action: 'move' });
     for (let i = 1; i <= 50; i++) {
       store.preview(translateFeatures(['feat-1'], { x: i, y: 0 }));
     }
@@ -176,7 +176,7 @@ describe('transactions', () => {
 
   it('each preview replaces the last rather than accumulating', () => {
     const store = new DocumentStore(docWithRect());
-    store.begin('Move');
+    store.begin({ action: 'move' });
     store.preview(translateFeatures(['feat-1'], { x: 10, y: 0 }));
     store.preview(translateFeatures(['feat-1'], { x: 30, y: 0 }));
     store.commit();
@@ -193,7 +193,7 @@ describe('transactions', () => {
     const store = new DocumentStore(docWithRect());
     const start = store.getState().document;
 
-    store.begin('Move');
+    store.begin({ action: 'move' });
     store.preview(translateFeatures(['feat-1'], { x: 25, y: 25 }));
     store.rollback();
 
@@ -204,7 +204,7 @@ describe('transactions', () => {
   it('undo during a transaction cancels it, matching Escape', () => {
     const store = new DocumentStore(docWithRect());
     const start = store.getState().document;
-    store.begin('Move');
+    store.begin({ action: 'move' });
     store.preview(translateFeatures(['feat-1'], { x: 25, y: 0 }));
     store.undo();
     expect(store.getState().document).toBe(start);
@@ -212,7 +212,7 @@ describe('transactions', () => {
 
   it('a transaction that changed nothing leaves no history', () => {
     const store = new DocumentStore(docWithRect());
-    store.begin('Move');
+    store.begin({ action: 'move' });
     store.commit();
     expect(store.getState().canUndo).toBe(false);
   });
@@ -286,7 +286,7 @@ describe('selection', () => {
   it('drops what a gesture hid when the gesture is committed', () => {
     const store = new DocumentStore(docWithRect());
     store.select(['feat-1']);
-    store.begin('Hide');
+    store.begin({ action: 'hide', count: 1 });
     store.preview(setPartVisible('part-1', false));
     store.commit();
     expect(store.getState().selection.features.size).toBe(0);
@@ -319,7 +319,7 @@ describe('reset', () => {
 
   it('abandons an open transaction', () => {
     const store = new DocumentStore(docWithRect());
-    store.begin('Move');
+    store.begin({ action: 'move' });
     store.preview(translateFeatures(['feat-1'], { x: 10, y: 0 }));
     store.reset(emptyDocument('other'));
     expect(store.inTransaction).toBe(false);
@@ -367,7 +367,7 @@ describe('the paper (6.4a, 7.4a)', () => {
 
     const { settings } = store.getState().document.project;
     expect([settings.paper, settings.orientation]).toEqual(['A3', 'landscape']);
-    expect(store.getState().undoLabel).toBe('Change paper');
+    expect(store.getState().undoLabel).toEqual({ action: 'change-paper' });
     store.undo();
     expect(store.getState().document.project.settings).toEqual(DEFAULT_SETTINGS);
     expect(store.getState().canUndo).toBe(false);

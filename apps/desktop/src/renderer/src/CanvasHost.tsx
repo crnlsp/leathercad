@@ -1,16 +1,8 @@
 import { selectedFeatureIds, type DocumentStore } from '@leathercad/document';
-import {
-  describeProblem,
-  diagnose,
-  evaluate,
-  sameProblem,
-  type Problem,
-  type Project,
-} from '@leathercad/domain';
+import { diagnose, evaluate, sameProblem, type Problem, type Project } from '@leathercad/domain';
 import {
   layoutSheets,
   pieceAt,
-  sheetLabel,
   sheetsView,
   tapeJoins,
   type SheetPlan,
@@ -52,6 +44,8 @@ import {
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
+import { useI18n } from './i18n.js';
+import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
 import { isTyping } from './shortcuts.js';
@@ -101,8 +95,8 @@ export interface CanvasStatus {
   readonly scale: number;
   /** Why the active tool is not doing what it was asked, shown in the status bar. */
   readonly notice: Problem | null;
-  /** On the Sheets view, the sheet under the pointer: "Sheet 2 of 3" (7.4d). */
-  readonly sheet: string | null;
+  /** On the Sheets view, the sheet under the pointer, 1-based, and how many there are (7.4d). */
+  readonly sheet: { readonly number: number; readonly count: number } | null;
 }
 
 /**
@@ -187,7 +181,8 @@ export function CanvasHost({
   const hoveredPartRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
   /** On the Sheets view: the sheet under the pointer, for the status bar. */
-  const [sheetUnder, setSheetUnder] = useState<string | null>(null);
+  const { t } = useI18n();
+  const [sheetUnder, setSheetUnder] = useState<CanvasStatus['sheet']>(null);
   /** Where a press on the Sheets view began, and on which piece. */
   const pressRef = useRef<{ x: number; y: number; partId: string | null; moved: boolean } | null>(
     null,
@@ -618,7 +613,7 @@ export function CanvasHost({
   const pickOnSheets = useCallback(
     (
       event: React.PointerEvent<HTMLCanvasElement>,
-    ): { sheet: string | null; partId: string | null } => {
+    ): { sheet: CanvasStatus['sheet']; partId: string | null } => {
       const viewport = sheetsViewportRef.current;
       const rect = event.currentTarget.getBoundingClientRect();
       const at = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
@@ -626,7 +621,7 @@ export function CanvasHost({
       const hit = pieceAt(plan, layoutSheets(plan), at);
       return hit === null
         ? { sheet: null, partId: null }
-        : { sheet: sheetLabel(hit.sheet + 1, plan.sheets.length), partId: hit.partId };
+        : { sheet: { number: hit.sheet + 1, count: plan.sheets.length }, partId: hit.partId };
     },
     [store],
   );
@@ -702,7 +697,12 @@ export function CanvasHost({
       if (viewRef.current === 'sheets') {
         setCursorMm(null);
         const under = pickOnSheets(event);
-        setSheetUnder(under.sheet);
+        // The same sheet is the same state: a pointer move within it re-renders nothing.
+        setSheetUnder((was) =>
+          was?.number === under.sheet?.number && was?.count === under.sheet?.count
+            ? was
+            : under.sheet,
+        );
         if (under.partId !== hoveredPartRef.current) {
           hoveredPartRef.current = under.partId;
           onHoverPartRef.current?.(under.partId);
@@ -826,7 +826,7 @@ export function CanvasHost({
           role="status"
           style={{ left: pointerCss.x + 16, top: pointerCss.y + 20 }}
         >
-          LeatherCAD places pieces on sheets for you. Choose another paper to change the layout.
+          {t('sheets.placedForYou')}
         </div>
       )}
       {notice !== null && pointerCss !== null && (
@@ -858,6 +858,7 @@ function CanvasNotice({
   at: { x: number; y: number };
   bounds: { width: number; height: number };
 }) {
+  const { t } = useI18n();
   const right = at.x + 16 + NOTICE_WIDTH_PX > bounds.width;
   const below = at.y + 20 + NOTICE_HEIGHT_PX > bounds.height;
   return (
@@ -872,7 +873,7 @@ function CanvasNotice({
         bottom: below ? Math.max(8, bounds.height - at.y + 12) : undefined,
       }}
     >
-      {describeProblem(problem)}
+      {describeProblem(problem, t)}
     </div>
   );
 }

@@ -79,6 +79,18 @@ Electron's default menu, a right-click did nothing, and nothing said a new relea
   *Not planned*). The app's first network request, so `SECURITY.md`'s "no network connections"
   changes with it, in an ADR; the Flatpak skips it, as Flathub updates it. Reads tags in both
   forms (R4).
+- ✅ **8.10 The interface's language.** Every word on screen through one catalogue per language,
+  so a translation is one file and needs no code: `apps/desktop/src/locales/`, checked by
+  `pnpm test locales`, and the README invites one. Settings › Language follows the system or keeps
+  a choice, applied at once. English is the only language so far
+  ([ADR 0018](adr/0018-interface-language.md)).
+  ✅ Built as described. On the way: the domain's problem sentences, the export's words for Parts
+  and the Sheets view, and the document's undo labels were English below the app — each is now
+  facts the app words, so no package but the app speaks a language. The status bar said "1 parts"
+  and "1 features"; it counts in the plural now. The recovery dialog wrote its date in the
+  system's format rather than the interface's. Left for a language that needs it: paper stays
+  English (its glyphs are Latin), default names such as *Untitled* stay as the file keeps them,
+  and numbers keep the decimal point.
 
 ### Drawing and editing
 

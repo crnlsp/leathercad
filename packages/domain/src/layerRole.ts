@@ -22,18 +22,6 @@ export const LAYER_ROLES: readonly LayerRole[] = [
   'construction',
 ];
 
-/** Human label, for panels and problem messages. */
-export const LAYER_ROLE_LABELS: Readonly<Record<LayerRole, string>> = {
-  cut: 'Cut line',
-  stitch: 'Stitch line',
-  'stitch-holes': 'Stitch holes',
-  fold: 'Fold line',
-  mark: 'Marking line',
-  hardware: 'Hardware',
-  annotation: 'Annotation',
-  construction: 'Construction',
-};
-
 /**
  * Whether a role represents material actually removed from the hide.
  *

@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from 'react';
 
+import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { focusAfter, sharedReasons, type MenuEntry, type MenuItem } from './menus.js';
 import { keysFor } from './shortcuts.js';
@@ -223,6 +224,7 @@ function MenuPopup({
     items[next]?.focus();
   };
 
+  const { t } = useI18n();
   const isMac = navigator.userAgent.includes('Mac');
   const said = sharedReasons(entries);
   const renderItem = (item: MenuItem) => {
@@ -251,7 +253,7 @@ function MenuPopup({
         <span className="menu-label">
           {item.icon !== undefined && <Icon of={item.icon} />}
           {item.label}
-          {item.keys !== undefined && <kbd>{keysFor(item.keys, isMac)}</kbd>}
+          {item.keys !== undefined && <kbd>{keysFor(item.keys, isMac, t)}</kbd>}
         </span>
         {note !== undefined && (
           <span className="menu-note" id={`${item.id}-why`}>

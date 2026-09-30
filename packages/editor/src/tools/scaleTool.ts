@@ -51,7 +51,7 @@ export function createScaleTool(): Tool {
       const pivot = selectionPivot(document.project, selection.features);
       if (pivot === null) return;
 
-      ctx.store.begin('Scale');
+      ctx.store.begin({ action: 'scale' });
       state = {
         kind: 'scaling',
         pivot,
@@ -77,7 +77,7 @@ export function createScaleTool(): Tool {
         factors,
         refusal: transformRefusal(document.project, selection.features, matrix),
       };
-      ctx.store.preview(transformFeatures(selection.features, matrix, 'Scale'));
+      ctx.store.preview(transformFeatures(selection.features, matrix, { action: 'scale' }));
       ctx.invalidate();
     },
 

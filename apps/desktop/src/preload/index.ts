@@ -40,11 +40,16 @@ const platformBridge = {
 
   getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
 
-  getPreferences: (): Promise<{ legendOpen: boolean; toolRailCollapsed: boolean }> =>
-    ipcRenderer.invoke(IPC.getPreferences),
+  getPreferences: (): Promise<{
+    legendOpen: boolean;
+    toolRailCollapsed: boolean;
+    language: string;
+  }> => ipcRenderer.invoke(IPC.getPreferences),
 
   setPreferences: (changes: unknown): Promise<void> =>
     ipcRenderer.invoke(IPC.setPreferences, changes),
+
+  getSystemLanguages: (): Promise<string[]> => ipcRenderer.invoke(IPC.getSystemLanguages),
 
   noteRecentFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.noteRecentFile, path),
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { createI18n } from '../../shared/i18n.js';
 import {
   focusAfter,
   helpMenu,
@@ -57,9 +58,10 @@ describe('a recent project, in two lines (8.7)', () => {
 describe('the Project and Help menus (8.7)', () => {
   const noop = (): void => undefined;
   const actions = { newProject: noop, open: noop, saveAs: noop, openRecent: noop };
+  const { t } = createI18n('en');
 
   it('puts the actions first and the recent projects after, so the actions stay put', () => {
-    const entries = projectMenu(actions, [{ path: '/p/Wallet.lcp', shown: '/p/Wallet.lcp' }]);
+    const entries = projectMenu(actions, [{ path: '/p/Wallet.lcp', shown: '/p/Wallet.lcp' }], t);
     expect(entries.map((entry) => (entry.kind === 'item' ? entry.id : entry.kind))).toEqual([
       'new',
       'open',
@@ -75,9 +77,11 @@ describe('the Project and Help menus (8.7)', () => {
 
   it('opens a recent project by its whole path, not the one shown', () => {
     const opened: string[] = [];
-    const entries = projectMenu({ ...actions, openRecent: (path) => opened.push(path) }, [
-      { path: '/home/m/Wallet.lcp', shown: '~/Wallet.lcp' },
-    ]);
+    const entries = projectMenu(
+      { ...actions, openRecent: (path) => opened.push(path) },
+      [{ path: '/home/m/Wallet.lcp', shown: '~/Wallet.lcp' }],
+      t,
+    );
     const group = entries.at(-1)!;
     if (group.kind !== 'group') throw new Error('no recent projects');
     group.items[0]!.onChoose();
@@ -85,12 +89,12 @@ describe('the Project and Help menus (8.7)', () => {
   });
 
   it('says what fills the recent list while it is empty', () => {
-    const group = projectMenu(actions, []).at(-1)!;
+    const group = projectMenu(actions, [], t).at(-1)!;
     expect(group.kind === 'group' && group.empty).toBe('Projects you open or save appear here.');
   });
 
   it('keeps Help to help and the application: no configuration', () => {
-    const labels = helpMenu({ openSample: noop, about: noop }).flatMap((entry) =>
+    const labels = helpMenu({ openSample: noop, about: noop }, t).flatMap((entry) =>
       entry.kind === 'item' ? [entry.label] : [],
     );
     expect(labels).toEqual(['Open sample project', 'About LeatherCAD']);

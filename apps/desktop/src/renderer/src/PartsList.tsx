@@ -17,13 +17,15 @@ import {
 import { Copy, Ellipsis, Eye, EyeOff, FlipHorizontal2, Lock, LockOpen, Trash2 } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 
-import { describePrintStatus, type PartPrintStatus } from '@leathercad/export';
+import type { PartPrintStatus } from '@leathercad/export';
 
 import type { RightClicked } from './contextMenu.js';
 import { CountBadge } from './CountBadge.js';
+import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
 import { MenuButton } from './Menu.js';
+import { describePrintStatus } from './sheetWords.js';
 import { Tooltip } from './Tooltip.js';
 
 /**
@@ -77,32 +79,33 @@ export function PartsList({
   /** Opens the worked sample (8.3): a finished pattern to take apart. */
   onOpenSample: () => void;
 }) {
+  const { t } = useI18n();
   if (project.parts.length === 0) {
+    // The link sits where the language puts it in the sentence.
+    const [before, after] = t('parts.sample').split('{{link}}');
     return (
-      <aside className="panel parts" data-testid="parts-list" aria-label="Parts">
-        <h2>Parts</h2>
+      <aside className="panel parts" data-testid="parts-list" aria-label={t('parts.title')}>
+        <h2>{t('parts.title')}</h2>
+        <p className="panel-empty">{t('parts.empty')}</p>
         <p className="panel-empty">
-          No parts yet. Press R, then drag or click two corners to draw one.
-        </p>
-        <p className="panel-empty">
-          Or take a finished one apart:{' '}
+          {before}
           <button
             type="button"
             className="link-button"
             data-testid="open-sample"
             onClick={onOpenSample}
           >
-            open the sample wallet
+            {t('parts.sampleLink')}
           </button>
-          .
+          {after}
         </p>
       </aside>
     );
   }
 
   return (
-    <aside className="panel parts" data-testid="parts-list" aria-label="Parts">
-      <h2>Parts</h2>
+    <aside className="panel parts" data-testid="parts-list" aria-label={t('parts.title')}>
+      <h2>{t('parts.title')}</h2>
       {project.parts.map((part) => (
         <PartSection
           key={part.id}
@@ -148,6 +151,7 @@ function PartSection({
   onDuplicatePart: (partId: string) => void;
   onContextMenu: OpenMenu;
 }) {
+  const { t } = useI18n();
   const visible = isPartVisible(part);
 
   return (
@@ -183,8 +187,8 @@ function PartSection({
         <IconToggle
           testId={`part-visible-${part.id}`}
           on={visible}
-          onLabel="Hide part"
-          offLabel="Show part"
+          onLabel={t('parts.hidePart')}
+          offLabel={t('parts.showPart')}
           glyph={<Icon of={visible ? Eye : EyeOff} />}
           onToggle={() => store.dispatch(setPartVisible(part.id, !visible))}
         />
@@ -196,14 +200,14 @@ function PartSection({
         // A part is removed only on purpose (ADR 0009), so an emptied one
         // stays — named, and with the way to remove it right here.
         <div className="empty-part">
-          <span className="panel-empty">Empty</span>
+          <span className="panel-empty">{t('parts.emptyPart')}</span>
           <button
             type="button"
             className="tool"
             data-testid="remove-empty-part"
             onClick={() => onRemovePart(part.id)}
           >
-            Remove
+            {t('parts.remove')}
           </button>
         </div>
       ) : (
@@ -240,9 +244,10 @@ function PartMenu({
   onDuplicatePart: (partId: string) => void;
   onRemovePart: (partId: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <MenuButton
-      label={`Actions for ${part.name}`}
+      label={t('parts.actions', { name: part.name })}
       testId={`part-menu-${part.id}`}
       className="icon-toggle"
       align="end"
@@ -250,9 +255,9 @@ function PartMenu({
         {
           kind: 'item',
           id: `duplicate-part-${part.id}`,
-          label: 'Duplicate',
+          label: t('actions.duplicate'),
           icon: Copy,
-          note: 'A copy beside this one, with its own stitching',
+          note: t('parts.duplicateNote'),
           onChoose: () => onDuplicatePart(part.id),
         },
         ...(part.features.length > 0
@@ -260,7 +265,7 @@ function PartMenu({
               {
                 kind: 'item' as const,
                 id: `delete-part-${part.id}`,
-                label: 'Delete part',
+                label: t('actions.deletePart'),
                 icon: Trash2,
                 danger: true,
                 onChoose: () => onRemovePart(part.id),
@@ -296,6 +301,7 @@ function FeatureRow({
   depth: number;
   onContextMenu: OpenMenu;
 }) {
+  const { t } = useI18n();
   const { feature } = node;
 
   return (
@@ -320,7 +326,7 @@ function FeatureRow({
             // A counterpart already nests under its original here, but the
             // nesting alone reads the same as a stitch line's. This says which
             // relationship it is, in the width of one glyph.
-            <Tooltip text="Mirrors the feature it nests under">
+            <Tooltip text={t('parts.mirrorsMark')}>
               <span className="row-mark" data-testid={`mirrored-mark-${feature.id}`}>
                 {isFoldMirrored(feature) ? (
                   <FeatureMark mark="mirror-across-fold" size={14} />
@@ -337,16 +343,16 @@ function FeatureRow({
         <IconToggle
           testId={`feature-locked-${feature.id}`}
           on={feature.locked}
-          onLabel="Unlock"
-          offLabel="Lock"
+          onLabel={t('actions.unlock')}
+          offLabel={t('actions.lock')}
           glyph={<Icon of={feature.locked ? Lock : LockOpen} />}
           onToggle={() => store.dispatch(setFeatureLocked([feature.id], !feature.locked))}
         />
         <IconToggle
           testId={`feature-visible-${feature.id}`}
           on={feature.visible}
-          onLabel="Hide"
-          offLabel="Show"
+          onLabel={t('actions.hide')}
+          offLabel={t('actions.show')}
           glyph={<Icon of={feature.visible ? Eye : EyeOff} />}
           onToggle={() => store.dispatch(setFeatureVisible([feature.id], !feature.visible))}
         />
@@ -437,7 +443,7 @@ function IconToggle({
  * have to infer from the canvas what the PDF will hold.
  */
 function PrintLine({ status, partId }: { status: PartPrintStatus; partId: string }) {
-  const { label, note } = describePrintStatus(status);
+  const { label, note } = describePrintStatus(status, useI18n());
   return (
     <p
       className={status.sheets === null ? 'part-print not-printed' : 'part-print'}

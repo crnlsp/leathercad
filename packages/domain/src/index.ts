@@ -17,7 +17,7 @@ export {
  */
 
 export type { LayerRole } from './layerRole.js';
-export { LAYER_ROLES, LAYER_ROLE_LABELS, isCutting } from './layerRole.js';
+export { LAYER_ROLES, isCutting } from './layerRole.js';
 
 export type {
   CutContour,
@@ -95,7 +95,9 @@ export type {
   CodeInfo,
   CompatibilityRule,
   Diagnostic,
+  DrawnContour,
   InvariantId,
+  ParameterName,
   Problem,
   ProblemCategory,
   ProblemCode,
@@ -104,16 +106,7 @@ export type {
   ProblemLocation,
   Severity,
 } from './problems/index.js';
-export {
-  PROBLEM_CODES,
-  describeProblem,
-  describeProblemWithSubject,
-  problem,
-  problemKey,
-  problemTitle,
-  sameProblem,
-  subjectOf,
-} from './problems/index.js';
+export { PROBLEM_CODES, problem, problemKey, sameProblem, subjectOf } from './problems/index.js';
 
 export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
 export { MIN_PITCH_MM, distributeHoles, splitAtCorners } from './stitch.js';

@@ -97,6 +97,12 @@ export interface PlatformHost {
   setPreferences(changes: Partial<Preferences>): Promise<void>;
 
   /**
+   * The operating system's languages, most preferred first, as BCP 47 tags
+   * (`pl-PL`, `en-GB`). What *Follow system* follows (ADR 0018).
+   */
+  getSystemLanguages(): Promise<readonly string[]>;
+
+  /**
    * Adds a project to the recent projects, most recent first. Only a project
    * the maker opened or saved through the app's own dialogs is taken.
    */
@@ -161,12 +167,19 @@ export interface Preferences {
   readonly legendOpen: boolean;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
+  /**
+   * The interface's language (ADR 0018): `system` to follow the operating
+   * system, or the tag of a language the app ships, such as `en`. The app's
+   * words only — a project reads the same in every language.
+   */
+  readonly language: string;
 }
 
 /** What a first launch starts with, and what a damaged file falls back to. */
 export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: false,
   toolRailCollapsed: false,
+  language: 'system',
 };
 
 /** What macOS's native menu can ask the renderer to do (8.7). */

@@ -2,7 +2,9 @@ import type { Feature, Project } from '@leathercad/domain';
 import { DEFAULT_SETTINGS } from '@leathercad/domain';
 import { describe, expect, it } from 'vitest';
 
-import { LEGEND_NAMES, legendEntries } from './legend.js';
+import { createI18n } from '../../shared/i18n.js';
+import { MARKS } from './icons/markFor.js';
+import { legendEntries } from './legend.js';
 
 const base = { name: 'F', visible: true, locked: false } as const;
 const drawn = { kind: 'path', path: { closed: true, segments: [] } } as const;
@@ -62,8 +64,12 @@ describe('the canvas legend', () => {
   });
 
   it('names every row in the maker’s words', () => {
-    expect(LEGEND_NAMES['cut-edge']).toBe('Outline');
-    expect(LEGEND_NAMES['fold-valley']).toBe('Valley fold');
-    expect(LEGEND_NAMES.measurement).toBe('Dimension');
+    const { t } = createI18n('en');
+    expect(t('legend.names.cut-edge')).toBe('Outline');
+    expect(t('legend.names.fold-valley')).toBe('Valley fold');
+    expect(t('legend.names.measurement')).toBe('Dimension');
+    for (const key of [...MARKS, 'linked' as const]) {
+      expect(t(`legend.names.${key}`)).not.toBe(`legend.names.${key}`);
+    }
   });
 });

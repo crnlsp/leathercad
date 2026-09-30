@@ -44,6 +44,8 @@ export function registerPlatformHandlers(
   openRecent: (path: string) => Promise<void>,
   /** Shows the third-party notices window (8.6b). */
   openNotices: () => void,
+  /** The preferences changed: the main process's own words may be in another language now. */
+  onPreferencesChanged: () => void,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -119,8 +121,11 @@ export function registerPlatformHandlers(
   // Preferences (8.2). The renderer names a change, never the file.
   ipcMain.handle(IPC.getPreferences, () => preferences.preferences);
   ipcMain.handle(IPC.setPreferences, async (_event, changes: unknown) => {
-    await preferences.update(changes);
+    const written = preferences.update(changes);
+    onPreferencesChanged();
+    await written;
   });
+  ipcMain.handle(IPC.getSystemLanguages, () => app.getPreferredSystemLanguages());
   // Only a project the maker chose in a dialog this session joins the list,
   // so the recent projects can never become a way to reach any other file.
   ipcMain.handle(IPC.noteRecentFile, async (_event, path: unknown) => {

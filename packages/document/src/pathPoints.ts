@@ -21,7 +21,7 @@ import {
   type Vec2,
 } from '@leathercad/geometry';
 
-import type { Command } from './document.js';
+import type { Command, HistoryLabel } from './document.js';
 
 /**
  * One change to one point of a drawn path (3.9b).
@@ -108,12 +108,12 @@ export function editPathPoint(edit: PathPointEdit): Command {
   };
 }
 
-const LABELS: { readonly [K in PathPointEdit['kind']]: string } = {
-  move: 'Move point',
-  insert: 'Add point',
-  remove: 'Remove point',
-  round: 'Round corner',
-  sharpen: 'Sharpen corner',
+const LABELS: { readonly [K in PathPointEdit['kind']]: HistoryLabel } = {
+  move: { action: 'move-point' },
+  insert: { action: 'add-point' },
+  remove: { action: 'remove-point' },
+  round: { action: 'round-corner' },
+  sharpen: { action: 'sharpen-corner' },
 };
 
 type Plan = { readonly project: Project } | { readonly problem: Problem };

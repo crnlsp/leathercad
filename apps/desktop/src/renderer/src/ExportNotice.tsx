@@ -1,6 +1,8 @@
-import { TILE_OVERLAP_MM, describeTiled } from '@leathercad/export';
+import { TILE_OVERLAP_MM } from '@leathercad/export';
 import { useEffect, useRef } from 'react';
 
+import { useI18n } from './i18n.js';
+import { describeTiled } from './sheetWords.js';
 import type { ExportReport } from './useProjectFile.js';
 
 /**
@@ -29,6 +31,8 @@ import type { ExportReport } from './useProjectFile.js';
  * exporter drew.
  */
 export function ExportNotice({ report, onClose }: { report: ExportReport; onClose: () => void }) {
+  const i18n = useI18n();
+  const { t } = i18n;
   const { readiness, tiled } = report;
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -36,13 +40,9 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
   }, []);
 
   const counts = [
-    readiness.errors === 0
-      ? null
-      : `${String(readiness.errors)} ${plural(readiness.errors, 'error')}`,
-    readiness.warnings === 0
-      ? null
-      : `${String(readiness.warnings)} ${plural(readiness.warnings, 'warning')}`,
-    readiness.infos === 0 ? null : `${String(readiness.infos)} to note`,
+    readiness.errors === 0 ? null : t('exportNotice.errors', { count: readiness.errors }),
+    readiness.warnings === 0 ? null : t('exportNotice.warnings', { count: readiness.warnings }),
+    readiness.infos === 0 ? null : t('exportNotice.infos', { count: readiness.infos }),
   ].filter((part): part is string => part !== null);
 
   return (
@@ -60,24 +60,19 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
       >
         <h3 id="export-notice-title">
           {readiness.omitted.length === 0 && counts.length === 0
-            ? 'Exported across several sheets'
-            : 'Exported, with something to check'}
+            ? t('exportNotice.titleTiled')
+            : t('exportNotice.titleCheck')}
         </h3>
 
         {tiled.length > 0 && (
           <section className="dialog-group" data-testid="export-tiled">
             <p>
-              <b>
-                {tiled.length === 1
-                  ? 'This part is printed across sheets'
-                  : `These ${String(tiled.length)} parts are printed across sheets`}
-              </b>{' '}
-              at 1:1, overlapping by {String(TILE_OVERLAP_MM)} mm. Cut one sheet on a dashed line,
-              lay it over the next, and match the crosses.
+              <b>{t('exportNotice.tiledLead', { count: tiled.length })}</b>{' '}
+              {t('exportNotice.tiledAcross', { overlap: TILE_OVERLAP_MM })}
             </p>
             <ul>
               {tiled.map((entry) => (
-                <li key={entry.part.id}>{describeTiled(entry)}</li>
+                <li key={entry.part.id}>{describeTiled(entry, t)}</li>
               ))}
             </ul>
           </section>
@@ -86,18 +81,16 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
         {readiness.omitted.length > 0 && (
           <section className="dialog-group" data-testid="export-omitted">
             <p>
-              <b>
-                {readiness.omitted.length === 1
-                  ? 'This feature is not on the paper'
-                  : `These ${String(readiness.omitted.length)} features are not on the paper`}
-              </b>{' '}
-              — each failed to build, so the template does not have it.
+              <b>{t('exportNotice.omittedLead', { count: readiness.omitted.length })}</b>{' '}
+              {t('exportNotice.omitted')}
             </p>
             <ul>
               {readiness.omitted.map((feature) => (
                 <li key={feature.featureId}>
                   <b>{feature.featureName}</b>{' '}
-                  <span className="dialog-note">in {feature.partName}</span>
+                  <span className="dialog-note">
+                    {t('exportNotice.inPart', { part: feature.partName })}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -106,19 +99,16 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
 
         {counts.length > 0 && (
           <p data-testid="export-counts">
-            The design has {counts.join(', ')}. The problems panel lists them; everything that built
-            is on the paper.
+            {t('exportNotice.counts', { counts: i18n.list(counts, 'unit') })}
           </p>
         )}
 
         <div className="dialog-actions">
           <button ref={closeRef} type="button" className="tool" onClick={onClose}>
-            Close
+            {t('actions.close')}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
-const plural = (count: number, word: string): string => (count === 1 ? word : `${word}s`);

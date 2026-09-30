@@ -1,5 +1,8 @@
 import type { DeletePlan, DeleteResolution, PlannedDependent } from '@leathercad/document';
 import { useEffect, useRef } from 'react';
+
+import type { Translate } from '../../shared/i18n.js';
+import { useI18n } from './i18n.js';
 import { Tooltip } from './Tooltip.js';
 
 /**
@@ -25,6 +28,7 @@ export function DeleteDialog({
   onResolve: (resolution: DeleteResolution) => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     cancelRef.current?.focus();
@@ -45,8 +49,8 @@ export function DeleteDialog({
           if (event.key === 'Escape') onCancel();
         }}
       >
-        <h3 id="delete-dialog-title">Delete {what}?</h3>
-        <p>These follow what you are deleting:</p>
+        <h3 id="delete-dialog-title">{t('deleteDialog.title', { what })}</h3>
+        <p>{t('deleteDialog.follow')}</p>
 
         {groupByPart(plan.dependents).map((group) => (
           <section className="dialog-group" key={group.partId}>
@@ -54,7 +58,8 @@ export function DeleteDialog({
             <ul>
               {group.dependents.map((dependent) => (
                 <li key={dependent.featureId}>
-                  <b>{dependent.name}</b> <span className="dialog-note">{noteFor(dependent)}</span>
+                  <b>{dependent.name}</b>{' '}
+                  <span className="dialog-note">{noteFor(dependent, t)}</span>
                 </li>
               ))}
             </ul>
@@ -69,9 +74,9 @@ export function DeleteDialog({
             data-testid="delete-cancel"
             onClick={onCancel}
           >
-            Cancel
+            {t('actions.cancel')}
           </button>
-          <Tooltip text="Keep them as drawn geometry, where they are now, no longer following anything">
+          <Tooltip text={t('deleteDialog.freezeTooltip')}>
             <button
               type="button"
               className="tool"
@@ -79,7 +84,7 @@ export function DeleteDialog({
               disabled={freezable === 0}
               onClick={() => onResolve('freeze-dependents')}
             >
-              Keep {freezable} frozen
+              {t('deleteDialog.freeze', { count: freezable })}
             </button>
           </Tooltip>
           <button
@@ -88,7 +93,7 @@ export function DeleteDialog({
             data-testid="delete-all"
             onClick={() => onResolve('delete-dependents')}
           >
-            Delete all
+            {t('deleteDialog.deleteAll')}
           </button>
         </div>
       </div>
@@ -97,13 +102,11 @@ export function DeleteDialog({
 }
 
 /** What happens to one dependent under each choice, in a few words. */
-function noteFor(dependent: PlannedDependent): string {
-  if (dependent.freezable) return 'can be kept as drawn geometry';
-  if (dependent.direct && dependent.kind === 'stitch-hole-set') {
-    return 'holes cannot exist without their line, so these go either way';
-  }
-  if (dependent.direct) return 'has no geometry to keep, so it goes either way';
-  return 'goes with what it follows, unless that is kept';
+function noteFor(dependent: PlannedDependent, t: Translate): string {
+  if (dependent.freezable) return t('deleteDialog.note.freezable');
+  if (dependent.direct && dependent.kind === 'stitch-hole-set') return t('deleteDialog.note.holes');
+  if (dependent.direct) return t('deleteDialog.note.direct');
+  return t('deleteDialog.note.indirect');
 }
 
 function groupByPart(

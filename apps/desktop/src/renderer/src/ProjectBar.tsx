@@ -1,13 +1,15 @@
 import { setProjectName, type DocumentStore } from '@leathercad/document';
 import type { Project } from '@leathercad/domain';
 import type { RecentFile } from '@leathercad/platform';
-import { describeSheets } from '@leathercad/export';
 import { ChevronDown, CircleHelp, Settings } from 'lucide-react';
 
+import type { Translate } from '../../shared/i18n.js';
+import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { MenuButton } from './Menu.js';
 import { helpMenu, projectMenu } from './menus.js';
 import { SheetIndicator } from './SheetIndicator.js';
+import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
 import { Tooltip } from './Tooltip.js';
 
@@ -57,6 +59,7 @@ export function ProjectBar({
   onSave: () => void;
   onExport: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <header className="project-bar" data-testid="project-bar">
       {/* The product's name is the window title's and the icon's to carry;
@@ -64,26 +67,27 @@ export function ProjectBar({
       <h1 className="visually-hidden">LeatherCAD</h1>
       <div className="project-identity">
         <MenuButton
-          label="Project menu"
-          tooltip="New, open, save as, and recent projects"
+          label={t('projectBar.projectMenu')}
+          tooltip={t('projectBar.projectMenuTooltip')}
           testId="project-menu"
           className="tool quiet project-menu-button"
           entries={projectMenu(
             { newProject: onNew, open: onOpen, saveAs: onSaveAs, openRecent: onOpenRecent },
             recent,
+            t,
           )}
           onOpen={onProjectMenuOpen}
         >
           <ProjectMark />
           <Icon of={ChevronDown} size={12} />
         </MenuButton>
-        <Tooltip text="Project name — used for the file name and the PDF footer">
+        <Tooltip text={t('projectBar.nameTooltip')}>
           <input
             className="project-name"
             data-testid="project-name"
-            aria-label="Project name"
+            aria-label={t('projectBar.name')}
             value={project.name}
-            placeholder="Untitled"
+            placeholder={t('app.untitled')}
             onChange={(event) => store.dispatch(setProjectName(event.target.value))}
           />
         </Tooltip>
@@ -93,19 +97,19 @@ export function ProjectBar({
           data-testid="save-state"
           aria-live="polite"
         >
-          {dirty ? 'Unsaved changes' : saved ? 'Saved' : ''}
+          {dirty ? t('projectBar.unsaved') : saved ? t('projectBar.saved') : ''}
         </span>
-        <Tooltip text="Save (Ctrl+S) · Save as (Ctrl+Shift+S)">
+        <Tooltip text={t('projectBar.saveTooltip')}>
           <button type="button" className="tool" data-testid="save" onClick={onSave}>
-            Save
+            {t('actions.save')}
           </button>
         </Tooltip>
       </div>
 
-      <div className="project-output" role="group" aria-label="Output">
+      <div className="project-output" role="group" aria-label={t('projectBar.output')}>
         <SheetIndicator project={project} store={store} />
         <Tooltip
-          text={`Export ${describeSheets(sheetPlanFor(project))} as a print-ready PDF at 1:1 (Ctrl+E)`}
+          text={t('projectBar.exportTooltip', { sheets: describeSheets(sheetPlanFor(project), t) })}
         >
           <button
             type="button"
@@ -113,30 +117,30 @@ export function ProjectBar({
             data-testid="export-pdf"
             onClick={onExport}
           >
-            Export PDF
+            {t('projectBar.exportPdf')}
           </button>
         </Tooltip>
       </div>
 
       {/* Past the rule is the application, not this project (8.7). */}
-      <div className="project-app" role="group" aria-label="Application">
-        <Tooltip text="Settings (Ctrl+,)">
+      <div className="project-app" role="group" aria-label={t('projectBar.application')}>
+        <Tooltip text={t('projectBar.settingsTooltip')}>
           <button
             type="button"
             className="tool quiet icon-only"
             data-testid="settings"
-            aria-label="Settings"
+            aria-label={t('projectBar.settings')}
             onClick={onSettings}
           >
             <Icon of={Settings} />
           </button>
         </Tooltip>
         <MenuButton
-          label="Help"
+          label={t('projectBar.help')}
           testId="help-menu"
           className="tool quiet icon-only"
           align="end"
-          entries={helpMenu({ openSample: onOpenSample, about: onAbout })}
+          entries={helpMenu({ openSample: onOpenSample, about: onAbout }, t)}
         >
           <Icon of={CircleHelp} />
         </MenuButton>
@@ -181,7 +185,7 @@ function ProjectMark() {
 }
 
 /** `LeatherCAD print test — LeatherCAD`, with a leading dot while there is unsaved work. */
-export function windowTitle(project: Project, dirty: boolean): string {
-  const name = project.name.trim() === '' ? 'Untitled' : project.name.trim();
-  return `${dirty ? '• ' : ''}${name} — LeatherCAD`;
+export function windowTitle(project: Project, dirty: boolean, t: Translate): string {
+  const name = project.name.trim() === '' ? t('app.untitled') : project.name.trim();
+  return t(dirty ? 'app.windowTitleUnsaved' : 'app.windowTitle', { name });
 }

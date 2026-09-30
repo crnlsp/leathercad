@@ -34,6 +34,12 @@ pnpm dev            # runs the app, with hot reload
 The layering in [`docs/architecture.md`](docs/architecture.md) §2 is enforced by `pnpm depcruise`: a
 violation fails the build, deliberately.
 
+**Translating?** You need none of the rest of this page beyond setting up: the
+[README's Translations section](README.md#translations) is the whole path, and
+`pnpm test locales` checks your file. **Adding words to the interface?** They go in
+`apps/desktop/src/locales/en.json` and reach the screen through `t()` — never in the component, and
+never in a package below the app ([ADR 0018](docs/adr/0018-interface-language.md)).
+
 ## Branches
 
 - **`main` is production.** What is on it is what is released. Nothing is pushed to it directly;

@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -13,8 +13,11 @@ import { launchApp } from './launchApp.js';
  * next, which is what a restart is.
  */
 
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
+async function launch(
+  configHome: string,
+  env: Readonly<Record<string, string>> = {},
+): Promise<{ app: ElectronApplication; window: Page }> {
+  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome, ...env } });
   const window = await app.firstWindow();
   window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
   await window.waitForLoadState('domcontentloaded');
@@ -229,5 +232,56 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
     await expect(window.getByTestId('feature-count')).toHaveText('1');
   } finally {
     await closeApp(app);
+  }
+});
+
+test('the interface language follows the system, or keeps the one chosen, at once and after a restart (ADR 0018)', async () => {
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-language-'));
+  // A French system, on Linux: a language LeatherCAD does not ship yet.
+  const french = { LANGUAGE: 'fr_FR', LC_ALL: 'fr_FR.UTF-8', LANG: 'fr_FR.UTF-8' };
+
+  const first = await launch(configHome, french);
+  try {
+    const system = await first.app.evaluate(({ app }) => app.getPreferredSystemLanguages());
+    await first.window.getByTestId('settings').click();
+    await first.window.getByTestId('settings-tab-language').click();
+    const choice = first.window.getByTestId('setting-language');
+
+    await expect(choice).toHaveValue('system');
+    await expect(choice.locator('option').first()).toHaveText('Follow system (English)');
+    await expect(choice.locator('option[value="en"]')).toHaveText('English');
+    // Linux takes the system's languages from the environment; Windows and
+    // macOS from their settings, which a test does not change.
+    if (process.platform === 'linux') {
+      expect(system[0]).toBe('fr-FR');
+      await expect(first.window.getByTestId('language-unavailable')).toHaveText(
+        'Your system’s language, French, is not available yet, so LeatherCAD is in English.',
+      );
+    }
+    await expect(first.window.locator('html')).toHaveAttribute('lang', /^en/);
+    await expect(
+      first.window.getByRole('link', { name: 'Help translate it into your language' }),
+    ).toHaveAttribute('href', 'https://github.com/crnlsp/leathercad#translations');
+
+    // Applied at once, and kept: nothing to save, nothing to cancel.
+    await choice.selectOption('en');
+    await expect(choice).toHaveValue('en');
+    await expect(first.window.getByTestId('language-unavailable')).toHaveCount(0);
+    await expect
+      .poll(() =>
+        JSON.parse(readFileSync(join(configHome, 'leathercad', 'preferences.json'), 'utf8')),
+      )
+      .toMatchObject({ language: 'en' });
+  } finally {
+    await closeApp(first.app);
+  }
+
+  const second = await launch(configHome, french);
+  try {
+    await second.window.getByTestId('settings').click();
+    await second.window.getByTestId('settings-tab-language').click();
+    await expect(second.window.getByTestId('setting-language')).toHaveValue('en');
+  } finally {
+    await closeApp(second.app);
   }
 });

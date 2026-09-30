@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import iconUrl from '../../../build/icon.svg';
+import { useI18n } from './i18n.js';
 import { getPlatformHost } from './platformBridge.js';
 
 /**
@@ -9,6 +10,7 @@ import { getPlatformHost } from './platformBridge.js';
  * picture, not chrome, so this is the one place in the window it appears.
  */
 export function AboutDialog({ version, onClose }: { version: string | null; onClose: () => void }) {
+  const { t } = useI18n();
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -33,20 +35,17 @@ export function AboutDialog({ version, onClose }: { version: string | null; onCl
           <img src={iconUrl} width={64} height={64} alt="" />
           <div>
             <h3 id="about-dialog-title">LeatherCAD</h3>
-            <p data-testid="about-version">Version {version ?? '…'}</p>
+            <p data-testid="about-version">{t('about.version', { version: version ?? '…' })}</p>
           </div>
         </div>
-        <p>
-          Leathercraft patterns that print at exact 1:1 scale. Free and open source under the Apache
-          License 2.0.
-        </p>
+        <p>{t('about.blurb')}</p>
         {/* An https link: the window-open handler sends it to the browser. */}
         <p>
           <a href="https://github.com/crnlsp/leathercad" target="_blank" rel="noreferrer">
-            Source code on GitHub
+            {t('about.source')}
           </a>
         </p>
-        <p className="dialog-note">Reporting a problem? Attach the log.</p>
+        <p className="dialog-note">{t('about.reporting')}</p>
         <div className="dialog-actions">
           <button
             type="button"
@@ -54,7 +53,7 @@ export function AboutDialog({ version, onClose }: { version: string | null; onCl
             data-testid="about-log-folder"
             onClick={() => void host.showLogFolder().catch(() => undefined)}
           >
-            Show log folder
+            {t('about.logFolder')}
           </button>
           <button
             type="button"
@@ -62,7 +61,7 @@ export function AboutDialog({ version, onClose }: { version: string | null; onCl
             data-testid="about-notices"
             onClick={() => void host.openNotices().catch(() => undefined)}
           >
-            Third-party notices
+            {t('about.notices')}
           </button>
           <button
             ref={closeRef}
@@ -71,7 +70,7 @@ export function AboutDialog({ version, onClose }: { version: string | null; onCl
             data-testid="about-close"
             onClick={onClose}
           >
-            Close
+            {t('actions.close')}
           </button>
         </div>
       </div>

@@ -82,7 +82,7 @@ export function createSelectTool(): Tool {
       if (state.kind === 'maybe-move') {
         if (!isDrag(ctx, state.startMm, event.at)) return;
         const { document, selection } = ctx.store.getState();
-        ctx.store.begin('Move');
+        ctx.store.begin({ action: 'move' });
         // A piece's outline carries the piece (Q30), hidden features and all.
         const { features } = pieceScope(document.project, [...selection.features]);
         state = { kind: 'moving', startMm: state.startMm, moving: features, refusal: null };

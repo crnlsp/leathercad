@@ -26,7 +26,7 @@ const PANEL = 'part-1' as Ulid;
 function storeWithPanel(settings = DEFAULT_SETTINGS) {
   const store = new DocumentStore(emptyDocument('doc' as Ulid));
   store.dispatch({
-    label: 'Set up',
+    label: { action: 'transform' },
     apply: (document) => ({
       project: {
         ...document.project,

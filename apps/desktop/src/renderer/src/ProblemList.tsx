@@ -1,10 +1,7 @@
-import {
-  describeProblem,
-  problemKey,
-  problemTitle,
-  type Diagnostic,
-  type Project,
-} from '@leathercad/domain';
+import { problemKey, type Diagnostic, type Project } from '@leathercad/domain';
+
+import { useI18n } from './i18n.js';
+import { describeProblem, problemTitle } from './problemText.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import { MarkOf } from './icons/marks.js';
 
@@ -31,6 +28,7 @@ export function ProblemRows({
   /** Whether to name the part and feature. Off in the property panel, which already has. */
   showWhere?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <>
       {diagnostics.map((diagnostic) => {
@@ -47,7 +45,7 @@ export function ProblemRows({
             <span className={`problem-mark severity-${diagnostic.severity}`} aria-hidden="true" />
             <SeverityGlyph severity={diagnostic.severity} />
             <span className="problem-text">
-              <span className="problem-title">{problemTitle(diagnostic.problem.code)}</span>
+              <span className="problem-title">{problemTitle(diagnostic.problem.code, t)}</span>
               {showWhere && where !== null && (
                 <span className="problem-where">
                   {/* The feature it is about, named by the mark the tree uses. */}
@@ -55,7 +53,7 @@ export function ProblemRows({
                   {where}
                 </span>
               )}
-              <span className="problem-message">{describeProblem(diagnostic.problem)}</span>
+              <span className="problem-message">{describeProblem(diagnostic.problem, t)}</span>
             </span>
           </>
         );

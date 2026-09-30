@@ -35,7 +35,7 @@ function chain(): Document {
   };
 
   apply({
-    label: 'seed',
+    label: { action: 'transform' },
     apply: (d) => ({
       project: {
         ...d.project,
@@ -191,8 +191,8 @@ describe('setFeatureLocked', () => {
   it('locks and unlocks, and says so in the undo menu', () => {
     const document = chain();
 
-    expect(setFeatureLocked([CUT], true).label).toBe('Lock');
-    expect(setFeatureLocked([CUT], false).label).toBe('Unlock');
+    expect(setFeatureLocked([CUT], true).label).toEqual({ action: 'lock', count: 1 });
+    expect(setFeatureLocked([CUT], false).label).toEqual({ action: 'unlock', count: 1 });
     expect(featureIn(setFeatureLocked([CUT], true).apply(document).project, CUT)?.locked).toBe(
       true,
     );
@@ -218,8 +218,14 @@ describe('locking and hiding several features at once (8.8)', () => {
     expect(featureIn(locked.project, CUT)?.locked).toBe(true);
     expect(featureIn(locked.project, 'mark-1')?.locked).toBe(true);
     expect(featureIn(locked.project, 'stitch-1')?.locked).toBe(false);
-    expect(setFeatureLocked([CUT, 'mark-1' as FeatureId], true).label).toBe('Lock 2 features');
-    expect(setFeatureVisible([CUT, 'mark-1' as FeatureId], false).label).toBe('Hide 2 features');
+    expect(setFeatureLocked([CUT, 'mark-1' as FeatureId], true).label).toEqual({
+      action: 'lock',
+      count: 2,
+    });
+    expect(setFeatureVisible([CUT, 'mark-1' as FeatureId], false).label).toEqual({
+      action: 'hide',
+      count: 2,
+    });
   });
 
   it('changes exactly the features named, to exactly the value asked, and nothing else', () => {

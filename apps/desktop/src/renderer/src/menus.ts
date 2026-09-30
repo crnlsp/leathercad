@@ -1,6 +1,8 @@
 import type { RecentFile } from '@leathercad/platform';
 import type { LucideIcon } from 'lucide-react';
 
+import type { Translate } from '../../shared/i18n.js';
+
 /**
  * What a menu holds (8.7), as data: the Project and Help menus, a part's
  * actions, and 8.8's right-click menu are lists of these, drawn by
@@ -93,28 +95,35 @@ export function projectMenu(
     readonly openRecent: (path: string) => void;
   },
   recent: readonly RecentFile[],
+  t: Translate,
 ): MenuEntry[] {
   return [
     {
       kind: 'item',
       id: 'new',
-      label: 'New project',
+      label: t('menu.new'),
       keys: 'CmdOrCtrl+N',
       onChoose: actions.newProject,
     },
-    { kind: 'item', id: 'open', label: 'Open…', keys: 'CmdOrCtrl+O', onChoose: actions.open },
+    {
+      kind: 'item',
+      id: 'open',
+      label: t('menu.open'),
+      keys: 'CmdOrCtrl+O',
+      onChoose: actions.open,
+    },
     {
       kind: 'item',
       id: 'save-as',
-      label: 'Save as…',
+      label: t('menu.saveAs'),
       keys: 'CmdOrCtrl+Shift+S',
       onChoose: actions.saveAs,
     },
     { kind: 'separator' },
     {
       kind: 'group',
-      label: 'Recent projects',
-      empty: 'Projects you open or save appear here.',
+      label: t('menu.recent'),
+      empty: t('menu.recentEmpty'),
       items: recent.map((file, index) => {
         const { name, folder } = recentParts(file.shown);
         return {
@@ -133,19 +142,22 @@ export function projectMenu(
  * is Settings'. The sample is here because it is the app's tutorial by design
  * (8.3): a finished pattern to take apart.
  */
-export function helpMenu(actions: {
-  readonly openSample: () => void;
-  readonly about: () => void;
-}): MenuEntry[] {
+export function helpMenu(
+  actions: {
+    readonly openSample: () => void;
+    readonly about: () => void;
+  },
+  t: Translate,
+): MenuEntry[] {
   return [
     {
       kind: 'item',
       id: 'help-open-sample',
-      label: 'Open sample project',
+      label: t('menu.openSample'),
       onChoose: actions.openSample,
     },
     { kind: 'separator' },
-    { kind: 'item', id: 'help-about', label: 'About LeatherCAD', onChoose: actions.about },
+    { kind: 'item', id: 'help-about', label: t('menu.about'), onChoose: actions.about },
   ];
 }
 

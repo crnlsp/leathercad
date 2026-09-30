@@ -10,13 +10,7 @@ import {
   type FlipAxis,
   type Selection,
 } from '@leathercad/document';
-import {
-  describeProblem,
-  type FeatureId,
-  type PartId,
-  type Problem,
-  type Project,
-} from '@leathercad/domain';
+import type { FeatureId, PartId, Problem, Project } from '@leathercad/domain';
 import {
   Copy,
   Eye,
@@ -28,7 +22,9 @@ import {
   Trash2,
 } from 'lucide-react';
 
+import type { I18n, Translate } from '../../shared/i18n.js';
 import type { MenuEntry } from './menus.js';
+import { describeProblem } from './problemText.js';
 
 /** What was right-clicked: a feature, on the board or its Parts row, or a part's heading. */
 export type RightClicked =
@@ -66,6 +62,7 @@ export interface SelectionActions {
  * every feature in it.
  */
 export function selectionMenu(
+  { t }: I18n,
   project: Project,
   selection: Selection,
   actions: SelectionActions,
@@ -81,7 +78,7 @@ export function selectionMenu(
     .filter((feature) => wholeParts || selection.features.has(feature.id));
   const ids = features.map((feature) => feature.id);
 
-  const empty = features.length === 0 ? 'The part is empty' : undefined;
+  const empty = features.length === 0 ? t('contextMenu.emptyPart') : undefined;
   // Mixed is not all: a half-locked selection is offered Lock, as other
   // editors do, and Unlock only once every piece of it is locked.
   const allLocked = features.length > 0 && features.every((feature) => feature.locked);
@@ -90,9 +87,9 @@ export function selectionMenu(
   const flip = (axis: FlipAxis): MenuEntry => ({
     kind: 'item',
     id: `context-flip-${axis}`,
-    label: axis === 'horizontal' ? 'Flip horizontal' : 'Flip vertical',
+    label: t(`contextMenu.flip.${axis}`),
     icon: axis === 'horizontal' ? FlipHorizontal2 : FlipVertical2,
-    refusal: empty ?? reason(flipRefusal(project, ids, axis)),
+    refusal: empty ?? reason(flipRefusal(project, ids, axis), t),
     onChoose: () => actions.dispatch(flipFeatures(ids, axis)),
   });
 
@@ -100,12 +97,10 @@ export function selectionMenu(
     {
       kind: 'item',
       id: 'context-duplicate-part',
-      label: 'Duplicate part',
+      label: t('actions.duplicatePart'),
       icon: Copy,
       refusal:
-        parts.length === 1
-          ? undefined
-          : `The selection is in ${String(parts.length)} parts; duplicate one at a time`,
+        parts.length === 1 ? undefined : t('contextMenu.spansParts', { count: parts.length }),
       onChoose: () => actions.duplicatePart(parts[0]!.id),
     },
     { kind: 'separator' },
@@ -115,7 +110,7 @@ export function selectionMenu(
     {
       kind: 'item',
       id: 'context-lock',
-      label: allLocked ? 'Unlock' : 'Lock',
+      label: allLocked ? t('actions.unlock') : t('actions.lock'),
       icon: allLocked ? LockOpen : Lock,
       refusal: empty,
       onChoose: () => actions.dispatch(setFeatureLocked(ids, !allLocked)),
@@ -123,11 +118,11 @@ export function selectionMenu(
     {
       kind: 'item',
       id: 'context-visible',
-      label: allHidden ? 'Show' : 'Hide',
+      label: allHidden ? t('actions.show') : t('actions.hide'),
       icon: allHidden ? Eye : EyeOff,
       // The print leaves out what the board hides: said before, not found
       // on the paper.
-      ...(allHidden ? {} : { note: 'Also left off the PDF until shown again' }),
+      ...(allHidden ? {} : { note: t('contextMenu.hideNote') }),
       refusal: empty,
       onChoose: () => actions.dispatch(setFeatureVisible(ids, allHidden)),
     },
@@ -135,15 +130,15 @@ export function selectionMenu(
     {
       kind: 'item',
       id: 'context-delete',
-      label: wholeParts ? 'Delete part' : 'Delete',
+      label: wholeParts ? t('actions.deletePart') : t('actions.delete'),
       icon: Trash2,
       danger: true,
-      refusal: reason(deleteRefusal(project, ids)),
+      refusal: reason(deleteRefusal(project, ids), t),
       onChoose: () => (wholeParts ? actions.deletePart(parts[0]!.id) : actions.deleteFeatures(ids)),
     },
   ];
 }
 
-function reason(problem: Problem | null): string | undefined {
-  return problem === null ? undefined : describeProblem(problem);
+function reason(problem: Problem | null, t: Translate): string | undefined {
+  return problem === null ? undefined : describeProblem(problem, t);
 }

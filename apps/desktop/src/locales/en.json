@@ -1,0 +1,868 @@
+{
+  "app": {
+    "untitled": "Untitled",
+    "windowTitle": "{{name}} — LeatherCAD",
+    "windowTitleUnsaved": "• {{name}} — LeatherCAD",
+    "drawing": "Drawing"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "deletePart": "Delete part",
+    "duplicate": "Duplicate",
+    "duplicatePart": "Duplicate part",
+    "hide": "Hide",
+    "lock": "Lock",
+    "save": "Save",
+    "show": "Show",
+    "unlock": "Unlock"
+  },
+  "keys": {
+    "Alt": "Alt",
+    "Backspace": "Backspace",
+    "Ctrl": "Ctrl",
+    "Delete": "Delete",
+    "Enter": "Enter",
+    "Escape": "Escape",
+    "Menu": "Menu",
+    "Middle-drag": "Middle-drag",
+    "Scroll": "Scroll",
+    "Shift": "Shift",
+    "drag": "drag"
+  },
+  "projectBar": {
+    "application": "Application",
+    "exportPdf": "Export PDF",
+    "exportTooltip": "Export {{sheets}} as a print-ready PDF at 1:1 (Ctrl+E)",
+    "help": "Help",
+    "name": "Project name",
+    "nameTooltip": "Project name — used for the file name and the PDF footer",
+    "output": "Output",
+    "projectMenu": "Project menu",
+    "projectMenuTooltip": "New, open, save as, and recent projects",
+    "saveTooltip": "Save (Ctrl+S) · Save as (Ctrl+Shift+S)",
+    "saved": "Saved",
+    "settings": "Settings",
+    "settingsTooltip": "Settings (Ctrl+,)",
+    "unsaved": "Unsaved changes"
+  },
+  "menu": {
+    "about": "About LeatherCAD",
+    "new": "New project",
+    "open": "Open…",
+    "openSample": "Open sample project",
+    "recent": "Recent projects",
+    "recentEmpty": "Projects you open or save appear here.",
+    "saveAs": "Save as…",
+    "settings": "Settings…"
+  },
+  "macMenu": {
+    "edit": "Edit",
+    "redo": "Redo",
+    "undo": "Undo"
+  },
+  "work": {
+    "howTo": "{{howTo}} · scroll zooms · middle-drag pans",
+    "redo": "Redo",
+    "region": "Work",
+    "undo": "Undo",
+    "undoTooltip": "Undo {{action}}"
+  },
+  "status": {
+    "features_one": "feature",
+    "features_other": "features",
+    "parts": "Parts",
+    "partsCount_one": "part",
+    "partsCount_other": "parts",
+    "problems_one": "problem",
+    "problems_other": "problems",
+    "properties": "Properties",
+    "selected": "selected",
+    "sheetOf": "Sheet {{number}} of {{count}}"
+  },
+  "view": {
+    "design": "Design",
+    "designTooltip": "Design the pieces (Ctrl+1)",
+    "label": "View",
+    "sheets": "Sheets",
+    "sheetsTooltip": "See the pieces on the sheets they will print on (Ctrl+2)"
+  },
+  "tools": {
+    "collapsedTooltip": "{{name}} ({{key}}) — {{howTo}}",
+    "hideNames": "Hide tool names",
+    "label": "Tools",
+    "showNames": "Show tool names",
+    "group": {
+      "draw": "Draw",
+      "modify": "Modify",
+      "place": "Place"
+    },
+    "arc": {
+      "howTo": "Click the start, the end, then a point the arc passes through",
+      "name": "Arc"
+    },
+    "circle": {
+      "howTo": "Drag out from the centre, or click the centre and then the rim",
+      "name": "Circle"
+    },
+    "hardware": {
+      "howTo": "Click to punch a hole in the selected part, at the size chosen above",
+      "name": "Hardware"
+    },
+    "line": {
+      "howTo": "Drag end to end, or click both ends · Shift holds 15° steps",
+      "name": "Line"
+    },
+    "measure": {
+      "howTo": "Click two corners to dimension the distance between them",
+      "name": "Measure"
+    },
+    "points": {
+      "howTo": "Drag a point of the selected drawn path to move it · press an edge to add one · Del removes the point last pressed · R rounds that corner, or sharpens a rounded one",
+      "name": "Edit Points"
+    },
+    "polyline": {
+      "howTo": "Click each point · A arcs the next segment: click its end, then a point on it · L goes straight · click the first to close · Enter finishes · Backspace takes one back",
+      "name": "Polyline"
+    },
+    "rectangle": {
+      "howTo": "Drag corner to corner, or click both corners · Shift keeps it square",
+      "name": "Rectangle"
+    },
+    "rotate": {
+      "howTo": "Drag around the selection to turn it about its centre",
+      "name": "Rotate"
+    },
+    "scale": {
+      "howTo": "Drag to resize the selection about its centre · Shift holds the proportions",
+      "name": "Scale"
+    },
+    "select": {
+      "howTo": "Click to select · Shift-click adds or removes · drag on empty space to box-select · drag a selection to move it · Del removes",
+      "name": "Select"
+    },
+    "text": {
+      "howTo": "Click to place a label on the selected part, then type it in the panel",
+      "name": "Text"
+    }
+  },
+  "toolOptions": {
+    "cornerRadius": "Corner radius",
+    "drawAs": "Draw as",
+    "for": "For",
+    "punch": "Punch"
+  },
+  "drawMode": {
+    "cut-out": "Cut-out",
+    "fold": "Fold",
+    "marking": "Marking",
+    "outline": "Outline",
+    "stitch": "Stitch",
+    "stitch-allowance": "Stitch + allowance"
+  },
+  "shortcuts": {
+    "or": "or",
+    "group": {
+      "drawing": "While drawing",
+      "edit": "Edit",
+      "editingPoints": "While editing points",
+      "file": "File",
+      "tools": "Tools",
+      "view": "View",
+      "window": "Window"
+    },
+    "arcOrStraight": "Polyline: the next segment is an arc, or straight",
+    "cancel": "Cancel what the tool is doing, or clear the selection",
+    "contextMenu": "The menu of what is selected, as a right-click opens it",
+    "delete": "Delete what is selected (Select tool)",
+    "design": "Design: the board you draw on",
+    "exportPdf": "Export PDF",
+    "finishPolyline": "Finish a polyline",
+    "fit": "Fit the pattern in the window",
+    "fullScreen": "Full screen",
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "newProject": "New project",
+    "openProject": "Open a project",
+    "pan": "Pan",
+    "quit": "Quit",
+    "redo": "Redo",
+    "removePoint": "Remove the point last pressed",
+    "roundCorner": "Round the corner last pressed to the corner radius, or sharpen a rounded one",
+    "save": "Save",
+    "saveAs": "Save as",
+    "settings": "Settings",
+    "sheets": "Sheets: the paper it prints on",
+    "square": "Keep a rectangle square; hold a line to 15° steps",
+    "takeBack": "Take back a polyline’s or an arc’s last point",
+    "undo": "Undo",
+    "zoom": "Zoom about the pointer",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
+  },
+  "settings": {
+    "close": "Close settings",
+    "sections": "Sections",
+    "title": "Settings",
+    "section": {
+      "appearance": "Appearance",
+      "general": "General",
+      "language": "Language",
+      "shortcuts": "Keyboard shortcuts"
+    },
+    "recent": {
+      "clear": "Clear list",
+      "count_one": "{{count}} is listed now.",
+      "count_other": "{{count}} are listed now.",
+      "name": "Recent projects",
+      "none": "None are listed now.",
+      "note": "The Project menu lists the projects you opened or saved most recently."
+    },
+    "legend": {
+      "name": "Name the marks in the canvas legend",
+      "note": "Off, the legend is a strip of marks until you open it."
+    },
+    "toolNames": {
+      "name": "Show tool names in the rail",
+      "note": "Off, each tool shows only its key. Below 1200 px wide the rail shows only keys anyway."
+    },
+    "language": {
+      "invite": "LeatherCAD is translated by the people who use it. {{link}}",
+      "inviteLink": "Help translate it into your language",
+      "name": "Display language",
+      "note": "The words in menus, panels and messages. A project is the same in every language.",
+      "system": "Follow system ({{language}})",
+      "unavailable": "Your system’s language, {{language}}, is not available yet, so LeatherCAD is in {{fallback}}.",
+      "option": "{{own}} — {{here}}"
+    }
+  },
+  "about": {
+    "blurb": "Leathercraft patterns that print at exact 1:1 scale. Free and open source under the Apache License 2.0.",
+    "logFolder": "Show log folder",
+    "notices": "Third-party notices",
+    "reporting": "Reporting a problem? Attach the log.",
+    "source": "Source code on GitHub",
+    "version": "Version {{version}}"
+  },
+  "recovery": {
+    "decline": "Not now",
+    "detail": "Unsaved work on “{{name}}” was kept at {{when}}. Recovering opens it as a new, unsaved project; the file it came from is not changed.",
+    "recover": "Recover",
+    "title": "LeatherCAD did not close properly"
+  },
+  "unsaved": {
+    "discard": "Don’t save",
+    "title": "Save changes to “{{name}}”?",
+    "consequence": {
+      "close": "If you close without saving, your changes are lost.",
+      "new": "Starting a new project replaces this one, and your changes are lost.",
+      "open": "Opening another project replaces this one, and your changes are lost."
+    }
+  },
+  "deleteDialog": {
+    "deleteAll": "Delete all",
+    "features_one": "{{count}} feature",
+    "features_other": "{{count}} features",
+    "follow": "These follow what you are deleting:",
+    "freeze_one": "Keep {{count}} frozen",
+    "freeze_other": "Keep {{count}} frozen",
+    "freezeTooltip": "Keep them as drawn geometry, where they are now, no longer following anything",
+    "thisPart": "this part",
+    "title": "Delete {{what}}?",
+    "note": {
+      "direct": "has no geometry to keep, so it goes either way",
+      "freezable": "can be kept as drawn geometry",
+      "holes": "holes cannot exist without their line, so these go either way",
+      "indirect": "goes with what it follows, unless that is kept"
+    }
+  },
+  "file": {
+    "exportTitle": "Export PDF",
+    "invalid": "document.json is not valid: {{problems}}",
+    "newer": "This file was saved by a newer version of LeatherCAD. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
+    "newerNamed": "This file was saved by LeatherCAD {{version}}, a newer version than this one. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
+    "openTitle": "Open project",
+    "pdf": "PDF",
+    "project": "LeatherCAD project",
+    "saveTitle": "Save project"
+  },
+  "main": {
+    "noticesTitle": "Third-Party Notices",
+    "noticesInDevelopment": "Third-party notices are written by a production build (pnpm build).",
+    "recentGone": "That project is no longer there",
+    "recentGoneDetail": "{{path}}\n\nIt was moved, renamed or deleted, so it has been taken off the recent projects."
+  },
+  "hardware": {
+    "eyelet": "Eyelet",
+    "other": "Other",
+    "rivet": "Rivet",
+    "screw": "Screw",
+    "snap": "Snap"
+  },
+  "sheets": {
+    "choiceTaped": "{{sheets}} ({{taped}})",
+    "count_one": "{{count}} sheet of {{paper}}, {{orientation}}",
+    "count_other": "{{count}} sheets of {{paper}}, {{orientation}}",
+    "failedNotPrinted_one": "{{count}} feature with a problem isn't printed.",
+    "failedNotPrinted_other": "{{count}} features with problems aren't printed.",
+    "paper": "Paper",
+    "paperAndSheets": "Paper and sheets",
+    "partNotPrinted": "{{name}} isn't printed.",
+    "partsNotPrinted_one": "{{count}} part isn't printed.",
+    "partsNotPrinted_other": "{{count}} parts aren't printed.",
+    "physical": "{{paper}}, {{width}} × {{height}} mm. Prints up to {{printWidth}} × {{printHeight}} mm per sheet: the rest is margins and the scale check. Printed at 1:1, never scaled to fit.",
+    "scaleCheckOnly": "{{sheets}}, scale check only",
+    "summary": "{{sheets}}.",
+    "taped": "{{names}} taped",
+    "tapedPieces_one": "{{count}} piece taped",
+    "tapedPieces_other": "{{count}} pieces taped",
+    "orientation": {
+      "landscape": "landscape",
+      "portrait": "portrait"
+    },
+    "placedForYou": "LeatherCAD places pieces on sheets for you. Choose another paper to change the layout."
+  },
+  "sheetNumbers": {
+    "list": "Sheets {{numbers}}",
+    "one": "Sheet {{number}}",
+    "range": "Sheets {{first}}–{{last}}"
+  },
+  "tapedAcross": {
+    "list": "{{name}} is taped across sheets {{numbers}}.",
+    "one": "{{name}} is taped across sheet {{number}}.",
+    "range": "{{name}} is taped across sheets {{first}}–{{last}}."
+  },
+  "print": {
+    "failed_one": "{{count}} feature with a problem",
+    "failed_other": "{{count}} features with problems",
+    "hidden_one": "{{count}} hidden feature",
+    "hidden_other": "{{count}} hidden features",
+    "leftOff_one": "{{features}} isn't printed.",
+    "leftOff_other": "{{features}} aren't printed.",
+    "notPrinted": "Not printed",
+    "taped": "{{sheets}}, taped",
+    "reason": {
+      "hidden": "It is hidden.",
+      "nothing-drawn": "Nothing is drawn in it.",
+      "nothing-to-cut": "It has only words, no lines to cut.",
+      "problems": "What is shown has problems."
+    }
+  },
+  "exportNotice": {
+    "counts": "The design has {{counts}}. The problems panel lists them; everything that built is on the paper.",
+    "errors_one": "{{count}} error",
+    "errors_other": "{{count}} errors",
+    "infos_one": "{{count}} to note",
+    "infos_other": "{{count}} to note",
+    "inPart": "in {{part}}",
+    "omitted": "— each failed to build, so the template does not have it.",
+    "omittedLead_one": "This feature is not on the paper",
+    "omittedLead_other": "These {{count}} features are not on the paper",
+    "tiled_one": "\"{{name}}\" is {{size}}, larger than {{paper}} {{orientation}}: printed on {{count}} sheet, {{rows}} × {{columns}}.",
+    "tiled_other": "\"{{name}}\" is {{size}}, larger than {{paper}} {{orientation}}: printed on {{count}} sheets, {{rows}} × {{columns}}.",
+    "tiledAcross": "at 1:1, overlapping by {{overlap}} mm. Cut one sheet on a dashed line, lay it over the next, and match the crosses.",
+    "tiledFits": "{{printed}} It fits whole on {{paper}} {{orientation}}.",
+    "tiledLead_one": "This part is printed across sheets",
+    "tiledLead_other": "These {{count}} parts are printed across sheets",
+    "tiledNoPaper": "{{printed}} No supported paper holds it whole.",
+    "titleCheck": "Exported, with something to check",
+    "titleTiled": "Exported across several sheets",
+    "warnings_one": "{{count}} warning",
+    "warnings_other": "{{count}} warnings"
+  },
+  "parts": {
+    "actions": "Actions for {{name}}",
+    "duplicateNote": "A copy beside this one, with its own stitching",
+    "empty": "No parts yet. Press R, then drag or click two corners to draw one.",
+    "emptyPart": "Empty",
+    "hidePart": "Hide part",
+    "mirrorsMark": "Mirrors the feature it nests under",
+    "remove": "Remove",
+    "sample": "Or take a finished one apart: {{link}}.",
+    "sampleLink": "open the sample wallet",
+    "showPart": "Show part",
+    "title": "Parts"
+  },
+  "featureKind": {
+    "cut-out": "Cut-out",
+    "fold-line": "Fold line",
+    "hardware-hole": "Hardware hole",
+    "marking-line": "Marking line",
+    "measurement": "Dimension",
+    "outline": "Outline",
+    "stitch-hole-set": "Stitch holes",
+    "stitch-line": "Stitch line",
+    "text-label": "Text label"
+  },
+  "properties": {
+    "addAllowance": "Add seam allowance",
+    "addAllowanceHint": "The cut edge, that far outside this seam — and it follows the seam's shape",
+    "addHoles": "Add holes",
+    "addHolesHint": "Holes along this line, at the pitch of your iron",
+    "addStitchLine": "Add stitch line",
+    "addStitchLineHint": "A stitch line that follows this edge at a fixed margin, and keeps following it",
+    "area": "Area",
+    "cut": "Cut",
+    "cutSuffix": "off",
+    "flipHeading": "Flip this piece",
+    "foldMirror": "Mirror across fold",
+    "foldMirrorHint": "A counterpart across {{fold}}, which re-mirrors whenever that fold moves",
+    "follows": "Follows",
+    "frozenNote": "Frozen from {{source}}: drawn geometry now, no longer following it.",
+    "itsOriginal": "its original",
+    "length": "Length",
+    "locked": "Locked",
+    "lockedNote": "Locked, so nothing here can be changed. Unlock it in the parts panel.",
+    "manySelected_one": "{{count}} feature selected. Editing more than one at a time comes later.",
+    "manySelected_other": "{{count}} features selected. Editing more than one at a time comes later.",
+    "measured": "Measured",
+    "measures": "Measures",
+    "mirrorFoldNote": "Mirrors {{source}} across {{fold}}. Move that fold and this follows it; move {{source}} and this stays its mirror. It cannot be dragged on its own.",
+    "mirrorHeading": "Mirror into a counterpart",
+    "mirrorLineNote": "Mirrors {{source}} across a line fixed where this was made — it does not follow {{source}} about. Moving {{source}} moves this the opposite way, and resizing it changes the gap between the two. Drag this piece to place the pair.",
+    "mirrors": "Mirrors",
+    "name": "Name",
+    "nothingSelected": "Nothing selected. Draw with R, or pick something with V.",
+    "part": "Part",
+    "perimeter": "Perimeter",
+    "problems_one": "Problem",
+    "problems_other": "Problems",
+    "reads": "Reads",
+    "title": "Properties",
+    "flip": {
+      "horizontal": "Flip ↔",
+      "vertical": "Flip ↕"
+    },
+    "flipHint": {
+      "horizontal": "Turn it over left to right, about its own centre. Nothing stays linked.",
+      "vertical": "Turn it over top to bottom, about its own centre. Nothing stays linked."
+    },
+    "mirror": {
+      "horizontal": "Mirror ↔",
+      "vertical": "Mirror ↕"
+    },
+    "mirrorHint": {
+      "counterpart": {
+        "horizontal": "A counterpart to the right, mirrored across this piece's right edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put.",
+        "vertical": "A counterpart below, mirrored across this piece's bottom edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put."
+      },
+      "piece": {
+        "horizontal": "A mirrored piece, as a new part, to the right, mirrored across this piece's right edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put.",
+        "vertical": "A mirrored piece, as a new part, below, mirrored across this piece's bottom edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put."
+      }
+    }
+  },
+  "legend": {
+    "hide": "Hide the legend",
+    "title": "Legend",
+    "tooltip": "Legend: {{names}}",
+    "names": {
+      "cut-edge": "Outline",
+      "cut-out": "Cut-out",
+      "fold-mountain": "Mountain fold",
+      "fold-valley": "Valley fold",
+      "hardware-hole": "Hardware hole",
+      "linked": "Follows or mirrors another line",
+      "marking": "Marking line",
+      "measurement": "Dimension",
+      "mirror-across-fold": "Mirror across fold",
+      "piece": "Piece",
+      "seam-allowance": "Seam allowance",
+      "stitch-holes": "Stitch holes",
+      "stitch-line": "Stitch line"
+    }
+  },
+  "problems": {
+    "withSubject": "{{name}}: {{sentence}}",
+    "severity": {
+      "error": "error",
+      "info": "info",
+      "warning": "warning"
+    },
+    "panel": {
+      "count_one": "{{count}} problem",
+      "count_other": "{{count}} problems",
+      "none": "Nothing to fix.",
+      "title": "Problems"
+    },
+    "drawing": {
+      "cut-out": "A cut-out",
+      "outline": "An outline",
+      "seam": "A seam"
+    },
+    "DUPLICATE_ID": {
+      "title": "Repeated id",
+      "description": "Two features share the id {{featureId}}."
+    },
+    "SOURCE_MISSING": {
+      "title": "Follows nothing",
+      "description": "{{featureName}} follows a feature that does not exist."
+    },
+    "FOLLOWS_ITSELF": {
+      "title": "Follows itself",
+      "description": "{{featureName}} cannot follow itself."
+    },
+    "WOULD_LOOP": {
+      "title": "Would loop",
+      "description": "{{featureName}} would end up following itself, through {{sourceName}}."
+    },
+    "CYCLE": {
+      "title": "Follows itself",
+      "description": "{{featureName}} follows a chain that leads back to itself."
+    },
+    "DERIVATION_INCOMPATIBLE": {
+      "title": "Cannot follow that",
+      "rule": {
+        "allowance-needs-closed-line": "A seam allowance needs a closed stitch line: an outline has to enclose the part.",
+        "allowance-needs-outer": "Only a part's outer outline can be derived from its stitch line, not a cut-out.",
+        "allowance-needs-outline": "Only an outline can be offset outward from a stitch line.",
+        "allowance-needs-stitch-line": "An outline can only be offset outward from a stitch line.",
+        "allowance-needs-whole-run": "A seam allowance follows the whole stitch line, so the outline it makes is closed.",
+        "holes-need-hole-set": "Only a stitch hole set can follow a stitch line at a pitch.",
+        "holes-need-stitch-line": "Holes can only follow a stitch line.",
+        "inset-needs-outline": "A stitch line can only be inset from an outline or a cut-out.",
+        "inset-needs-stitch-line": "Only a stitch line can be inset from an outline.",
+        "mirror-keeps-kind": "A counterpart is the same kind of thing as what it mirrors.",
+        "mirror-keeps-role": "A mirrored cut contour stays what it was: an outline mirrors to an outline, a cut-out to a cut-out."
+      }
+    },
+    "PART_ALREADY_HAS_OUTER": {
+      "title": "Already has an outline",
+      "description": "{{partName}} is already cut to {{outerName}}. A part is one piece of leather, so it has one outline — draw this as a cut-out, or start another part."
+    },
+    "CONTOUR_NOT_CLOSED": {
+      "title": "Does not enclose anything",
+      "inner": "{{subject}} has two ends, so there is nothing to cut out of the part. Draw it as a marking line.",
+      "innerClosable": "{{subject}} has two ends, so there is nothing to cut out of the part. Close the shape, or draw it as a marking line.",
+      "outer": "{{subject}} has two ends, so there is nothing to cut out. Draw it as a marking line.",
+      "outerClosable": "{{subject}} has two ends, so there is nothing to cut out. Close the shape, or draw it as a marking line."
+    },
+    "MEASURE_REF_MISSING": {
+      "title": "Measures nothing",
+      "description": "{{featureName}} names a place that is no longer in the drawing."
+    },
+    "MEASURE_NEEDS_ANCHOR": {
+      "title": "Nothing to measure from",
+      "description": "A dimension has to name a corner, so it keeps meaning the same place when the drawing changes. Point at one."
+    },
+    "MEASURE_ACROSS_PARTS": {
+      "title": "A dimension measures one piece",
+      "description": "That corner is on {{otherPartName}}. A dimension prints with the piece it measures, so both of its ends have to be on that piece."
+    },
+    "FOLLOWS_ANOTHER_PART": {
+      "title": "On another piece",
+      "description": "{{sourceName}} is on {{otherPartName}}, so {{featureName}} would be drawn there and print with the wrong piece. Follow something on this piece."
+    },
+    "MIRROR_FOLD_MISSING": {
+      "title": "The fold is gone",
+      "description": "{{featureName}} is mirrored across a fold that no longer exists."
+    },
+    "MIRROR_OUTLINE_ACROSS_FOLD": {
+      "title": "A piece has one edge",
+      "description": "Mirroring across a fold is for what is *inside* a piece — slots, stitching, hardware. {{partName}} already has an outline, and a piece of leather has one edge, so its contour cannot be completed this way. Draw the whole outline, or mirror the part to make a second piece."
+    },
+    "MIRROR_PLACED_BY_FOLD": {
+      "title": "Placed by its fold",
+      "description": "{{featureName}} is mirrored across {{foldName}}, so it goes where the fold puts it. Move {{foldName}}, or move {{sourceName}}."
+    },
+    "FOLD_NOT_STRAIGHT": {
+      "title": "The fold is not straight",
+      "description": "A mirror needs one line to fold about, and this fold bends. Draw it as a straight crease, or mirror across a different one."
+    },
+    "MIRROR_WOULD_SCALE": {
+      "title": "A counterpart cannot be resized",
+      "description": "{{featureName}} is a mirror of {{sourceName}}, so it is the size {{sourceName}} is. Scale {{sourceName}} and this follows."
+    },
+    "MIRROR_NO_AXIS": {
+      "title": "Nothing to mirror across",
+      "description": "Select something with a size to it, and the mirror runs along its edge."
+    },
+    "FEATURE_LOCKED": {
+      "title": "Locked",
+      "description": "{{featureName}} is locked, so it cannot be changed or deleted. Unlock it in the parts panel first."
+    },
+    "FEATURE_MISSING": {
+      "title": "No such feature",
+      "description": "That feature does not exist."
+    },
+    "NOT_A_DRAWN_PATH": {
+      "title": "No points to edit",
+      "description": "{{featureName}} is not a drawn path, so it has no points of its own. A shape is changed by its measurements, and a derived feature follows what it was made from."
+    },
+    "POINT_EDIT_DEGENERATE": {
+      "title": "Too few points",
+      "description": "That would leave {{featureName}} with too few points, or a side of no length."
+    },
+    "ROUNDING_DOES_NOT_FIT": {
+      "title": "The rounding does not fit",
+      "description": "A {{radius}} mm rounding does not fit that point of {{featureName}}: it has to be a corner between two straight sides, each longer than the rounding takes."
+    },
+    "NOT_A_ROUNDED_CORNER": {
+      "title": "Nothing to sharpen",
+      "description": "That is not a rounded corner between two straight sides of {{featureName}}, so there is no corner to sharpen it back to."
+    },
+    "CORNER_IN_USE": {
+      "title": "A corner in use",
+      "description": "{{usedByName}} is attached to that corner of {{featureName}}, and this edit would take the corner away. Change {{usedByName}} first."
+    },
+    "NOT_DERIVED": {
+      "title": "Follows nothing",
+      "description": "{{featureName}} does not follow anything, so there is nothing to re-point."
+    },
+    "DERIVED_MOVED_ALONE": {
+      "title": "Moves with its source",
+      "description": "{{featureName}} follows {{rootName}}, so it moves when {{rootName}} does. Move {{rootName}} instead."
+    },
+    "TRANSFORM_FLATTENS": {
+      "title": "Would flatten",
+      "description": "That would flatten the shape to nothing."
+    },
+    "WOULD_BECOME_ELLIPSE": {
+      "title": "Would become an ellipse",
+      "description": "A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this editor cannot represent. Scale it evenly instead."
+    },
+    "WOULD_SHEAR": {
+      "title": "Would shear",
+      "description": "A turned rectangle cannot be stretched along one axis — it would shear, and its corners would stop being square. Rotate it back to 0°, or scale it evenly."
+    },
+    "TEXT_WOULD_DISTORT": {
+      "title": "Would distort the letters",
+      "description": "Text can only be scaled evenly — stretching it along one axis would distort the letters. Hold Shift, or set the size in the panel."
+    },
+    "DIMENSION_NOT_MIRRORED": {
+      "title": "A dimension is measured, not mirrored",
+      "description": "{{featureName}} measures the drawing, so a mirrored copy would quote a number that is not the counterpart's. Mirror the shapes, then measure the counterpart."
+    },
+    "TEXT_WOULD_READ_BACKWARDS": {
+      "title": "Would read backwards",
+      "description": "A label cannot be mirrored — it would read backwards. Flip the shapes and leave the words, or retype them where you want them."
+    },
+    "NO_TARGET_PART": {
+      "title": "No part selected",
+      "cut-out": "Select a part first — a cut-out belongs to the panel it is drawn on.",
+      "label": "Select a part first — a label belongs to the panel it is drawn on.",
+      "line": "Select a part first — a fold or marking line belongs to the panel it is drawn on."
+    },
+    "TARGET_SPANS_PARTS": {
+      "title": "Selection spans parts",
+      "description": "Select one part: this belongs to a single panel, and the selection spans more than one."
+    },
+    "PARAMETER_INVALID": {
+      "title": "Unusable number",
+      "at-least": "{{featureName}}'s {{parameter}} is below {{minimum}}, the smallest that can be used. Type at least {{minimum}}.",
+      "finite": "{{featureName}}'s {{parameter}} is not a usable number. Type a value in millimetres.",
+      "non-negative": "{{featureName}}'s {{parameter}} is {{value}}, and it must not be negative.",
+      "positive": "{{featureName}}'s {{parameter}} is {{value}}, and it must be more than zero.",
+      "parameter": {
+        "allowance": "allowance",
+        "corner radius": "corner radius",
+        "end offset": "end offset",
+        "glide": "glide",
+        "height": "height",
+        "inset": "inset",
+        "mirror angle": "mirror angle",
+        "mirror axis": "mirror axis",
+        "pitch": "pitch",
+        "position": "position",
+        "radius": "radius",
+        "rotation": "rotation",
+        "start angle": "start angle",
+        "start offset": "start offset",
+        "sweep": "sweep",
+        "text size": "text size",
+        "width": "width"
+      }
+    },
+    "OFFSET_COLLAPSED": {
+      "title": "Offset collapsed",
+      "inward": "A {{distance}} mm edge margin is deeper than this edge can hold.",
+      "outward": "A {{distance}} mm allowance cannot be built outside this stitch line."
+    },
+    "OFFSET_UNSUPPORTED": {
+      "title": "Cannot offset curves",
+      "description": "{{featureName}} cannot be built: what it follows has free-form curves, and an offset cannot follow those yet."
+    },
+    "OFFSET_SPLIT": {
+      "title": "Offset came apart",
+      "description_one": "The offset for {{featureName}} came apart into {{pieces}} pieces. Only the largest is drawn; {{count}} piece left out.",
+      "description_other": "The offset for {{featureName}} came apart into {{pieces}} pieces. Only the largest is drawn; {{count}} pieces left out."
+    },
+    "ANCHOR_MISSING": {
+      "title": "Corner not found",
+      "description": "That run named corner {{anchor}}, and this outline has {{available}}.",
+      "noCorners": "This outline has no corners to run between, so it can only be followed whole."
+    },
+    "SOURCE_FAILED": {
+      "title": "Source failed",
+      "description": "The {{sourceName}} it follows could not be built."
+    },
+    "GEOMETRY_FAILED": {
+      "title": "Could not be built",
+      "description": "{{featureName}} could not be built ({{detail}})."
+    },
+    "TEXT_GLYPH_MISSING": {
+      "title": "Cannot be printed",
+      "label": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box. Retype the label using Latin characters.",
+      "part": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box. Rename the part using Latin characters."
+    },
+    "CONTOUR_SELF_INTERSECTS": {
+      "title": "Outline crosses itself",
+      "description_one": "{{featureName}} crosses itself once, so where to cut is ambiguous. Redraw it so the line never crosses.",
+      "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous. Redraw it so the line never crosses."
+    },
+    "HOLE_SPACING_DEVIATION": {
+      "title": "Spacing off the iron",
+      "description": "The spacing came out {{achieved}} against a {{pitch}} iron. Change the pitch, or the edge margin, to bring them together."
+    },
+    "HOLE_SPACING_UNEVEN": {
+      "title": "Uneven spacing",
+      "description": "The runs of {{featureName}} are spaced from {{narrowest}} to {{widest}}, so the change will show at the corners."
+    },
+    "HOLE_COUNT_TOO_LOW": {
+      "title": "Too few holes",
+      "description_one": "{{featureName}} has {{count}} hole, and a seam needs at least two.",
+      "description_other": "{{featureName}} has {{count}} holes, and a seam needs at least two.",
+      "none": "{{featureName}} has no holes, and a seam needs at least two."
+    },
+    "PART_HAS_NO_OUTER_CONTOUR": {
+      "title": "Nothing to cut",
+      "description": "{{partName}} has stitching and marks but no outline, so there is no piece of leather to cut them from. Draw an outline, or move these onto another part."
+    },
+    "CUT_OUT_OUTSIDE_PART": {
+      "title": "Cut-out is off the part",
+      "description": "{{featureName}} is not inside the outline it belongs to, so it cuts nothing. Move it onto the part."
+    },
+    "OUTSIDE_PART": {
+      "title": "Off the material",
+      "holes": "{{featureName}} has holes off the material — through the outline, or into a cut-out. They cannot be punched.",
+      "line": "{{featureName}} runs off the material, so part of it cannot be marked."
+    },
+    "HOLE_TOO_CLOSE_TO_EDGE": {
+      "title": "Too near the edge",
+      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a stitch needs. Leather tears out between a hole and an edge."
+    },
+    "EMPTY_PART": {
+      "title": "Empty part",
+      "description": "{{partName}} has nothing in it. Draw into it, or remove it from the parts list."
+    }
+  },
+  "contextMenu": {
+    "emptyPart": "The part is empty",
+    "hideNote": "Also left off the PDF until shown again",
+    "label": "Selection",
+    "spansParts_one": "The selection is in {{count}} part; duplicate one at a time",
+    "spansParts_other": "The selection is in {{count}} parts; duplicate one at a time",
+    "flip": {
+      "horizontal": "Flip horizontal",
+      "vertical": "Flip vertical"
+    }
+  },
+  "editor": {
+    "cornerRadii": "Corner radii",
+    "corners": "Corners",
+    "custom": "Custom",
+    "decimals": "Decimals",
+    "diameter": "Diameter",
+    "direction": "Direction",
+    "drawnByHand": "Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit Points (N).",
+    "edgeMargin": "Edge margin",
+    "fit": "Fit",
+    "height": "Height",
+    "holeCount": "Holes",
+    "iron": "Iron",
+    "notSet": "not set",
+    "offset": "Offset",
+    "pitch": "Pitch",
+    "purpose": "Purpose",
+    "radius": "Radius",
+    "runs": "Runs",
+    "size": "Size",
+    "spacing": "Spacing",
+    "start": "Start",
+    "sweep": "Sweep",
+    "text": "Text",
+    "thickness": "Thickness",
+    "turn": "Turn",
+    "width": "Width",
+    "fold": {
+      "mountain": "Mountain",
+      "valley": "Valley"
+    },
+    "holes": {
+      "continuous": "Continuous",
+      "exact-pitch": "Exactly this pitch",
+      "fit-whole": "Even, whole number",
+      "hole-at-corner": "A hole on each corner"
+    },
+    "marking": {
+      "alignment": "Alignment",
+      "glue-area": "Glue area",
+      "logo": "Logo",
+      "other": "Other",
+      "skive": "Skive"
+    }
+  },
+  "history": {
+    "add": "Add {{name}}",
+    "add-dimension": "Add dimension",
+    "add-label": "Add label",
+    "add-point": "Add point",
+    "add-seam-allowance": "Add seam allowance",
+    "change-fold-direction": "Change fold direction",
+    "change-fold-thickness": "Change fold thickness",
+    "change-hardware-type": "Change hardware type",
+    "change-marking-purpose": "Change marking purpose",
+    "change-paper": "Change paper",
+    "delete": "Delete {{what}}",
+    "deleteKeepFrozen": "Delete {{what}}, keep {{frozen}} frozen",
+    "deleteWithDependents_one": "Delete {{what}} and {{count}} dependent",
+    "deleteWithDependents_other": "Delete {{what}} and {{count}} dependents",
+    "deleteWithDependentsKeepFrozen_one": "Delete {{what}} and {{count}} dependent, keep {{frozen}} frozen",
+    "deleteWithDependentsKeepFrozen_other": "Delete {{what}} and {{count}} dependents, keep {{frozen}} frozen",
+    "duplicate": "Duplicate {{name}}",
+    "duplicate-part": "Duplicate part",
+    "edit-derivation": "Edit derivation",
+    "edit-dimension": "Edit dimension",
+    "edit-label": "Edit label",
+    "edit-shape": "Edit shape",
+    "features_one": "{{count}} feature",
+    "features_other": "{{count}} features",
+    "flip-horizontal": "Flip horizontal",
+    "flip-vertical": "Flip vertical",
+    "follow": "Follow {{name}}",
+    "follow-another": "Follow another feature",
+    "hide_one": "Hide feature",
+    "hide_other": "Hide {{count}} features",
+    "hide-part": "Hide part",
+    "lock_one": "Lock",
+    "lock_other": "Lock {{count}} features",
+    "mirror_one": "Mirror",
+    "mirror_other": "Mirror {{count}} features",
+    "mirror-across-fold_one": "Mirror across fold",
+    "mirror-across-fold_other": "Mirror {{count}} across fold",
+    "move": "Move",
+    "move-point": "Move point",
+    "new-document": "New document",
+    "new-project": "New project",
+    "open": "Open",
+    "open-sample": "Open sample",
+    "recover": "Recover",
+    "remove-point": "Remove point",
+    "rename": "Rename",
+    "rename-part": "Rename part",
+    "rename-project": "Rename project",
+    "resize-label": "Resize label",
+    "rotate": "Rotate",
+    "round-corner": "Round corner",
+    "scale": "Scale",
+    "set-quantity": "Set quantity",
+    "sharpen-corner": "Sharpen corner",
+    "show_one": "Show feature",
+    "show_other": "Show {{count}} features",
+    "show-part": "Show part",
+    "transform": "Transform",
+    "unlock_one": "Unlock",
+    "unlock_other": "Unlock {{count}} features",
+    "delete-part": "Delete part"
+  }
+}

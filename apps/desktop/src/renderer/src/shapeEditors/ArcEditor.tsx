@@ -1,5 +1,6 @@
 import type { ParametricShape } from '@leathercad/domain';
 
+import { useI18n } from '../i18n.js';
 import { NumberField } from '../NumberField.js';
 
 type Arc = Extract<ParametricShape, { type: 'arc' }>;
@@ -19,6 +20,7 @@ const DEG = 180 / Math.PI;
  * rather than an ambiguity.
  */
 export function ArcEditor({ shape, onChange }: { shape: Arc; onChange: (shape: Arc) => void }) {
+  const { t } = useI18n();
   return (
     <>
       <div className="field-pair">
@@ -34,14 +36,14 @@ export function ArcEditor({ shape, onChange }: { shape: Arc; onChange: (shape: A
         />
       </div>
       <NumberField
-        label="Radius"
+        label={t('editor.radius')}
         value={shape.radius}
         min={0.01}
         onCommit={(radius) => onChange({ ...shape, radius })}
       />
       <div className="field-pair">
         <NumberField
-          label="Start"
+          label={t('editor.start')}
           value={shape.startAngle * DEG}
           suffix="°"
           step={5}
@@ -49,7 +51,7 @@ export function ArcEditor({ shape, onChange }: { shape: Arc; onChange: (shape: A
           onCommit={(deg) => onChange({ ...shape, startAngle: deg / DEG })}
         />
         <NumberField
-          label="Sweep"
+          label={t('editor.sweep')}
           value={shape.sweepAngle * DEG}
           suffix="°"
           step={5}

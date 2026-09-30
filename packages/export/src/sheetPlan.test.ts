@@ -9,8 +9,7 @@ import { exportPdf } from './pdf/writer.js';
 import { PRINT_STYLES, type ExportPart, type ExportScene } from './scene.js';
 import {
   describeSheetNumbers,
-  describeSheets,
-  describeTaped,
+  isContiguous,
   isScaleCheckOnly,
   planEveryPaper,
   planSheets,
@@ -98,7 +97,6 @@ describe('the sheet plan (7.4a)', () => {
     expect(plan.sheets[0]!.placements).toEqual([]);
     expect(isScaleCheckOnly(plan)).toBe(true);
     expect(plan.parts.size).toBe(0);
-    expect(describeSheets(plan)).toBe('1 sheet of A4, portrait, scale check only');
 
     const { bytes } = await exportPdf(plan, { now: () => new Date(0) });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
@@ -222,27 +220,24 @@ describe('the sheet plan (7.4a)', () => {
   });
 });
 
-describe('what the plan is called', () => {
-  it('counts sheets of a paper, as a maker says it', () => {
-    expect(describeSheets(planSheets(PRINT_TEST, DEFAULT_PAGE_SETUP))).toBe(
-      '3 sheets of A4, portrait',
-    );
-    expect(describeSheets(planSheets(PRINT_TEST, pageSetupOf('A4', 'landscape')))).toBe(
-      '1 sheet of A4, landscape',
-    );
+describe('what the plan holds, for the words the app puts it in', () => {
+  it('counts sheets of a paper', () => {
+    expect(planSheets(PRINT_TEST, DEFAULT_PAGE_SETUP).sheets).toHaveLength(3);
+    expect(planSheets(PRINT_TEST, pageSetupOf('A4', 'landscape')).sheets).toHaveLength(1);
   });
 
   it('names what is taped', () => {
-    expect(describeTaped(planSheets(PRINT_TEST, DEFAULT_PAGE_SETUP))).toBe('Strap taped');
-    expect(describeTaped(planSheets(PRINT_TEST, pageSetupOf('A5', 'landscape')))).toBe(
-      'Outer panel and Strap taped',
-    );
-    expect(describeTaped(planSheets(PRINT_TEST, pageSetupOf('A4', 'landscape')))).toBeNull();
-    const many = scene([part('a', 400, 20), part('b', 400, 20), part('c', 400, 20)]);
-    expect(describeTaped(planSheets(many, DEFAULT_PAGE_SETUP))).toBe('3 pieces taped');
+    const taped = (setup: PageSetup): string[] =>
+      planSheets(PRINT_TEST, setup).pagination.tiled.map((entry) => entry.part.name);
+    expect(taped(DEFAULT_PAGE_SETUP)).toEqual(['Strap']);
+    expect(taped(pageSetupOf('A5', 'landscape'))).toEqual(['Outer panel', 'Strap']);
+    expect(taped(pageSetupOf('A4', 'landscape'))).toEqual([]);
   });
 
-  it('numbers sheets one way, on screen and on paper', () => {
+  it('numbers sheets one way on paper, a run as a range', () => {
+    expect(isContiguous([2, 3, 4])).toBe(true);
+    expect(isContiguous([2, 4])).toBe(false);
+    expect(isContiguous([])).toBe(false);
     expect(describeSheetNumbers([1])).toBe('Sheet 1');
     expect(describeSheetNumbers([2, 3])).toBe('Sheets 2–3');
     expect(describeSheetNumbers([2, 4])).toBe('Sheets 2, 4');

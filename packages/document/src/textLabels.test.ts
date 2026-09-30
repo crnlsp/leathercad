@@ -22,7 +22,7 @@ function storeWithLabel(text = 'Fold before stitching') {
   const store = new DocumentStore(emptyDocument('doc' as Ulid));
   const partId = 'part-1' as Ulid;
   store.dispatch({
-    label: 'Add part',
+    label: { action: 'transform' },
     apply: (document) => ({
       project: {
         ...document.project,

@@ -76,8 +76,8 @@ export function toggleSelected(selection: Selection, id: FeatureId): Selection {
  * that will ever be written. See docs/architecture.md §4.
  */
 export interface Command {
-  /** Shown in the undo menu, so phrase it as the user's action. */
-  readonly label: string;
+  /** What undoing it would undo, as the user's action: shown as "Undo <label>". */
+  readonly label: HistoryLabel;
   /**
    * A label naming what the command acts on, read from the document it is
    * about to be applied to — "Delete Outline and 2 dependents" rather than
@@ -86,10 +86,78 @@ export interface Command {
    * A function of the document rather than a label set during `apply`, so a
    * command stays a pure description and no call has a hidden side effect.
    */
-  labelFor?(document: Document): string;
+  labelFor?(document: Document): HistoryLabel;
   apply(document: Document): Document;
 }
 
-export function command(label: string, apply: (document: Document) => Document): Command {
+export function command(label: HistoryLabel, apply: (document: Document) => Document): Command {
   return { label, apply };
+}
+
+/** Every kind of step in the undo history. An id: the app has the words for each (ADR 0018). */
+export type HistoryAction =
+  | 'new-document'
+  | 'open'
+  | 'open-sample'
+  | 'new-project'
+  | 'recover'
+  | 'add'
+  | 'add-label'
+  | 'add-dimension'
+  | 'add-seam-allowance'
+  | 'delete'
+  | 'delete-part'
+  | 'rename'
+  | 'rename-part'
+  | 'rename-project'
+  | 'show'
+  | 'hide'
+  | 'show-part'
+  | 'hide-part'
+  | 'lock'
+  | 'unlock'
+  | 'move'
+  | 'rotate'
+  | 'scale'
+  | 'transform'
+  | 'flip-horizontal'
+  | 'flip-vertical'
+  | 'mirror'
+  | 'mirror-across-fold'
+  | 'duplicate'
+  | 'duplicate-part'
+  | 'follow'
+  | 'follow-another'
+  | 'edit-shape'
+  | 'edit-derivation'
+  | 'edit-dimension'
+  | 'edit-label'
+  | 'resize-label'
+  | 'change-paper'
+  | 'set-quantity'
+  | 'change-fold-direction'
+  | 'change-fold-thickness'
+  | 'change-marking-purpose'
+  | 'change-hardware-type'
+  | 'move-point'
+  | 'add-point'
+  | 'remove-point'
+  | 'round-corner'
+  | 'sharpen-corner';
+
+/**
+ * A step of the undo history, as facts: what was done, and the name or the
+ * count its words need. Never a sentence — the words are the app's, in the
+ * interface's language (ADR 0018), and a document is the same in every one.
+ */
+export interface HistoryLabel {
+  readonly action: HistoryAction;
+  /** What it acted on, by name: *Add Outline*, *Duplicate Strap*. */
+  readonly name?: string;
+  /** How many features it acted on: *Lock 3 features*. */
+  readonly count?: number;
+  /** A delete's dependents that went with what was named. */
+  readonly dependents?: number;
+  /** A delete's dependents kept as drawn geometry. */
+  readonly frozen?: number;
 }

@@ -62,7 +62,7 @@ export function createRotateTool(): Tool {
       const pivot = selectionPivot(document.project, new Set(scope.about));
       if (pivot === null) return;
 
-      ctx.store.begin('Rotate');
+      ctx.store.begin({ action: 'rotate' });
       state = {
         kind: 'turning',
         pivot,
@@ -87,7 +87,7 @@ export function createRotateTool(): Tool {
         refusal: transformRefusal(document.project, state.turning, matrix),
       };
 
-      ctx.store.preview(transformFeatures(state.turning, matrix, 'Rotate'));
+      ctx.store.preview(transformFeatures(state.turning, matrix, { action: 'rotate' }));
       ctx.invalidate();
     },
 
