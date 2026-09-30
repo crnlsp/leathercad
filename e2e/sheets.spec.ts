@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
 import { fromProjectMenu } from './projectMenu.js';
@@ -284,13 +285,9 @@ function num(text: string): number {
 async function boardView(window: Page): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
   const readAt = async (px: number, py: number): Promise<{ x: number; y: number }> => {
-    const previous = (await readout(window).textContent()) ?? '';
-    await window.mouse.move(box.x + px, box.y + py);
-    await expect.poll(async () => (await readout(window).textContent()) ?? '').not.toBe(previous);
-    const [x, y] = ((await readout(window).textContent()) ?? '').split(',').map(num);
+    const [x, y] = (await readoutAt(window, box.x + px, box.y + py)).split(',').map(num);
     return { x: x!, y: y! };
   };
-  await window.mouse.move(box.x + 60, box.y + box.height - 60);
   const a = await readAt(20, box.height - 20);
   const b = await readAt(220, box.height - 220);
   const mmPerPx = (b.x - a.x) / 200;

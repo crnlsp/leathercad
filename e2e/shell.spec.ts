@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
@@ -635,14 +636,8 @@ test('the drawing stays put when the drawer opens or the rail collapses (F.3)', 
     await inset.press('Enter');
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-    const readout = window.getByTestId('cursor-readout');
     const probe = { x: box.x + 400, y: box.y + 120 };
-    const reading = async (): Promise<string> => {
-      await window.mouse.move(probe.x + 1, probe.y);
-      await window.mouse.move(probe.x, probe.y);
-      await expect(readout).not.toContainText('—');
-      return (await readout.textContent()) ?? '';
-    };
+    const reading = (): Promise<string> => readoutAt(window, probe.x, probe.y);
 
     const before = await reading();
 
@@ -1482,20 +1477,13 @@ test('the panel measures what a feature has, and reads a dimension (F.1)', async
       await input.press('Enter');
     }
     await window.getByTestId('tool-measure').click();
-    const readout = window.getByTestId('cursor-readout');
     const canvas = (await window.getByTestId('editor-canvas').boundingBox())!;
     // Where the typed millimetres land on screen, read from the app itself.
     // Probed in the canvas's empty top-left: near geometry the readout snaps
     // to it, and a snapped probe gives a wrong view.
     const px = async (xMm: number, yMm: number): Promise<[number, number]> => {
-      await window.mouse.move(canvas.x + 40, canvas.y + 40);
-      await expect(readout).not.toContainText('—');
-      const a = (await readout.textContent())!.split(',').map(num);
-      await window.mouse.move(canvas.x + 140, canvas.y + 140);
-      await expect
-        .poll(async () => (await readout.textContent())!.split(',').map(num)[0])
-        .not.toBe(a[0]);
-      const b = (await readout.textContent())!.split(',').map(num);
+      const a = (await readoutAt(window, canvas.x + 40, canvas.y + 40)).split(',').map(num);
+      const b = (await readoutAt(window, canvas.x + 140, canvas.y + 140)).split(',').map(num);
       const perPx = (b[0]! - a[0]!) / 100;
       return [canvas.x + 40 + (xMm - a[0]!) / perPx, canvas.y + 40 - (yMm - a[1]!) / perPx];
     };
@@ -1597,18 +1585,10 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
 async function mmPerPx(
   window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
 ): Promise<number> {
-  const readout = window.getByTestId('cursor-readout');
   const box = await window.getByTestId('editor-canvas').boundingBox();
 
   const readAt = async (offsetPx: number): Promise<number> => {
-    await window.mouse.move(box!.x + offsetPx, box!.y + box!.height / 2);
-    // The readout is React state fed by a pointer event, so it arrives a frame
-    // later; until then it shows the em dashes it starts with.
-    await expect
-      .poll(async () => (await readout.textContent()) ?? '', { timeout: 5_000 })
-      .not.toContain('—');
-
-    const text = (await readout.textContent()) ?? '';
+    const text = await readoutAt(window, box!.x + offsetPx, box!.y + box!.height / 2);
     return num(text.split(',')[0]!);
   };
 
