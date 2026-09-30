@@ -46,6 +46,15 @@ overrides:
   # its dashboard, a reporter this project does not enable. 6.16.0 is the
   # fixed minor.
   'typed-rest-client>qs': 6.16.0
+  # GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr. minimatch
+  # 10.2.6, the newest 10.x, asks for ^5.0.8 and resolved 5.0.9; 5.0.12 fixes
+  # all three. This raises the floor inside the range minimatch already
+  # declares, so it runs against the API it expects. Only development tooling
+  # reaches it (ESLint, typescript-eslint, Stryker, electron-builder), and
+  # nothing in the shipped app. Scoped to minimatch 10 because the older
+  # minimatch lines use brace-expansion 1 and 2, whose fixed releases they
+  # already resolve.
+  'minimatch@10>brace-expansion': ^5.0.12
 
 # Local fixes to third-party code, each temporary and each with its upstream
 # issue. Delete the entry and its file in patches/ when the fix is released.
