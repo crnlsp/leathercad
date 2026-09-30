@@ -1,10 +1,13 @@
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { readoutAt } from './cursorReadout.js';
+import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 3.9a: the product spec's own example — "the card pockets are 95 × 60 mm
@@ -17,8 +20,6 @@ import { closeApp } from './closeApp.js';
  * the polyline claims them only while a run is live.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 function num(text: string | null): number {
   return Number.parseFloat((text ?? '').trim().replace('−', '-'));
 }
@@ -26,15 +27,10 @@ function num(text: string | null): number {
 /** Where a millimetre lands on screen, read from the app's own cursor readout. */
 async function viewOf(window: Page): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  const readout = window.getByTestId('cursor-readout');
   const readAt = async (px: number, py: number): Promise<{ x: number; y: number }> => {
-    const previous = (await readout.textContent()) ?? '';
-    await window.mouse.move(box.x + px, box.y + py);
-    await expect.poll(async () => (await readout.textContent()) ?? '').not.toBe(previous);
-    const [x, y] = ((await readout.textContent()) ?? '').split(',').map(num);
+    const [x, y] = (await readoutAt(window, box.x + px, box.y + py)).split(',').map(num);
     return { x: x!, y: y! };
   };
-  await window.mouse.move(box.x + 60, box.y + box.height - 60);
   const a = await readAt(20, box.height - 20);
   const b = await readAt(220, box.height - 220);
   const mmPerPx = (b.x - a.x) / 200;
@@ -46,7 +42,7 @@ async function viewOf(window: Page): Promise<(xMm: number, yMm: number) => [numb
 
 test('a card pocket with a thumb scoop is drawn, stitched on three sides, and reopened', async () => {
   const file = join(tmpdir(), `leathercad-e2e-scoop-${Date.now()}.lcp`);
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
 
   try {
     const window = await app.firstWindow();
@@ -123,9 +119,9 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
     // ── Saved, and the same pocket when it is opened again ──────────────────
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save')).toHaveText('Save');
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('part-count')).toHaveText('0');
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
 
     await expect(window.getByTestId('feature-count')).toHaveText('3');
     await window.getByTestId('parts-list').getByText('Outline').click();

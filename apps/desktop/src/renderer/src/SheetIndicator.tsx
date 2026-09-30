@@ -1,29 +1,28 @@
 import { formatEditable } from '@leathercad/core';
 import { setPageSetup, type DocumentStore } from '@leathercad/document';
 import { PAPER_SIZES, type Orientation, type PaperName, type Project } from '@leathercad/domain';
-import { contentAreaMm, describeSheets, describeTaped, type SheetPlan } from '@leathercad/export';
+import { contentAreaMm, type SheetPlan } from '@leathercad/export';
 
+import type { Translate } from '../../shared/i18n.js';
+import { useI18n } from './i18n.js';
+import { describeChoice } from './sheetWords.js';
 import { paperOptionsFor, sheetPlanFor } from './sheets.js';
 import { Tooltip } from './Tooltip.js';
 
 const mm = (value: number): string => formatEditable(value, 1);
 
-/** What one paper choice comes to: `3 sheets of A4, portrait (Strap taped)`. */
-export function describeChoice(plan: SheetPlan): string {
-  const taped = describeTaped(plan);
-  return taped === null ? describeSheets(plan) : `${describeSheets(plan)} (${taped})`;
-}
-
 /** The sheet and what of it prints, for the indicator's tooltip. */
-function physicalFacts(plan: SheetPlan): string {
+function physicalFacts(plan: SheetPlan, t: Translate): string {
   const { paper } = plan.setup;
   const area = contentAreaMm(plan.setup);
-  return (
-    `${paper.name}, ${mm(PAPER_SIZES[paper.name as PaperName].widthMm)} × ` +
-    `${mm(PAPER_SIZES[paper.name as PaperName].heightMm)} mm. Prints up to ` +
-    `${mm(area.widthMm)} × ${mm(area.heightMm)} mm per sheet: the rest is margins and the ` +
-    'scale check. Printed at 1:1, never scaled to fit.'
-  );
+  const size = PAPER_SIZES[paper.name as PaperName];
+  return t('sheets.physical', {
+    paper: paper.name,
+    width: mm(size.widthMm),
+    height: mm(size.heightMm),
+    printWidth: mm(area.widthMm),
+    printHeight: mm(area.heightMm),
+  });
 }
 
 /**
@@ -38,17 +37,24 @@ function physicalFacts(plan: SheetPlan): string {
  * count by construction.
  */
 export function SheetIndicator({ project, store }: { project: Project; store: DocumentStore }) {
+  const i18n = useI18n();
+  const { t } = i18n;
   const plan = sheetPlanFor(project);
   const { paper, orientation } = project.settings;
 
   return (
-    <div className="sheet-indicator" role="group" aria-label="Paper" data-testid="paper-control">
+    <div
+      className="sheet-indicator"
+      role="group"
+      aria-label={t('sheets.paper')}
+      data-testid="paper-control"
+    >
       <SheetGlyph plan={plan} />
-      <Tooltip text={physicalFacts(plan)}>
+      <Tooltip text={physicalFacts(plan, t)}>
         <select
           className="sheet-select"
           data-testid="paper"
-          aria-label="Paper and sheets"
+          aria-label={t('sheets.paperAndSheets')}
           value={`${paper} ${orientation}`}
           onChange={(event) => {
             const [name, turn] = event.target.value.split(' ') as [PaperName, Orientation];
@@ -60,7 +66,7 @@ export function SheetIndicator({ project, store }: { project: Project; store: Do
               key={`${option.paper} ${option.orientation}`}
               value={`${option.paper} ${option.orientation}`}
             >
-              {describeChoice(option.plan)}
+              {describeChoice(option.plan, i18n)}
             </option>
           ))}
         </select>

@@ -1,6 +1,11 @@
 import { formatAngle } from '@leathercad/core';
-import { refusedTransforms, transformFeatures } from '@leathercad/document';
-import type { Problem } from '@leathercad/domain';
+import {
+  pieceScope,
+  selectedFeatureIds,
+  transformFeatures,
+  transformRefusal,
+} from '@leathercad/document';
+import type { FeatureId, Problem } from '@leathercad/domain';
 import { MatOps, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, textItem, type DisplayList } from '@leathercad/render';
 
@@ -18,12 +23,17 @@ import { selectionPivot } from './selectionPivot.js';
  *
  * A parametric shape turns through its parameters and stays parametric: a
  * rotated rectangle is still a rectangle whose width you can retype.
+ *
+ * A piece's outline, or a part picked by its heading, turns the whole piece
+ * about the outline's centre (Q30) — its slots and holes with it.
  */
 type State =
   | { readonly kind: 'idle' }
   | {
       readonly kind: 'turning';
       readonly pivot: Vec2;
+      /** The selection, each piece in it made whole: what turns. */
+      readonly turning: readonly FeatureId[];
       readonly from: number;
       readonly angle: number;
       /** Why part of the selection is not turning, while it is not (X3). */
@@ -48,11 +58,19 @@ export function createRotateTool(): Tool {
       if (event.button !== 0) return;
 
       const { document, selection } = ctx.store.getState();
-      const pivot = selectionPivot(document.project, selection.features);
+      const scope = pieceScope(document.project, selectedFeatureIds(document.project, selection));
+      const pivot = selectionPivot(document.project, new Set(scope.about));
       if (pivot === null) return;
 
-      ctx.store.begin('Rotate');
-      state = { kind: 'turning', pivot, from: angleFrom(pivot, event.at), angle: 0, refusal: null };
+      ctx.store.begin({ action: 'rotate' });
+      state = {
+        kind: 'turning',
+        pivot,
+        turning: scope.features,
+        from: angleFrom(pivot, event.at),
+        angle: 0,
+        refusal: null,
+      };
       ctx.invalidate();
     },
 
@@ -62,11 +80,14 @@ export function createRotateTool(): Tool {
       const swept = angleFrom(state.pivot, event.at) - state.from;
       const angle = event.shiftKey ? Math.round(swept / ANGLE_STEP) * ANGLE_STEP : swept;
       const matrix = MatOps.fromRotationAround(state.pivot, angle);
-      const { document, selection } = ctx.store.getState();
-      const refused = refusedTransforms(document.project, selection.features, matrix);
-      state = { ...state, angle, refusal: refused[0]?.problem ?? null };
+      const { document } = ctx.store.getState();
+      state = {
+        ...state,
+        angle,
+        refusal: transformRefusal(document.project, state.turning, matrix),
+      };
 
-      ctx.store.preview(transformFeatures(selection.features, matrix, 'Rotate'));
+      ctx.store.preview(transformFeatures(state.turning, matrix, { action: 'rotate' }));
       ctx.invalidate();
     },
 

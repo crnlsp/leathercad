@@ -34,11 +34,24 @@ pnpm dev            # runs the app, with hot reload
 The layering in [`docs/architecture.md`](docs/architecture.md) §2 is enforced by `pnpm depcruise`: a
 violation fails the build, deliberately.
 
+**Translating?** You need none of the rest of this page beyond setting up: the
+[README's Translations section](README.md#translations) is the whole path, and
+`pnpm test locales` checks your file. A translation is offered in the app only once a maintainer
+has reviewed it and added it to `SUPPORTED_LANGUAGES`; until then `pnpm dev` shows it as a
+preview. **Adding words to the interface?** They go in
+`apps/desktop/src/locales/en.json` and reach the screen through `t()` — never in the component, and
+never in a package below the app ([ADR 0018](docs/adr/0018-interface-language.md)).
+
 ## Branches
 
 - **`main` is production.** What is on it is what is released. Nothing is pushed to it directly;
-  it changes only through a pull request from `develop`.
+  it changes only through a pull request from `develop`, and only for a release. The *Release gate*
+  check refuses a pull request into `main` from any other branch.
 - **`develop` is development.** Work lands here, through pull requests from short-lived branches.
+
+Both are protected by a ruleset each: no deletion, no force push, pull requests only, CI required.
+Without one, GitHub's *Automatically delete head branches* deletes `develop` the moment a release
+merges — which is how it was lost twice (roadmap R2).
 
 ```bash
 git switch develop && git pull
@@ -98,6 +111,13 @@ refuses. Scopes are the package or area: `geometry`, `domain`, `export`, `deskto
 A pull request fills in the template: what changes and why, how it was checked, and whether the
 docs moved with it.
 
+[CodeRabbit](https://www.coderabbit.ai/) reviews pull requests into `develop` and `main`, against
+the invariants in [`CLAUDE.md`](CLAUDE.md) and the path instructions in
+[`.coderabbit.yaml`](.coderabbit.yaml). It reviews automatically only once the repository has ten
+stars; until then, ask for a review with a comment of `@coderabbitai review`. It is a second
+reviewer, not a gate: answer each comment — fix it, or say why not — before merging. It is not a
+required check, and it never replaces the tests, running the app, or a physical print.
+
 ## Changelog and releases
 
 [`CHANGELOG.md`](CHANGELOG.md) is written by
@@ -105,13 +125,28 @@ docs moved with it.
 edits it by hand except to correct a mistake in an entry. See
 [ADR 0014](docs/adr/0014-electron-builder-and-release-please.md).
 
-1. When `develop` is ready, open a pull request from `develop` into `main`, and merge it with a
-   **merge commit** (not a squash, which would flatten every change into one entry).
+**A release is a whole section of the roadmap.** Everything under *the next release* in
+[`docs/roadmap.md`](docs/roadmap.md) ships together, and nothing ships until all of it is ✅.
+When an item will not make it, move it to the release after, or to *Later*, in a pull request of
+its own — the release waits for the roadmap, and the roadmap changes on purpose, never because a
+release happened. A fix that cannot wait ships the same way: move what is unfinished out, then
+release. The *Release gate* check holds this on every pull request into `main`; run
+`tools/release-gate.sh` to see what the next release still waits for.
+
+1. When every item under *the next release* is ✅, open a pull request from `develop` into `main`,
+   and merge it with a **merge commit** (not a squash, which would flatten every change into one
+   entry).
 2. release-please opens or updates a *release* pull request on `main`. Its description is the
-   changelog of the next version: **that pull request is the list of unreleased changes.**
+   changelog of the next version. Check it names the version the roadmap does — a section with a
+   `feat` in it is the next minor — and that no entry appears twice.
 3. Merging it tags the release. The release workflow then builds the AppImage, the Windows
    installer and the macOS dmg, attests their provenance, and attaches them with an SBOM.
-4. Bring the release commit back: merge `main` into `develop`.
+4. Bring the release commit back: a pull request from `main` into `develop`, squash-merged like
+   every other, titled for the changelog it will never reach — *chore(release): bring 1.3.0 back
+   into develop*.
+5. Start the next section: move the released items from the roadmap into its record in
+   [`docs/history/`](docs/history/), name the next release, and update the roadmap's *Released* and
+   *Next* line.
 
 Before a release that changes what prints, run the manual checks in
 [`docs/release-checklist.md`](docs/release-checklist.md), and record the physical measurements in

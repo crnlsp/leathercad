@@ -1,16 +1,8 @@
-import { type DocumentStore } from '@leathercad/document';
-import {
-  describeProblem,
-  diagnose,
-  evaluate,
-  sameProblem,
-  type Problem,
-  type Project,
-} from '@leathercad/domain';
+import { selectedFeatureIds, type DocumentStore } from '@leathercad/document';
+import { diagnose, evaluate, sameProblem, type Problem, type Project } from '@leathercad/domain';
 import {
   layoutSheets,
   pieceAt,
-  sheetLabel,
   sheetsView,
   tapeJoins,
   type SheetPlan,
@@ -52,7 +44,11 @@ import {
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
+import { useI18n } from './i18n.js';
+import { describeProblem } from './problemText.js';
+import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
+import { isTyping } from './shortcuts.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -82,10 +78,16 @@ export type CanvasView = 'design' | 'sheets';
 export interface CanvasHandle {
   /** Frames a millimetre rectangle, leaving the usual margin. */
   frame(bounds: Rect): void;
-  /** *View › Zoom In / Out* (8.4b): zooms the current view about its centre. */
+  /** The zoom keys (8.4b): zooms the current view about its centre. */
   zoom(factor: number): void;
-  /** *View › Fit to Pattern* (8.4b): what a double-click on empty board does. */
+  /** Ctrl+0 (8.4b): fits the pattern, as a double-click on empty board does. */
   fit(): void;
+  /**
+   * Where a menu about the selection opens from the keyboard (8.8), in CSS
+   * pixels of the window: the middle of what is selected, when it is on the
+   * board in view, otherwise the middle of the canvas.
+   */
+  selectionPoint(): { x: number; y: number } | null;
 }
 
 export interface CanvasStatus {
@@ -93,8 +95,8 @@ export interface CanvasStatus {
   readonly scale: number;
   /** Why the active tool is not doing what it was asked, shown in the status bar. */
   readonly notice: Problem | null;
-  /** On the Sheets view, the sheet under the pointer: "Sheet 2 of 3" (7.4d). */
-  readonly sheet: string | null;
+  /** On the Sheets view, the sheet under the pointer, 1-based, and how many there are (7.4d). */
+  readonly sheet: { readonly number: number; readonly count: number } | null;
 }
 
 /**
@@ -115,6 +117,8 @@ export function CanvasHost({
   hardware,
   pointOptions = DEFAULT_EDIT_POINTS,
   requestDelete,
+  requestDeletePart,
+  onContextMenu,
   nextId,
   onStatus,
   ref,
@@ -132,6 +136,10 @@ export function CanvasHost({
   /** The corner radius Edit Points rounds to (3.9d). */
   pointOptions?: EditPointsOptions;
   requestDelete: (ids: readonly string[]) => void;
+  /** The Delete key on a part picked by its heading (Q29). */
+  requestDeletePart: (partId: string) => void;
+  /** A right-click on a feature (8.8): the app selects it, unless it already is, and opens the menu. */
+  onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
   ref?: React.Ref<CanvasHandle>;
@@ -176,7 +184,8 @@ export function CanvasHost({
   const hoveredPartRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
   /** On the Sheets view: the sheet under the pointer, for the status bar. */
-  const [sheetUnder, setSheetUnder] = useState<string | null>(null);
+  const { t } = useI18n();
+  const [sheetUnder, setSheetUnder] = useState<CanvasStatus['sheet']>(null);
   /** Where a press on the Sheets view began, and on which piece. */
   const pressRef = useRef<{ x: number; y: number; partId: string | null; moved: boolean } | null>(
     null,
@@ -241,8 +250,38 @@ export function CanvasHost({
         invalidate();
       },
       fit: handleDoubleClick,
+      selectionPoint() {
+        const canvas = canvasRef.current;
+        if (canvas === null) return null;
+        const rect = canvas.getBoundingClientRect();
+        const middle = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        if (viewRef.current === 'sheets') return middle;
+
+        const { document, selection } = store.getState();
+        const selectedIds = new Set(selectedFeatureIds(document.project, selection));
+        const box = RectOps.unionAll(
+          evaluate(document.project)
+            .parts.flatMap((part) => part.features)
+            .filter(
+              (entry) => entry.ok && entry.feature.visible && selectedIds.has(entry.feature.id),
+            )
+            .flatMap((entry) => (entry.ok ? [PathOps.bbox(entry.path)] : []))
+            .filter((b): b is NonNullable<typeof b> => b !== null),
+        );
+        if (box === null) return middle;
+
+        const viewport = viewportRef.current;
+        const at = viewport.toScreen({
+          x: (box.minX + box.maxX) / 2,
+          y: (box.minY + box.maxY) / 2,
+        });
+        const x = rect.left + at.x / viewport.dpr;
+        const y = rect.top + at.y / viewport.dpr;
+        const inView = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        return inView ? { x, y } : middle;
+      },
     }),
-    [camera, handleDoubleClick, invalidate],
+    [camera, handleDoubleClick, invalidate, store],
   );
 
   // Settings the tools read at the moment they act. Refs rather than props
@@ -256,6 +295,10 @@ export function CanvasHost({
   pointOptionsRef.current = pointOptions;
   const requestDeleteRef = useRef(requestDelete);
   requestDeleteRef.current = requestDelete;
+  const requestDeletePartRef = useRef(requestDeletePart);
+  requestDeletePartRef.current = requestDeletePart;
+  const onContextMenuRef = useRef(onContextMenu);
+  onContextMenuRef.current = onContextMenu;
 
   const tools = useMemo(
     () => [
@@ -287,6 +330,7 @@ export function CanvasHost({
         invalidate,
         drawAs: () => drawAsRef.current,
         requestDelete: (ids) => requestDeleteRef.current(ids),
+        requestDeletePart: (partId) => requestDeletePartRef.current(partId),
       },
       tools[0]!,
       tools,
@@ -407,7 +451,12 @@ export function CanvasHost({
     renderDisplayList(
       context,
       buildDisplayList(evaluate(document.project), {
-        selected: selection.features,
+        // A part picked by its heading shows as picked (Q30): Rotate turns it,
+        // so the board has to say what will turn.
+        selected:
+          selection.parts.size === 0
+            ? selection.features
+            : new Set(selectedFeatureIds(document.project, selection)),
         hovered: hoveredRef.current,
         // The same list the panels read (X7), so a feature that failed is
         // marked here instead of silently disappearing.
@@ -518,9 +567,8 @@ export function CanvasHost({
   // Delete should work wherever the pointer happens to be.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      const target = event.target;
-      // Never steal keys from a text field.
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+      // Never steal keys from a field, a list or anything editable (8.7).
+      if (isTyping(event.target)) return;
 
       // Ctrl on Linux and Windows, Cmd on macOS — as the menu shows it.
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
@@ -571,7 +619,7 @@ export function CanvasHost({
   const pickOnSheets = useCallback(
     (
       event: React.PointerEvent<HTMLCanvasElement>,
-    ): { sheet: string | null; partId: string | null } => {
+    ): { sheet: CanvasStatus['sheet']; partId: string | null } => {
       const viewport = sheetsViewportRef.current;
       const rect = event.currentTarget.getBoundingClientRect();
       const at = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
@@ -579,7 +627,7 @@ export function CanvasHost({
       const hit = pieceAt(plan, layoutSheets(plan), at);
       return hit === null
         ? { sheet: null, partId: null }
-        : { sheet: sheetLabel(hit.sheet + 1, plan.sheets.length), partId: hit.partId };
+        : { sheet: { number: hit.sheet + 1, count: plan.sheets.length }, partId: hit.partId };
     },
     [store],
   );
@@ -655,7 +703,12 @@ export function CanvasHost({
       if (viewRef.current === 'sheets') {
         setCursorMm(null);
         const under = pickOnSheets(event);
-        setSheetUnder(under.sheet);
+        // The same sheet is the same state: a pointer move within it re-renders nothing.
+        setSheetUnder((was) =>
+          was?.number === under.sheet?.number && was?.count === under.sheet?.count
+            ? was
+            : under.sheet,
+        );
         if (under.partId !== hoveredPartRef.current) {
           hoveredPartRef.current = under.partId;
           onHoverPartRef.current?.(under.partId);
@@ -681,6 +734,36 @@ export function CanvasHost({
       invalidate();
     },
     [camera, invalidate, pickOnSheets, store, toInput],
+  );
+
+  /**
+   * A right-click on the board (8.8): what a click would pick, with any tool,
+   * since the panels already run these commands whatever tool is active.
+   * Nothing on the sheets — no tool acts there — and nothing mid-drag, or with
+   * Alt, which pans. On empty board there is no menu and the selection stays:
+   * a right-click that missed an edge must not undo a multi-selection. A
+   * locked piece is found, unlike by a click: this is where it is unlocked.
+   */
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      event.preventDefault();
+      if (viewRef.current === 'sheets' || store.inTransaction || event.altKey) return;
+      const viewport = viewportRef.current;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const at = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
+      const hit = hitTest(
+        evaluate(store.getState().document.project),
+        at,
+        viewport.pickToleranceMm(),
+        { locked: true },
+      );
+      if (hit === null) return;
+      onContextMenuRef.current?.(
+        { kind: 'feature', id: hit },
+        { x: event.clientX, y: event.clientY },
+      );
+    },
+    [store],
   );
 
   const handlePointerUp = useCallback(
@@ -739,6 +822,7 @@ export function CanvasHost({
           invalidate();
         }}
         onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
       />
       {children}
       {sheetsNotice && pointerCss !== null && (
@@ -748,7 +832,7 @@ export function CanvasHost({
           role="status"
           style={{ left: pointerCss.x + 16, top: pointerCss.y + 20 }}
         >
-          LeatherCAD places pieces on sheets for you. Choose another paper to change the layout.
+          {t('sheets.placedForYou')}
         </div>
       )}
       {notice !== null && pointerCss !== null && (
@@ -780,6 +864,7 @@ function CanvasNotice({
   at: { x: number; y: number };
   bounds: { width: number; height: number };
 }) {
+  const { t } = useI18n();
   const right = at.x + 16 + NOTICE_WIDTH_PX > bounds.width;
   const below = at.y + 20 + NOTICE_HEIGHT_PX > bounds.height;
   return (
@@ -794,7 +879,7 @@ function CanvasNotice({
         bottom: below ? Math.max(8, bounds.height - at.y + 12) : undefined,
       }}
     >
-      {describeProblem(problem)}
+      {describeProblem(problem, t)}
     </div>
   );
 }

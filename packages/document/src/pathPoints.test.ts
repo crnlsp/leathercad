@@ -351,7 +351,7 @@ describe('refusing a point edit', () => {
       'NOT_A_DRAWN_PATH',
     );
 
-    const locked = setFeatureLocked(OUTLINE, true).apply(document);
+    const locked = setFeatureLocked([OUTLINE], true).apply(document);
     expect(pointEditingRefusal(locked.project, OUTLINE)?.code).toBe('FEATURE_LOCKED');
     expect(refusal(locked, { kind: 'insert', featureId: OUTLINE, segment: 0, t: 0.5 })).toBe(
       'FEATURE_LOCKED',

@@ -1,10 +1,11 @@
 # Roadmap
 
-**Released:** v1.0.1 (2026-09-24) · **Next:** 1.1 · **Last updated:** 2026-09-26
+**Released:** v1.2.0 (2026-09-27) · **Next:** 1.3, then 1.4 · **Last updated:** 2026-09-30
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
-8.6, with what each found — is kept in [`history/roadmap-to-1.0.md`](history/roadmap-to-1.0.md).
+8.6, with what each found — is kept in [`history/roadmap-to-1.0.md`](history/roadmap-to-1.0.md),
+and what shipped in 1.1.0 to 1.2.0 in [`history/roadmap-1.1-and-1.2.md`](history/roadmap-1.1-and-1.2.md).
 
 ---
 
@@ -15,9 +16,14 @@ What comes next, and everything known that is not done yet. What already shipped
 - **A slice is a vertical piece of work** that ends with the app running, tests green, and
   something a person can see. How one is planned, built and landed is in
   [`CONTRIBUTING.md`](../CONTRIBUTING.md).
-- **Marks:** ☐ planned · ◐ in progress · ✅ done. A done item moves to the changelog at the next
-  release and is deleted here.
-- **Scope rule for 1.1,** carried over from 1.0: an idea that is not needed for everyday use, the
+- **Marks:** ☐ planned · ◐ in progress · ✅ done. A done item stays here until its release ships,
+  then moves to the record in [`history/`](history/) and is deleted here.
+- **A release is its whole section.** Everything under *the next release* ships together, and
+  `develop` goes to `main` only when every item in it is ✅. An item that will not make it is moved
+  to the release after, or to *Later*, in a change of its own — never left behind by a release
+  happening. The *Release gate* check on pull requests into `main` refuses a section with ☐ or ◐
+  still in it ([`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)).
+- **Scope rule,** carried over from 1.0: an idea that is not needed for everyday use, the
   leathercraft workflow, pattern correctness or print correctness waits for a later release — even
   when it turns up halfway through something else. Write it under *Later* instead.
 
@@ -35,79 +41,96 @@ What comes next, and everything known that is not done yet. What already shipped
 
 ---
 
-## 1.1 — the next release
+## 1.3 — the next release
 
-The theme: from a tool that works to one you can live in. The order within each group is the
-suggested order of work.
+The theme is still the one the roadmap gave 1.1 — from a tool that works to one you can live in.
+Its first half shipped early, as 1.1.0 to 1.2.0. 1.3 is what of the rest is done: the window's own
+top bar, Settings and right-click menu, the interface's language, and the fixes found on the way.
+Everything not done yet moved to [1.4](#14--the-release-after) on 2026-09-30, unchanged, so this
+could ship.
 
-### Everyday use
+### The window
 
-- ✅ **8.2 Preferences and recent files.** `preferences.json`, owned by the main process
-  ([`file-format.md`](file-format.md) §6); *File → Open Recent* (absorbs 5.3c), which grants a
-  path only because it is on the list, so the dialog-only file rule holds; the canvas legend and the
-  wide tool rail remember whether they were open; and a keyboard shortcut map (*Help → Keyboard
-  Shortcuts*, Ctrl+/ or `?`), held by a test to the menu's accelerators and the tool keys. End-to-end
-  tests launch with a config directory of their own, so a remembered preference cannot leak from one
-  test to the next or into a developer's own. Fixed alongside: Q8, Q9, Q14, Q16 and Q18.
-- ✅ **8.3 A worked sample project.** *Help → Open Sample Project*, and a link in the empty Parts
-  panel: the bifold wallet the README demo draws, plus a pair of card slots on the lining folded
-  across its fold and a dimension, in `fixtures/projects/bifold-wallet.lcp`. Built by the app's own
-  commands in `sampleProject.test.ts`, which holds the file to its recipe and the sample to no
-  problems; bundled with the main process, and opened untitled and clean. Absorbs 5.4. Fixed
-  alongside: Q2, Q10, Q11, Q12 and Q13 — the sample is a bifold, which is exactly where Q13's join
-  and Q2's fold ended up.
-- ✅ **8.5 File association and Flatpak.** Double-click a `.lcp` to open it: `fileAssociations`
-  register it with the NSIS installer and the dmg, and on Linux the desktop entry's `MimeType` plus
-  a shared-mime-info file that knows a project by its name and by the `mimetype` entry inside it.
-  The path arrives on the command line (Linux, Windows) or as *open-file* (macOS); the main process
-  grants it and the renderer asks for it once it is ready, so it cannot arrive before anything is
-  listening. No single-instance lock: a second project opens in a second window, as it always has.
-  A Flatpak (`pnpm package:flatpak`) on Electron's base app and the Freedesktop 24.08 runtime, with
-  the home directory and no network, built by `package.yml` and attached by the release workflow.
-  **Not verified by hand yet:** the Flatpak could not be built where it was written (Flathub was
-  unreachable), so its first install on a real desktop is still to do, and so is a double-click on
-  each platform — add both to the release checklist's manual pass.
-- ✅ **8.4b The rest of the native menu.** *Tools* (every tool with its key, grouped as the rail
-  groups them — "Tools" rather than "Draw", since Select, Rotate and Scale draw nothing); *View →
-  Zoom In, Zoom Out, Fit to Pattern* (Ctrl+=, Ctrl+−, Ctrl+0, also in the window and the shortcut
-  map); and *Paper*, which lists the paper list's own choices in its own words with the current
-  one checked. The renderer sends the list when it changes and the main process validates it and
-  rebuilds the menu; choosing one is the same single undoable edit as the list. Q19 turned out to be
-  7.4a's already.
+Set first on 2026-09-29, in this order, one pull request each: the window's own frame was still
+Electron's default menu, and a right-click did nothing.
+
+- ✅ **8.7 The top bar and Settings.** No application menu on Linux and Windows, and the minimal one
+  macOS requires. The project bar gains a Project menu (New, Open, Save as, recent projects), Settings
+  and Help (the sample project, About). Settings is a sidebar window — General, Appearance, Keyboard
+  shortcuts — that grows a section only when it has a real control. The Paper menu, a copy of the
+  sheet indicator, goes with its IPC. Design:
+  [`2026-09-29-top-bar-and-settings-design.md`](superpowers/specs/2026-09-29-top-bar-and-settings-design.md).
+  ✅ Built as designed. On the way: a menu closed by Escape never gave its button focus back, and
+  the shortcut map's "or" failed contrast; both fixed. The README's pictures still show the bar
+  before 8.7 (Q27).
+- ✅ **8.8 The right-click menu.** Selecting several features already works — Shift-click, and
+  dragging a box. A right-click selects what is under the pointer unless it is already selected,
+  then offers what the selection can take: Delete, Flip, Lock, Hide and Duplicate part, through the
+  commands that exist, as one undo step. The same menu on a row of the parts list. It reuses 8.7's
+  menu component. Copy and Paste are not in it: see *Later*.
+  ✅ Built as described, with any tool active, and from the keyboard (Shift+F10, the Menu key).
+  Lock and Hide became one command for any number of features, so a selection is one step of
+  undo. The items never move: one the selection refuses is greyed and says why, once for a run of
+  items it shares with. On the way: a piece locked on the board could not be unlocked there, since
+  a click passes over it — a right-click now reaches it, and only a right-click; Shift+F10 did
+  nothing wherever the canvas had no focus to give it; and Hide now says it leaves the piece off
+  the PDF. Found, not fixed: Q28, Q29.
+- ✅ **8.10 The interface's language.** Every word on screen through one catalogue per language,
+  so a translation is one file and needs no code: `apps/desktop/src/locales/`, checked by
+  `pnpm test locales`, tried in `pnpm dev`, and the README invites one. Which languages the app
+  offers is the project's own list, `SUPPORTED_LANGUAGES`: a translation joins it after review, not
+  by existing. Settings › Language follows the system or keeps a choice, applied at once. English
+  is the only supported language so far ([ADR 0018](adr/0018-interface-language.md)).
+  ✅ Built as described. On the way: the domain's problem sentences, the export's words for Parts
+  and the Sheets view, and the document's undo labels were English below the app — each is now
+  facts the app words, so no package but the app speaks a language. The status bar said "1 parts"
+  and "1 features"; it counts in the plural now. The recovery dialog wrote its date in the
+  system's format rather than the interface's. Left for a language that needs it: paper stays
+  English (its glyphs are Latin), default names such as *Untitled* stay as the file keeps them,
+  and numbers keep the decimal point.
+
+### Fixed along the way
+
+| # | What | Where it was found | Plan |
+|---|---|---|---|
+| ✅ **Q28** | Flip acts on what is selected, so a right-click on a piece's outline flips the outline alone: its cut-outs, hardware holes and fold stay where they were, and an asymmetric piece becomes a wrong pattern without a word. A symmetric outline flipped alone changes nothing visible and still takes an undo step. The panel's *Flip this piece* does the same | 8.8, the leathercraft review | ✅ Fixed: a piece's outline stands for the piece. Flipping it — from the menu, the panel or the part's heading — flips everything in the part about the outline's centre, and each stitch hole lands on its own mirror; a label goes to its mirrored place still reading forwards. Anything locked in the piece refuses the whole flip. Any other feature still flips alone |
+| ✅ **Q30** | Moving or turning a piece's outline — dragged, with Rotate, or its X, Y or Turn typed — left its cut-outs, rivets, fold and labels where they were, as Flip did before Q28. Rotate did nothing to a part picked by its heading, and the board never showed one as picked. A gesture part of the selection refused was applied to the rest: a stretched piece left its rivets behind, and a lock refused a drag without a word. And a turn stored a 100 mm panel as 99.99999999999999 mm for one angle in five | Q28, reviewing Move, Rotate and Scale | ✅ Fixed: Q28's rule, one helper for every gesture, typed moves and turns included; hidden features travel, a dragged piece never snaps to itself, and a part picked by its heading shows on the board; a refused gesture is refused whole, and says why, lock first; a turn, move or mirror scales nothing, exactly |
+| ✅ **Q29** | A part picked by its heading reads "0 selected" in the status bar and "Nothing selected" in Properties, while the right-click menu acts on the whole part | 8.8, the UX review | ✅ Fixed: a picked part is a real selection everywhere. The status bar counts it, Properties shows the part — name, cut, its outline's size, its problems, Flip this piece, Delete part — and the Delete key deletes it whole. Shift-click and Shift-box add to it instead of dropping it, Edit Points edits its outline, and Scale says why it does not resize a whole part. On the way: the panel's Delete was enabled on a feature a locked dependent refused, and did nothing |
+| ✅ **Q26** | **bug** · Two findings of the nightly property run ([issue #27](https://github.com/crnlsp/leathercad/issues/27)). A cubic that doubles back on itself measured short — 4 µm on a 94 mm curve, against a 1e-7 mm tolerance — because its speed kinks where it turns, and a kink can make adaptive quadrature's halves agree with the whole while both are wrong. And the nearest point of a line shorter than `EPS_POINT` was always its start, a hair from its other end | The nightly runs of 2026-09-27 to 2026-09-29 (seeds 267645448, 1303645 and 285059694) | ✅ Fixed: a cubic is measured in pieces cut at every turning point of x and of y, where its speed is smooth, and a line is projected on exactly at any length but zero. Both counterexamples are regression tests, and a new property measures cubics along a line against the distance they travel |
+
+### Release engineering
+
+| # | What | Plan |
+|---|---|---|
+| ✅ **R2** | `develop` was deleted once by merging the `develop` → `main` pull request, and was gone again from 2026-09-26 — so 3.9b–d and the fixes after 1.1.0 went straight into `main` | ✅ Done 2026-09-29. The cause: *Automatically delete head branches* deleted `develop` when a release merged, and the *General* ruleset that should have stopped it named no branch. `develop` is recreated, and each branch has a ruleset: no deletion, no force push, pull requests only with every CI check required — squash merges only into `develop`, bringing a release back included, and merge commits only into `main`, which also requires *Release gate* |
+| ✅ **R7** | Releases went out before their section of the roadmap was done: the roadmap's 1.1 shipped as 1.1.0, 1.1.1 and 1.2.0 with ten of its slices still to do, because a release pull request was merged whenever release-please opened one | ✅ A release is its whole section: `develop` reaches `main` only when every item under *the next release* is ✅, and the *Release gate* check refuses a pull request into `main` from anything but `develop` or release-please, and a section with anything not done left in it ([`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)) |
+
+---
+
+## 1.4 — the release after
+
+Everything 1.3 did not finish, moved here unchanged on 2026-09-30 so that what was done could ship
+([`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)). It becomes *the next release*
+once 1.3 has shipped. The order within each group is the suggested order of work, and *The window*
+comes before the other groups.
+
+### The window
+
+Left from 1.3's *The window*: nothing says a new release exists.
+
+- ☐ **8.9 Update discovery.** The main process asks GitHub for the latest release and compares it
+  with the running version: *Check for updates* in Settings › Updates, the result in About, and a
+  quiet mark on Settings when one exists. It links to the release page and installs nothing (see
+  *Not planned*). The app's first network request, so `SECURITY.md`'s "no network connections"
+  changes with it, in an ADR; the Flatpak skips it, as Flathub updates it. Reads tags in both
+  forms (R4).
 
 ### Drawing and editing
 
-- ✅ **3.9 Vertex editing.** Add, remove and move a drawn path's points; corner ↔ smooth. In three
-  slices:
-  - ✅ **3.9b Corners survive point edits.** `editPathPoint` moves, adds or removes a point of a
-    drawn path in one undoable step, and renumbers every stitch run and dimension attached to the
-    path's corners — or to anything derived from it — so each stays on the corner it was on. An
-    edit that would take an attached corner away is refused (`CORNER_IN_USE`). Closes ADR 0010's
-    open item without vertex ids or a format change (ADR 0010, amended). Commands and geometry
-    only; the tool is 3.9c.
-  - ✅ **3.9c The Edit Points tool** (N, under Modify). A handle on each point of the selected
-    drawn path: drag one to move its point, press an edge to add a point there and drag it in the
-    same gesture, and Delete removes the point last pressed — each one step to undo. A refusal is
-    said beside the pointer; a shape or a locked outline says why it has no points to edit, and a
-    press on another drawn path picks it. Built on `closestPointOnPath`, new in `packages/geometry`.
-    Pressing an edge replaced the double-click first written here: the canvas's double-click
-    already fits the view, and one gesture that adds and places a point is fewer steps.
-  - ✅ **3.9d Corner ↔ smooth,** as a rounded corner with a radius — an arc, which offsets — rather
-    than a Bézier, which the stitch-line offset refuses. In Edit Points, **R** rounds the picked
-    corner to the *Corner radius* in the work bar, and sharpens a rounded one picked by either end;
-    R is left to the Rectangle tool when no corner is picked. A stitch run or dimension on that
-    corner stays on it, now at the middle of its rounding. Refusals say why: the rounding does not
-    fit (`ROUNDING_DOES_NOT_FIT`), or there is no rounding to sharpen (`NOT_A_ROUNDED_CORNER`).
-    Built on `roundPathVertex` and `sharpenPathArc`, which are inverses and property-tested as such.
 - ☐ **3.10 Guides, alignment and distribution.**
 - ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.
   Until then, 3.7 refuses those transforms.
-- ✅ **3.11 Isolate a tool's overlay from the draw loop.** An overlay that throws stopped the whole
-  canvas painting (grid, rulers, every feature). `ToolManager` now runs a tool's overlay and notice
-  so that a throw costs only that tool's part of the frame — the snap glyph, the rulers and the
-  drawing still paint — and reports it once, naming the tool, to the console, which the app's log
-  records (ADR 0015). Held by a deliberately throwing tool in `tool.test.ts`.
 - ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
@@ -129,47 +152,25 @@ suggested order of work.
 
 ### Known issues and findings
 
-Everything found along the way that is not fixed yet, with where it was found. Each is small
-enough to fix in 1.1; the ones marked **bug** come first.
+Everything found along the way that is not fixed yet, with where it was found. The ones marked
+**bug** come first.
 
 | # | What | Where it was found | Plan |
 |---|---|---|---|
-| **Q1** | **bug** · `intersectSegments` is not symmetric: two collinear lines whose ends are 1e-9 mm apart give one intersection in one argument order and none in the other. Reproduces with `LEATHERCAD_FC_SEED=-1607984333 pnpm exec vitest run --project geometry intersect.test` | A local property-test run, 2026-09-24; the same "order-dependent `intersectSegments`" Phase 4 recorded | ✅ Fixed: the gap between collinear lines is measured in millimetres against `EPS_POINT`, not as a parameter against `EPS_PARAM` (which made the same gap a touch on a long line and a miss on a short one), and line/line is solved in one canonical argument order, so `(a, b)` and `(b, a)` are the same arithmetic. The counterexample is an example test, and a new property aims collinear pairs at the tolerance |
-| **Q2** | **bug** · A fold drawn edge to edge is reported as off the material (DR2's sampled containment) | Phase 4 close-out; met again drawing the README demo, whose folds stop short of the edges | ✅ Fixed with 8.3: a line's point within one storage quantum of the edge is on the leather |
-| **Q3** | Two reads of refs during render in `CanvasHost.tsx` can show stale state: the cursor style and the canvas notice's bounds | The engineering-tooling checkpoint | ✅ Fixed: the cursor comes from the tool the props name, not the manager (which switches only after the render), and the notice's bounds are state set by the resize observer. The other eight are the deliberate latest-value pattern |
-| **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
-| **Q5** | The property panel's sizing, and the Parts tree cutting feature names at about ten characters | UI audit, deferred opportunities | ✅ Names had wrapped rather than truncated since F.6, but below 1280 px Parts narrowed to 200 px and a name broke inside a word (*Cut-out mirrore / d*). Parts now keeps 220 px at every width; an end-to-end test holds every word of the sample's names whole at each width band. Properties still steps down to 264 px, which fits its fields |
-| **Q6** | `packages/domain/src/workloads.ts` shows 0 % coverage since the performance ceilings moved to their own step | Moving `perf.test.ts` out of the coverage run | ✅ Fixed: excluded from coverage as the test support it is |
-| **Q25** | **bug** · `offsetPath` out and back refuses a rounded rectangle whose corner radius is about `EPS_POINT` (1e-7 mm): the two lines either side of a corner arc that small meet within the tolerance, and `selfIntersections` counts that as a crossing. Reproduces with `LEATHERCAD_FC_SEED=42 pnpm exec vitest run --project geometry offset.test`; fails the same way before Q1's fix | Checking Q1's fix across seeds, 2026-09-26 | ✅ Fixed with 3.9b, where it kept failing `pnpm check` at random. Not the offset: `intersectSegments` let a crossing sit up to `EPS_PARAM` past a line's end *as a parameter* — 2e-7 mm on a 200 mm side, wider than `EPS_POINT` — so the sides either side of a kept 1.5e-7 mm corner arc read as crossing. The slack is now `EPS_POINT` in millimetres at any length, the rule Q1 applied to the collinear case. Both seeds are regression tests |
-| **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
+| ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
+| ☐ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
+| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
+| ☐ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | Decide which sizes a piece keeps (hardware, labels, card slots) before Scale takes the whole piece |
 
-#### The independent QA pass (2026-09-24)
+#### Left from the independent QA pass (2026-09-24)
 
-An outside QA pass over `main` at `d54b2d7` (v1.0.x), on Linux under Xvfb, before the Sheets view
-landed. Its ids (B1–B7 confirmed, S1–S10 suspected) are kept in brackets so the report can be read
-beside this table; the numbers here continue the Q series, because `S1`–`S7` already name the
-structural invariants in [`domain-model.md`](domain-model.md) §8. Each confirmed bug is fixed
-alongside the 8.x slice it is nearest to, one pull request per slice.
+The two findings still open from the outside QA pass over `main` at `d54b2d7` (v1.0.x); its fixes
+are in the [record](history/roadmap-1.1-and-1.2.md). The ids in brackets are the report's.
 
 | # | What | Severity | Plan |
 |---|---|---|---|
-| **Q8** | **bug** (B1) · Mirroring an **outline** puts a second outline in the same part. It saves, and the file then **cannot be reopened** (`PART_ALREADY_HAS_OUTER`); the crash-recovery copy is set aside as corrupt too, and the PDF prints both outlines as one piece. `mirrorFeatures` never asks `additionRefusal`, and `counterpartOf` copies `role: 'outer'` | P0 | ✅ Fixed with 8.2. The outline *is* the piece, so its counterpart — with every counterpart from that part — now goes into a **new part** beside it, which is the left-and-right pair the mirror design was always about. A property (`commandRoundTrip.test.ts`) now plays random sequences of 26 commands (29 since 3.9b) and holds every result to saving, reopening byte-identically and paginating; it finds this bug on the old code in one step |
-| **Q9** | **bug** (B2) · Mirroring a **dimension** makes a `measurement` with a `derived` source, which the schema refuses on open. The panel shows *Offset NaN mm*; `mirrorRefusal` refuses only labels, and the fold mirror inherits the hole | P0 | ✅ Fixed with 8.2. Refused, by `DIMENSION_NOT_MIRRORED` (X3), with a reason the disabled button shows; the fold mirror inherits the refusal. Held by the same property |
-| **Q10** | **bug** (B3) · **Duplicate** re-points only a derived feature's `sourceId`. A dimension's anchors and a fold mirror's `foldId` still name the original, so the copy's dimension measures the original, its caption sits over the original, a mirrored slot lands 230 mm off the copy, and the PDF tapes the copy across extra sheets | P1 | ✅ Fixed with 8.3: Duplicate re-points every reference inside the part — a derivation's source, a dimension's two ends and a fold mirror's fold |
-| **Q11** | **bug** (B4) · A dimension or a *Follows* can reach **another part**. The part's printed extent then spans the gap on the board, so moving a piece on the board changes the sheet count (4 → 7 pages), which the Sheets spec's criterion 2 forbids; readiness reports nothing | P1 | ✅ Fixed with 8.3: a derivation laid on its source (a stitch line, holes, an allowance) must follow something on its own piece (`FOLLOWS_ANOTHER_PART`), and a dimension measures one piece (`MEASURE_ACROSS_PARTS`, which the Measure tool says at the second click; it prefers the first piece's corner where two pieces touch). A mirror may still follow another piece — it is placed by its axis, and a mirrored piece is one (Q8). Commands only: a file from before holds what it holds, and opens |
-| **Q12** | **bug** (B5) · Packing ignores **captions**: a long caption on a narrow part prints over its neighbour's, or past the sheet edge (x = 327 mm on a 297 mm sheet) | P2 | ✅ Fixed with 8.3: a piece is packed by its caption's width where that is wider, up to the printable width; a property holds captions off each other and on the paper |
-| **Q13** | **bug** (B6) · A piece tiled **1 × 2** always has its join on its centre line — on a bifold, exactly on the fold, where the fold mark cannot be told from the cut line | P2 | ✅ Fixed with 8.3: the tile grid slides along its spare to keep every join at least 15 mm from a straight fold, and stays centred when it has no room; a property holds the coverage |
-| **Q14** | **bug** (B7) · Hiding a part keeps its features **selected**: the panel edits an invisible outline, and Delete removes it unseen | P3 | ✅ Fixed with 8.2. An edit drops from the selection what it removed or hid; a feature picked while already hidden, from the parts panel, stays picked |
-| **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | Decide what a corner of a rounded outline *means* to a maker before changing it; 4.10b |
-| **Q16** | (S2) **Save race**: the saved document is recorded after the write, from the store, not from the bytes written, so an edit landing during a slow write would be marked saved | P3 | ✅ Fixed with 8.2: the document marked saved is the one the bytes were made from |
-| **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | P3 · investigate | Physical prints first (R1), then move it inside the printable area if a printer clips it |
-| **Q18** | (S4) Export suggests *Wallet v1.pdf* for a project named *Wallet v1.2*: the name is cut at its last dot | P3 | ✅ Fixed with 8.2: only a trailing `.lcp` is taken off |
-| **Q19** | (S5) The paper menu label ignores orientation and implies the whole sheet is printable | P3 | ✅ Already fixed by 7.4a, found checking it in 8.4b: the list reads *1 sheet of A4, landscape*, and its tooltip gives the printable area. The native Paper menu uses the same words |
-| **Q20** | (S6) Hidden parts, label-only parts and parts with a hidden outline are left out of the PDF without a notice | intentional | The Sheets spec's *Not printed* labels |
-| **Q21** | (S7) *Cut 2* on a mirrored pair does not say to flip the template for the second piece | deferred | The Sheets spec §11 |
-| **Q22** | (S8) Saving rounds the mirror-line angle to six decimals, so a reopened document differs in memory by ≤ 0.0003 mm per metre | negligible | Recorded in 4.8a; nothing to do |
-| **Q23** | (S9) Ink reaches up to half a stroke (0.125 mm) past the printable area, because packing uses geometry bounds | negligible | Nothing unless a printer clips it |
-| **Q24** | (S10) Horizontal and vertical dimensions read 0.0 after a 90° rotation; the UI creates only aligned ones | API only | When those kinds reach the UI |
+| ☐ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | Decide what a corner of a rounded outline *means* to a maker before changing it; 4.10b |
+| ☐ **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | P3 · investigate | Physical prints first (R1), then move it inside the printable area if a printer clips it |
 
 **What the QA pass could not test,** kept here until someone does: physical 1:1 prints on real
 printers and viewers, including *Actual size* and `/PrintScaling /None` (R1); whether the footer
@@ -187,12 +188,11 @@ is felt.
 
 | # | What | Plan |
 |---|---|---|
-| **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md), which still says *pending* on all three platforms | Record one row per platform. Until then the project does not claim verified 1:1 output in writing |
-| **R2** | `develop` was deleted once, by merging the `develop` → `main` pull request | Protect `main` and `develop` with a branch ruleset (available now the repository is public): no deletion, no force push, pull requests only, CI required |
-| **R3** | 1.0.1's release notes list every fix twice, because pull requests into `develop` were merged with merge commits, which release-please reads as well as the commits inside them | Squash-merge into `develop` from now on ([`CONTRIBUTING.md`](../CONTRIBUTING.md)); `CHANGELOG.md` is corrected; edit the GitHub release notes by hand |
-| **R4** | Tags read `leathercad-v1.0.1`, not `v1.0.1` | Decide before 1.1 whether to keep the component in the tag; changing it later breaks the link between releases |
-| **R5** | `package.yml` builds Windows and macOS only when packaging could have changed, because a private repository pays for those minutes. The repository is public now, where they are free | Run it on every pull request |
-| **R6** | The renderer loads from `file://`, which keeps the `GrantFileProtocolExtraPrivileges` fuse on | Serve it from a custom `app://` protocol, then turn the fuse off (ADR 0014) |
+| ☐ **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md), which still says *pending* on all three platforms | Record one row per platform. Until then the project does not claim verified 1:1 output in writing |
+| ☐ **R3** | 1.0.1's release notes list every fix twice, because pull requests into `develop` were merged with merge commits, which release-please reads as well as the commits inside them. 1.2.0's list every feature twice, for the same reason: #23, #25 and #26 went into `main` with merge commits | Squash-merge into `develop` ([`CONTRIBUTING.md`](../CONTRIBUTING.md)), which the ruleset enforces since 2026-09-29; `CHANGELOG.md` is corrected for both; edit the GitHub release notes of 1.0.1 and 1.2.0 by hand |
+| ☐ **R4** | Tags read `leathercad-v1.0.1`, not `v1.0.1` | Decide before 1.4 whether to keep the component in the tag; 1.3 keeps it. Changing it later breaks the link between releases |
+| ☐ **R5** | `package.yml` builds Windows and macOS only when packaging could have changed, because a private repository pays for those minutes. The repository is public now, where they are free | Run it on every pull request |
+| ☐ **R6** | The renderer loads from `file://`, which keeps the `GrantFileProtocolExtraPrivileges` fuse on | Serve it from a custom `app://` protocol, then turn the fuse off (ADR 0014) |
 | — | Code signing | **Not done, by decision** (2026-09-24). LeatherCAD is free and open source and signing costs money every year, so installers ship unsigned; [`getting-started.md`](getting-started.md) says how to open them and how to check a download against its build provenance. If it is ever wanted, electron-builder signs when `CSC_LINK` is set |
 
 ---
@@ -225,9 +225,23 @@ Also later, each already decided in principle:
 - **Radial, angular, chained and baseline dimensions,** and dimensions between parts.
 - **A screen-calibration step,** which would make 1:1 literal on screen too.
 - **Draw tools in their role's colour** — still an open question in the UI decisions record.
+- **8.8b Copy, Paste and Duplicate of features,** after 8.8. Neither exists, and they carry a
+  domain question: what a pasted stitch line follows when its outline was not copied with it. A
+  command with property tests, not a menu item.
+
+Recorded from the QA pass (2026-09-24), with no work planned:
+
+| # | What | Severity | Plan |
+|---|---|---|---|
+| **Q20** | (S6) Hidden parts, label-only parts and parts with a hidden outline are left out of the PDF without a notice | intentional | The Sheets spec's *Not printed* labels |
+| **Q21** | (S7) *Cut 2* on a mirrored pair does not say to flip the template for the second piece | deferred | The Sheets spec §11 |
+| **Q22** | (S8) Saving rounds the mirror-line angle to six decimals, so a reopened document differs in memory by ≤ 0.0003 mm per metre | negligible | Recorded in 4.8a; nothing to do |
+| **Q23** | (S9) Ink reaches up to half a stroke (0.125 mm) past the printable area, because packing uses geometry bounds | negligible | Nothing unless a printer clips it |
+| **Q24** | (S10) Horizontal and vertical dimensions read 0.0 after a 90° rotation; the UI creates only aligned ones | API only | When those kinds reach the UI |
 
 ## Not planned
 
-Auto-update; material, cost or bill-of-materials metadata; a notes field separate from labels;
-3D; an onboarding wizard; drag handles for values that are already typed; driving a printer
-directly — LeatherCAD writes a PDF and the maker prints it from their own viewer.
+Auto-update, meaning a release installed from inside the app (8.9 only says one exists); material,
+cost or bill-of-materials metadata; a notes field separate from labels; 3D; an onboarding wizard;
+drag handles for values that are already typed; driving a printer directly — LeatherCAD writes a
+PDF and the maker prints it from their own viewer.

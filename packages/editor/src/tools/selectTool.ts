@@ -1,4 +1,12 @@
-import { deleteFeatures, refusedTransforms, translateFeatures } from '@leathercad/document';
+import {
+  deleteFeatures,
+  deletePart,
+  pieceScope,
+  selectedFeatureIds,
+  transformRefusal,
+  translateFeatures,
+} from '@leathercad/document';
+import type { FeatureId } from '@leathercad/domain';
 import { evaluate, type Problem } from '@leathercad/domain';
 import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
 import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
@@ -14,7 +22,9 @@ type State =
   | {
       readonly kind: 'moving';
       readonly startMm: { x: number; y: number };
-      /** Why part of the selection is not moving, while it is not (X3). */
+      /** The selection, each piece in it made whole (Q30): what the drag moves. */
+      readonly moving: readonly FeatureId[];
+      /** Why the selection is not moving, while it is not (X3). */
       readonly refusal: Problem | null;
     }
   | {
@@ -50,9 +60,11 @@ export function createSelectTool(): Tool {
         return;
       }
 
-      const selection = ctx.store.getState().selection;
+      const { selection, document } = ctx.store.getState();
       if (event.shiftKey) {
-        const next = new Set(selection.features);
+        // Added to what is picked — a part picked by its heading included, as
+        // the features it stands for, rather than dropped (Q29).
+        const next = new Set(selectedFeatureIds(document.project, selection));
         if (next.has(hit)) next.delete(hit);
         else next.add(hit);
         ctx.store.select(next);
@@ -73,24 +85,26 @@ export function createSelectTool(): Tool {
 
       if (state.kind === 'maybe-move') {
         if (!isDrag(ctx, state.startMm, event.at)) return;
-        ctx.store.begin('Move');
-        state = { kind: 'moving', startMm: state.startMm, refusal: null };
+        const { document, selection } = ctx.store.getState();
+        ctx.store.begin({ action: 'move' });
+        // A piece's outline carries the piece (Q30), hidden features and all.
+        const { features } = pieceScope(document.project, [...selection.features]);
+        state = { kind: 'moving', startMm: state.startMm, moving: features, refusal: null };
       }
 
       if (state.kind === 'moving') {
         const delta = { x: event.at.x - state.startMm.x, y: event.at.y - state.startMm.y };
-        const { document, selection } = ctx.store.getState();
+        const { document } = ctx.store.getState();
 
         // The same check the command makes, asked first so the user is told why
-        // a stitch line dragged on its own stays where it is.
-        const refused = refusedTransforms(
-          document.project,
-          selection.features,
-          MatOps.fromTranslation(delta),
-        );
-        state = { ...state, refusal: refused[0]?.problem ?? null };
+        // nothing moves: a stitch line dragged on its own, or a locked rivet in
+        // the piece being dragged.
+        state = {
+          ...state,
+          refusal: transformRefusal(document.project, state.moving, MatOps.fromTranslation(delta)),
+        };
 
-        ctx.store.preview(translateFeatures(selection.features, delta));
+        ctx.store.preview(translateFeatures(state.moving, delta));
         ctx.invalidate();
       }
     },
@@ -99,7 +113,8 @@ export function createSelectTool(): Tool {
       if (state.kind === 'band') {
         const band = RectOps.fromCorners(state.startMm, event.at);
         const found = featuresWithin(evaluate(ctx.store.getState().document.project), band);
-        const existing = event.shiftKey ? [...ctx.store.getState().selection.features] : [];
+        const { selection, document } = ctx.store.getState();
+        const existing = event.shiftKey ? selectedFeatureIds(document.project, selection) : [];
         ctx.store.select([...existing, ...found]);
       } else if (state.kind === 'moving') {
         ctx.store.commit();
@@ -117,7 +132,22 @@ export function createSelectTool(): Tool {
       }
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        const selected = [...ctx.store.getState().selection.features];
+        const { selection } = ctx.store.getState();
+        // A part picked by its heading goes whole, as its menu's Delete part
+        // does (Q29), not feature by feature into an empty part.
+        const [partId] = selection.parts;
+        if (partId !== undefined && selection.features.size === 0) {
+          if (ctx.requestDeletePart !== undefined) {
+            ctx.requestDeletePart(partId);
+            return;
+          }
+          const before = ctx.store.getState().document;
+          ctx.dispatch(deletePart(partId));
+          if (ctx.store.getState().document !== before) ctx.store.clearSelection();
+          return;
+        }
+
+        const selected = [...selection.features];
         if (selected.length === 0) return;
 
         if (ctx.requestDelete !== undefined) {
@@ -136,11 +166,11 @@ export function createSelectTool(): Tool {
     /**
      * While a move is in progress, the moving features snap to everything
      * except themselves. Without this a dragged panel catches its own corner
-     * the instant it leaves it, and cannot be moved at all.
+     * the instant it leaves it, and cannot be moved at all — and a piece
+     * carried by its outline catches its own slot.
      */
-    snapExclusions(ctx) {
-      if (state.kind !== 'moving') return [];
-      return [...ctx.store.getState().selection.features];
+    snapExclusions() {
+      return state.kind === 'moving' ? state.moving : [];
     },
 
     notice() {

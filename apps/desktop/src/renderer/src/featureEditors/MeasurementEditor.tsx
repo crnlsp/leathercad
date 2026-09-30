@@ -1,6 +1,7 @@
 import type { MeasureSource } from '@leathercad/domain';
 
 import { NumberField } from '../NumberField.js';
+import { useI18n } from '../i18n.js';
 
 /**
  * The two things about a dimension the maker chooses.
@@ -17,16 +18,17 @@ export function MeasurementEditor({
   source: MeasureSource;
   onChange: (change: { offsetMm?: number; precision?: 0 | 1 | 2 }) => void;
 }) {
+  const { t } = useI18n();
   return (
     <>
       <NumberField
-        label="Offset"
+        label={t('editor.offset')}
         value={source.offsetMm}
         step={1}
         onCommit={(offsetMm) => onChange({ offsetMm })}
       />
       <NumberField
-        label="Decimals"
+        label={t('editor.decimals')}
         value={source.precision}
         min={0}
         step={1}

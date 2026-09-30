@@ -1,3 +1,4 @@
+import { useI18n } from './i18n.js';
 import { TOOL_GROUPS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
 import { ChevronsLeft, ChevronsRight } from 'lucide-react';
@@ -28,52 +29,60 @@ export function ToolPalette({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
+  const { t } = useI18n();
+  const toggle = collapsed ? t('tools.showNames') : t('tools.hideNames');
   return (
     <nav
       className={collapsed ? 'rail collapsed' : 'rail'}
       data-testid="tool-rail"
-      aria-label="Tools"
+      aria-label={t('tools.label')}
     >
-      {TOOL_GROUPS.filter((group) => group.tools.length > 0).map((group, index) => (
-        <div className="rail-group" key={group.label ?? `lead-${index}`}>
-          {group.label !== null &&
+      {TOOL_GROUPS.filter((group) => group.tools.length > 0).map((group) => (
+        <div className="rail-group" key={group.id ?? 'lead'}>
+          {group.id !== null &&
             (collapsed ? (
-              <hr className="rail-rule" aria-label={group.label} />
+              <hr className="rail-rule" aria-label={t(`tools.group.${group.id}`)} />
             ) : (
-              <h2 className="rail-heading">{group.label}</h2>
+              <h2 className="rail-heading">{t(`tools.group.${group.id}`)}</h2>
             ))}
-          {group.tools.map((tool) => (
-            <Tooltip
-              key={tool.id}
-              text={collapsed ? `${tool.label} (${tool.key}) — ${tool.howTo}` : tool.howTo}
-            >
-              <button
-                type="button"
-                className={tool.id === activeId ? 'tool active' : 'tool'}
-                data-testid={`tool-${tool.id}`}
-                aria-label={collapsed ? tool.label : undefined}
-                onClick={() => onSelect(tool.id)}
+          {group.tools.map((tool) => {
+            const name = t(`tools.${tool.id}.name`);
+            const howTo = t(`tools.${tool.id}.howTo`);
+            return (
+              <Tooltip
+                key={tool.id}
+                text={
+                  collapsed ? t('tools.collapsedTooltip', { name, key: tool.key, howTo }) : howTo
+                }
               >
-                {/* Icon and label and shortcut expanded; the icon with the
-                    shortcut as a corner badge collapsed (decisions §4.3). */}
-                <span className="tool-face">
-                  <ToolIcon toolId={tool.id} size={collapsed ? 20 : 16} />
-                  {!collapsed && tool.label}
-                </span>
-                <kbd>{tool.key}</kbd>
-              </button>
-            </Tooltip>
-          ))}
+                <button
+                  type="button"
+                  className={tool.id === activeId ? 'tool active' : 'tool'}
+                  data-testid={`tool-${tool.id}`}
+                  aria-label={collapsed ? name : undefined}
+                  onClick={() => onSelect(tool.id)}
+                >
+                  {/* Icon and label and shortcut expanded; the icon with the
+                      shortcut as a corner badge collapsed (decisions §4.3). */}
+                  <span className="tool-face">
+                    <ToolIcon toolId={tool.id} size={collapsed ? 20 : 16} />
+                    {!collapsed && name}
+                  </span>
+                  <kbd>{tool.key}</kbd>
+                </button>
+              </Tooltip>
+            );
+          })}
         </div>
       ))}
 
-      <Tooltip text={collapsed ? 'Show tool names' : 'Hide tool names'}>
+      <Tooltip text={toggle}>
         <button
           type="button"
           className="tool rail-toggle"
           data-testid="rail-toggle"
           aria-pressed={!collapsed}
-          aria-label={collapsed ? 'Show tool names' : 'Hide tool names'}
+          aria-label={toggle}
           onClick={onToggleCollapsed}
         >
           <Icon of={collapsed ? ChevronsRight : ChevronsLeft} />

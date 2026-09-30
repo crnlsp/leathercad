@@ -1,13 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
+import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
+import { readoutAt } from './cursorReadout.js';
+import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 let app: ElectronApplication;
 
@@ -21,7 +22,7 @@ function num(text: string | null): number {
 }
 
 test.beforeAll(async () => {
-  app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  app = await launchApp();
 });
 
 test.afterAll(async () => {
@@ -45,10 +46,8 @@ async function withFreshApp(
   // A config directory of its own: a test that collapses the rail or opens
   // the legend changes a remembered preference (8.2), which must not reach
   // the next test.
-  const instance = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
+  const instance = await launchApp({
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
   });
   try {
     const window = await instance.firstWindow();
@@ -317,7 +316,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
   // pattern comes back as an editable 105 x 75 rectangle with named parts,
   // not as anonymous curves.
   const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.lcp`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -365,7 +364,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
 
     // The delete is unsaved work, so opening asks first (5.3a); throwing it
     // away is the point of this step.
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(window.getByTestId('parts-list')).toContainText('Card holder');
@@ -390,7 +389,7 @@ test('exports a print-ready PDF at 1:1', async () => {
   // in someone else's viewer. This checks the page really is A4 and that the
   // verification square really measures 50 mm, by rendering through poppler.
   const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.pdf`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -468,8 +467,18 @@ test('the project bar holds the project and its output; the work bar holds the w
     const project = window.getByTestId('project-bar');
     const work = window.getByTestId('work-bar');
 
-    // The project, its file actions, the sheets it prints on, and printing.
-    for (const id of ['project-name', 'save-state', 'save', 'new', 'open', 'paper', 'export-pdf']) {
+    // The project and its menu, the sheets it prints on, printing, and — past
+    // a rule — the application (8.7).
+    for (const id of [
+      'project-menu',
+      'project-name',
+      'save-state',
+      'save',
+      'paper',
+      'export-pdf',
+      'settings',
+      'help-menu',
+    ]) {
       await expect(project.getByTestId(id), id).toHaveCount(1);
       await expect(work.getByTestId(id), id).toHaveCount(0);
     }
@@ -627,14 +636,8 @@ test('the drawing stays put when the drawer opens or the rail collapses (F.3)', 
     await inset.press('Enter');
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-    const readout = window.getByTestId('cursor-readout');
     const probe = { x: box.x + 400, y: box.y + 120 };
-    const reading = async (): Promise<string> => {
-      await window.mouse.move(probe.x + 1, probe.y);
-      await window.mouse.move(probe.x, probe.y);
-      await expect(readout).not.toContainText('—');
-      return (await readout.textContent()) ?? '';
-    };
+    const reading = (): Promise<string> => readoutAt(window, probe.x, probe.y);
 
     const before = await reading();
 
@@ -1474,20 +1477,13 @@ test('the panel measures what a feature has, and reads a dimension (F.1)', async
       await input.press('Enter');
     }
     await window.getByTestId('tool-measure').click();
-    const readout = window.getByTestId('cursor-readout');
     const canvas = (await window.getByTestId('editor-canvas').boundingBox())!;
     // Where the typed millimetres land on screen, read from the app itself.
     // Probed in the canvas's empty top-left: near geometry the readout snaps
     // to it, and a snapped probe gives a wrong view.
     const px = async (xMm: number, yMm: number): Promise<[number, number]> => {
-      await window.mouse.move(canvas.x + 40, canvas.y + 40);
-      await expect(readout).not.toContainText('—');
-      const a = (await readout.textContent())!.split(',').map(num);
-      await window.mouse.move(canvas.x + 140, canvas.y + 140);
-      await expect
-        .poll(async () => (await readout.textContent())!.split(',').map(num)[0])
-        .not.toBe(a[0]);
-      const b = (await readout.textContent())!.split(',').map(num);
+      const a = (await readoutAt(window, canvas.x + 40, canvas.y + 40)).split(',').map(num);
+      const b = (await readoutAt(window, canvas.x + 140, canvas.y + 140)).split(',').map(num);
       const perPx = (b[0]! - a[0]!) / 100;
       return [canvas.x + 40 + (xMm - a[0]!) / perPx, canvas.y + 40 - (yMm - a[1]!) / perPx];
     };
@@ -1589,18 +1585,10 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
 async function mmPerPx(
   window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
 ): Promise<number> {
-  const readout = window.getByTestId('cursor-readout');
   const box = await window.getByTestId('editor-canvas').boundingBox();
 
   const readAt = async (offsetPx: number): Promise<number> => {
-    await window.mouse.move(box!.x + offsetPx, box!.y + box!.height / 2);
-    // The readout is React state fed by a pointer event, so it arrives a frame
-    // later; until then it shows the em dashes it starts with.
-    await expect
-      .poll(async () => (await readout.textContent()) ?? '', { timeout: 5_000 })
-      .not.toContain('—');
-
-    const text = (await readout.textContent()) ?? '';
+    const text = await readoutAt(window, box!.x + offsetPx, box!.y + box!.height / 2);
     return num(text.split(',')[0]!);
   };
 
@@ -1657,7 +1645,7 @@ test('export says what did not make it onto the paper', async () => {
   // to build is absent from the template, and a maker cutting from that
   // template has no way to know it was ever meant to be there.
   const target = join(tmpdir(), `leathercad-e2e-omitted-${Date.now()}.pdf`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -1699,7 +1687,7 @@ test('exports a part named in Polish, which used to be impossible', async () => 
   // all. Text is glyph outlines now, and an outline has no encoding to fall
   // outside of.
   const target = join(tmpdir(), `leathercad-e2e-pl-${Date.now()}.pdf`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -1738,7 +1726,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
   // Slice 4.11b. The words are the user's own, so unlike a part caption they
   // are stored — as words, a place and a size, never as outlines.
   const target = join(tmpdir(), `leathercad-e2e-label-${Date.now()}.lcp`);
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
 
   try {
     const window = await instance.firstWindow();
@@ -1784,7 +1772,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await expect(window.getByTestId('feature-count')).toHaveText('1');
 
     // Unsaved, so opening asks first (5.3a), and throwing it away is the point.
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('feature-count')).toHaveText('2');
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');

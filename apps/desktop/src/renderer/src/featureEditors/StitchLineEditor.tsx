@@ -1,6 +1,7 @@
 import type { Derivation } from '@leathercad/domain';
 
 import { NumberField } from '../NumberField.js';
+import { useI18n } from '../i18n.js';
 
 type Offset = Extract<Derivation, { type: 'offset' }>;
 
@@ -18,9 +19,10 @@ type Offset = Extract<Derivation, { type: 'offset' }>;
  * same quantity either way round.
  */
 export function StitchLineEditor({ op, onChange }: { op: Offset; onChange: (op: Offset) => void }) {
+  const { t } = useI18n();
   return (
     <NumberField
-      label="Edge margin"
+      label={t('editor.edgeMargin')}
       value={op.distanceMm}
       min={0.1}
       step={0.5}

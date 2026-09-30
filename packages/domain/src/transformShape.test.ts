@@ -4,7 +4,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import type { ParametricShape } from './feature.js';
-import { transformShape } from './transformShape.js';
+import { motionBetween, transformShape, transformTextSource } from './transformShape.js';
 
 const rect = (origin: Vec2 = { x: 0, y: 0 }, rotation = 0): ParametricShape => ({
   type: 'rect',
@@ -251,5 +251,100 @@ describe('paths are not this function’s business', () => {
     );
 
     expect(drawn.segments.every((s) => s.kind === 'cubic')).toBe(true);
+  });
+});
+
+// Angles drawn evenly, not fast-check's tidy doubles: about one angle in five
+// has a rotation whose determinant rounds below 1, which is what these catch.
+const rigid = fc
+  .tuple(
+    fc.integer({ min: -1_000_000, max: 1_000_000 }).map((i) => (i / 1_000_000) * Math.PI),
+    fc.double({ min: -500, max: 500, noNaN: true }),
+    fc.double({ min: -500, max: 500, noNaN: true }),
+  )
+  .map(([angle, x, y]) =>
+    MatOps.composeAll(MatOps.fromRotation(angle), MatOps.fromTranslation({ x, y })),
+  );
+
+const shapes = fc.constantFrom<ParametricShape>(rect({ x: 7, y: -3 }, 0.3), circle(), arc(2));
+
+describe('a rigid motion resizes nothing, exactly (Q30)', () => {
+  it('keeps every width, height, radius and corner as it was, to the last bit', () => {
+    fc.assert(
+      fc.property(shapes, rigid, (shape, m) => {
+        const moved = unwrap(transformShape(shape, m));
+        if (shape.type === 'rect' && moved.type === 'rect') {
+          expect(moved.width).toBe(shape.width);
+          expect(moved.height).toBe(shape.height);
+          expect(moved.radii).toEqual(shape.radii);
+        }
+        if (shape.type !== 'rect' && moved.type !== 'rect') {
+          expect(moved.radius).toBe(shape.radius);
+        }
+      }),
+    );
+  });
+
+  it('keeps a label its size', () => {
+    fc.assert(
+      fc.property(rigid, (m) => {
+        const label = {
+          kind: 'text',
+          text: 'Left',
+          at: { x: 5, y: 5 },
+          sizeMm: 3,
+          rotationRad: 0,
+        } as const;
+        expect(unwrap(transformTextSource(label, m)).sizeMm).toBe(3);
+      }),
+    );
+  });
+});
+
+describe('the move or turn between two versions of one shape (Q30)', () => {
+  const probes = [
+    { x: 0, y: 0 },
+    { x: 40, y: 13 },
+    { x: -25, y: 60 },
+  ];
+
+  it('is the rigid motion that took one to the other', () => {
+    fc.assert(
+      fc.property(shapes, rigid, (shape, m) => {
+        const motion = motionBetween(shape, unwrap(transformShape(shape, m)));
+        expect(motion).not.toBeNull();
+        // A circle has no turn to read: its motion is the move of its centre,
+        // which is the same everywhere on the circle.
+        const at = shape.type === 'circle' ? [shape.centre] : probes;
+        for (const probe of at) {
+          const want = MatOps.apply(m, probe);
+          const got = MatOps.apply(motion!, probe);
+          expect(got.x).toBeCloseTo(want.x, 6);
+          expect(got.y).toBeCloseTo(want.y, 6);
+        }
+      }),
+    );
+  });
+
+  it('is nothing when the shape was resized, not moved', () => {
+    const r = rect();
+    if (r.type !== 'rect') throw new Error('expected a rectangle');
+    expect(motionBetween(r, { ...r, width: 120 })).toBeNull();
+    expect(motionBetween(circle(), circle(undefined, 25))).toBeNull();
+    const a = arc();
+    expect(a.type === 'arc' && motionBetween(a, { ...a, sweepAngle: 1 })).toBeNull();
+    expect(motionBetween(r, circle())).toBeNull();
+  });
+
+  it('turns a rectangle about its centre when only its turn is retyped', () => {
+    const r = rect({ x: 0, y: 0 }, 0);
+    const motion = motionBetween(r, { ...rect({ x: 0, y: 0 }, Math.PI / 2) })!;
+    // The centre (50, 25) stays; the corner at the origin swings round it.
+    const centre = MatOps.apply(motion, { x: 50, y: 25 });
+    expect(centre.x).toBeCloseTo(50, 9);
+    expect(centre.y).toBeCloseTo(25, 9);
+    const corner = MatOps.apply(motion, { x: 0, y: 0 });
+    expect(corner.x).toBeCloseTo(75, 9);
+    expect(corner.y).toBeCloseTo(-25, 9);
   });
 });

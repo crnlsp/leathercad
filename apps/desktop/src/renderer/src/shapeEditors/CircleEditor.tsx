@@ -1,6 +1,7 @@
 import { quantise } from '@leathercad/core';
 import type { ParametricShape } from '@leathercad/domain';
 
+import { useI18n } from '../i18n.js';
 import { NumberField } from '../NumberField.js';
 
 type Circle = Extract<ParametricShape, { type: 'circle' }>;
@@ -22,6 +23,7 @@ export function CircleEditor({
   shape: Circle;
   onChange: (shape: Circle) => void;
 }) {
+  const { t } = useI18n();
   return (
     <>
       <div className="field-pair">
@@ -37,7 +39,7 @@ export function CircleEditor({
         />
       </div>
       <NumberField
-        label="Diameter"
+        label={t('editor.diameter')}
         value={shape.radius * 2}
         min={0.01}
         onCommit={(diameter) => onChange({ ...shape, radius: quantise(diameter / 2) })}

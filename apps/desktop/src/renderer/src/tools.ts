@@ -1,20 +1,33 @@
+export type ToolId =
+  | 'select'
+  | 'rectangle'
+  | 'circle'
+  | 'arc'
+  | 'line'
+  | 'polyline'
+  | 'hardware'
+  | 'text'
+  | 'measure'
+  | 'points'
+  | 'rotate'
+  | 'scale';
+
+/**
+ * A mode. Its words are the catalogue's (ADR 0018): `tools.<id>.name`, and
+ * `tools.<id>.howTo` — how the tool is used, in one line, shown in the work
+ * bar while it is the active mode and in its tooltip. That line replaced a
+ * permanent "drag to draw" that was wrong for five of the tools (F.1), so each
+ * has to be true of its own tool and no other.
+ */
 export interface ToolEntry {
-  readonly id: string;
-  readonly label: string;
+  readonly id: ToolId;
   /** Single-letter shortcut, shown on the button. */
   readonly key: string;
-  /**
-   * How the tool is used, in one line — shown in the header while it is the
-   * active mode, and in its tooltip. It replaced a permanent "drag to draw"
-   * that was wrong for five of the tools (F.1), so each line has to be true of
-   * its own tool and no other.
-   */
-  readonly howTo: string;
 }
 
 export interface ToolGroup {
   /** Null for the ungrouped lead entry — Select stands on its own. */
-  readonly label: string | null;
+  readonly id: 'draw' | 'place' | 'modify' | null;
   readonly tools: readonly ToolEntry[];
 }
 
@@ -31,88 +44,36 @@ export interface ToolGroup {
  * Groups with no tools yet are not rendered. An empty heading is noise.
  */
 export const TOOL_GROUPS: readonly ToolGroup[] = [
+  { id: null, tools: [{ id: 'select', key: 'V' }] },
   {
-    label: null,
+    id: 'draw',
     tools: [
-      {
-        id: 'select',
-        label: 'Select',
-        key: 'V',
-        howTo:
-          'Click to select · Shift-click adds or removes · drag on empty space to box-select · drag a selection to move it · Del removes',
-      },
-    ],
-  },
-  {
-    label: 'Draw',
-    tools: [
-      {
-        id: 'rectangle',
-        label: 'Rectangle',
-        key: 'R',
-        howTo: 'Drag corner to corner, or click both corners · Shift keeps it square',
-      },
-      {
-        id: 'circle',
-        label: 'Circle',
-        key: 'C',
-        howTo: 'Drag out from the centre, or click the centre and then the rim',
-      },
-      {
-        id: 'arc',
-        label: 'Arc',
-        key: 'A',
-        howTo: 'Click the start, the end, then a point the arc passes through',
-      },
-      {
-        id: 'line',
-        label: 'Line',
-        key: 'L',
-        howTo: 'Drag end to end, or click both ends · Shift holds 15° steps',
-      },
-      {
-        id: 'polyline',
-        label: 'Polyline',
-        key: 'P',
-        howTo:
-          'Click each point · A arcs the next segment: click its end, then a point on it · L goes straight · click the first to close · Enter finishes · Backspace takes one back',
-      },
+      { id: 'rectangle', key: 'R' },
+      { id: 'circle', key: 'C' },
+      { id: 'arc', key: 'A' },
+      { id: 'line', key: 'L' },
+      { id: 'polyline', key: 'P' },
     ],
   },
   {
     // Put down with one click at a size you choose, rather than drawn out.
     // Grouped by how the tool is used, which is the fact the old single Draw
     // group hid (UI Foundations decisions §2.1).
-    label: 'Place',
+    id: 'place',
     tools: [
       // Hardware is its own mode rather than a "draw as" option, because it is
       // the only one placed by a click at a chosen size rather than drawn.
-      {
-        id: 'hardware',
-        label: 'Hardware',
-        key: 'H',
-        howTo: 'Click to punch a hole in the selected part, at the size chosen above',
-      },
+      { id: 'hardware', key: 'H' },
       // X rather than T, which Rotate has for "turn". A label is placed with
       // one click and then typed in the panel.
-      {
-        id: 'text',
-        label: 'Text',
-        key: 'X',
-        howTo: 'Click to place a label on the selected part, then type it in the panel',
-      },
+      { id: 'text', key: 'X' },
       // A dimension is placed by naming two corners. It reads the drawing and
       // never changes it, which is why it is not under Modify.
-      {
-        id: 'measure',
-        label: 'Measure',
-        key: 'M',
-        howTo: 'Click two corners to dimension the distance between them',
-      },
+      { id: 'measure', key: 'M' },
     ],
   },
   {
-    label: 'Modify',
+    id: 'modify',
     tools: [
       // Move is not here on purpose. The select tool already moves a selection
       // by dragging it, and a second mode that did the same thing would teach
@@ -121,25 +82,9 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       //
       // Edit Points changes the shape of one drawn path rather than moving the
       // selection whole (3.9c). N for "node", the drafting name for a point.
-      {
-        id: 'points',
-        label: 'Edit Points',
-        key: 'N',
-        howTo:
-          'Drag a point of the selected drawn path to move it · press an edge to add one · Del removes the point last pressed · R rounds that corner, or sharpens a rounded one',
-      },
-      {
-        id: 'rotate',
-        label: 'Rotate',
-        key: 'T',
-        howTo: 'Drag around the selection to turn it about its centre',
-      },
-      {
-        id: 'scale',
-        label: 'Scale',
-        key: 'S',
-        howTo: 'Drag to resize the selection about its centre · Shift holds the proportions',
-      },
+      { id: 'points', key: 'N' },
+      { id: 'rotate', key: 'T' },
+      { id: 'scale', key: 'S' },
     ],
   },
 ];
@@ -152,7 +97,7 @@ export const ALL_TOOLS: readonly ToolEntry[] = TOOL_GROUPS.flatMap((g) => g.tool
  * a setting that does nothing.
  */
 export const DRAWING_TOOL_IDS: ReadonlySet<string> = new Set(
-  TOOL_GROUPS.filter((group) => group.label === 'Draw').flatMap((group) =>
+  TOOL_GROUPS.filter((group) => group.id === 'draw').flatMap((group) =>
     group.tools.map((tool) => tool.id),
   ),
 );

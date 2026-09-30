@@ -1,7 +1,9 @@
 import {
   editPathPoint,
   pathPointRefusal,
+  pieceScope,
   pointEditingRefusal,
+  selectedFeatureIds,
   type Command,
   type PathPointEdit,
 } from '@leathercad/document';
@@ -100,7 +102,7 @@ export function createEditPointsTool(
         const handle = nearestWithin(vertices, event.at, tolerance);
         if (handle !== null) {
           const base = ctx.store.getState().document.project;
-          ctx.store.begin('Move point');
+          ctx.store.begin({ action: 'move-point' });
           state = {
             kind: 'dragging',
             featureId: target.id,
@@ -118,7 +120,7 @@ export function createEditPointsTool(
           // Right at a segment's end, the point is already there to take.
           if (edge.t > END_SLACK && edge.t < 1 - END_SLACK) {
             const split = { segment: edge.segmentIndex, t: edge.t };
-            ctx.store.begin('Add point');
+            ctx.store.begin({ action: 'add-point' });
             ctx.store.preview(insertThenMove(target.id, split, null));
             state = {
               kind: 'dragging',
@@ -303,12 +305,17 @@ function reshapeAt(
   return null;
 }
 
-/** The one selected feature, if exactly one is. */
+/**
+ * The one selected feature, if exactly one is — or, for a part picked by its
+ * heading, the outline that stands for it (Q29).
+ */
 function soleSelected(ctx: ToolContext): FeatureId | null {
-  const selected = ctx.store.getState().selection.features;
-  if (selected.size !== 1) return null;
-  const [id] = selected;
-  return id ?? null;
+  const { selection, document } = ctx.store.getState();
+  const selected =
+    selection.features.size === 0 && selection.parts.size === 1
+      ? pieceScope(document.project, selectedFeatureIds(document.project, selection)).about
+      : [...selection.features];
+  return selected.length === 1 ? selected[0]! : null;
 }
 
 /** The selected feature's drawn path, when its points can be edited. */
@@ -349,7 +356,7 @@ function insertThenMove(
 ): Command {
   const insert = editPathPoint({ kind: 'insert', featureId, ...split });
   return {
-    label: 'Add point',
+    label: { action: 'add-point' },
     apply: (document) => {
       const inserted = insert.apply(document);
       return to === null

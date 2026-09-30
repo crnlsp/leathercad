@@ -3,6 +3,7 @@ import { MIN_PITCH_MM, type Derivation, type StitchHoles } from '@leathercad/dom
 
 import { NumberField } from '../NumberField.js';
 import { IRON_PRESETS, presetForPitch } from '../irons.js';
+import { useI18n } from '../i18n.js';
 
 type HolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
 
@@ -23,12 +24,13 @@ export function StitchHoleSetEditor({
   holes: StitchHoles | undefined;
   onChange: (op: HolesOp) => void;
 }) {
+  const { t } = useI18n();
   const preset = presetForPitch(op.pitchMm, op.ironLabel);
 
   return (
     <>
       <label className="field">
-        <span className="field-label">Iron</span>
+        <span className="field-label">{t('editor.iron')}</span>
         <span className="field-input">
           <select
             data-testid="iron-preset"
@@ -39,7 +41,7 @@ export function StitchHoleSetEditor({
               onChange({ ...op, pitchMm: chosen.pitchMm, ironLabel: chosen.label });
             }}
           >
-            <option value="">Custom</option>
+            <option value="">{t('editor.custom')}</option>
             {IRON_PRESETS.map((iron) => (
               <option key={iron.id} value={iron.id}>
                 {iron.label}
@@ -50,7 +52,7 @@ export function StitchHoleSetEditor({
       </label>
 
       <NumberField
-        label="Pitch"
+        label={t('editor.pitch')}
         value={op.pitchMm}
         // The domain's floor, so the field and evaluation refuse the same
         // pitches (5.6).
@@ -67,21 +69,21 @@ export function StitchHoleSetEditor({
       />
 
       <label className="field">
-        <span className="field-label">Fit</span>
+        <span className="field-label">{t('editor.fit')}</span>
         <span className="field-input">
           <select
             data-testid="hole-mode"
             value={op.mode}
             onChange={(event) => onChange({ ...op, mode: event.target.value as HolesOp['mode'] })}
           >
-            <option value="fit-whole">Even, whole number</option>
-            <option value="exact-pitch">Exactly this pitch</option>
+            <option value="fit-whole">{t('editor.holes.fit-whole')}</option>
+            <option value="exact-pitch">{t('editor.holes.exact-pitch')}</option>
           </select>
         </span>
       </label>
 
       <label className="field">
-        <span className="field-label">Corners</span>
+        <span className="field-label">{t('editor.corners')}</span>
         <span className="field-input">
           <select
             data-testid="corner-policy"
@@ -90,8 +92,8 @@ export function StitchHoleSetEditor({
               onChange({ ...op, corners: event.target.value as HolesOp['corners'] })
             }
           >
-            <option value="hole-at-corner">A hole on each corner</option>
-            <option value="continuous">Continuous</option>
+            <option value="hole-at-corner">{t('editor.holes.hole-at-corner')}</option>
+            <option value="continuous">{t('editor.holes.continuous')}</option>
           </select>
         </span>
       </label>
@@ -101,16 +103,16 @@ export function StitchHoleSetEditor({
           {/* The two numbers this panel is for: what gets punched, and how far
               apart it came out. */}
           <div className="readout key">
-            <span>Holes</span>
+            <span>{t('editor.holeCount')}</span>
             <b data-testid="hole-count">{holes.count}</b>
           </div>
           <div className="readout key">
-            <span>Spacing</span>
+            <span>{t('editor.spacing')}</span>
             <b data-testid="achieved-spacing">{formatMm(holes.achievedPitchMm)}</b>
           </div>
           {holes.runs.length > 1 && (
             <div className="readout">
-              <span>Runs</span>
+              <span>{t('editor.runs')}</span>
               <b>{holes.runs.map((run) => run.count).join(' · ')}</b>
             </div>
           )}

@@ -472,7 +472,7 @@ that names it fails with `ANCHOR_MISSING`.
 | Operation | Result | Relationship afterwards |
 |---|---|---|
 | **Duplicate part** | A new part beside the original | None. Derivations inside the part re-point to the copies; derivations to other parts keep pointing there |
-| **Flip** | The selected geometry, reflected in place | None |
+| **Flip** | The selected geometry, reflected in place; a piece's outline takes the whole piece with it | None |
 | **Mirror** | A new feature or part, reflected | Linked ([ADR 0012](adr/0012-mirror-is-a-derivation.md)) |
 
 - A mirror keeps kind and role. Mirroring a part mirrors every feature in it, so the counterpart's
@@ -486,8 +486,24 @@ that names it fails with `ANCHOR_MISSING`.
   on the other side of the axis, the same way up, with its rounded corners swapped **across** the
   axis rather than diagonally opposite. Judged against transforming the evaluated path, which is the
   comparison the old round-trip test could not make.
+- **A piece's outline stands for the piece** (Q28). Flipping it flips everything in its part — cut-outs,
+  hardware holes, folds, markings, counterparts, labels — about the outline's centre, and the derived stitch
+  lines and holes follow; a piece picked by its heading flips the same way. Flipping the outline alone
+  once left the slots of an asymmetric piece where they were: a wrong pattern, with nothing to say so.
+  Anything in the part that is locked refuses the whole flip. Any other feature still flips alone.
+- **Moving and turning follow the same rule** (Q30): dragging an outline, turning it with Rotate, or
+  typing its X, Y or Turn takes the whole piece, hidden features included, and a dragged piece never
+  snaps to its own slots. Rotate takes a part picked by its heading as its piece. A typed width or
+  corner reshapes the outline alone — a reshape is not a move. One helper, `pieceScope`, answers
+  what every gesture moves. **Scale does not follow it:** what resizing a piece should do to its
+  rivet holes and card slots is a decision still to make (Q31), so Scale acts on what is selected.
+- **A gesture part of the selection refuses is refused whole** (Q30), as a lock already was, and
+  `transformRefusal` says why, lock first. It used to move what it could: a piece stretched with its
+  rivets selected left them behind.
 - **A label refuses to be mirrored**, with `TEXT_WOULD_READ_BACKWARDS`: a mirror is a similarity, so
-  without refusing it the words would come out rotated rather than reflected.
+  without refusing it the words would come out rotated rather than reflected. In a flipped piece it
+  goes to its mirrored place instead: its text box onto the mirror of its box, turned rather than
+  mirrored, so it still reads forwards and a label along an edge still faces out.
 - **A counterpart owns its placement and nothing else** (built 4.8a,
   [design](superpowers/specs/2026-09-17-mirror-design.md)). The axis and glide are its own; the path,
   the holes, the anchors, the kind and the role all come from its original. A gesture the placement
@@ -732,8 +748,10 @@ interface Diagnostic {                // a problem found in the design, placed
 }
 
 function diagnose(project: Project): readonly Diagnostic[];   // the one list (X7)
-function describeProblem(problem: Problem): string;           // the one catalogue of words
 ```
+
+The words for a problem are not the domain's: the app puts a code and its facts into the interface's
+language, from one catalogue (`renderer/src/problemText.ts`, ADR 0018).
 
 **Refusals are problems too**, with the same codes and catalogue, but they are never diagnostics:
 they are refused at the gesture or by the loader, so they never exist in a document to be listed.
@@ -771,6 +789,7 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `MEASURE_ACROSS_PARTS` | interaction | X3 | Commands; the measure tool |
 | `NO_TARGET_PART` | interaction | X4 | Drawing modes |
 | `TARGET_SPANS_PARTS` | interaction | X4 | Drawing modes |
+| `WHOLE_PART_NOT_SCALED` | interaction | X4 | Scale, with a part picked by its heading (Q29) |
 | `TRANSFORM_FLATTENS` | interaction | X9 | Transform tools |
 | `WOULD_BECOME_ELLIPSE` | interaction | X9 | Transform tools |
 | `WOULD_SHEAR` | interaction | X9 | Transform tools |

@@ -1,6 +1,6 @@
 import { formatNumber } from '@leathercad/core';
-import { refusedTransforms, transformFeatures } from '@leathercad/document';
-import type { Problem } from '@leathercad/domain';
+import { transformFeatures, transformRefusal } from '@leathercad/document';
+import { problem, type Problem } from '@leathercad/domain';
 import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, textItem, type DisplayList } from '@leathercad/render';
 
@@ -51,7 +51,7 @@ export function createScaleTool(): Tool {
       const pivot = selectionPivot(document.project, selection.features);
       if (pivot === null) return;
 
-      ctx.store.begin('Scale');
+      ctx.store.begin({ action: 'scale' });
       state = {
         kind: 'scaling',
         pivot,
@@ -70,10 +70,14 @@ export function createScaleTool(): Tool {
 
       const matrix = scaleAbout(state.pivot, factors);
       const { document, selection } = ctx.store.getState();
-      const refused = refusedTransforms(document.project, selection.features, matrix);
-
-      state = { ...state, factors, refusal: refused[0]?.problem ?? null };
-      ctx.store.preview(transformFeatures(selection.features, matrix, 'Scale'));
+      // Refused whole (Q30), and said: a stretch the rivet cannot take leaves
+      // the whole piece as it was rather than the rivet behind.
+      state = {
+        ...state,
+        factors,
+        refusal: transformRefusal(document.project, selection.features, matrix),
+      };
+      ctx.store.preview(transformFeatures(selection.features, matrix, { action: 'scale' }));
       ctx.invalidate();
     },
 
@@ -106,9 +110,15 @@ export function createScaleTool(): Tool {
     },
 
     // Said during the drag, not after it: the user finds out why the circle is
-    // not moving while they can still do something about it.
-    notice() {
-      return state.kind === 'scaling' ? state.refusal : null;
+    // not moving while they can still do something about it. A part picked by
+    // its heading is said at once (Q29): what resizing a whole piece does to
+    // its rivet holes is not settled (Q31), so it is not guessed at.
+    notice(ctx) {
+      if (state.kind === 'scaling') return state.refusal;
+      const { selection } = ctx.store.getState();
+      return selection.parts.size > 0 && selection.features.size === 0
+        ? problem('WHOLE_PART_NOT_SCALED', {})
+        : null;
     },
 
     onDeactivate(ctx) {

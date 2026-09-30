@@ -1,10 +1,11 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 
 /**
  * The platform boundary (architecture §5): the renderer reads, writes and
@@ -13,15 +14,13 @@ import { closeApp } from './closeApp.js';
  * `PathGrants`, from inside the real renderer.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
 test('the renderer cannot read, write or open a file nobody chose', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'leathercad-boundary-'));
   const secret = join(dir, 'secret.txt');
   const chosen = join(dir, 'chosen.pdf');
   writeFileSync(secret, 'not yours');
 
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
@@ -59,6 +58,13 @@ test('the renderer cannot read, write or open a file nobody chose', async () => 
     expect(existsSync(chosen)).toBe(true);
     expect(await attempt('view', chosen)).toBe('done');
     expect(await attempt('read', secret)).toBe('refused');
+
+    // Open Recent opens only what is on the recent list (8.7): naming a file
+    // grants nothing.
+    const named = join(dir, 'named.lcp');
+    writeFileSync(named, 'not a project');
+    await window.evaluate((path) => window.platform!.openRecent(path), named);
+    expect(await attempt('read', named)).toBe('refused');
   } finally {
     await closeApp(app);
     rmSync(dir, { recursive: true, force: true });

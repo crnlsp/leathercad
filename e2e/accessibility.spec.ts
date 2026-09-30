@@ -1,9 +1,8 @@
-import { resolve } from 'node:path';
-
 import AxeBuilder from '@axe-core/playwright';
-import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
+import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 
 /**
  * An automated accessibility scan of the running window.
@@ -17,8 +16,6 @@ import { closeApp } from './closeApp.js';
  * one that has been fixed, so the list shrinks with the code rather than
  * going stale. See the engineering-tooling spec §4.
  */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 /**
  * Rule id → what it found when recorded. Empty is the goal — and reached.
@@ -34,7 +31,7 @@ const KNOWN: Record<string, string> = {};
 let app: ElectronApplication;
 
 test.beforeAll(async () => {
-  app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  app = await launchApp();
 });
 
 test.afterAll(async () => {
@@ -75,7 +72,7 @@ test('the F.2 layout at work has no accessibility violations either', async () =
   // The first scan sees an empty document at the default size. This one sees
   // what F.2 added: the collapsed rail, a populated parts tree with its menus,
   // the problems drawer open, and the properties overlay below 1024 px.
-  const instance = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const instance = await launchApp();
   try {
     const window = await instance.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
@@ -111,6 +108,44 @@ test('the F.2 layout at work has no accessibility violations either', async () =
       nodes: violation.nodes.length,
     }));
     expect(found, 'accessibility violations in the working layout').toEqual([]);
+  } finally {
+    await closeApp(instance);
+  }
+});
+
+test('the top bar’s menus, Settings and About have no accessibility violations (8.7)', async () => {
+  const instance = await launchApp();
+  try {
+    const window = await instance.firstWindow();
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    const scan = async (what: string): Promise<void> => {
+      const results = await new AxeBuilder({ page: window })
+        .setLegacyMode(true)
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
+        .analyze();
+      const found = results.violations.map(
+        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
+      );
+      expect(found, what).toEqual([]);
+    };
+
+    await window.getByTestId('project-menu').click();
+    await scan('the Project menu, with no recent projects');
+    await window.keyboard.press('Escape');
+    await window.getByTestId('help-menu').click();
+    await scan('the Help menu');
+    await window.keyboard.press('Escape');
+
+    await window.getByTestId('settings').click();
+    for (const section of ['general', 'appearance', 'shortcuts']) {
+      await window.getByTestId(`settings-tab-${section}`).click();
+      await scan(`Settings › ${section}`);
+    }
+    await window.getByTestId('settings-close').click();
+
+    await window.getByTestId('help-menu').click();
+    await window.getByTestId('help-about').click();
+    await scan('About');
   } finally {
     await closeApp(instance);
   }

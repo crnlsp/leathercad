@@ -334,7 +334,7 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
 
 ```
 ~/.config/leathercad/
-├── preferences.json      the frame as the maker left it, and File › Open Recent (8.2)
+├── preferences.json      the frame as the maker left it, and the recent projects (8.2, 8.7)
 ├── printers.json         per-printer calibration factors — see printing.md §8
 └── library/
     ├── parts/*.lcpart    saved part templates
@@ -349,6 +349,7 @@ and read once at start-up:
   "version": 1,
   "legendOpen": false,
   "toolRailCollapsed": false,
+  "language": "system",
   "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
 }
 ```
@@ -356,10 +357,16 @@ and read once at start-up:
 Unlike a project, **nothing in it is worth refusing to start over**: a damaged file, a wrong type
 or an unknown field falls back field by field to the defaults, and a newer version's extra fields
 are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent first, and only
-paths the maker chose in the app's own dialogs — *Open Recent* grants a path because it is on
+paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
 has gone is taken off the list when it is chosen. The rail's collapse applies to a wide window
-only; below 1200 px it collapses by itself, and opening it there lasts the session.
+only; below 1200 px it collapses by itself, and opening it there lasts the session. `language` is
+the interface's: `system` to follow the operating system, or the tag of a language the app supports
+([ADR 0018](adr/0018-interface-language.md)); one this version does not support follows the system.
+
+**The interface's language never reaches a project.** A `.lcp` holds no words chosen by it — problem
+sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads
+the same in every language. What the maker typed, names included, is theirs and is kept as typed.
 
 What the app writes about *itself* is state, not configuration, and goes in
 `$XDG_STATE_HOME/leathercad/` (falling back to `~/.local/state/`), per

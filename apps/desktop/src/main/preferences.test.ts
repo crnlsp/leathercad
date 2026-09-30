@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 
 import { DEFAULT_PREFERENCES } from '@leathercad/platform';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -9,6 +9,7 @@ import {
   PreferencesStore,
   RECENT_LIMIT,
   parsePreferences,
+  shownPath,
   validChanges,
   withRecent,
 } from './preferences.js';
@@ -51,6 +52,7 @@ describe('reading preferences.json', () => {
       JSON.stringify({
         legendOpen: true,
         toolRailCollapsed: 'yes',
+        language: 'xx',
         recentFiles: ['/p/a.lcp', 'relative.lcp', '/p/notes.txt', 7, '/p/a.lcp', '/p/b.LCP'],
         fromANewerVersion: { anything: 1 },
       }),
@@ -58,6 +60,8 @@ describe('reading preferences.json', () => {
 
     expect(parsed.legendOpen).toBe(true);
     expect(parsed.toolRailCollapsed).toBe(DEFAULT_PREFERENCES.toolRailCollapsed);
+    // A language this version does not ship follows the system.
+    expect(parsed.language).toBe('system');
     // Only absolute project paths, once each.
     expect(parsed.recentFiles).toEqual(['/p/a.lcp', '/p/b.LCP']);
   });
@@ -67,6 +71,15 @@ describe('reading preferences.json', () => {
       legendOpen: true,
     });
     expect(validChanges('legendOpen')).toEqual({});
+  });
+
+  it('keeps the interface language: following the system, or one the app ships', () => {
+    expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
+    expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');
+    expect(validChanges({ language: 'en' })).toEqual({ language: 'en' });
+    expect(validChanges({ language: 'system' })).toEqual({ language: 'system' });
+    expect(validChanges({ language: 'xx' })).toEqual({});
+    expect(validChanges({ language: 7 })).toEqual({});
   });
 });
 
@@ -124,5 +137,27 @@ describe('keeping preferences', () => {
   it('starts, with the defaults, over a damaged file', () => {
     writeFileSync(file, '\u0000\u0001garbage');
     expect(new PreferencesStore(file).preferences).toEqual(DEFAULT_PREFERENCES);
+  });
+});
+
+describe('a recent project as the maker reads it (8.7)', () => {
+  const home = ['', 'home', 'maker'].join(sep);
+
+  it('writes the home directory as ~', () => {
+    expect(shownPath([home, 'Leather', 'Wallet.lcp'].join(sep), home)).toBe(
+      ['~', 'Leather', 'Wallet.lcp'].join(sep),
+    );
+  });
+
+  it('leaves a path outside it, and a sibling that only starts the same, whole', () => {
+    const elsewhere = ['', 'srv', 'Wallet.lcp'].join(sep);
+    expect(shownPath(elsewhere, home)).toBe(elsewhere);
+    const sibling = `${home}2${sep}Wallet.lcp`;
+    expect(shownPath(sibling, home)).toBe(sibling);
+  });
+
+  it('leaves every path whole when there is no home directory', () => {
+    const path = ['', 'home', 'maker', 'Wallet.lcp'].join(sep);
+    expect(shownPath(path, '')).toBe(path);
   });
 });

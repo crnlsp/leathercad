@@ -1,20 +1,52 @@
 import type { Document, DocumentStore } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
 import { exportPdf, type TiledPart } from '@leathercad/export';
-import { LCP_EXTENSION, loadProject, saveProject } from '@leathercad/persist';
+import {
+  CURRENT_FORMAT_VERSION,
+  InvalidProjectFileError,
+  LCP_EXTENSION,
+  NewerFormatError,
+  loadProject,
+  saveProject,
+} from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
 
+import type { Translate } from '../../shared/i18n.js';
+import { describeProblemWithSubject } from './problemText.js';
 import { sheetPlanFor } from './sheets.js';
 
 export interface ProjectFileState {
   readonly path: string | null;
-  readonly error: string | null;
+  /**
+   * What went wrong with the last save, open or export, as it was thrown: put
+   * into words where it is shown (`fileErrorText`), so it follows a change of
+   * language like everything else.
+   */
+  readonly error: unknown;
   readonly savedAt: string | null;
 }
 
-const FILTERS = [{ name: 'LeatherCAD project', extensions: [LCP_EXTENSION] }];
-const PDF_FILTERS = [{ name: 'PDF', extensions: ['pdf'] }];
+/**
+ * A file error in the interface's words (ADR 0018). A file from a newer
+ * version, and a design whose reference graph is broken, are said in full;
+ * anything below that — bytes that are not an archive, a schema violation,
+ * the operating system refusing a write — is said as it was reported.
+ */
+export function fileErrorText(error: unknown, t: Translate): string {
+  if (error instanceof NewerFormatError) {
+    return t(error.savedBy === undefined ? 'file.newer' : 'file.newerNamed', {
+      version: error.savedBy ?? '',
+      format: error.fileVersion,
+      current: CURRENT_FORMAT_VERSION,
+    });
+  }
+  if (error instanceof InvalidProjectFileError && error.problems.length > 0) {
+    const problems = error.problems.map((p) => describeProblemWithSubject(p, t)).join(' ');
+    return t('file.invalid', { problems });
+  }
+  return error instanceof Error ? error.message : String(error);
+}
 
 /**
  * Save and open, over the platform boundary.
@@ -35,13 +67,15 @@ export function useProjectFile(
   appVersion: string,
   /** A fresh, empty document, for *New*. */
   blank: () => Document,
+  /** The interface's words, for the file dialogs. */
+  t: Translate,
 ): {
   state: ProjectFileState;
   /** True once the project is written; false when the maker cancelled or the write failed. */
   save: (forcePrompt?: boolean) => Promise<boolean>;
   open: () => Promise<void>;
   /**
-   * Opens a project the main process already granted — *Open Recent* (8.2).
+   * Opens a project the main process already granted — a recent project (8.2, 8.7).
    * The caller asks about unsaved work first, as for `open`.
    */
   openPath: (target: string) => Promise<void>;
@@ -94,9 +128,9 @@ export function useProjectFile(
 
         if (target === null || forcePrompt) {
           target = await platform.showSaveDialog({
-            title: 'Save project',
-            defaultPath: `${store.getState().document.project.name || 'Untitled'}.${LCP_EXTENSION}`,
-            filters: FILTERS,
+            title: t('file.saveTitle'),
+            defaultPath: `${store.getState().document.project.name || t('app.untitled')}.${LCP_EXTENSION}`,
+            filters: [{ name: t('file.project'), extensions: [LCP_EXTENSION] }],
           });
           // A cancelled dialog is not an error; it is the user changing their
           // mind, and must not leave a message on screen.
@@ -120,14 +154,11 @@ export function useProjectFile(
         void noteRecent(platform, target);
         return true;
       } catch (error) {
-        setState((previous) => ({
-          ...previous,
-          error: error instanceof Error ? error.message : String(error),
-        }));
+        setState((previous) => ({ ...previous, error }));
         return false;
       }
     },
-    [appVersion, host, state.path, store],
+    [appVersion, host, state.path, store, t],
   );
 
   const openPath = useCallback(
@@ -141,10 +172,7 @@ export function useProjectFile(
         setState({ path: target, error: null, savedAt: null });
         void noteRecent(platform, target);
       } catch (error) {
-        setState((previous) => ({
-          ...previous,
-          error: error instanceof Error ? error.message : String(error),
-        }));
+        setState((previous) => ({ ...previous, error }));
       }
     },
     [host, store],
@@ -153,15 +181,12 @@ export function useProjectFile(
   const openSample = useCallback(async () => {
     try {
       const loaded = loadProject(await host().readSampleProject());
-      store.reset({ project: loaded.project }, 'Open sample');
+      store.reset({ project: loaded.project }, { action: 'open-sample' });
       savedDocument.current = store.getState().document;
       createdUtc.current = undefined;
       setState({ path: null, error: null, savedAt: null });
     } catch (error) {
-      setState((previous) => ({
-        ...previous,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setState((previous) => ({ ...previous, error }));
     }
   }, [host, store]);
 
@@ -169,18 +194,15 @@ export function useProjectFile(
     let target: string | null;
     try {
       target = await host().showOpenDialog({
-        title: 'Open project',
-        filters: FILTERS,
+        title: t('file.openTitle'),
+        filters: [{ name: t('file.project'), extensions: [LCP_EXTENSION] }],
       });
     } catch (error) {
-      setState((previous) => ({
-        ...previous,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setState((previous) => ({ ...previous, error }));
       return;
     }
     if (target !== null) await openPath(target);
-  }, [host, openPath]);
+  }, [host, openPath, t]);
 
   /**
    * Writes a print-ready PDF and opens it in the system viewer.
@@ -196,11 +218,11 @@ export function useProjectFile(
 
       // Only a project extension is taken off: "Wallet v1.2" is a name, and
       // cutting it at its last dot suggested "Wallet v1.pdf" (Q18).
-      const suggested = (project.name || 'Untitled').replace(/\.lcp$/i, '');
+      const suggested = (project.name || t('app.untitled')).replace(/\.lcp$/i, '');
       const target = await platform.showSaveDialog({
-        title: 'Export PDF',
+        title: t('file.exportTitle'),
         defaultPath: `${suggested}.pdf`,
-        filters: PDF_FILTERS,
+        filters: [{ name: t('file.pdf'), extensions: ['pdf'] }],
       });
       if (target === null) return null;
 
@@ -236,16 +258,13 @@ export function useProjectFile(
         plan.pagination.tiled.length === 0;
       return quiet ? null : { readiness, tiled: plan.pagination.tiled };
     } catch (error) {
-      setState((previous) => ({
-        ...previous,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setState((previous) => ({ ...previous, error }));
       return null;
     }
-  }, [appVersion, host, store]);
+  }, [appVersion, host, store, t]);
 
   const newProject = useCallback(() => {
-    store.reset(blank(), 'New project');
+    store.reset(blank(), { action: 'new-project' });
     savedDocument.current = store.getState().document;
     createdUtc.current = undefined;
     setState({ path: null, error: null, savedAt: null });
@@ -253,7 +272,7 @@ export function useProjectFile(
 
   const adoptRecovered = useCallback(
     (project: Project) => {
-      store.reset({ project }, 'Recover');
+      store.reset({ project }, { action: 'recover' });
       // Never saved in this session, and never to be saved over its original:
       // unsaved by construction.
       savedDocument.current = null;
@@ -281,7 +300,7 @@ export function useProjectFile(
 }
 
 /**
- * Puts a project on *File › Open Recent*. A list that could not be updated
+ * Puts a project on the recent projects (8.2, 8.7). A list that could not be updated
  * costs nothing that matters, so it never becomes an error on screen.
  */
 async function noteRecent(platform: PlatformHost, path: string): Promise<void> {

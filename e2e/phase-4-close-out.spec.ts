@@ -1,11 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
+import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { readoutAt } from './cursorReadout.js';
+import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 4.13: one card holder, drafted the way a maker would, through every
@@ -17,8 +20,6 @@ import { closeApp } from './closeApp.js';
  * docs/superpowers/specs/2026-09-23-phase-4-close-out-design.md; the A-numbers
  * below are its acceptance criteria.
  */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 type Window = Awaited<ReturnType<ElectronApplication['firstWindow']>>;
 
@@ -38,18 +39,12 @@ function num(text: string | null): number {
  */
 async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  const readout = window.getByTestId('cursor-readout');
 
   const readAt = async (px: number, py: number): Promise<{ x: number; y: number }> => {
-    const previous = (await readout.textContent()) ?? '';
-    await window.mouse.move(box.x + px, box.y + py);
-    await expect.poll(async () => (await readout.textContent()) ?? '').not.toBe(previous);
-    const [x, y] = ((await readout.textContent()) ?? '').split(',').map(num);
+    const [x, y] = (await readoutAt(window, box.x + px, box.y + py)).split(',').map(num);
     return { x: x!, y: y! };
   };
 
-  // A first move so the readout is not already showing the first probe's value.
-  await window.mouse.move(box.x + 60, box.y + box.height - 60);
   const a = await readAt(20, box.height - 20);
   const b = await readAt(220, box.height - 220);
   const mmPerPx = (b.x - a.x) / 200;
@@ -118,7 +113,7 @@ test('a card holder, from the first outline to the printed page', async () => {
   let holes: string;
   let spacing: string;
 
-  const first = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const first = await launchApp();
   try {
     const window = await first.firstWindow();
     await window.waitForLoadState('domcontentloaded');
@@ -297,7 +292,7 @@ test('a card holder, from the first outline to the printed page', async () => {
   }
 
   // ── Reopened in a fresh instance: parameters in, the same numbers out (A7) ─
-  const second = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const second = await launchApp();
   try {
     const window = await second.firstWindow();
     await window.waitForLoadState('domcontentloaded');
@@ -314,7 +309,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     );
 
     const panel = window.getByTestId('property-panel');
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
 
     await expect(window.getByTestId('part-count')).toHaveText('2');
     await expect(window.getByTestId('feature-count')).toHaveText('10');

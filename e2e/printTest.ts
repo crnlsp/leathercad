@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 
 import { expect, type ElectronApplication, type Page } from '@playwright/test';
 
+import { fromProjectMenu } from './projectMenu.js';
+
 /**
  * The automated half of 7.7: an exported print test, measured on the page.
  *
@@ -105,7 +107,7 @@ export async function exportPrintTest(
     { project: PRINT_TEST, pdf },
   );
 
-  await window.getByTestId('open').click();
+  await fromProjectMenu(window, 'open');
   // A drawing left from an earlier test is not this one's to keep. Wait for
   // whichever comes first — the question, or the project opened — rather than
   // glancing once before the question has had time to appear.

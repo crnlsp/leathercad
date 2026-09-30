@@ -256,6 +256,65 @@ describe('length', () => {
     expect(fine).toBeLessThan(coarse);
     expect(fine).toBeLessThan(1e-4);
   });
+
+  it('regression: a cubic that doubles back on itself measures all of it (issue 27)', () => {
+    // The nightly run found this by splitting it (seed 267645448): the halves
+    // disagreed with the whole, because the whole read 4 µm short. It runs
+    // along the y axis, turning back where y' = 3(−58 + 432t − 474t²) is zero,
+    // so its length is the distance travelled between those turns.
+    const s = cubic(vec(0, 0), vec(0, -58), vec(0, 100), vec(0, 0));
+    const root = Math.sqrt(432 * 432 - 4 * 474 * 58);
+    const [t1, t2] = [(432 - root) / 948, (432 + root) / 948];
+    const y = (t: number): number => Seg.pointAt(s, t).y;
+    const travelled = Math.abs(y(t1)) + Math.abs(y(t2) - y(t1)) + Math.abs(y(t2));
+
+    expect(Seg.length(s)).toBeCloseTo(travelled, 7);
+
+    const [first, second] = Seg.split(s, 0.00010019611560544206);
+    expect(Seg.length(first) + Seg.length(second)).toBeCloseTo(travelled, 7);
+  });
+
+  it('measures a cubic along a line as the distance it travels, turns and all', () => {
+    // A cubic whose control points are collinear stops dead wherever it turns
+    // back, which puts a kink in its speed — what fooled the quadrature
+    // (issue 27). Its length is exact in closed form: the distance between
+    // its turns, where x'(t)/3 = (p − 2q + r)t² + 2(q − p)t + p is zero.
+    const coordinate = fc.double({ min: -200, max: 200, noNaN: true });
+    const arbCollinearCubic = fc
+      .tuple(
+        coordinate,
+        coordinate,
+        coordinate,
+        coordinate,
+        fc.double({ min: 0, max: 6.3, noNaN: true }),
+      )
+      .map(([a, b, c, d, angle]) => {
+        const along = (u: number) => vec(u * Math.cos(angle), u * Math.sin(angle));
+        return { s: cubic(along(a), along(b), along(c), along(d)), coordinates: [a, b, c, d] };
+      });
+
+    fc.assert(
+      fc.property(arbCollinearCubic, ({ s, coordinates: [a, b, c, d] }) => {
+        const at = (t: number): number =>
+          (1 - t) ** 3 * a! + 3 * (1 - t) ** 2 * t * b! + 3 * (1 - t) * t ** 2 * c! + t ** 3 * d!;
+        const [p, q, r] = [b! - a!, c! - b!, d! - c!];
+        const [qa, qb, qc] = [p - 2 * q + r, 2 * (q - p), p];
+        // The stable form: the textbook one cancels to nonsense when the
+        // cubic is nearly symmetric and qa is a hair from zero.
+        const discriminant = qb * qb - 4 * qa * qc;
+        const big = -0.5 * (qb + Math.sign(qb || 1) * Math.sqrt(Math.max(0, discriminant)));
+        const turns = discriminant < 0 ? [] : [big / qa, qc / big].filter(Number.isFinite);
+        const stops = [0, ...turns.filter((t) => t > 0 && t < 1).sort((x, y) => x - y), 1];
+        let travelled = 0;
+        for (let i = 1; i < stops.length; i++)
+          travelled += Math.abs(at(stops[i]!) - at(stops[i - 1]!));
+
+        expect(Seg.length(s)).toBeCloseTo(travelled, 6);
+      }),
+      // The old quadrature failed this once in a few hundred cubics.
+      { numRuns: 1000 },
+    );
+  });
 });
 
 describe('tangentAt', () => {

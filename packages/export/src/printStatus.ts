@@ -1,6 +1,6 @@
 import type { ResolvedProject } from '@leathercad/domain';
 
-import { describeSheetNumbers, type PartSheets, type SheetPlan } from './sheetPlan.js';
+import type { PartSheets, SheetPlan } from './sheetPlan.js';
 
 /** Why a part puts nothing on paper. */
 export type NotPrintedReason =
@@ -66,50 +66,4 @@ export function printStatusOf(
     });
   }
   return statuses;
-}
-
-const REASONS: Readonly<Record<NotPrintedReason, string>> = {
-  'nothing-drawn': 'Nothing is drawn in it.',
-  hidden: 'It is hidden.',
-  problems: 'What is shown has problems.',
-  'nothing-to-cut': 'It has only words, no lines to cut.',
-};
-
-const plural = (count: number, one: string, many: string): string =>
-  `${String(count)} ${count === 1 ? one : many}`;
-
-/**
- * The part's status in words, as Parts shows it: a short `label` —
- * `Sheet 1`, `Sheets 2–3, taped`, `Not printed` — and a `note` when something
- * the maker can see on the board will not be on the paper.
- */
-export function describePrintStatus(status: PartPrintStatus): {
-  label: string;
-  note: string | null;
-} {
-  if (status.sheets === null) {
-    return { label: 'Not printed', note: REASONS[status.notPrinted!] };
-  }
-
-  const label = status.sheets.taped
-    ? `${describeSheetNumbers(status.sheets.sheets)}, taped`
-    : describeSheetNumbers(status.sheets.sheets);
-
-  const left: string[] = [];
-  if (status.hiddenFeatures > 0) {
-    left.push(`${plural(status.hiddenFeatures, 'hidden feature', 'hidden features')}`);
-  }
-  if (status.failedFeatures > 0) {
-    left.push(
-      `${plural(status.failedFeatures, 'feature with a problem', 'features with problems')}`,
-    );
-  }
-  const total = status.hiddenFeatures + status.failedFeatures;
-  return {
-    label,
-    note:
-      left.length === 0
-        ? null
-        : `${left.join(' and ')} ${total === 1 ? "isn't" : "aren't"} printed.`,
-  };
 }

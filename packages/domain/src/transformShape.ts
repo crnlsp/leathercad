@@ -1,5 +1,5 @@
-import { EPS_ANGLE, EPS_AREA, approxZero, err, ok, type Result } from '@leathercad/core';
-import { MatOps, SegmentOps, type Mat2x3 } from '@leathercad/geometry';
+import { EPS_ANGLE, EPS_AREA, approxEq, approxZero, err, ok, type Result } from '@leathercad/core';
+import { MatOps, SegmentOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
 
 import type { ParametricShape, TextSource } from './feature.js';
 import { problem, type Problem } from './problems/index.js';
@@ -67,6 +67,61 @@ export function transformTextSource(source: TextSource, m: Mat2x3): Result<TextS
     sizeMm: source.sizeMm * MatOps.uniformScaleOf(m),
     rotationRad: source.rotationRad + rotationOf(m),
   });
+}
+
+/**
+ * The move or turn that takes one version of a shape to another, or `null`
+ * when the second is not the first moved or turned but resized, reshaped or
+ * another kind of shape (Q30).
+ *
+ * How a typed X, Y or Turn on a piece's outline is read as a gesture on the
+ * piece: the outline takes exactly the numbers typed, and everything else in
+ * the piece moves by this. A rectangle turns about its centre, as its `rotation`
+ * does; a circle has no turn to read, only its centre's move. Millimetres, and
+ * radians counter-clockwise with Y up. Sizes are compared with `approxEq`, the
+ * sweep with `EPS_ANGLE`; the same shape again is the identity.
+ */
+export function motionBetween(before: ParametricShape, after: ParametricShape): Mat2x3 | null {
+  switch (before.type) {
+    case 'rect': {
+      if (
+        after.type !== 'rect' ||
+        !approxEq(before.width, after.width) ||
+        !approxEq(before.height, after.height) ||
+        !(['bottomLeft', 'bottomRight', 'topLeft', 'topRight'] as const).every((corner) =>
+          approxEq(before.radii[corner], after.radii[corner]),
+        )
+      ) {
+        return null;
+      }
+      const from = rectCentre(before);
+      return turnThenMove(from, after.rotation - before.rotation, rectCentre(after));
+    }
+    case 'circle':
+      if (after.type !== 'circle' || !approxEq(before.radius, after.radius)) return null;
+      return turnThenMove(before.centre, 0, after.centre);
+    case 'arc':
+      if (
+        after.type !== 'arc' ||
+        !approxEq(before.radius, after.radius) ||
+        !approxEq(before.sweepAngle, after.sweepAngle, EPS_ANGLE)
+      ) {
+        return null;
+      }
+      return turnThenMove(before.centre, after.startAngle - before.startAngle, after.centre);
+  }
+}
+
+function rectCentre(shape: Extract<ParametricShape, { type: 'rect' }>): Vec2 {
+  return { x: shape.origin.x + shape.width / 2, y: shape.origin.y + shape.height / 2 };
+}
+
+/** Turned about `from`, then moved so that `from` lands on `to`. */
+function turnThenMove(from: Vec2, radians: number, to: Vec2): Mat2x3 {
+  return MatOps.composeAll(
+    MatOps.fromRotationAround(from, radians),
+    MatOps.fromTranslation({ x: to.x - from.x, y: to.y - from.y }),
+  );
 }
 
 /**

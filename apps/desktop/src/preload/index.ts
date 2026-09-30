@@ -40,19 +40,33 @@ const platformBridge = {
 
   getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
 
-  getPreferences: (): Promise<{ legendOpen: boolean; toolRailCollapsed: boolean }> =>
-    ipcRenderer.invoke(IPC.getPreferences),
+  getPreferences: (): Promise<{
+    legendOpen: boolean;
+    toolRailCollapsed: boolean;
+    language: string;
+  }> => ipcRenderer.invoke(IPC.getPreferences),
 
   setPreferences: (changes: unknown): Promise<void> =>
     ipcRenderer.invoke(IPC.setPreferences, changes),
 
+  getSystemLanguages: (): Promise<string[]> => ipcRenderer.invoke(IPC.getSystemLanguages),
+
   noteRecentFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.noteRecentFile, path),
+
+  getRecentFiles: (): Promise<{ path: string; shown: string }[]> =>
+    ipcRenderer.invoke(IPC.getRecentFiles),
+
+  openRecent: (path: string): Promise<void> => ipcRenderer.invoke(IPC.openRecent, path),
+
+  clearRecent: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecent),
+
+  showLogFolder: (): Promise<void> => ipcRenderer.invoke(IPC.showLogFolder),
+
+  openNotices: (): Promise<void> => ipcRenderer.invoke(IPC.openNotices),
 
   readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
 
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),
-
-  setPaperMenu: (choices: unknown): Promise<void> => ipcRenderer.invoke(IPC.setPaperMenu, choices),
 
   onOpenFile: (listener: (path: string) => void): (() => void) => {
     const handler = (_event: unknown, path: string): void => listener(path);

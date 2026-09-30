@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { extname, isAbsolute } from 'node:path';
+import { extname, isAbsolute, sep } from 'node:path';
 
 import { DEFAULT_PREFERENCES, type Preferences } from '@leathercad/platform';
 
+import { isLanguagePreference } from '../shared/i18n.js';
 import { writeFileAtomic } from './atomicWrite.js';
 
-/** How many projects *File › Open Recent* lists. */
+/** How many recent projects the Project menu lists (8.2, 8.7). */
 export const RECENT_LIMIT = 10;
 
 /** `preferences.json` as it is on disk (docs/file-format.md §6). */
@@ -16,6 +17,9 @@ interface StoredPreferences extends Preferences {
 }
 
 const EMPTY: StoredPreferences = { version: 1, ...DEFAULT_PREFERENCES, recentFiles: [] };
+
+/** The preferences that are on or off. */
+const FLAGS = ['legendOpen', 'toolRailCollapsed'] as const;
 
 /**
  * Reads `preferences.json`, keeping whatever of it is still usable.
@@ -37,7 +41,7 @@ export function parsePreferences(text: string | null): StoredPreferences {
   if (typeof raw !== 'object' || raw === null) return EMPTY;
   const record = raw as Record<string, unknown>;
 
-  const flag = (key: keyof Preferences): boolean =>
+  const flag = (key: (typeof FLAGS)[number]): boolean =>
     typeof record[key] === 'boolean' ? record[key] : DEFAULT_PREFERENCES[key];
 
   const recent = Array.isArray(record['recentFiles'])
@@ -48,6 +52,12 @@ export function parsePreferences(text: string | null): StoredPreferences {
     version: 1,
     legendOpen: flag('legendOpen'),
     toolRailCollapsed: flag('toolRailCollapsed'),
+    // A language this version does not support — one chosen in a newer
+    // version, or a preview tried in `pnpm dev` — follows the system rather
+    // than stopping the app starting.
+    language: isLanguagePreference(record['language'])
+      ? record['language']
+      : DEFAULT_PREFERENCES.language,
     recentFiles: [...new Set(recent)].slice(0, RECENT_LIMIT),
   };
 }
@@ -56,17 +66,26 @@ export function parsePreferences(text: string | null): StoredPreferences {
 export function validChanges(changes: unknown): Partial<Preferences> {
   if (typeof changes !== 'object' || changes === null) return {};
   const record = changes as Record<string, unknown>;
-  const out: { -readonly [K in keyof Preferences]?: boolean } = {};
-  for (const key of Object.keys(DEFAULT_PREFERENCES) as (keyof Preferences)[]) {
+  const out: { -readonly [K in keyof Preferences]?: Preferences[K] } = {};
+  for (const key of FLAGS) {
     const value = record[key];
     if (typeof value === 'boolean') out[key] = value;
   }
+  if (isLanguagePreference(record['language'])) out.language = record['language'];
   return out;
 }
 
-/** A path *Open Recent* may hold: an absolute path to a project file. */
+/** A path the recent list may hold: an absolute path to a project file. */
 export function isProjectPath(path: unknown): path is string {
   return typeof path === 'string' && isAbsolute(path) && extname(path).toLowerCase() === '.lcp';
+}
+
+/**
+ * A path as the maker reads it (8.7): the home directory as `~`, and only the
+ * home directory itself — not a sibling whose name starts the same.
+ */
+export function shownPath(path: string, home: string): string {
+  return home !== '' && path.startsWith(home + sep) ? `~${path.slice(home.length)}` : path;
 }
 
 /** The recent list with `path` put first, once, and the oldest let go. */
@@ -97,7 +116,8 @@ export class PreferencesStore {
   }
 
   get preferences(): Preferences {
-    return { legendOpen: this.stored.legendOpen, toolRailCollapsed: this.stored.toolRailCollapsed };
+    const { legendOpen, toolRailCollapsed, language } = this.stored;
+    return { legendOpen, toolRailCollapsed, language };
   }
 
   get recentFiles(): readonly string[] {

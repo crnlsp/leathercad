@@ -62,6 +62,9 @@ channel into identity (`problems/codes.ts`), information (`problems/problem.ts`)
 `Problem` is a code plus typed facts and carries no sentence at all — the words come from the one
 catalogue, which a dependency-cruiser rule keeps the rest of the domain from importing.
 
+*Amended by [ADR 0018](0018-interface-language.md):* the catalogue has left the domain for the app,
+which words a problem in the interface's language. The domain has no sentences to reach for.
+
 - `ResolvedFeature`'s error changes from a string to a typed failure.
 - Silent refusals become explained ones: closing a cycle, moving a derived feature on its own,
   scaling a linked mirror.

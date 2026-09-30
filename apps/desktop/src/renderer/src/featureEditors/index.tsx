@@ -13,6 +13,7 @@ import type { DocumentStore } from '@leathercad/document';
 import type { Derivation, Feature, StitchHoles } from '@leathercad/domain';
 import type { JSX } from 'react';
 
+import { useI18n } from '../i18n.js';
 import { ShapeEditor } from '../shapeEditors/index.js';
 import { FoldLineEditor } from './FoldLineEditor.js';
 import { HardwareHoleEditor } from './HardwareHoleEditor.js';
@@ -44,6 +45,7 @@ export function FeatureEditor({
   feature: Feature;
   holes: StitchHoles | undefined;
 }) {
+  const { t } = useI18n();
   const source = feature.source;
   const own = ownParameters(store, feature);
 
@@ -107,10 +109,7 @@ export function FeatureEditor({
   return (
     // Said in the maker's words, with the key the rail shows (3.9c): the
     // points are the parameters of a drawn path.
-    <p className="panel-empty">
-      Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit
-      Points (N).
-    </p>
+    <p className="panel-empty">{t('editor.drawnByHand')}</p>
   );
 }
 

@@ -29,6 +29,7 @@ import {
   findFeature,
   followRefusal,
   lockRefusal,
+  motionBetween,
   problem,
   transformShape,
   transformTextSource,
@@ -46,7 +47,7 @@ import {
   type Vec2,
 } from '@leathercad/geometry';
 
-import { command, type Command, type Document } from './document.js';
+import { command, type Command, type Document, type HistoryLabel } from './document.js';
 
 export function emptyProject(id: Ulid, name = 'Untitled'): Project {
   return { id, name, settings: DEFAULT_SETTINGS, parts: [] };
@@ -58,7 +59,7 @@ export function emptyDocument(id: Ulid, name?: string): Document {
 
 /** Adds a part, optionally with its features already in place. */
 export function addPart(part: Part): Command {
-  return command(`Add ${part.name}`, (document) => ({
+  return command({ action: 'add', name: part.name }, (document) => ({
     project: { ...document.project, parts: [...document.project.parts, part] },
   }));
 }
@@ -71,7 +72,7 @@ export function addPart(part: Part): Command {
  * left exactly as it was (S2–S4). The UI asks `derivationRefusal` for the reason.
  */
 export function addFeature(partId: PartId, feature: Feature): Command {
-  return command(`Add ${feature.name}`, (document) => {
+  return command({ action: 'add', name: feature.name }, (document) => {
     if (derivationRefusal(document.project, feature) !== null) return document;
     // S5 and S6: one outline per part, and an outline that encloses something.
     // The UI asks `additionRefusal` for the reason.
@@ -102,7 +103,7 @@ export function deleteFeatures(ids: Iterable<FeatureId>, resolution?: DeleteReso
   const requested = [...new Set(ids)];
 
   return {
-    label: requested.length === 1 ? 'Delete feature' : `Delete ${requested.length} features`,
+    label: { action: 'delete', count: requested.length },
     labelFor: (document) => deleteLabel(document.project, requested, resolution),
     apply: (document) => {
       if (requested.length === 0) return document;
@@ -114,46 +115,75 @@ export function deleteFeatures(ids: Iterable<FeatureId>, resolution?: DeleteReso
 }
 
 export function renameFeature(id: FeatureId, name: string): Command {
-  return command('Rename', (document) => ({
+  return command({ action: 'rename' }, (document) => ({
     project: mapFeature(document.project, id, (feature) => ({ ...feature, name })),
   }));
 }
 
 /**
- * Shows or hides a feature.
+ * Shows or hides features — one, or a whole selection as one step (8.8).
  *
  * Allowed on a locked feature on purpose: the lock protects the piece, not the
  * view. You pin the outline down so you cannot nudge it, and you still want to
  * hide it to see what is underneath. See `domain/lock.ts`.
+ *
+ * An array, not an `Iterable`: a `FeatureId` is a string, and a string is
+ * iterable, so one id passed bare would be read as its characters.
  */
-export function setFeatureVisible(id: FeatureId, visible: boolean): Command {
-  return command(visible ? 'Show feature' : 'Hide feature', (document) => ({
-    project: mapFeature(document.project, id, (feature) => ({ ...feature, visible }), {
-      evenIfLocked: true,
-    }),
-  }));
+export function setFeatureVisible(ids: readonly FeatureId[], visible: boolean): Command {
+  return command({ action: visible ? 'show' : 'hide', count: ids.length }, (document) =>
+    withFlag(document, ids, 'visible', visible),
+  );
 }
 
 /**
- * Pins a feature down, or lets it go (S7).
+ * Pins features down, or lets them go (S7) — one, or a whole selection as one
+ * step (8.8).
  *
  * The one command that may change a locked feature, because it is the only way
  * back: `hitTest` and `snap` already skip a locked feature, so without this —
  * and without the parts panel it is reached from — locking an outline would
  * put it permanently out of reach (defect D8).
  */
-export function setFeatureLocked(id: FeatureId, locked: boolean): Command {
-  return command(locked ? 'Lock' : 'Unlock', (document) => ({
-    project: mapFeature(document.project, id, (feature) => ({ ...feature, locked }), {
-      evenIfLocked: true,
-    }),
-  }));
+export function setFeatureLocked(ids: readonly FeatureId[], locked: boolean): Command {
+  return command({ action: locked ? 'lock' : 'unlock', count: ids.length }, (document) =>
+    withFlag(document, ids, 'locked', locked),
+  );
+}
+
+/**
+ * Sets one of a feature's two view-and-pick flags on each of `ids`. Returns
+ * the document itself when nothing changes: the store decides by identity, so
+ * a no-op earns no undo entry.
+ */
+function withFlag(
+  document: Document,
+  ids: readonly FeatureId[],
+  flag: 'visible' | 'locked',
+  value: boolean,
+): Document {
+  const { project } = document;
+  const wanted = new Set(ids);
+  const changes = (feature: Feature): boolean => wanted.has(feature.id) && feature[flag] !== value;
+  if (!project.parts.some((part) => part.features.some(changes))) return document;
+
+  const parts = project.parts.map((part) =>
+    part.features.some(changes)
+      ? {
+          ...part,
+          features: part.features.map((feature) =>
+            changes(feature) ? { ...feature, [flag]: value } : feature,
+          ),
+        }
+      : part,
+  );
+  return { project: { ...project, parts } };
 }
 
 /** Replaces a parametric shape — the path is regenerated on evaluation. */
 export function setShape(id: FeatureId, shape: ParametricShape): Command {
-  return command('Edit shape', (document) => ({
-    project: mapFeature(document.project, id, (feature) => {
+  const reshape = (project: Project): Project =>
+    mapFeature(project, id, (feature) => {
       // A label is made of words; it has no shape to replace, and asking for
       // one is a no-op rather than a way to turn it into a rectangle.
       if (feature.kind === 'text-label') return feature;
@@ -172,8 +202,29 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
         source:
           feature.source.kind === 'shape' ? { ...feature.source, shape } : { kind: 'shape', shape },
       };
-    }),
-  }));
+    });
+
+  return command({ action: 'edit-shape' }, (document) => {
+    // A piece's outline typed somewhere else, or turned, is the piece moved or
+    // turned (Q30): the rule dragging and flipping follow. Everything in the
+    // piece goes the way the outline did, refused whole if any of it cannot,
+    // and the outline then takes exactly the numbers typed. A new width or
+    // corner is a reshape of the outline alone, as it always was.
+    const motion = outlineMotion(document.project, id, shape);
+    if (motion === null) return { project: reshape(document.project) };
+
+    const { features } = pieceScope(document.project, [id]);
+    if (transformRefusal(document.project, features, motion) !== null) return document;
+    return { project: reshape(transformFeatures(features, motion).apply(document).project) };
+  });
+}
+
+/** The move or turn a new shape for `id` would be, if `id` is a piece's outline. */
+function outlineMotion(project: Project, id: FeatureId, shape: ParametricShape): Mat2x3 | null {
+  const feature = project.parts.flatMap((part) => part.features).find((f) => f.id === id);
+  if (feature === undefined || !isOutline(feature) || feature.source.kind !== 'shape') return null;
+  const motion = motionBetween(feature.source.shape, shape);
+  return motion === null || MatOps.isIdentity(motion) ? null : motion;
 }
 
 /**
@@ -183,7 +234,7 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
  * common thing and a matrix is a poor way to ask for it.
  */
 export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Command {
-  return transformFeatures(ids, MatOps.fromTranslation(deltaMm), 'Move');
+  return transformFeatures(ids, MatOps.fromTranslation(deltaMm), { action: 'move' });
 }
 
 /**
@@ -202,7 +253,7 @@ export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Comm
 export function transformFeatures(
   ids: Iterable<FeatureId>,
   matrix: Mat2x3,
-  label = 'Transform',
+  label: HistoryLabel = { action: 'transform' },
 ): Command {
   const targets = new Set(ids);
 
@@ -210,8 +261,11 @@ export function transformFeatures(
     if (targets.size === 0) return document;
     // A mixed selection is refused whole (S7). Moving the free half would
     // leave the drawing somewhere the user did not ask for and cannot see at
-    // a glance — worse than not moving at all.
-    if (lockRefusal(document.project, targets) !== null) return document;
+    // a glance — worse than not moving at all. The same for anything that
+    // cannot take the transform (Q30): a stretched piece once left its rivet
+    // and its labels where they were, and said so only while the mouse was
+    // down.
+    if (transformRefusal(document.project, targets, matrix) !== null) return document;
 
     const next = {
       project: {
@@ -255,20 +309,35 @@ export type FlipAxis = 'horizontal' | 'vertical';
  * other way. Mirroring a feature *to* somewhere — a linked counterpart across
  * a fold — is a derivation, and that is slice 4.8 (ADR 0012), not this.
  *
+ * A piece's outline stands for the whole piece (Q28): see `flipScope`.
+ *
  * Nothing moves if the selection has no geometry to measure, and whatever
  * cannot survive a mirror refuses through the usual path: a derived feature
  * follows its source, and a label would read backwards.
  */
 export function flipFeatures(ids: Iterable<FeatureId>, axis: FlipAxis): Command {
-  const targets = [...new Set(ids)];
+  const requested = [...new Set(ids)];
 
   return {
-    label: axis === 'horizontal' ? 'Flip horizontal' : 'Flip vertical',
+    label: { action: axis === 'horizontal' ? 'flip-horizontal' : 'flip-vertical' },
     apply: (document) => {
-      const centre = centreOf(document.project, targets);
+      const { targets, labels, about } = flipScope(document.project, requested);
+      const centre = centreOf(document.project, about);
       if (centre === null) return document;
+      // Refused whole, labels included: they move with the piece now.
+      if (lockRefusal(document.project, [...targets, ...labels]) !== null) return document;
 
-      const next = transformFeatures(targets, mirrorAbout(centre, axis)).apply(document);
+      const mirror = mirrorAbout(centre, axis);
+      let next = transformFeatures(targets, mirror).apply(document);
+      for (const [id, place] of readablePlaces(document.project, labels, mirror)) {
+        next = {
+          project: mapFeature(next.project, id, (feature) =>
+            feature.source.kind === 'text'
+              ? ({ ...feature, source: { ...feature.source, ...place } } as Feature)
+              : feature,
+          ),
+        };
+      }
 
       // A flip everything refused is a no-op, and a no-op earns no history:
       // "Flip horizontal" in the undo menu with nothing behind it is worse
@@ -290,18 +359,111 @@ export function flipRefusal(
   ids: Iterable<FeatureId>,
   axis: FlipAxis,
 ): Problem | null {
-  const targets = [...new Set(ids)];
+  const { targets, labels, about } = flipScope(project, [...new Set(ids)]);
 
   // The lock first: it refuses the whole selection, so it is the reason, not
   // one of several. Without it the button stays enabled on a locked piece and
   // pressing it does nothing (S7, X1).
-  const locked = lockRefusal(project, targets);
+  const locked = lockRefusal(project, [...targets, ...labels]);
   if (locked !== null) return locked;
 
-  const centre = centreOf(project, targets);
+  const centre = centreOf(project, about);
   if (centre === null) return null;
 
   return refusedTransforms(project, targets, mirrorAbout(centre, axis))[0]?.problem ?? null;
+}
+
+/** What a gesture on a selection moves (Q28, Q30): see `pieceScope`. */
+export interface PieceScope {
+  /** Everything the gesture moves: the selection, each piece in it made whole. */
+  readonly features: readonly FeatureId[];
+  /** The labels of those whole pieces, which a mirror moves readably instead. */
+  readonly labels: readonly FeatureId[];
+  /** What the gesture is centred on: a piece by its outline, anything else by itself. */
+  readonly about: readonly FeatureId[];
+}
+
+/**
+ * What a gesture on `ids` moves — a flip (Q28), a move or a turn (Q30) — and
+ * what it is centred on.
+ *
+ * A piece's outline stands for the piece. A gesture on it takes everything in
+ * its part — cut-outs, holes, folds, markings, counterparts, labels, hidden
+ * features too — so an asymmetric piece keeps its slots where they belong
+ * rather than leaving them where the outline was: the pattern a maker would
+ * cut the wrong leather to. A part picked by its heading is its features, so
+ * it comes out the same. Anything else moves on its own, as it always has.
+ */
+export function pieceScope(project: Project, ids: readonly FeatureId[]): PieceScope {
+  const wanted = new Set(ids);
+  const pieces = project.parts.filter((part) =>
+    part.features.some((feature) => wanted.has(feature.id) && isOutline(feature)),
+  );
+  if (pieces.length === 0) return { features: [...ids], labels: [], about: [...ids] };
+
+  const inPieces = new Set(pieces.flatMap((part) => part.features.map((feature) => feature.id)));
+  const loose = ids.filter((id) => !inPieces.has(id));
+  const features = pieces.flatMap((part) => part.features);
+  return {
+    features: [...loose, ...features.map((feature) => feature.id)],
+    labels: features.filter((feature) => feature.kind === 'text-label').map((f) => f.id),
+    about: [...loose, ...features.filter(isOutline).map((feature) => feature.id)],
+  };
+}
+
+function isOutline(feature: Feature): boolean {
+  return feature.kind === 'cut-contour' && feature.role === 'outer';
+}
+
+/**
+ * What a flip mirrors, and the labels it moves readably instead (Q28):
+ * mirrored text reads backwards.
+ */
+function flipScope(
+  project: Project,
+  ids: readonly FeatureId[],
+): { targets: FeatureId[]; labels: readonly FeatureId[]; about: readonly FeatureId[] } {
+  const { features, labels, about } = pieceScope(project, ids);
+  const readable = new Set(labels);
+  return { targets: features.filter((id) => !readable.has(id)), labels, about };
+}
+
+/**
+ * Where each label in a flipped piece goes (Q28): its box onto the mirror of
+ * its box, still reading forwards. A label's path is its text box, so the
+ * box's centre is exact. Turned by −2θ about that centre, then slid to the
+ * centre's mirror — a turn and a slide, never a mirror, so the words keep
+ * reading; and its tops face the way the mirror sends them, so a label run
+ * along an edge still faces out. Written as a place and a turn rather than
+ * put through a matrix, which would rescale the size by a rounding error.
+ */
+function readablePlaces(
+  project: Project,
+  labels: readonly FeatureId[],
+  mirror: Mat2x3,
+): [FeatureId, { at: Vec2; rotationRad: number }][] {
+  const wanted = new Set(labels);
+  const places: [FeatureId, { at: Vec2; rotationRad: number }][] = [];
+  for (const entry of evaluate(project).parts.flatMap((part) => part.features)) {
+    const { feature } = entry;
+    if (!entry.ok || !wanted.has(feature.id) || feature.source.kind !== 'text') continue;
+    const box = PathOps.bbox(entry.path);
+    if (box === null) continue;
+    const centre = RectOps.centre(box);
+    const to = MatOps.apply(mirror, centre);
+    const turned = MatOps.apply(
+      MatOps.fromRotationAround(centre, -2 * feature.source.rotationRad),
+      feature.source.at,
+    );
+    places.push([
+      feature.id,
+      {
+        at: { x: turned.x + to.x - centre.x, y: turned.y + to.y - centre.y },
+        rotationRad: -feature.source.rotationRad,
+      },
+    ]);
+  }
+  return places;
 }
 
 /** Whether any feature actually changed — by identity, so it is exact. */
@@ -358,6 +520,23 @@ export interface RefusedTransform {
  * same `transformShape` underneath, so the answer cannot disagree with what
  * actually happens.
  */
+/**
+ * Why transforming `ids` by `matrix` would refuse, or `null` — the question
+ * Move, Rotate and Scale ask as they go, so a gesture that does nothing says
+ * why (X1, X3). The lock first: it refuses the whole gesture, so it is the
+ * reason, not one of several.
+ */
+export function transformRefusal(
+  project: Project,
+  ids: Iterable<FeatureId>,
+  matrix: Mat2x3,
+): Problem | null {
+  const targets = [...new Set(ids)];
+  return (
+    lockRefusal(project, targets) ?? refusedTransforms(project, targets, matrix)[0]?.problem ?? null
+  );
+}
+
 export function refusedTransforms(
   project: Project,
   ids: Iterable<FeatureId>,
@@ -686,7 +865,7 @@ export function addStitchLine(
   run: Run = { kind: 'whole' },
 ): Command {
   return {
-    label: 'Add Stitch line',
+    label: { action: 'add', name: 'Stitch line' },
     apply: (document) => {
       // The project's stitch margin unless the caller insists (D7, X8). The
       // panel used to hard-code 3.5 mm, so a project set up for 4 mm quietly
@@ -739,7 +918,7 @@ export function addStitchHoles(
   op?: Partial<Extract<Derivation, { type: 'stitch-holes' }>>,
 ): Command {
   return {
-    label: 'Add Stitch holes',
+    label: { action: 'add', name: 'Stitch holes' },
     apply: (document) => {
       // The iron the project is set up for, unless the caller names another.
       const pitchMm = op?.pitchMm ?? document.project.settings.defaultIronPitchMm;
@@ -770,7 +949,7 @@ export function addStitchHoles(
 
 /** Changes what a derived feature does — the inset, the pitch, the run. */
 export function setDerivation(id: FeatureId, op: Derivation): Command {
-  return command('Edit derivation', (document) => ({
+  return command({ action: 'edit-derivation' }, (document) => ({
     project: mapFeature(document.project, id, (feature) =>
       feature.kind !== 'text-label' &&
       feature.kind !== 'measurement' &&
@@ -793,7 +972,7 @@ function addDerived(partId: PartId, _sourceId: FeatureId, feature: Feature): Com
 }
 
 export function setProjectName(name: string): Command {
-  return command('Rename project', (document) => ({
+  return command({ action: 'rename-project' }, (document) => ({
     project: { ...document.project, name },
   }));
 }
@@ -809,7 +988,7 @@ export function setProjectName(name: string): Command {
  * kept as it was, including one a newer build wrote (5.2).
  */
 export function setPageSetup(paper: PaperName, orientation: Orientation): Command {
-  return command('Change paper', (document) => {
+  return command({ action: 'change-paper' }, (document) => {
     const { settings } = document.project;
     return settings.paper === paper && settings.orientation === orientation
       ? document
@@ -818,13 +997,13 @@ export function setPageSetup(paper: PaperName, orientation: Orientation): Comman
 }
 
 export function setPartName(id: PartId, name: string): Command {
-  return command('Rename part', (document) => ({
+  return command({ action: 'rename-part' }, (document) => ({
     project: mapPart(document.project, id, (part) => ({ ...part, name })),
   }));
 }
 
 export function setPartQuantity(id: PartId, quantity: number): Command {
-  return command('Set quantity', (document) => ({
+  return command({ action: 'set-quantity' }, (document) => ({
     project: mapPart(document.project, id, (part) => ({
       ...part,
       // A part you cut zero of is a part you should delete instead.
@@ -938,7 +1117,7 @@ export function addMeasurement(
   precision: 0 | 1 | 2 = 1,
 ): Command {
   return {
-    label: 'Add dimension',
+    label: { action: 'add-dimension' },
     apply: (document) => {
       const home = findFeature(document.project, a.featureId);
       if (home === null || findFeature(document.project, b.featureId) === null) return document;
@@ -962,7 +1141,7 @@ export function setMeasurement(
   id: FeatureId,
   change: { readonly offsetMm?: Mm; readonly precision?: 0 | 1 | 2 },
 ): Command {
-  return command('Edit dimension', (document) => ({
+  return command({ action: 'edit-dimension' }, (document) => ({
     project: mapFeature(document.project, id, (feature) =>
       feature.kind === 'measurement'
         ? {
@@ -1022,7 +1201,7 @@ export function addAllowance(
   allowanceMm?: Mm,
 ): Command {
   return {
-    label: 'Add seam allowance',
+    label: { action: 'add-seam-allowance' },
     apply: (document) => {
       if (allowanceRefusal(document.project, stitchId) !== null) return document;
 
@@ -1052,7 +1231,7 @@ export function addAllowancePart(
   allowanceMm?: Mm,
 ): Command {
   return {
-    label: 'Add Pocket',
+    label: { action: 'add', name: 'Pocket' },
     apply: (document) => {
       const allowance = allowanceMm ?? document.project.settings.defaultStitchInsetMm;
 
@@ -1202,26 +1381,29 @@ export function addTextLabel(
 ): Command {
   const words = text.trim();
 
-  return command(`Add ${words === '' ? 'label' : words}`, (document) => {
-    if (words === '' || !(sizeMm > 0)) return document;
+  return command(
+    words === '' ? { action: 'add-label' } : { action: 'add', name: words },
+    (document) => {
+      if (words === '' || !(sizeMm > 0)) return document;
 
-    return {
-      project: mapPart(document.project, partId, (part) => ({
-        ...part,
-        features: [
-          ...part.features,
-          {
-            id: featureId,
-            kind: 'text-label',
-            name: words,
-            visible: true,
-            locked: false,
-            source: { kind: 'text', text: words, at, sizeMm, rotationRad: 0 },
-          },
-        ],
-      })),
-    };
-  });
+      return {
+        project: mapPart(document.project, partId, (part) => ({
+          ...part,
+          features: [
+            ...part.features,
+            {
+              id: featureId,
+              kind: 'text-label',
+              name: words,
+              visible: true,
+              locked: false,
+              source: { kind: 'text', text: words, at, sizeMm, rotationRad: 0 },
+            },
+          ],
+        })),
+      };
+    },
+  );
 }
 
 /**
@@ -1233,7 +1415,7 @@ export function addTextLabel(
 export function setLabelText(id: FeatureId, text: string): Command {
   const words = text.trim();
 
-  return command('Edit label', (document) => {
+  return command({ action: 'edit-label' }, (document) => {
     if (words === '') return document;
 
     return {
@@ -1248,7 +1430,7 @@ export function setLabelText(id: FeatureId, text: string): Command {
 
 /** Resizes a label, in millimetres, like everything else that can be printed. */
 export function setLabelSize(id: FeatureId, sizeMm: Mm): Command {
-  return command('Resize label', (document) => {
+  return command({ action: 'resize-label' }, (document) => {
     if (!(sizeMm > 0)) return document;
 
     return {
@@ -1281,7 +1463,7 @@ const HARDWARE_NAMES: Readonly<Record<HardwareHole['hardwareType'], string>> = {
 function setFeatureField<K extends Feature['kind']>(
   id: FeatureId,
   kind: K,
-  label: string,
+  label: HistoryLabel,
   update: (feature: Extract<Feature, { kind: K }>) => Extract<Feature, { kind: K }>,
 ): Command {
   return command(label, (document) => ({
@@ -1292,7 +1474,7 @@ function setFeatureField<K extends Feature['kind']>(
 }
 
 export function setFoldDirection(id: FeatureId, direction: FoldLine['direction']): Command {
-  return setFeatureField(id, 'fold-line', 'Change fold direction', (fold) => ({
+  return setFeatureField(id, 'fold-line', { action: 'change-fold-direction' }, (fold) => ({
     ...fold,
     direction,
   }));
@@ -1300,7 +1482,7 @@ export function setFoldDirection(id: FeatureId, direction: FoldLine['direction']
 
 /** Undefined means "inherit from the part" — see `FoldLineEditor`. */
 export function setFoldThickness(id: FeatureId, materialThicknessMm: Mm | undefined): Command {
-  return setFeatureField(id, 'fold-line', 'Change fold thickness', (fold) => {
+  return setFeatureField(id, 'fold-line', { action: 'change-fold-thickness' }, (fold) => {
     if (materialThicknessMm === undefined) {
       const { materialThicknessMm: _dropped, ...rest } = fold;
       return rest;
@@ -1310,7 +1492,7 @@ export function setFoldThickness(id: FeatureId, materialThicknessMm: Mm | undefi
 }
 
 export function setMarkingPurpose(id: FeatureId, purpose: MarkingLine['purpose']): Command {
-  return setFeatureField(id, 'marking-line', 'Change marking purpose', (mark) => ({
+  return setFeatureField(id, 'marking-line', { action: 'change-marking-purpose' }, (mark) => ({
     ...mark,
     purpose,
   }));
@@ -1320,7 +1502,7 @@ export function setHardwareType(
   id: FeatureId,
   hardwareType: HardwareHole['hardwareType'],
 ): Command {
-  return setFeatureField(id, 'hardware-hole', 'Change hardware type', (hole) => ({
+  return setFeatureField(id, 'hardware-hole', { action: 'change-hardware-type' }, (hole) => ({
     ...hole,
     hardwareType,
   }));
@@ -1400,6 +1582,20 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
 }
 
 /**
+ * Why deleting `ids` would refuse, or `null` — asked first by the Delete key,
+ * the panel and the right-click menu (8.8), so none of them offers a delete
+ * that was never going to happen (X1, ADR 0013).
+ *
+ * S7, over the cascade rather than only the request: deleting an outline would
+ * delete or freeze the stitch line that follows it, and if *that* is locked
+ * the user pinned it down precisely so this could not happen to it.
+ */
+export function deleteRefusal(project: Project, ids: Iterable<FeatureId>): Problem | null {
+  const plan = planDelete(project, ids);
+  return lockRefusal(project, [...plan.requested, ...plan.dependents.map((d) => d.featureId)]);
+}
+
+/**
  * Deletes a part and its features.
  *
  * Planned exactly like `deleteFeatures`: anything outside the part that depends
@@ -1407,10 +1603,10 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
  */
 export function deletePart(partId: PartId, resolution?: DeleteResolution): Command {
   return {
-    label: 'Delete part',
+    label: { action: 'delete-part' },
     labelFor: (document) => {
       const part = document.project.parts.find((p) => p.id === partId);
-      if (part === undefined) return 'Delete part';
+      if (part === undefined) return { action: 'delete-part' };
       const ids = part.features.map((f) => f.id);
       return deleteLabel(document.project, ids, resolution, part.name);
     },
@@ -1453,7 +1649,7 @@ export function isPartVisible(part: Part): boolean {
  * Locked features included: the lock protects the piece, not the view.
  */
 export function setPartVisible(partId: PartId, visible: boolean): Command {
-  return command(visible ? 'Show part' : 'Hide part', (document) => ({
+  return command({ action: visible ? 'show-part' : 'hide-part' }, (document) => ({
     project: mapPart(document.project, partId, (part) => ({
       ...part,
       features: part.features.map((feature) => ({ ...feature, visible })),
@@ -1486,10 +1682,12 @@ export function duplicatePart(
   featureIds: readonly FeatureId[],
 ): Command {
   return {
-    label: 'Duplicate part',
+    label: { action: 'duplicate-part' },
     labelFor: (document) => {
       const part = document.project.parts.find((p) => p.id === partId);
-      return part === undefined ? 'Duplicate part' : `Duplicate ${part.name}`;
+      return part === undefined
+        ? { action: 'duplicate-part' }
+        : { action: 'duplicate', name: part.name };
     },
     apply: (document) => {
       const part = document.project.parts.find((p) => p.id === partId);
@@ -1804,7 +2002,7 @@ export function mirrorFeatures(
   newPartIds: readonly PartId[] = [],
 ): Command {
   return {
-    label: ids.length === 1 ? 'Mirror' : `Mirror ${String(ids.length)} features`,
+    label: { action: 'mirror', count: ids.length },
     apply: (document) => {
       const wanted = [...new Set(ids)];
       if (wanted.length === 0 || newIds.length < wanted.length) return document;
@@ -1920,7 +2118,7 @@ export function mirrorAcrossFold(
   foldId: FeatureId,
 ): Command {
   return {
-    label: ids.length === 1 ? 'Mirror across fold' : `Mirror ${String(ids.length)} across fold`,
+    label: { action: 'mirror-across-fold', count: ids.length },
     apply: (document) => {
       const wanted = [...new Set(ids)];
       if (wanted.length === 0 || newIds.length < wanted.length) return document;
@@ -1989,12 +2187,14 @@ function counterpartOf(
  */
 export function setSource(id: FeatureId, sourceId: FeatureId): Command {
   return {
-    label: 'Follow another feature',
+    label: { action: 'follow-another' },
     labelFor: (document) => {
       const source = document.project.parts
         .flatMap((p) => p.features)
         .find((f) => f.id === sourceId);
-      return source === undefined ? 'Follow another feature' : `Follow ${source.name}`;
+      return source === undefined
+        ? { action: 'follow-another' }
+        : { action: 'follow', name: source.name };
     },
     apply: (document) => {
       if (followRefusal(document.project, id, sourceId) !== null) return document;
@@ -2030,13 +2230,8 @@ function resolveDelete(
   ids: readonly FeatureId[],
   resolution: DeleteResolution | undefined,
 ): DeleteOutcome | null {
+  if (deleteRefusal(project, ids) !== null) return null;
   const plan = planDelete(project, ids);
-
-  // S7, over the cascade rather than only the request: deleting an outline
-  // would delete or freeze the stitch line that follows it, and if *that* is
-  // locked the user pinned it down precisely so this could not happen to it.
-  const touched = [...plan.requested, ...plan.dependents.map((d) => d.featureId)];
-  if (lockRefusal(project, touched) !== null) return null;
 
   const gone = new Set(plan.requested);
   const frozen = new Map<FeatureId, Feature>();
@@ -2131,23 +2326,20 @@ function deleteLabel(
   ids: readonly FeatureId[],
   resolution: DeleteResolution | undefined,
   partName?: string,
-): string {
+): HistoryLabel {
   const names = project.parts.flatMap((p) => p.features).filter((f) => ids.includes(f.id));
-  const what =
-    partName ?? (names.length === 1 ? names[0]!.name : `${String(names.length)} features`);
+  // Named when it is one thing — the part, or its one feature — and counted otherwise.
+  const name = partName ?? (names.length === 1 ? names[0]!.name : undefined);
+  const what = name === undefined ? { count: names.length } : { name };
 
   const outcome = resolveDelete(project, ids, resolution);
-  if (outcome === null) return `Delete ${what}`;
-
-  const deleted = outcome.gone.size - outcome.requestedCount;
-  const kept = outcome.frozen.size;
-  const dependents = (n: number): string => `${String(n)} dependent${n === 1 ? '' : 's'}`;
-
-  if (kept > 0 && deleted > 0)
-    return `Delete ${what} and ${dependents(deleted)}, keep ${String(kept)} frozen`;
-  if (kept > 0) return `Delete ${what}, keep ${String(kept)} frozen`;
-  if (deleted > 0) return `Delete ${what} and ${dependents(deleted)}`;
-  return `Delete ${what}`;
+  if (outcome === null) return { action: 'delete', ...what };
+  return {
+    action: 'delete',
+    ...what,
+    dependents: outcome.gone.size - outcome.requestedCount,
+    frozen: outcome.frozen.size,
+  };
 }
 
 /** Whether anything upstream of `feature` is among the features being moved. */

@@ -12,9 +12,10 @@ export type {
   MirrorDirection,
   DeleteResolution,
   PlannedDependent,
+  PieceScope,
   RefusedTransform,
 } from './commands.js';
-export type { Command, Document, Selection } from './document.js';
+export type { Command, Document, HistoryAction, HistoryLabel, Selection } from './document.js';
 export {
   EMPTY_SELECTION,
   command,
@@ -22,6 +23,7 @@ export {
   isPartSelected,
   isSelected,
   partSelectionOf,
+  selectedFeatureIds,
   selectionOf,
   toggleSelected,
 } from './document.js';
@@ -50,6 +52,7 @@ export {
   circleShape,
   deleteFeatures,
   deletePart,
+  deleteRefusal,
   duplicatePart,
   isPartVisible,
   foldMirrorRefusal,
@@ -57,6 +60,7 @@ export {
   mirrorAxisFor,
   mirrorFeatures,
   mirrorRefusal,
+  pieceScope,
   planDelete,
   setSource,
   setFoldDirection,
@@ -86,6 +90,7 @@ export {
   shapePart,
   refusedTransforms,
   transformFeatures,
+  transformRefusal,
   translateFeatures,
 } from './commands.js';
 

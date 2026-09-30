@@ -1,19 +1,15 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Locator,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { readoutAt } from './cursorReadout.js';
+import { launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * The sheet workflow (7.4a–7.4d): the maker's question, answered before
@@ -23,8 +19,6 @@ import { PRINT_TEST } from './printTest.js';
  * Every test opens the 7.7 print test: an outer panel and a card pocket that
  * pack onto one sheet of A4 portrait, and a 250 mm strap taped across two more.
  */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
 /** The screen-only furniture colour, `SHEET.furniture` (#c22a8c). */
 const FURNITURE = [0xc2, 0x2a, 0x8c] as const;
@@ -38,7 +32,7 @@ interface Session {
 async function withPrintTest(body: (session: Session) => Promise<void>): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), 'leathercad-e2e-sheets-'));
   const pdf = join(dir, 'print-test.pdf');
-  const app = await electron.launch({ args: ['.'], cwd: DESKTOP_DIR });
+  const app = await launchApp();
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
@@ -53,7 +47,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
       },
       { project: PRINT_TEST, pdf },
     );
-    await window.getByTestId('open').click();
+    await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await body({ app, window, pdf });
   } finally {
@@ -204,27 +198,21 @@ test('the Sheets view shows the plan, and changing the paper changes it (7.4c)',
 });
 
 test('Design and Sheets each keep their camera, and switching changes nothing (7.4c)', async () => {
-  await withPrintTest(async ({ window, app }) => {
+  await withPrintTest(async ({ window }) => {
     const canvas = window.getByTestId('editor-canvas');
     await window.getByTestId('tool-select').click();
     const design = await canvasImage(canvas);
 
-    // By shortcut, and back by the menu.
+    // By shortcut, and back by the switch.
     await window.keyboard.press('Control+2');
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
-    await app.evaluate(({ Menu }) => {
-      const view = Menu.getApplicationMenu()?.items.find((item) => item.label === 'View');
-      view?.submenu?.items.find((item) => item.label === 'Design')?.click();
-    });
+    await window.getByTestId('view-design').click();
     await expect(canvas).toHaveAttribute('data-view', 'design');
     await expect.poll(() => canvasImage(canvas)).toBe(design);
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
 
-    // And by the menu to the sheets.
-    await app.evaluate(({ Menu }) => {
-      const view = Menu.getApplicationMenu()?.items.find((item) => item.label === 'View');
-      view?.submenu?.items.find((item) => item.label === 'Sheets')?.click();
-    });
+    // And by the switch to the sheets.
+    await window.getByTestId('view-sheets').click();
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
     await window.keyboard.press('Control+1');
     await expect(canvas).toHaveAttribute('data-view', 'design');
@@ -297,13 +285,9 @@ function num(text: string): number {
 async function boardView(window: Page): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
   const readAt = async (px: number, py: number): Promise<{ x: number; y: number }> => {
-    const previous = (await readout(window).textContent()) ?? '';
-    await window.mouse.move(box.x + px, box.y + py);
-    await expect.poll(async () => (await readout(window).textContent()) ?? '').not.toBe(previous);
-    const [x, y] = ((await readout(window).textContent()) ?? '').split(',').map(num);
+    const [x, y] = (await readoutAt(window, box.x + px, box.y + py)).split(',').map(num);
     return { x: x!, y: y! };
   };
-  await window.mouse.move(box.x + 60, box.y + box.height - 60);
   const a = await readAt(20, box.height - 20);
   const b = await readAt(220, box.height - 220);
   const mmPerPx = (b.x - a.x) / 200;
@@ -428,7 +412,7 @@ test('what does not print is said, in Parts, in the sheets and in the PDF (7.4d)
 
 test('an empty project is one scale-check sheet, on screen and in the PDF (7.4d)', async () => {
   await withPrintTest(async ({ window, pdf }) => {
-    await window.getByTestId('new').click();
+    await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await expect(window.getByTestId('paper').locator('option:checked')).toHaveText(
       '1 sheet of A4, portrait, scale check only',

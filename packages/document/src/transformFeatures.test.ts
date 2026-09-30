@@ -46,14 +46,16 @@ describe('transformFeatures', () => {
     expect(shapeOf(store, 0)).toEqual(before);
   });
 
-  it('moves what it can and leaves what it cannot, in a mixed selection', () => {
+  it('moves nothing in a mixed selection that part of it refuses, rather than half of it (Q30)', () => {
     const store = storeWith([rectShape({ x: 0, y: 0 }, 100, 50), circleShape({ x: 10, y: 10 }, 5)]);
+    const before = store.getState().document;
 
     store.dispatch(transformFeatures(['feat-0', 'feat-1'], MatOps.fromScale(2, 1)));
 
-    // The rectangle stretches — that is rule 1's worked example.
-    expect((shapeOf(store, 0) as { width: number }).width).toBeCloseTo(200, 9);
-    // The circle is left exactly as it was rather than becoming an ellipse.
+    // The circle cannot become an ellipse, so the rectangle does not stretch
+    // without it: a stretched piece once left its rivet holes behind, and
+    // said so only while the mouse was down.
+    expect(store.getState().document).toBe(before);
     expect(shapeOf(store, 1)).toEqual(circleShape({ x: 10, y: 10 }, 5));
   });
 

@@ -92,6 +92,11 @@ Features whose shapes refuse are **left untouched** while the rest of the select
 mixed selection of rectangles and arcs under a non-uniform scale moves the rectangles and reports
 the arcs, rather than failing wholesale — but nothing is converted behind the user's back either way.
 
+> **Changed in Q30 (2026-09-29):** a transform is now refused *whole* when any of the selection
+> refuses it, as a lock already refused it. Moving half left real pieces wrong without a word: a
+> piece stretched with its rivet holes selected left the holes where they were, and the notice
+> lasted only while the mouse was down. `transformRefusal` gives the reason, lock first.
+
 ## What this slice does not build
 
 - **`Part.transform`.** Placement stays where `domain-model.md` puts it, in its own slice.

@@ -1,16 +1,11 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { launchApp } from './launchApp.js';
 
 /**
  * Slice 8.2: the app remembers how the maker likes it, and what they worked
@@ -18,14 +13,11 @@ import { closeApp } from './closeApp.js';
  * next, which is what a restart is.
  */
 
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: configHome },
-  });
+async function launch(
+  configHome: string,
+  env: Readonly<Record<string, string>> = {},
+): Promise<{ app: ElectronApplication; window: Page }> {
+  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome, ...env } });
   const window = await app.firstWindow();
   window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
   await window.waitForLoadState('domcontentloaded');
@@ -47,15 +39,15 @@ async function drawAPanel(window: Page): Promise<void> {
   await expect(window.getByTestId('part-count')).toHaveText('1');
 }
 
-/** The labels under File › Open Recent, as the menu has them now. */
-async function recentLabels(app: ElectronApplication): Promise<string[]> {
-  return app.evaluate(({ Menu }) => {
-    const file = Menu.getApplicationMenu()?.items.find((entry) => entry.label === 'File');
-    const recent = file?.submenu?.items.find((entry) => entry.label === 'Open Recent');
-    return (recent?.submenu?.items ?? [])
-      .filter((entry) => entry.type !== 'separator')
-      .map((entry) => entry.label);
-  });
+/** The names under the Project menu's *Recent projects* (8.7), as it shows them now. */
+async function recentNames(window: Page): Promise<string[]> {
+  await window.getByTestId('project-menu').click();
+  const names = await window
+    .getByRole('group', { name: 'Recent projects' })
+    .locator('.menu-label')
+    .allTextContents();
+  await window.keyboard.press('Escape');
+  return names;
 }
 
 test('the legend and the tool rail are as the maker left them', async () => {
@@ -89,13 +81,13 @@ test('the legend and the tool rail are as the maker left them', async () => {
   }
 });
 
-test('File › Open Recent reopens a saved project after a restart', async () => {
+test('a recent project reopens from the Project menu after a restart (8.7)', async () => {
   const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-recent-'));
   const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet v1.2.lcp');
 
   const first = await launch(configHome);
   try {
-    expect(await recentLabels(first.app)).toEqual(['No Recent Projects', 'Clear Recent']);
+    expect(await recentNames(first.window)).toEqual([]);
 
     await first.app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
@@ -103,7 +95,7 @@ test('File › Open Recent reopens a saved project after a restart', async () =>
     await drawAPanel(first.window);
     await first.window.keyboard.press('Control+s');
     await expect(first.window.getByTestId('file-path')).toContainText('Wallet v1.2');
-    await expect.poll(() => recentLabels(first.app)).toContain(project);
+    await expect.poll(() => recentNames(first.window)).toEqual(['Wallet v1.2']);
   } finally {
     await closeApp(first.app);
   }
@@ -113,13 +105,8 @@ test('File › Open Recent reopens a saved project after a restart', async () =>
     // Chosen from the menu, not a dialog: the main process grants the path
     // because it is on its own list.
     await expect(second.window.getByTestId('part-count')).toHaveText('0');
-    await second.app.evaluate(({ Menu }, path) => {
-      const file = Menu.getApplicationMenu()?.items.find((entry) => entry.label === 'File');
-      const recent = file?.submenu?.items.find((entry) => entry.label === 'Open Recent');
-      const item = recent?.submenu?.items.find((entry) => entry.label === path);
-      if (item === undefined) throw new Error(`${path} is not on Open Recent`);
-      item.click();
-    }, project);
+    await second.window.getByTestId('project-menu').click();
+    await second.window.getByRole('menuitem', { name: /Wallet v1\.2/ }).click();
 
     await expect(second.window.getByTestId('part-count')).toHaveText('1');
     await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
@@ -131,36 +118,93 @@ test('File › Open Recent reopens a saved project after a restart', async () =>
   }
 });
 
-test('the keyboard shortcut map opens from the menu, from Ctrl+/ and from ?', async () => {
+test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcuts from Ctrl+/ and ? (8.7)', async () => {
   const { app, window } = await launch(mkdtempSync(join(tmpdir(), 'leathercad-e2e-keys-')));
   try {
-    const dialog = window.getByTestId('shortcuts-dialog');
+    const dialog = window.getByTestId('settings-dialog');
 
-    await app.evaluate(({ Menu }) => {
-      const help = Menu.getApplicationMenu()?.items.find((entry) => entry.label === 'Help');
-      help?.submenu?.items.find((entry) => entry.label === 'Keyboard Shortcuts')?.click();
-    });
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('Export PDF');
-    await expect(dialog).toContainText('Rectangle');
-
-    // A letter typed while it is open does not change the tool behind it.
+    await window.getByTestId('settings').click();
+    await expect(window.getByTestId('settings-pane-general')).toBeVisible();
+    await expect(window.getByTestId('settings-tab-general')).toBeFocused();
+    await window.keyboard.press('ArrowDown');
+    await expect(window.getByTestId('settings-pane-appearance')).toBeVisible();
+    // A letter typed in Settings does not change the tool behind it.
     await expect(window.getByTestId('tool-rectangle')).toHaveClass(/active/);
     await window.keyboard.press('c');
     await expect(window.getByTestId('tool-circle')).not.toHaveClass(/active/);
-    await expect(window.getByTestId('tool-rectangle')).toHaveClass(/active/);
     await window.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
 
-    await window.keyboard.press('Control+/');
-    await expect(dialog).toBeVisible();
-    await window.getByTestId('shortcuts-close').click();
+    await window.keyboard.press('Control+,');
+    await expect(window.getByTestId('settings-pane-general')).toBeVisible();
+    await window.getByTestId('settings-close').click();
     await expect(dialog).toHaveCount(0);
 
+    await window.keyboard.press('Control+/');
+    await expect(window.getByTestId('settings-pane-shortcuts')).toContainText('Export PDF');
+    await expect(window.getByTestId('settings-pane-shortcuts')).toContainText('Rectangle');
+    await window.keyboard.press('Escape');
     await window.keyboard.press('Shift+?');
-    await expect(dialog).toBeVisible();
+    await expect(window.getByTestId('settings-pane-shortcuts')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+
+    // Typing is typing: none of the three opens anything from a text field.
+    const name = window.getByTestId('project-name');
+    await name.fill('Wallet');
+    await name.press('Shift+?');
+    await name.press('Control+/');
+    await name.press('Control+,');
+    await expect(name).toHaveValue('Wallet?');
+    await expect(dialog).toHaveCount(0);
   } finally {
     await closeApp(app);
+  }
+});
+
+test('a setting applies at once and is kept, and Clear list empties the recent projects (8.7)', async () => {
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-settings-'));
+  const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Strap.lcp');
+
+  const first = await launch(configHome);
+  try {
+    // The legend shows only once there is something drawn for it to explain.
+    await drawAPanel(first.window);
+    await first.window.getByTestId('settings').click();
+    await first.window.getByTestId('settings-tab-appearance').click();
+    await first.window.getByTestId('setting-legend-open').check();
+    await first.window.getByTestId('settings-close').click();
+    await expect(first.window.getByTestId('canvas-legend-toggle')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+
+    await first.app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, project);
+    await first.window.keyboard.press('Control+s');
+    await expect.poll(() => recentNames(first.window)).toEqual(['Strap']);
+  } finally {
+    await closeApp(first.app);
+  }
+
+  const second = await launch(configHome);
+  try {
+    await second.window.getByTestId('settings').click();
+    await second.window.getByTestId('settings-tab-appearance').click();
+    await expect(second.window.getByTestId('setting-legend-open')).toBeChecked();
+
+    await second.window.getByTestId('settings-tab-general').click();
+    const general = second.window.getByTestId('settings-pane-general');
+    await expect(general).toContainText('1 is listed now.');
+    await general.getByTestId('clear-recent').click();
+    await expect(general).toContainText('None are listed now.');
+    await expect(general.getByTestId('clear-recent')).toBeDisabled();
+    // Closed by its button: the disabled Clear list no longer holds focus.
+    await second.window.getByTestId('settings-close').click();
+    expect(await recentNames(second.window)).toEqual([]);
+  } finally {
+    await closeApp(second.app);
   }
 });
 
@@ -188,5 +232,56 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
     await expect(window.getByTestId('feature-count')).toHaveText('1');
   } finally {
     await closeApp(app);
+  }
+});
+
+test('the interface language follows the system, or keeps the one chosen, at once and after a restart (ADR 0018)', async () => {
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-language-'));
+  // A French system, on Linux: a language LeatherCAD does not ship yet.
+  const french = { LANGUAGE: 'fr_FR', LC_ALL: 'fr_FR.UTF-8', LANG: 'fr_FR.UTF-8' };
+
+  const first = await launch(configHome, french);
+  try {
+    const system = await first.app.evaluate(({ app }) => app.getPreferredSystemLanguages());
+    await first.window.getByTestId('settings').click();
+    await first.window.getByTestId('settings-tab-language').click();
+    const choice = first.window.getByTestId('setting-language');
+
+    await expect(choice).toHaveValue('system');
+    await expect(choice.locator('option').first()).toHaveText('Follow system (English)');
+    await expect(choice.locator('option[value="en"]')).toHaveText('English');
+    // Linux takes the system's languages from the environment; Windows and
+    // macOS from their settings, which a test does not change.
+    if (process.platform === 'linux') {
+      expect(system[0]).toBe('fr-FR');
+      await expect(first.window.getByTestId('language-unavailable')).toHaveText(
+        'Your system’s language, French, is not available yet, so LeatherCAD is in English.',
+      );
+    }
+    await expect(first.window.locator('html')).toHaveAttribute('lang', /^en/);
+    await expect(
+      first.window.getByRole('link', { name: 'Help translate it into your language' }),
+    ).toHaveAttribute('href', 'https://github.com/crnlsp/leathercad#translations');
+
+    // Applied at once, and kept: nothing to save, nothing to cancel.
+    await choice.selectOption('en');
+    await expect(choice).toHaveValue('en');
+    await expect(first.window.getByTestId('language-unavailable')).toHaveCount(0);
+    await expect
+      .poll(() =>
+        JSON.parse(readFileSync(join(configHome, 'leathercad', 'preferences.json'), 'utf8')),
+      )
+      .toMatchObject({ language: 'en' });
+  } finally {
+    await closeApp(first.app);
+  }
+
+  const second = await launch(configHome, french);
+  try {
+    await second.window.getByTestId('settings').click();
+    await second.window.getByTestId('settings-tab-language').click();
+    await expect(second.window.getByTestId('setting-language')).toHaveValue('en');
+  } finally {
+    await closeApp(second.app);
   }
 });

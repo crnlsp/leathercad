@@ -1,5 +1,7 @@
 import type { HardwareHole } from '@leathercad/domain';
 
+import { useI18n } from '../i18n.js';
+
 const TYPES: readonly HardwareHole['hardwareType'][] = [
   'rivet',
   'snap',
@@ -23,9 +25,10 @@ export function HardwareHoleEditor({
   feature: HardwareHole;
   onChange: (next: HardwareHole) => void;
 }) {
+  const { t } = useI18n();
   return (
     <label className="field">
-      <span className="field-label">For</span>
+      <span className="field-label">{t('toolOptions.for')}</span>
       <select
         data-testid="hardware-hole-type"
         value={feature.hardwareType}
@@ -38,7 +41,7 @@ export function HardwareHoleEditor({
       >
         {TYPES.map((type) => (
           <option key={type} value={type}>
-            {type[0]!.toUpperCase() + type.slice(1)}
+            {t(`hardware.${type}`)}
           </option>
         ))}
       </select>

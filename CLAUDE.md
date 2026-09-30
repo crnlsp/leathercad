@@ -37,6 +37,7 @@ Violating any of these is a bug, even if tests pass.
 pnpm dev              # run the app (electron-vite, with HMR)
 pnpm check            # typecheck + lint + format:check + depcruise + knip + test:coverage + test:perf — before a slice is done
 pnpm test             # unit + property + export + SVG snapshot + format fixtures
+pnpm test locales     # a translation against English: keys, placeholders, plural forms (ADR 0018)
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
@@ -59,8 +60,9 @@ before committing it. A baseline from `pnpm bench:baseline` only compares on the
 recorded it.
 
 Two long-lived branches: **`main` is production** — what is released — and **`develop` is
-development**. Work lands on `develop`; `develop` reaches `main` through a pull request when it is
-ready to release. Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
+development**. Work lands on `develop`; `develop` reaches `main` through a pull request only when
+every item under the roadmap's next release is ✅ — a release is its whole section, and the
+*Release gate* check refuses anything else. Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
 refuses it and runs `pnpm check` on every push. Pull requests into `develop` are squash-merged, and
 their title is a Conventional Commit: it becomes the changelog line. See `CONTRIBUTING.md`.
 
@@ -89,8 +91,10 @@ document   Document, Command, undo/redo, selection                            �
 persist    .lcp container, zod schemas, migrations                            → domain
 render     DisplayList, canvas2d + svg backends                               → domain, typography
 editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
-export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.1)          → domain, render, typography
-apps/desktop  Electron main/preload/renderer, React panels — the ONLY package importing Electron
+export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.4)          → domain, render, typography
+apps/desktop  Electron main/preload/renderer, React panels — the ONLY package importing Electron,
+              and the only one with words: src/locales/*.json, one catalogue per language;
+              the languages offered are SUPPORTED_LANGUAGES in src/shared/i18n.ts, not the files
 ```
 
 `print`, `ui` and `cli` are reserved in `.dependency-cruiser.cjs` but not created: pagination and
@@ -114,6 +118,13 @@ Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run head
   screen at their real size or solid, never stretched. Colours, type and metric tokens live there
   too; `styles.css` defines none of its own, and an audit test holds it to that.
 - Every new dependency needs an ADR in `docs/adr/`.
+- **Every word on screen is in `apps/desktop/src/locales/en.json`**, reached through `t()` from
+  `useI18n()` (renderer) or the main process's translator. Keys are typed. A plural is one key per
+  CLDR form (`_one`, `_other`, …) with `{{count}}`; a number, list or date goes through `Intl`.
+  Stable ids — problem codes, tool ids, feature kinds, undo actions — are never translated; they
+  pick the words. `untranslated.test.ts` fails on words written into JSX. A translation file is
+  not a supported language: only an entry in `SUPPORTED_LANGUAGES`, added after review, makes it
+  one, and until then only `pnpm dev` shows it, as a preview. See ADR 0018.
 
 ## Terminology
 
@@ -144,6 +155,7 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | UI Foundations, F.0–F.7 | `docs/history/roadmap-to-1.0.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
 | The paper workflow and the window's bars (F.8, 7.4a–7.4d) | `docs/superpowers/specs/2026-09-24-sheets-workflow-design.md`; Design and Sheets stay separate views |
 | Tests | `docs/testing.md` |
+| Interface text, languages, Settings → Language | `docs/adr/0018-interface-language.md` |
 | Commits, pull requests, releases | `CONTRIBUTING.md` |
 
 Run `/geo-check` and `/arch-check` before considering a slice done. If a change invalidates
@@ -152,6 +164,9 @@ something in this file or in `docs/`, update it in the same commit.
 ## Do not
 
 - Do not add a coordinate in pixels to any model type.
+- Do not put a sentence for the interface in any package below `apps/desktop`. Report facts — a
+  problem code, a `HistoryLabel`, a status — and word them in the app (ADR 0018).
+- Do not let the interface's language reach a `.lcp`, or anything `persist` writes.
 - Do not store computed paths, hole positions, lengths, or bounding boxes in the file.
 - Do not scale content to fit a page. Add a page instead.
 - Do not use `window.print()` or any browser print path.

@@ -2,7 +2,7 @@
 
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-09-26
+**Last updated:** 2026-09-30
 
 ---
 
@@ -73,6 +73,15 @@ conformance suite for the replacement.
 - **The document is *not* in Zustand, Redux, or any generic state library.** It has its own store
   with commands, transactions, and an undo stack (§4). This is the single most important
   state-management decision in the project; see [risks](#9-risks-this-architecture-is-designed-to-avoid).
+- **Every word goes through the interface's language** ([ADR 0018](adr/0018-interface-language.md)).
+  The catalogues are JSON in `apps/desktop/src/locales/`, one file per language; the runtime is
+  `apps/desktop/src/shared/i18n.ts`, on `Intl`, shared by the renderer (`useI18n()`) and the main
+  process (macOS's menu, its dialogs). Keys are typed from `en.json`. The languages offered are
+  `SUPPORTED_LANGUAGES`, a registry the project owns, not the files: a file with no entry is a
+  translation in progress, shown only by `pnpm dev`. Nothing below `apps/desktop`
+  has words for the interface: a problem is a code and facts, an undo step a `HistoryLabel`, a
+  part's print status a `PartPrintStatus`, and the app words each one. The paper's words — the PDF
+  footer, part captions — are the export's, and stay English while the vendored glyphs are Latin.
 
 ### 1.4 Supporting tools
 
@@ -167,6 +176,10 @@ plan live in `export`; and there is no CLI yet. The rules below hold for them th
 7. `platform` may import only `core`. It declares the OS boundary; it never implements it.
 8. `typography` may import only `core` and `geometry`, and parses no font at run time: its glyph data
    is generated and committed ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)).
+
+Not a dependency-cruiser rule, but held the same way: **no package speaks the interface's
+language.** A package reports facts; `apps/desktop` words them (ADR 0018). The locale files sit in
+`apps/desktop`, so no package could import them if it tried (rule 4).
 
 Rule 6 is what keeps the Tauri escape hatch open. Rule 1 is what keeps the geometry engine testable
 and correct.
@@ -422,6 +435,13 @@ about, and the target-part rule would have two answers. The
 **target part** for anything that joins a part is the selected part, or the one part the selected
 features belong to — and selection only ever chooses *where* something goes, never *what* is created
 ([Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) §3.8).
+
+**A picked part is a real selection everywhere** (Q29). It stands for every feature in it
+(`selectedFeatureIds`): the board highlights them, the status bar counts "1 part selected",
+Properties shows the part — its fields, its outline's size, its problems, *Flip this piece* and
+*Delete part* — and the Delete key deletes the part whole. Rotate, Flip and the right-click menu take
+it as the piece; Shift-click and Shift-box add to what it stands for rather than dropping it; Edit
+Points edits its outline. Scale says why it does not resize a whole part (Q31).
 
 The drill-down sketched here originally — click for a part, double-click for its features, again for
 vertices — waits until real documents show that flat feature picking on the canvas is not enough.

@@ -3,13 +3,12 @@ import { join } from 'node:path';
 
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
-import type { PaperMenuChoice } from '@leathercad/platform';
 
 import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
-import { validPaperChoices } from './menu.js';
+import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
-import type { PreferencesStore } from './preferences.js';
+import { shownPath, type PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
 
 /**
@@ -28,21 +27,25 @@ function recoveryIntervalMs(): number {
  *
  * Nor does it get one through here: it reads, writes and opens only the paths
  * the user chose in these dialogs this session (`PathGrants`), or chose from
- * *File › Open Recent*, whose list only ever holds such paths.
+ * the recent projects, whose list only ever holds such paths.
  */
 export function registerPlatformHandlers(
   getWindow: () => BrowserWindow | null,
   recovery: RecoveryStore,
   grants: PathGrants,
   preferences: PreferencesStore,
-  /** The recent list changed, so the menu showing it has to be rebuilt. */
+  /** A project joined the recent list: the operating system's list is told too. */
   onRecentChanged: (path: string) => void,
   /** Where the bundled sample project is (8.3): a fixed path, never the renderer's. */
   sampleProjectPath: string,
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
-  /** The Paper menu's choices changed (8.4b), already validated. */
-  onPaperChoices: (choices: readonly PaperMenuChoice[]) => void,
+  /** Opens a project from the recent list, if it is on it (8.7). */
+  openRecent: (path: string) => Promise<void>,
+  /** Shows the third-party notices window (8.6b). */
+  openNotices: () => void,
+  /** The preferences changed: the main process's own words may be in another language now. */
+  onPreferencesChanged: () => void,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -114,22 +117,40 @@ export function registerPlatformHandlers(
   );
 
   ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
-  ipcMain.handle(IPC.setPaperMenu, (_event, choices: unknown) => {
-    onPaperChoices(validPaperChoices(choices));
-  });
 
   // Preferences (8.2). The renderer names a change, never the file.
   ipcMain.handle(IPC.getPreferences, () => preferences.preferences);
   ipcMain.handle(IPC.setPreferences, async (_event, changes: unknown) => {
-    await preferences.update(changes);
+    const written = preferences.update(changes);
+    onPreferencesChanged();
+    await written;
   });
+  ipcMain.handle(IPC.getSystemLanguages, () => app.getPreferredSystemLanguages());
   // Only a project the maker chose in a dialog this session joins the list,
-  // so *Open Recent* can never become a way to reach any other file.
+  // so the recent projects can never become a way to reach any other file.
   ipcMain.handle(IPC.noteRecentFile, async (_event, path: unknown) => {
     if (!grants.allows(path, 'write')) return;
     await preferences.noteRecent(path as string);
     onRecentChanged(path as string);
   });
+
+  // The recent list as the Project menu shows it (8.7). A path is only
+  // opened because it is on this list — `openRecent` checks — so the
+  // renderer cannot name its way to any other file.
+  ipcMain.handle(IPC.getRecentFiles, () =>
+    preferences.recentFiles.map((path) => ({ path, shown: shownPath(path, app.getPath('home')) })),
+  );
+  ipcMain.handle(IPC.openRecent, async (_event, path: unknown) => {
+    if (typeof path === 'string') await openRecent(path);
+  });
+  ipcMain.handle(IPC.clearRecent, async () => {
+    await preferences.clearRecent();
+    app.clearRecentDocuments();
+  });
+  ipcMain.handle(IPC.showLogFolder, async () => {
+    await shell.openPath(stateDirectory());
+  });
+  ipcMain.handle(IPC.openNotices, () => openNotices());
 }
 
 /** The path, if the renderer may use it this way; otherwise logged and refused. */
