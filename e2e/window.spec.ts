@@ -113,10 +113,17 @@ test('the zoom keys zoom, and Ctrl+0 fits the pattern again (8.4b)', async () =>
     await drawAPanel(window);
     await window.getByTestId('tool-select').click();
     const board = (await window.getByTestId('editor-canvas').boundingBox())!;
+    const readout = window.getByTestId('cursor-readout');
+    // The readout is React state fed by a pointer event, so it trails the
+    // pointer: read straight after a move, it can still show the point before.
+    // Off the board it is blank, so the first number it shows on coming back
+    // is this point's, at this zoom.
     const scale = async (): Promise<string> => {
+      await window.getByTestId('status-bar').hover();
+      await expect(readout).toHaveText('— , —');
       await window.mouse.move(board.x + 60, board.y + 60);
-      await window.mouse.move(board.x + 61, board.y + 61);
-      return (await window.getByTestId('cursor-readout').textContent()) ?? '';
+      await expect(readout).not.toHaveText('— , —');
+      return (await readout.textContent()) ?? '';
     };
     await window.keyboard.press('Control+0');
     const fitted = await scale();
