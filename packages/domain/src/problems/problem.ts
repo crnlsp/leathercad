@@ -209,6 +209,8 @@ export interface ProblemFacts {
   /** `what` is the thing being placed, so one code serves every tool. */
   readonly NO_TARGET_PART: { readonly what: PlacedThing };
   readonly TARGET_SPANS_PARTS: { readonly what: PlacedThing };
+  /** Scale with a whole part picked: what resizing a piece means is not settled (Q31). */
+  readonly WHOLE_PART_NOT_SCALED: Record<string, never>;
 
   // ——— Evaluation outcomes (E): a feature that did not resolve ———
   readonly PARAMETER_INVALID: About & {

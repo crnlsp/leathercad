@@ -5,6 +5,7 @@ import {
   addStitchHoles,
   addStitchLine,
   allowanceRefusal,
+  deleteRefusal,
   flipFeatures,
   flipRefusal,
   foldMirrorRefusal,
@@ -20,7 +21,7 @@ import {
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
-import { evaluate, followRefusal, lockRefusal, type ResolvedFeature } from '@leathercad/domain';
+import { evaluate, followRefusal, type ResolvedFeature } from '@leathercad/domain';
 
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
@@ -29,7 +30,7 @@ import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
 import { FeatureEditor } from './featureEditors/index.js';
-import { MarkOf } from './icons/marks.js';
+import { FeatureMark, MarkOf } from './icons/marks.js';
 
 /**
  * Exact numeric editing for whatever is selected.
@@ -41,21 +42,40 @@ export function PropertyPanel({
   store,
   project,
   selected,
+  selectedParts,
   diagnostics,
   nextId,
   requestDelete,
+  requestDeletePart,
 }: {
   store: DocumentStore;
   project: Project;
   selected: ReadonlySet<string>;
+  /** Parts picked by their headings (Q29): shown as the part, not as nothing. */
+  selectedParts: ReadonlySet<string>;
   /** The one diagnostic list, filtered here to what is selected (X7). */
   diagnostics: readonly Diagnostic[];
   nextId: () => string;
   /** Deletes at once, or asks about dependents first (ADR 0009). */
   requestDelete: (ids: readonly string[]) => void;
+  /** The same for a whole part, picked by its heading. */
+  requestDeletePart: (partId: string) => void;
 }) {
   const { t } = useI18n();
   const found = findSelected(project, selected);
+  const parts = selected.size === 0 ? project.parts.filter((p) => selectedParts.has(p.id)) : [];
+
+  if (parts.length === 1) {
+    return (
+      <PartProperties
+        store={store}
+        project={project}
+        part={parts[0]!}
+        diagnostics={diagnostics}
+        requestDeletePart={requestDeletePart}
+      />
+    );
+  }
 
   if (found === null) {
     return (
@@ -70,7 +90,9 @@ export function PropertyPanel({
         <p className="panel-empty">
           {selected.size > 1
             ? t('properties.manySelected', { count: selected.size })
-            : t('properties.nothingSelected')}
+            : parts.length > 1
+              ? t('properties.manyPartsSelected', { count: parts.length })
+              : t('properties.nothingSelected')}
         </p>
       </aside>
     );
@@ -111,28 +133,7 @@ export function PropertyPanel({
         )}
       </header>
 
-      <section className="panel-section">
-        <div className="panel-heading">{t('properties.part')}</div>
-        <label className="field">
-          <span className="field-label">{t('properties.name')}</span>
-          <span className="field-input">
-            <input
-              type="text"
-              data-testid="part-name"
-              value={part.name}
-              onChange={(event) => store.dispatch(setPartName(part.id, event.target.value))}
-            />
-          </span>
-        </label>
-        <NumberField
-          label={t('properties.cut')}
-          value={part.quantity}
-          suffix={t('properties.cutSuffix')}
-          min={1}
-          precision={0}
-          onCommit={(value) => store.dispatch(setPartQuantity(part.id, value))}
-        />
-      </section>
+      <PartFields store={store} part={part} />
 
       <section className="panel-section">
         <div className="panel-heading">{t(`featureKind.${kindOf(feature)}`)}</div>
@@ -228,8 +229,8 @@ export function PropertyPanel({
         <div className="panel-heading small">{t('properties.flipHeading')}</div>
         <ReasonedRow
           buttons={[
-            flipButton(store, project, feature, 'horizontal', t),
-            flipButton(store, project, feature, 'vertical', t),
+            flipButton(store, project, [feature.id], 'horizontal', t),
+            flipButton(store, project, [feature.id], 'vertical', t),
           ]}
         />
       </section>
@@ -278,6 +279,117 @@ export function PropertyPanel({
         about something that was never going to be allowed.
       */}
       <DeleteButton project={project} feature={feature} requestDelete={requestDelete} />
+    </aside>
+  );
+}
+
+/** A part's own fields: what it is called and how many to cut. */
+function PartFields({ store, part }: { store: DocumentStore; part: Part }) {
+  const { t } = useI18n();
+  return (
+    <section className="panel-section">
+      <div className="panel-heading">{t('properties.part')}</div>
+      <label className="field">
+        <span className="field-label">{t('properties.name')}</span>
+        <span className="field-input">
+          <input
+            type="text"
+            data-testid="part-name"
+            value={part.name}
+            onChange={(event) => store.dispatch(setPartName(part.id, event.target.value))}
+          />
+        </span>
+      </label>
+      <NumberField
+        label={t('properties.cut')}
+        value={part.quantity}
+        suffix={t('properties.cutSuffix')}
+        min={1}
+        precision={0}
+        onCommit={(value) => store.dispatch(setPartQuantity(part.id, value))}
+      />
+    </section>
+  );
+}
+
+/**
+ * A part picked by its heading (Q29): the piece itself, not "nothing
+ * selected". What a maker asks of a piece — its name, how many to cut, how
+ * big it is, what is wrong with it — and what can be done to it whole.
+ */
+function PartProperties({
+  store,
+  project,
+  part,
+  diagnostics,
+  requestDeletePart,
+}: {
+  store: DocumentStore;
+  project: Project;
+  part: Part;
+  diagnostics: readonly Diagnostic[];
+  requestDeletePart: (partId: string) => void;
+}) {
+  const { t } = useI18n();
+  const ids = part.features.map((feature) => feature.id);
+  const outline = part.features.find(
+    (feature) => feature.kind === 'cut-contour' && feature.role === 'outer',
+  );
+  const resolved =
+    outline === undefined
+      ? undefined
+      : evaluate(project)
+          .parts.flatMap((p) => p.features)
+          .find((entry) => entry.feature.id === outline.id);
+  const problems = diagnostics.filter((d) => d.partId === part.id);
+
+  return (
+    <aside
+      className="panel properties"
+      data-testid="property-panel"
+      aria-label={t('properties.title')}
+    >
+      <header className="panel-header" data-testid="property-header">
+        <FeatureMark mark="piece" />
+        <h2 className="header-name">{part.name}</h2>
+      </header>
+
+      <PartFields store={store} part={part} />
+
+      {/* The piece's size is its outline's: the leather it takes. */}
+      {outline !== undefined && resolved?.ok === true && (
+        <Measured project={project} feature={outline} resolved={resolved} />
+      )}
+
+      {problems.length > 0 && (
+        <section className="panel-section" data-testid="part-problems">
+          <div className="panel-heading">
+            {t('properties.problems', { count: problems.length })}
+          </div>
+          <ProblemRows diagnostics={problems} project={project} />
+        </section>
+      )}
+
+      {ids.length > 0 && (
+        <section className="panel-section">
+          <div className="panel-heading small">{t('properties.flipHeading')}</div>
+          <ReasonedRow
+            buttons={[
+              flipButton(store, project, ids, 'horizontal', t),
+              flipButton(store, project, ids, 'vertical', t),
+            ]}
+          />
+        </section>
+      )}
+
+      <ReasonedButton
+        testId="delete-part"
+        variant="destructive"
+        reason={deleteRefusal(project, ids)}
+        onClick={() => requestDeletePart(part.id)}
+      >
+        {t('actions.deletePart')}
+      </ReasonedButton>
     </aside>
   );
 }
@@ -384,7 +496,10 @@ function DeleteButton({
     <ReasonedButton
       testId="delete-feature"
       variant="destructive"
-      reason={lockRefusal(project, [feature.id])}
+      // Over what the delete would take with it, as the command asks: a
+      // locked stitch line behind this outline refuses it too, and a button
+      // left enabled then did nothing (Q29).
+      reason={deleteRefusal(project, [feature.id])}
       onClick={() => requestDelete([feature.id])}
     >
       {t('actions.delete')}
@@ -396,15 +511,15 @@ function DeleteButton({
 function flipButton(
   store: DocumentStore,
   project: Project,
-  feature: Feature,
+  ids: readonly string[],
   axis: FlipAxis,
   t: Translate,
 ): ReasonedButtonProps {
   return {
     testId: axis === 'horizontal' ? 'flip-horizontal' : 'flip-vertical',
-    reason: flipRefusal(project, [feature.id], axis),
+    reason: flipRefusal(project, ids, axis),
     hint: t(`properties.flipHint.${axis}`),
-    onClick: () => store.dispatch(flipFeatures([feature.id], axis)),
+    onClick: () => store.dispatch(flipFeatures(ids, axis)),
     children: t(`properties.flip.${axis}`),
   };
 }

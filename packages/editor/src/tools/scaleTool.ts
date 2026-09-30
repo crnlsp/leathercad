@@ -1,6 +1,6 @@
 import { formatNumber } from '@leathercad/core';
 import { transformFeatures, transformRefusal } from '@leathercad/document';
-import type { Problem } from '@leathercad/domain';
+import { problem, type Problem } from '@leathercad/domain';
 import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, textItem, type DisplayList } from '@leathercad/render';
 
@@ -110,9 +110,15 @@ export function createScaleTool(): Tool {
     },
 
     // Said during the drag, not after it: the user finds out why the circle is
-    // not moving while they can still do something about it.
-    notice() {
-      return state.kind === 'scaling' ? state.refusal : null;
+    // not moving while they can still do something about it. A part picked by
+    // its heading is said at once (Q29): what resizing a whole piece does to
+    // its rivet holes is not settled (Q31), so it is not guessed at.
+    notice(ctx) {
+      if (state.kind === 'scaling') return state.refusal;
+      const { selection } = ctx.store.getState();
+      return selection.parts.size > 0 && selection.features.size === 0
+        ? problem('WHOLE_PART_NOT_SCALED', {})
+        : null;
     },
 
     onDeactivate(ctx) {

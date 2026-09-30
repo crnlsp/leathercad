@@ -62,6 +62,7 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
   TEXT_WOULD_READ_BACKWARDS: (_, t) => t('problems.TEXT_WOULD_READ_BACKWARDS.description'),
   NO_TARGET_PART: (f, t) => t(`problems.NO_TARGET_PART.${f.what}`),
   TARGET_SPANS_PARTS: (_, t) => t('problems.TARGET_SPANS_PARTS.description'),
+  WHOLE_PART_NOT_SCALED: (_, t) => t('problems.WHOLE_PART_NOT_SCALED.description'),
 
   PARAMETER_INVALID: (f, t) => {
     const about = {

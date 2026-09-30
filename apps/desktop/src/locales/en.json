@@ -79,7 +79,9 @@
     "problems_other": "problems",
     "properties": "Properties",
     "selected": "selected",
-    "sheetOf": "Sheet {{number}} of {{count}}"
+    "sheetOf": "Sheet {{number}} of {{count}}",
+    "partsSelected_one": "part selected",
+    "partsSelected_other": "parts selected"
   },
   "view": {
     "design": "Design",
@@ -450,7 +452,9 @@
         "horizontal": "A mirrored piece, as a new part, to the right, mirrored across this piece's right edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put.",
         "vertical": "A mirrored piece, as a new part, below, mirrored across this piece's bottom edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put."
       }
-    }
+    },
+    "manyPartsSelected_one": "{{count}} part selected. Editing more than one at a time comes later.",
+    "manyPartsSelected_other": "{{count}} parts selected. Editing more than one at a time comes later."
   },
   "legend": {
     "hide": "Hide the legend",
@@ -744,6 +748,10 @@
     "EMPTY_PART": {
       "title": "Empty part",
       "description": "{{partName}} has nothing in it. Draw into it, or remove it from the parts list."
+    },
+    "WHOLE_PART_NOT_SCALED": {
+      "title": "A whole part is not scaled",
+      "description": "Scale resizes the shapes you pick, not a whole part: that would resize its rivet holes and labels too. Pick its outline on the board to resize the edge alone."
     }
   },
   "contextMenu": {

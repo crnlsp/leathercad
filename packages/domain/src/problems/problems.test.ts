@@ -56,6 +56,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   TEXT_WOULD_READ_BACKWARDS: {},
   NO_TARGET_PART: { what: 'line' },
   TARGET_SPANS_PARTS: { what: 'line' },
+  WHOLE_PART_NOT_SCALED: {},
   PARAMETER_INVALID: { ...named, parameter: 'width', requirement: 'finite', value: Number.NaN },
   OFFSET_COLLAPSED: { ...named, distanceMm: 60, side: 'inward' },
   OFFSET_UNSUPPORTED: named,

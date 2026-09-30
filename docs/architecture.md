@@ -434,6 +434,13 @@ about, and the target-part rule would have two answers. The
 features belong to — and selection only ever chooses *where* something goes, never *what* is created
 ([Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) §3.8).
 
+**A picked part is a real selection everywhere** (Q29). It stands for every feature in it
+(`selectedFeatureIds`): the board highlights them, the status bar counts "1 part selected",
+Properties shows the part — its fields, its outline's size, its problems, *Flip this piece* and
+*Delete part* — and the Delete key deletes the part whole. Rotate, Flip and the right-click menu take
+it as the piece; Shift-click and Shift-box add to what it stands for rather than dropping it; Edit
+Points edits its outline. Scale says why it does not resize a whole part (Q31).
+
 The drill-down sketched here originally — click for a part, double-click for its features, again for
 vertices — waits until real documents show that flat feature picking on the canvas is not enough.
 
