@@ -3,20 +3,25 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { SOURCE_LOCALE, flatten, type Catalogue } from '../shared/i18n.js';
+import { SOURCE_LOCALE, SUPPORTED_LANGUAGES, flatten, type Catalogue } from '../shared/i18n.js';
 
 /**
  * The check a translation has to pass (ADR 0018): `pnpm test locales`.
  *
- * Every file here is held to the English one, which is the source. Whatever
- * this finds is a mistake in the file, named with its key:
+ * Every file here is held to the English one, which is the source. What this
+ * finds is named with its key. In every file, a mistake fails:
  *
  * - a key English lacks: misspelt, or one English no longer has;
- * - a key English has and the file lacks — it would show in English;
  * - a placeholder English does not have, or one it has that is missing, so a
  *   name or a number would not be shown;
  * - a plural without every form the language has, or with one it has not;
  * - a value that is not words.
+ *
+ * A key the file lacks — it would show in English — fails for a language
+ * LeatherCAD supports, which must be complete. For a translation not
+ * supported yet it is the work still to do, and listed rather than failed, so
+ * a translation can be contributed, and kept up with English, a part at a
+ * time.
  */
 
 const HERE = import.meta.dirname;
@@ -72,18 +77,24 @@ function isLanguageTag(tag: string): boolean {
   }
 }
 
-/** What is wrong with one language's file, against English. Empty when nothing is. */
-function checkCatalogue(tag: string, text: string, sourceText: string): string[] {
+/** One language's file against English: its mistakes, and the keys it has not translated yet. */
+function checkCatalogue(
+  tag: string,
+  text: string,
+  sourceText: string,
+): { mistakes: string[]; missing: string[] } {
+  const wrong = (mistake: string) => ({ mistakes: [mistake], missing: [] });
   let tree: unknown;
   try {
     tree = JSON.parse(text);
   } catch (error) {
-    return [`is not valid JSON: ${error instanceof Error ? error.message : String(error)}`];
+    return wrong(`is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
   const found: string[] = notWords(tree).map((path) => `${path || 'the file'}: is not words`);
 
-  if (!isLanguageTag(tag))
-    return [`${tag}.json is not named by a language tag, such as pl or pt-BR`];
+  if (!isLanguageTag(tag)) {
+    return wrong(`${tag}.json is not named by a language tag, such as pl or pt-BR`);
+  }
   const categories = new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
 
   const source = messages(flatten(JSON.parse(sourceText)));
@@ -123,21 +134,35 @@ function checkCatalogue(tag: string, text: string, sourceText: string): string[]
         if (!used.has(name)) found.push(`${where}: {{${name}}} is missing`);
     }
   }
-  for (const key of source.keys()) {
-    if (!own.has(key)) found.push(`${key}: missing`);
-  }
-  return found;
+  return { mistakes: found, missing: [...source.keys()].filter((key) => !own.has(key)) };
 }
 
 const english = FILES.find((file) => file.tag === SOURCE_LOCALE)!.text;
+const supported = new Set(SUPPORTED_LANGUAGES.map((language) => language.tag));
 
 describe('every translation', () => {
   it.each(FILES.map((file) => [file.tag, file.text] as const))(
-    '%s has what English has, and nothing it does not',
+    '%s has nothing English does not, and says it as English does',
     (tag, text) => {
-      expect(checkCatalogue(tag, text, english)).toEqual([]);
+      const { mistakes, missing } = checkCatalogue(tag, text, english);
+      expect(mistakes).toEqual([]);
+      if (supported.has(tag)) {
+        // Supported: complete, or it does not ship.
+        expect(missing.map((key) => `${key}: missing`)).toEqual([]);
+      } else if (missing.length > 0) {
+        // Straight to stderr: the test runner keeps a passing test's console to
+        // itself, and this list is the translator's to-do.
+        process.stderr.write(
+          `${tag}.json is not supported yet, and ${String(missing.length)} keys are still in ` +
+            `English:\n  ${missing.join('\n  ')}\n`,
+        );
+      }
     },
   );
+
+  it('includes every language LeatherCAD supports', () => {
+    for (const tag of supported) expect(FILES.map((file) => file.tag)).toContain(tag);
+  });
 });
 
 describe('the check itself', () => {
@@ -155,18 +180,21 @@ describe('the check itself', () => {
     holes_many: '{{count}} otworów na {{part}}',
     holes_other: '{{count}} otworu na {{part}}',
   };
-  const check = (tree: unknown): string[] => checkCatalogue('pl', JSON.stringify(tree), source);
+  const check = (tree: unknown): string[] =>
+    checkCatalogue('pl', JSON.stringify(tree), source).mistakes;
 
   it('passes a complete translation, a count left out of a form included', () => {
-    expect(check(good)).toEqual([]);
+    expect(checkCatalogue('pl', JSON.stringify(good), source)).toEqual({
+      mistakes: [],
+      missing: [],
+    });
   });
 
-  it('finds a key English lacks, and one the file lacks', () => {
-    const { greeting: _left, ...missing } = good;
-    expect(check({ ...missing, greting: 'Cześć, {{name}}' })).toEqual([
-      'greting: English has no such key',
-      'greeting: missing',
-    ]);
+  it('finds a key English lacks, and lists one the file has not translated yet', () => {
+    const { greeting: _left, ...partial } = good;
+    expect(
+      checkCatalogue('pl', JSON.stringify({ ...partial, greting: 'Cześć, {{name}}' }), source),
+    ).toEqual({ mistakes: ['greting: English has no such key'], missing: ['greeting'] });
   });
 
   it('finds a placeholder misspelt, or left out', () => {
@@ -199,11 +227,11 @@ describe('the check itself', () => {
   });
 
   it('finds a file that is not JSON, or not named by a language tag', () => {
-    expect(checkCatalogue('pl', '{', source)[0]).toMatch(/^is not valid JSON/);
-    expect(checkCatalogue('polish', JSON.stringify(good), source)).toEqual([
+    expect(checkCatalogue('pl', '{', source).mistakes[0]).toMatch(/^is not valid JSON/);
+    expect(checkCatalogue('polish', JSON.stringify(good), source).mistakes).toEqual([
       'polish.json is not named by a language tag, such as pl or pt-BR',
     ]);
-    expect(checkCatalogue('pt_BR', JSON.stringify(good), source)).toEqual([
+    expect(checkCatalogue('pt_BR', JSON.stringify(good), source).mistakes).toEqual([
       'pt_BR.json is not named by a language tag, such as pl or pt-BR',
     ]);
   });

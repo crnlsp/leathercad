@@ -1,12 +1,16 @@
-import type en from '../locales/en.json';
+import en from '../locales/en.json';
 
 /**
  * The interface's words, in the maker's language (ADR 0018).
  *
  * One catalogue per language, as JSON in `src/locales/`, named by its BCP 47
  * tag: `en.json`, `pl.json`, `pt-BR.json`. English is the source — every key
- * exists in it — and any other language falls back to it key by key. Adding a
- * file adds a language: nothing here lists them.
+ * exists in it — and any other language falls back to it key by key.
+ *
+ * **A file is a translation, not a language LeatherCAD supports.** The
+ * languages the app offers are the project's: `SUPPORTED_LANGUAGES`, below,
+ * reviewed and added one by one. A file waiting for that is shown only by a
+ * development build, as a preview, so it can be tried in the app.
  *
  * The files are i18next's JSON v4, so translation tools read them as they are:
  * nested keys, `{{name}}` placeholders, and a plural as one key per CLDR form —
@@ -66,25 +70,77 @@ export function flatten(tree: unknown, prefix = '', into: Record<string, string>
   return into;
 }
 
-const FILES = import.meta.glob<unknown>('../locales/*.json', { eager: true, import: 'default' });
+/** A language the maker can choose. */
+export interface Language {
+  /** Its BCP 47 tag, which names its file: `pl` for `pl.json`. */
+  readonly tag: string;
+  /** Its name in itself, as Settings lists it: `Polski`, `Deutsch`. */
+  readonly name: string;
+  /** The file's contents. */
+  readonly messages: unknown;
+  /** Not supported yet: a translation file a development build shows to try. */
+  readonly preview?: true;
+}
 
-/** Every language shipped, by tag, from the files in `src/locales/`. */
+/**
+ * The languages LeatherCAD supports (ADR 0018): the only ones a release offers
+ * in Settings, follows the system into, or carries. Owned by the project —
+ * a translation file alone is not one of them. A language joins when its file
+ * has been reviewed and passes `pnpm test locales` with nothing missing: one
+ * entry here, and its file imported above.
+ */
+export const SUPPORTED_LANGUAGES: readonly Language[] = [
+  { tag: 'en', name: 'English', messages: en },
+];
+
+/**
+ * Every translation file, in a development build (`pnpm dev`) only, so a
+ * translator can try theirs in the app before it is supported. A production
+ * build replaces this with nothing, so it neither lists nor carries them.
+ */
+const TRANSLATIONS: Readonly<Record<string, unknown>> = import.meta.env.DEV
+  ? import.meta.glob<unknown>('../locales/*.json', { eager: true, import: 'default' })
+  : {};
+
+/** The translation files not supported yet, as previews, named by `Intl`. */
+export function previewsOf(
+  files: Readonly<Record<string, unknown>>,
+  supported: readonly Language[],
+): Language[] {
+  return Object.entries(files)
+    .map(([path, messages]) => ({
+      tag: path.slice(path.lastIndexOf('/') + 1, -'.json'.length),
+      messages,
+    }))
+    .filter(({ tag }) => !supported.some((language) => language.tag === tag))
+    .map(({ tag, messages }) => ({
+      tag,
+      name: languageName(tag, tag, true),
+      messages,
+      preview: true,
+    }));
+}
+
+/** The languages the maker can choose here: the supported ones, then any previews. */
+export const LANGUAGES: readonly Language[] = [
+  ...SUPPORTED_LANGUAGES,
+  ...previewsOf(TRANSLATIONS, SUPPORTED_LANGUAGES),
+];
+
+/** The languages' messages, by tag. */
 export const CATALOGUES: Readonly<Record<string, Catalogue>> = Object.fromEntries(
-  Object.entries(FILES).map(([path, tree]) => [
-    path.slice(path.lastIndexOf('/') + 1, -'.json'.length),
-    flatten(tree),
-  ]),
+  LANGUAGES.map((language) => [language.tag, flatten(language.messages)]),
 );
-
-/** The languages the maker can choose, by tag. */
-export const LOCALES: readonly string[] = Object.keys(CATALOGUES).sort();
 
 /** Whether this is something `preferences.json` may hold as the language. */
 export function isLanguagePreference(value: unknown): value is string {
-  return value === SYSTEM_LANGUAGE || (typeof value === 'string' && LOCALES.includes(value));
+  return (
+    value === SYSTEM_LANGUAGE ||
+    (typeof value === 'string' && LANGUAGES.some((language) => language.tag === value))
+  );
 }
 
-/** The shipped catalogue for a tag: the tag itself, or its language — `en` for `en-GB`. */
+/** The catalogue for a tag: the tag itself, or its language — `en` for `en-GB`. */
 export function catalogueFor(
   tag: string,
   catalogues: Readonly<Record<string, Catalogue>> = CATALOGUES,
@@ -95,8 +151,8 @@ export function catalogueFor(
 }
 
 /**
- * The interface's locale (ADR 0018): the chosen language if it ships, or —
- * following the system — the first of the system's languages that does, or
+ * The interface's locale (ADR 0018): the chosen language if it is offered,
+ * or — following the system — the first of the system's languages that is, or
  * English. Written in the system's regional form when the system speaks that
  * language, so a British system gets English with its own dates.
  *

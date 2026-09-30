@@ -52,8 +52,9 @@ export function parsePreferences(text: string | null): StoredPreferences {
     version: 1,
     legendOpen: flag('legendOpen'),
     toolRailCollapsed: flag('toolRailCollapsed'),
-    // A language this version does not ship — one chosen in a newer version —
-    // follows the system rather than stopping the app starting.
+    // A language this version does not support — one chosen in a newer
+    // version, or a preview tried in `pnpm dev` — follows the system rather
+    // than stopping the app starting.
     language: isLanguagePreference(record['language'])
       ? record['language']
       : DEFAULT_PREFERENCES.language,

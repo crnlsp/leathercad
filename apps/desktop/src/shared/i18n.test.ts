@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CATALOGUES,
-  LOCALES,
+  LANGUAGES,
   SOURCE_LOCALE,
+  SUPPORTED_LANGUAGES,
   SYSTEM_LANGUAGE,
   createI18n,
   flatten,
   isLanguagePreference,
   languageName,
+  previewsOf,
   resolveLocale,
   type MessageKey,
 } from './i18n.js';
@@ -119,17 +121,45 @@ describe('the interface language', () => {
   });
 });
 
-describe('the languages shipped', () => {
-  it('are the files in src/locales, English among them', () => {
-    expect(LOCALES).toContain(SOURCE_LOCALE);
-    expect(Object.keys(CATALOGUES).sort()).toEqual(LOCALES);
+describe('the languages LeatherCAD supports', () => {
+  it('are the project’s registry, English first, each named in itself', () => {
+    expect(SUPPORTED_LANGUAGES[0]).toMatchObject({ tag: SOURCE_LOCALE, name: 'English' });
+    for (const language of SUPPORTED_LANGUAGES) {
+      expect(language.preview).toBeUndefined();
+      expect(CATALOGUES[language.tag]).toBeDefined();
+    }
+    expect(new Set(SUPPORTED_LANGUAGES.map((language) => language.tag)).size).toBe(
+      SUPPORTED_LANGUAGES.length,
+    );
+  });
+
+  it('come first among those offered, then only previews', () => {
+    expect(LANGUAGES.slice(0, SUPPORTED_LANGUAGES.length)).toEqual(SUPPORTED_LANGUAGES);
+    for (const language of LANGUAGES.slice(SUPPORTED_LANGUAGES.length)) {
+      expect(language.preview).toBe(true);
+    }
   });
 
   it('are what a preference may name, besides following the system', () => {
     expect(isLanguagePreference(SYSTEM_LANGUAGE)).toBe(true);
-    for (const locale of LOCALES) expect(isLanguagePreference(locale)).toBe(true);
+    for (const { tag } of LANGUAGES) expect(isLanguagePreference(tag)).toBe(true);
     expect(isLanguagePreference('xx')).toBe(false);
     expect(isLanguagePreference(1)).toBe(false);
+  });
+
+  it('do not grow by a file: a translation not in the registry is only a preview', () => {
+    const files = {
+      '../locales/en.json': { greeting: 'Hello' },
+      '../locales/pl.json': { greeting: 'Cześć' },
+      '../locales/pt-BR.json': { greeting: 'Olá' },
+    };
+    expect(previewsOf(files, SUPPORTED_LANGUAGES)).toEqual([
+      { tag: 'pl', name: 'Polski', messages: { greeting: 'Cześć' }, preview: true },
+      { tag: 'pt-BR', name: 'Português (Brasil)', messages: { greeting: 'Olá' }, preview: true },
+    ]);
+    // Supported, it is the registry's: its name and its place are the project's.
+    const withPolish = [...SUPPORTED_LANGUAGES, { tag: 'pl', name: 'Polski', messages: {} }];
+    expect(previewsOf(files, withPolish).map((language) => language.tag)).toEqual(['pt-BR']);
   });
 
   it('are named in themselves, and as a list entry', () => {

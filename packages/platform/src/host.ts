@@ -169,7 +169,7 @@ export interface Preferences {
   readonly toolRailCollapsed: boolean;
   /**
    * The interface's language (ADR 0018): `system` to follow the operating
-   * system, or the tag of a language the app ships, such as `en`. The app's
+   * system, or the tag of a language the app supports, such as `en`. The app's
    * words only — a project reads the same in every language.
    */
   readonly language: string;

@@ -235,7 +235,8 @@
       "note": "The words in menus, panels and messages. A project is the same in every language.",
       "system": "Follow system ({{language}})",
       "unavailable": "Your system’s language, {{language}}, is not available yet, so LeatherCAD is in {{fallback}}.",
-      "option": "{{own}} — {{here}}"
+      "option": "{{own}} — {{here}}",
+      "preview": "{{language}} (preview, not yet supported)"
     }
   },
   "about": {

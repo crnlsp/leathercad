@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 
 import {
-  LOCALES,
+  LANGUAGES,
   SYSTEM_LANGUAGE,
   catalogueFor,
   languageName,
@@ -199,10 +199,11 @@ function Appearance({ preferences, onPreferences }: Props) {
 
 /**
  * The interface's language (ADR 0018): the system's, or one chosen. Applies
- * at once, as every setting does. Each language is listed by its own name,
- * so the maker can find theirs whatever the window is in, and by this
- * language's name for it. A language that ships only needs its file in
- * `src/locales/` to be listed here.
+ * at once, as every setting does. Lists the languages LeatherCAD supports —
+ * `SUPPORTED_LANGUAGES`, not whatever files exist — each by its own name, so
+ * the maker can find theirs whatever the window is in, and by this language's
+ * name for it. A development build adds any translation not supported yet,
+ * marked as a preview.
  */
 function Language({ preferences, onPreferences, systemLanguages }: Props) {
   const i18n = useI18n();
@@ -256,13 +257,14 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
         <option value={SYSTEM_LANGUAGE}>
           {t('settings.language.system', { language: named(followed) })}
         </option>
-        {LOCALES.map((tag) => {
-          const own = languageName(tag, tag, true);
+        {LANGUAGES.map(({ tag, name, preview }) => {
+          const label =
+            tag === catalogueFor(i18n.locale)
+              ? name
+              : t('settings.language.option', { own: name, here: named(tag) });
           return (
             <option key={tag} value={tag} lang={tag}>
-              {tag === catalogueFor(i18n.locale)
-                ? own
-                : t('settings.language.option', { own, here: named(tag) })}
+              {preview === true ? t('settings.language.preview', { language: label }) : label}
             </option>
           );
         })}

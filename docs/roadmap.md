@@ -81,9 +81,10 @@ Electron's default menu, a right-click did nothing, and nothing said a new relea
   forms (R4).
 - ✅ **8.10 The interface's language.** Every word on screen through one catalogue per language,
   so a translation is one file and needs no code: `apps/desktop/src/locales/`, checked by
-  `pnpm test locales`, and the README invites one. Settings › Language follows the system or keeps
-  a choice, applied at once. English is the only language so far
-  ([ADR 0018](adr/0018-interface-language.md)).
+  `pnpm test locales`, tried in `pnpm dev`, and the README invites one. Which languages the app
+  offers is the project's own list, `SUPPORTED_LANGUAGES`: a translation joins it after review, not
+  by existing. Settings › Language follows the system or keeps a choice, applied at once. English
+  is the only supported language so far ([ADR 0018](adr/0018-interface-language.md)).
   ✅ Built as described. On the way: the domain's problem sentences, the export's words for Parts
   and the Sheets view, and the document's undo labels were English below the app — each is now
   facts the app words, so no package but the app speaks a language. The status bar said "1 parts"

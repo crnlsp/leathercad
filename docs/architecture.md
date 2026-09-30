@@ -76,7 +76,9 @@ conformance suite for the replacement.
 - **Every word goes through the interface's language** ([ADR 0018](adr/0018-interface-language.md)).
   The catalogues are JSON in `apps/desktop/src/locales/`, one file per language; the runtime is
   `apps/desktop/src/shared/i18n.ts`, on `Intl`, shared by the renderer (`useI18n()`) and the main
-  process (macOS's menu, its dialogs). Keys are typed from `en.json`. Nothing below `apps/desktop`
+  process (macOS's menu, its dialogs). Keys are typed from `en.json`. The languages offered are
+  `SUPPORTED_LANGUAGES`, a registry the project owns, not the files: a file with no entry is a
+  translation in progress, shown only by `pnpm dev`. Nothing below `apps/desktop`
   has words for the interface: a problem is a code and facts, an undo step a `HistoryLabel`, a
   part's print status a `PartPrintStatus`, and the app words each one. The paper's words — the PDF
   footer, part captions — are the export's, and stay English while the vendored glyphs are Latin.

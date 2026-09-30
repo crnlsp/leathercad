@@ -93,7 +93,8 @@ render     DisplayList, canvas2d + svg backends                               �
 editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
 export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.3)          → domain, render, typography
 apps/desktop  Electron main/preload/renderer, React panels — the ONLY package importing Electron,
-              and the only one with words: src/locales/*.json, one catalogue per language
+              and the only one with words: src/locales/*.json, one catalogue per language;
+              the languages offered are SUPPORTED_LANGUAGES in src/shared/i18n.ts, not the files
 ```
 
 `print`, `ui` and `cli` are reserved in `.dependency-cruiser.cjs` but not created: pagination and
@@ -121,7 +122,9 @@ Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run head
   `useI18n()` (renderer) or the main process's translator. Keys are typed. A plural is one key per
   CLDR form (`_one`, `_other`, …) with `{{count}}`; a number, list or date goes through `Intl`.
   Stable ids — problem codes, tool ids, feature kinds, undo actions — are never translated; they
-  pick the words. `untranslated.test.ts` fails on words written into JSX. See ADR 0018.
+  pick the words. `untranslated.test.ts` fails on words written into JSX. A translation file is
+  not a supported language: only an entry in `SUPPORTED_LANGUAGES`, added after review, makes it
+  one, and until then only `pnpm dev` shows it, as a preview. See ADR 0018.
 
 ## Terminology
 
