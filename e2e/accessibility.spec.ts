@@ -113,7 +113,7 @@ test('the F.2 layout at work has no accessibility violations either', async () =
   }
 });
 
-test('the top bar’s menus, Settings and About have no accessibility violations (8.7)', async () => {
+test('the top bar’s menus, Settings, About and the Print Preview have no accessibility violations', async () => {
   const instance = await launchApp();
   try {
     const window = await instance.firstWindow();
@@ -146,6 +146,16 @@ test('the top bar’s menus, Settings and About have no accessibility violations
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-about').click();
     await scan('About');
+    await window.getByTestId('about-close').click();
+
+    // 7.6: whichever this machine offers — its printers, or Save PDF.
+    await window.getByTestId('print').click();
+    const preview = window.getByTestId('print-preview');
+    await expect(preview.locator('canvas').first()).toBeVisible();
+    await expect(
+      preview.getByTestId('print-no-scaling').or(preview.getByTestId('print-actual-size')),
+    ).toBeVisible();
+    await scan('the Print Preview');
   } finally {
     await closeApp(instance);
   }

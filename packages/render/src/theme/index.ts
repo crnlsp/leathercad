@@ -7,7 +7,7 @@
  * backends read them directly, `packages/export` prints from the same role
  * table, and `apps/desktop` projects them onto `:root` for the stylesheet.
  */
-export { ACCENT, GROUND, SHELL, STATE } from './palette.js';
+export { ACCENT, GO, GROUND, SHELL, STATE } from './palette.js';
 export { CANVAS, alpha } from './canvas.js';
 export { PAPER_FURNITURE, SHEET } from './sheets.js';
 export { NOMINAL_IRON } from './iron.js';

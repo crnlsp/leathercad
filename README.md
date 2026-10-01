@@ -84,8 +84,10 @@ sheets with join lines and registration crosses, never scaled to fit.
 
 ### Print, and check the print
 
-Export writes a vector PDF on A5, A4, A3, Letter or Legal. Every sheet has a 100 × 5 mm gauge at
-its foot: if it measures true, so does everything on the sheet.
+**Print** shows the PDF in LeatherCAD's own preview, and on Linux sends exactly that file to the
+printer with scaling turned off. There is no print dialog to get wrong. A vector PDF on A5, A4, A3,
+Letter or Legal, the same file *Export PDF* saves. Every sheet has a 100 × 5 mm gauge at its foot:
+if it measures true, so does everything on the sheet.
 
 ### Your work is kept
 

@@ -283,14 +283,19 @@ interface PlatformHost {
   showOpenDialog(opts: OpenDialogOptions): Promise<string | null>;
   showSaveDialog(opts: SaveDialogOptions): Promise<string | null>;
   openInExternalViewer(path: string): Promise<void>;
-  listPrinters(): Promise<PrinterInfo[]>;
-  submitPrintJob(pdfPath: string, opts: PrintJobOptions): Promise<void>;
+  listPrinters(): Promise<PrinterList>;            // CUPS's printers, or why there are none (7.6)
+  printPdf(data: Uint8Array, job: PrintJob): Promise<string>; // to `lp`, scaling off
   getUserConfigDir(): string;
 }
 ```
 
 Implemented once in `apps/desktop` over Electron IPC, and once as an in-memory fake in the test
 suite. Everything above `editor` depends on the interface, never on Electron.
+
+`printPdf` takes the bytes the Print Preview drew, not a path, so nothing is written to disk to
+print. The main process checks the job as untrusted: the printer must be one CUPS lists, and the
+numbers must be ones a person could have chosen. It then runs `lp` through `execFile`, never a
+shell ([ADR 0019](adr/0019-print-from-the-app.md), [printing.md](printing.md) §13).
 
 The main process reads, writes and opens only paths the user chose in one of the app's own dialogs
 during the session — the path returned, or that path with one of the dialog's filter extensions
@@ -465,11 +470,12 @@ avoid moiré. Major gridlines every 10 mm.
 
 Windows and macOS are 1.0 targets (roadmap 8.6 and 7.7). The shell is already cross-platform:
 `PlatformHost` goes through Electron's dialogs and `shell.openPath`, and `stateDirectory()` picks
-the platform's state directory. The app never drives a printer (7.6), so there is no spooler code to
-port. The work that remains is confined to:
+the platform's state directory. Printing (7.6, [ADR 0019](adr/0019-print-from-the-app.md)) is
+`listPrinters` and `printPdf` on `PlatformHost`: the main process drives the system's CUPS client
+(`lpstat`, `lp`) on Linux and macOS, and reports *no transport* on Windows, where the Print Preview
+saves the PDF instead. The work that remains is confined to:
 
-1. A second and third `PlatformHost` implementation (dialogs are already Electron's; printing
-   differs — CUPS `lp` on Linux, the Win32 spooler or shelling to a viewer on Windows).
+1. A Windows print transport, chosen and measured on paper in its own ADR.
 2. Packaging targets in electron-builder.
 3. Re-running the visual-regression suite per platform, with vendored fonts making that mostly a
    formality.

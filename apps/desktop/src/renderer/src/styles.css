@@ -504,17 +504,18 @@ body {
   border-right: 1px solid var(--shell-line);
 }
 
-/* The one primary action in the window: Export PDF (UI Foundations §5). */
+/* The one primary action in the window, and the Print Preview's last step:
+   Print, green (7.6). Tan stays the maker's own focus. */
 .tool.primary {
-  border-color: var(--tan);
-  background: var(--tan);
-  color: var(--on-tan);
+  border-color: var(--go);
+  background: var(--go);
+  color: var(--on-go);
   font-weight: 600;
 }
 
 .tool.primary:hover:not(:disabled) {
-  border-color: var(--tan-ink);
-  color: var(--on-tan);
+  border-color: var(--go-ink);
+  color: var(--on-go);
 }
 
 /* Project management that is not the main thing: New and Open. */
@@ -1006,6 +1007,166 @@ body {
 
 .dialog-note {
   color: var(--text-dim);
+}
+
+/* The Print Preview (7.6): the sheets down the left, the one looked at in the
+   middle, and the few choices that cannot change a sheet's size on the right.
+   A fixed height, so changing the paper never resizes the dialog. */
+.print-dialog {
+  gap: 0;
+  width: min(1040px, calc(100vw - 32px));
+  height: min(720px, calc(100vh - 64px));
+  padding: 0;
+  overflow: hidden;
+}
+
+.print-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.print-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.print-sheets {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+  border-right: 1px solid var(--shell-line);
+  list-style: none;
+}
+
+.print-thumb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.print-thumb-page {
+  display: block;
+  width: 98px;
+  padding: 0;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  cursor: pointer;
+}
+
+.print-thumb.current .print-thumb-page {
+  border-color: var(--tan);
+  outline: 1px solid var(--tan);
+}
+
+.print-thumb-label {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+.print-page {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: var(--space-4);
+  overflow: hidden;
+  background: var(--shell-900);
+}
+
+.print-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The sheet looked at: as large as fits, either way up, never cropped. */
+.print-page .print-canvas {
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: var(--elevation-raised);
+}
+
+.print-options {
+  display: flex;
+  flex: 0 0 300px;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow-y: auto;
+  border-left: 1px solid var(--shell-line);
+}
+
+.print-choice {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-right: var(--space-3);
+  color: var(--text);
+}
+
+.print-facts {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 4px 8px;
+  margin: 0;
+  font: var(--t-label);
+}
+
+.print-facts dt {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.print-facts dd {
+  margin: 0;
+}
+
+.print-status {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.print-status .icon,
+.print-status .severity-glyph {
+  flex: none;
+  margin-top: 3px;
+}
+
+.dialog .print-status.ok {
+  color: var(--text);
+}
+
+.print-status.ok .icon {
+  color: var(--go);
+}
+
+.print-status.warning .severity-glyph {
+  color: var(--warning);
+}
+
+.print-actions {
+  align-items: center;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--shell-line);
+}
+
+.print-sent {
+  flex: 1;
 }
 
 /* Settings (8.7): a sidebar of sections and the pane they show. A fixed

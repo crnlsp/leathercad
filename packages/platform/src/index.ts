@@ -9,9 +9,7 @@
  * writing another PlatformHost, not rewriting the app. See ADR 0002 and
  * docs/architecture.md §5.
  *
- * The interface grows as slices need it. Printer enumeration and print-job
- * submission arrive with slice 7.6; adding stubs for them now would only make
- * the fake lie.
+ * The interface grows as slices need it.
  */
 
 export type {
@@ -21,6 +19,9 @@ export type {
   FileFilter,
   MenuAction,
   Preferences,
+  PrintJob,
+  Printer,
+  PrinterList,
   RecentFile,
   RecoveredCopy,
 } from './host.js';

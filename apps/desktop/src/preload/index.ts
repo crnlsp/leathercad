@@ -24,6 +24,11 @@ const platformBridge = {
   openInExternalViewer: (path: string): Promise<void> =>
     ipcRenderer.invoke(IPC.openInExternalViewer, path),
 
+  listPrinters: (): Promise<unknown> => ipcRenderer.invoke(IPC.listPrinters),
+
+  printPdf: (data: Uint8Array, job: unknown): Promise<string> =>
+    ipcRenderer.invoke(IPC.printPdf, data, job),
+
   getUserConfigDir: (): Promise<string> => ipcRenderer.invoke(IPC.getUserConfigDir),
 
   getAppVersion: (): Promise<string> => ipcRenderer.invoke(IPC.getAppVersion),

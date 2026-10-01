@@ -35,6 +35,7 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
       { keys: ['CmdOrCtrl+S'], does: 'shortcuts.save' },
       { keys: ['CmdOrCtrl+Shift+S'], does: 'shortcuts.saveAs' },
       { keys: ['CmdOrCtrl+E'], does: 'shortcuts.exportPdf' },
+      { keys: ['CmdOrCtrl+P'], does: 'shortcuts.print' },
     ],
   },
   {

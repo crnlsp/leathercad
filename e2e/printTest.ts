@@ -96,6 +96,24 @@ export async function exportPrintTest(
   window: Page,
   pdf: string,
 ): Promise<void> {
+  await openPrintTest(app, window, pdf);
+
+  await window.getByTestId('export-pdf').click();
+  await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
+  await expect(window.getByTestId('file-error')).toHaveCount(0);
+  // The strap is too long for the sheet, and the maker is told it is tiled.
+  await expect(window.getByTestId('export-tiled')).toContainText('Strap');
+}
+
+/**
+ * Opens the print test in a running app, from the Project menu. A PDF saved
+ * from then on is saved to `pdf`, and the system viewer is not launched.
+ */
+export async function openPrintTest(
+  app: ElectronApplication,
+  window: Page,
+  pdf: string,
+): Promise<void> {
   await app.evaluate(
     ({ dialog, shell }, paths) => {
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [paths.project] });
@@ -114,12 +132,17 @@ export async function exportPrintTest(
   await expect(discard.or(opened)).toBeVisible();
   if (await discard.isVisible()) await discard.click();
   await expect(window.getByTestId('part-count')).toHaveText('3');
+}
 
-  await window.getByTestId('export-pdf').click();
-  await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
-  await expect(window.getByTestId('file-error')).toHaveCount(0);
-  // The strap is too long for the sheet, and the maker is told it is tiled.
-  await expect(window.getByTestId('export-tiled')).toContainText('Strap');
+/**
+ * How many dark pixels a canvas holds: whether pdf.js drew a sheet into it.
+ * Run in the page, through `locator.evaluate`.
+ */
+export function inkOn(canvas: HTMLCanvasElement): number {
+  const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+  let ink = 0;
+  for (let i = 0; i < data.length; i += 4) if (data[i]! < 128) ink++;
+  return ink;
 }
 
 /** Rasterises and measures an exported print test. */
