@@ -40,7 +40,7 @@ const scene = (parts: ExportPart[]): ExportScene => ({ projectName: 'Test', part
 const PRINT_TEST = scene([
   part('Outer panel', 100, 78),
   part('Pocket', 96, 60),
-  part('Strap', 250, 25),
+  part('Strap', 275, 25),
 ]);
 
 const SETUPS: PageSetup[] = PAPER_NAMES.flatMap((paper) =>
@@ -70,6 +70,7 @@ describe('the sheet plan (7.4a)', () => {
       partId: 'Outer panel',
       sheets: [1],
       taped: false,
+      turned: false,
       rows: 1,
       columns: 1,
     });
@@ -78,6 +79,7 @@ describe('the sheet plan (7.4a)', () => {
       partId: 'Strap',
       sheets: [2, 3],
       taped: true,
+      turned: false,
       rows: 1,
       columns: 2,
     });
@@ -216,7 +218,10 @@ describe('the sheet plan (7.4a)', () => {
     const counts = Object.fromEntries(
       options.map((o) => [`${o.paper} ${o.orientation}`, o.plan.sheets.length]),
     );
-    expect(counts).toMatchObject({ 'A4 portrait': 3, 'A4 landscape': 1, 'A5 landscape': 5 });
+    // A5 landscape took five sheets with the 62 mm verification block, the
+    // panel taped across two of them; the slimmer strip holds it whole, and
+    // the pocket turned beside it saves one more (7.8).
+    expect(counts).toMatchObject({ 'A4 portrait': 3, 'A4 landscape': 1, 'A5 landscape': 3 });
   });
 });
 
@@ -230,7 +235,8 @@ describe('what the plan holds, for the words the app puts it in', () => {
     const taped = (setup: PageSetup): string[] =>
       planSheets(PRINT_TEST, setup).pagination.tiled.map((entry) => entry.part.name);
     expect(taped(DEFAULT_PAGE_SETUP)).toEqual(['Strap']);
-    expect(taped(pageSetupOf('A5', 'landscape'))).toEqual(['Outer panel', 'Strap']);
+    expect(taped(pageSetupOf('A5', 'landscape'))).toEqual(['Strap']);
+    expect(taped(pageSetupOf('A5', 'portrait'))).toEqual(['Strap']);
     expect(taped(pageSetupOf('A4', 'landscape'))).toEqual([]);
   });
 

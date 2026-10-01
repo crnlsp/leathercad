@@ -386,8 +386,8 @@ test('saves a project and reopens it with its parameters intact', async () => {
 
 test('exports a print-ready PDF at 1:1', async () => {
   // The application never drives a printer, so the file has to be trustworthy
-  // in someone else's viewer. This checks the page really is A4 and that the
-  // verification square really measures 50 mm, by rendering through poppler.
+  // in someone else's viewer. This checks the page really is A4;
+  // `print-verification.spec.ts` measures what is on it, through poppler.
   const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.pdf`);
   const instance = await launchApp();
 

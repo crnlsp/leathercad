@@ -80,7 +80,8 @@ A **sheet** is one physical piece of paper of the chosen size and orientation. I
 - its **paper edge**;
 - **margins** of 10 mm, which printers cannot reach reliably;
 - the **verification block**: the 100 mm ruler, the 50 mm square and the instruction, whole on every
-  sheet (`verificationLayout`);
+  sheet (`verificationLayout`). *Since 7.8 an 8.5 mm strip inside the margins: a 100 × 5 mm gauge,
+  the sheet's words, which were the footer, and LeatherCAD's mark ([`printing.md`](../../printing.md) §8.1).*
 - the **printable area** left over;
 - its **number**, "Sheet 2 of 3", which is also its PDF page number.
 
@@ -348,7 +349,7 @@ is resolved in the sections above.
    - The blank-project scale-check sheet the count would have denied: fixed (§5.1).
    - *Cut 2* prints one template. The printed caption says so, and printing copies stays deferred.
    - Rotation for paper economy stays off until the model knows the grain. The drag notice doesn't
-     offer it.
+     offer it. *Lifted in 7.8: a part turns when that saves a sheet, and Parts says so.*
    - Reprinting a spoiled sheet is now "print page N", because sheet N is PDF page N.
 6. **Are we becoming a page-layout application?** No, by rule:
    - the Sheets view has no layout controls;
@@ -432,10 +433,10 @@ consumed it. Then **7.7** (the physical measurement) and **8.6** (release).
 | Deferred | Why |
 |---|---|
 | Pinning or dragging pieces onto sheets | Would make the Sheets view a layout tool. Revisit only with evidence makers need to group pieces or place joins. It would be a format change with a migration |
-| Rotating pieces for paper economy | Wrong for leather until grain direction exists (7.2's constraint) |
+| Rotating pieces for paper economy | Wrong for leather until grain direction exists (7.2's constraint). *Lifted in 7.8: a part turns a quarter when that saves a sheet ([`printing.md`](../../printing.md) §5.5).* |
 | Printing *N* copies for *cut N* | A print option with its own questions (mirrored pairs, sheet count). The caption already says "cut N" |
 | Grain-aware optimisation, nesting | Needs the grain model; nesting is v2 |
-| A slimmer verification block | Changes printed output that 7.7 is about to measure. Revisit with evidence and a new physical test |
+| A slimmer verification block | Changes printed output that 7.7 is about to measure. Revisit with evidence and a new physical test. *Built in 7.8; its physical measurement is owed (R1).* |
 | Pieces gliding between Design and Sheets | Shared selection and kept cameras already carry the correspondence. The glide is polish, and it needs a reduced-motion alternative |
 | A complete native menu (Draw, zoom, paper) | Only View › Design and View › Sheets are added. The rest is 1.1 |
 | Merged or custom title bar; Design / Print stages | §4.4 |

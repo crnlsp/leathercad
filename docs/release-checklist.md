@@ -44,7 +44,7 @@ Any one of these is a blocker:
 - Anything magenta on paper. Magenta is screen-only furniture.
 - A part printed that Parts says is *Not printed*, or a part missing that Parts says prints.
 - A taped join misaligned by more than 0.5 mm, or a step in an edge across a join.
-- A sheet without its 50 mm square and 100 mm ruler.
+- A sheet without its 100 × 5 mm verification gauge, or anything printed in its margins.
 - Lost work, a crash, or a file that does not reopen as it was saved.
 
 **Not blockers:**
@@ -66,8 +66,8 @@ Record them anyway.
 
 ### 2. An empty project
 
-1. Export PDF: one page, carrying only the 50 mm square, the ruler and the instructions.
-2. Print it at Actual size. The square measures **50.0 × 50.0**, and the ruler **100.0**.
+1. Export PDF: one page, carrying only the verification strip: the gauge and its words.
+2. Print it at Actual size. The gauge measures **100.0 × 5.0**.
 
 ### 3. The print test
 
@@ -78,16 +78,16 @@ Follow the procedure in [`print-verification-log.md`](print-verification-log.md)
    - sheet 1 holds the panel and the pocket;
    - the strap spans sheets 2–3 with one dashed join.
 2. **The measurements, A to H:**
-   - square **50.0 × 50.0**;
-   - ruler **100.0**;
+   - gauge **100.0** across;
+   - gauge **5.0** up;
    - panel edge **100.0**;
    - dimension line **100.0**;
    - the 25-hole row **93.0**;
    - 10 gaps **38.75**;
-   - the taped strap **250.0** end to end;
+   - the taped strap **275.0** end to end;
    - strap width **25.0**, with no step at the join.
 3. **The sheets:**
-   - the footers read *Sheet 1 of 3*, *Sheet 2 of 3*, *Sheet 3 of 3*;
+   - the sheets read *Sheet 1 of 3*, *Sheet 2 of 3*, *Sheet 3 of 3* at their foot;
    - each sheet carries what the Sheets view showed on it.
 
 ### 4. Every paper, on the print test
@@ -97,13 +97,13 @@ the PDF's page count.
 
 | Paper | Portrait | Landscape |
 |---|---|---|
-| A5 | 5 | 5 (the panel is taped) |
+| A5 | 4 | 3 (the pocket turned) |
 | A4 | 3 | 1 |
 | A3 | 1 | 1 |
-| Letter | 3 | 1 |
-| Legal | 3 | 1 |
+| Letter | 3 | 3 |
+| Legal | 1 (the strap turned) | 1 |
 
-Print one sheet in the orientation you would really use, and measure its square.
+Print one sheet in the orientation you would really use, and measure its gauge.
 
 ### 5. A realistic wallet
 
@@ -113,8 +113,9 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 - **the lining:** 196 × 91 mm;
 - **a card pocket:** 95 × 60 mm, with a thumb scoop, stitched on three sides, *Cut* 2.
 
-1. **On A4 portrait**, Parts says the outer and the lining are *taped*: 200 mm is more than the
-   190 mm A4 prints across. On A4 landscape they are whole.
+1. **On A4 portrait**, Parts says the outer and the lining are *turned*: 200 mm is more than the
+   190 mm A4 prints across, so they print a quarter turned, whole, on two sheets. On A4 landscape
+   they are as drawn.
 2. **On the paper you really print on:**
    - the number in the paper list;
    - the number of sheets in the Sheets view;
@@ -122,7 +123,7 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 
    All three are the same.
 3. **The pocket's printed caption** reads *— cut 2*.
-4. **Print, cut out and tape** the pieces, then:
+4. **Print and cut out** the pieces, then:
    - the outer measures **200.0 × 95.0**;
    - the lining measures **196.0 × 91.0**;
    - the fold line sits at **100.0**.
@@ -134,11 +135,11 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 
 ### 6. Taped both ways
 
-1. Draw a 300 × 250 mm panel on A4 portrait.
+1. Draw a 300 × 300 mm panel on A4 portrait: too large for it either way.
    - The Sheets view shows it as a 2 × 2 group.
    - The board shows its joins both ways, labelled *Tape join*.
 2. Print it, and assemble the four sheets on the crosses. The centre cross meets on all four.
-3. Measure **300.0 × 250.0**.
+3. Measure **300.0 × 300.0**.
 
 ### 7. Printing one sheet again
 

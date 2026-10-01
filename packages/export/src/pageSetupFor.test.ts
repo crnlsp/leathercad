@@ -49,16 +49,16 @@ describe('pageSetupFor', () => {
   });
 
   it('changes the printable area, which is what a maker actually gets', () => {
-    // A4 portrait is 190 x 215 once the margins and the 62 mm verification
-    // block are taken out — not 210 x 297. Choosing A3 has to move this number
+    // A4 portrait is 190 x 268.5 once the margins and the 8.5 mm
+    // verification strip are taken out — not 210 x 297. Choosing A3 has to move this number
     // or the setting is decorative.
     const a4 = contentAreaMm(pageSetupFor(settings()));
     const a3 = contentAreaMm(pageSetupFor(settings({ paper: 'A3' })));
 
     expect(a4.widthMm).toBeCloseTo(190, 6);
-    expect(a4.heightMm).toBeCloseTo(215, 6);
+    expect(a4.heightMm).toBeCloseTo(268.5, 6);
     expect(a3.widthMm).toBeCloseTo(277, 6);
-    expect(a3.heightMm).toBeCloseTo(338, 6);
+    expect(a3.heightMm).toBeCloseTo(391.5, 6);
   });
 
   it('reaches every paper the project can name', () => {

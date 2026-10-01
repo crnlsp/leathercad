@@ -93,7 +93,7 @@ describe('where the sheets sit on the Sheets view (7.4c)', () => {
   });
 
   it('is the same whatever the window: a function of the plan alone', () => {
-    const plan = planSheets(scene([part('a', 100, 80), part('b', 250, 30)]), DEFAULT_PAGE_SETUP);
+    const plan = planSheets(scene([part('a', 100, 80), part('b', 275, 30)]), DEFAULT_PAGE_SETUP);
     expect(layoutSheets(plan)).toEqual(layoutSheets(plan));
   });
 
@@ -133,7 +133,7 @@ describe('what is under the pointer on the Sheets view (7.4d)', () => {
   });
 
   it('finds a taped piece on each of its sheets, but not in the margin it is cropped from', () => {
-    const plan = planSheets(scene([part('strap', 250, 20)]), DEFAULT_PAGE_SETUP);
+    const plan = planSheets(scene([part('strap', 275, 20)]), DEFAULT_PAGE_SETUP);
     const layout = layoutSheets(plan);
     for (const frame of layout.frames) {
       const placement = plan.sheets[frame.index]!.placements[0]!;

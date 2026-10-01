@@ -88,8 +88,8 @@ changes, it asks first.
 3. **Export PDF** (**Ctrl+E**). The PDF is what the Sheets view showed, sheet for sheet — its pages
    are numbered *Sheet 1 of 3* like the view — and it opens in your system's PDF viewer.
 4. Print from the viewer at **Actual size** or **100 %** — never *Fit to page* or *Shrink*.
-5. Check it with a steel rule. **Every sheet has a 50 mm square and a 100 mm ruler.** If they
-   measure 50 and 100, everything on the sheet is true to size. If they do not, the viewer or the
+5. Check it with a steel rule. **Every sheet has a box at its foot that measures 100 × 5 mm.** If
+   it does, everything on the sheet is true to size. If they do not, the viewer or the
    printer scaled it: fix the print setting and print again.
 
 ## Where things are

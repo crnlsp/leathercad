@@ -75,7 +75,7 @@ describe('what of each part reaches paper (7.4b)', () => {
   it('names the sheet a part prints on, and a taped part its sheets', () => {
     const { plan, statuses } = statusesOf([
       part('panel', [outline('o1', 100, 70)]),
-      part('strap', [outline('o2', 250, 20)]),
+      part('strap', [outline('o2', 275, 20)]),
     ]);
     const panel = statuses.get('panel')!;
     expect(panel.sheets).toBe(plan.parts.get('panel'));

@@ -266,12 +266,12 @@ mean the logic is entangled with the canvas.
 The tests that most directly protect the product's promise.
 
 ```ts
-it('prints the 50 mm square at 50 mm', async () => {
+it('prints the 100 × 5 mm gauge at 100 × 5 mm', async () => {
   const pdf    = await exportPdf(planFor(project), options);
   const pixels = rasterise(pdf, { dpi: 254 });          // poppler's pdftoppm: 10 px per mm
-  const widthMm = measureSquare(pixels).width / 10;    // outer edge to outer edge
-  expect(widthMm).toBeGreaterThan(49.8);                // 50 mm, plus up to the stroke
-  expect(widthMm).toBeLessThan(50.4);
+  const widthMm = measureGauge(pixels).width / 10;     // outer edge to outer edge
+  expect(widthMm).toBeGreaterThan(99.8);                // 100 mm, plus up to the stroke
+  expect(widthMm).toBeLessThan(100.4);
 });
 ```
 

@@ -3,16 +3,21 @@ import { polyline, type Path, type Rect, type Vec2 } from '@leathercad/geometry'
 import { PAPER_FURNITURE } from '@leathercad/render';
 import { outlinesOf, placedText, textWidthMm, type TextPlacement } from '@leathercad/typography';
 
-import { contentAreaMm, sheetSizeMm, VERIFICATION_TEXT, verificationLayout } from './paper.js';
+import { brandMark } from './brandMark.js';
+import type { Tile } from './paginate.js';
+import {
+  contentAreaMm,
+  describeJoins,
+  VERIFICATION_TEXT,
+  verificationLayout,
+  type Neighbours,
+} from './paper.js';
 import type { ExportPath, ExportText, PrintStyle } from './scene.js';
 import { sheetLabel, type SheetPlan } from './sheetPlan.js';
 
-/** Page furniture's own text size: the footer and the square's label. */
-export const NOTE_SIZE_MM = 2.5;
-
 const APP_NAME = 'LeatherCAD';
 
-/** The block's lines: black, 0.2 mm, solid. */
+/** The gauge's lines: black, 0.2 mm, solid. */
 const BLOCK: PrintStyle = { widthMm: 0.2, dashMm: [], grey: 0 };
 const JOIN: PrintStyle = {
   widthMm: PAPER_FURNITURE.join.widthMm,
@@ -23,31 +28,33 @@ const CROSS: PrintStyle = { widthMm: PAPER_FURNITURE.join.widthMm, dashMm: [], g
 
 /**
  * Everything printed on one sheet that is not a pattern piece (7.4c): the
- * verification block, the footer, and on a tiled sheet its joins, crosses and
- * tile label — **the one description of it**, in millimetres from the sheet's
- * bottom-left, Y up.
+ * verification strip — the gauge, the instruction, what the sheet is and the mark — and
+ * on a tiled sheet its joins and crosses — **the one description of it**, in
+ * millimetres from the sheet's bottom-left, Y up.
  *
  * The PDF writer prints it and the Sheets view draws it, so what the maker
  * sees on screen is what comes out of the printer; neither has a second way
- * of laying out the ruler or wording the footer.
+ * of laying out the gauge or wording the sheet.
  */
 export interface SheetInk {
-  /** The block's ruler and square. Drawn with butt caps, as printed. */
+  /** The gauge and its ticks. Drawn with butt caps, as printed. */
   readonly paths: readonly ExportPath[];
   /**
    * A tiled sheet's joins and registration crosses. Printed inside the clip
    * to the printable area, like the tile's piece.
    */
   readonly clipped: readonly ExportPath[];
-  /** Every string: the block's words, the tile label and note, the footer. */
+  /** Every string: the instruction, and what the sheet is and where it came from. */
   readonly texts: readonly ExportText[];
+  /** LeatherCAD's mark, filled, beside where the sheet came from. */
+  readonly mark: readonly Path[];
   /** The printable area, which a tiled sheet's piece and joins are clipped to. */
   readonly clip: Rect | null;
 }
 
 /**
- * The ink of sheet `index` (0-based) of the plan. `now` dates the footer — the
- * one thing on a sheet that is "as of" when it is drawn.
+ * The ink of sheet `index` (0-based) of the plan. `now` dates the sheet — the
+ * one thing on it that is "as of" when it is drawn.
  */
 export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
   const { setup, scene } = plan;
@@ -56,55 +63,64 @@ export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
   const texts: ExportText[] = [];
   const paths: ExportPath[] = [];
 
-  // The 100 mm ruler: 10 mm major and 5 mm minor ticks.
-  const { x, y } = layout.ruler;
-  paths.push(
-    ink(
-      polyline([
-        { x, y },
-        { x: x + layout.rulerLengthMm, y },
-      ]),
-      BLOCK,
-    ),
-  );
-  for (let mm = 0; mm <= layout.rulerLengthMm; mm += 5) {
-    const height = mm % 10 === 0 ? layout.rulerHeightMm : 2;
-    paths.push(
-      ink(
-        polyline([
-          { x: x + mm, y },
-          { x: x + mm, y: y + height },
-        ]),
-        BLOCK,
-      ),
-    );
-  }
-
-  // The 50 mm square.
-  const { square, squareSizeMm: size } = layout;
+  // The gauge: a box whose sides are the measurement, ticked every 5 mm along
+  // its bottom like a rule, with the instruction written inside it.
+  const { gauge, gaugeWidthMm: width, gaugeHeightMm: height } = layout;
   paths.push(
     ink(
       polyline(
         [
-          square,
-          { x: square.x + size, y: square.y },
-          { x: square.x + size, y: square.y + size },
-          { x: square.x, y: square.y + size },
+          gauge,
+          { x: gauge.x + width, y: gauge.y },
+          { x: gauge.x + width, y: gauge.y + height },
+          { x: gauge.x, y: gauge.y + height },
         ],
         true,
       ),
       BLOCK,
     ),
   );
-  texts.push(words('50 mm', NOTE_SIZE_MM, { x: square.x + 2, y: square.y + size - 5 }));
+  for (let mm = 5; mm < width; mm += 5) {
+    const tick = mm % 10 === 0 ? 1.5 : 0.8;
+    paths.push(
+      ink(
+        polyline([
+          { x: gauge.x + mm, y: gauge.y },
+          { x: gauge.x + mm, y: gauge.y + tick },
+        ]),
+        BLOCK,
+      ),
+    );
+  }
   texts.push(
     words(VERIFICATION_TEXT.instruction, VERIFICATION_TEXT.instructionSizeMm, layout.instruction),
   );
-  texts.push(words(VERIFICATION_TEXT.note, VERIFICATION_TEXT.noteSizeMm, layout.note));
 
-  // A tiled sheet: which tile, how they go together, and where they join.
-  const clipped: ExportPath[] = [];
+  // What the sheet is, right-aligned — measured by the layout itself rather
+  // than by asking a font how wide it thinks the string is — and on a tiled
+  // sheet, which piece and which sheets it joins. Where it came from below,
+  // beside LeatherCAD's mark.
   const tile = sheet.tile;
+  const size = VERIFICATION_TEXT.sizeMm;
+  const right = { align: 'right' } as const;
+  const project = scene.projectName.trim() === '' ? 'Untitled' : scene.projectName.trim();
+  const number = sheetLabel(index + 1, plan.sheets.length);
+  const identity =
+    tile === undefined
+      ? fitted([project], ([p]) => `${p!} · ${number}`, layout.textMaxWidthMm, size)
+      : fitted(
+          [project, tile.part.name.trim() === '' ? 'Part' : tile.part.name.trim()],
+          ([p, part]) => `${p!} · ${number} · ${part!}, ${describeJoins(neighboursOf(plan, tile))}`,
+          layout.textMaxWidthMm,
+          size,
+        );
+  const { lines, mark } = layout;
+  texts.push(words(identity, size, { x: lines.x, y: lines.top }, right));
+  const date = now.toISOString().slice(0, 10);
+  texts.push(words(`${date} · 1:1 · ${APP_NAME}`, size, { x: lines.x, y: lines.bottom }, right));
+
+  // A tiled sheet: where it joins its neighbours.
+  const clipped: ExportPath[] = [];
   let clip: Rect | null = null;
   if (tile !== undefined) {
     const area = contentAreaMm(setup);
@@ -114,15 +130,6 @@ export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
       maxX: area.x + area.widthMm,
       maxY: area.y + area.heightMm,
     };
-
-    const tileSize = VERIFICATION_TEXT.tileSizeMm;
-    const grid = ` · ${tile.label} · ${String(tile.rows)} × ${String(tile.columns)} sheets`;
-    let name = tile.part.name.trim() === '' ? 'Part' : tile.part.name.trim();
-    while (name.length > 1 && textWidthMm(`${name}${grid}`, tileSize) > layout.tileTextMaxWidthMm) {
-      name = `${name.slice(0, -2)}…`;
-    }
-    texts.push(words(`${name}${grid}`, tileSize, layout.tileLabel));
-    texts.push(words(VERIFICATION_TEXT.tileNote, tileSize, layout.tileNote));
 
     // In the part's own coordinates, then onto the sheet by the placement's
     // translation: so each lands on the same place in the pattern on every
@@ -153,30 +160,47 @@ export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
     }
   }
 
-  // The footer: what this is, and which sheet of how many.
-  const footerY = setup.marginsMm.bottom - 5;
-  if (footerY >= 0) {
-    const name = scene.projectName.trim() === '' ? 'Untitled' : scene.projectName.trim();
-    const date = now.toISOString().slice(0, 10);
-    texts.push(
-      words(`${name} · ${date} · ${APP_NAME}`, NOTE_SIZE_MM, {
-        x: setup.marginsMm.left,
-        y: footerY,
-      }),
-    );
-    texts.push(
-      words(
-        `${sheetLabel(index + 1, plan.sheets.length)} · 1:1`,
-        NOTE_SIZE_MM,
-        { x: sheetSizeMm(setup).widthMm - setup.marginsMm.right, y: footerY },
-        // Right-aligned by the layout's own measurement, rather than by asking
-        // a font how wide it thinks the string is.
-        { align: 'right' },
-      ),
-    );
-  }
+  return { paths, clipped, texts, mark: brandMark(mark, mark.heightMm), clip };
+}
 
-  return { paths, clipped, texts, clip };
+/** The sheets beside a tile, by side, numbered from 1 as printed. */
+function neighboursOf(plan: SheetPlan, tile: Tile): Neighbours {
+  const at = (row: number, column: number): number | undefined => {
+    const index = plan.sheets.findIndex(
+      (other) =>
+        other.tile?.part.id === tile.part.id &&
+        other.tile.row === row &&
+        other.tile.column === column,
+    );
+    return index < 0 ? undefined : index + 1;
+  };
+  return {
+    above: at(tile.row - 1, tile.column),
+    left: at(tile.row, tile.column - 1),
+    right: at(tile.row, tile.column + 1),
+    below: at(tile.row + 1, tile.column),
+  };
+}
+
+/**
+ * `build(names)`, with the longest name shortened — an ellipsis for what is
+ * cut — until the line is no wider than `maxMm`. The rest of the line is
+ * never cut: a sheet's number is the one thing a maker cannot do without.
+ */
+function fitted(
+  names: string[],
+  build: (names: readonly string[]) => string,
+  maxMm: Mm,
+  sizeMm: Mm,
+): string {
+  const current = [...names];
+  while (textWidthMm(build(current), sizeMm) > maxMm) {
+    const longest = current.reduce((a, b, i) => (b.length > current[a]!.length ? i : a), 0);
+    const name = current[longest]!;
+    if (name.length <= 1) break;
+    current[longest] = `${name.endsWith('…') ? name.slice(0, -2) : name.slice(0, -1)}…`;
+  }
+  return build(current);
 }
 
 function ink(path: Path, style: PrintStyle): ExportPath {

@@ -3,7 +3,7 @@
 **Packages:** `packages/export`, `packages/print`
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-09-26
+**Last updated:** 2026-10-01
 
 ---
 
@@ -65,8 +65,8 @@ Two properties this buys, and they are the reason for the shape:
   page count, tile placement, or overlap, because a disagreement would be a bug in one function
   rather than a mismatch between two implementations. Built (7.4a–7.4c) as one derived `SheetPlan`:
   the PDF writes it, and the app's sheet count, Parts labels and **Sheets view** read it. Everything
-  a sheet prints besides its pieces — the verification block, the footer, a tiled sheet's joins,
-  crosses, label and clip — is one description, `sheetInk`, which the writer prints and the Sheets
+  a sheet prints besides its pieces — the verification strip, a tiled sheet's joins, crosses and
+  clip — is one description, `sheetInk`, which the writer prints and the Sheets
   view draws. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md).
 - **All writers consume the same `ExportScene`.** SVG, PDF, and DXF cannot drift apart in what they
   include or where they place it.
@@ -127,7 +127,7 @@ fails if the two ever differ (F.4).
 chooses an intent; the preset chooses the roles.
 
 **Text on paper is outlines, not a font.** Every string printed — part captions, measurement values,
-text labels, the footer, the verification labels — is laid out once in millimetres and written as
+text labels, the verification strip's words — is laid out once in millimetres and written as
 filled glyph paths from the vendored typeface. Nothing then depends on a viewer's or a cutter
 program's font handling. It also retires pdf-lib's standard Helvetica, which cannot encode Polish
 letters such as `ł` and `ę`: with it, exporting a part named "Przegroda główna" throws. The on-screen
@@ -233,6 +233,37 @@ For small patterns — a card holder fits on one A4 — skip tiling entirely. Th
 scale: if the drawing does not fit at 1:1, it reports that and offers a larger paper size or tiled
 mode. It never silently shrinks.
 
+### 5.5 Packing whole parts (7.8)
+
+A part that fits the printable area is printed whole, never tiled. `paginate` packs those parts
+before any tiled one:
+
+- **Each part goes to the first sheet with room for it**, at the free place highest up and then
+  furthest left (MaxRects, bottom-left rule). A small part fills the room beside a tall one, or
+  room left on an earlier sheet. The shelf packer before it filled rows left to right and never
+  went back, so a row was as tall as its tallest part and a sheet once left was never revisited.
+- **Four orders are tried** — tallest, largest, widest and longest side first — and the one
+  needing fewest sheets is kept, tallest first on a tie. The same parts always give the same sheets.
+- **Parts are 6 mm apart** (8 mm before 7.8): room to cut each one out, not more paper.
+- **A part prints as drawn unless turning saves paper.** The layout is made twice — as drawn, and
+  letting a part turn a quarter counter-clockwise where as drawn it would need a sheet of its own
+  or be taped — and the turned one is kept only when it needs fewer sheets, or as many with fewer
+  taped. A part too large either way is taped, as drawn.
+  - The turn is exact: (x, y) becomes (−y, x), by a matrix with no rounding in it. No scale.
+  - The part's words turn with it. Its name reads up its left side, from the sheet's right edge,
+    as drafting reads a turned dimension, so the cut-out template is the same shape either way.
+  - Parts says *Sheet 1, turned*, since the board shows the part as drawn.
+  - This lifts roadmap 7.2's "never turn until the model knows the grain", by decision
+    (2026-10-01). A cut-out template carries nothing of the sheet it was printed on, and a taped
+    join is the least accurate thing on a sheet. When grain arrives it will be an arrow on the
+    part, and an arrow turns with it.
+
+The bifold sample on A4 portrait took five sheets, its outer and lining each taped across two;
+turned, it takes two, and nothing is taped. Over 2,000 random projects of 3 to 12 parts up to
+260 × 200 mm, against the 62 mm block and the shelf packer: about half the sheets of A4 portrait
+and of A4 landscape, and taped sheets down from 8,176 to 630 on A4 portrait. No project needed
+more.
+
 ## 6. PDF output
 
 Generated with `pdf-lib`. Pure vector; nothing is rasterised.
@@ -259,24 +290,24 @@ Canvas2D and SVG require is absent here. One fewer place to get it wrong.
    neighbouring pages, which is what makes taping possible.
 4. Draw the scene items intersecting that rect.
 5. Draw registration marks (§7) outside the clip.
-6. Draw the calibration block (§8) in the bottom margin.
-7. Draw the footer: project name, the sheet label ("Sheet 2 of 3", from 7.4a; the word is "sheet"
-   on screen and on paper), `1:1 — print at 100 %, do not fit to page`, and the generation
-   timestamp.
+6. Draw the verification strip (§8.1) at the foot of the printable area: the gauge with the
+   instruction to print at 100 % in it, and beside it the project name, the sheet label ("Sheet 2
+   of 3", from 7.4a; the word is "sheet" on screen and on paper), `1:1`, the date and the
+   application's name. Inside the margins, like everything else printed (7.8, Q17).
 
 ### 6.3 Document-level metadata
 
 Title, author, creator, and creation date. Set the PDF's `/ViewerPreferences` `/PrintScaling
 /None` — Acrobat and several other viewers honour it and will default the print dialog to "Actual
 size". It is not universally supported, which is why the printed warning text and the verification
-square exist as well. Three independent defences against the same failure.
+gauge exist as well. Three independent defences against the same failure.
 
 ### 6.4 What not to do
 
 - No `Fit` or `FitH` open action that could imply scaling.
 - No embedded raster preview of the geometry.
 - No reliance on the viewer honouring anything. Assume the user prints from an unknown application
-  with unknown defaults; the verification square is the backstop.
+  with unknown defaults; the verification gauge is the backstop.
 
 ## 7. Registration and assembly aids
 
@@ -290,12 +321,16 @@ For tiled output, the difference between a usable pattern and a jigsaw puzzle.
   join lines cross. Being in model coordinates, they land on the same place in the pattern on every
   sheet. The maker cuts one sheet on a join line, lays it over the next, and matches the crosses.
 - **The overlap is 10 mm**, with no setting yet.
-- **A tile label and the assembly note** go in the footer beside the verification square:
-  `Strap · R1 C2 · 1 × 3 sheets`.
+- **Which sheets it joins** goes in the verification strip, after the sheet's number:
+  `Bag · Sheet 3 of 5 · Strap, joins sheets 2 left, 4 right`, or with one neighbour `joins sheet 4
+  to the right`. That is what a maker with sheets spread on a table needs; the dashed line and its
+  crosses show how. A printed sentence of instructions on every taped sheet did not earn its room,
+  and `R1 C2` was a grid reference nobody holding paper needs.
 - **Not yet (7.2, 1.1):** edge arrows, the assembly sheet, and tape guides.
 
 The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
-tiled part follows the packed parts on sheets of its own. Nothing rotates.
+tiled part follows the packed parts on sheets of its own. A tiled part is never turned: it is tiled
+only when it fits whole neither way (§5.5).
 
 - **Corner crosshairs** at the exact corners of each page's content rect: 8 mm arms, 0.1 mm stroke,
   drawn in the margin so they do not overlay the pattern.
@@ -316,22 +351,40 @@ Two distinct mechanisms, deliberately separated.
 
 ### 8.1 Verification — on every page, always
 
-Printed in the bottom margin of every page:
+One strip at the foot of the printable area of every sheet, **inside the margins** (7.8):
 
-- A **50 × 50 mm square** with its dimensions labelled.
-- A **100 mm ruler** with 10 mm major ticks and 1 mm minor ticks, numbered.
-- The line: *"Measure the square. If it is not exactly 50 mm, your print is scaled. Reprint at
-  100 % / Actual size."*
+- A **100 × 5 mm gauge**: a box, ticked every 5 mm along its bottom like a rule.
+- Written in it: *"Print at 100 % / Actual size — this box is 100 × 5 mm"*.
+- Beside it, right-aligned in two lines, what the sheet is — `Bifold wallet · Sheet 1 of 2`, and
+  on a taped sheet which sheets it joins (§7) — and where it came from: `2026-10-01 · 1:1 ·
+  LeatherCAD`.
+- In the corner, **LeatherCAD's mark**: the card pocket from the app icon, 5 mm tall, filled black
+  with its stitch holes open. Drawn from the icon's own numbers (`brandMark.ts`), so nothing parses
+  an SVG or embeds an image.
 
-This costs a few square centimetres of margin and turns a silent, expensive failure into a five
-second check. It is not optional and it is not a preference.
+It turns a silent, expensive failure into a five second check. It is not optional and it is not a
+preference.
+
+**Why a long box, not a square.** Length is what shows an error. A print at 97 % — the usual
+"fit to page" — is 3 mm short across the gauge's 100 mm, where a 25 mm square would be 0.75 mm
+out, under two graduations of a steel rule. A scaled print is scaled both ways, so the long side
+catches every viewer and driver setting. The short side catches only a print stretched one way by
+10 % or more — at 10 mm it was 5 %, and a 50 mm square's 1 % was no better for the error that
+really happens one way, a printer's few tenths of a percent, which no square a sheet could carry
+shows: that is calibration's job (§8.2), with 200 mm lines. So the gauge is as tall as the two
+lines of words beside it, and no taller; thinner would not make the strip thinner.
+
+**What it replaced.** Until 7.8 a 50 mm square, a 100 mm ruler and two lines of instruction took
+62 mm at the foot of every sheet — 21 % of A4 portrait, 30 % of A4 landscape — and the footer was
+printed 5 mm from the paper edge, inside the margin the code calls unreliable (Q17). The strip
+takes 8.5 mm — 5 mm of ink and 3 mm clear above it — and prints nothing in the margins. A4
+portrait prints 190 × 268.5 mm, not 190 × 215; A4 landscape 277 × 181.5, not 277 × 128.
 
 **On every sheet a maker can choose, whole.**
-- `verificationLayout` in `packages/export/src/paper.ts` is the block's one layout. The PDF writer
-  draws from it, and `contentAreaMm` keeps the pattern at least 4 mm above it.
-- The square sits beside the ruler where the sheet is wide enough (182 mm or more). On a narrower
-  sheet, A5 portrait, it stacks above the ruler at the right margin, and the block reserves 8 mm more.
-  It used to be skipped there.
+- `verificationLayout` in `packages/export/src/paper.ts` is the strip's one layout. The PDF writer
+  draws from it, and `contentAreaMm` keeps the pattern at least 3 mm above it.
+- The words sit beside the gauge where the sheet has room for the longest of them. On a narrower
+  sheet, A5 portrait, they stack above it with the mark, and the strip reserves 7 mm more.
 
 ### 8.2 Correction — opt-in, per printer, a last resort
 
@@ -364,7 +417,7 @@ Automated tests prove the PDF contains the right numbers. They cannot prove the 
 release, and at the end of every slice that touches export or printing:
 
 1. Open `fixtures/projects/print-test.lcp` — a panel with a 100.0 mm dimension and a stitch line all
-   round, a card pocket with a thumb scoop stitched on three sides, and a 250 mm strap tiled over two
+   round, a card pocket with a thumb scoop stitched on three sides, and a 275 mm strap tiled over two
    sheets.
 2. Export PDF from the app, and print from the system's PDF viewer at 100 %, actual size.
 3. Measure with a **steel rule** (not a tape), and record the readings, following the procedure in

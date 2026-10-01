@@ -6,6 +6,9 @@ import {
   type PaperSize,
   type ProjectSettings,
 } from '@leathercad/domain';
+import { textWidthMm } from '@leathercad/typography';
+
+import { BRAND_MARK_ASPECT } from './brandMark.js';
 
 /**
  * Paper sizes and the millimetre-to-point conversion.
@@ -47,23 +50,30 @@ export interface PageSetup {
   readonly orientation: Orientation;
   readonly marginsMm: Margins;
   /**
-   * Height reserved at the foot of the page for the verification block, when
-   * its square sits beside the ruler. A sheet too narrow for that stacks the
-   * square above the ruler and reserves more; `verificationLayout` decides.
+   * Height reserved at the foot of the page for the verification strip, when
+   * its words fit beside the gauge. A sheet too narrow for that stacks them
+   * above it and reserves more; `verificationLayout` decides.
    *
-   * Must clear the 50 mm square plus the warning text above it, or a pattern
-   * gets printed over the very thing that proves the scale is right. A raster
-   * test caught exactly that: the square ran from 18 mm to 68 mm while the
-   * content area began at 36 mm.
+   * Must clear the gauge plus the gap above it, or a pattern gets printed over
+   * the very thing that proves the scale is right. A raster test caught
+   * exactly that once, when the block was a 50 mm square.
    */
   readonly footerHeightMm: Mm;
 }
+
+/** The gauge: a box exactly this wide and tall, measured to its lines' centres. */
+const GAUGE_WIDTH_MM = 100;
+const GAUGE_HEIGHT_MM = 5;
+/** The gauge's bottom edge above the margin, so its line's ink is inside it too. */
+const GAUGE_LIFT_MM = 0.5;
+/** Between the strip's ink and the pattern above it. */
+const CLEARANCE_MM = 3;
 
 export const DEFAULT_PAGE_SETUP: PageSetup = {
   paper: PAPER_SIZES.A4,
   orientation: 'portrait',
   marginsMm: DEFAULT_MARGINS,
-  footerHeightMm: 62,
+  footerHeightMm: GAUGE_LIFT_MM + GAUGE_HEIGHT_MM + CLEARANCE_MM,
 };
 
 /**
@@ -99,7 +109,7 @@ export function pageSetupOf(paper: PaperName, orientation: Orientation): PageSet
 }
 
 /**
- * The area a pattern may occupy: the sheet less margins and the footer block.
+ * The area a pattern may occupy: the sheet less margins and the verification strip.
  *
  * Returned in millimetres with its origin at the bottom-left of the sheet,
  * matching the Y-up model and PDF's own coordinate system.
@@ -121,111 +131,150 @@ export function contentAreaMm(setup: PageSetup): {
   };
 }
 
-/** What the verification block says, and how large, so its layout can be checked. */
+/**
+ * What the verification strip says, and how large. English, like everything
+ * printed (ADR 0018): the paper's glyphs are Latin.
+ */
 export const VERIFICATION_TEXT = {
-  instruction: 'Print at 100% / Actual size — do not scale or fit to page.',
-  instructionSizeMm: 2.8,
-  note: 'Measure the 100 mm ruler or the 50 mm square to confirm.',
-  noteSizeMm: 2.5,
-  /** On a tiled sheet (7.2a): how the sheets go together. */
-  tileNote: 'Cut on a dashed line, lay it over the next sheet, match the crosses.',
-  tileSizeMm: 2.5,
+  /** Inside the gauge, above its ticks. */
+  instruction: 'Print at 100 % / Actual size — this box is 100 × 5 mm',
+  instructionSizeMm: 2.2,
+  /** The sheet's words beside the gauge. */
+  sizeMm: 2,
 } as const;
 
-/** Where the verification block's pieces go on one sheet, in mm from its bottom-left. */
+/** A taped sheet's neighbours, by the side of it they join. */
+export interface Neighbours {
+  readonly above?: number | undefined;
+  readonly left?: number | undefined;
+  readonly right?: number | undefined;
+  readonly below?: number | undefined;
+}
+
+/**
+ * Which sheets a taped sheet joins, said where the maker looks for it — beside
+ * the sheet's number: `joins sheet 3 to the right`, or for a sheet in a grid,
+ * `joins sheets 1 above, 2 left, 4 right`. The dashed line and the crosses on
+ * it already show how; what a maker with sheets spread on a table needs is
+ * which one goes there.
+ */
+export function describeJoins(neighbours: Neighbours): string {
+  const sides = (['above', 'left', 'right', 'below'] as const).flatMap((side) => {
+    const sheet = neighbours[side];
+    return sheet === undefined ? [] : [{ side, sheet }];
+  });
+  if (sides.length === 1) {
+    const [{ side, sheet }] = sides as [{ side: keyof Neighbours; sheet: number }];
+    const where = side === 'left' || side === 'right' ? `to the ${side}` : side;
+    return `joins sheet ${String(sheet)} ${where}`;
+  }
+  return `joins sheets ${sides.map(({ side, sheet }) => `${String(sheet)} ${side}`).join(', ')}`;
+}
+
+/** Where the verification strip's pieces go on one sheet, in mm from its bottom-left. */
 export interface VerificationLayout {
-  /** The left end of the ruler's baseline. */
-  readonly ruler: { readonly x: Mm; readonly y: Mm };
-  readonly rulerLengthMm: Mm;
-  /** Its tallest tick. */
-  readonly rulerHeightMm: Mm;
-  /** The square's bottom-left corner. */
-  readonly square: { readonly x: Mm; readonly y: Mm };
-  readonly squareSizeMm: Mm;
-  /** Where each line of text starts, on its baseline. */
+  /** The gauge's bottom-left corner: a box `gaugeWidthMm` × `gaugeHeightMm`. */
+  readonly gauge: { readonly x: Mm; readonly y: Mm };
+  readonly gaugeWidthMm: Mm;
+  readonly gaugeHeightMm: Mm;
+  /** The instruction, inside the gauge, from the start of its baseline. */
   readonly instruction: { readonly x: Mm; readonly y: Mm };
-  readonly note: { readonly x: Mm; readonly y: Mm };
+  /** LeatherCAD's mark — the pocket of its icon — by its bottom-left corner, at the right margin. */
+  readonly mark: { readonly x: Mm; readonly y: Mm; readonly heightMm: Mm };
   /**
-   * On a tiled sheet (7.2a), the tile's label and the assembly note: above
-   * the instruction, left of the square, and never wider than `tileTextMaxWidthMm`.
+   * The sheet's words, right-aligned at `x` beside the mark, by baseline: what
+   * the sheet is on top, where it came from below. Neither is ever wider than
+   * `textMaxWidthMm`.
    */
-  readonly tileLabel: { readonly x: Mm; readonly y: Mm };
-  readonly tileNote: { readonly x: Mm; readonly y: Mm };
-  readonly tileTextMaxWidthMm: Mm;
-  /** How much of the sheet above the bottom margin the block reserves. */
+  readonly lines: { readonly x: Mm; readonly top: Mm; readonly bottom: Mm };
+  readonly textMaxWidthMm: Mm;
+  /** How much of the sheet above the bottom margin the strip reserves. */
   readonly heightMm: Mm;
 }
 
-const RULER_LENGTH_MM = 100;
-const RULER_HEIGHT_MM = 3.5;
-const SQUARE_SIZE_MM = 50;
-/** From the ruler's left end to the square, when they sit side by side. */
-const SQUARE_OFFSET_MM = 112;
-/** Between the ruler's ticks and a square stacked above it. */
-const STACK_GAP_MM = 4.5;
-/** Between the text on the left and the square. */
-const TEXT_GAP_MM = 2;
+/** Between the gauge and the words beside it, and between the words and the mark. */
+const TEXT_GAP_MM = 6;
+const MARK_GAP_MM = 1.5;
+/** The two lines' baselines above the bottom of their block: room for descenders, and the pitch. */
+const DESCENT_MM = 0.55;
+const LINE_PITCH_MM = 2.4;
+/** Between the gauge and words stacked above it. */
+const STACK_GAP_MM = 2;
 
 /**
- * The verification block's layout on this sheet — **the one answer**, read by
+ * The widest words a sheet carries that are never shortened — its number and
+ * the most joins a taped sheet can have. The names around them are.
+ */
+const WIDEST_FIXED_MM = textWidthMm(
+  `… · Sheet 88 of 88 · …, ${describeJoins({ above: 88, left: 88, right: 88, below: 88 })}`,
+  VERIFICATION_TEXT.sizeMm,
+);
+
+/**
+ * The verification strip's layout on this sheet — **the one answer**, read by
  * the PDF writer to draw it and by `contentAreaMm` to keep the pattern off it.
  *
- * The block is whole on every sheet: a 100 mm ruler, a 50 mm square, and the
- * instruction to print at actual size. Where the square fits beside the ruler
- * (every sheet 182 mm wide or more) it goes there, as it always has. On a
- * narrower one — A5 portrait — it stacks above the ruler at the right margin,
- * clear of the text on the left, and the block reserves that much more. The
- * square used to be skipped there instead, on a page that still told the
- * maker to measure it.
+ * One strip at the foot of the printable area, inside the margins, 5 mm of
+ * ink: a 100 × 5 mm gauge with the instruction to print at actual size
+ * written in it; beside it, right-aligned, what the sheet is and where it came
+ * from, in two lines; and LeatherCAD's mark in the corner. Nothing prints in
+ * the margins, which no printer is trusted to reach (Q17).
+ *
+ * The gauge is long rather than square because length is what shows an error:
+ * a print at 97 % is 3 mm short across its 100 mm, where a 25 mm square would
+ * be under a millimetre out. Its height is the two lines of words beside it:
+ * a thinner gauge would not make the strip thinner. Where the words do not fit
+ * beside it — A5 portrait — they stack above it, and the strip reserves that
+ * much more.
  */
 export function verificationLayout(setup: PageSetup): VerificationLayout {
   const sheet = sheetSizeMm(setup);
   const m = setup.marginsMm;
-  const ruler = { x: m.left, y: m.bottom + 8 };
-  const text = {
-    instruction: { x: m.left, y: ruler.y + 16 },
-    note: { x: m.left, y: ruler.y + 11.5 },
-    tileNote: { x: m.left, y: ruler.y + 21.5 },
-    tileLabel: { x: m.left, y: ruler.y + 26 },
-  };
+  const gauge = { x: m.left, y: m.bottom + GAUGE_LIFT_MM };
+  const markWidth = GAUGE_HEIGHT_MM * BRAND_MARK_ASPECT;
+  const right = sheet.widthMm - m.right;
+  const wordsRight = right - markWidth - MARK_GAP_MM;
+  const block = (bottom: Mm) => ({
+    mark: { x: right - markWidth, y: bottom, heightMm: GAUGE_HEIGHT_MM },
+    lines: {
+      x: wordsRight,
+      bottom: bottom + DESCENT_MM,
+      top: bottom + DESCENT_MM + LINE_PITCH_MM,
+    },
+  });
   const common = {
-    ruler,
-    rulerLengthMm: RULER_LENGTH_MM,
-    rulerHeightMm: RULER_HEIGHT_MM,
-    squareSizeMm: SQUARE_SIZE_MM,
-    ...text,
+    gauge,
+    gaugeWidthMm: GAUGE_WIDTH_MM,
+    gaugeHeightMm: GAUGE_HEIGHT_MM,
+    // Above the tallest tick, with room for the descenders between.
+    instruction: { x: gauge.x + 2, y: gauge.y + 2.15 },
   };
-  // The tile's text stops short of the square, wherever the square is.
-  const clearOf = (square: { x: Mm }): Mm => square.x - TEXT_GAP_MM - m.left;
 
-  const beside = { x: ruler.x + SQUARE_OFFSET_MM, y: ruler.y };
-  if (approxLte(beside.x + SQUARE_SIZE_MM, sheet.widthMm - m.right)) {
+  const beside = wordsRight - (gauge.x + GAUGE_WIDTH_MM + TEXT_GAP_MM);
+  if (approxLte(WIDEST_FIXED_MM, beside)) {
     return {
       ...common,
-      square: beside,
-      tileTextMaxWidthMm: clearOf(beside),
+      ...block(gauge.y),
+      textMaxWidthMm: beside,
       heightMm: setup.footerHeightMm,
     };
   }
 
-  const stacked = {
-    x: sheet.widthMm - m.right - SQUARE_SIZE_MM,
-    y: ruler.y + RULER_HEIGHT_MM + STACK_GAP_MM,
-  };
-  // The same clearance above the square as beside the ruler.
-  const rise = stacked.y - beside.y;
+  // The words and the mark take the gauge's height again, above it.
+  const rise = STACK_GAP_MM + GAUGE_HEIGHT_MM;
   return {
     ...common,
-    square: stacked,
-    tileTextMaxWidthMm: clearOf(stacked),
+    ...block(gauge.y + GAUGE_HEIGHT_MM + STACK_GAP_MM),
+    textMaxWidthMm: wordsRight - m.left,
     heightMm: setup.footerHeightMm + rise,
   };
 }
 
 /**
- * Every paper size and orientation that would fit the given extent, in the
- * order of `PAPER_SIZES`, for telling a user what would work when their
- * pattern does not fit.
+ * Every paper size and orientation that would fit the given extent, as it is
+ * or turned a quarter as pagination may turn it, in the order of
+ * `PAPER_SIZES`, for telling a user what would work when their pattern does
+ * not fit.
  */
 export function paperOptionsFitting(
   widthMm: Mm,
@@ -237,7 +286,9 @@ export function paperOptionsFitting(
   for (const paper of Object.values(PAPER_SIZES)) {
     for (const orientation of ['portrait', 'landscape'] as const) {
       const area = contentAreaMm({ ...template, paper, orientation });
-      if (widthMm <= area.widthMm && heightMm <= area.heightMm) {
+      const fits = (w: Mm, h: Mm): boolean =>
+        approxLte(w, area.widthMm) && approxLte(h, area.heightMm);
+      if (fits(widthMm, heightMm) || fits(heightMm, widthMm)) {
         options.push({ paper, orientation });
       }
     }
