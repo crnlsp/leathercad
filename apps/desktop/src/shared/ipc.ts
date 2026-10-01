@@ -10,6 +10,8 @@ export const IPC = {
   showOpenDialog: 'platform:showOpenDialog',
   showSaveDialog: 'platform:showSaveDialog',
   openInExternalViewer: 'platform:openInExternalViewer',
+  listPrinters: 'platform:listPrinters',
+  printPdf: 'platform:printPdf',
   getUserConfigDir: 'platform:getUserConfigDir',
   getAppVersion: 'platform:getAppVersion',
   writeRecovery: 'platform:writeRecovery',

@@ -476,6 +476,7 @@ test('the project bar holds the project and its output; the work bar holds the w
       'save',
       'paper',
       'export-pdf',
+      'print',
       'settings',
       'help-menu',
     ]) {
@@ -488,9 +489,10 @@ test('the project bar holds the project and its output; the work bar holds the w
       await expect(project.getByTestId(id), id).toHaveCount(0);
     }
 
-    // Export PDF is the one primary action in the window.
+    // Print is the one primary action in the window (7.6); Export PDF is not.
     await expect(window.locator('.primary')).toHaveCount(1);
-    await expect(window.getByTestId('export-pdf')).toHaveClass(/primary/);
+    await expect(window.getByTestId('print')).toHaveClass(/primary/);
+    await expect(window.getByTestId('export-pdf')).not.toHaveClass(/primary/);
   });
 });
 

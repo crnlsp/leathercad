@@ -24,15 +24,21 @@ against the packaged binary, on Linux in CI and on Windows and macOS in the Pack
 The same check fails on the same PDF refitted to Letter, as a "fit to page" viewer would print it:
 it reads the square as 47.0 mm and the ruler as 94.0 mm.
 
-What no automated check can cover is the viewer's print dialog, the printer, its driver and its paper
-handling. That is what this file is for.
+`e2e/print-preview.spec.ts` prints the same project with **Print** (7.6) to a stand-in for CUPS's
+`lp`. It checks the job asks for `print-scaling=none`, and that the bytes `lp` received measure as
+above. Where CUPS's `pdftopdf` filter is installed, it measures them again after that filter, run
+with the job's options.
+
+What no automated check can cover is the printer, its driver and its paper handling, and on
+Windows the viewer's print dialog. That is what this file is for.
 
 ## The procedure
 
 This is check 3 of the [release checklist](release-checklist.md).
 
 About ten minutes, with a **steel rule** (not a tape) graduated in half millimetres. Once on each of
-Linux, Windows and macOS, from that platform's default PDF viewer.
+Linux, Windows and macOS: on Linux and macOS with LeatherCAD's own **Print**, on Windows from the
+default PDF viewer.
 
 1. **Open** `fixtures/projects/print-test.lcp` in the LeatherCAD build under test. Note the version
    in the status bar. The project is on A4 portrait, and the paper list beside *Export PDF* says
@@ -41,11 +47,12 @@ Linux, Windows and macOS, from that platform's default PDF viewer.
 2. **Look at the Sheets view** (*Sheets*, or Ctrl+2) and note what it shows: three sheets, the
    panel and the pocket on sheet 1, the strap across sheets 2 and 3 with a dashed join. Since 7.4c
    the Sheets view and the PDF are drawn from one sheet plan; the paper must match it.
-3. **Export PDF.** Save it anywhere. It opens in the system's PDF viewer.
-4. **Print from that viewer**, at *Actual size* / *100 %* — not *Fit*, not *Shrink oversized
-   pages*. Note the viewer and the exact name of the setting chosen. Three sheets come out, the
-   words at their foot reading *Sheet 1 of 3*, *Sheet 2 of 3* and *Sheet 3 of 3*, each carrying
-   what the Sheets view showed on it.
+3. **Print** (Ctrl+P). The preview shows the same three sheets, *100 % — locked* and *No scaling*.
+   Choose the printer and *Print 3 sheets*. On Windows the preview's last step is *Save PDF…*:
+   save it and print it from the system's PDF viewer, at *Actual size* / *100 %* — not *Fit*,
+   not *Shrink oversized pages* — and note the viewer and the exact name of the setting chosen.
+4. Three sheets come out, the words at their foot reading *Sheet 1 of 3*, *Sheet 2 of 3* and
+   *Sheet 3 of 3*, each carrying what the Sheets view showed on it.
 5. **Measure**, each to the nearest half millimetre:
 
    | # | Where | What | Expected |
@@ -76,9 +83,13 @@ not 250: a row recorded before it read A as the square, across × up, B as the r
 
 | Date | LeatherCAD | OS | Viewer, and its scale setting | Printer, driver | Paper | Readings | Result |
 |---|---|---|---|---|---|---|---|
-| _pending_ | | Linux | | | | | |
+| 2026-10-01 | 1.3.0 (bifold sample, before 7.6) | Linux (CachyOS), CUPS 2.4.19, libcupsfilters 2.2.1 | Okular, default *Fit to printable area*; again with *None; print original size*; and a browser | Brother HL-L2442DW, driverless (IPP Everywhere) | A4 | A · B: about 96 × 4.8 (the rest not taken) | **Fail.** CUPS fitted the page into the 4.23 mm margins: the jobs carried no `print-scaling=none`, and libcupsfilters defaults to `auto`. The PDF itself measures true (ADR 0019) |
+| 2026-10-01 | 7.6 branch: `lp -o print-scaling=none -o fit-to-page=false -o media=A4`, as *Print* sends it | Linux (CachyOS), CUPS 2.4.19, libcupsfilters 2.2.1 | none: sent to `lp` | Brother HL-L2442DW, driverless (IPP Everywhere) | A4 | Sheet 1 only. A–F each within 0.5 mm of expected, reported as passing; exact readings not noted. G, H not printed | **Pass** (sheet 1). No visible issue |
+| _pending_ | | Linux, all three sheets through *Print* in a released build | | | | | |
 | _pending_ | | Windows | | | | | |
-| _pending_ | | macOS | | | | | |
+| _pending_ | | macOS, through *Print* | | | | | |
 
-**7.7 is not verified.** No physical measurement has been made. Until a row above carries real
-readings for each platform, the project must not claim verified 1:1 output.
+**7.7 is not verified.** On Linux, sheet 1 sent with scaling off measured true, and the same
+printer scaled the same PDF to 96 % from a viewer. No platform has a full row of A–H yet. Until a
+row above carries real readings for each platform, the project must not claim verified 1:1
+output.

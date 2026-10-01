@@ -19,8 +19,9 @@ import { Tooltip } from './Tooltip.js';
  *
  * Left, the project itself: its menu — new, open, save as, the recent
  * projects — its name as the window's one title, and whether it is saved.
- * Right, where the workflow ends: the sheets it will print on, and *Export
- * PDF* — the one primary action in the window. Past a rule, the application:
+ * Right, where the workflow ends: the sheets it will print on, *Export PDF*
+ * for a file, and *Print* — the one primary action in the window, green (7.6),
+ * which opens LeatherCAD's own Print Preview. Past a rule, the application:
  * Settings and Help. Nothing here edits the pattern; that is the work bar's.
  */
 export function ProjectBar({
@@ -39,6 +40,7 @@ export function ProjectBar({
   onSettings,
   onSave,
   onExport,
+  onPrint,
 }: {
   project: Project;
   store: DocumentStore;
@@ -58,6 +60,7 @@ export function ProjectBar({
   onSettings: () => void;
   onSave: () => void;
   onExport: () => void;
+  onPrint: () => void;
 }) {
   const { t } = useI18n();
   return (
@@ -111,13 +114,15 @@ export function ProjectBar({
         <Tooltip
           text={t('projectBar.exportTooltip', { sheets: describeSheets(sheetPlanFor(project), t) })}
         >
-          <button
-            type="button"
-            className="tool primary"
-            data-testid="export-pdf"
-            onClick={onExport}
-          >
+          <button type="button" className="tool" data-testid="export-pdf" onClick={onExport}>
             {t('projectBar.exportPdf')}
+          </button>
+        </Tooltip>
+        <Tooltip
+          text={t('projectBar.printTooltip', { sheets: describeSheets(sheetPlanFor(project), t) })}
+        >
+          <button type="button" className="tool primary" data-testid="print" onClick={onPrint}>
+            {t('projectBar.print')}
           </button>
         </Tooltip>
       </div>

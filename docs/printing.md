@@ -35,8 +35,13 @@ silently shrink output by 3–6 % to accommodate the printer's unprintable margi
 is the most likely way this project fails.
 
 **The application generates print-ready PDFs itself, as vector content, with exact coordinates.** It
-then either hands the file to the system print queue with scaling explicitly disabled, or saves it
-for the user to print from a viewer at "Actual size".
+then shows that file in its own Print Preview and hands the same bytes to the system print queue
+with scaling explicitly disabled (§13). Where it cannot, it saves the file for the user to print
+from a viewer at "Actual size".
+
+A viewer is not a safe last step even at "Actual size". On Linux the scaling is decided by the
+job's `print-scaling` option, and a job without one is fitted into the printer's margins by CUPS
+itself (ADR 0019).
 
 This is also why the choice of Electron over Tauri is not a printing decision: the webview is never
 in the print path.
@@ -419,7 +424,9 @@ release, and at the end of every slice that touches export or printing:
 1. Open `fixtures/projects/print-test.lcp` — a panel with a 100.0 mm dimension and a stitch line all
    round, a card pocket with a thumb scoop stitched on three sides, and a 275 mm strap tiled over two
    sheets.
-2. Export PDF from the app, and print from the system's PDF viewer at 100 %, actual size.
+2. Print it from the app: **Print**, then *Print 3 sheets* in its preview (§13). Where the app
+   cannot print (Windows), *Save PDF…* there, and print from the system's PDF viewer at 100 %,
+   actual size.
 3. Measure with a **steel rule** (not a tape), and record the readings, following the procedure in
    `docs/print-verification-log.md`.
 
@@ -431,7 +438,9 @@ property panel's *Spacing*, which averages every run in the hole set.
 
 `e2e/print-verification.spec.ts` makes the same measurements on the exported PDF, rasterised by
 poppler, and `e2e/packaged/packaged.spec.ts` repeats them against the packaged app on each
-platform. What neither can reach is the viewer's print dialog, the printer and the paper.
+platform. `e2e/print-preview.spec.ts` checks that what the Print Preview sends to `lp` is that
+same PDF, measured the same way, with scaling off (§13). What none of them can reach is the
+printer and the paper.
 
 ## 10. SVG export
 
@@ -481,24 +490,64 @@ Rules that make the file actually 1:1 rather than merely nominally so:
   the evaluator already produces, and genuinely useful before starting a project.
 - **G-code** — out of scope. Users with laser cutters have their own CAM and want DXF or SVG.
 
-## 13. Print submission on Linux
+## 13. Printing from the app (7.6)
 
-Two paths, both offered:
+**Print → LeatherCAD's Print Preview → the printer.** The decision and what was measured are in
+[ADR 0019](adr/0019-print-from-the-app.md).
 
-**Primary — export and let the user print.** Write the PDF, then `xdg-open` it, with an on-screen
-reminder to select "Actual size" or 100 %. This works everywhere and keeps the user in a print
-dialog they already understand.
+**One PDF.** *Print* (green, the window's primary action, Ctrl+P) writes the PDF from the same
+`SheetPlan` as *Export PDF*. The preview draws **that file** with pdf.js, so the sheets shown are
+the bytes sent, not a second drawing. `lp` then receives those bytes on its standard input. Its
+choices are only those that cannot change the size of what prints:
 
-**Secondary — submit directly to CUPS** for users who print patterns constantly:
+| Choice | What it does |
+|---|---|
+| Printer | One `lpstat -e` lists; the system default first |
+| Paper, orientation | The project's own page setup, `setPageSetup`: one undo step, and the PDF is written again |
+| Which sheets | Ticked in the sheet list; sent as `-P`, so CUPS leaves the rest out of the same file |
+| Copies | 1–99, `-n` |
+
+Scale is shown as *100 % — locked*: there is no fit, shrink or percentage anywhere. Every job is:
 
 ```bash
-lp -d <printer> -o media=A4 -o print-scaling=none -o fit-to-page=false <file.pdf>
+lp -d <printer> -t <project> -n <copies> -P <sheets> \
+   -o media=<paper> -o print-scaling=none -o fit-to-page=false        # the PDF on stdin
 ```
 
-`print-scaling=none` is the IPP attribute honoured by CUPS 2.4 and later; `fit-to-page=false` covers
-older versions. Printers are enumerated with `lpstat -e`. If neither option is supported by the
-detected CUPS version, fall back to the primary path rather than submitting a job that might be
-scaled — **when scaling cannot be guaranteed off, do not print.**
+`print-scaling=none` is the IPP attribute CUPS 2.x and cups-filters' `pdftopdf` honour. Without it,
+libcupsfilters defaults to `auto`, which fits the page into the printable area: 96 % on an A4 laser
+with 4.23 mm margins. `fit-to-page=false` covers older CUPS. Printers and their paper sizes come
+from `lpstat -e`, `lpstat -d` and `lpoptions -p <printer> -l`. These only read: the app never
+changes a printer's settings. A printer that lists its paper and lacks the chosen size is not
+sent the job. The main process checks every job (`apps/desktop/src/main/printing.ts`): the printer
+must be one CUPS lists now, and nothing runs through a shell.
+
+The preview says what the app can and cannot promise. It sends the job with scaling off — *✓ No
+scaling* — but a driver or a printer could still scale, so it asks for the gauge to be measured
+(§8.1). That measurement, recorded in `print-verification-log.md`, is the only claim of 1:1.
+
+**Never send `orientation-requested` or `landscape`.** Through `pdftopdf` either one turns the page
+*and* fits it into the margins, even with `print-scaling=none`.
+
+**Landscape is not sent yet.** CUPS cannot turn a landscape page onto upright paper without
+scaling it. With scaling off, `pdftopdf` leaves it unturned and `pdftoraster` lays it on the upright
+sheet with everything past 210 mm cut off. With scaling on, it is turned and shrunk to 0.96. The
+preview shows landscape and says why it will not print it. The fix is for the writer to put every
+sheet in the PDF upright, with a landscape layout turned a quarter inside it, which changes §6.1.
+
+**Where the app does not print, it saves.** The same preview's last step is *Save PDF…*, with the
+reminder to print at *Actual size (100 %), never Fit or Shrink*:
+
+- **Windows** — no CUPS; no transport chosen yet (SumatraPDF is the candidate, ADR 0019).
+- **The Flatpak** — its runtime has libcups and `lpr`, but no `lp`, `lpstat` or `lpoptions`. The
+  app finds no `lpstat`, so it saves.
+- **No CUPS scheduler running**, or no printer set up.
+
+**macOS** runs the Linux path against Apple's CUPS, whose `cgpdftopdf` is not open source. It
+counts as unverified until a gauge printed there is in the log.
+
+*Export PDF* stays, for a file to keep or send. Its tooltip says how to print one from another
+application.
 
 ## 14. Automated tests
 
@@ -518,3 +567,5 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 | Preview equals print | `paginate()` output used by the preview is deep-equal to the one used by the PDF writer for the same setup |
 | Calibration correction | A 1.005 correction produces geometry 0.5 % larger, and a 1.03 correction is rejected |
 | Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items |
+| The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
+| Preview equals what is sent | Print previews the print test, and what the fake `lp` receives measures true like an exported PDF; where `pdftopdf` is installed, it measures true after that filter too, with the job's options (`e2e/print-preview.spec.ts`) |
