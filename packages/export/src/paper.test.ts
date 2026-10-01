@@ -42,13 +42,13 @@ describe('sheetSizeMm', () => {
 });
 
 describe('contentAreaMm', () => {
-  it('subtracts margins and the footer block', () => {
+  it('subtracts margins and the verification strip', () => {
     const area = contentAreaMm(DEFAULT_PAGE_SETUP);
     expect(area.widthMm).toBe(190);
-    expect(area.heightMm).toBe(297 - 10 - 10 - 62);
-    // Origin at bottom-left, above the footer — PDF is Y-up.
+    expect(area.heightMm).toBe(297 - 10 - 10 - 8.5);
+    // Origin at bottom-left, above the strip — PDF is Y-up.
     expect(area.x).toBe(10);
-    expect(area.y).toBe(72);
+    expect(area.y).toBe(18.5);
   });
 
   it('never returns a negative area for absurd margins', () => {
@@ -68,19 +68,28 @@ describe('paperOptionsFitting', () => {
   });
 
   it('excludes paper too small', () => {
-    // A4 portrait offers 190 x 215 mm once margins and the footer block are
-    // taken off; A3 portrait offers 277 x 374.
+    // A4 portrait offers 190 x 268.5 mm once margins and the verification
+    // strip are taken off, and A4 landscape 277 x 181.5; A3 portrait offers
+    // 277 x 391.5.
     const options = paperOptionsFitting(250, 300);
     expect(options.some((o) => o.paper.name === 'A4')).toBe(false);
     expect(options.some((o) => o.paper.name === 'A3' && o.orientation === 'portrait')).toBe(true);
   });
 
-  it('accounts for the footer block, not just the margins', () => {
-    // A4 leaves 190 x 215 mm once the margins and the 62 mm verification
-    // block are taken off. Printing over that block would defeat the very
+  it('accounts for the verification strip, not just the margins', () => {
+    // A4 leaves 190 x 268.5 mm once the margins and the 8.5 mm verification
+    // strip are taken off. Printing over the strip would defeat the very
     // scale check it exists to provide.
-    expect(paperOptionsFitting(190, 240).some((o) => o.paper.name === 'A4')).toBe(false);
-    expect(paperOptionsFitting(190, 210).some((o) => o.paper.name === 'A4')).toBe(true);
+    expect(paperOptionsFitting(190, 270).some((o) => o.paper.name === 'A4')).toBe(false);
+    expect(paperOptionsFitting(190, 268).some((o) => o.paper.name === 'A4')).toBe(true);
+  });
+
+  it('counts a paper that holds the extent turned a quarter, as pagination turns it', () => {
+    // 260 × 100 is wider than A4 portrait prints, but turned it fits.
+    expect(paperOptionsFitting(260, 100)).toContainEqual({
+      paper: expect.objectContaining({ name: 'A4' }),
+      orientation: 'portrait',
+    });
   });
 
   it('returns nothing when nothing fits', () => {

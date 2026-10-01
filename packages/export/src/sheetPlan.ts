@@ -14,6 +14,8 @@ export interface PartSheets {
   readonly sheets: readonly number[];
   /** Printed across several sheets to be taped together (7.2a). */
   readonly taped: boolean;
+  /** Turned a quarter on the paper from how it was drawn, to save sheets. */
+  readonly turned: boolean;
   /** For a taped part, its grid of tiles; 1 × 1 otherwise. */
   readonly rows: number;
   readonly columns: number;
@@ -60,6 +62,7 @@ export function planSheets(scene: ExportScene, setup: PageSetup): SheetPlan {
         partId: id,
         sheets: [...(known?.sheets ?? []), sheet.index + 1],
         taped: sheet.tile !== undefined,
+        turned: placement.turned,
         rows: sheet.tile?.rows ?? 1,
         columns: sheet.tile?.columns ?? 1,
       });

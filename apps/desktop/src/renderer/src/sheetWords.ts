@@ -62,7 +62,7 @@ export function describeTapedAcross(name: string, sheets: readonly number[], i18
 
 /**
  * A part's print status as Parts shows it: a short `label` — `Sheet 1`,
- * `Sheets 2–3, taped`, `Not printed` — and a `note` when something the maker
+ * `Sheets 2–3, taped`, `Sheet 1, turned`, `Not printed` — and a `note` when something the maker
  * can see on the board will not be on the paper.
  */
 export function describePrintStatus(
@@ -80,7 +80,11 @@ export function describePrintStatus(
     ...(status.failedFeatures > 0 ? [t('print.failed', { count: status.failedFeatures })] : []),
   ];
   return {
-    label: status.sheets.taped ? t('print.taped', { sheets }) : sheets,
+    label: status.sheets.taped
+      ? t('print.taped', { sheets })
+      : status.sheets.turned
+        ? t('print.turned', { sheets })
+        : sheets,
     note:
       left.length === 0
         ? null

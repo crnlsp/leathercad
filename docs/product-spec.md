@@ -69,7 +69,7 @@ A representative session, which the MVP must support end to end:
 5. "How long is that stitch line? How many holes did that give me?" *(They need to buy thread and
    know whether the two mating pieces have the same hole count.)*
 6. "Print it at 1:1 on A4."
-7. "Measure the printed 50 mm square with a steel rule. It reads 50 mm. Good."
+7. "Measure the printed 100 mm gauge with a steel rule. It reads 100 mm. Good."
 
 Steps 3, 4 and 7 are the ones no general-purpose tool does well. They are the product.
 
@@ -153,7 +153,7 @@ The MVP is defined as: **the smallest version that a leatherworker would choose 
 - SVG export with mm units and semantic layer groups
 - PDF export at exact 1:1
 - Tiled printing across A4 / A3 / Letter with margins, overlap, registration marks, tile labels
-- A 50 mm verification square and a 100 mm calibration ruler on every printed page
+- A 100 × 5 mm verification gauge on every printed sheet
 - On-screen print preview driven by the same pagination code as the PDF (the Sheets view, 7.4c)
 
 ### Explicitly out of the MVP

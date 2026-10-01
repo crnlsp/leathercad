@@ -14,12 +14,11 @@ against the packaged binary, on Linux in CI and on Windows and macOS in the Pack
 
 | On the PDF | Measured |
 |---|---|
-| 50 mm square, every sheet | 50.0 × 50.0 mm |
-| 100 mm ruler, every sheet | 100.0 mm |
+| The verification gauge, every sheet | 100.0 × 5.0 mm |
 | Outer panel's bottom edge, and between its straight sides | 100.0 mm |
 | The dimension line under it | 100.0 mm, 8.0 mm below the edge |
 | Outer panel's straight bottom run of holes | 25 holes, 3.875 mm apart, evenly |
-| The strap, sheet 2's end to the join plus the join to sheet 3's end | 250.0 mm |
+| The strap, sheet 2's end to the join plus the join to sheet 3's end | 275.0 mm |
 | Each registration cross | on its join line, at the same place on the strap on both sheets |
 
 The same check fails on the same PDF refitted to Letter, as a "fit to page" viewer would print it:
@@ -44,20 +43,20 @@ Linux, Windows and macOS, from that platform's default PDF viewer.
    the Sheets view and the PDF are drawn from one sheet plan; the paper must match it.
 3. **Export PDF.** Save it anywhere. It opens in the system's PDF viewer.
 4. **Print from that viewer**, at *Actual size* / *100 %* — not *Fit*, not *Shrink oversized
-   pages*. Note the viewer and the exact name of the setting chosen. Three sheets come out, their
-   footers reading *Sheet 1 of 3*, *Sheet 2 of 3* and *Sheet 3 of 3*, each carrying what the
-   Sheets view showed on it.
+   pages*. Note the viewer and the exact name of the setting chosen. Three sheets come out, the
+   words at their foot reading *Sheet 1 of 3*, *Sheet 2 of 3* and *Sheet 3 of 3*, each carrying
+   what the Sheets view showed on it.
 5. **Measure**, each to the nearest half millimetre:
 
    | # | Where | What | Expected |
    |---|---|---|---|
-   | A | Every sheet, bottom right | The square, across and up | 50.0 mm both ways |
-   | B | Every sheet, bottom left | The ruler, 0 to 100 | 100.0 mm |
+   | A | Every sheet, bottom left | The gauge's long side, across | 100.0 mm |
+   | B | Every sheet, bottom left | The gauge's short side, up | 5.0 mm |
    | C | Sheet 1, *Outer panel* | Its bottom edge, corner to corner | 100.0 mm |
    | D | Sheet 1, under the panel | The dimension line marked *100.0* | 100.0 mm |
    | E | Sheet 1, *Outer panel* | Its bottom row of holes, centre of the first to centre of the last: 25 holes, 24 gaps | 93.0 mm |
    | F | Sheet 1, *Outer panel* | The same row, hole 1 to hole 11: 10 gaps | 38.75 mm |
-   | G | Sheets 2 + 3, *Strap* | Cut sheet 2 along its dashed line, lay it on sheet 3 with the crosses and the dashed lines together, tape it; then the strap end to end | 250.0 mm |
+   | G | Sheets 2 + 3, *Strap* | Cut sheet 2 along its dashed line, lay it on sheet 3 with the crosses and the dashed lines together, tape it; then the strap end to end | 275.0 mm |
    | H | Sheets 2 + 3, *Strap* | Its width, and whether its edges cross the join without a step | 25.0 mm, no step |
 
    Measure the holes on **the straight bottom run**, as E and F say. The *Spacing* in the property
@@ -70,7 +69,10 @@ Linux, Windows and macOS, from that platform's default PDF viewer.
 
 ## Entries
 
-The *Readings* column is A (width × height) · B · C · D · E · F · G · H, in millimetres.
+The *Readings* column is A · B · C · D · E · F · G · H, in millimetres. Since 7.8 the sheets carry
+a 100 × 5 mm gauge where they carried a 50 mm square and a 100 mm ruler, and the strap is 275 mm,
+not 250: a row recorded before it read A as the square, across × up, B as the ruler, and G as
+250.0.
 
 | Date | LeatherCAD | OS | Viewer, and its scale setting | Printer, driver | Paper | Readings | Result |
 |---|---|---|---|---|---|---|---|

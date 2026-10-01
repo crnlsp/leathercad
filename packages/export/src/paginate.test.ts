@@ -163,8 +163,9 @@ describe('paginate', () => {
     // of the file. Now it is printed across sheets, at 1:1, to tape together.
     const result = paginate(scene([part('big', 400, 300, 'Bag gusset')]), DEFAULT_PAGE_SETUP);
 
-    // A4 portrait prints 190 × 215 mm; with a 10 mm overlap each further
-    // sheet adds 180 × 205. 400 wide needs 3 columns, 300 + 5 for its name 2 rows.
+    // A4 portrait prints 190 × 268.5 mm, and the gusset fits neither way; with
+    // a 10 mm overlap each further sheet adds 180 × 258.5. 400 wide needs 3
+    // columns, 300 + 5 for its name 2 rows.
     expect(result.tiled).toHaveLength(1);
     expect(result.tiled[0]).toMatchObject({ rows: 2, columns: 3 });
     expect(result.pages).toHaveLength(6);
@@ -183,25 +184,27 @@ describe('paginate', () => {
   });
 
   it('says what was tiled, on which paper, and which paper would hold it whole', () => {
-    const result = paginate(scene([part('big', 250, 180, 'Panel')]), DEFAULT_PAGE_SETUP);
+    // Too wide for A4 portrait as drawn, and too wide turned: 200 + 5 for its name.
+    const result = paginate(scene([part('big', 300, 200, 'Panel')]), DEFAULT_PAGE_SETUP);
     expect(result.tiled[0]).toMatchObject({
       part: { name: 'Panel' },
-      widthMm: 250,
-      heightMm: 180,
+      widthMm: 300,
+      heightMm: 200,
       on: { paper: { name: 'A4' }, orientation: 'portrait' },
       rows: 1,
       columns: 2,
     });
+    // A3 portrait holds it, turned.
     expect(result.tiled[0]!.fitsOn[0]).toEqual({ paper: { name: 'A3' }, orientation: 'portrait' });
   });
 
   it('suggests turning the chosen paper before changing it', () => {
     // The paper in the printer is the one the maker chose. A strap too long
-    // for Letter portrait fits Letter landscape — which is the answer, not
-    // A4 landscape, which happens to come first in the list and which a
-    // printer loaded with Letter does not have.
+    // for Letter portrait either way fits Letter landscape — which is the
+    // answer, not A4 landscape, which happens to come first in the list and
+    // which a printer loaded with Letter does not have.
     const letter = { ...DEFAULT_PAGE_SETUP, paper: PAPER_SIZES.Letter };
-    const result = paginate(scene([part('strap', 250, 100, 'Strap')]), letter);
+    const result = paginate(scene([part('strap', 255, 100, 'Strap')]), letter);
 
     expect(result.tiled[0]!.fitsOn[0]).toEqual({
       paper: { name: 'Letter' },
@@ -226,14 +229,16 @@ describe('paginate', () => {
   });
 
   it('keeps a tape join off a fold (Q13)', () => {
-    // A bifold wallet body, 200 × 90 with its fold down the middle: on A4
-    // portrait it tiles 1 × 2, and a centred grid put the join on the fold.
-    const body = withFold(part('wallet', 200, 90), 'x', 100);
+    // A body 300 × 200 with its fold down the middle, too large for A4
+    // portrait either way: it tiles 1 × 2, and a centred grid put the join on
+    // the fold. (The QA case was a 200 × 90 wallet, which now prints whole,
+    // turned.)
+    const body = withFold(part('wallet', 300, 200), 'x', 150);
     const tiles = paginate(scene([body]), DEFAULT_PAGE_SETUP).pages.flatMap((p) => p.tile ?? []);
 
     expect(tiles.map((t) => t.label)).toEqual(['R1 C1', 'R1 C2']);
     for (const join of tiles.flatMap((t) => t.joinsMm.x)) {
-      expect(Math.abs(join - 100)).toBeGreaterThanOrEqual(FOLD_CLEARANCE_MM - 1e-9);
+      expect(Math.abs(join - 150)).toBeGreaterThanOrEqual(FOLD_CLEARANCE_MM - 1e-9);
     }
   });
 
@@ -251,6 +256,7 @@ describe('paginate', () => {
           const tiles = paginate(scene([folded]), DEFAULT_PAGE_SETUP).pages.flatMap(
             (p) => p.tile ?? [],
           );
+          if (tiles.length === 0) return; // it fits whole, turned
           const joins = tiles.flatMap((t) => (vertical ? t.joinsMm.x : t.joinsMm.y));
           const grid = RectOps.unionAll(tiles.map((t) => t.windowMm))!;
           // Covered whatever happens: moving a join never uncovers the piece.
@@ -302,10 +308,15 @@ describe('paginate', () => {
             if (page.tile !== undefined) continue;
             const inks = page.placements.map(inkOnSheet);
             for (const [i, ink] of inks.entries()) {
-              // A caption no wider than the printable area stays on it.
+              // A caption no longer than the printable area stays on it —
+              // across as drawn, up the side once turned.
               if (RectOps.width(ink) <= area.widthMm) {
                 expect(ink.minX).toBeGreaterThanOrEqual(area.x - 1e-9);
                 expect(ink.maxX).toBeLessThanOrEqual(area.x + area.widthMm + 1e-9);
+              }
+              if (RectOps.height(ink) <= area.heightMm) {
+                expect(ink.minY).toBeGreaterThanOrEqual(area.y - 1e-9);
+                expect(ink.maxY).toBeLessThanOrEqual(area.y + area.heightMm + 1e-9);
               }
               for (const other of inks.slice(i + 1)) {
                 expect(RectOps.intersects(ink, other)).toBe(false);
@@ -316,6 +327,147 @@ describe('paginate', () => {
       ),
       { numRuns: 300 },
     );
+  });
+
+  it('fills the room beside a tall part, rather than starting a row (7.8)', () => {
+    // A shelf packer put one short part beside the tall one, then wrapped to
+    // a row below it that did not fit, and so took a second sheet.
+    const parts = [part('tall', 100, 250), part('a', 80, 70), part('b', 80, 70), part('c', 80, 70)];
+    const result = paginate(scene(parts), DEFAULT_PAGE_SETUP);
+    expect(result.pages).toHaveLength(1);
+    const placed = new Map(
+      result.pages[0]!.placements.map((p) => [
+        p.part.id,
+        RectOps.translate(p.part.boundsMm, p.offsetMm),
+      ]),
+    );
+    for (const id of ['a', 'b', 'c']) {
+      expect(placed.get(id)!.minX).toBeGreaterThan(placed.get('tall')!.maxX);
+    }
+  });
+
+  it('goes back to an earlier sheet for a part that fits there (7.8)', () => {
+    // Two parts too tall to share a sheet, then a small one: it takes the
+    // room left on the first, which a shelf packer never went back to.
+    const tall = AREA.heightMm - 5 - 40;
+    const result = paginate(
+      scene([part('one', 150, tall), part('two', 150, tall), part('small', 30, 20)]),
+      DEFAULT_PAGE_SETUP,
+    );
+    expect(result.pages).toHaveLength(2);
+    expect(result.pages[0]!.placements.map((p) => p.part.id)).toEqual(['one', 'small']);
+  });
+
+  it('keeps parts whole, apart and on the printable area, on every paper, as a property', () => {
+    const papers = PAPER_NAMES.flatMap((paper) =>
+      ORIENTATIONS.map((orientation) => pageSetupFor({ ...DEFAULT_SETTINGS, paper, orientation })),
+    );
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            width: fc.double({ min: 1, max: 300, noNaN: true }),
+            height: fc.double({ min: 1, max: 300, noNaN: true }),
+          }),
+          { minLength: 1, maxLength: 16 },
+        ),
+        fc.constantFrom(...papers),
+        (specs, setup) => {
+          const area = contentAreaMm(setup);
+          const parts = specs.map((s, i) => part(`p${String(i)}`, s.width, s.height));
+          const result = paginate(scene(parts), setup);
+
+          // Every part exactly once: packed whole, or tiled.
+          const packed = result.pages.filter((p) => p.tile === undefined);
+          const ids = [
+            ...packed.flatMap((p) => p.placements.map((placement) => placement.part.id)),
+            ...result.tiled.map((t) => t.part.id),
+          ].sort();
+          expect(ids).toEqual(parts.map((p) => p.id).sort());
+
+          for (const page of packed) {
+            // With room for its name — above it, or on its left once turned —
+            // inside the printable area…
+            const boxes = page.placements.map((p) => {
+              const box = RectOps.translate(p.part.boundsMm, p.offsetMm);
+              return p.turned ? { ...box, minX: box.minX - 5 } : { ...box, maxY: box.maxY + 5 };
+            });
+            for (const box of boxes) {
+              expect(box.minX).toBeGreaterThanOrEqual(area.x - 1e-6);
+              expect(box.minY).toBeGreaterThanOrEqual(area.y - 1e-6);
+              expect(box.maxX).toBeLessThanOrEqual(area.x + area.widthMm + 1e-6);
+              expect(box.maxY).toBeLessThanOrEqual(area.y + area.heightMm + 1e-6);
+            }
+            // …and the gap between any two, one way or the other.
+            for (const [i, a] of boxes.entries()) {
+              for (const b of boxes.slice(i + 1)) {
+                const apart = Math.max(
+                  b.minX - a.maxX,
+                  a.minX - b.maxX,
+                  b.minY - a.maxY,
+                  a.minY - b.maxY,
+                );
+                expect(apart).toBeGreaterThanOrEqual(6 - 1e-6);
+              }
+            }
+          }
+          // The same parts give the same sheets, every time.
+          expect(paginate(scene(parts), setup)).toEqual(result);
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
+
+  it('turns a part a quarter when that saves a sheet (7.8)', () => {
+    // The bifold sample: an outer and a lining wider than A4 portrait's
+    // 190 mm, and a pocket. As drawn, the outer and lining are taped across
+    // two sheets each, five in all; turned, they print whole on two.
+    const parts = [part('outer', 200, 95), part('lining', 196, 91), part('pocket', 95, 68)];
+    const result = paginate(scene(parts), DEFAULT_PAGE_SETUP);
+    expect(result.tiled).toEqual([]);
+    expect(result.pages).toHaveLength(2);
+    const placed = result.pages.flatMap((page) => page.placements);
+    expect(placed.find((p) => p.part.id === 'outer')!.turned).toBe(true);
+    expect(placed.find((p) => p.part.id === 'lining')!.turned).toBe(true);
+  });
+
+  it('turns a part exactly, words and all, and by nothing else', () => {
+    const outer = { ...captioned('outer', 200, 95, 30), paths: [] as ExportPart['paths'] };
+    const drawn: ExportPart = {
+      ...outer,
+      paths: [
+        {
+          role: 'cut',
+          style: PRINT_STYLES.cut,
+          path: PathOps.polyline(
+            [
+              { x: 0, y: 0 },
+              { x: 200, y: 0 },
+              { x: 200, y: 95 },
+              { x: 0, y: 95 },
+            ],
+            true,
+          ),
+        },
+      ],
+    };
+    const placement = paginate(scene([drawn]), DEFAULT_PAGE_SETUP).pages[0]!.placements[0]!;
+    expect(placement.turned).toBe(true);
+    // (x, y) to (−y, x), exactly: a quarter turn, no scale, no rounding.
+    expect(PathOps.vertices(placement.part.paths[0]!.path)).toEqual(
+      PathOps.vertices(drawn.paths[0]!.path).map(({ x, y }) => ({ x: 0 - y, y: x })),
+    );
+    expect(placement.part.boundsMm).toEqual({ minX: -95, minY: 0, maxX: 0, maxY: 200 });
+    // The name turns with it, up its left side.
+    const caption = PathOps.bbox(placement.part.texts[0]!.glyphs[0]!)!;
+    expect(caption.maxX).toBeLessThanOrEqual(-95);
+  });
+
+  it('prints parts as drawn when turning saves nothing', () => {
+    const parts = [part('a', 100, 60), part('b', 80, 50), part('c', 150, 40)];
+    const placed = paginate(scene(parts), DEFAULT_PAGE_SETUP).pages.flatMap((p) => p.placements);
+    expect(placed.every((p) => !p.turned)).toBe(true);
   });
 
   it('fits more on A3 than on A4', () => {

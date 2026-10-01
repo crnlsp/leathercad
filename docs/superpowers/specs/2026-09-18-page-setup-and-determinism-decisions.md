@@ -213,6 +213,11 @@ wrong. So the decision to make now, before 7.2 or any packing improvement, is: *
 never rotate a part until the model knows which way its grain runs.** That is a one-line constraint
 today and an expensive retrofit later.
 
+*Revisited and lifted in 7.8 (2026-10-01): a part turns a quarter, words and all, when that saves a
+sheet. A cut-out template carries nothing of the sheet it was printed on, so turning it instructs
+no cutting direction; a taped join costs more accuracy than a turn. Grain, when it comes, is an
+arrow that turns with the part. See [`printing.md`](../../printing.md) §5.5.*
+
 ---
 
 ## 5. Open

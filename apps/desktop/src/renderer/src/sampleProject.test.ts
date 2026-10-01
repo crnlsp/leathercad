@@ -167,13 +167,15 @@ describe('the sample project (8.3)', () => {
       .find((entry) => entry.feature.id === 'pocket-width')!;
     expect(width.ok && width.text?.layout.text).toBe('95.0');
 
-    // Two bifold pieces too wide for A4 portrait's printable 190 mm, each
-    // taped from two sheets, with the joins kept off their folds (Q13).
+    // The outer and the lining are wider than A4 portrait's printable
+    // 190 mm. They used to be taped from two sheets each, five in all; turned
+    // a quarter they print whole, and the wallet takes two sheets (7.8).
     const plan = sheetPlanFor(sampleProject());
-    expect(plan.pagination.tiled.map((t) => t.part.name)).toEqual(['Outer', 'Lining']);
-    for (const page of plan.pagination.pages) {
-      for (const join of page.tile?.joinsMm.x ?? [])
-        expect(Math.abs(join - 100)).toBeGreaterThan(10);
-    }
+    expect(plan.pagination.tiled).toEqual([]);
+    expect(plan.sheets).toHaveLength(2);
+    const turned = plan.sheets.flatMap((sheet) =>
+      sheet.placements.filter((p) => p.turned).map((p) => p.part.name),
+    );
+    expect(turned).toEqual(expect.arrayContaining(['Outer', 'Lining']));
   });
 });

@@ -344,6 +344,7 @@
     "leftOff_other": "{{features}} aren't printed.",
     "notPrinted": "Not printed",
     "taped": "{{sheets}}, taped",
+    "turned": "{{sheets}}, turned",
     "reason": {
       "hidden": "It is hidden.",
       "nothing-drawn": "Nothing is drawn in it.",

@@ -146,12 +146,18 @@ size, margins, and overlap. Its result, in a sheet plan, is shared by the PDF wr
 view, so that they cannot disagree.
 
 **Sheet** — One physical piece of paper of the chosen size and orientation, and the PDF page that
-prints it: "Sheet 2 of 3" on screen is page 2 of the PDF and says so in its footer. Use *sheet* in
-the UI and on paper; *page* only for the PDF file format itself. A sheet has its paper edge, 10 mm
-margins, the verification block, and the **printable area** left over.
+prints it: "Sheet 2 of 3" on screen is page 2 of the PDF and says so in its verification strip. Use
+*sheet* in the UI and on paper; *page* only for the PDF file format itself. A sheet has its paper
+edge, 10 mm margins, the verification strip, and the **printable area** left over.
 
 **Printable area** — The part of a sheet a pattern may occupy: the paper less margins and the
-verification block (`contentAreaMm`). A4 portrait prints up to 190 × 215 mm, not 210 × 297.
+verification strip (`contentAreaMm`). A4 portrait prints up to 190 × 268.5 mm, not 210 × 297.
+
+**Verification strip** — The foot of every sheet's printable area: a 100 × 5 mm gauge with the
+instruction to print at 100 % in it, what the sheet is beside it, and LeatherCAD's mark (7.8).
+
+**Turned** — Printed a quarter turn from how it was drawn, words and all, because that took fewer
+sheets (7.8). Parts says *Sheet 1, turned*.
 
 **Taped piece** — A part too large for the printable area, printed as tiles across several sheets
 that overlap by 10 mm and are taped together on their join lines. Its sheets are "Sheets 2–3,
@@ -169,7 +175,7 @@ paper. Board positions never affect the sheets, and nothing in the Sheets view i
 user can align and tape them together accurately.
 
 **Calibration** — Two distinct things, kept separate in the docs:
-1. *Verification*: a 50 mm square and 100 mm ruler printed on every page so the user can check
-   scale with a steel rule.
+1. *Verification*: a 100 × 5 mm gauge printed on every sheet so the user can check scale with a
+   steel rule.
 2. *Correction*: a stored per-printer scale factor applied to output to compensate for a printer
    that is measurably off. Correction is a last resort; wrong print settings are the usual cause.

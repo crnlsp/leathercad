@@ -217,7 +217,7 @@ free to drift from the one in `packages/domain/src/paper.ts`. That module is als
 vocabulary lives in the domain at all: `ProjectSettings` has to name it, and `domain` cannot import
 `packages/export`.
 
-**Margins and the 62 mm verification footer are deliberately not stored.** They are constants in
+**Margins and the verification strip are deliberately not stored.** They are constants in
 `packages/export`, they are already correct, and changing them has print-accuracy consequences — a
 setting nobody has asked for is a setting that can be got wrong.
 

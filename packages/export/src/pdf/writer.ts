@@ -133,10 +133,17 @@ function drawPage(page: PDFPage, layout: Page, ink: SheetInk): void {
     page.pushOperators(popGraphicsState());
   }
 
-  // The verification block, the tile label and the footer: `sheetInk`, the one
-  // description the Sheets view draws too (7.4c).
+  // The verification strip: `sheetInk`, the one description the Sheets view
+  // draws too (7.4c).
   for (const item of ink.paths) drawFurniturePath(page, item);
   for (const text of ink.texts) drawText(page, text, { x: 0, y: 0 });
+  page.pushOperators(
+    pushGraphicsState(),
+    setFillingGrayscaleColor(0),
+    ...ink.mark.flatMap((path) => tracePath(path, { x: 0, y: 0 })),
+    fill(),
+    popGraphicsState(),
+  );
 }
 
 /** Fills one laid-out string's glyph outlines. */

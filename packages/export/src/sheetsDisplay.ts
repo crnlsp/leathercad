@@ -207,9 +207,15 @@ export function sheetsView(
       ),
     );
 
-    // The verification block, the tile label and the footer, as printed.
+    // The verification strip, as printed.
     for (const item of ink.paths) base.push(inkPath(item, o));
     for (const text of ink.texts) base.push(inkText(text, o));
+    base.push({
+      kind: 'fill',
+      role: 'annotation',
+      paths: ink.mark.map((path) => moved(path, o)),
+      colour: inkColour(0),
+    });
 
     const pieces: DisplayItem[] = [];
     for (const placement of sheet.placements) {

@@ -23,6 +23,7 @@ import {
   pageSetupFor,
   sheetSizeMm,
   verificationLayout,
+  type PageSetup,
 } from '../paper.js';
 import { buildExportScene } from '../scene.js';
 import { planSheets } from '../sheetPlan.js';
@@ -618,14 +619,20 @@ function clusterCentres(image: Gray, fromRow: number, toRow: number): number[] {
   return centres;
 }
 
-function darkBounds(image: Gray, fromRow: number, toRow: number, fromColumn = 0) {
+function darkBounds(
+  image: Gray,
+  fromRow: number,
+  toRow: number,
+  fromColumn = 0,
+  toColumn = image.width,
+) {
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
   let maxY = Number.NEGATIVE_INFINITY;
 
   for (let y = fromRow; y < Math.min(toRow, image.height); y++) {
-    for (let x = fromColumn; x < image.width; x++) {
+    for (let x = fromColumn; x < Math.min(toColumn, image.width); x++) {
       if (image.pixels[y * image.width + x]! < 128) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
@@ -660,64 +667,51 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     expect(widthMm).toBeLessThan(100.4);
   });
 
-  it('draws a 50 mm verification square that measures 50 mm', async () => {
-    // The user's backstop against a scaled print, so it had better be 50 mm.
-    const image = render(await pdfFor(projectWithRect(100, 50)));
-
-    // Look only where the square is. The band below the content area also
-    // holds the warning text and the page footer, both of which reach further
-    // right than the square does.
-    const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
-    const squareBottomMm = DEFAULT_PAGE_SETUP.marginsMm.bottom + 8;
-    const bounds = darkBounds(
+  /** The ink around where the layout puts the gauge: the gauge, and what is written in it. */
+  const gaugeOn = (image: Gray, setup: PageSetup) => {
+    const { gauge, gaugeWidthMm, gaugeHeightMm } = verificationLayout(setup);
+    const sheet = sheetSizeMm(setup);
+    return darkBounds(
       image,
-      Math.floor((sheet.heightMm - (squareBottomMm + 52)) * PX_PER_MM),
-      Math.ceil((sheet.heightMm - squareBottomMm + 1) * PX_PER_MM),
-      Math.round(115 * PX_PER_MM),
+      Math.floor((sheet.heightMm - (gauge.y + gaugeHeightMm + 1)) * PX_PER_MM),
+      Math.ceil((sheet.heightMm - gauge.y + 1) * PX_PER_MM),
+      Math.round((gauge.x - 1) * PX_PER_MM),
+      Math.round((gauge.x + gaugeWidthMm + 1) * PX_PER_MM),
     );
+  };
+  const expectGauge = (bounds: ReturnType<typeof darkBounds>) => {
+    // Ink, so the line's width wider than the 100 × 5 mm between its centres.
     expect(bounds.found).toBe(true);
+    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(99.8);
+    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(100.4);
+    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeGreaterThan(4.8);
+    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeLessThan(5.4);
+  };
 
-    const widthMm = (bounds.maxX - bounds.minX) / PX_PER_MM;
-    const heightMm = (bounds.maxY - bounds.minY) / PX_PER_MM;
-    expect(widthMm).toBeGreaterThan(49.8);
-    expect(widthMm).toBeLessThan(50.4);
-    expect(heightMm).toBeGreaterThan(49.8);
-    expect(heightMm).toBeLessThan(50.4);
+  it('draws a 100 × 5 mm gauge that measures 100 × 5 mm (7.8)', async () => {
+    // The maker's backstop against a scaled print, so it had better be exact.
+    // Its words beside it reach no lower and no higher than it does.
+    expectGauge(gaugeOn(render(await pdfFor(projectWithRect(100, 50))), DEFAULT_PAGE_SETUP));
   });
 
   it.each(
     PAPER_NAMES.flatMap((paper) =>
       ORIENTATIONS.map((orientation) => [paper, orientation] as const),
     ),
-  )('prints the 50 mm square on %s %s, where the layout puts it', async (paper, orientation) => {
-    // Regression: on A5 portrait the square was skipped, on a page that still
-    // told the maker to measure it. Measured through poppler on every sheet a
-    // maker can choose, at the place `verificationLayout` gives.
+  )('prints the gauge on %s %s, where the layout puts it', async (paper, orientation) => {
+    // Regression, from the 50 mm square before it: on A5 portrait the square
+    // was skipped, on a page that still told the maker to measure it.
+    // Measured through poppler on every sheet a maker can choose.
     const project = on(projectWithRect(100, 50), paper, orientation);
-    const setup = pageSetupFor(project.settings);
-    const { square, squareSizeMm } = verificationLayout(setup);
-    const sheet = sheetSizeMm(setup);
-    const image = render(await pdfFor(project));
-
-    const bounds = darkBounds(
-      image,
-      Math.floor((sheet.heightMm - (square.y + squareSizeMm + 2)) * PX_PER_MM),
-      Math.ceil((sheet.heightMm - square.y + 1) * PX_PER_MM),
-      Math.round((square.x - 1) * PX_PER_MM),
-    );
-    expect(bounds.found).toBe(true);
-    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(49.8);
-    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(50.4);
-    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeGreaterThan(49.8);
-    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeLessThan(50.4);
+    expectGauge(gaugeOn(render(await pdfFor(project)), pageSetupFor(project.settings)));
   });
 
   it('prints a strap too long for the sheet on two, halves that add up to its length (7.2a)', async () => {
-    // A 250 mm strap on A4 portrait, which prints 190 mm across. Measured on
+    // A 275 mm strap on A4 portrait, too long for it either way. Measured on
     // paper only, through poppler: on each sheet, from the strap's end to the
     // dashed join line the two sheets share. Laid together on that line, the
     // halves must be the strap — at 1:1, with nothing lost in the overlap.
-    const project = projectWithRect(250, 100);
+    const project = projectWithRect(275, 100);
     const scene = buildExportScene(evaluate(project), project.name);
     const plan = planSheets(scene, pageSetupFor(project.settings));
     const { bytes } = await exportPdf(plan, { now: FIXED_NOW, applicationVersion: 'test' });
@@ -755,37 +749,26 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     const onSecond = (rightEnd - mean(second.grey)) / PX_PER_MM;
 
     // Within half a millimetre: two strokes and two join lines of pixels.
-    expect(Math.abs(onFirst + onSecond - 250)).toBeLessThan(0.5);
+    expect(Math.abs(onFirst + onSecond - 275)).toBeLessThan(0.5);
     // The join is in the overlap: both halves are more than a sheet's worth apart.
     expect(onFirst).toBeGreaterThan(100);
     expect(onSecond).toBeGreaterThan(50);
   });
 
-  it('prints the whole verification block on every tiled sheet', async () => {
-    const project = projectWithRect(250, 100);
+  it('prints the gauge on every tiled sheet', async () => {
+    const project = projectWithRect(275, 100);
     const bytes = await pdfFor(project);
     const setup = pageSetupFor(project.settings);
-    const { square, squareSizeMm } = verificationLayout(setup);
-    const sheet = sheetSizeMm(setup);
-    for (const pageNumber of [1, 2]) {
-      const bounds = darkBounds(
-        render(bytes, pageNumber),
-        Math.floor((sheet.heightMm - (square.y + squareSizeMm + 2)) * PX_PER_MM),
-        Math.ceil((sheet.heightMm - square.y + 1) * PX_PER_MM),
-        Math.round((square.x - 1) * PX_PER_MM),
-      );
-      expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(49.8);
-      expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(50.4);
-    }
+    for (const pageNumber of [1, 2]) expectGauge(gaugeOn(render(bytes, pageNumber), setup));
   });
 
-  it('keeps the pattern clear of the verification block', async () => {
-    // Regression: the square ran from 18 mm to 68 mm above the page bottom
-    // while the content area began at 36 mm, so a part could be printed
-    // straight over the thing that proves the scale is right.
+  it('keeps the pattern clear of the verification strip', () => {
+    // Regression: the square once ran from 18 mm to 68 mm above the page
+    // bottom while the content area began at 36 mm, so a part could be
+    // printed straight over the thing that proves the scale is right.
     const area = contentAreaMm(DEFAULT_PAGE_SETUP);
-    const squareTopMm = DEFAULT_PAGE_SETUP.marginsMm.bottom + 8 + 50;
-    expect(area.y).toBeGreaterThan(squareTopMm);
+    const { gauge, gaugeHeightMm } = verificationLayout(DEFAULT_PAGE_SETUP);
+    expect(area.y).toBeGreaterThan(gauge.y + gaugeHeightMm);
   });
 
   it('scales a 200 mm pattern to 200 mm, not to the page', async () => {

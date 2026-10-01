@@ -39,7 +39,8 @@ rows    = max(1, ceil((H − o) / (contentH − o)))
   printable area, placed on the sheet by a translation only. **No scale appears anywhere**, as with
   every other page.
 - Neighbouring windows share a 10 mm band, so both sheets carry the pattern there.
-- **Nothing rotates.** Rotating a part to save sheets would change which way the leather's grain
+- **Nothing rotates.** (*Since 7.8 a part turns when that saves a sheet, and is tiled only when it
+  fits whole neither way; a tiled part is never turned.*) Rotating a part to save sheets would change which way the leather's grain
   runs on the pattern (roadmap 7.2's recorded constraint).
 
 ### 2.2 On each tiled sheet (the PDF writer)
@@ -57,7 +58,9 @@ rows    = max(1, ceil((H − o) / (contentH − o)))
   crosses on the crosses. The 10 mm band is the tolerance.
 - **The verification block, whole, on every sheet**, from `verificationLayout` as on every other page
   (6.4a).
-- **A tile label** in the footer, left of the square:
+- **A tile label** in the footer, left of the square (*since 7.8, in the verification strip after
+  the sheet's number, with which sheets it joins: `Bag · Sheet 3 of 5 · Strap, joins sheets 2 left,
+  4 right`; the assembly note is gone*):
   - line 1: `Strap · R1 C2 · 1 × 3 sheets`. The part name is shortened with "…" if it would reach
     the square.
   - line 2, how to assemble: *Cut on a dashed line, lay it over the next sheet, match the crosses.*
@@ -81,7 +84,8 @@ rows    = max(1, ceil((H − o) / (contentH − o)))
 - Edge arrows naming each neighbour, and an assembly sheet with a thumbnail of the whole grid.
 - A print preview (7.4).
 - A setting for the overlap.
-- Rotating parts, which is ruled out until the model knows the grain (7.2's constraint).
+- Rotating parts, which is ruled out until the model knows the grain (7.2's constraint). *Since
+  7.8, packed parts turn when that saves a sheet; tiled parts still never do.*
 - Tiling several small parts together: they keep packing whole.
 
 ## 4. Acceptance criteria

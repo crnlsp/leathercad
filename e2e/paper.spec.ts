@@ -77,14 +77,15 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await expect(paper).toHaveValue('A4 portrait');
     await expect(chosen).toHaveText('1 sheet of A4, portrait, scale check only');
 
-    // A strap, 250 × 100 mm: longer than A4 portrait's 190 mm printable width.
+    // A strap, 275 × 100 mm: longer than A4 portrait prints either way —
+    // across, or turned down its 268.5 mm.
     await window.getByTestId('tool-rectangle').click();
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.mouse.move(box.x + 150, box.y + 150);
     await window.mouse.down();
     await window.mouse.move(box.x + 330, box.y + 260, { steps: 5 });
     await window.mouse.up();
-    await type(window, 'Width', 250);
+    await type(window, 'Width', 275);
     await type(window, 'Height', 100);
     await window.getByTestId('part-name').fill('Strap');
 
@@ -103,7 +104,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
     const notice = window.getByTestId('export-notice');
     await expect(notice.getByTestId('export-tiled')).toContainText(
-      '"Strap" is 250.0 × 100.0 mm, larger than A4 portrait: printed on 2 sheets, 1 × 2. It fits whole on A4 landscape.',
+      '"Strap" is 275.0 × 100.0 mm, larger than A4 portrait: printed on 2 sheets, 1 × 2. It fits whole on A4 landscape.',
     );
     await expect(window.getByTestId('file-error')).toHaveCount(0);
     expect(pageSize(pdf)).toBe('595.276 x 841.89');
@@ -138,6 +139,13 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
     await expect(window.getByTestId('file-error')).toHaveCount(0);
     expect(pageSize(pdf)).toBe('792 x 612');
+    // Letter landscape prints 259.4 mm across, so there the strap is taped,
+    // and the notice says so.
+    const letterNotice = window.getByTestId('export-notice');
+    await expect(letterNotice.getByTestId('export-tiled')).toContainText(
+      'larger than Letter landscape',
+    );
+    await letterNotice.getByText('Close').click();
 
     // Undone like any edit.
     await window.getByTestId('undo').click();

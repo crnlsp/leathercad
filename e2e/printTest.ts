@@ -54,10 +54,8 @@ export interface Stroke {
 
 export interface PrintTestMeasurements {
   readonly pages: number;
-  /** Per page: the 50 mm square, centre-line to centre-line. */
-  readonly squares: ReadonlyArray<{ readonly widthMm: number; readonly heightMm: number }>;
-  /** Per page: the 100 mm ruler's baseline. */
-  readonly rulersMm: readonly number[];
+  /** Per page: the 100 × 5 mm gauge, centre-line to centre-line. */
+  readonly gauges: ReadonlyArray<{ readonly widthMm: number; readonly heightMm: number }>;
   readonly panel: {
     /** The panel's bottom edge, which the dimension measures. */
     readonly edgeMm: number;
@@ -129,8 +127,7 @@ export function measurePrintTest(pdf: string): PrintTestMeasurements {
   const pages = pageCount(pdf);
   const images = Array.from({ length: pages }, (_, i) => render(pdf, i + 1));
 
-  const squares = images.map(squareOn);
-  const rulersMm = images.map((image) => rulerOn(image).length);
+  const gauges = images.map(gaugeOn);
 
   // The panel and the pocket share the first sheet; the strap is tiled over the
   // two after it, first column first.
@@ -138,7 +135,7 @@ export function measurePrintTest(pdf: string): PrintTestMeasurements {
   const [left, right] = [images[1]!, images[2]!];
   const strap = strapAcross(left, right);
 
-  return { pages, squares, rulersMm, panel, strap };
+  return { pages, gauges, panel, strap };
 }
 
 /**
@@ -153,11 +150,10 @@ export function expectAccurate(measured: PrintTestMeasurements): void {
     expect(Math.abs(actual - expected), `${what}: ${actual.toFixed(3)} mm`).toBeLessThan(tolerance);
 
   expect(measured.pages, 'sheets').toBe(3);
-  measured.squares.forEach((square, i) => {
-    close(square.widthMm, 50, 0.2, `square width, sheet ${String(i + 1)}`);
-    close(square.heightMm, 50, 0.2, `square height, sheet ${String(i + 1)}`);
+  measured.gauges.forEach((gauge, i) => {
+    close(gauge.widthMm, 100, 0.2, `gauge width, sheet ${String(i + 1)}`);
+    close(gauge.heightMm, 5, 0.2, `gauge height, sheet ${String(i + 1)}`);
   });
-  measured.rulersMm.forEach((ruler, i) => close(ruler, 100, 0.2, `ruler, sheet ${String(i + 1)}`));
 
   const { panel, strap } = measured;
   close(panel.edgeMm, 100, 0.2, 'panel edge');
@@ -173,7 +169,7 @@ export function expectAccurate(measured: PrintTestMeasurements): void {
   close(panel.spacingMm, 3.875, 0.01, 'hole spacing');
   expect(panel.worstGapErrorMm, 'evenness of the gaps').toBeLessThan(0.15);
 
-  close(strap.lengthMm, 250, 0.3, 'strap, both halves');
+  close(strap.lengthMm, 275, 0.3, 'strap, both halves');
   strap.pastJoinMm.forEach((past, i) =>
     expect(past, `strap past the join, sheet ${String(i + 2)}`).toBeGreaterThan(3),
   );
@@ -311,22 +307,37 @@ const within = (value: number, low: number, high: number) => value >= low && val
 
 // ── What is on the page ──────────────────────────────────────────────────────
 
-/** The verification square: two sides and a top and bottom, each about 50 mm. */
-function squareOn(image: Gray): { widthMm: number; heightMm: number } {
-  const sides = verticalStrokes(image, 40).filter((s) => within(s.length, 45, 55));
-  const ends = horizontalStrokes(image, 40).filter((s) => within(s.length, 45, 55));
-  expect(sides, 'the square’s two sides').toHaveLength(2);
-  expect(ends, 'the square’s top and bottom').toHaveLength(2);
+/** Above this, from the foot of the page, is the pattern; below it, the verification strip. */
+const STRIP_MM = 25;
+
+/** Strokes in the pattern: above the verification strip. */
+const inPattern = (image: Gray) => (stroke: Stroke) =>
+  stroke.at < image.height / PX_PER_MM - STRIP_MM;
+
+/**
+ * The verification gauge (7.8): the lowest 100 mm-ish stroke on the page and
+ * the one 5 mm above it, joined at their ends by 5 mm sides.
+ */
+function gaugeOn(image: Gray): { widthMm: number; heightMm: number } {
+  const long = horizontalStrokes(image, 80).filter((s) => within(s.length, 90, 110));
+  const bottom = long.reduce((a, b) => (b.at > a.at ? b : a));
+  const top = long.find(
+    (s) => within(bottom.at - s.at, 4, 6) && Math.abs(s.from - bottom.from) < 0.5,
+  );
+  expect(top, 'the gauge’s top, above its bottom').toBeDefined();
+  // Its two sides run from its top to its bottom, at its ends; its ticks only
+  // part way up, and the mark beside it is not at its ends.
+  const sides = verticalStrokes(image, 4).filter(
+    (s) =>
+      Math.abs(s.from - top!.at) < 1 &&
+      Math.abs(s.to - bottom.at) < 1 &&
+      (Math.abs(s.at - bottom.from) < 1 || Math.abs(s.at - bottom.to) < 1),
+  );
+  expect(sides, 'the gauge’s two sides').toHaveLength(2);
   return {
     widthMm: Math.abs(sides[1]!.at - sides[0]!.at),
-    heightMm: Math.abs(ends[1]!.at - ends[0]!.at),
+    heightMm: bottom.at - top!.at,
   };
-}
-
-/** The ruler: the lowest 100 mm-ish stroke on the page, under the pattern. */
-function rulerOn(image: Gray): Stroke {
-  const long = horizontalStrokes(image, 80).filter((s) => within(s.length, 90, 110));
-  return long.reduce((a, b) => (b.at > a.at ? b : a));
 }
 
 /**
@@ -334,10 +345,13 @@ function rulerOn(image: Gray): Stroke {
  * and the holes along its bottom.
  *
  * The edge and the dimension line are the one pair of equal ~100 mm strokes a
- * few millimetres apart; the pocket's bottom edge and the ruler have no twin.
+ * few millimetres apart above the verification strip — the gauge's long sides
+ * are another, below it; the pocket's bottom edge has no twin.
  */
 function panelOn(image: Gray): PrintTestMeasurements['panel'] {
-  const long = horizontalStrokes(image, 80).filter((s) => within(s.length, 90, 110));
+  const long = horizontalStrokes(image, 80)
+    .filter((s) => within(s.length, 90, 110))
+    .filter(inPattern(image));
   let edge: Stroke | undefined;
   let line: Stroke | undefined;
   for (const a of long) {
@@ -456,7 +470,7 @@ function strapAcross(first: Gray, second: Gray): PrintTestMeasurements['strap'] 
 function strapOn(image: Gray) {
   // Its top and bottom edges: the two long black strokes on the sheet, cut
   // off by the sheet's printable area, with the strap between them.
-  // The ruler's 100 mm is not long enough to be mistaken for one.
+  // The gauge's 100 mm is not long enough to be mistaken for one.
   const edges = horizontalStrokes(image, 110).sort((p, q) => p.at - q.at);
   expect(edges, 'the strap’s two edges').toHaveLength(2);
   const [top, bottom] = edges as [Stroke, Stroke];

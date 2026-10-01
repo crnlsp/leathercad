@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.2.0 (2026-09-27) · **Next:** 1.3, then 1.4 · **Last updated:** 2026-09-30
+**Released:** v1.2.0 (2026-09-27) · **Next:** 1.3, then 1.4 · **Last updated:** 2026-10-01
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -144,11 +144,22 @@ Left from 1.3's *The window*: nothing says a new release exists.
 - ☐ **6.4 The rest of the export dialog.** Presets, layers, bounds, and printing only some sheets.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than
   computes.
-- ☐ **7.2 Taped parts, finished.** Edge arrows and a printed assembly sheet. Pagination still never
-  rotates a part: leather stretches across the grain, and the model does not know the grain yet.
-- ☐ **7.5 Calibration.** Per-printer correction factors, with a ±2 % guard. The square and ruler
-  already show when a printer is off.
-- ☐ **7.8 A slimmer verification block.** Needs a new physical measurement before and after.
+- ☐ **7.2 Taped parts, finished.** Edge arrows and a printed assembly sheet. A taped part is never
+  turned: since 7.8 a part is taped only when it fits whole neither way.
+- ☐ **7.5 Calibration.** Per-printer correction factors, with a ±2 % guard. The verification
+  gauge already shows when a printer is off.
+- ✅ **7.8 A slimmer verification block, and fewer sheets.** The 50 mm square, the 100 mm ruler,
+  the instruction and the footer took 62 mm at the foot of every sheet, and the footer printed
+  5 mm from the edge. Now one strip of 8.5 mm, inside the margins: a 100 × 5 mm gauge with the
+  instruction in it; beside it what the sheet is, and on a taped sheet which sheets it joins; and
+  LeatherCAD's mark in the corner ([`printing.md`](printing.md) §8.1). Long, not square, because
+  length shows a scaling error and a 25 mm square would hide one. The shelf packer gave way to one
+  that fills gaps and goes back to earlier sheets, and a part turns a quarter when that saves a
+  sheet — lifting 7.2's grain rule, by decision (§5.5). The bifold sample on A4 portrait takes two
+  sheets, not five, with nothing taped; over 2,000 random projects, about half the sheets.
+  ✅ Built as described. The print test's strap is 275 mm, not 250, so that A4 portrait still tapes
+  it. **Still owed:** the new physical measurement this item always required — the print test's
+  rows in [`print-verification-log.md`](print-verification-log.md) now read the gauge (R1).
 
 ### Known issues and findings
 
@@ -159,7 +170,7 @@ Everything found along the way that is not fixed yet, with where it was found. T
 |---|---|---|---|
 | ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
 | ☐ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
-| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
+| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
 | ☐ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | Decide which sizes a piece keeps (hardware, labels, card slots) before Scale takes the whole piece |
 
 #### Left from the independent QA pass (2026-09-24)
@@ -170,11 +181,10 @@ are in the [record](history/roadmap-1.1-and-1.2.md). The ids in brackets are the
 | # | What | Severity | Plan |
 |---|---|---|---|
 | ☐ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | Decide what a corner of a rounded outline *means* to a maker before changing it; 4.10b |
-| ☐ **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | P3 · investigate | Physical prints first (R1), then move it inside the printable area if a printer clips it |
+| ✅ **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | P3 · investigate | ✅ Fixed in 7.8: everything printed is inside the margins, in the verification strip |
 
 **What the QA pass could not test,** kept here until someone does: physical 1:1 prints on real
-printers and viewers, including *Actual size* and `/PrintScaling /None` (R1); whether the footer
-survives each printer's bottom dead zone (Q17); taping a multi-sheet piece physically; real OS
+printers and viewers, including *Actual size* and `/PrintScaling /None` (R1); taping a multi-sheet piece physically; real OS
 dialogs (special characters, overwrite prompts, `.PDF` in capitals); crash recovery after a real
 process kill; `pnpm test:visual` and `pnpm test:packaged`; HiDPI, Windows and macOS.
 
@@ -220,7 +230,8 @@ are items that moved: DXF (9.4) into 1.1 as 6.5, and Windows and macOS (9.8) int
 
 Also later, each already decided in principle:
 - **A general curve editor** (Béziers) on top of 3.9.
-- **Grain direction** in the model, after which pagination may rotate a part.
+- **Grain direction** in the model: an arrow on the part, which turns with it on paper (7.8 turns
+  parts to save sheets).
 - **Pieces gliding** between Design and Sheets.
 - **Radial, angular, chained and baseline dimensions,** and dimensions between parts.
 - **A screen-calibration step,** which would make 1:1 literal on screen too.
