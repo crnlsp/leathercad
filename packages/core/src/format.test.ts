@@ -102,4 +102,8 @@ describe('parseNumber', () => {
     expect(parseNumber('abc')).toBeNaN();
     expect(parseNumber('−')).toBeNaN();
   });
+
+  it('refuses a long run of digits in linear time, not quadratic', () => {
+    expect(parseNumber(`${'9'.repeat(200_000)}x`)).toBeNaN();
+  }, 1_000);
 });
