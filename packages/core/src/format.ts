@@ -54,6 +54,6 @@ export function formatAngle(degrees: number, precision = 1): string {
  */
 export function parseNumber(text: string): number {
   const normal = text.trim().replace(MINUS, '-').replace(',', '.');
-  if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(normal)) return Number.NaN;
+  if (!/^[-+]?(\d+(\.\d*)?|\.\d+)$/.test(normal)) return Number.NaN;
   return Number.parseFloat(normal);
 }

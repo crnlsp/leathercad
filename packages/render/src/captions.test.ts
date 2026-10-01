@@ -64,7 +64,16 @@ describe('describeStitching — the iron on the pattern (UI Foundations §13)', 
     expect(describeStitching(partOf(holeSet(40, 3.85, 'KS Blade 3.38 mm')))).toBe(
       '40 holes · 3.85 mm · KS Blade 3.38 mm',
     );
+    // The whole number, not the pitch hiding at its end.
+    expect(describeStitching(partOf(holeSet(40, 3.85, 'Iron 13.85 mm')))).toBe(
+      '40 holes · 3.85 mm · Iron 13.85 mm',
+    );
   });
+
+  it('reads a label of any length in linear time, not quadratic', () => {
+    const label = `${'9'.repeat(200_000)}x`;
+    expect(describeStitching(partOf(holeSet(1, 3.85, label)))).toBe(`1 hole · 3.85 mm · ${label}`);
+  }, 1_000);
 
   it('reads a decimal comma in a label as the same pitch', () => {
     expect(describeStitching(partOf(holeSet(12, 3.85, 'Żelazko 3,85 mm')))).toBe(

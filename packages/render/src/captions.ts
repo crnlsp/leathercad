@@ -56,7 +56,9 @@ export function describeStitching(part: ResolvedPart): string | null {
 function ironName(label: string | undefined, pitchMm: Mm): string | null {
   const trimmed = label?.trim() ?? '';
   if (trimmed === '') return null;
-  const trailing = /^(.*?)\s*(\d+(?:[.,]\d+)?)\s*mm$/i.exec(trimmed);
+  // The name is nothing, or ends in a non-digit: a name that could end in the
+  // number's own digits makes the match quadratic in the label's length.
+  const trailing = /^(|.*?\D)(\d+(?:[.,]\d+)?)\s*mm$/i.exec(trimmed);
   if (trailing !== null && approxEq(parseNumber(trailing[2]!), pitchMm, EPS_LENGTH)) {
     const rest = trailing[1]!.trim();
     return rest === '' ? null : rest;
