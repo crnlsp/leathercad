@@ -1,4 +1,5 @@
 import fc from 'fast-check';
+import { vi } from 'vitest';
 
 /**
  * Shared test configuration.
@@ -27,3 +28,13 @@ fc.configureGlobal({
   numRuns: runs !== undefined ? Number(runs) : isCi ? 300 : 100,
   ...(seed !== undefined ? { seed: Number(seed) } : isCi ? { seed: 0x1eaf } : {}),
 });
+
+/**
+ * `LEATHERCAD_TEST_TIMEOUT` replaces every test's timeout, in milliseconds.
+ * Mutation testing sets it (stryker.config.mjs): its first run instruments
+ * every line and runs the whole suite in one thread, where a property at a
+ * thousand runs outlasts the 30 s each package allows. See docs/testing.md
+ * §3.4.
+ */
+const timeout = process.env['LEATHERCAD_TEST_TIMEOUT'];
+if (timeout !== undefined) vi.setConfig({ testTimeout: Number(timeout) });

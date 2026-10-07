@@ -162,6 +162,11 @@ HTML report as an artifact. There is no break threshold yet: the first full repo
 hold. On Vitest 5 the runner needs the local patch described in ADR 0016. Without it every mutant
 survives and the score measures the setup, not the tests.
 
+Stryker's first run instruments every line and runs the suite in one thread. There the thousand-run
+properties outlast the 30 s a test has in `pnpm test`, so `stryker.config.mjs` gives each test ten
+minutes through `LEATHERCAD_TEST_TIMEOUT`, which `vitest.setup.ts` reads. Without it the geometry
+run stopped at that first run, before testing a single mutant, both of the first two weeks.
+
 ## 4. Edge-case corpus
 
 Property tests find unknown unknowns. This is the list of *known* hazards, each with an explicit,
