@@ -18,8 +18,9 @@ Then check what the tool cannot:
    decision. It needs an ADR in `docs/adr/`, not a quiet import.
 3. **Is anything importing Electron outside `apps/desktop`?** That is what keeps the shell
    replaceable (ADR 0002).
-4. **Is Clipper imported anywhere but `geometry/internal/clipper.ts`?** Isolating it is what makes
-   it swappable (`docs/geometry.md` §6.3).
+4. **Is any Clipper binding imported at all?** There must be none: both were tried and rejected
+   (ADR 0008), and the `no-clipper` rule refuses one. Robust offsetting is written here when it is
+   needed (`docs/geometry.md` §6.3).
 
 A violation is not automatically a bug in the code — it can be a bug in the rule. Slice 0.2 found
 `no-dev-deps-in-src` was wrong for an Electron app, where the runtime is correctly a devDependency

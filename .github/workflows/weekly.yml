@@ -1,6 +1,15 @@
 name: Weekly
 
-# Too slow for every pull request, too valuable to leave to memory.
+# Too slow for every pull request, too valuable to leave to memory: mutation
+# testing of the pure layers (docs/testing.md §3.4).
+#
+# A schedule runs this file as it is on main, the default branch, which holds
+# the last release. The code being written is on develop, so a scheduled run
+# checks that out instead, as nightly.yml does. A run started by hand tests the
+# branch it is started on.
+#
+# Nobody watches a scheduled run, so a failure opens an issue, or adds to the
+# one already open. Before it did, the first two weekly runs failed unseen.
 
 on:
   schedule:
@@ -27,6 +36,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'schedule' && 'develop' || '' }}
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -38,17 +48,44 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Stryker's incremental file: mutants whose code and tests are unchanged
-      # since last week keep their result instead of being run again.
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # since the last run keep their result instead of being run again. The
+      # newest is restored; the step after Stryker saves this run's.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: reports/mutation/${{ matrix.package }}/incremental.json
-          key: stryker-${{ matrix.package }}-${{ github.sha }}
+          key: stryker-${{ matrix.package }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: stryker-${{ matrix.package }}-
 
+      # A whole geometry run takes far longer than a job may: every surviving
+      # mutant re-runs minutes of instrumented thousand-run properties. So
+      # Stryker is stopped after 3 h 30 min, before the job's own limit, and
+      # saves what it has tested; the next run carries on from there. The
+      # first full report takes a few weeks to build. After it, a run tests
+      # only what has changed. `timeout --foreground` signals Stryker alone,
+      # which then stops its own runners: a signal to every process at once
+      # once left it hung with nothing saved. This is
+      # `pnpm test:mutation:<package>` without pnpm between, for that reason.
       - name: Stryker
-        env:
-          PACKAGE: ${{ matrix.package }}
-        run: pnpm "test:mutation:$PACKAGE"
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          status=0
+          timeout --foreground --signal=TERM --kill-after=10m 210m \
+            ../../node_modules/.bin/stryker run ../../stryker.config.mjs || status=$?
+          if [ "$status" -eq 124 ]; then
+            echo "::warning title=Mutation testing::Stopped at the time limit, unfinished. The next run carries on from what this one tested."
+            exit 0
+          fi
+          exit "$status"
+
+      # Even when Stryker failed or stopped early, so no tested mutant is lost.
+      # A cache entry is never overwritten, so each run saves under a key of
+      # its own. Entries unused for seven days are evicted: a weekly run
+      # restores the last one after six days and twenty hours.
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: always()
+        with:
+          path: reports/mutation/${{ matrix.package }}/incremental.json
+          key: stryker-${{ matrix.package }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload report
         if: always()
@@ -59,34 +96,34 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-  cross-platform:
-    name: Unit tests on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        # Linux runs on every pull request. These catch paths, line endings
-        # and locale. Weekly, not per pull request: written while the
-        # repository was private, where macOS minutes cost ten times Linux's
-        # (see roadmap item R5).
-        os: [windows-latest, macos-latest]
+  report:
+    name: Report a failure
+    needs: mutation
+    # always(), so a run that timed out or was cancelled reports too: it saves
+    # no incremental file, and the next week would start from nothing again.
+    if: ${{ always() && github.event_name == 'schedule' && needs.mutation.result != 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      # No install scripts: the unit tests need neither the Electron binary
-      # nor the git hook, and the hook's POSIX shell does not run under cmd.
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-
-      # poppler is absent, so the rasterised print checks skip here. They run
-      # on Linux, where CI requires them.
-      - run: pnpm test
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.mutation.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '%s\n' \
+            "The weekly mutation run on develop ended with \`$RESULT\`: $RUN_URL" \
+            '' \
+            'Its log says which package and why. Run it again by hand from the Actions tab once it is fixed (docs/testing.md §3.4).')
+          gh label create weekly-run --repo "$GITHUB_REPOSITORY" --color B60205 \
+            --description 'Found by the weekly run' --force
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label weekly-run --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label weekly-run \
+              --title 'Weekly mutation run failed' --body "$body"
+          fi

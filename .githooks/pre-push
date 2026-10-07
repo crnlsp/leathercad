@@ -27,11 +27,12 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
   refs/heads/main)
     echo "pre-push: refusing to push directly to main." >&2
     echo "" >&2
-    echo "  Work lands on a slice branch through a pull request, merged when" >&2
-    echo "  CI is green. See CONTRIBUTING.md." >&2
+    echo "  Work lands on develop, through a pull request from a branch of its" >&2
+    echo "  own, merged when CI is green; main changes only for a release. See" >&2
+    echo "  CONTRIBUTING.md, Branches." >&2
     echo "" >&2
-    echo "    git switch -c slice/<number>-<name>" >&2
-    echo "    gh pr create --fill" >&2
+    echo "    git switch -c slice/<number>-<name> develop" >&2
+    echo "    gh pr create --base develop --fill" >&2
     echo "" >&2
     echo "  Override with --no-verify if you mean it." >&2
     exit 1
