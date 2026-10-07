@@ -361,7 +361,6 @@
     "failed": "{{printer}} did not take the job: {{reason}}",
     "include": "Print sheet {{number}}",
     "landscape": "Landscape",
-    "landscapeUnsafe": "Printers take paper upright, and CUPS cannot turn a landscape sheet onto it without shrinking it or cutting it off. Choose Portrait to print at 1:1, or Export PDF.",
     "loading": "Preparing the PDF…",
     "measure": "After printing, measure the 100 × 5 mm box at the foot of a sheet: it is how you know the printer kept to scale.",
     "noPrinters": "No printers are set up on this computer.",

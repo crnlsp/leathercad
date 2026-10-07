@@ -29,6 +29,10 @@ it reads the square as 47.0 mm and the ruler as 94.0 mm.
 above. Where CUPS's `pdftopdf` filter is installed, it measures them again after that filter, run
 with the job's options.
 
+It also prints the print test on A4 landscape (7.6b). `lp` receives one upright A4 page with the
+sheet turned a quarter on it, and turned back it measures as above, with the strap whole on the
+sheet at 275.0 mm, before and after `pdftopdf`.
+
 What no automated check can cover is the printer, its driver and its paper handling, and on
 Windows the viewer's print dialog. That is what this file is for.
 
@@ -86,6 +90,7 @@ not 250: a row recorded before it read A as the square, across × up, B as the r
 | 2026-10-01 | 1.3.0 (bifold sample, before 7.6) | Linux (CachyOS), CUPS 2.4.19, libcupsfilters 2.2.1 | Okular, default *Fit to printable area*; again with *None; print original size*; and a browser | Brother HL-L2442DW, driverless (IPP Everywhere) | A4 | A · B: about 96 × 4.8 (the rest not taken) | **Fail.** CUPS fitted the page into the 4.23 mm margins: the jobs carried no `print-scaling=none`, and libcupsfilters defaults to `auto`. The PDF itself measures true (ADR 0019) |
 | 2026-10-01 | 7.6 branch: `lp -o print-scaling=none -o fit-to-page=false -o media=A4`, as *Print* sends it | Linux (CachyOS), CUPS 2.4.19, libcupsfilters 2.2.1 | none: sent to `lp` | Brother HL-L2442DW, driverless (IPP Everywhere) | A4 | Sheet 1 only. A–F each within 0.5 mm of expected, reported as passing; exact readings not noted. G, H not printed | **Pass** (sheet 1). No visible issue |
 | _pending_ | | Linux, all three sheets through *Print* in a released build | | | | | |
+| _pending_ | | Linux, the print test on A4 landscape through *Print* (7.6b): one sheet, upright paper, A–F and the strap whole at 275.0 | | | | | |
 | _pending_ | | Windows | | | | | |
 | _pending_ | | macOS, through *Print* | | | | | |
 

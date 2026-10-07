@@ -13,11 +13,20 @@ import {
   type ProjectSettings,
 } from '@leathercad/domain';
 import { PathOps, RectOps, uniformRadii } from '@leathercad/geometry';
-import { PDFDocument, PDFName, type PDFDict } from 'pdf-lib';
+import {
+  PDFArray,
+  PDFDocument,
+  PDFName,
+  decodePDFRawStream,
+  type PDFDict,
+  type PDFPage,
+  type PDFRawStream,
+} from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_PAGE_SETUP,
+  PAPER_SIZES,
   contentAreaMm,
   mmToPt,
   pageSetupFor,
@@ -124,15 +133,19 @@ function projectWithRect(widthMm: number, heightMm: number, radius = 0): Project
   };
 }
 
-async function pdfFor(project: Project): Promise<Uint8Array> {
+async function pdfFor(project: Project, options: { upright?: boolean } = {}): Promise<Uint8Array> {
   const scene = buildExportScene(evaluate(project), project.name);
   // What the application passes: the plan for the project's own paper.
   const { bytes } = await exportPdf(planSheets(scene, pageSetupFor(project.settings)), {
     now: FIXED_NOW,
     applicationVersion: 'test',
+    ...options,
   });
   return bytes;
 }
+
+/** What Print sends (7.6b): every sheet upright on its paper. */
+const printFormOf = (project: Project) => pdfFor(project, { upright: true });
 
 /** The same project, printed on different paper. */
 function on(project: Project, paper: ProjectSettings['paper'], orientation: Orientation): Project {
@@ -421,6 +434,23 @@ describe('document structure', () => {
     expect(document.getPageCount()).toBe(1);
   });
 
+  it('writes no transform at all into a file, on any paper (printing.md §6.1)', async () => {
+    // *Export PDF*: the sheet as chosen, a landscape one as a landscape page,
+    // and every coordinate already in points. Nothing for a viewer to undo.
+    for (const paper of PAPER_NAMES) {
+      for (const orientation of ORIENTATIONS) {
+        const project = on(projectWithRect(275, 100), paper, orientation);
+        const document = await PDFDocument.load(await pdfFor(project));
+        const sheet = sheetSizeMm(pageSetupFor(project.settings));
+        for (const page of document.getPages()) {
+          expect(transformsOn(page), `${paper} ${orientation}`).toEqual([]);
+          expect(page.getWidth()).toBeCloseTo(mmToPt(sheet.widthMm), 4);
+          expect(page.getHeight()).toBeCloseTo(mmToPt(sheet.heightMm), 4);
+        }
+      }
+    }
+  });
+
   it('adds pages rather than shrinking when parts overflow', async () => {
     const project = projectWithRect(180, 120);
     const many: Project = {
@@ -434,6 +464,97 @@ describe('document structure', () => {
     const document = await PDFDocument.load(await pdfFor(many));
     expect(document.getPageCount()).toBeGreaterThan(1);
   });
+});
+
+/** A page's content stream, decompressed, as the text of its operators. */
+function contentOf(page: PDFPage): string {
+  const contents = page.node.Contents();
+  const streams =
+    contents instanceof PDFArray
+      ? contents.asArray().map((ref) => page.node.context.lookup(ref))
+      : [contents];
+  return streams
+    .map((stream) => new TextDecoder().decode(decodePDFRawStream(stream as PDFRawStream).decode()))
+    .join('\n');
+}
+
+/** Every `cm` on a page — the operator that sets a transform — as its six numbers. */
+function transformsOn(page: PDFPage): number[][] {
+  return [...contentOf(page).matchAll(/((?:-?[\d.]+\s+){6})cm\b/g)].map((match) =>
+    match[1]!.trim().split(/\s+/).map(Number),
+  );
+}
+
+describe('the print form: every sheet upright on its paper (7.6b)', () => {
+  // What *Print* sends. Printers take paper upright, and CUPS cannot turn a
+  // landscape page onto it without shrinking it — with scaling off it cuts it
+  // off instead — so every page is upright, and a landscape sheet lies on it
+  // turned a quarter (printing.md §6.1, §13).
+  const everySheet = PAPER_NAMES.flatMap((paper) =>
+    ORIENTATIONS.map((orientation) => [paper, orientation] as const),
+  );
+
+  it.each(everySheet)(
+    'puts every sheet of %s %s upright, and unrotated',
+    async (paper, orientation) => {
+      const project = on(projectWithRect(275, 100), paper, orientation);
+      const plan = planSheets(
+        buildExportScene(evaluate(project), project.name),
+        pageSetupFor(project.settings),
+      );
+      const document = await PDFDocument.load(await printFormOf(project));
+
+      // The sheets of the plan, in its order: the count the maker was shown.
+      expect(document.getPageCount()).toBe(plan.sheets.length);
+      for (const page of document.getPages()) {
+        expect(page.getWidth()).toBeCloseTo(mmToPt(PAPER_SIZES[paper].widthMm), 4);
+        expect(page.getHeight()).toBeCloseTo(mmToPt(PAPER_SIZES[paper].heightMm), 4);
+        // A page /Rotate is how a viewer would show it the right way up, and
+        // CUPS reads it as a landscape page again: cut off, or shrunk.
+        expect(page.getRotation().angle).toBe(0);
+      }
+    },
+  );
+
+  it.each(PAPER_NAMES)(
+    'turns a landscape sheet of %s with one quarter turn: a rotation, determinant 1, no scale',
+    async (paper) => {
+      const project = on(projectWithRect(275, 100), paper, 'landscape');
+      const document = await PDFDocument.load(await printFormOf(project));
+
+      for (const page of document.getPages()) {
+        const transforms = transformsOn(page);
+        expect(transforms).toHaveLength(1);
+        const [a, b, c, d, e, f] = transforms[0]!;
+        // (x, y) → (−y, x): a quarter turn counter-clockwise, every coefficient
+        // 0 or ±1, so nothing is rounded…
+        expect([a, b, c, d]).toEqual([0, 1, -1, 0]);
+        // …whose determinant is 1 and whose columns are unit length: lengths
+        // and angles kept, nothing scaled, nothing mirrored…
+        expect(a! * d! - b! * c!).toBe(1);
+        expect(Math.hypot(a!, b!)).toBe(1);
+        expect(Math.hypot(c!, d!)).toBe(1);
+        // …then across the paper's width, so the sheet lands on it.
+        expect(e).toBeCloseTo(mmToPt(PAPER_SIZES[paper].widthMm), 6);
+        expect(f).toBe(0);
+        // Before anything is drawn, so everything on the sheet turns with it.
+        expect(contentOf(page).trimStart()).toMatch(/^0 1 -1 0 [\d.]+ 0 cm\b/);
+      }
+    },
+  );
+
+  it.each(PAPER_NAMES)(
+    'leaves a portrait sheet of %s as the file has it, byte for byte',
+    async (paper) => {
+      const project = on(projectWithRect(100, 50), paper, 'portrait');
+      const printed = await printFormOf(project);
+
+      for (const page of (await PDFDocument.load(printed)).getPages()) {
+        expect(transformsOn(page)).toEqual([]);
+      }
+      expect(printed).toEqual(await pdfFor(project));
+    },
+  );
 });
 
 /**
@@ -538,14 +659,30 @@ function render(bytes: Uint8Array, pageNumber = 1): Gray {
 }
 
 /**
+ * A page of the print form turned a quarter clockwise, as a maker turns the
+ * paper to read a landscape sheet on it. Whole pixels move; none is
+ * resampled, so a length measured here is the length on the page.
+ */
+function turnedBack(image: Gray): Gray {
+  const width = image.height;
+  const pixels = new Uint8Array(image.width * image.height);
+  for (let y = 0; y < image.width; y++) {
+    for (let x = 0; x < width; x++) {
+      pixels[y * width + x] = image.pixels[(image.height - 1 - x) * image.width + y]!;
+    }
+  }
+  return { width, height: image.width, pixels };
+}
+
+/**
  * The image rows covering the printable area.
  *
  * Derived from the page setup rather than guessed, so the scan follows the
  * layout instead of silently including the verification block.
  */
-function contentRows(): [number, number] {
-  const area = contentAreaMm(DEFAULT_PAGE_SETUP);
-  const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
+function contentRows(setup: PageSetup = DEFAULT_PAGE_SETUP): [number, number] {
+  const area = contentAreaMm(setup);
+  const sheet = sheetSizeMm(setup);
   // Image rows run downward from the top of the page; millimetres run up.
   return [
     Math.floor((sheet.heightMm - (area.y + area.heightMm)) * PX_PER_MM),
@@ -705,6 +842,32 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     const project = on(projectWithRect(100, 50), paper, orientation);
     expectGauge(gaugeOn(render(await pdfFor(project)), pageSetupFor(project.settings)));
   });
+
+  it('draws a 100 mm line as 100 mm on a landscape sheet turned onto upright paper (7.6b)', async () => {
+    // What Print sends. On the paper the line runs up the page; turned back
+    // as the maker reads it, it is where the landscape layout put it.
+    const project = on(projectWithRect(100, 50), 'A4', 'landscape');
+    const page = render(await printFormOf(project));
+    expect(Math.abs(page.width - 210 * PX_PER_MM)).toBeLessThanOrEqual(1);
+    expect(Math.abs(page.height - 297 * PX_PER_MM)).toBeLessThanOrEqual(1);
+
+    const bounds = darkBounds(turnedBack(page), ...contentRows(pageSetupFor(project.settings)));
+    expect(bounds.found).toBe(true);
+    const lengthMm = (bounds.maxX - bounds.minX) / PX_PER_MM;
+    expect(lengthMm).toBeGreaterThan(99.8);
+    expect(lengthMm).toBeLessThan(100.4);
+  });
+
+  it.each(PAPER_NAMES)(
+    'prints the gauge 100 × 5 mm on %s landscape turned onto upright paper (7.6b)',
+    async (paper) => {
+      // The gauge, its words and the mark turn with the sheet: whole, inside
+      // the paper's margins, and read the right way when the paper is turned.
+      const project = on(projectWithRect(100, 50), paper, 'landscape');
+      const page = turnedBack(render(await printFormOf(project)));
+      expectGauge(gaugeOn(page, pageSetupFor(project.settings)));
+    },
+  );
 
   it('prints a strap too long for the sheet on two, halves that add up to its length (7.2a)', async () => {
     // A 275 mm strap on A4 portrait, too long for it either way. Measured on

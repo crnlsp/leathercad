@@ -27,8 +27,9 @@ export function openPdf(data: Uint8Array): Promise<PDFDocumentProxy> {
 
 /**
  * Draws one page (from 1) into a canvas `widthPx` CSS pixels wide, sharp at
- * the screen's density. Resolves false if it was cancelled, which `signal`
- * does when the canvas is about to show something else.
+ * the screen's density, its view turned `turn` degrees clockwise. Resolves
+ * false if it was cancelled, which `signal` does when the canvas is about to
+ * show something else.
  */
 export async function drawPage(
   pdf: PDFDocumentProxy,
@@ -36,12 +37,15 @@ export async function drawPage(
   canvas: HTMLCanvasElement,
   widthPx: number,
   signal: AbortSignal,
+  turn = 0,
 ): Promise<boolean> {
   const page = await pdf.getPage(number);
   if (signal.aborted) return false;
-  const natural = page.getViewport({ scale: 1 });
+  const rotation = (page.rotate + turn) % 360;
+  const natural = page.getViewport({ scale: 1, rotation });
   const viewport = page.getViewport({
     scale: (widthPx / natural.width) * window.devicePixelRatio,
+    rotation,
   });
   canvas.width = Math.round(viewport.width);
   canvas.height = Math.round(viewport.height);
