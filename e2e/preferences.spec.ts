@@ -196,9 +196,9 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
 
     await second.window.getByTestId('settings-tab-general').click();
     const general = second.window.getByTestId('settings-pane-general');
-    await expect(general).toContainText('1 is listed now.');
+    await expect(general).toContainText('1 project is listed now.');
     await general.getByTestId('clear-recent').click();
-    await expect(general).toContainText('None are listed now.');
+    await expect(general).toContainText('No projects are listed now.');
     await expect(general.getByTestId('clear-recent')).toBeDisabled();
     // Closed by its button: the disabled Clear list no longer holds focus.
     await second.window.getByTestId('settings-close').click();
