@@ -48,19 +48,44 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Stryker's incremental file: mutants whose code and tests are unchanged
-      # since last week keep their result instead of being run again. A cache
-      # entry is never overwritten, so each run saves under a key of its own
-      # and the next restores the newest.
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # since the last run keep their result instead of being run again. The
+      # newest is restored; the step after Stryker saves this run's.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: reports/mutation/${{ matrix.package }}/incremental.json
           key: stryker-${{ matrix.package }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: stryker-${{ matrix.package }}-
 
+      # A whole geometry run takes far longer than a job may: every surviving
+      # mutant re-runs minutes of instrumented thousand-run properties. So
+      # Stryker is stopped after 3 h 30 min, before the job's own limit, and
+      # saves what it has tested; the next run carries on from there. The
+      # first full report takes a few weeks to build. After it, a run tests
+      # only what has changed. `timeout --foreground` signals Stryker alone,
+      # which then stops its own runners: a signal to every process at once
+      # once left it hung with nothing saved. This is
+      # `pnpm test:mutation:<package>` without pnpm between, for that reason.
       - name: Stryker
-        env:
-          PACKAGE: ${{ matrix.package }}
-        run: pnpm "test:mutation:$PACKAGE"
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          status=0
+          timeout --foreground --signal=TERM --kill-after=10m 210m \
+            ../../node_modules/.bin/stryker run ../../stryker.config.mjs || status=$?
+          if [ "$status" -eq 124 ]; then
+            echo "::warning title=Mutation testing::Stopped at the time limit, unfinished. The next run carries on from what this one tested."
+            exit 0
+          fi
+          exit "$status"
+
+      # Even when Stryker failed or stopped early, so no tested mutant is lost.
+      # A cache entry is never overwritten, so each run saves under a key of
+      # its own. Entries unused for seven days are evicted: a weekly run
+      # restores the last one after six days and twenty hours.
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: always()
+        with:
+          path: reports/mutation/${{ matrix.package }}/incremental.json
+          key: stryker-${{ matrix.package }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload report
         if: always()

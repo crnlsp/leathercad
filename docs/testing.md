@@ -167,6 +167,15 @@ properties outlast the 30 s a test has in `pnpm test`, so `stryker.config.mjs` g
 minutes through `LEATHERCAD_TEST_TIMEOUT`, which `vitest.setup.ts` reads. Without it the geometry
 run stopped at that first run, before testing a single mutant, both of the first two weeks.
 
+A whole geometry run then lasts longer than a CI job may. Measured on four cores, as CI's runner
+has, the first two thousand mutants take about half an hour. The remaining fourteen hundred take
+hours more: the ones that survive or hang re-run minutes of instrumented thousand-run properties
+each. So `weekly.yml` stops Stryker after three and a half hours and keeps what it has tested, and
+the next run carries on from there. The first full report takes a few weeks to build; after it, a
+run tests only what has changed. Stopped by SIGTERM to its own process, Stryker saves a partial
+incremental file and restores the files it mutated in place. A signal to its whole process group
+once left it hung, with nothing saved.
+
 ## 4. Edge-case corpus
 
 Property tests find unknown unknowns. This is the list of *known* hazards, each with an explicit,
