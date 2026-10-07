@@ -3,7 +3,7 @@
 **Packages:** `packages/export`, `packages/print`
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-07
 
 ---
 
@@ -59,9 +59,8 @@ in the print path.
         ▼                                              ▼
   Page[]                                         single-surface export
         │                                              │
-        ├──▶ PdfWriter    ──▶ tiled PDF                ├──▶ SvgWriter ──▶ .svg
-        ├──▶ SvgWriter    ──▶ one .svg per page        ├──▶ PdfWriter ──▶ single-page .pdf
-        └──▶ Canvas2D     ──▶ the Sheets view          └──▶ DxfWriter ──▶ .dxf   (v1.1)
+        ├──▶ PdfWriter    ──▶ tiled PDF                ├──▶ SvgWriter ──▶ .svg   (6.2)
+        └──▶ Canvas2D     ──▶ the Sheets view          └──▶ DxfWriter ──▶ .dxf   (6.5)
 ```
 
 Two properties this buys, and they are the reason for the shape:
@@ -442,31 +441,96 @@ platform. `e2e/print-preview.spec.ts` checks that what the Print Preview sends t
 same PDF, measured the same way, with scaling off (§13). What none of them can reach is the
 printer and the paper.
 
-## 10. SVG export
+## 10. SVG export (6.2)
+
+*Export SVG…*, in the menu beside *Export PDF*; `packages/export/src/svg/writer.ts`. For a laser
+cutter, a plotter or a vector editor.
 
 ```xml
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="210mm" height="297mm"
-     viewBox="0 0 210 297">
-  <g id="cut"    fill="none" stroke="#000" stroke-width="0.25">…</g>
-  <g id="stitch" fill="none" stroke="#00f" stroke-width="0.15" stroke-dasharray="2 2">…</g>
-  <g id="stitch-holes" fill="#00f" stroke="none">…</g>
-  <g id="fold"   …>…</g>
-  <g id="mark"   …>…</g>
+<svg xmlns="http://www.w3.org/2000/svg" width="275mm" height="81.608mm" viewBox="0 0 275 81.608">
+<title>LeatherCAD print test</title>
+<g id="cut" fill="none" stroke="#1d2126" stroke-width="0.25" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 0 73.572 L 100 73.572 L 100 13.572 A 10 10 0 0 0 90 3.572 … Z"/>
+</g>
+<g id="stitch" … stroke-dasharray="2 2">…</g>
+<g id="stitch-holes" …><circle cx="96.5" cy="70.072" r="0.5"/>…</g>
+<g id="annotation" …><path d="…" fill="#8a5a2b" stroke="none"/></g>
 </svg>
 ```
 
+**What is in it, and where.** The scene the PDF is written from, so exactly what the PDF prints:
+a hidden feature, a feature that failed to build and a part with only words are not in it
+(`buildExportScene` decides, and the writers add no filter of their own). It is placed **as the
+maker arranged it on the board**, each part's geometry in model coordinates — not as the sheets
+pack it. Pagination, tiling, the verification strip and the registration marks are the paper's; a
+laser wants the arrangement the maker made. So pieces that overlap on the board overlap in the
+file: the print test lays its panel, pocket and strap on top of one another at the origin, and its
+SVG does too. Each part's caption, which the scene sets above it, is in the file, on the
+annotation layer.
+
+**The page** is the box of everything drawn: curves and glyphs by their exact bounds, never their
+control points, and no margin. Its left edge is `x = 0` and its top edge `y = 0`, wherever the
+drawing was on the board (`SvgExportResult.boundsMm` says where). A stroke on the very edge is half
+outside the page, which a cutter that follows the centre-line does not mind.
+
 Rules that make the file actually 1:1 rather than merely nominally so:
 
-- `width`/`height` carry **explicit `mm` units**, and the `viewBox` is in the same numeric space, so
-  one user unit equals one millimetre. Importers that respect physical units then get correct
-  dimensions with no configuration.
-- **No `transform` on the root.** Coordinates are literal millimetres.
-- SVG is Y-down, so the writer applies the flip by negating Y and translating by the bounds height —
-  in exactly one place, with a test asserting a point at model y = +10 lands above one at y = 0.
-- Grouped by layer role with stable `id`s, so laser cutters, plotters, and Cricut-class machines can
-  select what to cut.
-- Numbers written with 4 decimal places (0.1 µm), matching the model's quantisation.
+- `width`/`height` carry **explicit `mm` units**, and the `viewBox` is `0 0` and the same two
+  numbers, so one user unit equals one millimetre. Importers that respect physical units then get
+  correct dimensions with no configuration.
+- **No `transform`, anywhere.** Coordinates are literal millimetres.
+- SVG is Y-down, so the writer flips: the drawing's top edge becomes the page's top. That is
+  `modelToFile` in `svg/writer.ts`, the only place a Y is turned over in the file, applied by the
+  geometry layer's own transform so an arc's sweep reverses with it; the sweep flag reads the
+  reversed sweep and needs no flip of its own. A file has no viewport, so it is not
+  `worldToScreen`. A test asserts a point at model y = +10 lands above one at y = 0, and another
+  that a counter-clockwise arc stays counter-clockwise.
+- **Numbers to the model's quantum**: four decimals of a millimetre (0.1 µm), written without
+  trailing zeros (`100`, not `100.0000`). A coordinate that is not a number stops the export; it is
+  never written.
+- Plain `\n` line ends and UTF-8 on every platform, with an XML declaration and a `<title>` of the
+  project's name, escaped, and with what XML cannot hold left out.
+
+**Layers.** One `<g>` for each layer role, with the domain's role name as its `id` — `cut`,
+`stitch`, `stitch-holes`, `fold`, `mark`, `hardware`, `annotation` — in that order and only for roles
+with something in them. The DXF's layers have the same names. A stroke is its role's **true width in
+millimetres** and a dash its **true rhythm**, from the one role table the canvas and the PDF read,
+with the same round caps and joins the PDF draws.
+
+*Colour is the canvas's*, not the PDF's black. A paper template is black and told apart by line
+style, because it is photocopied; a file is read by software that sorts a drawing by colour — a
+laser's layers — as well as by group, so each role has the colour it has on the canvas. Stitch lines
+and their holes share the canvas's blue, so a laser operator separates those two by group.
+
+**What is a circle, an arc, a curve.**
+
+- A **stitch hole is a `<circle>`**, stroked and unfilled like the PDF's, at the 1 mm size the scene
+  gives a hole marker, in the `stitch-holes` group. (The hole size a laser wants is not the
+  template's marker; choosing it is 6.4.)
+- Any path that is one whole turn of an arc is a `<circle>`: a hardware hole is one.
+- **Arcs stay arcs** (`A`), and **cubics stay cubics** (`C`): nothing is flattened. An arc is cut
+  into pieces of at most a quarter turn. SVG writes an arc by its endpoints and radius, and the
+  reader works the centre out from them; for a half turn that is as sensitive as a square root at
+  zero, and rounding an endpoint by 0.1 µm moves the far side of a 12.5 mm radius — a strap's
+  rounded end — by up to 0.035 mm. Within a quarter turn rounding moves the arc by no more than it
+  moved the endpoint. A property test finds the failure in a few runs if the rule is lifted.
+- **Words are outlines**: one filled `<path>` for a string, all its contours in `d`, non-zero fill, in
+  the `annotation` group. No `<text>`, no font, in this file or any other (ADR 0011).
+
+**Nothing to export.** A scene that draws nothing has no size to give a page, so `exportSvg`
+throws a `RangeError`, and the interface greys the item and says why.
+
+**Tests.** `svg/writer.test.ts` parses the output back by hand — no SVG library — and checks the
+frame, the flip, the groups and their styles, curves, numbers and title, and that the groups hold
+what the plan puts on paper. Two properties over random lines, arcs (half and whole turns among
+them) and cubics: the file's curves are the model's, flipped and moved, to within 0.5 µm, read
+back through the SVG specification's own endpoint-to-centre conversion; and everything is inside
+the page the file declares. `e2e/vector-export.spec.ts` exports the print test through the app and
+measures the file: the panel 100.0 mm, its 25 holes 3.875 mm apart, the strap 275.0 mm, and the
+dimension under the panel. Rendered by librsvg at 254 dpi (2026-10-07), the print test came out
+2750 × 817 px: 275 × 81.6 mm, the right way up, its arcs bulging the right way.
+
+Not yet: presets, choosing layers and the bounds (6.4).
 
 ## 11. DXF export (v1.1)
 
@@ -562,11 +626,12 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 | Tiling coverage | For a 400 × 300 mm scene on A4, exactly 6 pages; the union of content rects covers the bounds with no gap; every adjacent pair overlaps by exactly 10 mm |
 | Tiling edge cases | Drawing smaller than one page → 1 page; exactly one page wide; overlap ≥ content width rejected; zero-size scene handled |
 | Grid centring | Leftover space is split evenly between the first and last tile |
-| SVG units | `width="210mm"`, `viewBox="0 0 210 297"`, no root transform |
+| SVG units | The export, read back by hand: `width`/`height` in `mm`, `viewBox="0 0 W H"` in the same numbers, no `transform` anywhere (`svg/writer.test.ts`) |
 | Y-axis orientation | A point at model y = +10 exports above one at y = 0, in both SVG and PDF |
 | Stroke widths | Exported widths are the specified true millimetres, not screen widths |
 | Preview equals print | `paginate()` output used by the preview is deep-equal to the one used by the PDF writer for the same setup |
 | Calibration correction | A 1.005 correction produces geometry 0.5 % larger, and a 1.03 correction is rejected |
+| Export round trip | Random lines, arcs and cubics exported to SVG and read back by hand are the model's curves, flipped and moved, within 0.5 µm; everything is inside the declared page (`svg/writer.test.ts`). The print test exported through the app measures 100.0 mm, 25 holes 3.875 mm apart and 275.0 mm in the file (`e2e/vector-export.spec.ts`) |
 | Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items |
 | The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, a paper it lists its sizes without, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
 | Preview equals what is sent | Print previews the print test, and what the fake `lp` receives measures true like an exported PDF; where `pdftopdf` is installed, it measures true after that filter too, with the job's options (`e2e/print-preview.spec.ts`) |

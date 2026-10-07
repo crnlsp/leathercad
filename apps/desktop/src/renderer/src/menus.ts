@@ -138,6 +138,32 @@ export function projectMenu(
 }
 
 /**
+ * The other formats of *Export PDF* (6.2), in the menu beside it: the files
+ * a laser cutter, a plotter or a vector editor reads, in
+ * millimetres. Not repeated in the Project menu — an export is the bar's.
+ *
+ * With nothing to export the items stay, and say so: a menu that drops what it
+ * cannot do moves the rest about, and never says why (X1).
+ */
+export function exportMenu(
+  actions: { readonly svg: () => void },
+  canExport: boolean,
+  t: Translate,
+): MenuEntry[] {
+  const refusal = canExport ? undefined : t('menu.exportNothing');
+  return [
+    {
+      kind: 'item',
+      id: 'export-svg',
+      label: t('menu.exportSvg'),
+      note: t('menu.exportSvgNote'),
+      refusal,
+      onChoose: actions.svg,
+    },
+  ];
+}
+
+/**
  * The Help menu (8.7): help, and the application. Never configuration — that
  * is Settings'. The sample is here because it is the app's tutorial by design
  * (8.3): a finished pattern to take apart.

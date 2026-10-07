@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
 import {
+  exportMenu,
   focusAfter,
   helpMenu,
   projectMenu,
@@ -98,6 +99,30 @@ describe('the Project and Help menus (8.7)', () => {
       entry.kind === 'item' ? [entry.label] : [],
     );
     expect(labels).toEqual(['Open sample project', 'About LeatherCAD']);
+  });
+});
+
+describe('the export menu (6.2)', () => {
+  const { t } = createI18n('en');
+  const items = (entries: MenuEntry[]) =>
+    entries.flatMap((entry) => (entry.kind === 'item' ? [entry] : []));
+
+  it('offers SVG, in millimetres, and says what it is for', () => {
+    const [svg, ...rest] = items(exportMenu({ svg: () => undefined }, true, t));
+    expect(rest).toEqual([]);
+    expect([svg!.id, svg!.label, svg!.refusal]).toEqual(['export-svg', 'Export SVG…', undefined]);
+    expect(svg!.note).toContain('Millimetres');
+  });
+
+  it('runs the action it is given, and no other', () => {
+    const chosen: string[] = [];
+    items(exportMenu({ svg: () => chosen.push('svg') }, true, t))[0]!.onChoose();
+    expect(chosen).toEqual(['svg']);
+  });
+
+  it('stays, and says why, when nothing prints: a menu that drops an item moves the rest', () => {
+    const [svg] = items(exportMenu({ svg: () => undefined }, false, t));
+    expect(svg!.refusal).toBe('Nothing to export yet. No part has a line to cut.');
   });
 });
 

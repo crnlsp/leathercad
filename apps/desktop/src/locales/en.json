@@ -33,6 +33,8 @@
   },
   "projectBar": {
     "application": "Application",
+    "exportMore": "More ways to export",
+    "exportMoreTooltip": "Export as SVG, in millimetres, for laser cutters, plotters and vector editors",
     "exportPdf": "Export PDF",
     "exportTooltip": "Save {{sheets}} as a print-ready PDF at 1:1 (Ctrl+E). To print it from another app, choose Actual size (100 %)",
     "help": "Help",
@@ -51,6 +53,9 @@
   },
   "menu": {
     "about": "About LeatherCAD",
+    "exportNothing": "Nothing to export yet. No part has a line to cut.",
+    "exportSvg": "Export SVG…",
+    "exportSvgNote": "Millimetres, for laser cutters, plotters and vector editors",
     "new": "New project",
     "open": "Open…",
     "openSample": "Open sample project",
@@ -283,6 +288,7 @@
     }
   },
   "file": {
+    "exportSvgTitle": "Export SVG",
     "exportTitle": "Export PDF",
     "invalid": "This project file can’t be opened: {{problems}}",
     "newer": "This file was saved by a newer version of LeatherCAD. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
@@ -290,7 +296,8 @@
     "openTitle": "Open project",
     "pdf": "PDF",
     "project": "LeatherCAD project",
-    "saveTitle": "Save project"
+    "saveTitle": "Save project",
+    "svg": "SVG"
   },
   "main": {
     "noticesTitle": "Third-party notices",
@@ -390,14 +397,18 @@
   },
   "exportNotice": {
     "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
+    "countsFile": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the file.",
     "errors_one": "{{count}} error",
     "errors_other": "{{count}} errors",
     "infos_one": "{{count}} to note",
     "infos_other": "{{count}} to note",
     "inPart": "in {{part}}",
     "omitted": "— each failed to build, so it is missing from the PDF.",
+    "omittedFile": "— each failed to build, so it is missing from the file.",
     "omittedLead_one": "This feature is not in the PDF",
     "omittedLead_other": "These {{count}} features are not in the PDF",
+    "omittedLeadFile_one": "This feature is not in the file",
+    "omittedLeadFile_other": "These {{count}} features are not in the file",
     "tiled_one": "\"{{name}}\" is {{size}}, larger than {{paper}} {{orientation}}: printed on {{count}} sheet, {{rows}} × {{columns}}.",
     "tiled_other": "\"{{name}}\" is {{size}}, larger than {{paper}} {{orientation}}: printed on {{count}} sheets, {{rows}} × {{columns}}.",
     "tiledAcross": "at 1:1, overlapping by {{overlap}} mm. Cut one sheet on a dashed line, lay it over the next, and match the crosses.",
@@ -406,6 +417,7 @@
     "tiledLead_other": "These {{count}} parts are printed across sheets",
     "tiledNoPaper": "{{printed}} No supported paper holds it whole.",
     "titleCheck": "PDF exported, with something to check",
+    "titleCheckFile": "{{format}} exported, with something to check",
     "titleTiled": "PDF exported across several sheets",
     "warnings_one": "{{count}} warning",
     "warnings_other": "{{count}} warnings"

@@ -91,7 +91,7 @@ document   Document, Command, undo/redo, selection                            �
 persist    .lcp container, zod schemas, migrations                            → domain
 render     DisplayList, canvas2d + svg backends                               → domain, typography
 editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
-export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.4)          → domain, render, typography
+export     ExportScene, the sheet plan, pdf and svg writers (dxf in 1.4)      → domain, render, typography
 apps/desktop  Electron main/preload/renderer, React panels — the ONLY package importing Electron,
               and the only one with words: src/locales/*.json, one catalogue per language;
               the languages offered are SUPPORTED_LANGUAGES in src/shared/i18n.ts, not the files

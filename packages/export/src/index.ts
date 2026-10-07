@@ -52,3 +52,8 @@ export { layoutSheets, pieceAt, sheetAt } from './sheetsLayout.js';
 
 export type { PdfExportOptions, PdfExportResult } from './pdf/writer.js';
 export { exportPdf, printableAreaMm } from './pdf/writer.js';
+
+// The drawing as a file a cutter, a plotter or a vector editor reads (6.2): the
+// export scene, where the maker put the pieces, in true millimetres.
+export type { SvgExportResult } from './svg/writer.js';
+export { exportSvg } from './svg/writer.js';

@@ -55,7 +55,9 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
           {readiness.omitted.length === 0 &&
           readiness.errors + readiness.warnings + readiness.infos === 0
             ? t('exportNotice.titleTiled')
-            : t('exportNotice.titleCheck')}
+            : report.format === 'pdf'
+              ? t('exportNotice.titleCheck')
+              : t('exportNotice.titleCheckFile', { format: report.format.toUpperCase() })}
         </h3>
 
         <ExportFindings report={report} />
@@ -79,6 +81,8 @@ export function ExportFindings({ report }: { report: ExportReport }) {
   const i18n = useI18n();
   const { t } = i18n;
   const { readiness, tiled } = report;
+  // What the paper or the file holds: an SVG or a DXF is a file, not a sheet.
+  const file = report.format !== 'pdf';
   const counts = [
     readiness.errors === 0 ? null : t('exportNotice.errors', { count: readiness.errors }),
     readiness.warnings === 0 ? null : t('exportNotice.warnings', { count: readiness.warnings }),
@@ -104,8 +108,12 @@ export function ExportFindings({ report }: { report: ExportReport }) {
       {readiness.omitted.length > 0 && (
         <section className="dialog-group" data-testid="export-omitted">
           <p>
-            <b>{t('exportNotice.omittedLead', { count: readiness.omitted.length })}</b>{' '}
-            {t('exportNotice.omitted')}
+            <b>
+              {t(file ? 'exportNotice.omittedLeadFile' : 'exportNotice.omittedLead', {
+                count: readiness.omitted.length,
+              })}
+            </b>{' '}
+            {t(file ? 'exportNotice.omittedFile' : 'exportNotice.omitted')}
           </p>
           <ul>
             {readiness.omitted.map((feature) => (
@@ -122,7 +130,9 @@ export function ExportFindings({ report }: { report: ExportReport }) {
 
       {counts.length > 0 && (
         <p data-testid="export-counts">
-          {t('exportNotice.counts', { counts: i18n.list(counts, 'unit') })}
+          {t(file ? 'exportNotice.countsFile' : 'exportNotice.counts', {
+            counts: i18n.list(counts, 'unit'),
+          })}
         </p>
       )}
     </>
