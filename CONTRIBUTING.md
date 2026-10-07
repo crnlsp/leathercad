@@ -131,7 +131,9 @@ When an item will not make it, move it to the release after, or to *Later*, in a
 its own — the release waits for the roadmap, and the roadmap changes on purpose, never because a
 release happened. A fix that cannot wait ships the same way: move what is unfinished out, then
 release. The *Release gate* check holds this on every pull request into `main`; run
-`tools/release-gate.sh` to see what the next release still waits for.
+`tools/release-gate.sh` to see what the next release still waits for. It also refuses a section
+whose version has already shipped, since every item in it is done by then: the roadmap moves on
+(step 5) before anything else is released.
 
 1. When every item under *the next release* is ✅, open a pull request from `develop` into `main`,
    and merge it with a **merge commit** (not a squash, which would flatten every change into one
