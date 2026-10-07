@@ -1557,7 +1557,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await expect(rows.first()).toHaveAttribute('data-code', 'OFFSET_COLLAPSED');
     await expect(rows.first()).toContainText('60 mm edge margin is deeper');
     await expect(rows.nth(1)).toHaveAttribute('data-code', 'SOURCE_FAILED');
-    await expect(rows.nth(1)).toContainText('Stitch line it follows could not be built');
+    await expect(rows.nth(1)).toContainText('Stitch line, which it follows, could not be built');
     await expect(window.getByTestId('problem-count')).toHaveText('2');
 
     // Clicking a problem selects what it is about, and the property panel
