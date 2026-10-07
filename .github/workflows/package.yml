@@ -51,9 +51,21 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install poppler
 
+      # The community feed fails now and then. On 2026-10-07 it answered 504,
+      # choco reported "installed 0/0 packages" and succeeded, and the smoke
+      # test failed later, as `pdfinfo` ENOENT. So: three tries, and if poppler
+      # is still missing, fail here, saying so.
       - name: Install poppler (Windows)
         if: runner.os == 'Windows'
-        run: choco install poppler --no-progress -y
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            choco install poppler --no-progress -y && command -v pdfinfo && exit 0
+            echo "poppler is not installed after attempt $attempt."
+            sleep $((attempt * 20))
+          done
+          echo "::error title=poppler::Not installed after three attempts. The packaged smoke test needs its pdfinfo."
+          exit 1
 
       - run: pnpm install --frozen-lockfile
 
