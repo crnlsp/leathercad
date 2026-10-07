@@ -1,10 +1,17 @@
 import type { Mm } from '@leathercad/core';
-import { EXPORT_TOLERANCE_MM, SegmentOps, type Path, type Vec2 } from '@leathercad/geometry';
+import {
+  EXPORT_TOLERANCE_MM,
+  SegmentOps,
+  Vec2Ops,
+  type Path,
+  type Vec2,
+} from '@leathercad/geometry';
 import {
   PDFDocument,
   PrintScaling,
   appendBezierCurve,
   clip,
+  concatTransformationMatrix,
   closePath,
   endPath,
   fill,
@@ -39,6 +46,14 @@ export interface PdfExportOptions {
   /** Injected so an exported file is reproducible. */
   readonly now?: () => Date;
   readonly applicationVersion?: string;
+  /**
+   * The form *Print* sends (7.6b): every page upright, a landscape sheet
+   * turned a quarter on it. Printers take paper upright, and CUPS cannot turn
+   * a landscape page onto it without shrinking it — with scaling off it cuts
+   * it off instead. Off for *Export PDF*, whose file keeps the sheet as it was
+   * chosen, the right way up in any viewer. docs/printing.md §6.1 and §13.
+   */
+  readonly upright?: boolean;
 }
 
 export interface PdfExportResult {
@@ -52,16 +67,18 @@ const APP_NAME = 'LeatherCAD';
  *
  * PDF user space is already 1/72 inch, so geometry goes in at `mm * 72/25.4`
  * and **no scaling transform is ever emitted**. 1:1 is therefore the definition
- * of what was written, not something this code has to achieve.
+ * of what was written, not something this code has to achieve. The one
+ * transform written at all is the print form's quarter turn (`upright`), and
+ * it scales nothing.
  *
  * PDF is Y-up like the model, so unlike the canvas renderer and the SVG writer
  * there is no axis flip here at all.
  *
- * The application never drives a printer — the user prints from an ordinary
- * viewer — so correctness is defended three times over: `/PrintScaling /None`
- * in the catalog, a printed instruction to print at 100%, and a 50 mm square
- * the user can measure with a steel rule. Any one can fail silently; all three
- * failing at once is unlikely. See docs/printing.md §8.
+ * A file can still be printed from someone else's viewer, so it defends
+ * itself three times over: `/PrintScaling /None` in the catalog, a printed
+ * instruction to print at 100 %, and a 100 × 5 mm gauge the maker can measure
+ * with a steel rule. Any one can fail silently; all three failing at once is
+ * unlikely. See docs/printing.md §8.
  */
 export async function exportPdf(
   plan: SheetPlan,
@@ -85,12 +102,22 @@ export async function exportPdf(
   // as filled glyph outlines (ADR 0011). That is also what fixes export on a
   // part named "Przegroda główna" — pdf-lib's standard fonts cannot encode ł.
   const sheet = sheetSizeMm(setup);
+  const turned = options.upright === true && setup.orientation === 'landscape';
+  const paper = turned ? { widthMm: sheet.heightMm, heightMm: sheet.widthMm } : sheet;
 
   // Exactly the plan's sheets, in its order: sheet n is page n. The plan
   // already holds the one scale-check sheet an empty project exports, so the
   // count the maker was shown is the count written.
   for (const page of plan.sheets) {
-    const pdfPage = document.addPage([mmToPt(sheet.widthMm), mmToPt(sheet.heightMm)]);
+    const pdfPage = document.addPage([mmToPt(paper.widthMm), mmToPt(paper.heightMm)]);
+    if (turned) {
+      // A quarter turn counter-clockwise, (x, y) → (−y, x), then across the
+      // paper's width: the sheet's foot runs up the paper's right edge, and
+      // its margins land on the paper's. Every coefficient is 0 or ±1 and the
+      // determinant is 1, so nothing is rounded, scaled or mirrored. First on
+      // the page, so everything drawn on it turns with it.
+      pdfPage.pushOperators(concatTransformationMatrix(0, 1, -1, 0, mmToPt(paper.widthMm), 0));
+    }
     drawPage(pdfPage, page, sheetInk(plan, page.index, now()));
   }
 
@@ -207,7 +234,7 @@ function tracePath(path: Path, offsetMm: Vec2): ReturnType<typeof moveTo>[] {
 
   for (const segment of path.segments) {
     const start = SegmentOps.start(segment);
-    if (previousEnd === null || !samePoint(previousEnd, start)) {
+    if (previousEnd === null || !Vec2Ops.equals(previousEnd, start)) {
       operators.push(moveTo(...at(start)));
     }
 
@@ -228,10 +255,6 @@ function tracePath(path: Path, offsetMm: Vec2): ReturnType<typeof moveTo>[] {
 
   if (path.closed && path.segments.length > 0) operators.push(closePath());
   return operators;
-}
-
-function samePoint(a: Vec2, b: Vec2): boolean {
-  return Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
 }
 
 /** The millimetre area a pattern may occupy, for callers checking fit. */

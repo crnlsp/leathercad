@@ -90,6 +90,8 @@ PDF…**: it writes the bytes shown and says how they must be printed (*Actual s
 
 ### Landscape is not sent
 
+*Superseded by the amendment below (7.6b): landscape is sent upright.*
+
 Measured through the installed `pdftopdf` and `pdftoraster`, there is no CUPS option that turns a
 landscape page onto upright paper without scaling it:
 
@@ -147,3 +149,34 @@ writer, and so to `printing.md` §6.1.
   `execFile`. Sending IPP straight to this printer fails anyway: it accepts no PDF.
 - **A CropBox the size of the printable area.** `auto` enlarges it instead. It is exact only for one
   printer's margins.
+
+## Amended 2026-10-07: landscape is sent upright (7.6b)
+
+The fix the *Landscape* section above called for is built. What *Print* sends is the **print
+form**: every page upright, and a landscape sheet drawn on it after one `0 1 -1 0 W 0 cm` — a
+quarter turn counter-clockwise and a translation, no scale (`printing.md` §6.1). The job is the
+one a portrait sheet gets: `lp` is never told the sheet is landscape.
+
+Measured before deciding, on the print test on A4 landscape, through the installed `pdftopdf` and
+`pdftoraster` (libcupsfilters 2.2.1) with the end-to-end test's A4 PPD, the raster decoded and
+measured:
+
+- **The print form, with the job's options:** upright and whole, the gauge 100.25 mm of ink
+  (100 mm and its 0.2 mm line), the 275 mm strap all on the page.
+- **A landscape page, as until now:** cut off at 210 mm with the job's options; turned and shrunk
+  to 96.2 % without `print-scaling=none`.
+- **An upright page with `/Rotate 90`,** which a viewer would show the right way up: `pdftopdf`
+  keeps the `/Rotate`, and `pdftoraster` lays the page exactly as it lays a landscape one — the same
+  raster, cut off at 210 mm. So the print form has no `/Rotate`.
+
+**Only *Print* sends the print form.** *Export PDF* keeps a landscape sheet as a landscape page,
+because a file is read in a viewer, which shows the print form sideways and a landscape page the
+right way up. Printing a file from a viewer gains nothing from the print form on this CUPS: a job
+without `print-scaling=none` is shrunk to 96 % whichever way its page lies. The preview's *Save
+PDF…* saves the print form, the bytes it showed.
+
+The preview draws the print form with pdf.js, as before, and turns only its view of a landscape
+page back a quarter, so the sheet reads as the Sheets view shows it. `e2e/print-preview.spec.ts`
+prints the print test on A4 landscape through the preview: `lp` receives one upright, unrotated A4
+page with the portrait job's options, and it measures true, turned back, before and after
+`pdftopdf`. A landscape sheet has not yet been measured on paper.

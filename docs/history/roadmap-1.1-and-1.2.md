@@ -16,7 +16,7 @@
 ## Everyday use
 
 - ✅ **8.2 Preferences and recent files.** `preferences.json`, owned by the main process
-  ([`file-format.md`](file-format.md) §6); *File → Open Recent* (absorbs 5.3c), which grants a
+  ([`file-format.md`](../file-format.md) §6); *File → Open Recent* (absorbs 5.3c), which grants a
   path only because it is on the list, so the dialog-only file rule holds; the canvas legend and the
   wide tool rail remember whether they were open; and a keyboard shortcut map (*Help → Keyboard
   Shortcuts*, Ctrl+/ or `?`), held by a test to the menu's accelerators and the tool keys. End-to-end
@@ -94,7 +94,7 @@
 An outside QA pass over `main` at `d54b2d7` (v1.0.x), on Linux under Xvfb, before the Sheets view
 landed. Its ids (B1–B7 confirmed, S1–S10 suspected) are kept in brackets so the report can be read
 beside this table; the numbers here continue the Q series, because `S1`–`S7` already name the
-structural invariants in [`domain-model.md`](domain-model.md) §8. Each confirmed bug is fixed
+structural invariants in [`domain-model.md`](../domain-model.md) §8. Each confirmed bug is fixed
 alongside the 8.x slice it is nearest to, one pull request per slice.
 
 | # | What | Severity | Plan |
