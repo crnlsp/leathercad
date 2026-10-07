@@ -40,6 +40,8 @@ pnpm-debug.log*
 
 # Claude Code local overrides (project settings ARE committed)
 .claude/settings.local.json
+# Claude Code's agent worktrees: whole checkouts of their own
+.claude/worktrees/
 
 # Mutation testing (pnpm test:mutation)
 reports/
