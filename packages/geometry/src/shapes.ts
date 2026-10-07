@@ -8,7 +8,7 @@ import {
 } from '@leathercad/core';
 
 import * as MatOps from './mat2x3.js';
-import { closed as closedPath, open as openPath, type Path } from './path/index.js';
+import { closed as closedPath, isPointOnPath, open as openPath, type Path } from './path/index.js';
 import * as SegmentOps from './segment/index.js';
 import { arc, line as lineSegment, FULL_TURN, type Segment } from './segment/index.js';
 import { EXPORT_TOLERANCE_MM } from './tolerance.js';
@@ -220,6 +220,11 @@ export function ellipse(centre: Vec2, rx: Mm, ry: Mm, rotation: Radians): Path {
  * if it lies between `a` and `c`: when it does not, no path from `a` to `c`
  * passes through it without doubling back, and the endpoints win.
  *
+ * Points almost in a line get the same answer when their circle is too large
+ * to draw: when the arc's centre and radius cannot put `a`, `b` and `c` back
+ * within `EPS_POINT` of where they are, that centre means nothing, and the
+ * straight line is again the honest answer.
+ *
  * Two coincident points throw, which is a different failure from three
  * distinct collinear ones and deserves a different answer.
  */
@@ -243,8 +248,8 @@ export function arcThroughPoints(a: Vec2, b: Vec2, c: Vec2): Path {
     throw new RangeError('arcThroughPoints needs three distinct points');
   }
 
-  // Twice the signed area of the triangle. Zero means collinear, and near
-  // zero means an arc so flat that its centre is numerically meaningless.
+  // Twice the signed area of the triangle. Zero means collinear, and there is
+  // no centre to compute.
   const twiceArea = cross(sub(b, a), sub(c, a));
 
   if (approxZero(twiceArea, EPS_AREA)) return openPath([lineSegment(a, c)]);
@@ -269,7 +274,19 @@ export function arcThroughPoints(a: Vec2, b: Vec2, c: Vec2): Path {
   let sweep = endAngle - startAngle;
   while (sweep * direction < 0) sweep += direction * FULL_TURN;
 
-  return openPath([arc(centre, radius, startAngle, sweep)]);
+  // Near zero area means a circle so large that its centre is numerically
+  // meaningless, but how near depends on the size of the triangle, so the arc
+  // is checked rather than the area. Points 4 mm apart and 2.5e-13 mm off a
+  // line made an arc that missed its own ends by 1.5 µm; points 4 m apart and
+  // 0.25 µm off one, a circle 8 000 km in radius (issue 39).
+  const segment = arc(centre, radius, startAngle, sweep);
+  const result = openPath([segment]);
+  const reproduces =
+    approxZero(dist(SegmentOps.start(segment), a), EPS_POINT) &&
+    approxZero(dist(SegmentOps.end(segment), c), EPS_POINT) &&
+    isPointOnPath(result, b, EPS_POINT);
+
+  return reproduces ? result : openPath([lineSegment(a, c)]);
 }
 
 /**

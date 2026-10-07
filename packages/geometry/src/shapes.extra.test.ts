@@ -1,8 +1,9 @@
+import { EPS_POINT } from '@leathercad/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { arbVec2 } from '../test/arbitraries.js';
-import { area, flattenPath, isPointOnPath, signedArea } from './path/index.js';
+import { area, end, flattenPath, isPointOnPath, signedArea, start } from './path/index.js';
 import { arcThroughPoints, ellipse, line as lineShape, regularPolygon } from './shapes.js';
 import { cross, dist, sub, vec } from './vec2.js';
 
@@ -129,23 +130,68 @@ describe('arcThroughPoints', () => {
     expect(isPointOnPath(p, vec(0, 0), 1e-6)).toBe(false);
   });
 
+  it('regression: three points almost in a line and metres apart give the straight line (issue 39)', () => {
+    // The nightly run shrank to this. c is a quarter of a micrometre off the
+    // line from a to b, so the circle through all three has a radius of
+    // 8 000 km, and since c lies between a and b, the arc from a through b to
+    // c would go nearly all the way round it. A double cannot place a point on
+    // a circle that size to within EPS_POINT: the centre is numerically
+    // meaningless, and the answer is the straight one, as for points exactly
+    // in a line.
+    const a = vec(0, -2000);
+    const c = vec(0.00025000000000000006, 0);
+    const p = arcThroughPoints(a, vec(0, 2000), c);
+
+    expect(p.segments).toHaveLength(1);
+    expect(p.segments[0]).toMatchObject({ kind: 'line', a, b: c });
+  });
+
+  it('regression: three points a hair off a line and millimetres apart give the straight line', () => {
+    // fast-check shrank to this while issue 39 was being fixed. c is 2.5e-13
+    // mm off the line through a and b, well inside EPS_POINT, but twice the
+    // triangle's area came to just over EPS_AREA, so the circle was solved:
+    // 8e12 mm in radius, and an arc that missed its own ends by 1.5 µm.
+    const a = vec(-2, 0);
+    const c = vec(0, -2.5000000000000005e-13);
+    const p = arcThroughPoints(a, vec(2, 0), c);
+
+    expect(p.segments).toHaveLength(1);
+    expect(p.segments[0]).toMatchObject({ kind: 'line', a, b: c });
+  });
+
   it('rejects coincident points', () => {
     expect(() => arcThroughPoints(vec(0, 0), vec(0, 0), vec(10, 10))).toThrow();
   });
 
-  it('always reaches all three points', () => {
+  it('draws an arc for every triangle whose circle is within a kilometre', () => {
     fc.assert(
       fc.property(arbVec2, arbVec2, arbVec2, (a, b, c) => {
-        // A real triangle: collinear triples fall back to a line and are
-        // covered by their own tests above, where b may legitimately be
-        // dropped.
         fc.pre(dist(a, b) > 1 && dist(b, c) > 1 && dist(a, c) > 1);
-        fc.pre(Math.abs(cross(sub(b, a), sub(c, a))) > 1);
+        // The circumradius, from the three sides and twice the area. Flatter
+        // triangles, with larger circles, may fall back to a line and are
+        // covered by their own tests above, where b may be dropped.
+        const twiceArea = Math.abs(cross(sub(b, a), sub(c, a)));
+        fc.pre((dist(a, b) * dist(b, c) * dist(a, c)) / (2 * twiceArea) < 1e6);
 
         const p = arcThroughPoints(a, b, c);
-        for (const target of [a, b, c]) {
-          expect(isPointOnPath(p, target, 1e-6)).toBe(true);
-        }
+
+        expect(p.segments).toHaveLength(1);
+        expect(p.segments[0]?.kind).toBe('arc');
+      }),
+      RUNS,
+    );
+  });
+
+  it('starts at a, ends at c, and passes through b whenever it draws an arc', () => {
+    fc.assert(
+      fc.property(arbVec2, arbVec2, arbVec2, (a, b, c) => {
+        fc.pre(dist(a, b) > 1 && dist(b, c) > 1 && dist(a, c) > 1);
+
+        const p = arcThroughPoints(a, b, c);
+
+        expect(dist(start(p)!, a)).toBeLessThanOrEqual(EPS_POINT);
+        expect(dist(end(p)!, c)).toBeLessThanOrEqual(EPS_POINT);
+        if (p.segments[0]?.kind === 'arc') expect(isPointOnPath(p, b, EPS_POINT)).toBe(true);
       }),
       RUNS,
     );
