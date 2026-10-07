@@ -336,7 +336,7 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
-Seven jobs, run in parallel on every pull request, so one run reports every failure rather than
+Eight jobs, run in parallel on every pull request, so one run reports every failure rather than
 only the first:
 
 ```
@@ -349,6 +349,9 @@ test     pnpm test:coverage     # unit, property, golden, export, snapshot,
                                 # and the coverage thresholds in one pass
                                 # LEATHERCAD_REQUIRE_POPPLER=1
          pnpm test:perf         # domain/perf.test.ts alone, serial, uninstrumented
+
+cross-platform  pnpm test       # the unit tests on Windows and macOS, where the
+                                # rasterised print checks skip without poppler
 
 e2e      pnpm test:e2e          # Playwright + Electron, under xvfb, incl. the axe scan
                                 # uploads playwright-report/ on failure
@@ -365,6 +368,10 @@ dependencies  osv-scanner          # the lockfile against known vulnerabilities
 `static` also runs `pnpm knip`. Every action is pinned to a commit; zizmor fails the run on one that
 is not.
 
+Beside it, on every pull request and push, `package.yml` runs the packaged smoke test and builds the
+installer on Windows and macOS, and builds the Flatpak. Until roadmap item R5 it ran only when
+packaging could have changed, because a private repository pays for those minutes.
+
 `pnpm check` runs the `static` and `test` work locally — including `test:coverage`, not plain
 `test` — and is what the pre-push hook invokes, so a green `pnpm check` predicts a green CI for
 everything but E2E. It runs the coverage build deliberately: slice 1.8 shipped a property test that
@@ -378,9 +385,8 @@ without coverage — in CI and in `pnpm check` alike. `pnpm test` still runs it 
 
 Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
 a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
-testing of `geometry` and `domain`, and the unit tests on Windows and macOS. CodeQL runs on every
-pull request and push, and OpenSSF Scorecard on `main`; both skipped themselves while the
-repository was private.
+testing of `geometry` and `domain`. CodeQL runs on every pull request and push, and OpenSSF
+Scorecard on `main`; both skipped themselves while the repository was private.
 
 `pnpm bench` runs the benchmarks. `pnpm bench:compare` sets each against the baseline committed
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the

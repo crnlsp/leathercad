@@ -58,35 +58,3 @@ jobs:
           path: reports/mutation/${{ matrix.package }}/
           retention-days: 30
           if-no-files-found: ignore
-
-  cross-platform:
-    name: Unit tests on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        # Linux runs on every pull request. These catch paths, line endings
-        # and locale. Weekly, not per pull request: written while the
-        # repository was private, where macOS minutes cost ten times Linux's
-        # (see roadmap item R5).
-        os: [windows-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      # No install scripts: the unit tests need neither the Electron binary
-      # nor the git hook, and the hook's POSIX shell does not run under cmd.
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-
-      # poppler is absent, so the rasterised print checks skip here. They run
-      # on Linux, where CI requires them.
-      - run: pnpm test
