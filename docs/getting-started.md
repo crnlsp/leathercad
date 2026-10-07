@@ -76,7 +76,7 @@ changes, it asks first.
 
 ## 5. Print, and check the print
 
-1. Choose the paper in your printer from the list beside **Export PDF**. Each entry says what it
+1. Choose the paper in your printer from the list beside **Print**. Each entry says what it
    prints, for example *3 sheets of A4, portrait (Strap taped)* or *1 sheet of A4, landscape*, so
    you can pick the one that uses the fewest sheets. **Parts** says which sheet each part prints
    on, and why a part will not print (it is hidden, or it has a problem).
@@ -85,17 +85,26 @@ changes, it asks first.
    several, taped together on a dashed join line with crosses on it; its joins also show on the
    board, labelled *Tape join*. Anything drawn in magenta is only on screen, never on paper.
    **Design** (**Ctrl+1**) takes you back to the board, where you left it.
-3. **Export PDF** (**Ctrl+E**). The PDF is what the Sheets view showed, sheet for sheet — its pages
-   are numbered *Sheet 1 of 3* like the view — and it opens in your system's PDF viewer.
-4. Print from the viewer at **Actual size** or **100 %** — never *Fit to page* or *Shrink*.
-5. Check it with a steel rule. **Every sheet has a box at its foot that measures 100 × 5 mm.** If
-   it does, everything on the sheet is true to size. If they do not, the viewer or the
-   printer scaled it: fix the print setting and print again.
+3. **Print** (**Ctrl+P**), the green button. LeatherCAD's Print Preview shows the PDF it will send,
+   sheet for sheet — numbered *Sheet 1 of 3* like the Sheets view. Choose the printer, the
+   sheets and how many copies; the scale is fixed at 100 %. **Print 3 sheets** sends them to the
+   printer with scaling turned off. You do not set anything in a print dialog.
+
+   On Windows, and in the Flatpak, LeatherCAD cannot send the job itself yet: the preview's last
+   button is **Save PDF…**. Print that file from your PDF viewer at **Actual size** or **100 %**
+   — never *Fit to page* or *Shrink*. Landscape sheets are not sent from the preview yet either.
+   Choose a portrait paper, or save the PDF.
+4. Check it with a steel rule. **Every sheet has a box at its foot that measures 100 × 5 mm.** If
+   it does, everything on the sheet is true to size. If it does not, something between LeatherCAD
+   and the paper scaled it — a viewer's setting, or the printer's driver — so fix that and print
+   again.
+
+**Export PDF** (**Ctrl+E**) saves the same PDF to keep or send, and opens it in your PDF viewer.
 
 ## Where things are
 
 - **The top bar:** the project menu at its left — the LeatherCAD mark — holds *New project*,
-  *Open…*, *Save as…* and your recent projects. At its right, past the paper and **Export PDF**,
+  *Open…*, *Save as…* and your recent projects. At its right, past the paper, **Export PDF** and **Print**,
   are **⚙** Settings and **?** Help.
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*

@@ -37,6 +37,7 @@ import { selectionForRightClick, selectionMenu, type RightClicked } from './cont
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { ExportNotice } from './ExportNotice.js';
+import { PrintPreview } from './PrintPreview.js';
 import { fileErrorText, useProjectFile, type ExportReport } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { printStatusFor } from './sheets.js';
@@ -333,6 +334,9 @@ export function App({
     setExportNotice(await file.exportPdfFile());
   }, [file]);
 
+  // The Print Preview (7.6), open or not.
+  const [printing, setPrinting] = useState(false);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (isTyping(event.target)) return;
@@ -351,6 +355,9 @@ export function App({
         } else if (key === 'e') {
           event.preventDefault();
           void exportPdf();
+        } else if (key === 'p') {
+          event.preventDefault();
+          setPrinting(true);
         } else if (key === '1') {
           event.preventDefault();
           showView('design');
@@ -579,6 +586,7 @@ export function App({
           onSettings={() => setSettings('general')}
           onSave={() => void file.save()}
           onExport={() => void exportPdf()}
+          onPrint={() => setPrinting(true)}
         />
 
         {/* The work bar (F.8): what the maker is doing right now — history, the
@@ -849,6 +857,21 @@ export function App({
         )}
 
         {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
+
+        {printing && (
+          <PrintPreview
+            project={storeState.document.project}
+            store={store}
+            appVersion={version ?? '0.0.0'}
+            // Where the app cannot print itself: the bytes previewed are the
+            // bytes saved, and the export's own notice follows.
+            onSavePdf={(bytes) => {
+              setPrinting(false);
+              void file.exportPdfFile(bytes).then(setExportNotice);
+            }}
+            onClose={() => setPrinting(false)}
+          />
+        )}
 
         {exportNotice !== null && (
           <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />

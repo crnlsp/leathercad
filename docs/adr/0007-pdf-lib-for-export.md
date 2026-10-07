@@ -58,3 +58,12 @@ Two consequences above changed after the decision; the decision itself, pdf-lib,
 - **No font is embedded.** Text is drawn as glyph outlines from the one vendored typeface
   ([ADR 0011](0011-one-vendored-typeface-outlined-on-paper.md)), which is what makes a Polish name
   print at all: pdf-lib's standard fonts cannot encode `ł`.
+
+## Amended 2026-10-01
+
+The constraint in the context — *the application will not drive a printer* — is lifted by
+[ADR 0019](0019-print-from-the-app.md). A physical print showed CUPS fitting a correct PDF into the
+printer's margins whenever the job did not carry `print-scaling=none`, an option no viewer on that
+setup sends, so the app now prints itself from its own preview. pdf-lib stays the writer, and the
+three defences above stay, because a PDF can still be saved and printed elsewhere. pdfjs-dist
+returns, this time in the app: it draws the Print Preview from the same bytes that are printed.

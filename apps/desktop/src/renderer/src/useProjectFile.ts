@@ -61,6 +61,25 @@ export interface ExportReport {
   readonly tiled: readonly TiledPart[];
 }
 
+/**
+ * What the maker should know about a project's paper before using it, or null
+ * when there is nothing to say. Export reports it once the file is written;
+ * the Print Preview shows it before printing (7.6). A part too large for the
+ * sheet is printed across several (7.2a) — not a problem, but something the
+ * maker needs to know to put the sheets together.
+ */
+export function exportReportFor(project: Project): ExportReport | null {
+  const readiness = exportReadiness(project);
+  const { tiled } = sheetPlanFor(project).pagination;
+  const quiet =
+    readiness.omitted.length === 0 &&
+    readiness.errors === 0 &&
+    readiness.warnings === 0 &&
+    readiness.infos === 0 &&
+    tiled.length === 0;
+  return quiet ? null : { readiness, tiled };
+}
+
 export function useProjectFile(
   store: DocumentStore,
   host: () => PlatformHost,
@@ -102,7 +121,7 @@ export function useProjectFile(
    * or it failed — and null too when there is nothing to say, so a clean
    * export stays silent.
    */
-  exportPdfFile: () => Promise<ExportReport | null>;
+  exportPdfFile: (shown?: Uint8Array) => Promise<ExportReport | null>;
   markSaved: () => void;
   savedDocument: React.MutableRefObject<unknown>;
 } {
@@ -205,63 +224,53 @@ export function useProjectFile(
   }, [host, openPath, t]);
 
   /**
-   * Writes a print-ready PDF and opens it in the system viewer.
-   *
-   * The application deliberately never drives a printer — the user prints
-   * from an ordinary viewer — so handing them the open file is where our
-   * responsibility ends.
+   * Writes a print-ready PDF and opens it in the system viewer: *Export PDF*,
+   * and the Print Preview's *Save PDF…* where LeatherCAD cannot print itself
+   * (7.6), which hands over the bytes it showed rather than writing new ones.
    */
-  const exportPdfFile = useCallback(async (): Promise<ExportReport | null> => {
-    try {
-      const platform = host();
-      const project = store.getState().document.project;
+  const exportPdfFile = useCallback(
+    async (shown?: Uint8Array): Promise<ExportReport | null> => {
+      try {
+        const platform = host();
+        const project = store.getState().document.project;
 
-      // Only a project extension is taken off: "Wallet v1.2" is a name, and
-      // cutting it at its last dot suggested "Wallet v1.pdf" (Q18).
-      const suggested = (project.name || t('app.untitled')).replace(/\.lcp$/i, '');
-      const target = await platform.showSaveDialog({
-        title: t('file.exportTitle'),
-        defaultPath: `${suggested}.pdf`,
-        filters: [{ name: t('file.pdf'), extensions: ['pdf'] }],
-      });
-      if (target === null) return null;
+        // Only a project extension is taken off: "Wallet v1.2" is a name, and
+        // cutting it at its last dot suggested "Wallet v1.pdf" (Q18).
+        const suggested = (project.name || t('app.untitled')).replace(/\.lcp$/i, '');
+        const target = await platform.showSaveDialog({
+          title: t('file.exportTitle'),
+          defaultPath: `${suggested}.pdf`,
+          filters: [{ name: t('file.pdf'), extensions: ['pdf'] }],
+        });
+        if (target === null) return null;
 
-      // The plan the maker has been looking at — the sheet count, Parts and
-      // the Sheets view all read this same object — so the file is exactly
-      // the print they were shown (7.4a).
-      const plan = sheetPlanFor(project);
-      const { bytes } = await exportPdf(plan, {
-        applicationVersion: appVersion,
-        now: () => new Date(),
-      });
+        // The plan the maker has been looking at — the sheet count, Parts and
+        // the Sheets view all read this same object — so the file is exactly
+        // the print they were shown (7.4a).
+        const plan = sheetPlanFor(project);
+        const bytes =
+          shown ??
+          (await exportPdf(plan, { applicationVersion: appVersion, now: () => new Date() })).bytes;
 
-      await platform.writeFile(target.endsWith('.pdf') ? target : `${target}.pdf`, bytes);
+        await platform.writeFile(target.endsWith('.pdf') ? target : `${target}.pdf`, bytes);
 
-      setState((previous) => ({
-        ...previous,
-        error: null,
-        savedAt: new Date().toLocaleTimeString(),
-      }));
+        setState((previous) => ({
+          ...previous,
+          error: null,
+          savedAt: new Date().toLocaleTimeString(),
+        }));
 
-      await platform.openInExternalViewer(target.endsWith('.pdf') ? target : `${target}.pdf`);
+        await platform.openInExternalViewer(target.endsWith('.pdf') ? target : `${target}.pdf`);
 
-      // Read from the project that was just exported, and reported *after* the
-      // file is written: export warns, and never blocks (§5). A part too large
-      // for the sheet is printed across several (7.2a) — not a problem, but
-      // something the maker needs to know to put the sheets together.
-      const readiness = exportReadiness(project);
-      const quiet =
-        readiness.omitted.length === 0 &&
-        readiness.errors === 0 &&
-        readiness.warnings === 0 &&
-        readiness.infos === 0 &&
-        plan.pagination.tiled.length === 0;
-      return quiet ? null : { readiness, tiled: plan.pagination.tiled };
-    } catch (error) {
-      setState((previous) => ({ ...previous, error }));
-      return null;
-    }
-  }, [appVersion, host, store, t]);
+        // Reported *after* the file is written: export warns, and never blocks (§5).
+        return exportReportFor(project);
+      } catch (error) {
+        setState((previous) => ({ ...previous, error }));
+        return null;
+      }
+    },
+    [appVersion, host, store, t],
+  );
 
   const newProject = useCallback(() => {
     store.reset(blank(), { action: 'new-project' });

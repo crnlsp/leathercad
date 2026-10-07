@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from '../closeApp.js';
-import { expectAccurate, exportPrintTest, measurePrintTest } from '../printTest.js';
+import { expectAccurate, exportPrintTest, inkOn, measurePrintTest } from '../printTest.js';
 
 /**
  * The packaged app, not the development build.
@@ -194,4 +194,21 @@ test('exports the 7.7 print test at 1:1, measured on the page', async () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('previews the print test with pdf.js, its worker loaded from inside the archive (7.6)', async () => {
+  // The Print Preview draws the PDF in a Web Worker built from a file in
+  // app.asar, under the shipped fuses. Nothing is sent: the test never presses
+  // Print, and on Windows there is nothing to send it to.
+  const window = await app.firstWindow();
+  // The export notice the test before left open.
+  await window.keyboard.press('Escape');
+  await window.getByTestId('print').click();
+  const preview = window.getByTestId('print-preview');
+  await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
+  await expect
+    .poll(() => preview.getByTestId('print-page').locator('canvas').evaluate(inkOn))
+    .toBeGreaterThan(1000);
+  await window.keyboard.press('Escape');
+  await expect(preview).toHaveCount(0);
 });

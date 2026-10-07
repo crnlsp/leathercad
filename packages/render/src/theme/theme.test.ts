@@ -6,6 +6,7 @@ import {
   ACCENT,
   CANVAS,
   DASH_LEGIBLE_PX,
+  GO,
   GROUND,
   PAPER_FURNITURE,
   ROLE_STYLES,
@@ -124,6 +125,14 @@ describe('the four planes (F.5)', () => {
   it('gives the accent an on-dark and an on-light value', () => {
     expect(contrast(ACCENT.tan, SHELL[800])).toBeGreaterThan(3);
     expect(contrast(ACCENT.tanInk, GROUND.ground)).toBeGreaterThan(3);
+  });
+
+  it('gives Print a fill its label reads on, and that stands out on the shell', () => {
+    expect(contrast(GO.onGo, GO.go)).toBeGreaterThan(4.5);
+    for (const shell of [SHELL[800], SHELL[700]]) {
+      expect(contrast(GO.go, shell)).toBeGreaterThan(3);
+      expect(contrast(GO.goInk, shell)).toBeGreaterThan(3);
+    }
   });
 });
 

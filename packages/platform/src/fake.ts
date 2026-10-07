@@ -4,6 +4,8 @@ import {
   type OpenDialogOptions,
   type PlatformHost,
   type Preferences,
+  type PrintJob,
+  type PrinterList,
   type RecentFile,
   type RecoveredCopy,
   type SaveDialogOptions,
@@ -64,6 +66,25 @@ export class InMemoryPlatformHost implements PlatformHost {
   openInExternalViewer(path: string): Promise<void> {
     this.openedExternally.push(path);
     return Promise.resolve();
+  }
+
+  /** What `listPrinters` answers. One A4 printer until a test says otherwise. */
+  printerList: PrinterList = {
+    available: true,
+    printers: [{ name: 'Test_Printer', papers: ['A4', 'Letter'] }],
+    defaultPrinter: 'Test_Printer',
+  };
+
+  /** Every job sent, with the bytes as sent. */
+  readonly printed: Array<{ data: Uint8Array; job: PrintJob }> = [];
+
+  listPrinters(): Promise<PrinterList> {
+    return Promise.resolve(this.printerList);
+  }
+
+  printPdf(data: Uint8Array, job: PrintJob): Promise<string> {
+    this.printed.push({ data: Uint8Array.from(data), job });
+    return Promise.resolve(`${job.printer}-${String(this.printed.length)}`);
   }
 
   getUserConfigDir(): Promise<string> {

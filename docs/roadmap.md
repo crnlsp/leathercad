@@ -138,10 +138,28 @@ Left from 1.3's *The window*: nothing says a new release exists.
 
 ### Output
 
+- ✅ **7.6 Print from LeatherCAD.** A physical print measured the gauge at 96 × 4.8 mm. The PDF
+  was exact; CUPS fitted it into the printer's margins, because no viewer's job carried
+  `print-scaling=none`. Now **Print**, green and the window's primary action, opens LeatherCAD's
+  own Print Preview. It draws the PDF itself with pdf.js, offers only printer, paper, orientation,
+  which sheets and copies, shows *100 % — locked* and *No scaling*, and sends those same bytes to
+  `lp` with `print-scaling=none` (*Print 3 sheets*). Where there is no CUPS client to drive
+  (Windows, the Flatpak), its last step is *Save PDF…* with the *Actual size* warning.
+  *Export PDF* stays, for a file. [ADR 0019](adr/0019-print-from-the-app.md),
+  [`printing.md`](printing.md) §13. Sheet 1 of the print test, sent this way on Linux, measured
+  true (log, 2026-10-01). macOS runs the same path and is unverified until measured.
+- ☐ **7.6b Landscape from the Print Preview.** CUPS cannot turn a landscape page onto upright paper
+  without shrinking it, and with scaling off it cuts it off, so the preview does not send landscape
+  yet. The writer puts every sheet in the PDF upright, with a landscape layout turned a quarter
+  inside it (`printing.md` §6.1 and §13), then the preview sends it.
+- ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
+  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
+  then the preview saves the PDF.
 - ☐ **6.2 SVG export.** Millimetre units, one group per layer, the single Y flip, with the
   accuracy tests from [`printing.md`](printing.md) §14.
 - ☐ **6.5 DXF export** (R12), for laser and CNC users.
-- ☐ **6.4 The rest of the export dialog.** Presets, layers, bounds, and printing only some sheets.
+- ☐ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
+  the Print Preview's since 7.6.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than
   computes.
 - ☐ **7.2 Taped parts, finished.** Edge arrows and a printed assembly sheet. A taped part is never
@@ -198,7 +216,7 @@ is felt.
 
 | # | What | Plan |
 |---|---|---|
-| ☐ **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md), which still says *pending* on all three platforms | Record one row per platform. Until then the project does not claim verified 1:1 output in writing |
+| ☐ **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md). Since 7.6 it has two Linux rows: a viewer's print scaled to 96 %, and sheet 1 through *Print* measured true. No platform has a full A–H row yet | Record one row per platform, through *Print* on Linux and macOS. Until then the project does not claim verified 1:1 output in writing |
 | ☐ **R3** | 1.0.1's release notes list every fix twice, because pull requests into `develop` were merged with merge commits, which release-please reads as well as the commits inside them. 1.2.0's list every feature twice, for the same reason: #23, #25 and #26 went into `main` with merge commits | Squash-merge into `develop` ([`CONTRIBUTING.md`](../CONTRIBUTING.md)), which the ruleset enforces since 2026-09-29; `CHANGELOG.md` is corrected for both; edit the GitHub release notes of 1.0.1 and 1.2.0 by hand |
 | ☐ **R4** | Tags read `leathercad-v1.0.1`, not `v1.0.1` | Decide before 1.4 whether to keep the component in the tag; 1.3 keeps it. Changing it later breaks the link between releases |
 | ☐ **R5** | `package.yml` builds Windows and macOS only when packaging could have changed, because a private repository pays for those minutes. The repository is public now, where they are free | Run it on every pull request |
@@ -254,5 +272,4 @@ Recorded from the QA pass (2026-09-24), with no work planned:
 
 Auto-update, meaning a release installed from inside the app (8.9 only says one exists); material,
 cost or bill-of-materials metadata; a notes field separate from labels; 3D; an onboarding wizard;
-drag handles for values that are already typed; driving a printer directly — LeatherCAD writes a
-PDF and the maker prints it from their own viewer.
+drag handles for values that are already typed.

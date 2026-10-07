@@ -12,6 +12,8 @@
     "src/renderer/**/*.tsx",
     // The interface's words (ADR 0018), shared with the main process.
     "src/shared/i18n.ts",
+    // Whether a printer offers the paper (7.6), checked again by the main process.
+    "src/shared/paper.ts",
     "src/locales/*.json"
   ],
   "references": [

@@ -3,6 +3,8 @@ import type {
   OpenDialogOptions,
   PlatformHost,
   Preferences,
+  PrintJob,
+  PrinterList,
   RecentFile,
   RecoveredCopy,
   SaveDialogOptions,
@@ -20,6 +22,8 @@ interface PreloadBridge {
   showOpenDialog(options: OpenDialogOptions): Promise<string | null>;
   showSaveDialog(options: SaveDialogOptions): Promise<string | null>;
   openInExternalViewer(path: string): Promise<void>;
+  listPrinters(): Promise<PrinterList>;
+  printPdf(data: Uint8Array, job: PrintJob): Promise<string>;
   getUserConfigDir(): Promise<string>;
   getAppVersion(): Promise<string>;
   writeRecovery(data: Uint8Array): Promise<void>;

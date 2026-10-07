@@ -44,6 +44,18 @@ export const ACCENT = {
 } as const;
 
 /**
+ * Print (7.6): the one action that puts the pattern on paper, and the window's
+ * primary action. Green, so it reads as *go* beside the tan of the maker's own
+ * focus, and never drawn on the ground.
+ */
+export const GO = {
+  go: '#46b46b',
+  /** Its edge on hover. */
+  goInk: '#2f8f4e',
+  onGo: '#1d2126',
+} as const;
+
+/**
  * Severity, per plane (§5.4). Always a colour **plus a glyph** — filled
  * triangle, hollow triangle, dot — so colour is never the only carrier, and the
  * warning's move to orange (decisions §1.2) cannot be confused with error.

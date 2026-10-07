@@ -47,6 +47,21 @@ export interface PlatformHost {
   openInExternalViewer(path: string): Promise<void>;
 
   /**
+   * The printers the app can print to itself (7.6): through the system's CUPS
+   * client, which is told not to scale. Unavailable where there is none to
+   * drive — Windows, the Flatpak, a system without CUPS — and the app saves a
+   * PDF instead. See docs/printing.md §13.
+   */
+  listPrinters(): Promise<PrinterList>;
+
+  /**
+   * Sends a PDF to a printer from `listPrinters`, exactly as given, with
+   * scaling turned off. Resolves with the print system's name for the job;
+   * rejects with what it said when it refused.
+   */
+  printPdf(data: Uint8Array, job: PrintJob): Promise<string>;
+
+  /**
    * Directory for application preferences — theme, recent files, printer
    * calibration. Never for project data. See docs/file-format.md §6.
    */
@@ -151,6 +166,43 @@ export interface PlatformHost {
    * hands over later (macOS's *open-file*) comes through `onOpenFile`.
    */
   takeLaunchFile(): Promise<string | null>;
+}
+
+/** What `listPrinters` found (7.6). */
+export type PrinterList =
+  | {
+      readonly available: true;
+      readonly printers: readonly Printer[];
+      /** The system's default, when it has one and it is in `printers`. */
+      readonly defaultPrinter: string | null;
+    }
+  | {
+      readonly available: false;
+      /** `platform`: not done here yet (Windows). `no-cups`: no CUPS client to drive. */
+      readonly reason: 'platform' | 'no-cups';
+    };
+
+/** A print queue, as the system names it. */
+export interface Printer {
+  readonly name: string;
+  /**
+   * The paper sizes it offers, as the system names them (`A4`, `Letter`), or
+   * null when it does not say — a printer found on the network that has not
+   * printed yet.
+   */
+  readonly papers: readonly string[] | null;
+}
+
+/** One print job. Scaling is not an option: it is always off. */
+export interface PrintJob {
+  readonly printer: string;
+  /** The paper the PDF was laid out on, by the name the app gives it. */
+  readonly paper: string;
+  /** Which of the PDF's pages, counted from 1. */
+  readonly pages: readonly number[];
+  readonly copies: number;
+  /** What the job is called in the print queue: the project's name. */
+  readonly title: string;
 }
 
 /** A project on the recent list (8.7). */

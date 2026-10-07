@@ -73,6 +73,10 @@ ignoredOptionalDependencies:
   # global-agent only when ELECTRON_GET_USE_PROXY is set, which nothing here
   # sets, and carries on without it when it is missing.
   - global-agent
+  # pdfjs-dist offers @napi-rs/canvas for rendering under Node; the app renders
+  # only in the renderer's own canvas, so the native binary would be downloaded
+  # and never run. See ADR 0019.
+  - '@napi-rs/canvas'
 
 # Local fixes to third-party code, each temporary and each with its upstream
 # issue. Delete the entry and its file in patches/ when the fix is released.
