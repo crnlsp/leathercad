@@ -122,15 +122,15 @@ describe('the message catalogue, in English', () => {
     ],
     [
       problem('NO_TARGET_PART', { what: 'line' }),
-      'Select a part first — a fold or marking line belongs to the panel it is drawn on.',
+      'Select a part first — a fold or marking line belongs to the part it is drawn on.',
     ],
     [
       problem('NO_TARGET_PART', { what: 'label' }),
-      'Select a part first — a label belongs to the panel it is drawn on.',
+      'Select a part first — a label belongs to the part it is drawn on.',
     ],
     [
       problem('TARGET_SPANS_PARTS', { what: 'line' }),
-      'Select one part: this belongs to a single panel, and the selection spans more than one.',
+      'Select one part: this belongs to a single part, and the selection spans more than one.',
     ],
     [problem('FOLLOWS_ITSELF', named), 'Stitch line cannot follow itself.'],
     [
@@ -139,7 +139,7 @@ describe('the message catalogue, in English', () => {
     ],
     [
       problem('NOT_DERIVED', named),
-      'Stitch line does not follow anything, so there is nothing to re-point.',
+      'Stitch line does not follow anything, so there is no source to change.',
     ],
     [problem('FEATURE_MISSING', { featureId: 'x' }), 'That feature does not exist.'],
     [problem('DUPLICATE_ID', { featureId: 'cut' }), 'Two features share the id cut.'],
@@ -151,7 +151,7 @@ describe('the message catalogue, in English', () => {
     ],
     [
       problem('SOURCE_FAILED', { ...named, sourceId: 'o', sourceName: 'Outline' }),
-      'The Outline it follows could not be built.',
+      'Outline, which it follows, could not be built.',
     ],
     [
       problem('ANCHOR_MISSING', { ...named, anchor: 9, available: 4 }),
@@ -163,8 +163,8 @@ describe('the message catalogue, in English', () => {
     ],
     [
       problem('HOLE_SPACING_DEVIATION', { ...named, achievedMm: 5, pitchMm: 3.85 }),
-      'The spacing came out 5.00 mm against a 3.85 mm iron. Change the pitch, or the edge ' +
-        'margin, to bring them together.',
+      'The holes are 5.00 mm apart, but the iron’s pitch is 3.85 mm. Change the pitch or the ' +
+        'edge margin to bring them closer.',
     ],
   ];
 
