@@ -312,7 +312,7 @@ really running.
 - React component internals. Tested through the few E2E flows, not in isolation.
 - Panel layout and CSS. Visual, cheap to fix, expensive to test.
 - Electron main-process plumbing beyond one "the window opens" smoke test.
-- Third-party libraries. Test *our* use of Clipper2, not Clipper2.
+- Third-party libraries. Test *our* use of pdf-lib, not pdf-lib.
 
 Coverage policy: **90 % lines and 85 % branches in `geometry` and `domain`, enforced in CI**; no
 threshold elsewhere. Branch coverage matters more than line coverage in geometry, because the
