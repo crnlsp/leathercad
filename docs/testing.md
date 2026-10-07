@@ -1,7 +1,7 @@
 # Testing Strategy
 
 **Status:** Implemented — every layer in §2 exists
-**Last updated:** 2026-09-23
+**Last updated:** 2026-10-07
 
 ---
 
@@ -21,7 +21,7 @@ invisible and expensive.
 |---|---|---|---|---|
 | Unit — geometry, domain | Vitest | ~600 | < 5 s | Arithmetic correctness |
 | Property-based | Vitest + fast-check | ~50 | < 20 s | Correctness across inputs nobody thought of |
-| Golden / approval | Vitest + JSON fixtures | ~40 | < 2 s | Unintended algorithm drift — **not built yet** (roadmap Q7); the committed `.lcp` format fixtures and the SVG snapshots cover part of it |
+| Golden / approval | Vitest `toMatchFileSnapshot` + JSON fixtures | 8 | < 1 s | Unintended drift in offsetting and hole distribution (§11); the committed `.lcp` format fixtures and the SVG snapshots cover the rest |
 | Document & command | Vitest | ~80 | < 3 s | Undo, evaluation, serialisation |
 | Export accuracy | Vitest + poppler (`pdftoppm`, `pdfinfo`) | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
@@ -425,8 +425,48 @@ The loop for a new geometry function:
 2. Write the **property** tests. What must be true of every output?
 3. Write the specific **edge cases** from §4 that apply.
 4. Implement.
-5. Add a **golden** fixture for a representative case, and review the committed output by hand once.
+5. Add a **golden** fixture for a representative case, and review the committed output by hand once
+   (§11).
 6. Run the `geometry-review` skill's checklist.
 
 For UI work, the order relaxes: write the command and its test first, then wire the interface to it.
 The command is the part with a contract; the panel is not.
+
+## 11. Golden fixtures
+
+Properties say what must hold of every answer. A golden says what the answer *was*, so that a change
+which moves a stitch hole is seen, read and explained instead of shipped. They exist for the two
+algorithms where silent drift costs leather: offsetting, which makes every derived stitch line, and
+hole distribution.
+
+`packages/geometry/src/golden.test.ts` builds a corpus of real pieces — a wallet panel, a panel
+whose 3 mm corners an inset consumes, a strap with round ends, the three sewn sides of a card
+pocket, the pocket with a V thumb notch and with the sample project's scooped one, a stitch line
+drawn by hand with its seam allowance, and a pouch front of arcs and a cubic — sets each stitch line
+3 and 4 mm in from the edge, or its allowance 3 and 4 mm out, and places holes along it with a
+3.0 mm and a 3.85 mm iron, `fit-whole` as the app does. Each piece is one JSON file in
+`packages/geometry/__golden__/`, compared with Vitest's own `toMatchFileSnapshot`: no dependency.
+
+**Reading one.** Each stitch line opens with what a reviewer looks at first: its `lengthMm`, then
+per iron the number of `holes` and the `spacingMm` achieved (pitch is nominal, spacing achieved —
+[glossary](glossary.md)). Then come its segments, and every hole's position, one per line, so a
+moved hole is a one-line diff. `[]` is an offset that gave nothing back: the strap inset by its
+half-width collapses, and the scooped pocket's inset would trim an arc against a line at its tips,
+which Tier 1 does not do ([geometry.md](geometry.md) §6.2). `"refused"` is an offset that threw:
+a cubic has no exact one.
+
+**No float noise.** Every number is millimetres on the model's 0.1 µm grid (`quantise`). An arc's
+sweep is written as its length along the arc, signed like the sweep, so even that is a length. A
+difference in the last bits of a double never reaches a file; a hole that moves by more than half a
+grid step does.
+
+**Updating.** A changed golden is a behaviour change. When it is meant, `pnpm test golden -u`
+rewrites the files. **Look at every changed golden before committing it**, and say in the commit
+message what moved and why ([geometry.md](geometry.md) §12). An unexplained golden diff is a silent
+behaviour change, and the reason this layer exists. A run writes a golden that is missing; CI, with
+`CI` set, never writes one, so a golden left uncommitted fails there. `.gitattributes` keeps the
+files' `\n` line endings on a Windows checkout, so every platform compares the same bytes.
+
+What they do not cover: the domain's corner policy. `hole-at-corner`, the default, splits a stitch
+line at its sharp corners and distributes each run on its own; on a line with no sharp corners it
+is the single run these goldens record. Its own tests are in `packages/domain/src/stitch.test.ts`.

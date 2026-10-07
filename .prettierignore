@@ -6,6 +6,8 @@ pnpm-lock.yaml
 LICENSE
 *.svg
 **/__snapshots__/
+# Golden fixtures, written by the tests that check them (docs/testing.md §11).
+**/__golden__/
 
 # Machine-written glyph outlines. Regenerate with `pnpm fonts:generate`.
 packages/typography/src/generated/
