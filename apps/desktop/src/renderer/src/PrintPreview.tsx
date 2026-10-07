@@ -80,9 +80,13 @@ export function PrintPreview({
     let opened: PDFDocumentProxy | null = null;
     void (async () => {
       try {
+        // The print form: every page upright, as printers take paper, and a
+        // landscape sheet turned a quarter on it — the one way CUPS prints it
+        // whole, at 1:1 (7.6b, docs/printing.md §13).
         const { bytes } = await exportPdf(plan, {
           applicationVersion: appVersion,
           now: () => new Date(),
+          upright: true,
         });
         opened = await openPdf(bytes);
         if (live) setWritten({ plan, bytes, doc: opened });
@@ -129,11 +133,10 @@ export function PrintPreview({
   const [sending, setSending] = useState<Sending>({ kind: 'idle' });
   // A printer not chosen yet is not refused: Print stays disabled without one.
   const paperOffered = offersPaper(printer?.papers ?? null, paper);
-  // CUPS turns a landscape page onto upright paper only by fitting it into the
-  // margins — shrunk — and with scaling off it does not turn it at all, so the
-  // far side is cut off (measured through pdftopdf and pdftoraster, 7.6).
-  // Until the PDF carries every sheet upright, landscape is not sent.
-  const landscapeBlocked = orientation === 'landscape';
+  // A landscape sheet lies turned a quarter counter-clockwise on its upright
+  // page. Only the view turns it back, a quarter clockwise, so it reads as the
+  // Sheets view shows it: what is drawn is still the bytes sent.
+  const turn = pdf?.plan.setup.orientation === 'landscape' ? 90 : 0;
 
   const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -165,7 +168,6 @@ export function PrintPreview({
     printer !== undefined &&
     chosen.length > 0 &&
     paperOffered &&
-    !landscapeBlocked &&
     sending.kind !== 'sending';
 
   return (
@@ -197,7 +199,9 @@ export function PrintPreview({
                   data-testid="print-thumb"
                   onClick={() => setCurrent(n)}
                 >
-                  {pdf !== null && <PageCanvas pdf={pdf.doc} number={n} widthPx={THUMB_PX} />}
+                  {pdf !== null && (
+                    <PageCanvas pdf={pdf.doc} number={n} widthPx={THUMB_PX} turn={turn} />
+                  )}
                 </button>
                 <label className="print-thumb-label">
                   {direct && (
@@ -222,7 +226,7 @@ export function PrintPreview({
 
           <div className="print-page" data-testid="print-page">
             {pdf !== null ? (
-              <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} />
+              <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} turn={turn} />
             ) : (
               <p className="dialog-note">{failure ?? t('printPreview.loading')}</p>
             )}
@@ -340,12 +344,6 @@ export function PrintPreview({
                 </p>
               )
             )}
-            {direct && landscapeBlocked && (
-              <p className="print-status warning" role="alert" data-testid="print-landscape-unsafe">
-                <SeverityGlyph severity="warning" />
-                <span>{t('printPreview.landscapeUnsafe')}</span>
-              </p>
-            )}
             {direct && !paperOffered && (
               <p className="print-status warning" role="alert" data-testid="print-paper-missing">
                 <SeverityGlyph severity="warning" />
@@ -402,23 +400,28 @@ export function PrintPreview({
   );
 }
 
-/** One page of the PDF, drawn by pdf.js, redrawn when the page or the PDF changes. */
+/**
+ * One page of the PDF, drawn by pdf.js, its view turned `turn` degrees
+ * clockwise; redrawn when the page or the PDF changes.
+ */
 function PageCanvas({
   pdf,
   number,
   widthPx,
+  turn,
 }: {
   pdf: PDFDocumentProxy;
   number: number;
   widthPx: number;
+  turn: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
     if (canvas === null) return;
     const abort = new AbortController();
-    drawPage(pdf, number, canvas, widthPx, abort.signal).catch(() => undefined);
+    drawPage(pdf, number, canvas, widthPx, abort.signal, turn).catch(() => undefined);
     return () => abort.abort();
-  }, [pdf, number, widthPx]);
+  }, [pdf, number, widthPx, turn]);
   return <canvas ref={ref} className="print-canvas" data-page={number} />;
 }

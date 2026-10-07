@@ -73,16 +73,22 @@ export interface PrintTestMeasurements {
     readonly worstGapErrorMm: number;
   };
   readonly strap: {
-    /** Strap end to join line on the first sheet, plus join line to strap end on the second. */
+    /**
+     * End to end: on its one sheet, or, taped, its end to the join line on the
+     * first sheet plus the join line to its end on the second.
+     */
     readonly lengthMm: number;
-    /** How far the strap runs past the join on each sheet: the overlap a maker lays down. */
-    readonly pastJoinMm: readonly [number, number];
-    /** How far each sheet's registration cross is off its join line. */
-    readonly crossOffJoinMm: readonly [number, number];
-    /** The cross's height above the strap's bottom edge, on each sheet. */
-    readonly crossAboveEdgeMm: readonly [number, number];
-    /** The strap's width, on each sheet. */
-    readonly widthMm: readonly [number, number];
+    /** The strap's width, on each sheet it is on. */
+    readonly widthMm: readonly number[];
+    /** Where it is taped across two sheets (A4 portrait); absent where it prints whole. */
+    readonly join?: {
+      /** How far the strap runs past the join on each sheet: the overlap a maker lays down. */
+      readonly pastJoinMm: readonly [number, number];
+      /** How far each sheet's registration cross is off its join line. */
+      readonly crossOffJoinMm: readonly [number, number];
+      /** The cross's height above the strap's bottom edge, on each sheet. */
+      readonly crossAboveEdgeMm: readonly [number, number];
+    };
   };
 }
 
@@ -145,18 +151,28 @@ export function inkOn(canvas: HTMLCanvasElement): number {
   return ink;
 }
 
-/** Rasterises and measures an exported print test. */
-export function measurePrintTest(pdf: string): PrintTestMeasurements {
+/**
+ * Rasterises and measures an exported print test: on A4 portrait, three
+ * sheets; on A4 landscape, one.
+ *
+ * `turned`: the PDF is what Print sends for a landscape sheet (7.6b), each
+ * page upright with the sheet turned a quarter on it. Each page is then
+ * turned back, as the maker turns the paper to read it.
+ */
+export function measurePrintTest(pdf: string, turned = false): PrintTestMeasurements {
   const pages = pageCount(pdf);
-  const images = Array.from({ length: pages }, (_, i) => render(pdf, i + 1));
+  const images = Array.from({ length: pages }, (_, i) => {
+    const page = render(pdf, i + 1);
+    return turned ? turnedBack(page) : page;
+  });
 
   const gauges = images.map(gaugeOn);
 
-  // The panel and the pocket share the first sheet; the strap is tiled over the
-  // two after it, first column first.
+  // The panel and the pocket share the first sheet. The strap is beside them
+  // on a sheet wide enough for it, or else tiled over the two after it, first
+  // column first.
   const panel = panelOn(images[0]!);
-  const [left, right] = [images[1]!, images[2]!];
-  const strap = strapAcross(left, right);
+  const strap = pages === 1 ? strapWhole(images[0]!) : strapAcross(images[1]!, images[2]!);
 
   return { pages, gauges, panel, strap };
 }
@@ -168,11 +184,11 @@ export function measurePrintTest(pdf: string): PrintTestMeasurements {
  * edge: tighter than a steel rule reads, and far tighter than the 3 mm a
  * 97 % "fit to page" would take off a 100 mm line.
  */
-export function expectAccurate(measured: PrintTestMeasurements): void {
+export function expectAccurate(measured: PrintTestMeasurements, sheets = 3): void {
   const close = (actual: number, expected: number, tolerance: number, what: string) =>
     expect(Math.abs(actual - expected), `${what}: ${actual.toFixed(3)} mm`).toBeLessThan(tolerance);
 
-  expect(measured.pages, 'sheets').toBe(3);
+  expect(measured.pages, 'sheets').toBe(sheets);
   measured.gauges.forEach((gauge, i) => {
     close(gauge.widthMm, 100, 0.2, `gauge width, sheet ${String(i + 1)}`);
     close(gauge.heightMm, 5, 0.2, `gauge height, sheet ${String(i + 1)}`);
@@ -192,20 +208,27 @@ export function expectAccurate(measured: PrintTestMeasurements): void {
   close(panel.spacingMm, 3.875, 0.01, 'hole spacing');
   expect(panel.worstGapErrorMm, 'evenness of the gaps').toBeLessThan(0.15);
 
-  close(strap.lengthMm, 275, 0.3, 'strap, both halves');
-  strap.pastJoinMm.forEach((past, i) =>
+  // Whole beside the panel on one sheet; taped across sheets 2 and 3 on three.
+  close(strap.lengthMm, 275, 0.3, 'strap, end to end');
+  const first = sheets === 1 ? 1 : 2;
+  strap.widthMm.forEach((width, i) =>
+    close(width, 25, 0.2, `strap width, sheet ${String(i + first)}`),
+  );
+  const { join } = strap;
+  expect(join !== undefined, 'the strap taped').toBe(sheets > 1);
+  if (join === undefined) return;
+  join.pastJoinMm.forEach((past, i) =>
     expect(past, `strap past the join, sheet ${String(i + 2)}`).toBeGreaterThan(3),
   );
-  strap.crossOffJoinMm.forEach((off, i) =>
+  join.crossOffJoinMm.forEach((off, i) =>
     expect(off, `cross off its join, sheet ${String(i + 2)}`).toBeLessThan(0.2),
   );
   close(
-    strap.crossAboveEdgeMm[0],
-    strap.crossAboveEdgeMm[1],
+    join.crossAboveEdgeMm[0],
+    join.crossAboveEdgeMm[1],
     0.2,
     'the cross, against the strap, sheet 2 then sheet 3',
   );
-  strap.widthMm.forEach((width, i) => close(width, 25, 0.2, `strap width, sheet ${String(i + 2)}`));
 }
 
 // ── Pages ────────────────────────────────────────────────────────────────────
@@ -262,6 +285,22 @@ function transpose(image: Gray): Gray {
     }
   }
   return { width: image.height, height: image.width, pixels };
+}
+
+/**
+ * The page turned a quarter clockwise, as a maker turns the paper to read a
+ * landscape sheet printed upright on it. Whole pixels move and none is
+ * resampled, so what is measured here is what is on the page.
+ */
+function turnedBack(image: Gray): Gray {
+  const width = image.height;
+  const pixels = new Uint8Array(image.width * image.height);
+  for (let y = 0; y < image.width; y++) {
+    for (let x = 0; x < width; x++) {
+      pixels[y * width + x] = image.pixels[(image.height - 1 - x) * image.width + y]!;
+    }
+  }
+  return { width, height: image.width, pixels };
 }
 
 // ── Strokes ──────────────────────────────────────────────────────────────────
@@ -483,22 +522,22 @@ function strapAcross(first: Gray, second: Gray): PrintTestMeasurements['strap'] 
     // Left end to the join on the first sheet; the join to the right end on
     // the second. Laid over each other on that line, they are the strap.
     lengthMm: a.join - a.leftEnd + (b.rightEnd - b.join),
-    pastJoinMm: [a.edgesTo - a.join, b.join - b.edgesFrom],
-    crossOffJoinMm: [Math.abs(a.cross.x - a.join), Math.abs(b.cross.x - b.join)],
-    crossAboveEdgeMm: [a.bottom - a.cross.y, b.bottom - b.cross.y],
     widthMm: [a.bottom - a.top, b.bottom - b.top],
+    join: {
+      pastJoinMm: [a.edgesTo - a.join, b.join - b.edgesFrom],
+      crossOffJoinMm: [Math.abs(a.cross.x - a.join), Math.abs(b.cross.x - b.join)],
+      crossAboveEdgeMm: [a.bottom - a.cross.y, b.bottom - b.cross.y],
+    },
   };
 }
 
-function strapOn(image: Gray) {
-  // Its top and bottom edges: the two long black strokes on the sheet, cut
-  // off by the sheet's printable area, with the strap between them.
-  // The gauge's 100 mm is not long enough to be mistaken for one.
-  const edges = horizontalStrokes(image, 110).sort((p, q) => p.at - q.at);
-  expect(edges, 'the strap’s two edges').toHaveLength(2);
-  const [top, bottom] = edges as [Stroke, Stroke];
-  const thickness = (top.thickness + bottom.thickness) / 2;
+/** The strap whole on one sheet (A4 landscape): end to end, and its width. */
+function strapWhole(image: Gray): PrintTestMeasurements['strap'] {
+  const { top, bottom, leftEnd, rightEnd } = strapBetweenEdges(image, null);
+  return { lengthMm: rightEnd - leftEnd, widthMm: [bottom - top] };
+}
 
+function strapOn(image: Gray) {
   // The join line: light grey dashes, the column with the most ink on the sheet.
   const columns = new Float64Array(image.width);
   for (let y = 0; y < image.height; y++) {
@@ -517,20 +556,6 @@ function strapOn(image: Gray) {
   });
   const join = sum / weight / PX_PER_MM;
 
-  // The strap's rounded ends: the furthest ink between its edges, less half a
-  // stroke to reach the line itself.
-  const [rowFrom, rowTo] = [Math.ceil(top.at * PX_PER_MM), Math.floor(bottom.at * PX_PER_MM)];
-  let left = image.width;
-  let right = -1;
-  for (let y = rowFrom; y <= rowTo; y++) {
-    for (let x = 0; x < image.width; x++) {
-      if (image.pixels[y * image.width + x]! < INK && Math.abs(x / PX_PER_MM - join) > 1) {
-        left = Math.min(left, x);
-        right = Math.max(right, x + 1);
-      }
-    }
-  }
-
   // The cross: a black arm, 6 mm, across the join.
   const arms = horizontalStrokes(image, 4).filter(
     (s) => within(s.to - s.from, 5, 7) && Math.abs((s.from + s.to) / 2 - join) < 1,
@@ -538,14 +563,43 @@ function strapOn(image: Gray) {
   expect(arms, 'the registration cross').toHaveLength(1);
   const cross = { x: (arms[0]!.from + arms[0]!.to) / 2, y: arms[0]!.at };
 
+  return { ...strapBetweenEdges(image, join), join, cross };
+}
+
+/**
+ * The strap on a sheet: its top and bottom edges, and its rounded ends, not
+ * counting ink on the `join` line.
+ */
+function strapBetweenEdges(image: Gray, join: number | null) {
+  // Its edges: the two long black strokes on the sheet — on a taped sheet, cut
+  // off by the printable area — with the strap between them. The gauge's
+  // 100 mm is not long enough to be mistaken for one.
+  const edges = horizontalStrokes(image, 110).sort((p, q) => p.at - q.at);
+  expect(edges, 'the strap’s two edges').toHaveLength(2);
+  const [top, bottom] = edges as [Stroke, Stroke];
+  const thickness = (top.thickness + bottom.thickness) / 2;
+
+  // Its rounded ends: the furthest ink between its edges, less half a stroke
+  // to reach the line itself.
+  const [rowFrom, rowTo] = [Math.ceil(top.at * PX_PER_MM), Math.floor(bottom.at * PX_PER_MM)];
+  let left = image.width;
+  let right = -1;
+  for (let y = rowFrom; y <= rowTo; y++) {
+    for (let x = 0; x < image.width; x++) {
+      const onJoin = join !== null && Math.abs(x / PX_PER_MM - join) <= 1;
+      if (image.pixels[y * image.width + x]! < INK && !onJoin) {
+        left = Math.min(left, x);
+        right = Math.max(right, x + 1);
+      }
+    }
+  }
+
   return {
     top: top.at,
     bottom: bottom.at,
-    join,
     edgesFrom: Math.min(top.from, bottom.from),
     edgesTo: Math.max(top.to, bottom.to),
     leftEnd: left / PX_PER_MM + thickness / 2,
     rightEnd: right / PX_PER_MM - thickness / 2,
-    cross,
   };
 }

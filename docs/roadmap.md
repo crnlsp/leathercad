@@ -148,10 +148,17 @@ Left from 1.3's *The window*: nothing says a new release exists.
   *Export PDF* stays, for a file. [ADR 0019](adr/0019-print-from-the-app.md),
   [`printing.md`](printing.md) §13. Sheet 1 of the print test, sent this way on Linux, measured
   true (log, 2026-10-01). macOS runs the same path and is unverified until measured.
-- ☐ **7.6b Landscape from the Print Preview.** CUPS cannot turn a landscape page onto upright paper
+- ✅ **7.6b Landscape from the Print Preview.** CUPS cannot turn a landscape page onto upright paper
   without shrinking it, and with scaling off it cuts it off, so the preview does not send landscape
   yet. The writer puts every sheet in the PDF upright, with a landscape layout turned a quarter
   inside it (`printing.md` §6.1 and §13), then the preview sends it.
+  ✅ Built as described. On the way: the turn is the one transform the writer emits — `0 1 -1 0 W 0
+  cm`, a quarter turn with no scale — and only *Print* sends it. *Export PDF* keeps a landscape
+  page, which a viewer shows the right way up; a page `/Rotate` would have done that for the print
+  form too, but `pdftopdf` keeps it and the page is cut off at 210 mm again, as measured through
+  `pdftopdf` and `pdftoraster` before deciding ([ADR 0019](adr/0019-print-from-the-app.md),
+  amended). The preview turns only its view of a landscape page. **Still owed:** a landscape
+  sheet printed through *Print* and measured on paper (R1).
 - ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
   candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
   then the preview saves the PDF.
