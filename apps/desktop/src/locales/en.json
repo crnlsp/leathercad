@@ -124,10 +124,10 @@
     },
     "points": {
       "howTo": "Drag a point of the selected drawn path to move it · press an edge to add one · Del removes the point last pressed · R rounds that corner, or sharpens a rounded one",
-      "name": "Edit Points"
+      "name": "Edit points"
     },
     "polyline": {
-      "howTo": "Click each point · A arcs the next segment: click its end, then a point on it · L goes straight · click the first to close · Enter finishes · Backspace takes one back",
+      "howTo": "Click each point · A arcs the next segment: click its end, then a point on it · L goes straight · click the first to close · Enter finishes · Backspace removes the last point",
       "name": "Polyline"
     },
     "rectangle": {
@@ -143,7 +143,7 @@
       "name": "Scale"
     },
     "select": {
-      "howTo": "Click to select · Shift-click adds or removes · drag on empty space to box-select · drag a selection to move it · Del removes",
+      "howTo": "Click to select · Shift-click adds or removes · drag on empty space to box-select · drag a selection to move it · Del deletes",
       "name": "Select"
     },
     "text": {
@@ -178,7 +178,7 @@
     },
     "arcOrStraight": "Polyline: the next segment is an arc, or straight",
     "cancel": "Cancel what the tool is doing, or clear the selection",
-    "contextMenu": "The menu of what is selected, as a right-click opens it",
+    "contextMenu": "Open the menu for the selection, as a right-click does",
     "delete": "Delete what is selected (Select tool)",
     "design": "Design: the board you draw on",
     "exportPdf": "Export PDF",
@@ -199,7 +199,7 @@
     "settings": "Settings",
     "sheets": "Sheets: the paper it prints on",
     "square": "Keep a rectangle square; hold a line to 15° steps",
-    "takeBack": "Take back a polyline’s or an arc’s last point",
+    "takeBack": "Remove the last point of a polyline or arc",
     "undo": "Undo",
     "zoom": "Zoom about the pointer",
     "zoomIn": "Zoom in",
@@ -217,10 +217,10 @@
     },
     "recent": {
       "clear": "Clear list",
-      "count_one": "{{count}} is listed now.",
-      "count_other": "{{count}} are listed now.",
+      "count_one": "{{count}} project is listed now.",
+      "count_other": "{{count}} projects are listed now.",
       "name": "Recent projects",
-      "none": "None are listed now.",
+      "none": "No projects are listed now.",
       "note": "The Project menu lists the projects you opened or saved most recently."
     },
     "legend": {
@@ -229,7 +229,7 @@
     },
     "toolNames": {
       "name": "Show tool names in the rail",
-      "note": "Off, each tool shows only its key. Below 1200 px wide the rail shows only keys anyway."
+      "note": "Off, each tool shows only its key. In windows narrower than 1200 px, the rail shows only keys regardless."
     },
     "language": {
       "invite": "LeatherCAD is translated by the people who use it. {{link}}",
@@ -246,13 +246,13 @@
     "blurb": "Leathercraft patterns that print at exact 1:1 scale. Free and open source under the Apache License 2.0.",
     "logFolder": "Show log folder",
     "notices": "Third-party notices",
-    "reporting": "Reporting a problem? Attach the log.",
+    "reporting": "To report a problem, attach the log.",
     "source": "Source code on GitHub",
     "version": "Version {{version}}"
   },
   "recovery": {
     "decline": "Not now",
-    "detail": "Unsaved work on “{{name}}” was kept at {{when}}. Recovering opens it as a new, unsaved project; the file it came from is not changed.",
+    "detail": "Unsaved work on “{{name}}” was saved automatically at {{when}}. Recover opens it as a new, unsaved project; the file it came from is not changed. If you choose Not now, the saved copy is deleted when you quit LeatherCAD.",
     "recover": "Recover",
     "title": "LeatherCAD did not close properly"
   },
@@ -269,22 +269,22 @@
     "deleteAll": "Delete all",
     "features_one": "{{count}} feature",
     "features_other": "{{count}} features",
-    "follow": "These follow what you are deleting:",
+    "follow": "These features follow what you are deleting:",
     "freeze_one": "Keep {{count}} frozen",
     "freeze_other": "Keep {{count}} frozen",
     "freezeTooltip": "Keep them as drawn geometry, where they are now, no longer following anything",
     "thisPart": "this part",
     "title": "Delete {{what}}?",
     "note": {
-      "direct": "has no geometry to keep, so it goes either way",
-      "freezable": "can be kept as drawn geometry",
-      "holes": "holes cannot exist without their line, so these go either way",
-      "indirect": "goes with what it follows, unless that is kept"
+      "direct": "will be deleted: it has no geometry to keep",
+      "freezable": "will be deleted, or can be kept as drawn geometry",
+      "holes": "will be deleted: holes cannot exist without their line",
+      "indirect": "will be deleted with what it follows, unless that is kept"
     }
   },
   "file": {
     "exportTitle": "Export PDF",
-    "invalid": "document.json is not valid: {{problems}}",
+    "invalid": "This project file can’t be opened: {{problems}}",
     "newer": "This file was saved by a newer version of LeatherCAD. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "newerNamed": "This file was saved by LeatherCAD {{version}}, a newer version than this one. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "openTitle": "Open project",
@@ -293,7 +293,7 @@
     "saveTitle": "Save project"
   },
   "main": {
-    "noticesTitle": "Third-Party Notices",
+    "noticesTitle": "Third-party notices",
     "noticesInDevelopment": "Third-party notices are written by a production build (pnpm build).",
     "recentGone": "That project is no longer there",
     "recentGoneDetail": "{{path}}\n\nIt was moved, renamed or deleted, so it has been taken off the recent projects."
@@ -389,15 +389,15 @@
     }
   },
   "exportNotice": {
-    "counts": "The design has {{counts}}. The problems panel lists them; everything that built is on the paper.",
+    "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
     "errors_one": "{{count}} error",
     "errors_other": "{{count}} errors",
     "infos_one": "{{count}} to note",
     "infos_other": "{{count}} to note",
     "inPart": "in {{part}}",
-    "omitted": "— each failed to build, so the template does not have it.",
-    "omittedLead_one": "This feature is not on the paper",
-    "omittedLead_other": "These {{count}} features are not on the paper",
+    "omitted": "— each failed to build, so it is missing from the PDF.",
+    "omittedLead_one": "This feature is not in the PDF",
+    "omittedLead_other": "These {{count}} features are not in the PDF",
     "tiled_one": "\"{{name}}\" is {{size}}, larger than {{paper}} {{orientation}}: printed on {{count}} sheet, {{rows}} × {{columns}}.",
     "tiled_other": "\"{{name}}\" is {{size}}, larger than {{paper}} {{orientation}}: printed on {{count}} sheets, {{rows}} × {{columns}}.",
     "tiledAcross": "at 1:1, overlapping by {{overlap}} mm. Cut one sheet on a dashed line, lay it over the next, and match the crosses.",
@@ -405,8 +405,8 @@
     "tiledLead_one": "This part is printed across sheets",
     "tiledLead_other": "These {{count}} parts are printed across sheets",
     "tiledNoPaper": "{{printed}} No supported paper holds it whole.",
-    "titleCheck": "Exported, with something to check",
-    "titleTiled": "Exported across several sheets",
+    "titleCheck": "PDF exported, with something to check",
+    "titleTiled": "PDF exported across several sheets",
     "warnings_one": "{{count}} warning",
     "warnings_other": "{{count}} warnings"
   },
@@ -417,7 +417,7 @@
     "emptyPart": "Empty",
     "hidePart": "Hide part",
     "mirrorsMark": "Mirrors the feature it nests under",
-    "remove": "Remove",
+    "remove": "Delete part",
     "sample": "Or take a finished one apart: {{link}}.",
     "sampleLink": "open the sample wallet",
     "showPart": "Show part",
@@ -453,8 +453,8 @@
     "length": "Length",
     "locked": "Locked",
     "lockedNote": "Locked, so nothing here can be changed. Unlock it in the parts panel.",
-    "manySelected_one": "{{count}} feature selected. Editing more than one at a time comes later.",
-    "manySelected_other": "{{count}} features selected. Editing more than one at a time comes later.",
+    "manySelected_one": "{{count}} feature selected. Select one to edit it.",
+    "manySelected_other": "{{count}} features selected. Select one to edit it.",
     "measured": "Measured",
     "measures": "Measures",
     "mirrorFoldNote": "Mirrors {{source}} across {{fold}}. Move that fold and this follows it; move {{source}} and this stays its mirror. It cannot be dragged on its own.",
@@ -483,16 +483,16 @@
     },
     "mirrorHint": {
       "counterpart": {
-        "horizontal": "A counterpart to the right, mirrored across this piece's right edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put.",
-        "vertical": "A counterpart below, mirrored across this piece's bottom edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put."
+        "horizontal": "A linked counterpart to the right, mirrored across this piece's right edge as it is now. It follows this piece's shape; the mirror line stays where it is.",
+        "vertical": "A linked counterpart below, mirrored across this piece's bottom edge as it is now. It follows this piece's shape; the mirror line stays where it is."
       },
       "piece": {
-        "horizontal": "A mirrored piece, as a new part, to the right, mirrored across this piece's right edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put.",
-        "vertical": "A mirrored piece, as a new part, below, mirrored across this piece's bottom edge as it is now. It keeps following this piece's shape; the mirror line stays where it is put."
+        "horizontal": "A mirrored copy as a new part, to the right, mirrored across this piece's right edge as it is now. It follows this piece's shape; the mirror line stays where it is.",
+        "vertical": "A mirrored copy as a new part, below, mirrored across this piece's bottom edge as it is now. It follows this piece's shape; the mirror line stays where it is."
       }
     },
-    "manyPartsSelected_one": "{{count}} part selected. Editing more than one at a time comes later.",
-    "manyPartsSelected_other": "{{count}} parts selected. Editing more than one at a time comes later."
+    "manyPartsSelected_one": "{{count}} part selected. Select one to edit it.",
+    "manyPartsSelected_other": "{{count}} parts selected. Select one to edit it."
   },
   "legend": {
     "hide": "Hide the legend",
@@ -545,7 +545,7 @@
       "description": "{{featureName}} cannot follow itself."
     },
     "WOULD_LOOP": {
-      "title": "Would loop",
+      "title": "Would create a loop",
       "description": "{{featureName}} would end up following itself, through {{sourceName}}."
     },
     "CYCLE": {
@@ -601,7 +601,7 @@
     },
     "MIRROR_OUTLINE_ACROSS_FOLD": {
       "title": "A piece has one edge",
-      "description": "Mirroring across a fold is for what is *inside* a piece — slots, stitching, hardware. {{partName}} already has an outline, and a piece of leather has one edge, so its contour cannot be completed this way. Draw the whole outline, or mirror the part to make a second piece."
+      "description": "Mirroring across a fold is for what is inside a piece — slots, stitching, hardware. {{partName}} already has an outline, and a piece of leather has one edge, so its contour cannot be completed this way. Draw the whole outline, or mirror the part to make a second piece."
     },
     "MIRROR_PLACED_BY_FOLD": {
       "title": "Placed by its fold",
@@ -617,7 +617,7 @@
     },
     "MIRROR_NO_AXIS": {
       "title": "Nothing to mirror across",
-      "description": "Select something with a size to it, and the mirror runs along its edge."
+      "description": "Select a shape with a size. The mirror line is placed along its edge."
     },
     "FEATURE_LOCKED": {
       "title": "Locked",
@@ -649,7 +649,7 @@
     },
     "NOT_DERIVED": {
       "title": "Follows nothing",
-      "description": "{{featureName}} does not follow anything, so there is nothing to re-point."
+      "description": "{{featureName}} does not follow anything, so there is no source to change."
     },
     "DERIVED_MOVED_ALONE": {
       "title": "Moves with its source",
@@ -681,13 +681,13 @@
     },
     "NO_TARGET_PART": {
       "title": "No part selected",
-      "cut-out": "Select a part first — a cut-out belongs to the panel it is drawn on.",
-      "label": "Select a part first — a label belongs to the panel it is drawn on.",
-      "line": "Select a part first — a fold or marking line belongs to the panel it is drawn on."
+      "cut-out": "Select a part first — a cut-out belongs to the part it is drawn on.",
+      "label": "Select a part first — a label belongs to the part it is drawn on.",
+      "line": "Select a part first — a fold or marking line belongs to the part it is drawn on."
     },
     "TARGET_SPANS_PARTS": {
       "title": "Selection spans parts",
-      "description": "Select one part: this belongs to a single panel, and the selection spans more than one."
+      "description": "Select one part: this belongs to a single part, and the selection spans more than one."
     },
     "PARAMETER_INVALID": {
       "title": "Unusable number",
@@ -735,8 +735,8 @@
       "noCorners": "This outline has no corners to run between, so it can only be followed whole."
     },
     "SOURCE_FAILED": {
-      "title": "Source failed",
-      "description": "The {{sourceName}} it follows could not be built."
+      "title": "What it follows failed",
+      "description": "{{sourceName}}, which it follows, could not be built."
     },
     "GEOMETRY_FAILED": {
       "title": "Could not be built",
@@ -753,12 +753,12 @@
       "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous. Redraw it so the line never crosses."
     },
     "HOLE_SPACING_DEVIATION": {
-      "title": "Spacing off the iron",
-      "description": "The spacing came out {{achieved}} against a {{pitch}} iron. Change the pitch, or the edge margin, to bring them together."
+      "title": "Spacing differs from the iron",
+      "description": "The holes are {{achieved}} apart, but the iron’s pitch is {{pitch}}. Change the pitch or the edge margin to bring them closer."
     },
     "HOLE_SPACING_UNEVEN": {
       "title": "Uneven spacing",
-      "description": "The runs of {{featureName}} are spaced from {{narrowest}} to {{widest}}, so the change will show at the corners."
+      "description": "The runs of {{featureName}} are spaced from {{narrowest}} to {{widest}}, so the difference will show at the corners."
     },
     "HOLE_COUNT_TOO_LOW": {
       "title": "Too few holes",
@@ -785,7 +785,7 @@
     },
     "EMPTY_PART": {
       "title": "Empty part",
-      "description": "{{partName}} has nothing in it. Draw into it, or remove it from the parts list."
+      "description": "{{partName}} has nothing in it. Draw into it, or delete it from the parts list."
     },
     "WHOLE_PART_NOT_SCALED": {
       "title": "A whole part is not scaled",
@@ -810,7 +810,7 @@
     "decimals": "Decimals",
     "diameter": "Diameter",
     "direction": "Direction",
-    "drawnByHand": "Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit Points (N).",
+    "drawnByHand": "Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit points (N).",
     "edgeMargin": "Edge margin",
     "fit": "Fit",
     "height": "Height",
