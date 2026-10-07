@@ -385,8 +385,19 @@ without coverage — in CI and in `pnpm check` alike. `pnpm test` still runs it 
 
 Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
 a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
-testing of `geometry` and `domain`. CodeQL runs on every pull request and push, and OpenSSF
-Scorecard on `main`; both skipped themselves while the repository was private.
+testing of `geometry` and `domain`, reporting a failure as an issue too. CodeQL runs on every pull
+request and push, and OpenSSF Scorecard on `main`; both skipped themselves while the repository was
+private.
+
+GitHub runs a schedule from the workflow file on the default branch, `main`, which holds the last
+release. So the nightly and weekly jobs check out `develop` themselves, where the code is being
+written: before they did, they tested only what had already shipped. Two consequences:
+
+- **A change to a scheduled workflow takes effect on schedule once it reaches `main`,** with the
+  next release. Until then, run it by hand on `develop` (*Actions* → the workflow → *Run
+  workflow*), which uses `develop`'s copy of the file.
+- **A failure names its commit,** because `develop` moves on: the nightly issue gives the commit and
+  the seed, which together reproduce it anywhere.
 
 `pnpm bench` runs the benchmarks. `pnpm bench:compare` sets each against the baseline committed
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
