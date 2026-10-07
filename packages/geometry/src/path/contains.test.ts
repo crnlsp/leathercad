@@ -79,13 +79,14 @@ describe('closestPointOnPath', () => {
     expect(near.distance).toBeCloseTo(10, 9);
   });
 
-  it('regression: a line shorter than EPS_POINT still has two ends (issue 27)', () => {
-    // The nightly run shrank to these twice. Taking a line that short as only
-    // its start put the answer a nanometre from its other end, where the
-    // point is.
+  it('regression: a line shorter than EPS_POINT still has two ends (issues 27 and 39)', () => {
+    // The nightly run shrank to these three times. Taking a line that short
+    // as only its start put the answer a nanometre from its other end, where
+    // the point is.
     for (const [start, end] of [
       [vec(1.0000000000000003e-9, 0), vec(0, 0)],
       [vec(0, -1.4142358395474732e-9), vec(0, 0)],
+      [vec(0, -1.0000000000000003e-9), vec(0, 0)],
     ] as const) {
       const near = closestPointOnPath(path([line(start, end)], false), vec(0, 0))!;
 
