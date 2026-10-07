@@ -40,7 +40,7 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 | `docs/printing.md` | Export and print pipeline, accuracy budget | Any export or print work |
 | `docs/testing.md` | Layers, property catalogue, edge-case corpus | Writing tests, which is always |
 | `docs/roadmap.md` | What is planned, open findings | Starting a slice |
-| `docs/history/roadmap-to-1.0.md` | Every 1.0 slice, and what it found | Before redoing something that was tried |
+| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3): every slice that shipped, and what it found | Before redoing something that was tried |
 | `docs/glossary.md` | Craft vocabulary | Whenever domain naming is in question |
 | `docs/adr/NNNN-*.md` | Why a decision was made | Before revisiting a decision |
 | `docs/superpowers/specs/` | The dated design of each larger slice | Changing what a slice built |
