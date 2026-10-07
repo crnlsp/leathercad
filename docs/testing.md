@@ -309,7 +309,8 @@ principles:
   output and compare it with the model, as a property over random curves; the end-to-end test
   exports the print test through the app and measures the file with a reader of its own that
   shares nothing with the writer (`e2e/vectorFiles.ts`). The files are written with one line
-  ending each, and a test holds it, so the cross-platform job sees the same bytes.
+  ending each (`\n` for SVG, `\r\n` for DXF), and a test holds it, so the cross-platform job sees
+  the same bytes.
 
 The strongest of these checks rasterise the PDF with poppler and measure the result in pixels,
 which is stronger than parsing our own numbers back out: it proves the file means what we think,

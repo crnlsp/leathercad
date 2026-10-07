@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { expect } from '@playwright/test';
 
 /**
- * The print test, measured in an exported SVG (6.2) — the way a laser's
- * software would read it.
+ * The print test, measured in an exported SVG (6.2) or DXF (6.5) — the way a
+ * laser's software would read it.
  *
  * Like `printTest.ts`, which measures the PDF by what poppler draws, nothing
  * here knows how the file was written: it is read by hand, with no SVG library,
@@ -129,6 +129,106 @@ function pathPrimitives(layer: string, d: string, pageHeight: number): Primitive
     at = to;
   }
   return found;
+}
+
+// ── DXF ──────────────────────────────────────────────────────────────────────
+
+export interface DxfFacts {
+  readonly version: string;
+  readonly units: number | undefined;
+  readonly measurement: number | undefined;
+  /** The layers entities are on, in the order they first appear. */
+  readonly layers: readonly string[];
+  readonly crLfOnly: boolean;
+  readonly ascii: boolean;
+}
+
+/**
+ * What a DXF file says about itself, and every entity in it as primitives. A DXF
+ * is Y-up already, like the board, so nothing is turned over: an arc is read
+ * from its centre, radius and two angles, as every DXF reader does.
+ */
+export function readDxf(file: string): { facts: DxfFacts; primitives: Primitive[] } {
+  const text = readFileSync(file, 'latin1');
+  const lines = text.split('\r\n');
+  expect(lines.pop(), 'the file ends with a line end').toBe('');
+  expect(lines.length % 2, 'group codes and values come in pairs').toBe(0);
+
+  const tags: Array<{ code: number; value: string }> = [];
+  for (let i = 0; i < lines.length; i += 2) {
+    tags.push({ code: Number(lines[i]), value: lines[i + 1]! });
+  }
+
+  const section = (name: string) => {
+    const start = tags.findIndex((t, i) => t.value === 'SECTION' && tags[i + 1]!.value === name);
+    const end = tags.findIndex((t, i) => i > start && t.code === 0 && t.value === 'ENDSEC');
+    return tags.slice(start + 2, end);
+  };
+
+  const header = new Map<string, string>();
+  let name = '';
+  for (const tag of section('HEADER')) {
+    if (tag.code === 9) name = tag.value;
+    else header.set(name, tag.value);
+  }
+
+  // Entities: each starts at a group code 0; a polyline's vertices follow it.
+  const records: Array<{ type: string; tags: Array<{ code: number; value: string }> }> = [];
+  for (const tag of section('ENTITIES')) {
+    if (tag.code === 0) records.push({ type: tag.value, tags: [] });
+    else records.at(-1)!.tags.push(tag);
+  }
+  const num = (tags: Array<{ code: number; value: string }>, code: number): number =>
+    Number(tags.find((t) => t.code === code)?.value);
+  const layerOf = (tags: Array<{ code: number; value: string }>): string =>
+    tags.find((t) => t.code === 8)!.value;
+
+  const primitives: Primitive[] = [];
+  const layers: string[] = [];
+  const seen = (layer: string) => {
+    if (!layers.includes(layer)) layers.push(layer);
+  };
+  for (let i = 0; i < records.length; i++) {
+    const { type, tags: t } = records[i]!;
+    if (type === 'POLYLINE') {
+      const layer = layerOf(t);
+      const points: Point[] = [];
+      while (records[++i]!.type === 'VERTEX') {
+        points.push({ x: num(records[i]!.tags, 10), y: num(records[i]!.tags, 20) });
+      }
+      seen(layer);
+      primitives.push({ layer, kind: 'curve', points });
+      continue;
+    }
+    const layer = layerOf(t);
+    seen(layer);
+    const at = { x: num(t, 10), y: num(t, 20) };
+    if (type === 'LINE') {
+      primitives.push({ layer, kind: 'line', from: at, to: { x: num(t, 11), y: num(t, 21) } });
+    } else if (type === 'CIRCLE') {
+      primitives.push({ layer, kind: 'circle', at, radius: num(t, 40) });
+    } else if (type === 'ARC') {
+      const end = (code: number): Point => ({
+        x: at.x + num(t, 40) * Math.cos((num(t, code) * Math.PI) / 180),
+        y: at.y + num(t, 40) * Math.sin((num(t, code) * Math.PI) / 180),
+      });
+      primitives.push({ layer, kind: 'arc', points: [end(50), end(51)] });
+    } else {
+      throw new Error(`an entity R12 does not have: ${type}`);
+    }
+  }
+
+  return {
+    facts: {
+      version: header.get('$ACADVER') ?? '',
+      units: header.has('$INSUNITS') ? Number(header.get('$INSUNITS')) : undefined,
+      measurement: header.has('$MEASUREMENT') ? Number(header.get('$MEASUREMENT')) : undefined,
+      layers,
+      crLfOnly: !text.replace(/\r\n/g, '').match(/[\r\n]/),
+      ascii: [...text].every((character) => character.charCodeAt(0) < 128),
+    },
+    primitives,
+  };
 }
 
 // ── Measuring ────────────────────────────────────────────────────────────────

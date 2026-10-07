@@ -70,7 +70,14 @@ the suggested order of work.
   inside it (`printing.md` §6.1 and §13), then the preview sends it.
 - ☐ **6.2 SVG export.** Millimetre units, one group per layer, the single Y flip, with the
   accuracy tests from [`printing.md`](printing.md) §14.
-- ☐ **6.5 DXF export** (R12), for laser and CNC users.
+- ✅ **6.5 DXF export** (R12), for laser and CNC users.
+  ✅ Built as described, except that [`printing.md`](printing.md) §11 was wrong: R12 has no
+  `LWPOLYLINE` and no `$INSUNITS`. It is R12 with `POLYLINE`s for flattened cubics, and with
+  `$INSUNITS = 4` and `$MEASUREMENT = 1` as extra header variables, for the reasons §11 gives. A
+  stitch hole is a `CIRCLE` of the scene's 1 mm size, not a `POINT` by option. Layers are the
+  SVG's groups, with a colour index and a linetype of their own. **Still owed:** LightBurn, or a
+  laser, has not opened one — the check that tests the units; LibreOffice Draw's importer read it,
+  but rescales to its page.
 - ✅ **7.8 A slimmer verification block, and fewer sheets.** The 50 mm square, the 100 mm ruler,
   the instruction and the footer took 62 mm at the foot of every sheet, and the footer printed
   5 mm from the edge. Now one strip of 8.5 mm, inside the margins: a 100 × 5 mm gauge with the

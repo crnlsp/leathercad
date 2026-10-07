@@ -1,6 +1,6 @@
 import type { Document, DocumentStore } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
-import { exportPdf, exportSvg, type TiledPart } from '@leathercad/export';
+import { exportDxf, exportPdf, exportSvg, type TiledPart } from '@leathercad/export';
 import {
   CURRENT_FORMAT_VERSION,
   InvalidProjectFileError,
@@ -61,13 +61,16 @@ export interface ExportReport {
   readonly tiled: readonly TiledPart[];
   /**
    * What the export made. A PDF is paper, and the notice says what is *on the
-   * paper*; an SVG (6.2) is a file for a machine, and it says what is *in the
-   * file*. The facts are the same ones.
+   * paper*; an SVG or a DXF (6.2, 6.5) is a file for a machine, and it says
+   * what is *in the file*. The facts are the same ones.
    */
   readonly format: ExportFormat;
 }
 
-export type ExportFormat = 'pdf' | 'svg';
+export type ExportFormat = 'pdf' | 'svg' | 'dxf';
+
+/** The formats of a drawing for a machine: a file, never opened afterwards. */
+export type DrawingFormat = Exclude<ExportFormat, 'pdf'>;
 
 /**
  * What the maker should know about a project's paper before using it, or null
@@ -134,8 +137,8 @@ export function useProjectFile(
    * export stays silent.
    */
   exportPdfFile: (shown?: Uint8Array) => Promise<ExportReport | null>;
-  /** The same, for an SVG (6.2): written, not opened. */
-  exportSvgFile: () => Promise<ExportReport | null>;
+  /** The same, for a drawing as an SVG or a DXF (6.2, 6.5): written, not opened. */
+  exportDrawingFile: (format: DrawingFormat) => Promise<ExportReport | null>;
   markSaved: () => void;
   savedDocument: React.MutableRefObject<unknown>;
 } {
@@ -284,39 +287,44 @@ export function useProjectFile(
   );
 
   /**
-   * Writes the drawing as an SVG (6.2): the board's arrangement in true
-   * millimetres, for a laser cutter, a plotter or a vector editor.
+   * Writes the drawing as an SVG or a DXF (6.2, 6.5): the board's arrangement in
+   * true millimetres, for a laser cutter, a plotter, a CNC program or a vector
+   * editor.
    *
    * It is the scene the PDF is written from, so it holds exactly what the PDF
    * prints. Nothing opens it afterwards — the main process opens only the PDF
    * it has exported, and a cutter's software is the maker's to start — so what
    * the maker is told is what to check, as after a PDF.
    */
-  const exportSvgFile = useCallback(async (): Promise<ExportReport | null> => {
-    try {
-      const platform = host();
-      const project = store.getState().document.project;
-      const target = await exportTarget(platform, project, 'svg', {
-        title: t('file.exportSvgTitle'),
-        filter: t('file.svg'),
-        untitled: t('app.untitled'),
-      });
-      if (target === null) return null;
+  const exportDrawingFile = useCallback(
+    async (format: DrawingFormat): Promise<ExportReport | null> => {
+      try {
+        const platform = host();
+        const project = store.getState().document.project;
+        const target = await exportTarget(platform, project, format, {
+          title: t(format === 'svg' ? 'file.exportSvgTitle' : 'file.exportDxfTitle'),
+          filter: t(format === 'svg' ? 'file.svg' : 'file.dxf'),
+          untitled: t('app.untitled'),
+        });
+        if (target === null) return null;
 
-      const { text } = exportSvg(sheetPlanFor(project).scene);
-      await platform.writeFile(target, new TextEncoder().encode(text));
+        const scene = sheetPlanFor(project).scene;
+        const { text } = format === 'svg' ? exportSvg(scene) : exportDxf(scene);
+        await platform.writeFile(target, new TextEncoder().encode(text));
 
-      setState((previous) => ({
-        ...previous,
-        error: null,
-        savedAt: new Date().toLocaleTimeString(),
-      }));
-      return exportReportFor(project, 'svg');
-    } catch (error) {
-      setState((previous) => ({ ...previous, error }));
-      return null;
-    }
-  }, [host, store, t]);
+        setState((previous) => ({
+          ...previous,
+          error: null,
+          savedAt: new Date().toLocaleTimeString(),
+        }));
+        return exportReportFor(project, format);
+      } catch (error) {
+        setState((previous) => ({ ...previous, error }));
+        return null;
+      }
+    },
+    [host, store, t],
+  );
 
   const newProject = useCallback(() => {
     store.reset(blank(), { action: 'new-project' });
@@ -349,7 +357,7 @@ export function useProjectFile(
     adoptRecovered,
     isDirty,
     exportPdfFile,
-    exportSvgFile,
+    exportDrawingFile,
     markSaved,
     savedDocument,
   };
@@ -367,7 +375,7 @@ export function useProjectFile(
 async function exportTarget(
   platform: PlatformHost,
   project: Project,
-  extension: 'pdf' | 'svg',
+  extension: ExportFormat,
   words: { readonly title: string; readonly filter: string; readonly untitled: string },
 ): Promise<string | null> {
   const suggested = (project.name || words.untitled).replace(/\.lcp$/i, '');

@@ -105,7 +105,7 @@ changes, it asks first.
 **Export PDF** (**Ctrl+E**) saves the same PDF to keep or send, and opens it in your PDF viewer.
 
 **For a laser cutter, a plotter or a vector editor**, the **▾** beside **Export PDF** saves the
-drawing as an **SVG**, in millimetres. It is the board as you arranged it, not the sheets, with each
+drawing as an **SVG** or a **DXF**, in millimetres. It is the board as you arranged it, not the sheets, with each
 layer — `cut`, `stitch`, `stitch-holes` and the rest — in a group of its own and in the colour it
 has on the board. It holds what the PDF would print: a hidden feature is not in it, and neither is
 one that failed to build, which LeatherCAD tells you about after saving. The first time, look at
@@ -114,7 +114,7 @@ the size your software shows: it should be the size you drew.
 ## Where things are
 
 - **The top bar:** the project menu at its left — the LeatherCAD mark — holds *New project*,
-  *Open…*, *Save as…* and your recent projects. At its right, past the paper, **Export PDF** (with **▾** for SVG) and **Print**,
+  *Open…*, *Save as…* and your recent projects. At its right, past the paper, **Export PDF** (with **▾** for SVG and DXF) and **Print**,
   are **⚙** Settings and **?** Help.
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*

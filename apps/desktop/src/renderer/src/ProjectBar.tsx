@@ -43,6 +43,7 @@ export function ProjectBar({
   onSave,
   onExport,
   onExportSvg,
+  onExportDxf,
   onPrint,
 }: {
   project: Project;
@@ -63,8 +64,9 @@ export function ProjectBar({
   onSettings: () => void;
   onSave: () => void;
   onExport: () => void;
-  /** *Export SVG…* (6.2), from the menu beside *Export PDF*. */
+  /** *Export SVG…* and *Export DXF…* (6.2, 6.5), from the menu beside *Export PDF*. */
   onExportSvg: () => void;
+  onExportDxf: () => void;
   onPrint: () => void;
 }) {
   const { t } = useI18n();
@@ -123,7 +125,7 @@ export function ProjectBar({
             {t('projectBar.exportPdf')}
           </button>
         </Tooltip>
-        {/* The other formats (6.2), joined to *Export PDF*: files for a
+        {/* The other formats (6.2, 6.5), joined to *Export PDF*: files for a
             cutter or a vector editor, not paper. */}
         <MenuButton
           label={t('projectBar.exportMore')}
@@ -131,7 +133,11 @@ export function ProjectBar({
           testId="export-more"
           className="tool quiet icon-only"
           align="end"
-          entries={exportMenu({ svg: onExportSvg }, !isScaleCheckOnly(sheetPlanFor(project)), t)}
+          entries={exportMenu(
+            { svg: onExportSvg, dxf: onExportDxf },
+            !isScaleCheckOnly(sheetPlanFor(project)),
+            t,
+          )}
         >
           <Icon of={ChevronDown} size={12} />
         </MenuButton>

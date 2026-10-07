@@ -57,3 +57,7 @@ export { exportPdf, printableAreaMm } from './pdf/writer.js';
 // export scene, where the maker put the pieces, in true millimetres.
 export type { SvgExportResult } from './svg/writer.js';
 export { exportSvg } from './svg/writer.js';
+
+// The same for a CNC or laser program that reads a DXF (6.5): R12, in millimetres.
+export type { DxfExportResult } from './dxf/writer.js';
+export { exportDxf } from './dxf/writer.js';
