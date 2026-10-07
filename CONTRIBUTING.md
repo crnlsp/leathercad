@@ -146,6 +146,7 @@ on your own machine. The rest, and what each one wants:
 | *Format check* | `pnpm format`. Markdown is left alone: it is formatted by hand |
 | *Layering* | `pnpm depcruise` names the rule; its comment in `.dependency-cruiser.cjs` says why it exists. A new edge between packages is an architecture decision and needs an ADR. Sometimes the rule is what is wrong, and `/arch-check` helps tell which |
 | *Dead code* | Delete what `pnpm knip` names, or list it in `knip.jsonc` with the reason it stays |
+| A golden fixture (`packages/geometry/__golden__/`) | The stitch lines or holes the engine makes have moved. If that is meant, `pnpm test golden -u`, read every changed file, and say in the commit message what moved and why ([`docs/testing.md`](docs/testing.md) §11). If it is not, the diff shows the bug |
 | A property test | `CI=1` reproduces CI's cases exactly. Commit the shrunk counterexample as a named regression test ([`docs/testing.md`](docs/testing.md) §3.3) |
 | *Tests and coverage*, green locally | Usually poppler: CI runs the print checks that skip without it |
 | *Unit tests on windows-latest* or *macos-latest* | Usually a path or a line ending. Make the test pass on every platform; never skip it on one |

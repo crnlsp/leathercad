@@ -1,0 +1,14 @@
+{
+  "shape": "The sample project's card pocket, scooped for a thumb. The scoop meets the top edge at two sharp tips, where an inset would trim an arc against a line, which Tier 1 cannot do: no stitch line comes back (docs/geometry.md §6.2). The sample draws its stitch line",
+  "lengthMm": 321.191,
+  "insets": [
+    {
+      "marginMm": 3,
+      "stitchLines": []
+    },
+    {
+      "marginMm": 4,
+      "stitchLines": []
+    }
+  ]
+}
