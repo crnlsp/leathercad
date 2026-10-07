@@ -1,4 +1,4 @@
-import { MatOps, PathOps, type Path, type Rect, type Segment } from '@leathercad/geometry';
+import { MatOps, PathOps, Vec2Ops, type Path, type Rect, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 
 import type { DisplayList, DisplayItem } from '../displayList.js';
@@ -411,7 +411,7 @@ export function tracePath(ctx: Canvas2DLike, path: Path): void {
 
   for (const segment of path.segments) {
     const start = startOf(segment);
-    if (previousEnd === null || !samePoint(previousEnd, start)) {
+    if (previousEnd === null || !Vec2Ops.equals(previousEnd, start)) {
       ctx.moveTo(start.x, start.y);
     }
     traceSegment(ctx, segment);
@@ -475,8 +475,4 @@ function endOf(s: Segment): { x: number; y: number } {
       };
     }
   }
-}
-
-function samePoint(a: { x: number; y: number }, b: { x: number; y: number }): boolean {
-  return Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
 }

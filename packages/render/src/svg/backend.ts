@@ -1,3 +1,4 @@
+import { EPS_ANGLE } from '@leathercad/core';
 import { MatOps, PathOps, SegmentOps, type Path, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY, outlinesOf } from '@leathercad/typography';
 
@@ -245,7 +246,7 @@ function commandsFor(s: Segment, n: (v: number) => string): string[] {
   // A full turn has coincident endpoints, and an SVG arc command between two
   // identical points draws nothing at all. Halving it gives two arcs that each
   // have somewhere to go.
-  const full = Math.abs(s.sweepAngle) >= Math.PI * 2 - 1e-9;
+  const full = Math.abs(s.sweepAngle) >= SegmentOps.FULL_TURN - EPS_ANGLE;
   if (full) {
     const [firstHalf, secondHalf] = SegmentOps.split(s, 0.5);
     return [...commandsFor(firstHalf, n), ...commandsFor(secondHalf, n)];

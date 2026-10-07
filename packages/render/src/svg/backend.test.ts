@@ -1,3 +1,4 @@
+import { EPS_ANGLE } from '@leathercad/core';
 import { arc, cubic, path, polyline, vec } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
@@ -70,6 +71,13 @@ describe('renderToSvgString', () => {
     const svg = renderToSvgString(listOf(pathItem('cut', full)), view);
 
     // Start and end coincide, so SVG would draw nothing at all.
+    expect(svg.match(/A /g)).toHaveLength(2);
+  });
+
+  it('splits a sweep within EPS_ANGLE of a full turn as a full circle', () => {
+    const almost = path([arc(vec(0, 0), 10, 0, Math.PI * 2 - EPS_ANGLE / 2)], true);
+    const svg = renderToSvgString(listOf(pathItem('cut', almost)), view);
+
     expect(svg.match(/A /g)).toHaveLength(2);
   });
 

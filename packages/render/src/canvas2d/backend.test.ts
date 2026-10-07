@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EPS_POINT } from '@leathercad/core';
 import { arc, cubic, line, PathOps } from '@leathercad/geometry';
 
 import {
@@ -108,6 +109,32 @@ describe('tracePath', () => {
 
     expect(ctx.calls.filter((c) => c.startsWith('moveTo'))).toHaveLength(1);
     expect(ctx.calls.filter((c) => c.startsWith('lineTo'))).toHaveLength(2);
+  });
+
+  it('keeps a joint that meets within EPS_POINT in one subpath', () => {
+    // A path's segments only promise to meet within EPS_POINT, so a joint
+    // that close is a joint, not a gap to start a new subpath at.
+    const ctx = new Recorder();
+    tracePath(
+      ctx,
+      PathOps.open([
+        line({ x: 0, y: 0 }, { x: 10, y: 0 }),
+        line({ x: 10 + EPS_POINT / 2, y: 0 }, { x: 10, y: 10 }),
+      ]),
+    );
+    expect(ctx.calls.filter((c) => c.startsWith('moveTo'))).toHaveLength(1);
+  });
+
+  it('starts a new subpath at a real gap', () => {
+    const ctx = new Recorder();
+    tracePath(
+      ctx,
+      PathOps.unsafePath([
+        line({ x: 0, y: 0 }, { x: 10, y: 0 }),
+        line({ x: 10 + EPS_POINT * 2, y: 0 }, { x: 10, y: 10 }),
+      ]),
+    );
+    expect(ctx.calls.filter((c) => c.startsWith('moveTo'))).toHaveLength(2);
   });
 
   it('closes a closed path', () => {
