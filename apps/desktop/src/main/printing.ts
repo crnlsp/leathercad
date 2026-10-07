@@ -2,6 +2,8 @@ import { execFile } from 'node:child_process';
 
 import type { PrintJob, PrinterList } from '@leathercad/platform';
 
+import { offersPaper } from '../shared/paper.js';
+
 /**
  * Printing (7.6): the system's own CUPS client, driven with scaling off.
  *
@@ -90,14 +92,18 @@ export async function listPrinters(
 
 /**
  * Sends the PDF to `lp`. The job came over IPC, so it is checked here as
- * untrusted: the printer must be one CUPS lists now, and every number must be
- * one a person could have chosen.
+ * untrusted: the printer must be one CUPS lists now, offering the paper when
+ * it lists its sizes, and every number must be one a person could have chosen.
  */
 export async function printPdf(run: Run, data: unknown, job: unknown): Promise<string> {
   const checked = checkJob(job);
   if (!(data instanceof Uint8Array) || !isPdf(data)) throw new Error('not a PDF');
   if (!destinations(await run('lpstat', ['-e'])).includes(checked.printer)) {
     throw new Error(`no printer named ${JSON.stringify(checked.printer)}`);
+  }
+  const papers = await run('lpoptions', ['-p', checked.printer, '-l']).then(pageSizes, () => null);
+  if (!offersPaper(papers, checked.paper)) {
+    throw new Error(`${JSON.stringify(checked.printer)} lists no ${checked.paper} paper`);
   }
   const out = await run('lp', lpArguments(checked), data);
   return /request id is (\S+)/.exec(out)?.[1] ?? '';

@@ -520,7 +520,8 @@ with 4.23 mm margins. `fit-to-page=false` covers older CUPS. Printers and their 
 from `lpstat -e`, `lpstat -d` and `lpoptions -p <printer> -l`. These only read: the app never
 changes a printer's settings. A printer that lists its paper and lacks the chosen size is not
 sent the job. The main process checks every job (`apps/desktop/src/main/printing.ts`): the printer
-must be one CUPS lists now, and nothing runs through a shell.
+must be one CUPS lists now, offering the paper when it lists its sizes, and nothing runs through a
+shell.
 
 The preview says what the app can and cannot promise. It sends the job with scaling off — *✓ No
 scaling* — but a driver or a printer could still scale, so it asks for the gauge to be measured
@@ -567,5 +568,5 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 | Preview equals print | `paginate()` output used by the preview is deep-equal to the one used by the PDF writer for the same setup |
 | Calibration correction | A 1.005 correction produces geometry 0.5 % larger, and a 1.03 correction is rejected |
 | Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items |
-| The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
+| The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, a paper it lists its sizes without, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
 | Preview equals what is sent | Print previews the print test, and what the fake `lp` receives measures true like an exported PDF; where `pdftopdf` is installed, it measures true after that filter too, with the job's options (`e2e/print-preview.spec.ts`) |

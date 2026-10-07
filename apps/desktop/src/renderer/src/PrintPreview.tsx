@@ -1,10 +1,12 @@
 import { setPageSetup, type DocumentStore } from '@leathercad/document';
 import { PAPER_SIZES, type Orientation, type PaperName, type Project } from '@leathercad/domain';
 import { exportPdf } from '@leathercad/export';
-import type { Printer, PrinterList } from '@leathercad/platform';
+import type { PrinterList } from '@leathercad/platform';
 import { Check } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+
+import { offersPaper } from '../../shared/paper.js';
 
 import { ExportFindings } from './ExportNotice.js';
 import { useI18n } from './i18n.js';
@@ -28,17 +30,6 @@ type Sending =
   | { readonly kind: 'sending' }
   | { readonly kind: 'sent'; readonly printer: string; readonly job: string }
   | { readonly kind: 'failed'; readonly printer: string; readonly reason: string };
-
-/**
- * Whether a printer offers the paper, as far as it says: CUPS names sizes as
- * the app does (`A4`, `Letter`), sometimes with a variant after a dot
- * (`A4.Borderless`). A printer that does not say is given the benefit of the
- * doubt — CUPS still refuses a size the printer lacks.
- */
-export function offersPaper(printer: Printer | undefined, paper: string): boolean {
-  if (printer === undefined || printer.papers === null) return true;
-  return printer.papers.some((name) => name.split('.')[0]!.toLowerCase() === paper.toLowerCase());
-}
 
 /**
  * Print (7.6): LeatherCAD's own preview, then the printer — never a viewer's
@@ -136,7 +127,8 @@ export function PrintPreview({
 
   const [copies, setCopies] = useState(1);
   const [sending, setSending] = useState<Sending>({ kind: 'idle' });
-  const paperOffered = offersPaper(printer, paper);
+  // A printer not chosen yet is not refused: Print stays disabled without one.
+  const paperOffered = offersPaper(printer?.papers ?? null, paper);
   // CUPS turns a landscape page onto upright paper only by fitting it into the
   // margins — shrunk — and with scaling off it does not turn it at all, so the
   // far side is cut off (measured through pdftopdf and pdftoraster, 7.6).

@@ -131,6 +131,21 @@ describe('sending a job', () => {
     expect(calls.some((call) => call.command === 'lp')).toBe(false);
   });
 
+  it('refuses a paper the printer lists its sizes without, without running lp', async () => {
+    const { run, calls } = cups(LPSTAT);
+    await expect(printPdf(run, PDF, { ...JOB, paper: 'A3' })).rejects.toThrow('A3');
+    expect(calls.some((call) => call.command === 'lp')).toBe(false);
+    const lpoptions = calls.filter((call) => call.command === 'lpoptions');
+    expect(lpoptions.map((call) => call.args)).toEqual([['-p', 'HL-L2442DW', '-l']]);
+  });
+
+  it('sends any paper to a printer that does not list its sizes', async () => {
+    const { run, calls } = cups({ ...LPSTAT, lp: 'request id is Brother_HL_L2442DW-3\n' });
+    const job = { ...JOB, printer: 'Brother_HL_L2442DW', paper: 'A3' };
+    expect(await printPdf(run, PDF, job)).toBe('Brother_HL_L2442DW-3');
+    expect(calls.some((call) => call.command === 'lp')).toBe(true);
+  });
+
   it('refuses what no one could have chosen', async () => {
     const { run, calls } = cups(LPSTAT);
     for (const job of [
