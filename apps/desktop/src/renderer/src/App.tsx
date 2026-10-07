@@ -334,6 +334,11 @@ export function App({
     setExportNotice(await file.exportPdfFile());
   }, [file]);
 
+  // The same for an SVG, from the menu beside Export PDF (6.2).
+  const exportSvg = useCallback(async () => {
+    setExportNotice(await file.exportSvgFile());
+  }, [file]);
+
   // The Print Preview (7.6), open or not.
   const [printing, setPrinting] = useState(false);
 
@@ -586,6 +591,7 @@ export function App({
           onSettings={() => setSettings('general')}
           onSave={() => void file.save()}
           onExport={() => void exportPdf()}
+          onExportSvg={() => void exportSvg()}
           onPrint={() => setPrinting(true)}
         />
 

@@ -162,6 +162,17 @@ Left from 1.3's *The window*: nothing says a new release exists.
 - ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
   candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
   then the preview saves the PDF.
+- ✅ **6.2 SVG export.** Millimetre units, one group per layer, the single Y flip, with the
+  accuracy tests from [`printing.md`](printing.md) §14.
+  ✅ Built as described: *Export SVG…*, in a menu beside *Export PDF*, writes the scene the PDF is
+  written from, laid out as the maker arranged the board ([`printing.md`](printing.md) §10). On the
+  way: strokes take the canvas's role colours, not the PDF's black, because laser software sorts
+  by colour; an arc is written in pieces of at most a quarter turn, because an SVG arc's centre is
+  worked out from its endpoints and a half turn could lose up to 0.035 mm to a rounding of 0.1 µm
+  (the round-trip property found it); and an export to a file ends in the same notice of what was
+  left out as the PDF's, in the words *in the file*. **Still owed:** a real laser or vector
+  editor has not opened one; the checks read the file by hand and rendered it with librsvg.
+- ☐ **6.5 DXF export** (R12), for laser and CNC users.
 - ☐ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
   the Print Preview's since 7.6.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than

@@ -152,6 +152,7 @@ test('the project bar fits the smallest window, with the longest paper it says (
       'save',
       'paper',
       'export-pdf',
+      'export-more',
       'print',
       'settings',
       'help-menu',

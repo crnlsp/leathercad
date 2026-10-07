@@ -1,5 +1,6 @@
 import { setProjectName, type DocumentStore } from '@leathercad/document';
 import type { Project } from '@leathercad/domain';
+import { isScaleCheckOnly } from '@leathercad/export';
 import type { RecentFile } from '@leathercad/platform';
 import { ChevronDown, CircleHelp, Settings } from 'lucide-react';
 
@@ -7,7 +8,7 @@ import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { MenuButton } from './Menu.js';
-import { helpMenu, projectMenu } from './menus.js';
+import { exportMenu, helpMenu, projectMenu } from './menus.js';
 import { SheetIndicator } from './SheetIndicator.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
@@ -20,7 +21,8 @@ import { Tooltip } from './Tooltip.js';
  * Left, the project itself: its menu — new, open, save as, the recent
  * projects — its name as the window's one title, and whether it is saved.
  * Right, where the workflow ends: the sheets it will print on, *Export PDF*
- * for a file, and *Print* — the one primary action in the window, green (7.6),
+ * for a file — with the menu of its other formats joined to it —
+ * and *Print* — the one primary action in the window, green (7.6),
  * which opens LeatherCAD's own Print Preview. Past a rule, the application:
  * Settings and Help. Nothing here edits the pattern; that is the work bar's.
  */
@@ -40,6 +42,7 @@ export function ProjectBar({
   onSettings,
   onSave,
   onExport,
+  onExportSvg,
   onPrint,
 }: {
   project: Project;
@@ -60,6 +63,8 @@ export function ProjectBar({
   onSettings: () => void;
   onSave: () => void;
   onExport: () => void;
+  /** *Export SVG…* (6.2), from the menu beside *Export PDF*. */
+  onExportSvg: () => void;
   onPrint: () => void;
 }) {
   const { t } = useI18n();
@@ -118,6 +123,18 @@ export function ProjectBar({
             {t('projectBar.exportPdf')}
           </button>
         </Tooltip>
+        {/* The other formats (6.2), joined to *Export PDF*: files for a
+            cutter or a vector editor, not paper. */}
+        <MenuButton
+          label={t('projectBar.exportMore')}
+          tooltip={t('projectBar.exportMoreTooltip')}
+          testId="export-more"
+          className="tool quiet icon-only"
+          align="end"
+          entries={exportMenu({ svg: onExportSvg }, !isScaleCheckOnly(sheetPlanFor(project)), t)}
+        >
+          <Icon of={ChevronDown} size={12} />
+        </MenuButton>
         <Tooltip
           text={t('projectBar.printTooltip', { sheets: describeSheets(sheetPlanFor(project), t) })}
         >
