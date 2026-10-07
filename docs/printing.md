@@ -282,13 +282,39 @@ const MM_TO_PT = 72 / 25.4;    // 2.834645669291339…
 
 Set the MediaBox to the paper size in points, place content at `mm * MM_TO_PT`, and **emit no
 scaling transform anywhere**. Then 1:1 is not something the code achieves — it is the definition of
-what it wrote. The only transforms in the content stream are translations (to position a tile) and
-the single Y-flip if one is needed, which it is not: PDF is Y-up like the model, so the flip that
-Canvas2D and SVG require is absent here. One fewer place to get it wrong.
+what it wrote. A tile is positioned by adding its offset to the coordinates, not by a transform, and
+no Y-flip is needed: PDF is Y-up like the model, so the flip that Canvas2D and SVG require is absent
+here. One fewer place to get it wrong.
+
+**One transform is allowed, and only one (7.6b): the print form's quarter turn.** What *Print*
+sends has every page upright, because printers take paper upright and CUPS cannot turn a landscape
+page onto it without scaling it (§13). A landscape sheet is drawn on its upright page after one
+`cm` at the head of the page's content stream:
+
+```
+0 1 -1 0 W 0 cm        % (x, y) → (W − y, x), W the paper's width in points
+```
+
+A quarter turn counter-clockwise, then across the paper's width. Every coefficient is 0 or ±1 and
+the determinant is 1, so nothing is rounded, scaled or mirrored, and the sheet's 10 mm margins land
+on the paper's. The sheet's foot — the verification strip — runs up the paper's right edge, and
+reads the right way when the paper is turned a quarter clockwise. It is the turn 7.8 gives a part
+(§5.5), applied to the whole sheet.
+
+- **Not in *Export PDF*.** A file keeps the sheet as it was chosen, a landscape sheet as a landscape
+  page, so a viewer shows it the right way up. Printing the file is a viewer's job and not safe in
+  any form (§2): measured through this CUPS, a job without `print-scaling=none` is shrunk to 96 %
+  whichever way the page lies.
+- **No page `/Rotate`**, in either. It would show the print form the right way up in a viewer, but
+  CUPS reads a page by how it is shown: `pdftopdf` keeps `/Rotate 90`, and the page then prints
+  exactly as a landscape page does — cut off at 210 mm with scaling off, turned and shrunk to 96 %
+  without (§13).
+- A portrait sheet is the same in both forms, byte for byte.
 
 ### 6.2 Per-page structure
 
-1. MediaBox = exact paper size in points.
+1. MediaBox = exact sheet size in points; in the print form, the paper upright, with a landscape
+   sheet turned a quarter on it (§6.1).
 2. Translate so the tile's `contentRectMm` origin lands at `originOnPaperMm`.
 3. Clip to the content rect **plus the overlap band**, so overlapping content appears on both
    neighbouring pages, which is what makes taping possible.
@@ -554,15 +580,17 @@ Not yet: presets, choosing layers and the bounds (6.4).
   the evaluator already produces, and genuinely useful before starting a project.
 - **G-code** — out of scope. Users with laser cutters have their own CAM and want DXF or SVG.
 
-## 13. Printing from the app (7.6)
+## 13. Printing from the app (7.6, 7.6b)
 
 **Print → LeatherCAD's Print Preview → the printer.** The decision and what was measured are in
 [ADR 0019](adr/0019-print-from-the-app.md).
 
 **One PDF.** *Print* (green, the window's primary action, Ctrl+P) writes the PDF from the same
-`SheetPlan` as *Export PDF*. The preview draws **that file** with pdf.js, so the sheets shown are
-the bytes sent, not a second drawing. `lp` then receives those bytes on its standard input. Its
-choices are only those that cannot change the size of what prints:
+`SheetPlan` as *Export PDF*, in the print form: every page upright, a landscape sheet turned a
+quarter on it (§6.1). The preview draws **that file** with pdf.js, so the sheets shown are the bytes
+sent, not a second drawing. Only its view of a landscape page is turned back, a quarter clockwise,
+so the sheet reads as the Sheets view shows it. `lp` then receives those bytes on its standard
+input. Its choices are only those that cannot change the size of what prints:
 
 | Choice | What it does |
 |---|---|
@@ -594,14 +622,27 @@ scaling* — but a driver or a printer could still scale, so it asks for the gau
 **Never send `orientation-requested` or `landscape`.** Through `pdftopdf` either one turns the page
 *and* fits it into the margins, even with `print-scaling=none`.
 
-**Landscape is not sent yet.** CUPS cannot turn a landscape page onto upright paper without
-scaling it. With scaling off, `pdftopdf` leaves it unturned and `pdftoraster` lays it on the upright
-sheet with everything past 210 mm cut off. With scaling on, it is turned and shrunk to 0.96. The
-preview shows landscape and says why it will not print it. The fix is for the writer to put every
-sheet in the PDF upright, with a landscape layout turned a quarter inside it, which changes §6.1.
+**Landscape is sent upright (7.6b).** CUPS cannot turn a landscape page onto upright paper without
+scaling it, so the PDF does the turning: a landscape sheet goes to `lp` on an upright page, turned a
+quarter inside it, with exactly the job a portrait sheet gets. The print test on A4 landscape, run
+through the installed `pdftopdf` and then `pdftoraster` with an A4 PPD (4.23 mm margins), the
+raster decoded and measured (libcupsfilters 2.2.1, 300 dpi):
+
+| The page sent | With the job's options | Without `print-scaling=none` |
+|---|---|---|
+| Landscape, 297 × 210 mm (until 7.6b) | Not turned: laid on the upright sheet, the 275 mm strap cut off at 210 mm | Turned, and shrunk: gauge 96.2 mm |
+| Upright, 210 × 297 mm, with `/Rotate 90` | `pdftopdf` keeps the `/Rotate`: the same raster as the landscape page, cut off at 210 mm | The same: 96.2 mm |
+| **Upright, the sheet turned inside it (the print form)** | **Upright, whole, gauge 100.25 mm of ink — 100 mm and its 0.2 mm line** | Shrunk like any page: 96.2 mm |
+
+So the print form carries no `/Rotate`, and the job no orientation. *Export PDF* keeps the
+landscape page (§6.1): through CUPS no form prints a file whole and true without the job's options,
+and only the landscape page reads the right way up in a viewer. `e2e/print-preview.spec.ts` sends
+the print test on A4 landscape and measures what `lp` received, and what `pdftopdf` makes of it.
 
 **Where the app does not print, it saves.** The same preview's last step is *Save PDF…*, with the
-reminder to print at *Actual size (100 %), never Fit or Shrink*:
+reminder to print at *Actual size (100 %), never Fit or Shrink*. It saves the bytes shown, the
+print form, so a viewer shows a landscape sheet sideways on its upright page — as it will come out
+of the printer:
 
 - **Windows** — no CUPS; no transport chosen yet (SumatraPDF is the candidate, ADR 0019).
 - **The Flatpak** — its runtime has libcups and `lpr`, but no `lp`, `lpstat` or `lpoptions`. The
@@ -622,7 +663,8 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 |---|---|
 | PDF dimension round trip | Export, rasterise with poppler's `pdftoppm` at 254 dpi, and measure the square, the ruler and the pattern in pixels, within a pixel (0.1 mm) |
 | MediaBox exactness | A4 page MediaBox equals 595.276 × 841.890 pt within 0.001 pt |
-| No scaling transform | The content stream contains no `cm` operator with non-unit scale factors |
+| No scaling transform | The content stream contains no `cm` operator at all in a file, and in the print form exactly one on each landscape sheet, first: `0 1 -1 0 W 0`, determinant 1, unit columns (`writer.test.ts`) |
+| The print form | Every page of every paper and orientation upright, unrotated and as many as the plan's sheets; a portrait sheet byte for byte the file's; on every paper's landscape sheet, turned back, a 100 mm line and the gauge measure true through poppler (`writer.test.ts`) |
 | Tiling coverage | For a 400 × 300 mm scene on A4, exactly 6 pages; the union of content rects covers the bounds with no gap; every adjacent pair overlaps by exactly 10 mm |
 | Tiling edge cases | Drawing smaller than one page → 1 page; exactly one page wide; overlap ≥ content width rejected; zero-size scene handled |
 | Grid centring | Leftover space is split evenly between the first and last tile |
@@ -635,3 +677,4 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 | Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items |
 | The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, a paper it lists its sizes without, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
 | Preview equals what is sent | Print previews the print test, and what the fake `lp` receives measures true like an exported PDF; where `pdftopdf` is installed, it measures true after that filter too, with the job's options (`e2e/print-preview.spec.ts`) |
+| Landscape, sent upright | Print sends the print test on A4 landscape with the portrait job's options; `lp` receives one upright, unrotated A4 page that, turned back, measures true — gauge, panel, holes, and the strap whole at 275 mm — before and after `pdftopdf` (`e2e/print-preview.spec.ts`) |

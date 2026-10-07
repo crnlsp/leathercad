@@ -138,6 +138,27 @@ Left from 1.3's *The window*: nothing says a new release exists.
 
 ### Output
 
+- ✅ **7.6 Print from LeatherCAD.** A physical print measured the gauge at 96 × 4.8 mm. The PDF
+  was exact; CUPS fitted it into the printer's margins, because no viewer's job carried
+  `print-scaling=none`. Now **Print**, green and the window's primary action, opens LeatherCAD's
+  own Print Preview. It draws the PDF itself with pdf.js, offers only printer, paper, orientation,
+  which sheets and copies, shows *100 % — locked* and *No scaling*, and sends those same bytes to
+  `lp` with `print-scaling=none` (*Print 3 sheets*). Where there is no CUPS client to drive
+  (Windows, the Flatpak), its last step is *Save PDF…* with the *Actual size* warning.
+  *Export PDF* stays, for a file. [ADR 0019](adr/0019-print-from-the-app.md),
+  [`printing.md`](printing.md) §13. Sheet 1 of the print test, sent this way on Linux, measured
+  true (log, 2026-10-01). macOS runs the same path and is unverified until measured.
+- ✅ **7.6b Landscape from the Print Preview.** CUPS cannot turn a landscape page onto upright paper
+  without shrinking it, and with scaling off it cuts it off, so the preview does not send landscape
+  yet. The writer puts every sheet in the PDF upright, with a landscape layout turned a quarter
+  inside it (`printing.md` §6.1 and §13), then the preview sends it.
+  ✅ Built as described. On the way: the turn is the one transform the writer emits — `0 1 -1 0 W 0
+  cm`, a quarter turn with no scale — and only *Print* sends it. *Export PDF* keeps a landscape
+  page, which a viewer shows the right way up; a page `/Rotate` would have done that for the print
+  form too, but `pdftopdf` keeps it and the page is cut off at 210 mm again, as measured through
+  `pdftopdf` and `pdftoraster` before deciding ([ADR 0019](adr/0019-print-from-the-app.md),
+  amended). The preview turns only its view of a landscape page. **Still owed:** a landscape
+  sheet printed through *Print* and measured on paper (R1).
 - ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
   candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
   then the preview saves the PDF.
@@ -169,6 +190,8 @@ Everything found along the way that is not fixed yet, with where it was found. T
 | # | What | Where it was found | Plan |
 |---|---|---|---|
 | ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
+| ✅ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | ✅ Built as described, for offsetting and hole distribution ([`testing.md`](testing.md) §11): eight real pieces, stitched 3 and 4 mm in or allowed 3 and 4 mm out, with a 3.0 and a 3.85 mm iron, every number on the 0.1 µm grid. Each was checked by hand once. On the way, not fixed: the sample project's scooped card pocket gets no stitch inset, because Tier 1 cannot trim the scoop's arc against the top edge, and the user is told the margin is deeper than the edge can hold, which is not why. The sample draws that seam by hand; the golden records the gap, and will show the stitch line the day Tier 1 learns that trim |
+| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
 | ☐ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | Decide which sizes a piece keeps (hardware, labels, card slots) before Scale takes the whole piece |
 
 #### Left from the independent QA pass (2026-09-24)

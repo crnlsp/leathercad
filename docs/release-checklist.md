@@ -108,8 +108,10 @@ the PDF's page count.
 | Letter | 3 | 3 |
 | Legal | 1 (the strap turned) | 1 |
 
-Print one portrait sheet and measure its gauge. Landscape is not sent from the preview yet
-([ADR 0019](adr/0019-print-from-the-app.md)): check that it says so and *Print* is unavailable.
+Print one portrait sheet and one landscape sheet, and measure both gauges. The landscape sheet
+comes out on upright paper, the sheet turned a quarter on it, whole: turn the paper to read it
+([ADR 0019](adr/0019-print-from-the-app.md), amended for 7.6b). The preview shows it landscape,
+like the Sheets view.
 
 ### 5. A realistic wallet
 

@@ -92,8 +92,11 @@ changes, it asks first.
 
    On Windows, and in the Flatpak, LeatherCAD cannot send the job itself yet: the preview's last
    button is **Save PDF…**. Print that file from your PDF viewer at **Actual size** or **100 %**
-   — never *Fit to page* or *Shrink*. Landscape sheets are not sent from the preview yet either.
-   Choose a portrait paper, or save the PDF.
+   — never *Fit to page* or *Shrink*.
+
+   A landscape sheet goes to the printer on upright paper, as printers take it, turned a quarter
+   on the page: turn the sheet to read it. The PDF the preview saves has it the same way, so a
+   viewer shows it sideways. *Export PDF*'s file keeps it landscape.
 4. Check it with a steel rule. **Every sheet has a box at its foot that measures 100 × 5 mm.** If
    it does, everything on the sheet is true to size. If it does not, something between LeatherCAD
    and the paper scaled it — a viewer's setting, or the printer's driver — so fix that and print
