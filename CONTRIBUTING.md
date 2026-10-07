@@ -193,6 +193,17 @@ Before a release that changes what prints, run the manual checks in
 [`docs/print-verification-log.md`](docs/print-verification-log.md). Print accuracy is never claimed
 without one.
 
+**If a release goes wrong:**
+
+- **A build fails.** The release stays without downloads: nothing is attached until every platform
+  has built. If the runner was at fault (a download, a timeout), use *Re-run failed jobs* on the
+  release run. It builds that platform again, then attaches all of them. If the code was at fault,
+  fix it on `develop` and release the fix as a patch, and say in the failed release's notes that
+  it has no downloads.
+- **A released installer is broken.** Edit the previous release on GitHub and tick *Set as the
+  latest release*: the README's *Download* link follows it at once. Then release the fix, which
+  becomes the latest in its turn.
+
 ## Working with Claude Code
 
 The repository is set up for it: [`CLAUDE.md`](CLAUDE.md) holds the invariants, and
