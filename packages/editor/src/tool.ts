@@ -9,7 +9,7 @@ import {
   type Project,
   type ResolvedProject,
 } from '@leathercad/domain';
-import type { DisplayList } from '@leathercad/render';
+import { cssPxPerMm, type DisplayList } from '@leathercad/render';
 
 import { buildSnapIndex, snap, snapGlyph, type SnapCandidate, type SnapIndex } from './snap.js';
 import type { Viewport } from './viewport.js';
@@ -332,6 +332,8 @@ export class ToolManager {
     // about to be committed to matters more than a rubber band, because a
     // corner and the edge through it are a fraction of a millimetre apart on
     // screen and very different in the file.
-    return { items: [...items, ...snapGlyph(this.caught, this.context.viewport.scale)] };
+    return {
+      items: [...items, ...snapGlyph(this.caught, cssPxPerMm(this.context.viewport.toView()))],
+    };
   }
 }

@@ -27,11 +27,6 @@ import type { SheetsLayout } from './sheetsLayout.js';
 /** How far a join line runs past the piece, so its ends are seen. */
 const JOIN_OVERRUN_MM = 6;
 
-/** Screen furniture options: the device pixel ratio, for text that stays the size it says. */
-export interface FurnitureOptions {
-  readonly dpr?: number;
-}
-
 /** The tiles of each taped part, keyed by part id, in sheet order. */
 function tilesByPart(plan: SheetPlan): Map<string, { bounds: Rect; tiles: Tile[] }> {
   const byPart = new Map<string, { bounds: Rect; tiles: Tile[] }>();
@@ -54,9 +49,11 @@ function tilesByPart(plan: SheetPlan): Map<string, { bounds: Rect; tiles: Tile[]
  * pixel wide, in the join's own printed dash rhythm, and a label saying what
  * it is. It is derived from the sheet plan and moves when the paper or the
  * piece changes; nothing about it is stored, and nothing can select it.
+ *
+ * Its sizes are CSS pixels, like every screen-constant size: the screen
+ * backends apply the display's ratio (U.1).
  */
-export function tapeJoins(plan: SheetPlan, options: FurnitureOptions = {}): DisplayList {
-  const dpr = options.dpr ?? 1;
+export function tapeJoins(plan: SheetPlan): DisplayList {
   const items: DisplayItem[] = [];
 
   for (const { bounds, tiles } of tilesByPart(plan).values()) {
@@ -74,7 +71,7 @@ export function tapeJoins(plan: SheetPlan, options: FurnitureOptions = {}): Disp
           { x, y: high },
         ]),
       );
-      items.push(label('Tape join', { x, y: high }, dpr, 'center'));
+      items.push(label('Tape join', { x, y: high }, 'center'));
     }
     for (const y of ys) {
       items.push(
@@ -83,7 +80,7 @@ export function tapeJoins(plan: SheetPlan, options: FurnitureOptions = {}): Disp
           { x: right, y },
         ]),
       );
-      items.push(label('Tape join', { x: right, y }, dpr, 'left'));
+      items.push(label('Tape join', { x: right, y }, 'left'));
     }
   }
   return { items };
@@ -102,18 +99,13 @@ function joinLine(points: { x: Mm; y: Mm }[]): DisplayItem {
   };
 }
 
-function label(
-  text: string,
-  at: { x: Mm; y: Mm },
-  dpr: number,
-  align: 'center' | 'left',
-): DisplayItem {
+function label(text: string, at: { x: Mm; y: Mm }, align: 'center' | 'left'): DisplayItem {
   return {
     kind: 'overlay-text',
     role: 'construction',
     at,
     text,
-    sizePx: SHEET.joinLabelPx * dpr,
+    sizePx: SHEET.joinLabelPx,
     colour: SHEET.furniture,
     align,
     baseline: align === 'center' ? 'bottom' : 'middle',
@@ -131,7 +123,7 @@ export interface SheetsLayer {
   readonly clipMm: Rect | null;
 }
 
-export interface SheetsViewOptions extends FurnitureOptions {
+export interface SheetsViewOptions {
   /** Dates the footer, as the PDF's is dated when it is written. */
   readonly now: Date;
   /** Parts to halo, as selected. */
@@ -154,14 +146,13 @@ export interface SheetsViewOptions extends FurnitureOptions {
  *   name below its grid — in the **furniture** magenta, which no ink can be.
  *
  * A taped sheet is a layer of its own, clipped to its printable area as the
- * PDF clips it.
+ * PDF clips it. Sizes on screen are CSS pixels, as on the Design board (U.1).
  */
 export function sheetsView(
   plan: SheetPlan,
   layout: SheetsLayout,
   options: SheetsViewOptions,
 ): readonly SheetsLayer[] {
-  const dpr = options.dpr ?? 1;
   const selected = options.selected ?? new Set<string>();
   const hovered = options.hovered ?? null;
   const area = contentAreaMm(plan.setup);
@@ -192,7 +183,7 @@ export function sheetsView(
         rect(shift(area.x, area.y), shift(area.x + area.widthMm, area.y + area.heightMm)),
         SHEET.furniture,
         SHEET.hairlinePx,
-        SHEET.outlineDashPx.map((px) => px * dpr),
+        SHEET.outlineDashPx,
       ),
     );
 
@@ -201,7 +192,6 @@ export function sheetsView(
       overlay(
         sheetLabel(frame.index + 1, plan.sheets.length),
         shift(0, frame.heightMm + 2),
-        dpr,
         'left',
         'bottom',
       ),
@@ -248,7 +238,6 @@ export function sheetsView(
       overlay(
         `${group.name}, taped: ${describeSheetNumbers(group.sheets).toLowerCase()}`,
         { x: group.bounds.minX, y: group.bounds.minY - 2 },
-        dpr,
         'left',
         'top',
       ),
@@ -327,7 +316,6 @@ function stroke(
 function overlay(
   text: string,
   at: Vec2,
-  dpr: number,
   align: 'left' | 'center',
   baseline: 'top' | 'bottom',
 ): DisplayItem {
@@ -336,7 +324,7 @@ function overlay(
     role: 'construction',
     at,
     text,
-    sizePx: SHEET.labelPx * dpr,
+    sizePx: SHEET.labelPx,
     colour: SHEET.furniture,
     align,
     baseline,

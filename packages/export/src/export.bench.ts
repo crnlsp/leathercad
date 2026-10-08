@@ -93,7 +93,7 @@ const project: Project = {
 const resolved = evaluate(project);
 const scene = buildExportScene(resolved, project.name);
 
-const view = { centreMm: { x: 600, y: 20 }, scale: 1, widthPx: 1400, heightPx: 400 };
+const view = { centreMm: { x: 600, y: 20 }, scale: 1, widthPx: 1400, heightPx: 400, dpr: 1 };
 
 test('build the display list', ({ bench }) =>
   measure(bench, 'display-list', () => buildDisplayList(resolved)));

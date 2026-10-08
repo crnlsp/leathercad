@@ -12,7 +12,7 @@ export interface RoleStyle {
    * hue identity, not the exact value, is the invariant (decisions §3).
    */
   readonly shell: string;
-  /** Screen-constant, so a cut line stays a hairline at any zoom. */
+  /** Screen-constant, in CSS pixels, so a cut line stays a hairline at any zoom. */
   readonly widthPx: number;
   /** On paper, in true millimetres: a 0.25 mm line prints 0.25 mm wide. */
   readonly widthMm: number;
@@ -37,8 +37,9 @@ export interface RoleStyle {
  * screen colours are for the light drafting ground (F.5), §8.1's table.
  */
 export const ROLE_STYLES: Readonly<Record<LayerRole, RoleStyle>> = {
-  // The heaviest line in the drawing, in ink.
-  cut: { colour: '#1d2126', shell: '#e5e8eb', widthPx: 1.75, widthMm: 0.25, grey: 0, dashMm: [] },
+  // The heaviest line in the drawing, in ink: 1.5 CSS px on screen (R-02),
+  // 0.25 mm on paper.
+  cut: { colour: '#1d2126', shell: '#e5e8eb', widthPx: 1.5, widthMm: 0.25, grey: 0, dashMm: [] },
   stitch: {
     colour: '#2f6690',
     shell: '#8cb8d9',
@@ -99,7 +100,7 @@ export const ROLE_STYLES: Readonly<Record<LayerRole, RoleStyle>> = {
   },
 };
 /**
- * The smallest dash or gap, in device pixels, that still reads as one.
+ * The smallest dash or gap, in CSS pixels, that still reads as one.
  * Below it a rhythm is noise, and the line is drawn solid instead.
  */
 export const DASH_LEGIBLE_PX = 1.5;

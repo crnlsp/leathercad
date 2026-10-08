@@ -51,7 +51,8 @@ two media. CLAUDE.md promises the screen previews the paper; here it does not.
 ### The resolution: width is pixels, dash is millimetres
 
 - **Stroke width stays screen-constant.** A cut line must remain a visible hairline at any zoom. This
-  is already the rule and it is right.
+  is already the rule and it is right. *Since U.1 (1.5):* in CSS pixels, so a line is as thick on a
+  2× display as on a 1× one; the screen backends apply the display's ratio once.
 - **Dash patterns become true millimetres**, read from one table shared by both media. Then a 2 mm
   dash is 2 mm on screen at 1:1 and 2 mm on paper, and zooming in shows the real rhythm.
 
@@ -414,7 +415,7 @@ in a different place. This table *is* the "same meaning everywhere" rule.
 
 | Feature | Colour | Width px / mm | Dash (mm, both media) | Distinguishing mark | Tree swatch |
 |---|---|---|---|---|---|
-| **Cut edge** (outer) | `--ink` `#1D2126` | 1.75 / 0.25 | solid | The heaviest line in the drawing | solid bar |
+| **Cut edge** (outer) | `--ink` `#1D2126` | 1.5 / 0.25 | solid | The heaviest line in the drawing | solid bar |
 | **Cut-out** (inner) | `--ink` `#1D2126` | 1.5 / 0.22 | solid | **Inward hatch**, 45°, 18 % ink — removal, not boundary | hatched bar |
 | **Stitch line** | `#2F6690` | 1.25 / 0.15 | `[2, 2]` | — | dashed bar |
 | **Stitch holes** | `#2F6690` | 1.25 / 0.15 | — | **Slanted slits** at the iron's angle, true size (§9) | three slits |
@@ -423,6 +424,10 @@ in a different place. This table *is* the "same meaning everywhere" rule.
 | **Hardware hole** | `#5B4CA8` | 1.5 / 0.20 | solid | Ring with a centre cross | ring |
 | **Measurement** | `#8A5A2B` | 1 / 0.10 | solid | Extension lines and arrowheads; the number set like every other measurement | arrow bar |
 | **Construction** | `#B6AD9B` | 1 / 0.10 | `[1, 1]` | — | faint bar |
+
+Widths in pixels are CSS pixels. The cut edge was 1.75 px until R-02 made it 1.5 (U.1, 1.5); the
+paper's 0.25 mm did not move. Inside a piece the lines sit on the piece fill, `--ground-piece-fill`
+`#FAF8F4`, or `--ground-piece-fill-selected` `#F7F1DE` for the piece being worked on (R-02).
 
 Three things this fixes: `mark` and `construction` stop being solid on screen and dotted on paper;
 `stitch` and `fold` get one rhythm in both media; hardware leaves the amber family, so a rivet can
@@ -499,12 +504,17 @@ Three tiers, real contrast steps, each dropping out at a zoom where it would bec
 
 | Tier | Colour | Shown when |
 |---|---|---|
-| 1 mm | `--ground-fine` | ≥ 4 px/mm |
-| 10 mm | `--ground-major` | ≥ 0.6 px/mm |
+| 1 mm | `--ground-fine` | ≥ 6 px/mm (160 %) |
+| 10 mm | `--ground-major` | ≥ 1.5 px/mm (40 %) |
 | 100 mm | `--ground-hundred` | always |
 | Axes | `--ground-axis` | always |
 
 Today one uniform low-contrast mesh produces moiré when zoomed in and vanishes when zoomed out.
+
+*Since U.1 (1.5):* the thresholds are R-02's — they were 4 and 0.6 — and every px/mm in §9 is **CSS**
+pixels per millimetre (`cssPxPerMm`), so a tier and a band switch at the same zoom on a 1× and a 2×
+display. Before, they compared device pixels and a 2× display switched at half the zoom. No grid
+line is drawn inside a piece: the piece fill covers it.
 
 ### 9.2 Rulers
 
@@ -518,7 +528,7 @@ Your point 4, made concrete. The **meaning** is constant across bands; the **rep
 | Band | px / mm | Stitch holes | 1 mm grid | Anchors |
 |---|---|---|---|---|
 | **Detail** | ≥ 8 | True size, true slant, true blade width | On | On hover |
-| **Working** | 2 – 8 | Slanted slits at `max(true size, 3 px)` — slant and colour kept | On above 4 | On hover |
+| **Working** | 2 – 8 | Slanted slits at `max(true size, 3 px)` — slant and colour kept | On from 6 | On hover |
 | **Overview** | < 2 | Individual holes **stop being drawn**; the set renders as its stitch line, dashed, in stitch blue | Off | Off |
 
 At every band stitching reads as stitching, in stitch blue, on the stitch line. Nothing changes

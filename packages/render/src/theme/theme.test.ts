@@ -127,6 +127,23 @@ describe('the four planes (F.5)', () => {
     expect(contrast(ACCENT.tanInk, GROUND.ground)).toBeGreaterThan(3);
   });
 
+  it('keeps every mark legible on a piece, either fill (R-02)', () => {
+    // Inside a piece every line, problem marker and selection halo now sits
+    // on the piece fill rather than the ground: 3 : 1 for marks still holds,
+    // and ink stays a body text's 4.5 : 1 and more.
+    for (const piece of [GROUND.pieceFill, GROUND.pieceFillSelected]) {
+      for (const role of LAYER_ROLES) {
+        if (role === 'construction') continue;
+        expect(contrast(ROLE_STYLES[role].colour, piece), `${role} on ${piece}`).toBeGreaterThan(3);
+      }
+      for (const severity of ['error', 'warning', 'info'] as const) {
+        expect(contrast(STATE.ground[severity], piece), severity).toBeGreaterThan(3);
+      }
+      expect(contrast(ACCENT.tanInk, piece)).toBeGreaterThan(3);
+      expect(contrast(GROUND.ink, piece)).toBeGreaterThan(4.5);
+    }
+  });
+
   it('gives Print a fill its label reads on, and that stands out on the shell', () => {
     expect(contrast(GO.onGo, GO.go)).toBeGreaterThan(4.5);
     for (const shell of [SHELL[800], SHELL[700]]) {
@@ -136,12 +153,14 @@ describe('the four planes (F.5)', () => {
   });
 });
 
-describe('the grid tiers (F.5)', () => {
+describe('the grid tiers (F.5, R-02)', () => {
   it('drops each tier out where it would become texture', () => {
-    // UI Foundations §9.1: 1 mm from 4 px/mm, 10 mm from 0.6, 100 mm always.
+    // R-02, in CSS pixels per millimetre: 1 mm from 6 (160 %), 10 mm from 1.5
+    // (40 %), 100 mm always. UI Foundations §9.1 had 4 and 0.6, in device
+    // pixels, so a 2× display drew them from half the zoom.
     expect(CANVAS.grid.map((tier) => [tier.stepMm, tier.minPxPerMm])).toEqual([
-      [1, 4],
-      [10, 0.6],
+      [1, 6],
+      [10, 1.5],
       [100, 0],
     ]);
   });

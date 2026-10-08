@@ -5,7 +5,7 @@ import type { DisplayList, DisplayItem } from '../displayList.js';
 import { foldTickShape, hatchLines, linkTickShape } from '../leather.js';
 import { markerShape } from '../marker.js';
 import { CANVAS, GROUND, screenDash } from '../theme/index.js';
-import { worldToScreen, type ViewportView } from '../view.js';
+import { cssPxPerMm, worldToCss, worldToScreen, type ViewportView } from '../view.js';
 
 /**
  * The slice of CanvasRenderingContext2D this backend actually uses.
@@ -105,6 +105,11 @@ export function clearCanvas(ctx: Canvas2DLike, view: ViewportView, background?: 
  * Text is drawn in a second, screen-space pass: the world transform flips Y,
  * and text drawn through it would come out mirrored.
  *
+ * Every screen-constant size is in **CSS pixels**, and the display's ratio is
+ * applied here, once (U.1): divided into millimetres by the CSS zoom in the
+ * geometry pass, and as the transform of every screen-space pass. So a line,
+ * a halo, a slit or a glyph is the same size on a 1× and a 2× display.
+ *
  * Does **not** clear the canvas. A display list is one layer among several —
  * grid beneath, rulers above — and a layer that wipes the surface erases
  * whatever was drawn before it. Call `clearCanvas` once, first.
@@ -116,7 +121,12 @@ export function renderDisplayList(
   options: RenderOptions = {},
 ): void {
   const transform = worldToScreen(view);
-  const perMm = view.scale;
+  // A screen-constant size in CSS pixels, divided by this, is millimetres.
+  const perMm = cssPxPerMm(view);
+  // Where the screen-space passes put things, in CSS pixels; each runs under
+  // `cssSpace`, which is where they meet the display's ratio.
+  const css = worldToCss(view);
+  const cssSpace = (): void => ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
 
   if (options.clipMm !== undefined) {
     const { clipMm, ...rest } = options;
@@ -216,21 +226,22 @@ export function renderDisplayList(
   // Both kinds are drawn here, and the difference is where the size comes
   // from. Document text is millimetres scaled by the viewport — it grows as
   // you zoom in, because it is part of the drawing — and each glyph is placed
-  // at the position `typography` laid out, so the screen and the paper agree.
-  // Overlay text is a fixed pixel size, because it is chrome.
+  // at the position `typography` laid out, so the screen and the paper agree:
+  // in device pixels, its size times the device scale. Overlay text is a fixed
+  // CSS pixel size, because it is chrome.
   const textItems = list.items.filter(
     (i): i is Extract<DisplayItem, { kind: 'document-text' | 'overlay-text' }> =>
       i.kind === 'document-text' || i.kind === 'overlay-text',
   );
   if (textItems.length > 0) {
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     for (const item of textItems) {
       ctx.fillStyle = item.colour;
 
       if (item.kind === 'overlay-text') {
-        const at = MatOps.apply(transform, item.at);
+        cssSpace();
+        const at = MatOps.apply(css, item.at);
         // Overlay text is the tool's readout — a length, an angle — so it is set
         // as a measurement: one weight above body (UI Foundations §4.3).
         ctx.font = `500 ${item.sizePx}px ${options.fontFamily ?? vendoredFamily()}`;
@@ -240,7 +251,8 @@ export function renderDisplayList(
         continue;
       }
 
-      ctx.font = `${item.placed.layout.sizeMm * perMm}px ${documentFamily(options)}`;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.font = `${item.placed.layout.sizeMm * view.scale}px ${documentFamily(options)}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
@@ -273,7 +285,7 @@ export function renderDisplayList(
 
   // Pass three: the leather glyphs — a fold's direction, a derived line's link
   // — in screen pixels, over the lines they belong to (F.7).
-  drawGlyphs(ctx, list, transform);
+  drawGlyphs(ctx, list, css, cssSpace);
 
   // Pass four: severity markers, on top of everything, in screen pixels so
   // they stay findable at any zoom (UI Foundations §8.5).
@@ -282,11 +294,11 @@ export function renderDisplayList(
   );
   if (markers.length === 0) return;
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  cssSpace();
   ctx.setLineDash([]);
   for (const item of markers) {
     const shape = markerShape(
-      MatOps.apply(transform, item.at),
+      MatOps.apply(css, item.at),
       item.glyph,
       CANVAS.marker.sizePx,
       CANVAS.marker.leaderPx,
@@ -330,14 +342,15 @@ export function renderDisplayList(
 }
 
 /**
- * Fold ticks and link ticks, from the shapes the SVG backend draws too. The
- * link's direction goes through the world transform like everything else, so
- * the flip stays in `view.ts`.
+ * Fold ticks and link ticks, from the shapes the SVG backend draws too, in CSS
+ * pixels. The link's direction goes through the world transform like
+ * everything else, so the flip stays in `view.ts`.
  */
 function drawGlyphs(
   ctx: Canvas2DLike,
   list: DisplayList,
-  transform: ReturnType<typeof worldToScreen>,
+  transform: ReturnType<typeof worldToCss>,
+  cssSpace: () => void,
 ): void {
   const glyphs = list.items.filter(
     (i): i is Extract<DisplayItem, { kind: 'fold-tick' | 'link-tick' }> =>
@@ -346,7 +359,7 @@ function drawGlyphs(
   if (glyphs.length === 0) return;
 
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  cssSpace();
   ctx.setLineDash([]);
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';

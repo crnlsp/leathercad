@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { EPS_POINT } from '@leathercad/core';
 import { arc, cubic, line, PathOps } from '@leathercad/geometry';
@@ -9,9 +10,11 @@ import {
   foldTickItem,
   hatchItem,
   linkTickItem,
+  markerItem,
   pathItem,
   slitsItem,
   textItem,
+  type DisplayList,
 } from '../displayList.js';
 import { CANVAS, GROUND } from '../theme/index.js';
 import type { ViewportView } from '../view.js';
@@ -90,7 +93,13 @@ class Recorder implements Canvas2DLike {
   }
 }
 
-const view: ViewportView = { centreMm: { x: 0, y: 0 }, scale: 4, widthPx: 800, heightPx: 600 };
+const view: ViewportView = {
+  centreMm: { x: 0, y: 0 },
+  scale: 4,
+  widthPx: 800,
+  heightPx: 600,
+  dpr: 1,
+};
 
 describe('tracePath', () => {
   it('emits a single moveTo for a connected path', () => {
@@ -240,8 +249,8 @@ describe('renderDisplayList', () => {
     );
 
     const stroke = ctx.calls.find((c) => c.startsWith('stroke('));
-    // 1.75 px (the cut edge, UI Foundations §8.1) / 4 px per mm.
-    expect(stroke).toContain('0.4375');
+    // 1.5 px (the cut edge, R-02; it was 1.75, UI Foundations §8.1) / 4 px per mm.
+    expect(stroke).toContain('0.3750');
   });
 
   const line = PathOps.polyline(
@@ -358,6 +367,136 @@ describe('renderDisplayList', () => {
     // 2 px at 4 px/mm is 0.5 mm in world space.
     expect(ctx.calls.filter((c) => c.startsWith('arc('))).toHaveLength(2);
     expect(ctx.calls.find((c) => c.startsWith('arc('))).toContain('0.5000');
+  });
+});
+
+describe('on a 2× display (U.1)', () => {
+  // Every screen-constant size is in CSS pixels, and the backend multiplies by
+  // the display's ratio once. It used to treat them as device pixels, so on a
+  // Retina display every line, halo, slit and glyph drew half as thick.
+  const line = PathOps.polyline(
+    [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ],
+    false,
+  );
+  /** The 1× view's CSS size and zoom, on a display of this ratio. */
+  const at = (dpr: number, css = 4): ViewportView => ({
+    centreMm: { x: 0, y: 0 },
+    scale: css * dpr,
+    widthPx: 800 * dpr,
+    heightPx: 600 * dpr,
+    dpr,
+  });
+  const devicePx = (ctx: Recorder, scale: number): number =>
+    Number(ctx.calls.find((c) => c.startsWith('stroke('))!.split(',')[1]) * scale;
+
+  it('strokes a 1.5 px line 1.5 device pixels wide at 1×, and 3 at 2×', () => {
+    for (const dpr of [1, 2]) {
+      const ctx = new Recorder();
+      renderDisplayList(ctx, { items: [pathItem('cut', line, { widthPx: 1.5 })] }, at(dpr));
+      expect(devicePx(ctx, at(dpr).scale)).toBeCloseTo(1.5 * dpr, 9);
+    }
+  });
+
+  it('sets a readout in CSS pixels, under the ratio', () => {
+    const ctx = new Recorder();
+    renderDisplayList(ctx, { items: [textItem('annotation', { x: 0, y: 0 }, 'hello', 11)] }, at(2));
+    const text = ctx.calls.findIndex((c) => c.startsWith('fillText'));
+    expect(ctx.calls.slice(0, text)).toContain(
+      'setTransform(2.0000,0.0000,0.0000,2.0000,0.0000,0.0000)',
+    );
+    // The canvas's CSS middle, at 11 CSS px: 22 device pixels tall.
+    expect(ctx.calls[text]).toBe('fillText(hello,400.0000,300.0000)');
+    expect(ctx.font).toBe('500 11px "IBM Plex Sans", sans-serif');
+  });
+
+  it('keeps document text true to size: its millimetres times the device scale', () => {
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      { items: [documentTextItem('annotation', { x: 0, y: 0 }, 'A', 4)] },
+      at(2),
+    );
+    // 4 mm at 4 CSS px/mm on a 2× display: 32 device pixels, at the device middle.
+    expect(ctx.font).toBe('32px "IBM Plex Sans", sans-serif');
+    expect(ctx.calls.find((c) => c.startsWith('fillText'))).toBe('fillText(A,800.0000,600.0000)');
+  });
+
+  it('multiplies every screen-constant size by the ratio exactly once', () => {
+    // Everything a list can hold that has a size on screen. Drawn at the same
+    // CSS zoom on two displays, the calls differ only in the transforms, by
+    // the ratio: every width, dash, radius, spacing and glyph is the same
+    // number, drawn under a transform that is the ratio times as large.
+    const square = PathOps.polyline(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 },
+      ],
+      true,
+    );
+    const list: DisplayList = {
+      items: [
+        fillItem('cut', [square], GROUND.ground),
+        hatchItem(square),
+        pathItem('cut', square),
+        pathItem('stitch', line),
+        pathItem('construction', line, { dashPx: [4, 3] }),
+        pathItem('construction', square, { colour: CANVAS.halo.selected, widthPx: 5, dashPx: [] }),
+        dotsItem('construction', [{ x: 1, y: 2 }], 3),
+        slitsItem(
+          [
+            [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+          ],
+          1.25,
+        ),
+        foldTickItem({ x: 5, y: 5 }, 'valley'),
+        linkTickItem('stitch', { x: 5, y: 0 }, { x: 1, y: 0 }),
+        textItem('annotation', { x: 2, y: 3 }, '40 mm', 11),
+        markerItem({ x: 3, y: 3 }, 'warning', '#b5651a', true),
+      ],
+    };
+    // Arguments, and a dash's segments, as numbers where they are numbers.
+    const numbers = (call: string): (number | string)[] =>
+      call
+        .slice(call.indexOf('(') + 1, -1)
+        .split(/[,|]/)
+        .map((arg) => (arg === '' || Number.isNaN(Number(arg)) ? arg : Number(arg)));
+
+    fc.assert(
+      fc.property(
+        fc.constantFrom(1.25, 1.5, 2, 3),
+        fc.double({ min: 0.1, max: 40, noNaN: true }),
+        (dpr, css) => {
+          const one = new Recorder();
+          const other = new Recorder();
+          renderDisplayList(one, list, at(1, css));
+          renderDisplayList(other, list, at(dpr, css));
+          expect(other.calls.map((c) => c.split('(')[0])).toEqual(
+            one.calls.map((c) => c.split('(')[0]),
+          );
+          other.calls.forEach((call, i) => {
+            const mine = numbers(call);
+            const theirs = numbers(one.calls[i]!);
+            const by = call.startsWith('setTransform(') ? dpr : 1;
+            mine.forEach((value, j) => {
+              const expected = theirs[j]!;
+              if (typeof value === 'string' || typeof expected === 'string') {
+                expect(value).toBe(expected);
+              } else {
+                expect(value).toBeCloseTo(expected * by, 2);
+              }
+            });
+          });
+        },
+      ),
+    );
   });
 });
 

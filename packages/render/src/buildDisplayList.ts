@@ -25,7 +25,7 @@ import {
   type DisplayList,
 } from './displayList.js';
 import { foldTicksAlong, linkTickOn, slitsFor } from './leather.js';
-import { CANVAS, ROLE_STYLES, STATE } from './theme/index.js';
+import { CANVAS, GROUND, ROLE_STYLES, STATE } from './theme/index.js';
 
 export interface BuildOptions {
   /** Haloed beneath, never repainted (UI Foundations §8.4). */
@@ -47,9 +47,9 @@ export interface BuildOptions {
    */
   readonly captions?: boolean;
   /**
-   * The zoom, in device pixels per millimetre, which picks the zoom band
-   * (§9.3) and spaces the fold ticks. Absent means the working zoom — what a
-   * test or an export of the screen wants.
+   * The zoom, in CSS pixels per millimetre (`cssPxPerMm`), which picks the
+   * zoom band (§9.3) and spaces the fold ticks. Absent means the working zoom
+   * — what a test or an export of the screen wants.
    */
   readonly pxPerMm?: number;
 }
@@ -72,6 +72,11 @@ export function buildDisplayList(
   const zoom = options.pxPerMm ?? CANVAS.bands.workingPxPerMm;
   const overview = zoom < CANVAS.bands.overviewBelowPxPerMm;
   const items: DisplayItem[] = [];
+  /**
+   * The pieces themselves (R-02), beneath everything on the board, so one
+   * piece laid over another never hides its lines.
+   */
+  const pieces: DisplayItem[] = [];
   const hidden = new Set<FeatureId>();
 
   // What every feature resolved to, so a seam allowance can find the stitching
@@ -105,6 +110,9 @@ export function buildDisplayList(
     // drawn on top of a region is tinted by it.
     const beneath: DisplayItem[] = [];
     const partStart = items.length;
+    // The leather: the outline, and the cut-outs it is left open at.
+    let outline: Path | null = null;
+    const cutOuts: Path[] = [];
 
     for (const entry of part.features) {
       if (!entry.feature.visible) hidden.add(entry.feature.id);
@@ -184,6 +192,12 @@ export function buildDisplayList(
       // A cut-out is removal, not boundary: hatched inward (§8.2).
       if (feature.kind === 'cut-contour' && feature.role === 'inner' && entry.path.closed) {
         beneath.push(hatchItem(entry.path));
+        cutOuts.push(entry.path);
+      }
+      // A part has one outline (S5); were a file to hold two, the first is
+      // the leather, as `materialOf` reads it.
+      if (feature.kind === 'cut-contour' && feature.role === 'outer' && entry.path.closed) {
+        outline ??= entry.path;
       }
 
       halo(id, entry.path);
@@ -203,6 +217,20 @@ export function buildDisplayList(
       }
     }
     items.splice(partStart, 0, ...beneath);
+
+    // Filled even-odd, so a cut-out shows the ground through it as a hole in
+    // the leather does. The one being worked on — anything in it selected,
+    // which a part picked by its heading is — is warmer.
+    if (outline !== null) {
+      const worked = part.features.some((entry) => selected.has(entry.feature.id));
+      pieces.push(
+        fillItem(
+          'cut',
+          [outline, ...cutOuts],
+          worked ? GROUND.pieceFillSelected : GROUND.pieceFill,
+        ),
+      );
+    }
 
     const bounds = RectOps.unionAll(drawn);
     if ((options.captions ?? true) && bounds !== null) items.push(...captionsFor(part, bounds));
@@ -235,7 +263,7 @@ export function buildDisplayList(
     }
   }
 
-  return { items };
+  return { items: [...pieces, ...items] };
 }
 
 /**

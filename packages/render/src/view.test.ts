@@ -2,7 +2,17 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { MatOps, RectOps } from '@leathercad/geometry';
 
-import { mmToPixels, pixelsToMm, screenToWorld, visibleBoundsMm, worldToScreen } from './view.js';
+import {
+  TRUE_SIZE_CSS_PX_PER_MM,
+  cssPxPerMm,
+  mmToPixels,
+  pixelsToMm,
+  screenToWorld,
+  visibleBoundsMm,
+  worldToCss,
+  worldToScreen,
+  zoomPercent,
+} from './view.js';
 import type { ViewportView } from './view.js';
 
 const view: ViewportView = {
@@ -10,7 +20,11 @@ const view: ViewportView = {
   scale: 4,
   widthPx: 800,
   heightPx: 600,
+  dpr: 1,
 };
+
+/** The displays a maker has: 100 %, the fractional scales Windows and Linux offer, Retina. */
+const ratios = fc.constantFrom(1, 1.25, 1.5, 2, 3);
 
 const closeTo = (a: number, b: number, eps = 1e-9): boolean => Math.abs(a - b) <= eps;
 
@@ -95,5 +109,67 @@ describe('pixel and millimetre conversion', () => {
 
   it('turn a 10 px pick radius into a millimetre tolerance', () => {
     expect(closeTo(pixelsToMm(view, 10), 2.5)).toBe(true);
+  });
+
+  it('count CSS pixels, so a pick radius covers the same millimetres on any display', () => {
+    fc.assert(
+      fc.property(ratios, fc.double({ min: 0.05, max: 100, noNaN: true }), (dpr, css) => {
+        const on = { ...view, scale: css * dpr, dpr };
+        return closeTo(pixelsToMm(on, 10), 10 / css, 1e-9);
+      }),
+    );
+  });
+});
+
+describe('zoom as the maker reads it', () => {
+  it('is 100 % at true size, whatever the display', () => {
+    fc.assert(
+      fc.property(ratios, (dpr) => {
+        const at = { ...view, scale: dpr * TRUE_SIZE_CSS_PX_PER_MM, dpr };
+        expect(zoomPercent(at)).toBeCloseTo(100, 9);
+        expect(cssPxPerMm(at)).toBeCloseTo(96 / 25.4, 9);
+      }),
+    );
+  });
+
+  it('is the same percentage on a 1× and a 2× display showing the same CSS size', () => {
+    fc.assert(
+      fc.property(ratios, fc.double({ min: 0.05, max: 100, noNaN: true }), (dpr, css) => {
+        const one = zoomPercent({ ...view, scale: css, dpr: 1 });
+        const other = zoomPercent({ ...view, scale: css * dpr, dpr });
+        return closeTo(one, other, 1e-9 * one);
+      }),
+    );
+  });
+});
+
+describe('worldToCss', () => {
+  it('is worldToScreen in CSS pixels: the same point, divided by the ratio', () => {
+    fc.assert(
+      fc.property(
+        ratios,
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        (dpr, x, y) => {
+          const on = { ...view, scale: 4 * dpr, widthPx: 800 * dpr, heightPx: 600 * dpr, dpr };
+          const device = MatOps.apply(worldToScreen(on), { x, y });
+          const css = MatOps.apply(worldToCss(on), { x, y });
+          return closeTo(css.x * dpr, device.x, 1e-6) && closeTo(css.y * dpr, device.y, 1e-6);
+        },
+      ),
+    );
+  });
+
+  it('flips Y as worldToScreen does, and puts a point where a 1× display would', () => {
+    const on: ViewportView = { ...view, scale: 8, widthPx: 1600, heightPx: 1200, dpr: 2 };
+    const m = worldToCss(on);
+    // The camera centre is the middle of the 800 × 600 CSS canvas, and 10 mm
+    // up the model is 40 CSS px up the screen, as at 1×.
+    expect(MatOps.apply(m, { x: 0, y: 0 })).toEqual({ x: 400, y: 300 });
+    expect(MatOps.apply(m, { x: 0, y: 10 })).toEqual({ x: 400, y: 260 });
+  });
+
+  it('is worldToScreen exactly on a 1× display', () => {
+    expect(worldToCss(view)).toEqual(worldToScreen(view));
   });
 });

@@ -248,7 +248,7 @@ The spec's §7 asks for five checks before building.
 
 | What | Where | Slice |
 |---|---|---|
-| The zoom bands and grid tiers compare **device** pixels per millimetre, and display-list widths are device pixels: on a 2× display the grid and the stitch detail switch at half the zoom, and every line, halo and slit is half as thick | `CanvasHost.tsx` 465 passes `view.scale`; `renderGrid` compares it; `canvas2d/backend.ts` sets `lineWidth = widthPx / perMm`; the backing store is `width × dpr` (`CanvasHost.tsx` 517); `ViewportView` has no `dpr` | U.1 |
+| The zoom bands and grid tiers compare **device** pixels per millimetre, and display-list widths are device pixels: on a 2× display the grid and the stitch detail switch at half the zoom, and every line, halo and slit is half as thick | `CanvasHost.tsx` 465 passes `view.scale`; `renderGrid` compares it; `canvas2d/backend.ts` sets `lineWidth = widthPx / perMm`; the backing store is `width × dpr` (`CanvasHost.tsx` 517); `ViewportView` has no `dpr` | U.1 ✅ |
 | One function words a piece for screen and paper, in English, below the app (`describePart`); R-01 changes only the screen's words | `render/src/captions.ts`, `buildDisplayList.ts` `captionsFor`, `export/src/scene.ts` | U.2 |
 | Keys are matched by `event.key`, so `[`, `]`, `\` and `Shift+1` fail on layouts where they need AltGr or type another character | `App.tsx` 345–406 | U.3 |
 | Keys are written into catalogue strings — "Settings (Ctrl+,)", "(Ctrl+E)", "(Ctrl+2)" — so macOS reads *Ctrl*, and no rebinding could reach them | `en.json` `projectBar.*Tooltip`, the view switch's tooltips | U.3 |
@@ -293,12 +293,14 @@ any zoom — and on a 2× display the lines stop being half as thick as they sho
 - Tokens `piece-fill` #FAF8F4 and `piece-fill-selected` #F7F1DE (`GROUND.pieceFill`,
   `GROUND.pieceFillSelected`, `--ground-piece-fill…` through `css.ts`'s existing loop), and the cut
   line at 1.5 px on screen.
-- **One fill per piece**, first among the part's `beneath` items so bands, hatches and halos draw
-  over it: the piece's outermost closed outer contour(s), with its closed cut-outs, filled
-  even-odd — a slot shows the ground through it, as a hole in leather does, and keeps its hatch. A
-  piece with a seam allowance has two closed outer contours, the outline inside the allowance: fill
-  the outermost only, or the band between them comes out empty. No closed outer contour, no fill;
-  a hidden outline, no fill.
+- **One fill per piece**, beneath every part's bands, hatches, halos and lines — *as built, all the
+  pieces' fills come first in the list, not first in each part, so a piece laid over another never
+  hides its lines*: the piece's closed outer contour, with its closed cut-outs, filled even-odd
+  — a slot shows the ground through it, as a hole in leather does, and keeps its hatch. *As built:
+  a piece with a seam allowance has one outer contour, not two — the edge grown from the stitch
+  line is the outline (S5 refuses a second) — so the fill is that edge and the band draws over
+  it.* No closed outer contour, no fill; a hidden outline, no fill; a hidden cut-out is filled
+  over.
 - **The selected piece** takes `piece-fill-selected` when any of its features is in the `selected`
   set the halo already reads — which covers a part picked by its heading, since `CanvasHost` passes
   its features. Never compute a second notion of selection.
@@ -307,35 +309,35 @@ any zoom — and on a 2× display the lines stop being half as thick as they sho
   - the grid tiers are thresholds in CSS px per mm: the 1 mm grid from 6 (≈ 160 %), the 10 mm grid
     from 1.5 (≈ 40 %), the 100 mm grid always; colours unchanged;
   - the zoom bands (`CANVAS.bands`) and the slit floor read CSS px per mm too — `CanvasHost` passes
-    `pxPerMm: view.scale / view.dpr`;
+    `pxPerMm: cssPxPerMm(view)` (*as built*: the division stays in `render`);
   - the backend multiplies every screen-constant width (strokes, halos, hatches, ticks, slits,
     markers) by `view.dpr`, in one place in each screen backend.
 - Since the fill is opaque and drawn after the grid, no grid line shows inside a piece: no clipping
   is needed.
 
 **Find out first.**
-- [ ] *Before* screenshots of the sample at 23 %, 60 %, 160 % and 300 % (mockup 07's four) at
+- [x] *Before* screenshots of the sample at 23 %, 60 %, 160 % and 300 % (mockup 07's four) at
       `devicePixelRatio` 1 and 2. Write down where each grid tier appears: by the code today, the
       1 mm grid at 106 % and the 10 mm at 16 % on a 1× display, and 53 % and 8 % on a 2× one.
-- [ ] Every place that multiplies by `dpr` before handing something to a backend — the rulers'
+- [x] Every place that multiplies by `dpr` before handing something to a backend — the rulers'
       style in `CanvasHost.tsx` 484–491, `tapeJoins(…, { dpr })`, anything else grep finds. Once
       the backend scales by `view.dpr`, each of these would scale twice: decide each one.
-- [ ] Which `beneath`/`items` order the SVG screen backend keeps, and whether it fills even-odd.
-- [ ] What `pnpm test:perf` measures for the display list (the 636-hole strap took 87 µs). One fill
+- [x] Which `beneath`/`items` order the SVG screen backend keeps, and whether it fills even-odd.
+- [x] What `pnpm test:perf` measures for the display list (the 636-hole strap took 87 µs). One fill
       path per piece should not move it; check.
 
 **Done when — check in the app.**
-- [ ] Every piece is filled #FAF8F4; the one being worked on — any of its features selected, or
+- [x] Every piece is filled #FAF8F4; the one being worked on — any of its features selected, or
       picked by its heading — #F7F1DE. A cut-out shows the ground and keeps its hatch. A piece with
       a seam allowance is filled to its outer edge, the allowance band still visible.
-- [ ] No grid line is visible inside a piece at any zoom.
-- [ ] The 1 mm grid appears from 160 % and the 10 mm grid from 40 %, at the same percentage on a 1×
+- [x] No grid line is visible inside a piece at any zoom.
+- [x] The 1 mm grid appears from 160 % and the 10 mm grid from 40 %, at the same percentage on a 1×
       and a 2× display.
-- [ ] Cut lines are 1.5 CSS px and grid lines 1 CSS px — on a 2× display, 3 and 2 device px. The
+- [x] Cut lines are 1.5 CSS px and grid lines 1 CSS px — on a 2× display, 3 and 2 device px. The
       other lines, the halos and the slits have the same CSS width at 1× and 2×.
-- [ ] Print did not move: the export tests, the golden fixtures and the `.lcp` fixtures pass
+- [x] Print did not move: the export tests, the golden fixtures and the `.lcp` fixtures pass
       unchanged, and nothing under `packages/export` changed but what a test needed.
-- [ ] Mockups 07 and 01 beside the *after* screenshots, in the pull request.
+- [x] Mockups 07 and 01 beside the *after* screenshots, in the pull request.
 
 **Tests.** `buildDisplayList`: the piece fill, its colour and order, cut-outs, the seam-allowance
 case, an open outline, a hidden outline, the selected piece. `view.ts`: `zoomPercent` is 100 at
@@ -351,12 +353,27 @@ default that hides a missing one. The export bench calls `buildDisplayList` too 
 
 **Not here.** Caption and dimension text (U.2). The zoom control (U.4).
 
+**As built (2026-10-08).** What the plan above did not know:
+
+- `pnpm test:perf` measures the domain's regeneration budget only. The display list is in
+  `pnpm bench`'s export bench: 85 µs before, 81 µs after on one machine — the fill costs nothing.
+- Two more sites multiplied by `dpr` before a backend: `sheetsView(…, { dpr })` (the Sheets view's
+  labels and the printable area's dash) besides `tapeJoins`. Both lost the option: the backends
+  scale now. The rulers draw in CSS pixels themselves; `CanvasHost` passes the plain style.
+- The editor had the same fault four more times — the snap glyph, Edit Points' handles, the
+  polyline's close radius and the drag threshold were device pixels. `Viewport.pxToMm` and
+  `pickToleranceMm` now go through `render`'s `pixelsToMm`, which is CSS pixels; the unused
+  `Viewport.mmToPx` went.
+- Thresholds as measured in the app: the 1 mm grid from 158.75 %, the 10 mm from 39.7 % (6 and
+  1.5 CSS px per mm exactly), on a 1× and a 2× display alike.
+
+
 **Steps.**
 
-- [ ] **1. Branch.** `git switch -c feat/ui-pieces-read-as-pieces` from the branch carrying this
+- [x] **1. Branch.** `git switch -c feat/ui-pieces-read-as-pieces` from the branch carrying this
       plan, or from `develop` once the plan is merged.
-- [ ] **2. Before.** The screenshots and the numbers in *Find out first*.
-- [ ] **3. Zoom, test first.** In `render/src/view.test.ts`, which already imports `fc` and has a
+- [x] **2. Before.** The screenshots and the numbers in *Find out first*.
+- [x] **3. Zoom, test first.** In `render/src/view.test.ts`, which already imports `fc` and has a
       `view` fixture (give it `dpr: 1`), add `TRUE_SIZE_CSS_PX_PER_MM`, `cssPxPerMm` and
       `zoomPercent` to the `./view.js` import, and:
 
@@ -381,21 +398,21 @@ default that hides a missing one. The export bench calls `buildDisplayList` too 
   ```
 
   Run `pnpm test view` — it fails: `zoomPercent` does not exist. Add `dpr` to `ViewportView`
-  (`Viewport.toView()` already has it), then the constant and the two functions in `view.ts`,
+  (*as built*: `Viewport` has `dpr`, but `toView()` did not hand it over), then the constant and the two functions in `view.ts`,
   exported from `render/src/index.ts`. Run it again: it passes; `pnpm typecheck` names every
   fixture that needs `dpr: 1`.
-- [ ] **4. The grid by CSS pixels, test first.** In `canvas2d/grid.test.ts`, with the file's own
+- [x] **4. The grid by CSS pixels, test first.** In `canvas2d/grid.test.ts`, with the file's own
       `recorder()`: at `dpr` 2 and `scale` 2 × 5.9 the 1 mm grid's colour is not stroked, at
       2 × 6.0 it is; the same at `dpr` 1 with 5.9 and 6.0; the 10 mm grid's at 1.49 and 1.5. Then
       the property: for any `dpr` and any CSS px per mm, the strokes recorded at that CSS density are
       the same set. Change `CANVAS.grid` to CSS thresholds (`minCssPxPerMm: 6`, `1.5`, `0`) and
-      `renderGrid` to compare `cssPxPerMm(view)`.
-- [ ] **5. Widths times `dpr`, test first.** In `canvas2d/backend.test.ts`: a path item with
+      `renderGrid` to compare `cssPxPerMm(view)`. *As built: the key stays `minPxPerMm`, like
+      every other `…PxPerMm` in `CANVAS`, whose doc says they are all CSS pixels now.*
+- [x] **5. Widths times `dpr`, test first.** In `canvas2d/backend.test.ts`: a path item with
       `widthPx` 1.5 strokes at `lineWidth × perMm = 3` when `view.dpr` is 2, and at 1.5 when it is 1.
       Make the backend multiply in one place; do the same in `svg/backend.ts`. Then fix each
-      double-scaling site found in step 2, with `CanvasHost` passing `pxPerMm: view.scale /
-      view.dpr`.
-- [ ] **6. The piece fill, test first.** In `buildDisplayList.test.ts`, with its `outline` fixture
+      double-scaling site found in step 2, with `CanvasHost` passing `pxPerMm: cssPxPerMm(view)`.
+- [x] **6. The piece fill, test first.** In `buildDisplayList.test.ts`, with its `outline` fixture
       and `resolved()` helper:
 
   ```ts
@@ -420,11 +437,11 @@ default that hides a missing one. The export bench calls `buildDisplayList` too 
   Add the cut-out case (a closed `role: 'inner'` contour is the fill's second path), the seam
   allowance case (only the outermost outer contour is filled), an open outline and a hidden one
   (no fill). Then the tokens, and the fill in `buildDisplayList`.
-- [ ] **7. The cut line at 1.5 px** in `ROLE_STYLES.cut.widthPx`. `widthMm` does not move.
-- [ ] **8. Look again.** The same screenshots at 1× and 2×, beside mockups 07 and 01.
-- [ ] **9. Prove print did not move**, then `pnpm check`, `pnpm test:e2e`, and the pixel baselines:
+- [x] **7. The cut line at 1.5 px** in `ROLE_STYLES.cut.widthPx`. `widthMm` does not move.
+- [x] **8. Look again.** The same screenshots at 1× and 2×, beside mockups 07 and 01.
+- [x] **9. Prove print did not move**, then `pnpm check`, `pnpm test:e2e`, and the pixel baselines:
       `pnpm build && pnpm test:visual --update-snapshots`, every image looked at.
-- [ ] **10. Docs and roadmap**, then commit —
+- [x] **10. Docs and roadmap**, then commit —
       `feat(desktop): pieces are filled on the board, and the grid and lines keep their size on any display (U.1)`
       — push, and open the pull request into `develop`.
 

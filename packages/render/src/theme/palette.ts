@@ -29,6 +29,14 @@ export const GROUND = {
   axis: '#a89e88',
   ink: '#1d2126',
   inkDim: '#6e695e',
+  /**
+   * Inside a piece on screen (R-02): flat and a shade paler than the ground,
+   * with no grid, so a piece reads as a cut piece on a cutting mat. Never
+   * printed.
+   */
+  pieceFill: '#faf8f4',
+  /** The piece being worked on: any of its features selected. */
+  pieceFillSelected: '#f7f1de',
 } as const;
 
 /**

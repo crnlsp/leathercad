@@ -25,7 +25,7 @@ export type SlitEnds = readonly [Vec2, Vec2];
 
 export interface Slits {
   readonly slits: readonly SlitEnds[];
-  /** Stroke width in device pixels: the blade's own, in the detail band. */
+  /** Stroke width in CSS pixels: the blade's own, in the detail band. */
   readonly widthPx: number;
 }
 
