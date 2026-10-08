@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.3.0 (2026-10-01) · **Next:** 1.4, then 1.5 · **Last updated:** 2026-10-07
+**Released:** v1.3.0 (2026-10-01) · **Next:** 1.4, then 1.5 and 1.6 · **Last updated:** 2026-10-08
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -27,6 +27,11 @@ and what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md).
 - **Scope rule,** carried over from 1.0: an idea that is not needed for everyday use, the
   leathercraft workflow, pattern correctness or print correctness waits for a later release — even
   when it turns up halfway through something else. Write it under *Later* instead.
+- **The UI refinement's slices are `U.1` to `U.19`** (1.5). Each builds requirements of
+  [its spec](superpowers/specs/2026-10-08-ui-refinement-requirements.md), whose ids are `R-01` to
+  `R-16` — not the release-engineering items `R1` to `R7` below. Each slice's whole task is in
+  [the plan](superpowers/plans/2026-10-08-ui-refinement.md): why it matters to a maker, what the
+  code does today, what to find out first, and how to check it is done.
 
 ## Where 1.0 left things
 
@@ -47,10 +52,16 @@ and what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md).
 The theme is *print true, and cut true*: what leaves the app, on paper or as a file for a cutter,
 is the size that was drawn. It is the first part of what the roadmap called 1.4. The maintainer
 split 1.4 on 2026-10-07 so that the print-scaling fix reaches people sooner: printed from a PDF
-viewer, a 1.3.0 PDF measured 96 % on paper (7.6). Everything else moved to
-[1.5](#15--the-release-after) as it was, so this could ship first
-([`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)). The order within each group is
-the suggested order of work.
+viewer, a 1.3.0 PDF measured 96 % on paper (7.6). Everything else moved to the release after as it
+was, so this could ship first ([`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)); that
+release is [1.6](#16--after-the-refinement) since the UI refinement took 1.5 on 2026-10-08. The
+order within each group is the suggested order of work.
+
+**What it still waits for** (2026-10-08): Q27, which needs `gifsicle` and `pngquant` where the
+pictures are retaken, and R1, the physical measurement only the maintainer can take. 6.5 landed in
+#65. 7.6b, 6.2 and Q7 were finished on branches cut
+before the split, so their ticks had landed in the release after; they are back in the release
+they belong to.
 
 ### Output
 
@@ -64,12 +75,27 @@ the suggested order of work.
   *Export PDF* stays, for a file. [ADR 0019](adr/0019-print-from-the-app.md),
   [`printing.md`](printing.md) §13. Sheet 1 of the print test, sent this way on Linux, measured
   true (log, 2026-10-01). macOS runs the same path and is unverified until measured.
-- ☐ **7.6b Landscape from the Print Preview.** CUPS cannot turn a landscape page onto upright paper
+- ✅ **7.6b Landscape from the Print Preview.** CUPS cannot turn a landscape page onto upright paper
   without shrinking it, and with scaling off it cuts it off, so the preview does not send landscape
   yet. The writer puts every sheet in the PDF upright, with a landscape layout turned a quarter
   inside it (`printing.md` §6.1 and §13), then the preview sends it.
-- ☐ **6.2 SVG export.** Millimetre units, one group per layer, the single Y flip, with the
+  ✅ Built as described. On the way: the turn is the one transform the writer emits — `0 1 -1 0 W 0
+  cm`, a quarter turn with no scale — and only *Print* sends it. *Export PDF* keeps a landscape
+  page, which a viewer shows the right way up; a page `/Rotate` would have done that for the print
+  form too, but `pdftopdf` keeps it and the page is cut off at 210 mm again, as measured through
+  `pdftopdf` and `pdftoraster` before deciding ([ADR 0019](adr/0019-print-from-the-app.md),
+  amended). The preview turns only its view of a landscape page. **Still owed:** a landscape
+  sheet printed through *Print* and measured on paper (R1).
+- ✅ **6.2 SVG export.** Millimetre units, one group per layer, the single Y flip, with the
   accuracy tests from [`printing.md`](printing.md) §14.
+  ✅ Built as described: *Export SVG…*, in a menu beside *Export PDF*, writes the scene the PDF is
+  written from, laid out as the maker arranged the board ([`printing.md`](printing.md) §10). On the
+  way: strokes take the canvas's role colours, not the PDF's black, because laser software sorts
+  by colour; an arc is written in pieces of at most a quarter turn, because an SVG arc's centre is
+  worked out from its endpoints and a half turn could lose up to 0.035 mm to a rounding of 0.1 µm
+  (the round-trip property found it); and an export to a file ends in the same notice of what was
+  left out as the PDF's, in the words *in the file*. **Still owed:** a real laser or vector
+  editor has not opened one; the checks read the file by hand and rendered it with librsvg.
 - ✅ **6.5 DXF export** (R12), for laser and CNC users.
   ✅ Built as described, except that [`printing.md`](printing.md) §11 was wrong: R12 has no
   `LWPOLYLINE` and no `$INSUNITS`. It is R12 with `POLYLINE`s for flattened cubics, and with
@@ -98,7 +124,7 @@ Everything found along the way that is not fixed yet, with where it was found. T
 
 | # | What | Where it was found | Plan |
 |---|---|---|---|
-| ☐ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | Build it for offsetting and hole distribution first, where silent drift costs leather |
+| ✅ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | ✅ Built as described, for offsetting and hole distribution ([`testing.md`](testing.md) §11): eight real pieces, stitched 3 and 4 mm in or allowed 3 and 4 mm out, with a 3.0 and a 3.85 mm iron, every number on the 0.1 µm grid. Each was checked by hand once. On the way, not fixed: the sample project's scooped card pocket gets no stitch inset, because Tier 1 cannot trim the scoop's arc against the top edge, and the user is told the margin is deeper than the edge can hold, which is not why. The sample draws that seam by hand; the golden records the gap, and will show the stitch line the day Tier 1 learns that trim |
 | ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
 | ✅ **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | The independent QA pass, 2026-09-24 (P3) | ✅ Fixed in 7.8: everything printed is inside the margins, in the verification strip |
 | ✅ **Q32** | **bug** · Two failures of the nightly property run ([issue #39](https://github.com/crnlsp/leathercad/issues/39)). `arcThroughPoints` took three points almost in a line, far apart, for a triangle: `(0, -2000)`, `(0, 2000)` and `(0.00025, 0)` gave a circle 8,000 km in radius, and an arc round it that missed its own points by more than 1e-6 mm. "In a line" was twice the triangle's area under an absolute 1e-12 mm², and how flat a triangle is depends on its size, so points 4 mm apart met the same fault. The other failure, `closestPointOnPath` on a line shorter than `EPS_POINT`, was Q26's: the nightly still tested `main` | The nightly runs of 2026-09-30 and 2026-10-03 (seeds 566912085 and 188633644) | ✅ Fixed in #58, which closed #39: `arcThroughPoints` checks the arc it built, and when its circle cannot put the ends on `a` and `c` and `b` on it within `EPS_POINT` it answers with the straight line from `a` to `c`, as it did for points exactly in a line. The arc tool shows no arc and the polyline tool draws a straight edge, where both made an arc thousands of kilometres across. The property that every triangle gets an arc through all three points was wrong at this scale; it is now two, that every triangle whose circle is under a kilometre gets an arc, and that every result starts at `a`, ends at `c` and passes through `b`. Each counterexample is a regression test, and the first seed's joins Q26's |
@@ -114,12 +140,92 @@ Everything found along the way that is not fixed yet, with where it was found. T
 
 ---
 
-## 1.5 — the release after
+## 1.5 — the window, refined
+
+The UI/UX final audit's requirements, received 2026-10-08: a refinement pass, not a redesign. The
+layout, the look and the words stay, and **printed output does not change**. The theme is *a maker
+gets more done at the bench*: the pattern reads at every zoom, the board gets the room, sizes are
+typed where the eye already is, and the next step is one click away.
+[Requirements](superpowers/specs/2026-10-08-ui-refinement-requirements.md) (R-01 to R-16) and
+[mockups](superpowers/specs/2026-10-08-ui-refinement-mockups/); [the
+plan](superpowers/plans/2026-10-08-ui-refinement.md) holds each slice's whole task, the answers to
+the requirements' open questions, and what reading the code turned up. One pull request per slice,
+in this order: U.1 first, and the plan's §0 says why. R-10 and the keys move up into Phase 1 as
+U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14 and R-16 read it.
+
+### Phase 1 — the canvas, the keys and the frame
+
+- ☐ **U.1 Pieces read as pieces** (R-02). Every piece filled on the board, the one being worked on
+  warmer; no grid inside a piece; the 1 mm grid from 160 % and the 10 mm grid from 40 %; cut lines
+  1.5 px. On the way, zoom is defined once, in CSS pixels per millimetre: on a 2× display the grid
+  and the stitch detail switch at half the zoom today, and every line draws half as thick.
+- ☐ **U.2 Captions and dimension numbers readable at every zoom** (R-01). 12 px at any zoom, with a
+  halo; "Card pocket ×2" over "52 holes · 3.85 mm"; the name only below 40 %; a caption pinned to
+  the canvas's top-left while its piece's top is off screen. Paper keeps its true-size "Card pocket
+  — cut 2", and the screen's words move to the catalogue.
+- ☐ **U.3 Keys by where they are, shown as caps, and tooltips that fit** (§2, §6, R-10). One keymap
+  matching `KeyboardEvent.code`, shown as the local character and as ⌘ on macOS; keys leave the
+  catalogue's sentences; a tooltip is one line up to 360 px, flipped and shifted to stay inside the
+  window — the thin column at the right edge goes.
+- ☐ **U.4 A zoom control, and true size** (R-03). − · % · + · Fit at the canvas's bottom-right;
+  *Fit drawing* `Shift+1`, *Fit selection* `Shift+2`, *True size* `Ctrl+0` — which fits today.
+- ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
+  three status-bar chips, always; the widths of the requirements' §5; the maker's choices
+  remembered; nothing unreachable.
+- ☐ **U.6 Properties: order, weight and job totals** (R-05). A hole set reads iron, result, name,
+  arrange, then Delete alone at its foot; with nothing selected, the pieces to cut, the holes to
+  punch and the sheets to print.
+- ☐ **U.7 The top bar in three zones** (R-06). The project and its save state · Design | Sheets ·
+  the paper, then Export PDF and Print as split buttons, Print's second half showing the problems;
+  green leaves the actions; the window's edited flag.
+
+### Phase 2 — panels, lists and small fixes
+
+- ☐ **U.8 The Parts tree** (R-07). Pieces fold; features nest under what they follow; keys for the
+  tree; *Sheet N, turned* leaves Design.
+- ☐ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
+  the reminder to measure. No Turn: no piece is turned by hand.
+- ☐ **U.10 The legend** (R-09). Open with names by default; folds to a chip that is remembered.
+- ☐ **U.11 Options-row hints** (R-11). Short hints with keys as caps, dropping from the right; `?`
+  never drops.
+- ☐ **U.12 Change a key in Settings › Keyboard shortcuts** (§2).
+
+### Phase 3 — the craft workflow
+
+- ☐ **U.13 Settings › My tools** (R-15). The maker's irons, a default, and starting values for new
+  pieces.
+- ☐ **U.14 Value chips beside the selected shape** (R-12). Width, height, corner and margin, edited
+  on the drawing.
+- ☐ **U.15 Values in any unit, and sums** (R-12). `95-2*3.5` and `3.75in`, wherever a size is typed.
+- ☐ **U.16 Typing while drawing** (R-13). `105` `Tab` `75` `Tab` `8` `Enter`.
+- ☐ **U.17 The selection bar: stitch summary and next step** (R-14).
+- ☐ **U.18 Drawing defaults in Properties** (R-16).
+- ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
+  pixel baselines and the README's pictures retaken.
+
+### Decisions this release needs
+
+Each has a recommended default in the plan, which its slice takes unless the maintainer decides
+otherwise.
+
+| Slice | Question | Recommended |
+|---|---|---|
+| U.3 | On a French or German keyboard, does a tool key follow its letter or its position? | Its letter: R stays R. Punctuation and digits keep their position, shown as the local character |
+| U.7 | If the project's name joins the Project menu's button, how is a project renamed? | Whichever of *Rename…* in the menu or F2 on the name fits what renaming does today |
+| U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
+| U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |
+| U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference |
+| U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
+
+---
+
+## 1.6 — after the refinement
 
 What 1.3 did not finish and 1.4 does not take moved here on 2026-10-07, when 1.4 was split
 ([1.4](#14--the-next-release) says why): word for word, but for 8.9, which now reads the one tag
-form R4 decided. It becomes *the next release* once 1.4 has shipped. The order within each group
-is the suggested order of work, and *The window* comes before the other groups.
+form R4 decided. It was 1.5 until 2026-10-08, when the UI refinement took that number, and it
+becomes *the next release* once 1.5 has shipped. The order within each group is the suggested
+order of work, and *The window* comes before the other groups.
 
 ### The window
 
@@ -145,41 +251,9 @@ Left from 1.3's *The window*: nothing says a new release exists.
 
 ### Output
 
-- ✅ **7.6 Print from LeatherCAD.** A physical print measured the gauge at 96 × 4.8 mm. The PDF
-  was exact; CUPS fitted it into the printer's margins, because no viewer's job carried
-  `print-scaling=none`. Now **Print**, green and the window's primary action, opens LeatherCAD's
-  own Print Preview. It draws the PDF itself with pdf.js, offers only printer, paper, orientation,
-  which sheets and copies, shows *100 % — locked* and *No scaling*, and sends those same bytes to
-  `lp` with `print-scaling=none` (*Print 3 sheets*). Where there is no CUPS client to drive
-  (Windows, the Flatpak), its last step is *Save PDF…* with the *Actual size* warning.
-  *Export PDF* stays, for a file. [ADR 0019](adr/0019-print-from-the-app.md),
-  [`printing.md`](printing.md) §13. Sheet 1 of the print test, sent this way on Linux, measured
-  true (log, 2026-10-01). macOS runs the same path and is unverified until measured.
-- ✅ **7.6b Landscape from the Print Preview.** CUPS cannot turn a landscape page onto upright paper
-  without shrinking it, and with scaling off it cuts it off, so the preview does not send landscape
-  yet. The writer puts every sheet in the PDF upright, with a landscape layout turned a quarter
-  inside it (`printing.md` §6.1 and §13), then the preview sends it.
-  ✅ Built as described. On the way: the turn is the one transform the writer emits — `0 1 -1 0 W 0
-  cm`, a quarter turn with no scale — and only *Print* sends it. *Export PDF* keeps a landscape
-  page, which a viewer shows the right way up; a page `/Rotate` would have done that for the print
-  form too, but `pdftopdf` keeps it and the page is cut off at 210 mm again, as measured through
-  `pdftopdf` and `pdftoraster` before deciding ([ADR 0019](adr/0019-print-from-the-app.md),
-  amended). The preview turns only its view of a landscape page. **Still owed:** a landscape
-  sheet printed through *Print* and measured on paper (R1).
 - ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
   candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
   then the preview saves the PDF.
-- ✅ **6.2 SVG export.** Millimetre units, one group per layer, the single Y flip, with the
-  accuracy tests from [`printing.md`](printing.md) §14.
-  ✅ Built as described: *Export SVG…*, in a menu beside *Export PDF*, writes the scene the PDF is
-  written from, laid out as the maker arranged the board ([`printing.md`](printing.md) §10). On the
-  way: strokes take the canvas's role colours, not the PDF's black, because laser software sorts
-  by colour; an arc is written in pieces of at most a quarter turn, because an SVG arc's centre is
-  worked out from its endpoints and a half turn could lose up to 0.035 mm to a rounding of 0.1 µm
-  (the round-trip property found it); and an export to a file ends in the same notice of what was
-  left out as the PDF's, in the words *in the file*. **Still owed:** a real laser or vector
-  editor has not opened one; the checks read the file by hand and rendered it with librsvg.
-- ☐ **6.5 DXF export** (R12), for laser and CNC users.
 - ☐ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
   the Print Preview's since 7.6.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than
@@ -197,8 +271,6 @@ Everything found along the way that is not fixed yet, with where it was found. T
 | # | What | Where it was found | Plan |
 |---|---|---|---|
 | ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
-| ✅ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | ✅ Built as described, for offsetting and hole distribution ([`testing.md`](testing.md) §11): eight real pieces, stitched 3 and 4 mm in or allowed 3 and 4 mm out, with a 3.0 and a 3.85 mm iron, every number on the 0.1 µm grid. Each was checked by hand once. On the way, not fixed: the sample project's scooped card pocket gets no stitch inset, because Tier 1 cannot trim the scoop's arc against the top edge, and the user is told the margin is deeper than the edge can hold, which is not why. The sample draws that seam by hand; the golden records the gap, and will show the stitch line the day Tier 1 learns that trim |
-| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
 | ☐ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | Decide which sizes a piece keeps (hardware, labels, card slots) before Scale takes the whole piece |
 
 #### Left from the independent QA pass (2026-09-24)
@@ -263,6 +335,11 @@ Also later, each already decided in principle:
 - **8.8b Copy, Paste and Duplicate of features,** after 8.8. Neither exists, and they carry a
   domain question: what a pasted stitch line follows when its outline was not copied with it. A
   command with property tests, not a menu item.
+
+Left room for by the UI refinement (1.5):
+- **Hole matching and thread length** in the selection bar — "Matches Outer, right run 15 = 15 ·
+  Thread ≈ 0.9 m". U.17 leaves room for this third line and builds nothing of it (R-14).
+- **Measuring on the sheets,** unless U.9 builds it: no tool acts on the Sheets view yet.
 
 Recorded from the QA pass (2026-09-24), with no work planned:
 
