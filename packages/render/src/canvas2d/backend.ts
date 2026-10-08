@@ -38,6 +38,7 @@ export interface Canvas2DLike {
   clip(fillRule?: CanvasFillRule): void;
   fillRect(x: number, y: number, w: number, h: number): void;
   fillText(text: string, x: number, y: number): void;
+  strokeText(text: string, x: number, y: number): void;
   setLineDash(segments: number[]): void;
   lineWidth: number;
   // Widened to the DOM's own union so CanvasRenderingContext2D satisfies this
@@ -228,7 +229,8 @@ export function renderDisplayList(
   // you zoom in, because it is part of the drawing — and each glyph is placed
   // at the position `typography` laid out, so the screen and the paper agree:
   // in device pixels, its size times the device scale. Overlay text is a fixed
-  // CSS pixel size, because it is chrome.
+  // CSS pixel size: a tool's readout, and the board's own words — a caption,
+  // a dimension's value — which read at every zoom (R-01).
   const textItems = list.items.filter(
     (i): i is Extract<DisplayItem, { kind: 'document-text' | 'overlay-text' }> =>
       i.kind === 'document-text' || i.kind === 'overlay-text',
@@ -240,13 +242,32 @@ export function renderDisplayList(
       ctx.fillStyle = item.colour;
 
       if (item.kind === 'overlay-text') {
-        cssSpace();
-        const at = MatOps.apply(css, item.at);
-        // Overlay text is the tool's readout — a length, an angle — so it is set
-        // as a measurement: one weight above body (UI Foundations §4.3).
-        ctx.font = `500 ${item.sizePx}px ${options.fontFamily ?? vendoredFamily()}`;
+        let at = MatOps.apply(css, item.at);
+        const turn = item.rotationRad ?? 0;
+        if (turn === 0) {
+          cssSpace();
+        } else {
+          // Turned through the world transform, so a number reads along its
+          // line on screen without a flip of its own (CLAUDE.md invariant 2).
+          const along = MatOps.applyDirection(css, { x: Math.cos(turn), y: Math.sin(turn) });
+          const angle = Math.atan2(along.y, along.x);
+          const [cos, sin, k] = [Math.cos(angle), Math.sin(angle), view.dpr];
+          ctx.setTransform(k * cos, k * sin, -k * sin, k * cos, k * at.x, k * at.y);
+          at = { x: 0, y: 0 };
+        }
+        // A readout — a length, an angle — is set as a measurement, one weight
+        // above body (UI Foundations §4.3); the board's words in their voice.
+        ctx.font = `${String(item.weight ?? 500)} ${item.sizePx}px ${options.fontFamily ?? vendoredFamily()}`;
         ctx.textAlign = item.align ?? 'left';
         ctx.textBaseline = item.baseline ?? 'alphabetic';
+        if (item.halo !== undefined) {
+          // The ground, out from every glyph's edge, so the words read over a
+          // line or a piece (R-01). Round, or a corner of the stroke spikes.
+          ctx.strokeStyle = item.halo.colour;
+          ctx.lineWidth = item.halo.widthPx * 2;
+          ctx.lineJoin = 'round';
+          ctx.strokeText(item.text, at.x, at.y);
+        }
         ctx.fillText(item.text, at.x, at.y);
         continue;
       }

@@ -33,18 +33,19 @@ import {
   type PointerInput,
 } from '@leathercad/editor';
 import {
+  CANVAS,
   DEFAULT_RULER_STYLE,
   GROUND,
   SHEET,
   buildDisplayList,
   clearCanvas,
-  cssPxPerMm,
   renderDisplayList,
   renderGrid,
   renderRulers,
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
+import { captionOf } from './captionWords.js';
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
@@ -63,7 +64,7 @@ import { isTyping } from './shortcuts.js';
  * problem and asked to be taken to it. Whether creating a part should move the
  * view is a different question, still deferred.
  */
-/** Margin left around anything the view is asked to frame, in device pixels. */
+/** Margin left around anything the view is asked to frame, in CSS pixels. */
 const FIT_PADDING_PX = 60;
 
 /** How far a press may wander, in CSS pixels, and still be a click on the Sheets view. */
@@ -184,8 +185,15 @@ export function CanvasHost({
   /** On the Sheets view, the part under the pointer (7.4d). */
   const hoveredPartRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
+  const i18n = useI18n();
+  const { t } = i18n;
+  /** The interface's words, which the board's captions are in, as the next paint reads them. */
+  const i18nRef = useRef(i18n);
+  useEffect(() => {
+    i18nRef.current = i18n;
+    dirtyRef.current = true;
+  }, [i18n]);
   /** On the Sheets view: the sheet under the pointer, for the status bar. */
-  const { t } = useI18n();
   const [sheetUnder, setSheetUnder] = useState<CanvasStatus['sheet']>(null);
   /** Where a press on the Sheets view began, and on which piece. */
   const pressRef = useRef<{ x: number; y: number; partId: string | null; moved: boolean } | null>(
@@ -362,11 +370,16 @@ export function CanvasHost({
   }, [view, invalidate]);
 
   // The first frame can be painted before the vendored typeface has loaded,
-  // which would leave the captions in a fallback face. Repaint once it is
-  // here. The positions never change — they come from the layout, not from
-  // the browser — so this only affects the letterforms.
+  // which would leave the board's words in a fallback face. Repaint once every
+  // weight the canvas sets is here: Regular, and the Medium and SemiBold of the
+  // captions and values (R-01), which only the interface's own text loaded.
+  // The positions never change, so this only affects the letterforms.
   useEffect(() => {
-    void document.fonts.load(`16px "${FONT_FAMILY}"`).then(
+    void Promise.all(
+      [CANVAS.text.meta, CANVAS.text.value, CANVAS.text.name].map(({ weight }) =>
+        document.fonts.load(`${String(weight)} 16px "${FONT_FAMILY}"`),
+      ),
+    ).then(
       () => invalidate(),
       () => undefined,
     );
@@ -459,9 +472,12 @@ export function CanvasHost({
         // The same list the panels read (X7), so a feature that failed is
         // marked here instead of silently disappearing.
         diagnostics: diagnose(document.project),
-        // The zoom band: how much detail the drawing carries at this zoom,
-        // the same on any display (U.1).
-        pxPerMm: cssPxPerMm(view),
+        // The camera: how much detail the drawing carries at this zoom, the
+        // same on any display (U.1), and where the board's words go — a
+        // caption pins to the top-left once it would run under the ruler (R-01).
+        view,
+        // Each piece's caption, in the interface's words (ADR 0018).
+        caption: (part) => captionOf(i18nRef.current, part),
       }),
       view,
     );

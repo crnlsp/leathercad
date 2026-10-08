@@ -109,11 +109,12 @@ export type DisplayItem =
       readonly colour: string;
     }
   /**
-   * Text that never leaves the screen: a rubber-band readout, a snap hint.
+   * Text that never leaves the screen: a rubber-band readout, a snap hint, and
+   * the board's own words — a piece's caption, a dimension's value (R-01).
    *
-   * Sized in **pixels**, because it is chrome rather than content — it should
-   * stay the same size as the user zooms. A separate item kind, so an export
-   * cannot be handed it by accident.
+   * Sized in **pixels**, so it stays the same size as the user zooms, and
+   * reads at every zoom. A separate item kind, so an export cannot be handed it
+   * by accident: paper sets its own captions and values as document text.
    */
   | {
       readonly kind: 'overlay-text';
@@ -124,6 +125,12 @@ export type DisplayItem =
       readonly colour: string;
       readonly align?: CanvasTextAlign;
       readonly baseline?: CanvasTextBaseline;
+      /** A readout's 500 when absent. */
+      readonly weight?: 400 | 500 | 600;
+      /** The ground around every glyph, `widthPx` out from its edge (R-01). */
+      readonly halo?: { readonly colour: string; readonly widthPx: number };
+      /** Turned about `at`, counter-clockwise in the world: a number along its line. */
+      readonly rotationRad?: number;
     }
   /**
    * Where something is wrong: a severity glyph with a short leader to its
@@ -249,7 +256,7 @@ export function textItem(
   role: LayerRole,
   at: Vec2,
   text: string,
-  sizePx = 11,
+  sizePx: number = CANVAS.text.minPx,
   colour?: string,
 ): DisplayItem {
   return {
@@ -259,6 +266,32 @@ export function textItem(
     text,
     sizePx,
     colour: colour ?? ROLE_STROKES[role].colour,
+  };
+}
+
+/**
+ * The board's own words (R-01): a line of a piece's caption, or a dimension's
+ * value — in one of `CANVAS.text`'s voices, the same size at every zoom, on a
+ * halo of the ground so it reads over the grid, a piece or a line. `at` is
+ * on the baseline, where `align` says: its left end unless told otherwise.
+ */
+export function boardTextItem(
+  at: Vec2,
+  text: string,
+  voice: { readonly weight: 400 | 500 | 600; readonly sizePx: number },
+  colour: string,
+  placement: { readonly align?: CanvasTextAlign; readonly rotationRad?: number } = {},
+): DisplayItem {
+  return {
+    kind: 'overlay-text',
+    role: 'annotation',
+    at,
+    text,
+    sizePx: voice.sizePx,
+    colour,
+    weight: voice.weight,
+    halo: { colour: CANVAS.text.halo, widthPx: CANVAS.text.haloPx },
+    ...placement,
   };
 }
 

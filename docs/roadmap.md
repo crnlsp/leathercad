@@ -169,10 +169,20 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   too — half size, or half the reach, at 2×. Every piece's fill lies beneath every line on the
   board, so a piece laid over another never hides it. Printed output did not move: no export test,
   golden fixture or format fixture changed.
-- ☐ **U.2 Captions and dimension numbers readable at every zoom** (R-01). 12 px at any zoom, with a
+- ✅ **U.2 Captions and dimension numbers readable at every zoom** (R-01). 12 px at any zoom, with a
   halo; "Card pocket ×2" over "52 holes · 3.85 mm"; the name only below 40 %; a caption pinned to
   the canvas's top-left while its piece's top is off screen. Paper keeps its true-size "Card pocket
   — cut 2", and the screen's words move to the catalogue.
+  ✅ Built as described. Measured in the app: at 60 %, where the wallet fits, a name was 6.4 CSS px
+  tall and a dimension's number 6.8; at 23 % they were 2.4 and 2.6. Now every caption and value is
+  12 CSS px at every zoom, 24 device pixels at 2×. The value is centred on its dimension line, and
+  its halo breaks the line. A caption pins as soon as it would run under the ruler, not only once
+  the piece's top has gone, or the topmost piece's name hid under the ruler at 60 %; two pinned
+  captions stack. The caption's words come from `en.json` through a `caption` option, and the
+  detail names the pitch, no longer the iron. Found on the way, and fixed: the canvas loaded only
+  the Regular weight before painting, and "Tape join" was 11 px. Printed output did not move: no
+  export test, golden fixture or format fixture changed, and a new test holds paper's "Card pocket
+  — cut 2" at 2.8 mm.
 - ☐ **U.3 Keys by where they are, shown as caps, and tooltips that fit** (§2, §6, R-10). One keymap
   matching `KeyboardEvent.code`, shown as the local character and as ⌘ on macOS; keys leave the
   catalogue's sentences; a tooltip is one line up to 360 px, flipped and shifted to stay inside the

@@ -30,6 +30,11 @@ export const GROUND = {
   ink: '#1d2126',
   inkDim: '#6e695e',
   /**
+   * The board's secondary words (R-01): a caption's detail under the piece's
+   * name. 6.0 : 1 on the ground, where `inkDim` was 4.7.
+   */
+  label: '#5e5950',
+  /**
    * Inside a piece on screen (R-02): flat and a shade paler than the ground,
    * with no grid, so a piece reads as a cut piece on a cutting mat. Never
    * printed.

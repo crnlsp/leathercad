@@ -4,6 +4,7 @@ import { EPS_POINT } from '@leathercad/core';
 import { arc, cubic, line, PathOps } from '@leathercad/geometry';
 
 import {
+  boardTextItem,
   documentTextItem,
   dotsItem,
   fillItem,
@@ -87,6 +88,9 @@ class Recorder implements Canvas2DLike {
   }
   fillText(t: string, x: number, y: number): void {
     this.record('fillText', t, x, y);
+  }
+  strokeText(t: string, x: number, y: number): void {
+    this.record('strokeText', t, x, y, String(this.strokeStyle), this.lineWidth, this.lineJoin);
   }
   setLineDash(s: number[]): void {
     this.record('setLineDash', s.join('|'));
@@ -296,6 +300,48 @@ describe('renderDisplayList', () => {
     expect(ctx.calls[textIndex]).toBe('fillText(hello,400.0000,300.0000)');
   });
 
+  it('sets the board’s words in their own weight, on a halo of the ground (R-01)', () => {
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      { items: [boardTextItem({ x: 0, y: 0 }, 'Card pocket ×2', CANVAS.text.name, GROUND.ink)] },
+      view,
+    );
+
+    expect(ctx.font).toBe('600 12px "IBM Plex Sans", sans-serif');
+    // The halo first, 4 px out from every glyph's edge, round, so the words
+    // are read against the ground over a line or a piece; then the words.
+    const halo = ctx.calls.findIndex((c) => c.startsWith('strokeText('));
+    expect(ctx.calls[halo]).toBe(
+      `strokeText(Card pocket ×2,400.0000,300.0000,${GROUND.ground},8.0000,round)`,
+    );
+    expect(ctx.calls[halo + 1]).toBe('fillText(Card pocket ×2,400.0000,300.0000)');
+  });
+
+  it('turns a dimension’s number to read along its line, through the world transform', () => {
+    // A quarter turn counter-clockwise in the world reads bottom to top on
+    // screen: the text's own x axis is the screen's −y.
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      {
+        items: [
+          boardTextItem({ x: 10, y: 5 }, '30.0', CANVAS.text.value, '#8a5a2b', {
+            rotationRad: Math.PI / 2,
+          }),
+        ],
+      },
+      view,
+    );
+
+    const text = ctx.calls.findIndex((c) => c.startsWith('fillText('));
+    expect(ctx.calls[text]).toBe('fillText(30.0,0.0000,0.0000)');
+    // 10 mm right of and 5 mm above the middle of an 800 × 600 canvas at 4 px/mm.
+    expect(ctx.calls.slice(0, text)).toContain(
+      'setTransform(0.0000,-1.0000,1.0000,0.0000,440.0000,280.0000)',
+    );
+  });
+
   it('draws document text glyph by glyph, where the layout put them', () => {
     // ADR 0011: the layout happens once, in millimetres, and the canvas places
     // the font at those positions. Drawing the whole string in one call would
@@ -459,6 +505,8 @@ describe('on a 2× display (U.1)', () => {
         foldTickItem({ x: 5, y: 5 }, 'valley'),
         linkTickItem('stitch', { x: 5, y: 0 }, { x: 1, y: 0 }),
         textItem('annotation', { x: 2, y: 3 }, '40 mm', 11),
+        boardTextItem({ x: 4, y: 1 }, 'Panel', CANVAS.text.name, GROUND.ink),
+        boardTextItem({ x: 4, y: 1 }, '30.0', CANVAS.text.value, '#8a5a2b', { rotationRad: 0.7 }),
         markerItem({ x: 3, y: 3 }, 'warning', '#b5651a', true),
       ],
     };

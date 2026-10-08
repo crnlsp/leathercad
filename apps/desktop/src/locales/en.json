@@ -529,6 +529,12 @@
       "stitch-line": "Stitch line"
     }
   },
+  "caption": {
+    "cut": "{{name}} ×{{quantity}}",
+    "holes_one": "{{count}} hole · {{pitch}}",
+    "holes_other": "{{count}} holes · {{pitch}}",
+    "unnamed": "Part"
+  },
   "problems": {
     "withSubject": "{{name}}: {{sentence}}",
     "severity": {

@@ -144,12 +144,42 @@ describe('the four planes (F.5)', () => {
     }
   });
 
+  it('sets the board’s words at the contrast R-01 promises, on the halo they sit on', () => {
+    // Every caption and dimension value draws on a halo of the ground, so the
+    // ground is what each is read against, over a piece or a line alike.
+    expect(CANVAS.text.halo).toBe(GROUND.ground);
+    expect(contrast(GROUND.label, GROUND.ground)).toBeGreaterThanOrEqual(6);
+    expect(contrast(ROLE_STYLES.annotation.colour, GROUND.ground)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(GROUND.ink, GROUND.ground)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('gives Print a fill its label reads on, and that stands out on the shell', () => {
     expect(contrast(GO.onGo, GO.go)).toBeGreaterThan(4.5);
     for (const shell of [SHELL[800], SHELL[700]]) {
       expect(contrast(GO.go, shell)).toBeGreaterThan(3);
       expect(contrast(GO.goInk, shell)).toBeGreaterThan(3);
     }
+  });
+});
+
+describe('text on the board (R-01)', () => {
+  it('sets a caption’s name, its detail and a dimension’s value at 12/16, at three weights', () => {
+    expect(CANVAS.text.name).toEqual({ weight: 600, sizePx: 12, lineHeightPx: 16 });
+    expect(CANVAS.text.meta).toEqual({ weight: 400, sizePx: 12, lineHeightPx: 16 });
+    expect(CANVAS.text.value).toEqual({ weight: 500, sizePx: 12, lineHeightPx: 16 });
+  });
+
+  it('never sets anything on the board below 12 px', () => {
+    expect(CANVAS.text.minPx).toBe(12);
+    for (const voice of [CANVAS.text.name, CANVAS.text.meta, CANVAS.text.value]) {
+      expect(voice.sizePx).toBeGreaterThanOrEqual(CANVAS.text.minPx);
+    }
+    // The tape join's words on the design board too.
+    expect(SHEET.joinLabelPx).toBeGreaterThanOrEqual(CANVAS.text.minPx);
+  });
+
+  it('haloes each in 4 px of the ground', () => {
+    expect(CANVAS.text.haloPx).toBe(4);
   });
 });
 

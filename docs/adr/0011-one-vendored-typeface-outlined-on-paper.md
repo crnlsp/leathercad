@@ -1,6 +1,6 @@
 # 11. One vendored typeface, laid out once, outlined on paper
 
-**Status:** Accepted
+**Status:** Accepted; point 2 amended 2026-10-08
 **Date:** 2026-09-15
 
 ## Context
@@ -89,3 +89,18 @@ never reach an export.
 - **Inter.** Excellent, but it separates 1, l and I through OpenType stylistic sets that an outline
   pipeline would have to apply itself. **Noto Sans:** coverage far beyond the need, for much larger
   glyph data.
+
+## Amended 2026-10-08: the board's captions and values are screen text (U.2, R-01)
+
+Point 2 put part captions and measurement values among **document text**, on screen as on paper. On
+the Design board they grew and shrank with the zoom: at 60 %, where a wallet fits, a caption was
+6 CSS px tall and a dimension's number 7, so a maker zoomed in to read what they had drawn.
+
+**On the Design board, a part's caption and a dimension's value are now overlay text**: 12 CSS px
+at every zoom, in the vendored face at 600 (the name), 400 (the detail) and 500 (the value), each on
+a 4 px halo of the ground. **Paper is unchanged**: the scene still sets "Card pocket — cut 2" at
+2.8 mm and the value at 3 mm, as glyph outlines from the one layout, and nothing printed moved.
+What divides the two kinds is now where the text goes, not what it says: on paper it is document
+text, on the board's screen it may be overlay text. The words of the board's caption are the
+interface's, from the app's catalogue (ADR 0018). A text label stays document text everywhere:
+its size is the maker's choice, and the board shows it true.

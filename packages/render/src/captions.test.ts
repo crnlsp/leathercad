@@ -1,8 +1,9 @@
 import type { Feature, ResolvedFeature, ResolvedPart } from '@leathercad/domain';
 import { Shapes } from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { describeStitching } from './captions.js';
+import { stitchingOf } from './captions.js';
 
 /** A resolved hole set: `count` holes from an iron of `pitchMm`, named `label`. */
 function holeSet(
@@ -51,69 +52,70 @@ const partOf = (...features: ResolvedFeature[]): ResolvedPart => ({
   features,
 });
 
-describe('describeStitching — the iron on the pattern (UI Foundations §13)', () => {
-  it('says the count, the pitch and the iron, the way a maker writes it on card', () => {
-    expect(describeStitching(partOf(holeSet(88, 3.85, 'KS Blade 3.85 mm')))).toBe(
-      '88 holes · 3.85 mm · KS Blade',
-    );
+describe('stitchingOf — what a piece’s caption counts (R-01)', () => {
+  it('counts the holes at the iron’s pitch', () => {
+    expect(stitchingOf(partOf(holeSet(52, 3.85, 'KS Blade 3.85 mm')))).toEqual([
+      { holes: 52, pitchMm: 3.85 },
+    ]);
   });
 
-  it('keeps an iron’s own name when it does not repeat the pitch', () => {
-    expect(describeStitching(partOf(holeSet(40, 3.85, 'Wuta')))).toBe('40 holes · 3.85 mm · Wuta');
-    // A different number is part of the name, not a repeat of the pitch.
-    expect(describeStitching(partOf(holeSet(40, 3.85, 'KS Blade 3.38 mm')))).toBe(
-      '40 holes · 3.85 mm · KS Blade 3.38 mm',
-    );
-    // The whole number, not the pitch hiding at its end.
-    expect(describeStitching(partOf(holeSet(40, 3.85, 'Iron 13.85 mm')))).toBe(
-      '40 holes · 3.85 mm · Iron 13.85 mm',
-    );
-  });
-
-  it('reads a label of any length in linear time, not quadratic', () => {
-    const label = `${'9'.repeat(200_000)}x`;
-    expect(describeStitching(partOf(holeSet(1, 3.85, label)))).toBe(`1 hole · 3.85 mm · ${label}`);
-  }, 1_000);
-
-  it('reads a decimal comma in a label as the same pitch', () => {
-    expect(describeStitching(partOf(holeSet(12, 3.85, 'Żelazko 3,85 mm')))).toBe(
-      '12 holes · 3.85 mm · Żelazko',
-    );
-  });
-
-  it('names the pitch alone when the iron has no name', () => {
-    expect(describeStitching(partOf(holeSet(24, 3)))).toBe('24 holes · 3.00 mm');
-  });
-
-  it('counts one hole as one hole', () => {
-    expect(describeStitching(partOf(holeSet(1, 3.85)))).toBe('1 hole · 3.85 mm');
-  });
-
-  it('adds up the sets one iron makes, and lists each iron once', () => {
+  it('adds up the sets at one pitch, whatever iron made them, and lists each pitch once', () => {
+    // The caption names the pitch, not the iron (R-01): two irons of one
+    // pitch punch the same holes.
     expect(
-      describeStitching(
-        partOf(
-          holeSet(60, 3.85, 'KS Blade 3.85 mm'),
-          holeSet(28, 3.85, 'KS Blade 3.85 mm'),
-          holeSet(24, 3),
-        ),
+      stitchingOf(
+        partOf(holeSet(60, 3.85, 'KS Blade 3.85 mm'), holeSet(28, 3.85, 'Wuta'), holeSet(24, 3)),
       ),
-    ).toBe('88 holes · 3.85 mm · KS Blade, 24 holes · 3.00 mm');
+    ).toEqual([
+      { holes: 88, pitchMm: 3.85 },
+      { holes: 24, pitchMm: 3 },
+    ]);
   });
 
   it('counts only the holes that are drawn', () => {
     expect(
-      describeStitching(
+      stitchingOf(
         partOf(
           holeSet(88, 3.85),
           holeSet(30, 3.85, undefined, { visible: false }),
           holeSet(9, 3.85, undefined, { ok: false }),
         ),
       ),
-    ).toBe('88 holes · 3.85 mm');
+    ).toEqual([{ holes: 88, pitchMm: 3.85 }]);
   });
 
-  it('has nothing to say about a part without stitching', () => {
-    expect(describeStitching(partOf())).toBeNull();
+  it('has nothing to count on a part without stitching', () => {
+    expect(stitchingOf(partOf())).toEqual([]);
+  });
+
+  it('counts every drawn hole once, under a pitch it lists once', () => {
+    const sets = fc.array(
+      fc.record({
+        count: fc.integer({ min: 0, max: 500 }),
+        pitch: fc.constantFrom(2.7, 3, 3.38, 3.85, 4),
+        visible: fc.boolean(),
+        ok: fc.boolean(),
+      }),
+      { maxLength: 8 },
+    );
+    fc.assert(
+      fc.property(sets, (generated) => {
+        const counted = stitchingOf(
+          partOf(
+            ...generated.map(({ count, pitch, visible, ok }) =>
+              holeSet(count, pitch, undefined, { visible, ok }),
+            ),
+          ),
+        );
+        const drawn = generated.filter(({ visible, ok }) => visible && ok);
+        expect(counted.reduce((sum, { holes }) => sum + holes, 0)).toBe(
+          drawn.reduce((sum, { count }) => sum + count, 0),
+        );
+        expect(new Set(counted.map(({ pitchMm }) => pitchMm)).size).toBe(counted.length);
+        expect(counted.map(({ pitchMm }) => pitchMm)).toEqual([
+          ...new Set(drawn.map(({ pitch }) => pitch)),
+        ]);
+      }),
+    );
   });
 });

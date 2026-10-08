@@ -48,7 +48,8 @@ export {
   textItem,
 } from './displayList.js';
 
-export { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from './captions.js';
+export type { Stitching } from './captions.js';
+export { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart, stitchingOf } from './captions.js';
 
 export type { Ring } from './leather.js';
 export { linkTickShape } from './leather.js';
@@ -61,7 +62,7 @@ export { labelPrecisionFor, majorStepFor, niceTickStepMm, ticksInRange } from '.
 export type { RulerStyle } from './canvas2d/grid.js';
 export { DEFAULT_RULER_STYLE, renderGrid, renderRulers } from './canvas2d/grid.js';
 
-export type { BuildOptions } from './buildDisplayList.js';
+export type { BuildOptions, Caption } from './buildDisplayList.js';
 export { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
 
 export type { SvgOptions } from './svg/backend.js';
