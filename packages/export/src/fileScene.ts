@@ -84,3 +84,8 @@ export function circleOf(path: Path): { readonly centre: Vec2; readonly radius: 
 export function mmText(value: Mm): string {
   return String(quantise(value));
 }
+
+/** The same length with all four decimals kept, as a DXF writes a coordinate: `100.0000`. */
+export function mmFixed(value: Mm): string {
+  return quantise(value).toFixed(4);
+}

@@ -34,7 +34,7 @@
   "projectBar": {
     "application": "Application",
     "exportMore": "More ways to export",
-    "exportMoreTooltip": "Export as SVG, in millimetres, for laser cutters, plotters and vector editors",
+    "exportMoreTooltip": "Export as SVG or DXF, in millimetres, for laser cutters, CNC and vector editors",
     "exportPdf": "Export PDF",
     "exportTooltip": "Save {{sheets}} as a print-ready PDF at 1:1 (Ctrl+E). To print it from another app, choose Actual size (100 %)",
     "help": "Help",
@@ -53,6 +53,8 @@
   },
   "menu": {
     "about": "About LeatherCAD",
+    "exportDxf": "Export DXF…",
+    "exportDxfNote": "R12, in millimetres, for laser and CNC software",
     "exportNothing": "Nothing to export yet. No part has a line to cut.",
     "exportSvg": "Export SVG…",
     "exportSvgNote": "Millimetres, for laser cutters, plotters and vector editors",
@@ -288,12 +290,14 @@
     }
   },
   "file": {
+    "exportDxfTitle": "Export DXF",
     "exportSvgTitle": "Export SVG",
     "exportTitle": "Export PDF",
     "invalid": "This project file can’t be opened: {{problems}}",
     "newer": "This file was saved by a newer version of LeatherCAD. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "newerNamed": "This file was saved by LeatherCAD {{version}}, a newer version than this one. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "openTitle": "Open project",
+    "dxf": "DXF",
     "pdf": "PDF",
     "project": "LeatherCAD project",
     "saveTitle": "Save project",

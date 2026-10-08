@@ -38,7 +38,12 @@ import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
-import { fileErrorText, useProjectFile, type ExportReport } from './useProjectFile.js';
+import {
+  fileErrorText,
+  useProjectFile,
+  type DrawingFormat,
+  type ExportReport,
+} from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { printStatusFor } from './sheets.js';
 import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
@@ -334,10 +339,13 @@ export function App({
     setExportNotice(await file.exportPdfFile());
   }, [file]);
 
-  // The same for an SVG, from the menu beside Export PDF (6.2).
-  const exportSvg = useCallback(async () => {
-    setExportNotice(await file.exportSvgFile());
-  }, [file]);
+  // The same for an SVG or a DXF, from the menu beside Export PDF (6.2, 6.5).
+  const exportDrawing = useCallback(
+    async (format: DrawingFormat) => {
+      setExportNotice(await file.exportDrawingFile(format));
+    },
+    [file],
+  );
 
   // The Print Preview (7.6), open or not.
   const [printing, setPrinting] = useState(false);
@@ -591,7 +599,8 @@ export function App({
           onSettings={() => setSettings('general')}
           onSave={() => void file.save()}
           onExport={() => void exportPdf()}
-          onExportSvg={() => void exportSvg()}
+          onExportSvg={() => void exportDrawing('svg')}
+          onExportDxf={() => void exportDrawing('dxf')}
           onPrint={() => setPrinting(true)}
         />
 

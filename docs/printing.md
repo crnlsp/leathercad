@@ -558,18 +558,78 @@ dimension under the panel. Rendered by librsvg at 254 dpi (2026-10-07), the prin
 
 Not yet: presets, choosing layers and the bounds (6.4).
 
-## 11. DXF export (v1.1)
+## 11. DXF export (6.5)
 
-- **R12 ASCII** as the default target: the most widely readable DXF dialect, accepted by essentially
-  every CAM and CNC package.
-- R12 has no SPLINE entity, so cubics flatten to `LWPOLYLINE` at 0.005 mm. Lines become `LINE`,
-  circular arcs `ARC`, full circles `CIRCLE`, stitch holes `POINT` or small `CIRCLE` depending on an
-  export option.
-- Header: `$INSUNITS = 4` (millimetres) and `$MEASUREMENT = 1` (metric). Without these, importers
-  guess, and guessing is how a pattern arrives at 25.4× the intended size.
-- One DXF layer per layer role, named identically to the SVG group ids.
-- Y-up matches DXF, so no flip.
-- An R2000 variant with true `SPLINE` entities is worth adding later for users whose CAM handles it.
+*Export DXF…*, in the menu beside *Export PDF*; `packages/export/src/dxf/writer.ts`. For laser and
+CNC programs. It draws what the SVG draws (§10) — the scene the PDF is written from, as the maker
+arranged the board — in a different dialect.
+
+**The dialect is R12 (`AC1009`).** The first draft of this section said R12 had `LWPOLYLINE` and
+`$INSUNITS`; it has neither. `LWPOLYLINE` is R14's, and `$INSUNITS` and `$MEASUREMENT` came with
+R2000 (the DXF reference lists them without a release; ezdxf, which writes strictly to the
+specification, drops both from an R12 file). The choice was between R12 with those two header
+variables added, and a minimal `AC1015` file:
+
+- **R12 is the lowest common denominator, and it is small.** A valid R12 file needs only an
+  `ENTITIES` section; every CAM and laser program reads it; LightBurn writes it itself, because some
+  programs read nothing newer. An R2000 file wants a handle on every entity, subclass markers, a
+  block record table and an objects section, and a strict reader refuses a file that has any of them
+  wrong. A file that is right for LibreCAD and wrong for AutoCAD is worse than R12's plainness.
+- **What R12 lacks, the writer does without.** No `LWPOLYLINE`: a curve is a `POLYLINE` with
+  `VERTEX`es and a `SEQEND`. No spline: a cubic is flattened to 0.005 mm, the export tolerance. An
+  R2000 variant with true splines is for later.
+- **Units are the one thing R12 cannot say**, and a pattern that arrives 25.4 times too big is how
+  that fails. So `$INSUNITS = 4` (millimetres) and `$MEASUREMENT = 1` (metric) are written as extra
+  header variables. A header is a list of named variables, and a reader skips a name it does not
+  know (vDraw's log reads *Unknown header variable $TITLE ignored*); QCAD's dxflib hands every one it finds to its
+  host without looking at the version; LightBurn's *Auto-detect units* reads `$INSUNITS`. A reader
+  that insists on R2000 for them will use its own unit setting — and the maker chooses millimetres
+  there. That residual is why the interface says *millimetres* where the file is offered, and it is
+  checked only for the readers named here.
+
+**What is in it.**
+
+- A line is a `LINE`, an arc an `ARC`, a whole circle a `CIRCLE`; none is flattened. DXF arcs run
+  counter-clockwise from the start angle to the end angle, so a clockwise arc is written from its
+  far end, and angles are degrees from 0 up to 360, to six decimals. A sliver of an arc is left
+  out, and a sweep a hair short of a whole turn is a `CIRCLE`, because written to six decimals the
+  two have the same start and end, which a reader draws as a whole circle.
+- A **stitch hole is a `CIRCLE`** at the 1 mm size the scene gives it, not a `POINT`: laser software
+  ignores points. (The first draft offered either by an option; nothing asks for the option, and
+  6.4 may.) A hardware hole, or any whole turn of an arc, is one too.
+- **Cubics are `POLYLINE`s**: consecutive cubics are one open polyline, and a closed loop of cubics
+  alone is one closed polyline, closed by its flag with no repeated vertex. A line beside a curve
+  stays a `LINE`.
+- **Words are outlines**: each contour of each letter a closed `POLYLINE`, on the `annotation`
+  layer with the dimensions. No `TEXT` and no text style, so no font (ADR 0011).
+- **Layers are the layer roles**, named as the domain names them and as the SVG names its groups —
+  `cut`, `stitch`, `stitch-holes`, `fold`, `mark`, `hardware`, `annotation` — plus layer 0, and only
+  roles with something in them. Each has a colour index of its own, because laser software maps a
+  DXF's colours to its layers (cut black, stitch blue, holes cyan, folds green, marks grey,
+  hardware magenta, annotation orange), and a linetype: `CONTINUOUS`, or for a dashed role a
+  `LTYPE` of the role table's **true rhythm in millimetres** (`stitch` 2 on, 2 off).
+- **Y is up, as the model is**: nothing is flipped. The drawing is moved so its lower left corner
+  is the origin, as the SVG's page is, and `$EXTMIN`/`$EXTMAX` give its extents.
+- **Lengths are written to four decimals** (`100.0000`), the model's quantum; a line a
+  ten-thousandth of a millimetre long has no length in the file and is left out. A coordinate that
+  is not a number stops the export.
+- **CR LF line ends and ASCII**, on every platform, as AutoCAD writes it. There is no project name
+  in the file; R12 has nowhere for one that every code page reads.
+
+**Tests.** `dxf/writer.test.ts` reads the file back tag by tag, by hand: the sections, the header's
+units and extents, the tables, each entity kind, the layers against the SVG's groups, and the same
+two properties as the SVG — over random lines, arcs and cubics, the file's curves are the model's
+moved, within 0.5 µm for lines and arcs and 0.0055 mm (the tolerance and a few quanta) for
+cubics — plus mutation checks that a swapped arc, or a unit written wrongly, fails. The end-to-end
+test exports the print test through the app and measures the DXF with a reader of its own:
+the panel foot 100.0 mm, 25 holes 3.875 mm apart, the strap 275.0 mm, in R12, millimetres and
+metric. LibreOffice Draw 26.2's DXF importer, an independent reader, opened the print test and
+the bifold sample (2026-10-07): every entity, the layers' colours, the arcs the right way round and
+the pieces where the maker put them. It rescales a drawing to its page and closes every arc with a
+chord — it does that to a DXF holding one `ARC` too — so it checks the structure and not the units.
+
+**Not yet:** LightBurn, or a laser, has not opened one: that is the maintainer's check, and the one
+that tests the units. Presets, choosing layers and the bounds are 6.4.
 
 ## 12. Other formats
 
@@ -673,7 +733,8 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 | Stroke widths | Exported widths are the specified true millimetres, not screen widths |
 | Preview equals print | `paginate()` output used by the preview is deep-equal to the one used by the PDF writer for the same setup |
 | Calibration correction | A 1.005 correction produces geometry 0.5 % larger, and a 1.03 correction is rejected |
-| Export round trip | Random lines, arcs and cubics exported to SVG and read back by hand are the model's curves, flipped and moved, within 0.5 µm; everything is inside the declared page (`svg/writer.test.ts`). The print test exported through the app measures 100.0 mm, 25 holes 3.875 mm apart and 275.0 mm in the file (`e2e/vector-export.spec.ts`) |
+| Export round trip | Random lines, arcs and cubics exported to SVG and DXF and read back by hand are the model's curves, moved (and flipped, for SVG), within 0.5 µm — within 0.0055 mm for a flattened cubic; everything is inside the declared page (`svg/writer.test.ts`, `dxf/writer.test.ts`). The print test exported through the app measures 100.0 mm, 25 holes 3.875 mm apart and 275.0 mm in both files (`e2e/vector-export.spec.ts`) |
+| DXF dialect and units | R12 with `$INSUNITS = 4` and `$MEASUREMENT = 1`; a counter-clockwise arc keeps its angles and a clockwise one is written from its far end; every layer is a role's name; a dash is its true millimetre rhythm; `\r\n` and ASCII only (`dxf/writer.test.ts`) |
 | Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items |
 | The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, a paper it lists its sizes without, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
 | Preview equals what is sent | Print previews the print test, and what the fake `lp` receives measures true like an exported PDF; where `pdftopdf` is installed, it measures true after that filter too, with the job's options (`e2e/print-preview.spec.ts`) |

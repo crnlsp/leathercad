@@ -138,15 +138,15 @@ export function projectMenu(
 }
 
 /**
- * The other formats of *Export PDF* (6.2), in the menu beside it: the files
- * a laser cutter, a plotter or a vector editor reads, in
+ * The other formats of *Export PDF* (6.2, 6.5), in the menu beside it: the files
+ * a laser cutter, a plotter, a CNC program or a vector editor reads, in
  * millimetres. Not repeated in the Project menu — an export is the bar's.
  *
  * With nothing to export the items stay, and say so: a menu that drops what it
  * cannot do moves the rest about, and never says why (X1).
  */
 export function exportMenu(
-  actions: { readonly svg: () => void },
+  actions: { readonly svg: () => void; readonly dxf: () => void },
   canExport: boolean,
   t: Translate,
 ): MenuEntry[] {
@@ -159,6 +159,14 @@ export function exportMenu(
       note: t('menu.exportSvgNote'),
       refusal,
       onChoose: actions.svg,
+    },
+    {
+      kind: 'item',
+      id: 'export-dxf',
+      label: t('menu.exportDxf'),
+      note: t('menu.exportDxfNote'),
+      refusal,
+      onChoose: actions.dxf,
     },
   ];
 }

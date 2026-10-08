@@ -88,7 +88,7 @@ sheets with join lines and registration crosses, never scaled to fit.
 printer with scaling turned off. There is no print dialog to get wrong. A vector PDF on A5, A4, A3,
 Letter or Legal, the same file *Export PDF* saves. Every sheet has a 100 × 5 mm gauge at its foot:
 if it measures true, so does everything on the sheet. For a laser cutter or a vector editor, *Export
-SVG* writes the board in millimetres, a group to each layer.
+SVG* and *Export DXF* write the board in millimetres, a layer to each role.
 
 ### Your work is kept
 
