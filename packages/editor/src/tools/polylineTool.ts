@@ -195,7 +195,7 @@ function polylineLike(
       // Clicking back on the first point closes the shape rather than adding a
       // point on top of it — straight away for a straight, after its bulge for
       // an arc.
-      const closeMm = CLOSE_RADIUS_PX / ctx.viewport.scale;
+      const closeMm = ctx.viewport.pxToMm(CLOSE_RADIUS_PX);
       const onFirst = first !== undefined && dist(placed, first) <= closeMm;
 
       if (state.arc) {

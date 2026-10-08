@@ -320,14 +320,14 @@ One object owns the mm ↔ px relationship, and nothing else computes it:
 ```ts
 class Viewport {
   centreMm: Vec2;
-  scale: number;              // px per mm
-  sizePx: { w: number; h: number };
-  dpr: number;
+  scale: number;              // device px per mm
+  widthPx: number;            // the backing store, in device px
+  heightPx: number;
+  dpr: number;                // device px per CSS px
 
   toScreen(p: Vec2): Vec2;
   toWorld(p: Vec2): Vec2;
-  mmToPx(len: number): number;
-  pxToMm(len: number): number;
+  pxToMm(len: number): number;                    // a distance on screen, in CSS px
   zoomAt(anchorPx: Vec2, factor: number): void;   // zoom about the cursor, not the centre
 }
 ```
@@ -335,6 +335,11 @@ class Viewport {
 Rules: nothing outside `editor/viewport.ts` and the renderer may convert between mm and px. Hit
 testing converts its *tolerance* from px to mm and then does all comparisons in mm — never the
 other way around.
+
+**Zoom is CSS pixels per millimetre** (U.1): `cssPxPerMm(view)` in `render/view.ts`, and
+`zoomPercent(view)`, 100 % at 96 ÷ 25.4 CSS px per mm. Grid tiers, zoom bands and anything a later
+control shows read it, so they switch at the same zoom on a 1× and a 2× display. A distance on
+screen — a pick radius, a drag threshold, a handle — is CSS pixels too.
 
 ### 6.2 Three stacked canvases
 
@@ -350,10 +355,13 @@ overlay, which holds a handful of shapes.
 All drawing is scheduled through a single `requestAnimationFrame` loop driven by dirty flags.
 Nothing draws synchronously from an event handler.
 
-DPR handling: back the canvas at `cssSize * dpr` and set a base transform of
-`ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`. Construction lines, handles, and grid lines use
-**screen-constant widths** (they should look the same at any zoom); only print and export use
-mm-true stroke widths. **Dash rhythms are the exception, and are true millimetres in both**: one role
+DPR handling: back the canvas at `cssSize * dpr`. Every screen-constant size — a stroke, a halo, a
+dash in pixels, a glyph, a label, the grid and the rulers — is in **CSS pixels**, and each screen
+backend applies `dpr` once: the geometry pass divides widths by the CSS zoom under the world
+transform, and every screen-space pass draws under `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)` (the
+SVG backend's viewBox is in CSS pixels). Nothing hands a backend a size it has already multiplied
+by `dpr`. Construction lines, handles, and grid lines use **screen-constant widths** (they should
+look the same at any zoom); only print and export use mm-true stroke widths. **Dash rhythms are the exception, and are true millimetres in both**: one role
 table in `packages/render/src/theme/` gives the screen and the exporter the same array, and the
 canvas draws it at its real size or solid when it is too fine to read — never stretched (UI
 Foundations §2). The same module holds the palette and the metric tokens, which the desktop app

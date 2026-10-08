@@ -6,7 +6,7 @@ import type { DisplayItem, DisplayList } from '../displayList.js';
 import { foldTickShape, hatchLines, linkTickShape } from '../leather.js';
 import { markerShape } from '../marker.js';
 import { CANVAS, GROUND, screenDash } from '../theme/index.js';
-import { worldToScreen, type ViewportView } from '../view.js';
+import { cssPxPerMm, worldToCss, type ViewportView } from '../view.js';
 
 export interface SvgOptions {
   /** Defaults to the vendored typeface. Never a platform font. */
@@ -43,6 +43,10 @@ const DEFAULT_PRECISION = 4;
  *
  * The flip itself is not defined here. It lives in `worldToScreen` in
  * `view.ts`, and both backends only apply it — see CLAUDE.md invariant 2.
+ *
+ * The document is as many device pixels as the canvas, and its user space is
+ * **CSS pixels**: the viewBox is where the display's ratio is applied, once,
+ * as the canvas backend applies it to its screen passes (U.1).
  */
 export function renderToSvgString(
   list: DisplayList,
@@ -51,12 +55,12 @@ export function renderToSvgString(
 ): string {
   const precision = options.precision ?? DEFAULT_PRECISION;
   const n = (value: number): string => format(value, precision);
-  const transform = worldToScreen(view);
-  const perMm = view.scale;
+  const transform = worldToCss(view);
+  const perMm = cssPxPerMm(view);
 
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${n(view.widthPx)}" height="${n(view.heightPx)}" ` +
-      `viewBox="0 0 ${n(view.widthPx)} ${n(view.heightPx)}">`,
+      `viewBox="0 0 ${n(view.widthPx / view.dpr)} ${n(view.heightPx / view.dpr)}">`,
   ];
 
   if (options.background !== undefined) {

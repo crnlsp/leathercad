@@ -255,8 +255,9 @@ const cellKey = (p: Vec2, cellMm: number): string =>
  * edge running through it are a fraction of a millimetre apart on screen and
  * very different in the file.
  *
- * Sized in **device pixels** and converted through the scale, so the glyph
- * stays the same size at any zoom while sitting at a true millimetre position.
+ * Sized in **CSS pixels** and converted through the zoom in CSS pixels per
+ * millimetre, so the glyph stays the same size at any zoom and on any display
+ * while sitting at a true millimetre position.
  */
 export function snapGlyph(
   candidate: SnapCandidate,

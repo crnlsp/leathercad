@@ -1,5 +1,6 @@
 import { EPS_ANGLE } from '@leathercad/core';
 import { arc, cubic, path, polyline, vec } from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,6 +10,7 @@ import {
   foldTickItem,
   hatchItem,
   linkTickItem,
+  markerItem,
   pathItem,
   slitsItem,
   textItem,
@@ -24,6 +26,7 @@ const view: ViewportView = {
   scale: 2,
   widthPx: 400,
   heightPx: 300,
+  dpr: 1,
 };
 
 const listOf = (...items: DisplayList['items']): DisplayList => ({ items });
@@ -93,7 +96,7 @@ describe('renderToSvgString', () => {
       view,
     );
 
-    // 3 device pixels at 2 px/mm is 1.5 mm inside the scaled group.
+    // 3 CSS pixels at 2 px/mm is 1.5 mm inside the scaled group.
     expect(svg).toContain('stroke-width="1.5"');
   });
 
@@ -161,6 +164,49 @@ describe('renderToSvgString', () => {
     );
 
     expect(renderToSvgString(scene, view)).toMatchSnapshot();
+  });
+});
+
+describe('on a 2× display (U.1)', () => {
+  // The document is the canvas's size in device pixels, and its user space is
+  // CSS pixels: the viewBox is where the display's ratio is applied, once, so
+  // every screen-constant size reads the same at any ratio.
+  const at = (dpr: number): ViewportView => ({
+    ...view,
+    scale: view.scale * dpr,
+    widthPx: view.widthPx * dpr,
+    heightPx: view.heightPx * dpr,
+    dpr,
+  });
+  const scene = listOf(
+    pathItem('cut', polyline([vec(-20, -10), vec(20, -10), vec(20, 10), vec(-20, 10)], true)),
+    pathItem('stitch', path([arc(vec(0, 0), 8, 0, Math.PI)])),
+    pathItem('construction', polyline([vec(0, 0), vec(5, 5)]), { dashPx: [4, 3] }),
+    dotsItem('stitch-holes', [vec(-8, 0), vec(8, 0)], 2, '#5aa9ff'),
+    slitsItem([[vec(0, 0), vec(1, 1)]], 1.25),
+    hatchItem(polyline([vec(0, 0), vec(4, 0), vec(4, 4)], true)),
+    foldTickItem(vec(0, 0), 'valley'),
+    linkTickItem('stitch', vec(0, 0), vec(1, 0)),
+    textItem('annotation', vec(0, 12), '40 mm', 11),
+    documentTextItem('annotation', vec(0, -14), 'A', 4),
+    markerItem(vec(3, 3), 'error', '#c0392f', true),
+  );
+
+  it('is as many device pixels as the canvas, over a viewBox of its CSS pixels', () => {
+    const svg = renderToSvgString(listOf(), at(2));
+    expect(svg).toContain('width="800" height="600" viewBox="0 0 400 300"');
+  });
+
+  it('draws everything as it would at 1×, only twice as sharp', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(2, 4), (dpr) => {
+        // Ratios that scale a float exactly, so the two documents can be
+        // compared character for character below the root element.
+        const one = renderToSvgString(scene, view).split('\n');
+        const other = renderToSvgString(scene, at(dpr)).split('\n');
+        expect(other.slice(1)).toEqual(one.slice(1));
+      }),
+    );
   });
 });
 

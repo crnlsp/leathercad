@@ -1,6 +1,6 @@
 import type { Mm } from '@leathercad/core';
 import { MatOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
-import { screenToWorld, worldToScreen, type ViewportView } from '@leathercad/render';
+import { pixelsToMm, screenToWorld, worldToScreen, type ViewportView } from '@leathercad/render';
 
 /**
  * The camera: the one object that knows how millimetres relate to pixels.
@@ -11,9 +11,11 @@ import { screenToWorld, worldToScreen, type ViewportView } from '@leathercad/ren
  * other way round, or results would depend on zoom in ways no unit test could
  * pin down. See CLAUDE.md invariant 1.
  *
- * **All pixel values are device pixels**, matching the canvas backing store.
- * Pointer events arrive in CSS pixels, so multiply by `dpr` first — or use
- * `fromCssPoint`.
+ * **Positions and the scale are in device pixels**, matching the canvas
+ * backing store. Pointer events arrive in CSS pixels, so multiply by `dpr`
+ * first — or use `fromCssPoint`. A **distance** on screen — a pick radius, a
+ * drag threshold, a handle — is in CSS pixels (`pxToMm`), so it reaches as
+ * far on a 2× display as on a 1× one.
  */
 export class Viewport {
   centreMm: Vec2 = { x: 0, y: 0 };
@@ -40,6 +42,7 @@ export class Viewport {
       scale: this.scale,
       widthPx: this.widthPx,
       heightPx: this.heightPx,
+      dpr: this.dpr,
     };
   }
 
@@ -90,12 +93,9 @@ export class Viewport {
     return this.toWorld({ x: cssX * this.dpr, y: cssY * this.dpr });
   }
 
-  mmToPx(mm: Mm): number {
-    return mm * this.scale;
-  }
-
+  /** A distance on screen, in CSS pixels, as millimetres. */
   pxToMm(px: number): Mm {
-    return px / this.scale;
+    return pixelsToMm(this.toView(), px);
   }
 
   /**
@@ -153,9 +153,9 @@ export class Viewport {
     );
   }
 
-  /** A pick radius in pixels, expressed as a millimetre tolerance. */
+  /** A pick radius in CSS pixels, expressed as a millimetre tolerance. */
   pickToleranceMm(radiusPx = 10): Mm {
-    return (radiusPx * this.dpr) / this.scale;
+    return this.pxToMm(radiusPx);
   }
 }
 

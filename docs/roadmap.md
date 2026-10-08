@@ -155,10 +155,20 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 
 ### Phase 1 — the canvas, the keys and the frame
 
-- ☐ **U.1 Pieces read as pieces** (R-02). Every piece filled on the board, the one being worked on
+- ✅ **U.1 Pieces read as pieces** (R-02). Every piece filled on the board, the one being worked on
   warmer; no grid inside a piece; the 1 mm grid from 160 % and the 10 mm grid from 40 %; cut lines
   1.5 px. On the way, zoom is defined once, in CSS pixels per millimetre: on a 2× display the grid
   and the stitch detail switch at half the zoom today, and every line draws half as thick.
+  ✅ Built as described. Measured in the app: the 1 mm grid came in at 106 % on a 1× display and
+  53 % on a 2× one, the 10 mm at 16 % and 8 %; now 158.75 % and 39.7 % on both. A cut line measured
+  1.75 device pixels at 1× and at 2× — 0.9 CSS px — and is 1.5 and 3 now; a grid line 1 and 2.
+  `cssPxPerMm` and `zoomPercent` in `render/view.ts` are the one definition of zoom; every
+  screen-constant size is a CSS pixel, and each screen backend applies the display's ratio once.
+  Found on the way, and fixed: the Sheets view's labels and dashes, the rulers, the snap glyph, Edit
+  Points' handles, the polyline's close radius and the drag threshold were sized in device pixels
+  too — half size, or half the reach, at 2×. Every piece's fill lies beneath every line on the
+  board, so a piece laid over another never hides it. Printed output did not move: no export test,
+  golden fixture or format fixture changed.
 - ☐ **U.2 Captions and dimension numbers readable at every zoom** (R-01). 12 px at any zoom, with a
   halo; "Card pocket ×2" over "52 holes · 3.85 mm"; the name only below 40 %; a caption pinned to
   the canvas's top-left while its piece's top is off screen. Paper keeps its true-size "Card pocket

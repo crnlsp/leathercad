@@ -8,7 +8,8 @@ import { CANVAS, ROLE_STYLES, alpha } from './theme/index.js';
 export interface Stroke {
   readonly colour: string;
   /**
-   * Width in **device pixels**, not millimetres.
+   * Width in **CSS pixels**, not millimetres: the backends multiply by the
+   * display's ratio, so a line is as thick on a 2× display as on a 1× one.
    *
    * Screen strokes are constant on screen: a cut line stays legible at any
    * zoom. Export is the opposite — true millimetres, so a 0.25 mm line is
@@ -21,7 +22,7 @@ export interface Stroke {
    */
   readonly dashMm?: readonly number[];
   /**
-   * A dash in **device pixels**, for the tools' own feedback only — rubber
+   * A dash in **CSS pixels**, for the tools' own feedback only — rubber
    * bands, selection boxes, diagnostic highlights. Screen chrome, never
    * printed, so it has no millimetre rhythm to keep. Wins over `dashMm`.
    */
@@ -39,7 +40,7 @@ export type DisplayItem =
       readonly kind: 'dots';
       readonly role: LayerRole;
       readonly points: readonly Vec2[];
-      /** Radius in device pixels — dots stay visible when zoomed out. */
+      /** Radius in CSS pixels — dots stay visible when zoomed out. */
       readonly radiusPx: number;
       readonly fill: string;
     }
@@ -55,8 +56,9 @@ export type DisplayItem =
       readonly stroke: { readonly colour: string; readonly widthPx: number };
     }
   /**
-   * A region between closed paths, filled even-odd: the seam allowance's band
-   * between an edge and the stitching it grew from (F.7). Screen only.
+   * A region between closed paths, filled even-odd: a piece, its outline with
+   * its cut-outs left open (R-02), and the seam allowance's band between an
+   * edge and the stitching it grew from (F.7). Screen only.
    */
   | {
       readonly kind: 'fill';

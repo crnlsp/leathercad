@@ -9,16 +9,21 @@ export function alpha(hex: string, opacity: number): string {
 
 /**
  * How the drafting ground is drawn (UI Foundations §8.4, §8.5, §9).
+ *
+ * **Every pixel here is a CSS pixel**, and every `…PxPerMm` a zoom in CSS
+ * pixels per millimetre (`cssPxPerMm`): the screen backends multiply by the
+ * display's ratio once, so a line, a glyph or a threshold is the same on a 1×
+ * and a 2× display (U.1).
  */
 export const CANVAS = {
   /**
    * Three tiers with real contrast steps, each dropping out at the zoom where
    * it would become texture (§9.1). A uniform mesh produced moiré zoomed in and
-   * vanished zoomed out.
+   * vanished zoomed out. The 1 mm grid from 160 %, the 10 mm from 40 % (R-02).
    */
   grid: [
-    { stepMm: 1, colour: GROUND.fine, minPxPerMm: 4 },
-    { stepMm: 10, colour: GROUND.major, minPxPerMm: 0.6 },
+    { stepMm: 1, colour: GROUND.fine, minPxPerMm: 6 },
+    { stepMm: 10, colour: GROUND.major, minPxPerMm: 1.5 },
     { stepMm: 100, colour: GROUND.hundred, minPxPerMm: 0 },
   ],
   axis: GROUND.axis,

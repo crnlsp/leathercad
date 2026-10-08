@@ -25,7 +25,16 @@ export {
 } from './theme/index.js';
 
 export type { ViewportView } from './view.js';
-export { mmToPixels, pixelsToMm, screenToWorld, visibleBoundsMm, worldToScreen } from './view.js';
+export {
+  TRUE_SIZE_CSS_PX_PER_MM,
+  cssPxPerMm,
+  mmToPixels,
+  pixelsToMm,
+  screenToWorld,
+  visibleBoundsMm,
+  worldToScreen,
+  zoomPercent,
+} from './view.js';
 
 export type { DisplayItem, DisplayList, Stroke } from './displayList.js';
 export {

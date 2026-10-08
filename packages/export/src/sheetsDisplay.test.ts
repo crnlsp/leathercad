@@ -45,7 +45,7 @@ describe('tape joins on the design board (7.4b)', () => {
 
   it('is screen furniture: the not-ink colour, the printed rhythm, and a label', () => {
     const plan = planSheets(scene([part('strap', 275, 20)]), DEFAULT_PAGE_SETUP);
-    const items = tapeJoins(plan, { dpr: 2 }).items;
+    const items = tapeJoins(plan).items;
     for (const item of items) {
       if (item.kind === 'path') {
         expect(item.stroke.colour).toBe(SHEET.furniture);
@@ -53,7 +53,8 @@ describe('tape joins on the design board (7.4b)', () => {
       } else if (item.kind === 'overlay-text') {
         expect(item.text).toBe('Tape join');
         expect(item.colour).toBe(SHEET.furniture);
-        expect(item.sizePx).toBe(22);
+        // CSS pixels: the screen backends apply the display's ratio (U.1).
+        expect(item.sizePx).toBe(SHEET.joinLabelPx);
       } else {
         throw new Error(`unexpected ${item.kind}`);
       }

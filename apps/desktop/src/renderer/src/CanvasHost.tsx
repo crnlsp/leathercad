@@ -38,6 +38,7 @@ import {
   SHEET,
   buildDisplayList,
   clearCanvas,
+  cssPxPerMm,
   renderDisplayList,
   renderGrid,
   renderRulers,
@@ -398,11 +399,9 @@ export function CanvasHost({
         cached !== null &&
         cached.plan === plan &&
         cached.selected === selectedKey(selected) &&
-        cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current) &&
-        cached.dpr === viewport.dpr
+        cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current)
           ? cached.layers
           : sheetsView(plan, layout, {
-              dpr: viewport.dpr,
               now: new Date(),
               selected,
               hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
@@ -411,7 +410,6 @@ export function CanvasHost({
         plan,
         selected: selectedKey(selected),
         hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-        dpr: viewport.dpr,
         layers,
       };
 
@@ -461,35 +459,22 @@ export function CanvasHost({
         // The same list the panels read (X7), so a feature that failed is
         // marked here instead of silently disappearing.
         diagnostics: diagnose(document.project),
-        // The zoom band: how much detail the drawing carries at this scale.
-        pxPerMm: view.scale,
+        // The zoom band: how much detail the drawing carries at this zoom,
+        // the same on any display (U.1).
+        pxPerMm: cssPxPerMm(view),
       }),
       view,
     );
     // Where a taped piece's sheets will join (7.4b): screen furniture read from
     // the sheet plan the PDF writes, over the pattern and under the tool.
-    renderDisplayList(
-      context,
-      tapeJoins(sheetPlanFor(document.project), { dpr: viewport.dpr }),
-      view,
-    );
+    renderDisplayList(context, tapeJoins(sheetPlanFor(document.project)), view);
     // The tool overlay is ephemeral feedback and never touches the document.
     renderDisplayList(context, managerRef.current?.overlay() ?? { items: [] }, view);
     // A tool builds a fresh problem on every pointer move. Keeping the old one
     // when it says the same thing stops the chrome re-rendering every frame.
     const next = managerRef.current?.notice() ?? null;
     setNotice((current) => (sameProblem(current, next) ? current : next));
-    renderRulers(
-      context,
-      view,
-      {
-        ...DEFAULT_RULER_STYLE,
-        thicknessPx: DEFAULT_RULER_STYLE.thicknessPx * viewport.dpr,
-        leftThicknessPx: DEFAULT_RULER_STYLE.leftThicknessPx * viewport.dpr,
-        fontPx: DEFAULT_RULER_STYLE.fontPx * viewport.dpr,
-      },
-      pointerRef.current,
-    );
+    renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
   }, [store, paintSheets]);
 
   useEffect(() => {
@@ -889,7 +874,6 @@ interface SheetsCache {
   readonly plan: SheetPlan;
   readonly selected: string;
   readonly hovered: string | null;
-  readonly dpr: number;
   readonly layers: readonly SheetsLayer[];
 }
 

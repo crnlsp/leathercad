@@ -141,6 +141,22 @@ describe('the Edit Points tool', () => {
     expect(tool.buildOverlay?.(ctx).items).toHaveLength(4);
   });
 
+  it('draws its handles the same size on a 2× display, at the same zoom', () => {
+    // 8 CSS pixels across, which is 2 mm at 4 CSS px/mm. They were 8 device
+    // pixels: half the size on a Retina display, under a stroke that U.1 made
+    // twice as thick (U.1).
+    const one = harness();
+    const two = harness();
+    two.ctx.viewport.resize(1600, 1200, 2);
+    two.ctx.viewport.scale = 8;
+    const box = (h: ReturnType<typeof harness>) => {
+      const [first] = h.tool.buildOverlay?.(h.ctx).items ?? [];
+      return first?.kind === 'path' ? PathOps.bbox(first.path) : null;
+    };
+    expect(box(two)).toEqual(box(one));
+    expect(box(one)!.maxX - box(one)!.minX).toBeCloseTo(2, 9);
+  });
+
   it('moves a point by dragging its handle, as one step to undo', () => {
     const { tool, ctx, store } = harness();
 

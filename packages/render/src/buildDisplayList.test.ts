@@ -6,11 +6,16 @@ import { describe, expect, it } from 'vitest';
 
 import { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
 import { ROLE_STROKES, type DisplayItem } from './displayList.js';
-import { CANVAS, NOMINAL_IRON } from './theme/index.js';
+import { CANVAS, GROUND, NOMINAL_IRON } from './theme/index.js';
 
-/** Everything except the part caption, which every part now carries. */
+/** The piece fills: the leather itself (R-02). */
+const isPieceFill = (item: DisplayItem): boolean =>
+  item.kind === 'fill' &&
+  (item.colour === GROUND.pieceFill || item.colour === GROUND.pieceFillSelected);
+
+/** Everything except the part caption and the piece's fill, which every part now carries. */
 const drawing = (items: readonly DisplayItem[]): DisplayItem[] =>
-  items.filter((item) => item.kind !== 'document-text');
+  items.filter((item) => item.kind !== 'document-text' && !isPieceFill(item));
 
 const outline: Feature = {
   id: 'cut-1',
@@ -170,6 +175,47 @@ describe('diagnostics on the canvas', () => {
       diagnostics: [crossings],
     });
     expect(list.items).toEqual([]);
+  });
+});
+
+describe('pieces read as pieces (R-02)', () => {
+  const fills = (items: readonly DisplayItem[]) => items.filter((item) => item.kind === 'fill');
+
+  it('fills a piece with the paper-pale piece colour, before anything else in it', () => {
+    const list = buildDisplayList(resolved([outline]));
+    expect(fills(list.items)).toEqual([
+      expect.objectContaining({ colour: GROUND.pieceFill, paths: [expect.anything()] }),
+    ]);
+    expect(list.items.findIndex((item) => item.kind === 'fill')).toBeLessThan(
+      list.items.findIndex((item) => item.kind === 'path'),
+    );
+  });
+
+  it('fills the piece being worked on in the selected colour', () => {
+    const list = buildDisplayList(resolved([outline]), { selected: new Set(['cut-1']) });
+    expect(fills(list.items)[0]).toMatchObject({ colour: GROUND.pieceFillSelected });
+  });
+
+  it('warms the piece when any of its features is selected, not only its outline', () => {
+    const list = buildDisplayList(resolved([outline, stitchLine]), {
+      selected: new Set(['stitch-1']),
+    });
+    expect(fills(list.items)).toEqual([
+      expect.objectContaining({ colour: GROUND.pieceFillSelected }),
+    ]);
+  });
+
+  it('leaves the piece pale while something else is selected, or hovered', () => {
+    const list = buildDisplayList(resolved([outline]), {
+      selected: new Set(['another-part']),
+      hovered: 'cut-1',
+    });
+    expect(fills(list.items)).toEqual([expect.objectContaining({ colour: GROUND.pieceFill })]);
+  });
+
+  it('fills nothing for a hidden outline, or an outline that did not resolve', () => {
+    expect(fills(buildDisplayList(resolved([{ ...outline, visible: false }])).items)).toEqual([]);
+    expect(fills(buildDisplayList(resolved([outline], ['cut-1'])).items)).toEqual([]);
   });
 });
 
@@ -569,10 +615,22 @@ describe('leather-specific treatment (F.7)', () => {
         [drawnStitch, stitchPath],
         [allowanceEdge, outlinePath],
       ]);
+    const bands = (items: readonly DisplayItem[]) =>
+      ofKind(items, 'fill').filter((fill) => fill.colour === CANVAS.allowance);
 
     it('fills between the edge and the stitch line it grew from', () => {
-      const [band] = ofKind(buildDisplayList(allowance()).items, 'fill');
+      const [band] = bands(buildDisplayList(allowance()).items);
       expect(band).toMatchObject({ colour: CANVAS.allowance, paths: [outlinePath, stitchPath] });
+    });
+
+    it('fills the piece to its edge, beneath the band (R-02)', () => {
+      // The edge grown from the stitching is the part's outline: the one
+      // outer contour S5 allows. The piece is filled to it, and the band is
+      // drawn over the fill, so the allowance still shows.
+      const items = buildDisplayList(allowance()).items;
+      const piece = ofKind(items, 'fill').find(isPieceFill);
+      expect(piece).toMatchObject({ colour: GROUND.pieceFill, paths: [outlinePath] });
+      expect(items.indexOf(piece!)).toBeLessThan(items.indexOf(bands(items)[0]!));
     });
 
     it('lies beneath every line of its part', () => {
@@ -584,7 +642,67 @@ describe('leather-specific treatment (F.7)', () => {
     });
 
     it('is not drawn for an ordinary outline and the stitching inset from it', () => {
-      expect(ofKind(buildDisplayList(stitched()).items, 'fill')).toEqual([]);
+      expect(bands(buildDisplayList(stitched()).items)).toEqual([]);
+    });
+  });
+
+  describe('the piece fill (R-02)', () => {
+    const slot = Shapes.rect(at(10, 10), 20, 8);
+
+    it('leaves a cut-out open, as a hole in the leather, and keeps its hatch', () => {
+      const items = buildDisplayList(
+        scene([
+          [drawnOutline, outlinePath],
+          [cutOut, slot],
+        ]),
+      ).items;
+      // Even-odd: the slot is the fill's second path, so the ground shows
+      // through it.
+      expect(ofKind(items, 'fill')).toEqual([
+        expect.objectContaining({ colour: GROUND.pieceFill, paths: [outlinePath, slot] }),
+      ]);
+      expect(ofKind(items, 'hatch')).toHaveLength(1);
+      expect(items.findIndex((i) => i.kind === 'fill')).toBeLessThan(
+        items.findIndex((i) => i.kind === 'hatch'),
+      );
+    });
+
+    it('fills over a hidden cut-out: hidden, it is not shown as a hole either', () => {
+      const items = buildDisplayList(
+        scene([
+          [drawnOutline, outlinePath],
+          [{ ...cutOut, visible: false }, slot],
+        ]),
+      ).items;
+      expect(ofKind(items, 'fill')).toEqual([expect.objectContaining({ paths: [outlinePath] })]);
+    });
+
+    it('fills nothing for an outline that is not closed, or a part with no outline', () => {
+      const open = PathOps.polyline([at(0, 0), at(100, 0), at(100, 60)], false);
+      expect(ofKind(buildDisplayList(scene([[drawnOutline, open]])).items, 'fill')).toEqual([]);
+      expect(ofKind(buildDisplayList(scene([[cutOut, slot]])).items, 'fill')).toEqual([]);
+    });
+
+    it('never hides another piece: every fill lies beneath every line on the board', () => {
+      // Two pieces laid over each other, as a pocket is offered up to the
+      // panel it is sewn to: both outlines and both stitch lines stay in view.
+      const panel = scene([
+        [drawnOutline, outlinePath],
+        [followingStitch, stitchPath],
+      ]);
+      const pocket = scene([[{ ...drawnOutline, id: 'pocket' }, Shapes.rect(at(20, 20), 40, 30)]]);
+      const both: ResolvedProject = {
+        ...panel,
+        parts: [
+          ...panel.parts,
+          { ...pocket.parts[0]!, part: { ...pocket.parts[0]!.part, id: 'p2' } },
+        ],
+      };
+      const items = buildDisplayList(both).items;
+      const lastFill = items.findLastIndex((i) => i.kind === 'fill');
+      const firstLine = items.findIndex((i) => i.kind === 'path');
+      expect(ofKind(items, 'fill')).toHaveLength(2);
+      expect(lastFill).toBeLessThan(firstLine);
     });
   });
 
