@@ -27,7 +27,7 @@ export function ViewSwitch({
   return (
     <div className="view-switch" role="group" aria-label={t('view.label')}>
       {choices.map((choice) => (
-        <Tooltip key={choice.id} text={choice.tip}>
+        <Tooltip key={choice.id} text={choice.tip} keys={choice.id}>
           <button
             type="button"
             className={view === choice.id ? 'chip active' : 'chip'}

@@ -57,16 +57,35 @@ function untranslated(path: string, source = readFileSync(path, 'utf8')): string
     const line = file.getLineAndCharacterOfPosition(node.getStart()).line + 1;
     found.push(`${relative(HERE, path)}:${String(line)} ${JSON.stringify(text.trim())}`);
   };
+  // Text an attribute's expression writes in place — a string, or a template's
+  // fixed parts — but not what it hands to a function: `t('a.key')` is a key.
+  const written = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) return;
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      if (isWords(node.text)) at(node, node.text);
+      return;
+    }
+    if (ts.isTemplateExpression(node)) {
+      const text = [node.head.text, ...node.templateSpans.map((span) => span.literal.text)].join(
+        '${…}',
+      );
+      if (isWords(text)) at(node, text);
+      return;
+    }
+    ts.forEachChild(node, written);
+  };
   const visit = (node: ts.Node): void => {
     if (ts.isJsxText(node) && isWords(node.text)) at(node, node.text);
     if (
       ts.isJsxAttribute(node) &&
       node.initializer !== undefined &&
-      ts.isStringLiteral(node.initializer) &&
-      SAID.has(node.name.getText()) &&
-      isWords(node.initializer.text)
+      SAID.has(node.name.getText())
     ) {
-      at(node, node.initializer.text);
+      if (ts.isStringLiteral(node.initializer)) {
+        if (isWords(node.initializer.text)) at(node, node.initializer.text);
+      } else if (ts.isJsxExpression(node.initializer) && node.initializer.expression) {
+        written(node.initializer.expression);
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -85,6 +104,18 @@ describe('the interface’s words', () => {
     expect(untranslated(probe, jsx)).toEqual([
       'probe.tsx:1 "Delete it"',
       'probe.tsx:2 "Delete part"',
+    ]);
+  });
+
+  it('would find words in a said attribute’s expression, but not a key passed to t()', () => {
+    // How the problem badge's tooltip stayed English (found in U.3).
+    const probe = join(HERE, 'probe.tsx');
+    const jsx =
+      '<Tip text={title ?? `${count} problems, worst: ${worst}`} label={t(`tools.${id}.name`)}\n' +
+      "  tooltip={open ? 'Hide it' : t('legend.show')} hint={name} />";
+    expect(untranslated(probe, jsx)).toEqual([
+      'probe.tsx:1 "${…} problems, worst: ${…}"',
+      'probe.tsx:2 "Hide it"',
     ]);
   });
 });

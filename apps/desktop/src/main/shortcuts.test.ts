@@ -1,21 +1,27 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
 
+import { KEYMAP, keyLabel, keysOf, type Binding } from '../renderer/src/keymap.js';
 import { helpMenu, projectMenu } from '../renderer/src/menus.js';
 import { createI18n } from '../shared/i18n.js';
-import { SHORTCUT_GROUPS, isTyping, keysFor } from '../renderer/src/shortcuts.js';
+import { SHORTCUT_GROUPS, isTyping } from '../renderer/src/shortcuts.js';
 import { TOOL_GROUPS } from '../renderer/src/tools.js';
 import { macMenuTemplate } from './menu.js';
 
 /**
  * The shortcut map (8.2) is only useful while it is true, so it is held to
- * the places keys are shown: the top bar's menus, macOS's menu (8.7) and the
- * tool list.
+ * the places keys are shown outside the keymap (U.3): the top bar's menus,
+ * macOS's menu (8.7) and the tool list. The main process hears its own keys
+ * through the keymap (`windowKeyFor`).
  */
 
 const { t } = createI18n('en');
 const listed = SHORTCUT_GROUPS.flatMap((group) => group.shortcuts);
-const listedKeys = new Set(listed.flatMap((shortcut) => shortcut.keys));
+
+/** A binding as Electron writes an accelerator: `CmdOrCtrl+Shift+Z`. */
+function accelerator(binding: Binding): string {
+  return keyLabel(binding, false, null, t).replace(/^Ctrl(?=\+)/, 'CmdOrCtrl');
+}
 
 function accelerators(items: readonly MenuItemConstructorOptions[]): string[] {
   return items.flatMap((item) => [
@@ -27,41 +33,35 @@ function accelerators(items: readonly MenuItemConstructorOptions[]): string[] {
 }
 
 describe('the keyboard shortcut map', () => {
-  it('lists every shortcut a menu shows', () => {
+  it('lists every key a menu shows, as the keymap binds it', () => {
     const noop = (): void => undefined;
     const shown = [
       ...projectMenu({ newProject: noop, open: noop, saveAs: noop, openRecent: noop }, [], t),
       ...helpMenu({ openSample: noop, about: noop }, t),
     ].flatMap((entry) => (entry.kind === 'item' && entry.keys !== undefined ? [entry.keys] : []));
-    shown.push(...accelerators(macMenuTemplate({ send: noop, t })));
     expect(shown.length).toBeGreaterThan(0);
-    for (const keys of shown) expect(listedKeys).toContain(keys);
+    for (const command of shown) {
+      expect(listed).toContainEqual(expect.objectContaining({ keys: keysOf(command) }));
+    }
+
+    const bound = new Set(KEYMAP.flatMap((command) => command.keys.map(accelerator)));
+    const mac = accelerators(macMenuTemplate({ send: noop, t }));
+    expect(mac.length).toBeGreaterThan(0);
+    for (const keys of mac) expect(bound, keys).toContain(keys);
   });
 
   it('lists every tool by its key', () => {
     for (const tool of TOOL_GROUPS.flatMap((group) => group.tools)) {
-      expect(listed).toContainEqual({ keys: [tool.key], does: `tools.${tool.id}.name` });
+      expect(listed).toContainEqual({
+        keys: [{ code: `Key${tool.key}` }],
+        does: `tools.${tool.id}.name`,
+      });
     }
   });
 
   it('gives no two tools the same key', () => {
     const keys = TOOL_GROUPS.flatMap((group) => group.tools).map((tool) => tool.key);
     expect(new Set(keys).size).toBe(keys.length);
-  });
-
-  it('writes keys as each platform does', () => {
-    expect(keysFor('CmdOrCtrl+Shift+S', false, t)).toBe('Ctrl+Shift+S');
-    expect(keysFor('CmdOrCtrl+Shift+S', true, t)).toBe('⌘⇧S');
-    expect(keysFor('Delete', true, t)).toBe('Delete');
-    expect(keysFor('Alt+drag', false, t)).toBe('Alt+drag');
-  });
-
-  it('names its keys in the interface’s language', () => {
-    const named = (part: string): string => `«${part}»`;
-    expect(keysFor('CmdOrCtrl+Shift+S', false, named as typeof t)).toBe(
-      '«keys.Ctrl»+«keys.Shift»+S',
-    );
-    expect(keysFor('Middle-drag', true, named as typeof t)).toBe('«keys.Middle-drag»');
   });
 
   it('has words for every shortcut, in English', () => {

@@ -22,6 +22,7 @@ import type { PartPrintStatus } from '@leathercad/export';
 import type { RightClicked } from './contextMenu.js';
 import { CountBadge } from './CountBadge.js';
 import { useI18n } from './i18n.js';
+import { useKeysInSentences } from './keyCaps.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
 import { MenuButton } from './Menu.js';
@@ -80,13 +81,14 @@ export function PartsList({
   onOpenSample: () => void;
 }) {
   const { t } = useI18n();
+  const keys = useKeysInSentences();
   if (project.parts.length === 0) {
     // The link sits where the language puts it in the sentence.
     const [before, after] = t('parts.sample').split('{{link}}');
     return (
       <aside className="panel parts" data-testid="parts-list" aria-label={t('parts.title')}>
         <h2>{t('parts.title')}</h2>
-        <p className="panel-empty">{t('parts.empty')}</p>
+        <p className="panel-empty">{t('parts.empty', keys)}</p>
         <p className="panel-empty">
           {before}
           <button

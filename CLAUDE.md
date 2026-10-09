@@ -123,7 +123,9 @@ Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run head
   `useI18n()` (renderer) or the main process's translator. Keys are typed. A plural is one key per
   CLDR form (`_one`, `_other`, …) with `{{count}}`; a number, list or date goes through `Intl`.
   Stable ids — problem codes, tool ids, feature kinds, undo actions — are never translated; they
-  pick the words. `untranslated.test.ts` fails on words written into JSX. A translation file is
+  pick the words. `untranslated.test.ts` fails on words written into JSX. A key is never written
+  into a sentence: it is a `{{placeholder}}` or a tooltip's `keys`, read from the keymap
+  (`renderer/src/keymap.ts`), so it follows the layout and the platform. A translation file is
   not a supported language: only an entry in `SUPPORTED_LANGUAGES`, added after review, makes it
   one, and until then only `pnpm dev` shows it, as a preview. See ADR 0018.
 

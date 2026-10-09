@@ -1,4 +1,5 @@
 import { useI18n } from './i18n.js';
+import { KeyCap, useKeysInSentences } from './keyCaps.js';
 import { TOOL_GROUPS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
 import { ChevronsLeft, ChevronsRight } from 'lucide-react';
@@ -30,6 +31,7 @@ export function ToolPalette({
   onToggleCollapsed: () => void;
 }) {
   const { t } = useI18n();
+  const keys = useKeysInSentences();
   const toggle = collapsed ? t('tools.showNames') : t('tools.hideNames');
   return (
     <nav
@@ -47,13 +49,12 @@ export function ToolPalette({
             ))}
           {group.tools.map((tool) => {
             const name = t(`tools.${tool.id}.name`);
-            const howTo = t(`tools.${tool.id}.howTo`);
+            const howTo = t(`tools.${tool.id}.howTo`, keys);
             return (
               <Tooltip
                 key={tool.id}
-                text={
-                  collapsed ? t('tools.collapsedTooltip', { name, key: tool.key, howTo }) : howTo
-                }
+                text={collapsed ? t('tools.collapsedTooltip', { name, howTo }) : howTo}
+                keys={`tool.${tool.id}`}
               >
                 <button
                   type="button"
@@ -68,7 +69,7 @@ export function ToolPalette({
                     <ToolIcon toolId={tool.id} size={collapsed ? 20 : 16} />
                     {!collapsed && name}
                   </span>
-                  <kbd>{tool.key}</kbd>
+                  <KeyCap command={`tool.${tool.id}`} />
                 </button>
               </Tooltip>
             );

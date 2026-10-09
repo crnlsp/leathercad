@@ -109,7 +109,7 @@ export function ProjectBar({
         >
           {dirty ? t('projectBar.unsaved') : saved ? t('projectBar.saved') : ''}
         </span>
-        <Tooltip text={t('projectBar.saveTooltip')}>
+        <Tooltip text={t('projectBar.saveTooltip')} keys="save">
           <button type="button" className="tool" data-testid="save" onClick={onSave}>
             {t('actions.save')}
           </button>
@@ -120,6 +120,7 @@ export function ProjectBar({
         <SheetIndicator project={project} store={store} />
         <Tooltip
           text={t('projectBar.exportTooltip', { sheets: describeSheets(sheetPlanFor(project), t) })}
+          keys="exportPdf"
         >
           <button type="button" className="tool" data-testid="export-pdf" onClick={onExport}>
             {t('projectBar.exportPdf')}
@@ -143,6 +144,7 @@ export function ProjectBar({
         </MenuButton>
         <Tooltip
           text={t('projectBar.printTooltip', { sheets: describeSheets(sheetPlanFor(project), t) })}
+          keys="print"
         >
           <button type="button" className="tool primary" data-testid="print" onClick={onPrint}>
             {t('projectBar.print')}
@@ -152,7 +154,7 @@ export function ProjectBar({
 
       {/* Past the rule is the application, not this project (8.7). */}
       <div className="project-app" role="group" aria-label={t('projectBar.application')}>
-        <Tooltip text={t('projectBar.settingsTooltip')}>
+        <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
           <button
             type="button"
             className="tool quiet icon-only"

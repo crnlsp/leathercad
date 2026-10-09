@@ -1762,10 +1762,16 @@ button.problem-row:hover {
   display: inline-flex;
 }
 
+/* One line up to 360 px, then wrapping at that width and never narrower
+   (R-10): `max-content` keeps the window's edge from squeezing it before
+   Tooltip.tsx measures it and places it. */
 .tooltip {
   position: fixed;
+  top: 0;
+  left: 0;
   z-index: 20;
-  max-width: 280px;
+  width: max-content;
+  max-width: 360px;
   padding: 6px 8px;
   border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
@@ -1780,6 +1786,19 @@ button.problem-row:hover {
 
 .tooltip[hidden] {
   display: none;
+}
+
+/* A key after the words, as a cap: the rail's look, outlined on the
+   tooltip's own ground. */
+.tooltip kbd {
+  margin-left: 4px;
+  padding: 0 4px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+  white-space: nowrap;
 }
 
 /* A readout whose value is words rather than a number: it may wrap, and it is

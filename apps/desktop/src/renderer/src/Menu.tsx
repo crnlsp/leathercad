@@ -9,10 +9,9 @@ import {
   type RefObject,
 } from 'react';
 
-import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import { KeyCap } from './keyCaps.js';
 import { focusAfter, sharedReasons, type MenuEntry, type MenuItem } from './menus.js';
-import { keysFor } from './shortcuts.js';
 import { Tooltip } from './Tooltip.js';
 
 /**
@@ -224,8 +223,6 @@ function MenuPopup({
     items[next]?.focus();
   };
 
-  const { t } = useI18n();
-  const isMac = navigator.userAgent.includes('Mac');
   const said = sharedReasons(entries);
   const renderItem = (item: MenuItem) => {
     const refused = item.refusal !== undefined;
@@ -253,7 +250,7 @@ function MenuPopup({
         <span className="menu-label">
           {item.icon !== undefined && <Icon of={item.icon} />}
           {item.label}
-          {item.keys !== undefined && <kbd>{keysFor(item.keys, isMac, t)}</kbd>}
+          {item.keys !== undefined && <KeyCap command={item.keys} />}
         </span>
         {note !== undefined && (
           <span className="menu-note" id={`${item.id}-why`}>

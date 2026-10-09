@@ -1,6 +1,7 @@
 import type { MenuAction } from '@leathercad/platform';
 import type { Input, MenuItemConstructorOptions } from 'electron';
 
+import { keysOf, matches, type CommandId } from '../renderer/src/keymap.js';
 import type { Translate } from '../shared/i18n.js';
 
 /**
@@ -74,16 +75,28 @@ export type WindowKey = 'full-screen' | 'quit' | 'developer-tools';
 /**
  * The window's own keys (8.7): full screen everywhere, Quit off macOS — where
  * the app menu has it — and the developer tools only in a development build,
- * as the menu offered them only there (8.5a).
+ * as the menu offered them only there (8.5a). Full screen and Quit are the
+ * keymap's, matched as the window matches its keys (U.3): Q is the key that
+ * types Q, wherever the layout puts it.
  */
 export function windowKeyFor(
-  input: Pick<Input, 'type' | 'key' | 'control' | 'shift' | 'alt'>,
+  input: Pick<Input, 'type' | 'key' | 'code' | 'control' | 'meta' | 'shift' | 'alt'>,
   platform: { readonly isMac: boolean; readonly packaged: boolean },
 ): WindowKey | null {
   if (input.type !== 'keyDown') return null;
+  const press = {
+    code: input.code,
+    key: input.key,
+    ctrlKey: input.control,
+    metaKey: input.meta,
+    shiftKey: input.shift,
+    altKey: input.alt,
+  };
+  const is = (command: CommandId): boolean =>
+    keysOf(command).some((binding) => matches(press, binding, platform.isMac));
+  if (is('fullScreen')) return 'full-screen';
+  if (!platform.isMac && is('quit')) return 'quit';
   const key = input.key.toLowerCase();
-  if (key === 'f11') return 'full-screen';
-  if (!platform.isMac && input.control && !input.shift && !input.alt && key === 'q') return 'quit';
   if (!platform.packaged && (key === 'f12' || (input.control && input.shift && key === 'i'))) {
     return 'developer-tools';
   }

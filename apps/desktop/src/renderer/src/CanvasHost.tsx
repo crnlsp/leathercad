@@ -50,6 +50,8 @@ import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
+import { IS_MAC } from './keyCaps.js';
+import { commandFor, keyForTools } from './keymap.js';
 import { isTyping } from './shortcuts.js';
 
 /**
@@ -571,10 +573,11 @@ export function CanvasHost({
       // Never steal keys from a field, a list or anything editable (8.7).
       if (isTyping(event.target)) return;
 
-      // Ctrl on Linux and Windows, Cmd on macOS — as the menu shows it.
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      // Ctrl on Linux and Windows, ⌘ on macOS: the keymap's (U.3).
+      const command = commandFor(event, IS_MAC);
+      if (command === 'undo' || command === 'redo') {
         event.preventDefault();
-        if (event.shiftKey) store.redo();
+        if (command === 'redo') store.redo();
         else store.undo();
         return;
       }
@@ -583,7 +586,8 @@ export function CanvasHost({
       if (viewRef.current === 'sheets') return;
 
       const claimed = managerRef.current?.key({
-        key: event.key,
+        // The letter the keymap reads, so a tool claims the key the window would take.
+        key: keyForTools(event),
         shiftKey: event.shiftKey,
         ctrlKey: event.ctrlKey,
       });

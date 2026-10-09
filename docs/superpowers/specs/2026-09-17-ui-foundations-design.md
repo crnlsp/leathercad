@@ -336,7 +336,7 @@ Disabled renders the sentence from `describeProblem` as a line beneath the contr
 | `Field` | label + control + unit, one implementation — fixes unit clipping everywhere |
 | `NumberField` | Tabular figures at weight 500, reserved unit column, commit on Enter/blur |
 | **`ReasonedButton`** | Disabled *and says why* |
-| `Tooltip` | Real: styled, delayed 400 ms, keyboard-reachable. Retires `title` |
+| `Tooltip` | Real: styled, delayed 400 ms, keyboard-reachable. Retires `title`. *Since U.3 (R-10): 500 ms, one line up to 360 px, turned and shifted to stay 8 px inside the window, the control's key as a cap, Escape hides it* |
 | `FeatureMark` | The role glyph — identical in rail, tree, property header, problems, legend |
 | `Badge` | Count + severity (exists, 4.12) |
 | `Chip` | The segmented control the *Draw as* strip wants to be |

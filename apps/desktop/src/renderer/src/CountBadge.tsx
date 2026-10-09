@@ -1,4 +1,5 @@
 import type { Badge } from '@leathercad/domain';
+import { useI18n } from './i18n.js';
 import { Tooltip } from './Tooltip.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 
@@ -14,11 +15,12 @@ import { SeverityGlyph } from './SeverityGlyph.js';
  * of grey noughts is how a panel stops being read.
  */
 export function CountBadge({ badge, title }: { badge: Badge | null; title?: string }) {
+  const { t } = useI18n();
   if (badge === null) return null;
 
-  const what = badge.count === 1 ? 'problem' : 'problems';
+  const severity = t(`problems.severity.${badge.worst}`);
   return (
-    <Tooltip text={title ?? `${badge.count} ${what}, worst: ${badge.worst}`}>
+    <Tooltip text={title ?? t('problems.badge', { count: badge.count, severity })}>
       <span
         className={`badge severity-${badge.worst}`}
         data-testid="count-badge"
