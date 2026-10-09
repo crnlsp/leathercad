@@ -1,4 +1,5 @@
-import type { FeatureId, PartId, Project } from '@leathercad/domain';
+import type { FeatureId, PartId, Project, ResolvedProject } from '@leathercad/domain';
+import { PathOps, RectOps, type Rect } from '@leathercad/geometry';
 
 /**
  * Everything that belongs in the saved file.
@@ -52,6 +53,20 @@ export function selectedFeatureIds(project: Project, selection: Selection): Feat
     .filter((part) => selection.parts.has(part.id))
     .flatMap((part) => part.features.map((feature) => feature.id));
   return [...new Set([...selection.features, ...fromParts])];
+}
+
+/**
+ * The drawn extent, in millimetres, of every feature the board draws — or of
+ * those in `only` among them: what Fit drawing and Fit selection frame (U.4).
+ * A hidden feature is not drawn, so it is not framed. Null when nothing is.
+ */
+export function drawnBounds(resolved: ResolvedProject, only?: ReadonlySet<FeatureId>): Rect | null {
+  return RectOps.unionAll(
+    resolved.parts
+      .flatMap((part) => part.features)
+      .filter((entry) => entry.feature.visible && (only?.has(entry.feature.id) ?? true))
+      .flatMap((entry) => (entry.ok ? (PathOps.bbox(entry.path) ?? []) : [])),
+  );
 }
 
 /** Whether anything at all is picked, of either kind. */

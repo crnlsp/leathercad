@@ -7,6 +7,7 @@ import {
   cssPxPerMm,
   mmToPixels,
   pixelsToMm,
+  scaleAtZoomPercent,
   screenToWorld,
   visibleBoundsMm,
   worldToCss,
@@ -140,6 +141,27 @@ describe('zoom as the maker reads it', () => {
         return closeTo(one, other, 1e-9 * one);
       }),
     );
+  });
+
+  it('turns a percentage into the scale that shows it, and back, on any display (U.4)', () => {
+    fc.assert(
+      fc.property(ratios, fc.double({ min: 1, max: 10_000, noNaN: true }), (dpr, percent) => {
+        const scale = scaleAtZoomPercent(percent, dpr);
+        return closeTo(zoomPercent({ ...view, scale, dpr }), percent, 1e-9 * percent);
+      }),
+    );
+    fc.assert(
+      fc.property(ratios, fc.double({ min: 0.05, max: 400, noNaN: true }), (dpr, scale) => {
+        const back = scaleAtZoomPercent(zoomPercent({ ...view, scale, dpr }), dpr);
+        return closeTo(back, scale, 1e-9 * scale);
+      }),
+    );
+  });
+
+  it('puts 100 % at true size: device pixels are the ratio times 96 to the inch', () => {
+    expect(scaleAtZoomPercent(100, 1)).toBeCloseTo(96 / 25.4, 12);
+    expect(scaleAtZoomPercent(100, 2)).toBeCloseTo((2 * 96) / 25.4, 12);
+    expect(scaleAtZoomPercent(50, 2)).toBeCloseTo(96 / 25.4, 12);
   });
 });
 

@@ -1,4 +1,4 @@
-import { selectedFeatureIds, type DocumentStore } from '@leathercad/document';
+import { drawnBounds, selectedFeatureIds, type DocumentStore } from '@leathercad/document';
 import { diagnose, evaluate, sameProblem, type Problem, type Project } from '@leathercad/domain';
 import {
   layoutSheets,
@@ -8,7 +8,7 @@ import {
   type SheetPlan,
   type SheetsLayer,
 } from '@leathercad/export';
-import { PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
+import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 import {
   ToolManager,
@@ -42,6 +42,7 @@ import {
   renderDisplayList,
   renderGrid,
   renderRulers,
+  zoomPercent,
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
@@ -84,8 +85,18 @@ export interface CanvasHandle {
   frame(bounds: Rect): void;
   /** The zoom keys (8.4b): zooms the current view about its centre. */
   zoom(factor: number): void;
-  /** Ctrl+0 (8.4b): fits the pattern, as a double-click on empty board does. */
+  /** Zooms the current view to a percentage about its centre, 100 % being true size (U.4). */
+  zoomTo(percent: number): void;
+  /**
+   * Shift+1 (U.4): fits the pattern, as a double-click on empty board does —
+   * on the Sheets view, the sheets.
+   */
   fit(): void;
+  /**
+   * Shift+2 (U.4): frames what is selected on the board, a part picked by its
+   * heading included. Nothing on the Sheets view, or with nothing drawn picked.
+   */
+  fitSelection(): void;
   /**
    * Where a menu about the selection opens from the keyboard (8.8), in CSS
    * pixels of the window: the middle of what is selected, when it is on the
@@ -96,7 +107,11 @@ export interface CanvasHandle {
 
 export interface CanvasStatus {
   readonly cursorMm: Vec2 | null;
-  readonly scale: number;
+  /**
+   * The showing view's zoom, 100 % being true size (U.4): its own camera's,
+   * Design's or the Sheets', sent whenever that camera changes.
+   */
+  readonly zoomPercent: number;
   /** Why the active tool is not doing what it was asked, shown in the status bar. */
   readonly notice: Problem | null;
   /** On the Sheets view, the sheet under the pointer, 1-based, and how many there are (7.4d). */
@@ -187,6 +202,14 @@ export function CanvasHost({
   /** On the Sheets view, the part under the pointer (7.4d). */
   const hoveredPartRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
+  /**
+   * The showing camera's zoom (U.4), read as each frame is painted — every
+   * change to a camera repaints, whatever made it: the wheel, a key, the zoom
+   * control, a fit, a resize, the Sheets view framing its paper, a change of
+   * view. Sent with the status, which once carried the Design camera's scale
+   * alone and only when the pointer moved.
+   */
+  const [zoom, setZoom] = useState(() => zoomPercent(viewportRef.current.toView()));
   const i18n = useI18n();
   const { t } = i18n;
   /** The interface's words, which the board's captions are in, as the next paint reads them. */
@@ -233,18 +256,22 @@ export function CanvasHost({
       invalidate();
       return;
     }
-    const resolved = evaluate(store.getState().document.project);
-    const boxes = resolved.parts
-      .flatMap((part) => part.features)
-      .flatMap((entry) => (entry.ok ? [PathOps.bbox(entry.path)] : []))
-      .filter((box): box is NonNullable<typeof box> => box !== null);
-
     viewportRef.current.fitTo(
-      RectOps.unionAll(boxes) ?? RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
+      drawnBounds(evaluate(store.getState().document.project)) ??
+        RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
       FIT_PADDING_PX * viewportRef.current.dpr,
     );
     invalidate();
   }, [store, invalidate]);
+
+  /** What is selected, as the board draws it: a part picked by its heading is all of it (Q29). */
+  const selectionBounds = useCallback((): Rect | null => {
+    const { document, selection } = store.getState();
+    return drawnBounds(
+      evaluate(document.project),
+      new Set(selectedFeatureIds(document.project, selection)),
+    );
+  }, [store]);
 
   useImperativeHandle(
     ref,
@@ -260,7 +287,18 @@ export function CanvasHost({
         viewport.zoomAt({ x: viewport.widthPx / 2, y: viewport.heightPx / 2 }, factor);
         invalidate();
       },
+      zoomTo(percent) {
+        camera().zoomToPercent(percent);
+        invalidate();
+      },
       fit: handleDoubleClick,
+      fitSelection() {
+        if (viewRef.current === 'sheets') return;
+        const box = selectionBounds();
+        if (box === null) return;
+        viewportRef.current.fitTo(box, FIT_PADDING_PX * viewportRef.current.dpr);
+        invalidate();
+      },
       selectionPoint() {
         const canvas = canvasRef.current;
         if (canvas === null) return null;
@@ -268,17 +306,7 @@ export function CanvasHost({
         const middle = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
         if (viewRef.current === 'sheets') return middle;
 
-        const { document, selection } = store.getState();
-        const selectedIds = new Set(selectedFeatureIds(document.project, selection));
-        const box = RectOps.unionAll(
-          evaluate(document.project)
-            .parts.flatMap((part) => part.features)
-            .filter(
-              (entry) => entry.ok && entry.feature.visible && selectedIds.has(entry.feature.id),
-            )
-            .flatMap((entry) => (entry.ok ? [PathOps.bbox(entry.path)] : []))
-            .filter((b): b is NonNullable<typeof b> => b !== null),
-        );
+        const box = selectionBounds();
         if (box === null) return middle;
 
         const viewport = viewportRef.current;
@@ -292,7 +320,7 @@ export function CanvasHost({
         return inView ? { x, y } : middle;
       },
     }),
-    [camera, handleDoubleClick, invalidate, store],
+    [camera, handleDoubleClick, invalidate, selectionBounds],
   );
 
   // Settings the tools read at the moment they act. Refs rather than props
@@ -449,11 +477,14 @@ export function CanvasHost({
 
     if (viewRef.current === 'sheets') {
       paintSheets(context);
+      // After painting: the sheets frame themselves when first shown.
+      setZoom(zoomPercent(sheetsViewportRef.current.toView()));
       return;
     }
 
     const viewport = viewportRef.current;
     const view = viewport.toView();
+    setZoom(zoomPercent(view));
     const { document, selection } = store.getState();
 
     // Layer order matters: the wipe happens once, and each layer afterwards
@@ -563,8 +594,8 @@ export function CanvasHost({
   }, [paint]);
 
   useEffect(() => {
-    onStatus?.({ cursorMm, scale: viewportRef.current.scale, notice, sheet: sheetUnder });
-  }, [cursorMm, notice, onStatus, sheetUnder]);
+    onStatus?.({ cursorMm, zoomPercent: zoom, notice, sheet: sheetUnder });
+  }, [cursorMm, notice, onStatus, sheetUnder, zoom]);
 
   // Keyboard goes to the document: the canvas is not focusable and Escape or
   // Delete should work wherever the pointer happens to be.

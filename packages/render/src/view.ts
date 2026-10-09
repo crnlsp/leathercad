@@ -49,6 +49,15 @@ export function zoomPercent(view: ViewportView): number {
 }
 
 /**
+ * The scale — device pixels per millimetre — that shows `percent` on a
+ * display of this ratio: `zoomPercent`'s inverse, for the zoom control's
+ * *True size* and its sizes (U.4).
+ */
+export function scaleAtZoomPercent(percent: number, dpr: number): number {
+  return (percent / 100) * TRUE_SIZE_CSS_PX_PER_MM * dpr;
+}
+
+/**
  * Millimetres to device pixels.
  *
  * **One of only two places in the codebase where Y is flipped** — the other is

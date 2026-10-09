@@ -118,11 +118,16 @@ the size your software shows: it should be the size you drew.
   are **⚙** Settings and **?** Help.
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*
-  (**Ctrl+/** or **?**) lists every key. **Ctrl+=** and **Ctrl+−** zoom, **Ctrl+0** fits the
-  pattern in the window, **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key works by where
-  it is on the keyboard — on a German or French one, Ctrl+= is the key right of 0 — and every list
-  and tooltip shows it as your keyboard prints it; a tool's letter stays its letter, wherever your
-  layout puts it.
+  (**Ctrl+/** or **?**) lists every key. **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key
+  works by where it is on the keyboard — **Shift+1** is the key with 1 on it, whatever it types
+  there — and every list and tooltip shows it as your keyboard prints it; a tool's letter stays its
+  letter, and zoom its **+** and **−**, wherever your layout puts them.
+- **Zoom:** the control at the board's bottom-right says the zoom and sets it: **−** and **+**
+  (**Ctrl+=** and **Ctrl+−**), **Fit** (**Shift+1**, or double-click empty board), and the
+  percentage opens *Fit selection* (**Shift+2**), *True size, 100 %* (**Ctrl+0**) and 50, 200 and
+  400 %. At 100 % the board is drawn at 96 pixels to the inch, the size a screen is nominally
+  drawn at; yours may show it a little larger or smaller, so hold a ruler to it before you trust it
+  against a buckle. The zoom never changes what prints. Until 1.5, **Ctrl+0** fitted the pattern.
 - **Settings** (**Ctrl+,**): clear the recent projects, and choose how the legend and the tool
   rail start. They stay as you left them.
 - **Logs:** *Help → About LeatherCAD → Show log folder*. Nothing is ever uploaded; attach the log

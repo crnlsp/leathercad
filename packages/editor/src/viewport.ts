@@ -1,6 +1,12 @@
 import type { Mm } from '@leathercad/core';
 import { MatOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
-import { pixelsToMm, screenToWorld, worldToScreen, type ViewportView } from '@leathercad/render';
+import {
+  pixelsToMm,
+  scaleAtZoomPercent,
+  screenToWorld,
+  worldToScreen,
+  type ViewportView,
+} from '@leathercad/render';
 
 /**
  * The camera: the one object that knows how millimetres relate to pixels.
@@ -115,6 +121,18 @@ export class Viewport {
       x: this.centreMm.x + (before.x - after.x),
       y: this.centreMm.y + (before.y - after.y),
     };
+  }
+
+  /**
+   * Zooms to a percentage, 100 % being true size (U.4), about the canvas
+   * centre: the camera centre is the millimetre there, so it stays.
+   */
+  zoomToPercent(percent: number): void {
+    this.scale = clamp(
+      scaleAtZoomPercent(percent, this.dpr),
+      Viewport.MIN_SCALE,
+      Viewport.MAX_SCALE,
+    );
   }
 
   /** Drags the drawing by a screen delta. */

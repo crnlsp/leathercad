@@ -19,6 +19,7 @@ export type { Command, Document, HistoryAction, HistoryLabel, Selection } from '
 export {
   EMPTY_SELECTION,
   command,
+  drawnBounds,
   isEmptySelection,
   isPartSelected,
   isSelected,

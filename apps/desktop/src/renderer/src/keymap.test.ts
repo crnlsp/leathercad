@@ -353,9 +353,9 @@ describe('matching a key, by where it is (U.3)', () => {
       expect(commandFor(ctrl('Digit1', '+'), false)).toBe('design');
       expect(commandFor(ctrl('Minus', '='), false)).toBe('zoomIn');
       expect(commandFor(ctrl('Slash', '-'), false)).toBe('zoomOut');
-      // German = is Shift with 0: that zooms in, and Ctrl+0 still fits.
+      // German = is Shift with 0: that zooms in, and Ctrl+0 is still true size (U.4).
       expect(commandFor(ctrl('Digit0', '=', { shiftKey: true }), false)).toBe('zoomIn');
-      expect(commandFor(ctrl('Digit0', '0'), false)).toBe('fit');
+      expect(commandFor(ctrl('Digit0', '0'), false)).toBe('trueSize');
     });
 
     it('wants the command key and only it: not bare, not with Alt or AltGr', () => {
@@ -366,6 +366,62 @@ describe('matching a key, by where it is (U.3)', () => {
         commandFor({ ...NO_MODIFIERS, code: 'BracketRight', key: '+', metaKey: true }, true),
       ).toBe('zoomIn');
       expect(commandFor(ctrl('BracketRight', '+'), true)).toBeNull();
+    });
+  });
+
+  describe('fit and true size (U.4, R-03)', () => {
+    // Shift+1 and Shift+2 by their place, whatever the key types with Shift:
+    // ! and @ in the US, ! and " in Germany, 1 and 2 in France and Czechia.
+    const shifted = (code: string, key: string): KeyPress => ({
+      ...NO_MODIFIERS,
+      code,
+      key,
+      shiftKey: true,
+    });
+
+    it('fits the drawing on Shift+1 on a US, German, French or Czech keyboard', () => {
+      for (const key of ['!', '1']) {
+        expect(commandFor(shifted('Digit1', key), false), key).toBe('fit');
+        expect(commandFor(shifted('Digit1', key), true), key).toBe('fit');
+      }
+    });
+
+    it('fits the selection on Shift+2, whatever the key types', () => {
+      for (const key of ['@', '"', '2']) {
+        expect(commandFor(shifted('Digit2', key), false), key).toBe('fitSelection');
+      }
+    });
+
+    it('zooms to true size on Ctrl+0, which fitted before, and on the keypad’s 0', () => {
+      const ctrl0 = { ...NO_MODIFIERS, code: 'Digit0', key: '0', ctrlKey: true };
+      expect(commandFor(ctrl0, false)).toBe('trueSize');
+      expect(commandFor({ ...ctrl0, code: 'Numpad0' }, false)).toBe('trueSize');
+      // French types à on the 0 key: by its place, still true size.
+      expect(commandFor({ ...ctrl0, key: 'à' }, false)).toBe('trueSize');
+      expect(commandFor({ ...ctrl0, ctrlKey: false, metaKey: true }, true)).toBe('trueSize');
+    });
+
+    it('holds the modifiers exactly: 1 alone, Ctrl+Shift+1 and Alt+Shift+1 do not fit', () => {
+      expect(commandFor({ ...NO_MODIFIERS, code: 'Digit1', key: '1' }, false)).toBeNull();
+      expect(commandFor({ ...shifted('Digit1', '!'), ctrlKey: true }, false)).toBeNull();
+      expect(commandFor({ ...shifted('Digit1', '!'), altKey: true }, false)).toBeNull();
+    });
+
+    it('never takes a ? typed on the 1 key for the shortcut list: the digit keeps its place', () => {
+      expect(commandFor(shifted('Digit1', '?'), false)).toBe('fit');
+    });
+
+    it('shows them as Shift+1, Shift+2 and Ctrl+0, and ⇧1, ⇧2 and ⌘0 on macOS', () => {
+      for (const layout of [US, GERMAN, FRENCH, CZECH, null]) {
+        const label = (id: CommandId, isMac = false): string =>
+          keyLabel(shownKeys(id, layout, isMac)[0]!, isMac, layout, t);
+        expect(label('fit')).toBe('Shift+1');
+        expect(label('fitSelection')).toBe('Shift+2');
+        expect(label('trueSize')).toBe('Ctrl+0');
+        expect(label('fit', true)).toBe('⇧1');
+        expect(label('fitSelection', true)).toBe('⇧2');
+        expect(label('trueSize', true)).toBe('⌘0');
+      }
     });
   });
 

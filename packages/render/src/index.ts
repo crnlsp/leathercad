@@ -30,6 +30,7 @@ export {
   cssPxPerMm,
   mmToPixels,
   pixelsToMm,
+  scaleAtZoomPercent,
   screenToWorld,
   visibleBoundsMm,
   worldToScreen,

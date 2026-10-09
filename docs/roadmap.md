@@ -58,13 +58,25 @@ typed where the eye already is, and the next step is one click away.
 [mockups](superpowers/specs/2026-10-08-ui-refinement-mockups/); [the
 plan](superpowers/plans/2026-10-08-ui-refinement.md) holds each slice's whole task, the answers to
 the requirements' open questions, and what reading the code turned up. One pull request per slice,
-in this order: U.1 first, and the plan's §0 says why. U.1 to U.3 shipped in 1.3.5, so U.4 is next. R-10 and the keys move up into Phase 1 as
+in this order: U.1 first, and the plan's §0 says why. U.1 to U.3 shipped in 1.3.5, and 1.5 begins at U.4. R-10 and the keys move up into Phase 1 as
 U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14 and R-16 read it.
 
 ### Phase 1 — the canvas, the keys and the frame
 
-- ☐ **U.4 A zoom control, and true size** (R-03). − · % · + · Fit at the canvas's bottom-right;
+- ✅ **U.4 A zoom control, and true size** (R-03). − · % · + · Fit at the canvas's bottom-right;
   *Fit drawing* `Shift+1`, *Fit selection* `Shift+2`, *True size* `Ctrl+0` — which fits today.
+  ✅ Built as described, on Design and on Sheets. Measured in the app: at *True size* a 100 mm
+  panel is 378 CSS px across on a 1× and a 2× display (377.95 by the arithmetic). `Ctrl+0` means
+  true size now, and fitting moved to `Shift+1`, matched by place, so a German `!` or a French `1`
+  fits. *Fit selection* is refused, with its reason, when nothing selected is drawn, and on Sheets.
+  100 % is the CSS reference pixel, 96 to the inch, one constant a screen calibration would
+  replace. Found on the way, and fixed: the status sent the Design camera's scale even on Sheets,
+  and only when the pointer moved — after `Ctrl+=` it still said 124.5 % for a board at 155.6 %,
+  and on Sheets the board's zoom for paper at 27.6 % — so the zoom is now read off whichever camera
+  is painted; Fit framed hidden features, which it does not draw; choosing from a menu by keyboard
+  dropped focus to the page, and now gives it back to the button; `getting-started.md` said a
+  German keyboard zooms from the key right of 0, which U.3's review had changed. Printed output did
+  not move: no export test, golden fixture or format fixture changed.
 - ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
   three status-bar chips, always; the widths of the requirements' §5; the maker's choices
   remembered; nothing unreachable.

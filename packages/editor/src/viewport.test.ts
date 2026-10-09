@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { RectOps } from '@leathercad/geometry';
+import { zoomPercent } from '@leathercad/render';
 
 import { Viewport } from './viewport.js';
 
@@ -125,6 +126,54 @@ describe('zoomAt', () => {
     const before = v.toWorld(anchor);
     v.zoomAt(anchor, 4);
     expect(closeTo(v.toWorld(anchor).x, before.x, 1e-6)).toBe(true);
+  });
+});
+
+describe('zoomToPercent (U.4)', () => {
+  it('shows the percentage asked for, and keeps the millimetre at the canvas centre still', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(1, 1.25, 1.5, 2, 3),
+        fc.double({ min: 0.1, max: 50, noNaN: true }),
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        fc.constantFrom(50, 100, 200, 400, 37.5, 1234),
+        (dpr, scale, x, y, percent) => {
+          const v = new Viewport();
+          v.resize(801 * dpr, 597 * dpr, dpr);
+          v.scale = scale * dpr;
+          v.centreMm = { x, y };
+          const middle = { x: v.widthPx / 2, y: v.heightPx / 2 };
+          const before = v.toWorld(middle);
+          v.zoomToPercent(percent);
+          const after = v.toWorld(middle);
+          return (
+            closeTo(zoomPercent(v.toView()), percent, 1e-9 * percent) &&
+            closeTo(before.x, after.x, 1e-6) &&
+            closeTo(before.y, after.y, 1e-6)
+          );
+        },
+      ),
+    );
+  });
+
+  it('is true size at 100 %: 100 mm across is 377.95 CSS px, on a 1× or a 2× display', () => {
+    for (const dpr of [1, 2]) {
+      const v = new Viewport();
+      v.resize(800 * dpr, 600 * dpr, dpr);
+      v.zoomToPercent(100);
+      const left = v.toScreen({ x: 0, y: 0 });
+      const right = v.toScreen({ x: 100, y: 0 });
+      expect((right.x - left.x) / dpr).toBeCloseTo(377.952756, 5);
+    }
+  });
+
+  it('stays inside the zoom limits', () => {
+    const v = makeViewport();
+    v.zoomToPercent(1e9);
+    expect(v.scale).toBe(Viewport.MAX_SCALE);
+    v.zoomToPercent(1e-9);
+    expect(v.scale).toBe(Viewport.MIN_SCALE);
   });
 });
 

@@ -106,9 +106,10 @@ test('copy and paste work in a text field with no menu (8.7)', async () => {
   }
 });
 
-test('the zoom keys zoom, and Ctrl+0 fits the pattern again (8.4b)', async () => {
+test('the zoom keys zoom, and Shift+1 fits the pattern again (8.4b, U.4)', async () => {
   // Zoom changes which millimetre is under a fixed point off the centre, and
   // fitting brings it back. The menu that also zoomed is gone; the keys stay.
+  // Ctrl+0 fitted until U.4, and is true size now (e2e/zoom.spec.ts).
   const { app, window } = await launch();
   try {
     await drawAPanel(window);
@@ -116,11 +117,11 @@ test('the zoom keys zoom, and Ctrl+0 fits the pattern again (8.4b)', async () =>
     const board = (await window.getByTestId('editor-canvas').boundingBox())!;
     // The millimetre under one fixed point, at the current zoom.
     const scale = (): Promise<string> => readoutAt(window, board.x + 60, board.y + 60);
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('Shift+Digit1');
     const fitted = await scale();
     await window.keyboard.press('Control+Equal');
     await expect.poll(scale).not.toBe(fitted);
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('Shift+Digit1');
     await expect.poll(scale).toBe(fitted);
     await window.keyboard.press('Control+Minus');
     await expect.poll(scale).not.toBe(fitted);

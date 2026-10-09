@@ -4,9 +4,11 @@ import {
   deleteFeatures,
   deletePart,
   deleteRefusal,
+  drawnBounds,
   duplicatePart,
   emptyDocument,
   isEmptySelection,
+  selectedFeatureIds,
   planDelete,
   type DeleteResolution,
 } from '@leathercad/document';
@@ -66,6 +68,7 @@ import { getPlatformHost } from './platformBridge.js';
 import { ALL_TOOLS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
 import { useMediaQuery } from './useMediaQuery.js';
+import { ZoomControl, type ZoomCommand } from './ZoomControl.js';
 
 function fileName(path: string): string {
   return path.split('/').pop() ?? path;
@@ -73,6 +76,15 @@ function fileName(path: string): string {
 
 /** How far one step of the zoom keys goes (8.4b). */
 const ZOOM_STEP = 1.25;
+
+/** What each zoom command asks of the canvas: its key and the zoom control run the same (U.4). */
+const ZOOM: Readonly<Record<ZoomCommand, (canvas: CanvasHandle) => void>> = {
+  zoomIn: (canvas) => canvas.zoom(ZOOM_STEP),
+  zoomOut: (canvas) => canvas.zoom(1 / ZOOM_STEP),
+  fit: (canvas) => canvas.fit(),
+  fitSelection: (canvas) => canvas.fitSelection(),
+  trueSize: (canvas) => canvas.zoomTo(100),
+};
 
 export function App({
   initialPreferences,
@@ -196,6 +208,10 @@ export function App({
   // The canvas owns the viewport; this is the only handle on it. Anyone may
   // ask it to show a rectangle, zoom about its centre, or fit the pattern.
   const canvasRef = useRef<CanvasHandle>(null);
+  const runZoom = useCallback((command: ZoomCommand) => {
+    if (canvasRef.current !== null) ZOOM[command](canvasRef.current);
+  }, []);
+  const zoomTo = useCallback((percent: number) => canvasRef.current?.zoomTo(percent), []);
 
   const nextId = useMemo(() => createIdFactory(systemIdSource), []);
   const store = useMemo(() => new DocumentStore(emptyDocument(nextId(), 'Untitled')), [nextId]);
@@ -367,10 +383,12 @@ export function App({
       // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
       keyboardShortcuts: () => setSettings('shortcuts'),
       settings: () => setSettings('general'),
-      // The view (8.4b): zoom in, zoom out, and fit the pattern.
-      zoomIn: () => canvasRef.current?.zoom(ZOOM_STEP),
-      zoomOut: () => canvasRef.current?.zoom(1 / ZOOM_STEP),
-      fit: () => canvasRef.current?.fit(),
+      // The view (8.4b, U.4): zoom in and out, fit, and true size.
+      zoomIn: () => runZoom('zoomIn'),
+      zoomOut: () => runZoom('zoomOut'),
+      fit: () => runZoom('fit'),
+      fitSelection: () => runZoom('fitSelection'),
+      trueSize: () => runZoom('trueSize'),
     };
     const onKey = (event: KeyboardEvent): void => {
       if (isTyping(event.target)) return;
@@ -389,7 +407,7 @@ export function App({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [file, exportPdf, newProject, openProject, showView, chooseTool]);
+  }, [file, exportPdf, newProject, openProject, showView, chooseTool, runZoom]);
 
   // macOS's native menu (8.7) sends what the platform keeps there; each runs
   // the handler its key and its button run.
@@ -546,6 +564,22 @@ export function App({
   // parts tree and the feature rows all read this rather than counting their
   // own way to a different number.
   const badges = badgesOf(diagnostics);
+
+  // Fit selection frames what the board draws of the selection, on Design: it
+  // says why when it cannot (U.4). `evaluate` is memoised on the project.
+  const selectionDrawn = useMemo(() => {
+    const { project } = storeState.document;
+    return (
+      drawnBounds(evaluate(project), new Set(selectedFeatureIds(project, storeState.selection))) !==
+      null
+    );
+  }, [storeState.document, storeState.selection]);
+  const fitSelectionRefusal =
+    view === 'sheets'
+      ? t('zoom.onDesignOnly')
+      : selectionDrawn
+        ? undefined
+        : t('zoom.nothingSelected');
 
   const featureCount = storeState.document.project.parts.reduce(
     (total, part) => total + part.features.length,
@@ -708,6 +742,14 @@ export function App({
                   project={storeState.document.project}
                   open={preferences.legendOpen}
                   onToggle={toggleLegend}
+                />
+              )}
+              {status !== null && (
+                <ZoomControl
+                  percent={status.zoomPercent}
+                  run={runZoom}
+                  zoomTo={zoomTo}
+                  fitSelectionRefusal={fitSelectionRefusal}
                 />
               )}
             </CanvasHost>

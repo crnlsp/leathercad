@@ -29,6 +29,7 @@ export function MenuButton({
   testId,
   className,
   align = 'start',
+  above = false,
   entries,
   onOpen,
   children,
@@ -41,6 +42,8 @@ export function MenuButton({
   className: string;
   /** Which edge of the button the menu lines up with. */
   align?: 'start' | 'end';
+  /** Opens upwards, for a button at the foot of the canvas, which clips what runs past it (U.4). */
+  above?: boolean;
   entries: readonly MenuEntry[];
   /** Called as the menu opens, for a menu that shows something that changes. */
   onOpen?: () => void;
@@ -50,14 +53,17 @@ export function MenuButton({
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  // Escape gives focus back to the button — once the menu has closed. The
-  // tooltip is off while the menu is open, which changes the button's
-  // wrapping, so the button focused before the render is not the one after.
+  // Escape, or choosing an item, gives focus back to the button — once the
+  // menu has closed. The tooltip is off while the menu is open, which changes
+  // the button's wrapping, so the button focused before the render is not the
+  // one after. Only if nothing else took it: a dialog the item opened keeps it.
+  // Choosing gave it to the page until U.4, so the keyboard lost its place.
   const giveBack = useRef(false);
 
   useEffect(() => {
     if (open) return;
-    if (giveBack.current) trigger.current?.focus();
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (giveBack.current && lost) trigger.current?.focus();
     giveBack.current = false;
   }, [open]);
 
@@ -84,13 +90,13 @@ export function MenuButton({
         <MenuPopup
           label={label}
           testId={`${testId}-items`}
-          className={`menu ${align}`}
+          className={`menu ${align}${above ? ' above' : ''}`}
           entries={entries}
           // The button is inside too: a press on it closes the menu through
           // its own click, not twice.
           inside={root}
-          onClose={(escaped) => {
-            giveBack.current = escaped;
+          onClose={(how) => {
+            giveBack.current = how !== 'away';
             setOpen(false);
           }}
         />
@@ -147,8 +153,8 @@ export function ContextMenu({
       style={{ left: place.x, top: place.y }}
       entries={entries}
       inside={menu}
-      onClose={(escaped) => {
-        if (escaped) opener?.focus();
+      onClose={(how) => {
+        if (how === 'escape') opener?.focus();
         onClose();
       }}
     />
@@ -177,8 +183,11 @@ function MenuPopup({
   entries: readonly MenuEntry[];
   /** Where a press may land without closing the menu. */
   inside: RefObject<HTMLElement | null>;
-  /** `escaped` when Escape closed it, so focus can go back where it came from. */
-  onClose: (escaped: boolean) => void;
+  /**
+   * How it closed — Escape, an item chosen, or a press elsewhere or Tab — so
+   * focus can go back where it came from.
+   */
+  onClose: (how: 'escape' | 'chosen' | 'away') => void;
 }) {
   const own = useRef<HTMLDivElement>(null);
   const list = ref ?? own;
@@ -190,12 +199,12 @@ function MenuPopup({
   useEffect(() => {
     list.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const away = (event: PointerEvent): void => {
-      if (!inside.current?.contains(event.target as Node)) onCloseRef.current(false);
+      if (!inside.current?.contains(event.target as Node)) onCloseRef.current('away');
     };
     const escape = (event: globalThis.KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
       event.stopPropagation();
-      onCloseRef.current(true);
+      onCloseRef.current('escape');
     };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', escape, true);
@@ -209,7 +218,7 @@ function MenuPopup({
     // Keys in a menu are the menu's: a letter must not change the tool behind it.
     event.stopPropagation();
     if (event.key === 'Tab') {
-      onClose(false);
+      onClose('away');
       return;
     }
     const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
@@ -243,7 +252,7 @@ function MenuPopup({
         aria-describedby={refused ? `${saidBy ?? item.id}-why` : undefined}
         onClick={() => {
           if (refused) return;
-          onClose(false);
+          onClose('chosen');
           item.onChoose();
         }}
       >
