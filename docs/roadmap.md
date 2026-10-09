@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.3.0 (2026-10-01) · **Next:** 1.4, then 1.5 and 1.6 · **Last updated:** 2026-10-08
+**Released:** v1.3.0 (2026-10-01) · **Next:** 1.3.5, then 1.5 and 1.6 · **Last updated:** 2026-10-09
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -47,7 +47,7 @@ and what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md).
 
 ---
 
-## 1.4 — the next release
+## 1.3.5 — the next release
 
 The theme is *print true, and cut true*: what leaves the app, on paper or as a file for a cutter,
 is the size that was drawn. It is the first part of what the roadmap called 1.4. The maintainer
@@ -57,9 +57,14 @@ was, so this could ship first ([`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-
 release is [1.6](#16--after-the-refinement) since the UI refinement took 1.5 on 2026-10-08. The
 order within each group is the suggested order of work.
 
-**What it still waits for** (2026-10-08): Q27, which needs `gifsicle` and `pngquant` where the
-pictures are retaken, and R1, the physical measurement only the maintainer can take. 6.5 landed in
-#65. 7.6b, 6.2 and Q7 were finished on branches cut
+**It ships as 1.3.5, not 1.4** — the maintainer's decision on 2026-10-09: what is on `develop` is cut
+here as a point release, with the first three slices of 1.5's UI refinement, which landed before
+it. release-please would call a release with features 1.4.0, so the commit that made this section
+1.3.5 carries `Release-As: 1.3.5`.
+
+**What it still waits for** (2026-10-09): R1's Linux rows, the physical measurement only the
+maintainer can take. Q27 moved to 1.5, whose UI changes every picture it would retake, and R1's
+macOS and Windows rows moved there as R8. 7.6b, 6.2 and Q7 were finished on branches cut
 before the split, so their ticks had landed in the release after; they are back in the release
 they belong to.
 
@@ -117,43 +122,9 @@ they belong to.
   it. **Still owed:** the new physical measurement this item always required — the print test's
   rows in [`print-verification-log.md`](print-verification-log.md) now read the gauge (R1).
 
-### Known issues and findings
+### The window, refined — its first three slices
 
-Everything found along the way that is not fixed yet, with where it was found. The ones marked
-**bug** come first.
-
-| # | What | Where it was found | Plan |
-|---|---|---|---|
-| ✅ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | ✅ Built as described, for offsetting and hole distribution ([`testing.md`](testing.md) §11): eight real pieces, stitched 3 and 4 mm in or allowed 3 and 4 mm out, with a 3.0 and a 3.85 mm iron, every number on the 0.1 µm grid. Each was checked by hand once. On the way, not fixed: the sample project's scooped card pocket gets no stitch inset, because Tier 1 cannot trim the scoop's arc against the top edge, and the user is told the margin is deeper than the edge can hold, which is not why. The sample draws that seam by hand; the golden records the gap, and will show the stitch line the day Tier 1 learns that trim |
-| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
-| ✅ **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | The independent QA pass, 2026-09-24 (P3) | ✅ Fixed in 7.8: everything printed is inside the margins, in the verification strip |
-| ✅ **Q32** | **bug** · Two failures of the nightly property run ([issue #39](https://github.com/crnlsp/leathercad/issues/39)). `arcThroughPoints` took three points almost in a line, far apart, for a triangle: `(0, -2000)`, `(0, 2000)` and `(0.00025, 0)` gave a circle 8,000 km in radius, and an arc round it that missed its own points by more than 1e-6 mm. "In a line" was twice the triangle's area under an absolute 1e-12 mm², and how flat a triangle is depends on its size, so points 4 mm apart met the same fault. The other failure, `closestPointOnPath` on a line shorter than `EPS_POINT`, was Q26's: the nightly still tested `main` | The nightly runs of 2026-09-30 and 2026-10-03 (seeds 566912085 and 188633644) | ✅ Fixed in #58, which closed #39: `arcThroughPoints` checks the arc it built, and when its circle cannot put the ends on `a` and `c` and `b` on it within `EPS_POINT` it answers with the straight line from `a` to `c`, as it did for points exactly in a line. The arc tool shows no arc and the polyline tool draws a straight edge, where both made an arc thousands of kilometres across. The property that every triangle gets an arc through all three points was wrong at this scale; it is now two, that every triangle whose circle is under a kilometre gets an arc, and that every result starts at `a`, ends at `c` and passes through `b`. Each counterexample is a regression test, and the first seed's joins Q26's |
-
-### Release engineering
-
-| # | What | Plan |
-|---|---|---|
-| ☐ **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md). Since 7.6 it has two Linux rows: a viewer's print scaled to 96 %, and sheet 1 through *Print* measured true. No platform has a full A–H row yet | Record one row per platform, through *Print* on Linux and macOS. Until then the project does not claim verified 1:1 output in writing |
-| ✅ **R3** | 1.0.1's release notes list every fix twice, because pull requests into `develop` were merged with merge commits, which release-please reads as well as the commits inside them. 1.2.0's list every feature twice, for the same reason: #23, #25 and #26 went into `main` with merge commits | Squash-merge into `develop` ([`CONTRIBUTING.md`](../CONTRIBUTING.md)), which the ruleset enforces since 2026-09-29; `CHANGELOG.md` is corrected for both; edit the GitHub release notes of 1.0.1 and 1.2.0 by hand. ✅ Done 2026-10-07: both releases' notes are now their corrected `CHANGELOG.md` sections, each entry once |
-| ✅ **R4** | Tags read `leathercad-v1.0.1`, not `v1.0.1` | ✅ Decided 2026-10-07: tags keep the component, `leathercad-vX.Y.Z`, so the links between releases stay unbroken. 8.9 reads that form |
-| ✅ **R5** | `package.yml` builds Windows and macOS only when packaging could have changed, because a private repository pays for those minutes. The repository is public now, where they are free | ✅ Done 2026-10-07: it runs on every pull request and push, and the unit tests on Windows and macOS moved from the weekly run into CI beside it. Its weekly run went too: it only caught what the path filter let through |
-
----
-
-## 1.5 — the window, refined
-
-The UI/UX final audit's requirements, received 2026-10-08: a refinement pass, not a redesign. The
-layout, the look and the words stay, and **printed output does not change**. The theme is *a maker
-gets more done at the bench*: the pattern reads at every zoom, the board gets the room, sizes are
-typed where the eye already is, and the next step is one click away.
-[Requirements](superpowers/specs/2026-10-08-ui-refinement-requirements.md) (R-01 to R-16) and
-[mockups](superpowers/specs/2026-10-08-ui-refinement-mockups/); [the
-plan](superpowers/plans/2026-10-08-ui-refinement.md) holds each slice's whole task, the answers to
-the requirements' open questions, and what reading the code turned up. One pull request per slice,
-in this order: U.1 first, and the plan's §0 says why. R-10 and the keys move up into Phase 1 as
-U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14 and R-16 read it.
-
-### Phase 1 — the canvas, the keys and the frame
+From [1.5](#15--the-window-refined)'s UI refinement, done before this was cut, so they ship here.
 
 - ✅ **U.1 Pieces read as pieces** (R-02). Every piece filled on the board, the one being worked on
   warmer; no grid inside a piece; the 1 mm grid from 160 % and the 10 mm grid from 40 %; cut lines
@@ -199,6 +170,44 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   position a German Ctrl+- opened the shortcut list and its Ctrl++ did nothing — while a digit keeps
   its place (Ctrl+1 is Design where that key types +), and the caps show only keys that work on the
   maker's layout. Printed output did not move.
+
+### Known issues and findings
+
+Everything found along the way that is not fixed yet, with where it was found. The ones marked
+**bug** come first.
+
+| # | What | Where it was found | Plan |
+|---|---|---|---|
+| ✅ **Q7** | The golden-fixture layer [`testing.md`](testing.md) §2 plans — committed geometry outputs, reviewed when they change — was never built. The `.lcp` format fixtures and the SVG snapshots cover part of it | The post-1.0 cleanup | ✅ Built as described, for offsetting and hole distribution ([`testing.md`](testing.md) §11): eight real pieces, stitched 3 and 4 mm in or allowed 3 and 4 mm out, with a 3.0 and a 3.85 mm iron, every number on the 0.1 µm grid. Each was checked by hand once. On the way, not fixed: the sample project's scooped card pocket gets no stitch inset, because Tier 1 cannot trim the scoop's arc against the top edge, and the user is told the margin is deeper than the edge can hold, which is not why. The sample draws that seam by hand; the golden records the gap, and will show the stitch line the day Tier 1 learns that trim |
+| ✅ **Q17** | (S3) The footer and *Page N of M* print 5 mm from the paper edge, inside the margin the code itself calls unreliable | The independent QA pass, 2026-09-24 (P3) | ✅ Fixed in 7.8: everything printed is inside the margins, in the verification strip |
+| ✅ **Q32** | **bug** · Two failures of the nightly property run ([issue #39](https://github.com/crnlsp/leathercad/issues/39)). `arcThroughPoints` took three points almost in a line, far apart, for a triangle: `(0, -2000)`, `(0, 2000)` and `(0.00025, 0)` gave a circle 8,000 km in radius, and an arc round it that missed its own points by more than 1e-6 mm. "In a line" was twice the triangle's area under an absolute 1e-12 mm², and how flat a triangle is depends on its size, so points 4 mm apart met the same fault. The other failure, `closestPointOnPath` on a line shorter than `EPS_POINT`, was Q26's: the nightly still tested `main` | The nightly runs of 2026-09-30 and 2026-10-03 (seeds 566912085 and 188633644) | ✅ Fixed in #58, which closed #39: `arcThroughPoints` checks the arc it built, and when its circle cannot put the ends on `a` and `c` and `b` on it within `EPS_POINT` it answers with the straight line from `a` to `c`, as it did for points exactly in a line. The arc tool shows no arc and the polyline tool draws a straight edge, where both made an arc thousands of kilometres across. The property that every triangle gets an arc through all three points was wrong at this scale; it is now two, that every triangle whose circle is under a kilometre gets an arc, and that every result starts at `a`, ends at `c` and passes through `b`. Each counterexample is a regression test, and the first seed's joins Q26's |
+
+### Release engineering
+
+| # | What | Plan |
+|---|---|---|
+| ☐ **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md). Since 7.6 it has two Linux rows: a viewer's print scaled to 96 %, and sheet 1 through *Print* measured true. No platform has a full A–H row yet | For 1.3.5, Linux: the print test's three sheets through *Print* on A4 portrait, and its landscape sheet (7.6b), measured A–H on the 7.8 gauge, in a build of this release. macOS and Windows moved to 1.5 as R8 on 2026-10-09. Until a platform has its row, the project does not claim verified 1:1 output on it |
+| ✅ **R3** | 1.0.1's release notes list every fix twice, because pull requests into `develop` were merged with merge commits, which release-please reads as well as the commits inside them. 1.2.0's list every feature twice, for the same reason: #23, #25 and #26 went into `main` with merge commits | Squash-merge into `develop` ([`CONTRIBUTING.md`](../CONTRIBUTING.md)), which the ruleset enforces since 2026-09-29; `CHANGELOG.md` is corrected for both; edit the GitHub release notes of 1.0.1 and 1.2.0 by hand. ✅ Done 2026-10-07: both releases' notes are now their corrected `CHANGELOG.md` sections, each entry once |
+| ✅ **R4** | Tags read `leathercad-v1.0.1`, not `v1.0.1` | ✅ Decided 2026-10-07: tags keep the component, `leathercad-vX.Y.Z`, so the links between releases stay unbroken. 8.9 reads that form |
+| ✅ **R5** | `package.yml` builds Windows and macOS only when packaging could have changed, because a private repository pays for those minutes. The repository is public now, where they are free | ✅ Done 2026-10-07: it runs on every pull request and push, and the unit tests on Windows and macOS moved from the weekly run into CI beside it. Its weekly run went too: it only caught what the path filter let through |
+
+---
+
+## 1.5 — the window, refined
+
+The UI/UX final audit's requirements, received 2026-10-08: a refinement pass, not a redesign. The
+layout, the look and the words stay, and **printed output does not change**. The theme is *a maker
+gets more done at the bench*: the pattern reads at every zoom, the board gets the room, sizes are
+typed where the eye already is, and the next step is one click away.
+[Requirements](superpowers/specs/2026-10-08-ui-refinement-requirements.md) (R-01 to R-16) and
+[mockups](superpowers/specs/2026-10-08-ui-refinement-mockups/); [the
+plan](superpowers/plans/2026-10-08-ui-refinement.md) holds each slice's whole task, the answers to
+the requirements' open questions, and what reading the code turned up. One pull request per slice,
+in this order: U.1 first, and the plan's §0 says why. U.1 to U.3 ship in 1.3.5. R-10 and the keys move up into Phase 1 as
+U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14 and R-16 read it.
+
+### Phase 1 — the canvas, the keys and the frame
+
 - ☐ **U.4 A zoom control, and true size** (R-03). − · % · + · Fit at the canvas's bottom-right;
   *Fit drawing* `Shift+1`, *Fit selection* `Shift+2`, *True size* `Ctrl+0` — which fits today.
 - ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
@@ -234,6 +243,18 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 - ☐ **U.18 Drawing defaults in Properties** (R-16).
 - ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
   pixel baselines and the README's pictures retaken.
+
+### Known issues and findings
+
+| # | What | Where it was found | Plan |
+|---|---|---|---|
+| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
+
+### Release engineering
+
+| # | What | Plan |
+|---|---|---|
+| ☐ **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | Record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Moved here from 1.3.5's R1 on 2026-10-09 |
 
 ### Decisions this release needs
 
