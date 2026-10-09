@@ -17,7 +17,7 @@ vertical slices. A refinement pass, not a redesign.
 [mockups](../specs/2026-10-08-ui-refinement-mockups/). The mockups are not pixel specs: where an
 image and the text disagree, the text wins.
 
-**Roadmap:** [1.5 — the window, refined](../../roadmap.md#15--the-window-refined).
+**Roadmap:** [1.5 — the window, refined](../../roadmap.md#15--the-next-release), the next release.
 
 **Stack:** React in `apps/desktop/src/renderer`; tokens in `packages/render/src/theme/`; the
 canvas2d and svg screen backends in `packages/render`; Playwright for the E2E and pixel tests.
@@ -28,7 +28,7 @@ canvas2d and svg screen backends in `packages/render`; Playwright for the E2E an
 
 | Order | What | Waits on | Who |
 |---|---|---|---|
-| 1 | **Finish 1.4, released as 1.3.5.** Its last feature, 6.5 (DXF), landed in [crnlsp/leathercad#65](https://github.com/crnlsp/leathercad/pull/65) on 2026-10-08; U.1 to U.3 ship with it. R1's Linux rows were recorded on 2026-10-09; nothing is left | Q27: `gifsicle` and `pngquant` on the machine that retakes the README pictures. R1: a physical print | the maintainer, or an agent asked to |
+| 1 | ✅ **1.4, released as 1.3.5** on 2026-10-09, with U.1 to U.3: [the record](../../history/roadmap-1.3.5.md) | — | — |
 | 2 | **U.1 Pieces read as pieces** | nothing | the `ui-refinement` agent, from 2026-10-08 |
 | 3 | U.2 → U.19, in this document's order | the slices named under each | one session per slice |
 
