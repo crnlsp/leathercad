@@ -89,12 +89,12 @@ not 250: a row recorded before it read A as the square, across × up, B as the r
 |---|---|---|---|---|---|---|---|
 | 2026-10-01 | 1.3.0 (bifold sample, before 7.6) | Linux (CachyOS), CUPS 2.4.19, libcupsfilters 2.2.1 | Okular, default *Fit to printable area*; again with *None; print original size*; and a browser | Brother HL-L2442DW, driverless (IPP Everywhere) | A4 | A · B: about 96 × 4.8 (the rest not taken) | **Fail.** CUPS fitted the page into the 4.23 mm margins: the jobs carried no `print-scaling=none`, and libcupsfilters defaults to `auto`. The PDF itself measures true (ADR 0019) |
 | 2026-10-01 | 7.6 branch: `lp -o print-scaling=none -o fit-to-page=false -o media=A4`, as *Print* sends it | Linux (CachyOS), CUPS 2.4.19, libcupsfilters 2.2.1 | none: sent to `lp` | Brother HL-L2442DW, driverless (IPP Everywhere) | A4 | Sheet 1 only. A–F each within 0.5 mm of expected, reported as passing; exact readings not noted. G, H not printed | **Pass** (sheet 1). No visible issue |
-| _pending_ | | Linux, all three sheets through *Print* in a released build | | | | | |
-| _pending_ | | Linux, the print test on A4 landscape through *Print* (7.6b): one sheet, upright paper, A–F and the strap whole at 275.0 | | | | | |
+| 2026-10-09 | `develop` at 6a63ae2, the 1.3.5 release candidate | Linux (CachyOS) | none: LeatherCAD's *Print*, *100 % — locked*, *No scaling* | Brother HL-L2442DW, the printer's default settings | A4 portrait | All three sheets. A–H each within 0.5 mm of expected, reported as passing; exact readings not noted | **Pass** |
+| 2026-10-09 | `develop` at 6a63ae2, the 1.3.5 release candidate | Linux (CachyOS) | none: LeatherCAD's *Print*, A4 landscape (7.6b) | Brother HL-L2442DW, the printer's default settings | A4, the sheet turned onto upright paper | One sheet. A–F and the strap whole at 275.0 each within 0.5 mm of expected, reported as passing; exact readings not noted | **Pass** |
 | _pending_ | | Windows | | | | | |
 | _pending_ | | macOS, through *Print* | | | | | |
 
-**7.7 is not verified.** On Linux, sheet 1 sent with scaling off measured true, and the same
-printer scaled the same PDF to 96 % from a viewer. No platform has a full row of A–H yet. Until a
-row above carries real readings for each platform, the project must not claim verified 1:1
-output.
+**Linux is verified through *Print*** (1.3.5): the print test's three portrait sheets and its
+landscape sheet measured true on a Brother laser, and the same printer scaled a viewer's print of
+the same PDF to 96 % before 7.6. **Windows and macOS are not verified** (R8): until a row above
+carries real readings for each, the project must not claim verified 1:1 output on it.
