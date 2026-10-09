@@ -41,7 +41,7 @@ and what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md).
 | **M2** | Draw a rounded rectangle with snapping, undo and redo it | ✅ |
 | **M3** | Change a rectangle's width; its stitch line and holes update live | ✅ |
 | **M4** | Save, quit, reopen, and everything is exactly as it was | ✅ |
-| **M5** | Print a wallet pattern and measure 100.0 mm with a steel rule | ✅ Measured by the maintainer; the readings still have to be written into [`print-verification-log.md`](print-verification-log.md) (**R1**) |
+| **M5** | Print a wallet pattern and measure 100.0 mm with a steel rule | ✅ Measured by the maintainer, and on Linux recorded in [`print-verification-log.md`](print-verification-log.md) (**R1**, 2026-10-09) |
 
 1.0 shipped on Linux, Windows and macOS, unsigned by decision (see *Release engineering*).
 
@@ -62,8 +62,8 @@ here as a point release, with the first three slices of 1.5's UI refinement, whi
 it. release-please would call a release with features 1.4.0, so the commit that made this section
 1.3.5 carries `Release-As: 1.3.5`.
 
-**What it still waits for** (2026-10-09): R1's Linux rows, the physical measurement only the
-maintainer can take. Q27 moved to 1.5, whose UI changes every picture it would retake, and R1's
+**What it still waits for** (2026-10-09): nothing. R1's Linux rows are recorded: the print test
+through *Print*, portrait and landscape, measured true. Q27 moved to 1.5, whose UI changes every picture it would retake, and R1's
 macOS and Windows rows moved there as R8. 7.6b, 6.2 and Q7 were finished on branches cut
 before the split, so their ticks had landed in the release after; they are back in the release
 they belong to.
@@ -89,8 +89,8 @@ they belong to.
   page, which a viewer shows the right way up; a page `/Rotate` would have done that for the print
   form too, but `pdftopdf` keeps it and the page is cut off at 210 mm again, as measured through
   `pdftopdf` and `pdftoraster` before deciding ([ADR 0019](adr/0019-print-from-the-app.md),
-  amended). The preview turns only its view of a landscape page. **Still owed:** a landscape
-  sheet printed through *Print* and measured on paper (R1).
+  amended). The preview turns only its view of a landscape page. A landscape
+  sheet printed through *Print* measured true on paper (R1, 2026-10-09).
 - ✅ **6.2 SVG export.** Millimetre units, one group per layer, the single Y flip, with the
   accuracy tests from [`printing.md`](printing.md) §14.
   ✅ Built as described: *Export SVG…*, in a menu beside *Export PDF*, writes the scene the PDF is
@@ -119,8 +119,8 @@ they belong to.
   sheet — lifting 7.2's grain rule, by decision (§5.5). The bifold sample on A4 portrait takes two
   sheets, not five, with nothing taped; over 2,000 random projects, about half the sheets.
   ✅ Built as described. The print test's strap is 275 mm, not 250, so that A4 portrait still tapes
-  it. **Still owed:** the new physical measurement this item always required — the print test's
-  rows in [`print-verification-log.md`](print-verification-log.md) now read the gauge (R1).
+  it. The new physical measurement this item always required is recorded: the print test's rows in
+  [`print-verification-log.md`](print-verification-log.md) read the gauge, and measured true (R1).
 
 ### The window, refined — its first three slices
 
@@ -186,7 +186,7 @@ Everything found along the way that is not fixed yet, with where it was found. T
 
 | # | What | Plan |
 |---|---|---|
-| ☐ **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md). Since 7.6 it has two Linux rows: a viewer's print scaled to 96 %, and sheet 1 through *Print* measured true. No platform has a full A–H row yet | For 1.3.5, Linux: the print test's three sheets through *Print* on A4 portrait, and its landscape sheet (7.6b), measured A–H on the 7.8 gauge, in a build of this release. macOS and Windows moved to 1.5 as R8 on 2026-10-09. Until a platform has its row, the project does not claim verified 1:1 output on it |
+| ✅ **R1** | The physical print check (7.7) was done, but its readings are not in [`print-verification-log.md`](print-verification-log.md). Since 7.6 it has two Linux rows: a viewer's print scaled to 96 %, and sheet 1 through *Print* measured true. No platform has a full A–H row yet | For 1.3.5, Linux: the print test's three sheets through *Print* on A4 portrait, and its landscape sheet (7.6b), measured A–H on the 7.8 gauge, in a build of this release. macOS and Windows moved to 1.5 as R8 on 2026-10-09. Until a platform has its row, the project does not claim verified 1:1 output on it. ✅ Done 2026-10-09: the three portrait sheets and the landscape sheet, printed through *Print* on a Brother laser at its default settings from the 1.3.5 release candidate, each reading within 0.5 mm — Linux has its rows |
 | ✅ **R3** | 1.0.1's release notes list every fix twice, because pull requests into `develop` were merged with merge commits, which release-please reads as well as the commits inside them. 1.2.0's list every feature twice, for the same reason: #23, #25 and #26 went into `main` with merge commits | Squash-merge into `develop` ([`CONTRIBUTING.md`](../CONTRIBUTING.md)), which the ruleset enforces since 2026-09-29; `CHANGELOG.md` is corrected for both; edit the GitHub release notes of 1.0.1 and 1.2.0 by hand. ✅ Done 2026-10-07: both releases' notes are now their corrected `CHANGELOG.md` sections, each entry once |
 | ✅ **R4** | Tags read `leathercad-v1.0.1`, not `v1.0.1` | ✅ Decided 2026-10-07: tags keep the component, `leathercad-vX.Y.Z`, so the links between releases stay unbroken. 8.9 reads that form |
 | ✅ **R5** | `package.yml` builds Windows and macOS only when packaging could have changed, because a private repository pays for those minutes. The repository is public now, where they are free | ✅ Done 2026-10-07: it runs on every pull request and push, and the unit tests on Windows and macOS moved from the weekly run into CI beside it. Its weekly run went too: it only caught what the path filter let through |
