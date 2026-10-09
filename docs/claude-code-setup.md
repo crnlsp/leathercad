@@ -40,7 +40,7 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 | `docs/printing.md` | Export and print pipeline, accuracy budget | Any export or print work |
 | `docs/testing.md` | Layers, property catalogue, edge-case corpus | Writing tests, which is always |
 | `docs/roadmap.md` | What is planned, open findings | Starting a slice |
-| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3): every slice that shipped, and what it found | Before redoing something that was tried |
+| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3, 1.3.5): every slice that shipped, and what it found | Before redoing something that was tried |
 | `docs/glossary.md` | Craft vocabulary | Whenever domain naming is in question |
 | `docs/adr/NNNN-*.md` | Why a decision was made | Before revisiting a decision |
 | `docs/superpowers/specs/` | The dated design of each larger slice | Changing what a slice built |
@@ -123,6 +123,7 @@ instructions that every session would otherwise have to be given again.
 | Agent | Does |
 |---|---|
 | `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.19) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
+| `zoom-control` | Builds U.4, the zoom control and true size, with that slice's technical briefing: the code it stands on after U.1–U.3, the two status bugs it fixes, the keys and how U.3's keymap matches them. Set to Opus at high effort: the keymap's matching rules and the true-size arithmetic are where a plausible change is quietly wrong |
 
 ## 6. Hooks
 
