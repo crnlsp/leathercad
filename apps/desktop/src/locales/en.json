@@ -22,9 +22,9 @@
     "Alt": "Alt",
     "Backspace": "Backspace",
     "Ctrl": "Ctrl",
-    "Delete": "Delete",
+    "Delete": "Del",
     "Enter": "Enter",
-    "Escape": "Escape",
+    "Escape": "Esc",
     "Menu": "Menu",
     "Middle-drag": "Middle-drag",
     "Scroll": "Scroll",
@@ -36,19 +36,19 @@
     "exportMore": "More ways to export",
     "exportMoreTooltip": "Export as SVG or DXF, in millimetres, for laser cutters, CNC and vector editors",
     "exportPdf": "Export PDF",
-    "exportTooltip": "Save {{sheets}} as a print-ready PDF at 1:1 (Ctrl+E). To print it from another app, choose Actual size (100 %)",
+    "exportTooltip": "Save {{sheets}} as a print-ready PDF at 1:1. To print it from another app, choose Actual size (100 %)",
     "help": "Help",
     "name": "Project name",
     "nameTooltip": "Project name — used for the file name and the PDF footer",
     "output": "Output",
     "print": "Print",
-    "printTooltip": "Preview {{sheets}}, then print them at 1:1 (Ctrl+P)",
+    "printTooltip": "Preview {{sheets}}, then print them at 1:1",
     "projectMenu": "Project menu",
     "projectMenuTooltip": "New, open, save as, and recent projects",
-    "saveTooltip": "Save (Ctrl+S) · Save as (Ctrl+Shift+S)",
+    "saveTooltip": "Save the project",
     "saved": "Saved",
     "settings": "Settings",
-    "settingsTooltip": "Settings (Ctrl+,)",
+    "settingsTooltip": "Settings",
     "unsaved": "Unsaved changes"
   },
   "menu": {
@@ -76,6 +76,7 @@
     "redo": "Redo",
     "region": "Work",
     "undo": "Undo",
+    "redoTooltip": "Redo {{action}}",
     "undoTooltip": "Undo {{action}}"
   },
   "status": {
@@ -94,13 +95,13 @@
   },
   "view": {
     "design": "Design",
-    "designTooltip": "Design the pieces (Ctrl+1)",
+    "designTooltip": "Design the pieces",
     "label": "View",
     "sheets": "Sheets",
-    "sheetsTooltip": "See the pieces on the sheets they will print on (Ctrl+2)"
+    "sheetsTooltip": "See the pieces on the sheets they will print on"
   },
   "tools": {
-    "collapsedTooltip": "{{name}} ({{key}}) — {{howTo}}",
+    "collapsedTooltip": "{{name}} — {{howTo}}",
     "hideNames": "Hide tool names",
     "label": "Tools",
     "showNames": "Show tool names",
@@ -122,7 +123,7 @@
       "name": "Hardware"
     },
     "line": {
-      "howTo": "Drag end to end, or click both ends · Shift holds 15° steps",
+      "howTo": "Drag end to end, or click both ends · {{shift}} holds 15° steps",
       "name": "Line"
     },
     "measure": {
@@ -130,15 +131,15 @@
       "name": "Measure"
     },
     "points": {
-      "howTo": "Drag a point of the selected drawn path to move it · press an edge to add one · Del removes the point last pressed · R rounds that corner, or sharpens a rounded one",
+      "howTo": "Drag a point of the selected drawn path to move it · press an edge to add one · {{removePoint}} removes the point last pressed · {{roundCorner}} rounds that corner, or sharpens a rounded one",
       "name": "Edit points"
     },
     "polyline": {
-      "howTo": "Click each point · A arcs the next segment: click its end, then a point on it · L goes straight · click the first to close · Enter finishes · Backspace removes the last point",
+      "howTo": "Click each point · {{arc}} arcs the next segment: click its end, then a point on it · {{straight}} goes straight · click the first to close · {{finish}} finishes · {{takeBack}} removes the last point",
       "name": "Polyline"
     },
     "rectangle": {
-      "howTo": "Drag corner to corner, or click both corners · Shift keeps it square",
+      "howTo": "Drag corner to corner, or click both corners · {{shift}} keeps it square",
       "name": "Rectangle"
     },
     "rotate": {
@@ -146,11 +147,11 @@
       "name": "Rotate"
     },
     "scale": {
-      "howTo": "Drag to resize the selection about its centre · Shift holds the proportions",
+      "howTo": "Drag to resize the selection about its centre · {{shift}} holds the proportions",
       "name": "Scale"
     },
     "select": {
-      "howTo": "Click to select · Shift-click adds or removes · drag on empty space to box-select · drag a selection to move it · Del deletes",
+      "howTo": "Click to select · {{shift}}-click adds or removes · drag on empty space to box-select · drag a selection to move it · {{delete}} deletes",
       "name": "Select"
     },
     "text": {
@@ -428,7 +429,7 @@
   "parts": {
     "actions": "Actions for {{name}}",
     "duplicateNote": "A copy beside this one, with its own stitching",
-    "empty": "No parts yet. Press R, then drag or click two corners to draw one.",
+    "empty": "No parts yet. Press {{rectangle}}, then drag or click two corners to draw one.",
     "emptyPart": "Empty",
     "hidePart": "Hide part",
     "mirrorsMark": "Mirrors the feature it nests under",
@@ -477,7 +478,7 @@
     "mirrorLineNote": "Mirrors {{source}} across a line fixed where this was made — it does not follow {{source}} about. Moving {{source}} moves this the opposite way, and resizing it changes the gap between the two. Drag this piece to place the pair.",
     "mirrors": "Mirrors",
     "name": "Name",
-    "nothingSelected": "Nothing selected. Draw with R, or pick something with V.",
+    "nothingSelected": "Nothing selected. Draw with {{rectangle}}, or pick something with {{select}}.",
     "part": "Part",
     "perimeter": "Perimeter",
     "problems_one": "Problem",
@@ -537,6 +538,8 @@
   },
   "problems": {
     "withSubject": "{{name}}: {{sentence}}",
+    "badge_one": "{{count}} problem, worst: {{severity}}",
+    "badge_other": "{{count}} problems, worst: {{severity}}",
     "severity": {
       "error": "error",
       "info": "info",
@@ -690,7 +693,7 @@
     },
     "TEXT_WOULD_DISTORT": {
       "title": "Would distort the letters",
-      "description": "Text can only be scaled evenly — stretching it along one axis would distort the letters. Hold Shift, or set the size in the panel."
+      "description": "Text can only be scaled evenly — stretching it along one axis would distort the letters. Hold {{shift}}, or set the size in the panel."
     },
     "DIMENSION_NOT_MIRRORED": {
       "title": "A dimension is measured, not mirrored",
@@ -831,7 +834,7 @@
     "decimals": "Decimals",
     "diameter": "Diameter",
     "direction": "Direction",
-    "drawnByHand": "Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit points (N).",
+    "drawnByHand": "Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit points ({{points}}).",
     "edgeMargin": "Edge margin",
     "fit": "Fit",
     "height": "Height",

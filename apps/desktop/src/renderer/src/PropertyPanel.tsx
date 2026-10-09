@@ -25,6 +25,7 @@ import { evaluate, followRefusal, type ResolvedFeature } from '@leathercad/domai
 
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
+import { useKeysInSentences } from './keyCaps.js';
 import { IRON_PRESETS } from './irons.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
@@ -62,6 +63,7 @@ export function PropertyPanel({
   requestDeletePart: (partId: string) => void;
 }) {
   const { t } = useI18n();
+  const keys = useKeysInSentences();
   const found = findSelected(project, selected);
   const parts = selected.size === 0 ? project.parts.filter((p) => selectedParts.has(p.id)) : [];
 
@@ -92,7 +94,7 @@ export function PropertyPanel({
             ? t('properties.manySelected', { count: selected.size })
             : parts.length > 1
               ? t('properties.manyPartsSelected', { count: parts.length })
-              : t('properties.nothingSelected')}
+              : t('properties.nothingSelected', keys)}
         </p>
       </aside>
     );

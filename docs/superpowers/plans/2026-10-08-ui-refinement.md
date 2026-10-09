@@ -580,7 +580,10 @@ tooltip should be one readable line that stays inside the window.
   keys — or `?` is resolved once, at start, to the key that types it on this layout
   (`navigator.keyboard.getLayoutMap()`, reversed); punctuation and digits keep their US position.
   Either way it is matched by `code`. *Recommended default; a decision for the maintainer if
-  anyone disagrees.*
+  anyone disagrees.* *As built: a letter is matched by the letter the press typed — the freshest
+  word on the layout there is, which follows a layout switched mid-session and needs no
+  asynchronous start — and found at its US place only on a keyboard whose key there types no
+  Latin letter (Cyrillic, Greek). The layout map is read for showing keys only. See As built.*
 - **Shown as the local character:** the layout map turns a code into what this keyboard prints
   (`BracketLeft` → `ü` in German); the US name when the API or the key is missing; ⌘ ⌥ ⇧ on macOS.
 - **A key cap** component (the rail's `kbd` look) and `Tooltip` gains a key: it shows the caps after
@@ -593,21 +596,31 @@ tooltip should be one readable line that stays inside the window.
   to the keymap.
 
 **Find out first.**
-- [ ] Every key handler: grep `keydown`, `onKeyDown` and `addEventListener` in the renderer and
+- [x] Every key handler: grep `keydown`, `onKeyDown` and `addEventListener` in the renderer and
       `packages/editor`. Which are window commands (the keymap's) and which a tool's own (they stay,
-      and are listed)?
-- [ ] Whether `navigator.keyboard.getLayoutMap()` answers in this Electron, in the sandboxed renderer
-      — try it in `pnpm dev`'s devtools — and what it returns for `BracketLeft` and `KeyQ`.
-- [ ] Reproduce the thin column: hover *Sheets* at the window's right edge at 860 px.
+      and are listed)? *Window commands: `App.tsx`'s handler (Ctrl+S, O, N, E, P, 1, 2, `/`, `,`,
+      `=`/`+`, `-`, `0`, `?`, the tool letters) and `CanvasHost`'s Ctrl+Z / Ctrl+Shift+Z — now all
+      through the keymap. The main process's F11 and Ctrl+Q (`windowKeyFor`) stay there, matched
+      through the keymap too — Ctrl+Q did not quit on a Cyrillic layout. A tool's own, matched in `packages/editor` and listed: Escape (every
+      tool), Delete/Backspace (Select, Edit Points), Enter, Backspace, A and L (polyline), Backspace
+      (arc), R (Edit Points). Native roles stay as they are: dialogs' Escape, `NumberField`'s Enter,
+      Escape and arrows, menus' arrows, Home, End and Tab, the Settings tab list.*
+- [x] Whether `navigator.keyboard.getLayoutMap()` answers in this Electron, in the sandboxed renderer
+      — try it in `pnpm dev`'s devtools — and what it returns for `BracketLeft` and `KeyQ`. *Yes, in
+      the built app's sandboxed renderer: 48 keys; `[` and `q` on a US layout. With the system's
+      layout switched (`setxkbmap de`, the app on X11) it answers `ü` for `BracketLeft`, `z` for
+      `KeyY`, `ß` for `Minus` — and `'` for `Equal`, Chromium's stand-in for the dead acute.*
+- [x] Reproduce the thin column: hover *Sheets* at the window's right edge at 860 px. *A 68 × 126 px
+      column, five lines, flush with the window's edge (0 px inside, not 8).*
 
 **Done when — check in the app.**
-- [ ] With a German layout — the system's, or synthetic events in the tests — every window key does
+- [x] With a German layout — the system's, or synthetic events in the tests — every window key does
       what it did with a US one.
-- [ ] Every key shown anywhere — tooltips, the rail, menus, the shortcut list — comes from the
+- [x] Every key shown anywhere — tooltips, the rail, menus, the shortcut list — comes from the
       keymap, as caps; on macOS Ctrl shows as ⌘; no `en.json` string contains a key.
-- [ ] A tooltip at the window's right edge is one line up to 360 px and 8 px inside the window; near
+- [x] A tooltip at the window's right edge is one line up to 360 px and 8 px inside the window; near
       the bottom it opens above.
-- [ ] Hover shows after 500 ms; Tab shows it at once; Esc hides it.
+- [x] Hover shows after 500 ms; Tab shows it at once; Esc hides it.
 
 **Tests.** The keymap: matching by `code` with the modifiers, `mod` as Meta on macOS and Ctrl
 elsewhere, no two commands bound alike in one scope, every binding in the derived list. Tooltip
@@ -621,6 +634,45 @@ with `ReasonedButton`.
 
 **Docs.** `docs/getting-started.md`'s keys; `docs/architecture.md` if it describes key handling;
 the roadmap.
+
+**As built (2026-10-09).** What the plan above did not know:
+
+- **Letters by what the press typed.** `matches` reads `event.code` and exactly the modifiers held
+  — Ctrl+Alt+S, which is AltGr+S on Windows, is not Ctrl+S — except for a letter key, which is
+  the key that *typed* that letter: French `{ code: 'KeyQ', key: 'a' }` is Arc. Reading the press
+  rather than a map resolved at start follows a layout switched while the app runs (a maker
+  switching between French and English would otherwise have A and Q swapped until a restart) and
+  works in the main process too, which has no layout map: `windowKeyFor` matches F11 and Ctrl+Q
+  through the keymap. A keyboard with no Latin letters there
+  (`к`, `λ`) finds the letter at its US place; a Latin letter with a mark (`ą`, AltGr+A in Polish)
+  never does. A key that types a letter is that letter's and never the punctuation key at its
+  place — Dvorak types z where a US keyboard has `/`, and Ctrl there undoes — so one press is never
+  two commands, which a property holds. `?` is the one character binding.
+- **The tools hear the same letter.** `CanvasHost` hands a tool `keyForTools(event)`, so on a
+  Cyrillic keyboard the polyline claims A mid-run on the key the window would otherwise take for
+  the Arc tool and throw the run away — a fault the keymap would have brought in.
+- **Exactly the modifiers.** Today's handler ignored Shift on every Ctrl key and took Meta for Ctrl
+  everywhere, so Ctrl+Shift+P printed and Super+S saved on Linux. Now a key is its binding: `mod` is
+  ⌘ on macOS and Ctrl elsewhere, Shift and Alt as written. The twins that did work are kept as
+  `aliases` — heard, never shown: Ctrl+Shift+= (`+`) and the numeric keypad's +, −, 0, 1 and 2.
+- **Shown, not matched, by the layout map**, read at start and whenever the window regains focus
+  (Chromium has no layout-change event): punctuation as this keyboard prints it, letters and
+  digits as themselves — every keyboard prints the digit on its key — and the US character
+  without a map. ⌥⇧⌘ in macOS's order, joined.
+- **The keymap's scopes** are `window` (dispatched through `commandFor`) and the tools' own
+  (`canvas`, `polyline`, `points`), listed so the list is whole and so a sentence can name them.
+  The shortcut list is the keymap plus three rows that are the pointer's, not keys: scroll to zoom,
+  middle- or Alt-drag to pan, Shift held while drawing.
+- **Keys in sentences** — the tools' how-to lines, the empty Parts and Properties, a drawn path's
+  note, the text-scaling refusal — are `{{placeholders}}` filled from the keymap; a test holds
+  `en.json` to it. The key catalogue names Delete *Del* and Escape *Esc*, as keyboards print them.
+- **On a German keyboard Ctrl+- opens the shortcut list** (it is where a US keyboard has `/`) and
+  Ctrl+ß zooms out; Ctrl++ no longer zooms in there. That is the rule as written; raised with the
+  maintainer in the pull request.
+- **Found on the way:** the problem badge's tooltip was English written into the code — "2
+  problems, worst: error" — in a template literal the untranslated-words audit did not read. It is
+  in the catalogue now, and the audit reads strings and templates in a said attribute's
+  expression, though not a key handed to `t()`.
 
 **Not here.** Changing a key in Settings (U.12).
 

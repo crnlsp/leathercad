@@ -390,6 +390,14 @@ shortcuts on `window`. A tool that returns `true` has **claimed** the key, and t
 fire. That is how the polyline takes A and L mid-run for its next segment (3.9a) without switching to
 the Arc or Line tool and losing the run.
 
+The window's keys are one keymap, `apps/desktop/src/renderer/src/keymap.ts` (U.3): each command's
+binding by `KeyboardEvent.code` and its modifiers — `mod` is Ctrl, ⌘ on macOS — except a letter,
+which is the key that typed it, and `?`, which is a character. The window's handler dispatches
+through `commandFor`, the shortcut list is drawn from it, and every key shown — a tooltip's cap, a
+menu's, the rail's, a sentence's `{{placeholder}}` — is read from it, shown as this keyboard prints
+it. A tool is handed `keyForTools(event)`, the letter the keymap reads, so its claim and the
+window's match agree on every layout.
+
 `ToolContext` gives read access to the viewport, the resolved document, and the snap engine, plus
 `dispatch(command)` and the transaction API. It gives **no** write access to the document.
 

@@ -57,7 +57,9 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
   TRANSFORM_FLATTENS: (_, t) => t('problems.TRANSFORM_FLATTENS.description'),
   WOULD_BECOME_ELLIPSE: (_, t) => t('problems.WOULD_BECOME_ELLIPSE.description'),
   WOULD_SHEAR: (_, t) => t('problems.WOULD_SHEAR.description'),
-  TEXT_WOULD_DISTORT: (_, t) => t('problems.TEXT_WOULD_DISTORT.description'),
+  // Shift, held: named in words, as a sentence names it on any platform (U.3).
+  TEXT_WOULD_DISTORT: (_, t) =>
+    t('problems.TEXT_WOULD_DISTORT.description', { shift: t('keys.Shift') }),
   DIMENSION_NOT_MIRRORED: (f, t) => t('problems.DIMENSION_NOT_MIRRORED.description', f),
   TEXT_WOULD_READ_BACKWARDS: (_, t) => t('problems.TEXT_WOULD_READ_BACKWARDS.description'),
   NO_TARGET_PART: (f, t) => t(`problems.NO_TARGET_PART.${f.what}`),

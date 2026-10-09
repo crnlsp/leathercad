@@ -183,10 +183,20 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   the Regular weight before painting, and "Tape join" was 11 px. Printed output did not move: no
   export test, golden fixture or format fixture changed, and a new test holds paper's "Card pocket
   — cut 2" at 2.8 mm.
-- ☐ **U.3 Keys by where they are, shown as caps, and tooltips that fit** (§2, §6, R-10). One keymap
+- ✅ **U.3 Keys by where they are, shown as caps, and tooltips that fit** (§2, §6, R-10). One keymap
   matching `KeyboardEvent.code`, shown as the local character and as ⌘ on macOS; keys leave the
   catalogue's sentences; a tooltip is one line up to 360 px, flipped and shifted to stay inside the
   window — the thin column at the right edge goes.
+  ✅ Built as described, with one change: a letter is the key that *typed* it, read from the press
+  rather than from a layout map resolved at start, so A stays Arc on a French keyboard even when the
+  maker switches layouts mid-session; the layout map, which this Electron answers, is read only to
+  show keys. Measured in the app: *Sheets*' tooltip at 860 px was a 68 px column five lines tall,
+  flush with the window's edge; it is one line, 314 px, 8 px inside. Found on the way, and fixed: a
+  key held exactly its modifiers nowhere — Ctrl+Shift+P printed, Super+S saved on Linux; on a
+  Cyrillic keyboard Ctrl+Q did not quit, and the polyline's A would have lost its run to the Arc
+  tool; the problem badge's tooltip was English in the code, past an audit that did not read
+  template strings. On a German keyboard Ctrl+- now opens the shortcut list, by position, and
+  Ctrl+ß zooms out: raised with the maintainer. Printed output did not move.
 - ☐ **U.4 A zoom control, and true size** (R-03). − · % · + · Fit at the canvas's bottom-right;
   *Fit drawing* `Shift+1`, *Fit selection* `Shift+2`, *True size* `Ctrl+0` — which fits today.
 - ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;

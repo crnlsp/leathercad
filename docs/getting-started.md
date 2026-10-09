@@ -119,7 +119,10 @@ the size your software shows: it should be the size you drew.
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*
   (**Ctrl+/** or **?**) lists every key. **Ctrl+=** and **Ctrl+−** zoom, **Ctrl+0** fits the
-  pattern in the window, **F11** is full screen.
+  pattern in the window, **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key works by where
+  it is on the keyboard — on a German or French one, Ctrl+= is the key right of 0 — and every list
+  and tooltip shows it as your keyboard prints it; a tool's letter stays its letter, wherever your
+  layout puts it.
 - **Settings** (**Ctrl+,**): clear the recent projects, and choose how the legend and the tool
   rail start. They stay as you left them.
 - **Logs:** *Help → About LeatherCAD → Show log folder*. Nothing is ever uploaded; attach the log

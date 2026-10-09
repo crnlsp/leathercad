@@ -1,10 +1,19 @@
-import { cloneElement, useEffect, useId, useRef, useState, type ReactElement } from 'react';
+import {
+  cloneElement,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
 
-/** How long a pointer rests on a control before its tooltip shows (UI Foundations §6.6). */
-const DELAY_MS = 400;
+import { KeyCap } from './keyCaps.js';
+import type { CommandId } from './keymap.js';
+import { placeTooltip } from './tooltipPlacement.js';
 
-/** Kept clear of the window edge, so a tooltip in the right-hand panel stays readable. */
-const MARGIN_PX = 8;
+/** How long a pointer rests on a control before its tooltip shows (R-10). */
+const DELAY_MS = 500;
 
 /**
  * A real tooltip: styled, delayed, and reachable from the keyboard.
@@ -15,24 +24,31 @@ const MARGIN_PX = 8;
  * says why through `ReasonedButton` instead; this is for what an enabled one
  * does.
  *
- * Hover waits 400 ms so sweeping across the rail does not flicker; focus shows
- * at once, because someone tabbing has asked. The text is tied to the control
- * with `aria-describedby`, so a screen reader gets it too. Positioned against
- * the window rather than the control, so a panel that clips its overflow
- * cannot cut it off.
+ * Hover waits 500 ms so sweeping across the rail does not flicker; focus shows
+ * at once, because someone tabbing has asked; Escape hides it wherever focus
+ * is (R-10, WCAG 1.4.13). The text — and the control's key, as a cap after it,
+ * from the keymap — is tied to the control with `aria-describedby`, so a
+ * screen reader gets it too. Positioned against the window rather than the
+ * control, so a panel that clips its overflow cannot cut it off: one line up
+ * to 360 px, measured at that before it is placed, then turned above or
+ * shifted to stay inside the window (`placeTooltip`).
  */
 export function Tooltip({
   text,
+  keys,
   children,
 }: {
   /** Null shows nothing, so a caller can pass its hint unconditionally. */
   text: string | null;
+  /** The command whose key the tooltip shows, as a cap after the text. */
+  keys?: CommandId;
   children: ReactElement<{ 'aria-describedby'?: string }>;
 }) {
   const id = useId();
   const anchor = useRef<HTMLSpanElement>(null);
+  const bubble = useRef<HTMLSpanElement>(null);
   const timer = useRef<number | undefined>(undefined);
-  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const [at, setAt] = useState<DOMRect | null>(null);
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -41,6 +57,28 @@ export function Tooltip({
   // Reset while rendering rather than in an effect, React's pattern for state
   // that follows a prop: no extra pass, and nothing shown in between.
   if (text === null && at !== null) setAt(null);
+
+  // Placed by the size it has at its widest, before it is painted.
+  useLayoutEffect(() => {
+    const node = bubble.current;
+    if (node === null || at === null) return;
+    const box = node.getBoundingClientRect();
+    const placed = placeTooltip(at, box, { width: window.innerWidth, height: window.innerHeight });
+    node.style.left = `${String(placed.left)}px`;
+    node.style.top = `${String(placed.top)}px`;
+  }, [at, text]);
+
+  // Escape hides it wherever focus is: a tooltip shown by hover has none.
+  useEffect(() => {
+    if (at === null) return;
+    const escape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      window.clearTimeout(timer.current);
+      setAt(null);
+    };
+    document.addEventListener('keydown', escape, true);
+    return () => document.removeEventListener('keydown', escape, true);
+  }, [at]);
 
   if (text === null) return children;
 
@@ -52,8 +90,7 @@ export function Tooltip({
     // is sent a fresh pointer-enter as the old content goes, and the delayed
     // show then fired after the pointer had left.
     if (!node.matches(':hover') && node.querySelector(':focus-visible') === null) return;
-    const box = node.getBoundingClientRect();
-    setAt({ left: box.left, top: box.bottom + 4 });
+    setAt(node.getBoundingClientRect());
   };
   const hide = (): void => {
     window.clearTimeout(timer.current);
@@ -75,30 +112,30 @@ export function Tooltip({
         if (event.target.matches(':focus-visible')) show();
       }}
       onBlur={hide}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') hide();
-      }}
     >
       {cloneElement(children, { 'aria-describedby': id })}
       <span
         id={id}
+        ref={bubble}
         role="tooltip"
         className="tooltip"
         data-testid="tooltip"
         hidden={at === null}
-        ref={(bubble) => {
-          // Clamped once it has a size, so it never runs off the window.
-          if (bubble === null || at === null) return;
-          const width = bubble.offsetWidth;
-          const left = Math.min(at.left, window.innerWidth - width - MARGIN_PX);
-          bubble.style.left = `${Math.max(MARGIN_PX, left)}px`;
-          bubble.style.top = `${at.top}px`;
-        }}
       >
         {/* Only while shown: hidden text would still match text queries and be
             read as page content. Focus shows it at once, so a screen reader
             gets the description when the control is reached. */}
-        {at === null ? null : text}
+        {at === null ? null : (
+          <>
+            {text}
+            {keys !== undefined && (
+              <>
+                {' '}
+                <KeyCap command={keys} />
+              </>
+            )}
+          </>
+        )}
       </span>
     </span>
   );

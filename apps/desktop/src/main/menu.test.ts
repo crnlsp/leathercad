@@ -61,10 +61,26 @@ describe('the macOS menu (8.7)', () => {
 
 describe('the keys the native menu used to give (8.7)', () => {
   const linux = { isMac: false, packaged: true };
+  // A US keyboard's press: a letter at its own place, a named key by its name.
   const key = (
     key: string,
-    mods: Partial<{ control: boolean; shift: boolean; alt: boolean }> = {},
-  ) => ({ type: 'keyDown', key, control: false, shift: false, alt: false, ...mods });
+    mods: Partial<{
+      code: string;
+      control: boolean;
+      meta: boolean;
+      shift: boolean;
+      alt: boolean;
+    }> = {},
+  ) => ({
+    type: 'keyDown',
+    key,
+    code: /^[a-z]$/i.test(key) ? `Key${key.toUpperCase()}` : key,
+    control: false,
+    meta: false,
+    shift: false,
+    alt: false,
+    ...mods,
+  });
 
   it('toggles full screen with F11, everywhere', () => {
     expect(windowKeyFor(key('F11'), linux)).toBe('full-screen');
@@ -77,6 +93,16 @@ describe('the keys the native menu used to give (8.7)', () => {
     expect(windowKeyFor(key('q', { control: true }), { isMac: true, packaged: true })).toBeNull();
     expect(windowKeyFor(key('q', { control: true, shift: true }), linux)).toBeNull();
     expect(windowKeyFor(key('q'), linux)).toBeNull();
+  });
+
+  it('finds Q as the window does, on any layout (U.3)', () => {
+    // French AZERTY types q where a US keyboard has A.
+    expect(windowKeyFor(key('q', { code: 'KeyA', control: true }), linux)).toBe('quit');
+    expect(windowKeyFor(key('a', { code: 'KeyQ', control: true }), linux)).toBeNull();
+    // Russian: no Latin letters, so Q is where a US keyboard has it.
+    expect(windowKeyFor(key('й', { code: 'KeyQ', control: true }), linux)).toBe('quit');
+    // Super is not Ctrl.
+    expect(windowKeyFor(key('q', { meta: true }), linux)).toBeNull();
   });
 
   it('opens the developer tools only in a development build', () => {
