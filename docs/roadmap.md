@@ -195,8 +195,10 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   key held exactly its modifiers nowhere — Ctrl+Shift+P printed, Super+S saved on Linux; on a
   Cyrillic keyboard Ctrl+Q did not quit, and the polyline's A would have lost its run to the Arc
   tool; the problem badge's tooltip was English in the code, past an audit that did not read
-  template strings. On a German keyboard Ctrl+- now opens the shortcut list, by position, and
-  Ctrl+ß zooms out: raised with the maintainer. Printed output did not move.
+  template strings. On review, zoom follows the + and − a keyboard prints, as before U.3 — by
+  position a German Ctrl+- opened the shortcut list and its Ctrl++ did nothing — while a digit keeps
+  its place (Ctrl+1 is Design where that key types +), and the caps show only keys that work on the
+  maker's layout. Printed output did not move.
 - ☐ **U.4 A zoom control, and true size** (R-03). − · % · + · Fit at the canvas's bottom-right;
   *Fit drawing* `Shift+1`, *Fit selection* `Shift+2`, *True size* `Ctrl+0` — which fits today.
 - ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
@@ -240,7 +242,7 @@ otherwise.
 
 | Slice | Question | Recommended |
 |---|---|---|
-| U.3 | On a French or German keyboard, does a tool key follow its letter or its position? | Its letter: R stays R. Punctuation and digits keep their position, shown as the local character |
+| U.3 | On a French or German keyboard, does a tool key follow its letter or its position? | Its letter: R stays R. Punctuation and digits keep their position, shown as the local character — but zoom's + and −, named by their symbols, follow what the key types (decided on review) |
 | U.7 | If the project's name joins the Project menu's button, how is a project renamed? | Whichever of *Rename…* in the menu or F2 on the name fits what renaming does today |
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |

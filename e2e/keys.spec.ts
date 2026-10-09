@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 
 /**
@@ -156,6 +157,22 @@ test('on a German or French keyboard, every window key does what it does on a US
     await press(window, { code: 'KeyY', key: 'z', ctrlKey: true });
     await expect(features).toHaveText(before ?? '');
 
+    // Zoom from the keys printed + and −, as before U.3: German + right of Ü,
+    // French − on its 6 key. The German − sits where a US keyboard has /: it
+    // zooms out, and the shortcut list stays shut.
+    const board = (await window.getByTestId('editor-canvas').boundingBox())!;
+    const at = (): Promise<string> => readoutAt(window, board.x + 60, board.y + 60);
+    const start = await at();
+    await press(window, { code: 'BracketRight', key: '+', ctrlKey: true });
+    await expect.poll(at).not.toBe(start);
+    const zoomedIn = await at();
+    await press(window, { code: 'Digit6', key: '-', ctrlKey: true });
+    await expect.poll(at).not.toBe(zoomedIn);
+    const zoomedOut = await at();
+    await press(window, { code: 'Slash', key: '-', ctrlKey: true });
+    await expect.poll(at).not.toBe(zoomedOut);
+    await expect(window.getByTestId('settings-pane-shortcuts')).toBeHidden();
+
     // ? is Shift with ß in Germany: it still opens the list.
     await press(window, { code: 'Minus', key: '?', shiftKey: true });
     await expect(window.getByTestId('settings-pane-shortcuts')).toBeVisible();
@@ -172,6 +189,7 @@ test('a key is shown as the maker’s keyboard prints it (U.3)', async () => {
         ['Equal', "'"],
         ['BracketLeft', 'ü'],
         ['Slash', '-'],
+        ['BracketRight', '+'],
         ['Comma', ','],
       ]);
       Object.defineProperty(navigator, 'keyboard', {
@@ -183,8 +201,10 @@ test('a key is shown as the maker’s keyboard prints it (U.3)', async () => {
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-shortcuts').click();
     const row = (text: string) => window.locator('.shortcut-row', { hasText: text }).locator('kbd');
-    await expect(row('Zoom out')).toHaveText(['Ctrl+ß']);
-    await expect(row('Keyboard shortcuts')).toHaveText(['Ctrl+-', '?']);
+    // Zoom as the + and − it prints; its − zooms, so the list is reached by ?.
+    await expect(row('Zoom in')).toHaveText(['Ctrl++']);
+    await expect(row('Zoom out')).toHaveText(['Ctrl+-']);
+    await expect(row('Keyboard shortcuts')).toHaveText(['?']);
     // Letters and digits as every keyboard prints them.
     await expect(row('Undo')).toHaveText(['Ctrl+Z']);
     await expect(row('Design:')).toHaveText(['Ctrl+1']);

@@ -628,7 +628,7 @@ placement as a pure function — `placeTooltip(anchor, bubble, window) → { lef
 the property that it stays 8 px inside whenever it fits and is never narrower than
 `min(360, natural width)`. E2E: the right-edge tooltip at 860 px is one line. `isTyping` unchanged.
 
-**Watch for.** Zoom in is `Equal` and also `NumpadAdd`. On a layout where `?` is Shift with another
+**Watch for.** Zoom in is `=` or `+` as typed, and also `NumpadAdd` (see *As built*). On a layout where `?` is Shift with another
 key, the hint must still read `?` — it is bound by character. Tooltips on disabled controls stay
 with `ReasonedButton`.
 
@@ -666,9 +666,17 @@ the roadmap.
 - **Keys in sentences** — the tools' how-to lines, the empty Parts and Properties, a drawn path's
   note, the text-scaling refusal — are `{{placeholders}}` filled from the keymap; a test holds
   `en.json` to it. The key catalogue names Delete *Del* and Escape *Esc*, as keyboards print them.
-- **On a German keyboard Ctrl+- opens the shortcut list** (it is where a US keyboard has `/`) and
-  Ctrl+ß zooms out; Ctrl++ no longer zooms in there. That is the rule as written; raised with the
-  maintainer in the pull request.
+- **Zoom follows its + and −, on review.** By position, a German keyboard's Ctrl+- opened the
+  shortcut list (it is where a US keyboard has `/`), Ctrl+ß and the dead ´ zoomed, and Ctrl++ did
+  nothing; a French one lost Ctrl+- (its − is on the 6 key). Before U.3 the window matched what a
+  key types, and all of those zoomed. §2 binds by place *so that* `[ ] \ Shift+1` work where they
+  need AltGr; + and − need none on any layout, and are named by their symbols as a tool by its
+  letter. So zoom's `=`, `+` and `-` are bindings by character, with the command key, Shift aside.
+  A digit bound at its place keeps it — Ctrl+1 is Design where that key types `+` (Czech) — and a
+  key that types a bound character is not the punctuation at its place. The caps show a command's
+  keys as pressed on this layout through the same matching, so the list never offers a key that
+  does something else: on a German keyboard *Zoom in* reads `Ctrl++` and the list is reached by `?`.
+  Ctrl+, stays by place (French `Ctrl+;`): rare, and the gear is beside it.
 - **Found on the way:** the problem badge's tooltip was English written into the code — "2
   problems, worst: error" — in a template literal the untranslated-words audit did not read. It is
   in the catalogue now, and the audit reads strings and templates in a said attribute's

@@ -2,9 +2,10 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 import { useI18n } from './i18n.js';
 import {
+  KEYMAP,
   keyLabel,
   keysInSentences,
-  keysOf,
+  shownKeys,
   type Binding,
   type CommandId,
   type KeyboardLayout,
@@ -60,10 +61,25 @@ export function useKeyLabel(): (of: CommandId | Binding) => string {
   const current = useSyncExternalStore(subscribe, () => layout);
   return useCallback(
     (of) => {
-      const binding = typeof of === 'string' ? keysOf(of)[0] : of;
+      const binding = typeof of === 'string' ? shownKeys(of, current, IS_MAC)[0] : of;
       return binding === undefined ? '' : keyLabel(binding, IS_MAC, current, t);
     },
     [current, t],
+  );
+}
+
+/**
+ * A shortcut list row's keys as this keyboard can press them (`shownKeys`):
+ * a command's, found by its keys; a pointer gesture's as they are.
+ */
+export function useShownKeys(): (keys: readonly Binding[]) => readonly Binding[] {
+  const current = useSyncExternalStore(subscribe, () => layout);
+  return useCallback(
+    (keys) => {
+      const command = KEYMAP.find((entry) => entry.keys === keys);
+      return command === undefined ? keys : shownKeys(command.id, current, IS_MAC);
+    },
+    [current],
   );
 }
 

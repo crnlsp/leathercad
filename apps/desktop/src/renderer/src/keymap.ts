@@ -6,9 +6,12 @@ import { ALL_TOOLS, type ToolId } from './tools.js';
  * `KeyboardEvent.code`, the same on every layout — with the modifiers held.
  * `mod` is Ctrl, or ⌘ on macOS.
  *
- * Or, for `?` alone, by **what it types**: it is Shift with `/` in the US,
- * with `ß` in Germany and with `,` in France, so only the character is the
- * same everywhere.
+ * Or by **what it types**, for the keys named by their symbol, which every
+ * layout types without AltGr: `?` alone — Shift with `/` in the US, with `ß`
+ * in Germany, with `,` in France — and the zoom keys' `=`, `+` and `-` with
+ * the command key, which a German keyboard prints right of Ü and where the US
+ * has `/`, and a French one on its 6 key. Shift is how a layout reaches a
+ * character, so it is not held against one.
  */
 export type Binding =
   | {
@@ -17,7 +20,7 @@ export type Binding =
       readonly shift?: boolean;
       readonly alt?: boolean;
     }
-  | { readonly char: string };
+  | { readonly char: string; readonly mod?: boolean };
 
 /** A key press, as much of a `KeyboardEvent` as matching reads. */
 export interface KeyPress {
@@ -81,13 +84,14 @@ export interface Command {
   readonly scope: Scope;
   /** Its keys, as shown; a tooltip, a menu and a sentence show the first. */
   readonly keys: readonly Binding[];
-  /** Heard too and never shown: the numeric keypad's twin, `+` as Shift with `=`. */
+  /** Heard too and never shown: the numeric keypad's twin. */
   readonly aliases?: readonly Binding[];
 }
 
 const mod = (code: string, shift = false): Binding =>
   shift ? { code, mod: true, shift: true } : { code, mod: true };
 const key = (code: string): Binding => ({ code });
+const modChar = (char: string): Binding => ({ char, mod: true });
 
 /**
  * Every key LeatherCAD answers to, in one place (U.3; the list was 8.2's).
@@ -172,15 +176,16 @@ export const KEYMAP: readonly Command[] = [
     does: 'shortcuts.zoomIn',
     group: 'view',
     scope: 'window',
-    keys: [mod('Equal')],
-    aliases: [mod('Equal', true), mod('NumpadAdd')],
+    // Shown as the one of the two this keyboard types without Shift.
+    keys: [modChar('='), modChar('+')],
+    aliases: [mod('NumpadAdd')],
   },
   {
     id: 'zoomOut',
     does: 'shortcuts.zoomOut',
     group: 'view',
     scope: 'window',
-    keys: [mod('Minus')],
+    keys: [modChar('-')],
     aliases: [mod('NumpadSubtract')],
   },
   {
@@ -275,38 +280,81 @@ export function keysOf(id: CommandId): readonly Binding[] {
  * itself, so it follows a layout switched mid-session. A keyboard that types
  * no Latin letter there (Cyrillic, Greek) finds it at its US place. And a key
  * that types a letter is that letter's, never the punctuation key at its
- * place: one press is never two commands.
+ * place: one press is never two commands. So is a key that types a bound
+ * character — German −, where a US keyboard has `/`, zooms out — but for a
+ * digit key bound at its place, which keeps it: Ctrl+1 is Design even where
+ * that key types `+` (Czech).
  */
 export function matches(event: KeyPress, binding: Binding, isMac: boolean): boolean {
-  if ('char' in binding) {
-    return event.key === binding.char && !event.ctrlKey && !event.metaKey && !event.altKey;
-  }
-  const command = isMac ? event.metaKey : event.ctrlKey;
-  const other = isMac ? event.ctrlKey : event.metaKey;
-  if (
-    other ||
-    command !== (binding.mod === true) ||
-    event.shiftKey !== (binding.shift === true) ||
-    event.altKey !== (binding.alt === true)
-  ) {
-    return false;
-  }
+  if ('char' in binding) return typesCharacter(event, binding, isMac) && !digitClaims(event, isMac);
+  if (!holdsExactly(event, binding, isMac)) return false;
   // ASCII only: a Turkish `ı` upper-cases to I, and is not the I key.
   const typed = keyForTools(event);
   const typedLetter = /^[a-z]$/i.test(typed);
   const letter = /^Key([A-Z])$/.exec(binding.code)?.[1];
-  // What a key types outranks where it is: a key that types a letter, or `?`,
-  // is that character's — Dvorak's z sits where a US keyboard has `/`, and
-  // Ctrl+Z there undoes.
-  if (letter === undefined) {
-    return event.code === binding.code && !typedLetter && !isBoundCharacter(event.key);
-  }
-  return typedLetter && typed.toUpperCase() === letter;
+  // What a key types outranks where it is: a key that types a letter is that
+  // letter's — Dvorak's z sits where a US keyboard has `/`, and Ctrl+Z there
+  // undoes — and one that types a bound character is that character's.
+  if (letter !== undefined) return typedLetter && typed.toUpperCase() === letter;
+  if (event.code !== binding.code || typedLetter) return false;
+  return DIGIT.test(binding.code) || !characterClaims(event, isMac);
 }
 
-function isBoundCharacter(typed: string): boolean {
+const DIGIT = /^Digit\d$/;
+
+/** The command key as the platform has it, and exactly the binding's other modifiers. */
+function holdsExactly(
+  event: KeyPress,
+  binding: { readonly mod?: boolean; readonly shift?: boolean; readonly alt?: boolean },
+  isMac: boolean,
+): boolean {
+  const command = isMac ? event.metaKey : event.ctrlKey;
+  const other = isMac ? event.ctrlKey : event.metaKey;
+  return (
+    !other &&
+    command === (binding.mod === true) &&
+    event.shiftKey === (binding.shift === true) &&
+    event.altKey === (binding.alt === true)
+  );
+}
+
+/** The character, with the command key if the binding has it and no other — Shift aside. */
+function typesCharacter(
+  event: KeyPress,
+  binding: { readonly char: string; readonly mod?: boolean },
+  isMac: boolean,
+): boolean {
+  const command = isMac ? event.metaKey : event.ctrlKey;
+  const other = isMac ? event.ctrlKey : event.metaKey;
+  return (
+    event.key === binding.char && command === (binding.mod === true) && !other && !event.altKey
+  );
+}
+
+const allBindings = (command: Command): readonly Binding[] => [
+  ...command.keys,
+  ...(command.aliases ?? []),
+];
+
+/** A digit key bound at its place, held as bound, whatever it types. */
+function digitClaims(event: KeyPress, isMac: boolean): boolean {
+  return (
+    DIGIT.test(event.code) &&
+    KEYMAP.some((command) =>
+      allBindings(command).some(
+        (binding) =>
+          'code' in binding && binding.code === event.code && holdsExactly(event, binding, isMac),
+      ),
+    )
+  );
+}
+
+/** A press that types a bound character, as it is bound. */
+function characterClaims(event: KeyPress, isMac: boolean): boolean {
   return KEYMAP.some((command) =>
-    command.keys.some((binding) => 'char' in binding && binding.char === typed),
+    allBindings(command).some(
+      (binding) => 'char' in binding && typesCharacter(event, binding, isMac),
+    ),
   );
 }
 
@@ -348,6 +396,69 @@ const US_PUNCTUATION: Readonly<Record<string, string>> = {
   Slash: '/',
 };
 
+/** A US keyboard, as `getLayoutMap()` would read it: what a key is shown as, and pressed as, unknown. */
+const US_LAYOUT: KeyboardLayout = new Map([
+  ...[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(
+    (letter) => [`Key${letter}`, letter.toLowerCase()] as const,
+  ),
+  ...[...'0123456789'].map((digit) => [`Digit${digit}`, digit] as const),
+  ...Object.entries(US_PUNCTUATION),
+]);
+
+/**
+ * A command's keys as this keyboard can press them, for its tooltip, menu
+ * line and row in the shortcut list. Each is pressed, in thought, on this
+ * layout and matched as the window matches it, so what is shown is what
+ * works: a key another command takes here is left out — German −, where a
+ * US keyboard has `/`, zooms out, so the list is reached by `?` there — and
+ * of zoom's `=` and `+` the one this keyboard types without Shift is shown.
+ * The first key when none would be left; a tool's own keys as they are.
+ */
+export function shownKeys(
+  id: CommandId,
+  layout: KeyboardLayout | null,
+  isMac: boolean,
+): readonly Binding[] {
+  const command = KEYMAP.find((entry) => entry.id === id);
+  if (command === undefined) return [];
+  if (command.scope !== 'window') return command.keys;
+  const shown = command.keys.filter((binding) => {
+    // `?` is typed however this layout types it, Shift and all.
+    if ('char' in binding && binding.mod !== true) return true;
+    const event = pressOn(binding, layout ?? US_LAYOUT, isMac);
+    return event !== null && commandFor(event, isMac) === id;
+  });
+  return shown.length > 0 ? shown : command.keys.slice(0, 1);
+}
+
+/** A binding pressed on a layout, as a maker would; null for a character it types only with Shift. */
+function pressOn(binding: Binding, layout: KeyboardLayout, isMac: boolean): KeyPress | null {
+  const held = {
+    ctrlKey: binding.mod === true && !isMac,
+    metaKey: binding.mod === true && isMac,
+    shiftKey: false,
+    altKey: false,
+  };
+  if ('char' in binding) {
+    const code = [...layout].find(([, typed]) => typed === binding.char)?.[0];
+    return code === undefined ? null : { ...held, code, key: binding.char };
+  }
+  const letter = /^Key([A-Z])$/.exec(binding.code)?.[1]?.toLowerCase();
+  const code =
+    letter === undefined
+      ? binding.code
+      : ([...layout].find(([, typed]) => typed === letter)?.[0] ?? binding.code);
+  const typed = layout.get(code) ?? US_LAYOUT.get(code) ?? code;
+  const shift = binding.shift === true;
+  return {
+    ...held,
+    code,
+    key: shift ? typed.toUpperCase() : typed,
+    shiftKey: shift,
+    altKey: binding.alt === true,
+  };
+}
+
 /**
  * Keys named in words, which the interface's language names its own way
  * (Strg, Entf): by code, their name in `keys.*`. `Scroll`, `MiddleDrag` and
@@ -377,15 +488,16 @@ export function keyLabel(
   layout: KeyboardLayout | null,
   t: Translate,
 ): string {
-  if ('char' in binding) return binding.char;
-  const name = keyName(binding.code, isMac, layout, t);
-  if (isMac) {
-    return `${binding.alt === true ? '⌥' : ''}${binding.shift === true ? '⇧' : ''}${binding.mod === true ? '⌘' : ''}${name}`;
-  }
+  // A character is shown as itself: Shift, if the layout needs it, is how it is typed.
+  const name = 'char' in binding ? binding.char : keyName(binding.code, isMac, layout, t);
+  const alt = 'code' in binding && binding.alt === true;
+  const shift = 'code' in binding && binding.shift === true;
+  const command = binding.mod === true;
+  if (isMac) return `${alt ? '⌥' : ''}${shift ? '⇧' : ''}${command ? '⌘' : ''}${name}`;
   return [
-    ...(binding.mod === true ? [t('keys.Ctrl')] : []),
-    ...(binding.alt === true ? [t('keys.Alt')] : []),
-    ...(binding.shift === true ? [t('keys.Shift')] : []),
+    ...(command ? [t('keys.Ctrl')] : []),
+    ...(alt ? [t('keys.Alt')] : []),
+    ...(shift ? [t('keys.Shift')] : []),
     name,
   ].join('+');
 }

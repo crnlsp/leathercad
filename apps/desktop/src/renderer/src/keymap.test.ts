@@ -8,7 +8,9 @@ import {
   commandFor,
   keyForTools,
   keyLabel,
+  keysOf,
   matches,
+  shownKeys,
   type Binding,
   type CommandId,
   type KeyPress,
@@ -91,6 +93,18 @@ const FRENCH: KeyboardLayout = new Map([
   ['Quote', 'ù'],
   ['Backquote', '²'],
 ]);
+// Czech QWERTZ: the digit row types + ě š …, = is right of it, - where US has /.
+const CZECH: KeyboardLayout = new Map([
+  ...US,
+  ['KeyY', 'z'],
+  ['KeyZ', 'y'],
+  ['Digit1', '+'],
+  ['Digit2', 'ě'],
+  ['Digit3', 'š'],
+  ['Minus', '='],
+  ['Equal', '´'],
+  ['Slash', '-'],
+]);
 // No Latin letter anywhere: every letter key types a Cyrillic one.
 const RUSSIAN: KeyboardLayout = new Map([
   ...US,
@@ -108,7 +122,16 @@ const NO_MODIFIERS = { ctrlKey: false, metaKey: false, shiftKey: false, altKey: 
  */
 function press(binding: Binding, layout: KeyboardLayout, isMac = false): KeyPress {
   if ('char' in binding) {
-    return { ...NO_MODIFIERS, code: 'Slash', key: binding.char, shiftKey: true };
+    // Where the layout types it with no Shift; otherwise as Shift with some key.
+    const code = [...layout].find(([, typed]) => typed === binding.char)?.[0];
+    return {
+      ...NO_MODIFIERS,
+      code: code ?? 'Slash',
+      key: binding.char,
+      shiftKey: code === undefined,
+      ctrlKey: binding.mod === true && !isMac,
+      metaKey: binding.mod === true && isMac,
+    };
   }
   const letter = /^Key([A-Z])$/.exec(binding.code)?.[1]?.toLowerCase();
   const code =
@@ -146,15 +169,23 @@ describe('matching a key, by where it is (U.3)', () => {
   });
 
   it('on a German, French or Russian keyboard, does with every key what it does on a US one', () => {
-    for (const layout of [GERMAN, FRENCH, RUSSIAN]) {
+    // One exception, and only one: German types − where a US keyboard has
+    // `/`, so Ctrl there zooms out, and the list is reached by `?` (U.3, on
+    // review). Any other key that changed its command would be a new one.
+    const taken: string[] = [];
+    for (const [name, layout] of [
+      ['German', GERMAN],
+      ['French', FRENCH],
+      ['Russian', RUSSIAN],
+    ] as const) {
       for (const command of windowCommands) {
         for (const binding of everyBinding(command)) {
-          expect(commandFor(press(binding, layout), false), JSON.stringify(binding)).toBe(
-            command.id,
-          );
+          const heard = commandFor(press(binding, layout), false);
+          if (heard !== command.id) taken.push(`${name} ${JSON.stringify(binding)} → ${heard}`);
         }
       }
     }
+    expect(taken).toEqual(['German {"code":"Slash","mod":true} → zoomOut']);
   });
 
   it('reads Ctrl as the command key off macOS, and ⌘ on it', () => {
@@ -182,9 +213,9 @@ describe('matching a key, by where it is (U.3)', () => {
     // German: the key right of P types ü, and `[` needs AltGr+8.
     expect(matches({ ...NO_MODIFIERS, code: 'BracketLeft', key: 'ü' }, left, false)).toBe(true);
     expect(matches({ ...NO_MODIFIERS, code: 'Digit8', key: '[' }, left, false)).toBe(false);
-    // Ctrl+= zooms in from the key right of 0, whatever it prints.
-    expect(commandFor({ ...NO_MODIFIERS, code: 'Equal', key: '´', ctrlKey: true }, false)).toBe(
-      'zoomIn',
+    // Ctrl+, opens Settings from the key right of M, whatever it prints.
+    expect(commandFor({ ...NO_MODIFIERS, code: 'Comma', key: ';', ctrlKey: true }, false)).toBe(
+      'settings',
     );
   });
 
@@ -274,6 +305,70 @@ describe('matching a key, by where it is (U.3)', () => {
     expect(commandFor({ ...NO_MODIFIERS, code: 'Slash', key: '/' }, false)).toBeNull();
   });
 
+  describe('zoom follows the + and − a keyboard prints (U.3, on review)', () => {
+    // Zoom is named by its symbols, like a tool by its letter, and + and −
+    // need no AltGr anywhere — unlike [ ] \ — so they are matched by what the
+    // key types. Before U.3 the window matched every key that way, and these
+    // are the presses that worked then on German and French keyboards.
+    const ctrl = (code: string, key: string, extra: Partial<KeyPress> = {}): KeyPress => ({
+      ...NO_MODIFIERS,
+      code,
+      key,
+      ctrlKey: true,
+      ...extra,
+    });
+
+    it('zooms from the keys printed + and − on a German keyboard, not from ´ and ß', () => {
+      expect(commandFor(ctrl('BracketRight', '+'), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('Slash', '-'), false)).toBe('zoomOut');
+      expect(commandFor(ctrl('Equal', 'Dead'), false)).toBeNull();
+      expect(commandFor(ctrl('Equal', '´'), false)).toBeNull();
+      expect(commandFor(ctrl('Minus', 'ß'), false)).toBeNull();
+    });
+
+    it('never opens the shortcut list from the German − key, at the US / place', () => {
+      expect(matches(ctrl('Slash', '-'), { code: 'Slash', mod: true }, false)).toBe(false);
+      expect(commandFor({ ...NO_MODIFIERS, code: 'Minus', key: '?', shiftKey: true }, false)).toBe(
+        'keyboardShortcuts',
+      );
+    });
+
+    it('zooms out from the − on a French keyboard’s 6 key, and in from =', () => {
+      expect(commandFor(ctrl('Digit6', '-'), false)).toBe('zoomOut');
+      expect(commandFor(ctrl('Equal', '='), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('Equal', '+', { shiftKey: true }), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('Minus', ')'), false)).toBeNull();
+    });
+
+    it('keeps the US keys: Ctrl+=, Shift for +, Ctrl+−, the keypad, and Ctrl+/', () => {
+      expect(commandFor(ctrl('Equal', '='), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('Equal', '+', { shiftKey: true }), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('Minus', '-'), false)).toBe('zoomOut');
+      expect(commandFor(ctrl('NumpadAdd', '+'), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('NumpadSubtract', '-'), false)).toBe('zoomOut');
+      expect(commandFor(ctrl('Slash', '/'), false)).toBe('keyboardShortcuts');
+    });
+
+    it('leaves a digit key its digit where it types + (Czech): Ctrl+1 is Design', () => {
+      expect(commandFor(ctrl('Digit1', '+'), false)).toBe('design');
+      expect(commandFor(ctrl('Minus', '='), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('Slash', '-'), false)).toBe('zoomOut');
+      // German = is Shift with 0: that zooms in, and Ctrl+0 still fits.
+      expect(commandFor(ctrl('Digit0', '=', { shiftKey: true }), false)).toBe('zoomIn');
+      expect(commandFor(ctrl('Digit0', '0'), false)).toBe('fit');
+    });
+
+    it('wants the command key and only it: not bare, not with Alt or AltGr', () => {
+      expect(commandFor({ ...NO_MODIFIERS, code: 'BracketRight', key: '+' }, false)).toBeNull();
+      expect(commandFor(ctrl('BracketRight', '+', { altKey: true }), false)).toBeNull();
+      expect(commandFor(ctrl('BracketRight', '+', { metaKey: true }), false)).toBeNull();
+      expect(
+        commandFor({ ...NO_MODIFIERS, code: 'BracketRight', key: '+', metaKey: true }, true),
+      ).toBe('zoomIn');
+      expect(commandFor(ctrl('BracketRight', '+'), true)).toBeNull();
+    });
+  });
+
   it('never runs two commands for one key press', () => {
     const codes = [...new Set([...US.keys(), ...GERMAN.keys(), 'NumpadAdd', 'F10', 'Delete'])];
     fc.assert(
@@ -307,7 +402,7 @@ describe('matching a key, by where it is (U.3)', () => {
       for (const binding of everyBinding(command)) {
         const name =
           'char' in binding
-            ? binding.char
+            ? [binding.char, binding.mod === true].join()
             : [
                 binding.code,
                 binding.mod === true,
@@ -323,14 +418,46 @@ describe('matching a key, by where it is (U.3)', () => {
 });
 
 describe('showing a key, as this keyboard prints it (U.3)', () => {
+  // A command's first key as a tooltip shows it: the first this keyboard can press.
   const label = (id: CommandId, layout: KeyboardLayout | null, isMac = false): string =>
-    keyLabel(KEYMAP.find((command) => command.id === id)!.keys[0]!, isMac, layout, t);
+    keyLabel(shownKeys(id, layout, isMac)[0]!, isMac, layout, t);
 
   it('shows a punctuation key as the character this layout has there', () => {
     expect(keyLabel({ code: 'BracketLeft' }, false, GERMAN, t)).toBe('ü');
-    expect(label('zoomOut', GERMAN)).toBe('Ctrl+ß');
-    expect(label('keyboardShortcuts', GERMAN)).toBe('Ctrl+-');
+    expect(label('keyboardShortcuts', FRENCH)).toBe('Ctrl+!');
     expect(label('settings', FRENCH)).toBe('Ctrl+;');
+  });
+
+  it('shows zoom as the + and − this keyboard prints (U.3, on review)', () => {
+    expect(label('zoomIn', US)).toBe('Ctrl+=');
+    expect(label('zoomIn', FRENCH)).toBe('Ctrl+=');
+    expect(label('zoomIn', GERMAN)).toBe('Ctrl++');
+    expect(label('zoomOut', GERMAN)).toBe('Ctrl+-');
+    // Czech types + on its 1 key, which stays Design's; = is beside it.
+    expect(label('zoomIn', CZECH)).toBe('Ctrl+=');
+    expect(label('zoomIn', GERMAN, true)).toBe('⌘+');
+  });
+
+  it('leaves out a key another command takes on this keyboard', () => {
+    // German − sits where US has /, and zooms out: the list is reached by ? there.
+    expect(shownKeys('keyboardShortcuts', GERMAN, false)).toEqual([{ char: '?' }]);
+    expect(shownKeys('keyboardShortcuts', US, false)).toEqual(keysOf('keyboardShortcuts'));
+  });
+
+  it('shows only keys that, pressed on that keyboard, run their command, and one at least', () => {
+    for (const isMac of [false, true]) {
+      for (const layout of [US, GERMAN, FRENCH, RUSSIAN, CZECH]) {
+        for (const command of windowCommands) {
+          const shown = shownKeys(command.id, layout, isMac);
+          expect(shown.length, command.id).toBeGreaterThan(0);
+          for (const binding of shown) {
+            expect(commandFor(press(binding, layout, isMac), isMac), JSON.stringify(binding)).toBe(
+              command.id,
+            );
+          }
+        }
+      }
+    }
   });
 
   it('shows its US character when the layout is not known', () => {
@@ -351,7 +478,7 @@ describe('showing a key, as this keyboard prints it (U.3)', () => {
   it('writes the modifiers as macOS does: ⌥ ⇧ ⌘, in that order, joined', () => {
     expect(label('saveAs', null, true)).toBe('⇧⌘S');
     expect(label('saveAs', null, false)).toBe('Ctrl+Shift+S');
-    expect(label('zoomIn', GERMAN, true)).toBe('⌘´');
+    expect(label('settings', FRENCH, true)).toBe('⌘;');
     expect(keyLabel({ code: 'KeyS', mod: true, alt: true }, true, null, t)).toBe('⌥⌘S');
     expect(keyLabel({ code: 'KeyS', mod: true, alt: true }, false, null, t)).toBe('Ctrl+Alt+S');
   });

@@ -13,7 +13,7 @@ import {
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { focusAfter } from './menus.js';
-import { KeyCap } from './keyCaps.js';
+import { KeyCap, useShownKeys } from './keyCaps.js';
 import { SHORTCUT_GROUPS } from './shortcuts.js';
 
 export type SettingsSection = 'general' | 'appearance' | 'language' | 'shortcuts';
@@ -314,6 +314,7 @@ function Toggle({
 /** Every key the app answers to (8.2), from the keymap (U.3); read-only until U.12. */
 function Shortcuts() {
   const { t } = useI18n();
+  const shown = useShownKeys();
   return (
     <div className="shortcuts-groups">
       {SHORTCUT_GROUPS.map((group) => (
@@ -323,7 +324,7 @@ function Shortcuts() {
             {group.shortcuts.map((shortcut) => (
               <div className="shortcut-row" key={`${group.id}-${shortcut.does}`}>
                 <dt>
-                  {shortcut.keys.map((binding, index) => (
+                  {shown(shortcut.keys).map((binding, index) => (
                     <span key={JSON.stringify(binding)}>
                       {index > 0 && <span className="shortcut-or"> {t('shortcuts.or')} </span>}
                       <KeyCap command={binding} />
