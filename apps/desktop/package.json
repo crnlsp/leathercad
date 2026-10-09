@@ -1,6 +1,6 @@
 {
   "name": "@leathercad/desktop",
-  "version": "1.3.0",
+  "version": "1.3.5",
   "private": true,
   "description": "Electron shell for LeatherCAD",
   "main": "./out/main/index.js",
