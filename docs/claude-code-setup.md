@@ -124,6 +124,7 @@ instructions that every session would otherwise have to be given again.
 |---|---|
 | `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.19) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
 | `zoom-control` | Builds U.4, the zoom control and true size, with that slice's technical briefing: the code it stands on after U.1–U.3, the two status bugs it fixes, the keys and how U.3's keymap matches them. Set to Opus at high effort: the keymap's matching rules and the true-size arithmetic are where a plausible change is quietly wrong |
+| `properties-panel` | Builds U.6, Properties in the order of the work and the job's totals, with its technical briefing: the panel's sections as they are, where the hole set's numbers and the totals come from, and the two rules for running beside U.4 — one lock on the shared display for end-to-end runs, and pixel references retaken by whichever merges second. Opus at high effort: the spacing-against-pitch rule and the totals are easy to get plausibly wrong |
 
 ## 6. Hooks
 
