@@ -28,7 +28,7 @@ canvas2d and svg screen backends in `packages/render`; Playwright for the E2E an
 
 | Order | What | Waits on | Who |
 |---|---|---|---|
-| 1 | **Finish 1.4.** Its last feature, 6.5 (DXF), landed in [crnlsp/leathercad#65](https://github.com/crnlsp/leathercad/pull/65) on 2026-10-08. What is left is Q27 and R1 | Q27: `gifsicle` and `pngquant` on the machine that retakes the README pictures. R1: a physical print | the maintainer, or an agent asked to |
+| 1 | **Finish 1.4, released as 1.3.5.** Its last feature, 6.5 (DXF), landed in [crnlsp/leathercad#65](https://github.com/crnlsp/leathercad/pull/65) on 2026-10-08; U.1 to U.3 ship with it. What is left is R1's Linux rows | Q27: `gifsicle` and `pngquant` on the machine that retakes the README pictures. R1: a physical print | the maintainer, or an agent asked to |
 | 2 | **U.1 Pieces read as pieces** | nothing | the `ui-refinement` agent, from 2026-10-08 |
 | 3 | U.2 → U.19, in this document's order | the slices named under each | one session per slice |
 
