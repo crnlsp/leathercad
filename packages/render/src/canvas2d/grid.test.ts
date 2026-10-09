@@ -56,6 +56,7 @@ function recorder(): Recorded {
       labels.push(text);
       placed.push({ text, x, y });
     },
+    strokeText: noop,
     setLineDash: noop,
     lineWidth: 1,
     get strokeStyle() {

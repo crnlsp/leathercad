@@ -4,6 +4,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  boardTextItem,
   documentTextItem,
   dotsItem,
   fillItem,
@@ -126,6 +127,35 @@ describe('renderToSvgString', () => {
     expect(svg).toContain('>100 mm<');
   });
 
+  it('sets the board’s words in their weight, on a halo of the ground, as the canvas does', () => {
+    const svg = renderToSvgString(
+      listOf(boardTextItem(vec(0, 0), 'Card pocket ×2', CANVAS.text.name, GROUND.ink)),
+      view,
+    );
+
+    expect(svg).toContain(
+      `<text x="200" y="150" font-size="12" fill="${GROUND.ink}" font-weight="600" ` +
+        `stroke="${GROUND.ground}" stroke-width="8" stroke-linejoin="round" ` +
+        `paint-order="stroke">Card pocket ×2</text>`,
+    );
+  });
+
+  it('turns a dimension’s number to read along its line', () => {
+    const svg = renderToSvgString(
+      listOf(
+        boardTextItem(vec(10, 5), '30.0', CANVAS.text.value, '#8a5a2b', {
+          rotationRad: Math.PI / 2,
+        }),
+      ),
+      view,
+    );
+
+    // A quarter turn counter-clockwise in the world is −90° on screen, about
+    // the number's own anchor: 10 mm right of and 5 mm above the middle.
+    expect(svg).toContain('x="220" y="140"');
+    expect(svg).toContain('transform="rotate(-90 220 140)"');
+  });
+
   it('escapes text that would otherwise break the document', () => {
     const svg = renderToSvgString(
       listOf(textItem('annotation', vec(0, 0), 'a < b & "c"', 12)),
@@ -188,6 +218,10 @@ describe('on a 2× display (U.1)', () => {
     foldTickItem(vec(0, 0), 'valley'),
     linkTickItem('stitch', vec(0, 0), vec(1, 0)),
     textItem('annotation', vec(0, 12), '40 mm', 11),
+    boardTextItem(vec(0, 16), '30.0', CANVAS.text.value, '#8a5a2b', {
+      align: 'center',
+      rotationRad: 0.5,
+    }),
     documentTextItem('annotation', vec(0, -14), 'A', 4),
     markerItem(vec(3, 3), 'error', '#c0392f', true),
   );

@@ -1,7 +1,6 @@
 import { DEFAULT_SETTINGS, LAYER_ROLES, evaluate, type Project } from '@leathercad/domain';
 import { PathOps, RectOps, uniformRadii, type Path, type Rect } from '@leathercad/geometry';
 import { ROLE_STROKES, ROLE_STYLES, buildDisplayList } from '@leathercad/render';
-import { outlinesOf } from '@leathercad/typography';
 import { describe, expect, it } from 'vitest';
 
 import { PRINT_STYLES, buildExportScene } from './scene.js';
@@ -39,22 +38,39 @@ describe('screen and paper', () => {
     }
   });
 
-  it('put a part’s caption in the same place, above a dimension on its top edge', () => {
+  it('put a part’s caption above a dimension on its top edge, on both', () => {
     // The caption sits above everything the part draws. A dimension's number
     // is set beyond its line, and once the line counted and the number did
-    // not, the part's name and the number shared a band — on both.
+    // not, the part's name and the number shared a band — on both. They no
+    // longer share a size: the board sets both at 12 px whatever the zoom
+    // (R-01), and paper keeps its glyphs in millimetres.
     const resolved = evaluate(dimensionedAlongTop());
-    const onScreen = buildDisplayList(resolved).items.flatMap((item) =>
-      item.kind === 'document-text' ? [item.placed] : [],
-    );
-    const screenCaption = inkOf(outlinesOf(onScreen.find((p) => p.layout.text === 'Panel')!));
-    const screenNumber = inkOf(outlinesOf(onScreen.find((p) => p.layout.text === '30.0')!));
+    const onScreen = buildDisplayList(resolved, {
+      caption: (part) => ({ name: part.part.name, detail: null }),
+    }).items.flatMap((item) => (item.kind === 'overlay-text' ? [item] : []));
+    const screenCaption = onScreen.find((text) => text.text === 'Panel')!;
+    const screenNumber = onScreen.find((text) => text.text === '30.0')!;
 
     const onPaper = buildExportScene(resolved, 'Test').parts[0]!.texts;
     const paperCaption = inkOf(onPaper.find((t) => t.source === 'Panel')!.glyphs);
+    const paperNumber = inkOf(onPaper.find((t) => t.source === '30.0')!.glyphs);
 
-    expect(screenCaption.minY).toBeGreaterThan(screenNumber.maxY);
-    expect(RectOps.equals(paperCaption, screenCaption)).toBe(true);
+    expect(screenCaption.at.y).toBeGreaterThan(screenNumber.at.y);
+    expect(paperCaption.minY).toBeGreaterThan(paperNumber.maxY);
+  });
+
+  it('keep paper’s own caption: "Card pocket — cut 2", 2.8 mm tall, whatever the board says', () => {
+    // R-01 changed the board's words to "Card pocket ×2" at 12 px; the printed
+    // pattern did not move.
+    const project = dimensionedAlongTop();
+    const pocket = { ...project.parts[0]!, name: 'Card pocket', quantity: 2 };
+    const scene = buildExportScene(evaluate({ ...project, parts: [pocket] }), 'Test');
+    const caption = scene.parts[0]!.texts[0]!;
+    expect(scene.parts[0]!.name).toBe('Card pocket — cut 2');
+    expect(caption).toMatchObject({ source: 'Card pocket — cut 2', sizeMm: 2.8 });
+    // 1.5 mm above everything the part prints, the number included.
+    const number = inkOf(scene.parts[0]!.texts.find((t) => t.source === '30.0')!.glyphs);
+    expect(inkOf(caption.glyphs).minY).toBeGreaterThan(number.maxY);
   });
 });
 

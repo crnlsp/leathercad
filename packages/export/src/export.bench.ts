@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS, evaluate, type Project } from '@leathercad/domain';
 import { uniformRadii } from '@leathercad/geometry';
-import { buildDisplayList, renderToSvgString } from '@leathercad/render';
+import { buildDisplayList, renderToSvgString, type Caption } from '@leathercad/render';
 import { test, type Bench } from 'vitest';
 
 import { DEFAULT_PAGE_SETUP } from './paper.js';
@@ -95,11 +95,18 @@ const scene = buildExportScene(resolved, project.name);
 
 const view = { centreMm: { x: 600, y: 20 }, scale: 1, widthPx: 1400, heightPx: 400, dpr: 1 };
 
+/**
+ * The board captions every piece on every frame. The words are the app's
+ * (ADR 0018), so these stand in for them; the drawing of them is what counts.
+ * Without it the screen half would measure a frame the app never draws (U.2).
+ */
+const caption = (): Caption => ({ name: 'Strap', detail: '636 holes · 3.85 mm' });
+
 test('build the display list', ({ bench }) =>
-  measure(bench, 'display-list', () => buildDisplayList(resolved)));
+  measure(bench, 'display-list', () => buildDisplayList(resolved, { caption })));
 
 test('render the display list as SVG', ({ bench }) =>
-  measure(bench, 'svg', () => renderToSvgString(buildDisplayList(resolved), view)));
+  measure(bench, 'svg', () => renderToSvgString(buildDisplayList(resolved, { caption }), view)));
 
 test('build the export scene', ({ bench }) =>
   measure(bench, 'export-scene', () => buildExportScene(resolved, project.name)));

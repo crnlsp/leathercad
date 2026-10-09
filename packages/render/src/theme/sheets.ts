@@ -31,8 +31,8 @@ export const SHEET = {
    */
   /** A sheet's number and a taped piece's name. */
   labelPx: 13,
-  /** "Tape join" on the design board. */
-  joinLabelPx: 11,
+  /** "Tape join" on the design board: no smaller than the board's own words (R-01). */
+  joinLabelPx: 12,
   /** A tape join on the design board. */
   joinStrokePx: 1.25,
   /** The paper's edge, the printable area's outline, and page-furniture ink. */

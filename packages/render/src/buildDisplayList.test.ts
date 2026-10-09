@@ -1,12 +1,27 @@
-import { DEFAULT_SETTINGS } from '@leathercad/domain';
-import type { Diagnostic, Feature, LayerRole, Part, ResolvedProject } from '@leathercad/domain';
-import { PathOps, Shapes, type Path } from '@leathercad/geometry';
-import { placedText } from '@leathercad/typography';
+import { DEFAULT_SETTINGS, evaluate } from '@leathercad/domain';
+import type {
+  Diagnostic,
+  Feature,
+  LayerRole,
+  Part,
+  Project,
+  ResolvedPart,
+  ResolvedProject,
+} from '@leathercad/domain';
+import { PathOps, Shapes, uniformRadii, type Path } from '@leathercad/geometry';
+import { FONT, placedText } from '@leathercad/typography';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
+import {
+  DIAGNOSTIC_COLOURS,
+  buildDisplayList,
+  type BuildOptions,
+  type Caption,
+} from './buildDisplayList.js';
 import { ROLE_STROKES, type DisplayItem } from './displayList.js';
 import { CANVAS, GROUND, NOMINAL_IRON } from './theme/index.js';
+import { TRUE_SIZE_CSS_PX_PER_MM, type ViewportView } from './view.js';
 
 /** The piece fills: the leather itself (R-02). */
 const isPieceFill = (item: DisplayItem): boolean =>
@@ -396,38 +411,318 @@ describe('text labels', () => {
   });
 });
 
-describe('part captions', () => {
-  it('names each part above it, in millimetres', () => {
-    const caption = buildDisplayList(resolved([outline])).items.find(
-      (item) => item.kind === 'document-text',
-    );
+/** The board's own words: captions, dimension values, readouts. */
+const texts = (list: { readonly items: readonly DisplayItem[] }) =>
+  list.items.filter(
+    (item): item is Extract<DisplayItem, { kind: 'overlay-text' }> => item.kind === 'overlay-text',
+  );
 
-    expect(caption).toBeDefined();
-    if (caption?.kind !== 'document-text') return;
-    expect(caption.placed.layout.text).toBe('Panel');
-    // Document text is sized in millimetres, never pixels: it is part of the
-    // drawing, and the same caption prints on the sheet.
-    expect(caption.placed.layout.sizeMm).toBeGreaterThan(0);
-    // Above the panel's top edge (Y is up).
-    expect(caption.placed.origin.y).toBeGreaterThan(60);
+/** A camera at this many CSS px per mm, looking at `centreMm` on an 800 × 600 CSS px canvas. */
+const looking = (css: number, centreMm = { x: 50, y: 30 }, dpr = 1): ViewportView => ({
+  centreMm,
+  scale: css * dpr,
+  widthPx: 800 * dpr,
+  heightPx: 600 * dpr,
+  dpr,
+});
+
+/** What the app says a piece is called: the words are its own (ADR 0018). */
+const words = (part: ResolvedPart): Caption => ({
+  name: `${part.part.name} ×2`,
+  detail: '52 holes · 3.85 mm',
+});
+
+/** A 30 × 50 panel, `measure`d along its top edge 8 mm out — or its left edge. */
+function dimensioned(measure: 'horizontal' | 'vertical' = 'horizontal'): Project {
+  const outlineOf: Feature = {
+    id: 'outline',
+    kind: 'cut-contour',
+    role: 'outer',
+    name: 'Outline',
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'shape',
+      shape: {
+        type: 'rect',
+        origin: { x: 0, y: 0 },
+        width: 30,
+        height: 50,
+        radii: uniformRadii(0),
+        rotation: 0,
+      },
+    },
+  };
+  const width: Feature = {
+    id: 'width',
+    kind: 'measurement',
+    name: 'Width',
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'measurement',
+      measure,
+      // Corners are numbered after each edge: 2 is the top left, 1 the top
+      // right, 3 the bottom left.
+      a: { kind: 'anchor', featureId: 'outline', anchor: 2 },
+      b: { kind: 'anchor', featureId: 'outline', anchor: measure === 'horizontal' ? 1 : 3 },
+      offsetMm: 8,
+      precision: 1,
+    },
+  };
+  return {
+    id: 'p',
+    name: 'Test',
+    settings: DEFAULT_SETTINGS,
+    parts: [{ id: 'part-1', name: 'Panel', quantity: 1, features: [outlineOf, width] }],
+  };
+}
+
+const atPercent = (percent: number): number => (percent / 100) * TRUE_SIZE_CSS_PX_PER_MM;
+
+describe('part captions on the board (R-01)', () => {
+  it('says nothing of its own: without the app’s words, no caption', () => {
+    expect(texts(buildDisplayList(resolved([outline])))).toEqual([]);
+    expect(
+      buildDisplayList(resolved([outline])).items.some((item) => item.kind === 'document-text'),
+    ).toBe(false);
   });
 
-  it('says how many to cut, the same words the printed sheet uses', () => {
-    const list = buildDisplayList(
-      resolved([outline], [], { id: 'part-1', name: 'Gusset', quantity: 2, features: [outline] }),
-    );
-    const caption = list.items.find((item) => item.kind === 'document-text');
-
-    expect(caption?.kind === 'document-text' && caption.placed.layout.text).toBe('Gusset — cut 2');
+  it('asks the app for the words of each piece it captions', () => {
+    const asked: string[] = [];
+    buildDisplayList(resolved([outline]), {
+      caption: (part) => {
+        asked.push(part.part.id);
+        return words(part);
+      },
+    });
+    expect(asked).toEqual(['part-1']);
   });
 
   it('leaves an empty part uncaptioned, having nothing to caption', () => {
-    expect(buildDisplayList(resolved([])).items).toEqual([]);
+    expect(buildDisplayList(resolved([]), { caption: words }).items).toEqual([]);
   });
 
-  it('can be turned off', () => {
-    const list = buildDisplayList(resolved([outline]), { captions: false });
-    expect(list.items.every((item) => item.kind !== 'document-text')).toBe(true);
+  it('names the piece over its detail, 12 px at every zoom, each on a halo of the ground', () => {
+    const halo = { colour: GROUND.ground, widthPx: 4 };
+    for (const percent of [23, 60, 160, 300]) {
+      const zoom = atPercent(percent);
+      const [name, detail, ...rest] = texts(
+        buildDisplayList(resolved([outline]), { caption: words, pxPerMm: zoom }),
+      );
+      expect(rest).toEqual([]);
+      expect(name).toMatchObject({
+        text: 'Panel ×2',
+        sizePx: 12,
+        weight: 600,
+        colour: GROUND.ink,
+        halo,
+      });
+      if (percent < 40) {
+        // Zoomed out, the name alone (R-01).
+        expect(detail).toBeUndefined();
+        continue;
+      }
+      expect(detail).toMatchObject({
+        text: '52 holes · 3.85 mm',
+        sizePx: 12,
+        weight: 400,
+        colour: GROUND.label,
+        halo,
+      });
+      // Left-aligned on the piece's left edge, one 16 px line apart, and the
+      // detail's baseline 7.5 px above the piece's top (Y is up): 4 px of gap
+      // and the 3.5 px of its line below the baseline.
+      expect(name!.at.x).toBeCloseTo(0, 9);
+      expect(detail!.at.x).toBeCloseTo(0, 9);
+      expect((name!.at.y - detail!.at.y) * zoom).toBeCloseTo(16, 9);
+      expect((detail!.at.y - 60) * zoom).toBeCloseTo(7.5, 9);
+    }
+  });
+
+  it('says the name alone below 40 %, and the detail too from 40 %', () => {
+    const lines = (percent: number): number =>
+      texts(buildDisplayList(resolved([outline]), { caption: words, pxPerMm: atPercent(percent) }))
+        .length;
+    expect(lines(39.9)).toBe(1);
+    expect(lines(40)).toBe(2);
+  });
+
+  it('says the name alone when the app has no detail to give', () => {
+    const list = buildDisplayList(resolved([outline]), {
+      caption: (part) => ({ name: part.part.name, detail: null }),
+    });
+    expect(texts(list).map((text) => text.text)).toEqual(['Panel']);
+  });
+
+  it('reads the zoom from the camera, the same on any display', () => {
+    for (const dpr of [1, 2]) {
+      const [name, detail] = texts(
+        buildDisplayList(resolved([outline]), {
+          caption: words,
+          view: looking(atPercent(60), { x: 50, y: 30 }, dpr),
+        }),
+      );
+      expect(name!.sizePx).toBe(12);
+      expect((detail!.at.y - 60) * atPercent(60)).toBeCloseTo(7.5, 9);
+    }
+  });
+
+  describe('pinned while its piece’s top is off the canvas', () => {
+    // At 4 px/mm, 800 × 600 CSS px show 200 × 150 mm; the rulers take 22 px
+    // off the top and 34 px off the left.
+    const zoom = 4;
+    const area = (centre: { x: number; y: number }) => ({
+      minX: centre.x - 100 + 34 / zoom,
+      maxY: centre.y + 75 - 22 / zoom,
+    });
+    const captionAt = (centre: { x: number; y: number }) =>
+      texts(buildDisplayList(resolved([outline]), { caption: words, view: looking(zoom, centre) }));
+
+    it('stays above its piece while it fits on the canvas there', () => {
+      for (const centre of [
+        { x: 50, y: 30 },
+        // The panel's top 36 px under the ruler: room for both lines and the gap.
+        { x: 110, y: 60 + 36 / zoom - 75 + 22 / zoom },
+      ]) {
+        const [name] = captionAt(centre);
+        expect(name!.at.x).toBeCloseTo(0, 9);
+        expect((name!.at.y - 60) * zoom).toBeCloseTo(23.5, 9);
+      }
+    });
+
+    it('pins once it would run under the ruler, before the piece’s top does', () => {
+      // The top 20 px under the ruler: the name would be hidden by it, and a
+      // name the maker cannot read is what R-01 is for.
+      const centre = { x: 110, y: 60 + 20 / zoom - 75 + 22 / zoom };
+      const [name] = captionAt(centre);
+      expect(name!.at.x).toBeCloseTo(area(centre).minX + 12 / zoom, 9);
+      expect((area(centre).maxY - name!.at.y) * zoom).toBeCloseTo(24.5, 9);
+    });
+
+    it('pins to the canvas’s top-left, 12 px in, once the top is off it', () => {
+      // Looking at the panel's lower right: its top (y = 60) is above the
+      // canvas, its left edge (x = 0) left of it.
+      const centre = { x: 110, y: -30 };
+      const [name, detail] = captionAt(centre);
+      expect(name!.at.x).toBeCloseTo(area(centre).minX + 12 / zoom, 9);
+      // The name's line starts 12 px under the ruler, and its baseline is
+      // 12.5 px down that line.
+      expect((area(centre).maxY - name!.at.y) * zoom).toBeCloseTo(24.5, 9);
+      expect((name!.at.y - detail!.at.y) * zoom).toBeCloseTo(16, 9);
+    });
+
+    it('pins to the canvas’s left even when the piece’s left edge is on the canvas', () => {
+      const centre = { x: 60, y: -30 };
+      const [name] = captionAt(centre);
+      expect(area(centre).minX).toBeLessThan(0);
+      expect(name!.at.x).toBeCloseTo(area(centre).minX + 12 / zoom, 9);
+    });
+
+    it('goes with the piece once the piece has left the canvas', () => {
+      // The panel entirely above the canvas: its caption stays above it, off
+      // the canvas too.
+      const [name] = captionAt({ x: 50, y: -200 });
+      expect((name!.at.y - 60) * zoom).toBeCloseTo(23.5, 9);
+    });
+
+    it('stacks two pinned captions rather than writing one over the other', () => {
+      const second: Part = { id: 'part-2', name: 'Lining', quantity: 1, features: [outline] };
+      const project = resolved([outline]);
+      const both: ResolvedProject = {
+        ...project,
+        parts: [...project.parts, { ...project.parts[0]!, part: second }],
+      };
+      const [first, , other] = texts(
+        buildDisplayList(both, { caption: words, view: looking(zoom, { x: 90, y: -30 }) }),
+      );
+      expect(other!.text).toBe('Lining ×2');
+      expect(other!.at.x).toBeCloseTo(first!.at.x, 9);
+      // Two lines of 16 px and a 4 px gap under the first.
+      expect((first!.at.y - other!.at.y) * zoom).toBeCloseTo(36, 9);
+    });
+  });
+
+  it('never sets the board’s words below 12 px, at any zoom on any display', () => {
+    const project = evaluate(dimensioned());
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.05, max: 400, noNaN: true }),
+        fc.constantFrom(1, 1.5, 2, 3),
+        (css, dpr) => {
+          const drawn = texts(
+            buildDisplayList(project, {
+              caption: words,
+              view: looking(css, { x: 15, y: 25 }, dpr),
+            }),
+          );
+          expect(drawn.length).toBeGreaterThan(1);
+          for (const text of drawn) expect(text.sizePx).toBeGreaterThanOrEqual(CANVAS.text.minPx);
+        },
+      ),
+    );
+  });
+});
+
+describe('a dimension’s value on the board (R-01)', () => {
+  const valueIn = (project: ResolvedProject, options: BuildOptions = {}) =>
+    texts(buildDisplayList(project, options)).find((item) => item.text === '30.0');
+
+  it('is 12 px in the measuring colour, centred on its line, on a halo of the ground', () => {
+    const resolved = evaluate(dimensioned());
+    for (const zoom of [1, 4, 12]) {
+      const number = valueIn(resolved, { pxPerMm: zoom });
+      expect(number).toMatchObject({
+        sizePx: 12,
+        weight: 500,
+        colour: ROLE_STROKES.annotation.colour,
+        align: 'center',
+        halo: { colour: GROUND.ground, widthPx: 4 },
+      });
+      // The line runs at y = 58 from x 0 to 30. The number is centred on its
+      // middle with its baseline half a capital below it, so the figures sit
+      // on the line and their halo breaks it.
+      expect(number!.at.x).toBeCloseTo(15, 9);
+      expect((58 - number!.at.y) * zoom).toBeCloseTo((FONT.capHeight / FONT.unitsPerEm) * 6, 9);
+      expect(number!.rotationRad ?? 0).toBe(0);
+    }
+  });
+
+  it('reads along a vertical line, as the printed one does', () => {
+    const resolved = evaluate(dimensioned('vertical'));
+    const printed = resolved.parts[0]!.features.find((entry) => entry.feature.id === 'width');
+    const number = texts(buildDisplayList(resolved))[0];
+    expect(printed?.ok && printed.text !== undefined).toBe(true);
+    if (!printed?.ok || printed.text === undefined) return;
+    expect(number!.text).toBe('50.0');
+    expect(number!.rotationRad).toBeCloseTo(printed.text.rotationRad, 9);
+    expect(Math.abs(number!.rotationRad!)).toBeCloseTo(Math.PI / 2, 9);
+  });
+
+  it('no longer draws the printed number’s glyphs on screen', () => {
+    const list = buildDisplayList(evaluate(dimensioned()));
+    expect(list.items.some((item) => item.kind === 'document-text')).toBe(false);
+  });
+
+  it('keeps the caption clear of a number above the piece, at any zoom', () => {
+    // The number counts towards the piece's extent at its size on screen,
+    // halo and all, so the caption sits above it, as the printed one does.
+    const resolved = evaluate(dimensioned());
+    fc.assert(
+      fc.property(fc.double({ min: 1.6, max: 60, noNaN: true }), (zoom) => {
+        const drawn = texts(
+          buildDisplayList(resolved, {
+            pxPerMm: zoom,
+            caption: (part) => ({ name: part.part.name, detail: 'detail' }),
+          }),
+        );
+        const number = drawn.find((item) => item.text === '30.0')!;
+        const detail = drawn.find((item) => item.text === 'detail')!;
+        // The number's line box tops out 12.5 px above its baseline and its
+        // halo 4 px beyond; the detail's line box ends 3.5 px under its own.
+        expect(detail.at.y - 3.5 / zoom).toBeGreaterThan(number.at.y + (12.5 + 4) / zoom);
+      }),
+    );
   });
 });
 
@@ -779,31 +1074,6 @@ describe('leather-specific treatment (F.7)', () => {
           ]),
         ),
       ).toEqual([]);
-    });
-  });
-
-  describe('the iron in the part caption', () => {
-    const captions = (project: ResolvedProject) =>
-      ofKind(buildDisplayList(project).items, 'document-text');
-
-    it('says the iron under the part’s name, quieter than the name', () => {
-      const [first, second] = captions(stitched());
-      const name = [first, second].find((c) => c?.placed.layout.text === 'Panel')!;
-      const iron = [first, second].find((c) => c !== name)!;
-      expect(iron.placed.layout.text).toBe('88 holes · 3.85 mm · KS Blade');
-      // Under the name and above the piece (Y is up).
-      expect(iron.placed.origin.y).toBeGreaterThan(60);
-      expect(name.placed.origin.y).toBeGreaterThan(
-        iron.placed.origin.y + iron.placed.layout.ascentMm,
-      );
-      expect(iron.placed.layout.sizeMm).toBeLessThan(name.placed.layout.sizeMm);
-      expect(iron.colour).toBe(CANVAS.caption);
-    });
-
-    it('leaves a part without stitching with its name alone', () => {
-      expect(
-        captions(scene([[drawnOutline, outlinePath]])).map((c) => c.placed.layout.text),
-      ).toEqual(['Panel']);
     });
   });
 });

@@ -144,9 +144,26 @@ export function renderToSvgString(
     );
     for (const item of texts) {
       const at = MatOps.apply(transform, item.at);
+      const weight =
+        item.weight === undefined || item.weight === 500 ? '' : ` font-weight="${item.weight}"`;
+      // The ground under every glyph, as the canvas strokes it (R-01).
+      const halo =
+        item.halo === undefined
+          ? ''
+          : ` stroke="${item.halo.colour}" stroke-width="${n(item.halo.widthPx * 2)}" ` +
+            `stroke-linejoin="round" paint-order="stroke"`;
+      // Turned through the world transform, as the canvas turns it.
+      const turn = item.rotationRad ?? 0;
+      const along = MatOps.applyDirection(transform, { x: Math.cos(turn), y: Math.sin(turn) });
+      const rotate =
+        turn === 0
+          ? ''
+          : ` transform="rotate(${n((Math.atan2(along.y, along.x) * 180) / Math.PI)} ` +
+            `${n(at.x)} ${n(at.y)})"`;
       parts.push(
         `<text x="${n(at.x)}" y="${n(at.y)}" font-size="${n(item.sizePx)}" fill="${item.colour}"` +
-          `${anchor(item.align)}${baseline(item.baseline)}>${escapeText(item.text)}</text>`,
+          `${weight}${halo}${rotate}${anchor(item.align)}${baseline(item.baseline)}>` +
+          `${escapeText(item.text)}</text>`,
       );
     }
     parts.push('</g>');

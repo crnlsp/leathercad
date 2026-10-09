@@ -198,10 +198,16 @@ Warm-neutral off-white. Restrained: no texture, no gradient, no paper fibre, no 
 | `--ground-hundred` | `#BEB5A3` | 100 mm grid |
 | `--ground-axis` | `#A89E88` | The x = 0 / y = 0 axes |
 | `--ink` | `#1D2126` | Cut lines, part names |
-| `--ink-dim` | `#6E695E` | Canvas captions, ruler labels |
+| `--ink-dim` | `#6E695E` | Ruler labels (canvas captions until U.2) |
+| `--ground-label` | `#5E5950` | A caption's detail under the part's name (R-01, U.2) |
 
 `--ink` on `--ground` is 13.97 : 1 (first written as "above 14"; measured when built, F.5).
-`--ink-dim` on `--ground` is 4.6 : 1.
+`--ink-dim` on `--ground` is 4.6 : 1; `--ground-label` 6.0 : 1.
+
+*Since U.2 (1.5):* the board's words are a constant size on screen, never below 12 px, each on a
+4 px halo of the ground (R-01, `CANVAS.text`): a part's name in `--ink` at 600, the detail under it
+in `--ground-label` at 400, and a dimension's value in the measurement colour at 500 — all 12/16.
+Paper keeps its true-size caption and values.
 
 **The whole canvas viewport is the drafting ground** — not a card or a sheet floating on a
 workbench. The model's coordinate space is unbounded, and drawing a page edge would imply a page the
@@ -670,7 +676,9 @@ Explicitly protected from this work. Changing any of these needs a reason writte
   a tooltip; they do not become hidden.
 - **The dependency tree.** The concept is right; only its container changes.
 - **The stitch-hole information.** Promoted, never redesigned: it also gains a canvas caption
-  (`88 holes · 3.85 mm · KS Blade`) and a legend entry.
+  (`88 holes · 3.85 mm · KS Blade`) and a legend entry. *Since U.2 (1.5):* the caption reads
+  `88 holes · 3.85 mm` — the pitch, each pitch once, without the iron's name — under "Card pocket
+  ×2", at 12 px whatever the zoom, in the interface's words (R-01).
 - **The refusal model.** The `Problem` channel is untouched; refusals move to where they can be seen.
 - **4.12's diagnostic channel** — `diagnose`, badges, `diagnosticTarget`, `exportReadiness`. This spec
   restyles its surfaces and changes none of its model.

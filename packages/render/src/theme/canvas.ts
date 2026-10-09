@@ -37,11 +37,34 @@ export const CANVAS = {
     edge: GROUND.major,
     tick: GROUND.hundred,
     text: GROUND.inkDim,
+    /** The top ruler's height, and the left one's width: "−160" does not fit in 22 px. */
+    thicknessPx: 22,
+    leftThicknessPx: 34,
   },
   cursorTick: ACCENT.tanInk,
 
-  /** Part captions: the drawing's own quiet voice, not a role's colour. */
-  caption: GROUND.inkDim,
+  /**
+   * The board's own words (R-01): a piece's caption and a dimension's value,
+   * the same size on screen at every zoom — the `canvas-name`, `canvas-meta`
+   * and `canvas-value` voices, each 12/16 — and never smaller than `minPx`.
+   * Each sits on `haloPx` of the ground, so it reads over the grid, a piece or
+   * a line. Paper keeps its own true-size text.
+   */
+  text: {
+    name: { weight: 600, sizePx: 12, lineHeightPx: 16 },
+    meta: { weight: 400, sizePx: 12, lineHeightPx: 16 },
+    value: { weight: 500, sizePx: 12, lineHeightPx: 16 },
+    minPx: 12,
+    haloPx: 4,
+    halo: GROUND.ground,
+  },
+
+  /**
+   * A caption: above its piece by `gapPx`, or — once it would run under the
+   * ruler — pinned `insetPx` in from the canvas's top-left. Below
+   * `detailFromPercent` of true size it says the piece's name alone (R-01).
+   */
+  caption: { gapPx: 4, insetPx: 12, detailFromPercent: 40 },
 
   /**
    * Selection adds, it never replaces (§8.4): a band of the accent beneath the

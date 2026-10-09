@@ -82,6 +82,8 @@ conformance suite for the replacement.
   has words for the interface: a problem is a code and facts, an undo step a `HistoryLabel`, a
   part's print status a `PartPrintStatus`, and the app words each one. The paper's words — the PDF
   footer, part captions — are the export's, and stay English while the vendored glyphs are Latin.
+  The Design board's captions are the app's: `buildDisplayList` takes a `caption` function and
+  places what it returns (R-01).
 
 ### 1.4 Supporting tools
 
@@ -195,7 +197,8 @@ and correct.
         │                          ▼
         │                     Diagnostic[] ──▶ problems panel, status count, property panel,
         │                                      canvas markers — every surface reads this one
-        │  buildDisplayList()  — layer-role styles; document text laid out by typography, in mm
+        │  buildDisplayList()  — layer-role styles; labels laid out by typography, in mm;
+        │                        captions and dimension values at 12 px, placed for the camera
         ▼
    DisplayList
         │

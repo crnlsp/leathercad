@@ -150,6 +150,10 @@ smaller (2.2 mm against the name's 2.8) and in the same quiet ink:
 The name moves up one line to make room. The iron line takes the name's old place, directly above
 the piece. Paper keeps the name alone (§6).
 
+*Since U.2 (1.5, R-01):* the line is `52 holes · 3.85 mm`, per pitch rather than per iron and
+without the iron's name, under "Card pocket ×2"; both lines are 12 px on screen at every zoom, the
+name alone below 40 %, and their words come from the app's catalogue (`caption.*`).
+
 ## 4. Acceptance criteria
 
 Each is something a person can check in the running application.

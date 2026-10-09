@@ -206,9 +206,9 @@ and `css.ts` projects it onto `:root`.
 | `geo-measure` | `ROLE_STYLES.annotation.colour` | #8A5A2B | exists: dimensions and their numbers |
 | `piece-fill` / `piece-fill-selected` | — | #FAF8F4 / #F7F1DE | **new**, U.1 |
 | `outline-stroke` | `ROLE_STYLES.cut.widthPx` = 1.75 | 1.5 px | **changed**, U.1. Grid lines stay 1 px |
-| `canvas-label` | `CANVAS.caption` = `GROUND.inkDim` #6E695E | #5E5950, 6.0:1 on the ground | **new**, U.2: replaces the light grey for canvas text |
-| `canvas-name` · `canvas-meta` · `canvas-value` | — | 12/16 at 600 · 400 · 500 | **new** type tokens, U.2 |
-| `canvas-text-min` | — | 12 px | **new**, U.2 |
+| `canvas-label` | `CANVAS.caption` = `GROUND.inkDim` #6E695E | #5E5950, 6.0:1 on the ground | **new**, U.2 ✅: `GROUND.label`, `--ground-label`; replaces the light grey for canvas text |
+| `canvas-name` · `canvas-meta` · `canvas-value` | — | 12/16 at 600 · 400 · 500 | **new** type tokens, U.2 ✅: `CANVAS.text.name` · `.meta` · `.value`, with `CANVAS.text.haloPx` 4 |
+| `canvas-text-min` | — | 12 px | **new**, U.2 ✅: `CANVAS.text.minPx` |
 | `primary` | `GO.go` #46B46B | **#F1EEE8** | **changed**, U.7: Print's main half, in the paper colour. Green is retired from actions: it reads as the fold colour |
 | `primary-side` | — | #D2CBBD (the value of `GROUND.major`) | **new**, U.7 |
 | `secondary-side` | — | #3A3F47 | **new**, U.7 |
@@ -249,7 +249,7 @@ The spec's §7 asks for five checks before building.
 | What | Where | Slice |
 |---|---|---|
 | The zoom bands and grid tiers compare **device** pixels per millimetre, and display-list widths are device pixels: on a 2× display the grid and the stitch detail switch at half the zoom, and every line, halo and slit is half as thick | `CanvasHost.tsx` 465 passes `view.scale`; `renderGrid` compares it; `canvas2d/backend.ts` sets `lineWidth = widthPx / perMm`; the backing store is `width × dpr` (`CanvasHost.tsx` 517); `ViewportView` has no `dpr` | U.1 ✅ |
-| One function words a piece for screen and paper, in English, below the app (`describePart`); R-01 changes only the screen's words | `render/src/captions.ts`, `buildDisplayList.ts` `captionsFor`, `export/src/scene.ts` | U.2 |
+| One function words a piece for screen and paper, in English, below the app (`describePart`); R-01 changes only the screen's words | `render/src/captions.ts`, `buildDisplayList.ts` `captionsFor`, `export/src/scene.ts` | U.2 ✅ |
 | Keys are matched by `event.key`, so `[`, `]`, `\` and `Shift+1` fail on layouts where they need AltGr or type another character | `App.tsx` 345–406 | U.3 |
 | Keys are written into catalogue strings — "Settings (Ctrl+,)", "(Ctrl+E)", "(Ctrl+2)" — so macOS reads *Ctrl*, and no rebinding could reach them | `en.json` `projectBar.*Tooltip`, the view switch's tooltips | U.3 |
 | The thin-column tooltip (mockup 16): it is laid out at the anchor's left, shrinks to the gap left before the window's edge, and only then is measured and clamped. It never flips above | `Tooltip.tsx`, its `ref` callback; `.tooltip { max-width: 280px }` | U.3 |
@@ -483,27 +483,27 @@ pattern.
   evaluated layout gives, on screen only; a printed dimension keeps its glyphs.
 
 **Find out first.**
-- [ ] The text size today at 23, 60, 160 and 300 %: 2.8 mm × CSS px per mm. Note it.
-- [ ] How the part's caption avoids a dimension above the piece today (the number's millimetre box
+- [x] The text size today at 23, 60, 160 and 300 %: 2.8 mm × CSS px per mm. Note it.
+- [x] How the part's caption avoids a dimension above the piece today (the number's millimetre box
       counts towards the part's extent). With screen-sized numbers, decide how the two stay apart
       — the conversion happens in `render`.
-- [ ] Whether anything hit-tests a caption or a number's box (`packages/editor/src/hitTest.ts`). If
+- [x] Whether anything hit-tests a caption or a number's box (`packages/editor/src/hitTest.ts`). If
       so, it follows the screen-sized box.
-- [ ] The vendored outlines are Regular only (ADR 0011), so 600 and 500 come from the DOM's
+- [x] The vendored outlines are Regular only (ADR 0011), so 600 and 500 come from the DOM's
       `@font-face`. Check the canvas has the face loaded before the first paint, or the first frame
       draws a fallback.
 
 **Done when — check in the app.**
-- [ ] At 23, 60, 160 and 300 %, every caption and dimension number is 12 px, crisp, and readable
+- [x] At 23, 60, 160 and 300 %, every caption and dimension number is 12 px, crisp, and readable
       over the grid, a piece or a line.
-- [ ] On a 2× display it is the same size to the eye.
-- [ ] Below 40 % captions show the name only.
-- [ ] A long strap scrolled until its top leaves the canvas keeps its caption at the canvas's
+- [x] On a 2× display it is the same size to the eye.
+- [x] Below 40 % captions show the name only.
+- [x] A long strap scrolled until its top leaves the canvas keeps its caption at the canvas's
       top-left until the strap itself leaves the screen.
-- [ ] Captions read "Card pocket ×2" / "52 holes · 3.85 mm".
-- [ ] A printed sheet still reads "Card pocket — cut 2" at 2.8 mm, and the export tests and
+- [x] Captions read "Card pocket ×2" / "52 holes · 3.85 mm".
+- [x] A printed sheet still reads "Card pocket — cut 2" at 2.8 mm, and the export tests and
       fixtures pass unchanged.
-- [ ] `pnpm test locales` passes, and no screen caption word is left in `packages/render`.
+- [x] `pnpm test locales` passes, and no screen caption word is left in `packages/render`.
 
 **Tests.** `buildDisplayList`: screen text items, their tokens, name only below 40 %, the pinned
 position, the words passed in. Contrast: `canvas-label` on `ground` ≥ 6.0:1, `geo-measure` on
@@ -513,6 +513,39 @@ position, the words passed in. Contrast: `canvas-label` on `ground` ≥ 6.0:1, `
 does), the roadmap.
 
 **Not here.** Chips on dimension lines (U.14). The Sheets view's captions (U.9).
+
+**As built (2026-10-08).** What the plan above did not know:
+
+- **Measured before**, from the canvas's own `fillText` calls on the sample wallet: the name
+  (2.8 mm) was 2.43 / 6.35 / 16.93 / 31.75 CSS px at 23 / 60 / 160 / 300 %, the iron line (2.2 mm)
+  1.91 / 4.99 / 13.30 / 24.94, the dimension's number (3 mm) 2.61 / 6.80 / 18.14 / 34.01 — the
+  same CSS size at 2×, twice the device pixels. **After**, 12 CSS px at every zoom: 24 device px
+  at 2×, in 600, 400 and 500.
+- **The board's words are `overlay-text`** with three optional fields — `weight`, `halo` and
+  `rotationRad` — rather than a new item kind; `boardTextItem` makes one in a `CANVAS.text` voice.
+  Both backends draw the halo as a stroke of the ground under the glyphs, 2 × 4 px wide, round
+  joined, and turn a number through `worldToCss`, so neither has a flip of its own.
+- **`buildDisplayList` takes `caption: (part) => { name, detail }`** in place of `captions: boolean`
+  — without it, no caption — and **`view`**, from which it reads the zoom and the canvas inside the
+  rulers (`CANVAS.ruler` now holds the rulers' thicknesses). `describeStitching` and its iron-name
+  trimming went; `stitchingOf(part)` is the facts — holes per nominal pitch, grouped with
+  `approxEq` — and `renderer/src/captionWords.ts` says them from `caption.*` in `en.json`.
+- **The dimension's number is centred on its line's middle**, its baseline half a capital below,
+  so the figures sit on the line and their halo breaks it, as mockup 07 draws "—95.0—". Its screen
+  box, halo included, counts towards the part's extent at the current zoom, so the caption clears
+  it at any zoom (a property test). Nothing hit-tests a caption or a number's glyphs:
+  `hitTest` reads `entry.path`, the dimension and extension lines.
+- **Pinned sooner than the requirement says**: once the caption would run under the ruler, not only
+  once the piece's top is off. Otherwise a piece whose top is within 36 px of the ruler has its name
+  hidden — at 60 % on the sample, the Outer's. Pinned at the canvas's top-left exactly, 12 px in, as
+  mockup 07 draws it; two pinned captions stack instead of overprinting. Fit's 60 px margin leaves
+  every caption above its piece.
+- **The weights were not loaded for the canvas**: `CanvasHost` loaded Regular only, and the Medium
+  and SemiBold the DOM loaded on its own. It now loads all three before repainting.
+- **"Tape join" on the board was 11 px**, under `canvas-text-min`; it is 12. The rulers stay at
+  `--t-num-micro`'s 11 px: they are the frame, not the drawing's words.
+- `pnpm test:visual`: only `stitched-panel.png` changed — its caption. The Sheets view's reference
+  did not move.
 
 ---
 

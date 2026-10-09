@@ -93,8 +93,8 @@ export interface RulerStyle {
 }
 
 export const DEFAULT_RULER_STYLE: RulerStyle = {
-  thicknessPx: 22,
-  leftThicknessPx: 34,
+  thicknessPx: CANVAS.ruler.thicknessPx,
+  leftThicknessPx: CANVAS.ruler.leftThicknessPx,
   // On the ground they measure (UI Foundations §5.2, §9.2).
   background: CANVAS.ruler.background,
   edge: CANVAS.ruler.edge,

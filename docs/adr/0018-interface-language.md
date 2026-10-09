@@ -61,6 +61,7 @@ them:
 | Parts' and the Sheets view's paper wording | `describePrintStatus`, `describeSheets`, … in export | `renderer/src/sheetWords.ts` |
 | Undo labels | English in `document` | `HistoryLabel` — an action and the name or count it needs |
 | A drawing refusal's subject | "An outline" as a fact | `drawing: 'outline' \| 'seam' \| 'cut-out'` |
+| A piece's caption on the board (U.2) | `describePart`, `describeStitching` in render | `renderer/src/captionWords.ts` from `stitchingOf`, words under `caption.*` |
 
 **The language is a preference**, in `preferences.json` like the others (`language`: `system` or a
 supported tag), applied at once from Settings → Language. *Follow system* follows Electron's
@@ -85,7 +86,9 @@ a translation in progress the check lists them, as what is left to do.
 - **Paper keeps its own language, English.** The PDF's footer, part captions and tape-join labels,
   and the Sheets view's picture of them, are drawn by `export` and `render` from glyph outlines
   extracted for Latin (ADR 0011). Printing Cyrillic needs those outlines first; that decision, and
-  whether paper should follow the interface at all, are left for when a language needs it.
+  whether paper should follow the interface at all, are left for when a language needs it. *Since
+  U.2 (1.5):* the Design board's own captions — "Card pocket ×2" over "52 holes · 3.85 mm" — are
+  screen text and the interface's words; only paper still says "Card pocket — cut 2" in English.
 - **Default names stay English**: *Untitled*, *Part 1*, *Stitch line*. They are the maker's data
   once created and are written into the file; making them follow the interface is a product decision
   of its own.
