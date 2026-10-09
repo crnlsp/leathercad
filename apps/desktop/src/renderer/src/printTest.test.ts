@@ -86,8 +86,12 @@ function printTestProject(): Project {
     }),
     addStitchHoles('pocket', 'pocket-holes', 'pocket-stitch'),
 
-    // Longer than A4 portrait prints across, so it is tiled over two sheets.
-    addPart(rectanglePart('strap', 'strap-outline', 'Strap', rectShape(at(0, 0), 250, 25, 5))),
+    // Longer than A4 portrait prints either way — across, or turned, down the
+    // sheet's 268.5 mm — so it is taped over two sheets. It was 250 mm until
+    // pagination turned a piece to save a sheet (7.8), when 250 fitted turned
+    // and the print test no longer taped anything. On A4 landscape, 277 mm
+    // across, it still fits whole.
+    addPart(rectanglePart('strap', 'strap-outline', 'Strap', rectShape(at(0, 0), 275, 25, 5))),
   ];
 
   return commands.reduce(

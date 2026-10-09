@@ -2,9 +2,17 @@ name: Release
 
 # release-please keeps one pull request open that bumps the version and writes
 # CHANGELOG.md from the conventional commits merged since the last release.
-# Merging that pull request tags the release; the second job then builds each
-# platform's installer from the tag — the AppImage, the Windows NSIS installer
-# and the macOS dmg (8.6a) — and attaches them, with an SBOM, to the release.
+# Merging that pull request tags the release. The build job then makes each
+# platform's installer from the tag — the AppImage and the Flatpak, the
+# Windows NSIS installer and the macOS dmg (8.6a) — and the publish job attests
+# them and attaches them, with an SBOM, to the release.
+#
+# The build runs every build-time dependency and the Flatpak bundler, so it
+# holds a read-only token and nothing it could publish or sign with. Only the
+# publish job can write to the release or sign provenance, and it checks out
+# nothing and installs nothing: what it runs is GitHub's own actions and `gh`.
+# The installers cross between the two as artifacts, whose digests the
+# download checks.
 #
 # Unsigned on Windows and ad-hoc signed on macOS, by decision: the project
 # does not buy signing certificates (roadmap 8.6, Code signing). Each
@@ -44,7 +52,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   build:
-    name: Build and attach (${{ matrix.os }})
+    name: Build (${{ matrix.os }})
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     strategy:
@@ -54,9 +62,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -95,26 +101,54 @@ jobs:
           pnpm sbom --sbom-format cyclonedx --sbom-type application
           --filter @leathercad/desktop --out apps/desktop/release/leathercad.cdx.json
 
-      # Signed provenance: this file was built by this workflow from this
+      # Handed to the publish job, which needs every platform's before it
+      # attaches any: a release is all its installers or none.
+      - name: Keep the installers
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ runner.os }}
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.flatpak
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+          # Installers are compressed already.
+          compression-level: 0
+
+  publish:
+    name: Attest and attach
+    needs: [release-please, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+
+      # Signed provenance: these files were built by this workflow from this
       # commit. Attestations on a private repository need Enterprise Cloud,
-      # so the step waits for the repository to be public.
+      # so the step skips itself if the repository is ever private again.
       - name: Attest build provenance
         if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
-            apps/desktop/release/*.AppImage
-            apps/desktop/release/*.flatpak
-            apps/desktop/release/*.exe
-            apps/desktop/release/*.dmg
+            release/*.AppImage
+            release/*.flatpak
+            release/*.exe
+            release/*.dmg
 
       - name: Attach to the release
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.release-please.outputs.tag_name }}
-        run: >-
-          shopt -s nullglob;
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber
-          apps/desktop/release/*.AppImage apps/desktop/release/*.flatpak apps/desktop/release/*.exe
-          apps/desktop/release/*.dmg apps/desktop/release/*.cdx.json
+        run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber release/*

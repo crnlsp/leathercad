@@ -8,7 +8,8 @@ import { CANVAS, ROLE_STYLES, alpha } from './theme/index.js';
 export interface Stroke {
   readonly colour: string;
   /**
-   * Width in **device pixels**, not millimetres.
+   * Width in **CSS pixels**, not millimetres: the backends multiply by the
+   * display's ratio, so a line is as thick on a 2× display as on a 1× one.
    *
    * Screen strokes are constant on screen: a cut line stays legible at any
    * zoom. Export is the opposite — true millimetres, so a 0.25 mm line is
@@ -21,7 +22,7 @@ export interface Stroke {
    */
   readonly dashMm?: readonly number[];
   /**
-   * A dash in **device pixels**, for the tools' own feedback only — rubber
+   * A dash in **CSS pixels**, for the tools' own feedback only — rubber
    * bands, selection boxes, diagnostic highlights. Screen chrome, never
    * printed, so it has no millimetre rhythm to keep. Wins over `dashMm`.
    */
@@ -39,7 +40,7 @@ export type DisplayItem =
       readonly kind: 'dots';
       readonly role: LayerRole;
       readonly points: readonly Vec2[];
-      /** Radius in device pixels — dots stay visible when zoomed out. */
+      /** Radius in CSS pixels — dots stay visible when zoomed out. */
       readonly radiusPx: number;
       readonly fill: string;
     }
@@ -55,8 +56,9 @@ export type DisplayItem =
       readonly stroke: { readonly colour: string; readonly widthPx: number };
     }
   /**
-   * A region between closed paths, filled even-odd: the seam allowance's band
-   * between an edge and the stitching it grew from (F.7). Screen only.
+   * A region between closed paths, filled even-odd: a piece, its outline with
+   * its cut-outs left open (R-02), and the seam allowance's band between an
+   * edge and the stitching it grew from (F.7). Screen only.
    */
   | {
       readonly kind: 'fill';
@@ -107,11 +109,12 @@ export type DisplayItem =
       readonly colour: string;
     }
   /**
-   * Text that never leaves the screen: a rubber-band readout, a snap hint.
+   * Text that never leaves the screen: a rubber-band readout, a snap hint, and
+   * the board's own words — a piece's caption, a dimension's value (R-01).
    *
-   * Sized in **pixels**, because it is chrome rather than content — it should
-   * stay the same size as the user zooms. A separate item kind, so an export
-   * cannot be handed it by accident.
+   * Sized in **pixels**, so it stays the same size as the user zooms, and
+   * reads at every zoom. A separate item kind, so an export cannot be handed it
+   * by accident: paper sets its own captions and values as document text.
    */
   | {
       readonly kind: 'overlay-text';
@@ -122,6 +125,12 @@ export type DisplayItem =
       readonly colour: string;
       readonly align?: CanvasTextAlign;
       readonly baseline?: CanvasTextBaseline;
+      /** A readout's 500 when absent. */
+      readonly weight?: 400 | 500 | 600;
+      /** The ground around every glyph, `widthPx` out from its edge (R-01). */
+      readonly halo?: { readonly colour: string; readonly widthPx: number };
+      /** Turned about `at`, counter-clockwise in the world: a number along its line. */
+      readonly rotationRad?: number;
     }
   /**
    * Where something is wrong: a severity glyph with a short leader to its
@@ -247,7 +256,7 @@ export function textItem(
   role: LayerRole,
   at: Vec2,
   text: string,
-  sizePx = 11,
+  sizePx: number = CANVAS.text.minPx,
   colour?: string,
 ): DisplayItem {
   return {
@@ -257,6 +266,32 @@ export function textItem(
     text,
     sizePx,
     colour: colour ?? ROLE_STROKES[role].colour,
+  };
+}
+
+/**
+ * The board's own words (R-01): a line of a piece's caption, or a dimension's
+ * value — in one of `CANVAS.text`'s voices, the same size at every zoom, on a
+ * halo of the ground so it reads over the grid, a piece or a line. `at` is
+ * on the baseline, where `align` says: its left end unless told otherwise.
+ */
+export function boardTextItem(
+  at: Vec2,
+  text: string,
+  voice: { readonly weight: 400 | 500 | 600; readonly sizePx: number },
+  colour: string,
+  placement: { readonly align?: CanvasTextAlign; readonly rotationRad?: number } = {},
+): DisplayItem {
+  return {
+    kind: 'overlay-text',
+    role: 'annotation',
+    at,
+    text,
+    sizePx: voice.sizePx,
+    colour,
+    weight: voice.weight,
+    halo: { colour: CANVAS.text.halo, widthPx: CANVAS.text.haloPx },
+    ...placement,
   };
 }
 

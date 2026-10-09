@@ -29,6 +29,19 @@ export const GROUND = {
   axis: '#a89e88',
   ink: '#1d2126',
   inkDim: '#6e695e',
+  /**
+   * The board's secondary words (R-01): a caption's detail under the piece's
+   * name. 6.0 : 1 on the ground, where `inkDim` was 4.7.
+   */
+  label: '#5e5950',
+  /**
+   * Inside a piece on screen (R-02): flat and a shade paler than the ground,
+   * with no grid, so a piece reads as a cut piece on a cutting mat. Never
+   * printed.
+   */
+  pieceFill: '#faf8f4',
+  /** The piece being worked on: any of its features selected. */
+  pieceFillSelected: '#f7f1de',
 } as const;
 
 /**
@@ -41,6 +54,18 @@ export const ACCENT = {
   /** On the ground: selection halo, anchors, active guides. */
   tanInk: '#a8810e',
   onTan: '#1d2126',
+} as const;
+
+/**
+ * Print (7.6): the one action that puts the pattern on paper, and the window's
+ * primary action. Green, so it reads as *go* beside the tan of the maker's own
+ * focus, and never drawn on the ground.
+ */
+export const GO = {
+  go: '#46b46b',
+  /** Its edge on hover. */
+  goInk: '#2f8f4e',
+  onGo: '#1d2126',
 } as const;
 
 /**

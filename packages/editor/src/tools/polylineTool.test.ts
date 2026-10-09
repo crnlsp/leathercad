@@ -145,6 +145,23 @@ describe('polyline tool', () => {
     expect(p?.segments).toHaveLength(3);
   });
 
+  it('closes from as far off the first point on a 2× display as on a 1× one', () => {
+    // 10 CSS pixels at 4 CSS px/mm is 2.5 mm, on any display. It was 10 device
+    // pixels — 1.25 mm on a Retina display — so a click that closed the shape
+    // at 1× added a point beside the first at 2× (U.1).
+    const { ctx, store } = harness();
+    ctx.viewport.resize(1600, 1200, 2);
+    ctx.viewport.scale = 8;
+    const tool = createPolylineTool(nextId);
+
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 20, y: 0 });
+    click(tool, ctx, { x: 20, y: 20 });
+    click(tool, ctx, { x: 2, y: 0 });
+
+    expect(firstPath(store)?.closed).toBe(true);
+  });
+
   it('makes a closed run a cut contour', () => {
     const { ctx, store } = harness();
     const tool = createPolylineTool(nextId);

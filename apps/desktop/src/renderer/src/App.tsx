@@ -37,7 +37,13 @@ import { selectionForRightClick, selectionMenu, type RightClicked } from './cont
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { ExportNotice } from './ExportNotice.js';
-import { fileErrorText, useProjectFile, type ExportReport } from './useProjectFile.js';
+import { PrintPreview } from './PrintPreview.js';
+import {
+  fileErrorText,
+  useProjectFile,
+  type DrawingFormat,
+  type ExportReport,
+} from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { printStatusFor } from './sheets.js';
 import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
@@ -49,9 +55,11 @@ import { PropertyPanel } from './PropertyPanel.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
-import { I18nProvider } from './i18n.js';
+import { I18nProvider, useI18n } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
+import { IS_MAC, useKeysInSentences } from './keyCaps.js';
+import { commandFor, type CommandId } from './keymap.js';
 import { isTyping } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
@@ -333,61 +341,51 @@ export function App({
     setExportNotice(await file.exportPdfFile());
   }, [file]);
 
+  // The same for an SVG or a DXF, from the menu beside Export PDF (6.2, 6.5).
+  const exportDrawing = useCallback(
+    async (format: DrawingFormat) => {
+      setExportNotice(await file.exportDrawingFile(format));
+    },
+    [file],
+  );
+
+  // The Print Preview (7.6), open or not.
+  const [printing, setPrinting] = useState(false);
+
   useEffect(() => {
+    // Through the keymap (U.3): each key by where it is on the keyboard, a
+    // letter by the letter it types.
+    const actions: Partial<Record<CommandId, () => void>> = {
+      save: () => void file.save(),
+      saveAs: () => void file.save(true),
+      openProject: () => void openProject(),
+      newProject: () => void newProject(),
+      exportPdf: () => void exportPdf(),
+      print: () => setPrinting(true),
+      design: () => showView('design'),
+      sheets: () => showView('sheets'),
+      // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
+      keyboardShortcuts: () => setSettings('shortcuts'),
+      settings: () => setSettings('general'),
+      // The view (8.4b): zoom in, zoom out, and fit the pattern.
+      zoomIn: () => canvasRef.current?.zoom(ZOOM_STEP),
+      zoomOut: () => canvasRef.current?.zoom(1 / ZOOM_STEP),
+      fit: () => canvasRef.current?.fit(),
+    };
     const onKey = (event: KeyboardEvent): void => {
       if (isTyping(event.target)) return;
-
-      if (event.ctrlKey || event.metaKey) {
-        const key = event.key.toLowerCase();
-        if (key === 's') {
-          event.preventDefault();
-          void file.save(event.shiftKey);
-        } else if (key === 'o') {
-          event.preventDefault();
-          void openProject();
-        } else if (key === 'n') {
-          event.preventDefault();
-          void newProject();
-        } else if (key === 'e') {
-          event.preventDefault();
-          void exportPdf();
-        } else if (key === '1') {
-          event.preventDefault();
-          showView('design');
-        } else if (key === '2') {
-          event.preventDefault();
-          showView('sheets');
-        } else if (key === '/') {
-          event.preventDefault();
-          setSettings('shortcuts');
-        } else if (key === ',') {
-          event.preventDefault();
-          setSettings('general');
-        } else if (key === '=' || key === '+') {
-          // The view (8.4b): zoom in, zoom out, and fit the pattern.
-          event.preventDefault();
-          canvasRef.current?.zoom(ZOOM_STEP);
-        } else if (key === '-') {
-          event.preventDefault();
-          canvasRef.current?.zoom(1 / ZOOM_STEP);
-        } else if (key === '0') {
-          event.preventDefault();
-          canvasRef.current?.fit();
-        }
+      const command = commandFor(event, IS_MAC);
+      if (command === null) return;
+      if (command.startsWith('tool.')) {
+        // The active tool claimed this key (the polyline's A and L mid-run).
+        if (event.defaultPrevented) return;
+        chooseTool(command.slice('tool.'.length));
         return;
       }
-
-      // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
-      if (event.key === '?') {
-        event.preventDefault();
-        setSettings('shortcuts');
-        return;
-      }
-
-      // The active tool claimed this key (the polyline's A and L mid-run).
-      if (event.defaultPrevented) return;
-      const match = ALL_TOOLS.find((tool) => tool.key.toLowerCase() === event.key.toLowerCase());
-      if (match !== undefined) chooseTool(match.id);
+      const action = actions[command];
+      if (action === undefined) return;
+      event.preventDefault();
+      action();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -579,6 +577,9 @@ export function App({
           onSettings={() => setSettings('general')}
           onSave={() => void file.save()}
           onExport={() => void exportPdf()}
+          onExportSvg={() => void exportDrawing('svg')}
+          onExportDxf={() => void exportDrawing('dxf')}
+          onPrint={() => setPrinting(true)}
         />
 
         {/* The work bar (F.8): what the maker is doing right now — history, the
@@ -599,6 +600,7 @@ export function App({
                   ? null
                   : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
               }
+              keys="undo"
             >
               <button
                 type="button"
@@ -610,15 +612,24 @@ export function App({
                 {t('work.undo')}
               </button>
             </Tooltip>
-            <button
-              type="button"
-              className="tool"
-              data-testid="redo"
-              disabled={!storeState.canRedo}
-              onClick={() => store.redo()}
+            <Tooltip
+              text={
+                storeState.redoLabel === null
+                  ? null
+                  : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
+              }
+              keys="redo"
             >
-              {t('work.redo')}
-            </button>
+              <button
+                type="button"
+                className="tool"
+                data-testid="redo"
+                disabled={!storeState.canRedo}
+                onClick={() => store.redo()}
+              >
+                {t('work.redo')}
+              </button>
+            </Tooltip>
           </div>
           {view === 'design' ? (
             <>
@@ -633,9 +644,7 @@ export function App({
               />
               {/* What the active tool does with a click or a drag, true for that
                 tool and no other (F.1). It is what gives way when the bar narrows. */}
-              <span className="work-hint" data-testid="tool-how-to">
-                {t('work.howTo', { howTo: howToFor(toolId, t) })}
-              </span>
+              <ToolHowTo toolId={toolId} />
             </>
           ) : (
             <SheetsSummary project={storeState.document.project} />
@@ -850,6 +859,21 @@ export function App({
 
         {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
 
+        {printing && (
+          <PrintPreview
+            project={storeState.document.project}
+            store={store}
+            appVersion={version ?? '0.0.0'}
+            // Where the app cannot print itself: the bytes previewed are the
+            // bytes saved, and the export's own notice follows.
+            onSavePdf={(bytes) => {
+              setPrinting(false);
+              void file.exportPdfFile(bytes).then(setExportNotice);
+            }}
+            onClose={() => setPrinting(false)}
+          />
+        )}
+
         {exportNotice !== null && (
           <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />
         )}
@@ -907,8 +931,14 @@ function describeDelete(project: Project, pending: PendingDelete, t: Translate):
   return named.length === 1 ? named[0]!.name : t('deleteDialog.features', { count: named.length });
 }
 
-/** The active tool's one line of guidance. */
-function howToFor(toolId: string, t: Translate): string {
+/** The active tool's one line of guidance, naming its keys from the keymap (U.3). */
+function ToolHowTo({ toolId }: { toolId: string }) {
+  const { t } = useI18n();
+  const keys = useKeysInSentences();
   const tool = ALL_TOOLS.find((entry) => entry.id === toolId);
-  return tool === undefined ? '' : t(`tools.${tool.id}.howTo`);
+  return (
+    <span className="work-hint" data-testid="tool-how-to">
+      {t('work.howTo', { howTo: tool === undefined ? '' : t(`tools.${tool.id}.howTo`, keys) })}
+    </span>
+  );
 }

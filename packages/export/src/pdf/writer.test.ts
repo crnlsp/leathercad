@@ -13,16 +13,26 @@ import {
   type ProjectSettings,
 } from '@leathercad/domain';
 import { PathOps, RectOps, uniformRadii } from '@leathercad/geometry';
-import { PDFDocument, PDFName, type PDFDict } from 'pdf-lib';
+import {
+  PDFArray,
+  PDFDocument,
+  PDFName,
+  decodePDFRawStream,
+  type PDFDict,
+  type PDFPage,
+  type PDFRawStream,
+} from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_PAGE_SETUP,
+  PAPER_SIZES,
   contentAreaMm,
   mmToPt,
   pageSetupFor,
   sheetSizeMm,
   verificationLayout,
+  type PageSetup,
 } from '../paper.js';
 import { buildExportScene } from '../scene.js';
 import { planSheets } from '../sheetPlan.js';
@@ -123,15 +133,19 @@ function projectWithRect(widthMm: number, heightMm: number, radius = 0): Project
   };
 }
 
-async function pdfFor(project: Project): Promise<Uint8Array> {
+async function pdfFor(project: Project, options: { upright?: boolean } = {}): Promise<Uint8Array> {
   const scene = buildExportScene(evaluate(project), project.name);
   // What the application passes: the plan for the project's own paper.
   const { bytes } = await exportPdf(planSheets(scene, pageSetupFor(project.settings)), {
     now: FIXED_NOW,
     applicationVersion: 'test',
+    ...options,
   });
   return bytes;
 }
+
+/** What Print sends (7.6b): every sheet upright on its paper. */
+const printFormOf = (project: Project) => pdfFor(project, { upright: true });
 
 /** The same project, printed on different paper. */
 function on(project: Project, paper: ProjectSettings['paper'], orientation: Orientation): Project {
@@ -420,6 +434,23 @@ describe('document structure', () => {
     expect(document.getPageCount()).toBe(1);
   });
 
+  it('writes no transform at all into a file, on any paper (printing.md §6.1)', async () => {
+    // *Export PDF*: the sheet as chosen, a landscape one as a landscape page,
+    // and every coordinate already in points. Nothing for a viewer to undo.
+    for (const paper of PAPER_NAMES) {
+      for (const orientation of ORIENTATIONS) {
+        const project = on(projectWithRect(275, 100), paper, orientation);
+        const document = await PDFDocument.load(await pdfFor(project));
+        const sheet = sheetSizeMm(pageSetupFor(project.settings));
+        for (const page of document.getPages()) {
+          expect(transformsOn(page), `${paper} ${orientation}`).toEqual([]);
+          expect(page.getWidth()).toBeCloseTo(mmToPt(sheet.widthMm), 4);
+          expect(page.getHeight()).toBeCloseTo(mmToPt(sheet.heightMm), 4);
+        }
+      }
+    }
+  });
+
   it('adds pages rather than shrinking when parts overflow', async () => {
     const project = projectWithRect(180, 120);
     const many: Project = {
@@ -433,6 +464,97 @@ describe('document structure', () => {
     const document = await PDFDocument.load(await pdfFor(many));
     expect(document.getPageCount()).toBeGreaterThan(1);
   });
+});
+
+/** A page's content stream, decompressed, as the text of its operators. */
+function contentOf(page: PDFPage): string {
+  const contents = page.node.Contents();
+  const streams =
+    contents instanceof PDFArray
+      ? contents.asArray().map((ref) => page.node.context.lookup(ref))
+      : [contents];
+  return streams
+    .map((stream) => new TextDecoder().decode(decodePDFRawStream(stream as PDFRawStream).decode()))
+    .join('\n');
+}
+
+/** Every `cm` on a page — the operator that sets a transform — as its six numbers. */
+function transformsOn(page: PDFPage): number[][] {
+  return [...contentOf(page).matchAll(/((?:-?[\d.]+\s+){6})cm\b/g)].map((match) =>
+    match[1]!.trim().split(/\s+/).map(Number),
+  );
+}
+
+describe('the print form: every sheet upright on its paper (7.6b)', () => {
+  // What *Print* sends. Printers take paper upright, and CUPS cannot turn a
+  // landscape page onto it without shrinking it — with scaling off it cuts it
+  // off instead — so every page is upright, and a landscape sheet lies on it
+  // turned a quarter (printing.md §6.1, §13).
+  const everySheet = PAPER_NAMES.flatMap((paper) =>
+    ORIENTATIONS.map((orientation) => [paper, orientation] as const),
+  );
+
+  it.each(everySheet)(
+    'puts every sheet of %s %s upright, and unrotated',
+    async (paper, orientation) => {
+      const project = on(projectWithRect(275, 100), paper, orientation);
+      const plan = planSheets(
+        buildExportScene(evaluate(project), project.name),
+        pageSetupFor(project.settings),
+      );
+      const document = await PDFDocument.load(await printFormOf(project));
+
+      // The sheets of the plan, in its order: the count the maker was shown.
+      expect(document.getPageCount()).toBe(plan.sheets.length);
+      for (const page of document.getPages()) {
+        expect(page.getWidth()).toBeCloseTo(mmToPt(PAPER_SIZES[paper].widthMm), 4);
+        expect(page.getHeight()).toBeCloseTo(mmToPt(PAPER_SIZES[paper].heightMm), 4);
+        // A page /Rotate is how a viewer would show it the right way up, and
+        // CUPS reads it as a landscape page again: cut off, or shrunk.
+        expect(page.getRotation().angle).toBe(0);
+      }
+    },
+  );
+
+  it.each(PAPER_NAMES)(
+    'turns a landscape sheet of %s with one quarter turn: a rotation, determinant 1, no scale',
+    async (paper) => {
+      const project = on(projectWithRect(275, 100), paper, 'landscape');
+      const document = await PDFDocument.load(await printFormOf(project));
+
+      for (const page of document.getPages()) {
+        const transforms = transformsOn(page);
+        expect(transforms).toHaveLength(1);
+        const [a, b, c, d, e, f] = transforms[0]!;
+        // (x, y) → (−y, x): a quarter turn counter-clockwise, every coefficient
+        // 0 or ±1, so nothing is rounded…
+        expect([a, b, c, d]).toEqual([0, 1, -1, 0]);
+        // …whose determinant is 1 and whose columns are unit length: lengths
+        // and angles kept, nothing scaled, nothing mirrored…
+        expect(a! * d! - b! * c!).toBe(1);
+        expect(Math.hypot(a!, b!)).toBe(1);
+        expect(Math.hypot(c!, d!)).toBe(1);
+        // …then across the paper's width, so the sheet lands on it.
+        expect(e).toBeCloseTo(mmToPt(PAPER_SIZES[paper].widthMm), 6);
+        expect(f).toBe(0);
+        // Before anything is drawn, so everything on the sheet turns with it.
+        expect(contentOf(page).trimStart()).toMatch(/^0 1 -1 0 [\d.]+ 0 cm\b/);
+      }
+    },
+  );
+
+  it.each(PAPER_NAMES)(
+    'leaves a portrait sheet of %s as the file has it, byte for byte',
+    async (paper) => {
+      const project = on(projectWithRect(100, 50), paper, 'portrait');
+      const printed = await printFormOf(project);
+
+      for (const page of (await PDFDocument.load(printed)).getPages()) {
+        expect(transformsOn(page)).toEqual([]);
+      }
+      expect(printed).toEqual(await pdfFor(project));
+    },
+  );
 });
 
 /**
@@ -537,14 +659,30 @@ function render(bytes: Uint8Array, pageNumber = 1): Gray {
 }
 
 /**
+ * A page of the print form turned a quarter clockwise, as a maker turns the
+ * paper to read a landscape sheet on it. Whole pixels move; none is
+ * resampled, so a length measured here is the length on the page.
+ */
+function turnedBack(image: Gray): Gray {
+  const width = image.height;
+  const pixels = new Uint8Array(image.width * image.height);
+  for (let y = 0; y < image.width; y++) {
+    for (let x = 0; x < width; x++) {
+      pixels[y * width + x] = image.pixels[(image.height - 1 - x) * image.width + y]!;
+    }
+  }
+  return { width, height: image.width, pixels };
+}
+
+/**
  * The image rows covering the printable area.
  *
  * Derived from the page setup rather than guessed, so the scan follows the
  * layout instead of silently including the verification block.
  */
-function contentRows(): [number, number] {
-  const area = contentAreaMm(DEFAULT_PAGE_SETUP);
-  const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
+function contentRows(setup: PageSetup = DEFAULT_PAGE_SETUP): [number, number] {
+  const area = contentAreaMm(setup);
+  const sheet = sheetSizeMm(setup);
   // Image rows run downward from the top of the page; millimetres run up.
   return [
     Math.floor((sheet.heightMm - (area.y + area.heightMm)) * PX_PER_MM),
@@ -618,14 +756,20 @@ function clusterCentres(image: Gray, fromRow: number, toRow: number): number[] {
   return centres;
 }
 
-function darkBounds(image: Gray, fromRow: number, toRow: number, fromColumn = 0) {
+function darkBounds(
+  image: Gray,
+  fromRow: number,
+  toRow: number,
+  fromColumn = 0,
+  toColumn = image.width,
+) {
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
   let maxY = Number.NEGATIVE_INFINITY;
 
   for (let y = fromRow; y < Math.min(toRow, image.height); y++) {
-    for (let x = fromColumn; x < image.width; x++) {
+    for (let x = fromColumn; x < Math.min(toColumn, image.width); x++) {
       if (image.pixels[y * image.width + x]! < 128) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
@@ -660,64 +804,77 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     expect(widthMm).toBeLessThan(100.4);
   });
 
-  it('draws a 50 mm verification square that measures 50 mm', async () => {
-    // The user's backstop against a scaled print, so it had better be 50 mm.
-    const image = render(await pdfFor(projectWithRect(100, 50)));
-
-    // Look only where the square is. The band below the content area also
-    // holds the warning text and the page footer, both of which reach further
-    // right than the square does.
-    const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
-    const squareBottomMm = DEFAULT_PAGE_SETUP.marginsMm.bottom + 8;
-    const bounds = darkBounds(
+  /** The ink around where the layout puts the gauge: the gauge, and what is written in it. */
+  const gaugeOn = (image: Gray, setup: PageSetup) => {
+    const { gauge, gaugeWidthMm, gaugeHeightMm } = verificationLayout(setup);
+    const sheet = sheetSizeMm(setup);
+    return darkBounds(
       image,
-      Math.floor((sheet.heightMm - (squareBottomMm + 52)) * PX_PER_MM),
-      Math.ceil((sheet.heightMm - squareBottomMm + 1) * PX_PER_MM),
-      Math.round(115 * PX_PER_MM),
+      Math.floor((sheet.heightMm - (gauge.y + gaugeHeightMm + 1)) * PX_PER_MM),
+      Math.ceil((sheet.heightMm - gauge.y + 1) * PX_PER_MM),
+      Math.round((gauge.x - 1) * PX_PER_MM),
+      Math.round((gauge.x + gaugeWidthMm + 1) * PX_PER_MM),
     );
+  };
+  const expectGauge = (bounds: ReturnType<typeof darkBounds>) => {
+    // Ink, so the line's width wider than the 100 × 5 mm between its centres.
     expect(bounds.found).toBe(true);
+    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(99.8);
+    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(100.4);
+    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeGreaterThan(4.8);
+    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeLessThan(5.4);
+  };
 
-    const widthMm = (bounds.maxX - bounds.minX) / PX_PER_MM;
-    const heightMm = (bounds.maxY - bounds.minY) / PX_PER_MM;
-    expect(widthMm).toBeGreaterThan(49.8);
-    expect(widthMm).toBeLessThan(50.4);
-    expect(heightMm).toBeGreaterThan(49.8);
-    expect(heightMm).toBeLessThan(50.4);
+  it('draws a 100 × 5 mm gauge that measures 100 × 5 mm (7.8)', async () => {
+    // The maker's backstop against a scaled print, so it had better be exact.
+    // Its words beside it reach no lower and no higher than it does.
+    expectGauge(gaugeOn(render(await pdfFor(projectWithRect(100, 50))), DEFAULT_PAGE_SETUP));
   });
 
   it.each(
     PAPER_NAMES.flatMap((paper) =>
       ORIENTATIONS.map((orientation) => [paper, orientation] as const),
     ),
-  )('prints the 50 mm square on %s %s, where the layout puts it', async (paper, orientation) => {
-    // Regression: on A5 portrait the square was skipped, on a page that still
-    // told the maker to measure it. Measured through poppler on every sheet a
-    // maker can choose, at the place `verificationLayout` gives.
+  )('prints the gauge on %s %s, where the layout puts it', async (paper, orientation) => {
+    // Regression, from the 50 mm square before it: on A5 portrait the square
+    // was skipped, on a page that still told the maker to measure it.
+    // Measured through poppler on every sheet a maker can choose.
     const project = on(projectWithRect(100, 50), paper, orientation);
-    const setup = pageSetupFor(project.settings);
-    const { square, squareSizeMm } = verificationLayout(setup);
-    const sheet = sheetSizeMm(setup);
-    const image = render(await pdfFor(project));
-
-    const bounds = darkBounds(
-      image,
-      Math.floor((sheet.heightMm - (square.y + squareSizeMm + 2)) * PX_PER_MM),
-      Math.ceil((sheet.heightMm - square.y + 1) * PX_PER_MM),
-      Math.round((square.x - 1) * PX_PER_MM),
-    );
-    expect(bounds.found).toBe(true);
-    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(49.8);
-    expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(50.4);
-    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeGreaterThan(49.8);
-    expect((bounds.maxY - bounds.minY) / PX_PER_MM).toBeLessThan(50.4);
+    expectGauge(gaugeOn(render(await pdfFor(project)), pageSetupFor(project.settings)));
   });
 
+  it('draws a 100 mm line as 100 mm on a landscape sheet turned onto upright paper (7.6b)', async () => {
+    // What Print sends. On the paper the line runs up the page; turned back
+    // as the maker reads it, it is where the landscape layout put it.
+    const project = on(projectWithRect(100, 50), 'A4', 'landscape');
+    const page = render(await printFormOf(project));
+    expect(Math.abs(page.width - 210 * PX_PER_MM)).toBeLessThanOrEqual(1);
+    expect(Math.abs(page.height - 297 * PX_PER_MM)).toBeLessThanOrEqual(1);
+
+    const bounds = darkBounds(turnedBack(page), ...contentRows(pageSetupFor(project.settings)));
+    expect(bounds.found).toBe(true);
+    const lengthMm = (bounds.maxX - bounds.minX) / PX_PER_MM;
+    expect(lengthMm).toBeGreaterThan(99.8);
+    expect(lengthMm).toBeLessThan(100.4);
+  });
+
+  it.each(PAPER_NAMES)(
+    'prints the gauge 100 × 5 mm on %s landscape turned onto upright paper (7.6b)',
+    async (paper) => {
+      // The gauge, its words and the mark turn with the sheet: whole, inside
+      // the paper's margins, and read the right way when the paper is turned.
+      const project = on(projectWithRect(100, 50), paper, 'landscape');
+      const page = turnedBack(render(await printFormOf(project)));
+      expectGauge(gaugeOn(page, pageSetupFor(project.settings)));
+    },
+  );
+
   it('prints a strap too long for the sheet on two, halves that add up to its length (7.2a)', async () => {
-    // A 250 mm strap on A4 portrait, which prints 190 mm across. Measured on
+    // A 275 mm strap on A4 portrait, too long for it either way. Measured on
     // paper only, through poppler: on each sheet, from the strap's end to the
     // dashed join line the two sheets share. Laid together on that line, the
     // halves must be the strap — at 1:1, with nothing lost in the overlap.
-    const project = projectWithRect(250, 100);
+    const project = projectWithRect(275, 100);
     const scene = buildExportScene(evaluate(project), project.name);
     const plan = planSheets(scene, pageSetupFor(project.settings));
     const { bytes } = await exportPdf(plan, { now: FIXED_NOW, applicationVersion: 'test' });
@@ -755,37 +912,26 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     const onSecond = (rightEnd - mean(second.grey)) / PX_PER_MM;
 
     // Within half a millimetre: two strokes and two join lines of pixels.
-    expect(Math.abs(onFirst + onSecond - 250)).toBeLessThan(0.5);
+    expect(Math.abs(onFirst + onSecond - 275)).toBeLessThan(0.5);
     // The join is in the overlap: both halves are more than a sheet's worth apart.
     expect(onFirst).toBeGreaterThan(100);
     expect(onSecond).toBeGreaterThan(50);
   });
 
-  it('prints the whole verification block on every tiled sheet', async () => {
-    const project = projectWithRect(250, 100);
+  it('prints the gauge on every tiled sheet', async () => {
+    const project = projectWithRect(275, 100);
     const bytes = await pdfFor(project);
     const setup = pageSetupFor(project.settings);
-    const { square, squareSizeMm } = verificationLayout(setup);
-    const sheet = sheetSizeMm(setup);
-    for (const pageNumber of [1, 2]) {
-      const bounds = darkBounds(
-        render(bytes, pageNumber),
-        Math.floor((sheet.heightMm - (square.y + squareSizeMm + 2)) * PX_PER_MM),
-        Math.ceil((sheet.heightMm - square.y + 1) * PX_PER_MM),
-        Math.round((square.x - 1) * PX_PER_MM),
-      );
-      expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeGreaterThan(49.8);
-      expect((bounds.maxX - bounds.minX) / PX_PER_MM).toBeLessThan(50.4);
-    }
+    for (const pageNumber of [1, 2]) expectGauge(gaugeOn(render(bytes, pageNumber), setup));
   });
 
-  it('keeps the pattern clear of the verification block', async () => {
-    // Regression: the square ran from 18 mm to 68 mm above the page bottom
-    // while the content area began at 36 mm, so a part could be printed
-    // straight over the thing that proves the scale is right.
+  it('keeps the pattern clear of the verification strip', () => {
+    // Regression: the square once ran from 18 mm to 68 mm above the page
+    // bottom while the content area began at 36 mm, so a part could be
+    // printed straight over the thing that proves the scale is right.
     const area = contentAreaMm(DEFAULT_PAGE_SETUP);
-    const squareTopMm = DEFAULT_PAGE_SETUP.marginsMm.bottom + 8 + 50;
-    expect(area.y).toBeGreaterThan(squareTopMm);
+    const { gauge, gaugeHeightMm } = verificationLayout(DEFAULT_PAGE_SETUP);
+    expect(area.y).toBeGreaterThan(gauge.y + gaugeHeightMm);
   });
 
   it('scales a 200 mm pattern to 200 mm, not to the page', async () => {

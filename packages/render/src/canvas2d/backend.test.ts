@@ -1,16 +1,21 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { EPS_POINT } from '@leathercad/core';
 import { arc, cubic, line, PathOps } from '@leathercad/geometry';
 
 import {
+  boardTextItem,
   documentTextItem,
   dotsItem,
   fillItem,
   foldTickItem,
   hatchItem,
   linkTickItem,
+  markerItem,
   pathItem,
   slitsItem,
   textItem,
+  type DisplayList,
 } from '../displayList.js';
 import { CANVAS, GROUND } from '../theme/index.js';
 import type { ViewportView } from '../view.js';
@@ -84,12 +89,21 @@ class Recorder implements Canvas2DLike {
   fillText(t: string, x: number, y: number): void {
     this.record('fillText', t, x, y);
   }
+  strokeText(t: string, x: number, y: number): void {
+    this.record('strokeText', t, x, y, String(this.strokeStyle), this.lineWidth, this.lineJoin);
+  }
   setLineDash(s: number[]): void {
     this.record('setLineDash', s.join('|'));
   }
 }
 
-const view: ViewportView = { centreMm: { x: 0, y: 0 }, scale: 4, widthPx: 800, heightPx: 600 };
+const view: ViewportView = {
+  centreMm: { x: 0, y: 0 },
+  scale: 4,
+  widthPx: 800,
+  heightPx: 600,
+  dpr: 1,
+};
 
 describe('tracePath', () => {
   it('emits a single moveTo for a connected path', () => {
@@ -108,6 +122,32 @@ describe('tracePath', () => {
 
     expect(ctx.calls.filter((c) => c.startsWith('moveTo'))).toHaveLength(1);
     expect(ctx.calls.filter((c) => c.startsWith('lineTo'))).toHaveLength(2);
+  });
+
+  it('keeps a joint that meets within EPS_POINT in one subpath', () => {
+    // A path's segments only promise to meet within EPS_POINT, so a joint
+    // that close is a joint, not a gap to start a new subpath at.
+    const ctx = new Recorder();
+    tracePath(
+      ctx,
+      PathOps.open([
+        line({ x: 0, y: 0 }, { x: 10, y: 0 }),
+        line({ x: 10 + EPS_POINT / 2, y: 0 }, { x: 10, y: 10 }),
+      ]),
+    );
+    expect(ctx.calls.filter((c) => c.startsWith('moveTo'))).toHaveLength(1);
+  });
+
+  it('starts a new subpath at a real gap', () => {
+    const ctx = new Recorder();
+    tracePath(
+      ctx,
+      PathOps.unsafePath([
+        line({ x: 0, y: 0 }, { x: 10, y: 0 }),
+        line({ x: 10 + EPS_POINT * 2, y: 0 }, { x: 10, y: 10 }),
+      ]),
+    );
+    expect(ctx.calls.filter((c) => c.startsWith('moveTo'))).toHaveLength(2);
   });
 
   it('closes a closed path', () => {
@@ -213,8 +253,8 @@ describe('renderDisplayList', () => {
     );
 
     const stroke = ctx.calls.find((c) => c.startsWith('stroke('));
-    // 1.75 px (the cut edge, UI Foundations §8.1) / 4 px per mm.
-    expect(stroke).toContain('0.4375');
+    // 1.5 px (the cut edge, R-02; it was 1.75, UI Foundations §8.1) / 4 px per mm.
+    expect(stroke).toContain('0.3750');
   });
 
   const line = PathOps.polyline(
@@ -258,6 +298,48 @@ describe('renderDisplayList', () => {
       .lastIndexOf('setTransform(1.0000,0.0000,0.0000,1.0000,0.0000,0.0000)');
     expect(identityBefore).toBeGreaterThan(-1);
     expect(ctx.calls[textIndex]).toBe('fillText(hello,400.0000,300.0000)');
+  });
+
+  it('sets the board’s words in their own weight, on a halo of the ground (R-01)', () => {
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      { items: [boardTextItem({ x: 0, y: 0 }, 'Card pocket ×2', CANVAS.text.name, GROUND.ink)] },
+      view,
+    );
+
+    expect(ctx.font).toBe('600 12px "IBM Plex Sans", sans-serif');
+    // The halo first, 4 px out from every glyph's edge, round, so the words
+    // are read against the ground over a line or a piece; then the words.
+    const halo = ctx.calls.findIndex((c) => c.startsWith('strokeText('));
+    expect(ctx.calls[halo]).toBe(
+      `strokeText(Card pocket ×2,400.0000,300.0000,${GROUND.ground},8.0000,round)`,
+    );
+    expect(ctx.calls[halo + 1]).toBe('fillText(Card pocket ×2,400.0000,300.0000)');
+  });
+
+  it('turns a dimension’s number to read along its line, through the world transform', () => {
+    // A quarter turn counter-clockwise in the world reads bottom to top on
+    // screen: the text's own x axis is the screen's −y.
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      {
+        items: [
+          boardTextItem({ x: 10, y: 5 }, '30.0', CANVAS.text.value, '#8a5a2b', {
+            rotationRad: Math.PI / 2,
+          }),
+        ],
+      },
+      view,
+    );
+
+    const text = ctx.calls.findIndex((c) => c.startsWith('fillText('));
+    expect(ctx.calls[text]).toBe('fillText(30.0,0.0000,0.0000)');
+    // 10 mm right of and 5 mm above the middle of an 800 × 600 canvas at 4 px/mm.
+    expect(ctx.calls.slice(0, text)).toContain(
+      'setTransform(0.0000,-1.0000,1.0000,0.0000,440.0000,280.0000)',
+    );
   });
 
   it('draws document text glyph by glyph, where the layout put them', () => {
@@ -331,6 +413,138 @@ describe('renderDisplayList', () => {
     // 2 px at 4 px/mm is 0.5 mm in world space.
     expect(ctx.calls.filter((c) => c.startsWith('arc('))).toHaveLength(2);
     expect(ctx.calls.find((c) => c.startsWith('arc('))).toContain('0.5000');
+  });
+});
+
+describe('on a 2× display (U.1)', () => {
+  // Every screen-constant size is in CSS pixels, and the backend multiplies by
+  // the display's ratio once. It used to treat them as device pixels, so on a
+  // Retina display every line, halo, slit and glyph drew half as thick.
+  const line = PathOps.polyline(
+    [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ],
+    false,
+  );
+  /** The 1× view's CSS size and zoom, on a display of this ratio. */
+  const at = (dpr: number, css = 4): ViewportView => ({
+    centreMm: { x: 0, y: 0 },
+    scale: css * dpr,
+    widthPx: 800 * dpr,
+    heightPx: 600 * dpr,
+    dpr,
+  });
+  const devicePx = (ctx: Recorder, scale: number): number =>
+    Number(ctx.calls.find((c) => c.startsWith('stroke('))!.split(',')[1]) * scale;
+
+  it('strokes a 1.5 px line 1.5 device pixels wide at 1×, and 3 at 2×', () => {
+    for (const dpr of [1, 2]) {
+      const ctx = new Recorder();
+      renderDisplayList(ctx, { items: [pathItem('cut', line, { widthPx: 1.5 })] }, at(dpr));
+      expect(devicePx(ctx, at(dpr).scale)).toBeCloseTo(1.5 * dpr, 9);
+    }
+  });
+
+  it('sets a readout in CSS pixels, under the ratio', () => {
+    const ctx = new Recorder();
+    renderDisplayList(ctx, { items: [textItem('annotation', { x: 0, y: 0 }, 'hello', 11)] }, at(2));
+    const text = ctx.calls.findIndex((c) => c.startsWith('fillText'));
+    expect(ctx.calls.slice(0, text)).toContain(
+      'setTransform(2.0000,0.0000,0.0000,2.0000,0.0000,0.0000)',
+    );
+    // The canvas's CSS middle, at 11 CSS px: 22 device pixels tall.
+    expect(ctx.calls[text]).toBe('fillText(hello,400.0000,300.0000)');
+    expect(ctx.font).toBe('500 11px "IBM Plex Sans", sans-serif');
+  });
+
+  it('keeps document text true to size: its millimetres times the device scale', () => {
+    const ctx = new Recorder();
+    renderDisplayList(
+      ctx,
+      { items: [documentTextItem('annotation', { x: 0, y: 0 }, 'A', 4)] },
+      at(2),
+    );
+    // 4 mm at 4 CSS px/mm on a 2× display: 32 device pixels, at the device middle.
+    expect(ctx.font).toBe('32px "IBM Plex Sans", sans-serif');
+    expect(ctx.calls.find((c) => c.startsWith('fillText'))).toBe('fillText(A,800.0000,600.0000)');
+  });
+
+  it('multiplies every screen-constant size by the ratio exactly once', () => {
+    // Everything a list can hold that has a size on screen. Drawn at the same
+    // CSS zoom on two displays, the calls differ only in the transforms, by
+    // the ratio: every width, dash, radius, spacing and glyph is the same
+    // number, drawn under a transform that is the ratio times as large.
+    const square = PathOps.polyline(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 },
+      ],
+      true,
+    );
+    const list: DisplayList = {
+      items: [
+        fillItem('cut', [square], GROUND.ground),
+        hatchItem(square),
+        pathItem('cut', square),
+        pathItem('stitch', line),
+        pathItem('construction', line, { dashPx: [4, 3] }),
+        pathItem('construction', square, { colour: CANVAS.halo.selected, widthPx: 5, dashPx: [] }),
+        dotsItem('construction', [{ x: 1, y: 2 }], 3),
+        slitsItem(
+          [
+            [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+          ],
+          1.25,
+        ),
+        foldTickItem({ x: 5, y: 5 }, 'valley'),
+        linkTickItem('stitch', { x: 5, y: 0 }, { x: 1, y: 0 }),
+        textItem('annotation', { x: 2, y: 3 }, '40 mm', 11),
+        boardTextItem({ x: 4, y: 1 }, 'Panel', CANVAS.text.name, GROUND.ink),
+        boardTextItem({ x: 4, y: 1 }, '30.0', CANVAS.text.value, '#8a5a2b', { rotationRad: 0.7 }),
+        markerItem({ x: 3, y: 3 }, 'warning', '#b5651a', true),
+      ],
+    };
+    // Arguments, and a dash's segments, as numbers where they are numbers.
+    const numbers = (call: string): (number | string)[] =>
+      call
+        .slice(call.indexOf('(') + 1, -1)
+        .split(/[,|]/)
+        .map((arg) => (arg === '' || Number.isNaN(Number(arg)) ? arg : Number(arg)));
+
+    fc.assert(
+      fc.property(
+        fc.constantFrom(1.25, 1.5, 2, 3),
+        fc.double({ min: 0.1, max: 40, noNaN: true }),
+        (dpr, css) => {
+          const one = new Recorder();
+          const other = new Recorder();
+          renderDisplayList(one, list, at(1, css));
+          renderDisplayList(other, list, at(dpr, css));
+          expect(other.calls.map((c) => c.split('(')[0])).toEqual(
+            one.calls.map((c) => c.split('(')[0]),
+          );
+          other.calls.forEach((call, i) => {
+            const mine = numbers(call);
+            const theirs = numbers(one.calls[i]!);
+            const by = call.startsWith('setTransform(') ? dpr : 1;
+            mine.forEach((value, j) => {
+              const expected = theirs[j]!;
+              if (typeof value === 'string' || typeof expected === 'string') {
+                expect(value).toBe(expected);
+              } else {
+                expect(value).toBeCloseTo(expected * by, 2);
+              }
+            });
+          });
+        },
+      ),
+    );
   });
 });
 

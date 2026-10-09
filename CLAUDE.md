@@ -91,7 +91,7 @@ document   Document, Command, undo/redo, selection                            �
 persist    .lcp container, zod schemas, migrations                            → domain
 render     DisplayList, canvas2d + svg backends                               → domain, typography
 editor     Viewport, tools, snapping, hit-testing, guides                     → render, document
-export     ExportScene, the sheet plan, pdf writer (svg, dxf in 1.4)          → domain, render, typography
+export     ExportScene, the sheet plan, pdf, svg and dxf writers              → domain, render, typography
 apps/desktop  Electron main/preload/renderer, React panels — the ONLY package importing Electron,
               and the only one with words: src/locales/*.json, one catalogue per language;
               the languages offered are SUPPORTED_LANGUAGES in src/shared/i18n.ts, not the files
@@ -113,16 +113,19 @@ Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run head
 - Fonts are vendored in `assets/fonts/`. Never use a system font: it breaks PDF output and snapshot
   determinism. Nothing parses a font at run time — `packages/typography` ships glyph outlines
   extracted at development time, and exports fill those outlines rather than embedding a font.
-- Stroke widths are **screen-constant** on canvas and **true millimetres** in export. **Dash rhythms
-  are true millimetres in both**, from one role table in `packages/render/src/theme/`, drawn on
-  screen at their real size or solid, never stretched. Colours, type and metric tokens live there
-  too; `styles.css` defines none of its own, and an audit test holds it to that.
+- Stroke widths are **screen-constant** on canvas — in **CSS pixels**, which the screen backends
+  multiply by the display's ratio once; zoom is `cssPxPerMm` — and **true millimetres** in export.
+  **Dash rhythms are true millimetres in both**, from one role table in `packages/render/src/theme/`,
+  drawn on screen at their real size or solid, never stretched. Colours, type and metric tokens
+  live there too; `styles.css` defines none of its own, and an audit test holds it to that.
 - Every new dependency needs an ADR in `docs/adr/`.
 - **Every word on screen is in `apps/desktop/src/locales/en.json`**, reached through `t()` from
   `useI18n()` (renderer) or the main process's translator. Keys are typed. A plural is one key per
   CLDR form (`_one`, `_other`, …) with `{{count}}`; a number, list or date goes through `Intl`.
   Stable ids — problem codes, tool ids, feature kinds, undo actions — are never translated; they
-  pick the words. `untranslated.test.ts` fails on words written into JSX. A translation file is
+  pick the words. `untranslated.test.ts` fails on words written into JSX. A key is never written
+  into a sentence: it is a `{{placeholder}}` or a tooltip's `keys`, read from the keymap
+  (`renderer/src/keymap.ts`), so it follows the layout and the platform. A translation file is
   not a supported language: only an entry in `SUPPORTED_LANGUAGES`, added after review, makes it
   one, and until then only `pnpm dev` shows it, as a preview. See ADR 0018.
 
@@ -154,6 +157,7 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | Phase 4's model (derivations, deletion, validation) | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
 | UI Foundations, F.0–F.7 | `docs/history/roadmap-to-1.0.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
 | The paper workflow and the window's bars (F.8, 7.4a–7.4d) | `docs/superpowers/specs/2026-09-24-sheets-workflow-design.md`; Design and Sheets stay separate views |
+| The UI refinement, U.1–U.19 (1.5) | `docs/superpowers/plans/2026-10-08-ui-refinement.md` — your slice's section is the task — and the requirements and mockups it links; the `ui-refinement` agent builds one slice |
 | Tests | `docs/testing.md` |
 | Interface text, languages, Settings → Language | `docs/adr/0018-interface-language.md` |
 | Commits, pull requests, releases | `CONTRIBUTING.md` |

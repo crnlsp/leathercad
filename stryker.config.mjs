@@ -33,20 +33,20 @@ import { basename } from 'node:path';
 const PACKAGE = basename(process.cwd());
 const REPORTS = `../../reports/mutation/${PACKAGE}`;
 
+// The first, unmutated run instruments every line and runs the suite in a
+// single thread. The geometry package's thousand-run properties then outlast
+// the 30 s a test has in `pnpm test`, the run fails, and no mutant is tested at
+// all: that ended both of the first weekly runs. Ten minutes a test here;
+// vitest.setup.ts reads it, and the runner processes inherit it. A mutant that
+// hangs is still stopped by Stryker's own timeout, `timeoutMS` below.
+process.env['LEATHERCAD_TEST_TIMEOUT'] ??= String(10 * 60_000);
+
 export default {
   testRunner: 'vitest',
   plugins: ['@stryker-mutator/vitest-runner'],
   vitest: { configFile: 'vitest.config.ts' },
   inPlace: true,
-  mutate: [
-    'src/**/*.ts',
-    '!**/*.test.ts',
-    '!**/*.bench.ts',
-    '!src/workloads.ts',
-    // Words for the user, not logic. A mutated sentence is caught by a
-    // snapshot or by nobody, and either way it is not what this measures.
-    '!src/problems/messages.ts',
-  ],
+  mutate: ['src/**/*.ts', '!**/*.test.ts', '!**/*.bench.ts', '!src/workloads.ts'],
   coverageAnalysis: 'perTest',
   incremental: true,
   incrementalFile: `${REPORTS}/incremental.json`,

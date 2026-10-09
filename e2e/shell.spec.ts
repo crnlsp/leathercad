@@ -386,8 +386,8 @@ test('saves a project and reopens it with its parameters intact', async () => {
 
 test('exports a print-ready PDF at 1:1', async () => {
   // The application never drives a printer, so the file has to be trustworthy
-  // in someone else's viewer. This checks the page really is A4 and that the
-  // verification square really measures 50 mm, by rendering through poppler.
+  // in someone else's viewer. This checks the page really is A4;
+  // `print-verification.spec.ts` measures what is on it, through poppler.
   const target = join(tmpdir(), `leathercad-e2e-${Date.now()}.pdf`);
   const instance = await launchApp();
 
@@ -476,6 +476,7 @@ test('the project bar holds the project and its output; the work bar holds the w
       'save',
       'paper',
       'export-pdf',
+      'print',
       'settings',
       'help-menu',
     ]) {
@@ -488,9 +489,10 @@ test('the project bar holds the project and its output; the work bar holds the w
       await expect(project.getByTestId(id), id).toHaveCount(0);
     }
 
-    // Export PDF is the one primary action in the window.
+    // Print is the one primary action in the window (7.6); Export PDF is not.
     await expect(window.locator('.primary')).toHaveCount(1);
-    await expect(window.getByTestId('export-pdf')).toHaveClass(/primary/);
+    await expect(window.getByTestId('print')).toHaveClass(/primary/);
+    await expect(window.getByTestId('export-pdf')).not.toHaveClass(/primary/);
   });
 });
 
@@ -1555,7 +1557,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await expect(rows.first()).toHaveAttribute('data-code', 'OFFSET_COLLAPSED');
     await expect(rows.first()).toContainText('60 mm edge margin is deeper');
     await expect(rows.nth(1)).toHaveAttribute('data-code', 'SOURCE_FAILED');
-    await expect(rows.nth(1)).toContainText('Stitch line it follows could not be built');
+    await expect(rows.nth(1)).toContainText('Stitch line, which it follows, could not be built');
     await expect(window.getByTestId('problem-count')).toHaveText('2');
 
     // Clicking a problem selects what it is about, and the property panel

@@ -3,7 +3,7 @@
 **Packages:** `packages/export`, `packages/print`
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-09-26
+**Last updated:** 2026-10-07
 
 ---
 
@@ -35,8 +35,13 @@ silently shrink output by 3–6 % to accommodate the printer's unprintable margi
 is the most likely way this project fails.
 
 **The application generates print-ready PDFs itself, as vector content, with exact coordinates.** It
-then either hands the file to the system print queue with scaling explicitly disabled, or saves it
-for the user to print from a viewer at "Actual size".
+then shows that file in its own Print Preview and hands the same bytes to the system print queue
+with scaling explicitly disabled (§13). Where it cannot, it saves the file for the user to print
+from a viewer at "Actual size".
+
+A viewer is not a safe last step even at "Actual size". On Linux the scaling is decided by the
+job's `print-scaling` option, and a job without one is fitted into the printer's margins by CUPS
+itself (ADR 0019).
 
 This is also why the choice of Electron over Tauri is not a printing decision: the webview is never
 in the print path.
@@ -54,9 +59,8 @@ in the print path.
         ▼                                              ▼
   Page[]                                         single-surface export
         │                                              │
-        ├──▶ PdfWriter    ──▶ tiled PDF                ├──▶ SvgWriter ──▶ .svg
-        ├──▶ SvgWriter    ──▶ one .svg per page        ├──▶ PdfWriter ──▶ single-page .pdf
-        └──▶ Canvas2D     ──▶ the Sheets view          └──▶ DxfWriter ──▶ .dxf   (v1.1)
+        ├──▶ PdfWriter    ──▶ tiled PDF                ├──▶ SvgWriter ──▶ .svg   (6.2)
+        └──▶ Canvas2D     ──▶ the Sheets view          └──▶ DxfWriter ──▶ .dxf   (6.5)
 ```
 
 Two properties this buys, and they are the reason for the shape:
@@ -65,8 +69,8 @@ Two properties this buys, and they are the reason for the shape:
   page count, tile placement, or overlap, because a disagreement would be a bug in one function
   rather than a mismatch between two implementations. Built (7.4a–7.4c) as one derived `SheetPlan`:
   the PDF writes it, and the app's sheet count, Parts labels and **Sheets view** read it. Everything
-  a sheet prints besides its pieces — the verification block, the footer, a tiled sheet's joins,
-  crosses, label and clip — is one description, `sheetInk`, which the writer prints and the Sheets
+  a sheet prints besides its pieces — the verification strip, a tiled sheet's joins, crosses and
+  clip — is one description, `sheetInk`, which the writer prints and the Sheets
   view draws. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md).
 - **All writers consume the same `ExportScene`.** SVG, PDF, and DXF cannot drift apart in what they
   include or where they place it.
@@ -127,7 +131,7 @@ fails if the two ever differ (F.4).
 chooses an intent; the preset chooses the roles.
 
 **Text on paper is outlines, not a font.** Every string printed — part captions, measurement values,
-text labels, the footer, the verification labels — is laid out once in millimetres and written as
+text labels, the verification strip's words — is laid out once in millimetres and written as
 filled glyph paths from the vendored typeface. Nothing then depends on a viewer's or a cutter
 program's font handling. It also retires pdf-lib's standard Helvetica, which cannot encode Polish
 letters such as `ł` and `ę`: with it, exporting a part named "Przegroda główna" throws. The on-screen
@@ -233,6 +237,37 @@ For small patterns — a card holder fits on one A4 — skip tiling entirely. Th
 scale: if the drawing does not fit at 1:1, it reports that and offers a larger paper size or tiled
 mode. It never silently shrinks.
 
+### 5.5 Packing whole parts (7.8)
+
+A part that fits the printable area is printed whole, never tiled. `paginate` packs those parts
+before any tiled one:
+
+- **Each part goes to the first sheet with room for it**, at the free place highest up and then
+  furthest left (MaxRects, bottom-left rule). A small part fills the room beside a tall one, or
+  room left on an earlier sheet. The shelf packer before it filled rows left to right and never
+  went back, so a row was as tall as its tallest part and a sheet once left was never revisited.
+- **Four orders are tried** — tallest, largest, widest and longest side first — and the one
+  needing fewest sheets is kept, tallest first on a tie. The same parts always give the same sheets.
+- **Parts are 6 mm apart** (8 mm before 7.8): room to cut each one out, not more paper.
+- **A part prints as drawn unless turning saves paper.** The layout is made twice — as drawn, and
+  letting a part turn a quarter counter-clockwise where as drawn it would need a sheet of its own
+  or be taped — and the turned one is kept only when it needs fewer sheets, or as many with fewer
+  taped. A part too large either way is taped, as drawn.
+  - The turn is exact: (x, y) becomes (−y, x), by a matrix with no rounding in it. No scale.
+  - The part's words turn with it. Its name reads up its left side, from the sheet's right edge,
+    as drafting reads a turned dimension, so the cut-out template is the same shape either way.
+  - Parts says *Sheet 1, turned*, since the board shows the part as drawn.
+  - This lifts roadmap 7.2's "never turn until the model knows the grain", by decision
+    (2026-10-01). A cut-out template carries nothing of the sheet it was printed on, and a taped
+    join is the least accurate thing on a sheet. When grain arrives it will be an arrow on the
+    part, and an arrow turns with it.
+
+The bifold sample on A4 portrait took five sheets, its outer and lining each taped across two;
+turned, it takes two, and nothing is taped. Over 2,000 random projects of 3 to 12 parts up to
+260 × 200 mm, against the 62 mm block and the shelf packer: about half the sheets of A4 portrait
+and of A4 landscape, and taped sheets down from 8,176 to 630 on A4 portrait. No project needed
+more.
+
 ## 6. PDF output
 
 Generated with `pdf-lib`. Pure vector; nothing is rasterised.
@@ -247,36 +282,62 @@ const MM_TO_PT = 72 / 25.4;    // 2.834645669291339…
 
 Set the MediaBox to the paper size in points, place content at `mm * MM_TO_PT`, and **emit no
 scaling transform anywhere**. Then 1:1 is not something the code achieves — it is the definition of
-what it wrote. The only transforms in the content stream are translations (to position a tile) and
-the single Y-flip if one is needed, which it is not: PDF is Y-up like the model, so the flip that
-Canvas2D and SVG require is absent here. One fewer place to get it wrong.
+what it wrote. A tile is positioned by adding its offset to the coordinates, not by a transform, and
+no Y-flip is needed: PDF is Y-up like the model, so the flip that Canvas2D and SVG require is absent
+here. One fewer place to get it wrong.
+
+**One transform is allowed, and only one (7.6b): the print form's quarter turn.** What *Print*
+sends has every page upright, because printers take paper upright and CUPS cannot turn a landscape
+page onto it without scaling it (§13). A landscape sheet is drawn on its upright page after one
+`cm` at the head of the page's content stream:
+
+```
+0 1 -1 0 W 0 cm        % (x, y) → (W − y, x), W the paper's width in points
+```
+
+A quarter turn counter-clockwise, then across the paper's width. Every coefficient is 0 or ±1 and
+the determinant is 1, so nothing is rounded, scaled or mirrored, and the sheet's 10 mm margins land
+on the paper's. The sheet's foot — the verification strip — runs up the paper's right edge, and
+reads the right way when the paper is turned a quarter clockwise. It is the turn 7.8 gives a part
+(§5.5), applied to the whole sheet.
+
+- **Not in *Export PDF*.** A file keeps the sheet as it was chosen, a landscape sheet as a landscape
+  page, so a viewer shows it the right way up. Printing the file is a viewer's job and not safe in
+  any form (§2): measured through this CUPS, a job without `print-scaling=none` is shrunk to 96 %
+  whichever way the page lies.
+- **No page `/Rotate`**, in either. It would show the print form the right way up in a viewer, but
+  CUPS reads a page by how it is shown: `pdftopdf` keeps `/Rotate 90`, and the page then prints
+  exactly as a landscape page does — cut off at 210 mm with scaling off, turned and shrunk to 96 %
+  without (§13).
+- A portrait sheet is the same in both forms, byte for byte.
 
 ### 6.2 Per-page structure
 
-1. MediaBox = exact paper size in points.
+1. MediaBox = exact sheet size in points; in the print form, the paper upright, with a landscape
+   sheet turned a quarter on it (§6.1).
 2. Translate so the tile's `contentRectMm` origin lands at `originOnPaperMm`.
 3. Clip to the content rect **plus the overlap band**, so overlapping content appears on both
    neighbouring pages, which is what makes taping possible.
 4. Draw the scene items intersecting that rect.
 5. Draw registration marks (§7) outside the clip.
-6. Draw the calibration block (§8) in the bottom margin.
-7. Draw the footer: project name, the sheet label ("Sheet 2 of 3", from 7.4a; the word is "sheet"
-   on screen and on paper), `1:1 — print at 100 %, do not fit to page`, and the generation
-   timestamp.
+6. Draw the verification strip (§8.1) at the foot of the printable area: the gauge with the
+   instruction to print at 100 % in it, and beside it the project name, the sheet label ("Sheet 2
+   of 3", from 7.4a; the word is "sheet" on screen and on paper), `1:1`, the date and the
+   application's name. Inside the margins, like everything else printed (7.8, Q17).
 
 ### 6.3 Document-level metadata
 
 Title, author, creator, and creation date. Set the PDF's `/ViewerPreferences` `/PrintScaling
 /None` — Acrobat and several other viewers honour it and will default the print dialog to "Actual
 size". It is not universally supported, which is why the printed warning text and the verification
-square exist as well. Three independent defences against the same failure.
+gauge exist as well. Three independent defences against the same failure.
 
 ### 6.4 What not to do
 
 - No `Fit` or `FitH` open action that could imply scaling.
 - No embedded raster preview of the geometry.
 - No reliance on the viewer honouring anything. Assume the user prints from an unknown application
-  with unknown defaults; the verification square is the backstop.
+  with unknown defaults; the verification gauge is the backstop.
 
 ## 7. Registration and assembly aids
 
@@ -290,12 +351,16 @@ For tiled output, the difference between a usable pattern and a jigsaw puzzle.
   join lines cross. Being in model coordinates, they land on the same place in the pattern on every
   sheet. The maker cuts one sheet on a join line, lays it over the next, and matches the crosses.
 - **The overlap is 10 mm**, with no setting yet.
-- **A tile label and the assembly note** go in the footer beside the verification square:
-  `Strap · R1 C2 · 1 × 3 sheets`.
+- **Which sheets it joins** goes in the verification strip, after the sheet's number:
+  `Bag · Sheet 3 of 5 · Strap, joins sheets 2 left, 4 right`, or with one neighbour `joins sheet 4
+  to the right`. That is what a maker with sheets spread on a table needs; the dashed line and its
+  crosses show how. A printed sentence of instructions on every taped sheet did not earn its room,
+  and `R1 C2` was a grid reference nobody holding paper needs.
 - **Not yet (7.2, 1.1):** edge arrows, the assembly sheet, and tape guides.
 
 The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
-tiled part follows the packed parts on sheets of its own. Nothing rotates.
+tiled part follows the packed parts on sheets of its own. A tiled part is never turned: it is tiled
+only when it fits whole neither way (§5.5).
 
 - **Corner crosshairs** at the exact corners of each page's content rect: 8 mm arms, 0.1 mm stroke,
   drawn in the margin so they do not overlay the pattern.
@@ -316,22 +381,40 @@ Two distinct mechanisms, deliberately separated.
 
 ### 8.1 Verification — on every page, always
 
-Printed in the bottom margin of every page:
+One strip at the foot of the printable area of every sheet, **inside the margins** (7.8):
 
-- A **50 × 50 mm square** with its dimensions labelled.
-- A **100 mm ruler** with 10 mm major ticks and 1 mm minor ticks, numbered.
-- The line: *"Measure the square. If it is not exactly 50 mm, your print is scaled. Reprint at
-  100 % / Actual size."*
+- A **100 × 5 mm gauge**: a box, ticked every 5 mm along its bottom like a rule.
+- Written in it: *"Print at 100 % / Actual size — this box is 100 × 5 mm"*.
+- Beside it, right-aligned in two lines, what the sheet is — `Bifold wallet · Sheet 1 of 2`, and
+  on a taped sheet which sheets it joins (§7) — and where it came from: `2026-10-01 · 1:1 ·
+  LeatherCAD`.
+- In the corner, **LeatherCAD's mark**: the card pocket from the app icon, 5 mm tall, filled black
+  with its stitch holes open. Drawn from the icon's own numbers (`brandMark.ts`), so nothing parses
+  an SVG or embeds an image.
 
-This costs a few square centimetres of margin and turns a silent, expensive failure into a five
-second check. It is not optional and it is not a preference.
+It turns a silent, expensive failure into a five second check. It is not optional and it is not a
+preference.
+
+**Why a long box, not a square.** Length is what shows an error. A print at 97 % — the usual
+"fit to page" — is 3 mm short across the gauge's 100 mm, where a 25 mm square would be 0.75 mm
+out, under two graduations of a steel rule. A scaled print is scaled both ways, so the long side
+catches every viewer and driver setting. The short side catches only a print stretched one way by
+10 % or more — at 10 mm it was 5 %, and a 50 mm square's 1 % was no better for the error that
+really happens one way, a printer's few tenths of a percent, which no square a sheet could carry
+shows: that is calibration's job (§8.2), with 200 mm lines. So the gauge is as tall as the two
+lines of words beside it, and no taller; thinner would not make the strip thinner.
+
+**What it replaced.** Until 7.8 a 50 mm square, a 100 mm ruler and two lines of instruction took
+62 mm at the foot of every sheet — 21 % of A4 portrait, 30 % of A4 landscape — and the footer was
+printed 5 mm from the paper edge, inside the margin the code calls unreliable (Q17). The strip
+takes 8.5 mm — 5 mm of ink and 3 mm clear above it — and prints nothing in the margins. A4
+portrait prints 190 × 268.5 mm, not 190 × 215; A4 landscape 277 × 181.5, not 277 × 128.
 
 **On every sheet a maker can choose, whole.**
-- `verificationLayout` in `packages/export/src/paper.ts` is the block's one layout. The PDF writer
-  draws from it, and `contentAreaMm` keeps the pattern at least 4 mm above it.
-- The square sits beside the ruler where the sheet is wide enough (182 mm or more). On a narrower
-  sheet, A5 portrait, it stacks above the ruler at the right margin, and the block reserves 8 mm more.
-  It used to be skipped there.
+- `verificationLayout` in `packages/export/src/paper.ts` is the strip's one layout. The PDF writer
+  draws from it, and `contentAreaMm` keeps the pattern at least 3 mm above it.
+- The words sit beside the gauge where the sheet has room for the longest of them. On a narrower
+  sheet, A5 portrait, they stack above it with the mark, and the strip reserves 7 mm more.
 
 ### 8.2 Correction — opt-in, per printer, a last resort
 
@@ -364,9 +447,11 @@ Automated tests prove the PDF contains the right numbers. They cannot prove the 
 release, and at the end of every slice that touches export or printing:
 
 1. Open `fixtures/projects/print-test.lcp` — a panel with a 100.0 mm dimension and a stitch line all
-   round, a card pocket with a thumb scoop stitched on three sides, and a 250 mm strap tiled over two
+   round, a card pocket with a thumb scoop stitched on three sides, and a 275 mm strap tiled over two
    sheets.
-2. Export PDF from the app, and print from the system's PDF viewer at 100 %, actual size.
+2. Print it from the app: **Print**, then *Print 3 sheets* in its preview (§13). Where the app
+   cannot print (Windows), *Save PDF…* there, and print from the system's PDF viewer at 100 %,
+   actual size.
 3. Measure with a **steel rule** (not a tape), and record the readings, following the procedure in
    `docs/print-verification-log.md`.
 
@@ -378,46 +463,173 @@ property panel's *Spacing*, which averages every run in the hole set.
 
 `e2e/print-verification.spec.ts` makes the same measurements on the exported PDF, rasterised by
 poppler, and `e2e/packaged/packaged.spec.ts` repeats them against the packaged app on each
-platform. What neither can reach is the viewer's print dialog, the printer and the paper.
+platform. `e2e/print-preview.spec.ts` checks that what the Print Preview sends to `lp` is that
+same PDF, measured the same way, with scaling off (§13). What none of them can reach is the
+printer and the paper.
 
-## 10. SVG export
+## 10. SVG export (6.2)
+
+*Export SVG…*, in the menu beside *Export PDF*; `packages/export/src/svg/writer.ts`. For a laser
+cutter, a plotter or a vector editor.
 
 ```xml
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="210mm" height="297mm"
-     viewBox="0 0 210 297">
-  <g id="cut"    fill="none" stroke="#000" stroke-width="0.25">…</g>
-  <g id="stitch" fill="none" stroke="#00f" stroke-width="0.15" stroke-dasharray="2 2">…</g>
-  <g id="stitch-holes" fill="#00f" stroke="none">…</g>
-  <g id="fold"   …>…</g>
-  <g id="mark"   …>…</g>
+<svg xmlns="http://www.w3.org/2000/svg" width="275mm" height="81.608mm" viewBox="0 0 275 81.608">
+<title>LeatherCAD print test</title>
+<g id="cut" fill="none" stroke="#1d2126" stroke-width="0.25" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 0 73.572 L 100 73.572 L 100 13.572 A 10 10 0 0 0 90 3.572 … Z"/>
+</g>
+<g id="stitch" … stroke-dasharray="2 2">…</g>
+<g id="stitch-holes" …><circle cx="96.5" cy="70.072" r="0.5"/>…</g>
+<g id="annotation" …><path d="…" fill="#8a5a2b" stroke="none"/></g>
 </svg>
 ```
 
+**What is in it, and where.** The scene the PDF is written from, so exactly what the PDF prints:
+a hidden feature, a feature that failed to build and a part with only words are not in it
+(`buildExportScene` decides, and the writers add no filter of their own). It is placed **as the
+maker arranged it on the board**, each part's geometry in model coordinates — not as the sheets
+pack it. Pagination, tiling, the verification strip and the registration marks are the paper's; a
+laser wants the arrangement the maker made. So pieces that overlap on the board overlap in the
+file: the print test lays its panel, pocket and strap on top of one another at the origin, and its
+SVG does too. Each part's caption, which the scene sets above it, is in the file, on the
+annotation layer.
+
+**The page** is the box of everything drawn: curves and glyphs by their exact bounds, never their
+control points, and no margin. Its left edge is `x = 0` and its top edge `y = 0`, wherever the
+drawing was on the board (`SvgExportResult.boundsMm` says where). A stroke on the very edge is half
+outside the page, which a cutter that follows the centre-line does not mind.
+
 Rules that make the file actually 1:1 rather than merely nominally so:
 
-- `width`/`height` carry **explicit `mm` units**, and the `viewBox` is in the same numeric space, so
-  one user unit equals one millimetre. Importers that respect physical units then get correct
-  dimensions with no configuration.
-- **No `transform` on the root.** Coordinates are literal millimetres.
-- SVG is Y-down, so the writer applies the flip by negating Y and translating by the bounds height —
-  in exactly one place, with a test asserting a point at model y = +10 lands above one at y = 0.
-- Grouped by layer role with stable `id`s, so laser cutters, plotters, and Cricut-class machines can
-  select what to cut.
-- Numbers written with 4 decimal places (0.1 µm), matching the model's quantisation.
+- `width`/`height` carry **explicit `mm` units**, and the `viewBox` is `0 0` and the same two
+  numbers, so one user unit equals one millimetre. Importers that respect physical units then get
+  correct dimensions with no configuration.
+- **No `transform`, anywhere.** Coordinates are literal millimetres.
+- SVG is Y-down, so the writer flips: the drawing's top edge becomes the page's top. That is
+  `modelToFile` in `svg/writer.ts`, the only place a Y is turned over in the file, applied by the
+  geometry layer's own transform so an arc's sweep reverses with it; the sweep flag reads the
+  reversed sweep and needs no flip of its own. A file has no viewport, so it is not
+  `worldToScreen`. A test asserts a point at model y = +10 lands above one at y = 0, and another
+  that a counter-clockwise arc stays counter-clockwise.
+- **Numbers to the model's quantum**: four decimals of a millimetre (0.1 µm), written without
+  trailing zeros (`100`, not `100.0000`). A coordinate that is not a number stops the export; it is
+  never written.
+- Plain `\n` line ends and UTF-8 on every platform, with an XML declaration and a `<title>` of the
+  project's name, escaped, and with what XML cannot hold left out.
 
-## 11. DXF export (v1.1)
+**Layers.** One `<g>` for each layer role, with the domain's role name as its `id` — `cut`,
+`stitch`, `stitch-holes`, `fold`, `mark`, `hardware`, `annotation` — in that order and only for roles
+with something in them. The DXF's layers have the same names. A stroke is its role's **true width in
+millimetres** and a dash its **true rhythm**, from the one role table the canvas and the PDF read,
+with the same round caps and joins the PDF draws.
 
-- **R12 ASCII** as the default target: the most widely readable DXF dialect, accepted by essentially
-  every CAM and CNC package.
-- R12 has no SPLINE entity, so cubics flatten to `LWPOLYLINE` at 0.005 mm. Lines become `LINE`,
-  circular arcs `ARC`, full circles `CIRCLE`, stitch holes `POINT` or small `CIRCLE` depending on an
-  export option.
-- Header: `$INSUNITS = 4` (millimetres) and `$MEASUREMENT = 1` (metric). Without these, importers
-  guess, and guessing is how a pattern arrives at 25.4× the intended size.
-- One DXF layer per layer role, named identically to the SVG group ids.
-- Y-up matches DXF, so no flip.
-- An R2000 variant with true `SPLINE` entities is worth adding later for users whose CAM handles it.
+*Colour is the canvas's*, not the PDF's black. A paper template is black and told apart by line
+style, because it is photocopied; a file is read by software that sorts a drawing by colour — a
+laser's layers — as well as by group, so each role has the colour it has on the canvas. Stitch lines
+and their holes share the canvas's blue, so a laser operator separates those two by group.
+
+**What is a circle, an arc, a curve.**
+
+- A **stitch hole is a `<circle>`**, stroked and unfilled like the PDF's, at the 1 mm size the scene
+  gives a hole marker, in the `stitch-holes` group. (The hole size a laser wants is not the
+  template's marker; choosing it is 6.4.)
+- Any path that is one whole turn of an arc is a `<circle>`: a hardware hole is one.
+- **Arcs stay arcs** (`A`), and **cubics stay cubics** (`C`): nothing is flattened. An arc is cut
+  into pieces of at most a quarter turn. SVG writes an arc by its endpoints and radius, and the
+  reader works the centre out from them; for a half turn that is as sensitive as a square root at
+  zero, and rounding an endpoint by 0.1 µm moves the far side of a 12.5 mm radius — a strap's
+  rounded end — by up to 0.035 mm. Within a quarter turn rounding moves the arc by no more than it
+  moved the endpoint. A property test finds the failure in a few runs if the rule is lifted.
+- **Words are outlines**: one filled `<path>` for a string, all its contours in `d`, non-zero fill, in
+  the `annotation` group. No `<text>`, no font, in this file or any other (ADR 0011).
+
+**Nothing to export.** A scene that draws nothing has no size to give a page, so `exportSvg`
+throws a `RangeError`, and the interface greys the item and says why.
+
+**Tests.** `svg/writer.test.ts` parses the output back by hand — no SVG library — and checks the
+frame, the flip, the groups and their styles, curves, numbers and title, and that the groups hold
+what the plan puts on paper. Two properties over random lines, arcs (half and whole turns among
+them) and cubics: the file's curves are the model's, flipped and moved, to within 0.5 µm, read
+back through the SVG specification's own endpoint-to-centre conversion; and everything is inside
+the page the file declares. `e2e/vector-export.spec.ts` exports the print test through the app and
+measures the file: the panel 100.0 mm, its 25 holes 3.875 mm apart, the strap 275.0 mm, and the
+dimension under the panel. Rendered by librsvg at 254 dpi (2026-10-07), the print test came out
+2750 × 817 px: 275 × 81.6 mm, the right way up, its arcs bulging the right way.
+
+Not yet: presets, choosing layers and the bounds (6.4).
+
+## 11. DXF export (6.5)
+
+*Export DXF…*, in the menu beside *Export PDF*; `packages/export/src/dxf/writer.ts`. For laser and
+CNC programs. It draws what the SVG draws (§10) — the scene the PDF is written from, as the maker
+arranged the board — in a different dialect.
+
+**The dialect is R12 (`AC1009`).** The first draft of this section said R12 had `LWPOLYLINE` and
+`$INSUNITS`; it has neither. `LWPOLYLINE` is R14's, and `$INSUNITS` and `$MEASUREMENT` came with
+R2000 (the DXF reference lists them without a release; ezdxf, which writes strictly to the
+specification, drops both from an R12 file). The choice was between R12 with those two header
+variables added, and a minimal `AC1015` file:
+
+- **R12 is the lowest common denominator, and it is small.** A valid R12 file needs only an
+  `ENTITIES` section; every CAM and laser program reads it; LightBurn writes it itself, because some
+  programs read nothing newer. An R2000 file wants a handle on every entity, subclass markers, a
+  block record table and an objects section, and a strict reader refuses a file that has any of them
+  wrong. A file that is right for LibreCAD and wrong for AutoCAD is worse than R12's plainness.
+- **What R12 lacks, the writer does without.** No `LWPOLYLINE`: a curve is a `POLYLINE` with
+  `VERTEX`es and a `SEQEND`. No spline: a cubic is flattened to 0.005 mm, the export tolerance. An
+  R2000 variant with true splines is for later.
+- **Units are the one thing R12 cannot say**, and a pattern that arrives 25.4 times too big is how
+  that fails. So `$INSUNITS = 4` (millimetres) and `$MEASUREMENT = 1` (metric) are written as extra
+  header variables. A header is a list of named variables, and a reader skips a name it does not
+  know (vDraw's log reads *Unknown header variable $TITLE ignored*); QCAD's dxflib hands every one it finds to its
+  host without looking at the version; LightBurn's *Auto-detect units* reads `$INSUNITS`. A reader
+  that insists on R2000 for them will use its own unit setting — and the maker chooses millimetres
+  there. That residual is why the interface says *millimetres* where the file is offered, and it is
+  checked only for the readers named here.
+
+**What is in it.**
+
+- A line is a `LINE`, an arc an `ARC`, a whole circle a `CIRCLE`; none is flattened. DXF arcs run
+  counter-clockwise from the start angle to the end angle, so a clockwise arc is written from its
+  far end, and angles are degrees from 0 up to 360, to six decimals. A sliver of an arc is left
+  out, and a sweep a hair short of a whole turn is a `CIRCLE`, because written to six decimals the
+  two have the same start and end, which a reader draws as a whole circle.
+- A **stitch hole is a `CIRCLE`** at the 1 mm size the scene gives it, not a `POINT`: laser software
+  ignores points. (The first draft offered either by an option; nothing asks for the option, and
+  6.4 may.) A hardware hole, or any whole turn of an arc, is one too.
+- **Cubics are `POLYLINE`s**: consecutive cubics are one open polyline, and a closed loop of cubics
+  alone is one closed polyline, closed by its flag with no repeated vertex. A line beside a curve
+  stays a `LINE`.
+- **Words are outlines**: each contour of each letter a closed `POLYLINE`, on the `annotation`
+  layer with the dimensions. No `TEXT` and no text style, so no font (ADR 0011).
+- **Layers are the layer roles**, named as the domain names them and as the SVG names its groups —
+  `cut`, `stitch`, `stitch-holes`, `fold`, `mark`, `hardware`, `annotation` — plus layer 0, and only
+  roles with something in them. Each has a colour index of its own, because laser software maps a
+  DXF's colours to its layers (cut black, stitch blue, holes cyan, folds green, marks grey,
+  hardware magenta, annotation orange), and a linetype: `CONTINUOUS`, or for a dashed role a
+  `LTYPE` of the role table's **true rhythm in millimetres** (`stitch` 2 on, 2 off).
+- **Y is up, as the model is**: nothing is flipped. The drawing is moved so its lower left corner
+  is the origin, as the SVG's page is, and `$EXTMIN`/`$EXTMAX` give its extents.
+- **Lengths are written to four decimals** (`100.0000`), the model's quantum; a line a
+  ten-thousandth of a millimetre long has no length in the file and is left out. A coordinate that
+  is not a number stops the export.
+- **CR LF line ends and ASCII**, on every platform, as AutoCAD writes it. There is no project name
+  in the file; R12 has nowhere for one that every code page reads.
+
+**Tests.** `dxf/writer.test.ts` reads the file back tag by tag, by hand: the sections, the header's
+units and extents, the tables, each entity kind, the layers against the SVG's groups, and the same
+two properties as the SVG — over random lines, arcs and cubics, the file's curves are the model's
+moved, within 0.5 µm for lines and arcs and 0.0055 mm (the tolerance and a few quanta) for
+cubics — plus mutation checks that a swapped arc, or a unit written wrongly, fails. The end-to-end
+test exports the print test through the app and measures the DXF with a reader of its own:
+the panel foot 100.0 mm, 25 holes 3.875 mm apart, the strap 275.0 mm, in R12, millimetres and
+metric. LibreOffice Draw 26.2's DXF importer, an independent reader, opened the print test and
+the bifold sample (2026-10-07): every entity, the layers' colours, the arcs the right way round and
+the pieces where the maker put them. It rescales a drawing to its page and closes every arc with a
+chord — it does that to a DXF holding one `ARC` too — so it checks the structure and not the units.
+
+**Not yet:** LightBurn, or a laser, has not opened one: that is the maintainer's check, and the one
+that tests the units. Presets, choosing layers and the bounds are 6.4.
 
 ## 12. Other formats
 
@@ -428,24 +640,80 @@ Rules that make the file actually 1:1 rather than merely nominally so:
   the evaluator already produces, and genuinely useful before starting a project.
 - **G-code** — out of scope. Users with laser cutters have their own CAM and want DXF or SVG.
 
-## 13. Print submission on Linux
+## 13. Printing from the app (7.6, 7.6b)
 
-Two paths, both offered:
+**Print → LeatherCAD's Print Preview → the printer.** The decision and what was measured are in
+[ADR 0019](adr/0019-print-from-the-app.md).
 
-**Primary — export and let the user print.** Write the PDF, then `xdg-open` it, with an on-screen
-reminder to select "Actual size" or 100 %. This works everywhere and keeps the user in a print
-dialog they already understand.
+**One PDF.** *Print* (green, the window's primary action, Ctrl+P) writes the PDF from the same
+`SheetPlan` as *Export PDF*, in the print form: every page upright, a landscape sheet turned a
+quarter on it (§6.1). The preview draws **that file** with pdf.js, so the sheets shown are the bytes
+sent, not a second drawing. Only its view of a landscape page is turned back, a quarter clockwise,
+so the sheet reads as the Sheets view shows it. `lp` then receives those bytes on its standard
+input. Its choices are only those that cannot change the size of what prints:
 
-**Secondary — submit directly to CUPS** for users who print patterns constantly:
+| Choice | What it does |
+|---|---|
+| Printer | One `lpstat -e` lists; the system default first |
+| Paper, orientation | The project's own page setup, `setPageSetup`: one undo step, and the PDF is written again |
+| Which sheets | Ticked in the sheet list; sent as `-P`, so CUPS leaves the rest out of the same file |
+| Copies | 1–99, `-n` |
+
+Scale is shown as *100 % — locked*: there is no fit, shrink or percentage anywhere. Every job is:
 
 ```bash
-lp -d <printer> -o media=A4 -o print-scaling=none -o fit-to-page=false <file.pdf>
+lp -d <printer> -t <project> -n <copies> -P <sheets> \
+   -o media=<paper> -o print-scaling=none -o fit-to-page=false        # the PDF on stdin
 ```
 
-`print-scaling=none` is the IPP attribute honoured by CUPS 2.4 and later; `fit-to-page=false` covers
-older versions. Printers are enumerated with `lpstat -e`. If neither option is supported by the
-detected CUPS version, fall back to the primary path rather than submitting a job that might be
-scaled — **when scaling cannot be guaranteed off, do not print.**
+`print-scaling=none` is the IPP attribute CUPS 2.x and cups-filters' `pdftopdf` honour. Without it,
+libcupsfilters defaults to `auto`, which fits the page into the printable area: 96 % on an A4 laser
+with 4.23 mm margins. `fit-to-page=false` covers older CUPS. Printers and their paper sizes come
+from `lpstat -e`, `lpstat -d` and `lpoptions -p <printer> -l`. These only read: the app never
+changes a printer's settings. A printer that lists its paper and lacks the chosen size is not
+sent the job. The main process checks every job (`apps/desktop/src/main/printing.ts`): the printer
+must be one CUPS lists now, offering the paper when it lists its sizes, and nothing runs through a
+shell.
+
+The preview says what the app can and cannot promise. It sends the job with scaling off — *✓ No
+scaling* — but a driver or a printer could still scale, so it asks for the gauge to be measured
+(§8.1). That measurement, recorded in `print-verification-log.md`, is the only claim of 1:1.
+
+**Never send `orientation-requested` or `landscape`.** Through `pdftopdf` either one turns the page
+*and* fits it into the margins, even with `print-scaling=none`.
+
+**Landscape is sent upright (7.6b).** CUPS cannot turn a landscape page onto upright paper without
+scaling it, so the PDF does the turning: a landscape sheet goes to `lp` on an upright page, turned a
+quarter inside it, with exactly the job a portrait sheet gets. The print test on A4 landscape, run
+through the installed `pdftopdf` and then `pdftoraster` with an A4 PPD (4.23 mm margins), the
+raster decoded and measured (libcupsfilters 2.2.1, 300 dpi):
+
+| The page sent | With the job's options | Without `print-scaling=none` |
+|---|---|---|
+| Landscape, 297 × 210 mm (until 7.6b) | Not turned: laid on the upright sheet, the 275 mm strap cut off at 210 mm | Turned, and shrunk: gauge 96.2 mm |
+| Upright, 210 × 297 mm, with `/Rotate 90` | `pdftopdf` keeps the `/Rotate`: the same raster as the landscape page, cut off at 210 mm | The same: 96.2 mm |
+| **Upright, the sheet turned inside it (the print form)** | **Upright, whole, gauge 100.25 mm of ink — 100 mm and its 0.2 mm line** | Shrunk like any page: 96.2 mm |
+
+So the print form carries no `/Rotate`, and the job no orientation. *Export PDF* keeps the
+landscape page (§6.1): through CUPS no form prints a file whole and true without the job's options,
+and only the landscape page reads the right way up in a viewer. `e2e/print-preview.spec.ts` sends
+the print test on A4 landscape and measures what `lp` received, and what `pdftopdf` makes of it.
+
+**Where the app does not print, it saves.** The same preview's last step is *Save PDF…*, with the
+reminder to print at *Actual size (100 %), never Fit or Shrink*. It saves the bytes shown, the
+print form, so a viewer shows a landscape sheet sideways on its upright page — as it will come out
+of the printer:
+
+- **Windows** — no CUPS; no transport chosen yet (SumatraPDF is the candidate, ADR 0019).
+- **The Flatpak** — its runtime has libcups and `lpr`, but no `lp`, `lpstat` or `lpoptions`. The
+  app finds no `lpstat`, so it saves.
+- **No CUPS scheduler running**, or no printer set up.
+
+**macOS** runs the Linux path against Apple's CUPS, whose `cgpdftopdf` is not open source. It
+counts as unverified until a gauge printed there is in the log.
+
+*Export PDF* stays, for a file to keep or send. Its tooltip says how to print one from another
+application.
 
 ## 14. Automated tests
 
@@ -455,13 +723,19 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 |---|---|
 | PDF dimension round trip | Export, rasterise with poppler's `pdftoppm` at 254 dpi, and measure the square, the ruler and the pattern in pixels, within a pixel (0.1 mm) |
 | MediaBox exactness | A4 page MediaBox equals 595.276 × 841.890 pt within 0.001 pt |
-| No scaling transform | The content stream contains no `cm` operator with non-unit scale factors |
+| No scaling transform | The content stream contains no `cm` operator at all in a file, and in the print form exactly one on each landscape sheet, first: `0 1 -1 0 W 0`, determinant 1, unit columns (`writer.test.ts`) |
+| The print form | Every page of every paper and orientation upright, unrotated and as many as the plan's sheets; a portrait sheet byte for byte the file's; on every paper's landscape sheet, turned back, a 100 mm line and the gauge measure true through poppler (`writer.test.ts`) |
 | Tiling coverage | For a 400 × 300 mm scene on A4, exactly 6 pages; the union of content rects covers the bounds with no gap; every adjacent pair overlaps by exactly 10 mm |
 | Tiling edge cases | Drawing smaller than one page → 1 page; exactly one page wide; overlap ≥ content width rejected; zero-size scene handled |
 | Grid centring | Leftover space is split evenly between the first and last tile |
-| SVG units | `width="210mm"`, `viewBox="0 0 210 297"`, no root transform |
+| SVG units | The export, read back by hand: `width`/`height` in `mm`, `viewBox="0 0 W H"` in the same numbers, no `transform` anywhere (`svg/writer.test.ts`) |
 | Y-axis orientation | A point at model y = +10 exports above one at y = 0, in both SVG and PDF |
 | Stroke widths | Exported widths are the specified true millimetres, not screen widths |
 | Preview equals print | `paginate()` output used by the preview is deep-equal to the one used by the PDF writer for the same setup |
 | Calibration correction | A 1.005 correction produces geometry 0.5 % larger, and a 1.03 correction is rejected |
+| Export round trip | Random lines, arcs and cubics exported to SVG and DXF and read back by hand are the model's curves, moved (and flipped, for SVG), within 0.5 µm — within 0.0055 mm for a flattened cubic; everything is inside the declared page (`svg/writer.test.ts`, `dxf/writer.test.ts`). The print test exported through the app measures 100.0 mm, 25 holes 3.875 mm apart and 275.0 mm in both files (`e2e/vector-export.spec.ts`) |
+| DXF dialect and units | R12 with `$INSUNITS = 4` and `$MEASUREMENT = 1`; a counter-clockwise arc keeps its angles and a clockwise one is written from its far end; every layer is a role's name; a dash is its true millimetre rhythm; `\r\n` and ASCII only (`dxf/writer.test.ts`) |
 | Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items |
+| The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, a paper it lists its sizes without, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
+| Preview equals what is sent | Print previews the print test, and what the fake `lp` receives measures true like an exported PDF; where `pdftopdf` is installed, it measures true after that filter too, with the job's options (`e2e/print-preview.spec.ts`) |
+| Landscape, sent upright | Print sends the print test on A4 landscape with the portrait job's options; `lp` receives one upright, unrotated A4 page that, turned back, measures true — gauge, panel, holes, and the strap whole at 275 mm — before and after `pdftopdf` (`e2e/print-preview.spec.ts`) |

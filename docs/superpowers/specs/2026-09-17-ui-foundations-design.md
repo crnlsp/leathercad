@@ -51,7 +51,8 @@ two media. CLAUDE.md promises the screen previews the paper; here it does not.
 ### The resolution: width is pixels, dash is millimetres
 
 - **Stroke width stays screen-constant.** A cut line must remain a visible hairline at any zoom. This
-  is already the rule and it is right.
+  is already the rule and it is right. *Since U.1 (1.5):* in CSS pixels, so a line is as thick on a
+  2× display as on a 1× one; the screen backends apply the display's ratio once.
 - **Dash patterns become true millimetres**, read from one table shared by both media. Then a 2 mm
   dash is 2 mm on screen at 1:1 and 2 mm on paper, and zooming in shows the real rhythm.
 
@@ -197,10 +198,16 @@ Warm-neutral off-white. Restrained: no texture, no gradient, no paper fibre, no 
 | `--ground-hundred` | `#BEB5A3` | 100 mm grid |
 | `--ground-axis` | `#A89E88` | The x = 0 / y = 0 axes |
 | `--ink` | `#1D2126` | Cut lines, part names |
-| `--ink-dim` | `#6E695E` | Canvas captions, ruler labels |
+| `--ink-dim` | `#6E695E` | Ruler labels (canvas captions until U.2) |
+| `--ground-label` | `#5E5950` | A caption's detail under the part's name (R-01, U.2) |
 
 `--ink` on `--ground` is 13.97 : 1 (first written as "above 14"; measured when built, F.5).
-`--ink-dim` on `--ground` is 4.6 : 1.
+`--ink-dim` on `--ground` is 4.6 : 1; `--ground-label` 6.0 : 1.
+
+*Since U.2 (1.5):* the board's words are a constant size on screen, never below 12 px, each on a
+4 px halo of the ground (R-01, `CANVAS.text`): a part's name in `--ink` at 600, the detail under it
+in `--ground-label` at 400, and a dimension's value in the measurement colour at 500 — all 12/16.
+Paper keeps its true-size caption and values.
 
 **The whole canvas viewport is the drafting ground** — not a card or a sheet floating on a
 workbench. The model's coordinate space is unbounded, and drawing a page edge would imply a page the
@@ -329,7 +336,7 @@ Disabled renders the sentence from `describeProblem` as a line beneath the contr
 | `Field` | label + control + unit, one implementation — fixes unit clipping everywhere |
 | `NumberField` | Tabular figures at weight 500, reserved unit column, commit on Enter/blur |
 | **`ReasonedButton`** | Disabled *and says why* |
-| `Tooltip` | Real: styled, delayed 400 ms, keyboard-reachable. Retires `title` |
+| `Tooltip` | Real: styled, delayed 400 ms, keyboard-reachable. Retires `title`. *Since U.3 (R-10): 500 ms, one line up to 360 px, turned and shifted to stay 8 px inside the window, the control's key as a cap, Escape hides it* |
 | `FeatureMark` | The role glyph — identical in rail, tree, property header, problems, legend |
 | `Badge` | Count + severity (exists, 4.12) |
 | `Chip` | The segmented control the *Draw as* strip wants to be |
@@ -414,7 +421,7 @@ in a different place. This table *is* the "same meaning everywhere" rule.
 
 | Feature | Colour | Width px / mm | Dash (mm, both media) | Distinguishing mark | Tree swatch |
 |---|---|---|---|---|---|
-| **Cut edge** (outer) | `--ink` `#1D2126` | 1.75 / 0.25 | solid | The heaviest line in the drawing | solid bar |
+| **Cut edge** (outer) | `--ink` `#1D2126` | 1.5 / 0.25 | solid | The heaviest line in the drawing | solid bar |
 | **Cut-out** (inner) | `--ink` `#1D2126` | 1.5 / 0.22 | solid | **Inward hatch**, 45°, 18 % ink — removal, not boundary | hatched bar |
 | **Stitch line** | `#2F6690` | 1.25 / 0.15 | `[2, 2]` | — | dashed bar |
 | **Stitch holes** | `#2F6690` | 1.25 / 0.15 | — | **Slanted slits** at the iron's angle, true size (§9) | three slits |
@@ -423,6 +430,10 @@ in a different place. This table *is* the "same meaning everywhere" rule.
 | **Hardware hole** | `#5B4CA8` | 1.5 / 0.20 | solid | Ring with a centre cross | ring |
 | **Measurement** | `#8A5A2B` | 1 / 0.10 | solid | Extension lines and arrowheads; the number set like every other measurement | arrow bar |
 | **Construction** | `#B6AD9B` | 1 / 0.10 | `[1, 1]` | — | faint bar |
+
+Widths in pixels are CSS pixels. The cut edge was 1.75 px until R-02 made it 1.5 (U.1, 1.5); the
+paper's 0.25 mm did not move. Inside a piece the lines sit on the piece fill, `--ground-piece-fill`
+`#FAF8F4`, or `--ground-piece-fill-selected` `#F7F1DE` for the piece being worked on (R-02).
 
 Three things this fixes: `mark` and `construction` stop being solid on screen and dotted on paper;
 `stitch` and `fold` get one rhythm in both media; hardware leaves the amber family, so a rivet can
@@ -499,12 +510,17 @@ Three tiers, real contrast steps, each dropping out at a zoom where it would bec
 
 | Tier | Colour | Shown when |
 |---|---|---|
-| 1 mm | `--ground-fine` | ≥ 4 px/mm |
-| 10 mm | `--ground-major` | ≥ 0.6 px/mm |
+| 1 mm | `--ground-fine` | ≥ 6 px/mm (160 %) |
+| 10 mm | `--ground-major` | ≥ 1.5 px/mm (40 %) |
 | 100 mm | `--ground-hundred` | always |
 | Axes | `--ground-axis` | always |
 
 Today one uniform low-contrast mesh produces moiré when zoomed in and vanishes when zoomed out.
+
+*Since U.1 (1.5):* the thresholds are R-02's — they were 4 and 0.6 — and every px/mm in §9 is **CSS**
+pixels per millimetre (`cssPxPerMm`), so a tier and a band switch at the same zoom on a 1× and a 2×
+display. Before, they compared device pixels and a 2× display switched at half the zoom. No grid
+line is drawn inside a piece: the piece fill covers it.
 
 ### 9.2 Rulers
 
@@ -518,7 +534,7 @@ Your point 4, made concrete. The **meaning** is constant across bands; the **rep
 | Band | px / mm | Stitch holes | 1 mm grid | Anchors |
 |---|---|---|---|---|
 | **Detail** | ≥ 8 | True size, true slant, true blade width | On | On hover |
-| **Working** | 2 – 8 | Slanted slits at `max(true size, 3 px)` — slant and colour kept | On above 4 | On hover |
+| **Working** | 2 – 8 | Slanted slits at `max(true size, 3 px)` — slant and colour kept | On from 6 | On hover |
 | **Overview** | < 2 | Individual holes **stop being drawn**; the set renders as its stitch line, dashed, in stitch blue | Off | Off |
 
 At every band stitching reads as stitching, in stitch blue, on the stitch line. Nothing changes
@@ -660,7 +676,9 @@ Explicitly protected from this work. Changing any of these needs a reason writte
   a tooltip; they do not become hidden.
 - **The dependency tree.** The concept is right; only its container changes.
 - **The stitch-hole information.** Promoted, never redesigned: it also gains a canvas caption
-  (`88 holes · 3.85 mm · KS Blade`) and a legend entry.
+  (`88 holes · 3.85 mm · KS Blade`) and a legend entry. *Since U.2 (1.5):* the caption reads
+  `88 holes · 3.85 mm` — the pitch, each pitch once, without the iron's name — under "Card pocket
+  ×2", at 12 px whatever the zoom, in the interface's words (R-01).
 - **The refusal model.** The `Problem` channel is untouched; refusals move to where they can be seen.
 - **4.12's diagnostic channel** — `diagnose`, badges, `diagnosticTarget`, `exportReadiness`. This spec
   restyles its surfaces and changes none of its model.

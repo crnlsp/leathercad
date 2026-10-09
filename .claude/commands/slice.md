@@ -24,5 +24,5 @@ Finish by running `pnpm check`, reporting the real output, walking the `geometry
 if the pure layers were touched, and updating `docs/roadmap.md`.
 
 Then land it the way `CONTRIBUTING.md` says: commit on the slice branch, push it — the
-pre-push hook runs `pnpm check` again — and open the pull request with `gh pr create --fill`. Do not
-merge it; report the run and let the human decide.
+pre-push hook runs `pnpm check` again — and open the pull request into `develop` with
+`gh pr create --base develop --fill`. Do not merge it; report the run and let the human decide.

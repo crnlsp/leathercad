@@ -1,7 +1,7 @@
 # Testing Strategy
 
 **Status:** Implemented — every layer in §2 exists
-**Last updated:** 2026-09-23
+**Last updated:** 2026-10-07
 
 ---
 
@@ -21,7 +21,7 @@ invisible and expensive.
 |---|---|---|---|---|
 | Unit — geometry, domain | Vitest | ~600 | < 5 s | Arithmetic correctness |
 | Property-based | Vitest + fast-check | ~50 | < 20 s | Correctness across inputs nobody thought of |
-| Golden / approval | Vitest + JSON fixtures | ~40 | < 2 s | Unintended algorithm drift — **not built yet** (roadmap Q7); the committed `.lcp` format fixtures and the SVG snapshots cover part of it |
+| Golden / approval | Vitest `toMatchFileSnapshot` + JSON fixtures | 8 | < 1 s | Unintended drift in offsetting and hole distribution (§11); the committed `.lcp` format fixtures and the SVG snapshots cover the rest |
 | Document & command | Vitest | ~80 | < 3 s | Undo, evaluation, serialisation |
 | Export accuracy | Vitest + poppler (`pdftoppm`, `pdfinfo`) | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
@@ -162,6 +162,20 @@ HTML report as an artifact. There is no break threshold yet: the first full repo
 hold. On Vitest 5 the runner needs the local patch described in ADR 0016. Without it every mutant
 survives and the score measures the setup, not the tests.
 
+Stryker's first run instruments every line and runs the suite in one thread. There the thousand-run
+properties outlast the 30 s a test has in `pnpm test`, so `stryker.config.mjs` gives each test ten
+minutes through `LEATHERCAD_TEST_TIMEOUT`, which `vitest.setup.ts` reads. Without it the geometry
+run stopped at that first run, before testing a single mutant, both of the first two weeks.
+
+A whole geometry run then lasts longer than a CI job may. Measured on four cores, as CI's runner
+has, the first two thousand mutants take about half an hour. The remaining fourteen hundred take
+hours more: the ones that survive or hang re-run minutes of instrumented thousand-run properties
+each. So `weekly.yml` stops Stryker after three and a half hours and keeps what it has tested, and
+the next run carries on from there. The first full report takes a few weeks to build; after it, a
+run tests only what has changed. Stopped by SIGTERM to its own process, Stryker saves a partial
+incremental file and restores the files it mutated in place. A signal to its whole process group
+once left it hung, with nothing saved.
+
 ## 4. Edge-case corpus
 
 Property tests find unknown unknowns. This is the list of *known* hazards, each with an explicit,
@@ -266,12 +280,12 @@ mean the logic is entangled with the canvas.
 The tests that most directly protect the product's promise.
 
 ```ts
-it('prints the 50 mm square at 50 mm', async () => {
+it('prints the 100 × 5 mm gauge at 100 × 5 mm', async () => {
   const pdf    = await exportPdf(planFor(project), options);
   const pixels = rasterise(pdf, { dpi: 254 });          // poppler's pdftoppm: 10 px per mm
-  const widthMm = measureSquare(pixels).width / 10;    // outer edge to outer edge
-  expect(widthMm).toBeGreaterThan(49.8);                // 50 mm, plus up to the stroke
-  expect(widthMm).toBeLessThan(50.4);
+  const widthMm = measureGauge(pixels).width / 10;     // outer edge to outer edge
+  expect(widthMm).toBeGreaterThan(99.8);                // 100 mm, plus up to the stroke
+  expect(widthMm).toBeLessThan(100.4);
 });
 ```
 
@@ -290,6 +304,13 @@ principles:
   overlap wider than the content area).
 - **Assert that the preview and the print use the same pagination** by deep-equality on the
   `Page[]`, so the two can never drift.
+- **Read an SVG or a DXF back by hand.** They are text, and a parser for either would be a
+  dependency and an ADR for a few dozen lines a test can own. The unit tests parse the writer's
+  output and compare it with the model, as a property over random curves; the end-to-end test
+  exports the print test through the app and measures the file with a reader of its own that
+  shares nothing with the writer (`e2e/vectorFiles.ts`). The files are written with one line
+  ending each (`\n` for SVG, `\r\n` for DXF), and a test holds it, so the cross-platform job sees
+  the same bytes.
 
 The strongest of these checks rasterise the PDF with poppler and measure the result in pixels,
 which is stronger than parsing our own numbers back out: it proves the file means what we think,
@@ -307,7 +328,7 @@ really running.
 - React component internals. Tested through the few E2E flows, not in isolation.
 - Panel layout and CSS. Visual, cheap to fix, expensive to test.
 - Electron main-process plumbing beyond one "the window opens" smoke test.
-- Third-party libraries. Test *our* use of Clipper2, not Clipper2.
+- Third-party libraries. Test *our* use of pdf-lib, not pdf-lib.
 
 Coverage policy: **90 % lines and 85 % branches in `geometry` and `domain`, enforced in CI**; no
 threshold elsewhere. Branch coverage matters more than line coverage in geometry, because the
@@ -331,7 +352,7 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
-Seven jobs, run in parallel on every pull request, so one run reports every failure rather than
+Eight jobs, run in parallel on every pull request, so one run reports every failure rather than
 only the first:
 
 ```
@@ -344,6 +365,9 @@ test     pnpm test:coverage     # unit, property, golden, export, snapshot,
                                 # and the coverage thresholds in one pass
                                 # LEATHERCAD_REQUIRE_POPPLER=1
          pnpm test:perf         # domain/perf.test.ts alone, serial, uninstrumented
+
+cross-platform  pnpm test       # the unit tests on Windows and macOS, where the
+                                # rasterised print checks skip without poppler
 
 e2e      pnpm test:e2e          # Playwright + Electron, under xvfb, incl. the axe scan
                                 # uploads playwright-report/ on failure
@@ -360,6 +384,10 @@ dependencies  osv-scanner          # the lockfile against known vulnerabilities
 `static` also runs `pnpm knip`. Every action is pinned to a commit; zizmor fails the run on one that
 is not.
 
+Beside it, on every pull request and push, `package.yml` runs the packaged smoke test and builds the
+installer on Windows and macOS, and builds the Flatpak. Until roadmap item R5 it ran only when
+packaging could have changed, because a private repository pays for those minutes.
+
 `pnpm check` runs the `static` and `test` work locally — including `test:coverage`, not plain
 `test` — and is what the pre-push hook invokes, so a green `pnpm check` predicts a green CI for
 everything but E2E. It runs the coverage build deliberately: slice 1.8 shipped a property test that
@@ -373,9 +401,19 @@ without coverage — in CI and in `pnpm check` alike. `pnpm test` still runs it 
 
 Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
 a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
-testing of `geometry` and `domain`, and the unit tests on Windows and macOS. CodeQL runs on every
-pull request and push, and OpenSSF Scorecard on `main`; both skipped themselves while the
-repository was private.
+testing of `geometry` and `domain`, reporting a failure as an issue too. CodeQL runs on every pull
+request and push, and OpenSSF Scorecard on `main`; both skipped themselves while the repository was
+private.
+
+GitHub runs a schedule from the workflow file on the default branch, `main`, which holds the last
+release. So the nightly and weekly jobs check out `develop` themselves, where the code is being
+written: before they did, they tested only what had already shipped. Two consequences:
+
+- **A change to a scheduled workflow takes effect on schedule once it reaches `main`,** with the
+  next release. Until then, run it by hand on `develop` (*Actions* → the workflow → *Run
+  workflow*), which uses `develop`'s copy of the file.
+- **A failure names its commit,** because `develop` moves on: the nightly issue gives the commit and
+  the seed, which together reproduce it anywhere.
 
 `pnpm bench` runs the benchmarks. `pnpm bench:compare` sets each against the baseline committed
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
@@ -394,8 +432,48 @@ The loop for a new geometry function:
 2. Write the **property** tests. What must be true of every output?
 3. Write the specific **edge cases** from §4 that apply.
 4. Implement.
-5. Add a **golden** fixture for a representative case, and review the committed output by hand once.
+5. Add a **golden** fixture for a representative case, and review the committed output by hand once
+   (§11).
 6. Run the `geometry-review` skill's checklist.
 
 For UI work, the order relaxes: write the command and its test first, then wire the interface to it.
 The command is the part with a contract; the panel is not.
+
+## 11. Golden fixtures
+
+Properties say what must hold of every answer. A golden says what the answer *was*, so that a change
+which moves a stitch hole is seen, read and explained instead of shipped. They exist for the two
+algorithms where silent drift costs leather: offsetting, which makes every derived stitch line, and
+hole distribution.
+
+`packages/geometry/src/golden.test.ts` builds a corpus of real pieces — a wallet panel, a panel
+whose 3 mm corners an inset consumes, a strap with round ends, the three sewn sides of a card
+pocket, the pocket with a V thumb notch and with the sample project's scooped one, a stitch line
+drawn by hand with its seam allowance, and a pouch front of arcs and a cubic — sets each stitch line
+3 and 4 mm in from the edge, or its allowance 3 and 4 mm out, and places holes along it with a
+3.0 mm and a 3.85 mm iron, `fit-whole` as the app does. Each piece is one JSON file in
+`packages/geometry/__golden__/`, compared with Vitest's own `toMatchFileSnapshot`: no dependency.
+
+**Reading one.** Each stitch line opens with what a reviewer looks at first: its `lengthMm`, then
+per iron the number of `holes` and the `spacingMm` achieved (pitch is nominal, spacing achieved —
+[glossary](glossary.md)). Then come its segments, and every hole's position, one per line, so a
+moved hole is a one-line diff. `[]` is an offset that gave nothing back: the strap inset by its
+half-width collapses, and the scooped pocket's inset would trim an arc against a line at its tips,
+which Tier 1 does not do ([geometry.md](geometry.md) §6.2). `"refused"` is an offset that threw:
+a cubic has no exact one.
+
+**No float noise.** Every number is millimetres on the model's 0.1 µm grid (`quantise`). An arc's
+sweep is written as its length along the arc, signed like the sweep, so even that is a length. A
+difference in the last bits of a double never reaches a file; a hole that moves by more than half a
+grid step does.
+
+**Updating.** A changed golden is a behaviour change. When it is meant, `pnpm test golden -u`
+rewrites the files. **Look at every changed golden before committing it**, and say in the commit
+message what moved and why ([geometry.md](geometry.md) §12). An unexplained golden diff is a silent
+behaviour change, and the reason this layer exists. A run writes a golden that is missing; CI, with
+`CI` set, never writes one, so a golden left uncommitted fails there. `.gitattributes` keeps the
+files' `\n` line endings on a Windows checkout, so every platform compares the same bytes.
+
+What they do not cover: the domain's corner policy. `hole-at-corner`, the default, splits a stitch
+line at its sharp corners and distributes each run on its own; on a line with no sharp corners it
+is the single run these goldens record. Its own tests are in `packages/domain/src/stitch.test.ts`.

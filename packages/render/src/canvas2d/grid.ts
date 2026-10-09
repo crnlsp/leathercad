@@ -1,4 +1,4 @@
-import { formatNumber } from '@leathercad/core';
+import { approxEq, formatNumber, type Mm } from '@leathercad/core';
 import { MatOps, type Vec2 } from '@leathercad/geometry';
 
 import {
@@ -8,7 +8,7 @@ import {
   niceTickStepMm,
   ticksInRange,
 } from '../ticks.js';
-import { visibleBoundsMm, worldToScreen, type ViewportView } from '../view.js';
+import { cssPxPerMm, visibleBoundsMm, worldToCss, type ViewportView } from '../view.js';
 import { vendoredFamily, type Canvas2DLike } from './backend.js';
 import { CANVAS } from '../theme/index.js';
 
@@ -20,19 +20,25 @@ import { CANVAS } from '../theme/index.js';
  * Fixed millimetre tiers rather than an adaptive mesh: the one mesh this
  * replaced produced moiré zoomed in and vanished zoomed out, and a grid square
  * that changes size with the zoom is not a unit anyone can count in.
+ *
+ * Drawn in CSS pixels, so a grid line is one CSS pixel wide and a tier
+ * appears at the same zoom on any display (R-02).
  */
 export function renderGrid(ctx: Canvas2DLike, view: ViewportView): void {
   const bounds = visibleBoundsMm(view);
-  const transform = worldToScreen(view);
+  const transform = worldToCss(view);
+  const zoom = cssPxPerMm(view);
+  const width = view.widthPx / view.dpr;
+  const height = view.heightPx / view.dpr;
 
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
   ctx.lineWidth = 1;
   ctx.setLineDash([]);
 
   const tiers = CANVAS.grid;
   tiers.forEach((tier, index) => {
-    if (view.scale < tier.minPxPerMm) return;
+    if (zoom < tier.minPxPerMm) return;
     // A line the next tier up will draw is left to it, so every line is drawn
     // once, in the strongest colour it has a right to.
     const coarser = tiers[index + 1]?.stepMm ?? null;
@@ -43,13 +49,13 @@ export function renderGrid(ctx: Canvas2DLike, view: ViewportView): void {
       if (coarser !== null && isMultiple(x, coarser)) continue;
       const px = crisp(MatOps.apply(transform, { x, y: 0 }).x);
       ctx.moveTo(px, 0);
-      ctx.lineTo(px, view.heightPx);
+      ctx.lineTo(px, height);
     }
     for (const y of ticksInRange(bounds.minY, bounds.maxY, tier.stepMm)) {
       if (coarser !== null && isMultiple(y, coarser)) continue;
       const py = crisp(MatOps.apply(transform, { x: 0, y }).y);
       ctx.moveTo(0, py);
-      ctx.lineTo(view.widthPx, py);
+      ctx.lineTo(width, py);
     }
     ctx.stroke();
   });
@@ -58,14 +64,15 @@ export function renderGrid(ctx: Canvas2DLike, view: ViewportView): void {
   ctx.beginPath();
   const origin = MatOps.apply(transform, { x: 0, y: 0 });
   ctx.moveTo(crisp(origin.x), 0);
-  ctx.lineTo(crisp(origin.x), view.heightPx);
+  ctx.lineTo(crisp(origin.x), height);
   ctx.moveTo(0, crisp(origin.y));
-  ctx.lineTo(view.widthPx, crisp(origin.y));
+  ctx.lineTo(width, crisp(origin.y));
   ctx.stroke();
 
   ctx.restore();
 }
 
+/** A ruler's look. Every size is in CSS pixels: the rulers scale with the display. */
 export interface RulerStyle {
   readonly thicknessPx: number;
   /**
@@ -86,8 +93,8 @@ export interface RulerStyle {
 }
 
 export const DEFAULT_RULER_STYLE: RulerStyle = {
-  thicknessPx: 22,
-  leftThicknessPx: 34,
+  thicknessPx: CANVAS.ruler.thicknessPx,
+  leftThicknessPx: CANVAS.ruler.leftThicknessPx,
   // On the ground they measure (UI Foundations §5.2, §9.2).
   background: CANVAS.ruler.background,
   edge: CANVAS.ruler.edge,
@@ -111,6 +118,9 @@ export const DEFAULT_RULER_STYLE: RulerStyle = {
  * The whole point of the application is that a stated millimetre is a real
  * millimetre, so the ruler is not decoration — it is the thing that lets
  * someone check the claim on screen before they ever reach a printer.
+ *
+ * Drawn in CSS pixels, like the grid: the same ruler on any display, its
+ * ticks as far apart and as long at 2× as at 1×.
  */
 export function renderRulers(
   ctx: Canvas2DLike,
@@ -120,10 +130,13 @@ export function renderRulers(
   cursorMm: Vec2 | null = null,
 ): void {
   const bounds = visibleBoundsMm(view);
-  const minorStep = niceTickStepMm(7, view.scale);
+  const zoom = cssPxPerMm(view);
+  const minorStep = niceTickStepMm(7, zoom);
   const majorStep = majorStepFor(minorStep);
   const precision = labelPrecisionFor(majorStep);
-  const transform = worldToScreen(view);
+  const transform = worldToCss(view);
+  const width = view.widthPx / view.dpr;
+  const height = view.heightPx / view.dpr;
   const top = style.thicknessPx;
   const left = style.leftThicknessPx;
 
@@ -136,19 +149,19 @@ export function renderRulers(
   );
   const topLabelStep = labelStepFor(
     majorStep,
-    view.scale,
+    zoom,
     widestLabel * 0.6 * style.fontPx + style.fontPx,
   );
-  const leftLabelStep = labelStepFor(majorStep, view.scale, style.fontPx * 2);
+  const leftLabelStep = labelStepFor(majorStep, zoom, style.fontPx * 2);
 
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
   ctx.setLineDash([]);
   ctx.lineWidth = 1;
 
   ctx.fillStyle = style.background;
-  ctx.fillRect(0, 0, view.widthPx, top);
-  ctx.fillRect(0, 0, left, view.heightPx);
+  ctx.fillRect(0, 0, width, top);
+  ctx.fillRect(0, 0, left, height);
 
   ctx.font = `${style.fontWeight} ${style.fontPx}px ${style.fontFamily}`;
   ctx.fillStyle = style.text;
@@ -190,9 +203,9 @@ export function renderRulers(
   ctx.strokeStyle = style.edge;
   ctx.beginPath();
   ctx.moveTo(left, crisp(top - 1));
-  ctx.lineTo(view.widthPx, crisp(top - 1));
+  ctx.lineTo(width, crisp(top - 1));
   ctx.moveTo(crisp(left - 1), top);
-  ctx.lineTo(crisp(left - 1), view.heightPx);
+  ctx.lineTo(crisp(left - 1), height);
   ctx.stroke();
 
   // The cursor tick on both rulers: a drafting affordance that reads the
@@ -202,11 +215,11 @@ export function renderRulers(
     ctx.strokeStyle = style.cursor;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    if (at.x >= left && at.x <= view.widthPx) {
+    if (at.x >= left && at.x <= width) {
       ctx.moveTo(at.x, 0);
       ctx.lineTo(at.x, top);
     }
-    if (at.y >= top && at.y <= view.heightPx) {
+    if (at.y >= top && at.y <= height) {
       ctx.moveTo(0, at.y);
       ctx.lineTo(left, at.y);
     }
@@ -221,16 +234,21 @@ export function renderRulers(
 }
 
 /**
- * Snaps to a half-pixel.
+ * Snaps to a half CSS pixel.
  *
  * A one-pixel line centred on an integer coordinate straddles two pixel rows
- * and renders as two grey ones; centred on a half it lands on exactly one.
+ * and renders as two grey ones; centred on a half it lands on exactly one —
+ * and on a 2× display, on exactly two device rows.
  */
 function crisp(value: number): number {
   return Math.round(value) + 0.5;
 }
 
-function isMultiple(value: number, step: number): boolean {
-  const multiple = value / step;
-  return Math.abs(multiple - Math.round(multiple)) < 1e-9;
+/**
+ * Whether a tick lies on a coarser step, compared in millimetres. Ticks are
+ * generated by index, so one is either float noise from a multiple or a whole
+ * minor step away from it — never anywhere near `EPS_POINT`.
+ */
+function isMultiple(value: Mm, step: Mm): boolean {
+  return approxEq(value, Math.round(value / step) * step);
 }

@@ -31,19 +31,12 @@ import type { ExportReport } from './useProjectFile.js';
  * exporter drew.
  */
 export function ExportNotice({ report, onClose }: { report: ExportReport; onClose: () => void }) {
-  const i18n = useI18n();
-  const { t } = i18n;
-  const { readiness, tiled } = report;
+  const { t } = useI18n();
+  const { readiness } = report;
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
   }, []);
-
-  const counts = [
-    readiness.errors === 0 ? null : t('exportNotice.errors', { count: readiness.errors }),
-    readiness.warnings === 0 ? null : t('exportNotice.warnings', { count: readiness.warnings }),
-    readiness.infos === 0 ? null : t('exportNotice.infos', { count: readiness.infos }),
-  ].filter((part): part is string => part !== null);
 
   return (
     <div className="dialog-backdrop">
@@ -59,49 +52,15 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
         }}
       >
         <h3 id="export-notice-title">
-          {readiness.omitted.length === 0 && counts.length === 0
+          {readiness.omitted.length === 0 &&
+          readiness.errors + readiness.warnings + readiness.infos === 0
             ? t('exportNotice.titleTiled')
-            : t('exportNotice.titleCheck')}
+            : report.format === 'pdf'
+              ? t('exportNotice.titleCheck')
+              : t('exportNotice.titleCheckFile', { format: report.format.toUpperCase() })}
         </h3>
 
-        {tiled.length > 0 && (
-          <section className="dialog-group" data-testid="export-tiled">
-            <p>
-              <b>{t('exportNotice.tiledLead', { count: tiled.length })}</b>{' '}
-              {t('exportNotice.tiledAcross', { overlap: TILE_OVERLAP_MM })}
-            </p>
-            <ul>
-              {tiled.map((entry) => (
-                <li key={entry.part.id}>{describeTiled(entry, t)}</li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {readiness.omitted.length > 0 && (
-          <section className="dialog-group" data-testid="export-omitted">
-            <p>
-              <b>{t('exportNotice.omittedLead', { count: readiness.omitted.length })}</b>{' '}
-              {t('exportNotice.omitted')}
-            </p>
-            <ul>
-              {readiness.omitted.map((feature) => (
-                <li key={feature.featureId}>
-                  <b>{feature.featureName}</b>{' '}
-                  <span className="dialog-note">
-                    {t('exportNotice.inPart', { part: feature.partName })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {counts.length > 0 && (
-          <p data-testid="export-counts">
-            {t('exportNotice.counts', { counts: i18n.list(counts, 'unit') })}
-          </p>
-        )}
+        <ExportFindings report={report} />
 
         <div className="dialog-actions">
           <button ref={closeRef} type="button" className="tool" onClick={onClose}>
@@ -110,5 +69,72 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The findings themselves, without the dialog: the export notice shows them
+ * once the file is written, and the Print Preview before anything is printed
+ * (7.6).
+ */
+export function ExportFindings({ report }: { report: ExportReport }) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const { readiness, tiled } = report;
+  // What the paper or the file holds: an SVG or a DXF is a file, not a sheet.
+  const file = report.format !== 'pdf';
+  const counts = [
+    readiness.errors === 0 ? null : t('exportNotice.errors', { count: readiness.errors }),
+    readiness.warnings === 0 ? null : t('exportNotice.warnings', { count: readiness.warnings }),
+    readiness.infos === 0 ? null : t('exportNotice.infos', { count: readiness.infos }),
+  ].filter((part): part is string => part !== null);
+
+  return (
+    <>
+      {tiled.length > 0 && (
+        <section className="dialog-group" data-testid="export-tiled">
+          <p>
+            <b>{t('exportNotice.tiledLead', { count: tiled.length })}</b>{' '}
+            {t('exportNotice.tiledAcross', { overlap: TILE_OVERLAP_MM })}
+          </p>
+          <ul>
+            {tiled.map((entry) => (
+              <li key={entry.part.id}>{describeTiled(entry, t)}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {readiness.omitted.length > 0 && (
+        <section className="dialog-group" data-testid="export-omitted">
+          <p>
+            <b>
+              {t(file ? 'exportNotice.omittedLeadFile' : 'exportNotice.omittedLead', {
+                count: readiness.omitted.length,
+              })}
+            </b>{' '}
+            {t(file ? 'exportNotice.omittedFile' : 'exportNotice.omitted')}
+          </p>
+          <ul>
+            {readiness.omitted.map((feature) => (
+              <li key={feature.featureId}>
+                <b>{feature.featureName}</b>{' '}
+                <span className="dialog-note">
+                  {t('exportNotice.inPart', { part: feature.partName })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {counts.length > 0 && (
+        <p data-testid="export-counts">
+          {t(file ? 'exportNotice.countsFile' : 'exportNotice.counts', {
+            counts: i18n.list(counts, 'unit'),
+          })}
+        </p>
+      )}
+    </>
   );
 }

@@ -6,7 +6,7 @@ import {
   rectShape,
 } from '@leathercad/document';
 import type { FeatureId } from '@leathercad/domain';
-import { vec, type Vec2 } from '@leathercad/geometry';
+import { PathOps, vec, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -150,6 +150,22 @@ describe('ToolManager snapping', () => {
     expect(tool.points[0]).toEqual(vec(19.5, 0.3));
   });
 
+  it('draws the snap glyph the same size on a 2× display, at the same zoom', () => {
+    // Nine CSS pixels across. It was nine device pixels, half the size on a
+    // Retina display (U.1).
+    const glyphBox = (dpr: number) => {
+      const { manager, store, viewport } = harness();
+      viewport.resize(800 * dpr, 600 * dpr, dpr);
+      viewport.scale = 4 * dpr;
+      addSquare(store);
+      manager.pointerMove(pointer(vec(19.5, 0.3)));
+      const [glyph] = manager.overlay().items;
+      return glyph?.kind === 'path' ? PathOps.bbox(glyph.path) : null;
+    };
+    expect(glyphBox(2)).toEqual(glyphBox(1));
+    expect(glyphBox(1)!.maxX - glyphBox(1)!.minX).toBeCloseTo(9 / 4, 9);
+  });
+
   it('shows a glyph for the snap it caught, and none when it caught nothing', () => {
     const { manager, store } = harness();
     addSquare(store);
@@ -220,7 +236,7 @@ describe('ToolManager snapping', () => {
           const near = snappedAt(scale, insidePx);
           const far = snappedAt(scale, outsidePx);
 
-          // The pick radius is 10 device pixels, converted through the
+          // The pick radius is 10 CSS pixels, converted through the
           // viewport — so what snaps is a matter of how close the cursor
           // *looks*, identically at every zoom.
           return near !== null && far === null;

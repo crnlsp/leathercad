@@ -31,7 +31,10 @@ The things most worth reporting are:
 - **Opening a file.** A `.lcp` project that crashes the app, hangs it, or gets anything to run.
 - **The renderer boundary.** A way for the renderer to reach the operating system beyond the typed
   platform bridge. That includes reading, writing or opening a file the user didn't choose in one of
-  the app's own dialogs, or getting a second window or a navigation. See `docs/architecture.md` §5.
+  the app's own dialogs, or getting a second window or a navigation. Printing counts too: the main
+  process runs the CUPS client (`lpstat`, `lpoptions`, `lp`) for printing, and anything that gets it
+  to run another command, or to send a job to a printer CUPS does not list, is in scope. See
+  `docs/architecture.md` §5.
 - **The packaged app.** Its Electron fuses, asar integrity, or the release pipeline and its
   artefacts.
 

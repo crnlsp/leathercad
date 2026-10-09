@@ -1,13 +1,17 @@
+import { EPS_ANGLE } from '@leathercad/core';
 import { arc, cubic, path, polyline, vec } from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  boardTextItem,
   documentTextItem,
   dotsItem,
   fillItem,
   foldTickItem,
   hatchItem,
   linkTickItem,
+  markerItem,
   pathItem,
   slitsItem,
   textItem,
@@ -23,6 +27,7 @@ const view: ViewportView = {
   scale: 2,
   widthPx: 400,
   heightPx: 300,
+  dpr: 1,
 };
 
 const listOf = (...items: DisplayList['items']): DisplayList => ({ items });
@@ -73,6 +78,13 @@ describe('renderToSvgString', () => {
     expect(svg.match(/A /g)).toHaveLength(2);
   });
 
+  it('splits a sweep within EPS_ANGLE of a full turn as a full circle', () => {
+    const almost = path([arc(vec(0, 0), 10, 0, Math.PI * 2 - EPS_ANGLE / 2)], true);
+    const svg = renderToSvgString(listOf(pathItem('cut', almost)), view);
+
+    expect(svg.match(/A /g)).toHaveLength(2);
+  });
+
   it('emits cubics as curve commands', () => {
     const c = path([cubic(vec(0, 0), vec(0, 10), vec(10, 10), vec(10, 0))]);
 
@@ -85,7 +97,7 @@ describe('renderToSvgString', () => {
       view,
     );
 
-    // 3 device pixels at 2 px/mm is 1.5 mm inside the scaled group.
+    // 3 CSS pixels at 2 px/mm is 1.5 mm inside the scaled group.
     expect(svg).toContain('stroke-width="1.5"');
   });
 
@@ -113,6 +125,35 @@ describe('renderToSvgString', () => {
     expect(svg).toContain('x="200"');
     expect(svg).toContain('y="150"');
     expect(svg).toContain('>100 mm<');
+  });
+
+  it('sets the board’s words in their weight, on a halo of the ground, as the canvas does', () => {
+    const svg = renderToSvgString(
+      listOf(boardTextItem(vec(0, 0), 'Card pocket ×2', CANVAS.text.name, GROUND.ink)),
+      view,
+    );
+
+    expect(svg).toContain(
+      `<text x="200" y="150" font-size="12" fill="${GROUND.ink}" font-weight="600" ` +
+        `stroke="${GROUND.ground}" stroke-width="8" stroke-linejoin="round" ` +
+        `paint-order="stroke">Card pocket ×2</text>`,
+    );
+  });
+
+  it('turns a dimension’s number to read along its line', () => {
+    const svg = renderToSvgString(
+      listOf(
+        boardTextItem(vec(10, 5), '30.0', CANVAS.text.value, '#8a5a2b', {
+          rotationRad: Math.PI / 2,
+        }),
+      ),
+      view,
+    );
+
+    // A quarter turn counter-clockwise in the world is −90° on screen, about
+    // the number's own anchor: 10 mm right of and 5 mm above the middle.
+    expect(svg).toContain('x="220" y="140"');
+    expect(svg).toContain('transform="rotate(-90 220 140)"');
   });
 
   it('escapes text that would otherwise break the document', () => {
@@ -153,6 +194,53 @@ describe('renderToSvgString', () => {
     );
 
     expect(renderToSvgString(scene, view)).toMatchSnapshot();
+  });
+});
+
+describe('on a 2× display (U.1)', () => {
+  // The document is the canvas's size in device pixels, and its user space is
+  // CSS pixels: the viewBox is where the display's ratio is applied, once, so
+  // every screen-constant size reads the same at any ratio.
+  const at = (dpr: number): ViewportView => ({
+    ...view,
+    scale: view.scale * dpr,
+    widthPx: view.widthPx * dpr,
+    heightPx: view.heightPx * dpr,
+    dpr,
+  });
+  const scene = listOf(
+    pathItem('cut', polyline([vec(-20, -10), vec(20, -10), vec(20, 10), vec(-20, 10)], true)),
+    pathItem('stitch', path([arc(vec(0, 0), 8, 0, Math.PI)])),
+    pathItem('construction', polyline([vec(0, 0), vec(5, 5)]), { dashPx: [4, 3] }),
+    dotsItem('stitch-holes', [vec(-8, 0), vec(8, 0)], 2, '#5aa9ff'),
+    slitsItem([[vec(0, 0), vec(1, 1)]], 1.25),
+    hatchItem(polyline([vec(0, 0), vec(4, 0), vec(4, 4)], true)),
+    foldTickItem(vec(0, 0), 'valley'),
+    linkTickItem('stitch', vec(0, 0), vec(1, 0)),
+    textItem('annotation', vec(0, 12), '40 mm', 11),
+    boardTextItem(vec(0, 16), '30.0', CANVAS.text.value, '#8a5a2b', {
+      align: 'center',
+      rotationRad: 0.5,
+    }),
+    documentTextItem('annotation', vec(0, -14), 'A', 4),
+    markerItem(vec(3, 3), 'error', '#c0392f', true),
+  );
+
+  it('is as many device pixels as the canvas, over a viewBox of its CSS pixels', () => {
+    const svg = renderToSvgString(listOf(), at(2));
+    expect(svg).toContain('width="800" height="600" viewBox="0 0 400 300"');
+  });
+
+  it('draws everything as it would at 1×, only twice as sharp', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(2, 4), (dpr) => {
+        // Ratios that scale a float exactly, so the two documents can be
+        // compared character for character below the root element.
+        const one = renderToSvgString(scene, view).split('\n');
+        const other = renderToSvgString(scene, at(dpr)).split('\n');
+        expect(other.slice(1)).toEqual(one.slice(1));
+      }),
+    );
   });
 });
 

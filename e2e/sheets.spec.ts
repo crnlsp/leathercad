@@ -17,7 +17,8 @@ import { fromProjectMenu } from './projectMenu.js';
  * and what the paper will look like — from the one sheet plan the PDF writes.
  *
  * Every test opens the 7.7 print test: an outer panel and a card pocket that
- * pack onto one sheet of A4 portrait, and a 250 mm strap taped across two more.
+ * pack onto one sheet of A4 portrait, and a 275 mm strap — too long for it
+ * either way — taped across two more.
  */
 
 /** The screen-only furniture colour, `SHEET.furniture` (#c22a8c). */
@@ -129,6 +130,11 @@ test('Parts says where each part prints, and why a part does not (7.4b)', async 
     for (const name of ['Outer panel', 'Pocket', 'Strap']) {
       await expect(printLine(window, name), name).toHaveText('Sheet 1');
     }
+    // On A5 landscape the pocket shares the panel's sheet only turned a
+    // quarter, and Parts says so: the board shows it as drawn (7.8).
+    await window.getByTestId('paper').selectOption('A5 landscape');
+    await expect(printLine(window, 'Pocket')).toHaveText('Sheet 1, turned');
+    await window.getByTestId('undo').click();
     await window.getByTestId('undo').click();
 
     // Hidden, the strap is left off the paper, and the count says so too.
@@ -318,7 +324,9 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     const second = await sheetBox(window, 'Sheet 2 of 3');
     const width = second.right - second.left;
     const height = second.bottom - second.top;
-    const target = { x: second.left + width * 0.62, y: second.top + height * 0.4 };
+    // The strap's tile is centred on the printable area, which on A4 portrait
+    // runs from 10 mm below the top to 18.5 mm above the foot: about half way.
+    const target = { x: second.left + width * 0.62, y: second.top + height * 0.49 };
     let found = false;
     for (let dy = -12; dy <= 12 && !found; dy += 3) {
       await window.mouse.move(target.x, target.y + dy);

@@ -2,6 +2,7 @@ import type { RecentFile } from '@leathercad/platform';
 import type { LucideIcon } from 'lucide-react';
 
 import type { Translate } from '../../shared/i18n.js';
+import type { CommandId } from './keymap.js';
 
 /**
  * What a menu holds (8.7), as data: the Project and Help menus, a part's
@@ -14,8 +15,8 @@ export interface MenuItem {
   readonly id: string;
   readonly label: string;
   readonly onChoose: () => void;
-  /** The shortcut shown at the right, as `shortcuts.ts` writes keys: `CmdOrCtrl+N`. */
-  readonly keys?: string;
+  /** The command whose key is shown at the right, from the keymap (U.3). */
+  readonly keys?: CommandId;
   /** A second line, in the dimmer text. */
   readonly note?: string;
   readonly icon?: LucideIcon;
@@ -102,21 +103,21 @@ export function projectMenu(
       kind: 'item',
       id: 'new',
       label: t('menu.new'),
-      keys: 'CmdOrCtrl+N',
+      keys: 'newProject',
       onChoose: actions.newProject,
     },
     {
       kind: 'item',
       id: 'open',
       label: t('menu.open'),
-      keys: 'CmdOrCtrl+O',
+      keys: 'openProject',
       onChoose: actions.open,
     },
     {
       kind: 'item',
       id: 'save-as',
       label: t('menu.saveAs'),
-      keys: 'CmdOrCtrl+Shift+S',
+      keys: 'saveAs',
       onChoose: actions.saveAs,
     },
     { kind: 'separator' },
@@ -133,6 +134,40 @@ export function projectMenu(
           onChoose: () => actions.openRecent(file.path),
         };
       }),
+    },
+  ];
+}
+
+/**
+ * The other formats of *Export PDF* (6.2, 6.5), in the menu beside it: the files
+ * a laser cutter, a plotter, a CNC program or a vector editor reads, in
+ * millimetres. Not repeated in the Project menu — an export is the bar's.
+ *
+ * With nothing to export the items stay, and say so: a menu that drops what it
+ * cannot do moves the rest about, and never says why (X1).
+ */
+export function exportMenu(
+  actions: { readonly svg: () => void; readonly dxf: () => void },
+  canExport: boolean,
+  t: Translate,
+): MenuEntry[] {
+  const refusal = canExport ? undefined : t('menu.exportNothing');
+  return [
+    {
+      kind: 'item',
+      id: 'export-svg',
+      label: t('menu.exportSvg'),
+      note: t('menu.exportSvgNote'),
+      refusal,
+      onChoose: actions.svg,
+    },
+    {
+      kind: 'item',
+      id: 'export-dxf',
+      label: t('menu.exportDxf'),
+      note: t('menu.exportDxfNote'),
+      refusal,
+      onChoose: actions.dxf,
     },
   ];
 }

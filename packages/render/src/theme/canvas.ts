@@ -9,16 +9,21 @@ export function alpha(hex: string, opacity: number): string {
 
 /**
  * How the drafting ground is drawn (UI Foundations §8.4, §8.5, §9).
+ *
+ * **Every pixel here is a CSS pixel**, and every `…PxPerMm` a zoom in CSS
+ * pixels per millimetre (`cssPxPerMm`): the screen backends multiply by the
+ * display's ratio once, so a line, a glyph or a threshold is the same on a 1×
+ * and a 2× display (U.1).
  */
 export const CANVAS = {
   /**
    * Three tiers with real contrast steps, each dropping out at the zoom where
    * it would become texture (§9.1). A uniform mesh produced moiré zoomed in and
-   * vanished zoomed out.
+   * vanished zoomed out. The 1 mm grid from 160 %, the 10 mm from 40 % (R-02).
    */
   grid: [
-    { stepMm: 1, colour: GROUND.fine, minPxPerMm: 4 },
-    { stepMm: 10, colour: GROUND.major, minPxPerMm: 0.6 },
+    { stepMm: 1, colour: GROUND.fine, minPxPerMm: 6 },
+    { stepMm: 10, colour: GROUND.major, minPxPerMm: 1.5 },
     { stepMm: 100, colour: GROUND.hundred, minPxPerMm: 0 },
   ],
   axis: GROUND.axis,
@@ -32,11 +37,34 @@ export const CANVAS = {
     edge: GROUND.major,
     tick: GROUND.hundred,
     text: GROUND.inkDim,
+    /** The top ruler's height, and the left one's width: "−160" does not fit in 22 px. */
+    thicknessPx: 22,
+    leftThicknessPx: 34,
   },
   cursorTick: ACCENT.tanInk,
 
-  /** Part captions: the drawing's own quiet voice, not a role's colour. */
-  caption: GROUND.inkDim,
+  /**
+   * The board's own words (R-01): a piece's caption and a dimension's value,
+   * the same size on screen at every zoom — the `canvas-name`, `canvas-meta`
+   * and `canvas-value` voices, each 12/16 — and never smaller than `minPx`.
+   * Each sits on `haloPx` of the ground, so it reads over the grid, a piece or
+   * a line. Paper keeps its own true-size text.
+   */
+  text: {
+    name: { weight: 600, sizePx: 12, lineHeightPx: 16 },
+    meta: { weight: 400, sizePx: 12, lineHeightPx: 16 },
+    value: { weight: 500, sizePx: 12, lineHeightPx: 16 },
+    minPx: 12,
+    haloPx: 4,
+    halo: GROUND.ground,
+  },
+
+  /**
+   * A caption: above its piece by `gapPx`, or — once it would run under the
+   * ruler — pinned `insetPx` in from the canvas's top-left. Below
+   * `detailFromPercent` of true size it says the piece's name alone (R-01).
+   */
+  caption: { gapPx: 4, insetPx: 12, detailFromPercent: 40 },
 
   /**
    * Selection adds, it never replaces (§8.4): a band of the accent beneath the

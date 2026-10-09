@@ -1,17 +1,34 @@
-import { approxEq, approxGte, formatMm, type Mm } from '@leathercad/core';
-import { PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
+import { approxCmp, approxEq, approxGte, approxLte, formatMm, type Mm } from '@leathercad/core';
+import {
+  MatOps,
+  PathOps,
+  RectOps,
+  type Mat2x3,
+  type Path,
+  type Rect,
+  type Vec2,
+} from '@leathercad/geometry';
 
 import { contentAreaMm, paperOptionsFitting, type Orientation, type PageSetup } from './paper.js';
 import type { ExportPart, ExportScene } from './scene.js';
 
-/** Space left between parts on a sheet, so cut lines never touch. */
-const PART_GAP_MM = 8;
+/**
+ * Space left between parts on a sheet, so cut lines never touch and each piece
+ * can be cut out on its own. Enough for scissors; more is paper.
+ */
+const PART_GAP_MM = 6;
 
 /** Room above a part for its printed name. */
 const LABEL_HEIGHT_MM = 5;
 
 export interface PlacedPart {
+  /** The part as it prints: turned a quarter, words and all, when `turned`. */
   readonly part: ExportPart;
+  /**
+   * Turned a quarter counter-clockwise from how it was drawn, because that
+   * took fewer sheets. Its name then reads upward along its left side.
+   */
+  readonly turned: boolean;
   /**
    * Where the part's bounds origin lands on the sheet, in millimetres from
    * the bottom-left of the paper. Y is up, matching PDF.
@@ -101,115 +118,294 @@ export const FOLD_CLEARANCE_MM = 15;
  * Packs whole parts onto sheets.
  *
  * This is **part packing, not tiling**: each part is placed complete on one
- * sheet and the overflow moves to the next page. Leatherworkers print on A4
- * and cut each piece out separately, so the spatial arrangement on the canvas
- * carries no meaning on paper — repacking to save sheets is the better trade.
+ * sheet. Leatherworkers print on A4 and cut each piece out separately, so the
+ * spatial arrangement on the canvas carries no meaning on paper — repacking to
+ * save sheets is the better trade.
  *
- * Shelf packing: parts are sorted tallest first and laid left to right in
- * rows. Not optimal — bin packing never is, cheaply — but it wastes little on
- * the handful of parts a real pattern has, and it is predictable, which
- * matters more than optimal when someone is checking their printout.
+ * Each part goes to the first sheet with room for it, at the free place
+ * highest up and then furthest left — so a small part fills a gap beside a
+ * tall one, or on an earlier sheet, rather than opening a row or a sheet of
+ * its own. A few orders of parts are tried and the one needing fewest sheets
+ * is kept, tallest first on a tie, so the result is the same for the same
+ * parts every time.
+ *
+ * **A part prints as drawn unless turning saves paper.** The layout is made
+ * twice: as drawn, and again letting a part turn a quarter where as drawn it
+ * would need a sheet of its own or be taped. The turned layout is kept only
+ * when it needs fewer sheets, or as many with fewer taped. A turned part
+ * carries its words with it, so its name reads up its side and the cut-out
+ * template is the same shape either way. A part too large either way is
+ * taped across sheets, as drawn.
  */
 export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult {
   const area = contentAreaMm(setup);
-  const oversized: TiledPart[] = [];
-  const fitting: ExportPart[] = [];
+  const asDrawn = layOut(scene.parts, area, false);
+  const turning = layOut(scene.parts, area, true);
+  const chosen =
+    turning.sheets < asDrawn.sheets ||
+    (turning.sheets === asDrawn.sheets && turning.taped < asDrawn.taped)
+      ? turning
+      : asDrawn;
 
-  for (const part of scene.parts) {
-    const width = RectOps.width(part.boundsMm);
-    const height = RectOps.height(part.boundsMm) + LABEL_HEIGHT_MM;
-
-    if (width > area.widthMm || height > area.heightMm) {
-      const options = paperOptionsFitting(width, height, setup);
-      const turned = options.filter((option) => option.paper.name === setup.paper.name);
-      oversized.push({
-        part,
-        widthMm: width,
-        heightMm: height - LABEL_HEIGHT_MM,
-        rows: 0,
-        columns: 0,
-        on: { paper: { name: setup.paper.name }, orientation: setup.orientation },
-        fitsOn: [...turned, ...options.filter((option) => !turned.includes(option))].map(
-          (option) => ({ paper: { name: option.paper.name }, orientation: option.orientation }),
-        ),
-      });
-    } else {
-      fitting.push(part);
-    }
-  }
-
-  // Tallest first, so short parts fill the gaps beside them rather than
-  // starting a row of their own.
-  const ordered = [...fitting].sort(
-    (a, b) => RectOps.height(b.boundsMm) - RectOps.height(a.boundsMm),
-  );
-
-  const pages: Page[] = [];
-  let placements: PlacedPart[] = [];
-  let cursorX = 0;
-  // Y measures downward from the top of the content area while packing; it is
-  // converted to PDF's bottom-up origin when a part is placed.
-  let rowTop = 0;
-  let rowHeight = 0;
-
-  const flushPage = (): void => {
-    if (placements.length > 0) pages.push({ index: pages.length, placements });
-    placements = [];
-    cursorX = 0;
-    rowTop = 0;
-    rowHeight = 0;
-  };
-
-  for (const part of ordered) {
-    const width = packingWidth(part, area.widthMm);
-    const height = RectOps.height(part.boundsMm) + LABEL_HEIGHT_MM;
-
-    // Wrap to the next row when this part would run off the right edge.
-    if (cursorX > 0 && cursorX + width > area.widthMm) {
-      rowTop += rowHeight + PART_GAP_MM;
-      cursorX = 0;
-      rowHeight = 0;
-    }
-
-    // Start a new page when the row would run off the bottom.
-    if (rowTop + height > area.heightMm) {
-      flushPage();
-    }
-
-    placements.push({
-      part,
-      offsetMm: {
-        x: area.x + cursorX - part.boundsMm.minX,
-        // Flip the downward packing cursor into PDF's upward page space.
-        y: area.y + area.heightMm - rowTop - height - part.boundsMm.minY,
-      },
-    });
-
-    cursorX += width + PART_GAP_MM;
-    rowHeight = Math.max(rowHeight, height);
-  }
-
-  flushPage();
+  const pages: Page[] = chosen.packed.map((placements, index) => ({ index, placements }));
 
   // Then each part too large for a sheet, on sheets of its own.
-  const tiled = oversized.map((entry) => {
-    const tiles = tile(entry.part, area);
+  const tiled = chosen.oversized.map(({ part, tiles }) => {
     for (const one of tiles) {
       pages.push({
         index: pages.length,
         placements: [
           {
-            part: entry.part,
+            part,
+            turned: false,
             offsetMm: { x: area.x - one.windowMm.minX, y: area.y - one.windowMm.minY },
           },
         ],
         tile: one,
       });
     }
-    return { ...entry, rows: tiles[0]!.rows, columns: tiles[0]!.columns };
+    const width = RectOps.width(part.boundsMm);
+    const height = RectOps.height(part.boundsMm);
+    const options = paperOptionsFitting(width, height + LABEL_HEIGHT_MM, setup);
+    const turned = options.filter((option) => option.paper.name === setup.paper.name);
+    return {
+      part,
+      widthMm: width,
+      heightMm: height,
+      rows: tiles[0]!.rows,
+      columns: tiles[0]!.columns,
+      on: { paper: { name: setup.paper.name }, orientation: setup.orientation },
+      fitsOn: [...turned, ...options.filter((option) => !turned.includes(option))].map(
+        (option) => ({ paper: { name: option.paper.name }, orientation: option.orientation }),
+      ),
+    };
   });
 
   return { pages, tiled };
+}
+
+interface Area {
+  readonly x: Mm;
+  readonly y: Mm;
+  readonly widthMm: Mm;
+  readonly heightMm: Mm;
+}
+
+/** One way to lay the parts out, and what it costs in sheets. */
+interface Layout {
+  readonly packed: PlacedPart[][];
+  readonly oversized: ReadonlyArray<{ readonly part: ExportPart; readonly tiles: Tile[] }>;
+  /** Every sheet, packed and taped. */
+  readonly sheets: number;
+  readonly taped: number;
+}
+
+function layOut(parts: readonly ExportPart[], area: Area, mayTurn: boolean): Layout {
+  const ways: Footprint[][] = [];
+  const oversized: Array<{ part: ExportPart; tiles: Tile[] }> = [];
+  for (const part of parts) {
+    const options = [asDrawn(part, area), ...(mayTurn ? [turned(part, area)] : [])].filter(
+      (option) =>
+        approxLte(option.widthMm, area.widthMm) && approxLte(option.heightMm, area.heightMm),
+    );
+    if (options.length === 0) oversized.push({ part, tiles: tile(part, area) });
+    else ways.push(options);
+  }
+
+  let packed: PlacedPart[][] = [];
+  for (const order of ORDERS) {
+    const sheets = pack(
+      [...ways].sort((a, b) => order(a[0]!, b[0]!)),
+      area,
+    );
+    if (packed.length === 0 || sheets.length < packed.length) packed = sheets;
+  }
+  const taped = oversized.reduce((sum, entry) => sum + entry.tiles.length, 0);
+  return { packed, oversized, sheets: packed.length + taped, taped };
+}
+
+/**
+ * A part as the packer sees it: the room it takes, in its own coordinates —
+ * its bounds and the name set above them, or beside them once turned.
+ */
+interface Footprint {
+  readonly part: ExportPart;
+  readonly turned: boolean;
+  readonly room: Rect;
+  readonly widthMm: Mm;
+  readonly heightMm: Mm;
+}
+
+function footprint(part: ExportPart, isTurned: boolean, room: Rect): Footprint {
+  return {
+    part,
+    turned: isTurned,
+    room,
+    widthMm: RectOps.width(room),
+    heightMm: RectOps.height(room),
+  };
+}
+
+/**
+ * As drawn: the bounds, with room above for the name, as wide as the name runs.
+ * The fit check is on the bounds: a name longer than the paper is not a reason
+ * to tape a part.
+ */
+function asDrawn(part: ExportPart, area: Area): Footprint {
+  const b = part.boundsMm;
+  return footprint(part, false, {
+    ...b,
+    maxX: b.minX + packingWidth(part, area.widthMm),
+    maxY: b.maxY + LABEL_HEIGHT_MM,
+  });
+}
+
+/**
+ * A quarter turn counter-clockwise, exactly: (x, y) becomes (−y, x) with no
+ * rounding, where `fromRotation(π / 2)` would leave its cosine at 6e-17.
+ */
+const QUARTER_TURN: Mat2x3 = { a: 0, b: 1, c: -1, d: 0, e: 0, f: 0 };
+
+/**
+ * Turned a quarter counter-clockwise, words and all: the name, set above the
+ * part as drawn, reads upward along its left side — from the sheet's right
+ * edge, as drafting reads a turned dimension.
+ */
+function turned(part: ExportPart, area: Area): Footprint {
+  const b = part.boundsMm;
+  const turn = (path: Path): Path => PathOps.transform(path, QUARTER_TURN);
+  const piece: ExportPart = {
+    ...part,
+    paths: part.paths.map((item) => ({ ...item, path: turn(item.path) })),
+    texts: part.texts.map((text) => ({ ...text, glyphs: text.glyphs.map(turn) })),
+    // Its corners turned by the same matrix as its paths, so the two agree.
+    boundsMm: RectOps.fromCorners(
+      MatOps.apply(QUARTER_TURN, { x: b.minX, y: b.minY }),
+      MatOps.apply(QUARTER_TURN, { x: b.maxX, y: b.maxY }),
+    ),
+  };
+  // The room as drawn, turned: the name's room on the left, and as long as the
+  // name runs up the side, never more than the printable height.
+  return footprint(piece, true, {
+    minX: -b.maxY - LABEL_HEIGHT_MM,
+    minY: b.minX,
+    maxX: -b.minY,
+    maxY: b.minX + packingWidth(part, area.heightMm),
+  });
+}
+
+/** The orders `paginate` tries: tallest, largest, widest, longest side first. */
+const ORDERS: ReadonlyArray<(a: Footprint, b: Footprint) => number> = [
+  (a, b) => approxCmp(b.heightMm, a.heightMm),
+  (a, b) => approxCmp(b.widthMm * b.heightMm, a.widthMm * a.heightMm),
+  (a, b) => approxCmp(b.widthMm, a.widthMm),
+  (a, b) => approxCmp(Math.max(b.widthMm, b.heightMm), Math.max(a.widthMm, a.heightMm)),
+];
+
+/**
+ * Parts onto as few sheets as this order allows: each at the first sheet with
+ * room, highest and then leftmost (MaxRects, bottom-left rule).
+ *
+ * Each part comes with the ways it may lie, as drawn first. A way is tried on
+ * every sheet already open before the next is, so a part is turned only when
+ * as drawn it would need a new sheet.
+ *
+ * A sheet's free room is kept as every largest empty rectangle, measured down
+ * from the top left of the printable area. Each footprint carries the gap on
+ * its right and below, and the sheet one gap's worth of room past its edges,
+ * so parts keep the gap between them and still reach the edge.
+ */
+function pack(parts: ReadonlyArray<readonly Footprint[]>, area: Area): PlacedPart[][] {
+  const sheets: Sheet[] = [];
+  for (const ways of parts) {
+    const placed = ways.some((way) => sheets.some((sheet) => place(sheet, way, area)));
+    if (!placed) {
+      // Every way `layOut` kept fits a blank sheet.
+      const sheet: Sheet = {
+        free: [
+          {
+            minX: 0,
+            minY: 0,
+            maxX: area.widthMm + PART_GAP_MM,
+            maxY: area.heightMm + PART_GAP_MM,
+          },
+        ],
+        placements: [],
+      };
+      sheets.push(sheet);
+      place(sheet, ways[0]!, area);
+    }
+  }
+  return sheets.map((sheet) => sheet.placements);
+}
+
+interface Sheet {
+  free: Rect[];
+  readonly placements: PlacedPart[];
+}
+
+/** Puts one way of a part on the sheet, if it has room; says whether it did. */
+function place(sheet: Sheet, way: Footprint, area: Area): boolean {
+  const w = way.widthMm + PART_GAP_MM;
+  const h = way.heightMm + PART_GAP_MM;
+  const at = spotFor(sheet.free, w, h);
+  if (at === null) return false;
+  sheet.free = carve(sheet.free, { minX: at.x, minY: at.y, maxX: at.x + w, maxY: at.y + h });
+  sheet.placements.push({
+    part: way.part,
+    turned: way.turned,
+    offsetMm: {
+      x: area.x + at.x - way.room.minX,
+      // Flip the downward packing space into PDF's upward page space.
+      y: area.y + area.heightMm - at.y - way.room.maxY,
+    },
+  });
+  return true;
+}
+
+/** The highest, then leftmost, free corner with room for `w` × `h`. */
+function spotFor(free: readonly Rect[], w: Mm, h: Mm): Vec2 | null {
+  let best: Vec2 | null = null;
+  for (const room of free) {
+    if (!approxLte(w, RectOps.width(room)) || !approxLte(h, RectOps.height(room))) continue;
+    const order = best === null ? -1 : approxCmp(room.minY, best.y) || approxCmp(room.minX, best.x);
+    if (order < 0) best = { x: room.minX, y: room.minY };
+  }
+  return best;
+}
+
+/**
+ * The free rectangles once `used` is taken: each one it overlaps split into
+ * the up to four largest rectangles around it, and any rectangle inside
+ * another dropped.
+ */
+function carve(free: readonly Rect[], used: Rect): Rect[] {
+  const pieces: Rect[] = [];
+  for (const room of free) {
+    const apart =
+      approxLte(used.maxX, room.minX) ||
+      approxLte(room.maxX, used.minX) ||
+      approxLte(used.maxY, room.minY) ||
+      approxLte(room.maxY, used.minY);
+    if (apart) {
+      pieces.push(room);
+      continue;
+    }
+    if (!approxLte(used.minX, room.minX)) pieces.push({ ...room, maxX: used.minX });
+    if (!approxGte(used.maxX, room.maxX)) pieces.push({ ...room, minX: used.maxX });
+    if (!approxLte(used.minY, room.minY)) pieces.push({ ...room, maxY: used.minY });
+    if (!approxGte(used.maxY, room.maxY)) pieces.push({ ...room, minY: used.maxY });
+  }
+  return pieces.filter(
+    (room, i) =>
+      !pieces.some(
+        (other, j) =>
+          j !== i &&
+          RectOps.containsRect(other, room) &&
+          // Of two equal rectangles, the first stays.
+          (j < i || !RectOps.containsRect(room, other)),
+      ),
+  );
 }
 
 /**
@@ -239,8 +435,8 @@ function packingWidth(part: ExportPart, printableWidthMm: Mm): Mm {
 /**
  * The tiles of one part: a grid of windows the size of the printable area,
  * overlapping by `TILE_OVERLAP_MM` and centred on the part and its name
- * (docs/printing.md §5.2). Row by row from the top left. Nothing rotates:
- * which way a piece lies on the paper is which way it is cut (7.2).
+ * (docs/printing.md §5.2). Row by row from the top left. A taped part is
+ * never turned: it is taped only when it does not fit whole either way.
  */
 function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
   const region = { ...part.boundsMm, maxY: part.boundsMm.maxY + LABEL_HEIGHT_MM };

@@ -236,7 +236,7 @@ export function createEditPointsTool(
       const target = editable(ctx);
       if (target === null) return { items: [] };
 
-      const half = HANDLE_PX / 2 / ctx.viewport.scale;
+      const half = ctx.viewport.pxToMm(HANDLE_PX / 2);
       const stroke = { colour: CANVAS.overlay.preview, widthPx: 1.5 };
       const vertices = PathOps.vertices(target.path);
       const items: DisplayItem[] = vertices.map((v) =>

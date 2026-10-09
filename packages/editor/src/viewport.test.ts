@@ -52,6 +52,33 @@ describe('coordinate conversion', () => {
     v.scale = 20;
     expect(closeTo(v.pickToleranceMm(10), 0.5)).toBe(true);
   });
+
+  it('measures a distance on screen in CSS pixels, the same millimetres on any display', () => {
+    // A drag threshold, a handle, a close radius: each a number of CSS pixels,
+    // so at the same zoom a 2× display reaches as far as a 1× one (U.1).
+    fc.assert(
+      fc.property(
+        fc.constantFrom(1, 1.25, 1.5, 2, 3),
+        fc.double({ min: 0.05, max: 100, noNaN: true }),
+        fc.double({ min: 0, max: 100, noNaN: true }),
+        (dpr, cssPxPerMm, px) => {
+          const v = makeViewport();
+          v.resize(800 * dpr, 600 * dpr, dpr);
+          v.scale = cssPxPerMm * dpr;
+          return (
+            closeTo(v.pxToMm(px), px / cssPxPerMm, 1e-9) &&
+            closeTo(v.pickToleranceMm(px), px / cssPxPerMm, 1e-9)
+          );
+        },
+      ),
+    );
+  });
+
+  it('hands the renderer the display ratio with the rest of the view', () => {
+    const v = makeViewport();
+    v.resize(1600, 1200, 2);
+    expect(v.toView()).toMatchObject({ widthPx: 1600, heightPx: 1200, dpr: 2 });
+  });
 });
 
 describe('zoomAt', () => {

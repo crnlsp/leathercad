@@ -33,6 +33,7 @@ import {
   type PointerInput,
 } from '@leathercad/editor';
 import {
+  CANVAS,
   DEFAULT_RULER_STYLE,
   GROUND,
   SHEET,
@@ -44,10 +45,13 @@ import {
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
+import { captionOf } from './captionWords.js';
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
+import { IS_MAC } from './keyCaps.js';
+import { commandFor, keyForTools } from './keymap.js';
 import { isTyping } from './shortcuts.js';
 
 /**
@@ -62,7 +66,7 @@ import { isTyping } from './shortcuts.js';
  * problem and asked to be taken to it. Whether creating a part should move the
  * view is a different question, still deferred.
  */
-/** Margin left around anything the view is asked to frame, in device pixels. */
+/** Margin left around anything the view is asked to frame, in CSS pixels. */
 const FIT_PADDING_PX = 60;
 
 /** How far a press may wander, in CSS pixels, and still be a click on the Sheets view. */
@@ -183,8 +187,15 @@ export function CanvasHost({
   /** On the Sheets view, the part under the pointer (7.4d). */
   const hoveredPartRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
+  const i18n = useI18n();
+  const { t } = i18n;
+  /** The interface's words, which the board's captions are in, as the next paint reads them. */
+  const i18nRef = useRef(i18n);
+  useEffect(() => {
+    i18nRef.current = i18n;
+    dirtyRef.current = true;
+  }, [i18n]);
   /** On the Sheets view: the sheet under the pointer, for the status bar. */
-  const { t } = useI18n();
   const [sheetUnder, setSheetUnder] = useState<CanvasStatus['sheet']>(null);
   /** Where a press on the Sheets view began, and on which piece. */
   const pressRef = useRef<{ x: number; y: number; partId: string | null; moved: boolean } | null>(
@@ -361,11 +372,16 @@ export function CanvasHost({
   }, [view, invalidate]);
 
   // The first frame can be painted before the vendored typeface has loaded,
-  // which would leave the captions in a fallback face. Repaint once it is
-  // here. The positions never change — they come from the layout, not from
-  // the browser — so this only affects the letterforms.
+  // which would leave the board's words in a fallback face. Repaint once every
+  // weight the canvas sets is here: Regular, and the Medium and SemiBold of the
+  // captions and values (R-01), which only the interface's own text loaded.
+  // The positions never change, so this only affects the letterforms.
   useEffect(() => {
-    void document.fonts.load(`16px "${FONT_FAMILY}"`).then(
+    void Promise.all(
+      [CANVAS.text.meta, CANVAS.text.value, CANVAS.text.name].map(({ weight }) =>
+        document.fonts.load(`${String(weight)} 16px "${FONT_FAMILY}"`),
+      ),
+    ).then(
       () => invalidate(),
       () => undefined,
     );
@@ -398,11 +414,9 @@ export function CanvasHost({
         cached !== null &&
         cached.plan === plan &&
         cached.selected === selectedKey(selected) &&
-        cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current) &&
-        cached.dpr === viewport.dpr
+        cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current)
           ? cached.layers
           : sheetsView(plan, layout, {
-              dpr: viewport.dpr,
               now: new Date(),
               selected,
               hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
@@ -411,7 +425,6 @@ export function CanvasHost({
         plan,
         selected: selectedKey(selected),
         hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-        dpr: viewport.dpr,
         layers,
       };
 
@@ -461,35 +474,25 @@ export function CanvasHost({
         // The same list the panels read (X7), so a feature that failed is
         // marked here instead of silently disappearing.
         diagnostics: diagnose(document.project),
-        // The zoom band: how much detail the drawing carries at this scale.
-        pxPerMm: view.scale,
+        // The camera: how much detail the drawing carries at this zoom, the
+        // same on any display (U.1), and where the board's words go — a
+        // caption pins to the top-left once it would run under the ruler (R-01).
+        view,
+        // Each piece's caption, in the interface's words (ADR 0018).
+        caption: (part) => captionOf(i18nRef.current, part),
       }),
       view,
     );
     // Where a taped piece's sheets will join (7.4b): screen furniture read from
     // the sheet plan the PDF writes, over the pattern and under the tool.
-    renderDisplayList(
-      context,
-      tapeJoins(sheetPlanFor(document.project), { dpr: viewport.dpr }),
-      view,
-    );
+    renderDisplayList(context, tapeJoins(sheetPlanFor(document.project)), view);
     // The tool overlay is ephemeral feedback and never touches the document.
     renderDisplayList(context, managerRef.current?.overlay() ?? { items: [] }, view);
     // A tool builds a fresh problem on every pointer move. Keeping the old one
     // when it says the same thing stops the chrome re-rendering every frame.
     const next = managerRef.current?.notice() ?? null;
     setNotice((current) => (sameProblem(current, next) ? current : next));
-    renderRulers(
-      context,
-      view,
-      {
-        ...DEFAULT_RULER_STYLE,
-        thicknessPx: DEFAULT_RULER_STYLE.thicknessPx * viewport.dpr,
-        leftThicknessPx: DEFAULT_RULER_STYLE.leftThicknessPx * viewport.dpr,
-        fontPx: DEFAULT_RULER_STYLE.fontPx * viewport.dpr,
-      },
-      pointerRef.current,
-    );
+    renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
   }, [store, paintSheets]);
 
   useEffect(() => {
@@ -570,10 +573,11 @@ export function CanvasHost({
       // Never steal keys from a field, a list or anything editable (8.7).
       if (isTyping(event.target)) return;
 
-      // Ctrl on Linux and Windows, Cmd on macOS — as the menu shows it.
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      // Ctrl on Linux and Windows, ⌘ on macOS: the keymap's (U.3).
+      const command = commandFor(event, IS_MAC);
+      if (command === 'undo' || command === 'redo') {
         event.preventDefault();
-        if (event.shiftKey) store.redo();
+        if (command === 'redo') store.redo();
         else store.undo();
         return;
       }
@@ -582,7 +586,8 @@ export function CanvasHost({
       if (viewRef.current === 'sheets') return;
 
       const claimed = managerRef.current?.key({
-        key: event.key,
+        // The letter the keymap reads, so a tool claims the key the window would take.
+        key: keyForTools(event),
         shiftKey: event.shiftKey,
         ctrlKey: event.ctrlKey,
       });
@@ -889,7 +894,6 @@ interface SheetsCache {
   readonly plan: SheetPlan;
   readonly selected: string;
   readonly hovered: string | null;
-  readonly dpr: number;
   readonly layers: readonly SheetsLayer[];
 }
 

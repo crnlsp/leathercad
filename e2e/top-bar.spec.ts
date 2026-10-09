@@ -126,11 +126,16 @@ test('About says the version, and shows the log folder and the notices (8.7, 8.6
 test('the project bar fits the smallest window, with the longest paper it says (8.7)', async () => {
   const { app, window } = await launch(fresh());
   try {
-    // The sample's paper reads '5 sheets of A4, portrait (Outer and Lining
-    // taped)', and a changed name adds 'Unsaved changes': the widest the bar gets.
+    // On A5 portrait the sample's paper reads '5 sheets of A5, portrait
+    // (Outer and Lining taped)', and a changed name adds 'Unsaved changes':
+    // the widest the bar gets. (On A4 portrait it is two sheets since 7.8.)
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-open-sample').click();
     await expect(window.getByTestId('project-name')).toHaveValue('Bifold wallet');
+    await window.getByTestId('paper').selectOption('A5 portrait');
+    await expect(window.getByTestId('paper').locator('option:checked')).toHaveText(
+      '5 sheets of A5, portrait (Outer and Lining taped)',
+    );
     await window.getByTestId('project-name').fill('Bifold wallet, lined');
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
     const tall = (await window.getByTestId('project-bar').boundingBox())!.height;
@@ -147,6 +152,8 @@ test('the project bar fits the smallest window, with the longest paper it says (
       'save',
       'paper',
       'export-pdf',
+      'export-more',
+      'print',
       'settings',
       'help-menu',
     ]) {

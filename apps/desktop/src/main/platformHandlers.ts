@@ -8,6 +8,7 @@ import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
 import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
+import { listPrinters, printPdf, runCommand } from './printing.js';
 import { shownPath, type PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
 
@@ -84,6 +85,21 @@ export function registerPlatformHandlers(
   ipcMain.handle(IPC.openInExternalViewer, async (_event, path: unknown) => {
     const error = await shell.openPath(guard(grants, path, 'view'));
     if (error !== '') throw new Error(error);
+  });
+
+  // Printing (7.6): the system's CUPS client, scaling off. The renderer sends
+  // the bytes it previewed and a job; the printer, the pages and the copies
+  // are checked here before anything runs.
+  ipcMain.handle(IPC.listPrinters, () => listPrinters(runCommand));
+  ipcMain.handle(IPC.printPdf, async (_event, data: unknown, job: unknown) => {
+    try {
+      const id = await printPdf(runCommand, data, job);
+      log.info(`printed ${JSON.stringify(job)} as job ${id}`);
+      return id;
+    } catch (error) {
+      log.warn(`print refused: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   });
 
   ipcMain.handle(IPC.getUserConfigDir, () => join(app.getPath('userData')));

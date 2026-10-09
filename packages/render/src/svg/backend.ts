@@ -1,3 +1,4 @@
+import { EPS_ANGLE } from '@leathercad/core';
 import { MatOps, PathOps, SegmentOps, type Path, type Segment } from '@leathercad/geometry';
 import { FONT_FAMILY, outlinesOf } from '@leathercad/typography';
 
@@ -5,7 +6,7 @@ import type { DisplayItem, DisplayList } from '../displayList.js';
 import { foldTickShape, hatchLines, linkTickShape } from '../leather.js';
 import { markerShape } from '../marker.js';
 import { CANVAS, GROUND, screenDash } from '../theme/index.js';
-import { worldToScreen, type ViewportView } from '../view.js';
+import { cssPxPerMm, worldToCss, type ViewportView } from '../view.js';
 
 export interface SvgOptions {
   /** Defaults to the vendored typeface. Never a platform font. */
@@ -42,6 +43,10 @@ const DEFAULT_PRECISION = 4;
  *
  * The flip itself is not defined here. It lives in `worldToScreen` in
  * `view.ts`, and both backends only apply it — see CLAUDE.md invariant 2.
+ *
+ * The document is as many device pixels as the canvas, and its user space is
+ * **CSS pixels**: the viewBox is where the display's ratio is applied, once,
+ * as the canvas backend applies it to its screen passes (U.1).
  */
 export function renderToSvgString(
   list: DisplayList,
@@ -50,12 +55,12 @@ export function renderToSvgString(
 ): string {
   const precision = options.precision ?? DEFAULT_PRECISION;
   const n = (value: number): string => format(value, precision);
-  const transform = worldToScreen(view);
-  const perMm = view.scale;
+  const transform = worldToCss(view);
+  const perMm = cssPxPerMm(view);
 
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${n(view.widthPx)}" height="${n(view.heightPx)}" ` +
-      `viewBox="0 0 ${n(view.widthPx)} ${n(view.heightPx)}">`,
+      `viewBox="0 0 ${n(view.widthPx / view.dpr)} ${n(view.heightPx / view.dpr)}">`,
   ];
 
   if (options.background !== undefined) {
@@ -139,9 +144,26 @@ export function renderToSvgString(
     );
     for (const item of texts) {
       const at = MatOps.apply(transform, item.at);
+      const weight =
+        item.weight === undefined || item.weight === 500 ? '' : ` font-weight="${item.weight}"`;
+      // The ground under every glyph, as the canvas strokes it (R-01).
+      const halo =
+        item.halo === undefined
+          ? ''
+          : ` stroke="${item.halo.colour}" stroke-width="${n(item.halo.widthPx * 2)}" ` +
+            `stroke-linejoin="round" paint-order="stroke"`;
+      // Turned through the world transform, as the canvas turns it.
+      const turn = item.rotationRad ?? 0;
+      const along = MatOps.applyDirection(transform, { x: Math.cos(turn), y: Math.sin(turn) });
+      const rotate =
+        turn === 0
+          ? ''
+          : ` transform="rotate(${n((Math.atan2(along.y, along.x) * 180) / Math.PI)} ` +
+            `${n(at.x)} ${n(at.y)})"`;
       parts.push(
         `<text x="${n(at.x)}" y="${n(at.y)}" font-size="${n(item.sizePx)}" fill="${item.colour}"` +
-          `${anchor(item.align)}${baseline(item.baseline)}>${escapeText(item.text)}</text>`,
+          `${weight}${halo}${rotate}${anchor(item.align)}${baseline(item.baseline)}>` +
+          `${escapeText(item.text)}</text>`,
       );
     }
     parts.push('</g>');
@@ -245,7 +267,7 @@ function commandsFor(s: Segment, n: (v: number) => string): string[] {
   // A full turn has coincident endpoints, and an SVG arc command between two
   // identical points draws nothing at all. Halving it gives two arcs that each
   // have somewhere to go.
-  const full = Math.abs(s.sweepAngle) >= Math.PI * 2 - 1e-9;
+  const full = Math.abs(s.sweepAngle) >= SegmentOps.FULL_TURN - EPS_ANGLE;
   if (full) {
     const [firstHalf, secondHalf] = SegmentOps.split(s, 0.5);
     return [...commandsFor(firstHalf, n), ...commandsFor(secondHalf, n)];

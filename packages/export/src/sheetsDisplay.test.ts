@@ -22,9 +22,9 @@ const scene = (parts: ExportPart[]): ExportScene => ({ projectName: 'Test', part
 
 describe('tape joins on the design board (7.4b)', () => {
   it('draws each printed join where the plan puts it, on the piece where it sits', () => {
-    // A 250 mm strap at (40, 300) on the board: A4 portrait tapes it across
+    // A 275 mm strap at (40, 300) on the board: A4 portrait tapes it across
     // two sheets with one vertical join.
-    const plan = planSheets(scene([part('strap', 250, 20, 40, 300)]), DEFAULT_PAGE_SETUP);
+    const plan = planSheets(scene([part('strap', 275, 20, 40, 300)]), DEFAULT_PAGE_SETUP);
     const joinX = plan.sheets[0]!.tile!.joinsMm.x;
     expect(joinX).toHaveLength(1);
 
@@ -44,8 +44,8 @@ describe('tape joins on the design board (7.4b)', () => {
   });
 
   it('is screen furniture: the not-ink colour, the printed rhythm, and a label', () => {
-    const plan = planSheets(scene([part('strap', 250, 20)]), DEFAULT_PAGE_SETUP);
-    const items = tapeJoins(plan, { dpr: 2 }).items;
+    const plan = planSheets(scene([part('strap', 275, 20)]), DEFAULT_PAGE_SETUP);
+    const items = tapeJoins(plan).items;
     for (const item of items) {
       if (item.kind === 'path') {
         expect(item.stroke.colour).toBe(SHEET.furniture);
@@ -53,7 +53,8 @@ describe('tape joins on the design board (7.4b)', () => {
       } else if (item.kind === 'overlay-text') {
         expect(item.text).toBe('Tape join');
         expect(item.colour).toBe(SHEET.furniture);
-        expect(item.sizePx).toBe(22);
+        // CSS pixels: the screen backends apply the display's ratio (U.1).
+        expect(item.sizePx).toBe(SHEET.joinLabelPx);
       } else {
         throw new Error(`unexpected ${item.kind}`);
       }
@@ -61,7 +62,7 @@ describe('tape joins on the design board (7.4b)', () => {
   });
 
   it('draws nothing when every piece prints whole', () => {
-    const plan = planSheets(scene([part('strap', 250, 20)]), pageSetupOf('A4', 'landscape'));
+    const plan = planSheets(scene([part('strap', 275, 20)]), pageSetupOf('A4', 'landscape'));
     expect(tapeJoins(plan).items).toEqual([]);
   });
 
@@ -94,7 +95,7 @@ const NOW = new Date('2026-09-24T00:00:00.000Z');
 
 describe('the Sheets view (7.4c)', () => {
   const plan = planSheets(
-    scene([outlined('panel', 100, 70, 500, -40), outlined('strap', 250, 20, -80, 900)]),
+    scene([outlined('panel', 100, 70, 500, -40), outlined('strap', 275, 20, -80, 900)]),
     DEFAULT_PAGE_SETUP,
   );
   const layout = layoutSheets(plan);

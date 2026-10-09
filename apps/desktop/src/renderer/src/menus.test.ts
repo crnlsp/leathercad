@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
 import {
+  exportMenu,
   focusAfter,
   helpMenu,
   projectMenu,
@@ -98,6 +99,40 @@ describe('the Project and Help menus (8.7)', () => {
       entry.kind === 'item' ? [entry.label] : [],
     );
     expect(labels).toEqual(['Open sample project', 'About LeatherCAD']);
+  });
+});
+
+describe('the export menu (6.2, 6.5)', () => {
+  const { t } = createI18n('en');
+  const noop = (): void => undefined;
+  const items = (entries: MenuEntry[]) =>
+    entries.flatMap((entry) => (entry.kind === 'item' ? [entry] : []));
+
+  it('offers SVG and DXF, in millimetres, and says what each is for', () => {
+    const [svg, dxf, ...rest] = items(exportMenu({ svg: noop, dxf: noop }, true, t));
+    expect(rest).toEqual([]);
+    expect([svg!.id, svg!.label, svg!.refusal]).toEqual(['export-svg', 'Export SVG…', undefined]);
+    expect([dxf!.id, dxf!.label, dxf!.refusal]).toEqual(['export-dxf', 'Export DXF…', undefined]);
+    expect(svg!.note).toContain('Millimetres');
+    expect(dxf!.note).toContain('millimetres');
+  });
+
+  it('runs the action of the item chosen, and no other', () => {
+    const chosen: string[] = [];
+    const [svg, dxf] = items(
+      exportMenu({ svg: () => chosen.push('svg'), dxf: () => chosen.push('dxf') }, true, t),
+    );
+    dxf!.onChoose();
+    svg!.onChoose();
+    expect(chosen).toEqual(['dxf', 'svg']);
+  });
+
+  it('stays, and says why, when nothing prints: a menu that drops an item moves the rest', () => {
+    const refused = items(exportMenu({ svg: noop, dxf: noop }, false, t));
+    expect(refused.map((item) => item.refusal)).toEqual([
+      'Nothing to export yet. No part has a line to cut.',
+      'Nothing to export yet. No part has a line to cut.',
+    ]);
   });
 });
 

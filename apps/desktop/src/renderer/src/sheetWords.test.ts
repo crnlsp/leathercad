@@ -40,11 +40,11 @@ function project(
   };
 }
 
-/** The print test's three pieces: one of them longer than an A4 sheet. */
+/** The print test's three pieces: one of them longer than an A4 sheet either way. */
 const PRINT_TEST: [string, number, number][] = [
   ['Outer panel', 100, 78],
   ['Pocket', 96, 60],
-  ['Strap', 250, 25],
+  ['Strap', 275, 25],
 ];
 
 describe('the sheet plan, in English', () => {
@@ -88,7 +88,7 @@ describe('the sheet plan, in English', () => {
   it('says where a part prints, and what of it does not', () => {
     const status = (over: Partial<PartPrintStatus>): PartPrintStatus => ({
       partId: 'p',
-      sheets: { partId: 'p', sheets: [1], taped: false, rows: 1, columns: 1 },
+      sheets: { partId: 'p', sheets: [1], taped: false, turned: false, rows: 1, columns: 1 },
       notPrinted: null,
       hiddenFeatures: 0,
       failedFeatures: 0,
@@ -97,10 +97,21 @@ describe('the sheet plan, in English', () => {
     expect(describePrintStatus(status({}), i18n)).toEqual({ label: 'Sheet 1', note: null });
     expect(
       describePrintStatus(
-        status({ sheets: { partId: 'p', sheets: [2, 3], taped: true, rows: 1, columns: 2 } }),
+        status({
+          sheets: { partId: 'p', sheets: [2, 3], taped: true, turned: false, rows: 1, columns: 2 },
+        }),
         i18n,
       ),
     ).toEqual({ label: 'Sheets 2–3, taped', note: null });
+    // Turned on the paper to save a sheet (7.8): said, since the board shows it as drawn.
+    expect(
+      describePrintStatus(
+        status({
+          sheets: { partId: 'p', sheets: [1], taped: false, turned: true, rows: 1, columns: 1 },
+        }),
+        i18n,
+      ),
+    ).toEqual({ label: 'Sheet 1, turned', note: null });
     expect(describePrintStatus(status({ sheets: null, notPrinted: 'hidden' }), i18n)).toEqual({
       label: 'Not printed',
       note: 'It is hidden.',

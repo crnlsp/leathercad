@@ -45,10 +45,19 @@ export { printStatusOf } from './printStatus.js';
 
 // The sheet plan drawn on screen: tape joins on the design board (7.4b), and
 // the Sheets view (7.4c) — drawn from the same `sheetInk` the PDF prints.
-export type { FurnitureOptions, SheetsLayer, SheetsViewOptions } from './sheetsDisplay.js';
+export type { SheetsLayer, SheetsViewOptions } from './sheetsDisplay.js';
 export { sheetsView, tapeJoins } from './sheetsDisplay.js';
 export type { SheetFrame, SheetGroup, SheetsLayout } from './sheetsLayout.js';
 export { layoutSheets, pieceAt, sheetAt } from './sheetsLayout.js';
 
 export type { PdfExportOptions, PdfExportResult } from './pdf/writer.js';
 export { exportPdf, printableAreaMm } from './pdf/writer.js';
+
+// The drawing as a file a cutter, a plotter or a vector editor reads (6.2): the
+// export scene, where the maker put the pieces, in true millimetres.
+export type { SvgExportResult } from './svg/writer.js';
+export { exportSvg } from './svg/writer.js';
+
+// The same for a CNC or laser program that reads a DXF (6.5): R12, in millimetres.
+export type { DxfExportResult } from './dxf/writer.js';
+export { exportDxf } from './dxf/writer.js';

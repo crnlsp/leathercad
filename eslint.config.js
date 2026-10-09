@@ -76,6 +76,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.d.ts',
       'dependency-graph.svg',
+      // Claude Code's agent worktrees: each lints itself, with its own config.
+      '.claude/worktrees/**',
       // Machine-written glyph outlines; regenerate rather than edit.
       'packages/typography/src/generated/**',
     ],

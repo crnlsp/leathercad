@@ -1,6 +1,6 @@
 import type { Document, DocumentStore } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
-import { exportPdf, type TiledPart } from '@leathercad/export';
+import { exportDxf, exportPdf, exportSvg, type TiledPart } from '@leathercad/export';
 import {
   CURRENT_FORMAT_VERSION,
   InvalidProjectFileError,
@@ -59,6 +59,40 @@ export function fileErrorText(error: unknown, t: Translate): string {
 export interface ExportReport {
   readonly readiness: ExportReadiness;
   readonly tiled: readonly TiledPart[];
+  /**
+   * What the export made. A PDF is paper, and the notice says what is *on the
+   * paper*; an SVG or a DXF (6.2, 6.5) is a file for a machine, and it says
+   * what is *in the file*. The facts are the same ones.
+   */
+  readonly format: ExportFormat;
+}
+
+export type ExportFormat = 'pdf' | 'svg' | 'dxf';
+
+/** The formats of a drawing for a machine: a file, never opened afterwards. */
+export type DrawingFormat = Exclude<ExportFormat, 'pdf'>;
+
+/**
+ * What the maker should know about a project's paper before using it, or null
+ * when there is nothing to say. Export reports it once the file is written;
+ * the Print Preview shows it before printing (7.6). A part too large for the
+ * sheet is printed across several (7.2a) — not a problem, but something the
+ * maker needs to know to put the sheets together.
+ */
+export function exportReportFor(
+  project: Project,
+  format: ExportFormat = 'pdf',
+): ExportReport | null {
+  const readiness = exportReadiness(project);
+  // Sheets are the PDF's: a file for a cutter is the drawing, whole.
+  const tiled = format === 'pdf' ? sheetPlanFor(project).pagination.tiled : [];
+  const quiet =
+    readiness.omitted.length === 0 &&
+    readiness.errors === 0 &&
+    readiness.warnings === 0 &&
+    readiness.infos === 0 &&
+    tiled.length === 0;
+  return quiet ? null : { readiness, tiled, format };
 }
 
 export function useProjectFile(
@@ -102,7 +136,9 @@ export function useProjectFile(
    * or it failed — and null too when there is nothing to say, so a clean
    * export stays silent.
    */
-  exportPdfFile: () => Promise<ExportReport | null>;
+  exportPdfFile: (shown?: Uint8Array) => Promise<ExportReport | null>;
+  /** The same, for a drawing as an SVG or a DXF (6.2, 6.5): written, not opened. */
+  exportDrawingFile: (format: DrawingFormat) => Promise<ExportReport | null>;
   markSaved: () => void;
   savedDocument: React.MutableRefObject<unknown>;
 } {
@@ -205,63 +241,90 @@ export function useProjectFile(
   }, [host, openPath, t]);
 
   /**
-   * Writes a print-ready PDF and opens it in the system viewer.
-   *
-   * The application deliberately never drives a printer — the user prints
-   * from an ordinary viewer — so handing them the open file is where our
-   * responsibility ends.
+   * Writes a print-ready PDF and opens it in the system viewer: *Export PDF*,
+   * and the Print Preview's *Save PDF…* where LeatherCAD cannot print itself
+   * (7.6), which hands over the bytes it showed rather than writing new ones.
    */
-  const exportPdfFile = useCallback(async (): Promise<ExportReport | null> => {
-    try {
-      const platform = host();
-      const project = store.getState().document.project;
+  const exportPdfFile = useCallback(
+    async (shown?: Uint8Array): Promise<ExportReport | null> => {
+      try {
+        const platform = host();
+        const project = store.getState().document.project;
 
-      // Only a project extension is taken off: "Wallet v1.2" is a name, and
-      // cutting it at its last dot suggested "Wallet v1.pdf" (Q18).
-      const suggested = (project.name || t('app.untitled')).replace(/\.lcp$/i, '');
-      const target = await platform.showSaveDialog({
-        title: t('file.exportTitle'),
-        defaultPath: `${suggested}.pdf`,
-        filters: [{ name: t('file.pdf'), extensions: ['pdf'] }],
-      });
-      if (target === null) return null;
+        const target = await exportTarget(platform, project, 'pdf', {
+          title: t('file.exportTitle'),
+          filter: t('file.pdf'),
+          untitled: t('app.untitled'),
+        });
+        if (target === null) return null;
 
-      // The plan the maker has been looking at — the sheet count, Parts and
-      // the Sheets view all read this same object — so the file is exactly
-      // the print they were shown (7.4a).
-      const plan = sheetPlanFor(project);
-      const { bytes } = await exportPdf(plan, {
-        applicationVersion: appVersion,
-        now: () => new Date(),
-      });
+        // The plan the maker has been looking at — the sheet count, Parts and
+        // the Sheets view all read this same object — so the file is exactly
+        // the print they were shown (7.4a).
+        const plan = sheetPlanFor(project);
+        const bytes =
+          shown ??
+          (await exportPdf(plan, { applicationVersion: appVersion, now: () => new Date() })).bytes;
 
-      await platform.writeFile(target.endsWith('.pdf') ? target : `${target}.pdf`, bytes);
+        await platform.writeFile(target, bytes);
 
-      setState((previous) => ({
-        ...previous,
-        error: null,
-        savedAt: new Date().toLocaleTimeString(),
-      }));
+        setState((previous) => ({
+          ...previous,
+          error: null,
+          savedAt: new Date().toLocaleTimeString(),
+        }));
 
-      await platform.openInExternalViewer(target.endsWith('.pdf') ? target : `${target}.pdf`);
+        await platform.openInExternalViewer(target);
 
-      // Read from the project that was just exported, and reported *after* the
-      // file is written: export warns, and never blocks (§5). A part too large
-      // for the sheet is printed across several (7.2a) — not a problem, but
-      // something the maker needs to know to put the sheets together.
-      const readiness = exportReadiness(project);
-      const quiet =
-        readiness.omitted.length === 0 &&
-        readiness.errors === 0 &&
-        readiness.warnings === 0 &&
-        readiness.infos === 0 &&
-        plan.pagination.tiled.length === 0;
-      return quiet ? null : { readiness, tiled: plan.pagination.tiled };
-    } catch (error) {
-      setState((previous) => ({ ...previous, error }));
-      return null;
-    }
-  }, [appVersion, host, store, t]);
+        // Reported *after* the file is written: export warns, and never blocks (§5).
+        return exportReportFor(project);
+      } catch (error) {
+        setState((previous) => ({ ...previous, error }));
+        return null;
+      }
+    },
+    [appVersion, host, store, t],
+  );
+
+  /**
+   * Writes the drawing as an SVG or a DXF (6.2, 6.5): the board's arrangement in
+   * true millimetres, for a laser cutter, a plotter, a CNC program or a vector
+   * editor.
+   *
+   * It is the scene the PDF is written from, so it holds exactly what the PDF
+   * prints. Nothing opens it afterwards — the main process opens only the PDF
+   * it has exported, and a cutter's software is the maker's to start — so what
+   * the maker is told is what to check, as after a PDF.
+   */
+  const exportDrawingFile = useCallback(
+    async (format: DrawingFormat): Promise<ExportReport | null> => {
+      try {
+        const platform = host();
+        const project = store.getState().document.project;
+        const target = await exportTarget(platform, project, format, {
+          title: t(format === 'svg' ? 'file.exportSvgTitle' : 'file.exportDxfTitle'),
+          filter: t(format === 'svg' ? 'file.svg' : 'file.dxf'),
+          untitled: t('app.untitled'),
+        });
+        if (target === null) return null;
+
+        const scene = sheetPlanFor(project).scene;
+        const { text } = format === 'svg' ? exportSvg(scene) : exportDxf(scene);
+        await platform.writeFile(target, new TextEncoder().encode(text));
+
+        setState((previous) => ({
+          ...previous,
+          error: null,
+          savedAt: new Date().toLocaleTimeString(),
+        }));
+        return exportReportFor(project, format);
+      } catch (error) {
+        setState((previous) => ({ ...previous, error }));
+        return null;
+      }
+    },
+    [host, store, t],
+  );
 
   const newProject = useCallback(() => {
     store.reset(blank(), { action: 'new-project' });
@@ -294,9 +357,35 @@ export function useProjectFile(
     adoptRecovered,
     isDirty,
     exportPdfFile,
+    exportDrawingFile,
     markSaved,
     savedDocument,
   };
+}
+
+/**
+ * Asks where an export goes, and gives back the path it will be written to:
+ * the one chosen, with the format's extension if the name typed has none. Null
+ * when the maker cancels.
+ *
+ * The suggestion is the project's name. Only a project extension is taken off
+ * it: "Wallet v1.2" is a name, and cutting it at its last dot suggested
+ * "Wallet v1.pdf" (Q18).
+ */
+async function exportTarget(
+  platform: PlatformHost,
+  project: Project,
+  extension: ExportFormat,
+  words: { readonly title: string; readonly filter: string; readonly untitled: string },
+): Promise<string | null> {
+  const suggested = (project.name || words.untitled).replace(/\.lcp$/i, '');
+  const target = await platform.showSaveDialog({
+    title: words.title,
+    defaultPath: `${suggested}.${extension}`,
+    filters: [{ name: words.filter, extensions: [extension] }],
+  });
+  if (target === null) return null;
+  return target.endsWith(`.${extension}`) ? target : `${target}.${extension}`;
 }
 
 /**

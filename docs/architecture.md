@@ -82,6 +82,8 @@ conformance suite for the replacement.
   has words for the interface: a problem is a code and facts, an undo step a `HistoryLabel`, a
   part's print status a `PartPrintStatus`, and the app words each one. The paper's words — the PDF
   footer, part captions — are the export's, and stay English while the vendored glyphs are Latin.
+  The Design board's captions are the app's: `buildDisplayList` takes a `caption` function and
+  places what it returns (R-01).
 
 ### 1.4 Supporting tools
 
@@ -195,7 +197,8 @@ and correct.
         │                          ▼
         │                     Diagnostic[] ──▶ problems panel, status count, property panel,
         │                                      canvas markers — every surface reads this one
-        │  buildDisplayList()  — layer-role styles; document text laid out by typography, in mm
+        │  buildDisplayList()  — layer-role styles; labels laid out by typography, in mm;
+        │                        captions and dimension values at 12 px, placed for the camera
         ▼
    DisplayList
         │
@@ -283,14 +286,19 @@ interface PlatformHost {
   showOpenDialog(opts: OpenDialogOptions): Promise<string | null>;
   showSaveDialog(opts: SaveDialogOptions): Promise<string | null>;
   openInExternalViewer(path: string): Promise<void>;
-  listPrinters(): Promise<PrinterInfo[]>;
-  submitPrintJob(pdfPath: string, opts: PrintJobOptions): Promise<void>;
+  listPrinters(): Promise<PrinterList>;            // CUPS's printers, or why there are none (7.6)
+  printPdf(data: Uint8Array, job: PrintJob): Promise<string>; // to `lp`, scaling off
   getUserConfigDir(): string;
 }
 ```
 
 Implemented once in `apps/desktop` over Electron IPC, and once as an in-memory fake in the test
 suite. Everything above `editor` depends on the interface, never on Electron.
+
+`printPdf` takes the bytes the Print Preview drew, not a path, so nothing is written to disk to
+print. The main process checks the job as untrusted: the printer must be one CUPS lists, and the
+numbers must be ones a person could have chosen. It then runs `lp` through `execFile`, never a
+shell ([ADR 0019](adr/0019-print-from-the-app.md), [printing.md](printing.md) §13).
 
 The main process reads, writes and opens only paths the user chose in one of the app's own dialogs
 during the session — the path returned, or that path with one of the dialog's filter extensions
@@ -315,14 +323,14 @@ One object owns the mm ↔ px relationship, and nothing else computes it:
 ```ts
 class Viewport {
   centreMm: Vec2;
-  scale: number;              // px per mm
-  sizePx: { w: number; h: number };
-  dpr: number;
+  scale: number;              // device px per mm
+  widthPx: number;            // the backing store, in device px
+  heightPx: number;
+  dpr: number;                // device px per CSS px
 
   toScreen(p: Vec2): Vec2;
   toWorld(p: Vec2): Vec2;
-  mmToPx(len: number): number;
-  pxToMm(len: number): number;
+  pxToMm(len: number): number;                    // a distance on screen, in CSS px
   zoomAt(anchorPx: Vec2, factor: number): void;   // zoom about the cursor, not the centre
 }
 ```
@@ -330,6 +338,11 @@ class Viewport {
 Rules: nothing outside `editor/viewport.ts` and the renderer may convert between mm and px. Hit
 testing converts its *tolerance* from px to mm and then does all comparisons in mm — never the
 other way around.
+
+**Zoom is CSS pixels per millimetre** (U.1): `cssPxPerMm(view)` in `render/view.ts`, and
+`zoomPercent(view)`, 100 % at 96 ÷ 25.4 CSS px per mm. Grid tiers, zoom bands and anything a later
+control shows read it, so they switch at the same zoom on a 1× and a 2× display. A distance on
+screen — a pick radius, a drag threshold, a handle — is CSS pixels too.
 
 ### 6.2 Three stacked canvases
 
@@ -345,10 +358,13 @@ overlay, which holds a handful of shapes.
 All drawing is scheduled through a single `requestAnimationFrame` loop driven by dirty flags.
 Nothing draws synchronously from an event handler.
 
-DPR handling: back the canvas at `cssSize * dpr` and set a base transform of
-`ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`. Construction lines, handles, and grid lines use
-**screen-constant widths** (they should look the same at any zoom); only print and export use
-mm-true stroke widths. **Dash rhythms are the exception, and are true millimetres in both**: one role
+DPR handling: back the canvas at `cssSize * dpr`. Every screen-constant size — a stroke, a halo, a
+dash in pixels, a glyph, a label, the grid and the rulers — is in **CSS pixels**, and each screen
+backend applies `dpr` once: the geometry pass divides widths by the CSS zoom under the world
+transform, and every screen-space pass draws under `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)` (the
+SVG backend's viewBox is in CSS pixels). Nothing hands a backend a size it has already multiplied
+by `dpr`. Construction lines, handles, and grid lines use **screen-constant widths** (they should
+look the same at any zoom); only print and export use mm-true stroke widths. **Dash rhythms are the exception, and are true millimetres in both**: one role
 table in `packages/render/src/theme/` gives the screen and the exporter the same array, and the
 canvas draws it at its real size or solid when it is too fine to read — never stretched (UI
 Foundations §2). The same module holds the palette and the metric tokens, which the desktop app
@@ -373,6 +389,14 @@ A tool hears a key before the application's tool shortcuts do: the canvas listen
 shortcuts on `window`. A tool that returns `true` has **claimed** the key, and the shortcut does not
 fire. That is how the polyline takes A and L mid-run for its next segment (3.9a) without switching to
 the Arc or Line tool and losing the run.
+
+The window's keys are one keymap, `apps/desktop/src/renderer/src/keymap.ts` (U.3): each command's
+binding by `KeyboardEvent.code` and its modifiers — `mod` is Ctrl, ⌘ on macOS — except a letter,
+which is the key that typed it, and `?`, which is a character. The window's handler dispatches
+through `commandFor`, the shortcut list is drawn from it, and every key shown — a tooltip's cap, a
+menu's, the rail's, a sentence's `{{placeholder}}` — is read from it, shown as this keyboard prints
+it. A tool is handed `keyForTools(event)`, the letter the keymap reads, so its claim and the
+window's match agree on every layout.
 
 `ToolContext` gives read access to the viewport, the resolved document, and the snap engine, plus
 `dispatch(command)` and the transaction API. It gives **no** write access to the document.
@@ -465,11 +489,12 @@ avoid moiré. Major gridlines every 10 mm.
 
 Windows and macOS are 1.0 targets (roadmap 8.6 and 7.7). The shell is already cross-platform:
 `PlatformHost` goes through Electron's dialogs and `shell.openPath`, and `stateDirectory()` picks
-the platform's state directory. The app never drives a printer (7.6), so there is no spooler code to
-port. The work that remains is confined to:
+the platform's state directory. Printing (7.6, [ADR 0019](adr/0019-print-from-the-app.md)) is
+`listPrinters` and `printPdf` on `PlatformHost`: the main process drives the system's CUPS client
+(`lpstat`, `lp`) on Linux and macOS, and reports *no transport* on Windows, where the Print Preview
+saves the PDF instead. The work that remains is confined to:
 
-1. A second and third `PlatformHost` implementation (dialogs are already Electron's; printing
-   differs — CUPS `lp` on Linux, the Win32 spooler or shelling to a viewer on Windows).
+1. A Windows print transport, chosen and measured on paper in its own ADR.
 2. Packaging targets in electron-builder.
 3. Re-running the visual-regression suite per platform, with vendored fonts making that mostly a
    formality.

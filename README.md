@@ -28,7 +28,7 @@ Draw in real millimetres, stitch along the edge, and print a template you can cu
 A general drawing program sees lines. LeatherCAD sees **leather**: an outline you cut, a stitch line
 that follows it, holes at your pricking iron's pitch, a fold, a pocket you cut twice. Change the
 outline and everything that depends on it follows. Then it prints on ordinary paper, **true to the
-millimetre** — and every sheet carries a 50 mm square so you can check that with a steel rule.
+millimetre** — and every sheet carries a 100 mm gauge so you can check that with a steel rule.
 
 ## A bifold wallet, start to finish
 
@@ -84,8 +84,11 @@ sheets with join lines and registration crosses, never scaled to fit.
 
 ### Print, and check the print
 
-Export writes a vector PDF on A5, A4, A3, Letter or Legal. Every sheet has a 50 mm square and a
-100 mm ruler: if they measure true, so does everything on the sheet.
+**Print** shows the PDF in LeatherCAD's own preview, and on Linux sends exactly that file to the
+printer with scaling turned off. There is no print dialog to get wrong. A vector PDF on A5, A4, A3,
+Letter or Legal, the same file *Export PDF* saves. Every sheet has a 100 × 5 mm gauge at its foot:
+if it measures true, so does everything on the sheet. For a laser cutter or a vector editor, *Export
+SVG* and *Export DXF* write the board in millimetres, a layer to each role.
 
 ### Your work is kept
 

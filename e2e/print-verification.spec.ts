@@ -14,7 +14,7 @@ import { expectAccurate, exportPrintTest, measurePrintTest } from './printTest.j
  *
  * The project is `fixtures/projects/print-test.lcp` — a rounded panel with its
  * width dimensioned and a stitch line all round, a card pocket with a thumb
- * scoop stitched on three sides, and a 250 mm strap tiled over two sheets. The
+ * scoop stitched on three sides, and a 275 mm strap tiled over two sheets. The
  * PDF is the one the Export button writes, and every number below is read off
  * poppler's rendering of it. The same measurement runs against the packaged
  * app in `e2e/packaged/packaged.spec.ts`.
@@ -24,7 +24,7 @@ import { expectAccurate, exportPrintTest, measurePrintTest } from './printTest.j
  * measured with a steel rule and recorded in `docs/print-verification-log.md`.
  */
 
-test('the print test measures true on every sheet: square, ruler, dimension, holes and tiles', async () => {
+test('the print test measures true on every sheet: gauge, dimension, holes and tiles', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'leathercad-e2e-7.7-'));
   const pdf = join(dir, 'print-test.pdf');
   const app = await launchApp();

@@ -2,43 +2,19 @@ name: Package
 
 # Windows and macOS builds (slice 8.6a): the packaged smoke test on each, then
 # the installer a user would download; and the Flatpak (8.5). Linux's AppImage
-# is packaged on every pull request by ci.yml.
+# is packaged by ci.yml.
 #
-# Not on every pull request: this was written while the repository was
-# private, where a macOS minute costs ten and a Windows minute two. Now it is
-# public those minutes are free, and running it on every pull request is
-# roadmap item R5. Until then it runs when packaging could have
-# changed — the desktop app, the packaged test and the 7.7 print test it
-# measures, the lockfile, this file — and weekly, and on demand, so a
-# regression from anywhere else is still caught within days. The release
-# workflow builds all three platforms regardless.
+# On every pull request and every push to main and develop (roadmap R5). This
+# was written while the repository was private, where a macOS minute costs ten
+# and a Windows minute two, so it ran only when packaging could have changed,
+# and weekly to catch the rest. A public repository's minutes are free, and a
+# change anywhere can break a package, so now every change runs it. The release
+# workflow builds all three platforms again, from the tag.
 
 on:
   pull_request:
-    paths:
-      - 'apps/desktop/**'
-      - 'e2e/packaged/**'
-      - 'e2e/printTest.ts'
-      - 'fixtures/projects/**'
-      - 'playwright.packaged.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/package.yml'
   push:
     branches: [main, develop]
-    paths:
-      - 'apps/desktop/**'
-      - 'e2e/packaged/**'
-      - 'e2e/printTest.ts'
-      - 'fixtures/projects/**'
-      - 'playwright.packaged.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/package.yml'
-  schedule:
-    - cron: '41 4 * * 1'
   workflow_dispatch:
 
 concurrency:
@@ -75,9 +51,21 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install poppler
 
+      # The community feed fails now and then. On 2026-10-07 it answered 504,
+      # choco reported "installed 0/0 packages" and succeeded, and the smoke
+      # test failed later, as `pdfinfo` ENOENT. So: three tries, and if poppler
+      # is still missing, fail here, saying so.
       - name: Install poppler (Windows)
         if: runner.os == 'Windows'
-        run: choco install poppler --no-progress -y
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            choco install poppler --no-progress -y && command -v pdfinfo && exit 0
+            echo "poppler is not installed after attempt $attempt."
+            sleep $((attempt * 20))
+          done
+          echo "::error title=poppler::Not installed after three attempts. The packaged smoke test needs its pdfinfo."
+          exit 1
 
       - run: pnpm install --frozen-lockfile
 

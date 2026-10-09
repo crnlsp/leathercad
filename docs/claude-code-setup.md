@@ -4,7 +4,7 @@ How this repository is configured to get useful work out of Claude Code, what is
 out, and what has been proposed but not built.
 
 **Status:** Describes what is in `.claude/` and `CLAUDE.md` today.
-**Last updated:** 2026-09-26
+**Last updated:** 2026-10-08
 
 ---
 
@@ -40,10 +40,11 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 | `docs/printing.md` | Export and print pipeline, accuracy budget | Any export or print work |
 | `docs/testing.md` | Layers, property catalogue, edge-case corpus | Writing tests, which is always |
 | `docs/roadmap.md` | What is planned, open findings | Starting a slice |
-| `docs/history/roadmap-to-1.0.md` | Every 1.0 slice, and what it found | Before redoing something that was tried |
+| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3): every slice that shipped, and what it found | Before redoing something that was tried |
 | `docs/glossary.md` | Craft vocabulary | Whenever domain naming is in question |
 | `docs/adr/NNNN-*.md` | Why a decision was made | Before revisiting a decision |
 | `docs/superpowers/specs/` | The dated design of each larger slice | Changing what a slice built |
+| `docs/superpowers/plans/` | A larger piece of work cut into slices, each with its whole task | Starting one of its slices |
 | `CONTRIBUTING.md` | Branches, commits, changelog, releases | Committing, opening a pull request |
 
 ## 4. Skills
@@ -98,7 +99,7 @@ Each of these was designed before 1.0 and would earn its place; none exists yet.
 - **`format-migration`** — the procedure for changing anything persisted, with its two
   prohibitions: never edit a shipped migration, never delete one.
 
-## 5. Slash commands
+## 5. Slash commands and subagents
 
 In `.claude/commands/`.
 
@@ -113,6 +114,15 @@ Proposed and not built: `/export-check` (every fixture through every backend), `
 from a template). Their logic belongs in a script or package that CI can run too, with the slash
 command a thin caller: a command holding real logic is a check CI cannot run. A `cli` package is
 reserved in `.dependency-cruiser.cjs` for that and not yet created.
+
+### Subagents
+
+In `.claude/agents/`. A subagent is worth defining when a run of slices shares one long set of
+instructions that every session would otherwise have to be given again.
+
+| Agent | Does |
+|---|---|
+| `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.19) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
 
 ## 6. Hooks
 

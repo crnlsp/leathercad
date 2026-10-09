@@ -26,7 +26,9 @@ bars), and passed for it on 2026-09-24.
   - a pen, tape, scissors or a knife;
   - scrap card or leather;
   - the pricking iron you normally use.
-- **The printer:** its usual paper, and the operating system's **default** PDF viewer.
+- **The printer:** its usual paper. On Linux and macOS, print with LeatherCAD's own **Print**. On
+  Windows, which the app does not print from yet, *Save PDF…* in its preview and print from the
+  operating system's **default** PDF viewer.
 - **Recording:**
   - Record every step as *expected / actual / pass or fail / note*.
   - Measurements go into [`print-verification-log.md`](print-verification-log.md), one row per
@@ -36,7 +38,9 @@ bars), and passed for it on 2026-09-24.
 
 Any one of these is a blocker:
 
-- A printed measurement more than **0.5 mm** from expected, printed at 100 % / Actual size.
+- A printed measurement more than **0.5 mm** from expected, printed with LeatherCAD's *Print* (on
+  Windows: from the viewer at 100 % / Actual size).
+- The Print Preview offering any scale choice, or showing sheets that differ from the Sheets view.
 - The sheet count, the numbering or what is on a sheet differs between:
   - the paper list;
   - the Sheets view;
@@ -44,7 +48,7 @@ Any one of these is a blocker:
 - Anything magenta on paper. Magenta is screen-only furniture.
 - A part printed that Parts says is *Not printed*, or a part missing that Parts says prints.
 - A taped join misaligned by more than 0.5 mm, or a step in an edge across a join.
-- A sheet without its 50 mm square and 100 mm ruler.
+- A sheet without its 100 × 5 mm verification gauge, or anything printed in its margins.
 - Lost work, a crash, or a file that does not reopen as it was saved.
 
 **Not blockers:**
@@ -59,15 +63,16 @@ Record them anyway.
 ### 1. Start-up
 
 1. The window title reads **Untitled — LeatherCAD**.
-2. The top bar holds the project: name, *Save*, *New*, *Open*, the paper list, and *Export PDF*,
-   the only gold button.
+2. The top bar holds the project: name, *Save*, *New*, *Open*, the paper list, *Export PDF*, and
+   *Print*, the only green button.
 3. The second bar holds the work: *Undo*, *Redo*, *Draw as* and *Design | Sheets*.
 4. The paper list reads **1 sheet of A4, portrait, scale check only**.
 
 ### 2. An empty project
 
-1. Export PDF: one page, carrying only the 50 mm square, the ruler and the instructions.
-2. Print it at Actual size. The square measures **50.0 × 50.0**, and the ruler **100.0**.
+1. *Print*: the preview shows one sheet, carrying only the verification strip: the gauge and its
+   words. It reads *100 % — locked* and *No scaling*.
+2. *Print 1 sheet*. The gauge measures **100.0 × 5.0**.
 
 ### 3. The print test
 
@@ -78,16 +83,16 @@ Follow the procedure in [`print-verification-log.md`](print-verification-log.md)
    - sheet 1 holds the panel and the pocket;
    - the strap spans sheets 2–3 with one dashed join.
 2. **The measurements, A to H:**
-   - square **50.0 × 50.0**;
-   - ruler **100.0**;
+   - gauge **100.0** across;
+   - gauge **5.0** up;
    - panel edge **100.0**;
    - dimension line **100.0**;
    - the 25-hole row **93.0**;
    - 10 gaps **38.75**;
-   - the taped strap **250.0** end to end;
+   - the taped strap **275.0** end to end;
    - strap width **25.0**, with no step at the join.
 3. **The sheets:**
-   - the footers read *Sheet 1 of 3*, *Sheet 2 of 3*, *Sheet 3 of 3*;
+   - the sheets read *Sheet 1 of 3*, *Sheet 2 of 3*, *Sheet 3 of 3* at their foot;
    - each sheet carries what the Sheets view showed on it.
 
 ### 4. Every paper, on the print test
@@ -97,13 +102,16 @@ the PDF's page count.
 
 | Paper | Portrait | Landscape |
 |---|---|---|
-| A5 | 5 | 5 (the panel is taped) |
+| A5 | 4 | 3 (the pocket turned) |
 | A4 | 3 | 1 |
 | A3 | 1 | 1 |
-| Letter | 3 | 1 |
-| Legal | 3 | 1 |
+| Letter | 3 | 3 |
+| Legal | 1 (the strap turned) | 1 |
 
-Print one sheet in the orientation you would really use, and measure its square.
+Print one portrait sheet and one landscape sheet, and measure both gauges. The landscape sheet
+comes out on upright paper, the sheet turned a quarter on it, whole: turn the paper to read it
+([ADR 0019](adr/0019-print-from-the-app.md), amended for 7.6b). The preview shows it landscape,
+like the Sheets view.
 
 ### 5. A realistic wallet
 
@@ -113,8 +121,9 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 - **the lining:** 196 × 91 mm;
 - **a card pocket:** 95 × 60 mm, with a thumb scoop, stitched on three sides, *Cut* 2.
 
-1. **On A4 portrait**, Parts says the outer and the lining are *taped*: 200 mm is more than the
-   190 mm A4 prints across. On A4 landscape they are whole.
+1. **On A4 portrait**, Parts says the outer and the lining are *turned*: 200 mm is more than the
+   190 mm A4 prints across, so they print a quarter turned, whole, on two sheets. On A4 landscape
+   they are as drawn.
 2. **On the paper you really print on:**
    - the number in the paper list;
    - the number of sheets in the Sheets view;
@@ -122,7 +131,7 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 
    All three are the same.
 3. **The pocket's printed caption** reads *— cut 2*.
-4. **Print, cut out and tape** the pieces, then:
+4. **Print and cut out** the pieces, then:
    - the outer measures **200.0 × 95.0**;
    - the lining measures **196.0 × 91.0**;
    - the fold line sits at **100.0**.
@@ -134,17 +143,17 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 
 ### 6. Taped both ways
 
-1. Draw a 300 × 250 mm panel on A4 portrait.
+1. Draw a 300 × 300 mm panel on A4 portrait: too large for it either way.
    - The Sheets view shows it as a 2 × 2 group.
    - The board shows its joins both ways, labelled *Tape join*.
 2. Print it, and assemble the four sheets on the crosses. The centre cross meets on all four.
-3. Measure **300.0 × 250.0**.
+3. Measure **300.0 × 300.0**.
 
 ### 7. Printing one sheet again
 
-1. From the viewer, print page 2 alone.
+1. In the Print Preview, untick sheets 1 and 3, and print sheet 2 alone.
 2. It is identical to sheet 2 of the first print.
-3. Its square still measures **50.0**.
+3. Its gauge still measures **100.0 × 5.0**.
 
 ### 8. What does not print
 
@@ -159,20 +168,23 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
 
 ### 9. Edge cases
 
-1. **The wrong paper in the printer.** Print a PDF exported for Letter on A4 paper, and the other
-   way round.
-   - The viewer may scale it; the square must show that it did.
+1. **The wrong paper.** In the Print Preview, choose a paper the printer does not list: the
+   preview says so, and *Print* is unavailable. On Windows, print a PDF saved for Letter on A4
+   paper, and the other way round.
+   - The viewer may scale it; the gauge must show that it did.
    - Record the viewer's behaviour. This is a procedure finding, not a software blocker.
 2. **Long names.** Long part and project names never hide *Save*, *New*, *Open*, the paper list or
-   *Export PDF* at your usual window size.
+   *Export PDF* and *Print* at your usual window size.
 3. **Undo.** Undo after a paper change brings back the previous paper, in one step.
 4. **Unsaved work.** Closing with unsaved changes asks first. Save, reopen, and everything —
    including the paper — is as it was.
 
 ### 10. Every platform
 
-Repeat checks 1–4 and 7 on Windows and on macOS, each from its own default PDF viewer. Note the
-exact name of the viewer's actual-size setting. Record one row per platform in the log.
+Repeat checks 1–4 and 7 on macOS, with *Print*: the same CUPS path as Linux, against Apple's
+filters, and unverified until its row is in the log. Repeat them on Windows through *Save PDF…* and
+the default PDF viewer, noting the exact name of the viewer's actual-size setting. Record one row
+per platform in the log.
 
 ### 11. Opening a project from the file manager
 
