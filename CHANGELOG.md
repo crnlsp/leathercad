@@ -7,6 +7,33 @@ yet is listed in the open
 [release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
 Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
 
+## [1.3.5](https://github.com/crnlsp/leathercad/compare/leathercad-v1.3.0...leathercad-v1.3.5) (2026-10-09)
+
+
+### Features
+
+* **desktop:** keys work by where they are on any keyboard, show as caps, and tooltips stay one line inside the window (U.3) ([#70](https://github.com/crnlsp/leathercad/issues/70)) ([0102a14](https://github.com/crnlsp/leathercad/commit/0102a142a25c3757acc8a922f28137604a3a8a55))
+* **desktop:** piece names and dimension numbers stay readable at every zoom (U.2) ([#69](https://github.com/crnlsp/leathercad/issues/69)) ([ebf5564](https://github.com/crnlsp/leathercad/commit/ebf55644535411e4ae887feb7eebb6486aaeb28c))
+* **desktop:** pieces are filled on the board, and the grid and lines keep their size on any display (U.1) ([#68](https://github.com/crnlsp/leathercad/issues/68)) ([1414d8c](https://github.com/crnlsp/leathercad/commit/1414d8cc139cf203262bf2fefe5f3fe9b26d375b))
+* **desktop:** print from LeatherCAD's own preview, with scaling off (7.6) ([#51](https://github.com/crnlsp/leathercad/issues/51)) ([4138d8f](https://github.com/crnlsp/leathercad/commit/4138d8fbfb882e66791a6d5ad911f149de27a3f9))
+* **desktop:** print landscape sheets from the preview, turned onto upright paper (7.6b) ([#61](https://github.com/crnlsp/leathercad/issues/61)) ([2dec2aa](https://github.com/crnlsp/leathercad/commit/2dec2aa39707521697e703528c7ad9aa99464221))
+* **export:** export the drawing as an R12 DXF in millimetres, for laser and CNC programs (6.5) ([#65](https://github.com/crnlsp/leathercad/issues/65)) ([2f4ad0a](https://github.com/crnlsp/leathercad/commit/2f4ad0a180237e46e4d0d61efb195cec26ab4a96))
+* **export:** export the drawing as an SVG in true millimetres, a group to each layer (6.2) ([#64](https://github.com/crnlsp/leathercad/issues/64)) ([4a635a0](https://github.com/crnlsp/leathercad/commit/4a635a056dc2c1e19f6a7b38c4fc061cdfc23ee0))
+* **export:** fewer sheets, with a slim scale strip and pieces turned to fit (7.8) ([#48](https://github.com/crnlsp/leathercad/issues/48)) ([cbbff3b](https://github.com/crnlsp/leathercad/commit/cbbff3b1f25eb71d73ef2dc61bcf846c7b1ad036))
+
+
+### Bug Fixes
+
+* **desktop:** clearer interface wording ([#57](https://github.com/crnlsp/leathercad/issues/57)) ([c8f0d0e](https://github.com/crnlsp/leathercad/commit/c8f0d0e427059d5bfd45ed85a89852b547b5b353))
+* **geometry:** three points almost in a line give the straight line, not a vast arc ([#58](https://github.com/crnlsp/leathercad/issues/58)) ([4f3016f](https://github.com/crnlsp/leathercad/commit/4f3016f86ecae90c379c6627c4fbfa9e5337953b))
+* parse numbers and iron labels in linear time (CodeQL polynomial-redos) ([#47](https://github.com/crnlsp/leathercad/issues/47)) ([88290ad](https://github.com/crnlsp/leathercad/commit/88290ad4d4bd7ad34fa09b2d274c8aa02c00786c))
+* **render:** use the shared epsilons, not local ones ([#63](https://github.com/crnlsp/leathercad/issues/63)) ([4fb9788](https://github.com/crnlsp/leathercad/commit/4fb9788e210a9170d791f0147ce215cd7c57c4b7))
+
+
+### Documentation
+
+* **roadmap:** the next release is 1.3.5, a point release with U.1 to U.3 ([#72](https://github.com/crnlsp/leathercad/issues/72)) ([6a63ae2](https://github.com/crnlsp/leathercad/commit/6a63ae2b44e5aec5ec8d2b2c8a99d165cf3befd2))
+
 ## [1.3.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.2.0...leathercad-v1.3.0) (2026-09-30)
 
 
