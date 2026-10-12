@@ -1,9 +1,19 @@
-import { formatMm } from '@leathercad/core';
-import { MIN_PITCH_MM, type Derivation, type StitchHoles } from '@leathercad/domain';
+import { formatNumber } from '@leathercad/core';
+import {
+  MIN_HOLES_IN_A_SET,
+  MIN_PITCH_MM,
+  type Derivation,
+  type Severity,
+  type StitchHoles,
+} from '@leathercad/domain';
+import { Check, FoldHorizontal, UnfoldHorizontal } from 'lucide-react';
 
 import { NumberField } from '../NumberField.js';
 import { IRON_PRESETS, presetForPitch } from '../irons.js';
 import { useI18n } from '../i18n.js';
+import { Icon } from '../icons/Icon.js';
+import { SeverityGlyph } from '../SeverityGlyph.js';
+import { describeSpacing, spacingAgainstPitch, spacingGlyph } from '../spacing.js';
 
 type HolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
 
@@ -18,10 +28,13 @@ type HolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
 export function StitchHoleSetEditor({
   op,
   holes,
+  reported,
   onChange,
 }: {
   op: HolesOp;
   holes: StitchHoles | undefined;
+  /** Problems' severity for this set's spacing, if it reports one. */
+  reported: Severity | undefined;
   onChange: (op: HolesOp) => void;
 }) {
   const { t } = useI18n();
@@ -100,24 +113,77 @@ export function StitchHoleSetEditor({
 
       {holes !== undefined && (
         <>
-          {/* The two numbers this panel is for: what gets punched, and how far
-              apart it came out. */}
-          <div className="readout key">
-            <span>{t('editor.holeCount')}</span>
-            <b data-testid="hole-count">{holes.count}</b>
-          </div>
-          <div className="readout key">
-            <span>{t('editor.spacing')}</span>
-            <b data-testid="achieved-spacing">{formatMm(holes.achievedPitchMm)}</b>
-          </div>
-          {holes.runs.length > 1 && (
-            <div className="readout">
-              <span>{t('editor.runs')}</span>
-              <b>{holes.runs.map((run) => run.count).join(' · ')}</b>
+          {/* The two numbers this panel is for — what gets punched, and how
+              far apart it came out — at the size a number is read at, then
+              whether that is the iron's pitch (R-05). A third line, hole
+              matching or thread length, has room below when it comes. */}
+          <div className="readouts">
+            <div className="readout-cell">
+              <span>{t('editor.holeCount')}</span>
+              <b data-testid="hole-count">{holes.count}</b>
             </div>
+            <div className="readout-cell">
+              <span>{t('editor.spacing')}</span>
+              <b data-testid="achieved-spacing">
+                {formatNumber(holes.achievedPitchMm, 2)} <span className="readout-unit">mm</span>
+              </b>
+            </div>
+            {holes.runs.length > 1 && (
+              <div className="readout-cell wide">
+                <span>{t('editor.runs')}</span>
+                <b>{holes.runs.map((run) => run.count).join(' · ')}</b>
+              </div>
+            )}
+          </div>
+          {/* Fewer than two holes have no spacing; Problems says so. */}
+          {holes.count >= MIN_HOLES_IN_A_SET && (
+            <SpacingLine
+              spacingMm={holes.achievedPitchMm}
+              pitchMm={op.pitchMm}
+              reported={reported}
+            />
           )}
         </>
       )}
     </>
+  );
+}
+
+/**
+ * Spacing against the pitch in one line, with its glyph — the shape says it as
+ * well as the words (R-05): a check when it matches; which way it went when it
+ * does not; the warning glyph only when Problems warns about this set too
+ * (`spacingGlyph`).
+ */
+function SpacingLine({
+  spacingMm,
+  pitchMm,
+  reported,
+}: {
+  spacingMm: number;
+  pitchMm: number;
+  reported: Severity | undefined;
+}) {
+  const { t } = useI18n();
+  const check = spacingAgainstPitch(spacingMm, pitchMm);
+  const glyph = spacingGlyph(check, reported);
+  return (
+    <p
+      className="spacing-line"
+      data-testid="spacing-line"
+      data-check={check.kind}
+      data-glyph={glyph}
+    >
+      {glyph === 'check' ? (
+        <Icon of={Check} size={14} />
+      ) : glyph === 'stretched' ? (
+        <Icon of={UnfoldHorizontal} size={14} />
+      ) : glyph === 'squeezed' ? (
+        <Icon of={FoldHorizontal} size={14} />
+      ) : (
+        <SeverityGlyph severity={glyph} />
+      )}
+      {describeSpacing(check, t)}
+    </p>
   );
 }

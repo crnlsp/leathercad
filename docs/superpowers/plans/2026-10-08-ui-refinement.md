@@ -828,9 +828,17 @@ Cut) for a part.
   you decided in the pull request.
 
 **Find out first.**
-- [ ] Where Holes, Spacing and Runs come from, and whether the domain already reports spacing
-      against pitch.
-- [ ] Which panels share the Flip and Mirror buttons — the part's and the feature's — so both move.
+- [x] Where Holes, Spacing and Runs come from, and whether the domain already reports spacing
+      against pitch. *The domain's `StitchHoles`: `count`, `achievedPitchMm` over the whole set
+      (length ÷ gaps) and each run's own. The domain judges spacing only past a quarter of the
+      pitch (`HOLE_SPACING_DEVIATION`, a problem) and runs that differ by 5 %
+      (`HOLE_SPACING_UNEVEN`): rules worth a problem, not the number. The line compares the
+      achieved spacing with the Pitch field to a tenth of a percent, finer than the Spacing
+      readout's 0.01 mm: the sample reads *3.85 mm* above *stretched 0.1 %*. Its warning glyph is
+      Problems' own verdict (`HOLE_SPACING_DEVIATION`), so the two cannot disagree.*
+- [x] Which panels share the Flip and Mirror buttons — the part's and the feature's — so both move.
+      *The feature's has Flip, Mirror and Across fold; the part's (`PartProperties`) Flip alone.
+      Both have Arrange and the footer now. The right-click menu's Flip shares the icons.*
 
 **Done when — check in the app.** Mockup 02's order for a hole set; mockup 11's Arrange and
 Delete; the subtitle; mockup 01's totals with nothing selected; at 860 × 600 Properties scrolls with
@@ -838,6 +846,48 @@ Delete pinned; every disabled button still says why.
 
 **Tests.** The comparison line's rule (unit, with the rounding edge); the totals from a project
 (unit: Cut, hidden pieces, several irons); E2E for the order and the footer.
+
+**As built (2026-10-09).** What the plan above did not know:
+
+- **The order for every kind**, R-05's kinds of thing: what it is made of and what that came out
+  as (the editor, then *Measured*, then its problems); its name, what it follows and the notes
+  about that, and — for an outline only — the piece's Name and Cut; what to make next (*Add stitch
+  line*, *Add holes*, *Add seam allowance*, in the order the work goes); Arrange; Delete. A rule
+  edge to edge between those groups. The feature-kind heading went: the trail ends with the kind.
+- **The trail** is the piece and its Cut, the names of what the feature follows, root first, and
+  the feature's kind — "Outer · Cut ×1 › Stitch line › Stitch holes". The piece's own outline is left
+  out (the piece's name stands for it), another piece's outline is named by its piece, and the last
+  word is the kind rather than the name, so a set renamed "Main seam" still says it is stitch holes
+  (`trailOf`, `renderer/src/propertyFacts.ts`).
+- **"Matches" is a whole count of tenths of a percent** (`spacingAgainstPitch`,
+  `renderer/src/spacing.ts`): the difference rounded to the tenth the line shows; the percent it
+  returns is that same count, so the decision and the words cannot disagree. **The sample's outer
+  reads "Spacing is stretched 0.1 %"** — 562.57 mm over 146 gaps is 3.8532 mm, 0.08 % over — where
+  mockup 02 draws a check. The pull request raises it.
+- **The glyph is Problems' verdict, not the line's** (`spacingGlyph`): the warning glyph only when
+  Problems reports `HOLE_SPACING_DEVIATION` for the set (past a quarter of the pitch), and then at
+  the problem's own severity; otherwise a check when it matches, and a plain stretch or squeeze
+  mark (Lucide's unfold and fold) when it does not. The Build line above asked for the warning
+  glyph at any difference: that put a warning on the sample's 0.003 mm while Problems said
+  *Nothing to fix*. R-14's selection bar should take the same function. Fewer than two holes show
+  no line: there is no spacing, and Problems says why.
+- **Properties' scrollbar is thin** and its selects end at the chevron: at 264 px a scrolling panel
+  (1024 × 700) left the Corners select 140 px for "A hole on each corner"'s 147.
+- **Totals count what prints** (`jobTotals`): every piece towards *Pieces*, but only those on the
+  sheet plan — not hidden, not failed — towards *to cut* and the holes, each set times its piece's
+  Cut, a hidden set left out. *Holes* lists each set ("146 + 52 ×2"), and only when that adds
+  something to the total. An empty project shows no totals.
+- **Lucide 1.x's flip aliases are swapped**: `FlipHorizontal2` is now
+  `TrianglesCenterlineDashedHorizontal`, a level line with a shape above and below — a
+  top-to-bottom flip — and the right-click menu's *Flip horizontal* and the parts list's mirror
+  mark showed it. Flip and Mirror's faces are picked by drawing, once, in
+  `icons/arrange.ts`, with a test reading what each draws.
+- **The 68 px column wraps *Edge margin*** onto two lines; every other label fits. "A hole on each
+  corner" fits whole at 264 px (it was clipped at 860 px, beside 88 px).
+- At 288 px with a scrollbar — the overlay below 1024 px — *Across fold* wraps under Mirror's
+  icons; the row wraps rather than scrolls sideways.
+- Naming a piece drawn in *Stitch + allowance* takes a click on its outline or its heading: that
+  mode leaves the stitch line selected, which no longer shows Name and Cut.
 
 ---
 

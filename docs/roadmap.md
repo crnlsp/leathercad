@@ -68,9 +68,22 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 - ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
   three status-bar chips, always; the widths of the requirements' §5; the maker's choices
   remembered; nothing unreachable.
-- ☐ **U.6 Properties: order, weight and job totals** (R-05). A hole set reads iron, result, name,
+- ✅ **U.6 Properties: order, weight and job totals** (R-05). A hole set reads iron, result, name,
   arrange, then Delete alone at its foot; with nothing selected, the pieces to cut, the holes to
   punch and the sheets to print.
+  ✅ Built as described. Holes, Spacing and Runs at 17/22, then one line: *Spacing matches the
+  pitch* with a check, or *Spacing is stretched 1.8 %* — "matches" when the difference is 0.0 % at
+  the tenth the line shows, and the warning glyph only when Problems warns about the set too.
+  Every kind follows the same order; Flip and Mirror are icon pairs; Delete sits in a footer with
+  its *Del* cap, in view at 860 × 600, where it sat 188 px below the window's foot. Under the
+  name, "Outer · Cut ×1 › Stitch line › Stitch holes"; Name and Cut only for the outline or the
+  piece. With nothing selected the sample reads *3 · 4 to cut*, *250 · 146 + 52 ×2*, *2 · A4,
+  portrait*, counting what prints. Labels are 68 px and the panel's scrollbar thin, so "A hole on
+  each corner" is no longer clipped, even while the panel scrolls at 264 px. Found on the way: the
+  sample's own outer reads *stretched 0.1 %* (3.8532 mm on a 3.85 iron), where the mockup draws a
+  check — said without a warning, since Problems is silent, and raised in the pull request; and
+  Lucide 1.x's flip icons are swapped, so the right-click menu's *Flip horizontal* showed a
+  top-to-bottom flip — fixed for the menu, Arrange and the parts list's mirror mark.
 - ☐ **U.7 The top bar in three zones** (R-06). The project and its save state · Design | Sheets ·
   the paper, then Export PDF and Print as split buttons, Print's second half showing the problems;
   green leaves the actions; the window's edited flag.

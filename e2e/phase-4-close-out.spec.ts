@@ -213,6 +213,10 @@ test('a card holder, from the first outline to the printed page', async () => {
     await type(window, 'Width', 90);
     await type(window, 'Height', 60);
     for (const corner of ['↖', '↗', '↙', '↘']) await type(window, corner, 0);
+    // Name and Cut are the piece's (R-05): the stitch line is what this mode
+    // leaves selected, so the piece is picked by its heading to be named.
+    await expect(panel.getByTestId('part-name')).toHaveCount(0);
+    await window.locator('[data-testid^="part-heading-"]').last().click();
     await window.getByTestId('part-name').fill('Pocket');
     await expect(problems).toContainText('Nothing to fix');
 

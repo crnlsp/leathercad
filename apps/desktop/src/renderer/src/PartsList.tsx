@@ -14,7 +14,7 @@ import {
   type Project,
 } from '@leathercad/domain';
 
-import { Copy, Ellipsis, Eye, EyeOff, FlipHorizontal2, Lock, LockOpen, Trash2 } from 'lucide-react';
+import { Copy, Ellipsis, Eye, EyeOff, Lock, LockOpen, Trash2 } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 
 import type { PartPrintStatus } from '@leathercad/export';
@@ -23,6 +23,7 @@ import type { RightClicked } from './contextMenu.js';
 import { CountBadge } from './CountBadge.js';
 import { useI18n } from './i18n.js';
 import { useKeysInSentences } from './keyCaps.js';
+import { MIRROR_ICON } from './icons/arrange.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
 import { MenuButton } from './Menu.js';
@@ -333,7 +334,7 @@ function FeatureRow({
                 {isFoldMirrored(feature) ? (
                   <FeatureMark mark="mirror-across-fold" size={14} />
                 ) : (
-                  <Icon of={FlipHorizontal2} size={14} />
+                  <Icon of={MIRROR_ICON.horizontal} size={14} />
                 )}
               </span>
             </Tooltip>

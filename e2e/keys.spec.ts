@@ -73,13 +73,12 @@ test('near the window’s foot, a tooltip opens above its control (R-10)', async
   await withSample(async (window, app) => {
     await resize(app, 1280, 600);
     await expect.poll(() => window.evaluate(() => innerHeight)).toBe(600);
-    // The lining has no stitching: Properties offers to add a stitch line,
-    // and its hint is two lines. Scrolled to the panel's foot, by the status bar.
-    await window.getByTestId('parts-list').getByText('Outline').nth(1).click();
-    const add = window.getByTestId('add-stitch-line');
-    await add.evaluate((button) => button.scrollIntoView({ block: 'end' }));
+    // The rail's own toggle sits at the window's foot, by the status bar.
+    // (Properties' last control was Add stitch line, scrolled to the foot;
+    // since R-05 Arrange follows it and Delete's footer holds the foot.)
+    const add = window.getByTestId('rail-toggle');
     await add.hover();
-    const tip = window.getByRole('tooltip', { name: /follows this edge/ });
+    const tip = window.getByRole('tooltip', { name: (await add.getAttribute('aria-label')) ?? '' });
     await expect(tip).toBeVisible();
     const [tipBox, addBox] = [(await tip.boundingBox())!, (await add.boundingBox())!];
     expect(addBox.y + addBox.height + 4 + tipBox.height, 'no room below').toBeGreaterThan(600 - 8);
