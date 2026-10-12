@@ -245,7 +245,7 @@ export function PropertyPanel({
             )}
         </fieldset>
 
-        {isOutline && <PartFields store={store} part={part} />}
+        {isOutline && <PartFields store={store} part={part} underOutline />}
       </div>
 
       <DeriveActions
@@ -371,14 +371,31 @@ function JobTotals({ project }: { project: Project }) {
   );
 }
 
-/** A part's own fields: what it is called and how many to cut. */
-function PartFields({ store, part }: { store: DocumentStore; part: Part }) {
+/**
+ * A part's own fields: what it is called and how many to cut.
+ *
+ * Under an outline (`underOutline`) they follow the outline's own Name, so the
+ * piece's is labelled *Piece* and the heading goes: two fields both called
+ * Name, one renaming the outline and one the piece, invite typing into the
+ * wrong one.
+ */
+function PartFields({
+  store,
+  part,
+  underOutline = false,
+}: {
+  store: DocumentStore;
+  part: Part;
+  underOutline?: boolean;
+}) {
   const { t } = useI18n();
   return (
     <section className="panel-section">
-      <div className="panel-heading">{t('properties.part')}</div>
+      {!underOutline && <div className="panel-heading">{t('properties.part')}</div>}
       <label className="field">
-        <span className="field-label">{t('properties.name')}</span>
+        <span className="field-label">
+          {underOutline ? t('properties.piece') : t('properties.name')}
+        </span>
         <span className="field-input">
           <input
             type="text"

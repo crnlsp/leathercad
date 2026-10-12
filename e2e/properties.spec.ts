@@ -77,12 +77,13 @@ test('a hole set reads in the order of the work, and says how its spacing came o
     expect(tops).toEqual([...tops].sort((a, b) => a - b));
     await expect(panel.getByTestId('hole-count')).toHaveText('146');
 
-    // The sample's outer is 562.57 mm round over 146 gaps: 3.8532 mm on a
-    // 3.85 iron, 0.08 % over, which the line's tenth shows as 0.1 %. Problems
-    // is silent about it, so the line draws no warning either.
+    // The sample's outer is 562.57 mm round over 146 gaps: 3.8532 mm, shown
+    // as 3.85 under its 3.85 iron — so the line says it matches, as the two
+    // numbers above it do, and Problems is silent.
     const line = panel.getByTestId('spacing-line');
-    await expect(line).toHaveText('Spacing is stretched 0.1 %');
-    await expect(line).toHaveAttribute('data-glyph', 'stretched');
+    await expect(panel.getByTestId('achieved-spacing')).toHaveText('3.85 mm');
+    await expect(line).toHaveText('Spacing matches the pitch');
+    await expect(line).toHaveAttribute('data-glyph', 'check');
     await expect(panel.getByTestId('feature-problems')).toHaveCount(0);
 
     // Arrange: icon pairs, each named, a disabled pair still saying why.
@@ -106,6 +107,10 @@ test('a hole set reads in the order of the work, and says how its spacing came o
     await expect(panel.getByTestId('part-name')).toHaveCount(0);
     await window.getByTestId('feature-row-outer-outline').click();
     await expect(panel.getByTestId('part-name')).toHaveValue('Outer');
+    // Two names, never both called Name: the outline's own, and the piece's.
+    await expect(panel.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('Outline');
+    await expect(panel.getByRole('textbox', { name: 'Piece', exact: true })).toHaveValue('Outer');
+    await expect(panel.getByTestId('part-name')).toHaveAccessibleName('Piece');
     await window.getByTestId('feature-row-pocket-holes').click();
     await expect(panel.getByTestId('property-trail')).toHaveText(
       'Card pocket · Cut ×2 › Stitch line › Stitch holes',

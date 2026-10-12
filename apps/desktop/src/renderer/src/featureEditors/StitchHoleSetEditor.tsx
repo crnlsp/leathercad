@@ -1,4 +1,3 @@
-import { formatNumber } from '@leathercad/core';
 import {
   MIN_HOLES_IN_A_SET,
   MIN_PITCH_MM,
@@ -13,7 +12,13 @@ import { IRON_PRESETS, presetForPitch } from '../irons.js';
 import { useI18n } from '../i18n.js';
 import { Icon } from '../icons/Icon.js';
 import { SeverityGlyph } from '../SeverityGlyph.js';
-import { describeSpacing, spacingAgainstPitch, spacingGlyph } from '../spacing.js';
+import {
+  SPACING_DECIMALS,
+  describeSpacing,
+  formatSpacing,
+  spacingAgainstPitch,
+  spacingGlyph,
+} from '../spacing.js';
 
 type HolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
 
@@ -71,7 +76,8 @@ export function StitchHoleSetEditor({
         // pitches (5.6).
         min={MIN_PITCH_MM}
         step={0.05}
-        precision={2}
+        // The Spacing readout's precision, which "matches" is decided at.
+        precision={SPACING_DECIMALS}
         // Typing a pitch by hand means it is no longer that iron's pitch, so
         // the label goes with it rather than lying about where the number came
         // from.
@@ -125,7 +131,7 @@ export function StitchHoleSetEditor({
             <div className="readout-cell">
               <span>{t('editor.spacing')}</span>
               <b data-testid="achieved-spacing">
-                {formatNumber(holes.achievedPitchMm, 2)} <span className="readout-unit">mm</span>
+                {formatSpacing(holes.achievedPitchMm)} <span className="readout-unit">mm</span>
               </b>
             </div>
             {holes.runs.length > 1 && (

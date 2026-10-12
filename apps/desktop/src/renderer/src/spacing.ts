@@ -1,4 +1,4 @@
-import type { Mm } from '@leathercad/core';
+import { formatNumber, type Mm } from '@leathercad/core';
 import type { Severity } from '@leathercad/domain';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -16,18 +16,40 @@ import type { Translate } from '../../shared/i18n.js';
  */
 export type SpacingAgainstPitch =
   | { readonly kind: 'matches' }
-  | { readonly kind: 'stretched' | 'squeezed'; readonly percent: number };
+  | {
+      readonly kind: 'stretched' | 'squeezed';
+      /** To the tenth: at least 0.1. */
+      readonly percent: number;
+      /** The readouts differ, but by less than the tenth of a percent shown. */
+      readonly underATenth: boolean;
+    };
+
+/**
+ * The decimals a hole set's Pitch field and its Spacing readout are both shown
+ * to — the one place either gets it, so "matches" below is about the numbers
+ * the maker reads.
+ */
+export const SPACING_DECIMALS = 2;
+
+/** A pitch or a spacing as Properties shows it: `3.85`. */
+export function formatSpacing(mm: Mm): string {
+  return formatNumber(mm, SPACING_DECIMALS);
+}
 
 /**
  * "Matches" is decided by what is shown, not by a tolerance (invariant 7): the
- * difference, in whole tenths of a percent as the line writes it, is none.
- * The percent handed back is that same count of tenths, so the words and the
- * decision cannot disagree.
+ * Spacing readout shows the Pitch field's number. Otherwise the difference in
+ * tenths of a percent as the line writes it — and where the readouts differ
+ * by less than that tenth, "less than 0.1 %", so it never reads 0.0 %.
  */
 export function spacingAgainstPitch(spacingMm: Mm, pitchMm: Mm): SpacingAgainstPitch {
+  if (formatSpacing(spacingMm) === formatSpacing(pitchMm)) return { kind: 'matches' };
   const tenths = Math.round((Math.abs(spacingMm - pitchMm) / pitchMm) * 1000);
-  if (tenths < 1) return { kind: 'matches' };
-  return { kind: spacingMm > pitchMm ? 'stretched' : 'squeezed', percent: tenths / 10 };
+  return {
+    kind: spacingMm > pitchMm ? 'stretched' : 'squeezed',
+    percent: Math.max(tenths, 1) / 10,
+    underATenth: tenths < 1,
+  };
 }
 
 /**
@@ -45,9 +67,9 @@ export function spacingGlyph(
   return check.kind === 'matches' ? 'check' : check.kind;
 }
 
-/** "Spacing matches the pitch", "Spacing is stretched 1.8 %". */
+/** "Spacing matches the pitch", "Spacing is stretched 1.8 %", "… less than 0.1 %". */
 export function describeSpacing(check: SpacingAgainstPitch, t: Translate): string {
   return check.kind === 'matches'
     ? t('spacing.matches')
-    : t(`spacing.${check.kind}`, { percent: check.percent });
+    : t(`spacing.${check.kind}${check.underATenth ? 'Under' : ''}`, { percent: check.percent });
 }

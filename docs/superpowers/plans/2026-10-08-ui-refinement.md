@@ -832,10 +832,11 @@ Cut) for a part.
       against pitch. *The domain's `StitchHoles`: `count`, `achievedPitchMm` over the whole set
       (length ÷ gaps) and each run's own. The domain judges spacing only past a quarter of the
       pitch (`HOLE_SPACING_DEVIATION`, a problem) and runs that differ by 5 %
-      (`HOLE_SPACING_UNEVEN`): rules worth a problem, not the number. The line compares the
-      achieved spacing with the Pitch field to a tenth of a percent, finer than the Spacing
-      readout's 0.01 mm: the sample reads *3.85 mm* above *stretched 0.1 %*. Its warning glyph is
-      Problems' own verdict (`HOLE_SPACING_DEVIATION`), so the two cannot disagree.*
+      (`HOLE_SPACING_UNEVEN`): rules worth a problem, not the number. First built
+      to a tenth of a percent, finer than the Spacing readout's 0.01 mm, the line read *stretched
+      0.1 %* under *3.85 mm*; it now matches when the readout shows the Pitch field's number. Its
+      warning glyph is Problems' own verdict (`HOLE_SPACING_DEVIATION`), so the two cannot
+      disagree.*
 - [x] Which panels share the Flip and Mirror buttons — the part's and the feature's — so both move.
       *The feature's has Flip, Mirror and Across fold; the part's (`PartProperties`) Flip alone.
       Both have Arrange and the footer now. The right-click menu's Flip shares the icons.*
@@ -851,7 +852,8 @@ Delete pinned; every disabled button still says why.
 
 - **The order for every kind**, R-05's kinds of thing: what it is made of and what that came out
   as (the editor, then *Measured*, then its problems); its name, what it follows and the notes
-  about that, and — for an outline only — the piece's Name and Cut; what to make next (*Add stitch
+  about that, and — for an outline only — the piece's name and Cut, its field labelled *Piece* so
+  it is never a second *Name* beside the outline's own; what to make next (*Add stitch
   line*, *Add holes*, *Add seam allowance*, in the order the work goes); Arrange; Delete. A rule
   edge to edge between those groups. The feature-kind heading went: the trail ends with the kind.
 - **The trail** is the piece and its Cut, the names of what the feature follows, root first, and
@@ -859,17 +861,22 @@ Delete pinned; every disabled button still says why.
   out (the piece's name stands for it), another piece's outline is named by its piece, and the last
   word is the kind rather than the name, so a set renamed "Main seam" still says it is stitch holes
   (`trailOf`, `renderer/src/propertyFacts.ts`).
-- **"Matches" is a whole count of tenths of a percent** (`spacingAgainstPitch`,
-  `renderer/src/spacing.ts`): the difference rounded to the tenth the line shows; the percent it
-  returns is that same count, so the decision and the words cannot disagree. **The sample's outer
-  reads "Spacing is stretched 0.1 %"** — 562.57 mm over 146 gaps is 3.8532 mm, 0.08 % over — where
-  mockup 02 draws a check. The pull request raises it.
+- **"Matches" means the Spacing readout shows the Pitch field's number** (`spacingAgainstPitch`,
+  `renderer/src/spacing.ts`; the maintainer's decision on the pull request, option C). Both are
+  shown by `formatSpacing` at `SPACING_DECIMALS` (2), and the decision compares those two strings:
+  no epsilon, and the line can never contradict the two numbers above it. Built first to a tenth
+  of a percent, the sample's outer — 562.57 mm over 146 gaps, 3.8532 mm, 0.08 % over — read
+  *stretched 0.1 %* under *3.85 mm*, where mockup 02 draws a check; it now reads *Spacing matches
+  the pitch*. Otherwise the difference is said to the tenth of a percent, and readouts that differ
+  by less than that (a 20 mm pitch's hundredth is 0.05 %) read *less than 0.1 %*, never 0.0 %.
 - **The glyph is Problems' verdict, not the line's** (`spacingGlyph`): the warning glyph only when
   Problems reports `HOLE_SPACING_DEVIATION` for the set (past a quarter of the pitch), and then at
   the problem's own severity; otherwise a check when it matches, and a plain stretch or squeeze
   mark (Lucide's unfold and fold) when it does not. The Build line above asked for the warning
   glyph at any difference: that put a warning on the sample's 0.003 mm while Problems said
-  *Nothing to fix*. R-14's selection bar should take the same function. Fewer than two holes show
+  *Nothing to fix*. R-14's selection bar should take the same functions — `spacingAgainstPitch`,
+  `spacingGlyph`, `describeSpacing` and `formatSpacing` for its own spacing number — so the bar,
+  Properties and Problems say one thing. Fewer than two holes show
   no line: there is no spacing, and Problems says why.
 - **Properties' scrollbar is thin** and its selects end at the chevron: at 264 px a scrolling panel
   (1024 × 700) left the Corners select 140 px for "A hole on each corner"'s 147.
@@ -1201,8 +1208,11 @@ matches the pitch — and offers the next step as one click with the maker's own
 - A small bar on the shell (`shell-1`, border, 5 px radius), under the selection's bounds and below
   its dimension line; above when there is no room below; never over the selected piece; hidden
   while dragging. Positioned from `render`'s millimetre-to-pixel transform.
-- **Line 1:** holes · spacing against pitch · runs · Cut ×N — a check when spacing equals the pitch
-  (U.6's rule), a warning glyph and words ("stretched 1.8 %") when not.
+- **Line 1:** holes · spacing against pitch · runs · Cut ×N — U.6's rule and words, from
+  `renderer/src/spacing.ts`: a check when the spacing shows as the pitch (`formatSpacing`, two
+  decimals, the numbers Properties shows); "stretched 1.8 %" with a stretch mark when not; the
+  warning glyph only when Problems warns about the set (`spacingGlyph`). Settle first what *runs*
+  add up to: the sample's 24 · 50 · 23 · 50 is 147 beside 146 holes, a corner counted twice.
 - **Line 2:** Next: Stitch line › Stitch holes › Seam allowance. Done steps show a check; the first
   undone step is a button that runs it with My tools' defaults; later steps are plain text. The
   commands are the panel's existing ones (`DeriveActions`, `AllowanceButton`).

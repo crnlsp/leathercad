@@ -482,6 +482,7 @@
     "name": "Name",
     "nothingSelected": "Nothing selected. Draw with {{rectangle}}, or pick something with {{select}}.",
     "part": "Part",
+    "piece": "Piece",
     "perimeter": "Perimeter",
     "problems_one": "Problem",
     "problems_other": "Problems",
@@ -556,7 +557,9 @@
   "spacing": {
     "matches": "Spacing matches the pitch",
     "squeezed": "Spacing is squeezed {{percent}} %",
-    "stretched": "Spacing is stretched {{percent}} %"
+    "squeezedUnder": "Spacing is squeezed less than {{percent}} %",
+    "stretched": "Spacing is stretched {{percent}} %",
+    "stretchedUnder": "Spacing is stretched less than {{percent}} %"
   },
   "problems": {
     "withSubject": "{{name}}: {{sentence}}",
