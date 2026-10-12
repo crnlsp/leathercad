@@ -169,6 +169,33 @@ test('the zoom menu works by keyboard alone, and gives focus back', async () => 
   }
 });
 
+test('a press on the control with the pointer leaves the keys to the board', async () => {
+  const { app, window } = await launch();
+  try {
+    const level = window.getByTestId('zoom-level');
+    await window.keyboard.press('Control+0');
+    await expect(level).toHaveText('100 %');
+
+    // Enter finishes a polyline: it must not press − again, nor reopen the menu.
+    await window.getByTestId('zoom-out').click();
+    await expect(level).toHaveText('80 %');
+    await window.keyboard.press('Enter');
+    await window.keyboard.press('Space');
+    // A key that does zoom, after them: 80 × 1.25 is 100, and 64 × 1.25 is not.
+    await window.keyboard.press('Control+Equal');
+    await expect(level).toHaveText('100 %');
+
+    await level.click();
+    await window.getByTestId('zoom-200').click();
+    await expect(level).toHaveText('200 %');
+    await expect(level).not.toBeFocused();
+    await window.keyboard.press('Enter');
+    await expect(window.getByTestId('zoom-level-items')).toHaveCount(0);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('the same control drives the Sheets view, where Fit selection says why it cannot', async () => {
   const { app, window } = await launch();
   try {

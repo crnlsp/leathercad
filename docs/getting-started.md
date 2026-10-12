@@ -126,8 +126,8 @@ the size your software shows: it should be the size you drew.
   (**Ctrl+=** and **Ctrl+−**), **Fit** (**Shift+1**, or double-click empty board), and the
   percentage opens *Fit selection* (**Shift+2**), *True size, 100 %* (**Ctrl+0**) and 50, 200 and
   400 %. At 100 % the board is drawn at 96 pixels to the inch, the size a screen is nominally
-  drawn at; yours may show it a little larger or smaller, so hold a ruler to it before you trust it
-  against a buckle. The zoom never changes what prints. Until 1.5, **Ctrl+0** fitted the pattern.
+  drawn at. Few screens are exactly that — a laptop often shows it a tenth or more smaller — so
+  hold a ruler to it before you trust it against a buckle. The zoom never changes what prints. Until 1.5, **Ctrl+0** fitted the pattern.
 - **Settings** (**Ctrl+,**): clear the recent projects, and choose how the legend and the tool
   rail start. They stay as you left them.
 - **Logs:** *Help → About LeatherCAD → Show log folder*. Nothing is ever uploaded; attach the log

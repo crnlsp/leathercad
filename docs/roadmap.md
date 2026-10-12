@@ -75,8 +75,11 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   and on Sheets the board's zoom for paper at 27.6 % — so the zoom is now read off whichever camera
   is painted; Fit framed hidden features, which it does not draw; choosing from a menu by keyboard
   dropped focus to the page, and now gives it back to the button; `getting-started.md` said a
-  German keyboard zooms from the key right of 0, which U.3's review had changed. Printed output did
-  not move: no export test, golden fixture or format fixture changed.
+  German keyboard zooms from the key right of 0, which U.3's review had changed; a button of the
+  control pressed with the mouse kept focus, so the Enter that finishes a polyline zoomed again,
+  and now leaves the keys to the board; a window moved to a display of another ratio kept its
+  device pixels per mm, so 100 % read 50 % on a 2× screen, and now keeps its zoom. Printed output
+  did not move: no export test, golden fixture or format fixture changed.
 - ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
   three status-bar chips, always; the widths of the requirements' §5; the maker's choices
   remembered; nothing unreachable.

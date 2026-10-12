@@ -759,6 +759,13 @@ included (unit); E2E for Ctrl+0, Shift+1 and the menu.
 - **Choosing from a menu by keyboard dropped focus** to the page. `MenuButton` gives it back to the
   button, as Escape did, unless the item moved it — a dialog it opened keeps it.
 - **The menu opens upwards** (`MenuButton`'s `above`): the canvas clips what runs below it.
+- **A press with the mouse leaves the keys to the board** (review, 2026-10-12): a control button
+  kept focus after a click, so the Enter that finishes a polyline — or a Space — pressed it again
+  (80 % became 64 %). Its buttons let go of focus after a pointer press, and a menu item chosen by
+  the pointer leaves focus with the page, as before U.4; from the keyboard, focus stays.
+- **The zoom survives a change of display ratio**: `Viewport.resize` kept device pixels per
+  millimetre, so a window moved from a 1× to a 2× screen went from 100 % to 50 % (measured with
+  the page's zoom factor at 2). It now scales the camera by the ratio's change.
 - `pnpm test:visual`: all three references changed, each only inside the control's 175 × 30 px box.
   The visual test's deselecting click and the README's Sheets picture moved to the bottom-left
   corner, which the control does not cover.

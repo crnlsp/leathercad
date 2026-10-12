@@ -168,6 +168,29 @@ describe('zoomToPercent (U.4)', () => {
     }
   });
 
+  it('keeps its percentage when the window moves to a display of another ratio', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(1, 1.25, 1.5, 2, 3),
+        fc.constantFrom(1, 1.25, 1.5, 2, 3),
+        fc.constantFrom(50, 100, 200, 400),
+        (from, to, percent) => {
+          const v = new Viewport();
+          v.resize(800 * from, 600 * from, from);
+          v.centreMm = { x: 12, y: -7 };
+          v.zoomToPercent(percent);
+          v.resize(800 * to, 600 * to, to);
+          const middle = v.toWorld({ x: v.widthPx / 2, y: v.heightPx / 2 });
+          return (
+            closeTo(zoomPercent(v.toView()), percent, 1e-9 * percent) &&
+            closeTo(middle.x, 12, 1e-9) &&
+            closeTo(middle.y, -7, 1e-9)
+          );
+        },
+      ),
+    );
+  });
+
   it('stays inside the zoom limits', () => {
     const v = makeViewport();
     v.zoomToPercent(1e9);

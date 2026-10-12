@@ -1,4 +1,5 @@
 import { Fullscreen, Minus, Plus } from 'lucide-react';
+import type { MouseEvent } from 'react';
 
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
@@ -38,6 +39,15 @@ export function ZoomControl({
 }) {
   const { t } = useI18n();
   const whole = Math.round(percent);
+  // A press by the pointer leaves the keys to the board, as a press on the
+  // board does: a button left focused would take the Enter that finishes a
+  // polyline, and zoom again. From the keyboard, focus stays to press again.
+  const press =
+    (command: ZoomCommand) =>
+    (event: MouseEvent<HTMLButtonElement>): void => {
+      if (event.detail > 0) event.currentTarget.blur();
+      run(command);
+    };
   const entries: MenuEntry[] = [
     {
       kind: 'item',
@@ -82,7 +92,7 @@ export function ZoomControl({
           className="zoom-button"
           data-testid="zoom-out"
           aria-label={t('shortcuts.zoomOut')}
-          onClick={() => run('zoomOut')}
+          onClick={press('zoomOut')}
         >
           <Icon of={Minus} />
         </button>
@@ -104,18 +114,13 @@ export function ZoomControl({
           className="zoom-button"
           data-testid="zoom-in"
           aria-label={t('shortcuts.zoomIn')}
-          onClick={() => run('zoomIn')}
+          onClick={press('zoomIn')}
         >
           <Icon of={Plus} />
         </button>
       </Tooltip>
       <Tooltip text={t('zoom.fitTooltip')} keys="fit">
-        <button
-          type="button"
-          className="zoom-button"
-          data-testid="zoom-fit"
-          onClick={() => run('fit')}
-        >
+        <button type="button" className="zoom-button" data-testid="zoom-fit" onClick={press('fit')}>
           <Icon of={Fullscreen} />
           {t('zoom.fit')}
         </button>

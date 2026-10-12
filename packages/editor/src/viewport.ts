@@ -53,6 +53,10 @@ export class Viewport {
   }
 
   resize(widthPx: number, heightPx: number, dpr = this.dpr): void {
+    // The scale is device pixels: on a display of another ratio — the window
+    // moved to another screen — the same zoom is that many more (U.4), or
+    // 100 % would stop being true size.
+    this.scale = clamp((this.scale * dpr) / this.dpr, Viewport.MIN_SCALE, Viewport.MAX_SCALE);
     this.widthPx = widthPx;
     this.heightPx = heightPx;
     this.dpr = dpr;

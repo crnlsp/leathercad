@@ -53,11 +53,12 @@ export function MenuButton({
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  // Escape, or choosing an item, gives focus back to the button — once the
-  // menu has closed. The tooltip is off while the menu is open, which changes
-  // the button's wrapping, so the button focused before the render is not the
-  // one after. Only if nothing else took it: a dialog the item opened keeps it.
-  // Choosing gave it to the page until U.4, so the keyboard lost its place.
+  // Escape, or choosing an item by keyboard, gives focus back to the button —
+  // once the menu has closed. The tooltip is off while the menu is open, which
+  // changes the button's wrapping, so the button focused before the render is
+  // not the one after. Only if nothing else took it: a dialog the item opened
+  // keeps it. Choosing gave it to the page until U.4, so the keyboard lost its
+  // place; an item chosen by the pointer still leaves focus with the page.
   const giveBack = useRef(false);
 
   useEffect(() => {
@@ -184,8 +185,8 @@ function MenuPopup({
   /** Where a press may land without closing the menu. */
   inside: RefObject<HTMLElement | null>;
   /**
-   * How it closed — Escape, an item chosen, or a press elsewhere or Tab — so
-   * focus can go back where it came from.
+   * How it closed — Escape, an item chosen from the keyboard, or a press
+   * (elsewhere or on an item) or Tab — so focus can go back where it came from.
    */
   onClose: (how: 'escape' | 'chosen' | 'away') => void;
 }) {
@@ -250,9 +251,11 @@ function MenuPopup({
         // keys still have to reach it to read why.
         aria-disabled={refused || undefined}
         aria-describedby={refused ? `${saidBy ?? item.id}-why` : undefined}
-        onClick={() => {
+        onClick={(event) => {
           if (refused) return;
-          onClose('chosen');
+          // Chosen by the pointer, focus is left where a press leaves it, as
+          // before U.4: on the button it would take the board's next Enter.
+          onClose(event.detail === 0 ? 'chosen' : 'away');
           item.onChoose();
         }}
       >
