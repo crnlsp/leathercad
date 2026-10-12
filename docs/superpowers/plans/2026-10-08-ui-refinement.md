@@ -766,6 +766,15 @@ included (unit); E2E for Ctrl+0, Shift+1 and the menu.
 - **The zoom survives a change of display ratio**: `Viewport.resize` kept device pixels per
   millimetre, so a window moved from a 1× to a 2× screen went from 100 % to 50 % (measured with
   the page's zoom factor at 2). It now scales the camera by the ratio's change.
+- **− and + step along a ladder**, not ×1.25 (`ZOOM_STEP` is gone): `ZOOM_STOPS` and
+  `nextZoomStop` in `render/view.ts`, `Viewport.stepZoom`, and `CanvasHandle.step` in place of
+  `zoom(factor)`. The stops are 1, 2, 5, 10, 25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400,
+  600, 800, 1200, 1600, 3200, 6400 and 10 000 %. Up and down are judged on the whole percentage
+  the control shows (`shownZoomPercent`), so 99.6 % is on the 100 stop. Buttons and keys zoom
+  about the centre; the wheel stays continuous.
+- **The zoom limits are percentages**, `ZOOM_LIMITS` 1 % and 10 000 %, the same on every display.
+  `Viewport.MIN_SCALE` and `MAX_SCALE` were device pixels per mm: 1.3 % to 10 583 % at 1×, and
+  0.66 % to 5 291 % at 2×.
 - `pnpm test:visual`: all three references changed, each only inside the control's 175 × 30 px box.
   The visual test's deselecting click and the README's Sheets picture moved to the bottom-left
   corner, which the control does not cover.

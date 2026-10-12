@@ -74,13 +74,10 @@ function fileName(path: string): string {
   return path.split('/').pop() ?? path;
 }
 
-/** How far one step of the zoom keys goes (8.4b). */
-const ZOOM_STEP = 1.25;
-
 /** What each zoom command asks of the canvas: its key and the zoom control run the same (U.4). */
 const ZOOM: Readonly<Record<ZoomCommand, (canvas: CanvasHandle) => void>> = {
-  zoomIn: (canvas) => canvas.zoom(ZOOM_STEP),
-  zoomOut: (canvas) => canvas.zoom(1 / ZOOM_STEP),
+  zoomIn: (canvas) => canvas.step(1),
+  zoomOut: (canvas) => canvas.step(-1),
   fit: (canvas) => canvas.fit(),
   fitSelection: (canvas) => canvas.fitSelection(),
   trueSize: (canvas) => canvas.zoomTo(100),

@@ -83,8 +83,11 @@ export type CanvasView = 'design' | 'sheets';
 export interface CanvasHandle {
   /** Frames a millimetre rectangle, leaving the usual margin. */
   frame(bounds: Rect): void;
-  /** The zoom keys (8.4b): zooms the current view about its centre. */
-  zoom(factor: number): void;
+  /**
+   * The zoom keys (8.4b) and − and + (U.4): the current view to the next stop
+   * of the zoom ladder up or down, about its centre.
+   */
+  step(direction: 1 | -1): void;
   /** Zooms the current view to a percentage about its centre, 100 % being true size (U.4). */
   zoomTo(percent: number): void;
   /**
@@ -282,9 +285,8 @@ export function CanvasHost({
         viewportRef.current.fitTo(bounds, FIT_PADDING_PX * viewportRef.current.dpr);
         invalidate();
       },
-      zoom(factor) {
-        const viewport = camera();
-        viewport.zoomAt({ x: viewport.widthPx / 2, y: viewport.heightPx / 2 }, factor);
+      step(direction) {
+        camera().stepZoom(direction);
         invalidate();
       },
       zoomTo(percent) {

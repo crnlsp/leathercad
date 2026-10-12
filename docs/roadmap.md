@@ -78,7 +78,10 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   German keyboard zooms from the key right of 0, which U.3's review had changed; a button of the
   control pressed with the mouse kept focus, so the Enter that finishes a polyline zoomed again,
   and now leaves the keys to the board; a window moved to a display of another ratio kept its
-  device pixels per mm, so 100 % read 50 % on a 2× screen, and now keeps its zoom. Printed output
+  device pixels per mm, so 100 % read 50 % on a 2× screen, and now keeps its zoom. From review:
+  − and + step along round stops (1 … 25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400 … 10 000 %)
+  instead of ×1.25, so + from any fit reaches 100 %; and the zoom limits, which were device pixels
+  (about 10 600 % at 1×, 5 300 % at 2×), are 1 % and 10 000 % on every display. Printed output
   did not move: no export test, golden fixture or format fixture changed.
 - ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
   three status-bar chips, always; the widths of the requirements' §5; the maker's choices

@@ -123,7 +123,8 @@ the size your software shows: it should be the size you drew.
   there — and every list and tooltip shows it as your keyboard prints it; a tool's letter stays its
   letter, and zoom its **+** and **−**, wherever your layout puts them.
 - **Zoom:** the control at the board's bottom-right says the zoom and sets it: **−** and **+**
-  (**Ctrl+=** and **Ctrl+−**), **Fit** (**Shift+1**, or double-click empty board), and the
+  (**Ctrl+−** and **Ctrl+=**) step through round sizes — 50, 67, 75, 100, 125, 150, 200 % and on —
+  while the wheel zooms smoothly about the pointer; **Fit** (**Shift+1**, or double-click empty board), and the
   percentage opens *Fit selection* (**Shift+2**), *True size, 100 %* (**Ctrl+0**) and 50, 200 and
   400 %. At 100 % the board is drawn at 96 pixels to the inch, the size a screen is nominally
   drawn at. Few screens are exactly that — a laptop often shows it a tenth or more smaller — so

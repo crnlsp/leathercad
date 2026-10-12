@@ -63,8 +63,15 @@ test('the control follows the zoom live, and Ctrl+0 is true size: 100 mm is 377.
     const right = x(await readoutAt(window, board.x + 120 + 378, y));
     expect(Math.abs(right - left - 378 / TRUE_SIZE)).toBeLessThan(0.02);
 
+    // − and + step along round stops (U.4): 75, 67, 50 below true size.
     await window.keyboard.press('Control+Minus');
-    await expect(window.getByTestId('zoom-level')).toHaveText('80 %');
+    await expect(window.getByTestId('zoom-level')).toHaveText('75 %');
+    await window.getByTestId('zoom-out').click();
+    await expect(window.getByTestId('zoom-level')).toHaveText('67 %');
+    await window.keyboard.press('Control+Equal');
+    await window.keyboard.press('Control+Equal');
+    await window.keyboard.press('Control+Equal');
+    await expect(window.getByTestId('zoom-level')).toHaveText('125 %');
   } finally {
     await closeApp(app);
   }
@@ -154,7 +161,7 @@ test('the zoom menu works by keyboard alone, and gives focus back', async () => 
     await expect(window.getByTestId('zoom-in')).toBeFocused();
     await expect(window.getByTestId('zoom-in')).toHaveAccessibleName('Zoom in');
     await window.keyboard.press('Enter');
-    await expect(level).toHaveText('250 %');
+    await expect(level).toHaveText('300 %');
     await window.keyboard.press('Tab');
     await expect(window.getByTestId('zoom-fit')).toBeFocused();
     await expect(window.getByRole('tooltip')).toContainText('double-click');
@@ -178,10 +185,10 @@ test('a press on the control with the pointer leaves the keys to the board', asy
 
     // Enter finishes a polyline: it must not press − again, nor reopen the menu.
     await window.getByTestId('zoom-out').click();
-    await expect(level).toHaveText('80 %');
+    await expect(level).toHaveText('75 %');
     await window.keyboard.press('Enter');
     await window.keyboard.press('Space');
-    // A key that does zoom, after them: 80 × 1.25 is 100, and 64 × 1.25 is not.
+    // A key that does zoom, after them: + from 75 is 100, and from 67 or 50 it is not.
     await window.keyboard.press('Control+Equal');
     await expect(level).toHaveText('100 %');
 

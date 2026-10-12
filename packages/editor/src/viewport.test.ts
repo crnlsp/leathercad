@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { RectOps } from '@leathercad/geometry';
-import { zoomPercent } from '@leathercad/render';
+import { ZOOM_LIMITS, ZOOM_STOPS, shownZoomPercent, zoomPercent } from '@leathercad/render';
 
 import { Viewport } from './viewport.js';
 
@@ -110,18 +110,26 @@ describe('zoomAt', () => {
     expect(closeTo(v.scale, 8)).toBe(true);
   });
 
-  it('clamps rather than letting zoom run away', () => {
-    const v = makeViewport();
-    for (let i = 0; i < 100; i++) v.zoomAt({ x: 400, y: 300 }, 2);
-    expect(v.scale).toBe(Viewport.MAX_SCALE);
-
-    for (let i = 0; i < 200; i++) v.zoomAt({ x: 400, y: 300 }, 0.5);
-    expect(v.scale).toBe(Viewport.MIN_SCALE);
+  it('clamps rather than letting zoom run away, at the same percentage on any display', () => {
+    fc.assert(
+      fc.property(fc.double({ min: 0.5, max: 4, noNaN: true }), (dpr) => {
+        const v = new Viewport();
+        v.resize(800 * dpr, 600 * dpr, dpr);
+        for (let i = 0; i < 100; i++) v.zoomAt({ x: 400, y: 300 }, 2);
+        const top = zoomPercent(v.toView());
+        for (let i = 0; i < 200; i++) v.zoomAt({ x: 400, y: 300 }, 0.5);
+        const bottom = zoomPercent(v.toView());
+        return (
+          closeTo(top, ZOOM_LIMITS.max, 1e-9 * ZOOM_LIMITS.max) &&
+          closeTo(bottom, ZOOM_LIMITS.min, 1e-9 * ZOOM_LIMITS.min)
+        );
+      }),
+    );
   });
 
   it('holds the anchor even at the clamp', () => {
     const v = makeViewport();
-    v.scale = Viewport.MAX_SCALE;
+    v.zoomToPercent(ZOOM_LIMITS.max);
     const anchor = { x: 123, y: 456 };
     const before = v.toWorld(anchor);
     v.zoomAt(anchor, 4);
@@ -191,12 +199,65 @@ describe('zoomToPercent (U.4)', () => {
     );
   });
 
-  it('stays inside the zoom limits', () => {
+  it('stays inside the zoom limits, the same percentages on any display', () => {
+    fc.assert(
+      fc.property(fc.double({ min: 0.5, max: 4, noNaN: true }), (dpr) => {
+        const v = new Viewport();
+        v.resize(800 * dpr, 600 * dpr, dpr);
+        v.zoomToPercent(1e9);
+        const top = zoomPercent(v.toView());
+        v.zoomToPercent(1e-9);
+        const bottom = zoomPercent(v.toView());
+        // A fit to a speck, and to a field, clamp at the same two.
+        v.fitTo(RectOps.fromCorners({ x: 0, y: 0 }, { x: 1e-6, y: 1e-6 }));
+        const speck = zoomPercent(v.toView());
+        v.fitTo(RectOps.fromCorners({ x: 0, y: 0 }, { x: 1e7, y: 1e7 }));
+        const field = zoomPercent(v.toView());
+        return (
+          [top, speck].every((p) => closeTo(p, ZOOM_LIMITS.max, 1e-9 * ZOOM_LIMITS.max)) &&
+          [bottom, field].every((p) => closeTo(p, ZOOM_LIMITS.min, 1e-9 * ZOOM_LIMITS.min))
+        );
+      }),
+    );
+  });
+});
+
+describe('stepZoom (U.4)', () => {
+  it('steps to the next stop of the ladder about the canvas centre, on any display', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.5, max: 4, noNaN: true }),
+        fc.double({ min: ZOOM_LIMITS.min, max: ZOOM_LIMITS.max, noNaN: true }),
+        fc.constantFrom(1 as const, -1 as const),
+        (dpr, percent, direction) => {
+          const v = new Viewport();
+          v.resize(801 * dpr, 597 * dpr, dpr);
+          v.centreMm = { x: 31, y: -4 };
+          v.zoomToPercent(percent);
+          const shown = shownZoomPercent(zoomPercent(v.toView()));
+          v.stepZoom(direction);
+          const after = shownZoomPercent(zoomPercent(v.toView()));
+          const middle = v.toWorld({ x: v.widthPx / 2, y: v.heightPx / 2 });
+          const atLimit = direction > 0 ? shown >= ZOOM_LIMITS.max : shown <= ZOOM_LIMITS.min;
+          return (
+            ZOOM_STOPS.includes(after) &&
+            (atLimit ? after === shown : direction > 0 ? after > shown : after < shown) &&
+            closeTo(middle.x, 31, 1e-6) &&
+            closeTo(middle.y, -4, 1e-6)
+          );
+        },
+      ),
+    );
+  });
+
+  it('reaches true size with + alone after a fit at 57 %', () => {
     const v = makeViewport();
-    v.zoomToPercent(1e9);
-    expect(v.scale).toBe(Viewport.MAX_SCALE);
-    v.zoomToPercent(1e-9);
-    expect(v.scale).toBe(Viewport.MIN_SCALE);
+    v.zoomToPercent(57);
+    const seen = [1, 1, 1].map(() => {
+      v.stepZoom(1);
+      return shownZoomPercent(zoomPercent(v.toView()));
+    });
+    expect(seen).toEqual([67, 75, 100]);
   });
 });
 
