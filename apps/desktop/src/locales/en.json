@@ -473,10 +473,12 @@
     "addStitchLine": "Add stitch line",
     "addStitchLineHint": "A stitch line that follows this edge at a fixed margin, and keeps following it",
     "area": "Area",
+    "arrange": "Arrange",
     "cut": "Cut",
     "cutSuffix": "off",
-    "flipHeading": "Flip this piece",
+    "flipLabel": "Flip",
     "foldMirror": "Mirror across fold",
+    "foldMirrorLabel": "Across fold",
     "foldMirrorHint": "A counterpart across {{fold}}, which re-mirrors whenever that fold moves",
     "follows": "Follows",
     "frozenNote": "Frozen from {{source}}: drawn geometry now, no longer following it.",
@@ -489,17 +491,19 @@
     "measured": "Measured",
     "measures": "Measures",
     "mirrorFoldNote": "Mirrors {{source}} across {{fold}}. Move that fold and this follows it; move {{source}} and this stays its mirror. It cannot be dragged on its own.",
-    "mirrorHeading": "Mirror into a counterpart",
+    "mirrorLabel": "Mirror",
     "mirrorLineNote": "Mirrors {{source}} across a line fixed where this was made — it does not follow {{source}} about. Moving {{source}} moves this the opposite way, and resizing it changes the gap between the two. Drag this piece to place the pair.",
     "mirrors": "Mirrors",
     "name": "Name",
     "nothingSelected": "Nothing selected. Draw with {{rectangle}}, or pick something with {{select}}.",
     "part": "Part",
+    "piece": "Piece",
     "perimeter": "Perimeter",
     "problems_one": "Problem",
     "problems_other": "Problems",
     "reads": "Reads",
     "title": "Properties",
+    "where": "{{part}} · Cut ×{{quantity}}",
     "flip": {
       "horizontal": "Flip ↔",
       "vertical": "Flip ↕"
@@ -521,6 +525,20 @@
         "horizontal": "A mirrored copy as a new part, to the right, mirrored across this piece's right edge as it is now. It follows this piece's shape; the mirror line stays where it is.",
         "vertical": "A mirrored copy as a new part, below, mirrored across this piece's bottom edge as it is now. It follows this piece's shape; the mirror line stays where it is."
       }
+    },
+    "mirrorNote": {
+      "counterpart": "Mirror makes a linked counterpart.",
+      "piece": "Mirror makes a counterpart piece."
+    },
+    "job": {
+      "holes": "Holes",
+      "paper": "{{paper}}, {{orientation}}",
+      "pieces": "Pieces",
+      "scaleCheckOnly": "{{paper}}, {{orientation}}, scale check only",
+      "sheets": "Sheets",
+      "timesCut": "{{holes}} ×{{cut}}",
+      "toCut_one": "{{count}} to cut",
+      "toCut_other": "{{count}} to cut"
     },
     "manyPartsSelected_one": "{{count}} part selected. Select one to edit it.",
     "manyPartsSelected_other": "{{count}} parts selected. Select one to edit it."
@@ -550,6 +568,13 @@
     "holes_one": "{{count}} hole · {{pitch}}",
     "holes_other": "{{count}} holes · {{pitch}}",
     "unnamed": "Part"
+  },
+  "spacing": {
+    "matches": "Spacing matches the pitch",
+    "squeezed": "Spacing is squeezed {{percent}} %",
+    "squeezedUnder": "Spacing is squeezed less than {{percent}} %",
+    "stretched": "Spacing is stretched {{percent}} %",
+    "stretchedUnder": "Spacing is stretched less than {{percent}} %"
   },
   "problems": {
     "withSubject": "{{name}}: {{sentence}}",

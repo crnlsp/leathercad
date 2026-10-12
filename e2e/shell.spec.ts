@@ -1971,9 +1971,8 @@ test('a refused outline keeps its points, and closing it is the correction', asy
     await expect(window.getByTestId('tool-notice')).toHaveCount(0);
     // A cut contour, which is what an outline is — not the marking line an
     // open run used to be quietly filed as. Headed in the maker's word (F.1).
-    await expect(window.getByTestId('property-panel').locator('.panel-heading').nth(1)).toHaveText(
-      'Outline',
-    );
+    // The trail under its name ends with what it is (R-05).
+    await expect(window.getByTestId('property-trail')).toHaveText(/› Outline$/);
   });
 });
 
@@ -2293,9 +2292,8 @@ test('an outline cannot be completed by mirroring it across its own fold', async
 
     const fold = panel.getByTestId('mirror-across-fold');
     await expect(fold).toBeDisabled();
-    await expect(panel.getByTestId('mirror-across-fold-reason')).toContainText(
-      /one edge|second piece/i,
-    );
+    // Said under Arrange's Mirror row, and read out with the button (R-05).
+    await expect(fold).toHaveAccessibleDescription(/one edge|second piece/i);
   });
 });
 

@@ -7,6 +7,11 @@ import { Tooltip } from './Tooltip.js';
 
 export interface ReasonedButtonProps {
   readonly children: ReactNode;
+  /**
+   * Its name, when its face does not say it all — an icon, or a word that
+   * leans on its row, such as Arrange's "Across fold" (R-05).
+   */
+  readonly label?: string;
   /** Why it cannot act, from the same query the command checks. Null = enabled. */
   readonly reason: Problem | null;
   /** What it does, shown in a tooltip while it can. */
@@ -51,7 +56,14 @@ export function ReasonedButton(props: ReasonedButtonProps) {
  * A pair usually shares its reason — a label can be flipped neither way, for
  * one cause — so a reason is said once, however many buttons it disables.
  */
-export function ReasonedRow({ buttons }: { buttons: readonly ReasonedButtonProps[] }) {
+export function ReasonedRow({
+  label,
+  buttons,
+}: {
+  /** What the row does, before its buttons: Arrange's "Flip" and "Mirror" (R-05). */
+  label?: string;
+  buttons: readonly ReasonedButtonProps[];
+}) {
   const { t } = useI18n();
   const baseId = useId();
   const sentences = [
@@ -65,6 +77,7 @@ export function ReasonedRow({ buttons }: { buttons: readonly ReasonedButtonProps
   return (
     <div className="reasoned-row">
       <div className="toolbar">
+        {label !== undefined && <span className="field-label">{label}</span>}
         {buttons.map((button) => (
           <Button key={button.testId} {...button} reasonId={idFor(button.reason)} />
         ))}
@@ -85,6 +98,7 @@ export function ReasonedRow({ buttons }: { buttons: readonly ReasonedButtonProps
 
 function Button({
   children,
+  label,
   reason,
   hint,
   onClick,
@@ -98,6 +112,7 @@ function Button({
         type="button"
         className={variant === 'destructive' ? 'tool danger' : 'tool'}
         data-testid={testId}
+        aria-label={label}
         disabled={reason !== null}
         aria-describedby={reason === null ? undefined : reasonId}
         onClick={onClick}

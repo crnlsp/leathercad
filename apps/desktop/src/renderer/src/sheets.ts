@@ -40,7 +40,8 @@ export interface PaperOption {
   readonly plan: SheetPlan;
 }
 
-function resolvedFor(project: Project): ResolvedProject {
+/** The project evaluated once, the evaluation the plan and Properties read. */
+export function resolvedFor(project: Project): ResolvedProject {
   let resolved = resolutions.get(project);
   if (resolved === undefined) {
     resolved = evaluate(project);

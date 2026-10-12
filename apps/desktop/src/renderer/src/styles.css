@@ -662,8 +662,9 @@ body {
   top: calc(-1 * var(--space-4));
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1) var(--space-2);
   margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
   padding: var(--space-4) var(--space-4) 10px;
   border-bottom: 1px solid var(--shell-line);
@@ -681,10 +682,10 @@ body {
   width: 14px;
 }
 
-/* An 88 px label column in Properties (§7.3), so the longest label — Edge
-   margin, Thickness — sits on one line beside its field. */
+/* A 68 px label column in Properties (R-05, was 88): the room goes to the
+   value, so "A hole on each corner" reads whole at the panel's 264 px. */
 .panel.properties .field-label {
-  flex-basis: 88px;
+  flex-basis: 68px;
 }
 
 .panel.properties .field-pair .field-label {
@@ -859,6 +860,147 @@ body {
 /* The number a panel is about (UI Foundations §4.2, --t-num-lg). */
 .readout.key b {
   font: var(--t-num-lg);
+}
+
+/* ——— R-05: Properties in the order of the work ———————————————————————————
+   Under the header, groups set apart by a rule edge to edge, as the header's
+   own: what it is and what it came out as; what it is called; what to make
+   next; Arrange. Delete is alone in the footer, in view however far the
+   groups scroll. */
+
+/* "A hole on each corner" needs 147 px of select; at 264 px a scrolling
+   panel's 16 px scrollbar left 140. The thin scrollbar (11 px) and the
+   chevron's own margin instead of padding leave it 145 for 143. */
+.panel.properties {
+  scrollbar-width: thin;
+}
+
+.panel.properties .field select {
+  padding-right: 0;
+}
+
+/* Where the selection is: "Outer · Cut ×1 › Stitch line › Stitch holes". */
+.header-trail {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-4));
+  padding: var(--space-3) var(--space-4) 0;
+  border-top: 1px solid var(--shell-line);
+}
+
+.panel-header + .panel-group {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Holes, Spacing and Runs at the size a number is read at, the label above. */
+.readouts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-3);
+}
+
+.readout-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.readout-cell b {
+  color: var(--text);
+  font: var(--t-num-lg);
+}
+
+.readout-cell.wide {
+  grid-column: 1 / -1;
+}
+
+.readout-unit {
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+/* Spacing against the pitch: a glyph, then the words. */
+.spacing-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+/* Arrange: a row's name in the label column, then its icon buttons. They
+   wrap under the name rather than push the panel sideways. */
+.reasoned-row > .toolbar {
+  flex-wrap: wrap;
+}
+
+.reasoned-row > .toolbar > .field-label {
+  margin-right: 4px;
+  font: var(--t-label);
+}
+
+.arrange .tool {
+  padding: 0 6px;
+}
+
+.panel-footer {
+  position: sticky;
+  bottom: calc(-1 * var(--space-4));
+  z-index: 1;
+  margin: auto calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--shell-line);
+  background: var(--shell-700);
+}
+
+.panel-footer .reasoned > .tool {
+  align-self: stretch;
+  border-color: transparent;
+}
+
+.panel-footer .footer-key {
+  margin-left: auto;
+}
+
+.tool.danger .icon {
+  color: currentColor;
+}
+
+/* The job, with nothing selected: a count, then what it is made of. */
+.job-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font: var(--t-label);
+}
+
+.job-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-dim);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.job-value b {
+  color: var(--text);
+  font: var(--t-num);
 }
 
 .row {

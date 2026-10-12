@@ -46,7 +46,9 @@ A card pocket, 96 × 60 mm, the shape a card holder is made from.
    anywhere. It becomes a new part, listed on the left.
 2. In **Properties** on the right, type **96** for *Width* and **60** for *Height*. Every number is
    in millimetres, and every number is exact: what you type is what prints.
-3. Name the part *Pocket* at the top of the panel.
+3. Name the part *Pocket* in the panel's **Piece** field, beside how many to **Cut**. They are the
+   piece's, so they show while its outline is selected — under the outline's own **Name** — or
+   under **Part** when the piece itself is picked in **Parts**.
 
 For a thumb scoop, draw the outline with **Polyline** (**P**) instead: click the corners, press
 **A** before a segment to make it an arc, then **L** to go straight again. Click the first point to
@@ -58,7 +60,11 @@ close it.
    following it: change the outline and the stitch line moves with it.
 2. Select the stitch line, and choose **Add holes**. Pick your pricking iron in the panel. The panel
    shows how many holes that makes and the spacing they came out at, which is slightly different
-   from the iron's pitch because the holes have to fit the line exactly.
+   from the iron's pitch because the holes have to fit the line exactly. The line under them says
+   by how much: *Spacing matches the pitch*, or *Spacing is stretched 1.8 %*.
+
+With nothing selected, **Properties** sums up the job: the pieces to cut, the holes to punch and the
+sheets to print.
 
 To stitch only some sides, as a pocket is, draw the stitch line yourself: *Draw as: Stitch* with
 the Polyline tool, along the sides to be sewn.

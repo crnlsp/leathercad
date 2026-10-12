@@ -398,7 +398,9 @@ Minimum supported: **860 × 600**.
 ### 7.3 Panel rhythm
 
 16 px panel padding · 12 px between sections · 8 px between fields · 88 px label column in Properties
-· one hairline between sections, never a box per section.
+· one hairline between sections, never a box per section. *(1.5, U.6: the label column is 68 px —
+R-05 gives the room to the value — and Properties keeps Delete in a footer under a rule, in view
+while the rest scrolls.)*
 
 ### 7.4 Where a refusal is said
 
