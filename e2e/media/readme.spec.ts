@@ -292,12 +292,10 @@ test('README media', async () => {
     // ── On paper ────────────────────────────────────────────────────────────
     await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).not.toBeEmpty();
-    // Off the button, or its tooltip is in the picture.
+    // Off the button, or its tooltip is in the picture — and off the zoom
+    // control at the bottom right (U.4), for the same reason.
     const sheetsBoard = (await window.getByTestId('editor-canvas').boundingBox())!;
-    await window.mouse.move(
-      sheetsBoard.x + sheetsBoard.width - 20,
-      sheetsBoard.y + sheetsBoard.height - 20,
-    );
+    await window.mouse.move(sheetsBoard.x + 20, sheetsBoard.y + sheetsBoard.height - 20);
     await pause(window, 1500);
     await window.screenshot({ path: join(OUT, 'sheets.png') });
     demo.to = Date.now() - launchedAt;

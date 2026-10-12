@@ -75,9 +75,11 @@ French one `1`; both must work). Keep `Ctrl+=`/`Ctrl+−`. New words go in `en.j
 
 **Components to reuse, not rebuild.** `MenuButton` in `Menu.tsx` (8.7: roving focus, Escape
 returns focus, a shortcut column) for the percentage's menu; `Tooltip.tsx` (U.3: one line up to
-360 px, flips, 500 ms, `keys` prop); `ReasonedButton.tsx` for *Fit selection* when nothing is
-selected — disabled, and saying why. `CanvasLegend.tsx` floats at the canvas's bottom-left: the
-control floats at its bottom-right the same way, so opening it never moves the drawing.
+360 px, flips, 500 ms, `keys` prop); a menu item's `refusal` (8.8, the menu's `ReasonedButton`)
+for *Fit selection* when nothing is selected — greyed, and saying why. `CanvasLegend.tsx` floats
+over the canvas at its top-right, under the ruler (U.10 moves it to the bottom-left): the control
+floats at its bottom-right the same way, so opening it never moves the drawing. *Corrected in U.4:
+this said the legend was at the bottom-left already.*
 
 **Selection.** A part picked by its heading is a real selection (Q29): `selectedFeatureIds(project,
 selection)` (imported in CanvasHost) gives its features. *Fit selection* frames the union of the

@@ -100,6 +100,19 @@
     "sheets": "Sheets",
     "sheetsTooltip": "See the pieces on the sheets they will print on"
   },
+  "zoom": {
+    "fit": "Fit",
+    "fitDrawing": "Fit drawing",
+    "fitSelection": "Fit selection",
+    "fitTooltip": "Fit the drawing, or double-click empty board",
+    "level": "Zoom, {{percent}} %",
+    "levelTooltip": "Fit, or zoom to a size",
+    "nothingSelected": "Select something drawn on the board to fit it",
+    "onDesignOnly": "On Design only: the sheets are fitted whole",
+    "percent": "{{percent}} %",
+    "title": "Zoom",
+    "trueSize": "True size, {{percent}} %"
+  },
   "tools": {
     "collapsedTooltip": "{{name}} — {{howTo}}",
     "hideNames": "Hide tool names",
@@ -191,7 +204,8 @@
     "design": "Design: the board you draw on",
     "exportPdf": "Export PDF",
     "finishPolyline": "Finish a polyline",
-    "fit": "Fit the pattern in the window",
+    "fit": "Fit the drawing in the window",
+    "fitSelection": "Fit the selection in the window",
     "fullScreen": "Full screen",
     "keyboardShortcuts": "Keyboard shortcuts",
     "newProject": "New project",
@@ -208,6 +222,7 @@
     "sheets": "Sheets: the paper it prints on",
     "square": "Keep a rectangle square; hold a line to 15° steps",
     "takeBack": "Remove the last point of a polyline or arc",
+    "trueSize": "Zoom to true size, 100 %",
     "undo": "Undo",
     "zoom": "Zoom about the pointer",
     "zoomIn": "Zoom in",

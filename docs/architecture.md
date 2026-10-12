@@ -332,6 +332,7 @@ class Viewport {
   toWorld(p: Vec2): Vec2;
   pxToMm(len: number): number;                    // a distance on screen, in CSS px
   zoomAt(anchorPx: Vec2, factor: number): void;   // zoom about the cursor, not the centre
+  zoomToPercent(percent: number): void;           // 100 % is true size, about the centre
 }
 ```
 
@@ -340,9 +341,12 @@ testing converts its *tolerance* from px to mm and then does all comparisons in 
 other way around.
 
 **Zoom is CSS pixels per millimetre** (U.1): `cssPxPerMm(view)` in `render/view.ts`, and
-`zoomPercent(view)`, 100 % at 96 ÷ 25.4 CSS px per mm. Grid tiers, zoom bands and anything a later
-control shows read it, so they switch at the same zoom on a 1× and a 2× display. A distance on
-screen — a pick radius, a drag threshold, a handle — is CSS pixels too.
+`zoomPercent(view)`, 100 % at 96 ÷ 25.4 CSS px per mm, and its inverse `scaleAtZoomPercent`. Grid
+tiers, zoom bands and the zoom control (U.4) read it, so they switch at the same zoom on a 1× and a
+2× display. There is no screen calibration yet: 100 % is the CSS reference pixel, one constant,
+`TRUE_SIZE_CSS_PX_PER_MM`, which a calibration would replace. The control shows the showing view's
+camera, Design's or the Sheets', read as each frame is painted. A distance on screen — a pick
+radius, a drag threshold, a handle — is CSS pixels too.
 
 ### 6.2 Three stacked canvases
 

@@ -65,6 +65,8 @@ export type CommandId =
   | 'zoomIn'
   | 'zoomOut'
   | 'fit'
+  | 'fitSelection'
+  | 'trueSize'
   | 'settings'
   | 'keyboardShortcuts'
   | 'fullScreen'
@@ -91,6 +93,7 @@ export interface Command {
 const mod = (code: string, shift = false): Binding =>
   shift ? { code, mod: true, shift: true } : { code, mod: true };
 const key = (code: string): Binding => ({ code });
+const shifted = (code: string): Binding => ({ code, shift: true });
 const modChar = (char: string): Binding => ({ char, mod: true });
 
 /**
@@ -188,9 +191,20 @@ export const KEYMAP: readonly Command[] = [
     keys: [modChar('-')],
     aliases: [mod('NumpadSubtract')],
   },
+  // By place, no command key (U.4): Shift+1 types ! in the US and Germany, 1
+  // in France and Czechia, and is the same key on all of them.
+  { id: 'fit', does: 'shortcuts.fit', group: 'view', scope: 'window', keys: [shifted('Digit1')] },
   {
-    id: 'fit',
-    does: 'shortcuts.fit',
+    id: 'fitSelection',
+    does: 'shortcuts.fitSelection',
+    group: 'view',
+    scope: 'window',
+    keys: [shifted('Digit2')],
+  },
+  // Ctrl+0 fitted until U.4; true size is what it means in most apps.
+  {
+    id: 'trueSize',
+    does: 'shortcuts.trueSize',
     group: 'view',
     scope: 'window',
     keys: [mod('Digit0')],

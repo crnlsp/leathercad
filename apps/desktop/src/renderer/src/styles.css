@@ -1894,6 +1894,73 @@ button.problem-row:hover {
   gap: var(--space-2);
 }
 
+/* ——— U.4: the zoom control ———————————————————————————————————————————————
+   − · the zoom · + · Fit, on the shell, floating at the canvas's bottom-right
+   so it never moves the drawing (R-03). Each part is its own target, 28 px
+   tall, divided by a line, which forced colours turn into real borders. */
+
+.zoom-control {
+  position: absolute;
+  z-index: 4;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-md);
+  background: var(--shell-800);
+}
+
+.zoom-control > * + * {
+  border-left: 1px solid var(--shell-line);
+}
+
+.zoom-control .tooltip-anchor {
+  display: flex;
+}
+
+.zoom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: var(--h-control);
+  height: var(--h-control);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font: var(--t-label);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--motion),
+    color var(--motion);
+}
+
+.zoom-button:hover {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.zoom-button:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: -2px;
+}
+
+/* The zoom: as wide as "999 %", so the − beside it stays put as it changes. */
+.zoom-level {
+  min-width: 56px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* At the canvas's foot the canvas clips what runs below it: open upwards. */
+.menu.above {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+}
+
 /* ——— F.4: motion ————————————————————————————————————————————————————————
    Colour-only acknowledgement of a press or a hover (§6.3): background, border,
    colour and opacity, never a transform. Off entirely for reduced motion. */

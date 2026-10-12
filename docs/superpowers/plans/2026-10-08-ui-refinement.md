@@ -713,22 +713,71 @@ percentage; `CanvasStatus.scale` is device px per mm. No *fit selection*. No scr
 - The same control drives the Sheets camera (mockup 04).
 
 **Find out first.**
-- [ ] `ZOOM_STEP`, `FIT_PADDING_PX`, and what `fit()` frames on Sheets.
-- [ ] At 860 × 600 the control, the legend (bottom-left) and the Problems drawer share the canvas's
-      foot: check nothing overlaps (mockup 05).
+- [x] `ZOOM_STEP`, `FIT_PADDING_PX`, and what `fit()` frames on Sheets. *1.25 and 60 CSS px. On
+      Sheets, `fit()` frames the sheets' whole extent on the Sheets camera; `frame(bounds)` always
+      moves the Design camera, which its one caller, going to a problem, switches to first.*
+- [x] At 860 × 600 the control, the legend (bottom-left) and the Problems drawer share the canvas's
+      foot: check nothing overlaps (mockup 05). *The legend is at the canvas's top-right until U.10
+      moves it; the drawer is the canvas's sibling below it, so it shrinks the canvas and cannot
+      overlap. At 860 × 600 with the drawer open the canvas is 355 px tall and the open menu fits
+      above the control with 185 px to spare.*
 
 **Done when — check in the app.**
-- [ ] The control shows a whole percentage that follows the wheel live.
-- [ ] Ctrl+0 or *True size*: a 100 mm line is 377.95 CSS px long, measured in devtools, at 1× and 2×.
-- [ ] Shift+1 fits the drawing; Shift+2 the selection, or is disabled with its reason; 50, 200 and
+- [x] The control shows a whole percentage that follows the wheel live.
+- [x] Ctrl+0 or *True size*: a 100 mm line is 377.95 CSS px long, measured in devtools, at 1× and 2×.
+- [x] Shift+1 fits the drawing; Shift+2 the selection, or is disabled with its reason; 50, 200 and
       400 % from the menu. Works on Sheets.
-- [ ] Every part reachable by Tab, named, with a tooltip and its key; the menu works from the
+- [x] Every part reachable by Tab, named, with a tooltip and its key; the menu works from the
       keyboard and gives focus back.
 
 **Tests.** Percentage and scale as a round trip (property); the selection's bounds, a picked part
 included (unit); E2E for Ctrl+0, Shift+1 and the menu.
 
 **Docs.** `docs/getting-started.md` (Ctrl+0 no longer fits), the shortcut list, the roadmap.
+
+**As built (2026-10-09).** What the plan above did not know:
+
+- **The status carried the wrong zoom.** `CanvasStatus.scale` was the Design camera's device
+  pixels per millimetre, sent only when the pointer, a notice or the sheet under the pointer
+  changed. Measured: after a wheel zoom and `Ctrl+=` it said 124.5 % for a board at 155.6 %; on
+  Sheets it said the board's zoom for paper at 27.6 %. It is `zoomPercent` now, read off whichever
+  camera is painted as each frame is — every change to a camera repaints, so the wheel, a key, the
+  menu, a fit, a resize, the Sheets view framing its paper and a change of view all reach it.
+- **One extent for both fits**: `drawnBounds(resolved, only?)` in `packages/document`, beside
+  `selectedFeatureIds` — every visible feature that resolved, or those selected. The double-click
+  fit used to frame hidden features too, which the board does not draw; and *Fit selection* of a
+  feature that failed to build, which has no path, is refused like an empty selection.
+- **The zoom lives in the camera**: `scaleAtZoomPercent` in `render/view.ts` (the inverse of
+  `zoomPercent`) and `Viewport.zoomToPercent`, which keeps the canvas centre's millimetre still.
+  `CanvasHandle` gains `zoomTo(percent)` and `fitSelection()`; `App` runs each zoom command
+  through one table, for its key and the control alike.
+- **Keys**: `fit` is `Shift+1` (`{ code: 'Digit1', shift: true }`), `fitSelection` `Shift+2`, and
+  `trueSize` `Ctrl+0` with the keypad's 0. No keypad twin for Shift+1: with Num Lock on, Windows
+  turns Shift with the keypad's 1 into End. The digits keep their place, so `?` typed on a 1 key is still Fit.
+- **Fit selection on Sheets is refused**, with its reason, rather than framing the picked piece's
+  placement: a piece can sit on two sheets, or twice, and the sheets have no such query yet.
+- **Choosing from a menu by keyboard dropped focus** to the page. `MenuButton` gives it back to the
+  button, as Escape did, unless the item moved it — a dialog it opened keeps it.
+- **The menu opens upwards** (`MenuButton`'s `above`): the canvas clips what runs below it.
+- **A press with the mouse leaves the keys to the board** (review, 2026-10-12): a control button
+  kept focus after a click, so the Enter that finishes a polyline — or a Space — pressed it again
+  (80 % became 64 %). Its buttons let go of focus after a pointer press, and a menu item chosen by
+  the pointer leaves focus with the page, as before U.4; from the keyboard, focus stays.
+- **The zoom survives a change of display ratio**: `Viewport.resize` kept device pixels per
+  millimetre, so a window moved from a 1× to a 2× screen went from 100 % to 50 % (measured with
+  the page's zoom factor at 2). It now scales the camera by the ratio's change.
+- **− and + step along a ladder**, not ×1.25 (`ZOOM_STEP` is gone): `ZOOM_STOPS` and
+  `nextZoomStop` in `render/view.ts`, `Viewport.stepZoom`, and `CanvasHandle.step` in place of
+  `zoom(factor)`. The stops are 1, 2, 5, 10, 25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400,
+  600, 800, 1200, 1600, 3200, 6400 and 10 000 %. Up and down are judged on the whole percentage
+  the control shows (`shownZoomPercent`), so 99.6 % is on the 100 stop. Buttons and keys zoom
+  about the centre; the wheel stays continuous.
+- **The zoom limits are percentages**, `ZOOM_LIMITS` 1 % and 10 000 %, the same on every display.
+  `Viewport.MIN_SCALE` and `MAX_SCALE` were device pixels per mm: 1.3 % to 10 583 % at 1×, and
+  0.66 % to 5 291 % at 2×.
+- `pnpm test:visual`: all three references changed, each only inside the control's 175 × 30 px box.
+  The visual test's deselecting click and the README's Sheets picture moved to the bottom-left
+  corner, which the control does not cover.
 
 ---
 

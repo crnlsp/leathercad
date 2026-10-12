@@ -49,6 +49,52 @@ export function zoomPercent(view: ViewportView): number {
 }
 
 /**
+ * The scale — device pixels per millimetre — that shows `percent` on a
+ * display of this ratio: `zoomPercent`'s inverse, for the zoom control's
+ * *True size* and its sizes (U.4).
+ */
+export function scaleAtZoomPercent(percent: number, dpr: number): number {
+  return (percent / 100) * TRUE_SIZE_CSS_PX_PER_MM * dpr;
+}
+
+/**
+ * How far the zoom goes, as percentages — so the same on every display (U.4).
+ * At 1 % a 2 m hide is 75 CSS px across; at 10 000 % a 0.1 mm detail is 38 px,
+ * past anything a pattern holds.
+ */
+export const ZOOM_LIMITS = { min: 1, max: 10_000 } as const;
+
+/**
+ * The stops − and + (and Ctrl+= and Ctrl+−) step along (U.4): round numbers
+ * a maker reads at a glance, and true size reached with + alone. Finest from
+ * 25 % to 200 %, where a whole pattern fits a laptop and a piece is checked
+ * against a real thing; doubling beyond, for stitch holes and points; coarse
+ * below, where there is nothing to read. Ends at the limits, so stepping
+ * clamps there.
+ */
+export const ZOOM_STOPS: readonly number[] = [
+  1, 2, 5, 10, 25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400, 600, 800, 1200, 1600, 3200, 6400,
+  10_000,
+];
+
+/** The zoom as the control shows it: a whole percentage. */
+export function shownZoomPercent(percent: number): number {
+  return Math.round(percent);
+}
+
+/**
+ * The stop one step up (`1`) or down (`-1`) from `percent`, judged on the
+ * whole percentage shown — 99.6 % reads 100, so it is on the 100 stop and +
+ * goes to 125. At a limit, the limit.
+ */
+export function nextZoomStop(percent: number, direction: 1 | -1): number {
+  const shown = shownZoomPercent(percent);
+  return direction > 0
+    ? (ZOOM_STOPS.find((stop) => stop > shown) ?? ZOOM_LIMITS.max)
+    : (ZOOM_STOPS.findLast((stop) => stop < shown) ?? ZOOM_LIMITS.min);
+}
+
+/**
  * Millimetres to device pixels.
  *
  * **One of only two places in the codebase where Y is flipped** — the other is
