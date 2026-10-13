@@ -104,6 +104,10 @@ here.
 - A display is available, so E2E tests and scratch Playwright specs run without `xvfb-run`; Docker
   is there for `pnpm test:visual`; poppler is installed for the print checks. `gifsicle` and
   `pngquant` are not, so `pnpm docs:media` cannot finish here.
+- **One live display, shared.** Run every Playwright command — `pnpm test:e2e`, a single spec, a
+  scratch screenshot spec, `pnpm test:visual` — behind `flock /tmp/leathercad-e2e.lock <command>`,
+  so another session's window cannot take your focus and hover. A hover or a key from the person at
+  the machine can still fail a test: rerun a failure on its own before believing it; CI decides.
 - **Stay in your worktree.** Never touch another worktree under `.claude/worktrees/` — each holds
   another session's branch.
 - Put scratch files (the screenshot spec, its PNGs) where they will not be committed, and delete the
@@ -111,14 +115,15 @@ here.
 
 ## Branches
 
-The plan and the 1.5 roadmap lines arrive through the pull request from `docs/ui-refinement-plan`.
+- **Start** from `origin/develop`, on a branch of your own. A slice whose *Needs* are not ✅ in
+  `docs/roadmap.md` there does not start: say so instead.
+- **Before pushing**, `git fetch origin` and rebase onto `origin/develop` if it moved. In a conflict
+  in the roadmap or the plan, keep both sides' facts. If a slice merged meanwhile changed the pixel
+  references, retake yours and look at every image again.
 
-- **Start** from `origin/develop` if it has `docs/superpowers/plans/2026-10-08-ui-refinement.md`;
-  otherwise from `docs/ui-refinement-plan` (local, or `origin/docs/ui-refinement-plan`).
-- **Before pushing**, `git fetch origin`. If `develop` has gained the plan meanwhile, rebase off the
-  planning commit: `git rebase --onto origin/develop docs/ui-refinement-plan`. If it has not, open
-  the pull request into `develop` anyway and say at the top of its description that it is stacked
-  on the planning pull request and goes in after it.
+Some slices also have an agent of their own (`docs/claude-code-setup.md` §5) with that slice's
+technical briefing: the code as it is, its traps, and when it may start. It adds to this process and
+never replaces it.
 
 ## Commits and the pull request
 

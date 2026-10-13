@@ -125,6 +125,15 @@ instructions that every session would otherwise have to be given again.
 | `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.19) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
 | `zoom-control` | Builds U.4, the zoom control and true size, with that slice's technical briefing: the code it stands on after U.1–U.3, the two status bugs it fixes, the keys and how U.3's keymap matches them. Set to Opus at high effort: the keymap's matching rules and the true-size arithmetic are where a plausible change is quietly wrong |
 | `properties-panel` | Builds U.6, Properties in the order of the work and the job's totals, with its technical briefing: the panel's sections as they are, where the hole set's numbers and the totals come from, and the two rules for running beside U.4 — one lock on the shared display for end-to-end runs, and pixel references retaken by whichever merges second. Opus at high effort: the spacing-against-pitch rule and the totals are easy to get plausibly wrong |
+| `panels-fold` | Builds U.5, panels that fold and focus mode, with its briefing: where the widths live today and where they go, the rail's remember-but-never-overwrite pattern, how `[`, `]` and `\` are matched by place, what already floats on the board, and who owns Escape first |
+| `top-bar` | Builds U.7, the top bar in three zones, with its briefing: the bar's parts as they are, the keys it has and the one it lacks (F1), what still uses green, the severity count that does not exist yet, and the edited flag's path through `PlatformHost` |
+| `parts-tree` | Builds U.8, the Parts tree, with its briefing: the nesting `featureTree` already gives, the print line that is also Design's *Not printed* warning, the test ids ten specs rely on, and keeping the tree's keys apart from the window's |
+
+**U.5, U.7 and U.8 run one at a time, in that order.** All three change `App.tsx`, `styles.css`,
+`keymap.ts`, `en.json` and the pixel references, and U.8 reuses U.5's thumbnail, so each agent starts
+only once the one before it is ✅ on `develop`. A slice agent carries only its slice's briefing; the
+process, the machine and the pull-request rules are `ui-refinement`'s, and the task is the plan's.
+All are Opus at high effort, as `zoom-control` and `properties-panel` are.
 
 ## 6. Hooks
 
