@@ -1294,6 +1294,10 @@ scan over every new surface; check every token pair's contrast test exists. Reta
 baselines and the README's pictures (with Q27's tooling, if 1.4 did not already). Record the result
 of UI Foundations' identity test. Move what this plan found into the roadmap.
 
+**Carried here by decision (2026-10-13).** Flip on a stitch line or a hole set is always refused,
+and its reason fills Arrange's first rows (U.6): keep it refused, and word the reason in one short
+line.
+
 ---
 
 ## 6. After 1.5
