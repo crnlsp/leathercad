@@ -693,7 +693,7 @@ rules are exact — a hole is a point, and a point is either on the material or 
 | X5 | Text that can reach paper is set in millimetres, in the vendored typeface, laid out once | built 4.11a |
 | X6 | Text that restates a model value is generated, never stored | built 4.10a for dimensions |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
-| X8 | Defaults come from project settings | built 4.3a |
+| X8 | Defaults come from settings, never from constants in a component: the maker's (My tools, U.13) where the app makes something, the project's when no maker's value is passed | built 4.3a; the maker's in U.13 |
 | X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
 | X10 | A refusal keeps the user's work where it can still be corrected | built 4.3a for drawing |
 

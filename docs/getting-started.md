@@ -137,6 +137,10 @@ the size your software shows: it should be the size you drew.
   hold a ruler to it before you trust it against a buckle. The zoom never changes what prints. Until 1.5, **Ctrl+0** fitted the pattern.
 - **Settings** (**Ctrl+,**): clear the recent projects, and choose how the legend and the tool
   rail start. They stay as you left them.
+- **Settings › My tools:** the pricking irons you own, by your own names, and the one a new hole
+  set takes; and the stitch margin and leather thickness new stitch lines, seam allowances and
+  folds start with. Each new thing keeps its own numbers, so a pattern sent to someone with other
+  irons opens the same.
 - **Logs:** *Help → About LeatherCAD → Show log folder*. Nothing is ever uploaded; attach the log
   to a bug report.
 - **Licences:** *Help → About LeatherCAD → Third-party notices*, and `THIRD_PARTY_NOTICES.txt`

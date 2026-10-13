@@ -121,6 +121,15 @@ describe("a feature's own parameters", () => {
     expect(Object.keys(feature(store, 'fold-1')!)).not.toContain('materialThicknessMm');
   });
 
+  it('writes a thickness into a new fold when one is given, and no key when none is (U.13)', () => {
+    const store = storeWithPanel();
+    store.dispatch(addFoldLine('part-1', 'fold-1', spine, 'valley', 1.4));
+    store.dispatch(addFoldLine('part-1', 'fold-2', spine));
+
+    expect(feature(store, 'fold-1')).toMatchObject({ materialThicknessMm: 1.4 });
+    expect(Object.keys(feature(store, 'fold-2')!)).not.toContain('materialThicknessMm');
+  });
+
   it('changes a marking purpose and a hardware type', () => {
     const store = storeWithPanel();
     store.dispatch(addMarkingLine('part-1', 'mark-1', spine));

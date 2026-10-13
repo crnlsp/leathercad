@@ -1,4 +1,4 @@
-import { approxEq } from '@leathercad/core';
+import { approxEq, type Mm } from '@leathercad/core';
 import type { Vec2 } from '@leathercad/geometry';
 import type { Command, DocumentStore } from '@leathercad/document';
 import {
@@ -71,6 +71,23 @@ export interface ToolContext {
    * `deletePart` directly, which refuses when something does.
    */
   readonly requestDeletePart?: (partId: PartId) => void;
+  /**
+   * The maker's starting values (U.13, Settings › My tools), read when a tool
+   * makes something: *Stitch + allowance* grows by the margin, and a fold
+   * carries the leather's thickness. A function, like `drawAs`, because they
+   * change under a context built once.
+   *
+   * Absent means the project's own settings, as before — a test harness, or a
+   * headless caller with no maker.
+   */
+  readonly makerDefaults?: () => MakerDefaults;
+}
+
+/** What a tool takes from the maker's settings: values, never a reference to them. */
+export interface MakerDefaults {
+  readonly stitchMarginMm: Mm;
+  /** `null` when the maker has not set one: a new fold then carries none. */
+  readonly leatherThicknessMm: Mm | null;
 }
 
 /**

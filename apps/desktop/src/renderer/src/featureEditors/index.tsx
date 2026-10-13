@@ -11,6 +11,7 @@ import {
 } from '@leathercad/document';
 import type { DocumentStore } from '@leathercad/document';
 import type { Derivation, Feature, Severity, StitchHoles } from '@leathercad/domain';
+import type { Iron } from '@leathercad/platform';
 import type { JSX } from 'react';
 
 import { useI18n } from '../i18n.js';
@@ -42,10 +43,13 @@ export function FeatureEditor({
   feature,
   holes,
   spacingReported,
+  irons,
 }: {
   store: DocumentStore;
   feature: Feature;
   holes: StitchHoles | undefined;
+  /** The maker's irons (U.13), for a hole set's Iron menu. */
+  irons: readonly Iron[];
   /** How Problems rates a hole set's spacing, when it reports it at all. */
   spacingReported?: Severity | undefined;
 }) {
@@ -102,6 +106,7 @@ export function FeatureEditor({
             op={source.op}
             holes={holes}
             reported={spacingReported}
+            irons={irons}
             onChange={change}
           />
         );

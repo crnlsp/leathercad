@@ -1417,6 +1417,55 @@ body {
   accent-color: var(--tan);
 }
 
+/* Settings › My tools (U.13): the irons as a table — a column for the default,
+   the name, the pitch and its menu — then the values for new pieces as
+   settings, each with its number at the right. */
+.settings-subhead {
+  margin: var(--space-4) 0 var(--space-1);
+  font: var(--t-body);
+  font-weight: 600;
+}
+
+.irons {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.irons th {
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+  text-align: left;
+}
+
+.irons td {
+  padding: var(--space-1) var(--space-2);
+  border-top: 1px solid var(--shell-line);
+}
+
+.irons input[type='radio'] {
+  accent-color: var(--tan);
+}
+
+/* A name reads as text until it is pointed at or edited (mockup 06). */
+.irons .field input:not(:hover, :focus) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.irons .iron-pitch {
+  width: 112px;
+}
+
+.add-iron {
+  margin-top: var(--space-2);
+}
+
+.setting-number {
+  flex: 0 0 112px;
+}
+
 /* The keyboard shortcut map (8.2), in Settings (8.7): in columns. */
 .shortcuts-groups {
   display: grid;

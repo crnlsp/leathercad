@@ -225,13 +225,59 @@ export interface Preferences {
    * words only — a project reads the same in every language.
    */
   readonly language: string;
+  /**
+   * The pricking irons the maker owns, in their order (U.13): what a hole
+   * set's Iron menu offers. A hole set stores the pitch and the iron's name it
+   * was made with, never a reference to this list, so a project opens the same
+   * on a machine with other irons.
+   */
+  readonly irons: readonly Iron[];
+  /** The iron a new hole set takes: one of `irons`, or `null` when there are none. */
+  readonly defaultIronId: string | null;
+  /**
+   * How far in from the edge the app starts a new stitch line, and how far out
+   * it grows a new seam allowance — one margin, as the project's own setting
+   * is (`settings.defaultStitchInsetMm`), which it is passed in place of.
+   */
+  readonly stitchMarginMm: number;
+  /**
+   * Written into each new fold (U.13). `null` until the maker sets one: a
+   * thickness is a measurement of their leather, and none is invented.
+   */
+  readonly leatherThicknessMm: number | null;
 }
+
+/** A pricking iron, by the name the maker gives it and the pitch stamped on it. */
+export interface Iron {
+  readonly id: string;
+  readonly name: string;
+  readonly pitchMm: number;
+}
+
+/**
+ * The irons a first launch lists, so nothing a maker picked before My tools
+ * existed disappears; they delete what they do not own. The names are the ones
+ * hole sets already carry.
+ */
+export const STARTER_IRONS: readonly Iron[] = [
+  { id: 'ks-3.85', name: 'KS Blade 3.85 mm', pitchMm: 3.85 },
+  { id: 'ks-3.38', name: 'KS Blade 3.38 mm', pitchMm: 3.38 },
+  { id: 'ks-3.0', name: 'KS Blade 3.0 mm', pitchMm: 3.0 },
+  { id: 'crimson-3.85', name: 'Crimson Hides 3.85 mm', pitchMm: 3.85 },
+  { id: 'crimson-3.0', name: 'Crimson Hides 3.0 mm', pitchMm: 3.0 },
+  { id: 'amy-roke-3.0', name: 'Amy Roke 3.0 mm', pitchMm: 3.0 },
+  { id: 'amy-roke-2.7', name: 'Amy Roke 2.7 mm', pitchMm: 2.7 },
+];
 
 /** What a first launch starts with, and what a damaged file falls back to. */
 export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: false,
   toolRailCollapsed: false,
   language: 'system',
+  irons: STARTER_IRONS,
+  defaultIronId: 'ks-3.85',
+  stitchMarginMm: 3.5,
+  leatherThicknessMm: null,
 };
 
 /** What macOS's native menu can ask the renderer to do (8.7). */

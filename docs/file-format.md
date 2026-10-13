@@ -334,11 +334,10 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
 
 ```
 ~/.config/leathercad/
-├── preferences.json      the frame as the maker left it, and the recent projects (8.2, 8.7)
+├── preferences.json      the frame as the maker left it, My tools, and the recent projects (8.2, 8.7, U.13)
 ├── printers.json         per-printer calibration factors — see printing.md §8
 └── library/
-    ├── parts/*.lcpart    saved part templates
-    └── irons.json        user-defined iron presets
+    └── parts/*.lcpart    saved part templates
 ```
 
 Only `preferences.json` exists so far (8.2). It is written by the main process alone, atomically,
@@ -350,6 +349,10 @@ and read once at start-up:
   "legendOpen": false,
   "toolRailCollapsed": false,
   "language": "system",
+  "irons": [{ "id": "ks-3.85", "name": "KS Blade 3.85 mm", "pitchMm": 3.85 }],
+  "defaultIronId": "ks-3.85",
+  "stitchMarginMm": 3.5,
+  "leatherThicknessMm": null,
   "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
 }
 ```
@@ -363,6 +366,20 @@ has gone is taken off the list when it is chosen. The rail's collapse applies to
 only; below 1200 px it collapses by itself, and opening it there lasts the session. `language` is
 the interface's: `system` to follow the operating system, or the tag of a language the app supports
 ([ADR 0018](adr/0018-interface-language.md)); one this version does not support follows the system.
+
+**My tools** (U.13) are the maker's irons and starting values, in this file rather than a library
+of their own. `irons` is a list in the maker's order, each with an `id`, a `name` and a `pitchMm`;
+an iron without a name, a positive pitch or an id of its own is dropped, and the rest kept. A file
+written before My tools has no `irons`, and starts from the irons the Iron menu offered then; a list
+the maker emptied stays empty. `defaultIronId` is always one of `irons`, the first when it names
+none, and `null` only with none. `stitchMarginMm` is a positive length (3.5 when not); and
+`leatherThicknessMm` is a positive length or `null`, which is the default — a thickness is a
+measurement of the maker's leather, and none is invented. **Nothing here reaches evaluation**: the
+app passes these values to the command that makes a stitch line, a hole set, a seam allowance or a
+fold, and that feature stores its own copy (a hole set its pitch and the iron's name), so a project
+evaluates the same on a machine with other tools. A project's own `settings.defaultStitchInsetMm`
+and `defaultIronPitchMm` are what a command takes when no maker's value is passed — a headless
+caller, or a maker with no irons.
 
 **The interface's language never reaches a project.** A `.lcp` holds no words chosen by it — problem
 sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads

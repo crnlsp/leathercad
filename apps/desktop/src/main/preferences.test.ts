@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 
-import { DEFAULT_PREFERENCES } from '@leathercad/platform';
+import { DEFAULT_PREFERENCES, STARTER_IRONS } from '@leathercad/platform';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -80,6 +80,91 @@ describe('reading preferences.json', () => {
     expect(validChanges({ language: 'system' })).toEqual({ language: 'system' });
     expect(validChanges({ language: 'xx' })).toEqual({});
     expect(validChanges({ language: 7 })).toEqual({});
+  });
+});
+
+describe('My tools (U.13)', () => {
+  const iron = (id: string, name: string, pitchMm: number) => ({ id, name, pitchMm });
+
+  it('lists the starter irons for a file written before My tools, and keeps a list emptied on purpose', () => {
+    const before = parsePreferences(JSON.stringify({ legendOpen: true }));
+    expect(before.irons).toEqual(STARTER_IRONS);
+    expect(before.defaultIronId).toBe('ks-3.85');
+    expect(before.stitchMarginMm).toBe(3.5);
+    expect(before.leatherThicknessMm).toBeNull();
+
+    const emptied = parsePreferences(JSON.stringify({ irons: [], defaultIronId: 'ks-3.85' }));
+    expect(emptied.irons).toEqual([]);
+    expect(emptied.defaultIronId).toBeNull();
+  });
+
+  it('keeps each usable iron, tidied, and drops only the damaged ones', () => {
+    const parsed = parsePreferences(
+      JSON.stringify({
+        irons: [
+          iron('a', '  Diamond 3.85  ', 3.85),
+          iron('a', 'Same id again', 3),
+          iron('b', '', 3),
+          iron('c', 'No pitch at all', 0),
+          { id: 'd', name: 'No pitch' },
+          iron('e', 'French 3.38', 3.380_04),
+          'not an iron',
+        ],
+        defaultIronId: 'e',
+      }),
+    );
+    expect(parsed.irons).toEqual([iron('a', 'Diamond 3.85', 3.85), iron('e', 'French 3.38', 3.38)]);
+    expect(parsed.defaultIronId).toBe('e');
+  });
+
+  it('makes the first iron the default when the default names none of them', () => {
+    const irons = [iron('a', 'Diamond 3.85', 3.85), iron('b', 'Diamond 2.7', 2.7)];
+    expect(parsePreferences(JSON.stringify({ irons, defaultIronId: 'gone' })).defaultIronId).toBe(
+      'a',
+    );
+    expect(parsePreferences(JSON.stringify({ irons, defaultIronId: null })).defaultIronId).toBe(
+      'a',
+    );
+  });
+
+  it('keeps a margin and a thickness that are real lengths, quantised, and falls back otherwise', () => {
+    const kept = parsePreferences(
+      JSON.stringify({ stitchMarginMm: 4.000_04, leatherThicknessMm: 1.2 }),
+    );
+    expect(kept.stitchMarginMm).toBe(4);
+    expect(kept.leatherThicknessMm).toBe(1.2);
+
+    for (const bad of [0, -3, '4', null, Number.MAX_VALUE * 10])
+      expect(parsePreferences(JSON.stringify({ stitchMarginMm: bad })).stitchMarginMm).toBe(3.5);
+    for (const bad of [0, -1, 'thick'])
+      expect(
+        parsePreferences(JSON.stringify({ leatherThicknessMm: bad })).leatherThicknessMm,
+      ).toBeNull();
+  });
+
+  it('takes the same changes from the renderer, by the same rules', () => {
+    expect(
+      validChanges({
+        irons: [iron('x', 'Mine', 3.2), iron('y', '', 3)],
+        defaultIronId: 'x',
+        stitchMarginMm: 4,
+        leatherThicknessMm: null,
+      }),
+    ).toEqual({
+      irons: [iron('x', 'Mine', 3.2)],
+      defaultIronId: 'x',
+      stitchMarginMm: 4,
+      leatherThicknessMm: null,
+    });
+    expect(validChanges({ stitchMarginMm: -1, leatherThicknessMm: 'x', irons: 'all' })).toEqual({});
+  });
+
+  it('keeps the default on an iron the maker still has, whatever the renderer sends', async () => {
+    const store = new PreferencesStore(file);
+    await store.update({ irons: [iron('a', 'Diamond 3.85', 3.85)], defaultIronId: 'a' });
+    await store.update({ irons: [iron('b', 'Diamond 2.7', 2.7)] });
+    expect(store.preferences.defaultIronId).toBe('b');
+    expect(new PreferencesStore(file).preferences.irons).toEqual([iron('b', 'Diamond 2.7', 2.7)]);
   });
 });
 

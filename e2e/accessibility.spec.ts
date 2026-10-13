@@ -137,7 +137,7 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
     await window.keyboard.press('Escape');
 
     await window.getByTestId('settings').click();
-    for (const section of ['general', 'appearance', 'shortcuts']) {
+    for (const section of ['general', 'appearance', 'tools', 'shortcuts']) {
       await window.getByTestId(`settings-tab-${section}`).click();
       await scan(`Settings › ${section}`);
     }

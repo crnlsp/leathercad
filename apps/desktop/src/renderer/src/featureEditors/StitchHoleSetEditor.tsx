@@ -5,10 +5,11 @@ import {
   type Severity,
   type StitchHoles,
 } from '@leathercad/domain';
+import type { Iron } from '@leathercad/platform';
 import { Check, FoldHorizontal, UnfoldHorizontal } from 'lucide-react';
 
 import { NumberField } from '../NumberField.js';
-import { IRON_PRESETS, presetForPitch } from '../irons.js';
+import { ironOf } from '../irons.js';
 import { useI18n } from '../i18n.js';
 import { Icon } from '../icons/Icon.js';
 import { SeverityGlyph } from '../SeverityGlyph.js';
@@ -22,6 +23,10 @@ import {
 
 type HolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
 
+// Not iron ids: those are the maker's, and never empty or this.
+const CUSTOM = '';
+const THEIRS = '\u0000theirs';
+
 /**
  * The iron, the policy, and what they actually produced.
  *
@@ -34,16 +39,22 @@ export function StitchHoleSetEditor({
   op,
   holes,
   reported,
+  irons,
   onChange,
 }: {
   op: HolesOp;
+  /** The maker's irons, from Settings › My tools (U.13): what the Iron menu offers. */
+  irons: readonly Iron[];
   holes: StitchHoles | undefined;
   /** Problems' severity for this set's spacing, if it reports one. */
   reported: Severity | undefined;
   onChange: (op: HolesOp) => void;
 }) {
   const { t } = useI18n();
-  const preset = presetForPitch(op.pitchMm, op.ironLabel);
+  const iron = ironOf(irons, op.pitchMm, op.ironLabel);
+  // An iron the maker does not have — a file from another bench — keeps its
+  // name here rather than reading as Custom: the set was made with it.
+  const theirs = iron === undefined && op.ironLabel !== undefined ? op.ironLabel : undefined;
 
   return (
     <>
@@ -52,19 +63,20 @@ export function StitchHoleSetEditor({
         <span className="field-input">
           <select
             data-testid="iron-preset"
-            value={preset?.id ?? ''}
+            value={iron?.id ?? (theirs === undefined ? CUSTOM : THEIRS)}
             onChange={(event) => {
-              const chosen = IRON_PRESETS.find((iron) => iron.id === event.target.value);
+              const chosen = irons.find((each) => each.id === event.target.value);
               if (chosen === undefined) return;
-              onChange({ ...op, pitchMm: chosen.pitchMm, ironLabel: chosen.label });
+              onChange({ ...op, pitchMm: chosen.pitchMm, ironLabel: chosen.name });
             }}
           >
-            <option value="">{t('editor.custom')}</option>
-            {IRON_PRESETS.map((iron) => (
-              <option key={iron.id} value={iron.id}>
-                {iron.label}
+            {irons.map((each) => (
+              <option key={each.id} value={each.id}>
+                {each.name}
               </option>
             ))}
+            {theirs !== undefined && <option value={THEIRS}>{theirs}</option>}
+            <option value={CUSTOM}>{t('editor.custom')}</option>
           </select>
         </span>
       </label>
