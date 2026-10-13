@@ -45,7 +45,11 @@ A card pocket, 96 × 60 mm, the shape a card holder is made from.
 1. Choose **Rectangle** (**R**) in the tool rail. With *Draw as: Outline*, drag out a rectangle
    anywhere. It becomes a new part, listed on the left.
 2. In **Properties** on the right, type **96** for *Width* and **60** for *Height*. Every number is
-   in millimetres, and every number is exact: what you type is what prints.
+   in millimetres, and every number is exact: what you type is what prints. A size can also be
+   typed as a sum or in another unit, and is shown in millimetres: `95-2*3.5`, `3.75in`, `3/4"`,
+   `9,5 cm`. A sum gives every number its unit, or none, so `10cm + 5mm` and not `10cm + 5`; and
+   3½ inches is `3.5in` or `(3+1/2)in`, since `3-1/2"` is a sum. What a field cannot read stays
+   in it after Enter, with the reason beneath; Escape puts the size back.
 3. Name the part *Pocket* in the panel's **Piece** field, beside how many to **Cut**. They are the
    piece's, so they show while its outline is selected — under the outline's own **Name** — or
    under **Part** when the piece itself is picked in **Parts**.

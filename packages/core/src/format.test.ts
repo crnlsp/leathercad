@@ -79,6 +79,45 @@ describe('formatEditable', () => {
   });
 });
 
+describe('formatEditable rounds the number it is, not its binary approximation', () => {
+  it('shows a typed fraction of an inch rounded as written: 1/8in is 3.175 mm, which reads 3.18', () => {
+    // 3.175 is stored as 3.17499999999999982…, which `toFixed(2)` rounds down
+    // to 3.17 — 0.005 mm short of what the maker typed (U.15).
+    expect(formatEditable(3.175, 2)).toBe('3.18');
+    expect(formatEditable(-3.175, 2)).toBe('−3.18');
+    expect(formatEditable(1.005, 2)).toBe('1.01');
+    expect(formatEditable(2.675, 2)).toBe('2.68');
+    expect(formatEditable(1.5875, 2)).toBe('1.59');
+    expect(formatEditable(1.5875, 3)).toBe('1.588');
+    expect(formatEditable(0.125, 2)).toBe('0.13');
+    expect(formatEditable(2.5, 0)).toBe('3');
+    // Not a tie: still down.
+    expect(formatEditable(3.17496, 2)).toBe('3.17');
+  });
+
+  it('shows every stored size rounded half away from zero, to its precision', () => {
+    // A stored size is a whole number of 0.1 µm quanta (quantise): checked
+    // here against integer arithmetic on that number, with no float at all.
+    const quanta = fc.integer({ min: -100_000_000, max: 100_000_000 });
+    fc.assert(
+      fc.property(quanta, precision, (n, p) => {
+        const step = 10 ** (4 - p);
+        const magnitude = Math.abs(n);
+        const rounded = p === 4 ? magnitude : Math.floor((magnitude + step / 2) / step);
+        const digits = String(rounded).padStart(p + 1, '0');
+        const fixed = p === 0 ? digits : `${digits.slice(0, -p)}.${digits.slice(-p)}`;
+        const trimmed = fixed.includes('.') ? fixed.replace(/\.?0+$/, '') : fixed;
+        const expected = n < 0 && rounded > 0 ? `${MINUS}${trimmed}` : trimmed;
+        return formatEditable(Number(`${String(n)}e-4`), p) === expected;
+      }),
+    );
+  });
+
+  it('leaves formatNumber as it was: what a ruler and a printed dimension show does not move', () => {
+    expect(formatNumber(3.175, 2)).toBe('3.17');
+  });
+});
+
 describe('formatMm and formatAngle', () => {
   it('name their unit', () => {
     expect(formatMm(-3.85)).toBe('−3.85 mm');

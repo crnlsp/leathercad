@@ -135,7 +135,16 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   the project's are the fallback with none (X8 amended in `domain-model.md`).
 - ☐ **U.14 Value chips beside the selected shape** (R-12). Width, height, corner and margin, edited
   on the drawing.
-- ☐ **U.15 Values in any unit, and sums** (R-12). `95-2*3.5` and `3.75in`, wherever a size is typed.
+- ✅ **U.15 Values in any unit, and sums** (R-12). `95-2*3.5` and `3.75in`, wherever a size is typed.
+  ✅ Built as described, ahead of U.5–U.14: it needs no other slice, and U.14 and U.16 read it.
+  `parseLength` in `core` reads `+ − * /`, parentheses, either minus, a decimal comma, and mm,
+  cm, in and `"` in any case; a unit takes everything multiplied before it, so `1/2in` is half an
+  inch. A sum gives every number a unit or none — `3-1/2"`, American for 3½ inches, is 3 mm less
+  half an inch as a sum, and a guess either way would store a wrong size without a word, so it is
+  refused and the reason says to type `3.5in`. Every millimetre field takes it, the work bar's
+  corner radius included; Enter on text a field cannot read keeps the text, marks the field and
+  says why beneath (in the work bar, hanging below it); Escape or leaving puts the size back, as
+  before. Found on the way: the dimension's *Decimals* field said "mm" after a count.
 - ☐ **U.16 Typing while drawing** (R-13). `105` `Tab` `75` `Tab` `8` `Enter`.
 - ☐ **U.17 The selection bar: stitch summary and next step** (R-14).
 - ☐ **U.18 Drawing defaults in Properties** (R-16).

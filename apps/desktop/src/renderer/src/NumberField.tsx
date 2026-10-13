@@ -1,5 +1,27 @@
-import { formatEditable, parseNumber, quantise } from '@leathercad/core';
-import { useRef, useState } from 'react';
+import {
+  err,
+  formatEditable,
+  ok,
+  parseLength,
+  parseNumber,
+  quantise,
+  type LengthError,
+  type Result,
+} from '@leathercad/core';
+import { useId, useRef, useState } from 'react';
+
+import { useI18n } from './i18n.js';
+
+/**
+ * What a field's text comes to. A field in millimetres takes a size as a maker
+ * types it — `95-2*3.5`, `3.75in`, `9,5 cm` (U.15) — so the same text means the
+ * same thing in every one; any other field (a count, an angle) a plain number.
+ */
+function read(text: string, inMm: boolean): Result<number, LengthError> {
+  if (inMm) return parseLength(text);
+  const value = parseNumber(text);
+  return Number.isFinite(value) ? ok(value) : err({ kind: 'syntax' });
+}
 
 /**
  * A millimetre entry field.
@@ -11,7 +33,10 @@ import { useRef, useState } from 'react';
  * and accepts either minus back, so a value can be retyped as it reads.
  *
  * Typing an exact number is not a convenience here — it is the primary way to
- * work. Mouse precision is the fallback.
+ * work. Mouse precision is the fallback. So a field in millimetres reads a sum
+ * and a unit (`95-2*3.5`, `3.75in`) and shows the result in mm; and Enter on
+ * text it cannot read keeps the text, and says why beneath, rather than
+ * dropping what was typed. Leaving the field, or Escape, still reverts.
  *
  * **An empty field is an answer only when the caller says so.** Pass `onClear`
  * and a `null` value renders blank with the `placeholder`, and clearing the
@@ -52,31 +77,42 @@ export function NumberField({
   // again from the same render's closure, where the state variable is still
   // the old value. That produced two identical commands and so two history
   // entries, which made the first press of Undo appear to do nothing.
+  const { t } = useI18n();
+  const reasonId = useId();
   const [draft, setDraft] = useState<string | null>(null);
   const draftRef = useRef<string | null>(null);
+  const [unread, setUnread] = useState<LengthError | null>(null);
   const shown = draft ?? (value === null ? '' : formatEditable(value, precision));
+  const inMm = suffix === 'mm';
 
   const updateDraft = (next: string | null): void => {
     draftRef.current = next;
     setDraft(next);
+    setUnread(null);
   };
 
-  const commit = (): void => {
+  /** `holdUnread`: Enter keeps text it cannot read, and says why; a blur drops it. */
+  const commit = (holdUnread: boolean): void => {
     const pending = draftRef.current;
     if (pending === null) return;
-    updateDraft(null);
 
     if (pending.trim() === '') {
+      updateDraft(null);
       // Only a field that allows it treats blank as a value; and clearing one
       // that is already blank is not an edit, so it writes no history.
       if (onClear !== undefined && value !== null) onClear();
       return;
     }
 
-    const parsed = parseNumber(pending);
-    if (!Number.isFinite(parsed)) return;
+    const parsed = read(pending, inMm);
+    if (!parsed.ok) {
+      if (holdUnread && inMm) setUnread(parsed.error);
+      else updateDraft(null);
+      return;
+    }
+    updateDraft(null);
 
-    const clamped = min !== undefined ? Math.max(min, parsed) : parsed;
+    const clamped = min !== undefined ? Math.max(min, parsed.value) : parsed.value;
     const snapped = quantise(clamped);
     if (snapped !== value) onCommit(snapped);
   };
@@ -87,17 +123,19 @@ export function NumberField({
       <span className="field-input">
         <input
           type="text"
-          inputMode="decimal"
+          inputMode={inMm ? 'text' : 'decimal'}
           value={shown}
           placeholder={placeholder}
           disabled={disabled}
           step={step}
+          aria-invalid={unread !== null || undefined}
+          aria-describedby={unread !== null ? reasonId : undefined}
           onChange={(event) => updateDraft(event.target.value)}
-          onBlur={commit}
+          onBlur={() => commit(false)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
-              commit();
-              event.currentTarget.blur();
+              commit(true);
+              if (draftRef.current === null) event.currentTarget.blur();
             } else if (event.key === 'Escape') {
               // An edit in progress is what Escape cancels — not the dialog
               // or the tool around the field (U.13, Settings › My tools).
@@ -111,10 +149,9 @@ export function NumberField({
               // A blank field steps from its minimum, or from zero: there is no
               // current number to step from, and inventing one would be worse.
               const current = value ?? min ?? 0;
-              const next = quantise(
-                (draft === null ? current : parseNumber(draft) || current) + delta,
-              );
-              setDraft(null);
+              const typed = draft === null ? null : read(draft, inMm);
+              const next = quantise((typed?.ok === true ? typed.value : current) + delta);
+              updateDraft(null);
               onCommit(min !== undefined ? Math.max(min, next) : next);
             }
           }}
@@ -123,6 +160,15 @@ export function NumberField({
         />
         {suffix !== '' && <span className="field-suffix">{suffix}</span>}
       </span>
+      {unread !== null && (
+        // Hidden from the label's name, which stays the field's; the input is
+        // described by it instead, as a reason beneath a button is (F.1).
+        <span id={reasonId} className="reason field-reason" aria-hidden="true">
+          {unread.kind === 'unit'
+            ? t('editor.lengthError.unit', { unit: unread.unit })
+            : t(`editor.lengthError.${unread.kind}`)}
+        </span>
+      )}
     </label>
   );
 }

@@ -1246,6 +1246,36 @@ Properties, so the same text means the same thing everywhere; the result is quan
 with properties: what `formatEditable` writes reads back to within half a unit; a sum and its
 reordering agree; inches are 25.4 mm exactly.
 
+**As built.**
+- `parseLength(text): Result<number, LengthError>` in `packages/core/src/length.ts`, exported with
+  `MM_PER_INCH` and `LengthError` (`syntax`, `unit` with the word, `mixed`, `notALength`,
+  `notFinite`) — facts the app words under `editor.lengthError.*`. It reads every number
+  `parseNumber` reads, the same (a property test holds it), so no field reads a plain number
+  differently than before.
+- **A unit takes everything multiplied or divided before it in its term**: `1/2in` is 12.7 mm, not
+  1 ÷ 2 in; what follows scales the length (`10cm/2`). A unit on what already has one, a length
+  times a length, or a division by a length is `notALength`. Units are mm, cm, in and `"`, in any
+  case; `inch`, `ft` and `m` are named back as units it does not know.
+- **A sum gives every number a unit, or none** (`mixed`). The plan left a bare number beside a
+  length open; reading it as millimetres turns American `3-1/2"` (3½ inches) into 3 mm − 12.7 mm,
+  which a field with a minimum would then clamp without a word. Multiplying and dividing by a bare
+  number is a scale, and stays.
+- `NumberField` reads its text with `parseLength` when its unit is mm (`suffix`, default `'mm'`),
+  and with `parseNumber` otherwise — Cut, Turn, the arc's angles, Decimals. Enter on what it
+  cannot read keeps the text, sets `aria-invalid`, and describes the input by the reason beneath
+  (hidden from the label's name, so the field keeps its own); typing clears it; Escape and blur
+  revert as they did. In the work bar, whose height is fixed, the reason hangs below the field.
+  The arrow keys step from what is typed when it reads, so `95-7` then ↑ gives 89.
+- **For U.14 and U.16:** the chips call the same `parseLength`; its `LengthError` is the "keeps the
+  chip open and says why" case, before the domain's own refusal.
+- Not built: a mixed number with a space (`3 1/2in`), which reads as two numbers and is refused.
+- **A field rounds the number as written** (fixed on review): `1/8in` stores 3.175 and showed
+  `3.17`, `toFixed` of the binary 3.17499…. `formatEditable` now rounds the shortest decimal the
+  number is, half away from zero, so it reads `3.18`, checked against integer arithmetic on every
+  stored quantum. `formatNumber` — the ruler, the readouts and the printed dimensions — keeps
+  `toFixed`, so nothing printed moves; whether readouts and printed dimensions should round the
+  same way is a decision for its own pull request.
+
 ---
 
 #### U.16 Typing while drawing — R-13 · M · mockups 03, 13
