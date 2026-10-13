@@ -1,3 +1,4 @@
+import type { Preferences } from '@leathercad/platform';
 import { contextBridge, ipcRenderer } from 'electron';
 
 import { IPC } from '../shared/ipc.js';
@@ -45,11 +46,7 @@ const platformBridge = {
 
   getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
 
-  getPreferences: (): Promise<{
-    legendOpen: boolean;
-    toolRailCollapsed: boolean;
-    language: string;
-  }> => ipcRenderer.invoke(IPC.getPreferences),
+  getPreferences: (): Promise<Preferences> => ipcRenderer.invoke(IPC.getPreferences),
 
   setPreferences: (changes: unknown): Promise<void> =>
     ipcRenderer.invoke(IPC.setPreferences, changes),

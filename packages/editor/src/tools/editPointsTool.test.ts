@@ -230,7 +230,7 @@ describe('the Edit Points tool', () => {
 
     tool.onPointerDown?.(ctx, pointer(vec(100, 0)));
     tool.onPointerMove?.(ctx, pointer(vec(130, 0)));
-    tool.onKey?.(ctx, key('Escape'));
+    expect(tool.onKey?.(ctx, key('Escape'))).toBe(true);
 
     expect(store.getState().document).toBe(before);
   });

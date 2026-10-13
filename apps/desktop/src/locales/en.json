@@ -82,6 +82,8 @@
   "status": {
     "features_one": "feature",
     "features_other": "features",
+    "focus": "Focus",
+    "panels": "Panels",
     "parts": "Parts",
     "partsCount_one": "part",
     "partsCount_other": "parts",
@@ -198,7 +200,7 @@
       "window": "Window"
     },
     "arcOrStraight": "Polyline: the next segment is an arc, or straight",
-    "cancel": "Cancel what the tool is doing, or clear the selection",
+    "cancel": "Cancel what the tool is doing, clear the selection, or leave focus mode",
     "contextMenu": "Open the menu for the selection, as a right-click does",
     "delete": "Delete what is selected (Select tool)",
     "design": "Design: the board you draw on",
@@ -206,6 +208,7 @@
     "finishPolyline": "Finish a polyline",
     "fit": "Fit the drawing in the window",
     "fitSelection": "Fit the selection in the window",
+    "focusMode": "Focus mode: both panels hide, and the rail shows keys only",
     "fullScreen": "Full screen",
     "keyboardShortcuts": "Keyboard shortcuts",
     "newProject": "New project",
@@ -222,6 +225,8 @@
     "sheets": "Sheets: the paper it prints on",
     "square": "Keep a rectangle square; hold a line to 15° steps",
     "takeBack": "Remove the last point of a polyline or arc",
+    "toggleParts": "Show or hide Parts",
+    "toggleProperties": "Show or hide Properties",
     "trueSize": "Zoom to true size, 100 %",
     "undo": "Undo",
     "zoom": "Zoom about the pointer",
@@ -467,6 +472,15 @@
     "titleTiled": "PDF exported across several sheets",
     "warnings_one": "{{count}} warning",
     "warnings_other": "{{count}} warnings"
+  },
+  "panels": {
+    "featureIn": "{{feature}} · {{part}}",
+    "hideParts": "Hide Parts",
+    "hideProperties": "Hide Properties",
+    "partsFolded": "Parts, folded",
+    "propertiesFolded": "Properties, folded",
+    "showParts": "Show Parts",
+    "showProperties": "Show Properties"
   },
   "parts": {
     "actions": "Actions for {{name}}",

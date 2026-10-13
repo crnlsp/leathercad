@@ -110,6 +110,10 @@ export interface Tool {
    * application's own shortcut for that key does not also fire — how the
    * polyline takes A and L for its next segment mid-run without switching to
    * the Arc or Line tool (3.9a). Anything else leaves shortcuts as they are.
+   *
+   * Escape is claimed when it gives something up — a gesture, a picked point,
+   * a selection — and left to the window when there is nothing to, where it
+   * closes an overlay or leaves focus mode (U.5): one press, one thing.
    */
   onKey?(ctx: ToolContext, event: KeyInput): boolean | void;
 

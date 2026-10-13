@@ -169,7 +169,7 @@ describe('arc tool', () => {
       { x: 0, y: 0 },
       { x: 10, y: 0 },
     ]);
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
     place(tool, ctx, [{ x: 5, y: 5 }]);
 
     // Nothing added to the part the arc would have joined: it still holds only

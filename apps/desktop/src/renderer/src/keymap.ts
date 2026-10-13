@@ -67,6 +67,9 @@ export type CommandId =
   | 'fit'
   | 'fitSelection'
   | 'trueSize'
+  | 'toggleParts'
+  | 'toggleProperties'
+  | 'focusMode'
   | 'settings'
   | 'keyboardShortcuts'
   | 'fullScreen'
@@ -209,6 +212,30 @@ export const KEYMAP: readonly Command[] = [
     scope: 'window',
     keys: [mod('Digit0')],
     aliases: [mod('Numpad0')],
+  },
+  // By place (U.5): on a German keyboard [ and ] are ü and +, \ is #. The ISO
+  // key beside Z is the twin: it is where a British keyboard prints \.
+  {
+    id: 'toggleParts',
+    does: 'shortcuts.toggleParts',
+    group: 'view',
+    scope: 'window',
+    keys: [key('BracketLeft')],
+  },
+  {
+    id: 'toggleProperties',
+    does: 'shortcuts.toggleProperties',
+    group: 'view',
+    scope: 'window',
+    keys: [key('BracketRight')],
+  },
+  {
+    id: 'focusMode',
+    does: 'shortcuts.focusMode',
+    group: 'view',
+    scope: 'window',
+    keys: [key('Backslash')],
+    aliases: [key('IntlBackslash')],
   },
 
   {

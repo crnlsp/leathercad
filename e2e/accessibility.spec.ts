@@ -71,7 +71,8 @@ test('the main window has no accessibility violations beyond those recorded', as
 test('the F.2 layout at work has no accessibility violations either', async () => {
   // The first scan sees an empty document at the default size. This one sees
   // what F.2 added: the collapsed rail, a populated parts tree with its menus,
-  // the problems drawer open, and the properties overlay below 1024 px.
+  // the problems drawer open, and Properties open over the board from its strip
+  // below 1280 px (U.5).
   const instance = await launchApp();
   try {
     const window = await instance.firstWindow();

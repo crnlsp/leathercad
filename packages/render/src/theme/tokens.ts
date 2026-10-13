@@ -62,4 +62,12 @@ export const DENSITY: Readonly<
   compact: { control: 24, controlLg: 28, rowPadY: 2 },
 };
 
-export const RAIL_PX = { expanded: 152, collapsed: 52 } as const;
+/** The tool rail with its tools' names, and with their keys only (§5: `rail-wide`, `rail-narrow`). */
+export const RAIL_PX = { expanded: 152, collapsed: 56 } as const;
+
+/**
+ * The docked panels and a folded one's strip (§5, U.5). Parts gives up 16 px
+ * below 1280, where the rail has dropped its names: at 1024 that leaves the
+ * board 720 px.
+ */
+export const PANEL_PX = { parts: 224, partsNarrow: 208, properties: 264, strip: 40 } as const;

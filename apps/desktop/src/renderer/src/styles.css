@@ -105,21 +105,22 @@ body {
 }
 
 /*
- * The frame (UI Foundations §7.1):
+ * The frame (UI Foundations §7.1, the requirements' §5):
  *
  *   rail | parts | tool options · canvas · problems drawer | properties
  *
  * Each panel has a column of its own, so none competes with another for
  * height — the tool rail above the parts tree is how the tree used to shrink
- * to nothing (audit §3.3). Properties steps down at 1280 px; below 1024 px
- * Properties becomes an overlay and below 900 px so does Parts, each opened
- * from the status bar (§7.2). **No panel is ever removed**: the parts tree is
- * the only route to a locked feature.
+ * to nothing (audit §3.3). Which width each column takes is `layoutFor`'s
+ * (panelLayout.ts), said here as classes: a panel docked, folded to a 40 px
+ * strip, or hidden, with only its chip in the status bar. **No panel is ever
+ * removed**: one that is not docked opens over the board, and the parts tree
+ * is the only route to a locked feature.
  */
 .workspace {
   --rail-w: var(--rail-w-expanded);
-  --parts-w: 220px;
-  --properties-w: 288px;
+  --parts-w: var(--parts-width);
+  --properties-w: var(--properties-width);
 
   position: relative;
   display: grid;
@@ -127,52 +128,175 @@ body {
   min-height: 0;
 }
 
+/* Each in its own column, so an empty one stays empty rather than taking the
+   board. A panel's slot is only its place in the DOM, not a box. */
+.workspace > .rail {
+  grid-column: 1;
+}
+
+.workspace .panel.parts,
+.panel-strip.parts {
+  grid-column: 2;
+}
+
+.workspace > .canvas-column {
+  grid-column: 3;
+}
+
+.workspace .panel.properties,
+.panel-strip.properties {
+  grid-column: 4;
+}
+
+.panel-slot {
+  display: contents;
+}
+
 .workspace.rail-collapsed {
   --rail-w: var(--rail-w-collapsed);
 }
 
-/* Parts keeps its width: at 200 px, with its scrollbar, the column beside
-   the toggles was narrower than "mirrored", and a name broke inside a word
-   (Q5). The canvas gives the 20 px instead. */
-@media (max-width: 1279px) {
-  .workspace {
-    --properties-w: 264px;
-  }
+/* Below 1280 px Parts gives up 16 px: at 1024 the board keeps 720. */
+.workspace.narrow {
+  --parts-w: var(--parts-width-narrow);
 }
 
-.workspace.properties-overlay {
-  grid-template-columns: var(--rail-w) var(--parts-w) minmax(0, 1fr);
+.workspace.parts-strip {
+  --parts-w: var(--panel-strip);
 }
 
-.workspace.properties-overlay.parts-overlay {
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+.workspace.parts-hidden {
+  --parts-w: 0px;
 }
 
-/* An overlay panel keeps its place in the DOM and is shown on request, over
-   the canvas, with the one elevation a floating surface gets. */
-.workspace.properties-overlay > .panel.properties,
-.workspace.parts-overlay > .panel.parts {
+.workspace.properties-strip {
+  --properties-w: var(--panel-strip);
+}
+
+.workspace.properties-hidden {
+  --properties-w: 0px;
+}
+
+/* A panel that is not docked keeps its place in the DOM and is shown on
+   request, over the board beside its strip, above the zoom control and the
+   legend, with the one elevation a floating surface gets. */
+.workspace:is(.parts-strip, .parts-hidden) .panel.parts,
+.workspace:is(.properties-strip, .properties-hidden) .panel.properties {
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 8;
+  grid-column: auto;
   display: none;
   box-shadow: var(--elevation-raised);
 }
 
-.workspace.properties-overlay > .panel.properties {
-  right: 0;
-  width: 288px;
+.workspace:is(.parts-strip, .parts-hidden) .panel.parts {
+  left: calc(var(--rail-w) + var(--parts-w));
+  width: var(--parts-width);
 }
 
-.workspace.parts-overlay > .panel.parts {
-  left: var(--rail-w);
-  width: 240px;
+.workspace:is(.properties-strip, .properties-hidden) .panel.properties {
+  right: var(--properties-w);
+  width: var(--properties-width);
 }
 
-.workspace.properties-open > .panel.properties,
-.workspace.parts-open > .panel.parts {
+.workspace.parts-open .panel.parts,
+.workspace.properties-open .panel.properties {
   display: flex;
+}
+
+/* A folded panel: icons only, no rotated text (R-04). Its toggle first, then
+   a piece's thumbnail or the selection's mark, each a 32 × 28 target. */
+.panel-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: var(--space-2) 0;
+  background: var(--shell-700);
+}
+
+.panel-strip.parts {
+  border-right: 1px solid var(--shell-line);
+}
+
+.panel-strip.properties {
+  border-left: 1px solid var(--shell-line);
+}
+
+.panel-strip > .tooltip-anchor {
+  display: flex;
+}
+
+.panel-strip .panel-toggle {
+  width: 32px;
+  min-height: var(--h-control);
+  margin-bottom: var(--space-1);
+}
+
+.strip-button {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: var(--h-control);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.strip-button:hover {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.strip-button[aria-pressed='true'],
+.strip-button.current {
+  border-color: var(--tan);
+  color: var(--text);
+}
+
+.strip-button.off {
+  opacity: 0.4;
+}
+
+.thumbnail path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+}
+
+/* How many are cut, or selected: the ×N of the caption, in the corner. */
+.strip-count {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  color: var(--text);
+  font: var(--t-micro);
+  line-height: 1;
+}
+
+/* "Parts", and its fold at the row's end. */
+.panel-title {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-toggle {
+  width: 24px;
+  min-height: 24px;
 }
 
 .rail {
@@ -441,9 +565,12 @@ body {
 
 .app-status {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 6px 14px;
+  /* 2 px, not 6: the panels' chips are 24 px targets, and the bar keeps the
+     height it had without them. */
+  padding: 2px 14px;
   background: var(--shell-700);
   border-top: 1px solid var(--shell-line);
   color: var(--text-dim);
@@ -479,9 +606,49 @@ body {
    never push the counts or the cursor readout off the bar. */
 .status-left {
   display: flex;
+  flex: 1;
   gap: 16px;
   min-width: 0;
   overflow: hidden;
+}
+
+/* Parts [, Focus \, Properties ]: always there, by the cursor readout. */
+.status-panels {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+}
+
+.chip.panel-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 4px 0 6px;
+  font: var(--t-micro);
+}
+
+.panel-chip kbd {
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text-dim);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+}
+
+/* A panel hidden — folded, or by focus mode — says so on its chip. */
+.chip.hiding {
+  border-color: var(--tan);
+}
+
+/* Forced colours draw every border alike: the system's highlight says which. */
+@media (forced-colors: active) {
+  .chip.hiding,
+  .strip-button[aria-pressed='true'],
+  .strip-button.current {
+    border-color: Highlight;
+  }
 }
 
 .status-left .status-error {

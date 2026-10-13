@@ -101,7 +101,7 @@ describe('rotate tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 150, y: 25 }));
     tool.onPointerMove?.(ctx, pointer({ x: 50, y: 125 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
 
     expect(rectIn(store).rotation).toBe(0);
   });
@@ -198,7 +198,7 @@ describe('scale tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 100, y: 25 }));
     tool.onPointerMove?.(ctx, pointer({ x: 150, y: 25 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
 
     expect(rectIn(store).width).toBe(100);
   });

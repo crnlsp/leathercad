@@ -77,8 +77,9 @@ test('no feature name in Parts breaks inside a word, at any window width (Q5)', 
         return broken;
       });
 
-    // Each width band the frame steps through: wide, the step at 1280, the
-    // Properties overlay below 1024, and the Parts overlay below 900.
+    // Each width band the frame steps through (§5, U.5): wide; below 1280,
+    // the rail's keys, Parts at 208 and Properties a strip; and below 900,
+    // Parts opened over the board.
     for (const width of [1440, 1200, 1000, 880]) {
       await app.evaluate(({ BrowserWindow }, size) => {
         BrowserWindow.getAllWindows()[0]?.setContentSize(size, 640);

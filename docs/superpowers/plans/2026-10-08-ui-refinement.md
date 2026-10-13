@@ -213,9 +213,9 @@ and `css.ts` projects it onto `:root`.
 | `primary-side` | — | #D2CBBD (the value of `GROUND.major`) | **new**, U.7 |
 | `secondary-side` | — | #3A3F47 | **new**, U.7 |
 | `on-primary` | `GO.onGo` #1D2126 | #14161A | **changed**, U.7: AA on `primary`, `primary-side`, `warning` and `error` |
-| `rail-wide` / `rail-narrow` | `RAIL_PX` 152 / 52 | 152 / **56** px | **changed**, U.5 |
-| `parts-width` / `properties-width` | `--parts-w` 220 and `--properties-w` 288 (264 below 1280), written in `styles.css` | 224 / 264 px | **changed**, U.5, and into the theme |
-| `panel-strip` · `row-height` | — | 40 px · 28 px (a Parts row was 34) | **new**, U.5 and U.8 |
+| `rail-wide` / `rail-narrow` | `RAIL_PX` 152 / 52 | 152 / **56** px | **changed**, U.5 ✅: `RAIL_PX`, `--rail-w-expanded` / `--rail-w-collapsed` |
+| `parts-width` / `properties-width` | `--parts-w` 220 and `--properties-w` 288 (264 below 1280), written in `styles.css` | 224 / 264 px | **changed**, U.5 ✅, into the theme: `PANEL_PX.parts` / `.properties`, `--parts-width` / `--properties-width`; and `PANEL_PX.partsNarrow` 208 below 1280, `--parts-width-narrow` |
+| `panel-strip` · `row-height` | — | 40 px · 28 px (a Parts row was 34) | **new**, U.5 ✅ (`PANEL_PX.strip`, `--panel-strip`) and U.8 |
 | `sheets-desk` · `paper` · `sheet-margin` | `SHEET`, `theme/sheets.ts` | #D6D1C7 · #FFFFFF · #D9579B | unchanged, recorded |
 
 ---
@@ -819,26 +819,78 @@ feature.
 - **The drawing stays put** when a panel folds: F.3's `reframe`.
 
 **Find out first.**
-- [ ] The canvas's width today at 1920, 1440, 1280, 1024 and 860 — the spec says 1260, 780, 620,
+- [x] The canvas's width today at 1920, 1440, 1280, 1024 and 860 — the spec says 1260, 780, 620,
       about 490 and 804. Confirm or correct the *today* column with the numbers you measure.
-- [ ] Fold a panel and watch a point of the drawing: does `reframe` run when the grid's columns
-      change, or only on a window resize?
+      *Measured at 1×: 1260, 780, 620, 488 and **808** — at 860 the rail was 52 px, not the 56 the
+      spec's 804 assumed.*
+- [x] Fold a panel and watch a point of the drawing: does `reframe` run when the grid's columns
+      change, or only on a window resize? *On any change of the canvas's box: `CanvasHost`'s
+      `ResizeObserver` watches the canvas's container and reframes by how far its left and top
+      edges moved, so a column changing width is the same to it as the window's. Measured: the
+      millimetre under a window point is the same with Parts folded, in focus mode and back.*
 
 **Done when — check in the app.**
-- [ ] The canvas is 1280, 800 (1384 in focus mode), 640, 720 and 804 px wide at 1920, 1440, 1280,
+- [x] The canvas is 1280, 800 (1384 in focus mode), 640, 720 and 804 px wide at 1920, 1440, 1280,
       1024 and 860.
-- [ ] `[`, `]`, `\` and Esc out of focus mode work, on a German layout too.
-- [ ] Strips: Parts' thumbnails select their pieces; Properties' icon names the selection; the
+- [x] `[`, `]`, `\` and Esc out of focus mode work, on a German layout too.
+- [x] Strips: Parts' thumbnails select their pieces; Properties' icon names the selection; the
       overlay takes focus, gives it back, and closes on Esc or a canvas click.
-- [ ] Three chips, always; every panel reachable at every size, by mouse and by keyboard.
-- [ ] Choices survive a restart, and an automatic fold does not change them.
-- [ ] Folding a panel does not move the drawing.
+- [x] Three chips, always; every panel reachable at every size, by mouse and by keyboard.
+- [x] Choices survive a restart, and an automatic fold does not change them.
+- [x] Folding a panel does not move the drawing.
 
 **Tests.** A pure `layoutFor(width, height, choices, focus)` → each panel docked, strip or overlay,
 with the property that every panel is reachable at every size. The preferences' new flags, read
 and validated as the existing ones are. E2E at the five widths.
 
 **Docs.** UI Foundations' layout rules, the shortcut list, the roadmap.
+
+**As built (2026-10-13).** What the plan above did not know:
+
+- **One function decides the frame**: `layoutFor(room, choices, focus)` in
+  `renderer/src/panelLayout.ts`, where `room` is `roomAt(width)` — `wide` from 1280 px, `narrow`
+  from 900, `cramped` below — and each panel is `docked`, `strip` or `hidden` (only its chip). The
+  window says it to the stylesheet as classes on `.workspace`; the widths are the theme's. The
+  property test: every panel not docked is shown by its toggle, at every width, with any choices,
+  in or out of focus mode.
+- **What a toggle does depends on the room**, one rule for its key, its header's button, its
+  strip's and its chip (`toggleOf`): where the panel can take a column — Properties from 1280,
+  Parts from 900 — it folds or unfolds it, which is the maker's choice and remembered; where it
+  cannot, or in focus mode, it opens the panel over the board for now. So a narrow window's
+  folding never writes a choice, and widening it again brings back what the maker had. In focus
+  mode `[` and `]` open a panel over the board rather than ending it.
+- **The overlay is the panel itself**, kept in its place in the DOM (F.2) and shown absolutely
+  over the board beside its strip, `z-index` 8, above the zoom control and the legend. It takes
+  focus as a whole (`tabIndex` −1) rather than on its first button, which would take the Enter
+  that finishes a polyline; Tab goes on into it and out of it. Esc pressed in it closes it first;
+  a field being typed in, or a menu open in it, keeps Esc. A keyboard close gives focus back to the
+  opener; a press on the board closes it and leaves focus where the press put it (U.4's rule).
+  One at a time, and a change of room or of focus mode closes it.
+- **Esc has one owner per press.** The tools never claimed Escape — none needed to, with nothing
+  else on it — so one press would have cancelled a drawing and left focus mode. A tool now claims
+  it when it gives something up (a gesture, a picked point, or Select's selection), and the window
+  takes it after: an open overlay, then focus mode. With a piece selected in focus mode, the first
+  Esc clears the selection and the second brings the panels back.
+- **Keys:** `toggleParts` `[`, `toggleProperties` `]` and `focusMode` `\` (`BracketLeft`,
+  `BracketRight`, `Backslash`), by place, so a German keyboard folds on `ü`, `+` and `#`. Focus mode
+  has `IntlBackslash` as a twin, heard and never shown: it is where a British keyboard prints `\`.
+  The rail has no toggle in focus mode.
+- **Thumbnails:** `thumbnailPath(outline, box, insetPx = 1)` in `packages/render` (`thumbnail.ts`),
+  an SVG path in the box's pixels, fitted by `thumbnailView` through `worldToScreen`, so Y is up as
+  on the board and no flip is derived. The strip draws each piece's outer contour
+  (`materialOf(…).outer`) at 24 × 16, and a piece that has none the piece mark. **U.8 reuses it.**
+- **Preferences:** `partsFolded` and `propertiesFolded`, read and validated as the other flags,
+  each falling back on its own. Focus mode is the session's.
+- **The German `+` key, bare, folds Properties**: it is where a US keyboard has `]`. With the
+  command key it still zooms in, as U.3 decided.
+- **Found on the way:** `linkTickOn` took the longest run with a bare `>`, so of a rectangle's
+  equal top and bottom the last bit of a float chose — the pixel reference's panel, drawn 10 px
+  further right on the wider board, wore its tick at the bottom. Longer by more than `EPS_LENGTH`
+  now, so the first of equal runs keeps it.
+- **The chips** — Parts `[` · Focus `\` · Properties `]` — sit by the cursor readout, 24 px
+  targets in a bar that keeps its 29 px. A chip whose panel is not open has the accent border
+  (`Highlight` in forced colours). A button pressed by the pointer lets go of focus, as the zoom
+  control's do.
 
 ---
 

@@ -16,8 +16,9 @@ import { ToolIcon } from './icons/ToolIcon.js';
  * It used to sit above the parts tree and compete with it for height, which is
  * how the tree could shrink to nothing (audit §3.3). In its own column it never
  * scrolls and never competes (UI Foundations §7.1). **Expanded**, 152 px: label
- * and shortcut. **Collapsed**, 52 px: the shortcut alone as the face, with the
- * name and the guidance in the tooltip — until F.6 gives each tool an icon.
+ * and shortcut. **Collapsed**, 56 px: the icon, with its key as a corner badge
+ * and the name and the guidance in the tooltip. In focus mode (U.5) it stays
+ * collapsed, and has no toggle of its own.
  */
 export function ToolPalette({
   activeId,
@@ -28,7 +29,8 @@ export function ToolPalette({
   activeId: string;
   onSelect: (id: string) => void;
   collapsed: boolean;
-  onToggleCollapsed: () => void;
+  /** Absent in focus mode, where the rail shows keys only. */
+  onToggleCollapsed?: (() => void) | undefined;
 }) {
   const { t } = useI18n();
   const keys = useKeysInSentences();
@@ -77,18 +79,20 @@ export function ToolPalette({
         </div>
       ))}
 
-      <Tooltip text={toggle}>
-        <button
-          type="button"
-          className="tool rail-toggle"
-          data-testid="rail-toggle"
-          aria-pressed={!collapsed}
-          aria-label={toggle}
-          onClick={onToggleCollapsed}
-        >
-          <Icon of={collapsed ? ChevronsRight : ChevronsLeft} />
-        </button>
-      </Tooltip>
+      {onToggleCollapsed !== undefined && (
+        <Tooltip text={toggle}>
+          <button
+            type="button"
+            className="tool rail-toggle"
+            data-testid="rail-toggle"
+            aria-pressed={!collapsed}
+            aria-label={toggle}
+            onClick={onToggleCollapsed}
+          >
+            <Icon of={collapsed ? ChevronsRight : ChevronsLeft} />
+          </button>
+        </Tooltip>
+      )}
     </nav>
   );
 }

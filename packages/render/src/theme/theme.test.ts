@@ -85,6 +85,17 @@ describe('cssVariables', () => {
       expect(compact[name]).toBe(comfortable[name]);
     }
   });
+
+  it('carries the frame’s columns, as the requirements’ §5 sizes them (U.5)', () => {
+    expect(cssVariables('comfortable')).toMatchObject({
+      '--rail-w-expanded': '152px',
+      '--rail-w-collapsed': '56px',
+      '--parts-width': '224px',
+      '--parts-width-narrow': '208px',
+      '--properties-width': '264px',
+      '--panel-strip': '40px',
+    });
+  });
 });
 
 /** WCAG relative luminance and contrast — how the spec states its colour claims. */

@@ -20,7 +20,7 @@ interface StoredPreferences extends Preferences {
 const EMPTY: StoredPreferences = { version: 1, ...DEFAULT_PREFERENCES, recentFiles: [] };
 
 /** The preferences that are on or off. */
-const FLAGS = ['legendOpen', 'toolRailCollapsed'] as const;
+const FLAGS = ['legendOpen', 'toolRailCollapsed', 'partsFolded', 'propertiesFolded'] as const;
 
 /**
  * Reads `preferences.json`, keeping whatever of it is still usable.
@@ -59,6 +59,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     version: 1,
     legendOpen: flag('legendOpen'),
     toolRailCollapsed: flag('toolRailCollapsed'),
+    partsFolded: flag('partsFolded'),
+    propertiesFolded: flag('propertiesFolded'),
     // A language this version does not support — one chosen in a newer
     // version, or a preview tried in `pnpm dev` — follows the system rather
     // than stopping the app starting.

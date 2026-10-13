@@ -348,6 +348,8 @@ and read once at start-up:
   "version": 1,
   "legendOpen": false,
   "toolRailCollapsed": false,
+  "partsFolded": false,
+  "propertiesFolded": false,
   "language": "system",
   "irons": [{ "id": "ks-3.85", "name": "KS Blade 3.85 mm", "pitchMm": 3.85 }],
   "defaultIronId": "ks-3.85",
@@ -363,7 +365,10 @@ are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent 
 paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
 has gone is taken off the list when it is chosen. The rail's collapse applies to a wide window
-only; below 1200 px it collapses by itself, and opening it there lasts the session. `language` is
+only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
+and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
+room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode
+is the session's alone. `language` is
 the interface's: `system` to follow the operating system, or the tag of a language the app supports
 ([ADR 0018](adr/0018-interface-language.md)); one this version does not support follows the system.
 

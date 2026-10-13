@@ -532,8 +532,8 @@ test('the window and the project bar say which project it is, and whether it is 
 test('no panel is ever removed, and a locked feature stays reachable at 860 × 600 (F.2)', async () => {
   // At 860 × 640 the parts panel used to vanish, and it is the only route to a
   // locked feature — locking takes it out of hit-testing (audit §3.3). Below
-  // 1024 px Properties becomes an overlay, below 900 px so does Parts, each
-  // opened from the status bar; the rail always stays.
+  // 900 px both panels open over the board from their chips in the status bar
+  // (U.5); the rail always stays.
   await withFreshApp(async (window, instance) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
@@ -576,7 +576,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
   });
 });
 
-test('the rail collapses below 1200 px, and the maker can open it (F.2)', async () => {
+test('the rail collapses below 1280 px, and the maker can open it (F.2, U.5)', async () => {
   await withFreshApp(async (window, instance) => {
     const rail = window.getByTestId('tool-rail');
     await expect(rail).not.toHaveClass(/collapsed/);
@@ -853,8 +853,9 @@ test('the workspace narrows instead of pushing the properties panel off screen',
     await expect
       .poll(async () =>
         window.evaluate(() => {
-          const panel = document.querySelector('[data-testid="property-panel"]');
-          return Math.round(panel?.getBoundingClientRect().right ?? 0);
+          // Folded to its strip there (U.5): the strip is what must stay in.
+          const panel = document.querySelector('[data-testid="properties-strip"]');
+          return Math.round(panel?.getBoundingClientRect().right ?? Infinity);
         }),
       )
       .toBeLessThanOrEqual(1024);

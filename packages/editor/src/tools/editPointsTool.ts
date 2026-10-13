@@ -176,9 +176,11 @@ export function createEditPointsTool(
           reset(ctx);
           return true;
         }
+        // A picked corner, or the reason one was refused, is let go of.
+        const busy = state.picked !== null || state.refusal !== null;
         state = { kind: 'idle', picked: null, refusal: null };
         ctx.invalidate();
-        return;
+        return busy;
       }
 
       // R reshapes the picked corner: rounds a sharp one to the work bar's

@@ -220,6 +220,13 @@ export interface Preferences {
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
   /**
+   * Whether the maker folded Parts, or Properties, to its strip (U.5). Where
+   * the window has the room to dock it: a narrow window folds a panel by
+   * itself, and never writes this.
+   */
+  readonly partsFolded: boolean;
+  readonly propertiesFolded: boolean;
+  /**
    * The interface's language (ADR 0018): `system` to follow the operating
    * system, or the tag of a language the app supports, such as `en`. The app's
    * words only — a project reads the same in every language.
@@ -273,6 +280,8 @@ export const STARTER_IRONS: readonly Iron[] = [
 export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: false,
   toolRailCollapsed: false,
+  partsFolded: false,
+  propertiesFolded: false,
   language: 'system',
   irons: STARTER_IRONS,
   defaultIronId: 'ks-3.85',

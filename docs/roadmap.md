@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.3.5 (2026-10-09) · **Next:** 1.5, then 1.6 · **Last updated:** 2026-10-09
+**Released:** v1.3.5 (2026-10-09) · **Next:** 1.5, then 1.6 · **Last updated:** 2026-10-13
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -83,9 +83,26 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   instead of ×1.25, so + from any fit reaches 100 %; and the zoom limits, which were device pixels
   (about 10 600 % at 1×, 5 300 % at 2×), are 1 % and 10 000 % on every display. Printed output
   did not move: no export test, golden fixture or format fixture changed.
-- ☐ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
+- ✅ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
   three status-bar chips, always; the widths of the requirements' §5; the maker's choices
   remembered; nothing unreachable.
+  ✅ Built as described. Measured in the app at 1×, the board is 1280, 800 (1384 in focus mode),
+  640, 720 and 804 px wide at 1920, 1440, 1280, 1024 and 860 — it was 1260, 780, 620, 488 and 808.
+  Each panel's header has its fold, and a folded panel is a 40 px strip: Parts a thumbnail of each
+  piece, which selects it, a locked one too; Properties the mark of what is selected, named in its
+  tooltip. `\` hides both and turns the rail to keys; `\` or Esc brings back exactly what was
+  there. The keys are matched by place, so a German keyboard folds on `ü`, `+` and `#`. Below 1280 px
+  Properties folds by itself and below 900 Parts too; there a panel opens over the board, takes
+  focus, gives it back, and closes on Esc or a press on the board. The status bar always holds
+  *Parts*, *Focus* and *Properties*, the one for a hidden panel in the accent. The maker's folds
+  are kept in `preferences.json` (`partsFolded`, `propertiesFolded`); a narrow window's never are,
+  and focus mode is the session's. The drawing stays where it is through every fold. Thumbnails
+  are `thumbnailPath` in `packages/render`, for U.8. Found on the way: no tool claimed Escape, so
+  one press would have cancelled a drawing and left focus mode — a tool now claims it when it gives
+  something up, and the window takes it only after; the link tick on a derived line chose between
+  a rectangle's equal top and bottom by the last bit of a float, so the same panel drawn 10 px
+  further right wore it on the other side — the first of equal runs keeps it now; and the preload
+  declared three of the preferences' fields. Printed output did not move.
 - ✅ **U.6 Properties: order, weight and job totals** (R-05). A hole set reads iron, result, name,
   arrange, then Delete alone at its foot; with nothing selected, the pieces to cut, the holes to
   punch and the sheets to print.
@@ -178,6 +195,10 @@ otherwise.
 | U.6 | An outline showed two fields called *Name* | **Decided 2026-10-13:** the piece's is *Piece*, beside *Cut* |
 | U.6 | Flip on a stitch line or hole set is always refused, and its reason takes Arrange's first rows | **Decided 2026-10-13:** stays refused, with its reason; U.19 words the reason shorter |
 | U.6 | A hole set's runs add to 147 beside 146 holes: a corner hole is counted in both its runs | **Decided 2026-10-13:** settled in U.17, before the selection bar shows runs |
+| U.5 | Below 1280 px Properties is a strip: may the maker dock it there anyway, as the rail can be opened while narrow? | No: `]` opens it over the board, as §5 says, and a press on the board closes it |
+| U.5 | Does a press on the board close a panel open over it even while the maker selects there? | Yes, as R-04 says; the press also selects. At 1024 px that means `]` again after picking a piece |
+| U.5 | Is focus mode remembered across a restart? | No, it is the session's, like the view; the folds are remembered |
+| U.5 | Does Esc clear a selection before it leaves focus mode? | Yes: one press, one thing, and Select's Esc has always cleared the selection |
 | U.7 | If the project's name joins the Project menu's button, how is a project renamed? | Whichever of *Rename…* in the menu or F2 on the name fits what renaming does today |
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |
