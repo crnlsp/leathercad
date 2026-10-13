@@ -1,6 +1,7 @@
-import type { Preferences } from '@leathercad/platform';
-import { X } from 'lucide-react';
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { MIN_PITCH_MM } from '@leathercad/domain';
+import type { Iron, Preferences } from '@leathercad/platform';
+import { Ellipsis, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import {
   LANGUAGES,
@@ -12,11 +13,14 @@ import {
 } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import { defaultIron, withoutIron } from './irons.js';
+import { MenuButton } from './Menu.js';
 import { focusAfter } from './menus.js';
+import { NumberField } from './NumberField.js';
 import { KeyCap, useShownKeys } from './keyCaps.js';
 import { SHORTCUT_GROUPS } from './shortcuts.js';
 
-export type SettingsSection = 'general' | 'appearance' | 'language' | 'shortcuts';
+export type SettingsSection = 'general' | 'appearance' | 'tools' | 'language' | 'shortcuts';
 
 /** Where a translator starts (README § Translations). */
 const TRANSLATE_URL = 'https://github.com/crnlsp/leathercad#translations';
@@ -32,6 +36,8 @@ interface Props {
   recentCount: number;
   onClearRecent: () => void;
   onClose: () => void;
+  /** Ids for the irons a maker adds (U.13). */
+  nextId: () => string;
 }
 
 /**
@@ -50,6 +56,7 @@ const SECTIONS: readonly {
     title: 'settings.section.appearance',
     pane: (props) => <Appearance {...props} />,
   },
+  { id: 'tools', title: 'settings.section.tools', pane: (props) => <MyTools {...props} /> },
   { id: 'language', title: 'settings.section.language', pane: (props) => <Language {...props} /> },
   { id: 'shortcuts', title: 'settings.section.shortcuts', pane: () => <Shortcuts /> },
 ];
@@ -195,6 +202,225 @@ function Appearance({ preferences, onPreferences }: Props) {
         onChange={(on) => onPreferences({ toolRailCollapsed: !on })}
       />
     </>
+  );
+}
+
+/**
+ * The maker's irons and starting values (U.13, R-15). The irons are what a
+ * hole set's Iron menu lists, one of them the default a new hole set takes;
+ * the margin and the thickness are what the app makes new stitch lines,
+ * allowances and folds with. Each new thing carries its own copy, so a project
+ * reads the same on a machine with other tools.
+ */
+function MyTools({ preferences, onPreferences, nextId }: Props) {
+  const { t } = useI18n();
+  const names = useRef(new Map<string, HTMLInputElement>());
+  const { irons } = preferences;
+  const editName = (id: string): boolean => {
+    const input = names.current.get(id);
+    input?.focus();
+    input?.select();
+    return input !== undefined;
+  };
+  // A new iron's name takes the caret once its row is drawn.
+  const added = useRef<string | null>(null);
+  useEffect(() => {
+    if (added.current !== null && editName(added.current)) added.current = null;
+  }, [irons]);
+
+  const change = (id: string, patch: Partial<Iron>): void =>
+    onPreferences({ irons: irons.map((iron) => (iron.id === id ? { ...iron, ...patch } : iron)) });
+  const add = (): void => {
+    const id = nextId();
+    const pitchMm = defaultIron(preferences)?.pitchMm ?? DEFAULT_PITCH_MM;
+    const name = t('settings.tools.newIron', { number: String(irons.length + 1) });
+    onPreferences({
+      irons: [...irons, { id, name, pitchMm }],
+      defaultIronId: preferences.defaultIronId ?? id,
+    });
+    added.current = id;
+  };
+
+  return (
+    <>
+      <p className="setting-note">{t('settings.tools.intro')}</p>
+      <h5 className="settings-subhead">{t('settings.tools.irons')}</h5>
+      {irons.length === 0 ? (
+        <p className="setting-note" data-testid="no-irons">
+          {t('settings.tools.noIrons')}
+        </p>
+      ) : (
+        <table className="irons" data-testid="irons">
+          <thead>
+            <tr>
+              <th scope="col">{t('settings.tools.default')}</th>
+              <th scope="col">{t('settings.tools.name')}</th>
+              <th scope="col">{t('settings.tools.pitch')}</th>
+              <th scope="col">
+                <span className="visually-hidden">{t('settings.tools.actions')}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {irons.map((iron) => (
+              <tr key={iron.id} data-testid={`iron-${iron.id}`}>
+                <td>
+                  <input
+                    type="radio"
+                    name="default-iron"
+                    data-testid={`iron-default-${iron.id}`}
+                    aria-label={t('settings.tools.makeDefault', { name: iron.name })}
+                    checked={iron.id === preferences.defaultIronId}
+                    onChange={() => onPreferences({ defaultIronId: iron.id })}
+                  />
+                </td>
+                <td>
+                  <IronName
+                    iron={iron}
+                    inputRef={(input) => {
+                      if (input === null) names.current.delete(iron.id);
+                      else names.current.set(iron.id, input);
+                    }}
+                    onName={(name) => change(iron.id, { name })}
+                  />
+                </td>
+                <td className="iron-pitch">
+                  <NumberField
+                    label={t('settings.tools.pitchOf', { name: iron.name })}
+                    hideLabel
+                    value={iron.pitchMm}
+                    // The domain's floor, as the hole set's own Pitch field.
+                    min={MIN_PITCH_MM}
+                    step={0.05}
+                    onCommit={(pitchMm) => change(iron.id, { pitchMm })}
+                  />
+                </td>
+                <td>
+                  <MenuButton
+                    label={t('settings.tools.ironActions', { name: iron.name })}
+                    testId={`iron-menu-${iron.id}`}
+                    className="icon-toggle"
+                    align="end"
+                    entries={[
+                      {
+                        kind: 'item',
+                        id: `rename-iron-${iron.id}`,
+                        label: t('settings.tools.rename'),
+                        icon: Pencil,
+                        // After the menu has closed and settled focus.
+                        onChoose: () => requestAnimationFrame(() => editName(iron.id)),
+                      },
+                      {
+                        kind: 'item',
+                        id: `delete-iron-${iron.id}`,
+                        label: t('settings.tools.delete'),
+                        icon: Trash2,
+                        danger: true,
+                        note: t('settings.tools.deleteNote'),
+                        onChoose: () => onPreferences(withoutIron(preferences, iron.id)),
+                      },
+                    ]}
+                  >
+                    <Icon of={Ellipsis} />
+                  </MenuButton>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <button type="button" className="tool add-iron" data-testid="add-iron" onClick={add}>
+        <Icon of={Plus} />
+        {t('settings.tools.addIron')}
+      </button>
+
+      <h5 className="settings-subhead">{t('settings.tools.forNewPieces')}</h5>
+      <div className="setting">
+        <div className="setting-text">
+          <span className="setting-name">{t('settings.tools.margin.name')}</span>
+          <span className="setting-note">{t('settings.tools.margin.note')}</span>
+        </div>
+        <span className="setting-number" data-testid="setting-margin">
+          <NumberField
+            label={t('settings.tools.margin.name')}
+            hideLabel
+            value={preferences.stitchMarginMm}
+            min={0.5}
+            step={0.5}
+            onCommit={(stitchMarginMm) => onPreferences({ stitchMarginMm })}
+          />
+        </span>
+      </div>
+      <div className="setting">
+        <div className="setting-text">
+          <span className="setting-name">{t('settings.tools.thickness.name')}</span>
+          <span className="setting-note">{t('settings.tools.thickness.note')}</span>
+        </div>
+        <span className="setting-number" data-testid="setting-thickness">
+          <NumberField
+            label={t('settings.tools.thickness.name')}
+            hideLabel
+            value={preferences.leatherThicknessMm}
+            placeholder={t('editor.notSet')}
+            // Leather has thickness: "none" is said by clearing, never by 0.
+            min={0.1}
+            step={0.1}
+            onCommit={(leatherThicknessMm) => onPreferences({ leatherThicknessMm })}
+            onClear={() => onPreferences({ leatherThicknessMm: null })}
+          />
+        </span>
+      </div>
+    </>
+  );
+}
+
+/** What a new iron's pitch starts at when the maker has no default to copy. */
+const DEFAULT_PITCH_MM = 3.85;
+
+/**
+ * An iron's name, kept as typed until Enter or leaving the field; Escape, or
+ * a name left blank, puts it back. Whitespace is the maker's typo, not a name.
+ */
+function IronName({
+  iron,
+  inputRef,
+  onName,
+}: {
+  iron: Iron;
+  inputRef: (input: HTMLInputElement | null) => void;
+  onName: (name: string) => void;
+}) {
+  const { t } = useI18n();
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = (): void => {
+    if (draft === null) return;
+    const name = draft.trim();
+    setDraft(null);
+    if (name !== '' && name !== iron.name) onName(name);
+  };
+  return (
+    <label className="field">
+      <span className="visually-hidden">{t('settings.tools.name')}</span>
+      <input
+        ref={inputRef}
+        type="text"
+        data-testid={`iron-name-${iron.id}`}
+        value={draft ?? iron.name}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            commit();
+            event.currentTarget.blur();
+          } else if (event.key === 'Escape') {
+            // Escape leaves the name, not the dialog.
+            event.stopPropagation();
+            setDraft(null);
+            event.currentTarget.blur();
+          }
+        }}
+      />
+    </label>
   );
 }
 

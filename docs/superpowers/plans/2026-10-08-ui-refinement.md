@@ -1179,6 +1179,30 @@ default as a placeholder; evaluation never reads preferences.
 stitch line made by the app sits at the margin; a new fold carries the thickness; a project opened
 on a machine with other irons evaluates the same.
 
+**As built.**
+- `Preferences` (`packages/platform`) gains `irons` (`Iron`: `id`, `name`, `pitchMm`),
+  `defaultIronId`, `stitchMarginMm` and `leatherThicknessMm` (`null` by default); `STARTER_IRONS`
+  are today's seven presets, under the names hole sets already carry. `parsePreferences` and
+  `validChanges` (`main/preferences.ts`) keep each usable iron and drop the rest; the store reads
+  every change back as the file would be, so the default is always an iron the maker has.
+- **The plan's *Today* was wrong about the margin.** Every project carries
+  `settings.defaultStitchInsetMm` and `defaultIronPitchMm`, and X8 had the commands read them —
+  with no interface to change them, so in practice 3.5 and 3.85 in every file. Seeding a new
+  project from My tools would leave the sample and every older file on 3.85, so the app passes the
+  maker's values instead (`addStitchLine`, `addStitchHoles`, `addAllowance`, and through
+  `ToolContext.makerDefaults` the editor's *Stitch + allowance* and folds); the project's are the
+  fallback when none is passed. X8 is amended in `domain-model.md`. One source, as U.18 asks.
+- **The thickness starts not set**, not the mockup's 1.2: written into every new fold of a maker
+  who never chose it, it would one day bend their leather by a guess (9.1). A fold without one
+  still says *not set* — showing the maker's default there would suggest it is used.
+- **The Iron menu** lists the maker's irons, then the set's own iron by its name when the maker
+  does not have it (`ironOf` matches name and pitch), then Custom. Choosing writes pitch and name;
+  typing a pitch drops the name, as before.
+- `NumberField` takes `hideLabel` (a column heading or a setting's name says it on screen), and an
+  Escape on an edit in progress stops there: it cancels the edit, not Settings.
+- **For U.14, U.17 and U.18:** the maker's values are `MakerTools` in `renderer/src/irons.ts`, from
+  `App`'s preferences; `defaultIron(tools)` is the iron, `tools.stitchMarginMm` the margin.
+
 ---
 
 #### U.14 Value chips beside the selected shape — R-12 · L, built as M + U.15 · mockups 02, 05, 13

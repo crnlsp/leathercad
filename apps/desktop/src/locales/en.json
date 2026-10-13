@@ -236,7 +236,8 @@
       "appearance": "Appearance",
       "general": "General",
       "language": "Language",
-      "shortcuts": "Keyboard shortcuts"
+      "shortcuts": "Keyboard shortcuts",
+      "tools": "My tools"
     },
     "recent": {
       "clear": "Clear list",
@@ -253,6 +254,32 @@
     "toolNames": {
       "name": "Show tool names in the rail",
       "note": "Off, each tool shows only its key. In windows narrower than 1200 px, the rail shows only keys regardless."
+    },
+    "tools": {
+      "actions": "Actions",
+      "addIron": "Add iron",
+      "default": "Default",
+      "delete": "Delete",
+      "deleteNote": "Hole sets made with it keep their pitch",
+      "forNewPieces": "For new pieces",
+      "intro": "Your irons and starting values. The Iron menu on a hole set lists these irons; a new stitch line, seam allowance or fold takes these values, and keeps them.",
+      "ironActions": "Actions for {{name}}",
+      "irons": "Irons",
+      "makeDefault": "Make {{name}} the default",
+      "name": "Name",
+      "newIron": "Iron {{number}}",
+      "noIrons": "No irons yet. A new hole set takes the project’s pitch until you add one.",
+      "pitch": "Pitch",
+      "pitchOf": "Pitch of {{name}}",
+      "rename": "Rename",
+      "margin": {
+        "name": "Stitch margin",
+        "note": "How far in from the edge a new stitch line starts, and how far out a new seam allowance goes."
+      },
+      "thickness": {
+        "name": "Leather thickness",
+        "note": "Written into each new fold. Leave it blank to record none."
+      }
     },
     "language": {
       "invite": "LeatherCAD is translated by the people who use it. {{link}}",

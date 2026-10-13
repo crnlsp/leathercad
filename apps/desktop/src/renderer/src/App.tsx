@@ -59,6 +59,7 @@ import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { I18nProvider, useI18n } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
+import type { MakerTools } from './irons.js';
 import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
 import { IS_MAC, useKeysInSentences } from './keyCaps.js';
 import { commandFor, type CommandId } from './keymap.js';
@@ -158,6 +159,30 @@ export function App({
       .setPreferences(changes)
       .catch(() => undefined);
   }, []);
+
+  // The maker's irons and starting values (U.13, Settings › My tools): what
+  // the panel's Iron menu lists and what the app makes new things with.
+  const tools = useMemo<MakerTools>(
+    () => ({
+      irons: preferences.irons,
+      defaultIronId: preferences.defaultIronId,
+      stitchMarginMm: preferences.stitchMarginMm,
+      leatherThicknessMm: preferences.leatherThicknessMm,
+    }),
+    [
+      preferences.irons,
+      preferences.defaultIronId,
+      preferences.stitchMarginMm,
+      preferences.leatherThicknessMm,
+    ],
+  );
+  const makerDefaults = useMemo(
+    () => ({
+      stitchMarginMm: tools.stitchMarginMm,
+      leatherThicknessMm: tools.leatherThicknessMm,
+    }),
+    [tools.stitchMarginMm, tools.leatherThicknessMm],
+  );
 
   // The interface's language (ADR 0018): a preference like any other, so a
   // change in Settings re-renders every word at once. The document's `lang`
@@ -727,6 +752,7 @@ export function App({
               nextId={nextId}
               onStatus={handleStatus}
               drawAs={drawAs}
+              makerDefaults={makerDefaults}
               hardware={hardware}
               pointOptions={pointOptions}
               requestDelete={requestDelete}
@@ -767,6 +793,7 @@ export function App({
             nextId={nextId}
             requestDelete={requestDelete}
             requestDeletePart={requestDeletePart}
+            tools={tools}
           />
         </div>
 
@@ -893,6 +920,7 @@ export function App({
                 .catch(() => undefined)
             }
             onClose={() => setSettings(null)}
+            nextId={nextId}
           />
         )}
 

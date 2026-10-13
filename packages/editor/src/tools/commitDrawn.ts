@@ -17,6 +17,8 @@ import {
   type Problem,
 } from '@leathercad/domain';
 
+import type { Mm } from '@leathercad/core';
+
 import type { ToolContext } from '../tool.js';
 
 /**
@@ -138,7 +140,15 @@ function fileDrawn(
     // the *opening*: what was drawn is the stitch line, and the cut edge is
     // derived outward from it. One command, one undo step.
     const outlineId = nextId() as FeatureId;
-    ctx.dispatch(addAllowancePart(nextId() as PartId, featureId, outlineId, source));
+    ctx.dispatch(
+      addAllowancePart(
+        nextId() as PartId,
+        featureId,
+        outlineId,
+        source,
+        ctx.makerDefaults?.().stitchMarginMm,
+      ),
+    );
     // The stitch line is selected, not the edge: it is the thing the maker
     // dimensioned and the thing they will retype.
     ctx.store.select([featureId]);
@@ -148,7 +158,9 @@ function fileDrawn(
   const partId = targetPart(ctx);
   if (partId === null) return null;
 
-  ctx.dispatch(commandFor(mode, partId, featureId, source));
+  ctx.dispatch(
+    commandFor(mode, partId, featureId, source, ctx.makerDefaults?.().leatherThicknessMm ?? null),
+  );
   ctx.store.select([featureId]);
   return featureId;
 }
@@ -158,6 +170,7 @@ function commandFor(
   partId: PartId,
   featureId: FeatureId,
   source: DrawnSource,
+  thicknessMm: Mm | null,
 ) {
   switch (mode) {
     case 'cut-out':
@@ -165,7 +178,7 @@ function commandFor(
     case 'stitch':
       return addDrawnStitchLine(partId, featureId, source);
     case 'fold':
-      return addFoldLine(partId, featureId, source);
+      return addFoldLine(partId, featureId, source, 'valley', thicknessMm ?? undefined);
     case 'marking':
       return addMarkingLine(partId, featureId, source);
   }

@@ -29,6 +29,7 @@ export function NumberField({
   suffix = 'mm',
   disabled = false,
   precision = 2,
+  hideLabel = false,
 }: {
   label: string;
   value: number | null;
@@ -40,6 +41,8 @@ export function NumberField({
   suffix?: string;
   disabled?: boolean;
   precision?: number;
+  /** Named for a screen reader only, where a column heading or a setting's name says it (U.13). */
+  hideLabel?: boolean;
 }) {
   // While the user is typing, their draft wins; otherwise the document does,
   // so an undo immediately shows the restored number.
@@ -80,7 +83,7 @@ export function NumberField({
 
   return (
     <label className="field">
-      <span className="field-label">{label}</span>
+      <span className={hideLabel ? 'visually-hidden' : 'field-label'}>{label}</span>
       <span className="field-input">
         <input
           type="text"
@@ -96,6 +99,9 @@ export function NumberField({
               commit();
               event.currentTarget.blur();
             } else if (event.key === 'Escape') {
+              // An edit in progress is what Escape cancels — not the dialog
+              // or the tool around the field (U.13, Settings › My tools).
+              if (draftRef.current !== null) event.stopPropagation();
               updateDraft(null);
               event.currentTarget.blur();
             } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {

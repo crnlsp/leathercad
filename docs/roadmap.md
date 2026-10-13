@@ -120,8 +120,19 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 
 ### Phase 3 — the craft workflow
 
-- ☐ **U.13 Settings › My tools** (R-15). The maker's irons, a default, and starting values for new
+- ✅ **U.13 Settings › My tools** (R-15). The maker's irons, a default, and starting values for new
   pieces.
+  ✅ Built as described, kept in `preferences.json`. A first launch lists the seven irons the Iron
+  menu offered before, so nothing disappears; the maker adds, renames, deletes and picks the
+  default. The Iron menu lists the maker's irons, then — for a hole set made with an iron they do
+  not have, a file from another bench — that iron by its own name, then Custom. A new hole set takes
+  the default iron's pitch and name; a new stitch line and a new seam allowance the margin; a new
+  fold the thickness, which starts **not set** rather than at the mockup's 1.2: it is a
+  measurement of the maker's leather, and thickness compensation (9.1) will read it. Each new
+  thing keeps its own copy, so a project evaluates the same on any machine. Found on the way: the
+  plan said there was no default margin, but every project carries `defaultStitchInsetMm` and
+  `defaultIronPitchMm`, which X8 had the commands read; the app now passes the maker's values, and
+  the project's are the fallback with none (X8 amended in `domain-model.md`).
 - ☐ **U.14 Value chips beside the selected shape** (R-12). Width, height, corner and margin, edited
   on the drawing.
 - ☐ **U.15 Values in any unit, and sums** (R-12). `95-2*3.5` and `3.75in`, wherever a size is typed.
@@ -154,7 +165,7 @@ otherwise.
 | U.7 | If the project's name joins the Project menu's button, how is a project renamed? | Whichever of *Rename…* in the menu or F2 on the name fits what renaming does today |
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |
-| U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference |
+| U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |
 | U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
 
 ---

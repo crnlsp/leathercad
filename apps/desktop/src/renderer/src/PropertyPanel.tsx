@@ -27,7 +27,7 @@ import { Trash2 } from 'lucide-react';
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { KeyCap, useKeysInSentences } from './keyCaps.js';
-import { IRON_PRESETS } from './irons.js';
+import { defaultIron, type MakerTools } from './irons.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
 import { jobTotals, trailOf } from './propertyFacts.js';
@@ -53,6 +53,7 @@ export function PropertyPanel({
   nextId,
   requestDelete,
   requestDeletePart,
+  tools,
 }: {
   store: DocumentStore;
   project: Project;
@@ -66,6 +67,8 @@ export function PropertyPanel({
   requestDelete: (ids: readonly string[]) => void;
   /** The same for a whole part, picked by its heading. */
   requestDeletePart: (partId: string) => void;
+  /** The maker's irons and starting values, from Settings › My tools (U.13). */
+  tools: MakerTools;
 }) {
   const { t } = useI18n();
   const keys = useKeysInSentences();
@@ -180,6 +183,7 @@ export function PropertyPanel({
             spacingReported={
               problems.find((d) => d.problem.code === 'HOLE_SPACING_DEVIATION')?.severity
             }
+            irons={tools.irons}
           />
         </fieldset>
 
@@ -254,6 +258,7 @@ export function PropertyPanel({
         part={part}
         feature={feature}
         nextId={nextId}
+        tools={tools}
       />
 
       <section className="panel-group arrange" data-testid="arrange">
@@ -661,12 +666,14 @@ function DeriveActions({
   part,
   feature,
   nextId,
+  tools,
 }: {
   store: DocumentStore;
   project: Project;
   part: Part;
   feature: Feature;
   nextId: () => string;
+  tools: MakerTools;
 }) {
   const { t } = useI18n();
   if (feature.kind === 'cut-contour') {
@@ -678,9 +685,9 @@ function DeriveActions({
           hint={t('properties.addStitchLineHint')}
           onClick={() => {
             const id = nextId();
-            // No inset given: the command reads the project's stitch margin, so
-            // a project set up for 4 mm gets 4 mm (D7, X8).
-            store.dispatch(addStitchLine(part.id, id, feature.id));
+            // The maker's margin, from My tools (U.13): values come from the
+            // maker's settings, never a constant here (D7, X8).
+            store.dispatch(addStitchLine(part.id, id, feature.id, tools.stitchMarginMm));
             store.select([id]);
           }}
         >
@@ -699,14 +706,14 @@ function DeriveActions({
           hint={t('properties.addHolesHint')}
           onClick={() => {
             const id = nextId();
+            const iron = defaultIron(tools);
             store.dispatch(
-              // Likewise the iron: the pitch comes from the project's settings,
-              // and the label follows the pitch so the panel can still name the
-              // iron rather than calling every default "Custom".
+              // Likewise the iron: the maker's default, its pitch and its name,
+              // so the panel names it. With no irons at all, the project's.
               addStitchHoles(part.id, id, feature.id, {
                 mode: 'fit-whole',
                 corners: 'hole-at-corner',
-                ...ironLabelFor(store.getState().document.project.settings.defaultIronPitchMm),
+                ...(iron === undefined ? {} : { pitchMm: iron.pitchMm, ironLabel: iron.name }),
               }),
             );
             store.select([id]);
@@ -720,6 +727,7 @@ function DeriveActions({
           feature={feature}
           project={project}
           nextId={nextId}
+          allowanceMm={tools.stitchMarginMm}
         />
       </div>
     );
@@ -742,12 +750,15 @@ function AllowanceButton({
   part,
   feature,
   nextId,
+  allowanceMm,
 }: {
   store: DocumentStore;
   project: Project;
   part: Part;
   feature: Feature;
   nextId: () => string;
+  /** The maker's margin (U.13), which a seam allowance grows by too. */
+  allowanceMm: number;
 }) {
   const { t } = useI18n();
   return (
@@ -757,19 +768,13 @@ function AllowanceButton({
       hint={t('properties.addAllowanceHint')}
       onClick={() => {
         const id = nextId();
-        store.dispatch(addAllowance(part.id, id, feature.id));
+        store.dispatch(addAllowance(part.id, id, feature.id, allowanceMm));
         store.select([id]);
       }}
     >
       {t('properties.addAllowance')}
     </ReasonedButton>
   );
-}
-
-/** The name of an iron with this pitch, if the presets know one. */
-function ironLabelFor(pitchMm: number): { ironLabel?: string } {
-  const iron = IRON_PRESETS.find((preset) => preset.pitchMm === pitchMm);
-  return iron === undefined ? {} : { ironLabel: iron.label };
 }
 
 function findSelected(

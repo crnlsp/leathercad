@@ -30,6 +30,7 @@ import {
   type DrawMode,
   type EditPointsOptions,
   type HardwareOptions,
+  type MakerDefaults,
   type PointerInput,
 } from '@leathercad/editor';
 import {
@@ -136,6 +137,7 @@ export function CanvasHost({
   onHoverPart,
   toolId,
   drawAs,
+  makerDefaults,
   hardware,
   pointOptions = DEFAULT_EDIT_POINTS,
   requestDelete,
@@ -154,6 +156,8 @@ export function CanvasHost({
   onHoverPart?: (partId: string | null) => void;
   toolId: string;
   drawAs: DrawMode;
+  /** The maker's margin and leather (U.13): what *Stitch + allowance* and a new fold take. */
+  makerDefaults: MakerDefaults;
   hardware: HardwareOptions;
   /** The corner radius Edit Points rounds to (3.9d). */
   pointOptions?: EditPointsOptions;
@@ -330,6 +334,8 @@ export function CanvasHost({
   // new manager mid-drag would lose the half-drawn shape.
   const drawAsRef = useRef(drawAs);
   drawAsRef.current = drawAs;
+  const makerDefaultsRef = useRef(makerDefaults);
+  makerDefaultsRef.current = makerDefaults;
   const hardwareRef = useRef(hardware);
   hardwareRef.current = hardware;
   const pointOptionsRef = useRef(pointOptions);
@@ -370,6 +376,7 @@ export function CanvasHost({
         dispatch: (command) => store.dispatch(command),
         invalidate,
         drawAs: () => drawAsRef.current,
+        makerDefaults: () => makerDefaultsRef.current,
         requestDelete: (ids) => requestDeleteRef.current(ids),
         requestDeletePart: (partId) => requestDeletePartRef.current(partId),
       },

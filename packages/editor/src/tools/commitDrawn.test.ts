@@ -22,7 +22,10 @@ import {
 let counter = 0;
 const nextId = (): string => `id-${(counter += 1)}`;
 
-function harness(drawAs: DrawMode = 'outline'): {
+function harness(
+  drawAs: DrawMode = 'outline',
+  makerDefaults?: ToolContext['makerDefaults'],
+): {
   ctx: ToolContext;
   store: DocumentStore;
   draw: DrawCommit;
@@ -40,6 +43,7 @@ function harness(drawAs: DrawMode = 'outline'): {
       dispatch: (command) => store.dispatch(command),
       invalidate: () => {},
       drawAs: () => drawAs,
+      ...(makerDefaults === undefined ? {} : { makerDefaults }),
     },
   };
 }
@@ -80,6 +84,35 @@ describe('the drawing commit boundary', () => {
     // "part" that can never be cut.
     expect(project.parts).toHaveLength(1);
     expect(project.parts[0]!.features.map((f) => f.kind)).toEqual(['cut-contour', 'fold-line']);
+  });
+
+  it('writes the maker’s leather thickness into a drawn fold, and none when they have not set one (U.13)', () => {
+    for (const [thickness, expected] of [
+      [1.4, { materialThicknessMm: 1.4 }],
+      [null, {}],
+    ] as const) {
+      const { ctx, store, draw } = harness('fold', () => ({
+        stitchMarginMm: 3.5,
+        leatherThicknessMm: thickness,
+      }));
+      store.select([addPanel(store, 'p1') as never]);
+      const id = draw.commit(ctx, nextId, 'Fold', line);
+      const fold = store.getState().document.project.parts[0]!.features.find((f) => f.id === id)!;
+      expect(fold).toMatchObject(expected);
+      if (thickness === null) expect(Object.keys(fold)).not.toContain('materialThicknessMm');
+    }
+  });
+
+  it('grows Stitch + allowance by the maker’s margin rather than the project’s (U.13)', () => {
+    const { ctx, store, draw } = harness('stitch-allowance', () => ({
+      stitchMarginMm: 5,
+      leatherThicknessMm: null,
+    }));
+    draw.commit(ctx, nextId, 'Pocket', line);
+    const outline = store
+      .getState()
+      .document.project.parts[0]!.features.find((f) => f.kind === 'cut-contour')!;
+    expect(outline.source).toMatchObject({ kind: 'derived', op: { distanceMm: 5 } });
   });
 
   it('names a fold line for its direction, because the canvas cannot show it', () => {
