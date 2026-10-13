@@ -904,6 +904,13 @@
       "fit-whole": "Even, whole number",
       "hole-at-corner": "A hole on each corner"
     },
+    "lengthError": {
+      "mixed": "Give every number in a sum its unit, as in 10cm + 5mm. For 3½ inches, type 3.5in",
+      "notALength": "That doesn’t come to a length: a unit goes on a number once, and a length is not multiplied or divided by a length",
+      "notFinite": "That doesn’t come to a number",
+      "syntax": "Not a size this reads. Try 95, 95-2*3.5 or 3.75in",
+      "unit": "“{{unit}}” is not a unit here. Use mm, cm or in"
+    },
     "marking": {
       "alignment": "Alignment",
       "glue-area": "Glue area",

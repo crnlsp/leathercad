@@ -824,6 +824,33 @@ body {
   pointer-events: none;
 }
 
+/* A size a field cannot read (U.15): the text stays, its border and the line
+   beneath it say why — the reason wraps under the field, so the row it sits
+   in does not change width. */
+.field {
+  flex-wrap: wrap;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.field-reason {
+  flex-basis: 100%;
+  color: var(--error);
+}
+
+/* In a pair the field is already a column, where wrapping would start a second
+   one over its neighbour: the reason simply follows the input, and the
+   neighbour stays at the top of the row the reason makes taller. */
+.field-pair {
+  align-items: start;
+}
+
+.field-pair .field {
+  flex-wrap: nowrap;
+}
+
 .field-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2217,6 +2244,27 @@ button.problem-row,
 .tool-options .field-input {
   flex: none;
   width: 88px;
+}
+
+/* The work bar's height is fixed, so there a reason a size cannot be read
+   (U.15) hangs below the field, as a tooltip does, instead of wrapping. */
+.tool-options .field {
+  position: relative;
+  flex-wrap: nowrap;
+}
+
+.tool-options .field-reason {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: 360px;
+  padding: 6px 8px;
+  border: 1px solid var(--error);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  box-shadow: var(--elevation-raised);
 }
 
 .text-mark {

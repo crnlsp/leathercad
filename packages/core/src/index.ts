@@ -43,6 +43,8 @@ export {
   parseNumber,
 } from './format.js';
 
+export { MM_PER_INCH, parseLength, type LengthError } from './length.js';
+
 export { assertFinite, invariant } from './guard.js';
 
 export { CROCKFORD_ALPHABET, createIdFactory, type IdSource, type Ulid } from './id.js';
