@@ -71,3 +71,10 @@ export const RAIL_PX = { expanded: 152, collapsed: 56 } as const;
  * board 720 px.
  */
 export const PANEL_PX = { parts: 224, partsNarrow: 208, properties: 264, strip: 40 } as const;
+
+/**
+ * The work bar's and the status bar's heights, whatever they hold (§7.1):
+ * reserved, so the board never moves when a tool's options or the panels'
+ * chips change (U.5).
+ */
+export const BAR_PX = { work: 36, status: 28 } as const;

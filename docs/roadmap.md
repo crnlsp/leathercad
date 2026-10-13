@@ -101,8 +101,11 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   one press would have cancelled a drawing and left focus mode — a tool now claims it when it gives
   something up, and the window takes it only after; the link tick on a derived line chose between
   a rectangle's equal top and bottom by the last bit of a float, so the same panel drawn 10 px
-  further right wore it on the other side — the first of equal runs keeps it now; and the preload
-  declared three of the preferences' fields. Printed output did not move.
+  further right wore it on the other side — the first of equal runs keeps it now; the status bar's
+  height was its content's, so the chips made it a pixel taller (and the old narrow-window chips
+  37 px instead of 28) — it is a fixed 28 px from the theme now, as the work bar's 36 is; and the
+  preload declared three of the preferences' fields. Parts at 208 px keeps every row that fitted
+  at 220 on one line. Printed output did not move.
 - ✅ **U.6 Properties: order, weight and job totals** (R-05). A hole set reads iron, result, name,
   arrange, then Delete alone at its foot; with nothing selected, the pieces to cut, the holes to
   punch and the sheets to print.

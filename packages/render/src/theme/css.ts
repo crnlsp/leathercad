@@ -3,6 +3,7 @@ import type { LayerRole } from '@leathercad/domain';
 import { ACCENT, GO, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
+  BAR_PX,
   DENSITY,
   ELEVATION,
   FONT_SANS,
@@ -78,6 +79,8 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--parts-width-narrow'] = `${String(PANEL_PX.partsNarrow)}px`;
   variables['--properties-width'] = `${String(PANEL_PX.properties)}px`;
   variables['--panel-strip'] = `${String(PANEL_PX.strip)}px`;
+  variables['--work-bar-h'] = `${String(BAR_PX.work)}px`;
+  variables['--status-bar-h'] = `${String(BAR_PX.status)}px`;
 
   return variables;
 }

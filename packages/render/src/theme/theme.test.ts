@@ -96,6 +96,15 @@ describe('cssVariables', () => {
       '--panel-strip': '40px',
     });
   });
+
+  it('holds the work bar and the status bar to fixed heights, whatever is in them (U.5)', () => {
+    // Set by their content, the status bar grew 1 px with the panels' chips
+    // and moved the board, its fit and every pixel reference.
+    expect(cssVariables('comfortable')).toMatchObject({
+      '--work-bar-h': '36px',
+      '--status-bar-h': '28px',
+    });
+  });
 });
 
 /** WCAG relative luminance and contrast — how the spec states its colour claims. */

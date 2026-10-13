@@ -328,6 +328,47 @@ test('folding a panel, or focus mode, does not move the drawing (F.3)', async ()
   });
 });
 
+test('the status bar keeps its 28 px, chips and all, folded or not, at every width', async () => {
+  // Its content set its height: 28 px before U.5, 29 with the chips, and the
+  // pixel lost moved the board, the Sheets fit and every pixel reference. At
+  // 860 its old narrow-window chips had made it 37.
+  await withSample(async (window, app) => {
+    const barHeight = (): Promise<number> =>
+      window.getByTestId('status-bar').evaluate((bar) => bar.getBoundingClientRect().height);
+    for (const keys of [[], ['BracketLeft'], ['BracketLeft', 'BracketRight'], ['Backslash']]) {
+      await resize(app, window, 1920, 1080);
+      for (const key of keys) await window.keyboard.press(key);
+      for (const [width, height] of SIZES) {
+        await resize(app, window, width, height);
+        expect(await barHeight(), `${keys.join('+') || 'none'} at ${String(width)}`).toBe(28);
+      }
+      await resize(app, window, 1920, 1080);
+      for (const key of [...keys].reverse()) await window.keyboard.press(key);
+    }
+  });
+});
+
+test('a feature’s row in Parts is one line at 1024, where Parts is 208 px', async () => {
+  // At 220 px "Stitch holes" fit on one line; at U.5's 208 it wrapped. The
+  // names wrap rather than truncate (F.6), but not one that fitted before.
+  // "Cut-out mirrored" wraps at 220 too, and is left to U.8's rows.
+  await withSample(async (window, app) => {
+    await resize(app, window, 1024, 700);
+    const lines = await window.getByTestId('parts-list').evaluate((parts) =>
+      [...parts.querySelectorAll('.feature-name')]
+        .filter((name) => name.textContent !== 'Cut-out mirrored')
+        .map((name) => {
+          const range = document.createRange();
+          range.selectNodeContents(name);
+          const tops = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+          return `${name.textContent ?? ''}: ${String(tops.size)}`;
+        }),
+    );
+    expect(lines.length).toBeGreaterThan(8);
+    for (const line of lines) expect(line).toMatch(/: 1$/);
+  });
+});
+
 test('no fold covers the zoom control or the legend, at any width', async () => {
   await withSample(async (window, app) => {
     /** Whether the middle of each is itself, where a press there lands. */

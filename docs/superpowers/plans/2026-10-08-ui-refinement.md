@@ -888,7 +888,14 @@ and validated as the existing ones are. E2E at the five widths.
   further right on the wider board, wore its tick at the bottom. Longer by more than `EPS_LENGTH`
   now, so the first of equal runs keeps it.
 - **The chips** — Parts `[` · Focus `\` · Properties `]` — sit by the cursor readout, 24 px
-  targets in a bar that keeps its 29 px. A chip whose panel is not open has the accent border
+  targets in a bar of a fixed 28 px, its height before U.5: `BAR_PX.status` (`--status-bar-h`),
+  beside the work bar's 36, which moved into the theme with it (`BAR_PX.work`, `--work-bar-h`).
+  Set by its content, the bar had grown a pixel with the chips, and 37 px below 1024 with the old
+  narrow-window chips.
+- **Rows stay as they were at 208 px.** At 220 "Stitch holes" fitted one line; at 208, with the
+  tree scrolling at 1024 × 700, it had 58 px of its 65 and wrapped. Parts takes Properties' thin
+  scrollbar and a 12 px right padding, and has 67. Names still wrap rather than truncate (F.6):
+  "Cut-out mirrored" wrapped at 220 too, and is U.8's. A chip whose panel is not open has the accent border
   (`Highlight` in forced colours). A button pressed by the pointer lets go of focus, as the zoom
   control's do.
 
