@@ -1245,9 +1245,12 @@ reordering agree; inches are 25.4 mm exactly.
 - **For U.14 and U.16:** the chips call the same `parseLength`; its `LengthError` is the "keeps the
   chip open and says why" case, before the domain's own refusal.
 - Not built: a mixed number with a space (`3 1/2in`), which reads as two numbers and is refused.
-  A field shows two decimals, so `1/8in` stores 3.175 and shows `3.17` (`toFixed` of the binary
-  3.17499…); the stored size is exact, and showing four decimals is a display decision for every
-  field, not this slice's.
+- **A field rounds the number as written** (fixed on review): `1/8in` stores 3.175 and showed
+  `3.17`, `toFixed` of the binary 3.17499…. `formatEditable` now rounds the shortest decimal the
+  number is, half away from zero, so it reads `3.18`, checked against integer arithmetic on every
+  stored quantum. `formatNumber` — the ruler, the readouts and the printed dimensions — keeps
+  `toFixed`, so nothing printed moves; whether readouts and printed dimensions should round the
+  same way is a decision for its own pull request.
 
 ---
 

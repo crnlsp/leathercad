@@ -100,6 +100,10 @@ test('the work bar’s corner radius takes inches too, and its reason hangs belo
 
     await enter(radius, '1/4in');
     await expect(radius).toHaveValue('6.35');
+    // 3.175 mm, shown as written rather than as its binary 3.17499…
+    await enter(radius, '1/8in');
+    await expect(radius).toHaveValue('3.18');
+    await enter(radius, '1/4in');
 
     await enter(radius, 'abc');
     await expect(radius).toHaveAttribute('aria-invalid', 'true');

@@ -21,9 +21,7 @@ export const MINUS = '−';
  * Decimals are fixed rather than trimmed, so figures stay in columns.
  */
 export function formatNumber(value: number, precision: number): string {
-  const fixed = Math.abs(value).toFixed(precision);
-  const isZero = /^[0.]*$/.test(fixed);
-  return value < 0 && !isZero ? `${MINUS}${fixed}` : fixed;
+  return signed(value, Math.abs(value).toFixed(precision));
 }
 
 /**
@@ -31,10 +29,36 @@ export function formatNumber(value: number, precision: number): string {
  * "105" and not "105.00" — a field shows the number that was typed, not a
  * column of them. A whole number keeps its own zeros: 10 is not "1", and 0 is
  * not blank.
+ *
+ * **Rounded as written, half away from zero** — the decimal the number is, not
+ * its binary approximation: 1/8 in is 3.175 mm, stored as 3.17499999…, which
+ * `toFixed(2)` turns into 3.17, a field 0.005 mm short of what was typed
+ * (U.15). `formatNumber` keeps `toFixed`: it writes the ruler and the printed
+ * dimensions, and they do not move for a field's sake.
  */
 export function formatEditable(value: number, precision: number): string {
-  const fixed = formatNumber(value, precision);
+  const fixed = signed(value, roundedAsWritten(Math.abs(value), precision));
   return fixed.includes('.') ? fixed.replace(/\.?0+$/, '') : fixed;
+}
+
+/**
+ * `magnitude` to `precision` decimals, rounding the shortest decimal that is
+ * this number — what `String` writes — half up. Shifting by an exponent in the
+ * text (`"3.175e2"` is exactly 317.5) keeps the tie a tie. Exponent notation,
+ * below 1e-6 or from 1e21, is left to `toFixed`: there is no tie at a field's
+ * precision there.
+ */
+function roundedAsWritten(magnitude: number, precision: number): string {
+  const written = String(magnitude);
+  if (written.includes('e')) return magnitude.toFixed(precision);
+  const shifted = Math.round(Number(`${written}e${String(precision)}`));
+  return (shifted / 10 ** precision).toFixed(precision);
+}
+
+/** A true minus, and none on anything that rounds to zero. */
+function signed(value: number, fixed: string): string {
+  const isZero = /^[0.]*$/.test(fixed);
+  return value < 0 && !isZero ? `${MINUS}${fixed}` : fixed;
 }
 
 /** A length, with its unit: `−3.85 mm`. */
