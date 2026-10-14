@@ -874,6 +874,10 @@ export function App({
           ]
             .filter((name) => name !== '')
             .join(' ')}
+          // The room the frame is laid out for. It follows the window a frame
+          // late — media queries are evaluated as the window next renders — so
+          // a test waits for it after resizing before it presses anything.
+          data-room={room}
         >
           <ToolPalette
             activeId={toolId}

@@ -9,6 +9,7 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 import { fromProjectMenu, renameProject } from './projectMenu.js';
+import { resizeWindow } from './windowSize.js';
 
 let app: ElectronApplication;
 
@@ -553,9 +554,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
     await window.mouse.click(box!.x + 40, box!.y + 40);
     await expect(window.getByTestId('selected-count')).toHaveText('0');
 
-    await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(860, 600);
-    });
+    await resizeWindow(instance, window, 860, 600);
     await expect(window.getByTestId('toggle-parts')).toBeVisible();
     await expect(window.getByTestId('toggle-properties')).toBeVisible();
     await expect(window.getByTestId('tool-rail')).toBeVisible();

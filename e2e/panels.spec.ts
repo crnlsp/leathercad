@@ -8,6 +8,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
+import { resizeWindow } from './windowSize.js';
 
 /**
  * U.5 (R-04, the requirements' §5): Parts and Properties fold to 40 px strips
@@ -38,13 +39,8 @@ async function withSample(run: (window: Page, app: ElectronApplication) => Promi
   }
 }
 
-async function resize(app: ElectronApplication, window: Page, width: number, height: number) {
-  await app.evaluate(
-    ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0]?.setSize(size[0], size[1]),
-    [width, height] as const,
-  );
-  await expect.poll(() => window.evaluate(() => innerWidth)).toBe(width);
-}
+/** Resized, and laid out for the new size before anything is pressed. */
+const resize = resizeWindow;
 
 /** The board's width, in CSS pixels. */
 const boardWidth = (window: Page): Promise<number> =>

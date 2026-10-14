@@ -1118,6 +1118,14 @@ calls Print green.
 - **Print's dialog button** is in the paper's colour too: `.tool.primary` is that one button.
 - **The pixel references**: only `empty-window.png` changed, and only inside the two bars; the
   other two clip to the board.
+- **A resize races the room** (found on CI): `innerWidth` changes with the window, but the frame
+  learns its room from media queries, which Chromium evaluates only when it next renders. U.5's
+  860 px test pressed Enter on the Parts chip in between, so the key was heard by the wide
+  layout and folded Parts instead of opening it over the board — 4 runs in 10 under CPU load
+  on `develop` too, and every time on CI's runner for this branch. `e2e/windowSize.ts`'s
+  `resizeWindow` now waits for the frame's own `data-room` as well; the specs that resize and
+  then press or measure use it. A maker cannot press a key in that frame, so the app is
+  unchanged but for the attribute.
 
 ---
 

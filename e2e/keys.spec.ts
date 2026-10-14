@@ -8,6 +8,7 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
+import { resizeWindow } from './windowSize.js';
 
 /**
  * Keys by where they are, shown as caps, and tooltips that fit (U.3, §2
@@ -34,13 +35,6 @@ async function withSample(body: (window: Page, app: ElectronApplication) => Prom
   }
 }
 
-async function resize(app: ElectronApplication, width: number, height: number): Promise<void> {
-  await app.evaluate(
-    ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0]?.setSize(size[0], size[1]),
-    [width, height] as const,
-  );
-}
-
 /** A key press as a keyboard of another layout sends it. */
 async function press(
   window: Page,
@@ -55,8 +49,7 @@ async function press(
 
 test('a tooltip at the window’s right edge is one line, 8 px inside it (R-10, mockup 16)', async () => {
   await withSample(async (window, app) => {
-    await resize(app, 860, 600);
-    await expect.poll(() => window.evaluate(() => innerWidth)).toBe(860);
+    await resizeWindow(app, window, 860, 600);
 
     // Help is the last control on the right since U.7; Design | Sheets moved to the middle.
     await window.getByTestId('help-menu').hover();
@@ -73,7 +66,7 @@ test('a tooltip at the window’s right edge is one line, 8 px inside it (R-10, 
 
 test('near the window’s foot, a tooltip opens above its control (R-10)', async () => {
   await withSample(async (window, app) => {
-    await resize(app, 1280, 600);
+    await resizeWindow(app, window, 1280, 600);
     await expect.poll(() => window.evaluate(() => innerHeight)).toBe(600);
     // The rail's own toggle sits at the window's foot, by the status bar.
     // (Properties' last control was Add stitch line, scrolled to the foot;

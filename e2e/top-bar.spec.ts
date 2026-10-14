@@ -7,6 +7,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
+import { resizeWindow } from './windowSize.js';
 
 /**
  * Slice 8.7: the project bar's Project menu, Help and About. Each launch has
@@ -137,14 +138,6 @@ async function openSample(window: Page): Promise<void> {
   await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
 }
 
-async function resize(app: ElectronApplication, width: number, height: number, window: Page) {
-  await app.evaluate(
-    ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0]?.setSize(size[0], size[1]),
-    [width, height] as const,
-  );
-  await expect.poll(() => window.evaluate(() => window.innerWidth)).toBeLessThanOrEqual(width);
-}
-
 const BAR = [
   'project-menu',
   'save-state',
@@ -175,7 +168,7 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
       [1024, '5 × A5', 'Unsaved'],
       [860, '5', ''],
     ] as const) {
-      await resize(app, width, 600, window);
+      await resizeWindow(app, window, width, 600);
       const bar = (await window.getByTestId('project-bar').boundingBox())!;
       // One row, the height it has in any window.
       expect(bar.height, `${String(width)}: nothing wrapped`).toBeLessThanOrEqual(42);
