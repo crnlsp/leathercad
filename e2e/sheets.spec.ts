@@ -57,11 +57,11 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
   }
 }
 
-/** The Parts print line of the part with this name. */
+/** The Parts print line of the part with this name: on the Sheets view (U.8). */
 function printLine(window: Page, name: string): Locator {
   return window
     .getByTestId('parts-list')
-    .locator('section', { has: window.getByRole('button', { name, exact: false }) })
+    .locator('section', { has: window.getByRole('treeitem', { name, exact: false }) })
     .locator('[data-testid^="part-print-"]')
     .first();
 }
@@ -121,6 +121,9 @@ function hasColour(pdf: string): boolean {
 
 test('Parts says where each part prints, and why a part does not (7.4b)', async () => {
   await withPrintTest(async ({ window }) => {
+    // Where each piece prints is the Sheets view's to say (U.8).
+    await expect(window.locator('[data-testid^="part-print-"]')).toHaveCount(0);
+    await window.getByTestId('view-sheets').click();
     await expect(printLine(window, 'Outer panel')).toHaveText('Sheet 1');
     await expect(printLine(window, 'Pocket')).toHaveText('Sheet 1');
     await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
@@ -144,6 +147,9 @@ test('Parts says where each part prints, and why a part does not (7.4b)', async 
     await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
       'Paper: 1 sheet of A4, portrait',
     );
+    // Design says only that it does not print, with the reason in its tooltip.
+    await window.getByTestId('view-design').click();
+    await expect(strap.locator('[data-testid^="part-not-printed-"]')).toBeVisible();
   });
 });
 
@@ -311,11 +317,12 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
 
     // 1. The paper says what it will print, before anything is exported.
     await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
-    await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
 
-    // 2. The sheets: the same answer, in pictures and in words.
+    // 2. The sheets: the same answer, in pictures and in words — and Parts
+    //    says where each piece prints, as Design's no longer does (U.8).
     await window.getByTestId('view-sheets').click();
     await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
+    await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
 
     // 3. Pointing at the strap on sheet 2: the status bar names the sheet,
     //    Parts lights the strap's row, and a click selects the strap.
@@ -371,13 +378,13 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await window.mouse.up();
     // A move is an edit: undo has something to undo.
     await expect(window.getByTestId('undo')).toBeEnabled();
-    await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
     await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
 
     // 5. Nor does the window's size.
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
     await window.getByTestId('view-sheets').click();
     await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
+    await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
 
     // 6. Export: the PDF is the plan that was shown — three A4 portrait sheets.
     await window.getByTestId('export-pdf').click();
@@ -397,6 +404,7 @@ test('what does not print is said, in Parts, in the sheets and in the PDF (7.4d)
     const holes = panel.locator('[data-testid^="feature-row-"]', { hasText: 'Stitch holes' });
     const holesId = ((await holes.getAttribute('data-testid')) ?? '').replace('feature-row-', '');
     await window.getByTestId(`feature-visible-${holesId}`).click();
+    await window.getByTestId('view-sheets').click();
     await expect(printLine(window, 'Outer panel')).toHaveText(
       /^Sheet 1\s*1 hidden feature isn't printed\.$/,
     );
@@ -404,7 +412,6 @@ test('what does not print is said, in Parts, in the sheets and in the PDF (7.4d)
     // Hide the strap: it leaves the paper, and the plan shrinks to one sheet.
     const strap = window.locator('[data-testid^="part-section-"]', { hasText: 'Strap' });
     await strap.locator('[data-testid^="part-visible-"]').click();
-    await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(
       "1 sheet of A4, portrait. Strap isn't printed.",
     );

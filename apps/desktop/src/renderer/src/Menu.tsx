@@ -35,6 +35,7 @@ export function MenuButton({
   onOpen,
   keys,
   triggerRef,
+  tabIndex,
   children,
 }: {
   /** The button's accessible name, and the menu's. */
@@ -45,6 +46,8 @@ export function MenuButton({
   keys?: CommandId;
   /** The button, for whoever opens the menu by its key, or gives focus back to it. */
   triggerRef?: RefObject<HTMLButtonElement | null>;
+  /** -1 inside a widget that keeps one stop for Tab: a Parts row (U.8). */
+  tabIndex?: number;
   testId: string;
   className: string;
   /** Which edge of the button the menu lines up with. */
@@ -87,6 +90,7 @@ export function MenuButton({
           aria-label={label}
           aria-haspopup="menu"
           aria-expanded={open}
+          tabIndex={tabIndex}
           onClick={() => {
             if (!open) onOpen?.();
             setOpen((was) => !was);

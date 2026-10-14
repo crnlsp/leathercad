@@ -256,7 +256,8 @@ before any tiled one:
   - The turn is exact: (x, y) becomes (−y, x), by a matrix with no rounding in it. No scale.
   - The part's words turn with it. Its name reads up its left side, from the sheet's right edge,
     as drafting reads a turned dimension, so the cut-out template is the same shape either way.
-  - Parts says *Sheet 1, turned*, since the board shows the part as drawn.
+  - Parts says *Sheet 1, turned* on the Sheets view, since the board shows the part as drawn
+    (Design's Parts tree no longer says where a part prints, U.8).
   - This lifts roadmap 7.2's "never turn until the model knows the grain", by decision
     (2026-10-01). A cut-out template carries nothing of the sheet it was printed on, and a taped
     join is the least accurate thing on a sheet. When grain arrives it will be an arrow on the

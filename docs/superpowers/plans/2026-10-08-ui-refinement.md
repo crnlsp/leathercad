@@ -215,7 +215,7 @@ and `css.ts` projects it onto `:root`.
 | `on-primary` | `GO.onGo` #1D2126 | #14161A | **changed**, U.7 ✅: `ACTION.onPrimary`, `--on-primary`; AA on `primary`, `primary-side`, `warning` and `error` |
 | `rail-wide` / `rail-narrow` | `RAIL_PX` 152 / 52 | 152 / **56** px | **changed**, U.5 ✅: `RAIL_PX`, `--rail-w-expanded` / `--rail-w-collapsed` |
 | `parts-width` / `properties-width` | `--parts-w` 220 and `--properties-w` 288 (264 below 1280), written in `styles.css` | 224 / 264 px | **changed**, U.5 ✅, into the theme: `PANEL_PX.parts` / `.properties`, `--parts-width` / `--properties-width`; and `PANEL_PX.partsNarrow` 208 below 1280, `--parts-width-narrow` |
-| `panel-strip` · `row-height` | — | 40 px · 28 px (a Parts row was 34) | **new**, U.5 ✅ (`PANEL_PX.strip`, `--panel-strip`) and U.8 |
+| `panel-strip` · `row-height` | — | 40 px · 28 px (a Parts row was 34) | **new**, U.5 ✅ (`PANEL_PX.strip`, `--panel-strip`) and U.8 ✅ (`DENSITY.*.row`, `--row-height`: 28, 24 compact) |
 | `sheets-desk` · `paper` · `sheet-margin` | `SHEET`, `theme/sheets.ts` | #D6D1C7 · #FFFFFF · #D9579B | unchanged, recorded |
 
 ---
@@ -1156,14 +1156,67 @@ tree semantics or tree keyboard.
   parent; Space toggles visibility; F2 renames. ARIA `tree` / `treeitem` with roving focus.
 - Selecting on the canvas opens the piece and scrolls its row into view.
 
-**Find out first.** How features are ordered today and whether a feature can follow two others;
-which row actions the right-click menu lacks; how the list behaves with 30 features.
+**Find out first.**
+- [x] How features are ordered today, and whether a feature can follow two others. *Document
+      order, nested by `featureTree`: a derived feature under its source within the part, drawn
+      ones and followers of another part's features as roots. A feature follows at most one
+      (`source.sourceId`); a dimension names two features, but as references, not sources, so
+      it is a root.*
+- [x] Which row actions the right-click menu lacks. *None: a piece's eye is the menu's Hide on
+      every feature in it, its ⋯ holds Duplicate and Delete, and a feature's lock and eye are
+      Lock and Hide. F2's rename is new and not on the menu — a decision below.*
+- [x] How the list behaves with 30 features. *The sample with five copies of the lining, 32
+      features: a click on a row changes the list in 3.0 ms on `develop` and 4.5 ms here (median
+      of 60, click to the DOM's change), each piece's thumbnail fitted once per evaluation.*
 
-**Done when — check in the app.** Mockup 09's three states; the keys, with a screen reader's
-announcements sensible (the accessibility scan passes); a canvas click reveals its row.
+**Done when — check in the app.**
+- [x] Mockup 09's three states — at rest, hover and keyboard focus, the states that stay
+      (`e2e/parts-tree.spec.ts`, and screenshots at 1440 and 1024).
+- [x] The keys, with a screen reader's announcements sensible: rows are `treeitem`s named by
+      their names, with level, position, expanded and selected, and *Hidden*, *Locked* or *Not
+      printed* as their description; the scan passes with pieces open, closed and on Sheets.
+- [x] A canvas click reveals its row: the piece opens, the row scrolls into view, focus stays.
 
 **Tests.** The nesting from the derivation graph (unit); keyboard movement as a pure function over
 the visible rows (unit); E2E for keys and reveal.
+
+**As built (2026-10-14).** What the plan above did not know:
+
+- **Rows as a function**: `treeRows(parts, closed)` and `treeMove(rows, at, key)` in
+  `renderer/src/partsTree.ts`, with properties: Down from the first row reaches every row shown
+  and Up comes back; Left from any feature reaches its piece one level at a time. A row's key is
+  `part:<id>` or `feature:<id>`, since a piece and a feature may share an id. `revealed` is the
+  selection's opening of its piece.
+- **One flat tree**: `role="tree"` holds every row, `aria-level` says the nesting, and each
+  piece's `section` (`part-section-<id>`, `role="none"`) only groups its rows. Nested groups would
+  have named each piece by every feature in it. A row is named by its name alone; its state is
+  its description. The Sheets view's print line and an empty piece's *Delete part* are inside the
+  piece's row, where a tree allows them.
+- **Selection follows focus**: ↑ and ↓ select the row they reach, so Delete acts on the row the
+  maker is on; Enter selects, as the row's button did, and lets the key go on. Space, F2 and the
+  arrows stop at the tree. Space and F2 are the keymap's (`scope: 'tree'`, group *In Parts*), so
+  the shortcut list shows them and U.12 can change them; the window hears neither.
+- **The row's buttons are out of the Tab order** (one Tab stop for the tree); the keyboard reaches
+  what they do by Space and the right-click menu. Pressed by the pointer they let go of focus.
+  `MenuButton` took a `tabIndex` for the piece's ⋯.
+- **Lock and eye over the row's end**: absolutely placed just left of the row's marks, faded out
+  at rest and shown on hover or focus — over the name's end or the hole count, so no name
+  reflows under the pointer, and left of the marks, so the mirror mark's and *Not printed*'s
+  tooltips stay in reach. What is on is a silent mark (lock, crossed eye) at rest.
+- **Not printed, in Design**: the print line is the Sheets view's until U.9. Design marks a piece
+  that does not print with a crossed printer in the warning colour, its tooltip the reason
+  (*Not printed. It is hidden.*), and says it in the row's description. A printing piece's hidden
+  features are told by their own marks.
+- **Pieces start open** and a fold is the session's; a selection on the board opens its piece,
+  sets the tree's Tab stop on its row and scrolls it into view (`block: 'nearest'`), focus staying
+  on the board.
+- **Fixed on the way**: the piece's ⋯ menu, inside the faded actions, faded with them as the
+  pointer left the row for it; forced colours drew every row's transparent border; a rename
+  outlived its row — undone away from macOS's Edit menu while the field had focus, which never
+  blurs it — and its field came back uninvited on redo, so a rename now ends when its row is no
+  longer among the rows shown, committing nothing; the tree's
+  print line was 4.3:1 on a hovered row's fill and takes `--text` there; "Cut-out mirrored" fits
+  one line at 208 px, which U.5 left to this slice.
 
 ---
 

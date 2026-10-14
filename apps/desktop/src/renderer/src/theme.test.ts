@@ -16,7 +16,8 @@ const stylesheet = readFileSync(resolve(import.meta.dirname, 'styles.css'), 'utf
  * Every token the stylesheet reads comes from `packages/render/src/theme`, the
  * module the canvas and the exporter read — so it cannot drift from them. The
  * only custom properties it may define itself are layout: the frame's column
- * widths, which are about arranging the window rather than how anything looks.
+ * widths, and a Parts row's depth in the tree (U.8), which its row sets —
+ * about arranging the window rather than how anything looks.
  */
 // Comments may name anything, including the colours they explain.
 const css = stylesheet.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -36,7 +37,7 @@ describe('the stylesheet reads the theme', () => {
   });
 
   it('defines no token of its own except the layout it arranges', () => {
-    expect([...LOCAL].sort()).toEqual(['--parts-w', '--properties-w', '--rail-w']);
+    expect([...LOCAL].sort()).toEqual(['--level', '--parts-w', '--properties-w', '--rail-w']);
     for (const name of LOCAL) expect(THEME.has(name), name).toBe(false);
   });
 

@@ -217,7 +217,7 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
     await window.getByTestId('tool-select').click();
     await window
       .getByTestId('parts-list')
-      .getByRole('button', { name: /Outline/ })
+      .getByRole('treeitem', { name: /Outline/ })
       .click();
     await expect(window.getByTestId('selected-count')).toHaveText('1');
 

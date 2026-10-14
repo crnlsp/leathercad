@@ -157,7 +157,7 @@ verification strip (`contentAreaMm`). A4 portrait prints up to 190 × 268.5 mm, 
 instruction to print at 100 % in it, what the sheet is beside it, and LeatherCAD's mark (7.8).
 
 **Turned** — Printed a quarter turn from how it was drawn, words and all, because that took fewer
-sheets (7.8). Parts says *Sheet 1, turned*.
+sheets (7.8). Parts says *Sheet 1, turned* on the Sheets view.
 
 **Taped piece** — A part too large for the printable area, printed as tiles across several sheets
 that overlap by 10 mm and are taped together on their join lines. Its sheets are "Sheets 2–3,

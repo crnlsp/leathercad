@@ -56,10 +56,11 @@ export type Density = 'comfortable' | 'compact';
  * exists from day one, so choosing it later re-derives nothing.
  */
 export const DENSITY: Readonly<
-  Record<Density, { control: number; controlLg: number; rowPadY: number }>
+  Record<Density, { control: number; controlLg: number; rowPadY: number; row: number }>
 > = {
-  comfortable: { control: 28, controlLg: 32, rowPadY: 4 },
-  compact: { control: 24, controlLg: 28, rowPadY: 2 },
+  // `row` is a Parts tree row (§3 `row-height`, U.8): a piece and each thing it is made of.
+  comfortable: { control: 28, controlLg: 32, rowPadY: 4, row: 28 },
+  compact: { control: 24, controlLg: 28, rowPadY: 2, row: 24 },
 };
 
 /** The tool rail with its tools' names, and with their keys only (§5: `rail-wide`, `rail-narrow`). */

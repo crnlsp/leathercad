@@ -47,6 +47,7 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
     shortcuts: [{ keys: [{ code: 'Shift' }], does: 'shortcuts.square' }, ...listed('drawing')],
   },
   { id: 'editingPoints', shortcuts: listed('editingPoints') },
+  { id: 'parts', shortcuts: listed('parts') },
 ];
 
 /**

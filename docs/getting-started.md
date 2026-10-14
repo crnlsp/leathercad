@@ -97,8 +97,9 @@ back.
    example, *3 × A4 portrait*. Each paper in its list says how many sheets it takes, the
    tooltip of **Portrait** and **Landscape** what the other way up would take, and the line under
    them what is taped across sheets, so you can pick the one that uses the fewest sheets.
-   **Parts** says which sheet each part prints on, and why a part will not print (it is hidden,
-   or it has a problem).
+   In Design, a piece that will not print has a mark on its row in **Parts**, whose tooltip says
+   why (it is hidden, or it has a problem); on the Sheets view, **Parts** says which sheet each
+   piece prints on.
 2. Choose **Sheets** in the middle of the top bar (**Ctrl+2**), or *See the sheets* under the paper,
    to see the pieces on the paper exactly as the PDF will put them. A part bigger than a sheet is printed across
    several, taped together on a dashed join line with crosses on it; its joins also show on the
@@ -160,6 +161,12 @@ the size your software shows: it should be the size you drew.
   folds you make are kept for next time; the ones a small window makes are not. On a keyboard
   other than a US one, the keys are where a US keyboard has `[`, `]` and `\`, shown as yours
   prints them (`ü`, `+` and `#` on a German one).
+- **Parts:** each piece, with what it is made of nested the way it is built — *Outline › Stitch
+  line › Stitch holes* — and its hole counts. A piece folds with its arrow; a piece you pick on the
+  board opens and scrolls into view. Pointing at a row shows its lock and eye; a hidden or locked
+  feature keeps its mark. With a row focused, **↑** and **↓** move (and select), **→** opens a
+  piece, **←** closes it or goes up a level, **Space** hides or shows, **F2** renames, and
+  **Shift+F10** opens the row's menu; Tab leaves the tree. A locked feature is reached here.
 - **Settings** (**Ctrl+,**): clear the recent projects, and choose how the legend and the tool
   rail start. They stay as you left them.
 - **Settings › My tools:** the pricking irons you own, by your own names, and the one a new hole

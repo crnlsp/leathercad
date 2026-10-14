@@ -145,8 +145,26 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 
 ### Phase 2 — panels, lists and small fixes
 
-- ☐ **U.8 The Parts tree** (R-07). Pieces fold; features nest under what they follow; keys for the
+- ✅ **U.8 The Parts tree** (R-07). Pieces fold; features nest under what they follow; keys for the
   tree; *Sheet N, turned* leaves Design.
+  ✅ Built as described. Each piece is a row with its fold, its outline in small (U.5's
+  `thumbnailPath`) and its ×N; under it what it is made of, a level deeper for each thing it
+  follows — *Outline › Stitch line › Stitch holes* — joined by elbows, in 28 px rows
+  (`row-height`, the theme's `DENSITY`), a hole set's count at the right. At rest no row shows its
+  lock and eye; hover or keyboard focus shows them over the row's end, so no name reflows; a
+  hidden or locked feature keeps its mark, the mirror mark always shows. A WAI-ARIA tree with one
+  Tab stop: ↑ ↓ move and select, → opens or goes in, ← closes or goes up, Home and End, **Space**
+  hides or shows, **F2** renames in place (one undo step), Shift+F10 the row's menu; the window's
+  keys — Delete, Ctrl+Z, a tool's letter — pass through a focused row. A selection on the board
+  opens its piece and scrolls its row into view without taking focus. *Sheet 1, turned* is the
+  Sheets view's now; in Design a piece that will not print has a mark whose tooltip says why
+  (*Not printed. It is hidden.*). Pieces start open, and a fold lasts the session. Found on the
+  way: a piece's ⋯ menu, once its button showed only on hover, faded out with the row as the
+  pointer left for it — it stays while open; forced colours drew a box round every row; a rename whose row went from under it — undone
+  away from macOS's Edit menu while its field had focus — reopened its field when the row came
+  back, and now ends with the row, keeping nothing half-typed; at 1024 px
+  *Cut-out mirrored* now fits one line. A selection paints in 4.5 ms with 32 features (3.0 ms
+  before). Printed output did not move.
 - ☐ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
   the reminder to measure. No Turn: no piece is turned by hand.
 - ☐ **U.10 The legend** (R-09). Open with names by default; folds to a chip that is remembered.
@@ -198,7 +216,7 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 | # | What | Plan |
 |---|---|---|
 | ☐ **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | Record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Moved here from 1.3.5's R1 on 2026-10-09 |
-| ☐ **R9** | `Ctrl+0` changed meaning in U.4: it fitted the pattern until 1.5 and is *True size* now, with fitting on `Shift+1`. The changelog's line is the pull request's title, which names the new keys but not the change | When 1.5's release pull request opens, put one sentence at the top of its notes, and of the GitHub release's: *`Ctrl+0` now shows true size; fit the pattern with `Shift+1`.* `getting-started.md` already says so |
+| ☐ **R9** | `Ctrl+0` changed meaning in U.4: it fitted the pattern until 1.5 and is *True size* now, with fitting on `Shift+1`. The changelog's line is the pull request's title, which names the new keys but not the change | When 1.5's release pull request opens, put one sentence at the top of its notes, and of the GitHub release's: *`Ctrl+0` now shows true size; fit the pattern with `Shift+1`.* `getting-started.md` already says so. And from U.8: *In Parts, Space on a focused row now hides or shows it (it used to select it, as Enter still does).* |
 | ☐ **R10** | U.7's window edited flag is unverified on macOS, the one platform that shows it: it was checked on Linux, where Electron ignores it, and through the test host and a mock of `setDocumentEdited` | Check 12 of [`release-checklist.md`](release-checklist.md) on a real Mac, with the packaged dmg: an edit sets the window's edited dot, *Save* clears it. Tick this only then, saying the macOS version and the date — never from Linux, the test host or a mock |
 
 ### Decisions this release needs
@@ -225,6 +243,9 @@ slice took, or will take, and is still open.
 | U.7 | What count does Print's problems half show? | **Decided 2026-10-14:** the worst severity's alone, as R-06 draws it. Its tooltip and accessible name give every severity's count, from the one count (`countBySeverity`) the drawer and the export notice read |
 | U.7 | One paper list, as 7.4a had, or paper and orientation apart, as mockup 08 draws them? | **Decided 2026-10-14:** apart. Each paper says its sheet count and each orientation's tooltip what it takes, before it is chosen; the summary keeps the scale and the taping |
 | U.7 | Does *Export PDF*'s main half remember the folder it last saved to? | **Decided 2026-10-14:** no; it does what *Export PDF* did. Remembering the folder would be a feature of its own, scoped separately |
+| U.8 | Do pieces start open or closed, and is a fold remembered? | Open, so nothing is hidden until the maker hides it; a fold is the session's, like the view, and a selection on the board reopens its piece |
+| U.8 | Does selection follow focus in the tree? | Yes, as in a file manager: ↑ and ↓ select the row they reach, so Delete and Properties act on the row the maker is on. Tab into the tree selects nothing |
+| U.8 | Rename on the right-click menu? | Not added: F2 in the tree and the Name field in Properties rename; the menu is the board's too, where F2 is not heard |
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |
 | U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |
