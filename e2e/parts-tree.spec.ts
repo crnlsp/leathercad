@@ -166,6 +166,47 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
   });
 });
 
+test('a rename ends with its row: undone away and redone, the row comes back as it was', async () => {
+  // macOS's Edit menu undoes while the name field has focus (8.7): the row
+  // goes without the field ever losing focus, so nothing said it ended.
+  const { app, window } = await launch();
+  const menu = (action: 'undo' | 'redo') =>
+    app.evaluate(({ BrowserWindow }, sent) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send('menu:action', sent);
+    }, action);
+  try {
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box.x + 150, box.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 300, box.y + 260, { steps: 4 });
+    await window.mouse.up();
+    const outline = window.locator('[data-testid^="feature-row-"]').first();
+    await outline.focus();
+    await window.keyboard.press('F2');
+    const field = window.getByTestId('row-name-input');
+    await field.fill('Half-typed');
+
+    await menu('undo');
+    await expect(window.getByTestId('feature-count')).toHaveText('0');
+    await expect(field).toHaveCount(0);
+    await menu('redo');
+    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    // Back as it was: no field reopened uninvited, nothing half-typed kept.
+    await expect(outline).toHaveAccessibleName('Outline');
+    await expect(field).toHaveCount(0);
+    // And F2 still renames it, as one step.
+    await outline.focus();
+    await window.keyboard.press('F2');
+    await field.fill('Edge');
+    await window.keyboard.press('Enter');
+    await expect(outline).toHaveAccessibleName('Edge');
+    await expect(outline).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('a locked feature is reached from the tree by keyboard, and unlocked from its menu (F.2)', async () => {
   await withSample(async (window) => {
     await row(window, 'outer-outline').hover();

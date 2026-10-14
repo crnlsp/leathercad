@@ -142,6 +142,13 @@ export function PartsList({
       ?.scrollIntoView({ block: 'nearest' });
   }, [selection]);
 
+  const rows = treeRows(project.parts, closed);
+  // A rename lasts as long as its row: one that goes — undone away from the
+  // macOS menu while the field has focus, deleted, folded out of sight — ends
+  // with it, keeping nothing half-typed, so the field never comes back with
+  // the row uninvited.
+  if (renaming !== null && !rows.some((row) => row.key === renaming)) setRenaming(null);
+
   if (project.parts.length === 0) {
     // The link sits where the language puts it in the sentence.
     const [before, after] = t('parts.sample').split('{{link}}');
@@ -170,7 +177,6 @@ export function PartsList({
     );
   }
 
-  const rows = treeRows(project.parts, closed);
   // The row Tab reaches: the last one focused or selected, its piece while
   // the piece is closed, or the first.
   const holder = project.parts.find((part) =>

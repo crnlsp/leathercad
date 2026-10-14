@@ -1211,7 +1211,10 @@ the visible rows (unit); E2E for keys and reveal.
   sets the tree's Tab stop on its row and scrolls it into view (`block: 'nearest'`), focus staying
   on the board.
 - **Fixed on the way**: the piece's ⋯ menu, inside the faded actions, faded with them as the
-  pointer left the row for it; forced colours drew every row's transparent border; the tree's
+  pointer left the row for it; forced colours drew every row's transparent border; a rename
+  outlived its row — undone away from macOS's Edit menu while the field had focus, which never
+  blurs it — and its field came back uninvited on redo, so a rename now ends when its row is no
+  longer among the rows shown, committing nothing; the tree's
   print line was 4.3:1 on a hovered row's fill and takes `--text` there; "Cut-out mirrored" fits
   one line at 208 px, which U.5 left to this slice.
 

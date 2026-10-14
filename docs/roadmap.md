@@ -160,7 +160,9 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   Sheets view's now; in Design a piece that will not print has a mark whose tooltip says why
   (*Not printed. It is hidden.*). Pieces start open, and a fold lasts the session. Found on the
   way: a piece's ⋯ menu, once its button showed only on hover, faded out with the row as the
-  pointer left for it — it stays while open; forced colours drew a box round every row; at 1024 px
+  pointer left for it — it stays while open; forced colours drew a box round every row; a rename whose row went from under it — undone
+  away from macOS's Edit menu while its field had focus — reopened its field when the row came
+  back, and now ends with the row, keeping nothing half-typed; at 1024 px
   *Cut-out mirrored* now fits one line. A selection paints in 4.5 ms with 32 features (3.0 ms
   before). Printed output did not move.
 - ☐ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
