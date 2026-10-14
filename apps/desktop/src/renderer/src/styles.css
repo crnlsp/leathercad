@@ -294,6 +294,13 @@ body {
   justify-content: space-between;
 }
 
+/* "3 pieces", beside "Parts" (R-07). */
+.panel-count {
+  margin-right: auto;
+  color: var(--text-dim);
+  font: var(--t-micro);
+}
+
 .panel-toggle {
   width: 24px;
   min-height: 24px;
@@ -1530,30 +1537,6 @@ body {
   font: var(--t-num);
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--row-pad-y) 5px;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--text-dim);
-  font: var(--t-label);
-  text-align: left;
-  cursor: pointer;
-}
-
-.row:hover {
-  color: var(--text);
-  background: var(--shell-600);
-}
-
-.row.selected {
-  border-color: var(--tan);
-  color: var(--text);
-}
-
 .badge {
   /* A glyph and a count, always on one line: a badge that wraps reads as two. */
   display: inline-flex;
@@ -2076,6 +2059,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding: 0 2px 4px 24px;
 }
 
 /* A destructive action reads as one, wherever it appears: the panel's Delete
@@ -2228,38 +2212,179 @@ button.problem-row:hover {
   margin-left: -8px;
 }
 
-.part-heading {
+/* The tree (R-07, U.8): one column of rows of one height, a feature indented
+   under what it follows — 16 px a level — and joined to it by an elbow. */
+.parts-tree {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
 }
 
-.part-name {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 4px;
+.tree-row {
+  /* How deep it is under its piece: a feature's row sets it, one a level. */
+  --level: 0;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--text);
-  font: var(--t-strong);
-  text-align: left;
+  color: var(--text-dim);
+  font: var(--t-label);
   cursor: pointer;
 }
 
-.part-name:hover {
+.tree-row:hover {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.tree-row.selected {
+  border-color: var(--tan);
+  color: var(--text);
+}
+
+.tree-row:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: -1px;
+}
+
+/* Forced colours draw every row's transparent border, whatever colour it is
+   given: only the selected row keeps one, in the system's highlight. */
+@media (forced-colors: active) {
+  .tree-row {
+    border-style: none;
+    padding: 1px;
+  }
+
+  .tree-row.selected {
+    border-style: solid;
+    border-color: Highlight;
+    padding: 0;
+  }
+}
+
+.tree-line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* The row's 28 px (§3 row-height) include its 1 px border, top and bottom. */
+  min-height: calc(var(--row-height) - 2px);
+  padding: 0 2px 0 calc(var(--level) * var(--space-4) + 4px);
+}
+
+.piece-row {
+  color: var(--text);
+  font: var(--t-strong);
+}
+
+.tree-fold {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  color: var(--text-dim);
+}
+
+/* Under the middle of the mark of the row it follows. */
+.tree-elbow {
+  position: absolute;
+  top: 0;
+  left: calc(var(--level) * var(--space-4) - 4px);
+  width: 6px;
+  height: 50%;
+  border-bottom: 1px solid var(--text-mute);
+  border-left: 1px solid var(--text-mute);
+  border-bottom-left-radius: 2px;
+}
+
+/* Names wrap rather than truncate (§7.1) — "Stitch hol…" told nobody which
+   feature it was. The name still gives way to the toggles: a long name must
+   not push the lock off the edge of the panel, because the lock is the way
+   back. */
+.part-label,
+.feature-name {
+  min-width: 0;
+  /* At word boundaries, and inside a word only when one cannot fit a line:
+     "Stit / ch / hole / s" told nobody which feature it was (F.6). */
+  overflow-wrap: break-word;
+}
+
+/* The numbers a maker cares about, and the marks, at the row's right end. */
+.row-count {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-dim);
+  font: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.row-end {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-self: stretch;
+  gap: 2px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.row-count + .row-end {
+  margin-left: 0;
+}
+
+.row-mark.not-printed {
+  color: var(--warning);
+}
+
+/* Lock and eye (and a piece's menu), shown on hover and keyboard focus
+   (R-07), over the row just left of its marks — over, so a name never
+   reflows under the pointer, and left of them, so a mark's tooltip stays in
+   reach. Faded out rather than removed at rest: a pointer that reaches them
+   has shown them. What is on (hidden, locked) stays as a mark, which the
+   toggles replace while they show. */
+.row-actions {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2px;
+  border-radius: var(--r-sm);
+  background: var(--shell-700);
+  opacity: 0;
+}
+
+.tree-row:hover .row-actions {
   background: var(--shell-600);
 }
 
-/* Where the part prints (7.4b): quiet when all of it reaches paper, and in
-   the warning colour when something the board shows will not. */
+/* …and while a piece's menu is open from them: its menu is inside, and
+   would fade with them as the pointer left the row for it. */
+.tree-row:is(:hover, :focus-visible) .row-actions,
+.row-actions:has([aria-expanded='true']) {
+  opacity: 1;
+}
+
+.tree-row:is(:hover, :focus-visible) .state-mark {
+  display: none;
+}
+
+.row-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px;
+  border: 1px solid var(--tan);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  font: inherit;
+}
+
+/* Where the part prints (7.4b), on the Sheets view: quiet when all of it
+   reaches paper, and in the warning colour when something the board shows
+   will not. */
 .part-print {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--space-2);
-  margin: 0 0 2px 30px;
+  margin: 0 0 2px 50px;
   color: var(--text-dim);
   font: var(--t-micro);
   font-weight: 400;
@@ -2270,31 +2395,15 @@ button.problem-row:hover {
   background: var(--shell-600);
 }
 
+/* The dim text is short of 4.5:1 on the hover's fill (§3: never text-dim on shell-600). */
+.part.hovered .part-print,
+.tree-row:hover .part-print {
+  color: var(--text);
+}
+
 .part-print-note,
 .part-print.not-printed .part-print-sheets {
   color: var(--warning);
-}
-
-.feature-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.feature-row .row {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Names wrap rather than truncate (§7.1) — "Stitch hol…" told nobody which
-   feature it was. The name still gives way to the toggles: a long name must
-   not push the lock off the edge of the panel, because the lock is the way
-   back. */
-.feature-name {
-  min-width: 0;
-  /* At word boundaries, and inside a word only when one cannot fit a line:
-     "Stit / ch / hole / s" told nobody which feature it was (F.6). */
-  overflow-wrap: break-word;
 }
 
 .icon-toggle {
@@ -2312,12 +2421,7 @@ button.problem-row:hover {
 }
 
 .icon-toggle:hover {
-  background: var(--shell-600);
-}
-
-/* Off reads as off at a glance, without a second colour to learn. */
-.icon-toggle.off {
-  opacity: 0.4;
+  background: var(--shell-line);
 }
 
 /* A button's menu (8.7): the Project and Help menus, and a part's actions in
@@ -2690,10 +2794,9 @@ button.problem-row:hover {
 
 .tool,
 .chip,
-.row,
+.tree-row,
 .menu-item,
 .icon-toggle,
-.part-name,
 .drawer-handle,
 button.problem-row,
 .field input,

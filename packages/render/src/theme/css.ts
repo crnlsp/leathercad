@@ -75,6 +75,7 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--h-control'] = `${String(rows.control)}px`;
   variables['--h-control-lg'] = `${String(rows.controlLg)}px`;
   variables['--row-pad-y'] = `${String(rows.rowPadY)}px`;
+  variables['--row-height'] = `${String(rows.row)}px`;
   variables['--rail-w-expanded'] = `${String(RAIL_PX.expanded)}px`;
   variables['--rail-w-collapsed'] = `${String(RAIL_PX.collapsed)}px`;
   variables['--parts-width'] = `${String(PANEL_PX.parts)}px`;

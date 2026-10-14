@@ -322,6 +322,10 @@ out on sheets here."* That matches the PDF, which is one scale-check sheet.
     problem aren't printed"*.
 
   This answers "which sheet?" without leaving Design.
+
+  *Since U.8 (R-07, 2026-10-14)* these lines are the Sheets view's: Design's Parts tree shows only a
+  piece that will not print, as a mark on its row with the reason in its tooltip, and a hidden
+  feature by its own mark. U.9 gives the Sheets view its own Parts.
 - **Oversized pieces show their joins.** A piece too large for the chosen sheet shows its join
   lines in Design, at the plan's model coordinates, in the same dash rhythm as the printed join,
   in the furniture magenta and labelled *Tape join*. The maker sees before printing where the tape

@@ -1,5 +1,6 @@
 import { isPartVisible } from '@leathercad/document';
 import { materialOf, type Feature, type Part, type Project } from '@leathercad/domain';
+import type { Path } from '@leathercad/geometry';
 import { thumbnailPath } from '@leathercad/render';
 import { Maximize, PanelLeft, PanelRight, type LucideIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
@@ -84,8 +85,43 @@ export function PanelToggle({
   );
 }
 
-/** A thumbnail's box: the strip's, and U.8's tree row's. */
+/** A thumbnail's box: the strip's, and the tree row's (U.8). */
 const THUMBNAIL = { width: 24, height: 16 } as const;
+
+/** Each outline's thumbnail, once: an evaluation's paths are new only when the project is. */
+const thumbnails = new WeakMap<Path, string>();
+function fitted(outline: Path): string {
+  let d = thumbnails.get(outline);
+  if (d === undefined) {
+    d = thumbnailPath(outline, THUMBNAIL);
+    thumbnails.set(outline, d);
+  }
+  return d;
+}
+
+/**
+ * A piece as its outer contour, fitted into the thumbnail's box by
+ * `thumbnailPath` (U.5) — the folded strip's, and each piece's row in the
+ * tree (U.8). The piece mark for a piece with no outline to draw.
+ */
+export function PieceThumbnail({ project, part }: { project: Project; part: Part }) {
+  const built = resolvedFor(project).parts.find((entry) => entry.part.id === part.id);
+  const outer = built === undefined ? null : materialOf(built).outer;
+  const d = outer === null ? '' : fitted(outer);
+  return d === '' ? (
+    <FeatureMark mark="piece" />
+  ) : (
+    <svg
+      className="thumbnail"
+      width={THUMBNAIL.width}
+      height={THUMBNAIL.height}
+      viewBox={`0 0 ${String(THUMBNAIL.width)} ${String(THUMBNAIL.height)}`}
+      aria-hidden
+    >
+      <path d={d} />
+    </svg>
+  );
+}
 
 /**
  * Parts, folded: one thumbnail per piece, the way back to every piece — a
@@ -106,7 +142,6 @@ export function PartsStrip({
   toggle: ReactNode;
 }) {
   const { t } = useI18n();
-  const resolved = resolvedFor(project);
   return (
     <aside
       className="panel-strip parts"
@@ -115,9 +150,6 @@ export function PartsStrip({
     >
       {toggle}
       {project.parts.map((part) => {
-        const built = resolved.parts.find((entry) => entry.part.id === part.id);
-        const outer = built === undefined ? null : materialOf(built).outer;
-        const d = outer === null ? '' : thumbnailPath(outer, THUMBNAIL);
         const name = pieceName(part, t);
         const isSelected =
           selectedParts.has(part.id) || part.features.some((feature) => selected.has(feature.id));
@@ -134,19 +166,7 @@ export function PartsStrip({
                 onSelectPart(part.id);
               }}
             >
-              {d === '' ? (
-                <FeatureMark mark="piece" />
-              ) : (
-                <svg
-                  className="thumbnail"
-                  width={THUMBNAIL.width}
-                  height={THUMBNAIL.height}
-                  viewBox={`0 0 ${String(THUMBNAIL.width)} ${String(THUMBNAIL.height)}`}
-                  aria-hidden
-                >
-                  <path d={d} />
-                </svg>
-              )}
+              <PieceThumbnail project={project} part={part} />
               {part.quantity > 1 && (
                 <span className="strip-count" aria-hidden>
                   {part.quantity}
@@ -161,7 +181,7 @@ export function PartsStrip({
 }
 
 /** "Card pocket ×2", as the board's caption names it (R-01). */
-function pieceName(part: Part, t: Translate): string {
+export function pieceName(part: Part, t: Translate): string {
   return part.quantity > 1
     ? t('caption.cut', { name: part.name, quantity: part.quantity })
     : part.name;

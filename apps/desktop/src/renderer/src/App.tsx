@@ -906,6 +906,7 @@ export function App({
             <PartsList
               store={store}
               project={storeState.document.project}
+              view={view}
               selected={storeState.selection.features}
               selectedParts={storeState.selection.parts}
               badges={badges}

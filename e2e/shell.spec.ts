@@ -306,7 +306,7 @@ test('the parts list selects what the canvas cannot reach', async () => {
 
     await window
       .getByTestId('parts-list')
-      .getByRole('button', { name: /Outline/ })
+      .getByRole('treeitem', { name: /Outline/ })
       .click();
     await expect(window.getByTestId('selected-count')).toHaveText('1');
   });
@@ -357,7 +357,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
     await window.getByTestId('tool-select').click();
     await window
       .getByTestId('parts-list')
-      .getByRole('button', { name: /Outline/ })
+      .getByRole('treeitem', { name: /Outline/ })
       .click();
     await window.keyboard.press('Delete');
     // The emptied part stays until it is removed on purpose (ADR 0009).
@@ -373,7 +373,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
     // Reopened as parameters, so the geometry recomputes to the same numbers.
     await window
       .getByTestId('parts-list')
-      .getByRole('button', { name: /Outline/ })
+      .getByRole('treeitem', { name: /Outline/ })
       .click();
     await expect(panel.locator('.readout').first()).toContainText('346.27 mm');
 
@@ -680,7 +680,8 @@ test('every line is named by its mark, and no emoji is left (F.6)', async () => 
     }
 
     const tree = window.getByTestId('parts-list');
-    await expect(tree.locator('[data-mark="piece"]')).toHaveCount(1);
+    // A piece is its own outline in small (U.8), drawn by the strip's thumbnail.
+    await expect(tree.locator('svg.thumbnail')).toHaveCount(1);
     await expect(tree.locator('[data-mark="cut-edge"]')).toHaveCount(1);
     await expect(tree.locator('[data-mark="stitch-line"]')).toHaveCount(1);
     await expect(tree.locator('[data-mark="stitch-holes"]')).toHaveCount(1);
@@ -1772,7 +1773,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
 
     // Throw it away and get it back from disk, at format version 5.
     await window.getByTestId('tool-select').click();
-    await window.getByTestId('parts-list').getByRole('button', { name: /Zszyć/ }).click();
+    await window.getByTestId('parts-list').getByRole('treeitem', { name: /Zszyć/ }).click();
     await window.keyboard.press('Delete');
     await expect(window.getByTestId('feature-count')).toHaveText('1');
 
@@ -1783,7 +1784,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 
     // Back as parameters: the panel can still retype it.
-    await window.getByTestId('parts-list').getByRole('button', { name: /Zszyć/ }).click();
+    await window.getByTestId('parts-list').getByRole('treeitem', { name: /Zszyć/ }).click();
     await expect(panel.getByTestId('label-text')).toHaveValue('Zszyć przed klejeniem');
   } finally {
     await closeApp(instance);
@@ -2018,10 +2019,9 @@ test('the parts panel shows what follows what, and locks it down', async () => {
     const panel = window.getByTestId('parts-list');
     const rows = panel.locator('.feature-row');
     await expect(rows).toHaveCount(3);
-    const indents = await rows.evaluateAll((els) =>
-      els.map((el) => (el as HTMLElement).style.paddingLeft),
-    );
-    expect(indents).toEqual(['0px', '12px', '24px']);
+    // A tree's levels (U.8): the piece is 1.
+    const levels = await rows.evaluateAll((els) => els.map((el) => el.getAttribute('aria-level')));
+    expect(levels).toEqual(['2', '3', '4']);
 
     // Lock the outline. It is still selectable here — the panel is the only
     // way back, because a locked feature is out of hit-testing.
@@ -2116,7 +2116,7 @@ test('selecting a part heading makes it the target for a cut-out', async () => {
 
     const heading = window.getByTestId('parts-list').locator('[data-testid^="part-heading-"]');
     await heading.first().click();
-    await expect(heading.first()).toHaveAttribute('aria-pressed', 'true');
+    await expect(heading.first()).toHaveAttribute('aria-selected', 'true');
 
     await window.getByTestId('tool-circle').click();
     await window.getByTestId('draw-as-cut-out').click();

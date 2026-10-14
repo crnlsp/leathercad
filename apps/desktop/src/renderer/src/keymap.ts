@@ -37,16 +37,17 @@ export type KeyboardLayout = ReadonlyMap<string, string>;
 
 /** Its heading in the shortcut list is `shortcuts.group.<id>`. */
 export type ShortcutGroupId =
-  'file' | 'edit' | 'view' | 'window' | 'tools' | 'drawing' | 'editingPoints';
+  'file' | 'edit' | 'view' | 'window' | 'tools' | 'drawing' | 'editingPoints' | 'parts';
 
 /**
  * Where a key is heard. The window's commands are dispatched through
  * `commandFor`. The others are a tool's own — the board's active tool, the
  * polyline mid-run, Edit Points — heard by the tool in `packages/editor` by
  * the key's name; they are here so the shortcut list shows them, and so a
- * sentence that names one takes it from here.
+ * sentence that names one takes it from here. `tree` is the Parts tree's
+ * (U.8), heard only while a row has focus.
  */
-export type Scope = 'window' | 'canvas' | 'polyline' | 'points';
+export type Scope = 'window' | 'canvas' | 'polyline' | 'points' | 'tree';
 
 export type CommandId =
   | 'newProject'
@@ -80,7 +81,9 @@ export type CommandId =
   | 'takeBack'
   | 'arcOrStraight'
   | 'removePoint'
-  | 'roundCorner';
+  | 'roundCorner'
+  | 'toggleVisible'
+  | 'rename';
 
 export interface Command {
   readonly id: CommandId;
@@ -307,6 +310,17 @@ export const KEYMAP: readonly Command[] = [
     scope: 'points',
     keys: [key('KeyR')],
   },
+
+  // The Parts tree's own (U.8, R-07): heard while a row has focus, and never
+  // by the window. Its arrows are a tree's, as every tree has them.
+  {
+    id: 'toggleVisible',
+    does: 'shortcuts.toggleVisible',
+    group: 'parts',
+    scope: 'tree',
+    keys: [key('Space')],
+  },
+  { id: 'rename', does: 'shortcuts.rename', group: 'parts', scope: 'tree', keys: [key('F2')] },
 ];
 
 /** A command's keys. */
@@ -513,6 +527,7 @@ const NAMED: Readonly<Record<string, string>> = {
   Delete: 'Delete',
   Enter: 'Enter',
   Escape: 'Escape',
+  Space: 'Space',
   ContextMenu: 'Menu',
   Scroll: 'Scroll',
   MiddleDrag: 'Middle-drag',

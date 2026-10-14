@@ -311,6 +311,18 @@ describe('matching a key, by where it is (U.3)', () => {
     expect(commandFor({ ...NO_MODIFIERS, code: 'F1', key: 'F1', ctrlKey: true }, false)).toBeNull();
   });
 
+  it('leaves Space and F2 to the Parts tree: the window hears neither (U.8)', () => {
+    const space = { ...NO_MODIFIERS, code: 'Space', key: ' ' };
+    const f2 = { ...NO_MODIFIERS, code: 'F2', key: 'F2' };
+    expect(commandFor(space, false)).toBeNull();
+    expect(commandFor(f2, false)).toBeNull();
+    expect(keysOf('toggleVisible').some((binding) => matches(space, binding, false))).toBe(true);
+    expect(keysOf('rename').some((binding) => matches(f2, binding, false))).toBe(true);
+    expect(
+      KEYMAP.filter((command) => command.scope === 'tree').map((command) => command.id),
+    ).toEqual(['toggleVisible', 'rename']);
+  });
+
   describe('zoom follows the + and − a keyboard prints (U.3, on review)', () => {
     // Zoom is named by its symbols, like a tool by its letter, and + and −
     // need no AltGr anywhere — unlike [ ] \ — so they are matched by what the
