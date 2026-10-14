@@ -202,6 +202,8 @@ test('at 860 × 600 Properties scrolls and Delete stays at its foot (R-05, §5)'
 test('"A hole on each corner" fits at 264 px, even while the panel scrolls (R-05)', async () => {
   await withSample([1024, 700], async (window) => {
     await window.getByTestId('feature-row-outer-holes').click();
+    // A strip at 1024 (U.5): `]` opens it over the board, at the same 264 px.
+    await window.keyboard.press('BracketRight');
     const panel = window.getByTestId('property-panel');
     expect((await panel.boundingBox())!.width).toBe(264);
     expect(await panel.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);

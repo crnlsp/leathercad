@@ -85,8 +85,9 @@ export function createArcTool(nextId: () => string): Tool {
 
     onKey(ctx, event) {
       if (event.key === 'Escape') {
+        const busy = state.kind === 'placing';
         reset(ctx);
-        return;
+        return busy;
       }
 
       if (event.key === 'Backspace' && state.kind === 'placing') {
@@ -97,6 +98,7 @@ export function createArcTool(nextId: () => string): Tool {
             : { kind: 'placing', points, cursor: state.cursor };
         ctx.invalidate();
       }
+      return false;
     },
 
     buildOverlay(): DisplayList {

@@ -139,6 +139,16 @@ the size your software shows: it should be the size you drew.
   400 %. At 100 % the board is drawn at 96 pixels to the inch, the size a screen is nominally
   drawn at. Few screens are exactly that — a laptop often shows it a tenth or more smaller — so
   hold a ruler to it before you trust it against a buckle. The zoom never changes what prints. Until 1.5, **Ctrl+0** fitted the pattern.
+- **Panels:** **[** folds Parts and **]** folds Properties to a 40 px strip, and the button at the
+  end of each panel's header does the same; **\\** is focus mode, which hides both and leaves the
+  rail its keys, until **\\** or **Esc** brings back what was there. Folded, Parts shows a
+  thumbnail of each piece — a click selects it, a locked one too — and Properties the mark of what
+  is selected. On a narrow window the app folds them itself (below 1280 px Properties, below 900 px
+  both), and a panel then opens over the board, until **Esc** or a click on the board; the three
+  chips at the status bar's right — *Parts*, *Focus*, *Properties* — reach them at every size. The
+  folds you make are kept for next time; the ones a small window makes are not. On a keyboard
+  other than a US one, the keys are where a US keyboard has `[`, `]` and `\`, shown as yours
+  prints them (`ü`, `+` and `#` on a German one).
 - **Settings** (**Ctrl+,**): clear the recent projects, and choose how the legend and the tool
   rail start. They stay as you left them.
 - **Settings › My tools:** the pricking irons you own, by your own names, and the one a new hole

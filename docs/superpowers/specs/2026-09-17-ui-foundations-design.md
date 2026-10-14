@@ -268,7 +268,7 @@ and for colour-blind readers.
 | `--h-control` | 28 px |
 | `--h-control-lg` | 32 px — toolbar primary |
 | `--icon` | 16 px in a 28 px hit box; 20 px in the rail's 40 px box |
-| `--rail-w` | 52 px |
+| `--rail-w` | 52 px (56 px since U.5) |
 
 Three radii replace today's five ad-hoc values (1, 2, 3, 4, 6).
 
@@ -366,6 +366,13 @@ Disabled renders the sentence from `describeProblem` as a line beneath the contr
   52/152px   220px              1fr                      288px
 ```
 
+> **Since U.5 (1.5):** 56/152 · 224 (208 below 1280) · 1fr · 264, the widths in
+> `packages/render/src/theme/tokens.ts` (`RAIL_PX`, `PANEL_PX`). Each panel folds to a 40 px strip
+> (`[` Parts, `]` Properties), `\` is focus mode, and the status bar always holds the three chips
+> that reach them. The breakpoints below are replaced by the UI refinement's §5
+> ([requirements](2026-10-08-ui-refinement-requirements.md#5-responsive)), decided in
+> `renderer/src/panelLayout.ts`.
+
 - **Rail** — its own column, **152 px expanded (default) / 52 px collapsed**, auto-collapsing below
   1200 px. Icon **and** label **and** shortcut when expanded; icon plus a corner shortcut badge when
   collapsed. **Never scrolls, never competes for height** — which was audit finding 3.3. Every button
@@ -389,9 +396,9 @@ feature, because locking removes it from hit-testing. That is a correctness fail
 | Width | Behaviour |
 |---|---|
 | ≥ 1280 | Full frame as above |
-| 1024–1279 | Parts 200, Properties 264 |
-| 900–1023 | Properties collapses to a right overlay, toggled from the status bar. **Parts stays** |
-| < 900 | Parts also becomes a toggled overlay. **The rail always stays**, and no panel is removed from the DOM |
+| 1024–1279 | Parts 200, Properties 264 · *since U.5: below 1280 the rail shows keys (56), Parts 208, Properties a 40 px strip that opens over the board* |
+| 900–1023 | Properties collapses to a right overlay, toggled from the status bar. **Parts stays** · *since U.5: as above* |
+| < 900 | Parts also becomes a toggled overlay. **The rail always stays**, and no panel is removed from the DOM · *since U.5: both open over the board from their chips; the board is 804 px at 860* |
 
 Minimum supported: **860 × 600**.
 

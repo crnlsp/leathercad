@@ -53,6 +53,7 @@ export function PartsList({
   onDuplicatePart,
   onContextMenu,
   onOpenSample,
+  toggle,
 }: {
   store: DocumentStore;
   project: Project;
@@ -80,6 +81,8 @@ export function PartsList({
   onContextMenu: OpenMenu;
   /** Opens the worked sample (8.3): a finished pattern to take apart. */
   onOpenSample: () => void;
+  /** Its fold (U.5), at the header's end. */
+  toggle?: ReactNode;
 }) {
   const { t } = useI18n();
   const keys = useKeysInSentences();
@@ -87,8 +90,13 @@ export function PartsList({
     // The link sits where the language puts it in the sentence.
     const [before, after] = t('parts.sample').split('{{link}}');
     return (
-      <aside className="panel parts" data-testid="parts-list" aria-label={t('parts.title')}>
-        <h2>{t('parts.title')}</h2>
+      <aside
+        className="panel parts"
+        tabIndex={-1}
+        data-testid="parts-list"
+        aria-label={t('parts.title')}
+      >
+        <PartsTitle toggle={toggle} />
         <p className="panel-empty">{t('parts.empty', keys)}</p>
         <p className="panel-empty">
           {before}
@@ -107,8 +115,13 @@ export function PartsList({
   }
 
   return (
-    <aside className="panel parts" data-testid="parts-list" aria-label={t('parts.title')}>
-      <h2>{t('parts.title')}</h2>
+    <aside
+      className="panel parts"
+      tabIndex={-1}
+      data-testid="parts-list"
+      aria-label={t('parts.title')}
+    >
+      <PartsTitle toggle={toggle} />
       {project.parts.map((part) => (
         <PartSection
           key={part.id}
@@ -126,6 +139,17 @@ export function PartsList({
         />
       ))}
     </aside>
+  );
+}
+
+/** "Parts", and the panel's fold at the row's end. */
+function PartsTitle({ toggle }: { toggle: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <header className="panel-title">
+      <h2>{t('parts.title')}</h2>
+      {toggle}
+    </header>
   );
 }
 

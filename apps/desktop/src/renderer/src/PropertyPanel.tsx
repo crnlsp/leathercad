@@ -23,6 +23,7 @@ import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import { PathOps } from '@leathercad/geometry';
 import { followRefusal, type ResolvedFeature } from '@leathercad/domain';
 import { Trash2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
@@ -54,6 +55,7 @@ export function PropertyPanel({
   requestDelete,
   requestDeletePart,
   tools,
+  toggle,
 }: {
   store: DocumentStore;
   project: Project;
@@ -69,6 +71,8 @@ export function PropertyPanel({
   requestDeletePart: (partId: string) => void;
   /** The maker's irons and starting values, from Settings › My tools (U.13). */
   tools: MakerTools;
+  /** Its fold (U.5), at the end of the header's first row. */
+  toggle?: ReactNode;
 }) {
   const { t } = useI18n();
   const keys = useKeysInSentences();
@@ -83,6 +87,7 @@ export function PropertyPanel({
         part={parts[0]!}
         diagnostics={diagnostics}
         requestDeletePart={requestDeletePart}
+        toggle={toggle}
       />
     );
   }
@@ -91,11 +96,13 @@ export function PropertyPanel({
     return (
       <aside
         className="panel properties"
+        tabIndex={-1}
         data-testid="property-panel"
         aria-label={t('properties.title')}
       >
         <header className="panel-header">
-          <h2>{t('properties.title')}</h2>
+          <h2 className="header-name">{t('properties.title')}</h2>
+          {toggle}
         </header>
         <p className="panel-empty">
           {selected.size > 1
@@ -128,6 +135,7 @@ export function PropertyPanel({
   return (
     <aside
       className="panel properties"
+      tabIndex={-1}
       data-testid="property-panel"
       aria-label={t('properties.title')}
     >
@@ -153,6 +161,7 @@ export function PropertyPanel({
             {t('properties.locked')}
           </span>
         )}
+        {toggle}
         <p className="header-trail" data-testid="property-trail">
           {[
             t('properties.where', { part: part.name, quantity: part.quantity }),
@@ -433,12 +442,14 @@ function PartProperties({
   part,
   diagnostics,
   requestDeletePart,
+  toggle,
 }: {
   store: DocumentStore;
   project: Project;
   part: Part;
   diagnostics: readonly Diagnostic[];
   requestDeletePart: (partId: string) => void;
+  toggle: ReactNode;
 }) {
   const { t } = useI18n();
   const ids = part.features.map((feature) => feature.id);
@@ -460,12 +471,14 @@ function PartProperties({
   return (
     <aside
       className="panel properties"
+      tabIndex={-1}
       data-testid="property-panel"
       aria-label={t('properties.title')}
     >
       <header className="panel-header" data-testid="property-header">
         <FeatureMark mark="piece" />
         <h2 className="header-name">{part.name}</h2>
+        {toggle}
       </header>
 
       {(measured || problems.length > 0) && (

@@ -21,7 +21,14 @@ import {
   type Project,
 } from '@leathercad/domain';
 import { systemIdSource, type Preferences, type RecentFile } from '@leathercad/platform';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
 
 import {
   DEFAULT_EDIT_POINTS,
@@ -62,7 +69,16 @@ import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
 import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
 import { IS_MAC, useKeysInSentences } from './keyCaps.js';
-import { commandFor, type CommandId } from './keymap.js';
+import { commandFor, keysOf, matches, type CommandId } from './keymap.js';
+import {
+  CHIP_ICON,
+  PanelChip,
+  PanelToggle,
+  PartsStrip,
+  PropertiesStrip,
+  type Press,
+} from './PanelFold.js';
+import { ROOM_PX, layoutFor, toggleOf, type Panel, type Room } from './panelLayout.js';
 import { isTyping } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
@@ -196,21 +212,112 @@ export function App({
     document.documentElement.lang = i18n.locale;
   }, [i18n]);
 
-  // The rail collapses by itself below 1200 px, and follows the maker's own
-  // remembered choice above it. Opening it while narrow lasts the session:
-  // it answers the window being small, not a liking.
-  const railAutoCollapsed = useMediaQuery('(max-width: 1199px)');
+  // The frame gives the board its room in §5's order (U.5): below 1280 px
+  // the rail drops its names and Properties folds to a strip; below 900 Parts
+  // leaves its column too. The maker's own folds are remembered, and the
+  // window's never overwrite them. Opening the rail while narrow lasts the
+  // session: it answers the window being small, not a liking.
+  const narrow = useMediaQuery(`(max-width: ${String(ROOM_PX.wide - 1)}px)`);
+  const cramped = useMediaQuery(`(max-width: ${String(ROOM_PX.narrow - 1)}px)`);
+  const room: Room = cramped ? 'cramped' : narrow ? 'narrow' : 'wide';
   const [railExpandedWhileNarrow, setRailExpandedWhileNarrow] = useState(false);
-  const railCollapsed = railAutoCollapsed
-    ? !railExpandedWhileNarrow
-    : preferences.toolRailCollapsed;
+  // Focus mode (`\`): both panels hide and the rail shows keys only, until `\`
+  // or Esc. Nothing the maker chose changes, so leaving it restores exactly
+  // what was there. For the session, like the view.
+  const [focus, setFocus] = useState(false);
+  const layout = layoutFor(
+    room,
+    {
+      railCollapsed: preferences.toolRailCollapsed,
+      railExpandedWhileNarrow,
+      partsFolded: preferences.partsFolded,
+      propertiesFolded: preferences.propertiesFolded,
+    },
+    focus,
+  );
   const toggleRail = useCallback(() => {
-    if (railAutoCollapsed) {
+    if (room !== 'wide') {
       setRailExpandedWhileNarrow((expanded) => !expanded);
       return;
     }
     changePreferences({ toolRailCollapsed: !preferences.toolRailCollapsed });
-  }, [railAutoCollapsed, changePreferences, preferences.toolRailCollapsed]);
+  }, [room, changePreferences, preferences.toolRailCollapsed]);
+
+  // A panel opened over the board — from its strip, its chip or its key —
+  // where it has no column (R-04). It takes focus, and gives it back to what
+  // had it when the keyboard closes it; a press on the board closes it and
+  // leaves focus where the press put it (U.4's rule). One at a time. A change
+  // of room or of focus mode closes it: the panel may have its column now.
+  const [overlay, setOverlay] = useState<{
+    readonly panel: Panel;
+    readonly opener: HTMLElement | null;
+  } | null>(null);
+  const [overlayIn, setOverlayIn] = useState(`${room} ${String(focus)}`);
+  if (overlayIn !== `${room} ${String(focus)}`) {
+    setOverlayIn(`${room} ${String(focus)}`);
+    setOverlay(null);
+  }
+  const open = overlay?.panel ?? null;
+  const closeOverlay = useCallback(
+    (press: Press) => {
+      if (press === 'keyboard') overlay?.opener?.focus();
+      setOverlay(null);
+    },
+    [overlay],
+  );
+  // The panel itself takes focus, not its first button: a button would take
+  // the Enter that finishes a polyline. Tab goes on into it, and out of it.
+  useEffect(() => {
+    if (open !== null) document.querySelector<HTMLElement>(`.panel.${open}`)?.focus();
+  }, [open]);
+
+  // A toggle that folds or unfolds its own panel goes with it: from the
+  // keyboard, focus follows to the panel's toggle in its new shape.
+  const followToggle = useRef<Panel | null>(null);
+  const togglePanel = useCallback(
+    (panel: Panel, press: Press, fromToggle = false) => {
+      if (toggleOf(panel, room, focus) === 'overlay') {
+        if (open === panel) closeOverlay(press);
+        else {
+          const active = document.activeElement;
+          setOverlay({ panel, opener: active instanceof HTMLElement ? active : null });
+        }
+        return;
+      }
+      if (fromToggle && press === 'keyboard') followToggle.current = panel;
+      changePreferences(
+        panel === 'parts'
+          ? { partsFolded: !preferences.partsFolded }
+          : { propertiesFolded: !preferences.propertiesFolded },
+      );
+    },
+    [
+      room,
+      focus,
+      open,
+      closeOverlay,
+      changePreferences,
+      preferences.partsFolded,
+      preferences.propertiesFolded,
+    ],
+  );
+  useEffect(() => {
+    const panel = followToggle.current;
+    followToggle.current = null;
+    if (panel === null) return;
+    [...document.querySelectorAll<HTMLElement>(`[data-panel-toggle="${panel}"]`)]
+      .find((toggle) => toggle.getClientRects().length > 0)
+      ?.focus();
+  }, [layout.parts, layout.properties]);
+  // Esc closes an overlay from inside it before anything behind it hears the
+  // key. A menu open in it, or a field being typed in, keeps Esc for itself.
+  const overlayKeys = (panel: Panel) => (event: ReactKeyboardEvent) => {
+    if (open !== panel || isTyping(event.target)) return;
+    if (!keysOf('cancel').some((binding) => matches(event, binding, IS_MAC))) return;
+    event.stopPropagation();
+    event.preventDefault();
+    closeOverlay('keyboard');
+  };
   const toggleLegend = useCallback(
     () => changePreferences({ legendOpen: !preferences.legendOpen }),
     [changePreferences, preferences.legendOpen],
@@ -219,13 +326,6 @@ export function App({
   const [settings, setSettings] = useState<SettingsSection | null>(null);
 
   const [problemsOpen, setProblemsOpen] = useState(false);
-  // Below these widths a panel stops taking a column and becomes an overlay
-  // opened from the status bar — never removed, because the parts tree is the
-  // only route to a locked feature (audit §3.3).
-  const propertiesOverlay = useMediaQuery('(max-width: 1023px)');
-  const partsOverlay = useMediaQuery('(max-width: 899px)');
-  const [propertiesOpen, setPropertiesOpen] = useState(false);
-  const [partsOpen, setPartsOpen] = useState(false);
 
   // The canvas owns the viewport; this is the only handle on it. Anyone may
   // ask it to show a rectangle, zoom about its centre, or fit the pattern.
@@ -411,9 +511,24 @@ export function App({
       fit: () => runZoom('fit'),
       fitSelection: () => runZoom('fitSelection'),
       trueSize: () => runZoom('trueSize'),
+      // The panels (U.5): `[`, `]`, and `\` for focus mode.
+      toggleParts: () => togglePanel('parts', 'keyboard'),
+      toggleProperties: () => togglePanel('properties', 'keyboard'),
+      focusMode: () => setFocus((on) => !on),
     };
     const onKey = (event: KeyboardEvent): void => {
       if (isTyping(event.target)) return;
+      // Esc, once nothing before it claimed it — a menu, a field, a dialog,
+      // the overlay it was pressed in, or a tool giving something up: an
+      // overlay closes, then focus mode ends.
+      if (keysOf('cancel').some((binding) => matches(event, binding, IS_MAC))) {
+        if (event.defaultPrevented) return;
+        if (open !== null) closeOverlay('keyboard');
+        else if (focus) setFocus(false);
+        else return;
+        event.preventDefault();
+        return;
+      }
       const command = commandFor(event, IS_MAC);
       if (command === null) return;
       if (command.startsWith('tool.')) {
@@ -429,7 +544,19 @@ export function App({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [file, exportPdf, newProject, openProject, showView, chooseTool, runZoom]);
+  }, [
+    file,
+    exportPdf,
+    newProject,
+    openProject,
+    showView,
+    chooseTool,
+    runZoom,
+    togglePanel,
+    open,
+    focus,
+    closeOverlay,
+  ]);
 
   // macOS's native menu (8.7) sends what the platform keeps there; each runs
   // the handler its key and its button run.
@@ -711,11 +838,11 @@ export function App({
         <div
           className={[
             'workspace',
-            railCollapsed ? 'rail-collapsed' : '',
-            propertiesOverlay ? 'properties-overlay' : '',
-            propertiesOverlay && propertiesOpen ? 'properties-open' : '',
-            partsOverlay ? 'parts-overlay' : '',
-            partsOverlay && partsOpen ? 'parts-open' : '',
+            layout.railNames ? '' : 'rail-collapsed',
+            room === 'wide' ? '' : 'narrow',
+            `parts-${layout.parts}`,
+            `properties-${layout.properties}`,
+            open === null ? '' : `${open}-open`,
           ]
             .filter((name) => name !== '')
             .join(' ')}
@@ -723,25 +850,56 @@ export function App({
           <ToolPalette
             activeId={toolId}
             onSelect={chooseTool}
-            collapsed={railCollapsed}
-            onToggleCollapsed={toggleRail}
+            collapsed={!layout.railNames}
+            onToggleCollapsed={focus ? undefined : toggleRail}
           />
-          <PartsList
-            store={store}
-            project={storeState.document.project}
-            selected={storeState.selection.features}
-            selectedParts={storeState.selection.parts}
-            badges={badges}
-            printStatus={printStatusFor(storeState.document.project)}
-            hoveredPart={view === 'sheets' ? hoveredPart : null}
-            onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
-            onRemovePart={requestDeletePart}
-            onDuplicatePart={requestDuplicatePart}
-            onContextMenu={openContextMenu}
-            onOpenSample={() => void openSample()}
-          />
-          {/* The drawing is what the window is for: its main landmark. */}
-          <main className="canvas-column" aria-label={t('app.drawing')}>
+          {layout.parts === 'strip' && (
+            <PartsStrip
+              project={storeState.document.project}
+              selected={storeState.selection.features}
+              selectedParts={storeState.selection.parts}
+              onSelectPart={(partId) => store.selectParts([partId])}
+              toggle={
+                <PanelToggle
+                  panel="parts"
+                  shown={open === 'parts'}
+                  onToggle={(press) => togglePanel('parts', press, true)}
+                />
+              }
+            />
+          )}
+          {/* A panel's place in the DOM, docked or not (F.2): no panel is ever
+              removed. Esc pressed inside it, open over the board, closes it. */}
+          <div className="panel-slot" onKeyDown={overlayKeys('parts')}>
+            <PartsList
+              store={store}
+              project={storeState.document.project}
+              selected={storeState.selection.features}
+              selectedParts={storeState.selection.parts}
+              badges={badges}
+              printStatus={printStatusFor(storeState.document.project)}
+              hoveredPart={view === 'sheets' ? hoveredPart : null}
+              onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
+              onRemovePart={requestDeletePart}
+              onDuplicatePart={requestDuplicatePart}
+              onContextMenu={openContextMenu}
+              onOpenSample={() => void openSample()}
+              toggle={
+                <PanelToggle
+                  panel="parts"
+                  shown
+                  onToggle={(press) => togglePanel('parts', press, true)}
+                />
+              }
+            />
+          </div>
+          {/* The drawing is what the window is for: its main landmark. A press
+              on it closes a panel open over it. */}
+          <main
+            className="canvas-column"
+            aria-label={t('app.drawing')}
+            onPointerDown={open === null ? undefined : () => closeOverlay('pointer')}
+          >
             <CanvasHost
               ref={canvasRef}
               store={store}
@@ -784,17 +942,41 @@ export function App({
               onToggle={() => setProblemsOpen((open) => !open)}
             />
           </main>
-          <PropertyPanel
-            store={store}
-            project={storeState.document.project}
-            selected={storeState.selection.features}
-            selectedParts={storeState.selection.parts}
-            diagnostics={diagnostics}
-            nextId={nextId}
-            requestDelete={requestDelete}
-            requestDeletePart={requestDeletePart}
-            tools={tools}
-          />
+          <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
+            <PropertyPanel
+              store={store}
+              project={storeState.document.project}
+              selected={storeState.selection.features}
+              selectedParts={storeState.selection.parts}
+              diagnostics={diagnostics}
+              nextId={nextId}
+              requestDelete={requestDelete}
+              requestDeletePart={requestDeletePart}
+              tools={tools}
+              toggle={
+                <PanelToggle
+                  panel="properties"
+                  shown
+                  onToggle={(press) => togglePanel('properties', press, true)}
+                />
+              }
+            />
+          </div>
+          {layout.properties === 'strip' && (
+            <PropertiesStrip
+              project={storeState.document.project}
+              selected={storeState.selection.features}
+              selectedParts={storeState.selection.parts}
+              onOpen={(press) => togglePanel('properties', press)}
+              toggle={
+                <PanelToggle
+                  panel="properties"
+                  shown={open === 'properties'}
+                  onToggle={(press) => togglePanel('properties', press, true)}
+                />
+              }
+            />
+          )}
         </div>
 
         <footer className="app-status" data-testid="status-bar">
@@ -806,29 +988,6 @@ export function App({
           the wrong way round.
         */}
           <span className="status-left">
-            {/* Only where a panel has become an overlay: the way back to it. */}
-            {partsOverlay && (
-              <button
-                type="button"
-                className="chip"
-                data-testid="toggle-parts"
-                aria-pressed={partsOpen}
-                onClick={() => setPartsOpen((open) => !open)}
-              >
-                {t('status.parts')}
-              </button>
-            )}
-            {propertiesOverlay && (
-              <button
-                type="button"
-                className="chip"
-                data-testid="toggle-properties"
-                aria-pressed={propertiesOpen}
-                onClick={() => setPropertiesOpen((open) => !open)}
-              >
-                {t('status.properties')}
-              </button>
-            )}
             <span data-testid="status-counts">
               v<span data-testid="app-version">{version ?? '…'}</span>
               <span className="sep">·</span>
@@ -875,6 +1034,38 @@ export function App({
                 {bridgeError ?? fileErrorText(file.state.error, t)}
               </span>
             ) : null}
+          </span>
+
+          {/* Always all three (R-04): whatever shape a panel is in, its chip
+              reaches it, so nothing is ever out of reach. */}
+          <span className="status-panels" role="group" aria-label={t('status.panels')}>
+            <PanelChip
+              testId="toggle-parts"
+              icon={CHIP_ICON.parts}
+              label={t('status.parts')}
+              command="toggleParts"
+              pressed={layout.parts === 'docked' || open === 'parts'}
+              hiding={layout.parts !== 'docked' && open !== 'parts'}
+              onPress={(press) => togglePanel('parts', press)}
+            />
+            <PanelChip
+              testId="toggle-focus"
+              icon={CHIP_ICON.focus}
+              label={t('status.focus')}
+              command="focusMode"
+              pressed={focus}
+              hiding={focus}
+              onPress={() => setFocus((on) => !on)}
+            />
+            <PanelChip
+              testId="toggle-properties"
+              icon={CHIP_ICON.properties}
+              label={t('status.properties')}
+              command="toggleProperties"
+              pressed={layout.properties === 'docked' || open === 'properties'}
+              hiding={layout.properties !== 'docked' && open !== 'properties'}
+              onPress={(press) => togglePanel('properties', press)}
+            />
           </span>
 
           <span className="status-right" data-testid="cursor-readout">

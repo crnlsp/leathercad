@@ -3,10 +3,12 @@ import type { LayerRole } from '@leathercad/domain';
 import { ACCENT, GO, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
+  BAR_PX,
   DENSITY,
   ELEVATION,
   FONT_SANS,
   MOTION,
+  PANEL_PX,
   RADIUS,
   RAIL_PX,
   SPACE_PX,
@@ -73,6 +75,12 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--row-pad-y'] = `${String(rows.rowPadY)}px`;
   variables['--rail-w-expanded'] = `${String(RAIL_PX.expanded)}px`;
   variables['--rail-w-collapsed'] = `${String(RAIL_PX.collapsed)}px`;
+  variables['--parts-width'] = `${String(PANEL_PX.parts)}px`;
+  variables['--parts-width-narrow'] = `${String(PANEL_PX.partsNarrow)}px`;
+  variables['--properties-width'] = `${String(PANEL_PX.properties)}px`;
+  variables['--panel-strip'] = `${String(PANEL_PX.strip)}px`;
+  variables['--work-bar-h'] = `${String(BAR_PX.work)}px`;
+  variables['--status-bar-h'] = `${String(BAR_PX.status)}px`;
 
   return variables;
 }

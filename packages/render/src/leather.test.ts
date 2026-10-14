@@ -209,6 +209,25 @@ describe('linkTickOn — where a derived line wears its link', () => {
     expect(Math.abs(tick!.tangent.x)).toBeCloseTo(1, 9);
   });
 
+  it('keeps to the first of two equal runs, whatever the last bit of a float says (U.5)', () => {
+    // A rectangle's top and bottom are the same length; offset, one comes out a
+    // hair longer — now one, now the other, by where it was drawn. The tick
+    // hopped across the piece: the same panel drawn 10 px to the right wore it
+    // at the bottom, not the top.
+    for (const hair of [-1e-12, 0, 1e-12]) {
+      const path = PathOps.polyline(
+        [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100 + hair, y: 60 },
+          { x: 0, y: 60 },
+        ],
+        true,
+      );
+      expect(linkTickOn(path)!.at.y, `by ${String(hair)}`).toBeCloseTo(0, 9);
+    }
+  });
+
   it('lies on the path, whatever its shape', () => {
     fc.assert(
       fc.property(

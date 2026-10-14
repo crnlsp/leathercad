@@ -144,7 +144,7 @@ describe('rectangle tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 10, y: 20 }));
     tool.onPointerUp?.(ctx, pointer({ x: 10, y: 20 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
     tool.onPointerDown?.(ctx, pointer({ x: 115, y: 95 }));
     tool.onPointerUp?.(ctx, pointer({ x: 115, y: 95 }));
 
@@ -190,7 +190,7 @@ describe('rectangle tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 0, y: 0 }));
     tool.onPointerMove?.(ctx, pointer({ x: 50, y: 50 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
     tool.onPointerUp?.(ctx, pointer({ x: 50, y: 50 }));
 
     expect(store.getState().document.project.parts).toHaveLength(0);
@@ -346,7 +346,7 @@ describe('select tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 50, y: 0 }));
     tool.onPointerMove?.(ctx, pointer({ x: 90, y: 40 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
 
     expect(firstRect(store)!.origin).toEqual({ x: 0, y: 0 });
     expect(store.inTransaction).toBe(false);

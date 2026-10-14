@@ -257,7 +257,7 @@ function polylineLike(
 
       if (event.key === 'Escape') {
         reset(ctx);
-        return false;
+        return true;
       }
 
       // A and L choose the next segment. Claimed, so the app does not also

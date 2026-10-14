@@ -73,6 +73,19 @@ describe('reading preferences.json', () => {
     expect(validChanges('legendOpen')).toEqual({});
   });
 
+  it('keeps the panels the maker folded, each falling back on its own (U.5)', () => {
+    // A file from before U.5 has neither: both panels open, as they always did.
+    expect(parsePreferences(JSON.stringify({ legendOpen: true }))).toMatchObject({
+      partsFolded: false,
+      propertiesFolded: false,
+    });
+    expect(
+      parsePreferences(JSON.stringify({ partsFolded: true, propertiesFolded: 'yes' })),
+    ).toMatchObject({ partsFolded: true, propertiesFolded: false });
+    expect(validChanges({ partsFolded: true, propertiesFolded: 0 })).toEqual({ partsFolded: true });
+    expect(validChanges({ propertiesFolded: false })).toEqual({ propertiesFolded: false });
+  });
+
   it('keeps the interface language: following the system, or one the app ships', () => {
     expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
     expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');

@@ -99,7 +99,11 @@ export function createRectangleTool(nextId: () => string): Tool {
     notice: (ctx) => draw.notice(ctx),
 
     onKey(ctx, event) {
-      if (event.key === 'Escape') reset(ctx);
+      if (event.key !== 'Escape') return false;
+      // Claimed only when it gives something up (U.5).
+      const busy = state.kind !== 'idle';
+      reset(ctx);
+      return busy;
     },
 
     buildOverlay(): DisplayList {

@@ -72,3 +72,6 @@ export { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
 
 export type { SvgOptions } from './svg/backend.js';
 export { renderToSvgString } from './svg/backend.js';
+
+export type { PixelBox } from './thumbnail.js';
+export { thumbnailPath } from './thumbnail.js';

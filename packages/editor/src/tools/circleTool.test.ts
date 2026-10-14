@@ -88,7 +88,7 @@ describe('circle tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 0, y: 0 }));
     tool.onPointerMove?.(ctx, pointer({ x: 10, y: 0 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
     tool.onPointerUp?.(ctx, pointer({ x: 10, y: 0 }));
 
     expect(store.getState().document.project.parts).toHaveLength(0);

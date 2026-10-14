@@ -1,6 +1,7 @@
 import {
   deleteFeatures,
   deletePart,
+  isEmptySelection,
   pieceScope,
   selectedFeatureIds,
   transformRefusal,
@@ -126,9 +127,12 @@ export function createSelectTool(): Tool {
 
     onKey(ctx, event) {
       if (event.key === 'Escape') {
+        // Claimed only when there was something to let go of (U.5): a drag,
+        // or a selection.
+        const busy = state.kind !== 'idle' || !isEmptySelection(ctx.store.getState().selection);
         reset(ctx);
         ctx.store.clearSelection();
-        return;
+        return busy;
       }
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -139,20 +143,20 @@ export function createSelectTool(): Tool {
         if (partId !== undefined && selection.features.size === 0) {
           if (ctx.requestDeletePart !== undefined) {
             ctx.requestDeletePart(partId);
-            return;
+            return false;
           }
           const before = ctx.store.getState().document;
           ctx.dispatch(deletePart(partId));
           if (ctx.store.getState().document !== before) ctx.store.clearSelection();
-          return;
+          return false;
         }
 
         const selected = [...selection.features];
-        if (selected.length === 0) return;
+        if (selected.length === 0) return false;
 
         if (ctx.requestDelete !== undefined) {
           ctx.requestDelete(selected);
-          return;
+          return false;
         }
 
         // Without an app to ask, a delete with dependents is refused. Keep the
@@ -161,6 +165,7 @@ export function createSelectTool(): Tool {
         ctx.dispatch(deleteFeatures(selected));
         if (ctx.store.getState().document !== before) ctx.store.clearSelection();
       }
+      return false;
     },
 
     /**

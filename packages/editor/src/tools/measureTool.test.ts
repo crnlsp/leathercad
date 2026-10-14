@@ -159,7 +159,7 @@ describe('the measure tool', () => {
     const tool = createMeasureTool(nextId, () => 'aligned');
 
     tool.onPointerDown!(ctx, click(0, 0));
-    tool.onKey!(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey!(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
     // The second corner of the abandoned dimension starts a new one instead.
     tool.onPointerDown!(ctx, click(100, 0));
 

@@ -359,7 +359,10 @@ describe('matching a key, by where it is (U.3)', () => {
     });
 
     it('wants the command key and only it: not bare, not with Alt or AltGr', () => {
-      expect(commandFor({ ...NO_MODIFIERS, code: 'BracketRight', key: '+' }, false)).toBeNull();
+      // Bare, the German + key is the place of `]`, which folds Properties (U.5): never zoom.
+      expect(commandFor({ ...NO_MODIFIERS, code: 'BracketRight', key: '+' }, false)).toBe(
+        'toggleProperties',
+      );
       expect(commandFor(ctrl('BracketRight', '+', { altKey: true }), false)).toBeNull();
       expect(commandFor(ctrl('BracketRight', '+', { metaKey: true }), false)).toBeNull();
       expect(
@@ -422,6 +425,47 @@ describe('matching a key, by where it is (U.3)', () => {
         expect(label('fitSelection', true)).toBe('⇧2');
         expect(label('trueSize', true)).toBe('⌘0');
       }
+    });
+  });
+
+  describe('the panels and focus mode (U.5, R-04)', () => {
+    const bare = (code: string, key: string): KeyPress => ({ ...NO_MODIFIERS, code, key });
+
+    it('folds Parts on [, Properties on ] and both on \\, by their place', () => {
+      // US; German ü + #, which need no AltGr there; French ^ $ *.
+      for (const [left, right, back] of [
+        ['[', ']', '\\'],
+        ['ü', '+', '#'],
+        ['^', '$', '*'],
+        ['Dead', 'Dead', '*'],
+      ] as const) {
+        expect(commandFor(bare('BracketLeft', left), false), left).toBe('toggleParts');
+        expect(commandFor(bare('BracketRight', right), false), right).toBe('toggleProperties');
+        expect(commandFor(bare('Backslash', back), false), back).toBe('focusMode');
+      }
+    });
+
+    it('takes focus mode from the \\ beside Z on an ISO keyboard too', () => {
+      // A British keyboard prints \ left of Z and # where a US one has \.
+      expect(commandFor(bare('IntlBackslash', '\\'), false)).toBe('focusMode');
+    });
+
+    it('wants the key alone: Ctrl+[ and Shift+] fold nothing', () => {
+      expect(commandFor({ ...bare('BracketLeft', '['), ctrlKey: true }, false)).toBeNull();
+      expect(commandFor({ ...bare('BracketRight', '}'), shiftKey: true }, false)).toBeNull();
+    });
+
+    it('shows each as this keyboard prints it', () => {
+      const label = (id: CommandId, layout: KeyboardLayout | null): string =>
+        keyLabel(shownKeys(id, layout, false)[0]!, false, layout, t);
+      expect(
+        ['toggleParts', 'toggleProperties', 'focusMode'].map((id) => label(id as CommandId, null)),
+      ).toEqual(['[', ']', '\\']);
+      expect(
+        ['toggleParts', 'toggleProperties', 'focusMode'].map((id) =>
+          label(id as CommandId, GERMAN),
+        ),
+      ).toEqual(['ü', '+', '#']);
     });
   });
 
