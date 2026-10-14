@@ -9,8 +9,8 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-09-26. First written for 1.0 (sheet plan, Sheets view, project and work
-bars), and passed for it on 2026-09-24.
+**Last updated:** 2026-10-14, for check 12, the macOS edited flag (U.7). First written for 1.0
+(sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
 
@@ -195,6 +195,19 @@ installed with `flatpak install --user` — double-click a saved `.lcp`. The app
 and **Save** writes back to it without asking where. With the app already open and unsaved work, a
 second double-click on macOS asks about the unsaved work first; on Linux and Windows it opens a
 second window. On Linux, the file manager calls the file a *LeatherCAD project*.
+
+### 12. The window's edited flag, on macOS
+
+Since 1.5 (U.7). On a **real Mac**, with the packaged dmg. Not Linux, where Electron ignores the
+flag; not the test host or the end-to-end mock, which replace it.
+
+1. Open a project, saved and unchanged: the window's close button shows no edited dot.
+2. Make an edit: the dot appears in the close button.
+3. *Save*: the dot clears.
+
+Until this has passed on a Mac, **R10** in [`roadmap.md`](roadmap.md) stays ☐ and the release gate
+refuses the release. Tick it in the pull request that records the result, with the macOS version
+and the date.
 
 ## After it passes
 
