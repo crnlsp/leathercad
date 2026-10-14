@@ -106,6 +106,11 @@ export function registerPlatformHandlers(
 
   ipcMain.handle(IPC.getAppVersion, () => app.getVersion());
 
+  // The edited flag (U.7): macOS's dot in the close button. A no-op elsewhere.
+  ipcMain.handle(IPC.setDocumentEdited, (_event, edited: unknown) => {
+    getWindow()?.setDocumentEdited(edited === true);
+  });
+
   // Crash recovery (5.3b). The renderer says what to keep; the files — their
   // names, their directory, their atomic writes — are the main process's alone.
   ipcMain.handle(IPC.writeRecovery, async (_event, data: Uint8Array) => {

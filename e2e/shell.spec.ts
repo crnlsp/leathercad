@@ -8,7 +8,8 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { fromProjectMenu, renameProject } from './projectMenu.js';
+import { resizeWindow } from './windowSize.js';
 
 let app: ElectronApplication;
 
@@ -402,7 +403,7 @@ test('exports a print-ready PDF at 1:1', async () => {
     }, target);
 
     const box = await window.getByTestId('editor-canvas').boundingBox();
-    await window.getByTestId('project-name').fill('Card holder');
+    await renameProject(window, 'Card holder');
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 150, box!.y + 150);
     await window.mouse.down();
@@ -474,9 +475,12 @@ test('the project bar holds the project and its output; the work bar holds the w
       'project-name',
       'save-state',
       'save',
-      'paper',
+      'view-design',
+      'view-sheets',
+      'paper-button',
       'export-pdf',
       'print',
+      'print-problems',
       'settings',
       'help-menu',
     ]) {
@@ -489,10 +493,10 @@ test('the project bar holds the project and its output; the work bar holds the w
       await expect(project.getByTestId(id), id).toHaveCount(0);
     }
 
-    // Print is the one primary action in the window (7.6); Export PDF is not.
+    // Print is the one primary action in the window (7.6, R-06); Export PDF is not.
     await expect(window.locator('.primary')).toHaveCount(1);
-    await expect(window.getByTestId('print')).toHaveClass(/primary/);
-    await expect(window.getByTestId('export-pdf')).not.toHaveClass(/primary/);
+    await expect(window.locator('.primary').getByTestId('print')).toHaveCount(1);
+    await expect(window.locator('.primary').getByTestId('export-pdf')).toHaveCount(0);
   });
 });
 
@@ -517,12 +521,12 @@ test('the window and the project bar say which project it is, and whether it is 
     await expect(window).toHaveTitle('Untitled — LeatherCAD');
     await expect(window.getByTestId('save-state')).toHaveText('');
 
-    await window.getByTestId('project-name').fill('Card holder');
+    await renameProject(window, 'Card holder');
     await expect(window).toHaveTitle('• Card holder — LeatherCAD');
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
 
-    // Undone back to where it started: clean again, and untitled.
-    await window.getByTestId('project-name').blur();
+    // Undone back to where it started — one step for the whole name (U.7):
+    // clean again, and untitled.
     await window.getByTestId('undo').click();
     await expect(window).toHaveTitle('Untitled — LeatherCAD');
     await expect(window.getByTestId('save-state')).toHaveText('');
@@ -550,9 +554,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
     await window.mouse.click(box!.x + 40, box!.y + 40);
     await expect(window.getByTestId('selected-count')).toHaveText('0');
 
-    await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(860, 600);
-    });
+    await resizeWindow(instance, window, 860, 600);
     await expect(window.getByTestId('toggle-parts')).toBeVisible();
     await expect(window.getByTestId('toggle-properties')).toBeVisible();
     await expect(window.getByTestId('tool-rail')).toBeVisible();
@@ -606,7 +608,7 @@ test('problems wait in a drawer that says the verdict, and part actions in a men
     await inset.fill('60');
     await inset.press('Enter');
     // Collapsed, it still says how many — closing it never hides trouble.
-    await expect(toggle).toContainText('2 problems');
+    await expect(toggle).toContainText('2 errors');
     const drawer = window.getByTestId('problems-panel');
     await expect(drawer.getByTestId('problem-row')).toHaveCount(0);
     await toggle.click();
@@ -1548,7 +1550,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
 
     const problems = window.getByTestId('problems-panel');
     // Collapsed, the handle already says how many and how bad.
-    await expect(problems).toContainText('2 problems');
+    await expect(problems).toContainText('2 errors');
     await openProblems(window);
     const rows = problems.getByTestId('problem-row');
     await expect(rows).toHaveCount(2);
@@ -1702,7 +1704,7 @@ test('exports a part named in Polish, which used to be impossible', async () => 
     }, target);
 
     const box = await window.getByTestId('editor-canvas').boundingBox();
-    await window.getByTestId('project-name').fill('Portfel');
+    await renameProject(window, 'Portfel');
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 150, box!.y + 150);
     await window.mouse.down();

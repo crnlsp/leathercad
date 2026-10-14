@@ -9,7 +9,7 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { choosePaper, fromProjectMenu } from './projectMenu.js';
 
 /**
  * The sheet workflow (7.4a–7.4d): the maker's question, answered before
@@ -126,13 +126,13 @@ test('Parts says where each part prints, and why a part does not (7.4b)', async 
     await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
 
     // Turned, everything fits whole on one sheet.
-    await window.getByTestId('paper').selectOption('A4 landscape');
+    await choosePaper(window, 'A4', 'landscape');
     for (const name of ['Outer panel', 'Pocket', 'Strap']) {
       await expect(printLine(window, name), name).toHaveText('Sheet 1');
     }
     // On A5 landscape the pocket shares the panel's sheet only turned a
     // quarter, and Parts says so: the board shows it as drawn (7.8).
-    await window.getByTestId('paper').selectOption('A5 landscape');
+    await choosePaper(window, 'A5', 'landscape');
     await expect(printLine(window, 'Pocket')).toHaveText('Sheet 1, turned');
     await window.getByTestId('undo').click();
     await window.getByTestId('undo').click();
@@ -141,8 +141,8 @@ test('Parts says where each part prints, and why a part does not (7.4b)', async 
     const strap = window.getByTestId('parts-list').locator('section', { hasText: 'Strap' });
     await strap.locator('[data-testid^="part-visible-"]').click();
     await expect(printLine(window, 'Strap')).toHaveText(/^Not printed\s*It is hidden\.$/);
-    await expect(window.getByTestId('paper').locator('option:checked')).toHaveText(
-      '1 sheet of A4, portrait',
+    await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
+      'Paper: 1 sheet of A4, portrait',
     );
   });
 });
@@ -154,7 +154,7 @@ test('the board shows where a taped piece joins, and the joins never reach paper
     await expect.poll(() => furniturePixels(canvas)).toBeGreaterThan(40);
 
     // A4 landscape holds it whole: no join, no furniture.
-    await window.getByTestId('paper').selectOption('A4 landscape');
+    await choosePaper(window, 'A4', 'landscape');
     await expect.poll(() => furniturePixels(canvas)).toBe(0);
 
     // Back on A4 portrait, the PDF has the three sheets the plan promised, all
@@ -179,7 +179,7 @@ test('the Sheets view shows the plan, and changing the paper changes it (7.4c)',
     const canvas = window.getByTestId('editor-canvas');
     await window.getByTestId('view-sheets').click();
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
-    await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-pressed', 'true');
+    await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
     await expect(window.getByTestId('sheets-summary')).toHaveText(
       '3 sheets of A4, portrait. Strap is taped across sheets 2–3.',
     );
@@ -191,7 +191,7 @@ test('the Sheets view shows the plan, and changing the paper changes it (7.4c)',
     await expect.poll(() => furniturePixels(canvas)).toBeGreaterThan(40);
 
     const before = await canvasImage(canvas);
-    await window.getByTestId('paper').selectOption('A4 landscape');
+    await choosePaper(window, 'A4', 'landscape');
     await expect(window.getByTestId('sheets-summary')).toHaveText('1 sheet of A4, landscape.');
     await expect.poll(() => canvasImage(canvas)).not.toBe(before);
 
@@ -305,14 +305,12 @@ async function boardView(window: Page): Promise<(xMm: number, yMm: number) => [n
 
 test('the maker’s journey: design, paper, sheets, and a PDF that is what was shown (7.4d)', async () => {
   await withPrintTest(async ({ app, window, pdf }) => {
-    const paper = window.getByTestId('paper');
+    const paper = window.getByTestId('paper-button');
     const summary = window.getByTestId('sheets-summary');
     const strapSection = window.locator('[data-testid^="part-section-"]', { hasText: 'Strap' });
 
     // 1. The paper says what it will print, before anything is exported.
-    await expect(paper.locator('option:checked')).toHaveText(
-      '3 sheets of A4, portrait (Strap taped)',
-    );
+    await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
     await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
 
     // 2. The sheets: the same answer, in pictures and in words.
@@ -374,9 +372,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     // A move is an edit: undo has something to undo.
     await expect(window.getByTestId('undo')).toBeEnabled();
     await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
-    await expect(paper.locator('option:checked')).toHaveText(
-      '3 sheets of A4, portrait (Strap taped)',
-    );
+    await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
 
     // 5. Nor does the window's size.
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
@@ -422,8 +418,8 @@ test('an empty project is one scale-check sheet, on screen and in the PDF (7.4d)
   await withPrintTest(async ({ window, pdf }) => {
     await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('part-count')).toHaveText('0');
-    await expect(window.getByTestId('paper').locator('option:checked')).toHaveText(
-      '1 sheet of A4, portrait, scale check only',
+    await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
+      'Paper: 1 sheet of A4, portrait, scale check only',
     );
     await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(

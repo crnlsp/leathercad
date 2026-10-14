@@ -38,18 +38,37 @@
     "exportPdf": "Export PDF",
     "exportTooltip": "Save {{sheets}} as a print-ready PDF at 1:1. To print it from another app, choose Actual size (100 %)",
     "help": "Help",
+    "helpTooltip": "Help",
     "name": "Project name",
-    "nameTooltip": "Project name — used for the file name and the PDF footer",
+    "nothingToSave": "Nothing to save",
     "output": "Output",
+    "paper": "Paper: {{sheets}}",
+    "paperLong": "{{count}} × {{paper}} {{orientation}}",
+    "paperPopover": {
+      "orientation": "Orientation",
+      "option_one": "{{paper}} · {{count}} sheet",
+      "option_other": "{{paper}} · {{count}} sheets",
+      "sheets_one": "{{count}} sheet",
+      "sheets_other": "{{count}} sheets",
+      "summary": "{{sheets}} · scale 100 %, locked · {{taped}}",
+      "nothingTaped": "nothing taped",
+      "seeSheets": "See the sheets"
+    },
+    "paperShort": "{{count}} × {{paper}}",
     "print": "Print",
     "printTooltip": "Preview {{sheets}}, then print them at 1:1",
-    "projectMenu": "Project menu",
-    "projectMenuTooltip": "New, open, save as, and recent projects",
+    "problems": "Problems: {{counts}}",
+    "problemsNone": "Problems: nothing to fix",
+    "problemsNoneTooltip": "Nothing to fix",
+    "problemsTooltip": "{{counts}}. Show them in Problems",
+    "projectMenu": "Project menu, {{name}}",
+    "projectMenuTooltip": "{{name}}. New, open, save as, rename, and recent projects",
     "saveTooltip": "Save the project",
     "saved": "Saved",
     "settings": "Settings",
     "settingsTooltip": "Settings",
-    "unsaved": "Unsaved changes"
+    "unsaved": "Unsaved changes",
+    "unsavedShort": "Unsaved"
   },
   "menu": {
     "about": "About LeatherCAD",
@@ -63,6 +82,8 @@
     "openSample": "Open sample project",
     "recent": "Recent projects",
     "recentEmpty": "Projects you open or save appear here.",
+    "rename": "Rename…",
+    "renameNote": "The name is the file’s and the PDF footer’s",
     "saveAs": "Save as…",
     "settings": "Settings…"
   },
@@ -100,6 +121,8 @@
     "designTooltip": "Design the pieces",
     "label": "View",
     "sheets": "Sheets",
+    "sheetsNamed_one": "Sheets, {{count}} sheet",
+    "sheetsNamed_other": "Sheets, {{count}} sheets",
     "sheetsTooltip": "See the pieces on the sheets they will print on"
   },
   "zoom": {
@@ -231,7 +254,8 @@
     "undo": "Undo",
     "zoom": "Zoom about the pointer",
     "zoomIn": "Zoom in",
-    "zoomOut": "Zoom out"
+    "zoomOut": "Zoom out",
+    "help": "Open the Help menu"
   },
   "settings": {
     "close": "Close settings",
@@ -371,7 +395,6 @@
     "failedNotPrinted_one": "{{count}} feature with a problem isn't printed.",
     "failedNotPrinted_other": "{{count}} features with problems aren't printed.",
     "paper": "Paper",
-    "paperAndSheets": "Paper and sheets",
     "partNotPrinted": "{{name}} isn't printed.",
     "partsNotPrinted_one": "{{count}} part isn't printed.",
     "partsNotPrinted_other": "{{count}} parts aren't printed.",
@@ -433,6 +456,8 @@
     "printSheets_one": "Print {{count}} sheet",
     "printSheets_other": "Print {{count}} sheets",
     "printer": "Printer",
+    "problems": "Problems",
+    "problemsLead": "The design has {{counts}}. Everything that could be built is on the sheets.",
     "savePdf": "Save PDF…",
     "scale": "Scale",
     "scaleLocked": "100 % — locked",
@@ -449,10 +474,6 @@
   "exportNotice": {
     "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
     "countsFile": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the file.",
-    "errors_one": "{{count}} error",
-    "errors_other": "{{count}} errors",
-    "infos_one": "{{count}} to note",
-    "infos_other": "{{count}} to note",
     "inPart": "in {{part}}",
     "omitted": "— each failed to build, so it is missing from the PDF.",
     "omittedFile": "— each failed to build, so it is missing from the file.",
@@ -469,9 +490,7 @@
     "tiledNoPaper": "{{printed}} No supported paper holds it whole.",
     "titleCheck": "PDF exported, with something to check",
     "titleCheckFile": "{{format}} exported, with something to check",
-    "titleTiled": "PDF exported across several sheets",
-    "warnings_one": "{{count}} warning",
-    "warnings_other": "{{count}} warnings"
+    "titleTiled": "PDF exported across several sheets"
   },
   "panels": {
     "featureIn": "{{feature}} · {{part}}",
@@ -627,8 +646,6 @@
       "warning": "warning"
     },
     "panel": {
-      "count_one": "{{count}} problem",
-      "count_other": "{{count}} problems",
       "none": "Nothing to fix.",
       "title": "Problems"
     },
@@ -895,6 +912,14 @@
     "WHOLE_PART_NOT_SCALED": {
       "title": "A whole part is not scaled",
       "description": "Scale resizes the shapes you pick, not a whole part: that would resize its rivet holes and labels too. Pick its outline on the board to resize the edge alone."
+    },
+    "counts": {
+      "error_one": "{{count}} error",
+      "error_other": "{{count}} errors",
+      "warning_one": "{{count}} warning",
+      "warning_other": "{{count}} warnings",
+      "info_one": "{{count}} to note",
+      "info_other": "{{count}} to note"
     }
   },
   "contextMenu": {

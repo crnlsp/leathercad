@@ -36,7 +36,11 @@ describe('the keyboard shortcut map', () => {
   it('lists every key a menu shows, as the keymap binds it', () => {
     const noop = (): void => undefined;
     const shown = [
-      ...projectMenu({ newProject: noop, open: noop, saveAs: noop, openRecent: noop }, [], t),
+      ...projectMenu(
+        { newProject: noop, open: noop, saveAs: noop, rename: noop, openRecent: noop },
+        [],
+        t,
+      ),
       ...helpMenu({ openSample: noop, about: noop }, t),
     ].flatMap((entry) => (entry.kind === 'item' && entry.keys !== undefined ? [entry.keys] : []));
     expect(shown.length).toBeGreaterThan(0);

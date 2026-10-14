@@ -7,6 +7,8 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
+import { renameProject } from './projectMenu.js';
+import { resizeWindow } from './windowSize.js';
 
 /**
  * Keys by where they are, shown as caps, and tooltips that fit (U.3, §2
@@ -33,13 +35,6 @@ async function withSample(body: (window: Page, app: ElectronApplication) => Prom
   }
 }
 
-async function resize(app: ElectronApplication, width: number, height: number): Promise<void> {
-  await app.evaluate(
-    ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0]?.setSize(size[0], size[1]),
-    [width, height] as const,
-  );
-}
-
 /** A key press as a keyboard of another layout sends it. */
 async function press(
   window: Page,
@@ -54,24 +49,24 @@ async function press(
 
 test('a tooltip at the window’s right edge is one line, 8 px inside it (R-10, mockup 16)', async () => {
   await withSample(async (window, app) => {
-    await resize(app, 860, 600);
-    await expect.poll(() => window.evaluate(() => innerWidth)).toBe(860);
+    await resizeWindow(app, window, 860, 600);
 
-    await window.getByTestId('view-sheets').hover();
-    const tip = window.getByRole('tooltip', { name: /See the pieces on the sheets/ });
+    // Help is the last control on the right since U.7; Design | Sheets moved to the middle.
+    await window.getByTestId('help-menu').hover();
+    const tip = window.getByRole('tooltip', { name: /^Help/ });
     await expect(tip).toBeVisible();
     const box = (await tip.boundingBox())!;
     // It was a 68 px column, five lines tall, flush with the edge.
     expect(box.x + box.width).toBeCloseTo(860 - 8, 0);
     expect(box.width).toBeLessThanOrEqual(360);
     expect(box.height).toBeLessThan(36);
-    await expect(tip.locator('kbd')).toHaveText('Ctrl+2');
+    await expect(tip.locator('kbd')).toHaveText('F1');
   });
 });
 
 test('near the window’s foot, a tooltip opens above its control (R-10)', async () => {
   await withSample(async (window, app) => {
-    await resize(app, 1280, 600);
+    await resizeWindow(app, window, 1280, 600);
     await expect.poll(() => window.evaluate(() => innerHeight)).toBe(600);
     // The rail's own toggle sits at the window's foot, by the status bar.
     // (Properties' last control was Add stitch line, scrolled to the foot;
@@ -89,6 +84,8 @@ test('near the window’s foot, a tooltip opens above its control (R-10)', async
 
 test('a tooltip waits 500 ms for the pointer, comes at once for the keyboard, and Escape hides it (R-10)', async () => {
   await withSample(async (window) => {
+    // Something to save: with nothing, Save says so and shows no key (R-06).
+    await renameProject(window, 'Bifold wallet, lined');
     const save = window.getByTestId('save');
     const tip = window.getByRole('tooltip', { name: /Save the project/ });
     await save.hover();
@@ -101,7 +98,7 @@ test('a tooltip waits 500 ms for the pointer, comes at once for the keyboard, an
     await expect(tip).toHaveCount(0);
 
     await window.mouse.move(600, 500);
-    await window.getByTestId('project-name').focus();
+    await window.getByTestId('project-menu').focus();
     await window.keyboard.press('Tab');
     await expect(save).toBeFocused();
     await expect(tip).toBeVisible({ timeout: 200 });
@@ -142,9 +139,9 @@ test('on a German or French keyboard, every window key does what it does on a US
 
     // Ctrl+2 and Ctrl+1 from the digit keys, whatever they type: & and é in French.
     await press(window, { code: 'Digit2', key: 'é', ctrlKey: true });
-    await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-pressed', 'true');
+    await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
     await press(window, { code: 'Digit1', key: '&', ctrlKey: true });
-    await expect(window.getByTestId('view-design')).toHaveAttribute('aria-pressed', 'true');
+    await expect(window.getByTestId('view-design')).toHaveAttribute('aria-selected', 'true');
 
     // German QWERTZ: Z is where a US keyboard has Y, and Ctrl+Z still undoes.
     const features = window.getByTestId('feature-count');

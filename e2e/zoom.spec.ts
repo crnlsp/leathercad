@@ -3,6 +3,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * U.4 (R-03): the zoom control at the canvas's bottom-right — − · the zoom ·
@@ -122,8 +123,8 @@ test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its h
 
     // Typed into a field, Shift+1 is a !, not a fit.
     await window.keyboard.press('Control+0');
-    const name = window.getByTestId('project-name');
-    await name.click();
+    await fromProjectMenu(window, 'rename');
+    const name = window.getByTestId('project-name-input');
     await name.press('End');
     await name.press('Shift+Digit1');
     await expect(name).toHaveValue(/!$/);

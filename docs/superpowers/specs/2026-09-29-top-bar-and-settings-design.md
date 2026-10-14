@@ -4,6 +4,17 @@
 1.3 · **Supersedes:** the File menu note in
 [`2026-09-24-sheets-workflow-design.md`](2026-09-24-sheets-workflow-design.md) §4.1
 
+> **Successor, §3 (U.7, 2026-10-14).** The project bar became the top bar in three zones of R-06
+> ([requirements](2026-10-08-ui-refinement-requirements.md), the plan's §5 U.7). The Project menu's
+> button is the project's name, and *Rename…* in it renames the project (the name was a field in
+> the bar); the save state is a check and *Saved*, or an open dot and *Unsaved changes*, and Save
+> says *Nothing to save* when there is none. Design | Sheets moved here from the work bar, into
+> the middle, as a tab list. The sheet indicator's list became a paper button — "2 × A4 portrait"
+> — opening a popover with the paper, which way up, the sheets and *See the sheets*. Export PDF and
+> Print are split buttons: Export's second half is the export menu, Print's the problems
+> indicator, which opens the Problems drawer. Print is the paper's colour, no longer green. Help
+> opens on F1. The rest of this document is as decided for 8.7.
+
 ## 1. The problem
 
 The window's top row is Electron's native menu: *File, Edit, View, Tools, Paper, Help*. Nearly

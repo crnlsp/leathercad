@@ -305,6 +305,12 @@ describe('matching a key, by where it is (U.3)', () => {
     expect(commandFor({ ...NO_MODIFIERS, code: 'Slash', key: '/' }, false)).toBeNull();
   });
 
+  it('opens Help on F1 alone (U.7)', () => {
+    expect(commandFor({ ...NO_MODIFIERS, code: 'F1', key: 'F1' }, false)).toBe('help');
+    expect(commandFor({ ...NO_MODIFIERS, code: 'F1', key: 'F1' }, true)).toBe('help');
+    expect(commandFor({ ...NO_MODIFIERS, code: 'F1', key: 'F1', ctrlKey: true }, false)).toBeNull();
+  });
+
   describe('zoom follows the + and − a keyboard prints (U.3, on review)', () => {
     // Zoom is named by its symbols, like a tool by its letter, and + and −
     // need no AltGr anywhere — unlike [ ] \ — so they are matched by what the

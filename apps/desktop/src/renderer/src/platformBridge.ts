@@ -26,6 +26,7 @@ interface PreloadBridge {
   printPdf(data: Uint8Array, job: PrintJob): Promise<string>;
   getUserConfigDir(): Promise<string>;
   getAppVersion(): Promise<string>;
+  setDocumentEdited(edited: boolean): Promise<void>;
   writeRecovery(data: Uint8Array): Promise<void>;
   clearRecovery(): Promise<void>;
   findRecovery(): Promise<RecoveredCopy | null>;

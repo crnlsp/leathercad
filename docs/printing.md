@@ -645,12 +645,14 @@ that tests the units. Presets, choosing layers and the bounds are 6.4.
 **Print → LeatherCAD's Print Preview → the printer.** The decision and what was measured are in
 [ADR 0019](adr/0019-print-from-the-app.md).
 
-**One PDF.** *Print* (green, the window's primary action, Ctrl+P) writes the PDF from the same
+**One PDF.** *Print* (the window's primary action, in the paper's colour since U.7, Ctrl+P) writes the PDF from the same
 `SheetPlan` as *Export PDF*, in the print form: every page upright, a landscape sheet turned a
 quarter on it (§6.1). The preview draws **that file** with pdf.js, so the sheets shown are the bytes
 sent, not a second drawing. Only its view of a landscape page is turned back, a quarter clockwise,
 so the sheet reads as the Sheets view shows it. `lp` then receives those bytes on its standard
-input. Its choices are only those that cannot change the size of what prints:
+input. The preview lists the design's problems first — the Problems drawer's list, in its order —
+and prints with them all the same (R-06). Its choices are only those that cannot change the size
+of what prints:
 
 | Choice | What it does |
 |---|---|

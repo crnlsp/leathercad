@@ -209,10 +209,10 @@ and `css.ts` projects it onto `:root`.
 | `canvas-label` | `CANVAS.caption` = `GROUND.inkDim` #6E695E | #5E5950, 6.0:1 on the ground | **new**, U.2 ✅: `GROUND.label`, `--ground-label`; replaces the light grey for canvas text |
 | `canvas-name` · `canvas-meta` · `canvas-value` | — | 12/16 at 600 · 400 · 500 | **new** type tokens, U.2 ✅: `CANVAS.text.name` · `.meta` · `.value`, with `CANVAS.text.haloPx` 4 |
 | `canvas-text-min` | — | 12 px | **new**, U.2 ✅: `CANVAS.text.minPx` |
-| `primary` | `GO.go` #46B46B | **#F1EEE8** | **changed**, U.7: Print's main half, in the paper colour. Green is retired from actions: it reads as the fold colour |
-| `primary-side` | — | #D2CBBD (the value of `GROUND.major`) | **new**, U.7 |
-| `secondary-side` | — | #3A3F47 | **new**, U.7 |
-| `on-primary` | `GO.onGo` #1D2126 | #14161A | **changed**, U.7: AA on `primary`, `primary-side`, `warning` and `error` |
+| `primary` | `GO.go` #46B46B | **#F1EEE8** | **changed**, U.7 ✅: `ACTION.primary`, `--primary`; Print's main half, in the paper colour. Green is retired from actions: it reads as the fold colour. `GO` is gone |
+| `primary-side` | — | #D2CBBD (the value of `GROUND.major`) | **new**, U.7 ✅: `ACTION.primarySide`, `--primary-side` |
+| `secondary-side` | — | #3A3F47 | **new**, U.7 ✅: `ACTION.secondarySide`, `--secondary-side` |
+| `on-primary` | `GO.onGo` #1D2126 | #14161A | **changed**, U.7 ✅: `ACTION.onPrimary`, `--on-primary`; AA on `primary`, `primary-side`, `warning` and `error` |
 | `rail-wide` / `rail-narrow` | `RAIL_PX` 152 / 52 | 152 / **56** px | **changed**, U.5 ✅: `RAIL_PX`, `--rail-w-expanded` / `--rail-w-collapsed` |
 | `parts-width` / `properties-width` | `--parts-w` 220 and `--properties-w` 288 (264 below 1280), written in `styles.css` | 224 / 264 px | **changed**, U.5 ✅, into the theme: `PANEL_PX.parts` / `.properties`, `--parts-width` / `--properties-width`; and `PANEL_PX.partsNarrow` 208 below 1280, `--parts-width-narrow` |
 | `panel-strip` · `row-height` | — | 40 px · 28 px (a Parts row was 34) | **new**, U.5 ✅ (`PANEL_PX.strip`, `--panel-strip`) and U.8 |
@@ -1050,10 +1050,19 @@ count is only in the status bar. Tooltips carry their keys in their sentences.
   knip`).
 
 **Find out first.**
-- [ ] Is the project's name renamed in place today? If the name becomes part of the menu button,
+- [x] Is the project's name renamed in place today? If the name becomes part of the menu button,
       renaming must stay reachable — a *Rename…* item, or F2 on the name. A decision if neither fits.
-- [ ] What *Export PDF* does on a second press: is anything remembered ("the last settings")?
-- [ ] Where severities are counted, so the indicator and the drawer can never disagree.
+      *Yes: an `<input>` in the bar dispatched `setProjectName` on every keystroke, so each letter
+      was an undo step of its own. Per the roadmap's decision, *Rename…* in the Project menu turns
+      the name back into that field; F2 stays the Parts tree's (§4).*
+- [x] What *Export PDF* does on a second press: is anything remembered ("the last settings")?
+      *Nothing: every press asks where, suggesting `<name>.pdf`. The paper and the way up are the
+      project's own (`setPageSetup`), so "the last settings" are already what it exports with; the
+      main half does what Export PDF did.*
+- [x] Where severities are counted, so the indicator and the drawer can never disagree.
+      *Twice, then neither: `exportReadiness` counted errors, warnings and infos in a loop of its
+      own, `badgesOf` folds only the worst, and the drawer said a total. Now `countBySeverity` in
+      `packages/domain/src/badges.ts`, read by the indicator, the drawer and the export notice.*
 
 **Done when — check in the app.** Mockup 08's rows at 1920, 1024 and 860, nothing clipped or wrapped
 at 860 (the existing E2E holds it); each half named on its own (the accessibility scan); the
@@ -1066,6 +1075,57 @@ keyboard and their names (E2E); the 860 px fit (E2E); the edited flag through th
 
 **Docs.** The top-bar spec's successor note, `docs/getting-started.md`, the roadmap; 7.6's text
 calls Print green.
+
+**As built (2026-10-14).** What the plan above did not know:
+
+- **Every *Done when* line was checked in `e2e/top-bar.spec.ts`**: the bar at 1920, 1024 and 860
+  px, one row, every control inside it, the words as R-06 says them at each; each half's name; the
+  indicator clear, warning and error with the drawer opening and saying the same; the Print
+  preview's list, the drawer's rows in the drawer's order, first in its options; the switch by the
+  arrows, Home, `Ctrl+1` and `Ctrl+2`; F1; one announcement per change; the edited flag.
+- **The edited flag was checked on Linux, not on a Mac**: the e2e replaces the window's
+  `setDocumentEdited` in the main process and watches it go true on an edit and false on Save,
+  through the real IPC channel (`platform:setDocumentEdited`). `InMemoryPlatformHost` keeps it
+  too. Electron ignores it off macOS.
+- **Renaming** (`NameField` in `ProjectBar.tsx`): Enter or leaving keeps the name, Escape puts it
+  back, and the whole name is one undo step. From the keyboard, focus goes back to the menu's
+  button. A menu item's `onChoose` now hears how it was chosen (`'keyboard' | 'pointer'`), optional,
+  so U.4's rule can follow an item that replaces its own menu.
+- **The indicator has a fourth state**, *to note*: the drawer lists infos (an empty part, uneven
+  runs), so a check beside them would contradict it. Infos show the dot and their count on
+  `primary-side` (`indicatorOf`, `renderer/src/problemsIndicator.ts`). Its count is of the worst
+  severity alone, as R-06 draws it; the tooltip and its name say all of them ("1 error, 2
+  warnings"), in the words the drawer's verdict and the export notice now share
+  (`problems.counts.*`, `describeCounts`).
+- **The paper popover splits the list in two**, as R-06 draws it: a paper list whose entries say
+  their sheet count at the current way up ("A4 · 2 sheets"), and Portrait | Landscape, each
+  tooltip saying what that way up takes ("1 sheet of A4, landscape") — so 7.4a's "see the result
+  before choosing" holds. What is taped moved to the summary line. The popover takes focus,
+  closes on Escape (giving focus back), a press outside or focus leaving.
+- **Announcements**: one polite region in the bar with two spans, the save state's words and the
+  problems'. Text that does not change is not touched, so it is not said again; and the problems
+  hold still while a gesture is under way (`store.inTransaction`), so a drag does not read out
+  every count it passes through.
+- **Tokens**: `ACTION` in `palette.ts` — `primary` (`GROUND.ground`), `primaryHover`
+  (`GROUND.pieceFill`), `primarySide` (`GROUND.major`), `secondarySide` #3A3F47, `onPrimary`
+  (`SHELL[900]`) — as `--primary`, `--primary-hover`, `--primary-side`, `--secondary-side`,
+  `--on-primary`. `GO` is gone; the print preview's *No scaling* check took `--text`. Contrast:
+  `on-primary` ≥ 4.5 on all three fills and the shell's warning and error; `--text` ≥ 4.5 on both
+  of Export's halves (`theme.test.ts`).
+- **Rooms**: the bar's words follow U.5's `roomAt`: full from 1280, short ("2 × A4", *Unsaved*,
+  Save without its cap) from 900, minimal below — so "at 1024" and "at 860" are the narrow and
+  cramped rooms.
+- **Print's dialog button** is in the paper's colour too: `.tool.primary` is that one button.
+- **The pixel references**: only `empty-window.png` changed, and only inside the two bars; the
+  other two clip to the board.
+- **A resize races the room** (found on CI): `innerWidth` changes with the window, but the frame
+  learns its room from media queries, which Chromium evaluates only when it next renders. U.5's
+  860 px test pressed Enter on the Parts chip in between, so the key was heard by the wide
+  layout and folded Parts instead of opening it over the board — 4 runs in 10 under CPU load
+  on `develop` too, and every time on CI's runner for this branch. `e2e/windowSize.ts`'s
+  `resizeWindow` now waits for the frame's own `data-room` as well; the specs that resize and
+  then press or measure use it. A maker cannot press a key in that frame, so the app is
+  unchanged but for the attribute.
 
 ---
 

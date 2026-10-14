@@ -126,7 +126,7 @@ test('New asks first, and starts a clean, empty project', async () => {
     await dialog.getByTestId('unsaved-discard').click();
 
     await expect(window.getByTestId('part-count')).toHaveText('0');
-    await expect(window.getByTestId('project-name')).toHaveValue('Untitled');
+    await expect(window.getByTestId('project-name')).toHaveText('Untitled');
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     await expect(window.getByTestId('undo')).toBeDisabled();
 

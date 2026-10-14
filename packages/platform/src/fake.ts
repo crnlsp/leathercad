@@ -95,6 +95,16 @@ export class InMemoryPlatformHost implements PlatformHost {
     return Promise.resolve(this.appVersion);
   }
 
+  /** The window's edited flag as the app last set it, and every change in order. */
+  documentEdited = false;
+  readonly documentEditedCalls: boolean[] = [];
+
+  setDocumentEdited(edited: boolean): Promise<void> {
+    this.documentEdited = edited;
+    this.documentEditedCalls.push(edited);
+    return Promise.resolve();
+  }
+
   /** This session's recovery copy, if any. */
   recovery: Uint8Array | null = null;
   /** What `findRecovery` returns: a copy a crashed session left. */

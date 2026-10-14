@@ -71,6 +71,13 @@ export interface PlatformHost {
   getAppVersion(): Promise<string>;
 
   /**
+   * Whether the window holds unsaved work (U.7): macOS draws the dot in the
+   * close button and asks before closing the window from the Dock. Elsewhere
+   * the window title's leading dot says it, and this does nothing.
+   */
+  setDocumentEdited(edited: boolean): Promise<void>;
+
+  /**
    * Crash recovery (slice 5.3b). Replaces this session's recovery copy with
    * `data`, atomically, in the app's state directory — never beside a project,
    * never under a project's name.

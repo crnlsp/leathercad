@@ -77,26 +77,36 @@ the Polyline tool, along the sides to be sewn.
 
 The **Problems** drawer at the bottom says if anything will not make a good template — holes too
 close to an edge, a stitch line that has lost its outline — and selecting a problem shows where.
+The narrow half of **Print** says it too: a check when there is nothing to fix, or the warning's
+△ or the error's ▲ and how many. Click it to open the drawer.
 
 ## 4. Save
 
-**Save** (**Ctrl+S**, **⌘S** on macOS) writes a `.lcp` file. If LeatherCAD or the computer stops
-unexpectedly, it offers your unsaved work back the next time it starts; if you close with unsaved
-changes, it asks first.
+**Save** (**Ctrl+S**, **⌘S** on macOS) writes a `.lcp` file. Beside the project's name the bar says
+*Unsaved changes* or *Saved*; with nothing to save, Save says so. If LeatherCAD or the computer
+stops unexpectedly, it offers your unsaved work back the next time it starts; if you close with
+unsaved changes, it asks first.
+
+The project's name is the file's and the PDF footer's. To change it, open the project menu — its
+button is the name — and choose **Rename…**; **Enter** keeps the new name, **Esc** puts the old one
+back.
 
 ## 5. Print, and check the print
 
-1. Choose the paper in your printer from the list beside **Print**. Each entry says what it
-   prints, for example *3 sheets of A4, portrait (Strap taped)* or *1 sheet of A4, landscape*, so
-   you can pick the one that uses the fewest sheets. **Parts** says which sheet each part prints
-   on, and why a part will not print (it is hidden, or it has a problem).
-2. Choose **Sheets** at the right of the bar under the project's name (**Ctrl+2**) to see the pieces
-   on the paper exactly as the PDF will put them. A part bigger than a sheet is printed across
+1. Choose the paper in your printer with the paper button beside **Export PDF** — it reads, for
+   example, *3 × A4 portrait*. Each paper in its list says how many sheets it takes, the
+   tooltip of **Portrait** and **Landscape** what the other way up would take, and the line under
+   them what is taped across sheets, so you can pick the one that uses the fewest sheets.
+   **Parts** says which sheet each part prints on, and why a part will not print (it is hidden,
+   or it has a problem).
+2. Choose **Sheets** in the middle of the top bar (**Ctrl+2**), or *See the sheets* under the paper,
+   to see the pieces on the paper exactly as the PDF will put them. A part bigger than a sheet is printed across
    several, taped together on a dashed join line with crosses on it; its joins also show on the
    board, labelled *Tape join*. Anything drawn in magenta is only on screen, never on paper.
    **Design** (**Ctrl+1**) takes you back to the board, where you left it.
-3. **Print** (**Ctrl+P**), the green button. LeatherCAD's Print Preview shows the PDF it will send,
-   sheet for sheet — numbered *Sheet 1 of 3* like the Sheets view. Choose the printer, the
+3. **Print** (**Ctrl+P**), the light button. Its Print Preview lists the problems first, if there
+   are any — the same list as the drawer; choose one to go to it — and nothing stops you printing
+   with them. It shows the PDF it will send, sheet for sheet — numbered *Sheet 1 of 3* like the Sheets view. Choose the printer, the
    sheets and how many copies; the scale is fixed at 100 %. **Print 3 sheets** sends them to the
    printer with scaling turned off. You do not set anything in a print dialog.
 
@@ -123,9 +133,10 @@ the size your software shows: it should be the size you drew.
 
 ## Where things are
 
-- **The top bar:** the project menu at its left — the LeatherCAD mark — holds *New project*,
-  *Open…*, *Save as…* and your recent projects. At its right, past the paper, **Export PDF** (with **▾** for SVG and DXF) and **Print**,
-  are **⚙** Settings and **?** Help.
+- **The top bar:** at its left, the project menu — the LeatherCAD mark and the project's name —
+  holds *New project*, *Open…*, *Save as…*, *Rename…* and your recent projects, then whether it is
+  saved. In the middle, **Design | Sheets**. At its right the paper, **Export PDF** (with **▾** for
+  SVG and DXF) and **Print** (with the problems), then **⚙** Settings and **?** Help (**F1**).
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*
   (**Ctrl+/** or **?**) lists every key. **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key

@@ -3,6 +3,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import { resizeWindow } from './windowSize.js';
 
 /**
  * U.6, R-05: Properties in the order of the work. A hole set reads iron,
@@ -23,11 +24,7 @@ async function withSample(
     // Opened first: below 900 px the empty Parts panel that offers it folds.
     await window.getByTestId('open-sample').click();
     await expect(window.getByTestId('part-count')).toHaveText('3');
-    await app.evaluate(
-      ({ BrowserWindow }, [width, height]) =>
-        BrowserWindow.getAllWindows()[0]?.setSize(width, height),
-      size,
-    );
+    await resizeWindow(app, window, size[0], size[1]);
     await run(window, app);
   } finally {
     await closeApp(app);

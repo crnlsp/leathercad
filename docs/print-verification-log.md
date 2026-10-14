@@ -45,9 +45,10 @@ Linux, Windows and macOS: on Linux and macOS with LeatherCAD's own **Print**, on
 default PDF viewer.
 
 1. **Open** `fixtures/projects/print-test.lcp` in the LeatherCAD build under test. Note the version
-   in the status bar. The project is on A4 portrait, and the paper list beside *Export PDF* says
-   *3 sheets of A4, portrait (Strap taped)*. If the printer holds Letter, choose *3 sheets of
-   Letter, portrait (Strap taped)* first — the layout changes, the measurements do not.
+   in the status bar. The project is on A4 portrait, and the paper button beside *Export PDF* says
+   *3 × A4 portrait* (before 1.5, the paper list said *3 sheets of A4, portrait (Strap taped)*).
+   If the printer holds Letter, choose *Letter* in its popover first — the layout changes, the
+   measurements do not.
 2. **Look at the Sheets view** (*Sheets*, or Ctrl+2) and note what it shows: three sheets, the
    panel and the pocket on sheet 1, the strap across sheets 2 and 3 with a dashed join. Since 7.4c
    the Sheets view and the PDF are drawn from one sheet plan; the paper must match it.

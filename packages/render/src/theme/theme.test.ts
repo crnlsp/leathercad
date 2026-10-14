@@ -6,7 +6,7 @@ import {
   ACCENT,
   CANVAS,
   DASH_LEGIBLE_PX,
-  GO,
+  ACTION,
   GROUND,
   PAPER_FURNITURE,
   ROLE_STYLES,
@@ -173,11 +173,25 @@ describe('the four planes (F.5)', () => {
     expect(contrast(GROUND.ink, GROUND.ground)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('gives Print a fill its label reads on, and that stands out on the shell', () => {
-    expect(contrast(GO.onGo, GO.go)).toBeGreaterThan(4.5);
-    for (const shell of [SHELL[800], SHELL[700]]) {
-      expect(contrast(GO.go, shell)).toBeGreaterThan(3);
-      expect(contrast(GO.goInk, shell)).toBeGreaterThan(3);
+  it('gives Print fills its words read on, standing out on the shell (U.7)', () => {
+    // R-06's on-primary: AA on Print's main half, hovered or not, on its
+    // narrow half, and on the indicator's warning and error.
+    for (const fill of [ACTION.primary, ACTION.primaryHover, ACTION.primarySide]) {
+      expect(contrast(ACTION.onPrimary, fill)).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const severity of ['warning', 'error'] as const) {
+      expect(contrast(ACTION.onPrimary, STATE.shell[severity]), severity).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    }
+    for (const shell of [SHELL[900], SHELL[800], SHELL[700]]) {
+      expect(contrast(ACTION.primary, shell)).toBeGreaterThan(3);
+    }
+  });
+
+  it('keeps Export PDF’s words readable on both of its halves (U.7)', () => {
+    for (const fill of [SHELL[600], ACTION.secondarySide]) {
+      expect(contrast(SHELL.text, fill)).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

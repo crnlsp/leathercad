@@ -14,7 +14,8 @@ export interface MenuItem {
   /** Its `data-testid`. */
   readonly id: string;
   readonly label: string;
-  readonly onChoose: () => void;
+  /** How it was chosen: a keyboard's choice gives focus back where it came from (U.4). */
+  readonly onChoose: (how?: 'keyboard' | 'pointer') => void;
   /** The command whose key is shown at the right, from the keymap (U.3). */
   readonly keys?: CommandId;
   /** A second line, in the dimmer text. */
@@ -86,13 +87,15 @@ export function focusAfter(key: string, current: number, count: number): number 
  * and the recent projects after — the list grows and shrinks, and the actions
  * stay under the pointer. Save and Export PDF are buttons on the bar, so they
  * are not repeated here; clearing the list is in Settings, so this menu holds
- * nothing destructive.
+ * nothing destructive. *Rename…* (U.7) is here because the name is this
+ * menu's button: it turns the name into the field it was before.
  */
 export function projectMenu(
   actions: {
     readonly newProject: () => void;
     readonly open: () => void;
     readonly saveAs: () => void;
+    readonly rename: (how?: 'keyboard' | 'pointer') => void;
     readonly openRecent: (path: string) => void;
   },
   recent: readonly RecentFile[],
@@ -119,6 +122,13 @@ export function projectMenu(
       label: t('menu.saveAs'),
       keys: 'saveAs',
       onChoose: actions.saveAs,
+    },
+    {
+      kind: 'item',
+      id: 'rename',
+      label: t('menu.rename'),
+      note: t('menu.renameNote'),
+      onChoose: actions.rename,
     },
     { kind: 'separator' },
     {
