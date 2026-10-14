@@ -199,11 +199,13 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 |---|---|---|
 | ☐ **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | Record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Moved here from 1.3.5's R1 on 2026-10-09 |
 | ☐ **R9** | `Ctrl+0` changed meaning in U.4: it fitted the pattern until 1.5 and is *True size* now, with fitting on `Shift+1`. The changelog's line is the pull request's title, which names the new keys but not the change | When 1.5's release pull request opens, put one sentence at the top of its notes, and of the GitHub release's: *`Ctrl+0` now shows true size; fit the pattern with `Shift+1`.* `getting-started.md` already says so |
+| ☐ **R10** | U.7's window edited flag is unverified on macOS, the one platform that shows it: it was checked on Linux, where Electron ignores it, and through the test host and a mock of `setDocumentEdited` | Check 12 of [`release-checklist.md`](release-checklist.md) on a real Mac, with the packaged dmg: an edit sets the window's edited dot, *Save* clears it. Tick this only then, saying the macOS version and the date — never from Linux, the test host or a mock |
 
 ### Decisions this release needs
 
 Each has a recommended default in the plan, which its slice takes unless the maintainer decides
-otherwise.
+otherwise. A row marked **Decided** is settled by the maintainer; any other is the default its
+slice took, or will take, and is still open.
 
 | Slice | Question | Recommended |
 |---|---|---|
@@ -214,11 +216,15 @@ otherwise.
 | U.6 | An outline showed two fields called *Name* | **Decided 2026-10-13:** the piece's is *Piece*, beside *Cut* |
 | U.6 | Flip on a stitch line or hole set is always refused, and its reason takes Arrange's first rows | **Decided 2026-10-13:** stays refused, with its reason; U.19 words the reason shorter |
 | U.6 | A hole set's runs add to 147 beside 146 holes: a corner hole is counted in both its runs | **Decided 2026-10-13:** settled in U.17, before the selection bar shows runs |
-| U.5 | Below 1280 px Properties is a strip: may the maker dock it there anyway, as the rail can be opened while narrow? | No: `]` opens it over the board, as §5 says, and a press on the board closes it |
-| U.5 | Does a press on the board close a panel open over it even while the maker selects there? | Yes, as R-04 says; the press also selects. At 1024 px that means `]` again after picking a piece |
-| U.5 | Is focus mode remembered across a restart? | No, it is the session's, like the view; the folds are remembered |
-| U.5 | Does Esc clear a selection before it leaves focus mode? | Yes: one press, one thing, and Select's Esc has always cleared the selection |
-| U.7 | If the project's name joins the Project menu's button, how is a project renamed? | Whichever of *Rename…* in the menu or F2 on the name fits what renaming does today |
+| U.5 | Below 1280 px Properties is a strip: may the maker dock it there anyway, as the rail can be opened while narrow? | **Decided 2026-10-14:** no. `]` opens it over the board, as §5 says, and a press on the board closes it |
+| U.5 | Does a press on the board close a panel open over it even while the maker selects there? | **Decided 2026-10-14:** yes, as R-04 says; the press also selects. At 1024 px, `]` reopens Properties after picking a piece |
+| U.5 | Is focus mode remembered across a restart? | Built as recommended — no, it is the session's, like the view; the folds are remembered. Not yet decided |
+| U.5 | Does Esc clear a selection before it leaves focus mode? | **Decided 2026-10-14:** yes. One press, one thing: Esc clears the selection, and the next one leaves focus mode |
+| U.7 | If the project's name joins the Project menu's button, how is a project renamed? | **Decided 2026-10-14:** *Rename…* in the Project menu turns the name back into its field, and a whole rename is one undo step. F2 stays the Parts tree's (U.8) |
+| U.7 | Print's problems half when the drawer holds only infos (an empty part, uneven runs) | **Decided 2026-10-14:** a fourth state, *to note* — the dot and the infos' count. A check means the drawer is empty |
+| U.7 | What count does Print's problems half show? | **Decided 2026-10-14:** the worst severity's alone, as R-06 draws it. Its tooltip and accessible name give every severity's count, from the one count (`countBySeverity`) the drawer and the export notice read |
+| U.7 | One paper list, as 7.4a had, or paper and orientation apart, as mockup 08 draws them? | **Decided 2026-10-14:** apart. Each paper says its sheet count and each orientation's tooltip what it takes, before it is chosen; the summary keeps the scale and the taping |
+| U.7 | Does *Export PDF*'s main half remember the folder it last saved to? | **Decided 2026-10-14:** no; it does what *Export PDF* did. Remembering the folder would be a feature of its own, scoped separately |
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |
 | U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |
