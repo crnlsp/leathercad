@@ -14,6 +14,7 @@ import {
 } from '@leathercad/document';
 import {
   badgesOf,
+  countBySeverity,
   diagnose,
   diagnosticTarget,
   evaluate,
@@ -55,7 +56,7 @@ import {
 } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { printStatusFor } from './sheets.js';
-import { SheetsSummary, ViewSwitch } from './ViewSwitch.js';
+import { SheetsSummary } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { historyText } from './historyText.js';
 import { describeProblem } from './problemText.js';
@@ -326,6 +327,18 @@ export function App({
   const [settings, setSettings] = useState<SettingsSection | null>(null);
 
   const [problemsOpen, setProblemsOpen] = useState(false);
+  // Print's second half opens the drawer (R-06); from the keyboard, focus
+  // goes to the drawer's handle, where the list begins.
+  const showProblems = useCallback((press: Press) => {
+    setProblemsOpen(true);
+    if (press === 'keyboard') {
+      requestAnimationFrame(() =>
+        document.querySelector<HTMLElement>('[data-testid="problems-toggle"]')?.focus(),
+      );
+    }
+  }, []);
+  // The Help menu's button: F1 opens it (U.7).
+  const helpRef = useRef<HTMLButtonElement>(null);
 
   // The canvas owns the viewport; this is the only handle on it. Anyone may
   // ask it to show a rectangle, zoom about its centre, or fit the pattern.
@@ -352,6 +365,12 @@ export function App({
   useEffect(() => {
     document.title = windowTitle(storeState.document.project, dirty, t);
   }, [storeState.document.project, dirty, t]);
+  // And macOS's dot in the close button (U.7): the window's edited flag.
+  useEffect(() => {
+    void getPlatformHost()
+      .setDocumentEdited(dirty)
+      .catch(() => undefined);
+  }, [dirty]);
 
   // Crash recovery (5.3b): a copy while there is unsaved work, and an offer of
   // what a crash left behind.
@@ -505,6 +524,7 @@ export function App({
       // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
       keyboardShortcuts: () => setSettings('shortcuts'),
       settings: () => setSettings('general'),
+      help: () => helpRef.current?.click(),
       // The view (8.4b, U.4): zoom in and out, fit, and true size.
       zoomIn: () => runZoom('zoomIn'),
       zoomOut: () => runZoom('zoomOut'),
@@ -713,6 +733,8 @@ export function App({
   // parts tree and the feature rows all read this rather than counting their
   // own way to a different number.
   const badges = badgesOf(diagnostics);
+  // And by severity, once, for Print's indicator and the drawer (U.7).
+  const counts = countBySeverity(diagnostics);
 
   // Fit selection frames what the board draws of the selection, on Design: it
   // says why when it cannot (U.4). `evaluate` is memoised on the project.
@@ -743,6 +765,13 @@ export function App({
           store={store}
           dirty={dirty}
           saved={file.state.path !== null}
+          room={room}
+          view={view}
+          onView={showView}
+          counts={counts}
+          settled={!store.inTransaction}
+          onShowProblems={showProblems}
+          helpRef={helpRef}
           onNew={() => void newProject()}
           onOpen={() => void openProject()}
           onSaveAs={() => void file.save(true)}
@@ -832,7 +861,6 @@ export function App({
           ) : (
             <SheetsSummary project={storeState.document.project} />
           )}
-          <ViewSwitch view={view} onView={showView} />
         </div>
 
         <div
@@ -937,6 +965,7 @@ export function App({
             <ProblemsPanel
               project={storeState.document.project}
               diagnostics={diagnostics}
+              counts={counts}
               onGoTo={goToDiagnostic}
               open={problemsOpen}
               onToggle={() => setProblemsOpen((open) => !open)}
@@ -1122,6 +1151,12 @@ export function App({
             project={storeState.document.project}
             store={store}
             appVersion={version ?? '0.0.0'}
+            diagnostics={diagnostics}
+            // A problem chosen there is gone to, as from the drawer.
+            onGoTo={(diagnostic) => {
+              setPrinting(false);
+              goToDiagnostic(diagnostic);
+            }}
             // Where the app cannot print itself: the bytes previewed are the
             // bytes saved, and the export's own notice follows.
             onSavePdf={(bytes) => {

@@ -34,6 +34,9 @@ const platformBridge = {
 
   getAppVersion: (): Promise<string> => ipcRenderer.invoke(IPC.getAppVersion),
 
+  setDocumentEdited: (edited: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.setDocumentEdited, edited),
+
   writeRecovery: (data: Uint8Array): Promise<void> => ipcRenderer.invoke(IPC.writeRecovery, data),
 
   clearRecovery: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery),

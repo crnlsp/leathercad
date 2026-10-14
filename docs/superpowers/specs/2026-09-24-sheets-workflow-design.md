@@ -8,6 +8,12 @@ supersedes the paper reference in [paper reference and typography](2026-09-18-pa
 builds on [paper and orientation](2026-09-24-paper-and-orientation-design.md) (6.4a) and
 [tiling](2026-09-24-tiling-design.md) (7.2a)
 
+> **Since U.7 (2026-10-14):** the window's bars moved on as R-06 asks. Design | Sheets is a tab list
+> in the middle of the top bar, not at the work bar's right; the sheet indicator's list is a paper
+> button — "3 × A4 portrait" — whose popover holds the paper, which way up and the sheets; and Print
+> is in the paper's colour, its second half the problems. The views, the plan and the count are as
+> this document decided. See [the top bar's successor note](2026-09-29-top-bar-and-settings-design.md).
+
 ---
 
 ## 1. Decision

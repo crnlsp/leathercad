@@ -14,6 +14,7 @@ export const IPC = {
   printPdf: 'platform:printPdf',
   getUserConfigDir: 'platform:getUserConfigDir',
   getAppVersion: 'platform:getAppVersion',
+  setDocumentEdited: 'platform:setDocumentEdited',
   writeRecovery: 'platform:writeRecovery',
   clearRecovery: 'platform:clearRecovery',
   findRecovery: 'platform:findRecovery',

@@ -1,6 +1,6 @@
 import type { LayerRole } from '@leathercad/domain';
 
-import { ACCENT, GO, GROUND, SHELL, STATE } from './palette.js';
+import { ACCENT, ACTION, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
   BAR_PX,
@@ -47,9 +47,11 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--tan'] = ACCENT.tan;
   variables['--tan-ink'] = ACCENT.tanInk;
   variables['--on-tan'] = ACCENT.onTan;
-  variables['--go'] = GO.go;
-  variables['--go-ink'] = GO.goInk;
-  variables['--on-go'] = GO.onGo;
+  variables['--primary'] = ACTION.primary;
+  variables['--primary-hover'] = ACTION.primaryHover;
+  variables['--primary-side'] = ACTION.primarySide;
+  variables['--secondary-side'] = ACTION.secondarySide;
+  variables['--on-primary'] = ACTION.onPrimary;
   for (const [name, value] of Object.entries(STATE.shell)) variables[`--${name}`] = value;
   for (const [name, value] of Object.entries(STATE.ground)) variables[`--${name}-ground`] = value;
   for (const [role, style] of Object.entries(ROLE_STYLES) as [LayerRole, { colour: string }][]) {

@@ -11,6 +11,7 @@ import {
 
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
+import type { CommandId } from './keymap.js';
 import { focusAfter, sharedReasons, type MenuEntry, type MenuItem } from './menus.js';
 import { Tooltip } from './Tooltip.js';
 
@@ -32,12 +33,18 @@ export function MenuButton({
   above = false,
   entries,
   onOpen,
+  keys,
+  triggerRef,
   children,
 }: {
   /** The button's accessible name, and the menu's. */
   label: string;
   /** What the tooltip says while the menu is closed; the label if not given. */
   tooltip?: string;
+  /** The command that opens it, shown as a cap in the tooltip: Help's F1 (U.7). */
+  keys?: CommandId;
+  /** The button, for whoever opens the menu by its key, or gives focus back to it. */
+  triggerRef?: RefObject<HTMLButtonElement | null>;
   testId: string;
   className: string;
   /** Which edge of the button the menu lines up with. */
@@ -52,7 +59,8 @@ export function MenuButton({
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
+  const own = useRef<HTMLButtonElement>(null);
+  const trigger = triggerRef ?? own;
   // Escape, or choosing an item by keyboard, gives focus back to the button —
   // once the menu has closed. The tooltip is off while the menu is open, which
   // changes the button's wrapping, so the button focused before the render is
@@ -66,11 +74,11 @@ export function MenuButton({
     const lost = document.activeElement === null || document.activeElement === document.body;
     if (giveBack.current && lost) trigger.current?.focus();
     giveBack.current = false;
-  }, [open]);
+  }, [open, trigger]);
 
   return (
     <div className="menu-anchor" ref={root}>
-      <Tooltip text={open ? null : (tooltip ?? label)}>
+      <Tooltip text={open ? null : (tooltip ?? label)} {...(keys === undefined ? {} : { keys })}>
         <button
           ref={trigger}
           type="button"
@@ -256,7 +264,7 @@ function MenuPopup({
           // Chosen by the pointer, focus is left where a press leaves it, as
           // before U.4: on the button it would take the board's next Enter.
           onClose(event.detail === 0 ? 'chosen' : 'away');
-          item.onChoose();
+          item.onChoose(event.detail === 0 ? 'keyboard' : 'pointer');
         }}
       >
         <span className="menu-label">

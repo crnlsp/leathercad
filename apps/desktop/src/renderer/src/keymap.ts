@@ -72,6 +72,7 @@ export type CommandId =
   | 'focusMode'
   | 'settings'
   | 'keyboardShortcuts'
+  | 'help'
   | 'fullScreen'
   | 'quit'
   | `tool.${ToolId}`
@@ -252,6 +253,8 @@ export const KEYMAP: readonly Command[] = [
     scope: 'window',
     keys: [mod('Slash'), { char: '?' }],
   },
+  // F1 (U.7): the Help menu, where help is in most apps.
+  { id: 'help', does: 'shortcuts.help', group: 'window', scope: 'window', keys: [key('F1')] },
   {
     id: 'fullScreen',
     does: 'shortcuts.fullScreen',

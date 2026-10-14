@@ -6,6 +6,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 8.2: the app remembers how the maker likes it, and what they worked
@@ -150,7 +151,8 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
     await expect(dialog).toHaveCount(0);
 
     // Typing is typing: none of the three opens anything from a text field.
-    const name = window.getByTestId('project-name');
+    await fromProjectMenu(window, 'rename');
+    const name = window.getByTestId('project-name-input');
     await name.fill('Wallet');
     await name.press('Shift+?');
     await name.press('Control+/');

@@ -123,9 +123,25 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   matches, as its numbers do; and Lucide 1.x's flip icons are swapped, so the right-click menu's
   *Flip horizontal* showed a top-to-bottom flip — fixed for the menu, Arrange and the parts list's
   mirror mark.
-- ☐ **U.7 The top bar in three zones** (R-06). The project and its save state · Design | Sheets ·
+- ✅ **U.7 The top bar in three zones** (R-06). The project and its save state · Design | Sheets ·
   the paper, then Export PDF and Print as split buttons, Print's second half showing the problems;
   green leaves the actions; the window's edited flag.
+  ✅ Built as described. The Project menu's button is the project's name, cut short with its
+  tooltip whole, and *Rename…* in it turns the name back into the field it was — as the roadmap's
+  decision asked; a check and *Saved*, or an open dot and *Unsaved changes*, and Save says
+  *Nothing to save* when there is none. Design | Sheets is a tab list in the middle, the Sheets tab
+  carrying the sheet count. The paper is a quiet "2 × A4 portrait" opening the paper, which way up,
+  what it comes to and *See the sheets*. Export PDF and Print are two-tone split buttons, each half
+  its own button; Print is the paper's colour, and its second half says the problems — a check, or
+  the worst severity and how many — and opens the drawer, which says the same from the same
+  count (`countBySeverity`). Print stays enabled, and its preview lists the drawer's problems first.
+  F1 opens Help. At 1024 px the words shorten, at 860 px only the paper's count, the save state's
+  dot and the switch's icons stay. The save state and the problems are said politely, once per
+  change, and not while a drag is under way; the window's edited flag follows unsaved work
+  (checked through the fake and on Linux, where Electron ignores it, not on a Mac). Green left the
+  palette. Found on the way: typing the project's name made every letter an undo step of its own —
+  renaming is one step now; and the export notice counted the severities on its own while the
+  drawer said only a total — one count serves all three now. No key changed meaning; F1 is new. Printed output did not move.
 
 ### Phase 2 — panels, lists and small fixes
 

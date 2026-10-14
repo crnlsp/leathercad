@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from '../closeApp.js';
+import { renameProject } from '../projectMenu.js';
 
 /**
  * The README's pictures, taken from the real app: `pnpm docs:media`.
@@ -158,7 +159,7 @@ test('README media', async () => {
     await pause(window, 500);
     demo.from = Date.now() - launchedAt;
 
-    await window.getByTestId('project-name').fill('Bifold wallet');
+    await renameProject(window, 'Bifold wallet');
     const panel = window.getByTestId('property-panel');
 
     // ── The outer: drawn roughly, then typed exactly ────────────────────────

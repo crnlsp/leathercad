@@ -1,3 +1,4 @@
+import { countBySeverity } from './badges.js';
 import { diagnose } from './diagnose.js';
 import { evaluate } from './evaluate.js';
 import type { FeatureId, Project } from './feature.js';
@@ -46,15 +47,7 @@ export interface ExportReadiness {
  * `omitted` comes from the same `ok` flag the scene builder filters on.
  */
 export function exportReadiness(project: Project): ExportReadiness {
-  let errors = 0;
-  let warnings = 0;
-  let infos = 0;
-
-  for (const diagnostic of diagnose(project)) {
-    if (diagnostic.severity === 'error') errors += 1;
-    else if (diagnostic.severity === 'warning') warnings += 1;
-    else infos += 1;
-  }
+  const counts = countBySeverity(diagnose(project));
 
   const omitted: OmittedFeature[] = [];
   for (const { part, features } of evaluate(project).parts) {
@@ -68,5 +61,5 @@ export function exportReadiness(project: Project): ExportReadiness {
     }
   }
 
-  return { errors, warnings, infos, omitted };
+  return { errors: counts.error, warnings: counts.warning, infos: counts.info, omitted };
 }

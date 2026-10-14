@@ -3,6 +3,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 8.7: Linux and Windows have no application menu — the project bar
@@ -94,7 +95,8 @@ test('copy and paste work in a text field with no menu (8.7)', async () => {
   // Chromium's own editing keys: nothing of the app's, and no menu role.
   const { app, window } = await launch();
   try {
-    const name = window.getByTestId('project-name');
+    await fromProjectMenu(window, 'rename');
+    const name = window.getByTestId('project-name-input');
     await name.fill('Wallet');
     await name.press('ControlOrMeta+a');
     await name.press('ControlOrMeta+c');

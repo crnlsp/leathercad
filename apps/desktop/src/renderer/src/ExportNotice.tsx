@@ -2,6 +2,7 @@ import { TILE_OVERLAP_MM } from '@leathercad/export';
 import { useEffect, useRef } from 'react';
 
 import { useI18n } from './i18n.js';
+import { describeCounts } from './problemsIndicator.js';
 import { describeTiled } from './sheetWords.js';
 import type { ExportReport } from './useProjectFile.js';
 
@@ -77,17 +78,25 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
  * once the file is written, and the Print Preview before anything is printed
  * (7.6).
  */
-export function ExportFindings({ report }: { report: ExportReport }) {
+export function ExportFindings({
+  report,
+  withCounts = true,
+}: {
+  report: ExportReport;
+  /** Off in the Print Preview, which lists the problems themselves, first (U.7). */
+  withCounts?: boolean;
+}) {
   const i18n = useI18n();
   const { t } = i18n;
   const { readiness, tiled } = report;
   // What the paper or the file holds: an SVG or a DXF is a file, not a sheet.
   const file = report.format !== 'pdf';
-  const counts = [
-    readiness.errors === 0 ? null : t('exportNotice.errors', { count: readiness.errors }),
-    readiness.warnings === 0 ? null : t('exportNotice.warnings', { count: readiness.warnings }),
-    readiness.infos === 0 ? null : t('exportNotice.infos', { count: readiness.infos }),
-  ].filter((part): part is string => part !== null);
+  const counts = withCounts
+    ? describeCounts(
+        { error: readiness.errors, warning: readiness.warnings, info: readiness.infos },
+        i18n,
+      )
+    : null;
 
   return (
     <>
@@ -128,11 +137,9 @@ export function ExportFindings({ report }: { report: ExportReport }) {
         </section>
       )}
 
-      {counts.length > 0 && (
+      {counts !== null && (
         <p data-testid="export-counts">
-          {t(file ? 'exportNotice.countsFile' : 'exportNotice.counts', {
-            counts: i18n.list(counts, 'unit'),
-          })}
+          {t(file ? 'exportNotice.countsFile' : 'exportNotice.counts', { counts })}
         </p>
       )}
     </>

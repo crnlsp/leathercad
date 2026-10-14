@@ -8,7 +8,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { fromProjectMenu, renameProject } from './projectMenu.js';
 
 /**
  * Slice 4.13: one card holder, drafted the way a maker would, through every
@@ -127,7 +127,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     const problems = window.getByTestId('problems-panel');
     const features = window.getByTestId('feature-count');
 
-    await window.getByTestId('project-name').fill('Wizytownik łączony');
+    await renameProject(window, 'Wizytownik łączony');
 
     // ── The shell: drawn roughly, then typed exactly ─────────────────────────
     await useTool(window, 'rectangle', 'outline');

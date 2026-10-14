@@ -119,7 +119,8 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
     await window.waitForLoadState('domcontentloaded');
     await openPrintTest(app, window, join(cups.bin, 'unused.pdf'));
 
-    await expect(window.getByTestId('print')).toHaveClass(/primary/);
+    // The one primary action (7.6, R-06): Print's main half.
+    await expect(window.locator('.split.primary').getByTestId('print')).toHaveCount(1);
     await window.getByTestId('print').click();
     const preview = window.getByTestId('print-preview');
     await expect(preview).toBeVisible();

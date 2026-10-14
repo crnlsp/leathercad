@@ -42,7 +42,7 @@ Any one of these is a blocker:
   Windows: from the viewer at 100 % / Actual size).
 - The Print Preview offering any scale choice, or showing sheets that differ from the Sheets view.
 - The sheet count, the numbering or what is on a sheet differs between:
-  - the paper list;
+  - the paper button and the Sheets tab;
   - the Sheets view;
   - the PDF.
 - Anything magenta on paper. Magenta is screen-only furniture.
@@ -63,10 +63,11 @@ Record them anyway.
 ### 1. Start-up
 
 1. The window title reads **Untitled — LeatherCAD**.
-2. The top bar holds the project: name, *Save*, *New*, *Open*, the paper list, *Export PDF*, and
-   *Print*, the only green button.
-3. The second bar holds the work: *Undo*, *Redo*, *Draw as* and *Design | Sheets*.
-4. The paper list reads **1 sheet of A4, portrait, scale check only**.
+2. The top bar has three zones: the project menu, whose button is the name, and its save state and
+   *Save*; *Design | Sheets* in the middle; the paper button, *Export PDF* and *Print* — the only
+   primary button, in the paper's colour, its second half a check — then Settings and Help.
+3. The second bar holds the work: *Undo*, *Redo* and *Draw as*.
+4. The paper button reads **1 × A4 portrait**, and the Sheets tab **1**.
 
 ### 2. An empty project
 
@@ -97,7 +98,7 @@ Follow the procedure in [`print-verification-log.md`](print-verification-log.md)
 
 ### 4. Every paper, on the print test
 
-For each paper, check three things agree: the paper list's words, the Sheets view's summary, and
+For each paper, check three things agree: the paper button's count, the Sheets view's summary, and
 the PDF's page count.
 
 | Paper | Portrait | Landscape |
@@ -125,7 +126,7 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
    190 mm A4 prints across, so they print a quarter turned, whole, on two sheets. On A4 landscape
    they are as drawn.
 2. **On the paper you really print on:**
-   - the number in the paper list;
+   - the number on the paper button and the Sheets tab;
    - the number of sheets in the Sheets view;
    - the PDF's page count.
 
@@ -173,8 +174,9 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
    paper, and the other way round.
    - The viewer may scale it; the gauge must show that it did.
    - Record the viewer's behaviour. This is a procedure finding, not a software blocker.
-2. **Long names.** Long part and project names never hide *Save*, *New*, *Open*, the paper list or
-   *Export PDF* and *Print* at your usual window size.
+2. **Long names.** Long part and project names never hide the project menu, *Save*, *Design |
+   Sheets*, the paper button, *Export PDF* or *Print* at any window size: a long name gives way,
+   and its tooltip says it whole.
 3. **Undo.** Undo after a paper change brings back the previous paper, in one step.
 4. **Unsaved work.** Closing with unsaved changes asks first. Save, reopen, and everything —
    including the paper — is as it was.
