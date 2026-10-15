@@ -224,10 +224,10 @@ fake:
 | Method | Does |
 |---|---|
 | `getRecentFiles()` | The recent list: each absolute path, and the path as shown, with `~` |
-| `openRecent(path)` | The main process checks the path is on its list, grants it and sends it back through `openFile`, exactly as the native item did — or takes it off the list and says why, if it is gone |
+| `openRecent(path)` | The main process checks the path is on its list, grants it and sends it back through `openFile`, exactly as the native item did — or takes it off the list and says why, if it is gone. *Since U.20 it answers `opening`, `gone` or `unlisted`, and the renderer says why in its own dialog* |
 | `clearRecent()` | Clears `preferences.json`'s list and the operating system's |
 | `showLogFolder()` | Opens the log folder in the file manager |
-| `openNotices()` | Opens the third-party notices window |
+| `openNotices()` | Opens the third-party notices window. *Since U.20 `readNotices()`: the text, which About shows in the app's own dialog* |
 
 The renderer never names a file the main process did not give it: `openRecent` refuses a path that
 is not on the list.

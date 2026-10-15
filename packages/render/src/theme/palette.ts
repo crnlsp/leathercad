@@ -14,6 +14,12 @@ export const SHELL = {
   text: '#e6e8ea',
   textDim: '#8b929b',
   textMute: '#6b7079',
+  /**
+   * A scrollbar's thumb, on a track of whatever it scrolls (U.20): 3 : 1 on
+   * every surface that scrolls, so it is found without hunting. The value of
+   * `textMute`, which is kept for disabled words and placeholders.
+   */
+  scrollbar: '#6b7079',
 } as const;
 
 /**

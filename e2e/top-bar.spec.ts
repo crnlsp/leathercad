@@ -104,18 +104,22 @@ test('About says the version, and shows the log folder and the notices (8.7, 8.6
       .not.toBe('');
 
     // The file the build wrote from its own bundles: the renderer's packages,
-    // main's, and the vendored typeface, each with its licence text.
-    const opened = app.waitForEvent('window');
+    // main's, and the vendored typeface, each with its licence text — in the
+    // app's own dialog over About (U.20), not a window of its own.
     await about.getByTestId('about-notices').click();
-    const notices = await opened;
-    await notices.waitForLoadState('domcontentloaded');
-    const text = (await notices.locator('body').textContent()) ?? '';
+    const notices = window.getByTestId('notices');
+    await expect(notices).toBeVisible();
+    const text = (await notices.getByTestId('notices-text').textContent()) ?? '';
     expect(text).toContain('LeatherCAD — third-party notices');
     for (const name of ['react 19', 'zod 4', 'electron-log 5', 'IBM Plex Sans']) {
       expect(text).toContain(name);
     }
     expect(text).toContain('SIL OPEN FONT LICENSE');
-    await notices.close();
+    expect(app.windows()).toHaveLength(1);
+    // Escape closes the notices, and leaves About and the button that opened them.
+    await window.keyboard.press('Escape');
+    await expect(notices).toHaveCount(0);
+    await expect(about.getByTestId('about-notices')).toBeFocused();
 
     await about.getByTestId('about-close').click();
     await expect(about).toHaveCount(0);

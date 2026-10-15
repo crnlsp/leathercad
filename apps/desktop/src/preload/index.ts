@@ -61,13 +61,14 @@ const platformBridge = {
   getRecentFiles: (): Promise<{ path: string; shown: string }[]> =>
     ipcRenderer.invoke(IPC.getRecentFiles),
 
-  openRecent: (path: string): Promise<void> => ipcRenderer.invoke(IPC.openRecent, path),
+  openRecent: (path: string): Promise<'opening' | 'gone' | 'unlisted'> =>
+    ipcRenderer.invoke(IPC.openRecent, path),
 
   clearRecent: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecent),
 
   showLogFolder: (): Promise<void> => ipcRenderer.invoke(IPC.showLogFolder),
 
-  openNotices: (): Promise<void> => ipcRenderer.invoke(IPC.openNotices),
+  readNotices: (): Promise<string | null> => ipcRenderer.invoke(IPC.readNotices),
 
   readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
 

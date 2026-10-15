@@ -37,7 +37,7 @@ export type KeyboardLayout = ReadonlyMap<string, string>;
 
 /** Its heading in the shortcut list is `shortcuts.group.<id>`. */
 export type ShortcutGroupId =
-  'file' | 'edit' | 'view' | 'window' | 'tools' | 'drawing' | 'editingPoints' | 'parts';
+  'file' | 'edit' | 'field' | 'view' | 'window' | 'tools' | 'drawing' | 'editingPoints' | 'parts';
 
 /**
  * Where a key is heard. The window's commands are dispatched through
@@ -45,9 +45,10 @@ export type ShortcutGroupId =
  * polyline mid-run, Edit Points — heard by the tool in `packages/editor` by
  * the key's name; they are here so the shortcut list shows them, and so a
  * sentence that names one takes it from here. `tree` is the Parts tree's
- * (U.8), heard only while a row has focus.
+ * (U.8), heard only while a row has focus. `field` is a text field's own
+ * editing (U.20), heard by the field itself and shown in its right-click menu.
  */
-export type Scope = 'window' | 'canvas' | 'polyline' | 'points' | 'tree';
+export type Scope = 'window' | 'canvas' | 'polyline' | 'points' | 'tree' | 'field';
 
 export type CommandId =
   | 'newProject'
@@ -76,6 +77,10 @@ export type CommandId =
   | 'help'
   | 'fullScreen'
   | 'quit'
+  | 'cut'
+  | 'copy'
+  | 'paste'
+  | 'selectAll'
   | `tool.${ToolId}`
   | 'finishPolyline'
   | 'takeBack'
@@ -266,6 +271,19 @@ export const KEYMAP: readonly Command[] = [
     keys: [key('F11')],
   },
   { id: 'quit', does: 'shortcuts.quit', group: 'window', scope: 'window', keys: [mod('KeyQ')] },
+
+  // A text field's own (U.20): the field hears them, as every field does, and
+  // its right-click menu shows them. Listed so that menu takes its keys from here.
+  { id: 'cut', does: 'fieldMenu.cut', group: 'field', scope: 'field', keys: [mod('KeyX')] },
+  { id: 'copy', does: 'fieldMenu.copy', group: 'field', scope: 'field', keys: [mod('KeyC')] },
+  { id: 'paste', does: 'fieldMenu.paste', group: 'field', scope: 'field', keys: [mod('KeyV')] },
+  {
+    id: 'selectAll',
+    does: 'fieldMenu.selectAll',
+    group: 'field',
+    scope: 'field',
+    keys: [mod('KeyA')],
+  },
 
   ...ALL_TOOLS.map((tool): Command => ({
     id: `tool.${tool.id}`,

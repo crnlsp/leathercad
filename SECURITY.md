@@ -37,6 +37,8 @@ The things most worth reporting are:
   `docs/architecture.md` §5.
 - **The packaged app.** Its Electron fuses, asar integrity, or the release pipeline and its
   artefacts.
+- **A network connection.** Anything that gets the app to reach the network. Chromium's
+  spellchecker did, fetching a dictionary from Google on Linux, until 1.5 turned it off.
 
 Out of scope: problems that need an attacker who already controls the user's account or machine,
 and bugs in a PDF viewer or printer driver that LeatherCAD's output merely passes through.

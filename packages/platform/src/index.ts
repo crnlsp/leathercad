@@ -24,6 +24,7 @@ export type {
   Printer,
   PrinterList,
   RecentFile,
+  RecentOutcome,
   RecoveredCopy,
 } from './host.js';
 export { DEFAULT_PREFERENCES, STARTER_IRONS } from './host.js';

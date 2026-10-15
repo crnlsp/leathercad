@@ -61,6 +61,7 @@
      nowhere else. Plex's digits are tabular by default, so this states the
      intent and survives a change of face. */
   font-variant-numeric: tabular-nums lining-nums !important;
+  scrollbar-width: thin;
 }
 
 /* Form controls do not inherit the page's font by default: a native button or
@@ -79,6 +80,97 @@ strong {
   font-weight: 600;
 }
 
+/*
+ * What Chromium would otherwise draw in its own light theme (U.20), said once
+ * for the whole shell. The board and the sheet previews are canvases, and
+ * read none of it.
+ *
+ * - `color-scheme`: a select's open list, a field's caret and the scrollbars
+ *   are dark.
+ * - Scrollbars thin and without arrows, a thumb on the track of whatever
+ *   scrolls. `scrollbar-color` is inherited and `scrollbar-width` is not, so
+ *   the width is said on every element, above. A scrolling column is 11 px
+ *   narrower for it, not 16 (the Properties panel counts on that).
+ * - Radios and checkboxes in the accent: `accent-color` is inherited too.
+ */
+:root {
+  color-scheme: dark;
+  scrollbar-color: var(--scrollbar) transparent;
+  accent-color: var(--tan);
+}
+
+/*
+ * A select's open list (U.20). With `color-scheme` alone Chromium draws it
+ * dark, but marks the option under the pointer or the keyboard in the
+ * system's blue. `base-select` makes the list the page's own, in the menus'
+ * colours: the shell's darkest, the option at hand a step lighter, and the
+ * chosen one ticked in the accent.
+ */
+select,
+::picker(select) {
+  appearance: base-select;
+}
+
+::picker(select) {
+  padding: var(--space-1) 0;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  box-shadow: var(--elevation-raised);
+}
+
+option {
+  padding: var(--space-1) var(--space-2);
+}
+
+option:is(:hover, :focus-visible) {
+  background: var(--shell-600);
+  outline: none;
+}
+
+option::checkmark {
+  color: var(--tan);
+}
+
+select::picker-icon {
+  color: var(--text-dim);
+}
+
+/* Forced colours paint every background the window's: the option at hand
+   takes the system's highlight, as a native list's would. */
+@media (forced-colors: active) {
+  option:is(:hover, :focus-visible) {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
+/*
+ * The focus ring (UI Foundations §6.5): 2 px of the accent at 1 px, on
+ * :focus-visible only — never Chromium's `auto`, in the desktop's colour. For
+ * every stop that says nothing of its own: `:where` weighs nothing, so any
+ * component's ring wins, and one on the board says `--tan-ink`, the accent
+ * for the ground.
+ */
+:where(:focus-visible) {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+/*
+ * Text is not picked up by a drag, a double-click or Ctrl+A (U.20): the
+ * window is a tool, not a page. A field is always selectable, and so are the
+ * few words a maker might paste into a report — a problem's words, About's
+ * version — marked `.selectable`.
+ */
+input,
+textarea,
+[contenteditable],
+.selectable {
+  user-select: text;
+}
+
 html,
 body,
 #root {
@@ -87,6 +179,7 @@ body,
 }
 
 body {
+  user-select: none;
   background: var(--shell-800);
   color: var(--text);
   font: var(--t-body);
@@ -1312,7 +1405,10 @@ body {
   padding-right: 32px;
 }
 
-.field input:focus {
+/* A field's border is its focus. Not a radio's or a checkbox's, which have no
+   border to light: they keep the ring (U.20) — Print's orientation had no
+   focus to see at all. */
+.field input:not([type='radio'], [type='checkbox']):focus {
   border-color: var(--tan);
   outline: none;
 }
@@ -1399,15 +1495,11 @@ body {
    groups scroll. */
 
 /* "A hole on each corner" needs 147 px of select; at 264 px a scrolling
-   panel's 16 px scrollbar left 140. The thin scrollbar (11 px) and the
-   chevron's own margin instead of padding leave it 145 for 143. Parts the
-   same (U.5): at 208 px a scrolling tree left "Stitch holes" 58 px of its
-   65, and it wrapped where at 220 it had not; with this and Parts' 12 px
-   right padding it has 67. */
-.panel.parts,
-.panel.properties {
-  scrollbar-width: thin;
-}
+   panel's 16 px scrollbar left 140. The thin scrollbar (11 px, every
+   scrollbar's since U.20) and the chevron's own margin instead of padding
+   leave it 145 for 143. Parts the same (U.5): at 208 px a scrolling tree
+   left "Stitch holes" 58 px of its 65, and it wrapped where at 220 it had
+   not; with this and Parts' 12 px right padding it has 67. */
 
 .panel.properties .field select {
   padding-right: 0;
@@ -1635,6 +1727,23 @@ body {
   color: var(--text-dim);
 }
 
+/* The third-party notices, from About (U.20): long, and written for an
+   80-column terminal, so the text keeps its lines and scrolls on its own
+   while Close stays in view. */
+.notices-dialog {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.notices-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  color: var(--text-dim);
+  font: var(--t-body);
+}
+
 /* The Print Preview (7.6): the sheets down the left, the one looked at in the
    middle, and the few choices that cannot change a sheet's size on the right.
    A fixed height, so changing the paper never resizes the dialog. */
@@ -1763,7 +1872,6 @@ body {
 .print-problem-rows {
   max-height: 180px;
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .print-choice {
@@ -1929,7 +2037,6 @@ body {
 
 .setting input[type='checkbox'] {
   flex: none;
-  accent-color: var(--tan);
 }
 
 /* Settings › My tools (U.13): the irons as a table — a column for the default,
@@ -1957,10 +2064,6 @@ body {
 .irons td {
   padding: var(--space-1) var(--space-2);
   border-top: 1px solid var(--shell-line);
-}
-
-.irons input[type='radio'] {
-  accent-color: var(--tan);
 }
 
 /* A name reads as text until it is pointed at or edited (mockup 06). */

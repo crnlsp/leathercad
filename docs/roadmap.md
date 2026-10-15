@@ -186,10 +186,27 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
 - ☐ **U.11 Options-row hints** (R-11). Short hints with keys as caps, dropping from the right; `?`
   never drops.
 - ☐ **U.12 Change a key in Settings › Keyboard shortcuts** (§2).
-- ☐ **U.20 What Chromium still draws itself.** Light scrollbars, radios, checkboxes, a spin button
+- ✅ **U.20 What Chromium still draws itself.** Light scrollbars, radios, checkboxes, a spin button
   and select lists in a dark window; focus rings in the desktop's colour; Ctrl+A selecting the
   whole window; a bare notices window; and Electron's spellchecker, which downloads a dictionary
   that `SECURITY.md` says the app never would. Found 2026-10-15; lands before U.19.
+  ✅ Built as described, said once for the whole shell: `color-scheme: dark`, thin scrollbars with
+  the shell's thumb (`SHELL.scrollbar`, 3:1 on every surface that scrolls), radios and checkboxes
+  in the accent, and the 2 px tan ring on every stop that had none — a `:where()` rule, so any
+  component's own ring wins, and one on the board says `--tan-ink`. A select's open list is the
+  app's own (`appearance: base-select`): `color-scheme` alone made it dark but kept the system's
+  blue on the option at hand. Copies is a `NumberField`. Text is selected only in a field, a
+  problem's words and About's version, and Ctrl+A outside a field selects nothing. A field's
+  right-click menu — Cut, Copy, Paste, Select all, keys from the keymap — is the app's own; the
+  notices are a dialog over About, and *a recent project is gone* the app's own dialog. The
+  spellchecker is off. Found on the way: Tab walked out of every dialog into the window behind it
+  — it goes round inside the dialog on top now; Print's orientation dots had no focus to see at
+  all; with the list the page's own, Escape closing it closed the dialog under it, and a letter
+  typed to find an option chose a tool — an open list keeps its keys; `spellcheck: false` and the
+  session's spellchecker off still fetched `en-US-10-1.bdic` once a field was typed in, until the
+  session was given no language (Chromium still makes an empty `Dictionaries/`). Scrollbars keep
+  Chromium's small arrows, in the thumb's colour: no standard property removes them. Printed
+  output did not move.
 
 ### Phase 3 — the craft workflow
 
@@ -271,9 +288,9 @@ slice took, or will take, and is still open.
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Built as recommended: preferences version 2 opens it once, since version 1 never recorded a choice. Not yet decided |
 | U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |
 | U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
-| U.20 | Electron's spellchecker: keep it, or turn it off? On Linux it downloads an English dictionary whatever the interface language, and the leather words are not in it | Off. A name is a few words, and `SECURITY.md` says the app makes no network connections |
-| U.20 | A right-click menu in a text field | Cut, Copy, Paste and Select all, in the app's own menu with its words from `en.json`; nothing outside fields |
-| U.20 | Which text can be selected? | The fields, a problem's words, and About's version and log folder — what a maker might paste into a bug report. Nothing else |
+| U.20 | Electron's spellchecker: keep it, or turn it off? On Linux it downloads an English dictionary whatever the interface language, and the leather words are not in it | **Decided 2026-10-15:** off. A name is a few words, and `SECURITY.md` says the app makes no network connections |
+| U.20 | A right-click menu in a text field | **Decided 2026-10-15:** Cut, Copy, Paste and Select all, in the app's own menu with its words from `en.json`; nothing outside fields |
+| U.20 | Which text can be selected? | **Decided 2026-10-15:** the fields, a problem's words, and About's version — what a maker might paste into a bug report. Nothing else. About shows no log folder to select: its button opens the folder |
 
 ---
 

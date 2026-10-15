@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import type { RecentOutcome } from '@leathercad/platform';
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
 
@@ -42,9 +43,9 @@ export function registerPlatformHandlers(
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
   /** Opens a project from the recent list, if it is on it (8.7). */
-  openRecent: (path: string) => Promise<void>,
-  /** Shows the third-party notices window (8.6b). */
-  openNotices: () => void,
+  openRecent: (path: string) => Promise<RecentOutcome>,
+  /** The third-party notices the build wrote (8.6b), or null in development (U.20). */
+  readNotices: () => Promise<string | null>,
   /** The preferences changed: the main process's own words may be in another language now. */
   onPreferencesChanged: () => void,
 ): void {
@@ -161,9 +162,9 @@ export function registerPlatformHandlers(
   ipcMain.handle(IPC.getRecentFiles, () =>
     preferences.recentFiles.map((path) => ({ path, shown: shownPath(path, app.getPath('home')) })),
   );
-  ipcMain.handle(IPC.openRecent, async (_event, path: unknown) => {
-    if (typeof path === 'string') await openRecent(path);
-  });
+  ipcMain.handle(IPC.openRecent, (_event, path: unknown) =>
+    typeof path === 'string' ? openRecent(path) : 'unlisted',
+  );
   ipcMain.handle(IPC.clearRecent, async () => {
     await preferences.clearRecent();
     app.clearRecentDocuments();
@@ -171,7 +172,7 @@ export function registerPlatformHandlers(
   ipcMain.handle(IPC.showLogFolder, async () => {
     await shell.openPath(stateDirectory());
   });
-  ipcMain.handle(IPC.openNotices, () => openNotices());
+  ipcMain.handle(IPC.readNotices, () => readNotices());
 }
 
 /** The path, if the renderer may use it this way; otherwise logged and refused. */

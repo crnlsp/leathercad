@@ -136,10 +136,12 @@ export interface PlatformHost {
   /**
    * Opens a project from the recent list (8.7). The main process opens only a
    * path on its own list: it grants it and hands it back through
-   * `onOpenFile`, so unsaved work is asked about as for *Open*. One that is
-   * gone is taken off the list, and the maker told why.
+   * `onOpenFile`, so unsaved work is asked about as for *Open* — `opening`.
+   * One that is `gone` is taken off the list, for the app to tell the maker
+   * why in its own dialog (U.20). A path not on the list is `unlisted`, and
+   * nothing happens.
    */
-  openRecent(path: string): Promise<void>;
+  openRecent(path: string): Promise<RecentOutcome>;
 
   /** Empties the recent list, and the operating system's (8.7). */
   clearRecent(): Promise<void>;
@@ -147,8 +149,11 @@ export interface PlatformHost {
   /** Opens the folder the log is in, to attach to a report (ADR 0015). */
   showLogFolder(): Promise<void>;
 
-  /** Shows the licences of what the app ships (8.6b). */
-  openNotices(): Promise<void>;
+  /**
+   * The licences of what the app ships (8.6b), as the text the build wrote,
+   * for About to show (U.20); null in a development build, which writes none.
+   */
+  readNotices(): Promise<string | null>;
 
   /**
    * Listens for a project the operating system side asks the app to open —
@@ -211,6 +216,9 @@ export interface PrintJob {
   /** What the job is called in the print queue: the project's name. */
   readonly title: string;
 }
+
+/** What became of a recent project asked for (8.7, U.20). */
+export type RecentOutcome = 'opening' | 'gone' | 'unlisted';
 
 /** A project on the recent list (8.7). */
 export interface RecentFile {

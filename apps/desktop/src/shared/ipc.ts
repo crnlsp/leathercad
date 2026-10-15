@@ -30,7 +30,7 @@ export const IPC = {
   openRecent: 'platform:openRecent',
   clearRecent: 'platform:clearRecent',
   showLogFolder: 'platform:showLogFolder',
-  openNotices: 'platform:openNotices',
+  readNotices: 'platform:readNotices',
   /** Main → renderer: an item of macOS's menu was chosen (8.5a, 8.7). */
   menuAction: 'menu:action',
   /** Main → renderer: open this project, which the main process granted (8.2). */

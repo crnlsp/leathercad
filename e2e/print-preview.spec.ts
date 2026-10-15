@@ -1,11 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { launchApp } from './launchApp.js';
 import { expectAccurate, inkOn, measurePrintTest, openPrintTest } from './printTest.js';
 
@@ -56,28 +56,6 @@ const A4_PPD = `*PPD-Adobe: "4.3"
 *DefaultPaperDimension: A4
 *PaperDimension A4: "595.28 841.89"
 `;
-
-/** A directory of stand-ins for the CUPS client, and where `lp` leaves its job. */
-function fakeCups(lpstat: string): { bin: string; args: string; job: string } {
-  const bin = mkdtempSync(join(tmpdir(), 'leathercad-e2e-cups-'));
-  const args = join(bin, 'lp-args');
-  const job = join(bin, 'job.pdf');
-  const tools: Record<string, string> = {
-    lpstat,
-    lpoptions: `[ "$2" = "LeatherCAD_Test" ] && echo 'PageSize/Media Size: *A4 Letter Custom.WIDTHxHEIGHT'\nexit 0`,
-    lp: `printf '%s\\n' "$@" > '${args}'\ncat > '${job}'\necho 'request id is LeatherCAD_Test-7 (1 file(s))'`,
-  };
-  for (const [name, body] of Object.entries(tools)) {
-    writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`);
-    chmodSync(join(bin, name), 0o755);
-  }
-  return { bin, args, job };
-}
-
-const ONE_PRINTER = `case "$1" in
-  -e) echo LeatherCAD_Test ;;
-  -d) echo 'system default destination: LeatherCAD_Test' ;;
-esac`;
 
 /** The `-o` options of a job, as one string, the way CUPS hands them to a filter. */
 const jobOptions = (args: readonly string[]): string =>
@@ -146,7 +124,8 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
 
     await preview.getByTestId('print-include').nth(1).uncheck();
     await expect(submit).toHaveText('Print 2 sheets');
-    await preview.getByTestId('print-copies').fill('2');
+    await preview.getByLabel('Copies').fill('2');
+    await preview.getByLabel('Copies').press('Enter');
     await expect(submit).toHaveText('Print 2 sheets × 2');
 
     await submit.click();

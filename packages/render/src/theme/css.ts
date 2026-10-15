@@ -39,6 +39,7 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--text'] = SHELL.text;
   variables['--text-dim'] = SHELL.textDim;
   variables['--text-mute'] = SHELL.textMute;
+  variables['--scrollbar'] = SHELL.scrollbar;
   for (const [name, value] of Object.entries(GROUND)) {
     variables[name === 'ground' ? '--ground' : `--ground-${kebab(name)}`] = value;
   }

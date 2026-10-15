@@ -7,6 +7,7 @@ import {
   type PrintJob,
   type PrinterList,
   type RecentFile,
+  type RecentOutcome,
   type RecoveredCopy,
   type SaveDialogOptions,
 } from './host.js';
@@ -180,9 +181,17 @@ export class InMemoryPlatformHost implements PlatformHost {
     return Promise.resolve(this.recentFiles.map((path) => ({ path, shown: path })));
   }
 
-  openRecent(path: string): Promise<void> {
-    if (this.recentFiles.includes(path)) this.openFile(path);
-    return Promise.resolve();
+  /** Paths a test says are no longer on disk: asked for, they come back `gone`. */
+  readonly goneFiles = new Set<string>();
+
+  openRecent(path: string): Promise<RecentOutcome> {
+    if (!this.recentFiles.includes(path)) return Promise.resolve('unlisted');
+    if (this.goneFiles.has(path)) {
+      this.recentFiles.splice(this.recentFiles.indexOf(path), 1);
+      return Promise.resolve('gone');
+    }
+    this.openFile(path);
+    return Promise.resolve('opening');
   }
 
   clearRecent(): Promise<void> {
@@ -194,8 +203,11 @@ export class InMemoryPlatformHost implements PlatformHost {
     return Promise.resolve();
   }
 
-  openNotices(): Promise<void> {
-    return Promise.resolve();
+  /** What `readNotices` answers; a development build has none. */
+  notices: string | null = null;
+
+  readNotices(): Promise<string | null> {
+    return Promise.resolve(this.notices);
   }
 
   private readonly openFileListeners = new Set<(path: string) => void>();

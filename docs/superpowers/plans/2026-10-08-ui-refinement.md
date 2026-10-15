@@ -1390,17 +1390,17 @@ the app makes no network connections.
 
 **Find out first.**
 
-- [ ] Add `color-scheme: dark` on `:root` alone, then look at each item above again. Count what
+- [x] Add `color-scheme: dark` on `:root` alone, then look at each item above again. Count what
       it fixed before writing anything else: it may be most of the list.
-- [ ] With it set, open Paper, Follows, Iron and Language. Is the open list readable, its
+- [x] With it set, open Paper, Follows, Iron and Language. Is the open list readable, its
       highlight the shell's rather than the system's blue? Only if not, `appearance: base-select`
       (Electron 44's Chromium has it).
-- [ ] With a printer listed, Print's checkbox and Copies.
-- [ ] Tab through Settings, Print, Delete, Unsaved changes and Recovery: which stops still ring
+- [x] With a printer listed, Print's checkbox and Copies.
+- [x] Tab through Settings, Print, Delete, Unsaved changes and Recovery: which stops still ring
       with `auto`?
-- [ ] In `forced-colors`, native controls take the system's colours: check no new rule fights
+- [x] In `forced-colors`, native controls take the system's colours: check no new rule fights
       `styles.css`'s three `forced-colors` blocks.
-- [ ] How the renderer would read the notices, if they move into a dialog: the file is emitted at
+- [x] How the renderer would read the notices, if they move into a dialog: the file is emitted at
       build by `notices/thirdPartyNotices.ts`, and the renderer is sandboxed.
 
 **Build.** Every colour from the theme: `theme.test.ts` refuses one written in `styles.css`.
@@ -1432,7 +1432,8 @@ the app makes no network connections.
   anywhere in the window or a dialog.
 - Every tab stop, in the window and in every dialog, shows the tan ring.
 - Ctrl+A outside a field selects nothing; inside one, its text.
-- A fresh profile (an empty `XDG_CONFIG_HOME`) has no `Dictionaries/` folder after typing in a name.
+- A fresh profile (an empty `XDG_CONFIG_HOME`) has no dictionary in `Dictionaries/` after typing in
+  a name. *As built: Chromium makes the folder, empty, at startup.*
 - A right-click in the project name offers Cut, Copy, Paste and Select all, in the interface's
   language.
 - The notices and *a recent project is gone* in the app's look.
@@ -1453,6 +1454,53 @@ printer listed.
   Name: test all three.
 - A token the theme does not define fails `theme.test.ts`; a new one goes into
   `packages/render/src/theme/`.
+
+**As built (2026-10-15).** What the plan above did not know:
+
+- **`color-scheme: dark` alone fixed about half the list.** Measured on the sample at 1400 × 600:
+  the scrollbars and a select's open list went dark, Chromium's `auto` ring went from KDE's orange
+  to white, and the radios and checkboxes went from light blue to Chromium's dark blue. Still to
+  do after it: the twelve `auto` stops, the blue controls, the option at hand in the system's
+  blue, Copies' spin buttons, Ctrl+A (918 characters selected), and the rest of the list.
+- **The open list needed `appearance: base-select`.** Looked at on a private Xwayland with
+  `import`, since the list is a window of its own: dark with `color-scheme`, but the option under
+  the pointer or the keyboard in the system's light blue. With `base-select` the list is the page's,
+  drawn as the menus are — `shell-900`, the option at hand `shell-600`, the chosen one ticked in
+  the accent — and, being the page's, its keys reached the page: Escape closing it closed the
+  dialog under it, and a letter typed to find an option chose a tool. `keepKeysInOpenLists` keeps
+  every key pressed in an open list to the list. In forced colours the option at hand takes
+  `Highlight`, as a native list's does.
+- **Tab walked out of every dialog.** All seven say `aria-modal` and their backdrop takes the
+  pointer, but Tab went from the last stop to the project menu behind. `keepTabInDialogs`
+  (`modalKeys.ts`, installed once) sends it round inside the dialog on top, and brings focus that
+  is outside back in. A menu open in a dialog keeps its own Tab.
+- **Print's orientation had no focus ring at all**: `.field input:focus { outline: none }` was
+  meant for a field's border and caught the radios. Radios and checkboxes keep the ring now.
+- **The spellchecker needed the session's languages emptied.** `spellcheck: false` in
+  `webPreferences` and `setSpellCheckerEnabled(false)` together still fetched `en-US-10-1.bdic`
+  once a name was typed; `setSpellCheckerLanguages([])` stopped it. Chromium still makes an empty
+  `Dictionaries/` folder at startup, so the test reads that it holds nothing.
+- **The notices moved into a dialog** over About, read through `PlatformHost.readNotices()` (the
+  main process reads the file the build wrote; the renderer is sandboxed): `openNotices()` and the
+  second window are gone. *A recent project is gone* is `openRecent`'s answer now — `opening`,
+  `gone` or `unlisted` — and the project bar's own dialog. The main process has no words left
+  but macOS's menu: `main.*` is gone from `en.json`.
+- **The field menu** is `fieldMenu.ts` (the entries, a pure function) and `FieldMenu.tsx`, mounted
+  once, heard on the window before anything else so a right-click in Parts' rename is the field's
+  and not the piece's menu. It is placed beside its field in the document (its dialog, or its
+  landmark), so it is above a dialog the field is in and inside a landmark for axe. Focus goes
+  into the menu, so a field that finishes when left — the project's name, a row's, a
+  `NumberField`, an iron's name — ignores a blur into a menu (`intoMenu`), and the menu gives
+  focus back when it closes. Paste reads the clipboard and types it in (`insertText`): Chromium
+  refuses a page's own `paste`. The keymap has a `field` scope and group, *In a text field*,
+  which the window never dispatches.
+- **Three `forced-colors` blocks**, as the plan said (≈813, ≈1003 and the tree's ≈2253); none of
+  the new rules fights them: forced colours repaint the outline but keep it solid and 2 px.
+- **The window's `backgroundColor`** stays written out in `main/index.ts`: importing the theme
+  there pulls `packages/render`'s DOM types into the main process's build. The stylesheet's audit
+  holds the literal to `SHELL[800]`.
+- **Scrollbars keep small arrows**, now in the thumb's colour on the shell. Chromium draws them
+  with the standard properties, and ignores `::-webkit-scrollbar` once `scrollbar-color` is set.
 
 ---
 
