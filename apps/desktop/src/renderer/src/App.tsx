@@ -46,7 +46,7 @@ import { CanvasLegend } from './CanvasLegend.js';
 import { selectionForRightClick, selectionMenu, type RightClicked } from './contextMenu.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
-import { FieldMenu } from './FieldMenu.js';
+import { TextFieldMenu } from './TextFieldMenu.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
 import {
@@ -1143,7 +1143,7 @@ export function App({
         )}
 
         {/* A text field's own (U.20): Cut, Copy, Paste and Select all. */}
-        <FieldMenu />
+        <TextFieldMenu />
 
         {settings !== null && (
           <SettingsDialog

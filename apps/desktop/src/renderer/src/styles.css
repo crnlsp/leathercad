@@ -87,8 +87,9 @@ strong {
  *
  * - `color-scheme`: a select's open list, a field's caret and the scrollbars
  *   are dark.
- * - Scrollbars thin and without arrows, a thumb on the track of whatever
- *   scrolls. `scrollbar-color` is inherited and `scrollbar-width` is not, so
+ * - Scrollbars thin, a thumb on the track of whatever scrolls. Chromium keeps
+ *   its small arrows, drawn in the thumb's colour: no standard property
+ *   removes them. `scrollbar-color` is inherited and `scrollbar-width` is not, so
  *   the width is said on every element, above. A scrolling column is 11 px
  *   narrower for it, not 16 (the Properties panel counts on that).
  * - Radios and checkboxes in the accent: `accent-color` is inherited too.

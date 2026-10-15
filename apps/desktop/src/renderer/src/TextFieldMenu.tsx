@@ -32,7 +32,7 @@ function hasSelection(field: Field): boolean {
  * And Ctrl+A is a field's: outside one it selects nothing, where Chromium
  * would paint the whole window.
  */
-export function FieldMenu() {
+export function TextFieldMenu() {
   const { t } = useI18n();
   const [open, setOpen] = useState<{
     readonly field: Field;

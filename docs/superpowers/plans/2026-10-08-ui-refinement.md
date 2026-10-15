@@ -1485,7 +1485,7 @@ printer listed.
   second window are gone. *A recent project is gone* is `openRecent`'s answer now — `opening`,
   `gone` or `unlisted` — and the project bar's own dialog. The main process has no words left
   but macOS's menu: `main.*` is gone from `en.json`.
-- **The field menu** is `fieldMenu.ts` (the entries, a pure function) and `FieldMenu.tsx`, mounted
+- **The field menu** is `fieldMenu.ts` (the entries, a pure function) and `TextFieldMenu.tsx`, mounted
   once, heard on the window before anything else so a right-click in Parts' rename is the field's
   and not the piece's menu. It is placed beside its field in the document (its dialog, or its
   landmark), so it is above a dialog the field is in and inside a landmark for axe. Focus goes
