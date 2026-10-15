@@ -35,9 +35,18 @@ async function withSample(run: (window: Page, app: ElectronApplication) => Promi
 
 const row = (window: Page, id: string): Locator => window.getByTestId(`feature-row-${id}`);
 const piece = (window: Page, id: string): Locator => window.getByTestId(`part-heading-${id}`);
-/** Whether a row's lock and eye can be seen. */
+/** Whether all of a row's lock and eye (or eye and menu) can be seen. */
 const actionsShown = (target: Locator): Promise<boolean> =>
-  target.locator('.row-actions').evaluate((actions) => getComputedStyle(actions).opacity === '1');
+  target
+    .locator('.row-actions')
+    .evaluate((actions) =>
+      [...actions.children].every((action) => getComputedStyle(action).opacity === '1'),
+    );
+/** Whether one of a row's toggles can be seen, as its tooltip's anchor shows it. */
+const toggleShown = (toggle: Locator): Promise<boolean> =>
+  toggle.evaluate(
+    (button) => getComputedStyle(button.closest('.tooltip-anchor') ?? button).opacity === '1',
+  );
 
 test('the tree reads as mockup 09: nested, counted, and quiet at rest', async () => {
   await withSample(async (window) => {
@@ -55,10 +64,22 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await expect(window.getByTestId('hole-count-outer-holes')).toHaveText('146');
     await expect(piece(window, 'pocket')).toContainText('×2');
     await expect(piece(window, 'outer').locator('svg.thumbnail path')).toHaveAttribute('d', /^M/);
-    // Every row is the row height.
-    const heights = await tree
-      .getByRole('treeitem')
-      .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
+    // Every row that holds one line is the row height; a name wraps rather
+    // than truncates (F.6), and a crowded piece's marks take a line below,
+    // and the row grows with them.
+    const heights = await tree.getByRole('treeitem').evaluateAll((items) =>
+      items.map((item) => {
+        const name = item.querySelector('.feature-name, .part-label')!;
+        const range = document.createRange();
+        range.selectNodeContents(name);
+        const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+        const top = item.getBoundingClientRect().top;
+        const marks = item.querySelector('.row-end')!.getBoundingClientRect();
+        return lines.size === 1 && marks.bottom <= top + 28
+          ? item.getBoundingClientRect().height
+          : 28;
+      }),
+    );
     expect(new Set(heights)).toEqual(new Set([28]));
 
     // At rest no row shows its lock and eye; hover shows a row's; keyboard
@@ -80,8 +101,10 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await cutOut.hover();
     await cutOut.locator('[data-testid^="feature-locked-"]').click();
     await window.getByTestId('status-bar').hover();
-    await expect(row(window, 'lining-fold').locator('.state-mark')).toBeVisible();
-    await expect(cutOut.locator('.state-mark')).toBeVisible();
+    expect(await toggleShown(window.getByTestId('feature-visible-lining-fold'))).toBe(true);
+    expect(await toggleShown(cutOut.locator('[data-testid^="feature-locked-"]'))).toBe(true);
+    // …and only what is on: the cut-out's eye waits for the pointer.
+    expect(await toggleShown(cutOut.locator('[data-testid^="feature-visible-"]'))).toBe(false);
     await expect(tree.locator('[data-testid^="mirrored-mark-"]')).toBeVisible();
     await expect(row(window, 'lining-fold')).toHaveAccessibleDescription('Hidden');
     await expect(cutOut).toHaveAccessibleDescription('Locked');
@@ -91,6 +114,104 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await window.getByTestId('part-menu-lining').click();
     await window.getByTestId('duplicate-part-lining').click();
     await expect(window.getByTestId('part-count')).toHaveText('4');
+  });
+});
+
+test('a hole set’s count stays in sight at rest, on hover and on keyboard focus, and nothing moves', async () => {
+  await withSample(async (window) => {
+    const holes = row(window, 'outer-holes');
+    const parts = {
+      row: holes,
+      name: holes.locator('.feature-name'),
+      count: window.getByTestId('hole-count-outer-holes'),
+      actions: holes.locator('.row-actions'),
+    };
+    type Box = { x: number; y: number; width: number; height: number };
+    const boxes = async (): Promise<Record<keyof typeof parts, Box>> => {
+      const read = async (locator: Locator): Promise<Box> => (await locator.boundingBox())!;
+      return {
+        row: await read(parts.row),
+        name: await read(parts.name),
+        count: await read(parts.count),
+        actions: await read(parts.actions),
+      };
+    };
+    const apart = (a: Box, b: Box): boolean => a.x + a.width <= b.x || b.x + b.width <= a.x;
+
+    await window.getByTestId('status-bar').hover();
+    const rest = await boxes();
+    await holes.hover();
+    await expect.poll(() => actionsShown(holes)).toBe(true);
+    const hover = await boxes();
+    await window.getByTestId('status-bar').hover();
+    await row(window, 'outer-stitch').focus();
+    await window.keyboard.press('ArrowDown');
+    await expect(holes).toBeFocused();
+    await expect.poll(() => actionsShown(holes)).toBe(true);
+    const focus = await boxes();
+
+    for (const [state, at] of Object.entries({ rest, hover, focus })) {
+      await expect(parts.count, state).toBeInViewport();
+      expect(apart(at.count, at.actions), `${state}: the actions cover the count`).toBe(true);
+      expect(at.row, state).toEqual(rest.row);
+      expect(at.name, state).toEqual(rest.name);
+      expect(at.count, state).toEqual(rest.count);
+    }
+  });
+});
+
+test('at 208 px no name breaks inside a word, a hidden piece’s with both its marks included', async () => {
+  await withSample(async (window, app) => {
+    await resizeWindow(app, window, 1024, 700);
+    await piece(window, 'pocket').hover();
+    await window.getByTestId('part-visible-pocket').click();
+    await expect(window.getByTestId('part-not-printed-pocket')).toBeVisible();
+    const names = await window.getByRole('tree').evaluate((tree) =>
+      [...tree.querySelectorAll('.feature-name, .part-label')].map((name) => {
+        const range = document.createRange();
+        range.selectNodeContents(name);
+        const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+        return { name: name.textContent ?? '', lines: lines.size };
+      }),
+    );
+    for (const { name, lines } of names) {
+      expect(lines, name).toBeLessThanOrEqual(name.split(' ').length);
+    }
+  });
+});
+
+test('Tab into the tree changes no selection; the arrows then select', async () => {
+  await withSample(async (window) => {
+    const selected = window.getByTestId('selected-count');
+    const tabInto = async (): Promise<void> => {
+      await window.getByTestId('tool-select').focus();
+      for (let i = 0; i < 20; i++) {
+        await window.keyboard.press('Tab');
+        const role = await window.evaluate(() => document.activeElement?.getAttribute('role'));
+        if (role === 'treeitem') return;
+      }
+      throw new Error('Tab never reached the tree');
+    };
+
+    // Nothing selected: focus lands on the first row, and selects nothing.
+    await expect(selected).toHaveText('0');
+    await tabInto();
+    await expect(piece(window, 'outer')).toBeFocused();
+    await expect(selected).toHaveText('0');
+
+    // Something else selected: focus lands on its row, and the selection stays.
+    await row(window, 'pocket-stitch').click();
+    await window.getByTestId('status-bar').click();
+    await expect(selected).toHaveText('1');
+    await tabInto();
+    await expect(row(window, 'pocket-stitch')).toBeFocused();
+    await expect(row(window, 'pocket-stitch')).toHaveAttribute('aria-selected', 'true');
+    await expect(selected).toHaveText('1');
+
+    // The arrows select, as decided.
+    await window.keyboard.press('ArrowDown');
+    await expect(row(window, 'pocket-holes')).toHaveAttribute('aria-selected', 'true');
+    await expect(row(window, 'pocket-stitch')).toHaveAttribute('aria-selected', 'false');
   });
 });
 

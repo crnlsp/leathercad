@@ -344,10 +344,12 @@ test('the status bar keeps its 28 px, chips and all, folded or not, at every wid
   });
 });
 
-test('a feature’s row in Parts is one line at 1024, where Parts is 208 px', async () => {
-  // At 220 px "Stitch holes" fit on one line; at U.5's 208 it wrapped. The
-  // names wrap rather than truncate (F.6), but not one that fitted before —
-  // and since U.8's rows, "Cut-out mirrored" fits too, which wrapped at 220.
+test('a feature’s name in Parts wraps only between words at 1024, where Parts is 208 px', async () => {
+  // At 220 px "Stitch holes" fit on one line; at U.5's 208 it wrapped, and U.5
+  // won it back. U.8 keeps every row's lock and eye room at rest, so a hole
+  // set's count never moves when they show: the deepest "Stitch holes" and
+  // "Cut-out mirrored" take two lines again — between their words, never
+  // inside one (F.6) — and every other name keeps its one line.
   await withSample(async (window, app) => {
     await resize(app, window, 1024, 700);
     const lines = await window.getByTestId('parts-list').evaluate((parts) =>
@@ -355,11 +357,16 @@ test('a feature’s row in Parts is one line at 1024, where Parts is 208 px', as
         const range = document.createRange();
         range.selectNodeContents(name);
         const tops = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
-        return `${name.textContent ?? ''}: ${String(tops.size)}`;
+        const words = (name.textContent ?? '').split(' ').length;
+        return { name: name.textContent ?? '', lines: tops.size, words };
       }),
     );
     expect(lines.length).toBeGreaterThan(8);
-    for (const line of lines) expect(line).toMatch(/: 1$/);
+    for (const line of lines) expect(line.lines, line.name).toBeLessThanOrEqual(line.words);
+    expect(lines.filter((line) => line.lines > 1).map((line) => line.name)).toEqual([
+      'Stitch holes',
+      'Cut-out mirrored',
+    ]);
   });
 });
 

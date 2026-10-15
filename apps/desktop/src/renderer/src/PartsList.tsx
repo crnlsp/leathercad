@@ -20,7 +20,6 @@ import {
   LockOpen,
   PrinterX,
   Trash2,
-  type LucideIcon,
 } from 'lucide-react';
 import {
   useEffect,
@@ -509,6 +508,7 @@ function PieceRow({
               offLabel={t('parts.showPart')}
               glyph={<Icon of={visible ? Eye : EyeOff} />}
               keys="toggleVisible"
+              persists={!visible}
               onToggle={() => store.dispatch(setPartVisible(part.id, !visible))}
             />
             <PartMenu part={part} onDuplicatePart={onDuplicatePart} onRemovePart={onRemovePart} />
@@ -520,7 +520,6 @@ function PieceRow({
               </span>
             </Tooltip>
           )}
-          {!visible && <StateMark of={EyeOff} />}
         </span>
       </div>
       {view === 'sheets' && status !== null && <PrintLine status={status} partId={part.id} />}
@@ -679,6 +678,7 @@ function FeatureRow({
               onLabel={t('actions.unlock')}
               offLabel={t('actions.lock')}
               glyph={<Icon of={feature.locked ? Lock : LockOpen} />}
+              persists={feature.locked}
               onToggle={() => store.dispatch(setFeatureLocked([feature.id], !feature.locked))}
             />
             <IconToggle
@@ -688,6 +688,7 @@ function FeatureRow({
               offLabel={t('actions.show')}
               glyph={<Icon of={feature.visible ? Eye : EyeOff} />}
               keys="toggleVisible"
+              persists={!feature.visible}
               onToggle={() => store.dispatch(setFeatureVisible([feature.id], !feature.visible))}
             />
           </span>
@@ -705,8 +706,6 @@ function FeatureRow({
               </span>
             </Tooltip>
           )}
-          {feature.locked && <StateMark of={Lock} />}
-          {!feature.visible && <StateMark of={EyeOff} />}
         </span>
       </div>
       {description.text !== null && (
@@ -822,19 +821,6 @@ function isMirroredFeature(feature: Feature): boolean {
 }
 
 /**
- * A state the maker should see at rest — hidden, locked — where the row's
- * toggles show on hover (R-07). Said to a screen reader by the row's
- * description, so the glyph is silent.
- */
-function StateMark({ of }: { of: LucideIcon }) {
-  return (
-    <span className="row-mark state-mark" aria-hidden>
-      <Icon of={of} size={14} />
-    </span>
-  );
-}
-
-/**
  * A small on/off control that says what pressing it would do. Out of the Tab
  * order — the row is the tree's one stop, and Space and the right-click menu
  * do what these do from the keyboard. Pressed by the pointer, it lets go of
@@ -847,6 +833,7 @@ function IconToggle({
   offLabel,
   glyph,
   keys,
+  persists = false,
   onToggle,
 }: {
   testId: string;
@@ -855,6 +842,8 @@ function IconToggle({
   offLabel: string;
   glyph: ReactNode;
   keys?: CommandId;
+  /** Shown at rest too: a state the maker should see — hidden, locked (R-07). */
+  persists?: boolean;
   onToggle: () => void;
 }) {
   const label = on ? onLabel : offLabel;
@@ -863,7 +852,9 @@ function IconToggle({
     <Tooltip text={label} {...(keys === undefined ? {} : { keys })}>
       <button
         type="button"
-        className={on ? 'icon-toggle' : 'icon-toggle off'}
+        className={['icon-toggle', on ? '' : 'off', persists ? 'persists' : '']
+          .filter((name) => name !== '')
+          .join(' ')}
         data-testid={testId}
         aria-pressed={on}
         aria-label={label}
