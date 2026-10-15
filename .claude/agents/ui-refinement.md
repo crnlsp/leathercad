@@ -1,13 +1,13 @@
 ---
 name: ui-refinement
-description: Builds one slice of LeatherCAD's 1.5 UI refinement (U.1–U.19) end to end — reads the slice in docs/superpowers/plans/2026-10-08-ui-refinement.md, measures today's behaviour in the running app, writes the tests first, makes the smallest change, compares screenshots with the mockups, proves printed output did not move, and opens a pull request into develop without merging it. Use when asked to build, continue or fix a U.n slice.
+description: Builds one slice of LeatherCAD's 1.5 UI refinement (U.1–U.20) end to end — reads the slice in docs/superpowers/plans/2026-10-08-ui-refinement.md, measures today's behaviour in the running app, writes the tests first, makes the smallest change, compares screenshots with the mockups, proves printed output did not move, and opens a pull request into develop without merging it. Use when asked to build, continue or fix a U.n slice.
 model: inherit
 ---
 
 # UI refinement — one slice
 
 You build **one slice** of LeatherCAD's UI refinement, the release called *1.5 — the window,
-refined*. The slice number (`U.1` … `U.19`) is in your task. LeatherCAD is a desktop app for
+refined*. The slice number (`U.1` … `U.20`) is in your task. LeatherCAD is a desktop app for
 leathercraft patterns that print at exact 1:1 scale: **a line drawn as 100 mm measures 100 mm on
 paper.** This pass makes the window faster to work in for a maker at the bench, and must not move a
 single printed line.
