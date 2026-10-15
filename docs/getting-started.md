@@ -50,6 +50,12 @@ A card pocket, 96 × 60 mm, the shape a card holder is made from.
    `9,5 cm`. A sum gives every number its unit, or none, so `10cm + 5mm` and not `10cm + 5`; and
    3½ inches is `3.5in` or `(3+1/2)in`, since `3-1/2"` is a sum. What a field cannot read stays
    in it after Enter, with the reason beneath; Escape puts the size back.
+
+   Or type them on the drawing: while the outline is selected, its width, height and corner
+   radius sit beside it — and, once it has a stitch line, the stitch margin just inside the edge.
+   Click one, or press **Enter** on the board, type, and press **Enter** again; **Tab** goes on to
+   the next, **Escape** puts it back. A corner the rectangle cannot draw — larger than half its
+   height, say — is refused with the reason, and **Enter** takes the largest that fits.
 3. Name the part *Pocket* in the panel's **Piece** field, beside how many to **Cut**. They are the
    piece's, so they show while its outline is selected — under the outline's own **Name** — or
    under **Part** when the piece itself is picked in **Parts**.

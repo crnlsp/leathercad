@@ -1591,6 +1591,93 @@ values are *Not planned*, and stay so.
 **Done when.** Mockup 13's states; editing by mouse and by keyboard alone; one undo per applied
 value; a refusal explained, and Enter taking the suggested value; the chips never print.
 
+**Find out first — answered (2026-10-15, on `bfc878e`).**
+- [x] Corner 40 on an 80 × 60 rectangle. *Properties showed 40 in all four fields, the `.lcp`
+      saved `"radii": {… 40 …}`, and the board and the PDF both drew a stadium with 30 mm ends:
+      `roundedRect`'s private `clampRadii` shrank them at draw time. **The plan's "the domain's
+      own refusal" did not exist** — nothing anywhere refused a corner.*
+- [x] Which dimension line the chips sit on. *Their own, screen-only: a `measurement` feature is
+      document geometry that prints (the sample's card pocket has one), and it is the maker's.
+      The chips' lines are a display list of `annotation`-role paths returned by
+      `placeValueChips` and drawn by `CanvasHost` beside the tape joins, never reaching the
+      export scene. `e2e/value-chips.spec.ts` exports with the chips showing and without them
+      and compares every page pixel for pixel.*
+- [x] How `CanvasHost` tells children about the camera. *It did not: the camera is refs inside
+      `CanvasHost`, only the zoom percentage leaves through `onStatus`, and a pan says nothing.
+      The chips are placed from `paint()`, the one place every camera change goes through, by
+      an imperative `place(view, area)` on the chips' handle — a DOM write per chip, no React
+      render per frame. Measured with the sample at 1440: a wheel step paints once (it painted
+      twice until `ValueChips` was memoised), median 0.6 ms with the chips against 0.4 ms
+      with a stitch line selected.*
+- [x] Where Enter went. *Only the polyline's `onKey` read it, and it returned `false` after
+      finishing — or after refusing an open outline, keeping the points — so the press went on.
+      A Parts row's Enter selects and lets the key go on too. Both would now reach the board's
+      new Enter; see below.*
+- [x] At 1024 and 860. *Properties is a docked 40 px strip at 1024, beside the canvas, not over
+      it; opened with `]` (and both panels at 860) it lies over the board at z 8. The chips keep
+      clear of an open panel: `CanvasHost` passes the board less the panel's side as the area
+      they may use, and a chip with no room there is left out.*
+
+**As built.**
+- **The corner fact is in `packages/geometry`:** `fittedRadii(radii, w, h)` is the old
+  `clampRadii`, exported, and what `roundedRect` calls — so the drawn and printed clamp did not
+  move. `cornerRoom(w, h, radii, corners)` is the largest radius the named corners take
+  together, the others kept, before `roundedRect` would shrink them: the side that limits it,
+  and whether its two corners share it. Property-tested: the room always fits, anything more is
+  drawn smaller, anything within is drawn as asked, it agrees with `roundedRect`'s arcs. The
+  property found the first draft taking the first side within `EPS_POINT` of the tightest,
+  offering a radius a nanometre too large; it is the exact minimum now, with that case kept as an
+  example. `quantiseAtMost` (core) puts the offered radius on the storage grid without
+  crossing the limit: half of a stored 60.0001 is 30.00005, which `quantise` rounds up.
+- **The app words it** (`renderer/src/outlineSizes.ts`, `cornerRefusal`): "Corner is larger than
+  half the height (30.0). {{enter}} uses 30.0." for all four corners, and "…than the height
+  leaves it (55.0)…" for one corner beside another. `{{enter}}` is the field's own Enter,
+  through `keysInSentences`. **Properties' corner fields refuse the same way** (`NumberField`'s
+  new `refuse`): Enter once says why with the warning glyph, Enter again takes the radius, leaving
+  the field drops it, and the arrow keys stop at it. A file that already holds an oversize radius
+  opens and draws as before (`lcp.test.ts`).
+- **Which chips:** one feature selected, a piece's **outline** (the outer cut contour) drawn as a
+  rectangle, shown and unlocked: width, height and corner; the margin only where exactly one
+  stitch line follows it inward. Nothing for a cut-out, a circle, a drawn path, a piece picked by
+  its heading, two stitch lines or a locked outline. Four different corners read *mixed*; typing
+  sets all four, one step.
+- **Placement** is `placeValueChips(view, input)` in `packages/render`, from the rectangle's own
+  frame turned on screen, so a turned rectangle's chips turn with it: width on the lower of its
+  two width sides, height on the right-hand height side, both on dimension lines with extension
+  lines, the chip's nearer side 8 px off the outline and sliding along its line to stay in view;
+  the corner off the top-right corner along its diagonal, clear of even the square corner, a
+  leader from the arc as drawn. Chips the app measured are its input; centres in CSS px and the
+  lines in mm are its output, and a chip whose place is under a ruler, past the canvas or under
+  an open panel is left out. Property-tested: never over the shape, never under a ruler or past
+  the area, deterministic, moved exactly by a pan. A refusal's note is placed there too, under its
+  chip or over it at the canvas's foot.
+- **The margin chip sits on the leather, just inside the stitch line**, with a line from the edge
+  across the margin to it — R-12's "across the margin" and mockups 02 and 05. Outside the left edge
+  it had no room at *Fit selection*: 60 px of padding, 34 of them the left ruler's. It keeps
+  inside the stitch line all round and is left out where it cannot (a narrow piece far out).
+- **Keys.** `editSizes` (canvas scope, Enter) opens the first chip in view, only with nothing
+  focused — a field, a button or a Parts row keeps its Enter — and after the tool has heard it.
+  **The polyline now claims the Enter that finishes a run**, refused or not: it returned `false`,
+  so a refused open outline would also have opened the selected outline's sizes. At rest the
+  chips are ordinary Tab stops after Parts, so the keyboard reaches them without the board; open,
+  Tab applies and goes on (W → H → corner → margin, then out of them: no trap), Shift+Tab back. A
+  value that cannot apply holds Tab once to say why; a second Tab leaves it. Esc drops what was
+  typed, keeps the selection and gives the keys back to the board. Leaving by a click applies a
+  value that reads, to the outline the chip was opened on.
+
+**Corrections to this section.** "The domain's own refusal" was not there to word; it is
+`cornerRoom`, in `geometry`, beside the clamp it describes. "`Tab` … only while a chip is open":
+the chips are also reachable by Tab at rest, which is how the keyboard gets to them from Parts.
+
+**For U.16 and U.17.**
+- **U.16** reuses `ValueChips`' field (`Chip`), `chipNumber`, `CHIP_MIN`, `parseLength`, and
+  `placeValueChips` with the live rectangle's parameters; the rectangle tool should claim
+  Enter while it has a first corner, as the polyline now does, or Enter opens the selected
+  outline's chips instead. `cornerRefusal` with `cornerRoom` refuses a typed corner while drawing.
+- **U.17**'s bar goes below the width chip: its box is `placed.at.width` and the chip's measured
+  size, in the same CSS px. When the width chip is left out, the lowest point of the selection's
+  bounds is the fallback. The bar must keep clear of the margin chip, which is inside the piece.
+
 ---
 
 #### U.15 Values in any unit, and sums — R-12 · S

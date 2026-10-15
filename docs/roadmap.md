@@ -225,8 +225,24 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   plan said there was no default margin, but every project carries `defaultStitchInsetMm` and
   `defaultIronPitchMm`, which X8 had the commands read; the app now passes the maker's values, and
   the project's are the fallback with none (X8 amended in `domain-model.md`).
-- ☐ **U.14 Value chips beside the selected shape** (R-12). Width, height, corner and margin, edited
+- ✅ **U.14 Value chips beside the selected shape** (R-12). Width, height, corner and margin, edited
   on the drawing.
+  ✅ Built as described. A selected rectangle outline shows its width below on a dimension line,
+  its height at the right, *r 5.0* off its top-right corner and, with one stitch line following
+  it, *margin 3.0* on the leather just inside the stitch line — outside the left edge it had no
+  room at *Fit selection*, where the left ruler takes 34 of the 60 px. A click, or Enter on the
+  board, opens one with the unit and its number selected; it reads `95-2*3.5` and `3.75in`; Enter
+  applies it as one undo step, Tab applies and goes on, Esc puts it back. They follow every pan
+  and zoom in the frame the board moves, keep off the outline, the rulers and a panel opened over
+  the board, and never print — the PDF exported with them showing is the same, pixel for pixel.
+  Found on the way: **nothing refused a corner** — Properties stored 40 on an 80 × 60 rectangle
+  while the board and the PDF drew 30. `roundedRect`'s clamp is `fittedRadii` now, and
+  `cornerRoom` says how much room corners have; a chip and Properties' corner fields refuse a
+  radius that would never be drawn, saying why, and a second Enter takes the largest that fits.
+  Files that already hold one open and draw as before. The polyline let the Enter that finished a
+  run go on to the window, where it would also have opened the selected outline's sizes — it
+  claims it now; and an arrow key on a field at its limit wrote an undo step that changed nothing.
+  Printed output did not move.
 - ✅ **U.15 Values in any unit, and sums** (R-12). `95-2*3.5` and `3.75in`, wherever a size is typed.
   ✅ Built as described, ahead of U.5–U.14: it needs no other slice, and U.14 and U.16 read it.
   `parseLength` in `core` reads `+ − * /`, parentheses, either minus, a decimal comma, and mm,

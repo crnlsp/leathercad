@@ -1,7 +1,8 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { QUANTUM_MM, quantise } from './quantise.js';
+import { EPS_POINT } from './epsilon.js';
+import { QUANTUM_MM, quantise, quantiseAtMost } from './quantise.js';
 
 /** The file format's documented coordinate limit. */
 const inRange = fc.double({ min: -100_000, max: 100_000, noNaN: true });
@@ -55,5 +56,32 @@ describe('quantise', () => {
     expect(() => quantise(Number.NaN)).toThrow(RangeError);
     expect(() => quantise(Number.POSITIVE_INFINITY)).toThrow(RangeError);
     expect(() => quantise(Number.NEGATIVE_INFINITY)).toThrow(RangeError);
+  });
+});
+
+describe('quantiseAtMost', () => {
+  it('snaps a limit to the grid without crossing it', () => {
+    // Half of a stored 60.0001 mm: quantise would round it up, past the limit.
+    expect(quantiseAtMost(30.00005)).toBe(30);
+    expect(quantiseAtMost(30)).toBe(30);
+    expect(quantiseAtMost(30.00004)).toBe(30);
+    expect(quantiseAtMost(29.99996)).toBe(29.9999);
+  });
+
+  it('lands on the grid, at most the value, and less than a quantum below it', () => {
+    fc.assert(
+      fc.property(inRange, (v) => {
+        const snapped = quantiseAtMost(v);
+        return (
+          quantise(snapped) === snapped &&
+          snapped <= v + EPS_POINT &&
+          v - snapped < QUANTUM_MM + 1e-9
+        );
+      }),
+    );
+  });
+
+  it('leaves a value already on the grid as it is', () => {
+    fc.assert(fc.property(inRange, (v) => quantiseAtMost(quantise(v)) === quantise(v)));
   });
 });

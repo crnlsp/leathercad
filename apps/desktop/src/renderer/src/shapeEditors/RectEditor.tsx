@@ -1,17 +1,31 @@
 import type { ParametricShape } from '@leathercad/domain';
-import type { CornerRadii } from '@leathercad/geometry';
+import { cornerRoom, type CornerRadii } from '@leathercad/geometry';
 
 import { useI18n } from '../i18n.js';
+import { useKeysInSentences } from '../keyCaps.js';
 import { NumberField } from '../NumberField.js';
+import { cornerRefusal, type Refusal } from '../outlineSizes.js';
 
 type Rect = Extract<ParametricShape, { type: 'rect' }>;
 
-/** Position, size, and a radius per corner. */
+/**
+ * Position, size, and a radius per corner. A corner larger than the corners
+ * beside it leave is refused, with the largest that fits to take instead, as
+ * the chips on the board refuse it (U.14): stored, it would never be drawn.
+ */
 export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape: Rect) => void }) {
   const { t } = useI18n();
+  const keys = useKeysInSentences();
   const setRadius = (corner: keyof CornerRadii, value: number): void => {
     onChange({ ...shape, radii: { ...shape.radii, [corner]: value } });
   };
+  const refuse =
+    (corner: keyof CornerRadii) =>
+    (radius: number): Refusal | null =>
+      cornerRefusal(cornerRoom(shape.width, shape.height, shape.radii, [corner]), radius, {
+        t,
+        enter: keys['enter'] ?? '',
+      });
 
   return (
     <>
@@ -59,6 +73,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.topLeft}
           min={0}
           step={0.5}
+          refuse={refuse('topLeft')}
           onCommit={(v) => setRadius('topLeft', v)}
         />
         <NumberField
@@ -66,6 +81,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.topRight}
           min={0}
           step={0.5}
+          refuse={refuse('topRight')}
           onCommit={(v) => setRadius('topRight', v)}
         />
       </div>
@@ -75,6 +91,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.bottomLeft}
           min={0}
           step={0.5}
+          refuse={refuse('bottomLeft')}
           onCommit={(v) => setRadius('bottomLeft', v)}
         />
         <NumberField
@@ -82,6 +99,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.bottomRight}
           min={0}
           step={0.5}
+          refuse={refuse('bottomRight')}
           onCommit={(v) => setRadius('bottomRight', v)}
         />
       </div>

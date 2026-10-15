@@ -1,4 +1,5 @@
 import {
+  approxEq,
   approxZero,
   assertFinite,
   EPS_AREA,
@@ -65,7 +66,7 @@ export function roundedRect(origin: Vec2, width: Mm, height: Mm, radii: CornerRa
   assertFinite(height, 'roundedRect height');
 
   const requested = typeof radii === 'number' ? uniformRadii(radii) : radii;
-  const r = clampRadii(requested, Math.abs(width), Math.abs(height));
+  const r = fittedRadii(requested, width, height);
 
   const x0 = Math.min(origin.x, origin.x + width);
   const y0 = Math.min(origin.y, origin.y + height);
@@ -111,32 +112,42 @@ export function circle(centre: Vec2, radius: Mm): Path {
   return closedPath([arc(centre, Math.abs(radius), 0, Math.PI * 2)]);
 }
 
+const CORNER_NAMES = ['bottomLeft', 'bottomRight', 'topRight', 'topLeft'] as const;
+
+/** Each side of a rectangle, and the two corners that share it. */
+const SIDES: ReadonlyArray<readonly [keyof CornerRadii, keyof CornerRadii, 'width' | 'height']> = [
+  ['bottomLeft', 'bottomRight', 'width'],
+  ['topLeft', 'topRight', 'width'],
+  ['bottomLeft', 'topLeft', 'height'],
+  ['bottomRight', 'topRight', 'height'],
+];
+
 /**
- * Shrinks radii until adjacent corners stop competing for the same edge.
+ * The radii `roundedRect` draws: as asked, unless two corners sharing a side
+ * would overlap — then every corner shrinks by the one factor that makes the
+ * tightest side fit. A negative radius is a square corner. A negative size is
+ * read as its magnitude, as `roundedRect` reads it.
  *
  * Scaling both corners of an over-subscribed edge by the same factor keeps
  * their proportions, which looks deliberate; clamping each independently would
  * silently turn an asymmetric design symmetric.
  */
-function clampRadii(radii: CornerRadii, width: Mm, height: Mm): CornerRadii {
+export function fittedRadii(radii: CornerRadii, width: Mm, height: Mm): CornerRadii {
+  assertFinite(width, 'fittedRadii width');
+  assertFinite(height, 'fittedRadii height');
+  for (const corner of CORNER_NAMES) assertFinite(radii[corner], `fittedRadii ${corner}`);
   const clamped = {
     bottomLeft: Math.max(0, radii.bottomLeft),
     bottomRight: Math.max(0, radii.bottomRight),
     topRight: Math.max(0, radii.topRight),
     topLeft: Math.max(0, radii.topLeft),
   };
-
-  const edges: ReadonlyArray<readonly [keyof CornerRadii, keyof CornerRadii, Mm]> = [
-    ['bottomLeft', 'bottomRight', width],
-    ['topLeft', 'topRight', width],
-    ['bottomLeft', 'topLeft', height],
-    ['bottomRight', 'topRight', height],
-  ];
+  const length = { width: Math.abs(width), height: Math.abs(height) };
 
   let factor = 1;
-  for (const [a, b, available] of edges) {
+  for (const [a, b, side] of SIDES) {
     const wanted = clamped[a] + clamped[b];
-    if (wanted > available && wanted > 0) factor = Math.min(factor, available / wanted);
+    if (wanted > length[side] && wanted > 0) factor = Math.min(factor, length[side] / wanted);
   }
 
   if (factor >= 1) return clamped;
@@ -146,6 +157,62 @@ function clampRadii(radii: CornerRadii, width: Mm, height: Mm): CornerRadii {
     topRight: clamped.topRight * factor,
     topLeft: clamped.topLeft * factor,
   };
+}
+
+/** How much radius some corners of a rectangle have, and what limits it. */
+export interface CornerRoom {
+  /**
+   * The largest radius the corners can take, set together, that `roundedRect`
+   * draws as asked. Zero when a corner beside them already takes a whole side.
+   */
+  readonly radiusMm: Mm;
+  /** The side that limits it. */
+  readonly side: 'width' | 'height';
+  /**
+   * Whether both corners of that side are among those set, so each has half
+   * of it — "half the height" — rather than what the corner beside it leaves.
+   */
+  readonly shared: boolean;
+}
+
+/**
+ * The room `corners` have, set to one radius together while the others keep
+ * theirs (R-12): the fact behind refusing a corner `roundedRect` would draw
+ * smaller than typed. Only the sides those corners touch are read — a side
+ * whose own two corners already overlap shrinks every corner whatever these
+ * are, which is a fault of the radii already there, not of the one typed.
+ *
+ * A tie between the sides goes to the width, so the answer never depends on
+ * the last bit of a float.
+ */
+export function cornerRoom(
+  width: Mm,
+  height: Mm,
+  radii: CornerRadii,
+  corners: readonly (keyof CornerRadii)[],
+): CornerRoom {
+  assertFinite(width, 'cornerRoom width');
+  assertFinite(height, 'cornerRoom height');
+  for (const corner of CORNER_NAMES) assertFinite(radii[corner], `cornerRoom ${corner}`);
+  if (corners.length === 0) throw new RangeError('cornerRoom needs at least one corner to set');
+
+  const length = { width: Math.abs(width), height: Math.abs(height) };
+  const limits = SIDES.flatMap(([a, b, side]) => {
+    const setA = corners.includes(a);
+    const setB = corners.includes(b);
+    if (!setA && !setB) return [];
+    const shared = setA && setB;
+    const beside = shared ? 0 : Math.max(0, setA ? radii[b] : radii[a]);
+    return [
+      { radiusMm: Math.max(0, shared ? length[side] / 2 : length[side] - beside), side, shared },
+    ];
+  });
+  // The room is the tightest limit exactly — a tolerance here would offer a
+  // radius a hair too large — and the side named is the first that close to it.
+  const radiusMm = Math.min(...limits.map((limit) => limit.radiusMm));
+  // Every corner touches two sides, so a corner named has set one.
+  const tightest = limits.find((limit) => approxEq(limit.radiusMm, radiusMm))!;
+  return { radiusMm, side: tightest.side, shared: tightest.shared };
 }
 
 export { polyline } from './path/index.js';

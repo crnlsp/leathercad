@@ -12,6 +12,8 @@ import { useId, useRef, useState } from 'react';
 
 import { intoMenu } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
+import { SeverityGlyph } from './SeverityGlyph.js';
+import type { Refusal } from './outlineSizes.js';
 
 /**
  * What a field's text comes to. A field in millimetres takes a size as a maker
@@ -39,6 +41,11 @@ function read(text: string, inMm: boolean): Result<number, LengthError> {
  * text it cannot read keeps the text, and says why beneath, rather than
  * dropping what was typed. Leaving the field, or Escape, still reverts.
  *
+ * **A value the field's owner refuses** (`refuse`) — a corner larger than the
+ * rectangle draws (U.14) — is kept on Enter with the reason and a warning
+ * glyph beneath, which names what a second Enter applies instead; the arrow
+ * keys stop there. Leaving the field drops it, as unread text is dropped.
+ *
  * **An empty field is an answer only when the caller says so.** Pass `onClear`
  * and a `null` value renders blank with the `placeholder`, and clearing the
  * field calls `onClear`. Without it an empty draft is a typo and reverts, as it
@@ -56,6 +63,7 @@ export function NumberField({
   disabled = false,
   precision = 2,
   hideLabel = false,
+  refuse,
 }: {
   label: string;
   value: number | null;
@@ -69,6 +77,8 @@ export function NumberField({
   precision?: number;
   /** Named for a screen reader only, where a column heading or a setting's name says it (U.13). */
   hideLabel?: boolean;
+  /** Why a value that reads cannot be stored as it is, and what to store instead (U.14). */
+  refuse?: (value: number) => Refusal | null;
 }) {
   // While the user is typing, their draft wins; otherwise the document does,
   // so an undo immediately shows the restored number.
@@ -83,6 +93,7 @@ export function NumberField({
   const [draft, setDraft] = useState<string | null>(null);
   const draftRef = useRef<string | null>(null);
   const [unread, setUnread] = useState<LengthError | null>(null);
+  const [refused, setRefused] = useState<Refusal | null>(null);
   const shown = draft ?? (value === null ? '' : formatEditable(value, precision));
   const inMm = suffix === 'mm';
 
@@ -90,6 +101,7 @@ export function NumberField({
     draftRef.current = next;
     setDraft(next);
     setUnread(null);
+    setRefused(null);
   };
 
   /** `holdUnread`: Enter keeps text it cannot read, and says why; a blur drops it. */
@@ -111,11 +123,19 @@ export function NumberField({
       else updateDraft(null);
       return;
     }
-    updateDraft(null);
 
     const clamped = min !== undefined ? Math.max(min, parsed.value) : parsed.value;
     const snapped = quantise(clamped);
-    if (snapped !== value) onCommit(snapped);
+    const refusal = refuse?.(snapped) ?? null;
+    if (refusal !== null && holdUnread && refused === null) {
+      // Said once; Enter again takes what it offers.
+      setRefused(refusal);
+      return;
+    }
+    updateDraft(null);
+    if (refusal !== null && !holdUnread) return;
+    const stored = refusal?.use ?? snapped;
+    if (stored !== value) onCommit(stored);
   };
 
   return (
@@ -129,8 +149,8 @@ export function NumberField({
           placeholder={placeholder}
           disabled={disabled}
           step={step}
-          aria-invalid={unread !== null || undefined}
-          aria-describedby={unread !== null ? reasonId : undefined}
+          aria-invalid={unread !== null || refused !== null || undefined}
+          aria-describedby={unread !== null || refused !== null ? reasonId : undefined}
           onChange={(event) => updateDraft(event.target.value)}
           onBlur={(event) => {
             // The field's own menu is not leaving it (U.20).
@@ -156,7 +176,10 @@ export function NumberField({
               const typed = draft === null ? null : read(draft, inMm);
               const next = quantise((typed?.ok === true ? typed.value : current) + delta);
               updateDraft(null);
-              onCommit(min !== undefined ? Math.max(min, next) : next);
+              const floored = min !== undefined ? Math.max(min, next) : next;
+              // A step past what the field takes stops there.
+              const stored = refuse?.(floored)?.use ?? floored;
+              if (stored !== value) onCommit(stored);
             }
           }}
           // Stop canvas shortcuts firing while a field has focus.
@@ -171,6 +194,11 @@ export function NumberField({
           {unread.kind === 'unit'
             ? t('editor.lengthError.unit', { unit: unread.unit })
             : t(`editor.lengthError.${unread.kind}`)}
+        </span>
+      )}
+      {refused !== null && (
+        <span id={reasonId} className="reason field-reason refused" aria-hidden="true">
+          <SeverityGlyph severity="warning" /> {refused.reason}
         </span>
       )}
     </label>

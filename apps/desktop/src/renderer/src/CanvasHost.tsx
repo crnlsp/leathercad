@@ -44,6 +44,7 @@ import {
   renderGrid,
   renderRulers,
   zoomPercent,
+  type CssBox,
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
@@ -53,8 +54,9 @@ import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
-import { commandFor, keyForTools } from './keymap.js';
+import { commandFor, keyForTools, keysOf, matches } from './keymap.js';
 import { isTyping } from './shortcuts.js';
+import { ValueChips, type ValueChipsHandle } from './ValueChips.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -145,6 +147,7 @@ export function CanvasHost({
   onContextMenu,
   nextId,
   onStatus,
+  panelOver = null,
   ref,
   children,
 }: {
@@ -168,6 +171,8 @@ export function CanvasHost({
   onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
+  /** A panel open over the board (U.5), by its class: the value chips keep clear of it. */
+  panelOver?: string | null;
   ref?: React.Ref<CanvasHandle>;
   /** Drawn over the canvas without taking space from it: the legend (F.7). */
   children?: React.ReactNode;
@@ -253,6 +258,30 @@ export function CanvasHost({
 
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
+  }, []);
+
+  /** The selected outline's sizes, beside it (U.14): placed as each frame is painted. */
+  const chipsRef = useRef<ValueChipsHandle>(null);
+  const panelOverRef = useRef(panelOver);
+  useEffect(() => {
+    panelOverRef.current = panelOver;
+    invalidate();
+  }, [panelOver, invalidate]);
+  /** The board the chips may sit on: the canvas, less a panel open over one side of it. */
+  const chipArea = useCallback((): CssBox | undefined => {
+    const canvas = canvasRef.current;
+    const over = panelOverRef.current;
+    const panel = over === null ? null : document.querySelector(`.panel.${over}`);
+    if (canvas === null || panel === null) return undefined;
+    const board = canvas.getBoundingClientRect();
+    const covered = panel.getBoundingClientRect();
+    const fromLeft = covered.left + covered.width / 2 < board.left + board.width / 2;
+    return {
+      left: fromLeft ? covered.right - board.left : 0,
+      top: 0,
+      right: fromLeft ? board.width : covered.left - board.left,
+      bottom: board.height,
+    };
   }, []);
 
   const handleDoubleClick = useCallback(() => {
@@ -523,6 +552,10 @@ export function CanvasHost({
       }),
       view,
     );
+    // The selected outline's dimension lines, under its value chips (U.14):
+    // screen furniture like the rest of this, never printed.
+    const chipLines = chipsRef.current?.place(view, chipArea()) ?? null;
+    if (chipLines !== null) renderDisplayList(context, chipLines, view);
     // Where a taped piece's sheets will join (7.4b): screen furniture read from
     // the sheet plan the PDF writes, over the pattern and under the tool.
     renderDisplayList(context, tapeJoins(sheetPlanFor(document.project)), view);
@@ -533,7 +566,7 @@ export function CanvasHost({
     const next = managerRef.current?.notice() ?? null;
     setNotice((current) => (sameProblem(current, next) ? current : next));
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
-  }, [store, paintSheets]);
+  }, [store, paintSheets, chipArea]);
 
   useEffect(() => {
     const tick = (): void => {
@@ -633,7 +666,21 @@ export function CanvasHost({
       });
       // A key the tool claimed is not also a shortcut: the app's tool keys
       // skip an event whose default is prevented.
-      if (claimed === true) event.preventDefault();
+      if (claimed === true) {
+        event.preventDefault();
+        return;
+      }
+
+      // Enter on the board opens the selected outline's sizes (U.14) — on the
+      // board only: a focused button, field or Parts row keeps its own Enter.
+      const onBoard = event.target === document.body || event.target === canvasRef.current;
+      if (
+        onBoard &&
+        keysOf('editSizes').some((binding) => matches(event, binding, IS_MAC)) &&
+        chipsRef.current?.open() === true
+      ) {
+        event.preventDefault();
+      }
     };
 
     // On the document, which a key bubbles through before the window: the tool
@@ -869,6 +916,7 @@ export function CanvasHost({
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
       />
+      {view === 'design' && <ValueChips ref={chipsRef} store={store} invalidate={invalidate} />}
       {children}
       {sheetsNotice && pointerCss !== null && (
         <div

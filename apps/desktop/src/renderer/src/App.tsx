@@ -954,6 +954,7 @@ export function App({
               toolId={toolId}
               nextId={nextId}
               onStatus={handleStatus}
+              panelOver={open}
               drawAs={drawAs}
               makerDefaults={makerDefaults}
               hardware={hardware}

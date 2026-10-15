@@ -83,6 +83,7 @@ export type CommandId =
   | 'selectAll'
   | `tool.${ToolId}`
   | 'finishPolyline'
+  | 'editSizes'
   | 'takeBack'
   | 'arcOrStraight'
   | 'removePoint'
@@ -298,6 +299,16 @@ export const KEYMAP: readonly Command[] = [
     does: 'shortcuts.finishPolyline',
     group: 'drawing',
     scope: 'polyline',
+    keys: [key('Enter')],
+  },
+  // U.14 (R-12): on the board, with an outline selected, its sizes open beside
+  // it. Heard after the tool, so a polyline mid-run still finishes, and only
+  // with nothing focused, so a field, a button or a Parts row keeps its Enter.
+  {
+    id: 'editSizes',
+    does: 'shortcuts.editSizes',
+    group: 'edit',
+    scope: 'canvas',
     keys: [key('Enter')],
   },
   {
@@ -620,6 +631,8 @@ export function keysInSentences(
     straight: first('arcOrStraight', 1),
     removePoint: first('removePoint'),
     roundCorner: first('roundCorner'),
+    // A field's own Enter, which no command binds: what applies a typed size (U.14).
+    enter: label({ code: 'Enter' }),
     rectangle: first('tool.rectangle'),
     select: first('tool.select'),
     points: first('tool.points'),

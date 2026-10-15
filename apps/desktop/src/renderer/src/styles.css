@@ -2898,6 +2898,133 @@ button.problem-row:hover {
   bottom: calc(100% + var(--space-1));
 }
 
+/* ——— U.14: value chips ——————————————————————————————————————————————————
+   A selected outline's sizes on the board (R-12): on the ground, in the
+   dimension's colour and the canvas-value voice, each on its dimension line.
+   Where each sits is the canvas's, set once a frame from packages/render;
+   hidden until it is placed. They are fields on the canvas, so they take the
+   canvas's focus ring, the accent's ground value, and stay selectable. Above
+   the legend and the zoom control, below a panel opened over the board, which
+   they keep clear of. */
+
+.value-chips {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+}
+
+.value-chip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--role-annotation) 45%, var(--ground));
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  color: var(--role-annotation);
+  font: var(--t-label);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: auto;
+  cursor: text;
+  user-select: text;
+  transition: border-color var(--motion);
+}
+
+.value-chip:hover {
+  border-color: var(--role-annotation);
+}
+
+.value-chip input {
+  field-sizing: content;
+  min-width: 2ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  user-select: text;
+  cursor: text;
+}
+
+.value-chip input:focus,
+.value-chip input:focus-visible {
+  outline: none;
+}
+
+.value-chip-prefix,
+.value-chip-unit {
+  color: var(--ground-label);
+}
+
+.value-chip[data-editing] {
+  border-color: var(--tan-ink);
+  outline: 2px solid var(--tan-ink);
+  outline-offset: 0;
+  color: var(--ink);
+}
+
+.value-chip[data-editing] input {
+  text-align: left;
+}
+
+.value-chip input[aria-invalid='true'] {
+  color: var(--error-ground);
+}
+
+/* Why a value cannot apply, under its chip: on the ground, beside the drawing
+   it is about, with the warning's glyph. */
+.value-chip-note {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 360px;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--warning-ground);
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  color: var(--ink);
+  font: var(--t-label);
+  font-weight: 400;
+  visibility: hidden;
+}
+
+.value-chip-note .severity-glyph {
+  flex: none;
+  color: var(--warning-ground);
+}
+
+/* A size Properties refuses (U.14), with the warning's glyph. */
+.field-reason.refused {
+  color: var(--text);
+}
+
+.field-reason.refused .severity-glyph {
+  color: var(--warning);
+}
+
+@media (forced-colors: active) {
+  .value-chip,
+  .value-chip-note {
+    border-color: CanvasText;
+  }
+
+  .value-chip[data-editing] {
+    outline-color: Highlight;
+  }
+}
+
 /* ——— F.4: motion ————————————————————————————————————————————————————————
    Colour-only acknowledgement of a press or a hover (§6.3): background, border,
    colour and opacity, never a transform. Off entirely for reduced motion. */
