@@ -2213,7 +2213,11 @@ button.problem-row:hover {
 }
 
 /* The tree (R-07, U.8): one column of rows of one height, a feature indented
-   under what it follows — 16 px a level — and joined to it by an elbow. */
+   under what it follows — 12 px a level — and joined to it by an elbow. 12, and
+   4 px between a row's parts, rather than the mockup's 16 and 6: each row
+   keeps its lock and eye's room at rest (R-07), so a hole set's count never
+   moves, and at 208 px "Stitch holes" four levels deep still wraps between
+   its words, never inside one (F.6). */
 .parts-tree {
   display: flex;
   flex-direction: column;
@@ -2263,10 +2267,15 @@ button.problem-row:hover {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   /* The row's 28 px (§3 row-height) include its 1 px border, top and bottom. */
   min-height: calc(var(--row-height) - 2px);
-  padding: 0 2px 0 calc(var(--level) * var(--space-4) + 4px);
+  padding: 0 2px 0 calc(var(--level) * var(--space-3) + 4px);
+}
+
+/* The marks and the thumbnail keep their size; the name is what gives way. */
+.tree-line > :is(svg, .feature-mark) {
+  flex: none;
 }
 
 .piece-row {
@@ -2285,8 +2294,8 @@ button.problem-row:hover {
 .tree-elbow {
   position: absolute;
   top: 0;
-  left: calc(var(--level) * var(--space-4) - 4px);
-  width: 6px;
+  left: calc(var(--level) * var(--space-3) - 1px);
+  width: 5px;
   height: 50%;
   border-bottom: 1px solid var(--text-mute);
   border-left: 1px solid var(--text-mute);
@@ -2305,11 +2314,25 @@ button.problem-row:hover {
   overflow-wrap: break-word;
 }
 
+/* A piece's row holds the most — its fold, thumbnail, ×N, the actions' room
+   and a not-printed mark — so where those leave its name less than its
+   longest word ("Card pock / et" at 208 px, hidden), its marks take a line
+   of their own below, at the right, rather than the name breaking inside a
+   word. Decided by the row's room, never by hover, so nothing moves. */
+.piece-row .tree-line {
+  flex-wrap: wrap;
+}
+
+.part-label {
+  min-width: min(min-content, 100%);
+}
+
 /* The numbers a maker cares about, and the marks, at the row's right end. */
 .row-count {
   flex: none;
   margin-left: auto;
-  color: var(--text-dim);
+  /* The row's: dim at rest, full on the hover's fill, where dim is short of 4.5:1. */
+  color: inherit;
   font: var(--t-micro);
   font-variant-numeric: tabular-nums;
 }
@@ -2332,38 +2355,25 @@ button.problem-row:hover {
   color: var(--warning);
 }
 
-/* Lock and eye (and a piece's menu), shown on hover and keyboard focus
-   (R-07), over the row just left of its marks — over, so a name never
-   reflows under the pointer, and left of them, so a mark's tooltip stays in
-   reach. Faded out rather than removed at rest: a pointer that reaches them
-   has shown them. What is on (hidden, locked) stays as a mark, which the
-   toggles replace while they show. */
+/* Lock and eye (and a piece's menu): their room kept at every row's end, at
+   rest as on hover, so nothing moves — not a name, not the hole count — when
+   they show on hover and keyboard focus (R-07). Faded out at rest rather than
+   removed: a pointer that reaches them has shown them. One that is on
+   (hidden, locked) stays in sight. */
 .row-actions {
-  position: absolute;
-  top: 0;
-  right: 100%;
-  bottom: 0;
   display: inline-flex;
   align-items: center;
-  padding: 0 2px;
-  border-radius: var(--r-sm);
-  background: var(--shell-700);
-  opacity: 0;
 }
 
-.tree-row:hover .row-actions {
-  background: var(--shell-600);
+.row-actions > :not(:has(.persists)) {
+  opacity: 0;
 }
 
 /* …and while a piece's menu is open from them: its menu is inside, and
    would fade with them as the pointer left the row for it. */
-.tree-row:is(:hover, :focus-visible) .row-actions,
-.row-actions:has([aria-expanded='true']) {
+.tree-row:is(:hover, :focus-visible) .row-actions > *,
+.row-actions:has([aria-expanded='true']) > * {
   opacity: 1;
-}
-
-.tree-row:is(:hover, :focus-visible) .state-mark {
-  display: none;
 }
 
 .row-name-input {

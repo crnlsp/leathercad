@@ -35,9 +35,18 @@ async function withSample(run: (window: Page, app: ElectronApplication) => Promi
 
 const row = (window: Page, id: string): Locator => window.getByTestId(`feature-row-${id}`);
 const piece = (window: Page, id: string): Locator => window.getByTestId(`part-heading-${id}`);
-/** Whether a row's lock and eye can be seen. */
+/** Whether all of a row's lock and eye (or eye and menu) can be seen. */
 const actionsShown = (target: Locator): Promise<boolean> =>
-  target.locator('.row-actions').evaluate((actions) => getComputedStyle(actions).opacity === '1');
+  target
+    .locator('.row-actions')
+    .evaluate((actions) =>
+      [...actions.children].every((action) => getComputedStyle(action).opacity === '1'),
+    );
+/** Whether one of a row's toggles can be seen, as its tooltip's anchor shows it. */
+const toggleShown = (toggle: Locator): Promise<boolean> =>
+  toggle.evaluate(
+    (button) => getComputedStyle(button.closest('.tooltip-anchor') ?? button).opacity === '1',
+  );
 
 test('the tree reads as mockup 09: nested, counted, and quiet at rest', async () => {
   await withSample(async (window) => {
@@ -55,11 +64,6 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await expect(window.getByTestId('hole-count-outer-holes')).toHaveText('146');
     await expect(piece(window, 'pocket')).toContainText('×2');
     await expect(piece(window, 'outer').locator('svg.thumbnail path')).toHaveAttribute('d', /^M/);
-    // Every row is the row height.
-    const heights = await tree
-      .getByRole('treeitem')
-      .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
-    expect(new Set(heights)).toEqual(new Set([28]));
 
     // At rest no row shows its lock and eye; hover shows a row's; keyboard
     // focus on a piece shows its eye and menu.
@@ -80,8 +84,10 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await cutOut.hover();
     await cutOut.locator('[data-testid^="feature-locked-"]').click();
     await window.getByTestId('status-bar').hover();
-    await expect(row(window, 'lining-fold').locator('.state-mark')).toBeVisible();
-    await expect(cutOut.locator('.state-mark')).toBeVisible();
+    expect(await toggleShown(window.getByTestId('feature-visible-lining-fold'))).toBe(true);
+    expect(await toggleShown(cutOut.locator('[data-testid^="feature-locked-"]'))).toBe(true);
+    // …and only what is on: the cut-out's eye waits for the pointer.
+    expect(await toggleShown(cutOut.locator('[data-testid^="feature-visible-"]'))).toBe(false);
     await expect(tree.locator('[data-testid^="mirrored-mark-"]')).toBeVisible();
     await expect(row(window, 'lining-fold')).toHaveAccessibleDescription('Hidden');
     await expect(cutOut).toHaveAccessibleDescription('Locked');
@@ -91,6 +97,243 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await window.getByTestId('part-menu-lining').click();
     await window.getByTestId('duplicate-part-lining').click();
     await expect(window.getByTestId('part-count')).toHaveText('4');
+  });
+});
+
+/**
+ * Every row of the tree as laid out: its height, how many lines its name
+ * takes, and the boxes of what it holds — the name's line boxes, the fold,
+ * the thumbnail or mark, the pills, the hole count, and the actions and marks
+ * at its end — with what lies outside the row, what overlaps, and whether
+ * anything is clipped. Measured, nothing substituted.
+ */
+async function rowLayouts(window: Page) {
+  return window.getByRole('tree').evaluate((tree) =>
+    [...tree.querySelectorAll<HTMLElement>('[role="treeitem"]')].map((item) => {
+      const row = item.getBoundingClientRect();
+      const line = item.querySelector<HTMLElement>('.tree-line')!;
+      const name = line.querySelector('.feature-name, .part-label')!;
+      const range = document.createRange();
+      range.selectNodeContents(name);
+      const parts = [...range.getClientRects()]
+        .filter((rect) => rect.width > 0)
+        .map((rect, at) => ({ what: `name ${String(at + 1)}`, rect }));
+      const lines = new Set(parts.map((part) => Math.round(part.rect.top))).size;
+      for (const [what, selector] of [
+        ['fold', ':scope > .tree-fold > svg'],
+        ['thumbnail', ':scope > svg.thumbnail'],
+        ['mark', ':scope > .feature-mark'],
+        ['pill', '.badge'],
+        ['count', '.row-count'],
+        ['action', '.row-actions .icon-toggle'],
+        ['mark at the end', '.row-end > .tooltip-anchor > .row-mark'],
+      ] as const) {
+        line.querySelectorAll(selector).forEach((element, at) => {
+          const rect = element.getBoundingClientRect();
+          if (rect.width > 0) parts.push({ what: `${what} ${String(at + 1)}`, rect });
+        });
+      }
+      const outside = parts
+        .filter(
+          ({ rect }) =>
+            rect.left < row.left - 0.5 ||
+            rect.right > row.right + 0.5 ||
+            rect.top < row.top - 0.5 ||
+            rect.bottom > row.bottom + 0.5,
+        )
+        .map(({ what }) => what);
+      const overlaps: string[] = [];
+      parts.forEach((a, i) =>
+        parts.slice(i + 1).forEach((b) => {
+          const x = Math.min(a.rect.right, b.rect.right) - Math.max(a.rect.left, b.rect.left);
+          const y = Math.min(a.rect.bottom, b.rect.bottom) - Math.max(a.rect.top, b.rect.top);
+          if (x > 0.5 && y > 0.5) overlaps.push(`${a.what} × ${b.what}`);
+        }),
+      );
+      const top = Math.min(...parts.map(({ rect }) => rect.top));
+      const bottom = Math.max(...parts.map(({ rect }) => rect.bottom));
+      return {
+        row: item.dataset['testid'] ?? '',
+        found: parts.map(({ what }) => what),
+        height: row.height,
+        lines,
+        content: bottom - top,
+        clipped:
+          item.scrollHeight > item.clientHeight ||
+          item.scrollWidth > item.clientWidth ||
+          line.scrollHeight > line.clientHeight ||
+          line.scrollWidth > line.clientWidth,
+        outside,
+        overlaps,
+      };
+    }),
+  );
+}
+
+test('every row is 28 px, or holds its second line whole: nothing clipped, nothing overlapping', async () => {
+  await withSample(async (window, app) => {
+    // The rows that take a second line, by the maintainer's accepted layout
+    // (#90): the deepest "Stitch holes" and "Cut-out mirrored" wrap between
+    // their words, and "Card pocket ×2" puts its actions and marks below.
+    const tall = [
+      'feature-row-outer-holes',
+      'feature-row-lining-slot-mirrored',
+      'part-heading-pocket',
+    ];
+    const check = async (state: string): Promise<void> => {
+      const rows = await rowLayouts(window);
+      expect(rows.length, state).toBe(15);
+      for (const row of rows) {
+        const where = `${state}: ${row.row}`;
+        expect(row.outside, `${where}, outside the row`).toEqual([]);
+        expect(row.overlaps, `${where}, overlapping`).toEqual([]);
+        expect(row.clipped, `${where}, clipped`).toBe(false);
+        if (tall.includes(row.row)) {
+          // Taller by its real second line: the content's own extent, and
+          // the row's border and padding about it — nothing substituted.
+          expect(row.height, where).toBeGreaterThan(28);
+          expect(row.height - row.content, where).toBeGreaterThanOrEqual(0);
+          expect(row.height - row.content, where).toBeLessThanOrEqual(12);
+        } else {
+          expect(row.lines, where).toBe(1);
+          expect(row.height, where).toBe(28);
+        }
+      }
+      expect(
+        rows.filter((row) => row.height !== 28).map((row) => row.row),
+        state,
+      ).toEqual(tall); // What was measured: the pocket's name, pill, thumbnail, fold, eye and
+      // menu — and, hidden, its crossed printer.
+      const pocket = rows.find((row) => row.row === 'part-heading-pocket')!;
+      expect(pocket.found, state).toEqual(
+        expect.arrayContaining([
+          'name 1',
+          'fold 1',
+          'thumbnail 1',
+          'pill 1',
+          'action 1',
+          'action 2',
+        ]),
+      );
+      if (state.includes('hidden')) expect(pocket.found, state).toContain('mark at the end 1');
+      const holes = rows.find((row) => row.row === 'feature-row-outer-holes')!;
+      expect(holes.found, state).toEqual(
+        expect.arrayContaining(['name 1', 'name 2', 'mark 1', 'count 1', 'action 1', 'action 2']),
+      );
+    };
+
+    for (const width of [1440, 1024]) {
+      await resizeWindow(app, window, width, 900);
+      await window.getByTestId('status-bar').hover();
+      await check(`${String(width)} px, at rest`);
+    }
+    // The pocket hidden: its crossed eye and crossed printer both show.
+    await piece(window, 'pocket').hover();
+    await window.getByTestId('part-visible-pocket').click();
+    await expect(window.getByTestId('part-not-printed-pocket')).toBeVisible();
+    for (const width of [1024, 1440]) {
+      await resizeWindow(app, window, width, 900);
+      await window.getByTestId('status-bar').hover();
+      await check(`${String(width)} px, the pocket hidden`);
+    }
+  });
+});
+
+test('a hole set’s count stays in sight at rest, on hover and on keyboard focus, and nothing moves', async () => {
+  await withSample(async (window) => {
+    const holes = row(window, 'outer-holes');
+    const parts = {
+      row: holes,
+      name: holes.locator('.feature-name'),
+      count: window.getByTestId('hole-count-outer-holes'),
+      actions: holes.locator('.row-actions'),
+    };
+    type Box = { x: number; y: number; width: number; height: number };
+    const boxes = async (): Promise<Record<keyof typeof parts, Box>> => {
+      const read = async (locator: Locator): Promise<Box> => (await locator.boundingBox())!;
+      return {
+        row: await read(parts.row),
+        name: await read(parts.name),
+        count: await read(parts.count),
+        actions: await read(parts.actions),
+      };
+    };
+    const apart = (a: Box, b: Box): boolean => a.x + a.width <= b.x || b.x + b.width <= a.x;
+
+    await window.getByTestId('status-bar').hover();
+    const rest = await boxes();
+    await holes.hover();
+    await expect.poll(() => actionsShown(holes)).toBe(true);
+    const hover = await boxes();
+    await window.getByTestId('status-bar').hover();
+    await row(window, 'outer-stitch').focus();
+    await window.keyboard.press('ArrowDown');
+    await expect(holes).toBeFocused();
+    await expect.poll(() => actionsShown(holes)).toBe(true);
+    const focus = await boxes();
+
+    for (const [state, at] of Object.entries({ rest, hover, focus })) {
+      await expect(parts.count, state).toBeInViewport();
+      expect(apart(at.count, at.actions), `${state}: the actions cover the count`).toBe(true);
+      expect(at.row, state).toEqual(rest.row);
+      expect(at.name, state).toEqual(rest.name);
+      expect(at.count, state).toEqual(rest.count);
+    }
+  });
+});
+
+test('at 208 px no name breaks inside a word, a hidden piece’s with both its marks included', async () => {
+  await withSample(async (window, app) => {
+    await resizeWindow(app, window, 1024, 700);
+    await piece(window, 'pocket').hover();
+    await window.getByTestId('part-visible-pocket').click();
+    await expect(window.getByTestId('part-not-printed-pocket')).toBeVisible();
+    const names = await window.getByRole('tree').evaluate((tree) =>
+      [...tree.querySelectorAll('.feature-name, .part-label')].map((name) => {
+        const range = document.createRange();
+        range.selectNodeContents(name);
+        const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+        return { name: name.textContent ?? '', lines: lines.size };
+      }),
+    );
+    for (const { name, lines } of names) {
+      expect(lines, name).toBeLessThanOrEqual(name.split(' ').length);
+    }
+  });
+});
+
+test('Tab into the tree changes no selection; the arrows then select', async () => {
+  await withSample(async (window) => {
+    const selected = window.getByTestId('selected-count');
+    const tabInto = async (): Promise<void> => {
+      await window.getByTestId('tool-select').focus();
+      for (let i = 0; i < 20; i++) {
+        await window.keyboard.press('Tab');
+        const role = await window.evaluate(() => document.activeElement?.getAttribute('role'));
+        if (role === 'treeitem') return;
+      }
+      throw new Error('Tab never reached the tree');
+    };
+
+    // Nothing selected: focus lands on the first row, and selects nothing.
+    await expect(selected).toHaveText('0');
+    await tabInto();
+    await expect(piece(window, 'outer')).toBeFocused();
+    await expect(selected).toHaveText('0');
+
+    // Something else selected: focus lands on its row, and the selection stays.
+    await row(window, 'pocket-stitch').click();
+    await window.getByTestId('status-bar').click();
+    await expect(selected).toHaveText('1');
+    await tabInto();
+    await expect(row(window, 'pocket-stitch')).toBeFocused();
+    await expect(row(window, 'pocket-stitch')).toHaveAttribute('aria-selected', 'true');
+    await expect(selected).toHaveText('1');
+
+    // The arrows select, as decided.
+    await window.keyboard.press('ArrowDown');
+    await expect(row(window, 'pocket-holes')).toHaveAttribute('aria-selected', 'true');
+    await expect(row(window, 'pocket-stitch')).toHaveAttribute('aria-selected', 'false');
   });
 });
 

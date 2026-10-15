@@ -152,8 +152,9 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   `thumbnailPath`) and its ×N; under it what it is made of, a level deeper for each thing it
   follows — *Outline › Stitch line › Stitch holes* — joined by elbows, in 28 px rows
   (`row-height`, the theme's `DENSITY`), a hole set's count at the right. At rest no row shows its
-  lock and eye; hover or keyboard focus shows them over the row's end, so no name reflows; a
-  hidden or locked feature keeps its mark, the mirror mark always shows. A WAI-ARIA tree with one
+  lock and eye, though their room is kept at every row's end, so hover or keyboard focus shows
+  them and nothing moves — a hole set's count stays in sight beside them (on review, after #89);
+  a hidden or locked feature keeps its toggle in sight, the mirror mark always shows. A WAI-ARIA tree with one
   Tab stop: ↑ ↓ move and select, → opens or goes in, ← closes or goes up, Home and End, **Space**
   hides or shows, **F2** renames in place (one undo step), Shift+F10 the row's menu; the window's
   keys — Delete, Ctrl+Z, a tool's letter — pass through a focused row. A selection on the board
@@ -163,8 +164,10 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   way: a piece's ⋯ menu, once its button showed only on hover, faded out with the row as the
   pointer left for it — it stays while open; forced colours drew a box round every row; a rename whose row went from under it — undone
   away from macOS's Edit menu while its field had focus — reopened its field when the row came
-  back, and now ends with the row, keeping nothing half-typed; at 1024 px
-  *Cut-out mirrored* now fits one line. A selection paints in 4.5 ms with 32 features (3.0 ms
+  back, and now ends with the row, keeping nothing half-typed. With the actions' room kept, rows
+  step 12 px a level with 4 px between their parts; at 208 and 224 px the deepest *Stitch holes*
+  and *Cut-out mirrored* wrap between their words, and *Card pocket ×2*'s marks take a line below
+  its name. A selection paints in 4.5 ms with 32 features (3.0 ms
   before). Printed output did not move.
 - ☐ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
   the reminder to measure. No Turn: no piece is turned by hand.
@@ -248,9 +251,11 @@ slice took, or will take, and is still open.
 | U.7 | What count does Print's problems half show? | **Decided 2026-10-14:** the worst severity's alone, as R-06 draws it. Its tooltip and accessible name give every severity's count, from the one count (`countBySeverity`) the drawer and the export notice read |
 | U.7 | One paper list, as 7.4a had, or paper and orientation apart, as mockup 08 draws them? | **Decided 2026-10-14:** apart. Each paper says its sheet count and each orientation's tooltip what it takes, before it is chosen; the summary keeps the scale and the taping |
 | U.7 | Does *Export PDF*'s main half remember the folder it last saved to? | **Decided 2026-10-14:** no; it does what *Export PDF* did. Remembering the folder would be a feature of its own, scoped separately |
-| U.8 | Do pieces start open or closed, and is a fold remembered? | Open, so nothing is hidden until the maker hides it; a fold is the session's, like the view, and a selection on the board reopens its piece |
-| U.8 | Does selection follow focus in the tree? | Yes, as in a file manager: ↑ and ↓ select the row they reach, so Delete and Properties act on the row the maker is on. Tab into the tree selects nothing |
-| U.8 | Rename on the right-click menu? | Not added: F2 in the tree and the Name field in Properties rename; the menu is the board's too, where F2 is not heard |
+| U.8 | Do pieces start open or closed, and is a fold remembered? | **Decided 2026-10-14:** pieces start open, and a fold lasts the session. A selection on the board opens its piece and reveals its row |
+| U.8 | Does selection follow focus in the tree? | **Decided 2026-10-14:** yes. ↑ and ↓ select the row they reach, and Delete and Properties act on that selection. Tabbing into the tree changes no selection: focus lands on the selected row, or the first |
+| U.8 | Rename on the right-click menu? | **Decided 2026-10-14:** no. F2 in the tree, heard only there, and the Name field in Properties |
+| U.8 | A hidden piece shows the crossed eye and the crossed printer | **Decided 2026-10-14:** both stay: one says it is hidden, the other what that means for printing. A name that then wraps to two lines is acceptable under the wrap rules (F.6, §7.1) |
+| U.8 | Lock and eye covered the hole count on hover | **Decided 2026-10-14:** the count stays in sight at rest, on hover and on focus. The actions' room is kept at every row's end, so nothing moves; names wrap between words, never truncate |
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |
 | U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |

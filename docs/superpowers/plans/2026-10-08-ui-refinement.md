@@ -1199,24 +1199,35 @@ the visible rows (unit); E2E for keys and reveal.
 - **The row's buttons are out of the Tab order** (one Tab stop for the tree); the keyboard reaches
   what they do by Space and the right-click menu. Pressed by the pointer they let go of focus.
   `MenuButton` took a `tabIndex` for the piece's ⋯.
-- **Lock and eye over the row's end**: absolutely placed just left of the row's marks, faded out
-  at rest and shown on hover or focus — over the name's end or the hole count, so no name
-  reflows under the pointer, and left of the marks, so the mirror mark's and *Not printed*'s
-  tooltips stay in reach. What is on is a silent mark (lock, crossed eye) at rest.
+- **Lock and eye keep their room** at every row's end (on review, after #89; first built as an
+  overlay that covered the hole count on hover): faded out at rest, shown on hover or keyboard
+  focus, and nothing moves between the three — the row, the name and the count keep their boxes
+  (`e2e/parts-tree.spec.ts`). A toggle that is on (hidden, locked) stays in sight at rest. The
+  marks — mirror, *Not printed* — follow them. To pay for the 40 px, a level is 12 px and a row's
+  parts 4 px apart (the mockup's 16 and 6), so at 208 px the fourth level's *Stitch holes* has 47
+  px and wraps between its words rather than inside "Stitch" (29 px at the mockup's spacing). At
+  224 and 208 px the deepest *Stitch holes* and *Cut-out mirrored* take two lines, and *Card
+  pocket ×2* keeps its name on one but puts its marks on a line below; every other row keeps
+  one. A piece's row holds the most, and hidden at 208 px — the crossed eye and the crossed
+  printer both kept, as decided — it broke "Card pock / et": its marks now go below rather than
+  the name breaking inside a word (`flex-wrap` on a piece's row, the name at least its longest
+  word).
 - **Not printed, in Design**: the print line is the Sheets view's until U.9. Design marks a piece
   that does not print with a crossed printer in the warning colour, its tooltip the reason
   (*Not printed. It is hidden.*), and says it in the row's description. A printing piece's hidden
   features are told by their own marks.
 - **Pieces start open** and a fold is the session's; a selection on the board opens its piece,
   sets the tree's Tab stop on its row and scrolls it into view (`block: 'nearest'`), focus staying
-  on the board.
+  on the board. Tabbing into the tree selects nothing: focus lands on the selected row, or the
+  first (checked from the rail with nothing selected and with a stitch line selected).
 - **Fixed on the way**: the piece's ⋯ menu, inside the faded actions, faded with them as the
   pointer left the row for it; forced colours drew every row's transparent border; a rename
   outlived its row — undone away from macOS's Edit menu while the field had focus, which never
   blurs it — and its field came back uninvited on redo, so a rename now ends when its row is no
   longer among the rows shown, committing nothing; the tree's
-  print line was 4.3:1 on a hovered row's fill and takes `--text` there; "Cut-out mirrored" fits
-  one line at 208 px, which U.5 left to this slice.
+  print line was 4.3:1 on a hovered row's fill and takes `--text` there, as the hole count does
+  now; a squeezed row shrank its thumbnail and marks — they keep their size, and the name gives
+  way.
 
 ---
 
