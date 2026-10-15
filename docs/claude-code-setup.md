@@ -122,7 +122,7 @@ instructions that every session would otherwise have to be given again.
 
 | Agent | Does |
 |---|---|
-| `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.19) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
+| `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.20) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
 | `panels-fold` | Builds U.5, panels that fold and focus mode, with its briefing: where the widths live today and where they go, the rail's remember-but-never-overwrite pattern, how `[`, `]` and `\` are matched by place, what already floats on the board, and who owns Escape first |
 | `top-bar` | Builds U.7, the top bar in three zones, with its briefing: the bar's parts as they are, the keys it has and the one it lacks (F1), what still uses green, the severity count that does not exist yet, and the edited flag's path through `PlatformHost` |
 | `parts-tree` | Builds U.8, the Parts tree, with its briefing: the nesting `featureTree` already gives, the print line that is also Design's *Not printed* warning, the test ids ten specs rely on, and keeping the tree's keys apart from the window's |

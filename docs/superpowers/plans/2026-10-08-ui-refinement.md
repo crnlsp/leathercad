@@ -1,4 +1,4 @@
-# The window, refined — the plan for 1.5 (U.1 – U.19)
+# The window, refined — the plan for 1.5 (U.1 – U.20)
 
 > **For agentic workers:** one slice per session. Start one with `/slice U.n`, or hand it to the
 > `ui-refinement` agent ([`.claude/agents/ui-refinement.md`](../../../.claude/agents/ui-refinement.md)),
@@ -30,7 +30,7 @@ canvas2d and svg screen backends in `packages/render`; Playwright for the E2E an
 |---|---|---|---|
 | 1 | ✅ **1.4, released as 1.3.5** on 2026-10-09, with U.1 to U.3: [the record](../../history/roadmap-1.3.5.md) | — | — |
 | 2 | **U.1 Pieces read as pieces** | nothing | the `ui-refinement` agent, from 2026-10-08 |
-| 3 | U.2 → U.19, in this document's order | the slices named under each | one session per slice |
+| 3 | U.2 → U.19, in this document's order, which puts U.20 in Phase 2 | the slices named under each | one session per slice |
 
 **Why U.1 comes first:**
 
@@ -1314,6 +1314,125 @@ cap in the window follows. Esc, Tab and Enter keep their native roles and cannot
 
 **Done when.** A key changed, used, shown everywhere as changed, and still changed after a restart;
 a clash explained; *Reset all* restores the defaults.
+
+---
+
+#### U.20 What Chromium still draws itself — §2 *Keyboard*, UI Foundations §6.5 · M
+
+Added 2026-10-15 from a pass over the running app. It cites no `R-` id: the requirements assume a
+dark window, and these are where Chromium and Electron left their defaults in it. Numbered last
+because it was found last; it lands before U.19, which walks the window as one thing and retakes
+the pixel baselines.
+
+**Needs** nothing.
+
+**For the maker.** The window is dark, but every control Chromium draws itself is still in its
+light theme: a white scrollbar with arrow buttons beside Properties, Parts, the tool rail and every
+dialog; white radio dots; a blue checkbox in Print. A stray Ctrl+A paints the whole window blue. A
+name field underlines *Gusset* in red and offers nothing to do about it. And Electron's
+spellchecker downloads a dictionary from Google on first launch, when `SECURITY.md` tells the maker
+the app makes no network connections.
+
+**Today** (measured 2026-10-15 on Linux, KDE, at 1100 and 1400 px wide).
+
+- **Nothing declares `color-scheme`.** Not `styles.css`, not the tokens `theme.ts` writes at
+  startup, not `index.html`, and the main process sets no `nativeTheme.themeSource`. So Chromium
+  draws its own controls light:
+  - **Scrollbars**, light and with arrows, wherever the shell scrolls: `.rail`, `.panel` (Parts and
+    Properties, thin since U.6), `.dialog`, `.settings-pane` (My tools shows it), `.print-sheets`,
+    `.print-options`, `.print-problem-rows`, `.drawer-body` and a long `.menu`. Only
+    `.panel-strip` hides its own.
+  - **Radios.** Print's orientation (`PrintPreview.tsx` 325) has no `accent-color`, so it is
+    Chromium's blue; My tools' are tan when chosen and a white disc when not.
+  - **Checkboxes.** Print's *include this sheet* (`PrintPreview.tsx` 229) is Chromium's blue;
+    Settings' is tan, and white when clear. Both Print controls show only with a printer listed.
+  - **Copies** (`PrintPreview.tsx` 342) is the window's only `type="number"`, with Chromium's spin
+    buttons. Every other number is a `NumberField`.
+  - **Thirteen `<select>`s.** The closed box is styled (`.field select`); the open list is
+    Chromium's, and was not looked at.
+- **Focus.** Twelve tab stops in the main window have no `:focus-visible` rule and fall back to
+  Chromium's `outline: auto`, in the desktop's accent colour — KDE's orange here, not `--tan`:
+  `.chip` (*Draw as*, and the status bar's Parts, Focus and Properties), `.panel-toggle` (both
+  folds) and `.drawer-handle`. The dialogs were not walked.
+- **Text.** Nothing sets `user-select`. Ctrl+A outside a field selects the whole window in
+  Chromium's blue (1,192 characters); a double-click selects a label.
+- **The spellchecker** is Electron's default: on, in `en-US` whatever the interface language. On
+  Linux it fetched `en-US-10-1.bdic` from Google into `<userData>/Dictionaries/` on first launch.
+  `index.html`'s CSP holds the renderer, not the main process's session, so it does not stop it.
+- **No right-click menu in a field.** Electron ships none, and `App.tsx` 701 opens the board's menu
+  only for the keyboard's menu key. The keys work: Ctrl+C, V, X and A in a field (8.7's E2E).
+- **The notices window.** `openNotices()` (`main/index.ts` 159) loads `THIRD_PARTY_NOTICES.txt`
+  bare in a second window: white, a system monospace face — a system font, which the project never
+  uses — a light scrollbar, and no `backgroundColor`.
+- **One native message box.** *A recent project is gone* (`main/index.ts` 221) is
+  `dialog.showMessageBox`; every other message is the app's own dialog. The open and save dialogs
+  stay the system's, as they should.
+
+**Find out first.**
+
+- [ ] Add `color-scheme: dark` on `:root` alone, then look at each item above again. Count what
+      it fixed before writing anything else: it may be most of the list.
+- [ ] With it set, open Paper, Follows, Iron and Language. Is the open list readable, its
+      highlight the shell's rather than the system's blue? Only if not, `appearance: base-select`
+      (Electron 44's Chromium has it).
+- [ ] With a printer listed, Print's checkbox and Copies.
+- [ ] Tab through Settings, Print, Delete, Unsaved changes and Recovery: which stops still ring
+      with `auto`?
+- [ ] In `forced-colors`, native controls take the system's colours: check no new rule fights
+      `styles.css`'s three `forced-colors` blocks.
+- [ ] How the renderer would read the notices, if they move into a dialog: the file is emitted at
+      build by `notices/thirdPartyNotices.ts`, and the renderer is sandboxed.
+
+**Build.** Every colour from the theme: `theme.test.ts` refuses one written in `styles.css`.
+
+- **`color-scheme: dark`** for the shell. The board and the sheet previews are canvases and do not
+  read it.
+- **Scrollbars:** thin, `scrollbar-color` from the shell's tokens, said once for the shell rather
+  than per panel.
+- **`accent-color: var(--tan)`** on every radio and checkbox, said once.
+- **Copies** becomes a `NumberField`, as the dimension's *Decimals* is (`MeasurementEditor.tsx`): a
+  count, no unit, no sums.
+- **Focus:** UI Foundations §6.5's ring — 2 px `--tan` at 1 px offset, on `:focus-visible` only —
+  on every stop that lacks one.
+- **Text:** `user-select: none` on the shell. Fields stay selectable, and so does what a maker might
+  paste into a bug report: a problem's words, About's version and log folder.
+- **The spellchecker off,** with `spellcheck: false` in the window's `webPreferences`, so no
+  dictionary is ever fetched and `SECURITY.md`'s sentence is true again (decision in the roadmap).
+- **A field's right-click menu:** Cut, Copy, Paste and Select all, in the app's own `Menu.tsx`,
+  words from `en.json` and keys from the keymap. Nothing outside fields (decision in the roadmap).
+- **The notices** in the app's look: a dialog from About with the text in the vendored face, or the
+  window given the theme's background and the same face. No monospace face is vendored; the
+  notices' `===` rules read well enough in Plex Sans.
+- ***A recent project is gone*** said by the renderer, in the app's own dialog. Its two keys move
+  from `main.` to the renderer's.
+
+**Done when.**
+
+- At 1400 × 600 and at 1024: no light scrollbar, no blue or white control, no spin button,
+  anywhere in the window or a dialog.
+- Every tab stop, in the window and in every dialog, shows the tan ring.
+- Ctrl+A outside a field selects nothing; inside one, its text.
+- A fresh profile (an empty `XDG_CONFIG_HOME`) has no `Dictionaries/` folder after typing in a name.
+- A right-click in the project name offers Cut, Copy, Paste and Select all, in the interface's
+  language.
+- The notices and *a recent project is gone* in the app's look.
+- Printed output did not move (§1, step 6).
+
+**Tests.** An E2E that tabs through the window and each dialog and finds no computed
+`outline-style: auto`; the spellchecker's state read from the main process
+(`session.defaultSession.isSpellCheckerEnabled()` false); the field menu's entries as a pure
+function, with its words in `en.json` checked by the locales test; the axe scan over Print with a
+printer listed.
+
+**Traps.**
+
+- A menu built in the main process from Electron's `role:` items carries Electron's own English
+  and skips `en.json` (ADR 0018).
+- Never `outline: none` without the ring in its place (§2 *Keyboard*).
+- `user-select: none` on the shell must not reach the project name, Parts' rename or Properties'
+  Name: test all three.
+- A token the theme does not define fails `theme.test.ts`; a new one goes into
+  `packages/render/src/theme/`.
 
 ---
 
