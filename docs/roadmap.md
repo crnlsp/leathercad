@@ -171,7 +171,18 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   before). Printed output did not move.
 - ☐ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
   the reminder to measure. No Turn: no piece is turned by hand.
-- ☐ **U.10 The legend** (R-09). Open with names by default; folds to a chip that is remembered.
+- ✅ **U.10 The legend** (R-09). Open with names by default; folds to a chip that is remembered.
+  ✅ Built as described. The legend sits at the canvas's bottom-left — moved from the top-right U.4
+  left it at — and opens with names on any window with room; folded, it is a chip reading *Legend*
+  whose tooltip names the marks, and a window 1024 px wide or narrower, or shorter than 720 px,
+  folds it for the session. That fold never reaches `preferences.json`. `preferences.json` is
+  version 2: version 1 wrote `legendOpen: false` out whenever any preference changed, so a stored
+  `false` could not be told from the old default, and a version 1 file is reset once to the new one.
+  Found on the way: the fold is the window's, so it reads at every size and not only at start-up;
+  the toggle had to follow the legend's shown state rather than the stored preference — opening it
+  by hand in a small window holds it open, and folding it there writes the choice; and the open
+  legend covered the empty bottom-left corner a pixel reference clicked to deselect, so that
+  reference now clicks an empty point below the ruler. Printed output did not move.
 - ☐ **U.11 Options-row hints** (R-11). Short hints with keys as caps, dropping from the right; `?`
   never drops.
 - ☐ **U.12 Change a key in Settings › Keyboard shortcuts** (§2).
@@ -257,7 +268,7 @@ slice took, or will take, and is still open.
 | U.8 | A hidden piece shows the crossed eye and the crossed printer | **Decided 2026-10-14:** both stay: one says it is hidden, the other what that means for printing. A name that then wraps to two lines is acceptable under the wrap rules (F.6, §7.1) |
 | U.8 | Lock and eye covered the hole count on hover | **Decided 2026-10-14:** the count stays in sight at rest, on hover and on focus. The actions' room is kept at every row's end, so nothing moves; names wrap between words, never truncate |
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
-| U.10 | Every saved preferences file says the legend is closed, chosen or not | Preferences version 2 opens it once |
+| U.10 | Every saved preferences file says the legend is closed, chosen or not | Built as recommended: preferences version 2 opens it once, since version 1 never recorded a choice. Not yet decided |
 | U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |
 | U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
 | U.20 | Electron's spellchecker: keep it, or turn it off? On Linux it downloads an English dictionary whatever the interface language, and the leather words are not in it | Off. A name is a few words, and `SECURITY.md` says the app makes no network connections |

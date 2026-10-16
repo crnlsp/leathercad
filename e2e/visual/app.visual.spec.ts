@@ -107,11 +107,11 @@ test('a stitched panel on the canvas', async () => {
     await expect(window.getByTestId('feature-count')).toHaveText('3');
 
     // Nothing selected and the pointer off the canvas, so the picture is the
-    // drawing and not the interaction with it.
+    // drawing and not the interaction with it. An empty point past the ruler:
+    // the legend holds the canvas's bottom-left (U.10, R-09) and the zoom
+    // control its bottom-right (U.4).
     await window.getByTestId('tool-select').click();
-    // The canvas's empty bottom-left corner, past the ruler — measured from its
-    // own size, which F.2 made narrower. The bottom-right holds the zoom control (U.4).
-    await window.mouse.click(box!.x + 60, box!.y + box!.height - 30);
+    await window.mouse.click(box!.x + 60, box!.y + 60);
     await expect(window.getByTestId('selected-count')).toHaveText('0');
     await pointerAway(window);
 

@@ -1284,6 +1284,15 @@ new default once, since version 1 never recorded a choice.
 **Done when.** A new install and an upgraded one both open with names; folding is remembered across
 a restart; the narrow and short windows start folded.
 
+**As built (2026-10-16).** Moved to the canvas's bottom-left, as this slice's Build says (U.4 left
+it at the top-right), opening with a down chevron and growing upward. Folded, it is a chip reading
+*Legend* with a list icon and an up chevron — not the old strip of marks — its tooltip naming the
+marks drawn, as mockups 01, 05 and 15 draw it. `preferences.json` version 2 resets `legendOpen`
+once; the small-window fold is the session's, and it is read at every size rather than only at
+start-up, so a window resized small folds it and one resized back opens it. The toggle follows the
+legend's shown state, not the stored preference, so opening it by hand in a small window holds it
+open.
+
 ---
 
 #### U.11 Options-row hints — R-11 · S · mockup 17

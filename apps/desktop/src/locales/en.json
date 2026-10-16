@@ -282,7 +282,7 @@
     },
     "legend": {
       "name": "Name the marks in the canvas legend",
-      "note": "Off, the legend is a strip of marks until you open it."
+      "note": "Off, the legend folds to a chip until you open it."
     },
     "toolNames": {
       "name": "Show tool names in the rail",

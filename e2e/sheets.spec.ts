@@ -293,20 +293,22 @@ function num(text: string): number {
   return Number(text.replace('−', '-').replace(/[^\d.-]/g, ''));
 }
 
-/** Where a millimetre of the board lands on screen, read from the status bar. */
+/**
+ * Where a millimetre of the board lands on screen, read from the status bar.
+ *
+ * The probes sit in the canvas's empty upper-left: the legend holds its
+ * lower-left (U.10) and the zoom control its lower-right (U.4).
+ */
 async function boardView(window: Page): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
   const readAt = async (px: number, py: number): Promise<{ x: number; y: number }> => {
     const [x, y] = (await readoutAt(window, box.x + px, box.y + py)).split(',').map(num);
     return { x: x!, y: y! };
   };
-  const a = await readAt(20, box.height - 20);
-  const b = await readAt(220, box.height - 220);
+  const a = await readAt(20, 20);
+  const b = await readAt(220, 220);
   const mmPerPx = (b.x - a.x) / 200;
-  return (xMm, yMm) => [
-    box.x + 20 + (xMm - a.x) / mmPerPx,
-    box.y + box.height - 20 - (yMm - a.y) / mmPerPx,
-  ];
+  return (xMm, yMm) => [box.x + 20 + (xMm - a.x) / mmPerPx, box.y + 20 + (a.y - yMm) / mmPerPx];
 }
 
 test('the maker’s journey: design, paper, sheets, and a PDF that is what was shown (7.4d)', async () => {

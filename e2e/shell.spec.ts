@@ -712,17 +712,18 @@ test('every line is named by its mark, and no emoji is left (F.6)', async () => 
   });
 });
 
-test('the canvas legend is the key to what is drawn, and moves nothing (F.7)', async () => {
+test('the canvas legend is the key to what is drawn, and moves nothing (F.7, U.10)', async () => {
   // UI Foundations §8.6: the drawing's own language, on the drawing. It lists
-  // only what this document draws, starts collapsed to a strip of marks, and
-  // floats over the canvas so opening it never moves the drawing (§9.4).
+  // only what this document draws, opens with names on a window with room
+  // (U.10, R-09), and floats over the canvas so opening it never moves the
+  // drawing (§9.4).
   await withFreshApp(async (window) => {
     const legend = window.getByTestId('canvas-legend');
     await expect(legend).toHaveCount(0);
 
     const panel = await panelWithChain(window);
     const toggle = legend.getByTestId('canvas-legend-toggle');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const marks = () =>
       legend
         .locator('.feature-mark')
@@ -732,9 +733,13 @@ test('the canvas legend is the key to what is drawn, and moves nothing (F.7)', a
 
     const canvas = window.getByTestId('editor-canvas');
     const before = await canvas.boundingBox();
-    // Opening swaps the marks under the pointer for the title. The tooltip's
-    // hover delay used to survive that and open after the pointer had gone
-    // (found in F.7), so wait well past the delay.
+    // Fold it, then open it again under the pointer: the fold and the open swap
+    // the marks for the title and back, and the tooltip's hover delay used to
+    // survive that and open after the pointer had gone (found in F.7), so wait
+    // well past the delay.
+    await window.mouse.move(0, 0);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await window.mouse.move(0, 0);
     await toggle.click();
     await window.mouse.move(0, 0);

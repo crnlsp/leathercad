@@ -101,6 +101,13 @@ const ZOOM: Readonly<Record<ZoomCommand, (canvas: CanvasHandle) => void>> = {
   trueSize: (canvas) => canvas.zoomTo(100),
 };
 
+/**
+ * The room the canvas legend opens with names in (U.10, R-09): at 1024 px wide
+ * or narrower, or shorter than 720 px, it folds to its chip. The board is the
+ * same either way — the legend floats over it.
+ */
+const LEGEND_ROOM = '(min-width: 1025px) and (min-height: 720px)';
+
 export function App({
   initialPreferences,
   systemLanguages,
@@ -319,10 +326,18 @@ export function App({
     event.preventDefault();
     closeOverlay('keyboard');
   };
-  const toggleLegend = useCallback(
-    () => changePreferences({ legendOpen: !preferences.legendOpen }),
-    [changePreferences, preferences.legendOpen],
-  );
+  // The canvas legend opens with names on a window with room for it (U.10,
+  // R-09); at 1024 px wide or less, or under 720 px tall, it folds to its chip
+  // for the session. That fold answers the window, not a liking, so it never
+  // reaches preferences.json — and opening the legend by hand clears it.
+  const legendHasRoom = useMediaQuery(LEGEND_ROOM);
+  const [legendOpenedInSmallWindow, setLegendOpenedInSmallWindow] = useState(false);
+  const legendOpen = preferences.legendOpen && (legendHasRoom || legendOpenedInSmallWindow);
+  const toggleLegend = useCallback(() => {
+    const next = !legendOpen;
+    setLegendOpenedInSmallWindow(next);
+    changePreferences({ legendOpen: next });
+  }, [legendOpen, changePreferences]);
   // Settings (8.7), open on a section, or closed.
   const [settings, setSettings] = useState<SettingsSection | null>(null);
 
@@ -954,7 +969,7 @@ export function App({
               {view === 'design' && (
                 <CanvasLegend
                   project={storeState.document.project}
-                  open={preferences.legendOpen}
+                  open={legendOpen}
                   onToggle={toggleLegend}
                 />
               )}
