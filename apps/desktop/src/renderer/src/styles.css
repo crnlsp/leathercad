@@ -2672,9 +2672,10 @@ button.problem-row:hover {
 .canvas-legend {
   position: absolute;
   z-index: 4;
-  /* Below the 22 px top ruler. */
-  top: calc(22px + var(--space-2));
-  right: var(--space-2);
+  /* At the canvas's foot, by the ruler's corner and clear of the zoom control
+     (U.10, R-09); it grows upward from its chip. */
+  bottom: var(--space-4);
+  left: var(--space-4);
   max-width: 220px;
   border: 1px solid var(--ground-major);
   border-radius: var(--r-sm);
@@ -2705,11 +2706,6 @@ button.problem-row:hover {
 .canvas-legend-toggle:focus-visible {
   outline: 1px solid var(--tan-ink);
   outline-offset: 1px;
-}
-
-.canvas-legend-strip {
-  display: flex;
-  gap: var(--space-1);
 }
 
 .canvas-legend-title {

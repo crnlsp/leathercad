@@ -1,6 +1,6 @@
 import type { Project } from '@leathercad/domain';
 import { CANVAS, GROUND, linkTickShape } from '@leathercad/render';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, List } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -18,11 +18,13 @@ import { Tooltip } from './Tooltip.js';
  * property header and the problem rows use, set on the ground as the canvas
  * sets them. It teaches the language where the language is used.
  *
- * **Collapsed by default**, as a strip of marks: a key that opened on every
- * launch would cost an experienced maker a click every time. Whether it is
- * open is remembered in `preferences.json` (8.2), so the owner passes it in.
- * Open, each mark gains its name. It floats over the canvas, so opening it
- * never moves the drawing (§9.4).
+ * **At the canvas's bottom-left, and open by default, with names** (U.10,
+ * R-09): a key that showed only marks taught nothing, and a maker folded it
+ * once learned. Whether it is open is remembered in `preferences.json` (8.2),
+ * so the owner passes it; a window too small for it folds it for the session.
+ * Folded, it is a chip reading *Legend*, named in its tooltip; open, each mark
+ * gains its name. It floats over the canvas, so opening it never moves the
+ * drawing (§9.4).
  */
 export function CanvasLegend({
   project,
@@ -55,16 +57,9 @@ export function CanvasLegend({
           aria-label={t('legend.title')}
           onClick={onToggle}
         >
-          {open ? (
-            <span className="canvas-legend-title">{t('legend.title')}</span>
-          ) : (
-            <span className="canvas-legend-strip">
-              {entries.map((key) => (
-                <LegendMark key={key} entry={key} />
-              ))}
-            </span>
-          )}
-          <Icon of={open ? ChevronUp : ChevronDown} />
+          {!open && <Icon of={List} />}
+          <span className="canvas-legend-title">{t('legend.title')}</span>
+          <Icon of={open ? ChevronDown : ChevronUp} />
         </button>
       </Tooltip>
       {open && (

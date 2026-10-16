@@ -12,12 +12,17 @@ export const RECENT_LIMIT = 10;
 
 /** `preferences.json` as it is on disk (docs/file-format.md §6). */
 interface StoredPreferences extends Preferences {
-  readonly version: 1;
+  /**
+   * The file's version (U.10). Always 2 as this code reads and writes it:
+   * version 1 never recorded a legend choice, so a version 1 file is reset to
+   * the new default once and read back as version 2.
+   */
+  readonly version: 2;
   /** Absolute paths, most recent first. */
   readonly recentFiles: readonly string[];
 }
 
-const EMPTY: StoredPreferences = { version: 1, ...DEFAULT_PREFERENCES, recentFiles: [] };
+const EMPTY: StoredPreferences = { version: 2, ...DEFAULT_PREFERENCES, recentFiles: [] };
 
 /** The preferences that are on or off. */
 const FLAGS = ['legendOpen', 'toolRailCollapsed', 'partsFolded', 'propertiesFolded'] as const;
@@ -47,6 +52,13 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
   const flag = (key: (typeof FLAGS)[number]): boolean =>
     typeof record[key] === 'boolean' ? record[key] : DEFAULT_PREFERENCES[key];
 
+  // Version 1 wrote `legendOpen: false` out whenever any preference changed,
+  // so a stored false cannot be told from the old default (U.10, R-09). A
+  // version 1 file — the version absent, or 1 — takes the new default; version
+  // 2 records a real choice, and a newer version's is honoured too.
+  const storedVersion = typeof record['version'] === 'number' ? record['version'] : 1;
+  const legendOpen = storedVersion >= 2 ? flag('legendOpen') : DEFAULT_PREFERENCES.legendOpen;
+
   const recent = Array.isArray(record['recentFiles'])
     ? record['recentFiles'].filter(isProjectPath)
     : [];
@@ -56,8 +68,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
   const thickness = record['leatherThicknessMm'];
 
   return {
-    version: 1,
-    legendOpen: flag('legendOpen'),
+    version: 2,
+    legendOpen,
     toolRailCollapsed: flag('toolRailCollapsed'),
     partsFolded: flag('partsFolded'),
     propertiesFolded: flag('propertiesFolded'),

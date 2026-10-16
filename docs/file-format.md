@@ -345,8 +345,8 @@ and read once at start-up:
 
 ```json
 {
-  "version": 1,
-  "legendOpen": false,
+  "version": 2,
+  "legendOpen": true,
   "toolRailCollapsed": false,
   "partsFolded": false,
   "propertiesFolded": false,
@@ -371,6 +371,12 @@ room to dock them: a narrow window folds a panel by itself and never writes eith
 is the session's alone. `language` is
 the interface's: `system` to follow the operating system, or the tag of a language the app supports
 ([ADR 0018](adr/0018-interface-language.md)); one this version does not support follows the system.
+
+The file's `version` is 2 (U.10). On a window with room, the canvas legend opens with names; a
+window 1024 px wide or narrower, or shorter than 720 px, folds it to its chip for the session and
+never writes this. Version 1 wrote `legendOpen: false` out whenever any other preference changed,
+so a stored `false` cannot be told from the default it used to be: a version 1 file is reset to the
+new default once, and version 2 records the maker's real choice from then on.
 
 **My tools** (U.13) are the maker's irons and starting values, in this file rather than a library
 of their own. `irons` is a list in the maker's order, each with an `id`, a `name` and a `pitchMm`;

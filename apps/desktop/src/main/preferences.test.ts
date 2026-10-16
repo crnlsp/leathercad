@@ -50,6 +50,7 @@ describe('reading preferences.json', () => {
   it('keeps each usable field and drops only the damaged ones', () => {
     const parsed = parsePreferences(
       JSON.stringify({
+        version: 2,
         legendOpen: true,
         toolRailCollapsed: 'yes',
         language: 'xx',
@@ -93,6 +94,59 @@ describe('reading preferences.json', () => {
     expect(validChanges({ language: 'system' })).toEqual({ language: 'system' });
     expect(validChanges({ language: 'xx' })).toEqual({});
     expect(validChanges({ language: 7 })).toEqual({});
+  });
+});
+
+describe('the legend opens with names by default (U.10, R-09)', () => {
+  it('starts open on a first launch, and over a damaged file', () => {
+    expect(DEFAULT_PREFERENCES.legendOpen).toBe(true);
+    expect(parsePreferences(null).legendOpen).toBe(true);
+    expect(parsePreferences('not json').legendOpen).toBe(true);
+  });
+
+  it('resets a version 1 file once: it never recorded a real choice', () => {
+    // Version 1 wrote `legendOpen: false` out whenever any preference changed,
+    // so a stored false cannot be told from the old default. Version 2 records
+    // a choice; a version 1 file is reset to the new default.
+    const parsed = parsePreferences(JSON.stringify({ version: 1, legendOpen: false }));
+    expect(parsed.legendOpen).toBe(true);
+    expect(parsed.version).toBe(2);
+  });
+
+  it('honours the maker’s choice in a version 2 file', () => {
+    const parsed = parsePreferences(JSON.stringify({ version: 2, legendOpen: false }));
+    expect(parsed.legendOpen).toBe(false);
+    expect(parsed.version).toBe(2);
+  });
+
+  it('keeps a folded legend across a restart, once version 2 has recorded it', async () => {
+    writeFileSync(file, JSON.stringify({ version: 1, legendOpen: false, toolRailCollapsed: true }));
+    const first = new PreferencesStore(file);
+    // The reset opens it, and the old choice did not survive.
+    expect(first.preferences.legendOpen).toBe(true);
+    // Everything else the file held is kept.
+    expect(first.preferences.toolRailCollapsed).toBe(true);
+
+    // The maker folds it: the choice is written as version 2 and survives.
+    await first.update({ legendOpen: false });
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ version: 2, legendOpen: false });
+    expect(new PreferencesStore(file).preferences.legendOpen).toBe(false);
+  });
+
+  it('does not reset again on the next restart', async () => {
+    writeFileSync(file, JSON.stringify({ version: 2, legendOpen: false }));
+    const first = new PreferencesStore(file);
+    expect(first.preferences.legendOpen).toBe(false);
+
+    // A later change must not re-open it: version 2 is not the version that is
+    // reset once, and it stays version 2 as the file is written again.
+    await first.update({ toolRailCollapsed: true });
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({
+      version: 2,
+      legendOpen: false,
+      toolRailCollapsed: true,
+    });
+    expect(new PreferencesStore(file).preferences.legendOpen).toBe(false);
   });
 });
 

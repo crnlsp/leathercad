@@ -222,7 +222,11 @@ export interface RecentFile {
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
 export interface Preferences {
-  /** Whether the canvas legend is open, rather than a strip of marks. */
+  /**
+   * Whether the canvas legend is open, showing names, rather than its chip
+   * (U.10, R-09). Open by default; a window too small for it folds it to the
+   * chip for the session, and that fold never reaches this file.
+   */
   readonly legendOpen: boolean;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
@@ -285,7 +289,7 @@ export const STARTER_IRONS: readonly Iron[] = [
 
 /** What a first launch starts with, and what a damaged file falls back to. */
 export const DEFAULT_PREFERENCES: Preferences = {
-  legendOpen: false,
+  legendOpen: true,
   toolRailCollapsed: false,
   partsFolded: false,
   propertiesFolded: false,
