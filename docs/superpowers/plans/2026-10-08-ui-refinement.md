@@ -1397,6 +1397,25 @@ French, Czech, Dvorak and Russian keyboards. What the plan did not know:
   through the same clash path; *Reset all* empties the map. Only what differs is stored, and the
   file stays version 2.
 
+**On review (2026-10-17)**, five holes, each fixed where every caller routes through:
+
+- **A tool claims every key it acts on.** Take back (polyline, arc) and the Select tool's Delete
+  acted and returned false, so take back given Ctrl+Z also undid, and given R also chose Rectangle.
+  That is the rule that lets the polyline and Edit Points shadow the window at all; it is written
+  where `clashScopes` is defined, and each tool's tests hold it.
+- **One hearing rule.** A board's tool hears its key with Shift held, but finding a clash matched
+  Shift exactly, so Circle on Shift+Delete was taken and deleted *and* switched tools. `hears`
+  (`keymap.ts`) is now the one rule, for dispatch and for clashes, and a key bound as pressed wins
+  over a tool's Shift-held reading (a Czech Ctrl+Shift+1 types `+`, Zoom in's). A property presses
+  every bound key on six layouts, alone and with Shift, after any steps, and finds no press heard
+  twice in one place.
+- **A digit, `.` or `,` alone types a size on the board** (U.16), so it is refused, by the press and
+  by its place, and dropped from the file; with a modifier held it is a key like any other.
+- **Quit is fixed on macOS**, where it is the app menu's ⌘Q and no other key reaches it
+  (`isChangeable(id, isMac)`).
+- **Both processes read the maker's keys through `readBindings`**, the renderer before applying
+  them too; a press with no `code` is refused, since `{code: ''}` would match every other such press.
+
 ---
 
 #### U.20 What Chromium still draws itself — §2 *Keyboard*, UI Foundations §6.5 · M

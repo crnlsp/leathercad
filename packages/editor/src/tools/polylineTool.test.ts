@@ -519,6 +519,19 @@ describe('arc segments (3.9a)', () => {
     expect(tool.buildOverlay?.(ctx)).toEqual(before);
   });
 
+  it('claims the key it takes a point back with, so Ctrl+Z or R given to it is not also undo or a tool (U.12, on review)', () => {
+    const { ctx } = harness('outline');
+    const tool = createPolylineTool(nextId);
+    // Idle: nothing to take back, and the key is the window's.
+    expect(tool.onKey?.(ctx, keyInput('r', ['takeBack']))).not.toBe(true);
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 10, y: 0 });
+    expect(tool.onKey?.(ctx, keyInput('r', ['takeBack']))).toBe(true);
+    // The last point taken back leaves the run, and is claimed too.
+    expect(tool.onKey?.(ctx, keyInput('r', ['takeBack']))).toBe(true);
+    expect(tool.underway?.()).toBe(false);
+  });
+
   it('says so while an arc’s end is being placed', () => {
     const { ctx } = harness('outline');
     const tool = createPolylineTool(nextId);

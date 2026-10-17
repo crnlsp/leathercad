@@ -83,6 +83,7 @@ import {
   type Press,
 } from './PanelFold.js';
 import { ROOM_PX, layoutFor, toggleOf, type Panel, type Room } from './panelLayout.js';
+import { readBindings } from './rebind.js';
 import { isTyping, pressesControl } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
@@ -182,9 +183,13 @@ export function App({
   // localStorage, which a second window blocks on for seconds because both
   // share one profile. Read before the first render (main.tsx).
   const [preferences, setPreferences] = useState<Preferences>(initialPreferences);
-  const changePreferences = useCallback((changes: Partial<Preferences>) => {
-    // The maker's keys are heard, and every cap shows them, from this press on (U.12).
-    if (changes.keyBindings !== undefined) applyBindings(changes.keyBindings);
+  const changePreferences = useCallback((asked: Partial<Preferences>) => {
+    // The maker's keys are heard, and every cap shows them, from this press on
+    // (U.12) — read as the main process reads them, so both hear the same keys.
+    const keyBindings =
+      asked.keyBindings === undefined ? undefined : readBindings(asked.keyBindings, IS_MAC);
+    const changes = keyBindings === undefined ? asked : { ...asked, keyBindings };
+    if (keyBindings !== undefined) applyBindings(keyBindings);
     setPreferences((previous) => ({ ...previous, ...changes }));
     // A preference that could not be kept still applies to this session.
     void getPlatformHost()

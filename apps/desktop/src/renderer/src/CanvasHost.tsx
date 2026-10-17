@@ -60,7 +60,7 @@ import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
-import { commandFor, keyForTools, keysOf, matches, meaningsForTools } from './keymap.js';
+import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
 import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 
@@ -738,10 +738,7 @@ export function CanvasHost({
       // shape starts at the pointer.
       if (
         !onSheets &&
-        /^[0-9.,]$/.test(event.key) &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey &&
+        typesSize(event) &&
         (event.target === document.body || event.target === canvasRef.current) &&
         managerRef.current?.beginSizing() === true
       ) {

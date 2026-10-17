@@ -550,6 +550,44 @@ export function keyForTools(event: KeyPress): string {
 }
 
 /**
+ * Whether a press is a size typed on the board (U.16, R-13): a digit, a point
+ * or a comma, with no command key or Alt — Shift is how some keyboards type a
+ * digit. The board puts it into a shape's size; so no shortcut may be one.
+ */
+export function typesSize(event: KeyPress): boolean {
+  return /^[0-9.,]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey;
+}
+
+/** Where the board's tools hear their keys: the board's, a polyline's, Edit Points'. */
+export const TOOL_SCOPES: readonly Scope[] = ['canvas', 'polyline', 'points'];
+
+/**
+ * Whether a command hears a press: one of its keys matches it — and, for a
+ * board's tool, the same press with Shift let go, unless the press as it is
+ * is some command's own key. Shift is held while drawing, to keep a square or
+ * a step, and a tool's key counts with it held, as it always has: A
+ * mid-polyline is the arc. But a key bound as pressed — Shift+Delete given to
+ * a command, or Ctrl+Shift+1 typing a Czech `+` — is that command's alone.
+ * One rule, for dispatch and for finding who has a key in Settings (U.12).
+ */
+export function hears(
+  command: Command,
+  event: KeyPress,
+  isMac: boolean,
+  keymap: readonly Command[] = current,
+): boolean {
+  const has = (owner: Command, press: KeyPress): boolean =>
+    allBindings(owner).some((binding) => matches(press, binding, isMac, keymap));
+  if (has(command, event)) return true;
+  return (
+    event.shiftKey &&
+    TOOL_SCOPES.includes(command.scope) &&
+    has(command, { ...event, shiftKey: false }) &&
+    !keymap.some((other) => other !== command && has(other, event))
+  );
+}
+
+/**
  * Every command of these scopes a key press is, in the keymap's order (U.12):
  * the board's tools hear theirs by these ids, and a key being given to one
  * command finds who has it already.
@@ -561,35 +599,20 @@ export function commandsHearing(
   keymap = current,
 ): readonly CommandId[] {
   return keymap
-    .filter(
-      (command) =>
-        scopes.includes(command.scope) &&
-        allBindings(command).some((binding) => matches(event, binding, isMac, keymap)),
-    )
+    .filter((command) => scopes.includes(command.scope) && hears(command, event, isMac, keymap))
     .map((command) => command.id);
 }
-
-/** Where the board's tools hear their keys: the board's, a polyline's, Edit Points'. */
-const TOOL_SCOPES: readonly Scope[] = ['canvas', 'polyline', 'points'];
 
 /**
  * What a press means to the board's tools (U.12), which act on these ids and
  * never on a key's name — so a key moved in Settings moves for them too.
- * Shift is held while drawing, to keep a square or a step, and a tool's key
- * still counts with it held, as it always has: A mid-polyline is the arc.
  */
 export function meaningsForTools(
   event: KeyPress,
   isMac: boolean,
   keymap = current,
 ): ReadonlySet<CommandId> {
-  const meant = new Set(commandsHearing(event, TOOL_SCOPES, isMac, keymap));
-  if (event.shiftKey) {
-    for (const id of commandsHearing({ ...event, shiftKey: false }, TOOL_SCOPES, isMac, keymap)) {
-      meant.add(id);
-    }
-  }
-  return meant;
+  return new Set(commandsHearing(event, TOOL_SCOPES, isMac, keymap));
 }
 
 /** The window's command a key press asks for, if any. */

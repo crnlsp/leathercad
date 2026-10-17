@@ -280,12 +280,13 @@ function polylineLike(
 
       // Undoing a misplaced point without abandoning the whole run: an arc's
       // placed end first, then the point before it. Removing the last one
-      // leaves idle rather than an empty drawing state.
+      // leaves idle rather than an empty drawing state. Claimed (U.12): a key
+      // the maker gave it — Ctrl+Z, R — must not also undo or switch tools.
       if (means(event, 'takeBack')) {
         if (state.pending !== null) {
           state = { ...state, pending: null, cursor: state.points[state.points.length - 1]! };
           ctx.invalidate();
-          return false;
+          return true;
         }
         const points = state.points.slice(0, -1);
         if (points.length === 0) reset(ctx);
@@ -299,6 +300,7 @@ function polylineLike(
           };
           ctx.invalidate();
         }
+        return true;
       }
       return false;
     },

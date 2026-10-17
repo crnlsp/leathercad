@@ -400,10 +400,11 @@ key that types *a* wherever the layout puts it) with `mod` (Ctrl, ⌘ on macOS),
 when held, or a `char` with `mod`, as some defaults are. A command left out keeps its defaults, so
 a new default reaches every maker who never moved that key; a key changed back to its default is
 not stored. A command this version does not know or lets no one change (Esc, Enter, a text field's
-own keys, the menu key), a key that is not one — Esc, Tab, Enter, a modifier alone, a bare arrow —
-and a change that gives a key another command in the same place already has are dropped, the later
-of two first; the rest is kept. A file written before U.12 has no `keyBindings` and every default.
-The version stays 2: a new field with a default is not a change of meaning.
+own keys, the menu key; Quit on macOS, the app menu's own ⌘Q), a key that is not one — Esc, Tab,
+Enter, a modifier alone, a bare arrow, a digit, `.` or `,` with nothing held (the board types
+sizes with them) — and a change that gives a key another command in the same place already hears
+are dropped, the later of two first; the rest is kept. A file written before U.12 has no
+`keyBindings` and every default. The version stays 2: a new field with a default is not a change of meaning.
 
 **The interface's language never reaches a project.** A `.lcp` holds no words chosen by it — problem
 sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads

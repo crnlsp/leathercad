@@ -229,7 +229,11 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   command other than a tool's — every command skips it now; the polyline's A and L were one command,
   now two; and Space on a focused button is the button's. Esc, Enter, a field's own keys and the
   menu key are fixed; Full screen and Quit need a function key or a modifier, since the main
-  process hears them in fields too. Printed output did not move.
+  process hears them in fields too. On review: take back and Delete now claim the key they act on,
+  one rule decides whether a key is heard with Shift for dispatch and for clashes alike, a digit, a
+  point or a comma alone is refused (it types a size on the board), Quit is fixed on macOS, and the
+  renderer reads the maker's keys through the same validator as the main process. Printed output
+  did not move.
 - ✅ **U.20 What Chromium still draws itself.** Light scrollbars, radios, checkboxes, a spin button
   and select lists in a dark window; focus rings in the desktop's colour; Ctrl+A selecting the
   whole window; a bare notices window; and Electron's spellchecker, which downloads a dictionary

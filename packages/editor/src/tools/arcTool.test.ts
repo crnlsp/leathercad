@@ -180,6 +180,14 @@ describe('arc tool', () => {
     );
   });
 
+  it('claims the key it takes a point back with, only when it takes one (U.12, on review)', () => {
+    const { ctx } = withPart('marking');
+    const tool = createArcTool(() => 'id');
+    expect(tool.onKey?.(ctx, keyInput('Backspace'))).not.toBe(true);
+    place(tool, ctx, [{ x: 0, y: 0 }]);
+    expect(tool.onKey?.(ctx, keyInput('Backspace'))).toBe(true);
+  });
+
   it('drops the last point on Backspace, so the next click replaces it', () => {
     const { ctx, store } = withPart('marking');
     const tool = createArcTool(() => 'id');

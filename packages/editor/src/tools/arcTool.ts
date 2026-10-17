@@ -97,6 +97,8 @@ export function createArcTool(nextId: () => string): Tool {
             ? { kind: 'idle', cursor: state.cursor }
             : { kind: 'placing', points, cursor: state.cursor };
         ctx.invalidate();
+        // Claimed (U.12): a key the maker gave it is not also another command.
+        return true;
       }
       return false;
     },

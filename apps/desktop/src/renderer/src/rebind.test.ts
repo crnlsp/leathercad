@@ -128,9 +128,44 @@ describe('taking a key from a press (U.12)', () => {
 
   it('refuses a letter key that types something else, which the letter would not match', () => {
     // Polish AltGr+A types ą: storing KeyA would bind the plain A instead.
-    expect(bindingFor(at('KeyA', 'ą'), false)).toBe('unusable');
-    // macOS's Option+A types å.
-    expect(bindingFor(at('KeyA', 'å', { altKey: true }), true)).toBe('unusable');
+    expect(bindingFor(at('KeyA', 'ą'), false)).toBe('typesOther');
+    // macOS's Option+A types å: said as such, so the maker knows why.
+    expect(bindingFor(at('KeyA', 'å', { altKey: true }), true)).toBe('typesOther');
+  });
+
+  it('refuses a press with no code, which would match every other such press (on review)', () => {
+    expect(bindingFor(at('', 'Unidentified'), false)).toBe('unusable');
+    expect(readBindings({ save: [{ code: '' }] })).toEqual({});
+  });
+
+  it('refuses a digit, a point or a comma alone: the board types sizes with them (U.16, on review)', () => {
+    for (const [code, key] of [
+      ['Digit5', '5'],
+      ['Numpad5', '5'],
+      ['Period', '.'],
+      ['Comma', ','],
+      ['NumpadDecimal', ','],
+    ] as const) {
+      expect(bindingFor(at(code, key), false), code).toBe('typesSize');
+    }
+    // French: Shift+& types 1, a size; and & alone is the 1 key elsewhere.
+    expect(bindingFor(at('Digit1', '1', { shiftKey: true }), false)).toBe('typesSize');
+    expect(bindingFor(at('Digit1', '&'), false)).toBe('typesSize');
+    // With a modifier held they are keys like any other.
+    expect(bindingFor(at('Digit5', '5', { ctrlKey: true }), false)).toEqual({
+      code: 'Digit5',
+      mod: true,
+    });
+    expect(bindingFor(at('Digit5', '%', { shiftKey: true }), false)).toEqual({
+      code: 'Digit5',
+      shift: true,
+    });
+    for (const code of ['Digit5', 'Numpad5', 'Period', 'Comma', 'NumpadDecimal']) {
+      expect(readBindings({ toggleParts: [{ code }] }), code).toEqual({});
+    }
+    expect(readBindings({ toggleParts: [{ code: 'Digit5', alt: true }] })).toEqual({
+      toggleParts: [{ code: 'Digit5', alt: true }],
+    });
   });
 });
 
@@ -197,6 +232,41 @@ describe('giving a command a key', () => {
       clash: 'copy',
       canSwap: false,
     });
+  });
+
+  it('counts a tool’s key held with Shift as the tool’s: Shift+Delete is Delete’s (on review)', () => {
+    // Circle on Shift+Delete would delete and switch tools with something selected.
+    const shiftDelete = at('Delete', 'Delete', { shiftKey: true });
+    expect(
+      apply({}, proposeKey('tool.circle', { code: 'Delete', shift: true }, shiftDelete), false),
+    ).toEqual({ clash: 'delete', canSwap: true });
+    // And the other way: Delete given F while a window command has Shift+F.
+    const shiftF = changed(
+      apply(
+        {},
+        proposeKey('help', { code: 'KeyF', shift: true }, at('KeyF', 'F', { shiftKey: true })),
+        false,
+      ),
+    );
+    expect(apply(shiftF, proposeKey('delete', { code: 'KeyF' }, at('KeyF', 'f')), false)).toEqual({
+      clash: 'help',
+      canSwap: true,
+    });
+    expect(
+      readBindings({ help: [{ code: 'KeyF', shift: true }], delete: [{ code: 'KeyF' }] }),
+    ).toEqual({ help: [{ code: 'KeyF', shift: true }] });
+  });
+
+  it('keeps Quit macOS’s own ⌘Q, and the maker’s elsewhere (on review)', () => {
+    expect(isChangeable('quit', true)).toBe(false);
+    expect(isChangeable('quit', false)).toBe(true);
+    const altQ = at('KeyQ', 'q', { metaKey: true, altKey: true });
+    expect(apply({}, proposeKey('quit', { code: 'KeyQ', mod: true, alt: true }, altQ), true)).toBe(
+      'unusable',
+    );
+    const stored = { quit: [{ code: 'KeyQ', mod: true, alt: true }] };
+    expect(readBindings(stored, true)).toEqual({});
+    expect(readBindings(stored, false)).toEqual(stored);
   });
 
   it('keeps Full screen and Quit off a bare key: the main process hears them in a field too', () => {
@@ -389,9 +459,81 @@ const arbitraryId = fc.constantFrom(...CHANGEABLE);
 const arbitraryStep = fc.oneof(
   fc.record({ kind: fc.constant('key' as const), id: arbitraryId, at: arbitraryPress }),
   fc.record({ kind: fc.constant('reset' as const), id: arbitraryId, isMac: fc.boolean() }),
+  // Another command's key, pressed on a test keyboard, alone or with Shift:
+  // the presses that clash, which random keys rarely are.
+  fc.record({
+    kind: fc.constant('steal' as const),
+    id: arbitraryId,
+    from: fc.constantFrom(...KEYMAP.map((command) => command.id)),
+    layout: fc.constantFrom(...LAYOUTS.map(([, layout]) => layout)),
+    shift: fc.boolean(),
+    isMac: fc.boolean(),
+  }),
 );
+type Step = typeof arbitraryStep extends fc.Arbitrary<infer T> ? T : never;
+
+/** The keys after a maker's steps in Settings, each swapped when `swapIt` and it can be. */
+function afterSteps(steps: readonly Step[], swapIt: boolean): KeyBindings {
+  let bindings: KeyBindings = {};
+  for (const entry of steps) {
+    const isMac = entry.kind === 'key' ? entry.at.isMac : entry.isMac;
+    let proposal;
+    if (entry.kind === 'reset') proposal = proposeReset(entry.id, US, isMac);
+    else {
+      let press: KeyPress | null;
+      if (entry.kind === 'key') press = entry.at.press;
+      else {
+        const key = keysOf(entry.from, withBindings(bindings))[0];
+        press = key === undefined ? null : pressOn(key, entry.layout, isMac);
+        if (press !== null && entry.shift) {
+          press = { ...press, shiftKey: true, key: press.key.toUpperCase() };
+        }
+      }
+      if (press === null) continue;
+      const binding = bindingFor(press, isMac);
+      if (binding === null || typeof binding === 'string') continue;
+      proposal = proposeKey(entry.id, binding, press);
+    }
+    const change = apply(bindings, proposal, isMac);
+    if (typeof change === 'object' && 'bindings' in change) bindings = change.bindings;
+    else if (swapIt && typeof change === 'object' && change.canSwap) {
+      bindings = swap(bindings, proposal, isMac);
+    }
+  }
+  return bindings;
+}
 
 describe('properties of changing keys', () => {
+  it('never lets one press be heard by two commands in the same place, after any steps (on review)', () => {
+    const PLACES = [['window', 'canvas', 'tree'], ['polyline'], ['points'], ['field']] as const;
+    fc.assert(
+      fc.property(fc.array(arbitraryStep, { maxLength: 12 }), fc.boolean(), (steps, isMac) => {
+        const keymap = withBindings(afterSteps(steps, true));
+        // Every key bound, pressed on every test keyboard, alone and with Shift.
+        const presses = keymap.flatMap((command) =>
+          allBindings(command).flatMap((binding) =>
+            LAYOUTS.flatMap(([, layout]) => {
+              const press = pressOn(binding, layout, isMac);
+              return press === null
+                ? []
+                : [press, { ...press, shiftKey: true, key: press.key.toUpperCase() }];
+            }),
+          ),
+        );
+        for (const press of presses) {
+          for (const place of PLACES) {
+            const heard = commandsHearing(press, place, isMac, keymap);
+            expect(
+              heard.length,
+              `${JSON.stringify(press)} in ${place.join()}: ${heard.join()}`,
+            ).toBeLessThanOrEqual(1);
+          }
+        }
+      }),
+      { numRuns: 400 },
+    );
+  });
+
   it('takes every press a binding can say, as one the keymap matches for that same press', () => {
     fc.assert(
       fc.property(arbitraryPress, ({ press, isMac }) => {
@@ -430,21 +572,7 @@ describe('properties of changing keys', () => {
   it('every command keeps a key, and none is heard twice in a place, after any steps', () => {
     fc.assert(
       fc.property(fc.array(arbitraryStep, { maxLength: 12 }), fc.boolean(), (steps, swapIt) => {
-        let bindings: KeyBindings = {};
-        for (const entry of steps) {
-          const isMac = entry.kind === 'key' ? entry.at.isMac : entry.isMac;
-          let proposal;
-          if (entry.kind === 'key') {
-            const binding = bindingFor(entry.at.press, isMac);
-            if (binding === null || typeof binding === 'string') continue;
-            proposal = proposeKey(entry.id, binding, entry.at.press);
-          } else proposal = proposeReset(entry.id, US, isMac);
-          const change = apply(bindings, proposal, isMac);
-          if (typeof change === 'object' && 'bindings' in change) bindings = change.bindings;
-          else if (swapIt && typeof change === 'object' && change.canSwap) {
-            bindings = swap(bindings, proposal, isMac);
-          }
-        }
+        const bindings = afterSteps(steps, swapIt);
         const keymap = withBindings(bindings);
         for (const command of keymap) {
           expect(command.keys.length, command.id).toBeGreaterThan(0);

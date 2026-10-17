@@ -642,6 +642,12 @@ describe('every command a press is, in some scopes (U.12)', () => {
     const del = { ...NO_MODIFIERS, code: 'Delete', key: 'Delete' };
     expect([...meaningsForTools(del, false)]).toEqual(['delete', 'removePoint']);
     expect([...meaningsForTools({ ...del, ctrlKey: true }, false)]).toEqual([]);
+    // A key bound as pressed is its command's alone: Shift+Delete given to
+    // the Circle tool is not also Delete held with Shift (on review).
+    const circle = withBindings({ 'tool.circle': [{ code: 'Delete', shift: true }] });
+    const shiftDelete = { ...del, shiftKey: true };
+    expect([...meaningsForTools(shiftDelete, false, circle)]).toEqual([]);
+    expect(commandFor(shiftDelete, false, circle)).toBe('tool.circle');
     // Moved, the old key means nothing to them.
     const moved = withBindings({ delete: [{ code: 'KeyD', alt: true }] });
     expect([...meaningsForTools(del, false, moved)]).toEqual(['removePoint']);
@@ -652,8 +658,18 @@ describe('every command a press is, in some scopes (U.12)', () => {
     expect(commandsHearing({ ...NO_MODIFIERS, code: 'KeyQ', key: 'a' }, scopes, false)).toEqual([
       'arc',
     ]);
+    // Shift is held while drawing, and a tool's key counts with it — in dispatch
+    // and in finding a clash alike (U.12, on review).
     expect(
       commandsHearing({ ...NO_MODIFIERS, code: 'KeyL', key: 'L', shiftKey: true }, scopes, false),
+    ).toEqual(['straight']);
+    // The window's keys stay exact.
+    expect(
+      commandsHearing(
+        { ...NO_MODIFIERS, code: 'KeyR', key: 'R', shiftKey: true },
+        ['window'],
+        false,
+      ),
     ).toEqual([]);
     expect(commandsHearing({ ...NO_MODIFIERS, code: 'KeyL', key: 'l' }, scopes, false)).toEqual([
       'straight',

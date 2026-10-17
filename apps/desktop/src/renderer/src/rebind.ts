@@ -2,10 +2,13 @@ import {
   KEYMAP,
   allBindings,
   commandsHearing,
+  hears,
   keyForTools,
   keysOf,
   matches,
   pressOn,
+  TOOL_SCOPES,
+  typesSize,
   withBindings,
   type Binding,
   type Command,
@@ -28,8 +31,12 @@ export type Captured =
   | Binding
   /** Esc, Tab, Enter — and the arrows, Home and End alone — keep their roles. */
   | 'reserved'
-  /** A key no binding can say, or one that types something its place would not match. */
+  /** A key no binding can say: Ctrl on macOS, the Windows key elsewhere, a key with no code. */
   | 'unusable'
+  /** A letter's key held so it types something else — Option+A's `å` — which its letter would not match. */
+  | 'typesOther'
+  /** A digit, `.` or `,` alone, which the board takes as a size typed (U.16). */
+  | 'typesSize'
   /** A modifier on its own: the capture keeps listening. */
   | null;
 
@@ -47,13 +54,32 @@ function isModifier(code: string): boolean {
   return MODIFIERS.has(code.replace(/(Left|Right)$/, ''));
 }
 
+/** A key that types a size's digit, point or comma on most keyboards. */
+const SIZE_KEY = /^(?:Digit\d|Numpad\d|NumpadDecimal|Period|Comma)$/;
+
+/**
+ * A binding of such a key with nothing held: the board takes the press as a
+ * size typed into a shape (U.16), so it cannot also be a shortcut. Checked by
+ * place, so a key that types `&` here but `1` on another keyboard is refused too.
+ */
+function sizeKey(binding: Binding): boolean {
+  return (
+    'code' in binding &&
+    SIZE_KEY.test(binding.code) &&
+    binding.mod !== true &&
+    binding.shift !== true &&
+    binding.alt !== true
+  );
+}
+
 /**
  * The binding a press is (U.12). A key that types a Latin letter is stored as
  * that letter, wherever the layout puts it — the key that types `a` on a
  * French keyboard is where a US one has Q, and the keymap matches a letter by
  * what it types — and any other key by its place. The command key is Ctrl, or
  * ⌘ on macOS. Whatever comes out matches this same press, or the press is
- * `unusable`: AltGr+A typing `ą` would otherwise bind the plain A.
+ * refused: AltGr+A typing `ą` would otherwise bind the plain A. A digit, `.`
+ * or `,` alone is a size typed on the board, never a shortcut.
  */
 export function bindingFor(press: KeyPress, isMac: boolean): Captured {
   if (isModifier(press.code) || MODIFIERS.has(press.key)) return null;
@@ -69,8 +95,10 @@ export function bindingFor(press: KeyPress, isMac: boolean): Captured {
     ...(press.shiftKey ? { shift: true } : {}),
     ...(press.altKey ? { alt: true } : {}),
   };
+  if (!CODE.test(binding.code)) return 'unusable';
+  if (typesSize(press) || sizeKey(binding)) return 'typesSize';
   // Against no keymap: whether the binding can say this press at all.
-  return matches(press, binding, isMac, []) ? binding : 'unusable';
+  return matches(press, binding, isMac, []) ? binding : 'typesOther';
 }
 
 /** The keys the main process hears before any field does (`windowKeyFor`, 8.7). */
@@ -78,10 +106,17 @@ const HEARD_BY_MAIN: ReadonlySet<CommandId> = new Set(['fullScreen', 'quit']);
 
 /**
  * Where a command's keys must be its alone: what the maker sees as one place.
- * A Parts row and the board hear the window's keys, so those three are one; a
- * tool under way shadows the window on purpose — the polyline's A is not the
- * Arc tool's — so the polyline and Edit Points are each their own; and a
- * field's keys are the field's. Full screen and Quit are heard in a field too.
+ * A Parts row and the board hear the window's keys, so those three are one;
+ * a field's keys are the field's; Full screen and Quit are heard in a field too.
+ *
+ * A tool under way shadows the window on purpose — the polyline's A is not the
+ * Arc tool's — so the polyline and Edit Points are each their own place, and
+ * any window key may be given to one of their commands. That is safe by one
+ * rule, which every tool keeps and its tests hold it to: **a tool claims every
+ * key it acts on** (`onKey` returns true), so the window's command for that key
+ * does not run as well; and a key it does not act on — the polyline idle, no
+ * corner picked — is the window's, as A is the Arc tool's outside a run. Take
+ * back on Ctrl+Z takes a point back mid-run and undoes otherwise.
  */
 export function clashScopes(id: CommandId): readonly Scope[] {
   const scope = KEYMAP.find((command) => command.id === id)?.scope ?? 'window';
@@ -91,10 +126,14 @@ export function clashScopes(id: CommandId): readonly Scope[] {
     : ['window', 'canvas', 'tree'];
 }
 
-/** Whether the maker can change a command's keys: it exists, and is not fixed. */
-export function isChangeable(id: CommandId): boolean {
+/**
+ * Whether the maker can change a command's keys: it exists, and is not fixed.
+ * On macOS Quit is the app menu's own ⌘Q, which macOS hears and no other key
+ * reaches, so it is fixed there.
+ */
+export function isChangeable(id: CommandId, isMac = false): boolean {
   const command = KEYMAP.find((entry) => entry.id === id);
-  return command !== undefined && command.fixed !== true;
+  return command !== undefined && command.fixed !== true && !(isMac && id === 'quit');
 }
 
 /**
@@ -147,6 +186,7 @@ export type Change =
 /** A proposal applied, if no other command in the same place has the key. */
 export function apply(bindings: KeyBindings, proposal: Proposal, isMac: boolean): Change {
   const { id, keys } = proposal;
+  if (!isChangeable(id, isMac)) return 'unusable';
   if (keys !== null && !keys.every((binding) => allowed(id, binding))) return 'needsModifier';
   const keymap = withBindings(bindings);
   const owners = ownersOf(keymap, proposal, isMac);
@@ -180,11 +220,20 @@ function swapped(
   owners: readonly CommandId[],
 ): KeyBindings | null {
   const [owner] = owners;
-  if (owners.length !== 1 || owner === undefined || !isChangeable(owner)) return null;
+  if (owners.length !== 1 || owner === undefined || !isChangeable(owner, isMac)) return null;
   const keymap = withBindings(bindings);
-  const taken = (binding: Binding): boolean =>
-    proposal.presses.some((press) => matches(press, binding, isMac, keymap)) ||
-    (proposal.keys ?? []).some((key) => sameKey(key, binding));
+  const ownCommand = keymap.find((command) => command.id === owner)!;
+  const changed = KEYMAP.find((command) => command.id === proposal.id)!;
+  const proposedKeys = heardKeys(changed, proposal.keys ?? allBindings(changed));
+  // A key of the owner's goes if it is heard as the proposal is — by the same
+  // rule as dispatch, Shift and all for a board's tool.
+  const taken = (binding: Binding): boolean => {
+    const alone = { ...ownCommand, keys: [binding], aliases: [] };
+    return (
+      proposal.presses.some((press) => hears(alone, press, isMac, keymap)) ||
+      heardKeys(ownCommand, [binding]).some((key) => proposedKeys.includes(key))
+    );
+  };
   const kept = keysOf(owner, keymap).filter((binding) => !taken(binding));
   const given = keysOf(proposal.id, keymap).filter(
     (binding) => !kept.some((key) => sameKey(key, binding)),
@@ -207,14 +256,15 @@ function ownersOf(
   isMac: boolean,
 ): readonly CommandId[] {
   const scopes = clashScopes(id);
-  const proposed = keys ?? allBindings(KEYMAP.find((command) => command.id === id)!);
+  const own = KEYMAP.find((command) => command.id === id)!;
+  const proposed = heardKeys(own, keys ?? allBindings(own));
   const owners = new Set<CommandId>();
   for (const press of presses) {
     for (const heard of commandsHearing(press, scopes, isMac, keymap)) owners.add(heard);
   }
   for (const command of keymap) {
     if (!scopes.includes(command.scope)) continue;
-    if (allBindings(command).some((binding) => proposed.some((key) => sameKey(key, binding)))) {
+    if (heardKeys(command, allBindings(command)).some((key) => proposed.includes(key))) {
       owners.add(command.id);
     }
   }
@@ -263,18 +313,32 @@ function keyOf(binding: Binding): string {
 
 const sameKey = (a: Binding, b: Binding): boolean => keyOf(a) === keyOf(b);
 
-/** The other commands in the same place bound to one of this command's very keys. */
+/**
+ * The keys a command hears with these bindings, as identities: each binding,
+ * and for a board's tool the same with Shift held too — the rule `hears`
+ * dispatches by, so a clash is found where a press would be heard twice.
+ */
+function heardKeys(command: Command, bindings: readonly Binding[]): string[] {
+  const tool = TOOL_SCOPES.includes(command.scope);
+  return bindings.flatMap((binding) =>
+    tool && 'code' in binding && binding.shift !== true
+      ? [keyOf(binding), keyOf({ ...binding, shift: true })]
+      : [keyOf(binding)],
+  );
+}
+
+/** The other commands in the same place that hear one of this command's very keys. */
 export function duplicated(keymap: readonly Command[], id: CommandId): readonly CommandId[] {
   const own = keymap.find((command) => command.id === id);
   if (own === undefined) return [];
-  const mine = new Set(allBindings(own).map(keyOf));
+  const mine = new Set(heardKeys(own, allBindings(own)));
   const scopes = clashScopes(id);
   return keymap
     .filter(
       (command) =>
         command.id !== id &&
         scopes.includes(command.scope) &&
-        allBindings(command).some((binding) => mine.has(keyOf(binding))),
+        heardKeys(command, allBindings(command)).some((key) => mine.has(key)),
     )
     .map((command) => command.id);
 }
@@ -299,7 +363,8 @@ function readBinding(value: unknown): Binding | null {
   };
   if (typeof code === 'string' && char === undefined) {
     if (!CODE.test(code) || isModifier(code) || reserved(code, !isMod && !isAlt)) return null;
-    return { code, ...held };
+    const binding = { code, ...held };
+    return sizeKey(binding) ? null : binding;
   }
   // A character is typed with whatever Shift the layout needs: only the command key is held.
   if (
@@ -319,13 +384,14 @@ function readBinding(value: unknown): Binding | null {
  * (docs/file-format.md §6): a command this version has and lets change, one
  * to four keys a binding can say, none reserved, and none another command in
  * the same place has — the later of two such changes is dropped. Never
- * throws: a damaged file loses those keys, and the app starts.
+ * throws: a damaged file loses those keys, and the app starts. Both processes
+ * read the maker's keys through this, so they always agree on them.
  */
-export function readBindings(value: unknown): KeyBindings {
+export function readBindings(value: unknown, isMac = false): KeyBindings {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
   let kept: Partial<Record<CommandId, readonly Binding[]>> = {};
   for (const [id, list] of Object.entries(value as Record<string, unknown>)) {
-    if (!isChangeable(id as CommandId) || !Array.isArray(list)) continue;
+    if (!isChangeable(id as CommandId, isMac) || !Array.isArray(list)) continue;
     if (list.length === 0 || list.length > MOST_KEYS) continue;
     const keys = list.map(readBinding);
     if (!keys.every((key) => key !== null && allowed(id as CommandId, key))) continue;

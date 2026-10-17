@@ -397,7 +397,7 @@
       "resetAll": "Reset all",
       "fixed": "Fixed",
       "reserved": "{{key}} keeps its own role. Press other keys.",
-      "unusable": "Those keys can't be a shortcut. Press other keys.",
+      "unusable": "That key, or a modifier held with it, can't be part of a shortcut. Press other keys.",
       "needsModifier": "{{command}} works in text fields too: give it a function key, or keys held with a modifier.",
       "clash": "{{keys}} is already used for “{{command}}”.",
       "clashFixed": "{{keys}} is already used for “{{command}}”, and can't be swapped.",
@@ -406,7 +406,9 @@
       "changed": "{{command}} has new keys.",
       "wasReset": "{{command}} has its default keys again.",
       "swapped": "{{command}} and {{other}} swapped keys.",
-      "allReset": "Every key is back to its default."
+      "allReset": "Every key is back to its default.",
+      "typesOther": "Held that way, the key types “{{typed}}” rather than its letter, so it can't be a shortcut. Press other keys.",
+      "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys."
     }
   },
   "about": {

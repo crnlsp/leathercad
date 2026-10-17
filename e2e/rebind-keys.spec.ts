@@ -141,6 +141,13 @@ test('Esc during a change leaves the key and the dialog; Enter and Tab cannot be
     await expect(keysOf(window, 'print')).toHaveText(['Ctrl+P']);
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
 
+    // A digit alone types a size on the board: refused, and still listening.
+    await change(window, 'toggleParts', 'Digit5');
+    await expect(pane.getByTestId('shortcut-note')).toContainText('type sizes on the board');
+    await expect(window.getByTestId('change-toggleParts')).toHaveAttribute('aria-pressed', 'true');
+    await window.keyboard.press('Escape');
+    await expect(keysOf(window, 'toggleParts')).toHaveText(['[']);
+
     // Esc itself, and Enter's own rows, are fixed: no Change to press.
     await expect(window.getByTestId('change-cancel')).toHaveCount(0);
     await expect(window.getByTestId('change-editSizes')).toHaveCount(0);
@@ -385,6 +392,37 @@ test('Parts’ rename moved to F4 renames a focused row, and nothing on the boar
     await window.keyboard.press('F4');
     await expect(window.getByTestId('row-name-input')).toBeFocused();
     await window.keyboard.press('Escape');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('take back moved to R takes a point back mid-run, and is not Rectangle as well', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const pane = await openShortcuts(window);
+    await change(window, 'takeBack', 'KeyR');
+    // The polyline is a place of its own: R there shadows the Rectangle tool.
+    await expect(pane.getByTestId('shortcut-clash')).toHaveCount(0);
+    await expect(keysOf(window, 'takeBack')).toHaveText(['R']);
+    await window.getByTestId('settings-close').click();
+
+    await watchClaims(window);
+    await window.getByTestId('tool-polyline').click();
+    const board = (await window.getByTestId('editor-canvas').boundingBox())!;
+    const at = { x: board.x + board.width * 0.3, y: board.y + board.height * 0.6 };
+    await window.mouse.click(at.x, at.y);
+    await window.mouse.click(at.x + 80, at.y);
+    await window.mouse.move(at.x + 80, at.y - 60);
+    await expect(hint(window, 'hints.takesBack').locator('kbd')).toHaveText('R');
+    await window.keyboard.press('KeyR');
+    expect(await claims(window)).toEqual(['KeyR:true']);
+    await expect(window.getByTestId('tool-polyline')).toHaveClass(/active/);
+    await window.keyboard.press('KeyR');
+    // The run is over: R is the Rectangle tool's again.
+    await expect(hint(window, 'hints.polylinePoints')).toBeVisible();
+    await window.keyboard.press('KeyR');
+    await expect(window.getByTestId('tool-rectangle')).toHaveClass(/active/);
   } finally {
     await closeApp(app);
   }

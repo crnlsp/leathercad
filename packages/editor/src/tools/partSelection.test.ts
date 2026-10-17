@@ -71,6 +71,15 @@ describe('a part picked by its heading, with the Select tool (Q29)', () => {
     expect(requestDeletePart).toHaveBeenCalledWith('p');
   });
 
+  it('claims the key it deletes with, and leaves it when nothing is selected (U.12, on review)', () => {
+    const { ctx, store } = harness();
+    expect(createSelectTool().onKey?.(ctx, keyInput('Delete'))).not.toBe(true);
+    store.selectParts(['p']);
+    expect(
+      createSelectTool().onKey?.({ ...ctx, requestDeletePart: vi.fn() }, keyInput('Delete')),
+    ).toBe(true);
+  });
+
   it('is deleted by whatever key means delete, and Delete alone no longer when moved (U.12)', () => {
     const { ctx, store } = harness();
     const requestDeletePart = vi.fn();

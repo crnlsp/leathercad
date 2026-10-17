@@ -39,6 +39,7 @@ import {
   apply,
   bindingFor,
   differs,
+  isChangeable,
   proposeKey,
   proposeReset,
   swap,
@@ -663,8 +664,15 @@ function Shortcuts({ preferences, onPreferences }: Props) {
         id,
         note: t('settings.shortcuts.reserved', { key: label({ code: press.code }) }),
       });
-    } else if (taken === 'unusable') {
-      setListening({ id, note: t('settings.shortcuts.unusable') });
+    } else if (typeof taken === 'string') {
+      // Each refusal says why, so the maker knows what to press instead.
+      const note =
+        taken === 'typesOther'
+          ? t('settings.shortcuts.typesOther', { typed: press.key })
+          : taken === 'typesSize'
+            ? t('settings.shortcuts.typesSize')
+            : t('settings.shortcuts.unusable');
+      setListening({ id, note });
     } else propose(proposeKey(id, taken, press));
   };
 
@@ -698,6 +706,8 @@ function Shortcuts({ preferences, onPreferences }: Props) {
             <div className="shortcut-list">
               {group.shortcuts.map((shortcut) => {
                 const { id } = shortcut;
+                // Fixed by the keymap, or by the platform: macOS's ⌘Q is its own.
+                const fixed = id !== undefined && !isChangeable(id, IS_MAC);
                 const here = id !== undefined && listening?.id === id;
                 const clashing = id !== undefined && clash?.proposal.id === id ? clash : null;
                 return (
@@ -724,10 +734,10 @@ function Shortcuts({ preferences, onPreferences }: Props) {
                       )}
                     </span>
                     <span className="shortcut-actions">
-                      {id !== undefined && shortcut.fixed === true && (
+                      {fixed && (
                         <span className="shortcut-fixed">{t('settings.shortcuts.fixed')}</span>
                       )}
-                      {id !== undefined && shortcut.fixed !== true && (
+                      {id !== undefined && !fixed && (
                         <>
                           <button
                             type="button"
