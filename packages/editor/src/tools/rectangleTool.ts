@@ -202,6 +202,8 @@ export function createRectangleTool(nextId: () => string): Tool {
       };
     },
 
+    underway: () => state.kind !== 'idle',
+
     sizing() {
       return state.kind === 'spanning' && state.phase === 'placing' ? shown(state) : null;
     },

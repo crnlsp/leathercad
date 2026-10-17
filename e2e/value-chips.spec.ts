@@ -48,7 +48,7 @@ async function onTheBoard(window: Page): Promise<void> {
 async function selectOuter(window: Page): Promise<void> {
   await window.getByTestId('feature-row-outer-outline').click();
   await onTheBoard(window);
-  await window.keyboard.press('Shift+2');
+  await window.keyboard.press('Shift+@');
   await expect(chip(window, 'height')).toBeVisible();
 }
 
@@ -136,7 +136,7 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
 
     // Enter on the board opens the width — framed first, so it is in view.
     await onTheBoard(window);
-    await window.keyboard.press('Shift+2');
+    await window.keyboard.press('Shift+@');
     await expect(chip(window, 'width')).toBeVisible();
     await window.keyboard.press('Enter');
     await expect(field(window, 'width')).toBeFocused();

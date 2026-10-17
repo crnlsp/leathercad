@@ -63,16 +63,16 @@ import { historyText } from './historyText.js';
 import { describeProblem } from './problemText.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
 import { PropertyPanel } from './PropertyPanel.js';
-import { SheetsHint, SheetsParts, SheetsProperties } from './SheetsPanels.js';
+import { SheetsParts, SheetsProperties } from './SheetsPanels.js';
 import { selectedParts } from './sheetContents.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
-import { I18nProvider, useI18n } from './i18n.js';
+import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
 import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
-import { IS_MAC, useKeysInSentences } from './keyCaps.js';
+import { IS_MAC } from './keyCaps.js';
 import { commandFor, keysOf, matches, type CommandId } from './keymap.js';
 import {
   CHIP_ICON,
@@ -86,6 +86,9 @@ import { ROOM_PX, layoutFor, toggleOf, type Panel, type Room } from './panelLayo
 import { isTyping } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
+import { OptionHints } from './OptionHints.js';
+import { SHEETS_HINTS, hintsFor } from './optionHints.js';
+import { chipSubject } from './outlineSizes.js';
 import { ALL_TOOLS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
 import { useMediaQuery } from './useMediaQuery.js';
@@ -770,6 +773,19 @@ export function App({
         ? undefined
         : t('zoom.nothingSelected');
 
+  // The work bar's hints (U.11): the active tool's, for what is selected and whether a
+  // shape is between its clicks.
+  const toolHints = useMemo(
+    () =>
+      hintsFor({
+        tool: ALL_TOOLS.find((entry) => entry.id === toolId)?.id ?? 'select',
+        selected: !isEmptySelection(storeState.selection),
+        sizable: chipSubject(storeState.document.project, storeState.selection) !== null,
+        underway: status?.underway ?? false,
+      }),
+    [toolId, storeState.selection, storeState.document, status?.underway],
+  );
+
   // The pieces the Sheets view's panels show as picked (U.9): the board's selection.
   const sheetsSelected = useMemo(
     () => selectedParts(storeState.document.project, storeState.selection),
@@ -815,7 +831,7 @@ export function App({
         />
 
         {/* The work bar (F.8): what the maker is doing right now — history, the
-          active tool's options and its one line of guidance. The project and
+          active tool's options and its hints (U.11). The project and
           its output are the bar above's; nothing here is about files. */}
         <div
           className="work-bar"
@@ -874,13 +890,14 @@ export function App({
                 points={pointOptions}
                 onPoints={setPointOptions}
               />
-              {/* What the active tool does with a click or a drag, true for that
-                tool and no other (F.1). It is what gives way when the bar narrows. */}
-              <ToolHowTo toolId={toolId} />
+              {/* What the active tool does with a click, a drag and a key, true for that
+                tool and no other (F.1), and for the state it is in (U.11). The lowest
+                ranked give way as the bar narrows, whole; "all keys" never does. */}
+              <OptionHints hints={toolHints} testId="tool-how-to" />
             </>
           ) : (
             <>
-              <SheetsHint />
+              <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
               {/* The plan in words, for a screen reader: the sheet count, what is taped and
                   what is left off now sit in Parts and Properties. */}
               <SheetsSummary project={storeState.document.project} />
@@ -1288,16 +1305,4 @@ function describeDelete(project: Project, pending: PendingDelete, t: Translate):
     .flatMap((part) => part.features)
     .filter((f) => pending.ids.includes(f.id));
   return named.length === 1 ? named[0]!.name : t('deleteDialog.features', { count: named.length });
-}
-
-/** The active tool's one line of guidance, naming its keys from the keymap (U.3). */
-function ToolHowTo({ toolId }: { toolId: string }) {
-  const { t } = useI18n();
-  const keys = useKeysInSentences();
-  const tool = ALL_TOOLS.find((entry) => entry.id === toolId);
-  return (
-    <span className="work-hint" data-testid="tool-how-to">
-      {t('work.howTo', { howTo: tool === undefined ? '' : t(`tools.${tool.id}.howTo`, keys) })}
-    </span>
-  );
 }

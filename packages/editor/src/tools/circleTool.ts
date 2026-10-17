@@ -126,6 +126,8 @@ export function createCircleTool(nextId: () => string): Tool {
       };
     },
 
+    underway: () => state.kind !== 'idle',
+
     onDeactivate(ctx) {
       reset(ctx);
     },

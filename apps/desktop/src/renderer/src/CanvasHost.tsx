@@ -130,6 +130,8 @@ export interface CanvasStatus {
   readonly sheet: { readonly number: number; readonly count: number } | null;
   /** The rectangle being drawn and its sizes, while one is (U.16): Properties mirrors them. */
   readonly sizing: SizeDraft | null;
+  /** A shape is between its clicks (U.11): the work bar offers Esc, and the keys of that run. */
+  readonly underway: boolean;
 }
 
 /**
@@ -224,6 +226,7 @@ export function CanvasHost({
   const [notice, setNotice] = useState<Problem | null>(null);
   /** The rectangle being drawn, which the chips and Properties show the sizes of (U.16). */
   const [drawing, setDrawing] = useState<SizeDraft | null>(null);
+  const [underway, setUnderway] = useState(false);
   /**
    * The showing camera's zoom (U.4), read as each frame is painted — every
    * change to a camera repaints, whatever made it: the wheel, a key, the zoom
@@ -630,6 +633,7 @@ export function CanvasHost({
     // only when a number moved, not on every frame.
     const sizing = managerRef.current?.sizing() ?? null;
     setDrawing((current) => (sameDraft(current, sizing) ? current : sizing));
+    setUnderway(managerRef.current?.underway() ?? false);
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
   }, [store, paintSheets, chipRoom]);
 
@@ -701,8 +705,15 @@ export function CanvasHost({
   }, [paint]);
 
   useEffect(() => {
-    onStatus?.({ cursorMm, zoomPercent: zoom, notice, sheet: sheetUnder, sizing: drawing });
-  }, [cursorMm, notice, onStatus, sheetUnder, zoom, drawing]);
+    onStatus?.({
+      cursorMm,
+      zoomPercent: zoom,
+      notice,
+      sheet: sheetUnder,
+      sizing: drawing,
+      underway,
+    });
+  }, [cursorMm, notice, onStatus, sheetUnder, zoom, drawing, underway]);
 
   // Keyboard goes to the document: the board is one Tab stop (U.14), but
   // Escape or Delete should work wherever focus and the pointer happen to be.
