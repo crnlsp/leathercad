@@ -1,3 +1,4 @@
+import { approxEq } from '@leathercad/core';
 import { drawnBounds, selectedFeatureIds, type DocumentStore } from '@leathercad/document';
 import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import {
@@ -32,6 +33,7 @@ import {
   type HardwareOptions,
   type MakerDefaults,
   type PointerInput,
+  type SizeDraft,
 } from '@leathercad/editor';
 import {
   CANVAS,
@@ -47,6 +49,7 @@ import {
   type CssBox,
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import { captionOf } from './captionWords.js';
 import { selectedParts } from './sheetContents.js';
@@ -59,7 +62,7 @@ import { sheetPlanFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
 import { commandFor, keyForTools, keysOf, matches } from './keymap.js';
 import { isTyping } from './shortcuts.js';
-import { ValueChips, type ValueChipsHandle } from './ValueChips.js';
+import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -125,6 +128,8 @@ export interface CanvasStatus {
   readonly notice: Problem | null;
   /** On the Sheets view, the sheet under the pointer, 1-based, and how many there are (7.4d). */
   readonly sheet: { readonly number: number; readonly count: number } | null;
+  /** The rectangle being drawn and its sizes, while one is (U.16): Properties mirrors them. */
+  readonly sizing: SizeDraft | null;
 }
 
 /**
@@ -217,6 +222,8 @@ export function CanvasHost({
   /** On the Sheets view, the part under the pointer (7.4d). */
   const hoveredPartRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<Problem | null>(null);
+  /** The rectangle being drawn, which the chips and Properties show the sizes of (U.16). */
+  const [drawing, setDrawing] = useState<SizeDraft | null>(null);
   /**
    * The showing camera's zoom (U.4), read as each frame is painted — every
    * change to a camera repaints, whatever made it: the wheel, a key, the zoom
@@ -265,6 +272,25 @@ export function CanvasHost({
 
   /** The selected outline's sizes, beside it (U.14): placed as each frame is painted. */
   const chipsRef = useRef<ValueChipsHandle>(null);
+  /** What typing into a chip does to the shape being drawn: the tool's, never the document's. */
+  const drawn = useMemo(
+    (): DrawnChips => ({
+      read: () => managerRef.current?.sizing() ?? null,
+      set: (field, value) => {
+        managerRef.current?.setSize(field, value);
+        dirtyRef.current = true;
+      },
+      finish: () => {
+        managerRef.current?.finishSizing();
+        dirtyRef.current = true;
+      },
+      cancel: () => {
+        managerRef.current?.key({ key: 'Escape', shiftKey: false, ctrlKey: false });
+        dirtyRef.current = true;
+      },
+    }),
+    [],
+  );
   /** The keys back to the board, without scrolling the window to it. */
   const toBoard = useCallback(() => canvasRef.current?.focus({ preventScroll: true }), []);
   const panelOverRef = useRef(panelOver);
@@ -600,6 +626,10 @@ export function CanvasHost({
     // when it says the same thing stops the chrome re-rendering every frame.
     const next = managerRef.current?.notice() ?? null;
     setNotice((current) => (sameProblem(current, next) ? current : next));
+    // The shape being typed over, for the chips and for Properties (U.16): set
+    // only when a number moved, not on every frame.
+    const sizing = managerRef.current?.sizing() ?? null;
+    setDrawing((current) => (sameDraft(current, sizing) ? current : sizing));
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
   }, [store, paintSheets, chipRoom]);
 
@@ -671,8 +701,8 @@ export function CanvasHost({
   }, [paint]);
 
   useEffect(() => {
-    onStatus?.({ cursorMm, zoomPercent: zoom, notice, sheet: sheetUnder });
-  }, [cursorMm, notice, onStatus, sheetUnder, zoom]);
+    onStatus?.({ cursorMm, zoomPercent: zoom, notice, sheet: sheetUnder, sizing: drawing });
+  }, [cursorMm, notice, onStatus, sheetUnder, zoom, drawing]);
 
   // Keyboard goes to the document: the board is one Tab stop (U.14), but
   // Escape or Delete should work wherever focus and the pointer happen to be.
@@ -692,6 +722,25 @@ export function CanvasHost({
 
       // No tool acts on the Sheets view: Delete there must not delete.
       if (viewRef.current === 'sheets') return;
+
+      // A number typed with the board focused while a rectangle is being drawn,
+      // or about to be, goes into its first chip (U.16, R-13): the key lands
+      // there, and Tab, Enter and Esc are the chips'. With no corner placed the
+      // shape starts at the pointer.
+      if (
+        /^[0-9.,]$/.test(event.key) &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        (event.target === document.body || event.target === canvasRef.current) &&
+        managerRef.current?.beginSizing() === true
+      ) {
+        // The chips exist and are placed before the key goes to one of them.
+        flushSync(() => setDrawing(managerRef.current?.sizing() ?? null));
+        paint();
+        // Not prevented: the key is typed into the chip that has the focus now.
+        if (chipsRef.current?.open() === true) return;
+      }
 
       const claimed = managerRef.current?.key({
         // The letter the keymap reads, so a tool claims the key the window would take.
@@ -723,7 +772,7 @@ export function CanvasHost({
     // still stops it before either.
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [store]);
+  }, [store, paint]);
 
   const toInput = useCallback((event: React.PointerEvent<HTMLCanvasElement>): PointerInput => {
     const viewport = viewportRef.current;
@@ -960,7 +1009,14 @@ export function CanvasHost({
         onContextMenu={handleContextMenu}
       />
       {view === 'design' && (
-        <ValueChips ref={chipsRef} store={store} invalidate={invalidate} toBoard={toBoard} />
+        <ValueChips
+          ref={chipsRef}
+          store={store}
+          drawing={drawing}
+          drawn={drawn}
+          invalidate={invalidate}
+          toBoard={toBoard}
+        />
       )}
       {children}
       {sheetsNotice && pointerCss !== null && (
@@ -977,6 +1033,19 @@ export function CanvasHost({
         <CanvasNotice problem={notice} at={pointerCss} bounds={containerSize} />
       )}
     </div>
+  );
+}
+
+/** Whether two drafts are the same shape: a frame that changed nothing sets nothing. */
+function sameDraft(a: SizeDraft | null, b: SizeDraft | null): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    approxEq(a.origin.x, b.origin.x) &&
+    approxEq(a.origin.y, b.origin.y) &&
+    approxEq(a.width, b.width) &&
+    approxEq(a.height, b.height) &&
+    approxEq(a.corner, b.corner) &&
+    a.refusals === b.refusals
   );
 }
 

@@ -53,6 +53,11 @@ export interface ValueChipsInput {
   readonly obstacles?: readonly CssBox[];
   /** Why one chip's value cannot apply, said beside it: that chip, and the note's size. */
   readonly note?: { readonly chip: ValueChip; readonly size: ChipBox };
+  /**
+   * A line of keys under the shape — what `Tab`, `Enter` and `Esc` do while
+   * it is being drawn (U.16) — at its size on screen.
+   */
+  readonly hint?: ChipBox;
 }
 
 export interface PlacedValueChips {
@@ -66,6 +71,12 @@ export interface PlacedValueChips {
    * out of view.
    */
   readonly noteAt?: Vec2;
+  /**
+   * The hint's top-left, in CSS pixels: centred under the shape and under
+   * every chip and note below it, or over them where there is no room under;
+   * never over the shape, a control laid over the board, or outside the area.
+   */
+  readonly hintAt?: Vec2;
 }
 
 /** From the shape to a chip's nearer side. */
@@ -243,9 +254,70 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
 
   const note =
     input.note === undefined ? undefined : noteBeside(input.note, sizes, at, area, obstacles);
-  return note === undefined
-    ? { at, lines: { items: lines } }
-    : { at, lines: { items: lines }, noteAt: note };
+  const hint =
+    input.hint === undefined
+      ? undefined
+      : hintBeside(
+          input.hint,
+          Object.values(corner),
+          sizes,
+          at,
+          note,
+          input.note?.size,
+          area,
+          obstacles,
+        );
+  return {
+    at,
+    lines: { items: lines },
+    ...(note === undefined ? {} : { noteAt: note }),
+    ...(hint === undefined ? {} : { hintAt: hint }),
+  };
+}
+
+/** Between the hint and what it sits clear of. */
+const HINT_GAP_PX = 8;
+
+/**
+ * The hint under everything the shape has laid out below it — the shape, its
+ * chips, a note — centred on the shape, or over all of it where the canvas's
+ * foot or a control leaves no room under.
+ */
+function hintBeside(
+  hint: ChipBox,
+  shape: readonly Vec2[],
+  sizes: ValueChipsInput['sizes'],
+  at: Partial<Record<ValueChip, Vec2>>,
+  noteAt: Vec2 | undefined,
+  noteSize: ChipBox | undefined,
+  area: CssBox,
+  obstacles: readonly CssBox[],
+): Vec2 {
+  let low = Math.max(...shape.map((p) => p.y));
+  let high = Math.min(...shape.map((p) => p.y));
+  const reach = (top: number, height: number): void => {
+    low = Math.max(low, top + height);
+    high = Math.min(high, top);
+  };
+  for (const chip of VALUE_CHIPS) {
+    const centre = at[chip];
+    const size = sizes[chip];
+    if (centre !== undefined && size !== undefined) reach(centre.y - size.height / 2, size.height);
+  }
+  if (noteAt !== undefined && noteSize !== undefined) reach(noteAt.y, noteSize.height);
+
+  const middle = shape.reduce((sum, p) => sum + p.x, 0) / shape.length;
+  const x = Math.max(area.left, Math.min(middle - hint.width / 2, area.right - hint.width));
+  const below = low + HINT_GAP_PX;
+  const above = high - HINT_GAP_PX - hint.height;
+  const keepOff = keptOff(obstacles, hint);
+  const clearAt = (y: number): boolean =>
+    !blocked({ x: x + hint.width / 2, y: y + hint.height / 2 }, keepOff);
+  const fitsBelow = below + hint.height <= area.bottom;
+  const fitsAbove = above >= area.top;
+  if (fitsBelow && clearAt(below)) return { x, y: below };
+  if (fitsAbove && clearAt(above)) return { x, y: above };
+  return { x, y: fitsBelow || !fitsAbove ? below : above };
 }
 
 /**

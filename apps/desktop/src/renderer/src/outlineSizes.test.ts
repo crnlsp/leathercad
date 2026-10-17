@@ -20,6 +20,7 @@ import {
   chipsOf,
   chipValue,
   cornerRefusal,
+  drawnSubject,
   sizeRefusal,
   type ChipSubject,
 } from './outlineSizes.js';
@@ -264,5 +265,27 @@ describe('chipNumber', () => {
     expect(chipNumber(3.5)).toBe('3.5');
     expect(chipNumber(95.25)).toBe('95.25');
     expect(chipNumber(3.175)).toBe('3.18');
+  });
+});
+
+describe('drawnSubject (U.16)', () => {
+  const draft = { origin: { x: 10, y: 20 }, width: 105, height: 75, corner: 8, refusals: 0 };
+
+  it('has the three sizes of the shape in progress and no margin', () => {
+    const subject = drawnSubject(draft);
+    expect(chipsOf(subject)).toEqual(['width', 'height', 'corner']);
+    expect([
+      chipValue(subject, 'width'),
+      chipValue(subject, 'height'),
+      chipValue(subject, 'corner'),
+    ]).toEqual([105, 75, 8]);
+  });
+
+  it('is refused as an outline is: a corner too large, a size its corners do not fit', () => {
+    const subject = drawnSubject(draft);
+    expect(chipRefusal(subject, 'corner', 40, words)?.use).toBe(37.5);
+    expect(chipRefusal(subject, 'corner', 37.5, words)).toBeNull();
+    expect(chipRefusal(subject, 'height', 10, words)?.use).toBe(16);
+    expect(chipRefusal(subject, 'height', 16, words)).toBeNull();
   });
 });

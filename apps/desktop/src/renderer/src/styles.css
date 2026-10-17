@@ -3118,6 +3118,37 @@ button.problem-row:hover {
   color: var(--warning-ground);
 }
 
+/* What the keys do while a rectangle is typed (U.16): a dark pill under the
+   shape, like the canvas notice, keys as the shell's key caps. Never printed. */
+.value-chip-hint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px var(--space-2);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  box-shadow: var(--elevation-raised);
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.value-chip-hint kbd {
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--shell-800);
+  color: var(--text);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+}
+
 /* A size Properties refuses (U.14), with the warning's glyph. */
 .field-reason.refused {
   color: var(--text);
@@ -3129,7 +3160,8 @@ button.problem-row:hover {
 
 @media (forced-colors: active) {
   .value-chip,
-  .value-chip-note {
+  .value-chip-note,
+  .value-chip-hint {
     border-color: CanvasText;
   }
 

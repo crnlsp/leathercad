@@ -20,6 +20,7 @@ import {
 } from '@leathercad/document';
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
+import type { SizeDraft } from '@leathercad/editor';
 import { PathOps } from '@leathercad/geometry';
 import { followRefusal, type ResolvedFeature } from '@leathercad/domain';
 import { Trash2 } from 'lucide-react';
@@ -55,6 +56,7 @@ export function PropertyPanel({
   requestDelete,
   requestDeletePart,
   tools,
+  sizing = null,
   toggle,
 }: {
   store: DocumentStore;
@@ -71,6 +73,8 @@ export function PropertyPanel({
   requestDeletePart: (partId: string) => void;
   /** The maker's irons and starting values, from Settings › My tools (U.13). */
   tools: MakerTools;
+  /** The rectangle being drawn, while one is (U.16): its sizes, as the chips on the board show them. */
+  sizing?: SizeDraft | null;
   /** Its fold (U.5), at the end of the header's first row. */
   toggle?: ReactNode;
 }) {
@@ -111,9 +115,27 @@ export function PropertyPanel({
               ? t('properties.manyPartsSelected', { count: parts.length })
               : t('properties.nothingSelected', keys)}
         </p>
-        {selected.size === 0 && parts.length === 0 && project.parts.length > 0 && (
-          <JobTotals project={project} />
+        {sizing !== null && selected.size === 0 && (
+          <section className="panel-section" data-testid="drawing-sizes">
+            <div className="panel-heading">{t('properties.drawing')}</div>
+            {(
+              [
+                ['width', t('editor.width'), sizing.width],
+                ['height', t('editor.height'), sizing.height],
+                ['corner', t('toolOptions.cornerRadius'), sizing.corner],
+              ] as const
+            ).map(([name, label, value]) => (
+              <div className="readout" key={name}>
+                <span>{label}</span>
+                <b data-testid={`drawing-${name}`}>{formatMm(value, 1)}</b>
+              </div>
+            ))}
+          </section>
         )}
+        {sizing === null &&
+          selected.size === 0 &&
+          parts.length === 0 &&
+          project.parts.length > 0 && <JobTotals project={project} />}
       </aside>
     );
   }

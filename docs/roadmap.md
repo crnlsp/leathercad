@@ -274,7 +274,21 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   corner radius included; Enter on text a field cannot read keeps the text, marks the field and
   says why beneath (in the work bar, hanging below it); Escape or leaving puts the size back, as
   before. Found on the way: the dimension's *Decimals* field said "mm" after a count.
-- ☐ **U.16 Typing while drawing** (R-13). `105` `Tab` `75` `Tab` `8` `Enter`.
+- ✅ **U.16 Typing while drawing** (R-13). `105` `Tab` `75` `Tab` `8` `Enter`.
+  Between the first click and the second, the rectangle's live readout is the value chips (U.14's
+  own field, `parseLength`, the same refusals): width, height and corner, with a hint under the
+  shape — Tab next, Enter makes it, Esc cancels, the keys read from the keymap — and Properties
+  mirrors the three. The first digit typed on the board opens the width chip, with the first
+  corner placed or not: before any click the rectangle starts at the pointer, and the sizes run
+  from the corner towards the pointer either way. Enter makes it (one undo step, the new outline
+  selected, its chips at rest), Esc gives it up, a click on the board makes what is typed. A drag
+  still draws as before and is sized afterwards by the U.14 chips; Shift still squares a drag.
+  Found on the way: the tool's Enter went to the window, which would have opened the sizes of
+  whatever outline was selected — the tool claims it now while it has a corner; and a typed
+  corner the pointer then left no room for was made smaller without a word — Enter, a click or a
+  chip's Enter is refused now, saying why in the corner chip, whose second Enter takes what
+  fits. Printed output did not move: a rectangle that is dragged is stored as before, with square
+  corners.
 - ☐ **U.17 The selection bar: stitch summary and next step** (R-14).
 - ☐ **U.18 Drawing defaults in Properties** (R-16).
 - ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the

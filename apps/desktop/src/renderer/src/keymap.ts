@@ -557,6 +557,7 @@ const NAMED: Readonly<Record<string, string>> = {
   Enter: 'Enter',
   Escape: 'Escape',
   Space: 'Space',
+  Tab: 'Tab',
   ContextMenu: 'Menu',
   Scroll: 'Scroll',
   MiddleDrag: 'Middle-drag',
@@ -633,6 +634,9 @@ export function keysInSentences(
     roundCorner: first('roundCorner'),
     // A field's own Enter, which no command binds: what applies a typed size (U.14).
     enter: label({ code: 'Enter' }),
+    // Moves between a shape's size fields while it is drawn, as in any form (U.16).
+    tab: label({ code: 'Tab' }),
+    escape: first('cancel'),
     rectangle: first('tool.rectangle'),
     select: first('tool.select'),
     points: first('tool.points'),

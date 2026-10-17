@@ -6,7 +6,14 @@ import {
   quantiseAtLeast,
   quantiseAtMost,
 } from '@leathercad/core';
-import { setDerivation, setShape, type Command, type Selection } from '@leathercad/document';
+import {
+  rectShape,
+  setDerivation,
+  setShape,
+  type Command,
+  type Selection,
+} from '@leathercad/document';
+import type { SizeDraft } from '@leathercad/editor';
 import type { Derivation, FeatureId, ParametricShape, Project } from '@leathercad/domain';
 import {
   cornerNeeds,
@@ -71,6 +78,19 @@ export function chipSubject(project: Project, selection: Selection): ChipSubject
     };
   }
   return null;
+}
+
+/**
+ * The rectangle being drawn, as chips see an outline (U.16): its three sizes
+ * and no margin, for there is no stitch line yet. It has no feature to
+ * command — typed numbers go to the tool — so its id names nothing.
+ */
+export function drawnSubject(draft: SizeDraft): ChipSubject {
+  return {
+    outlineId: '' as FeatureId,
+    shape: rectShape(draft.origin, draft.width, draft.height, draft.corner),
+    margin: null,
+  };
 }
 
 /** The chips a subject has, in `Tab`'s order. */

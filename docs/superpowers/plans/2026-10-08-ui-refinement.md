@@ -1786,6 +1786,33 @@ sizes are typed afterwards in Properties.
 still works; Shift still makes a square. A hint under the shape: `Tab` next · `Enter` makes it ·
 `Esc` cancels. Properties mirrors Width, Height and Corner while drawing.
 
+**Decided 2026-10-17 (as built).**
+- **Where it goes:** at the pointer, as recommended. The first click still places a corner; typing
+  sets the size from there towards the pointer (the pointer picks the side of each axis, so the
+  shape follows it round the corner). With no corner placed, the first digit starts the corner at
+  the pointer's last position over the board.
+- **What a number does:** a typed width, height or corner stays; what was not typed follows the
+  pointer, so `105` `Enter` is 105 wide by however high the pointer shows. A side still at nothing
+  is not made — the rectangle stays open for it to be typed. Freezing both sides on the first
+  keystroke was tried and dropped: a corner clicked and `105` `Enter` made a 105 × 0 rectangle,
+  refused without a word.
+- **Reused, not rebuilt:** `ValueChips`' `Chip` edits a `ChipSubject` built from the tool's draft
+  (`drawnSubject`), refuses with `chipRefusal` (`cornerRoom`, `cornerNeeds`) and reads with
+  `parseLength`; its Tab goes round the three, since past the last is no longer out of the shape.
+  Typed numbers reach the shape through the tool (`Tool.sizing`, `beginSizing`, `setSize`,
+  `finishSizing`), which alone dispatches (`draw.commit`).
+- **A typed corner the pointer has since left no room for** is refused, never made smaller
+  unsaid: Enter on the board, a click, or a chip's Enter makes nothing, opens the corner chip and
+  says why there ("Corner is larger than half the height (4.0). Enter uses 4.0."); only a second
+  Enter in it takes what fits — one undo step. A chip open while drawing is checked against the
+  shape as it is now, not as it was when the chip opened. As U.14 decided: a stored radius is
+  always the one drawn, and never one the maker did not see.
+- **A drag commits on release**, as before; "dragging first and typing after" is the U.14 chips on
+  the outline it made. Between two clicks the chips replace the readout; during a drag the readout
+  stays.
+- The hint is placed by `placeValueChips` (`hint` in, `hintAt` out): under the shape and its chips,
+  over them where there is no room, never over the shape.
+
 **Find out first — and decide.** Where a typed rectangle goes when no corner has been clicked yet.
 Recommended: the first click sets a corner, as now, and typing sets the size from there towards
 the pointer; before any click, typing starts at the pointer.
