@@ -8,6 +8,7 @@ import {
   VALUE_CHIPS,
   placeValueChips,
   type ChipBox,
+  type CssBox,
   type ValueChip,
   type ValueChipsInput,
 } from './valueChips.js';
@@ -340,6 +341,94 @@ describe('placeValueChips', () => {
           }
         },
       ),
+    );
+  });
+  /** Whether a chip's box covers a control by more than EPS. */
+  const covers = (box: ReturnType<typeof boxAt>, control: CssBox): boolean =>
+    box.minX < control.right - EPS &&
+    box.maxX > control.left + EPS &&
+    box.minY < control.bottom - EPS &&
+    box.maxY > control.top + EPS;
+
+  it('slides the width along its line clear of a control laid over the board, such as the legend', () => {
+    // The 100 × 50 rectangle's foot is at y = 350 px; its width sits centred at x = 400.
+    const legend = { left: 280, top: 355, right: 420, bottom: 600 };
+    const free = placeValueChips(view(), input(rectShape(100, 50))).at.width!;
+    const placed = placeValueChips(view(), input(rectShape(100, 50), { obstacles: [legend] })).at
+      .width!;
+    expect(placed.y).toBeCloseTo(free.y, 9);
+    expect(placed.x).toBeGreaterThan(free.x);
+    expect(covers(boxAt(placed, SIZES.width), legend)).toBe(false);
+  });
+
+  it('leaves a chip out rather than cover a control it cannot get clear of', () => {
+    // Along the whole foot of the canvas: nowhere on the width's line is clear.
+    const foot = { left: 0, top: 355, right: 800, bottom: 600 };
+    const at = placeValueChips(view(), input(rectShape(100, 50), { obstacles: [foot] })).at;
+    expect(at.width).toBeUndefined();
+    expect(at.height).toBeDefined();
+    // The corner's place is a point, not a line: covered, it is left out.
+    const corner = placeValueChips(view(), input(rectShape(100, 50))).at.corner!;
+    const over = {
+      left: corner.x - 30,
+      top: corner.y - 30,
+      right: corner.x + 30,
+      bottom: corner.y + 30,
+    };
+    expect(
+      placeValueChips(view(), input(rectShape(100, 50), { obstacles: [over] })).at.corner,
+    ).toBeUndefined();
+  });
+
+  it('says why over its chip when a control covers the place under it', () => {
+    const note = { chip: 'width' as const, size: { width: 200, height: 24 } };
+    const under = placeValueChips(view(), input(rectShape(100, 50), { note })).noteAt!;
+    const zoomControl = { left: under.x, top: under.y + 2, right: under.x + 200, bottom: 600 };
+    const placed = placeValueChips(
+      view(),
+      input(rectShape(100, 50), { note, obstacles: [zoomControl] }),
+    );
+    expect(placed.noteAt!.y + note.size.height).toBeLessThan(placed.at.width!.y);
+  });
+
+  const controls = fc.array(
+    fc
+      .record({
+        left: fc.integer({ min: 0, max: 780 }),
+        top: fc.integer({ min: 0, max: 580 }),
+        width: fc.integer({ min: 10, max: 300 }),
+        height: fc.integer({ min: 10, max: 200 }),
+      })
+      .map(({ left, top, width, height }) => ({
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
+      })),
+    { maxLength: 3 },
+  );
+
+  it('never puts a chip over a control laid over the board', () => {
+    fc.assert(
+      fc.property(shapes, views, sizes, controls, (shape, v, chipSizes, obstacles) => {
+        const { at } = placeValueChips(v, input(shape, { sizes: chipSizes, obstacles }));
+        return VALUE_CHIPS.every((chip) => {
+          const placed = at[chip];
+          if (placed === undefined) return true;
+          return obstacles.every((control) => !covers(boxAt(placed, chipSizes[chip]), control));
+        });
+      }),
+    );
+  });
+
+  it('places every chip as before when no control is in the way', () => {
+    const away = [{ left: 2000, top: 2000, right: 2100, bottom: 2100 }];
+    fc.assert(
+      fc.property(shapes, views, sizes, (shape, v, chipSizes) => {
+        const before = placeValueChips(v, input(shape, { sizes: chipSizes })).at;
+        const after = placeValueChips(v, input(shape, { sizes: chipSizes, obstacles: away })).at;
+        return JSON.stringify(after) === JSON.stringify(before);
+      }),
     );
   });
 });

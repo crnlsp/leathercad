@@ -992,6 +992,13 @@ body {
   cursor: grabbing;
 }
 
+/* The board is one Tab stop (U.14). Its ring is the ground's accent, and
+   inside its edge, where the panels beside it cannot hide it (§2). */
+.canvas-host canvas:focus-visible {
+  outline-color: var(--tan-ink);
+  outline-offset: -2px;
+}
+
 /* The hint is the least important thing in the work bar, so it is the one
    that gives when the window narrows. Without this the controls fold instead,
    and a two-line bar is what the whole layout exists to remove. */

@@ -215,6 +215,28 @@ export function cornerRoom(
   return { radiusMm, side: tightest.side, shared: tightest.shared };
 }
 
+/** The least width and height a rectangle draws its corner radii in. */
+export interface CornerNeeds {
+  readonly widthMm: Mm;
+  readonly heightMm: Mm;
+}
+
+/**
+ * The least width and height `roundedRect` draws `radii` in as asked: on each
+ * pair of opposite sides, the longer of the two sums of the corners sharing
+ * one — `fittedRadii`'s own sums. Any less, and every corner is drawn smaller
+ * than stored. A negative radius is a square corner, as `fittedRadii` reads it.
+ * The fact behind refusing a width or height the corners do not fit in (U.14).
+ */
+export function cornerNeeds(radii: CornerRadii): CornerNeeds {
+  for (const corner of CORNER_NAMES) assertFinite(radii[corner], `cornerNeeds ${corner}`);
+  const need = { width: 0, height: 0 };
+  for (const [a, b, side] of SIDES) {
+    need[side] = Math.max(need[side], Math.max(0, radii[a]) + Math.max(0, radii[b]));
+  }
+  return { widthMm: need.width, heightMm: need.height };
+}
+
 export { polyline } from './path/index.js';
 
 /**

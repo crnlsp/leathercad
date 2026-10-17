@@ -39,10 +39,11 @@ export { arc, cubic, line, quadraticToCubic } from './segment/index.js';
 export type { FillRule, Orientation, Path } from './path/index.js';
 export { closed, open, path, polyline } from './path/index.js';
 
-export type { CornerRadii, CornerRoom } from './shapes.js';
+export type { CornerNeeds, CornerRadii, CornerRoom } from './shapes.js';
 export {
   arcThroughPoints,
   circle,
+  cornerNeeds,
   cornerRoom,
   ellipse,
   fittedRadii,

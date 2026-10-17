@@ -45,6 +45,12 @@ export interface ValueChipsInput {
    * the rulers, whatever this says.
    */
   readonly area?: CssBox;
+  /**
+   * Controls laid over the board — the legend, the zoom control — which no
+   * chip or note may cover: a chip slides along its line clear of them, or is
+   * left out. In the same CSS pixels as `area`.
+   */
+  readonly obstacles?: readonly CssBox[];
   /** Why one chip's value cannot apply, said beside it: that chip, and the note's size. */
   readonly note?: { readonly chip: ValueChip; readonly size: ChipBox };
 }
@@ -72,6 +78,8 @@ const ZERO_X: Vec2 = { x: 1, y: 0 };
 const TICK_PX = 3;
 /** Between a chip and the note under it. */
 const NOTE_GAP_PX = 4;
+/** Between a chip, or a note, and a control laid over the board. */
+const CONTROL_GAP_PX = 4;
 
 /**
  * Where a selected rectangle's value chips sit on screen, and the lines they
@@ -82,8 +90,9 @@ const NOTE_GAP_PX = 4;
  *
  * The three outside have their nearer side `GAP_PX` off the shape, so none
  * ever covers it; the margin's sits as far inside the stitch line. A chip on a
- * line slides along it to stay in view, and a chip whose place is out of view
- * — under a ruler, past the canvas, under a panel — is left out.
+ * line slides along it to stay in view and clear of the controls laid over
+ * the board, as near its middle as it can, and a chip with no such place —
+ * under a ruler, past the canvas, under a panel, on the legend — is left out.
  * The app places an input at each centre and draws the lines on the board.
  */
 export function placeValueChips(view: ViewportView, input: ValueChipsInput): PlacedValueChips {
@@ -92,6 +101,7 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
   const toMm = MatOps.invert(toCss);
   const zoom = cssPxPerMm(view);
   const area = clearArea(view, input.area);
+  const obstacles = input.obstacles ?? [];
 
   // The rectangle's own frame, square-cornered, turned about its centre.
   const x0 = Math.min(rect.origin.x, rect.origin.x + rect.width);
@@ -144,7 +154,8 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
     const to = Vec2Ops.add(side.b, Vec2Ops.scale(side.out, offset));
     const range = clip(from, to, shrink(area, size));
     if (range === null) return null;
-    return { at: Vec2Ops.lerp(from, to, (range[0] + range[1]) / 2), offset };
+    const t = clearAlong(from, to, range, keptOff(obstacles, size));
+    return t === null ? null : { at: Vec2Ops.lerp(from, to, t), offset };
   };
 
   for (const [chip, side] of [
@@ -178,7 +189,10 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
       sharp,
       Vec2Ops.scale(diagonal, GAP_PX + support(cornerSize, diagonal)),
     );
-    if (inside(centreAt, shrink(area, cornerSize))) {
+    if (
+      inside(centreAt, shrink(area, cornerSize)) &&
+      !blocked(centreAt, keptOff(obstacles, cornerSize))
+    ) {
       at.corner = centreAt;
       const radiusPx = fittedRadii(rect.radii, rect.width, rect.height)[name] * zoom;
       const onArc = Vec2Ops.sub(
@@ -214,8 +228,9 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
         Vec2Ops.scale(inward, depth),
       );
       const range = clip(from, to, shrink(area, marginSize));
-      if (range !== null) {
-        const centreAt = Vec2Ops.lerp(from, to, (range[0] + range[1]) / 2);
+      const t = range === null ? null : clearAlong(from, to, range, keptOff(obstacles, marginSize));
+      if (t !== null) {
+        const centreAt = Vec2Ops.lerp(from, to, t);
         at.margin = centreAt;
         const edge = Vec2Ops.sub(centreAt, Vec2Ops.scale(inward, depth));
         const stitch = Vec2Ops.add(edge, Vec2Ops.scale(inward, marginMm * zoom));
@@ -226,29 +241,88 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
     }
   }
 
-  const note = input.note === undefined ? undefined : noteBeside(input.note, sizes, at, area);
+  const note =
+    input.note === undefined ? undefined : noteBeside(input.note, sizes, at, area, obstacles);
   return note === undefined
     ? { at, lines: { items: lines } }
     : { at, lines: { items: lines }, noteAt: note };
 }
 
-/** A note under its chip, its left edge on the chip's, turned back from the area's edges. */
+/**
+ * A note under its chip, its left edge on the chip's, turned back from the
+ * area's edges — or over the chip where the canvas's foot or a control laid
+ * over the board leaves no room under it.
+ */
 function noteBeside(
   note: NonNullable<ValueChipsInput['note']>,
   sizes: ValueChipsInput['sizes'],
   at: Partial<Record<ValueChip, Vec2>>,
   area: CssBox,
+  obstacles: readonly CssBox[],
 ): Vec2 | undefined {
   const centre = at[note.chip];
   const chip = sizes[note.chip];
   if (centre === undefined || chip === undefined) return undefined;
+  const x = Math.max(area.left, Math.min(centre.x - chip.width / 2, area.right - note.size.width));
   const below = centre.y + chip.height / 2 + NOTE_GAP_PX;
   const above = centre.y - chip.height / 2 - NOTE_GAP_PX - note.size.height;
+  // The note's centre at each, kept off the controls as a chip is.
+  const keepOff = keptOff(obstacles, note.size);
+  const clearAt = (y: number): boolean =>
+    !blocked({ x: x + note.size.width / 2, y: y + note.size.height / 2 }, keepOff);
   const fitsBelow = below + note.size.height <= area.bottom;
-  return {
-    x: Math.max(area.left, Math.min(centre.x - chip.width / 2, area.right - note.size.width)),
-    y: fitsBelow || above < area.top ? below : above,
-  };
+  const fitsAbove = above >= area.top;
+  if (fitsBelow && clearAt(below)) return { x, y: below };
+  if (fitsAbove && clearAt(above)) return { x, y: above };
+  return { x, y: fitsBelow || !fitsAbove ? below : above };
+}
+
+/** Where a box's centre may not be, for all of it to keep `CONTROL_GAP_PX` off each control. */
+function keptOff(obstacles: readonly CssBox[], box: ChipBox): CssBox[] {
+  return obstacles.map((control) => ({
+    left: control.left - box.width / 2 - CONTROL_GAP_PX,
+    top: control.top - box.height / 2 - CONTROL_GAP_PX,
+    right: control.right + box.width / 2 + CONTROL_GAP_PX,
+    bottom: control.bottom + box.height / 2 + CONTROL_GAP_PX,
+  }));
+}
+
+/** Whether a centre is inside any keep-off box: on its edge is clear. */
+function blocked(point: Vec2, keepOff: readonly CssBox[]): boolean {
+  return keepOff.some(
+    (box) =>
+      approxCmp(point.x, box.left) > 0 &&
+      approxCmp(point.x, box.right) < 0 &&
+      approxCmp(point.y, box.top) > 0 &&
+      approxCmp(point.y, box.bottom) < 0,
+  );
+}
+
+/**
+ * Where on the segment, within `range`, a chip's centre is clear of every
+ * keep-off box, as near the range's middle as can be: the middle itself when
+ * clear, else the nearest end of the range or edge of a box. Null where none
+ * is clear. With no controls in the way, the middle, as before.
+ */
+function clearAlong(
+  from: Vec2,
+  to: Vec2,
+  range: readonly [number, number],
+  keepOff: readonly CssBox[],
+): number | null {
+  const middle = (range[0] + range[1]) / 2;
+  const candidates = [middle, range[0], range[1]];
+  for (const box of keepOff) {
+    const hit = clip(from, to, box);
+    if (hit !== null) candidates.push(hit[0], hit[1]);
+  }
+  let best: number | null = null;
+  for (const t of candidates) {
+    if (approxCmp(t, range[0]) < 0 || approxCmp(t, range[1]) > 0) continue;
+    if (blocked(Vec2Ops.lerp(from, to, t), keepOff)) continue;
+    if (best === null || Math.abs(t - middle) < Math.abs(best - middle)) best = t;
+  }
+  return best;
 }
 
 interface Side {

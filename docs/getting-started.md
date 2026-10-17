@@ -53,9 +53,11 @@ A card pocket, 96 × 60 mm, the shape a card holder is made from.
 
    Or type them on the drawing: while the outline is selected, its width, height and corner
    radius sit beside it — and, once it has a stitch line, the stitch margin just inside the edge.
-   Click one, or press **Enter** on the board, type, and press **Enter** again; **Tab** goes on to
-   the next, **Escape** puts it back. A corner the rectangle cannot draw — larger than half its
-   height, say — is refused with the reason, and **Enter** takes the largest that fits.
+   Click one, or press **Enter** on the board — **Tab** reaches the board as it does any control —
+   type, and press **Enter** again; **Tab** goes on to the next, **Escape** puts it back. A corner
+   the rectangle cannot draw — larger than half its height, say — is refused with the reason, and
+   **Enter** takes the largest that fits; so is a width or height too small for its corners, and
+   **Enter** takes the least they fit in.
 3. Name the part *Pocket* in the panel's **Piece** field, beside how many to **Cut**. They are the
    piece's, so they show while its outline is selected — under the outline's own **Name** — or
    under **Part** when the piece itself is picked in **Parts**.

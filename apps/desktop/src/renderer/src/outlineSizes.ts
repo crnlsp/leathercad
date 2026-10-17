@@ -3,11 +3,18 @@ import {
   approxLte,
   formatEditable,
   formatNumber,
+  quantiseAtLeast,
   quantiseAtMost,
 } from '@leathercad/core';
 import { setDerivation, setShape, type Command, type Selection } from '@leathercad/document';
 import type { Derivation, FeatureId, ParametricShape, Project } from '@leathercad/domain';
-import { cornerRoom, uniformRadii, type CornerRadii, type CornerRoom } from '@leathercad/geometry';
+import {
+  cornerNeeds,
+  cornerRoom,
+  uniformRadii,
+  type CornerRadii,
+  type CornerRoom,
+} from '@leathercad/geometry';
 import { VALUE_CHIPS, type ValueChip } from '@leathercad/render';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -162,16 +169,54 @@ export function cornerRefusal(
   return { reason, use };
 }
 
-/** Why a chip's value cannot apply as typed: today, only a corner too large for the shape. */
+/**
+ * A width or height the corners would be drawn smaller in (U.14): "Width is
+ * less than its corners need (23.0). Enter uses 23.0." Null when they fit.
+ * The need is `cornerNeeds`'s — the sums `fittedRadii` shrinks by — so what is
+ * refused is exactly a size in which a stored radius would not be the one
+ * drawn; the size offered is the least stored value the corners fit in. Only
+ * the side typed is read: corners a file already holds too large for the
+ * other side are that side's to fix, not this size's.
+ */
+export function sizeRefusal(
+  radii: CornerRadii,
+  side: 'width' | 'height',
+  size: number,
+  { t, enter }: RefusalWords,
+): Refusal | null {
+  const needs = cornerNeeds(radii);
+  const need = side === 'width' ? needs.widthMm : needs.heightMm;
+  if (approxLte(need, size)) return null;
+  const use = quantiseAtLeast(need);
+  const shown = chipNumber(use);
+  const reason =
+    side === 'width'
+      ? t('chips.tooSmall.width', { size: shown, enter })
+      : t('chips.tooSmall.height', { size: shown, enter });
+  return { reason, use };
+}
+
+/**
+ * Why a chip's value cannot apply as typed: a corner too large for the shape,
+ * or a width or height too small for its corners. The margin is the stitch
+ * line's, and is refused, as before, only by its own field's minimum.
+ */
 export function chipRefusal(
   subject: ChipSubject,
   chip: ValueChip,
   value: number,
   words: RefusalWords,
 ): Refusal | null {
-  if (chip !== 'corner') return null;
   const { width, height, radii } = subject.shape;
-  return cornerRefusal(cornerRoom(width, height, radii, CORNERS), value, words);
+  switch (chip) {
+    case 'corner':
+      return cornerRefusal(cornerRoom(width, height, radii, CORNERS), value, words);
+    case 'width':
+    case 'height':
+      return sizeRefusal(radii, chip, value, words);
+    case 'margin':
+      return null;
+  }
 }
 
 /**

@@ -8,6 +8,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import { resizeWindow } from './windowSize.js';
 
 /**
  * U.14, R-12: a selected outline's sizes beside it on the board — width
@@ -146,6 +147,11 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     await window.keyboard.type('60');
     await window.keyboard.press('Tab');
     await expect(field(window, 'corner')).toBeFocused();
+    // Each applied to the outline as it is now: the height did not put the
+    // width it was opened beside back (a Tab opens the next chip in the same
+    // keypress that applied the last).
+    await expect(field(window, 'width')).toHaveValue('95.0');
+    await expect(field(window, 'height')).toHaveValue('60.0');
 
     // Larger than half the height: kept open, said why, with a glyph.
     await window.keyboard.type('48');
@@ -191,6 +197,96 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
       () => document.activeElement?.closest('[data-testid="value-chips"]') !== null,
     );
     expect(inChips).toBe(false);
+  });
+});
+
+/** What has focus: a chip, the board, the page itself, or a control by its test id. */
+async function focused(window: Page): Promise<string> {
+  return window.evaluate(() => {
+    const element = document.activeElement;
+    if (element === null || element === document.body) return 'body';
+    if (element.closest('[data-testid="value-chips"]') !== null) return 'chip';
+    return element.getAttribute('data-testid') ?? element.tagName.toLowerCase();
+  });
+}
+
+test('at rest the chips are not Tab stops: Tab reaches the board, and never a chip (U.14)', async () => {
+  await withSample(async (window) => {
+    await selectOuter(window);
+    await onTheBoard(window);
+    const stops: string[] = [];
+    // Round the window more than once: it has about forty stops.
+    for (let i = 0; i < 120; i++) {
+      await window.keyboard.press('Tab');
+      stops.push(await focused(window));
+    }
+    expect(stops).not.toContain('chip');
+    expect(stops).toContain('editor-canvas');
+    await expect(window.getByTestId('value-chips')).toBeVisible();
+  });
+});
+
+test('Enter on the board opens the first chip, Tab and Shift+Tab go through them and out, and the keys come back to the board (U.14)', async () => {
+  await withSample(async (window) => {
+    await selectOuter(window);
+    const board = window.getByTestId('editor-canvas');
+    await board.focus();
+    await window.keyboard.press('Enter');
+    await expect(field(window, 'width')).toBeFocused();
+
+    // Shift+Tab from the first chip leaves the sequence backwards, to the board.
+    await window.keyboard.press('Shift+Tab');
+    await expect(board).toBeFocused();
+    await expect(chip(window, 'width')).not.toHaveAttribute('data-editing', 'true');
+
+    // While one is open, Tab goes on through the others, Shift+Tab back.
+    await window.keyboard.press('Enter');
+    for (const next of ['height', 'corner', 'margin'] as const) {
+      await window.keyboard.press('Tab');
+      await expect(field(window, next)).toBeFocused();
+    }
+    await window.keyboard.press('Shift+Tab');
+    await expect(field(window, 'corner')).toBeFocused();
+
+    // Past the last, Tab leaves them for the window's next stop, and
+    // Shift+Tab from there is the board again — not a chip: no trap.
+    await window.keyboard.press('Tab');
+    await window.keyboard.press('Tab');
+    expect(await focused(window)).not.toMatch(/^(chip|body)$/);
+    await expect(chip(window, 'margin')).not.toHaveAttribute('data-editing', 'true');
+    await window.keyboard.press('Shift+Tab');
+    await expect(board).toBeFocused();
+
+    // Esc, and an Enter that applies, give the keys back to the board.
+    await window.keyboard.press('Enter');
+    await expect(field(window, 'width')).toBeFocused();
+    await window.keyboard.press('Escape');
+    await expect(board).toBeFocused();
+    await window.keyboard.press('Enter');
+    await window.keyboard.type('190');
+    await window.keyboard.press('Enter');
+    await expect(board).toBeFocused();
+    await expect(field(window, 'width')).toHaveValue('190.0');
+  });
+});
+
+test('a right-click in an open chip is the field’s menu, and the chip stays open (U.14, U.20)', async () => {
+  await withSample(async (window) => {
+    await selectOuter(window);
+    await field(window, 'width').click();
+    await expect(chip(window, 'width')).toHaveAttribute('data-editing', 'true');
+    await window.keyboard.type('150');
+    await field(window, 'width').click({ button: 'right' });
+    const menu = window.getByTestId('field-menu');
+    await expect(menu).toBeVisible();
+    // The menu taking focus is not the maker leaving the chip.
+    await expect(chip(window, 'width')).toHaveAttribute('data-editing', 'true');
+    await expect(field(window, 'width')).toHaveValue('150');
+    await window.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await expect(field(window, 'width')).toBeFocused();
+    await window.keyboard.press('Enter');
+    await expect(field(window, 'width')).toHaveValue('150.0');
   });
 });
 
@@ -297,3 +393,94 @@ test('the chips and their lines never print (U.14)', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('a width or height its corners do not fit in is refused, on the board and in Properties, and Enter takes the least that fits (U.14)', async () => {
+  await withSample(async (window) => {
+    // The outer's 5 mm corners need 10 mm of width and of height.
+    await selectOuter(window);
+    const note = window.getByTestId('value-chip-note');
+
+    await field(window, 'width').click();
+    await window.keyboard.type('8');
+    await window.keyboard.press('Enter');
+    await expect(field(window, 'width')).toBeFocused();
+    await expect(field(window, 'width')).toHaveAttribute('aria-invalid', 'true');
+    await expect(note).toHaveText('Width is less than its corners need (10.0). Enter uses 10.0.');
+    await window.keyboard.press('Enter');
+    await expect(field(window, 'width')).toHaveValue('10.0');
+
+    const panel = window.getByTestId('property-panel');
+    const height = panel.getByLabel('Height');
+    await height.fill('6');
+    await height.press('Enter');
+    await expect(height).toHaveAttribute('aria-invalid', 'true');
+    // After the warning glyph's own word, as a corner's refusal reads.
+    await expect(height).toHaveAccessibleDescription(
+      /Height is less than its corners need \(10\.0\)\. Enter uses 10\.0\.$/,
+    );
+    await expect(field(window, 'height')).toHaveValue('95.0');
+    await height.press('Enter');
+    await expect(field(window, 'height')).toHaveValue('10.0');
+
+    // Stored as drawn: the corners are still the 5 mm typed.
+    for (const corner of ['↖', '↗', '↙', '↘']) {
+      await expect(panel.getByLabel(corner)).toHaveValue('5');
+    }
+    // Two sizes accepted, two steps back; the refusals were none.
+    for (let step = 0; step < 2; step++) await window.getByTestId('undo').click();
+    await expect(field(window, 'width')).toHaveValue('200.0');
+    await expect(field(window, 'height')).toHaveValue('95.0');
+    await expect(window.getByTestId('undo')).toBeDisabled();
+  });
+});
+
+type Box = { x: number; y: number; width: number; height: number };
+const overlap = (a: Box, b: Box): boolean =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+/** Every chip in view, by its box on screen. */
+async function chipBoxes(window: Page): Promise<Box[]> {
+  const boxes: Box[] = [];
+  for (const name of ['width', 'height', 'corner', 'margin'] as const) {
+    const element = chip(window, name);
+    if ((await element.count()) === 0 || !(await element.isVisible())) continue;
+    boxes.push((await element.boundingBox())!);
+  }
+  return boxes;
+}
+
+// The legend open with names (1440), folded to its chip with Properties a
+// strip (1024), and the smallest window, where panels open over the board (860).
+for (const [width, height] of [
+  [1440, 900],
+  [1024, 700],
+  [860, 600],
+] as const) {
+  test(`the chips keep clear of the legend and the zoom control at ${String(width)} × ${String(height)} (U.14, U.10)`, async () => {
+    await withSample(async (window, app) => {
+      await resizeWindow(app, window, width, height);
+      const legend = (await window.getByTestId('canvas-legend').boundingBox())!;
+      const zoom = (await window.getByTestId('zoom-control').boundingBox())!;
+      // A piece drawn just above each, wider than it: its width's place is on
+      // the control, and a clear stretch of its line beside it.
+      for (const [left, right, foot] of [
+        [legend.x + 10, legend.x + legend.width + 180, legend.y - 12],
+        [zoom.x - 180, zoom.x + zoom.width - 10, zoom.y - 12],
+      ] as const) {
+        await window.getByTestId('tool-rectangle').click();
+        await window.mouse.move(left, foot - 90);
+        await window.mouse.down();
+        await window.mouse.move(right, foot, { steps: 5 });
+        await window.mouse.up();
+        await expect(chip(window, 'width')).toBeVisible();
+        const boxes = await chipBoxes(window);
+        for (const box of boxes) {
+          expect(overlap(box, legend), `a chip on the legend: ${JSON.stringify(box)}`).toBe(false);
+          expect(overlap(box, zoom), `a chip on the zoom control: ${JSON.stringify(box)}`).toBe(
+            false,
+          );
+        }
+      }
+    });
+  });
+}

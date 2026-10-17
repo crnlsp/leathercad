@@ -22,6 +22,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 
+import { intoMenu } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
 import { useKeysInSentences } from './keyCaps.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
@@ -40,12 +41,25 @@ import {
 /** What the canvas asks of the chips, once a frame. */
 export interface ValueChipsHandle {
   /**
-   * Puts each chip where `placeValueChips` says for this camera, and returns
-   * the lines they sit on for the board to draw; null with no chips.
+   * Puts each chip where `placeValueChips` says for this camera, in the room
+   * the board leaves it — clear of a panel over it and of the controls laid
+   * over it — and returns the lines they sit on for the board to draw; null
+   * with no chips.
    */
-  place(view: ViewportView, area: CssBox | undefined): DisplayList | null;
+  place(
+    view: ViewportView,
+    room: { area?: CssBox; obstacles: readonly CssBox[] },
+  ): DisplayList | null;
   /** Opens the first chip in view, as `Enter` on the board does; false with none. */
   open(): boolean;
+}
+
+/** The chips placed in view, in Tab's order: the width first. */
+function inView(chips: ReadonlyMap<ValueChip, HTMLElement>): HTMLElement[] {
+  return VALUE_CHIPS.flatMap((chip) => {
+    const element = chips.get(chip);
+    return element?.style.visibility === 'visible' ? [element] : [];
+  });
 }
 
 /** Why the open chip's value cannot apply: its words, and what Enter applies instead, if anything. */
@@ -60,8 +74,11 @@ interface Note {
  * height, the corner radius and the stitch margin, each a field that looks
  * like a dimension's number until it is clicked, or `Enter` is pressed on the
  * board. Typed as Properties' fields are — `95-2*3.5`, `3.75in` — and applied
- * as one command each. `Tab` goes on to the next, `Esc` puts the value back
- * and gives the keys back to the board.
+ * as one command each. They are not Tab stops at rest: the board is, and
+ * `Enter` there opens the first in view. While one is open, `Tab` and
+ * `Shift+Tab` go through the others, and past either end out of them, as the
+ * window's Tab would; `Esc`, or an `Enter` that applies, gives the keys back
+ * to the board.
  *
  * React renders the fields; where they sit is the canvas's to say, once a
  * frame, through `place` — so a pan or a zoom moves them in the frame the
@@ -71,11 +88,14 @@ interface Note {
 export const ValueChips = memo(function ValueChips({
   store,
   invalidate,
+  toBoard,
   ref,
 }: {
   store: DocumentStore;
   /** Asks the canvas for a frame, which places the chips again. */
   invalidate: () => void;
+  /** Gives the keys back to the board: focus on it, where Enter opens the chips again. */
+  toBoard: () => void;
   ref?: React.Ref<ValueChipsHandle>;
 }) {
   const { t } = useI18n();
@@ -90,6 +110,14 @@ export const ValueChips = memo(function ValueChips({
   );
 
   const chips = useRef(new Map<ValueChip, HTMLElement>());
+  /** Focuses the chip after `from`, or before it; false past either end. */
+  const step = (from: ValueChip, back: boolean): boolean => {
+    const shown = inView(chips.current);
+    const at = shown.findIndex((element) => element.dataset['chip'] === from);
+    const next = at < 0 ? undefined : shown[back ? at - 1 : at + 1];
+    next?.querySelector('input')?.focus();
+    return next !== undefined;
+  };
   const noteRef = useRef<HTMLDivElement>(null);
   const [note, setNote] = useState<Note | null>(null);
   const noteId = useId();
@@ -102,7 +130,7 @@ export const ValueChips = memo(function ValueChips({
   useImperativeHandle(
     ref,
     (): ValueChipsHandle => ({
-      place(view, area) {
+      place(view, { area, obstacles }) {
         // The store's now, as the board paints it: React's may be a render behind.
         const state = store.getState();
         const current = chipSubject(state.document.project, state.selection);
@@ -119,6 +147,7 @@ export const ValueChips = memo(function ValueChips({
           marginMm: current.margin?.op.distanceMm ?? null,
           sizes,
           ...(area === undefined ? {} : { area }),
+          obstacles,
           ...(noteElement === null || noteFor === undefined
             ? {}
             : {
@@ -152,13 +181,9 @@ export const ValueChips = memo(function ValueChips({
       },
       open() {
         // In Tab's order: the width first, unless it is out of view.
-        for (const chip of VALUE_CHIPS) {
-          const element = chips.current.get(chip);
-          if (element?.style.visibility !== 'visible') continue;
-          element.querySelector('input')?.focus();
-          return true;
-        }
-        return false;
+        const first = inView(chips.current)[0]?.querySelector('input');
+        first?.focus();
+        return first !== undefined && first !== null;
       },
     }),
     [store],
@@ -183,6 +208,8 @@ export const ValueChips = memo(function ValueChips({
           noteId={noteId}
           onNote={setNote}
           onResize={invalidate}
+          onStep={step}
+          toBoard={toBoard}
           register={(element) => {
             if (element === null) chips.current.delete(chip);
             else chips.current.set(chip, element);
@@ -217,6 +244,8 @@ function Chip({
   noteId,
   onNote,
   onResize,
+  onStep,
+  toBoard,
   register,
 }: {
   chip: ValueChip;
@@ -228,6 +257,9 @@ function Chip({
   onNote: (note: Note | null) => void;
   /** Its text changed, and with it its size: the canvas places it again. */
   onResize: () => void;
+  /** Opens the next chip in view, or the one before; false past the end. */
+  onStep: (from: ValueChip, back: boolean) => boolean;
+  toBoard: () => void;
   register: (element: HTMLLabelElement | null) => void;
 }) {
   const { t } = words;
@@ -298,17 +330,20 @@ function Chip({
     if (event.key === 'Enter') {
       event.preventDefault();
       // Applied, the keys go back to the board: Enter there opens the chips again.
-      if (apply('enter')) event.currentTarget.blur();
+      if (apply('enter')) toBoard();
     } else if (event.key === 'Escape') {
       // What was typed is dropped, and the board has the keys again — not the
       // tool, which would take Escape as clearing the selection.
       event.preventDefault();
       event.stopPropagation();
       updateDraft(null);
-      event.currentTarget.blur();
+      toBoard();
     } else if (event.key === 'Tab') {
-      // Applied, Tab goes on to the next chip, and past the last out of them.
-      if (!apply('tab')) event.preventDefault();
+      // Applied, Tab goes on to the next chip, Shift+Tab back. Past either end
+      // the window's own Tab goes on from here — the board before the chips,
+      // the legend after them — so there is no trap: the chips are not Tab
+      // stops of their own.
+      if (!apply('tab') || onStep(chip, event.shiftKey)) event.preventDefault();
     }
   };
 
@@ -342,19 +377,30 @@ function Chip({
         ref={inputRef}
         type="text"
         inputMode="text"
+        // Reached by Enter on the board, not by the window's Tab (R-12).
+        tabIndex={-1}
         spellCheck={false}
         aria-label={name}
         aria-invalid={note !== null || undefined}
         aria-describedby={note !== null ? noteId : undefined}
         value={shown}
         onFocus={() => {
-          openedOn.current = subject;
+          // The store's now, not this render's: Tab opens the next chip in the
+          // same keypress that applied the last, before React renders the
+          // outline it made — and a stale outline would put the last size back.
+          const state = store.getState();
+          const now = chipSubject(state.document.project, state.selection) ?? subject;
+          openedOn.current = now;
           if (draftRef.current === null) {
-            updateDraft(value === null ? '' : formatEditable(value, 2));
+            const opened = chipValue(now, chip);
+            updateDraft(opened === null ? '' : formatEditable(opened, 2));
           }
         }}
         onChange={(event) => updateDraft(event.target.value)}
-        onBlur={() => apply('blur')}
+        onBlur={(event) => {
+          // The field's own menu (U.20) is not leaving the chip.
+          if (!intoMenu(event.relatedTarget)) apply('blur');
+        }}
         onKeyDown={onKeyDown}
         // Stop canvas shortcuts firing while a chip has focus, as a field does.
         onKeyUp={(event) => event.stopPropagation()}

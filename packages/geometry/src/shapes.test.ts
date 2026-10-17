@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import * as P from './path/index.js';
 import {
   circle,
+  cornerNeeds,
   cornerRoom,
   fittedRadii,
   rect,
@@ -351,5 +352,78 @@ describe('cornerRoom', () => {
         return Object.is(a.radiusMm, b.radiusMm) && a.side === b.side && a.shared === b.shared;
       }),
     );
+  });
+});
+
+/** Any four radii, a square corner (a negative radius) among them now and then. */
+const anyRadii = fc.record({
+  bottomLeft: fc.double({ min: -5, max: 100, noNaN: true }),
+  bottomRight: fc.double({ min: -5, max: 100, noNaN: true }),
+  topRight: fc.double({ min: -5, max: 100, noNaN: true }),
+  topLeft: fc.double({ min: -5, max: 100, noNaN: true }),
+});
+
+/** The radii as `fittedRadii` reads them: a negative one is a square corner. */
+const asAsked = (radii: CornerRadii): CornerRadii =>
+  Object.fromEntries(
+    CORNERS.map((corner) => [corner, Math.max(0, radii[corner])]),
+  ) as unknown as CornerRadii;
+
+describe('cornerNeeds', () => {
+  it('is, on each pair of sides, the longer sum of the two corners sharing one', () => {
+    expect(cornerNeeds(uniformRadii(40))).toEqual({ widthMm: 80, heightMm: 80 });
+    // The top limits the width (3 + 20), the right the height (5 + 20).
+    expect(cornerNeeds({ bottomLeft: 10, bottomRight: 5, topRight: 20, topLeft: 3 })).toEqual({
+      widthMm: 23,
+      heightMm: 25,
+    });
+  });
+
+  it('reads a negative radius as a square corner, as fittedRadii does', () => {
+    expect(cornerNeeds({ bottomLeft: -4, bottomRight: 6, topRight: 0, topLeft: 2 })).toEqual({
+      widthMm: 6,
+      heightMm: 6,
+    });
+  });
+
+  it('is a size the radii are drawn in as asked, and so is anything larger', () => {
+    fc.assert(
+      fc.property(
+        anyRadii,
+        fc.double({ min: 0, max: 100, noNaN: true }),
+        fc.double({ min: 0, max: 100, noNaN: true }),
+        (radii, wider, taller) => {
+          const need = cornerNeeds(radii);
+          const drawn = fittedRadii(radii, need.widthMm + wider, need.heightMm + taller);
+          return sameRadii(drawn, asAsked(radii));
+        },
+      ),
+    );
+  });
+
+  it('is the least: any narrower, or any shorter, and a corner is drawn smaller', () => {
+    fc.assert(
+      fc.property(
+        anyRadii,
+        fc.double({ min: 1e-6, max: 0.999, noNaN: true }),
+        fc.boolean(),
+        (radii, short, narrower) => {
+          const need = cornerNeeds(radii);
+          const side = narrower ? need.widthMm : need.heightMm;
+          fc.pre(side > 1e-6);
+          const drawn = narrower
+            ? fittedRadii(radii, side * (1 - short), need.heightMm)
+            : fittedRadii(radii, need.widthMm, side * (1 - short));
+          return CORNERS.some((corner) => drawn[corner] < asAsked(radii)[corner]);
+        },
+      ),
+    );
+  });
+
+  it('refuses a radius that is not finite', () => {
+    expect(() => cornerNeeds({ ...uniformRadii(1), topLeft: Number.NaN })).toThrow();
+    expect(() =>
+      cornerNeeds({ ...uniformRadii(1), bottomRight: Number.POSITIVE_INFINITY }),
+    ).toThrow();
   });
 });

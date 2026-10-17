@@ -262,6 +262,7 @@ emitting no arc, and produce line-arc-line-arc-… in a consistent winding.
 ```ts
 shapes.fittedRadii(radii, w, h): CornerRadii;                 // the radii roundedRect draws
 shapes.cornerRoom(w, h, radii, corners): CornerRoom;          // the most `corners` take, and why
+shapes.cornerNeeds(radii): CornerNeeds;                        // the least w and h they are drawn in
 ```
 
 `fittedRadii` is that shrink, exported so nothing else has to restate it: when two corners sharing a
@@ -270,7 +271,10 @@ side, keeping an asymmetric design asymmetric. `cornerRoom` is its inverse quest
 radius the named corners can be set to together, the others kept, that is drawn as asked — with
 the side that limits it and whether its two corners share it ("half the height"). The app refuses
 a typed corner by it (U.14), so a radius that would never be drawn is never stored; a file that
-already holds one still opens and draws as it always did. Property-tested against `roundedRect`.
+already holds one still opens and draws as it always did. `cornerNeeds` asks the same of the
+rectangle: the least width and height — on each pair of sides, the longer sum of the two corners
+sharing one — in which every radius is drawn as asked, so a typed width or height that would
+shrink them is refused too. Both property-tested against `fittedRadii` and `roundedRect`.
 
 ### 4.1 Editing a drawn path's points (3.9b)
 

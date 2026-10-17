@@ -232,17 +232,21 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   it, *margin 3.0* on the leather just inside the stitch line — outside the left edge it had no
   room at *Fit selection*, where the left ruler takes 34 of the 60 px. A click, or Enter on the
   board, opens one with the unit and its number selected; it reads `95-2*3.5` and `3.75in`; Enter
-  applies it as one undo step, Tab applies and goes on, Esc puts it back. They follow every pan
-  and zoom in the frame the board moves, keep off the outline, the rulers and a panel opened over
-  the board, and never print — the PDF exported with them showing is the same, pixel for pixel.
+  applies it as one undo step, Tab applies and goes on, Esc puts it back. The chips are not Tab
+  stops at rest: the board is one now, and Enter there opens them. They follow every pan and zoom
+  in the frame the board moves, keep off the outline, the rulers, a panel opened over the board,
+  the legend and the zoom control, and never print — the PDF exported with them showing is the
+  same, pixel for pixel.
   Found on the way: **nothing refused a corner** — Properties stored 40 on an 80 × 60 rectangle
   while the board and the PDF drew 30. `roundedRect`'s clamp is `fittedRadii` now, and
   `cornerRoom` says how much room corners have; a chip and Properties' corner fields refuse a
-  radius that would never be drawn, saying why, and a second Enter takes the largest that fits.
-  Files that already hold one open and draw as before. The polyline let the Enter that finished a
+  radius that would never be drawn, saying why, and a second Enter takes the largest that fits;
+  a width or height its corners do not fit in is refused the same way (`cornerNeeds`), with the
+  least they do. Files that already hold one open and draw as before. The polyline let the Enter that finished a
   run go on to the window, where it would also have opened the selected outline's sizes — it
-  claims it now; and an arrow key on a field at its limit wrote an undo step that changed nothing.
-  Printed output did not move.
+  claims it now; an arrow key on a field at its limit wrote an undo step that changed nothing; and
+  on review, a chip that Tab opened read the outline a render behind, so `95` Tab `60` put the
+  width back. Printed output did not move.
 - ✅ **U.15 Values in any unit, and sums** (R-12). `95-2*3.5` and `3.75in`, wherever a size is typed.
   ✅ Built as described, ahead of U.5–U.14: it needs no other slice, and U.14 and U.16 read it.
   `parseLength` in `core` reads `+ − * /`, parentheses, either minus, a decimal comma, and mm,
@@ -305,6 +309,10 @@ slice took, or will take, and is still open.
 | U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
 | U.10 | Every saved preferences file says the legend is closed, chosen or not | Built as recommended: preferences version 2 opens it once, since version 1 never recorded a choice. Not yet decided |
 | U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |
+| U.14 | When the four corners differ, what does the corner chip show and set? | **Decided 2026-10-15:** it reads *mixed*, and a value typed there sets all four, one undo step; a corner each is Properties' to type |
+| U.14 | Are the chips Tab stops at rest? | **Decided 2026-10-17:** no, as R-12 says. The board is one Tab stop; Enter there opens the first chip in view; while one is open, Tab and Shift+Tab go through the chips, and past either end out of them |
+| U.14 | A width or height that leaves the corners larger than the rectangle draws them | **Decided 2026-10-17:** refused, saying why, and Enter takes the least size the corners fit in — on the board and in Properties alike. A stored radius is always the one drawn |
+| U.14 | Chips near the legend or the zoom control | **Decided 2026-10-17:** kept clear of them, as of the rulers and panels — a chip slides along its line, or is left out; never laid over one |
 | U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
 | U.20 | Electron's spellchecker: keep it, or turn it off? On Linux it downloads an English dictionary whatever the interface language, and the leather words are not in it | **Decided 2026-10-15:** off. A name is a few words, and `SECURITY.md` says the app makes no network connections |
 | U.20 | A right-click menu in a text field | **Decided 2026-10-15:** Cut, Copy, Paste and Select all, in the app's own menu with its words from `en.json`; nothing outside fields |

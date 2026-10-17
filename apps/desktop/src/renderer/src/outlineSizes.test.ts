@@ -1,7 +1,13 @@
 import { QUANTUM_MM, quantise } from '@leathercad/core';
 import * as D from '@leathercad/document';
 import { evaluate } from '@leathercad/domain';
-import { cornerRoom, fittedRadii, uniformRadii } from '@leathercad/geometry';
+import {
+  cornerNeeds,
+  cornerRoom,
+  fittedRadii,
+  uniformRadii,
+  type CornerRadii,
+} from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -14,6 +20,7 @@ import {
   chipsOf,
   chipValue,
   cornerRefusal,
+  sizeRefusal,
   type ChipSubject,
 } from './outlineSizes.js';
 
@@ -159,6 +166,69 @@ describe('chipRefusal', () => {
             Math.abs(
               fittedRadii(uniformRadii(refusal.use), width!, height!).topRight - refusal.use,
             ) < 1e-9
+          );
+        },
+      ),
+    );
+  });
+});
+
+describe('sizeRefusal', () => {
+  /** 3 + 20 along the top limits the width, 5 + 20 down the right the height. */
+  const lopsided: CornerRadii = { bottomLeft: 10, bottomRight: 5, topRight: 20, topLeft: 3 };
+
+  it('refuses a width or height the corners do not fit in, offering the least they do', () => {
+    // The 80 × 60 panel's 4 mm corners need 8 of each.
+    const subject = subjectOf(store());
+    expect(chipRefusal(subject, 'width', 7, words)).toEqual({
+      reason: 'Width is less than its corners need (8.0). Enter uses 8.0.',
+      use: 8,
+    });
+    expect(chipRefusal(subject, 'height', 7.5, words)).toEqual({
+      reason: 'Height is less than its corners need (8.0). Enter uses 8.0.',
+      use: 8,
+    });
+    expect(chipRefusal(subject, 'width', 8, words)).toBeNull();
+    expect(chipRefusal(subject, 'height', 8, words)).toBeNull();
+  });
+
+  it('reads the side that limits each: the top for the width, the right for the height', () => {
+    expect(sizeRefusal(lopsided, 'width', 22.9, words)?.use).toBe(23);
+    expect(sizeRefusal(lopsided, 'width', 23, words)).toBeNull();
+    expect(sizeRefusal(lopsided, 'height', 24.9, words)?.use).toBe(25);
+    expect(sizeRefusal(lopsided, 'height', 25, words)).toBeNull();
+  });
+
+  it('reads only the side typed: corners already too large for the other are not this size’s', () => {
+    // A file from before U.14: 40 mm corners on 80 × 60, drawn at 30.
+    const legacy = uniformRadii(40);
+    expect(sizeRefusal(legacy, 'width', 90, words)).toBeNull();
+    expect(sizeRefusal(legacy, 'height', 70, words)?.use).toBe(80);
+  });
+
+  it('refuses exactly the size the rectangle would draw a corner smaller in', () => {
+    const onGrid = fc.integer({ min: 0, max: 1_000_000 }).map((n) => quantise(n * QUANTUM_MM));
+    fc.assert(
+      fc.property(
+        fc.record({ bottomLeft: onGrid, bottomRight: onGrid, topRight: onGrid, topLeft: onGrid }),
+        fc.integer({ min: 1, max: 3_000_000 }).map((n) => quantise(n * QUANTUM_MM)),
+        fc.boolean(),
+        (radii, typed, width) => {
+          // The other side roomy enough, so only the side typed decides.
+          const room = cornerNeeds(radii);
+          const other = (width ? room.heightMm : room.widthMm) + 1;
+          const drawnIn = (size: number) =>
+            width ? fittedRadii(radii, size, other) : fittedRadii(radii, other, size);
+          const asStored = (drawn: CornerRadii) =>
+            (['bottomLeft', 'bottomRight', 'topRight', 'topLeft'] as const).every(
+              (corner) => Math.abs(drawn[corner] - radii[corner]) < 1e-9,
+            );
+          const refusal = sizeRefusal(radii, width ? 'width' : 'height', typed, words);
+          if (refusal === null) return asStored(drawnIn(typed));
+          return (
+            !asStored(drawnIn(typed)) &&
+            quantise(refusal.use) === refusal.use &&
+            asStored(drawnIn(refusal.use))
           );
         },
       ),
