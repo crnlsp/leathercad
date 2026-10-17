@@ -63,6 +63,8 @@ function followLanguage(): boolean {
  * and Redo's. True when they changed.
  */
 let keys = '{}';
+/** Settings is listening for a new key (U.12): the window's keys are not acted on. */
+let keyCapture = false;
 function followKeys(): boolean {
   const next = JSON.stringify(preferences.preferences.keyBindings);
   if (next === keys) return false;
@@ -134,6 +136,7 @@ function createWindow(): void {
     const key = windowKeyFor(input, {
       isMac: process.platform === 'darwin',
       packaged: app.isPackaged,
+      capturing: keyCapture,
     });
     if (key === null) return;
     event.preventDefault();
@@ -248,6 +251,9 @@ app.whenReady().then(() => {
     () => {
       const words = followLanguage();
       if (followKeys() || words) buildMenu();
+    },
+    (capturing) => {
+      keyCapture = capturing;
     },
   );
 

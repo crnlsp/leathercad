@@ -15,6 +15,7 @@ export const IPC = {
   getUserConfigDir: 'platform:getUserConfigDir',
   getAppVersion: 'platform:getAppVersion',
   setDocumentEdited: 'platform:setDocumentEdited',
+  setKeyCapture: 'platform:setKeyCapture',
   writeRecovery: 'platform:writeRecovery',
   clearRecovery: 'platform:clearRecovery',
   findRecovery: 'platform:findRecovery',

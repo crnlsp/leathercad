@@ -78,6 +78,13 @@ export interface PlatformHost {
   setDocumentEdited(edited: boolean): Promise<void>;
 
   /**
+   * Whether Settings is listening for a new key (U.12). While it is, the main
+   * process leaves the keys it hears before any field — Full screen, Quit,
+   * the developer tools — to the renderer, so they can be given to a command.
+   */
+  setKeyCapture(capturing: boolean): Promise<void>;
+
+  /**
    * Crash recovery (slice 5.3b). Replaces this session's recovery copy with
    * `data`, atomically, in the app's state directory — never beside a project,
    * never under a project's name.

@@ -199,6 +199,55 @@ test('a clash names the command, and Cancel leaves both while Swap exchanges the
   }
 });
 
+/** A key as the operating system delivers it: the main process hears it first. */
+async function pressInWindow(
+  app: ElectronApplication,
+  keyCode: string,
+  modifiers: readonly 'control'[] = [],
+): Promise<void> {
+  await app.evaluate(
+    ({ BrowserWindow }, [keyCode, modifiers]) => {
+      const contents = BrowserWindow.getAllWindows()[0]!.webContents;
+      contents.sendInputEvent({ type: 'keyDown', keyCode, modifiers: [...modifiers] });
+      contents.sendInputEvent({ type: 'keyUp', keyCode, modifiers: [...modifiers] });
+    },
+    [keyCode, modifiers] as const,
+  );
+}
+
+test('Ctrl+Q and F11 can be captured: they clash with Quit and Full screen, and act on neither', async () => {
+  test.skip(process.platform === 'darwin', 'Quit is the app menu’s on macOS');
+  const { app, window } = await launch(fresh());
+  try {
+    // Unsaved work, so a Ctrl+Q that got through would raise the unsaved dialog.
+    await drawAPanel(window);
+    const pane = await openShortcuts(window);
+    const isFullScreen = (): Promise<boolean> =>
+      app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFullScreen());
+
+    await window.getByTestId('change-settings').click();
+    await pressInWindow(app, 'Q', ['control']);
+    await expect(pane.getByTestId('shortcut-clash')).toContainText('is already used for “Quit”');
+    await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
+    await pane.getByTestId('clash-cancel').click();
+
+    await window.getByTestId('change-settings').click();
+    await pressInWindow(app, 'F11');
+    await expect(pane.getByTestId('shortcut-clash')).toContainText('“Full screen”');
+    expect(await isFullScreen()).toBe(false);
+    await pane.getByTestId('clash-cancel').click();
+
+    // Listening over, the window hears F11 again.
+    await window.getByTestId('settings-close').click();
+    await pressInWindow(app, 'F11');
+    await expect.poll(isFullScreen).toBe(true);
+    await pressInWindow(app, 'F11');
+    await expect.poll(isFullScreen).toBe(false);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('Reset puts one command’s keys back, through a swap if it must; Reset all, every one', async () => {
   const { app, window } = await launch(fresh());
   try {

@@ -37,6 +37,9 @@ const platformBridge = {
   setDocumentEdited: (edited: boolean): Promise<void> =>
     ipcRenderer.invoke(IPC.setDocumentEdited, edited),
 
+  setKeyCapture: (capturing: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.setKeyCapture, capturing),
+
   writeRecovery: (data: Uint8Array): Promise<void> => ipcRenderer.invoke(IPC.writeRecovery, data),
 
   clearRecovery: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery),

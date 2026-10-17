@@ -48,6 +48,8 @@ export function registerPlatformHandlers(
   readNotices: () => Promise<string | null>,
   /** The preferences changed: the main process's own words may be in another language now. */
   onPreferencesChanged: () => void,
+  /** Settings is listening for a key (U.12): the window's own keys wait. */
+  onKeyCapture: (capturing: boolean) => void,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -110,6 +112,10 @@ export function registerPlatformHandlers(
   // The edited flag (U.7): macOS's dot in the close button. A no-op elsewhere.
   ipcMain.handle(IPC.setDocumentEdited, (_event, edited: unknown) => {
     getWindow()?.setDocumentEdited(edited === true);
+  });
+
+  ipcMain.handle(IPC.setKeyCapture, (_event, capturing: unknown) => {
+    onKeyCapture(capturing === true);
   });
 
   // Crash recovery (5.3b). The renderer says what to keep; the files — their
