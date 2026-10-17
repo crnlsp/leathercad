@@ -1,5 +1,6 @@
 import { approxEq, formatEditable, parseLength, quantise } from '@leathercad/core';
 import type { DocumentStore } from '@leathercad/document';
+import type { SizeDraft, SizeField } from '@leathercad/editor';
 import {
   VALUE_CHIPS,
   placeValueChips,
@@ -33,6 +34,7 @@ import {
   chipRefusal,
   chipSubject,
   chipsOf,
+  drawnSubject,
   chipValue,
   type ChipSubject,
   type RefusalWords,
@@ -62,6 +64,21 @@ function inView(chips: ReadonlyMap<ValueChip, HTMLElement>): HTMLElement[] {
   });
 }
 
+/**
+ * What the chips do while a rectangle is being drawn (U.16, R-13): the tool's
+ * own, so a typed number goes to the shape in progress and `Enter` makes it —
+ * the chips never write the document themselves.
+ */
+export interface DrawnChips {
+  /** The shape in progress as it is now, not as the last render saw it. */
+  read(): SizeDraft | null;
+  set(field: SizeField, value: number): void;
+  /** `Enter`: makes the shape. */
+  finish(): void;
+  /** `Esc`: gives it up. */
+  cancel(): void;
+}
+
 /** Why the open chip's value cannot apply: its words, and what Enter applies instead, if anything. */
 interface Note {
   readonly chip: ValueChip;
@@ -87,11 +104,16 @@ interface Note {
  */
 export const ValueChips = memo(function ValueChips({
   store,
+  drawing,
+  drawn,
   invalidate,
   toBoard,
   ref,
 }: {
   store: DocumentStore;
+  /** The rectangle being drawn, when one is: its sizes are the chips, in place of a selected outline's. */
+  drawing: SizeDraft | null;
+  drawn: DrawnChips;
   /** Asks the canvas for a frame, which places the chips again. */
   invalidate: () => void;
   /** Gives the keys back to the board: focus on it, where Enter opens the chips again. */
@@ -105,20 +127,35 @@ export const ValueChips = memo(function ValueChips({
   const document = useSyncExternalStore(subscribe, () => store.getState().document);
   const selection = useSyncExternalStore(subscribe, () => store.getState().selection);
   const subject = useMemo(
-    () => chipSubject(document.project, selection),
-    [document.project, selection],
+    () => (drawing === null ? chipSubject(document.project, selection) : drawnSubject(drawing)),
+    [drawing, document.project, selection],
   );
+  /** The outline or shape the chips are on now — the store's and the tool's, not this render's. */
+  const subjectNow = useCallback((): ChipSubject | null => {
+    const draft = drawn.read();
+    if (draft !== null) return drawnSubject(draft);
+    const state = store.getState();
+    return chipSubject(state.document.project, state.selection);
+  }, [store, drawn]);
 
   const chips = useRef(new Map<ValueChip, HTMLElement>());
   /** Focuses the chip after `from`, or before it; false past either end. */
   const step = (from: ValueChip, back: boolean): boolean => {
     const shown = inView(chips.current);
     const at = shown.findIndex((element) => element.dataset['chip'] === from);
-    const next = at < 0 ? undefined : shown[back ? at - 1 : at + 1];
+    // Drawing, Tab goes round: past the last chip is not out of the shape
+    // being drawn, whose `Enter` is what ends it.
+    const around = drawing !== null && shown.length > 1;
+    const next =
+      at < 0
+        ? undefined
+        : (shown[back ? at - 1 : at + 1] ??
+          (around ? shown[back ? shown.length - 1 : 0] : undefined));
     next?.querySelector('input')?.focus();
     return next !== undefined;
   };
   const noteRef = useRef<HTMLDivElement>(null);
+  const hintRef = useRef<HTMLDivElement>(null);
   const [note, setNote] = useState<Note | null>(null);
   const noteId = useId();
 
@@ -132,14 +169,14 @@ export const ValueChips = memo(function ValueChips({
     (): ValueChipsHandle => ({
       place(view, { area, obstacles }) {
         // The store's now, as the board paints it: React's may be a render behind.
-        const state = store.getState();
-        const current = chipSubject(state.document.project, state.selection);
+        const current = subjectNow();
         if (current === null) return null;
         const sizes: Partial<Record<ValueChip, ChipBox>> = {};
         for (const [chip, element] of chips.current) {
           sizes[chip] = { width: element.offsetWidth, height: element.offsetHeight };
         }
         const noteElement = noteRef.current;
+        const hintElement = hintRef.current;
         const noteFor =
           noteElement === null ? undefined : (noteElement.dataset['chip'] as ValueChip);
         const placed = placeValueChips(view, {
@@ -148,6 +185,9 @@ export const ValueChips = memo(function ValueChips({
           sizes,
           ...(area === undefined ? {} : { area }),
           obstacles,
+          ...(hintElement === null
+            ? {}
+            : { hint: { width: hintElement.offsetWidth, height: hintElement.offsetHeight } }),
           ...(noteElement === null || noteFor === undefined
             ? {}
             : {
@@ -170,6 +210,12 @@ export const ValueChips = memo(function ValueChips({
           element.style.transform = `translate(${String(at.x - element.offsetWidth / 2)}px, ${String(at.y - element.offsetHeight / 2)}px)`;
           element.style.visibility = 'visible';
         }
+        if (hintElement !== null) {
+          const at = placed.hintAt;
+          if (at !== undefined)
+            hintElement.style.transform = `translate(${String(at.x)}px, ${String(at.y)}px)`;
+          hintElement.style.visibility = at === undefined ? 'hidden' : 'visible';
+        }
         if (noteElement !== null) {
           const at = placed.noteAt;
           if (at !== undefined) {
@@ -186,7 +232,7 @@ export const ValueChips = memo(function ValueChips({
         return first !== undefined && first !== null;
       },
     }),
-    [store],
+    [subjectNow],
   );
 
   if (subject === null) return null;
@@ -194,7 +240,7 @@ export const ValueChips = memo(function ValueChips({
     <div
       className="value-chips"
       role="group"
-      aria-label={t('chips.title')}
+      aria-label={drawing === null ? t('chips.title') : t('chips.titleDrawing')}
       data-testid="value-chips"
     >
       {chipsOf(subject).map((chip) => (
@@ -204,6 +250,8 @@ export const ValueChips = memo(function ValueChips({
           subject={subject}
           words={words}
           store={store}
+          drawn={drawing === null ? null : drawn}
+          subjectNow={subjectNow}
           note={note?.chip === chip ? note : null}
           noteId={noteId}
           onNote={setNote}
@@ -216,6 +264,13 @@ export const ValueChips = memo(function ValueChips({
           }}
         />
       ))}
+      {drawing !== null && (
+        <div ref={hintRef} className="value-chip-hint" data-testid="value-chip-hint">
+          <kbd>{keys['tab']}</kbd> {t('chips.hint.next')} <span aria-hidden="true">·</span>{' '}
+          <kbd>{keys['enter']}</kbd> {t('chips.hint.make')} <span aria-hidden="true">·</span>{' '}
+          <kbd>{keys['escape']}</kbd> {t('chips.hint.cancel')}
+        </div>
+      )}
       {note !== null && (
         <div
           ref={noteRef}
@@ -240,6 +295,8 @@ function Chip({
   subject,
   words,
   store,
+  drawn,
+  subjectNow,
   note,
   noteId,
   onNote,
@@ -252,6 +309,9 @@ function Chip({
   subject: ChipSubject;
   words: RefusalWords;
   store: DocumentStore;
+  /** Set while a rectangle is being drawn: a typed number goes to it, not to an outline. */
+  drawn: DrawnChips | null;
+  subjectNow: () => ChipSubject | null;
   note: Note | null;
   noteId: string;
   onNote: (note: Note | null) => void;
@@ -320,7 +380,10 @@ function Chip({
       }
       typed = refusal.use;
     }
-    if (current === null || !approxEq(typed, current)) {
+    if (drawn !== null) {
+      // Always: a number equal to the pointer's is still typed, and stays.
+      if (chip !== 'margin') drawn.set(chip, typed);
+    } else if (current === null || !approxEq(typed, current)) {
       store.dispatch(chipCommand(target, chip, typed));
     }
     return close();
@@ -329,14 +392,19 @@ function Chip({
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      // Applied, the keys go back to the board: Enter there opens the chips again.
-      if (apply('enter')) toBoard();
+      // Applied, the keys go back to the board: Enter there opens the chips
+      // again. A shape being drawn is made, by the same Enter.
+      if (apply('enter')) {
+        drawn?.finish();
+        toBoard();
+      }
     } else if (event.key === 'Escape') {
       // What was typed is dropped, and the board has the keys again — not the
       // tool, which would take Escape as clearing the selection.
       event.preventDefault();
       event.stopPropagation();
       updateDraft(null);
+      drawn?.cancel();
       toBoard();
     } else if (event.key === 'Tab') {
       // Applied, Tab goes on to the next chip, Shift+Tab back. Past either end
@@ -388,8 +456,7 @@ function Chip({
           // The store's now, not this render's: Tab opens the next chip in the
           // same keypress that applied the last, before React renders the
           // outline it made — and a stale outline would put the last size back.
-          const state = store.getState();
-          const now = chipSubject(state.document.project, state.selection) ?? subject;
+          const now = subjectNow() ?? subject;
           openedOn.current = now;
           if (draftRef.current === null) {
             const opened = chipValue(now, chip);

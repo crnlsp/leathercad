@@ -143,6 +143,33 @@ export interface Tool {
 
   /** Called when the tool is swapped out; must leave no transaction open. */
   onDeactivate?(ctx: ToolContext): void;
+
+  /**
+   * The size of what is being drawn, to be typed over (U.16, R-13): the
+   * app shows it as chips beside the shape for as long as this is not null.
+   * A tool that draws no sized shape omits all four of these.
+   */
+  sizing?(): SizeDraft | null;
+  /**
+   * Typing begins with no corner placed: the shape starts at the pointer.
+   * True when there is something to size now.
+   */
+  beginSizing?(ctx: ToolContext): boolean;
+  /** One typed number, already quantised and checked against the others. */
+  setSize?(ctx: ToolContext, field: SizeField, value: Mm): void;
+  /** `Enter`: makes what is shown, as one command. */
+  finishSizing?(ctx: ToolContext): void;
+}
+
+/** What a sizing tool lets be typed, in `Tab`'s order. */
+export type SizeField = 'width' | 'height' | 'corner';
+
+/** The rectangle being drawn, as it would be made: its lower-left, its sizes, its corners. */
+export interface SizeDraft {
+  readonly origin: Vec2;
+  readonly width: Mm;
+  readonly height: Mm;
+  readonly corner: Mm;
 }
 
 /**
@@ -339,6 +366,23 @@ export class ToolManager {
   /** Hands a key to the active tool; true when the tool claimed it. */
   key(event: KeyInput): boolean {
     return this.active.onKey?.(this.context, event) === true;
+  }
+
+  /** The active tool's sized shape in progress, if it has one (U.16). */
+  sizing(): SizeDraft | null {
+    return this.active.sizing?.() ?? null;
+  }
+
+  beginSizing(): boolean {
+    return this.active.beginSizing?.(this.context) ?? false;
+  }
+
+  setSize(field: SizeField, value: Mm): void {
+    this.active.setSize?.(this.context, field, value);
+  }
+
+  finishSizing(): void {
+    this.active.finishSizing?.(this.context);
   }
 
   overlay(): DisplayList {

@@ -30,6 +30,7 @@
     "Scroll": "Scroll",
     "Shift": "Shift",
     "Space": "Space",
+    "Tab": "Tab",
     "drag": "drag"
   },
   "projectBar": {
@@ -547,6 +548,7 @@
     "arrange": "Arrange",
     "cut": "Cut",
     "cutSuffix": "off",
+    "drawing": "Rectangle being drawn",
     "flipLabel": "Flip",
     "foldMirror": "Mirror across fold",
     "foldMirrorLabel": "Across fold",
@@ -1069,6 +1071,12 @@
   },
   "chips": {
     "title": "Sizes of the selected outline",
+    "titleDrawing": "Sizes of the rectangle being drawn",
+    "hint": {
+      "next": "next",
+      "make": "makes it",
+      "cancel": "cancels"
+    },
     "cornerName": "Corner radius, all four corners",
     "corner": "r",
     "margin": "margin",

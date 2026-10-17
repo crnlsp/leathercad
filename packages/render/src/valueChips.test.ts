@@ -431,4 +431,55 @@ describe('placeValueChips', () => {
       }),
     );
   });
+
+  describe('the hint under the shape (U.16)', () => {
+    const HINT: ChipBox = { width: 180, height: 22 };
+
+    it('sits centred under the shape and under its width chip, and not over either', () => {
+      const shape = rectShape(100, 50);
+      const placed = placeValueChips(view(), input(shape, { hint: HINT }));
+      const hint = placed.hintAt!;
+      expect(hint.x + HINT.width / 2).toBeCloseTo(400, 6);
+      const widthBox = boxAt(placed.at.width!, SIZES.width);
+      expect(hint.y).toBeGreaterThanOrEqual(widthBox.maxY);
+      expect(hint.y).toBeGreaterThan(350);
+    });
+
+    it('is left out when no hint is asked for', () => {
+      expect(placeValueChips(view(), input(rectShape(100, 50))).hintAt).toBeUndefined();
+    });
+
+    it('goes over the shape where the canvas leaves no room under it, inside the area', () => {
+      // The shape's foot is 20 px off the canvas's: no room under it.
+      const shape = rectShape(100, 50, { y: -100 });
+      const placed = placeValueChips(view({ x: 50, y: -75 }), input(shape, { hint: HINT }));
+      const hint = placed.hintAt!;
+      expect(hint.y + HINT.height).toBeLessThanOrEqual(600);
+      expect(hint.y).toBeGreaterThanOrEqual(0);
+    });
+
+    it('never covers the shape or a chip, and stays inside the canvas’s width, for any shape and view', () => {
+      fc.assert(
+        fc.property(shapes, views, sizes, (shape, v, chipSizes) => {
+          const placed = placeValueChips(v, input(shape, { hint: HINT, sizes: chipSizes }));
+          const hint = placed.hintAt!;
+          const box = corners({
+            minX: hint.x,
+            maxX: hint.x + HINT.width,
+            minY: hint.y,
+            maxY: hint.y + HINT.height,
+          });
+          const chipBoxes = VALUE_CHIPS.flatMap((chip) =>
+            placed.at[chip] === undefined ? [] : [corners(boxAt(placed.at[chip], chipSizes[chip]))],
+          );
+          return (
+            hint.x >= -EPS &&
+            hint.x + HINT.width <= 800 + EPS &&
+            !overlaps(box, cornersOnScreen(shape, v)) &&
+            chipBoxes.every((chipBox) => !overlaps(box, chipBox))
+          );
+        }),
+      );
+    });
+  });
 });

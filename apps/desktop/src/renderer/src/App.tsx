@@ -1000,6 +1000,7 @@ export function App({
               requestDelete={requestDelete}
               requestDeletePart={requestDeletePart}
               tools={tools}
+              sizing={status?.sizing ?? null}
               toggle={
                 <PanelToggle
                   panel="properties"
