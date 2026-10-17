@@ -143,6 +143,10 @@ export function sheetsWords(i18n: I18n): SheetsWords {
       }),
     turned: (names) => t('sheetsView.pieceTurned', { names: i18n.list(names) }),
     taped: (name, sheets) =>
-      t('sheetsView.tapedLabel', { name, sheets: describeSheetNumbers(sheets, i18n) }),
+      // Parts' own words for it — "Sheets 2–3, taped" — after the name.
+      t('sheetsView.tapedLabel', {
+        name,
+        sheets: t('print.taped', { sheets: describeSheetNumbers(sheets, i18n) }),
+      }),
   };
 }

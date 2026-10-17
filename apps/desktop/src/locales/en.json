@@ -428,7 +428,7 @@
     "sheetHeading": "{{sheet}} · {{pieces}}",
     "noPieces": "No pieces",
     "pieceTurned": "{{names}}, turned 90°",
-    "tapedLabel": "{{name}}, taped: {{sheets}}",
+    "tapedLabel": "{{name}} · {{sheets}}",
     "turnedMark": "Turned 90°",
     "tapedMark": "Taped",
     "turnedLegend": "marks a piece turned to fit its sheet.",
