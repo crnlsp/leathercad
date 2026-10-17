@@ -71,13 +71,10 @@ import { Tooltip } from './Tooltip.js';
 export function PartsList({
   store,
   project,
-  view,
   selected,
   selectedParts,
   badges,
   printStatus,
-  hoveredPart = null,
-  onHoverPart,
   onRemovePart,
   onDuplicatePart,
   onContextMenu,
@@ -86,15 +83,10 @@ export function PartsList({
 }: {
   store: DocumentStore;
   project: Project;
-  /** Where each piece prints is the Sheets view's to say (R-07); Design says only what does not. */
-  view: 'design' | 'sheets';
-  /** On the Sheets view, the part under the pointer there: highlighted here (7.4d). */
-  hoveredPart?: string | null;
-  /** On the Sheets view, a row under the pointer: haloed on its sheets. */
-  onHoverPart?: ((partId: string | null) => void) | undefined;
   /**
-   * Where each part prints, from the sheet plan the PDF writes (7.4b). Passed
-   * in so this tree, the sheet count and the Sheets view read one answer.
+   * Which parts do not print, from the sheet plan the PDF writes (7.4b). Where
+   * each one does is the Sheets view's own panel (U.9). Passed in so this tree,
+   * the sheet count and that panel read one answer.
    */
   printStatus: ReadonlyMap<string, PartPrintStatus>;
   selected: ReadonlySet<string>;
@@ -312,22 +304,15 @@ export function PartsList({
             <section
               key={part.id}
               role="none"
-              className={[
-                'part',
-                selectedParts.has(part.id) ? 'selected' : '',
-                hoveredPart === part.id ? 'hovered' : '',
-              ]
+              className={['part', selectedParts.has(part.id) ? 'selected' : '']
                 .filter((name) => name !== '')
                 .join(' ')}
               data-testid={`part-section-${part.id}`}
-              onMouseEnter={onHoverPart === undefined ? undefined : () => onHoverPart(part.id)}
-              onMouseLeave={onHoverPart === undefined ? undefined : () => onHoverPart(null)}
             >
               <PieceRow
                 store={store}
                 project={project}
                 part={part}
-                view={view}
                 status={status}
                 isSelected={selectedParts.has(part.id)}
                 badges={badges}
@@ -410,15 +395,14 @@ function useDescription(parts: readonly (string | null)[]): {
 }
 
 /**
- * A piece's row: its fold, its outline in small, its name and Cut, and — on
- * the Sheets view — where it prints. In Design only what does not print says
- * so (Q20), as a mark whose tooltip gives the reason.
+ * A piece's row: its fold, its outline in small, its name and Cut. Only what
+ * does not print says so (Q20), as a mark whose tooltip gives the reason;
+ * where a piece does print is the Sheets view's panel (U.9).
  */
 function PieceRow({
   store,
   project,
   part,
-  view,
   status,
   isSelected,
   badges,
@@ -434,7 +418,6 @@ function PieceRow({
   store: DocumentStore;
   project: Project;
   part: Part;
-  view: 'design' | 'sheets';
   status: PartPrintStatus | null;
   isSelected: boolean;
   badges: Badges;
@@ -455,12 +438,7 @@ function PieceRow({
     status !== null && status.sheets === null && printed !== null
       ? t('parts.notPrinted', { reason: printed.note ?? '' })
       : null;
-  const description = useDescription([
-    visible ? null : t('parts.isHidden'),
-    view === 'sheets' && printed !== null
-      ? [printed.label, printed.note].filter((line) => line !== null).join('. ')
-      : notPrinted,
-  ]);
+  const description = useDescription([visible ? null : t('parts.isHidden'), notPrinted]);
 
   return (
     <div
@@ -514,7 +492,7 @@ function PieceRow({
             />
             <PartMenu part={part} onDuplicatePart={onDuplicatePart} onRemovePart={onRemovePart} />
           </span>
-          {view === 'design' && notPrinted !== null && (
+          {notPrinted !== null && (
             <Tooltip text={notPrinted}>
               <span className="row-mark not-printed" data-testid={`part-not-printed-${part.id}`}>
                 <Icon of={PrinterX} size={14} />
@@ -523,7 +501,6 @@ function PieceRow({
           )}
         </span>
       </div>
-      {view === 'sheets' && status !== null && <PrintLine status={status} partId={part.id} />}
       {part.features.length === 0 && (
         // A part is removed only on purpose (ADR 0009), so an emptied one
         // stays — named, and with the way to remove it right here.
@@ -872,28 +849,5 @@ function IconToggle({
         {glyph}
       </button>
     </Tooltip>
-  );
-}
-
-/**
- * Where the part prints, under its name, on the Sheets view (7.4b): `Sheet 1`,
- * `Sheets 2–3, taped`, or `Not printed` with the reason — and, for a part that
- * prints, whatever visible on the board stays off the paper.
- */
-function PrintLine({ status, partId }: { status: PartPrintStatus; partId: string }) {
-  const { label, note } = describePrintStatus(status, useI18n());
-  return (
-    <p
-      className={status.sheets === null ? 'part-print not-printed' : 'part-print'}
-      data-testid={`part-print-${partId}`}
-      aria-hidden
-    >
-      <span className="part-print-sheets">{label}</span>
-      {note !== null && (
-        <span className="part-print-note" data-testid={`part-print-note-${partId}`}>
-          {note}
-        </span>
-      )}
-    </p>
   );
 }

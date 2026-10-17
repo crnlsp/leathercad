@@ -25,12 +25,15 @@ export function ToolPalette({
   onSelect,
   collapsed,
   onToggleCollapsed,
+  view = 'design',
 }: {
   activeId: string;
   onSelect: (id: string) => void;
   collapsed: boolean;
   /** Absent in focus mode, where the rail shows keys only. */
   onToggleCollapsed?: (() => void) | undefined;
+  /** On the Sheets view no tool acts but Select, and the rail says where the others are (U.9). */
+  view?: 'design' | 'sheets';
 }) {
   const { t } = useI18n();
   const keys = useKeysInSentences();
@@ -41,7 +44,9 @@ export function ToolPalette({
       data-testid="tool-rail"
       aria-label={t('tools.label')}
     >
-      {TOOL_GROUPS.filter((group) => group.tools.length > 0).map((group) => (
+      {TOOL_GROUPS.filter(
+        (group) => group.tools.length > 0 && (view === 'design' || group.id === null),
+      ).map((group) => (
         <div className="rail-group" key={group.id ?? 'lead'}>
           {group.id !== null &&
             (collapsed ? (
@@ -78,6 +83,12 @@ export function ToolPalette({
           })}
         </div>
       ))}
+
+      {view === 'sheets' && !collapsed && (
+        <p className="rail-note" data-testid="rail-note">
+          {t('sheetsView.drawingTools', keys)}
+        </p>
+      )}
 
       {onToggleCollapsed !== undefined && (
         <Tooltip text={toggle}>

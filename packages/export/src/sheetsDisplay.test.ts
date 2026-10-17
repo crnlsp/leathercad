@@ -1,5 +1,5 @@
 import { PathOps, RectOps, polyline } from '@leathercad/geometry';
-import { SHEET, PAPER_FURNITURE } from '@leathercad/render';
+import { CANVAS, GROUND, PAPER_FURNITURE, SHEET } from '@leathercad/render';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_PAGE_SETUP, contentAreaMm, pageSetupOf } from './paper.js';
@@ -136,8 +136,8 @@ describe('the Sheets view (7.4c)', () => {
       hex.slice(1, 3) === hex.slice(3, 5) && hex.slice(3, 5) === hex.slice(5, 7);
     for (const item of layers.flatMap((layer) => layer.list.items)) {
       if (item.kind === 'overlay-text') {
-        // Sheet numbers and a taped piece's name: screen only.
-        expect(item.colour).toBe(SHEET.furniture);
+        // Sheet numbers and a taped piece's name: screen only, never an ink grey.
+        expect(item.colour).toBe(GROUND.label);
       } else if (item.kind === 'path' && item.role !== 'construction') {
         expect(grey(item.stroke.colour), item.role).toBe(true);
       } else if (item.kind === 'fill' && item.role !== 'construction') {
@@ -153,6 +153,65 @@ describe('the Sheets view (7.4c)', () => {
       'Sheet 3 of 3',
       'strap, taped: sheets 2–3',
     ]);
+  });
+
+  it("words the labels in the app's language, and says which pieces were turned (U.9)", () => {
+    const words = {
+      sheet: (n: number, count: number, pieces: number) =>
+        `S${String(n)}/${String(count)}:${String(pieces)}`,
+      turned: (names: readonly string[]) => `${names.join('+')} turned`,
+      taped: (name: string, sheets: readonly number[]) => `${name} taped ${sheets.join('+')}`,
+    };
+    const labels = sheetsView(plan, layout, { now: NOW, words })
+      .flatMap((layer) => layer.list.items)
+      .flatMap((item) => (item.kind === 'overlay-text' ? [item] : []));
+    expect(labels.map((item) => item.text)).toEqual([
+      'S1/3:1',
+      'S2/3:1',
+      'S3/3:1',
+      'strap taped 2+3',
+    ]);
+    // Readable on the sheets' ground: the board's 12 px voice at 600 (R-01).
+    for (const item of labels) {
+      expect(item.sizePx).toBe(CANVAS.text.name.sizePx);
+      expect(item.weight).toBe(CANVAS.text.name.weight);
+      expect(item.halo).toBeUndefined();
+    }
+    // Nothing was turned on A4 portrait, so nothing is captioned over a piece.
+    expect(labels.some((item) => item.text.endsWith('turned'))).toBe(false);
+  });
+
+  it('names the pieces turned to save a sheet below it, on screen only (U.9)', () => {
+    // The print test's panel and pocket: on A5 landscape the pocket shares the
+    // panel's sheet only turned a quarter (7.8).
+    const a5 = planSheets(
+      scene([outlined('panel', 100, 78, 0, 0), outlined('pocket', 96, 60, 300, 0)]),
+      pageSetupOf('A5', 'landscape'),
+    );
+    const turned = [...a5.parts.values()].filter((entry) => entry.turned).map((e) => e.partId);
+    expect(turned).toEqual(['pocket']);
+    const words = {
+      sheet: () => '',
+      turned: (names: readonly string[]) => `${names.join('+')} turned`,
+      taped: () => '',
+    };
+    const layout5 = layoutSheets(a5);
+    const caption = (given?: typeof words) =>
+      sheetsView(a5, layout5, { now: NOW, ...(given === undefined ? {} : { words: given }) })
+        .flatMap((layer) => layer.list.items)
+        .flatMap((item) =>
+          item.kind === 'overlay-text' && item.text.includes('turned') ? [item] : [],
+        );
+
+    const [item, ...rest] = caption(words);
+    expect(rest).toEqual([]);
+    expect(item!.text).toBe('pocket turned');
+    // Under the sheet's bottom-left corner, in the ground's label colour — never over the pattern.
+    const frame = layout5.frames[0]!;
+    expect(item!.at).toEqual({ x: frame.origin.x, y: frame.origin.y - 2 });
+    expect(item!.colour).toBe(GROUND.label);
+    // Without the app's words, a package words nothing.
+    expect(caption()).toEqual([]);
   });
 
   it('clips each taped sheet to its printable area, as the PDF does', () => {

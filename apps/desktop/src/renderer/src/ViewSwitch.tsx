@@ -123,9 +123,11 @@ export function ViewSwitch({
 }
 
 /**
- * The sheet plan in words, in the work bar while the Sheets view shows (7.4c):
- * how many sheets, what is taped across which, and what the board shows that
- * the paper will not. Also the Sheets view's text alternative.
+ * The sheet plan in words, while the Sheets view shows (7.4c): how many sheets,
+ * what is taped across which, and what the board shows that the paper will not.
+ * The Sheets view's text alternative, and its polite announcement when the paper
+ * changes. Out of sight since U.9, which shows the same facts in Parts and
+ * Properties; the sheet count, the taped list and what is left off are there.
  */
 export function SheetsSummary({ project }: { project: Project }) {
   const i18n = useI18n();
@@ -151,7 +153,7 @@ export function SheetsSummary({ project }: { project: Project }) {
   if (failed > 0) sentences.push(t('sheets.failedNotPrinted', { count: failed }));
 
   return (
-    <p className="sheets-summary" data-testid="sheets-summary" aria-live="polite">
+    <p className="visually-hidden" data-testid="sheets-summary" aria-live="polite">
       {sentences.join(' ')}
     </p>
   );

@@ -1212,7 +1212,7 @@ the visible rows (unit); E2E for keys and reveal.
   printer both kept, as decided — it broke "Card pock / et": its marks now go below rather than
   the name breaking inside a word (`flex-wrap` on a piece's row, the name at least its longest
   word).
-- **Not printed, in Design**: the print line is the Sheets view's until U.9. Design marks a piece
+- **Not printed, in Design**: the print line is the Sheets view's, and since U.9 its own panel's. Design marks a piece
   that does not print with a crossed printer in the warning colour, its tooltip the reason
   (*Not printed. It is hidden.*), and says it in the row's description. A printing piece's hidden
   features are told by their own marks.
@@ -1259,6 +1259,18 @@ Properties shows the Design selection; the work bar shows `SheetsSummary`.
 
 **Done when — check in the app.** Mockup 04, less Turn; every number read from the sheet plan, not
 computed again (7.4a: there is no second pagination); the PDF unchanged.
+
+**As built (2026-10-17).** Rail, Parts, Properties and the options-row hint as above, less Turn and
+Measure (§4: *Measure on the sheets* is in *Later*). Three things differ from the text. (1) The
+*Parts* panel is a component of its own, `SheetsParts`, not the tree with a different order: the
+Sheets view's rows are buttons in sheet groups, not a tree, and `PartsList` lost its `view`,
+hover and print-line parts, which only Design remains to use. (2) The work bar's sheet summary is
+kept as a polite announcement, hidden to the eye, since its facts are now in Parts and
+Properties. (3) A sheet's label and the *turned* names below it are `GROUND.label` on the sheets'
+ground — not the furniture magenta, 3.5:1 there — in the app's words (`SheetsViewOptions.words`);
+no caption is laid over a turned piece, because at fit zoom it runs several times wider than the
+piece. *Decision for the maintainer — recommended and taken: the mockup's caption inside the
+piece waits for a zoom-aware text fit in the screen backends, if it is wanted at all.*
 
 ---
 

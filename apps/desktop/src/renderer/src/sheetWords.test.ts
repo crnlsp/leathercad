@@ -8,6 +8,8 @@ import {
   describeChoice,
   describePrintStatus,
   describeSheetNumbers,
+  describeSheetNumbersOnly,
+  sheetsWords,
   describeSheets,
   describeTaped,
   describeTapedAcross,
@@ -142,5 +144,23 @@ describe('the sheet plan, in English', () => {
     expect(describeTiled(tiled([]), t)).toBe(
       '"Panel" is 250.0 × 180.0 mm, larger than A4 portrait: printed on 2 sheets, 1 × 2. No supported paper holds it whole.',
     );
+  });
+});
+
+describe('the Sheets view in English (U.9)', () => {
+  it('words a sheet by its number and its pieces, and a taped piece by its sheets', () => {
+    const words = sheetsWords(i18n);
+    expect(words.sheet(1, 2, 2)).toBe('Sheet 1 of 2 · 2 pieces');
+    expect(words.sheet(2, 2, 1)).toBe('Sheet 2 of 2 · 1 piece');
+    expect(words.sheet(1, 1, 0)).toBe('Sheet 1 of 1 · No pieces');
+    expect(words.turned(['Outer'])).toBe('Outer, turned 90°');
+    expect(words.turned(['Outer', 'Pocket'])).toBe('Outer and Pocket, turned 90°');
+    expect(words.taped('Strap', [2, 3])).toBe('Strap, taped: Sheets 2–3');
+  });
+
+  it('says the numbers alone for a labelled field', () => {
+    expect(describeSheetNumbersOnly([1], i18n)).toBe('1');
+    expect(describeSheetNumbersOnly([2, 3], i18n)).toBe('2–3');
+    expect(describeSheetNumbersOnly([2, 4], i18n)).toBe('2, 4');
   });
 });
