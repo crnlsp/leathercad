@@ -954,19 +954,6 @@ body {
   gap: 4px;
 }
 
-/* The sheet plan in words, while the Sheets view shows. */
-.sheets-summary {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  color: var(--text);
-  font: var(--t-label);
-  font-weight: 400;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -2498,33 +2485,152 @@ button.problem-row:hover {
   font: inherit;
 }
 
-/* Where the part prints (7.4b), on the Sheets view: quiet when all of it
-   reaches paper, and in the warning colour when something the board shows
-   will not. */
-.part-print {
+/* The Sheets view's Parts (U.9): the sheets, and the pieces on each. Rows are
+   the tree's own look — a 28 px row, the accent border when picked — and a
+   piece under the pointer on the paper is lit here too (7.4d). */
+.sheets-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--space-2);
-  margin: 0 0 2px 50px;
-  color: var(--text-dim);
-  font: var(--t-micro);
-  font-weight: 400;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-/* On the Sheets view, the part under the pointer there (7.4d). */
-.part.hovered {
+.sheets-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sheets-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 4px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.sheets-group-count {
+  color: var(--text-dim);
+  font: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.sheets-pieces {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sheets-piece {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: var(--row-height);
+  padding: 0 2px 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: var(--t-strong);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sheets-piece:hover,
+.sheets-piece.hovered {
   background: var(--shell-600);
 }
 
-/* The dim text is short of 4.5:1 on the hover's fill (§3: never text-dim on shell-600). */
-.part.hovered .part-print,
-.tree-row:hover .part-print {
-  color: var(--text);
+.sheets-piece.selected {
+  border-color: var(--tan);
 }
 
-.part-print-note,
-.part-print.not-printed .part-print-sheets {
+.sheets-piece:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: -1px;
+}
+
+@media (forced-colors: active) {
+  .sheets-piece {
+    border-style: none;
+    padding: 1px;
+  }
+
+  .sheets-piece.selected {
+    border-style: solid;
+    border-color: Highlight;
+  }
+}
+
+.sheets-piece-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: calc(var(--row-height) - 2px);
+}
+
+.sheets-piece-line > :is(svg, .thumbnail) {
+  flex: none;
+}
+
+.sheets-piece-line .part-label {
+  flex: 1;
+}
+
+.sheets-taped-entry {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 4px;
+  color: var(--text);
+  font: var(--t-label);
+}
+
+.sheets-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* What the picked piece does on the paper: a line of its own, with its mark. */
+.sheets-fit,
+.sheets-measure {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.sheets-on {
+  margin-left: var(--space-2);
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.sheets-properties .field-value {
+  color: var(--text);
+  font: var(--t-body);
+}
+
+.rail-note {
+  margin: var(--space-3) 0 0;
+  padding: 0 4px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+/* Where the part is not printed, and what was left off one that is. */
+.part-print-note {
   color: var(--warning);
+  font: var(--t-micro);
+  font-weight: 400;
 }
 
 .icon-toggle {

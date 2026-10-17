@@ -1,6 +1,6 @@
 import { approxEq } from '@leathercad/core';
 import { drawnBounds, selectedFeatureIds, type DocumentStore } from '@leathercad/document';
-import { diagnose, evaluate, sameProblem, type Problem, type Project } from '@leathercad/domain';
+import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import {
   layoutSheets,
   pieceAt,
@@ -52,6 +52,9 @@ import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState 
 import { flushSync } from 'react-dom';
 
 import { captionOf } from './captionWords.js';
+import { selectedParts } from './sheetContents.js';
+import { sheetsWords } from './sheetWords.js';
+import type { I18n } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
@@ -534,6 +537,7 @@ export function CanvasHost({
       const layers =
         cached !== null &&
         cached.plan === plan &&
+        cached.i18n === i18nRef.current &&
         cached.selected === selectedKey(selected) &&
         cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current)
           ? cached.layers
@@ -541,9 +545,11 @@ export function CanvasHost({
               now: new Date(),
               selected,
               hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
+              words: sheetsWords(i18nRef.current),
             });
       sheetsCacheRef.current = {
         plan,
+        i18n: i18nRef.current,
         selected: selectedKey(selected),
         hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
         layers,
@@ -1088,28 +1094,11 @@ function CanvasNotice({
 /** What the Sheets view last drew, so panning does not lay the sheets out again. */
 interface SheetsCache {
   readonly plan: SheetPlan;
+  /** The words the labels were made in: a new language makes new labels. */
+  readonly i18n: I18n;
   readonly selected: string;
   readonly hovered: string | null;
   readonly layers: readonly SheetsLayer[];
-}
-
-/**
- * The parts to halo on the Sheets view: selected themselves, or holding a
- * selected feature — selection is shared with the design board.
- */
-function selectedParts(
-  project: Project,
-  selection: { readonly parts: ReadonlySet<string>; readonly features: ReadonlySet<string> },
-): ReadonlySet<string> {
-  return new Set(
-    project.parts
-      .filter(
-        (part) =>
-          selection.parts.has(part.id) ||
-          part.features.some((feature) => selection.features.has(feature.id)),
-      )
-      .map((part) => part.id),
-  );
 }
 
 function selectedKey(selected: ReadonlySet<string>): string {

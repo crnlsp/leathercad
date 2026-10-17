@@ -640,5 +640,8 @@ export function keysInSentences(
     rectangle: first('tool.rectangle'),
     select: first('tool.select'),
     points: first('tool.points'),
+    // The Sheets view's way back to the board, and the list of every key (U.9).
+    design: first('design'),
+    shortcuts: first('keyboardShortcuts', 1),
   };
 }

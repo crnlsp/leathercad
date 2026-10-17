@@ -63,6 +63,8 @@ import { historyText } from './historyText.js';
 import { describeProblem } from './problemText.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
 import { PropertyPanel } from './PropertyPanel.js';
+import { SheetsHint, SheetsParts, SheetsProperties } from './SheetsPanels.js';
+import { selectedParts } from './sheetContents.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
@@ -768,6 +770,12 @@ export function App({
         ? undefined
         : t('zoom.nothingSelected');
 
+  // The pieces the Sheets view's panels show as picked (U.9): the board's selection.
+  const sheetsSelected = useMemo(
+    () => selectedParts(storeState.document.project, storeState.selection),
+    [storeState.document, storeState.selection],
+  );
+
   const featureCount = storeState.document.project.parts.reduce(
     (total, part) => total + part.features.length,
     0,
@@ -871,7 +879,12 @@ export function App({
               <ToolHowTo toolId={toolId} />
             </>
           ) : (
-            <SheetsSummary project={storeState.document.project} />
+            <>
+              <SheetsHint />
+              {/* The plan in words, for a screen reader: the sheet count, what is taped and
+                  what is left off now sit in Parts and Properties. */}
+              <SheetsSummary project={storeState.document.project} />
+            </>
           )}
         </div>
 
@@ -896,6 +909,7 @@ export function App({
             onSelect={chooseTool}
             collapsed={!layout.railNames}
             onToggleCollapsed={focus ? undefined : toggleRail}
+            view={view}
           />
           {layout.parts === 'strip' && (
             <PartsStrip
@@ -915,28 +929,43 @@ export function App({
           {/* A panel's place in the DOM, docked or not (F.2): no panel is ever
               removed. Esc pressed inside it, open over the board, closes it. */}
           <div className="panel-slot" onKeyDown={overlayKeys('parts')}>
-            <PartsList
-              store={store}
-              project={storeState.document.project}
-              view={view}
-              selected={storeState.selection.features}
-              selectedParts={storeState.selection.parts}
-              badges={badges}
-              printStatus={printStatusFor(storeState.document.project)}
-              hoveredPart={view === 'sheets' ? hoveredPart : null}
-              onHoverPart={view === 'sheets' ? setHoveredPart : undefined}
-              onRemovePart={requestDeletePart}
-              onDuplicatePart={requestDuplicatePart}
-              onContextMenu={openContextMenu}
-              onOpenSample={() => void openSample()}
-              toggle={
-                <PanelToggle
-                  panel="parts"
-                  shown
-                  onToggle={(press) => togglePanel('parts', press, true)}
-                />
-              }
-            />
+            {view === 'sheets' ? (
+              <SheetsParts
+                store={store}
+                project={storeState.document.project}
+                printStatus={printStatusFor(storeState.document.project)}
+                selected={sheetsSelected}
+                hoveredPart={hoveredPart}
+                onHoverPart={setHoveredPart}
+                toggle={
+                  <PanelToggle
+                    panel="parts"
+                    shown
+                    onToggle={(press) => togglePanel('parts', press, true)}
+                  />
+                }
+              />
+            ) : (
+              <PartsList
+                store={store}
+                project={storeState.document.project}
+                selected={storeState.selection.features}
+                selectedParts={storeState.selection.parts}
+                badges={badges}
+                printStatus={printStatusFor(storeState.document.project)}
+                onRemovePart={requestDeletePart}
+                onDuplicatePart={requestDuplicatePart}
+                onContextMenu={openContextMenu}
+                onOpenSample={() => void openSample()}
+                toggle={
+                  <PanelToggle
+                    panel="parts"
+                    shown
+                    onToggle={(press) => togglePanel('parts', press, true)}
+                  />
+                }
+              />
+            )}
           </div>
           {/* The drawing is what the window is for: its main landmark. A press
               on it closes a panel open over it. */}
@@ -990,25 +1019,40 @@ export function App({
             />
           </main>
           <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
-            <PropertyPanel
-              store={store}
-              project={storeState.document.project}
-              selected={storeState.selection.features}
-              selectedParts={storeState.selection.parts}
-              diagnostics={diagnostics}
-              nextId={nextId}
-              requestDelete={requestDelete}
-              requestDeletePart={requestDeletePart}
-              tools={tools}
-              sizing={status?.sizing ?? null}
-              toggle={
-                <PanelToggle
-                  panel="properties"
-                  shown
-                  onToggle={(press) => togglePanel('properties', press, true)}
-                />
-              }
-            />
+            {view === 'sheets' ? (
+              <SheetsProperties
+                store={store}
+                project={storeState.document.project}
+                selected={sheetsSelected}
+                toggle={
+                  <PanelToggle
+                    panel="properties"
+                    shown
+                    onToggle={(press) => togglePanel('properties', press, true)}
+                  />
+                }
+              />
+            ) : (
+              <PropertyPanel
+                store={store}
+                project={storeState.document.project}
+                selected={storeState.selection.features}
+                selectedParts={storeState.selection.parts}
+                diagnostics={diagnostics}
+                nextId={nextId}
+                requestDelete={requestDelete}
+                requestDeletePart={requestDeletePart}
+                tools={tools}
+                sizing={status?.sizing ?? null}
+                toggle={
+                  <PanelToggle
+                    panel="properties"
+                    shown
+                    onToggle={(press) => togglePanel('properties', press, true)}
+                  />
+                }
+              />
+            )}
           </div>
           {layout.properties === 'strip' && (
             <PropertiesStrip

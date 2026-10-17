@@ -101,9 +101,6 @@ export function PaperButton({
       : room === 'narrow'
         ? t('projectBar.paperShort', { count, paper })
         : t('projectBar.paperLong', { count, paper, orientation: orientationWord });
-  const options = paperOptionsFor(project);
-  const choiceOf = (way: Orientation) =>
-    options.find((option) => option.paper === paper && option.orientation === way);
 
   return (
     <div className="menu-anchor" ref={root}>
@@ -145,53 +142,7 @@ export function PaperButton({
             if (!root.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
           }}
         >
-          <label className="field">
-            <span className="field-label">{t('sheets.paper')}</span>
-            <select
-              data-testid="paper"
-              value={paper}
-              onChange={(event) =>
-                store.dispatch(setPageSetup(event.target.value as PaperName, orientation))
-              }
-            >
-              {options
-                .filter((option) => option.orientation === orientation)
-                .map((option) => (
-                  <option key={option.paper} value={option.paper}>
-                    {t('projectBar.paperPopover.option', {
-                      paper: option.paper,
-                      count: option.plan.sheets.length,
-                    })}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <div className="field" role="group" aria-labelledby={`${ids}orientation`}>
-            <span className="field-label" id={`${ids}orientation`}>
-              {t('projectBar.paperPopover.orientation')}
-            </span>
-            <span className="segmented">
-              {ORIENTATIONS.map((way) => {
-                const choice = choiceOf(way);
-                return (
-                  <Tooltip
-                    key={way}
-                    text={choice === undefined ? null : describeChoice(choice.plan, i18n)}
-                  >
-                    <button
-                      type="button"
-                      className={orientation === way ? 'segment active' : 'segment'}
-                      data-testid={`paper-${way}`}
-                      aria-pressed={orientation === way}
-                      onClick={() => store.dispatch(setPageSetup(paper, way))}
-                    >
-                      {t(`printPreview.${way}`)}
-                    </button>
-                  </Tooltip>
-                );
-              })}
-            </span>
-          </div>
+          <PaperFields project={project} store={store} />
           <p className="paper-summary" data-testid="paper-summary">
             <SheetGlyph plan={plan} />
             {t('projectBar.paperPopover.summary', {
@@ -214,6 +165,83 @@ export function PaperButton({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The paper and which way up, as the page setup edits them: a list of papers
+ * each saying how many sheets it takes, and the two orientations each saying
+ * what it comes to — read from the sheet plan for that choice. In the paper
+ * button's popover, and in Properties on the Sheets view (U.9), where
+ * `testPrefix` keeps the two apart.
+ */
+export function PaperFields({
+  project,
+  store,
+  testPrefix = '',
+}: {
+  project: Project;
+  store: DocumentStore;
+  testPrefix?: string;
+}) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const ids = useId();
+  const { paper, orientation } = project.settings;
+  const options = paperOptionsFor(project);
+  const choiceOf = (way: Orientation) =>
+    options.find((option) => option.paper === paper && option.orientation === way);
+
+  return (
+    <>
+      <label className="field">
+        <span className="field-label">{t('sheets.paper')}</span>
+        <select
+          data-testid={`${testPrefix}paper`}
+          value={paper}
+          onChange={(event) =>
+            store.dispatch(setPageSetup(event.target.value as PaperName, orientation))
+          }
+        >
+          {options
+            .filter((option) => option.orientation === orientation)
+            .map((option) => (
+              <option key={option.paper} value={option.paper}>
+                {t('projectBar.paperPopover.option', {
+                  paper: option.paper,
+                  count: option.plan.sheets.length,
+                })}
+              </option>
+            ))}
+        </select>
+      </label>
+      <div className="field" role="group" aria-labelledby={`${ids}orientation`}>
+        <span className="field-label" id={`${ids}orientation`}>
+          {t('projectBar.paperPopover.orientation')}
+        </span>
+        <span className="segmented">
+          {ORIENTATIONS.map((way) => {
+            const choice = choiceOf(way);
+            return (
+              <Tooltip
+                key={way}
+                text={choice === undefined ? null : describeChoice(choice.plan, i18n)}
+              >
+                <button
+                  type="button"
+                  className={orientation === way ? 'segment active' : 'segment'}
+                  data-testid={`${testPrefix}paper-${way}`}
+                  aria-pressed={orientation === way}
+                  onClick={() => store.dispatch(setPageSetup(paper, way))}
+                >
+                  {t(`printPreview.${way}`)}
+                </button>
+              </Tooltip>
+            );
+          })}
+        </span>
+      </div>
+    </>
   );
 }
 

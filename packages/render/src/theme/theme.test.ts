@@ -182,6 +182,11 @@ describe('the four planes (F.5)', () => {
     expect(contrast(GROUND.ink, GROUND.ground)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('sets the Sheets view’s words at AA on what they sit on (U.9, R-08)', () => {
+    // A sheet's number and the names under it sit on the sheets' ground.
+    expect(contrast(GROUND.label, SHEET.ground)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('gives Print fills its words read on, standing out on the shell (U.7)', () => {
     // R-06's on-primary: AA on Print's main half, hovered or not, on its
     // narrow half, and on the indicator's warning and error.

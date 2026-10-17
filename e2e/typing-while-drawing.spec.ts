@@ -156,9 +156,9 @@ test('a typed corner the pointer has left no room for is refused, never made sma
     // Only a second Enter, there, takes the corner that fits — one undo step.
     await window.keyboard.press('Enter');
     await expect(parts).toHaveText('1');
-    const taken = Number(await field(window, 'corner').inputValue());
-    expect(taken).toBeGreaterThan(0);
-    expect(taken).toBeLessThan(8);
+    const corner = () => field(window, 'corner').inputValue().then(Number);
+    await expect.poll(corner).toBeLessThan(8);
+    expect(await corner()).toBeGreaterThan(0);
     await window.getByTestId('undo').click();
     await expect(parts).toHaveText('0');
     await expect(window.getByTestId('undo')).toBeDisabled();
@@ -181,7 +181,10 @@ test('a typed corner the pointer has left no room for is refused, never made sma
     await expect(parts).toHaveText('0');
     await window.keyboard.press('Enter');
     await expect(parts).toHaveText('1');
-    expect(Number(await field(window, 'corner').inputValue())).toBeLessThan(8);
+    // The new outline's own corner, once its chip shows it rather than what was typed.
+    await expect
+      .poll(async () => Number(await field(window, 'corner').inputValue()))
+      .toBeLessThan(8);
   });
 });
 

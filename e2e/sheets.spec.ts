@@ -57,12 +57,11 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
   }
 }
 
-/** The Parts print line of the part with this name: on the Sheets view (U.8). */
-function printLine(window: Page, name: string): Locator {
+/** The Sheets view's Parts row of the piece with this name (U.9): the first, when it is on several sheets. */
+function pieceRow(window: Page, name: string): Locator {
   return window
-    .getByTestId('parts-list')
-    .locator('section', { has: window.getByRole('treeitem', { name, exact: false }) })
-    .locator('[data-testid^="part-print-"]')
+    .getByTestId('sheets-parts')
+    .getByRole('button', { name: new RegExp(name) })
     .first();
 }
 
@@ -119,37 +118,53 @@ function hasColour(pdf: string): boolean {
   }
 }
 
-test('Parts says where each part prints, and why a part does not (7.4b)', async () => {
+test('Parts groups the pieces by sheet, lists what is taped, and says why a part does not print (7.4b, U.9)', async () => {
   await withPrintTest(async ({ window }) => {
-    // Where each piece prints is the Sheets view's to say (U.8).
-    await expect(window.locator('[data-testid^="part-print-"]')).toHaveCount(0);
+    // Where each piece prints is the Sheets view's to say (U.8, U.9).
+    await expect(window.getByTestId('sheets-parts')).toHaveCount(0);
     await window.getByTestId('view-sheets').click();
-    await expect(printLine(window, 'Outer panel')).toHaveText('Sheet 1');
-    await expect(printLine(window, 'Pocket')).toHaveText('Sheet 1');
-    await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
+    const parts = window.getByTestId('sheets-parts');
+    await expect(parts.getByTestId('parts-count')).toHaveText('3 sheets');
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('Sheet 1 of 3');
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('2 pieces');
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('Outer panel');
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('Pocket');
+    await expect(parts.getByTestId('sheets-group-2')).toContainText('Strap');
+    await expect(parts.getByTestId('sheets-group-3')).toContainText('Strap');
+    await expect(parts.getByTestId('sheets-taped')).toContainText('Strap');
+    await expect(parts.getByTestId('sheets-taped')).toContainText('Sheets 2–3');
 
-    // Turned, everything fits whole on one sheet.
+    // Turned, everything fits whole on one sheet, and nothing is taped.
     await choosePaper(window, 'A4', 'landscape');
-    for (const name of ['Outer panel', 'Pocket', 'Strap']) {
-      await expect(printLine(window, name), name).toHaveText('Sheet 1');
-    }
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('3 pieces');
+    await expect(parts.getByTestId('sheets-taped-none')).toHaveText(
+      'None. Every piece fits on one sheet.',
+    );
     // On A5 landscape the pocket shares the panel's sheet only turned a
     // quarter, and Parts says so: the board shows it as drawn (7.8).
     await choosePaper(window, 'A5', 'landscape');
-    await expect(printLine(window, 'Pocket')).toHaveText('Sheet 1, turned');
+    await expect(
+      pieceRow(window, 'Pocket').locator('[data-testid^="sheets-turned-"]'),
+    ).toBeVisible();
+    await expect(
+      pieceRow(window, 'Outer panel').locator('[data-testid^="sheets-turned-"]'),
+    ).toHaveCount(0);
     await window.getByTestId('undo').click();
     await window.getByTestId('undo').click();
 
     // Hidden, the strap is left off the paper, and the count says so too.
+    await window.getByTestId('view-design').click();
     const strap = window.getByTestId('parts-list').locator('section', { hasText: 'Strap' });
     await strap.locator('[data-testid^="part-visible-"]').click();
-    await expect(printLine(window, 'Strap')).toHaveText(/^Not printed\s*It is hidden\.$/);
     await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
       'Paper: 1 sheet of A4, portrait',
     );
     // Design says only that it does not print, with the reason in its tooltip.
-    await window.getByTestId('view-design').click();
     await expect(strap.locator('[data-testid^="part-not-printed-"]')).toBeVisible();
+    await window.getByTestId('view-sheets').click();
+    await expect(parts.getByTestId('sheets-not-printed')).toContainText('Strap');
+    await expect(parts.getByTestId('sheets-not-printed')).toContainText('It is hidden.');
+    await expect(parts.getByTestId('sheets-taped-none')).toBeVisible();
   });
 });
 
@@ -206,6 +221,56 @@ test('the Sheets view shows the plan, and changing the paper changes it (7.4c)',
     await expect(window.getByTestId('sheets-summary')).toHaveText(
       '3 sheets of A4, portrait. Strap is taped across sheets 2–3.',
     );
+  });
+});
+
+test('the Sheets view has its own rail, hint and Properties, and the paper is edited there (U.9, R-08)', async () => {
+  await withPrintTest(async ({ window, pdf }) => {
+    await window.getByTestId('view-sheets').click();
+
+    // The rail: Select alone, no Turn and no Measure, and the way back to the board.
+    await expect(window.getByTestId('tool-rail').getByRole('button')).toHaveCount(2); // Select, and the fold
+    await expect(window.getByTestId('tool-select')).toBeVisible();
+    await expect(window.getByTestId('tool-measure')).toHaveCount(0);
+    await expect(window.getByTestId('rail-note')).toHaveText(
+      'Drawing tools are in Design · Ctrl+1',
+    );
+    // The options row says what a click does here, with the key from the keymap.
+    await expect(window.getByTestId('sheets-hint')).toHaveText(
+      'Click a piece to see where it prints · ? all keys',
+    );
+
+    // Properties: the paper and what it comes to, then the reminder.
+    const props = window.getByTestId('sheets-properties');
+    await expect(props.getByTestId('sheets-count')).toContainText('3');
+    await expect(props.getByTestId('sheets-scale')).toContainText('100 % · locked');
+    await expect(props.getByTestId('sheets-measure')).toHaveText(
+      'After printing, measure the 100 × 5 mm box at the foot of a sheet.',
+    );
+    await expect(props.getByTestId('sheets-piece')).toHaveCount(0);
+
+    // Pick a piece from its row: the sheet, the placement and the fit.
+    await pieceRow(window, 'Pocket').click();
+    await expect(props.getByTestId('sheets-piece')).toContainText('Pocket');
+    await expect(props.getByTestId('sheets-piece-sheet')).toHaveText('Sheet1 of 3');
+    await expect(props.getByTestId('sheets-piece-placement')).toHaveText('PlacementAs drawn');
+    await expect(props.getByTestId('sheets-piece-fit')).toHaveText('Fits one sheet, no tape');
+    await window.getByTestId('view-design').click();
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await window.getByTestId('view-sheets').click();
+
+    // The paper is changed here, as in the paper button: one undo step, and
+    // the sheets, Parts and the PDF all follow the same plan.
+    await props.getByTestId('sheets-paper').selectOption('A4');
+    await props.getByTestId('sheets-paper-landscape').click();
+    await expect(props.getByTestId('sheets-count')).toContainText('1');
+    await expect(window.getByTestId('sheets-taped-none')).toBeVisible();
+    await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
+      'Paper: 1 sheet of A4, landscape',
+    );
+    await window.getByTestId('export-pdf').click();
+    await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
+    await expect.poll(() => pageCount(pdf)).toBe(1);
   });
 });
 
@@ -316,6 +381,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     const paper = window.getByTestId('paper-button');
     const summary = window.getByTestId('sheets-summary');
     const strapSection = window.locator('[data-testid^="part-section-"]', { hasText: 'Strap' });
+    const strapRow = pieceRow(window, 'Strap');
 
     // 1. The paper says what it will print, before anything is exported.
     await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
@@ -324,7 +390,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     //    says where each piece prints, as Design's no longer does (U.8).
     await window.getByTestId('view-sheets').click();
     await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
-    await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
+    await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 2–3');
 
     // 3. Pointing at the strap on sheet 2: the status bar names the sheet,
     //    Parts lights the strap's row, and a click selects the strap.
@@ -337,20 +403,20 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     let found = false;
     for (let dy = -12; dy <= 12 && !found; dy += 3) {
       await window.mouse.move(target.x, target.y + dy);
-      found = /hovered/.test((await strapSection.getAttribute('class')) ?? '');
+      found = /hovered/.test((await strapRow.getAttribute('class')) ?? '');
       if (found) target.y += dy;
     }
     expect(found, 'the strap on sheet 2 lights its Parts row').toBe(true);
     await expect(readout(window)).toHaveText('Sheet 2 of 3');
     await window.mouse.click(target.x, target.y);
-    // Its outline is selected, as a click on the board would select it, and
-    // Properties shows the part.
-    const strapOutline = strapSection.locator('[data-testid^="feature-row-"]', {
-      hasText: 'Outline',
-    });
-    await expect(strapOutline).toHaveClass(/selected/);
+    // Its outline is selected, as a click on the board would select it, Parts
+    // lights its row, and Properties says where it prints (U.9).
+    await expect(strapRow).toHaveClass(/selected/);
     await expect(window.getByTestId('selected-count')).toHaveText('1');
-    await expect(window.getByTestId('part-name')).toHaveValue('Strap');
+    const strapOnPaper = window.getByTestId('sheets-piece');
+    await expect(strapOnPaper).toContainText('Strap');
+    await expect(window.getByTestId('sheets-piece-sheet')).toHaveText('Sheets2–3 of 3');
+    await expect(window.getByTestId('sheets-piece-placement')).toHaveText('PlacementTaped');
 
     // Dragging it moves nothing, and says why.
     await window.mouse.move(target.x, target.y);
@@ -366,6 +432,9 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
 
     // The selection is the board's too.
     await window.getByTestId('view-design').click();
+    const strapOutline = strapSection.locator('[data-testid^="feature-row-"]', {
+      hasText: 'Outline',
+    });
     await expect(strapOutline).toHaveClass(/selected/);
     await expect(window.getByTestId('selected-count')).toHaveText('1');
 
@@ -386,7 +455,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
     await window.getByTestId('view-sheets').click();
     await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
-    await expect(printLine(window, 'Strap')).toHaveText('Sheets 2–3, taped');
+    await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 2–3');
 
     // 6. Export: the PDF is the plan that was shown — three A4 portrait sheets.
     await window.getByTestId('export-pdf').click();
@@ -407,13 +476,14 @@ test('what does not print is said, in Parts, in the sheets and in the PDF (7.4d)
     const holesId = ((await holes.getAttribute('data-testid')) ?? '').replace('feature-row-', '');
     await window.getByTestId(`feature-visible-${holesId}`).click();
     await window.getByTestId('view-sheets').click();
-    await expect(printLine(window, 'Outer panel')).toHaveText(
-      /^Sheet 1\s*1 hidden feature isn't printed\.$/,
-    );
+    await expect(pieceRow(window, 'Outer panel')).toContainText("1 hidden feature isn't printed.");
 
     // Hide the strap: it leaves the paper, and the plan shrinks to one sheet.
+    // (Showing and hiding is Design's: Parts on the sheets only reads the plan.)
+    await window.getByTestId('view-design').click();
     const strap = window.locator('[data-testid^="part-section-"]', { hasText: 'Strap' });
     await strap.locator('[data-testid^="part-visible-"]').click();
+    await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(
       "1 sheet of A4, portrait. Strap isn't printed.",
     );

@@ -515,7 +515,7 @@ test('a selection on the board opens its piece and scrolls its row into view, le
 
 test('Design says only what does not print; the Sheets view says where each piece prints', async () => {
   await withSample(async (window) => {
-    await expect(window.locator('[data-testid^="part-print-"]')).toHaveCount(0);
+    await expect(window.getByTestId('sheets-parts')).toHaveCount(0);
     await expect(window.locator('[data-testid^="part-not-printed-"]')).toHaveCount(0);
 
     // A hidden piece is left off the paper (Q20), and its row says so.
@@ -530,8 +530,8 @@ test('Design says only what does not print; the Sheets view says where each piec
     );
 
     await window.keyboard.press('Control+2');
-    await expect(window.getByTestId('part-print-outer')).toHaveText(/Sheet 1/);
-    await expect(window.getByTestId('part-print-pocket')).toHaveText(/Not printed/);
+    await expect(window.getByTestId('sheets-group-1')).toContainText('Outer');
+    await expect(window.getByTestId('sheets-not-printed')).toContainText('It is hidden.');
     await expect(window.locator('[data-testid^="part-not-printed-"]')).toHaveCount(0);
   });
 });
