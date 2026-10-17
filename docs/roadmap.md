@@ -204,7 +204,9 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   all; with the list the page's own, Escape closing it closed the dialog under it, and a letter
   typed to find an option chose a tool — an open list keeps its keys; `spellcheck: false` and the
   session's spellchecker off still fetched `en-US-10-1.bdic` once a field was typed in, until the
-  session was given no language (Chromium still makes an empty `Dictionaries/`). Scrollbars keep
+  session was given no language (Chromium still makes an empty `Dictionaries/`); and Settings ›
+  Language failed to render on a system whose language is C — Linux's C.UTF-8, and CI's — because
+  `Intl` refuses `C` as a language: `languageName` now names such a tag by itself. Scrollbars keep
   Chromium's small arrows, in the thumb's colour: no standard property removes them. Printed
   output did not move.
 
