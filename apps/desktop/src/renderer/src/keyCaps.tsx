@@ -2,14 +2,16 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 import { useI18n } from './i18n.js';
 import {
-  KEYMAP,
+  currentKeymap,
   keyLabel,
   keysInSentences,
   shownKeys,
+  subscribeKeymap,
   type Binding,
   type CommandId,
   type KeyboardLayout,
 } from './keymap.js';
+import type { Shortcut } from './shortcuts.js';
 
 /** ⌘ for the command key, and the platform's order of modifiers. */
 export const IS_MAC = navigator.userAgent.includes('Mac');
@@ -55,31 +57,41 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+/** This keyboard's layout, where it is known; every key shown re-renders when it changes. */
+export function useLayout(): KeyboardLayout | null {
+  return useSyncExternalStore(subscribe, () => layout);
+}
+
+/** The keymap in effect: every key shown re-renders when the maker changes one (U.12). */
+export function useKeymap(): ReturnType<typeof currentKeymap> {
+  return useSyncExternalStore(subscribeKeymap, currentKeymap);
+}
+
 /** A key — a command's first, or a binding — as this keyboard and platform show it. */
 export function useKeyLabel(): (of: CommandId | Binding) => string {
   const { t } = useI18n();
-  const current = useSyncExternalStore(subscribe, () => layout);
+  const current = useLayout();
+  const keymap = useKeymap();
   return useCallback(
     (of) => {
-      const binding = typeof of === 'string' ? shownKeys(of, current, IS_MAC)[0] : of;
+      const binding = typeof of === 'string' ? shownKeys(of, current, IS_MAC, keymap)[0] : of;
       return binding === undefined ? '' : keyLabel(binding, IS_MAC, current, t);
     },
-    [current, t],
+    [current, keymap, t],
   );
 }
 
 /**
  * A shortcut list row's keys as this keyboard can press them (`shownKeys`):
- * a command's, found by its keys; a pointer gesture's as they are.
+ * a command's; a pointer gesture's as they are.
  */
-export function useShownKeys(): (keys: readonly Binding[]) => readonly Binding[] {
-  const current = useSyncExternalStore(subscribe, () => layout);
+export function useShownKeys(): (shortcut: Shortcut) => readonly Binding[] {
+  const current = useLayout();
+  const keymap = useKeymap();
   return useCallback(
-    (keys) => {
-      const command = KEYMAP.find((entry) => entry.keys === keys);
-      return command === undefined ? keys : shownKeys(command.id, current, IS_MAC);
-    },
-    [current],
+    (shortcut) =>
+      shortcut.id === undefined ? shortcut.keys : shownKeys(shortcut.id, current, IS_MAC, keymap),
+    [current, keymap],
   );
 }
 
@@ -92,5 +104,6 @@ export function KeyCap({ command }: { command: CommandId | Binding }) {
 export function useKeysInSentences(): Readonly<Record<string, string>> {
   const { t } = useI18n();
   const label = useKeyLabel();
-  return useMemo(() => keysInSentences(label, t), [label, t]);
+  const keymap = useKeymap();
+  return useMemo(() => keysInSentences(label, t, keymap), [label, t, keymap]);
 }

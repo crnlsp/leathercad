@@ -271,7 +271,27 @@ export interface Preferences {
    * thickness is a measurement of their leather, and none is invented.
    */
   readonly leatherThicknessMm: number | null;
+  /**
+   * The keys the maker changed in Settings › Keyboard shortcuts (U.12), by
+   * the app's command id: each one's keys in place of its defaults. Only what
+   * differs is kept, so a new default reaches a command the maker never moved.
+   */
+  readonly keyBindings: Readonly<Record<string, readonly KeyBinding[]>>;
 }
+
+/**
+ * A key, as the app's keymap binds it: by its place on the keyboard
+ * (`KeyboardEvent.code`) and the modifiers held — `mod` is Ctrl, or ⌘ on
+ * macOS — or by the character it types.
+ */
+export type KeyBinding =
+  | {
+      readonly code: string;
+      readonly mod?: boolean;
+      readonly shift?: boolean;
+      readonly alt?: boolean;
+    }
+  | { readonly char: string; readonly mod?: boolean };
 
 /** A pricking iron, by the name the maker gives it and the pitch stamped on it. */
 export interface Iron {
@@ -306,6 +326,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   defaultIronId: 'ks-3.85',
   stitchMarginMm: 3.5,
   leatherThicknessMm: null,
+  keyBindings: {},
 };
 
 /** What macOS's native menu can ask the renderer to do (8.7). */

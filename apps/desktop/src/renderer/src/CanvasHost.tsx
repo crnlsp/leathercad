@@ -60,8 +60,8 @@ import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
-import { commandFor, keyForTools, keysOf, matches } from './keymap.js';
-import { isTyping } from './shortcuts.js';
+import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
+import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 
 /**
@@ -288,7 +288,12 @@ export function CanvasHost({
         dirtyRef.current = true;
       },
       cancel: () => {
-        managerRef.current?.key({ key: 'Escape', shiftKey: false, ctrlKey: false });
+        managerRef.current?.key({
+          key: 'Escape',
+          means: new Set(),
+          shiftKey: false,
+          ctrlKey: false,
+        });
         dirtyRef.current = true;
       },
     }),
@@ -719,30 +724,21 @@ export function CanvasHost({
   // Escape or Delete should work wherever focus and the pointer happen to be.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      // Never steal keys from a field, a list or anything editable (8.7).
-      if (isTyping(event.target)) return;
+      // Never steal keys from a field, a list or anything editable (8.7), nor
+      // a focused button's Space (U.12).
+      if (isTyping(event.target) || pressesControl(event)) return;
 
       // Ctrl on Linux and Windows, ⌘ on macOS: the keymap's (U.3).
       const command = commandFor(event, IS_MAC);
-      if (command === 'undo' || command === 'redo') {
-        event.preventDefault();
-        if (command === 'redo') store.redo();
-        else store.undo();
-        return;
-      }
-
-      // No tool acts on the Sheets view: Delete there must not delete.
-      if (viewRef.current === 'sheets') return;
+      const onSheets = viewRef.current === 'sheets';
 
       // A number typed with the board focused while a rectangle is being drawn,
       // or about to be, goes into its first chip (U.16, R-13): the key lands
       // there, and Tab, Enter and Esc are the chips'. With no corner placed the
       // shape starts at the pointer.
       if (
-        /^[0-9.,]$/.test(event.key) &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey &&
+        !onSheets &&
+        typesSize(event) &&
         (event.target === document.body || event.target === canvasRef.current) &&
         managerRef.current?.beginSizing() === true
       ) {
@@ -753,18 +749,33 @@ export function CanvasHost({
         if (chipsRef.current?.open() === true) return;
       }
 
-      const claimed = managerRef.current?.key({
-        // The letter the keymap reads, so a tool claims the key the window would take.
-        key: keyForTools(event),
-        shiftKey: event.shiftKey,
-        ctrlKey: event.ctrlKey,
-      });
-      // A key the tool claimed is not also a shortcut: the app's tool keys
-      // skip an event whose default is prevented.
-      if (claimed === true) {
+      // No tool acts on the Sheets view: Delete there must not delete. On the
+      // board the active tool hears a key first, undo included, so a key the
+      // maker gave a tool under way is never another command's (U.12).
+      const claimed =
+        !onSheets &&
+        managerRef.current?.key({
+          // The letter the keymap reads, so a tool claims the key the window would take.
+          key: keyForTools(event),
+          // What the press means to the board's tools, by the keymap (U.12).
+          means: meaningsForTools(event, IS_MAC),
+          shiftKey: event.shiftKey,
+          ctrlKey: event.ctrlKey,
+        }) === true;
+      // A key the tool claimed is not also a shortcut: the window skips an
+      // event whose default is prevented.
+      if (claimed) {
         event.preventDefault();
         return;
       }
+
+      if (command === 'undo' || command === 'redo') {
+        event.preventDefault();
+        if (command === 'redo') store.redo();
+        else store.undo();
+        return;
+      }
+      if (onSheets) return;
 
       // Enter on the board opens the selected outline's sizes (U.14) — on the
       // board only: a focused button, field or Parts row keeps its own Enter.

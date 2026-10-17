@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 import type { PointerInput, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createMeasureTool } from './measureTool.js';
+import { keyInput } from './keys.fixture.js';
 
 let counter = 0;
 const nextId = (): string => `m-${(counter += 1)}`;
@@ -159,7 +160,7 @@ describe('the measure tool', () => {
     const tool = createMeasureTool(nextId, () => 'aligned');
 
     tool.onPointerDown!(ctx, click(0, 0));
-    expect(tool.onKey!(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
+    expect(tool.onKey!(ctx, keyInput('Escape'))).toBe(true);
     // The second corner of the abandoned dimension starts a new one instead.
     tool.onPointerDown!(ctx, click(100, 0));
 

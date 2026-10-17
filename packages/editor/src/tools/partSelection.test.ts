@@ -16,6 +16,7 @@ import { Viewport } from '../viewport.js';
 import { createEditPointsTool } from './editPointsTool.js';
 import { createScaleTool } from './scaleTool.js';
 import { createSelectTool } from './selectTool.js';
+import { keyInput } from './keys.fixture.js';
 
 /**
  * Q29: a part picked by its heading is a real selection for every tool, not
@@ -57,7 +58,7 @@ function pointer(at: Vec2, shiftKey = false): PointerInput {
   return { at, atPx: { x: 0, y: 0 }, button: 0, shiftKey, altKey: false, ctrlKey: false };
 }
 
-const key = (name: string) => ({ key: name, shiftKey: false, ctrlKey: false });
+const key = (name: string) => keyInput(name);
 
 describe('a part picked by its heading, with the Select tool (Q29)', () => {
   it('is deleted by the Delete key, through the app, which asks about dependents', () => {
@@ -67,6 +68,27 @@ describe('a part picked by its heading, with the Select tool (Q29)', () => {
 
     createSelectTool().onKey?.({ ...ctx, requestDeletePart }, key('Delete'));
 
+    expect(requestDeletePart).toHaveBeenCalledWith('p');
+  });
+
+  it('claims the key it deletes with, and leaves it when nothing is selected (U.12, on review)', () => {
+    const { ctx, store } = harness();
+    expect(createSelectTool().onKey?.(ctx, keyInput('Delete'))).not.toBe(true);
+    store.selectParts(['p']);
+    expect(
+      createSelectTool().onKey?.({ ...ctx, requestDeletePart: vi.fn() }, keyInput('Delete')),
+    ).toBe(true);
+  });
+
+  it('is deleted by whatever key means delete, and Delete alone no longer when moved (U.12)', () => {
+    const { ctx, store } = harness();
+    const requestDeletePart = vi.fn();
+    store.selectParts(['p']);
+    const app = { ...ctx, requestDeletePart };
+
+    createSelectTool().onKey?.(app, keyInput('Delete', []));
+    expect(requestDeletePart).not.toHaveBeenCalled();
+    createSelectTool().onKey?.(app, keyInput('x', ['delete']));
     expect(requestDeletePart).toHaveBeenCalledWith('p');
   });
 

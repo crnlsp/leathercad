@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { fieldMenu, isTextField } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
 import { IS_MAC } from './keyCaps.js';
-import { keysOf, matches } from './keymap.js';
+import { commandFor, keysOf, matches } from './keymap.js';
 import { ContextMenu } from './Menu.js';
 
 type Field = HTMLInputElement | HTMLTextAreaElement | HTMLElement;
@@ -56,7 +56,12 @@ export function TextFieldMenu() {
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (isTextField(event.target)) return;
-      if (keysOf('selectAll').some((binding) => matches(event, binding, IS_MAC))) {
+      // Chromium's select-all outside a field, unless the maker gave the
+      // window that key (U.12): then it is that command's, not prevented here.
+      if (
+        keysOf('selectAll').some((binding) => matches(event, binding, IS_MAC)) &&
+        commandFor(event, IS_MAC) === null
+      ) {
         event.preventDefault();
       }
     };

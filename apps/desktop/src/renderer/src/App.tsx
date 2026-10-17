@@ -73,7 +73,7 @@ import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
 import { SettingsDialog, type SettingsSection } from './SettingsDialog.js';
 import { IS_MAC } from './keyCaps.js';
-import { commandFor, keysOf, matches, type CommandId } from './keymap.js';
+import { applyBindings, commandFor, keysOf, matches, type CommandId } from './keymap.js';
 import {
   CHIP_ICON,
   PanelChip,
@@ -83,7 +83,8 @@ import {
   type Press,
 } from './PanelFold.js';
 import { ROOM_PX, layoutFor, toggleOf, type Panel, type Room } from './panelLayout.js';
-import { isTyping } from './shortcuts.js';
+import { readBindings } from './rebind.js';
+import { isTyping, pressesControl } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { OptionHints } from './OptionHintsRow.js';
@@ -182,7 +183,13 @@ export function App({
   // localStorage, which a second window blocks on for seconds because both
   // share one profile. Read before the first render (main.tsx).
   const [preferences, setPreferences] = useState<Preferences>(initialPreferences);
-  const changePreferences = useCallback((changes: Partial<Preferences>) => {
+  const changePreferences = useCallback((asked: Partial<Preferences>) => {
+    // The maker's keys are heard, and every cap shows them, from this press on
+    // (U.12) — read as the main process reads them, so both hear the same keys.
+    const keyBindings =
+      asked.keyBindings === undefined ? undefined : readBindings(asked.keyBindings, IS_MAC);
+    const changes = keyBindings === undefined ? asked : { ...asked, keyBindings };
+    if (keyBindings !== undefined) applyBindings(keyBindings);
     setPreferences((previous) => ({ ...previous, ...changes }));
     // A preference that could not be kept still applies to this session.
     void getPlatformHost()
@@ -558,7 +565,8 @@ export function App({
       focusMode: () => setFocus((on) => !on),
     };
     const onKey = (event: KeyboardEvent): void => {
-      if (isTyping(event.target)) return;
+      // A field's keys are its own, and so is a focused button's Space (U.12).
+      if (isTyping(event.target) || pressesControl(event)) return;
       // Esc, once nothing before it claimed it — a menu, a field, a dialog,
       // the overlay it was pressed in, or a tool giving something up: an
       // overlay closes, then focus mode ends.
@@ -572,9 +580,13 @@ export function App({
       }
       const command = commandFor(event, IS_MAC);
       if (command === null) return;
+      // A key something before the window claimed is not also a shortcut: the
+      // active tool's (the polyline's A mid-run), a Parts row's, a menu's or a
+      // tab list's arrows — whichever command the maker gave that key (U.12).
+      if (event.defaultPrevented) return;
       if (command.startsWith('tool.')) {
-        // The active tool claimed this key (the polyline's A and L mid-run).
-        if (event.defaultPrevented) return;
+        // Taken, so a tool moved to Ctrl+A is not Chromium's select-all too.
+        event.preventDefault();
         chooseTool(command.slice('tool.'.length));
         return;
       }

@@ -2123,10 +2123,24 @@ body {
   flex: 0 0 112px;
 }
 
-/* The keyboard shortcut map (8.2), in Settings (8.7): in columns. */
+/* The keyboard shortcut map (8.2), in Settings (8.7), where a key is changed
+   (U.12): a group's rows share three columns — what it does, its keys as
+   caps, then Change and Reset — so the caps line up down the group. */
+.shortcuts-intro {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.shortcuts-intro .setting-note {
+  margin: 0;
+}
+
 .shortcuts-groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
@@ -2135,26 +2149,35 @@ body {
   font: var(--t-strong);
 }
 
-.shortcuts-groups dl {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
+.shortcut-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 2px var(--space-3);
+  align-items: center;
 }
 
 .shortcut-row {
-  display: grid;
-  grid-template-columns: minmax(96px, auto) 1fr;
-  gap: 8px;
-  align-items: baseline;
+  display: contents;
 }
 
-.shortcut-row dd {
-  margin: 0;
+.shortcut-does {
   color: var(--text-dim);
 }
 
-.shortcut-row kbd {
+.shortcut-keys {
+  justify-self: end;
+  text-align: right;
+}
+
+/* Change in one place on every row; Reset after it, when there is one. */
+.shortcut-actions {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 132px;
+}
+
+.shortcut-keys kbd,
+.shortcut-clash kbd {
   padding: 0 4px;
   border-radius: var(--r-sm);
   background: var(--shell-900);
@@ -2162,6 +2185,47 @@ body {
   font: var(--t-micro);
   letter-spacing: var(--tracking-micro);
   white-space: nowrap;
+}
+
+/* Listening: the row's keys give way to what to press, in the accent. */
+.shortcut-listening {
+  color: var(--tan);
+  font: var(--t-label);
+}
+
+.tool.listening {
+  border-color: var(--tan);
+  color: var(--text);
+}
+
+.shortcut-fixed {
+  padding-left: 11px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+/* A note on a press, and a clash: under their row, across it. */
+.shortcut-note,
+.shortcut-clash {
+  grid-column: 1 / -1;
+  margin: 0 0 var(--space-1);
+  color: var(--text);
+  font: var(--t-label);
+}
+
+.shortcut-clash {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--space-2);
+  border: 1px solid var(--warning);
+  border-radius: var(--r-sm);
+}
+
+.shortcut-clash span {
+  flex: 1 1 200px;
 }
 
 /* Dim, not muted: muted fails contrast on the dialog's surface (8.7's scan). */

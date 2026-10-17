@@ -5,7 +5,14 @@ import en from '../../locales/en.json';
 import { createI18n, flatten } from '../../shared/i18n.js';
 import {
   KEYMAP,
+  applyBindings,
   commandFor,
+  commandsHearing,
+  currentKeymap,
+  keysInSentences,
+  meaningsForTools,
+  subscribeKeymap,
+  withBindings,
   keyForTools,
   keyLabel,
   keysOf,
@@ -16,7 +23,8 @@ import {
   type KeyPress,
   type KeyboardLayout,
 } from './keymap.js';
-import { SHORTCUT_GROUPS } from './shortcuts.js';
+import { CZECH, FRENCH, GERMAN, LETTERS, RUSSIAN, US } from './layouts.fixture.js';
+import { shortcutGroups } from './shortcuts.js';
 
 /**
  * The keymap (U.3, §2 *Shortcuts*): every key the window answers to, matched
@@ -30,88 +38,6 @@ import { SHORTCUT_GROUPS } from './shortcuts.js';
  */
 
 const { t } = createI18n('en');
-
-// The base level of three layouts, as `navigator.keyboard.getLayoutMap()`
-// returns it: what each key types with no modifier.
-const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
-const US: KeyboardLayout = new Map([
-  ...[...LETTERS].map((letter) => [`Key${letter.toUpperCase()}`, letter] as const),
-  ...[...'0123456789'].map((digit) => [`Digit${digit}`, digit] as const),
-  ['Backquote', '`'],
-  ['Minus', '-'],
-  ['Equal', '='],
-  ['BracketLeft', '['],
-  ['BracketRight', ']'],
-  ['Backslash', '\\'],
-  ['Semicolon', ';'],
-  ['Quote', "'"],
-  ['Comma', ','],
-  ['Period', '.'],
-  ['Slash', '/'],
-]);
-const GERMAN: KeyboardLayout = new Map([
-  ...US,
-  ['KeyY', 'z'],
-  ['KeyZ', 'y'],
-  ['Backquote', '^'],
-  ['Minus', 'ß'],
-  ['Equal', '´'],
-  ['BracketLeft', 'ü'],
-  ['BracketRight', '+'],
-  ['Backslash', '#'],
-  ['Semicolon', 'ö'],
-  ['Quote', 'ä'],
-  ['Slash', '-'],
-  ['IntlBackslash', '<'],
-]);
-const FRENCH: KeyboardLayout = new Map([
-  ...US,
-  ['KeyQ', 'a'],
-  ['KeyA', 'q'],
-  ['KeyW', 'z'],
-  ['KeyZ', 'w'],
-  ['Semicolon', 'm'],
-  ['KeyM', ','],
-  ['Comma', ';'],
-  ['Period', ':'],
-  ['Slash', '!'],
-  ['Digit1', '&'],
-  ['Digit2', 'é'],
-  ['Digit3', '"'],
-  ['Digit4', "'"],
-  ['Digit5', '('],
-  ['Digit6', '-'],
-  ['Digit7', 'è'],
-  ['Digit8', '_'],
-  ['Digit9', 'ç'],
-  ['Digit0', 'à'],
-  ['Minus', ')'],
-  ['Equal', '='],
-  ['BracketLeft', '^'],
-  ['BracketRight', '$'],
-  ['Backslash', '*'],
-  ['Quote', 'ù'],
-  ['Backquote', '²'],
-]);
-// Czech QWERTZ: the digit row types + ě š …, = is right of it, - where US has /.
-const CZECH: KeyboardLayout = new Map([
-  ...US,
-  ['KeyY', 'z'],
-  ['KeyZ', 'y'],
-  ['Digit1', '+'],
-  ['Digit2', 'ě'],
-  ['Digit3', 'š'],
-  ['Minus', '='],
-  ['Equal', '´'],
-  ['Slash', '-'],
-]);
-// No Latin letter anywhere: every letter key types a Cyrillic one.
-const RUSSIAN: KeyboardLayout = new Map([
-  ...US,
-  ...[...'фисвуапршолдьтщзйкыегмцчня'].map(
-    (letter, index) => [`Key${LETTERS[index]!.toUpperCase()}`, letter] as const,
-  ),
-]);
 
 const NO_MODIFIERS = { ctrlKey: false, metaKey: false, shiftKey: false, altKey: false };
 
@@ -542,7 +468,7 @@ describe('showing a key, as this keyboard prints it (U.3)', () => {
 
   it('shows a punctuation key as the character this layout has there', () => {
     expect(keyLabel({ code: 'BracketLeft' }, false, GERMAN, t)).toBe('ü');
-    expect(label('keyboardShortcuts', FRENCH)).toBe('Ctrl+!');
+    expect(keyLabel({ code: 'Slash', mod: true }, false, FRENCH, t)).toBe('Ctrl+!');
     expect(label('settings', FRENCH)).toBe('Ctrl+;');
   });
 
@@ -581,7 +507,9 @@ describe('showing a key, as this keyboard prints it (U.3)', () => {
   it('shows its US character when the layout is not known', () => {
     expect(keyLabel({ code: 'BracketLeft' }, false, null, t)).toBe('[');
     expect(label('zoomIn', null)).toBe('Ctrl+=');
-    expect(label('keyboardShortcuts', null)).toBe('Ctrl+/');
+    expect(keyLabel({ code: 'Slash', mod: true }, false, null, t)).toBe('Ctrl+/');
+    // The list's first key is ?, the work bar's "all keys" (U.11), on any layout.
+    expect(label('keyboardShortcuts', null)).toBe('?');
   });
 
   it('keeps a letter its letter, and a digit its digit, on any layout', () => {
@@ -613,7 +541,7 @@ describe('showing a key, as this keyboard prints it (U.3)', () => {
 });
 
 describe('the shortcut list (8.2) is the keymap (U.3)', () => {
-  const listed = SHORTCUT_GROUPS.flatMap((group) =>
+  const listed = shortcutGroups().flatMap((group) =>
     group.shortcuts.map((shortcut) => ({ group: group.id, ...shortcut })),
   );
 
@@ -621,20 +549,130 @@ describe('the shortcut list (8.2) is the keymap (U.3)', () => {
     for (const command of KEYMAP) {
       expect(listed).toContainEqual({
         group: command.group,
+        id: command.id,
         keys: command.keys,
         does: command.does,
+        ...(command.fixed ? { fixed: true } : {}),
       });
     }
   });
 
   it('lists nothing the keymap lacks but the pointer’s gestures', () => {
-    const gestures = listed.filter(
-      (row) => !KEYMAP.some((command) => command.does === row.does && command.keys === row.keys),
-    );
+    const gestures = listed.filter((row) => row.id === undefined);
     expect(gestures.map((row) => row.does).sort()).toEqual([
       'shortcuts.pan',
       'shortcuts.square',
       'shortcuts.zoom',
+    ]);
+  });
+});
+
+describe('the maker’s keys (U.12)', () => {
+  const f5 = { ...NO_MODIFIERS, code: 'F5', key: 'F5' };
+  const ctrlS = { ...NO_MODIFIERS, code: 'KeyS', key: 's', ctrlKey: true };
+
+  it('are heard in place of the defaults by every function, or by the keymap it is handed', () => {
+    const keymap = withBindings({ save: [{ code: 'F5' }] });
+    expect(commandFor(f5, false, keymap)).toBe('save');
+    expect(commandFor(ctrlS, false, keymap)).toBeNull();
+    expect(commandFor(f5, false)).toBeNull();
+    try {
+      applyBindings({ save: [{ code: 'F5' }] });
+      expect(commandFor(f5, false)).toBe('save');
+      expect(keysOf('save')).toEqual([{ code: 'F5' }]);
+      expect(shownKeys('save', US, false)).toEqual([{ code: 'F5' }]);
+      expect(shortcutGroups()[0]!.shortcuts.find((row) => row.id === 'save')?.keys).toEqual([
+        { code: 'F5' },
+      ]);
+    } finally {
+      applyBindings({});
+    }
+    expect(commandFor(ctrlS, false)).toBe('save');
+  });
+
+  it('tell whoever listens, with a new keymap each time', () => {
+    const before = currentKeymap();
+    let told = 0;
+    const stop = subscribeKeymap(() => (told += 1));
+    try {
+      applyBindings({ help: [{ code: 'F4' }] });
+      expect(told).toBe(1);
+      expect(currentKeymap()).not.toBe(before);
+    } finally {
+      applyBindings({});
+      stop();
+    }
+    applyBindings({});
+    expect(told).toBe(2);
+  });
+
+  it('drop a changed command’s numpad twin with its old key', () => {
+    const keymap = withBindings({ design: [{ code: 'F7' }] });
+    expect(
+      commandFor({ ...NO_MODIFIERS, code: 'Numpad1', key: '1', ctrlKey: true }, false, keymap),
+    ).toBeNull();
+  });
+
+  it('name sentences’ keys from the keymap in effect', () => {
+    const keys = keysInSentences(
+      (binding) => keyLabel(binding, false, null, t),
+      t,
+      withBindings({ arc: [{ code: 'KeyQ' }], delete: [{ code: 'KeyD', alt: true }] }),
+    );
+    expect(keys['arc']).toBe('Q');
+    expect(keys['straight']).toBe('L');
+    expect(keys['delete']).toBe('Alt+D');
+  });
+});
+
+describe('every command a press is, in some scopes (U.12)', () => {
+  it('finds the board’s, the polyline’s and Edit Points’ commands for one key', () => {
+    const backspace = { ...NO_MODIFIERS, code: 'Backspace', key: 'Backspace' };
+    expect(commandsHearing(backspace, ['canvas', 'polyline', 'points'], false)).toEqual([
+      'delete',
+      'takeBack',
+      'removePoint',
+    ]);
+    expect(commandsHearing(backspace, ['window'], false)).toEqual([]);
+  });
+
+  it('gives the board’s tools their keys with Shift held too, as drawing holds it', () => {
+    const shiftA = { ...NO_MODIFIERS, code: 'KeyA', key: 'A', shiftKey: true };
+    expect([...meaningsForTools(shiftA, false)]).toEqual(['arc']);
+    const del = { ...NO_MODIFIERS, code: 'Delete', key: 'Delete' };
+    expect([...meaningsForTools(del, false)]).toEqual(['delete', 'removePoint']);
+    expect([...meaningsForTools({ ...del, ctrlKey: true }, false)]).toEqual([]);
+    // A key bound as pressed is its command's alone: Shift+Delete given to
+    // the Circle tool is not also Delete held with Shift (on review).
+    const circle = withBindings({ 'tool.circle': [{ code: 'Delete', shift: true }] });
+    const shiftDelete = { ...del, shiftKey: true };
+    expect([...meaningsForTools(shiftDelete, false, circle)]).toEqual([]);
+    expect(commandFor(shiftDelete, false, circle)).toBe('tool.circle');
+    // Moved, the old key means nothing to them.
+    const moved = withBindings({ delete: [{ code: 'KeyD', alt: true }] });
+    expect([...meaningsForTools(del, false, moved)]).toEqual(['removePoint']);
+  });
+
+  it('hears the polyline’s A and L as two commands, by the letter typed', () => {
+    const scopes = ['polyline'] as const;
+    expect(commandsHearing({ ...NO_MODIFIERS, code: 'KeyQ', key: 'a' }, scopes, false)).toEqual([
+      'arc',
+    ]);
+    // Shift is held while drawing, and a tool's key counts with it — in dispatch
+    // and in finding a clash alike (U.12, on review).
+    expect(
+      commandsHearing({ ...NO_MODIFIERS, code: 'KeyL', key: 'L', shiftKey: true }, scopes, false),
+    ).toEqual(['straight']);
+    // The window's keys stay exact.
+    expect(
+      commandsHearing(
+        { ...NO_MODIFIERS, code: 'KeyR', key: 'R', shiftKey: true },
+        ['window'],
+        false,
+      ),
+    ).toEqual([]);
+    expect(commandsHearing({ ...NO_MODIFIERS, code: 'KeyL', key: 'l' }, scopes, false)).toEqual([
+      'straight',
     ]);
   });
 });

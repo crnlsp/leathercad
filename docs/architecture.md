@@ -389,10 +389,13 @@ interface Tool {
 }
 ```
 
-A tool hears a key before the application's tool shortcuts do: the canvas listens on `document`, the
-shortcuts on `window`. A tool that returns `true` has **claimed** the key, and the shortcut does not
-fire. That is how the polyline takes A and L mid-run for its next segment (3.9a) without switching to
-the Arc or Line tool and losing the run.
+A tool hears a key before the application's shortcuts do: the canvas listens on `document`, the
+shortcuts on `window`. A tool that returns `true` has **claimed** the key, and no shortcut fires —
+not a tool's, nor any other (U.12). That is how the polyline takes A and L mid-run for its next
+segment (3.9a) without switching to the Arc or Line tool and losing the run. A tool reads what a key
+**means** — `KeyInput.means`, the commands the app's keymap makes of the press (`arc`, `takeBack`,
+`delete` …) — never which key it was, so a key the maker moves in Settings moves for the tool too;
+only Escape and Enter, whose roles no one can change, are read by name.
 
 The window's keys are one keymap, `apps/desktop/src/renderer/src/keymap.ts` (U.3): each command's
 binding by `KeyboardEvent.code` and its modifiers — `mod` is Ctrl, ⌘ on macOS — except a letter,

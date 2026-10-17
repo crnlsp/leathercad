@@ -1,5 +1,5 @@
 import type { MessageKey } from '../../shared/i18n.js';
-import { keysOf, type Binding, type CommandId } from './keymap.js';
+import type { Binding, CommandId } from './keymap.js';
 import type { ToolId } from './tools.js';
 
 /**
@@ -37,11 +37,11 @@ export interface HintSituation {
 /** Shift, held: a modifier on its own, which no command binds. */
 const SHIFT: Binding = { code: 'Shift' };
 
-/** `?`: the character that opens the list of every key, whatever the layout types it with. */
-const QUESTION: Binding = keysOf('keyboardShortcuts').find((binding) => 'char' in binding)!;
-
-/** The one hint that never drops: the way to every other key. */
-export const ALL_KEYS: Hint = { key: QUESTION, words: 'hints.allKeys', rank: 0 };
+/**
+ * The one hint that never drops: the way to every other key — `?` by
+ * default, the keymap's first for the list, so it follows a change (U.12).
+ */
+export const ALL_KEYS: Hint = { key: 'keyboardShortcuts', words: 'hints.allKeys', rank: 0 };
 
 const gesture = (words: MessageKey, rank: number): Hint => ({ words, rank });
 const press = (key: CommandId | Binding, words: MessageKey, rank: number): Hint => ({
@@ -115,7 +115,7 @@ const BY_TOOL: Readonly<Record<Exclude<ToolId, 'select'>, ToolHints>> = {
     underway: [
       press('finishPolyline', 'hints.finishes', 1),
       // The key only a polyline has, and the one a maker is least likely to guess.
-      press('arcOrStraight', 'hints.arcsNext', 2),
+      press('arc', 'hints.arcsNext', 2),
       press('takeBack', 'hints.takesBack', 3),
       gesture('hints.polylineClose', 4),
     ],

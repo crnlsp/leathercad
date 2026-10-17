@@ -26,11 +26,24 @@ export interface PointerInput {
   readonly ctrlKey: boolean;
 }
 
+/**
+ * What a key means to the board's tools (U.12): the app's keymap decides, so
+ * a key the maker moved in Settings moves here too. `ToolKey` names the
+ * commands a tool answers to; their keys are the app's to show and change.
+ */
+export type ToolKey = 'delete' | 'takeBack' | 'arc' | 'straight' | 'removePoint' | 'roundCorner';
+
 export interface KeyInput {
+  /** The key's name, for Escape and Enter, whose roles no keymap changes. */
   readonly key: string;
+  /** The commands this press is, by the keymap: a tool acts on these, not on `key`. */
+  readonly means: ReadonlySet<string>;
   readonly shiftKey: boolean;
   readonly ctrlKey: boolean;
 }
+
+/** Whether a press means this tool command. */
+export const means = (event: KeyInput, command: ToolKey): boolean => event.means.has(command);
 
 /**
  * What a tool is allowed to do.

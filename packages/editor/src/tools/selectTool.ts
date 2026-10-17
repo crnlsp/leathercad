@@ -13,7 +13,7 @@ import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
 import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
 
 import { featuresWithin, hitTest } from '../hitTest.js';
-import type { Tool, ToolContext } from '../tool.js';
+import { means, type Tool, type ToolContext } from '../tool.js';
 import { isDrag } from './gesture.js';
 
 type State =
@@ -135,7 +135,9 @@ export function createSelectTool(): Tool {
         return busy;
       }
 
-      if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Claimed whenever it acts (U.12): the key is this delete's, and no
+      // command the maker gave the same key runs as well.
+      if (means(event, 'delete')) {
         const { selection } = ctx.store.getState();
         // A part picked by its heading goes whole, as its menu's Delete part
         // does (Q29), not feature by feature into an empty part.
@@ -143,12 +145,12 @@ export function createSelectTool(): Tool {
         if (partId !== undefined && selection.features.size === 0) {
           if (ctx.requestDeletePart !== undefined) {
             ctx.requestDeletePart(partId);
-            return false;
+            return true;
           }
           const before = ctx.store.getState().document;
           ctx.dispatch(deletePart(partId));
           if (ctx.store.getState().document !== before) ctx.store.clearSelection();
-          return false;
+          return true;
         }
 
         const selected = [...selection.features];
@@ -156,7 +158,7 @@ export function createSelectTool(): Tool {
 
         if (ctx.requestDelete !== undefined) {
           ctx.requestDelete(selected);
-          return false;
+          return true;
         }
 
         // Without an app to ask, a delete with dependents is refused. Keep the
@@ -164,6 +166,7 @@ export function createSelectTool(): Tool {
         const before = ctx.store.getState().document;
         ctx.dispatch(deleteFeatures(selected));
         if (ctx.store.getState().document !== before) ctx.store.clearSelection();
+        return true;
       }
       return false;
     },

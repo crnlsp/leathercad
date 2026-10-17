@@ -4,8 +4,12 @@ import { extname, isAbsolute, sep } from 'node:path';
 import { quantise } from '@leathercad/core';
 import { DEFAULT_PREFERENCES, type Iron, type Preferences } from '@leathercad/platform';
 
+import { readBindings } from '../renderer/src/rebind.js';
 import { isLanguagePreference } from '../shared/i18n.js';
 import { writeFileAtomic } from './atomicWrite.js';
+
+/** Quit is macOS's own ⌘Q there, and not a key the maker changes (U.12). */
+const IS_MAC = process.platform === 'darwin';
 
 /** How many recent projects the Project menu lists (8.2, 8.7). */
 export const RECENT_LIMIT = 10;
@@ -83,6 +87,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     defaultIronId: defaultAmong(irons, record['defaultIronId']),
     stitchMarginMm: readLength(record['stitchMarginMm']) ?? DEFAULT_PREFERENCES.stitchMarginMm,
     leatherThicknessMm: thickness === null ? null : (readLength(thickness) ?? null),
+    // Each key the maker changed, kept only if this version can use it (U.12).
+    keyBindings: readBindings(record['keyBindings'], IS_MAC),
     recentFiles: [...new Set(recent)].slice(0, RECENT_LIMIT),
   };
 }
@@ -140,6 +146,9 @@ export function validChanges(changes: unknown): Partial<Preferences> {
   const thicknessMm = readLength(thickness);
   if (thickness === null) out.leatherThicknessMm = null;
   else if (thicknessMm !== undefined) out.leatherThicknessMm = thicknessMm;
+  if (record['keyBindings'] !== undefined) {
+    out.keyBindings = readBindings(record['keyBindings'], IS_MAC);
+  }
   return out;
 }
 

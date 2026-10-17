@@ -1,7 +1,7 @@
 import type { MenuAction } from '@leathercad/platform';
 import type { Input, MenuItemConstructorOptions } from 'electron';
 
-import { keysOf, matches, type CommandId } from '../renderer/src/keymap.js';
+import { keysOf, matches, type Binding, type CommandId } from '../renderer/src/keymap.js';
 import type { Translate } from '../shared/i18n.js';
 
 /**
@@ -14,8 +14,10 @@ import type { Translate } from '../shared/i18n.js';
  * the ones the project bar opens.
  *
  * Shortcuts are shown but not registered: the renderer handles the keys, and
- * a registered accelerator would run the action a second time. In the
- * interface's language (ADR 0018); macOS names the roles' items itself.
+ * a registered accelerator would run the action a second time. They are the
+ * keymap's, the maker's keys in it (U.12), so the menu is rebuilt when one
+ * changes. In the interface's language (ADR 0018); macOS names the roles'
+ * items itself.
  */
 export function macMenuTemplate(options: {
   readonly send: (action: MenuAction) => void;
@@ -24,14 +26,17 @@ export function macMenuTemplate(options: {
   const { send, t } = options;
   const action = (
     label: string,
-    accelerator: string,
+    command: CommandId,
     sent: MenuAction,
-  ): MenuItemConstructorOptions => ({
-    label,
-    accelerator,
-    registerAccelerator: false,
-    click: () => send(sent),
-  });
+  ): MenuItemConstructorOptions => {
+    const key = keysOf(command)[0];
+    const shown = key === undefined ? undefined : accelerator(key);
+    return {
+      label,
+      ...(shown === undefined ? {} : { accelerator: shown, registerAccelerator: false }),
+      click: () => send(sent),
+    };
+  };
 
   return [
     {
@@ -40,7 +45,7 @@ export function macMenuTemplate(options: {
       submenu: [
         { label: t('menu.about'), click: () => send('about') },
         { type: 'separator' },
-        action(t('menu.settings'), 'CmdOrCtrl+,', 'settings'),
+        action(t('menu.settings'), 'settings', 'settings'),
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -56,8 +61,8 @@ export function macMenuTemplate(options: {
       label: t('macMenu.edit'),
       submenu: [
         // The document's history, not a text field's.
-        action(t('macMenu.undo'), 'CmdOrCtrl+Z', 'undo'),
-        action(t('macMenu.redo'), 'CmdOrCtrl+Shift+Z', 'redo'),
+        action(t('macMenu.undo'), 'undo', 'undo'),
+        action(t('macMenu.redo'), 'redo', 'redo'),
         { type: 'separator' },
         { role: 'cut' },
         { role: 'copy' },
@@ -67,6 +72,61 @@ export function macMenuTemplate(options: {
     },
     { role: 'windowMenu' },
   ];
+}
+
+/** Electron's names for the keys that are not a letter, a digit or a function key. */
+const ELECTRON_KEYS: Readonly<Record<string, string>> = {
+  Backquote: '`',
+  Minus: '-',
+  Equal: '=',
+  BracketLeft: '[',
+  BracketRight: ']',
+  Backslash: '\\',
+  Semicolon: ';',
+  Quote: "'",
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+  Space: 'Space',
+  Backspace: 'Backspace',
+  Delete: 'Delete',
+  Insert: 'Insert',
+  Home: 'Home',
+  End: 'End',
+  PageUp: 'PageUp',
+  PageDown: 'PageDown',
+  ArrowUp: 'Up',
+  ArrowDown: 'Down',
+  ArrowLeft: 'Left',
+  ArrowRight: 'Right',
+  NumpadAdd: 'numadd',
+  NumpadSubtract: 'numsub',
+};
+
+/**
+ * A binding as Electron writes an accelerator — `CmdOrCtrl+Shift+Z` — which
+ * macOS's menu shows in its own way; undefined for a key it has no name for,
+ * which the menu then shows without one.
+ */
+export function accelerator(binding: Binding): string | undefined {
+  const key =
+    'char' in binding ? (binding.char === '+' ? 'Plus' : binding.char) : electronKey(binding.code);
+  if (key === undefined) return undefined;
+  const code = 'code' in binding;
+  return [
+    ...(binding.mod === true ? ['CmdOrCtrl'] : []),
+    ...(code && binding.alt === true ? ['Alt'] : []),
+    ...(code && binding.shift === true ? ['Shift'] : []),
+    key,
+  ].join('+');
+}
+
+function electronKey(code: string): string | undefined {
+  const letterOrDigit = /^(?:Key|Digit)(.)$/.exec(code)?.[1];
+  if (letterOrDigit !== undefined) return letterOrDigit;
+  if (/^F\d+$/.test(code)) return code;
+  const numpad = /^Numpad(\d)$/.exec(code)?.[1];
+  return numpad === undefined ? ELECTRON_KEYS[code] : `num${numpad}`;
 }
 
 /** What a key the native menu's roles used to give does, now there is no menu (8.7). */
