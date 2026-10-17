@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App.js';
+import { applyBindings } from './keymap.js';
 import { keepKeysInOpenLists, keepTabInDialogs } from './modalKeys.js';
 import { getPlatformHost } from './platformBridge.js';
 import { applyTheme } from './theme.js';
@@ -33,6 +34,8 @@ async function start(root: HTMLElement): Promise<void> {
   } catch {
     // Defaults: English, until the preference can be read.
   }
+  // The maker's keys (U.12), before anything shows one or hears one.
+  applyBindings(preferences.keyBindings);
   createRoot(root).render(
     <StrictMode>
       <App initialPreferences={preferences} systemLanguages={systemLanguages} />

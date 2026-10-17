@@ -14,6 +14,7 @@ import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
 import { projectPathFromArgs } from './launchFile.js';
+import { applyBindings } from '../renderer/src/keymap.js';
 import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
@@ -53,6 +54,20 @@ function followLanguage(): boolean {
   const locale = resolveLocale(preferences.preferences.language, app.getPreferredSystemLanguages());
   if (locale === i18n.locale) return false;
   i18n = createI18n(locale);
+  return true;
+}
+
+/**
+ * Follows the maker's keys (U.12), as the renderer does: Full screen and Quit
+ * are heard here (`windowKeyFor`), and macOS's menu shows Settings', Undo's
+ * and Redo's. True when they changed.
+ */
+let keys = '{}';
+function followKeys(): boolean {
+  const next = JSON.stringify(preferences.preferences.keyBindings);
+  if (next === keys) return false;
+  keys = next;
+  applyBindings(preferences.preferences.keyBindings);
   return true;
 }
 
@@ -229,13 +244,15 @@ app.whenReady().then(() => {
     (path) => openRecent(path),
     readNotices,
     // A new language rebuilds macOS's menu in it, at once, as the window's
-    // own words change (8.7's Settings apply immediately).
+    // own words change (8.7's Settings apply immediately); so do new keys.
     () => {
-      if (followLanguage()) buildMenu();
+      const words = followLanguage();
+      if (followKeys() || words) buildMenu();
     },
   );
 
   followLanguage();
+  followKeys();
   buildMenu();
 
   // The session's spellchecker off too (U.20), and with no language: off

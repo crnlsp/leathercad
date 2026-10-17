@@ -14,6 +14,7 @@ import type { PointerInput, Tool, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createRectangleTool } from './rectangleTool.js';
 import { createSelectTool } from './selectTool.js';
+import { keyInput } from './keys.fixture.js';
 
 /**
  * A tool harness with no canvas in it.
@@ -144,7 +145,7 @@ describe('rectangle tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 10, y: 20 }));
     tool.onPointerUp?.(ctx, pointer({ x: 10, y: 20 }));
-    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
+    expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
     tool.onPointerDown?.(ctx, pointer({ x: 115, y: 95 }));
     tool.onPointerUp?.(ctx, pointer({ x: 115, y: 95 }));
 
@@ -190,7 +191,7 @@ describe('rectangle tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 0, y: 0 }));
     tool.onPointerMove?.(ctx, pointer({ x: 50, y: 50 }));
-    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
+    expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
     tool.onPointerUp?.(ctx, pointer({ x: 50, y: 50 }));
 
     expect(store.getState().document.project.parts).toHaveLength(0);
@@ -322,7 +323,7 @@ describe('select tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 50, y: 0 }));
     tool.onPointerUp?.(ctx, pointer({ x: 50, y: 0 }));
-    tool.onKey?.(ctx, { key: 'Delete', shiftKey: false, ctrlKey: false });
+    tool.onKey?.(ctx, keyInput('Delete'));
 
     // The feature goes; its part stays until it is removed on purpose (ADR 0009).
     expect(store.getState().document.project.parts[0]!.features).toHaveLength(0);
@@ -333,7 +334,7 @@ describe('select tool', () => {
   it('Delete with nothing selected does nothing', () => {
     const { ctx, store } = withRect();
     const tool = createSelectTool();
-    tool.onKey?.(ctx, { key: 'Delete', shiftKey: false, ctrlKey: false });
+    tool.onKey?.(ctx, keyInput('Delete'));
     expect(store.getState().document.project.parts).toHaveLength(1);
   });
 
@@ -346,7 +347,7 @@ describe('select tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 50, y: 0 }));
     tool.onPointerMove?.(ctx, pointer({ x: 90, y: 40 }));
-    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
+    expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
 
     expect(firstRect(store)!.origin).toEqual({ x: 0, y: 0 });
     expect(store.inTransaction).toBe(false);
@@ -425,7 +426,7 @@ describe('select tool and derived features', () => {
     store.select(['cut-1']);
     const before = store.getState().document;
 
-    createSelectTool().onKey?.(withHandler, { key: 'Delete', shiftKey: false, ctrlKey: false });
+    createSelectTool().onKey?.(withHandler, keyInput('Delete'));
 
     expect(asked).toEqual([['cut-1']]);
     expect(store.getState().document).toBe(before);
@@ -435,7 +436,7 @@ describe('select tool and derived features', () => {
     const { ctx, store } = withChain();
     store.select(['cut-1']);
 
-    createSelectTool().onKey?.(ctx, { key: 'Delete', shiftKey: false, ctrlKey: false });
+    createSelectTool().onKey?.(ctx, keyInput('Delete'));
 
     expect([...store.getState().selection.features]).toEqual(['cut-1']);
     expect(store.getState().document.project.parts[0]!.features).toHaveLength(2);

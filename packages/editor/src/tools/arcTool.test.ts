@@ -13,6 +13,7 @@ import type { PointerInput, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createArcTool } from './arcTool.js';
 import type { DrawMode } from './commitDrawn.js';
+import { keyInput } from './keys.fixture.js';
 
 /**
  * An arc has two ends, so **Marking** is the mode it can actually be drawn in:
@@ -169,7 +170,7 @@ describe('arc tool', () => {
       { x: 0, y: 0 },
       { x: 10, y: 0 },
     ]);
-    expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
+    expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
     place(tool, ctx, [{ x: 5, y: 5 }]);
 
     // Nothing added to the part the arc would have joined: it still holds only
@@ -187,7 +188,7 @@ describe('arc tool', () => {
       { x: 0, y: 0 },
       { x: 99, y: 99 },
     ]);
-    tool.onKey?.(ctx, { key: 'Backspace', shiftKey: false, ctrlKey: false });
+    tool.onKey?.(ctx, keyInput('Backspace'));
 
     // Two clicks after the undo: the discarded (99,99) would otherwise have
     // been the end point, and the arc would be a different one.

@@ -155,7 +155,7 @@ Each menu owns one kind of thing. An item that belongs to none of them is not ad
 |---|---|---|
 | **General** | *Recent projects* — "The Project menu lists the last 10 projects you opened or saved." with how many are listed, and *Clear list* (disabled when there are none) | `PreferencesStore.clearRecent`, and the operating system's list, as the native menu cleared both |
 | **Appearance** | *Name the marks in the canvas legend*; *Show tool names in the rail* | the existing `legendOpen`, and `toolRailCollapsed` inverted — the same state the legend's own toggle and the rail's toggle change |
-| **Keyboard shortcuts** | the shortcut map, **read-only** — rebinding keys would change this pane, not the Settings structure around it — which gains *Ctrl+, Settings*; its *Ctrl+/ or ? This list* row stays | `SHORTCUT_GROUPS`, as the dialog shows it today |
+| **Keyboard shortcuts** | the shortcut map, which gains *Ctrl+, Settings*; its *Ctrl+/ or ? This list* row stays. *As built in U.12:* no longer read-only — each row has *Change* and, once changed, *Reset*, with *Reset all* above; rebinding changed this pane, not the Settings structure around it | `shortcutGroups(keymap)` (was `SHORTCUT_GROUPS`) |
 
 **How it grows.** The sections are one list at the top of `SettingsDialog.tsx`: an id, a title and
 the component that draws the pane. A new section is one entry. **No section is written before

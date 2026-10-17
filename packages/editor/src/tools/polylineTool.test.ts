@@ -12,6 +12,7 @@ import type { PointerInput, Tool, ToolContext } from '../tool.js';
 import type { DrawMode } from './commitDrawn.js';
 import { Viewport } from '../viewport.js';
 import { createLineTool, createPolylineTool } from './polylineTool.js';
+import { keyInput } from './keys.fixture.js';
 
 /**
  * `outline` unless a test says otherwise, because that is the mode a closed
@@ -52,7 +53,7 @@ const click = (tool: Tool, ctx: ToolContext, at: Vec2, shiftKey = false): void =
 };
 
 const key = (tool: Tool, ctx: ToolContext, k: string): void => {
-  tool.onKey?.(ctx, { key: k, shiftKey: false, ctrlKey: false });
+  tool.onKey?.(ctx, keyInput(k));
 };
 
 /**
@@ -122,7 +123,7 @@ describe('polyline tool', () => {
     // the press that finishes — or is refused finishing — a run is the run's.
     const { ctx } = harness('outline');
     const tool = createPolylineTool(nextId);
-    const enter = { key: 'Enter', shiftKey: false, ctrlKey: false };
+    const enter = keyInput('Enter');
     expect(tool.onKey?.(ctx, enter)).toBe(false);
 
     click(tool, ctx, { x: 0, y: 0 });
@@ -486,7 +487,7 @@ describe('arc segments (3.9a)', () => {
   it('claims A and L only mid-run, so they still switch tools otherwise', () => {
     const { ctx } = harness('outline');
     const tool = createPolylineTool(nextId);
-    const press = (k: string) => tool.onKey?.(ctx, { key: k, shiftKey: false, ctrlKey: false });
+    const press = (k: string) => tool.onKey?.(ctx, keyInput(k));
 
     // Idle: A is the Arc tool and L the Line tool, as ever.
     expect(press('a')).not.toBe(true);
@@ -502,7 +503,20 @@ describe('arc segments (3.9a)', () => {
     // The line tool finishes itself at two points: nothing to choose.
     const line = createLineTool(nextId);
     click(line, ctx, { x: 0, y: 0 });
-    expect(line.onKey?.(ctx, { key: 'a', shiftKey: false, ctrlKey: false })).not.toBe(true);
+    expect(line.onKey?.(ctx, keyInput('a'))).not.toBe(true);
+  });
+
+  it('hears the next segment by what the key means, so a key moved in Settings moves here (U.12)', () => {
+    const { ctx } = harness('outline');
+    const tool = createPolylineTool(nextId);
+    click(tool, ctx, { x: 0, y: 0 });
+    // The maker gave the arc Q: Q is the arc, and A is only a letter now.
+    expect(tool.onKey?.(ctx, keyInput('q', ['arc']))).toBe(true);
+    expect(tool.onKey?.(ctx, keyInput('a', []))).not.toBe(true);
+    // A key that means nothing to it is not taken back either.
+    const before = tool.buildOverlay?.(ctx);
+    tool.onKey?.(ctx, keyInput('Backspace', []));
+    expect(tool.buildOverlay?.(ctx)).toEqual(before);
   });
 
   it('says so while an arc’s end is being placed', () => {

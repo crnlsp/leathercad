@@ -1353,6 +1353,50 @@ cap in the window follows. Esc, Tab and Enter keep their native roles and cannot
 **Done when.** A key changed, used, shown everywhere as changed, and still changed after a restart;
 a clash explained; *Reset all* restores the defaults.
 
+**As built (2026-10-17).** One registry still: `KEYMAP` is the defaults, and `applyBindings`
+(`keymap.ts`) makes the maker's keys the map every function reads — `matches`, `commandFor`,
+`shownKeys`, `keysOf`, `keysInSentences`, and the new `commandsHearing` each take the keymap as a
+defaulted last argument. The renderer applies the preferences before its first render and on every
+change; the main process applies them at start and on every change, so `windowKeyFor` (Full
+screen, Quit) and macOS's menu accelerators — now derived from the keymap, `accelerator()` in
+`menu.ts` — follow. The rules are pure, in `rebind.ts`, with property tests over US, German,
+French, Czech, Dvorak and Russian keyboards. What the plan did not know:
+
+- **The capture has to store what `matches` agrees with for the same press.** `matches` reads a
+  letter by what it types (U.3), so storing `event.code` would bind AZERTY's `a` key as Q. A key
+  that types a Latin letter is stored as that letter (`KeyA`), anything else by its place; and a
+  press the stored binding would not match — Polish AltGr+A typing `ą`, macOS's Option+A typing
+  `å` — is refused rather than binding the plain letter. A property test holds every capture to it.
+- **Tools heard keys by name**, outside the keymap: `selectTool` (Delete, Backspace),
+  `polylineTool` (Backspace, A, L), `arcTool` (Backspace), `editPointsTool` (R, Delete). `KeyInput`
+  carries `means` now — the commands the press is, from the keymap — and only Escape and Enter
+  are still read by name, which no one can move. Shift held while drawing still counts, as it did.
+- **A tool's claimed key still ran the window's command**: App skipped a prevented key only for
+  `tool.*`. Focus mode given A would have arced *and* toggled focus mode mid-polyline. Every
+  command skips a key something before the window claimed now (a tool, a Parts row, a menu's or a
+  tab list's arrows); and on the board the tool hears a key before undo does.
+- **`arcOrStraight` held two keys with two meanings by index**: it is `arc` (A) and `straight`
+  (L), each movable on its own.
+- **The defaults are not clash-free on every layout, by design**: German types − where US has `/`,
+  so Ctrl+/ there is Zoom out's. A clash is found from the real press and from the very same keys
+  (which a layout may hide), so giving Save that key on German names Zoom out and offers no swap,
+  since the list holds Ctrl+/ too. `preferences.json` is checked for a key two commands share in
+  the same place, not against a layout it was not made on.
+- **Fixed rows**: Esc (`cancel`), Enter (`finishPolyline`, `editSizes`), a field's Cut, Copy, Paste
+  and Select all, and the menu key — Chromium's, or a role. Esc, Tab, Enter and NumpadEnter are
+  refused with any modifier, and the arrows, Home and End without one (a list's, a tree's and a
+  menu's own).
+- **Full screen and Quit are heard by the main process before any field**, so a bare letter there
+  would never be typed: they take a function key or keys held with a modifier, and they clash with
+  a field's own keys. A key the main process hears acts even while Settings listens, so F11 and
+  Ctrl+Q cannot be captured for another command until those two are moved.
+- **Space on a focused button is the button's** (`pressesControl`), once a window command may
+  have Space. The `?` comes first in the list's keys, so the work bar's "all keys" is the list's
+  first key, and follows a change.
+- Swap gives the command being changed the key and the other its previous keys; a reset goes
+  through the same clash path; *Reset all* empties the map. Only what differs is stored, and the
+  file stays version 2.
+
 ---
 
 #### U.20 What Chromium still draws itself — §2 *Keyboard*, UI Foundations §6.5 · M

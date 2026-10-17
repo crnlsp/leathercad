@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { PointerInput, Tool, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createRectangleTool } from './rectangleTool.js';
+import { keyInput } from './keys.fixture.js';
 
 /** U.16, R-13: sizes typed while the rectangle is being drawn. */
 
@@ -35,7 +36,7 @@ function firstRect(store: DocumentStore) {
 
 let counter = 0;
 const nextId = (): string => `typed-${counter++}`;
-const key = (name: string) => ({ key: name, shiftKey: false, ctrlKey: false });
+const key = (name: string) => keyInput(name);
 
 describe('rectangle tool, typed sizes', () => {
   it('has nothing to size until a corner is placed, or typing starts at the pointer', () => {

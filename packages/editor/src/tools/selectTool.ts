@@ -13,7 +13,7 @@ import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
 import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
 
 import { featuresWithin, hitTest } from '../hitTest.js';
-import type { Tool, ToolContext } from '../tool.js';
+import { means, type Tool, type ToolContext } from '../tool.js';
 import { isDrag } from './gesture.js';
 
 type State =
@@ -135,7 +135,7 @@ export function createSelectTool(): Tool {
         return busy;
       }
 
-      if (event.key === 'Delete' || event.key === 'Backspace') {
+      if (means(event, 'delete')) {
         const { selection } = ctx.store.getState();
         // A part picked by its heading goes whole, as its menu's Delete part
         // does (Q29), not feature by feature into an empty part.

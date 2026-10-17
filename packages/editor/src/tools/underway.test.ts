@@ -7,6 +7,7 @@ import { createArcTool } from './arcTool.js';
 import { createCircleTool } from './circleTool.js';
 import { createLineTool, createPolylineTool } from './polylineTool.js';
 import { createRectangleTool } from './rectangleTool.js';
+import { keyInput } from './keys.fixture.js';
 
 /**
  * U.11 (R-11): the work bar's hints depend on whether a shape is under way,
@@ -64,7 +65,7 @@ describe('a tool under way', () => {
       tool.onPointerMove?.(ctx, pointer(10, 10));
       click(tool, ctx, 10, 10);
       expect(tool.underway?.()).toBe(true);
-      expect(tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false })).toBe(true);
+      expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
       expect(tool.underway?.()).toBe(false);
     },
   );

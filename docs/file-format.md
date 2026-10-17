@@ -355,6 +355,7 @@ and read once at start-up:
   "defaultIronId": "ks-3.85",
   "stitchMarginMm": 3.5,
   "leatherThicknessMm": null,
+  "keyBindings": { "save": [{ "code": "F5" }] },
   "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
 }
 ```
@@ -391,6 +392,18 @@ fold, and that feature stores its own copy (a hole set its pitch and the iron's 
 evaluates the same on a machine with other tools. A project's own `settings.defaultStitchInsetMm`
 and `defaultIronPitchMm` are what a command takes when no maker's value is passed — a headless
 caller, or a maker with no irons.
+
+**The maker's keys** (U.12) are `keyBindings`: only the commands changed in Settings › Keyboard
+shortcuts, by the app's command id (`save`, `tool.rectangle`, `arc`), each with the keys it has in
+place of its defaults — one to four, each a `code` (`KeyboardEvent.code`, a letter as `KeyA` for the
+key that types *a* wherever the layout puts it) with `mod` (Ctrl, ⌘ on macOS), `shift` and `alt`
+when held, or a `char` with `mod`, as some defaults are. A command left out keeps its defaults, so
+a new default reaches every maker who never moved that key; a key changed back to its default is
+not stored. A command this version does not know or lets no one change (Esc, Enter, a text field's
+own keys, the menu key), a key that is not one — Esc, Tab, Enter, a modifier alone, a bare arrow —
+and a change that gives a key another command in the same place already has are dropped, the later
+of two first; the rest is kept. A file written before U.12 has no `keyBindings` and every default.
+The version stays 2: a new field with a default is not a change of meaning.
 
 **The interface's language never reaches a project.** A `.lcp` holds no words chosen by it — problem
 sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads

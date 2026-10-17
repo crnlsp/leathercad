@@ -1,7 +1,14 @@
 import { MIN_PITCH_MM } from '@leathercad/domain';
 import type { Iron, Preferences } from '@leathercad/platform';
 import { Ellipsis, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react';
 
 import {
   LANGUAGES,
@@ -18,8 +25,26 @@ import { defaultIron, withoutIron } from './irons.js';
 import { MenuButton } from './Menu.js';
 import { focusAfter } from './menus.js';
 import { NumberField } from './NumberField.js';
-import { KeyCap, useShownKeys } from './keyCaps.js';
-import { SHORTCUT_GROUPS } from './shortcuts.js';
+import {
+  IS_MAC,
+  KeyCap,
+  useKeyLabel,
+  useKeymap,
+  useKeysInSentences,
+  useLayout,
+  useShownKeys,
+} from './keyCaps.js';
+import { KEYMAP, type CommandId, type KeyBindings } from './keymap.js';
+import {
+  apply,
+  bindingFor,
+  differs,
+  proposeKey,
+  proposeReset,
+  swap,
+  type Proposal,
+} from './rebind.js';
+import { shortcutGroups } from './shortcuts.js';
 
 export type SettingsSection = 'general' | 'appearance' | 'tools' | 'language' | 'shortcuts';
 
@@ -59,7 +84,11 @@ const SECTIONS: readonly {
   },
   { id: 'tools', title: 'settings.section.tools', pane: (props) => <MyTools {...props} /> },
   { id: 'language', title: 'settings.section.language', pane: (props) => <Language {...props} /> },
-  { id: 'shortcuts', title: 'settings.section.shortcuts', pane: () => <Shortcuts /> },
+  {
+    id: 'shortcuts',
+    title: 'settings.section.shortcuts',
+    pane: (props) => <Shortcuts {...props} />,
+  },
 ];
 
 /**
@@ -541,32 +570,281 @@ function Toggle({
   );
 }
 
-/** Every key the app answers to (8.2), from the keymap (U.3); read-only until U.12. */
-function Shortcuts() {
+/**
+ * Every key the app answers to (8.2), from the keymap (U.3), and the place to
+ * change one (U.12). *Change* listens for the next keys pressed; a key another
+ * command in the same place has is named, to swap or leave; *Reset* puts one
+ * command's keys back, *Reset all* every one. Each change applies at once,
+ * everywhere a key is shown or heard, as every setting does.
+ */
+function Shortcuts({ preferences, onPreferences }: Props) {
   const { t } = useI18n();
+  const keymap = useKeymap();
+  const layout = useLayout();
   const shown = useShownKeys();
+  const label = useKeyLabel();
+  const sentences = useKeysInSentences();
+  const bindings: KeyBindings = preferences.keyBindings;
+  /** The command listening for its new keys, and what was last said about a press. */
+  const [listening, setListening] = useState<{
+    readonly id: CommandId;
+    readonly note: string | null;
+  } | null>(null);
+  /** A change waiting on Swap or Cancel. */
+  const [clash, setClash] = useState<{
+    readonly proposal: Proposal;
+    readonly owner: CommandId;
+    readonly canSwap: boolean;
+  } | null>(null);
+  /** What the last change came to, said politely. */
+  const [said, setSaid] = useState('');
+  const swapRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => swapRef.current?.focus(), [clash]);
+
+  const does = (id: CommandId): string => {
+    const command = keymap.find((entry) => entry.id === id);
+    return command === undefined ? id : t(command.does);
+  };
+  // The keys asked for: a reset's are the defaults, not the ones it has now.
+  const keysOf = (proposal: Proposal): string => {
+    const key = proposal.keys?.[0] ?? KEYMAP.find((command) => command.id === proposal.id)?.keys[0];
+    return key === undefined ? '' : label(key);
+  };
+  const changeButton = (id: CommandId): void =>
+    document.getElementById(`shortcut-change-${id}`)?.focus();
+
+  const done = (next: KeyBindings, id: CommandId): void => {
+    onPreferences({ keyBindings: next });
+    setListening(null);
+    setClash(null);
+    // After the keymap has changed, so the label is the new key's.
+    requestAnimationFrame(() => changeButton(id));
+  };
+  const propose = (proposal: Proposal): void => {
+    const change = apply(bindings, proposal, IS_MAC);
+    if (change === 'unusable' || change === 'needsModifier') {
+      setListening({
+        id: proposal.id,
+        note:
+          change === 'unusable'
+            ? t('settings.shortcuts.unusable')
+            : t('settings.shortcuts.needsModifier', { command: does(proposal.id) }),
+      });
+      return;
+    }
+    if ('clash' in change) {
+      setListening(null);
+      setClash({ proposal, owner: change.clash, canSwap: change.canSwap });
+      return;
+    }
+    setSaid(
+      t(proposal.keys === null ? 'settings.shortcuts.wasReset' : 'settings.shortcuts.changed', {
+        command: does(proposal.id),
+      }),
+    );
+    done(change.bindings, proposal.id);
+  };
+
+  const onCapture = (id: CommandId) => (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    // Tab goes on, and leaving the button ends the listening: no trap.
+    if (event.key === 'Tab') return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.repeat) return;
+    const press = event.nativeEvent;
+    if (press.code === 'Escape') {
+      setListening(null);
+      return;
+    }
+    const taken = bindingFor(press, IS_MAC);
+    if (taken === null) return;
+    if (taken === 'reserved') {
+      setListening({
+        id,
+        note: t('settings.shortcuts.reserved', { key: label({ code: press.code }) }),
+      });
+    } else if (taken === 'unusable') {
+      setListening({ id, note: t('settings.shortcuts.unusable') });
+    } else propose(proposeKey(id, taken, press));
+  };
+
+  const changed = Object.keys(bindings).length > 0;
   return (
-    <div className="shortcuts-groups">
-      {SHORTCUT_GROUPS.map((group) => (
-        <section key={group.id} aria-label={t(`shortcuts.group.${group.id}`)}>
-          <h5>{t(`shortcuts.group.${group.id}`)}</h5>
-          <dl>
-            {group.shortcuts.map((shortcut) => (
-              <div className="shortcut-row" key={`${group.id}-${shortcut.does}`}>
-                <dt>
-                  {shown(shortcut.keys).map((binding, index) => (
-                    <span key={JSON.stringify(binding)}>
-                      {index > 0 && <span className="shortcut-or"> {t('shortcuts.or')} </span>}
-                      <KeyCap command={binding} />
+    <>
+      <div className="shortcuts-intro">
+        <p className="setting-note">{t('settings.shortcuts.intro', sentences)}</p>
+        <button
+          type="button"
+          className="tool"
+          data-testid="shortcuts-reset-all"
+          disabled={!changed}
+          onClick={() => {
+            onPreferences({ keyBindings: {} });
+            setClash(null);
+            setListening(null);
+            setSaid(t('settings.shortcuts.allReset'));
+          }}
+        >
+          {t('settings.shortcuts.resetAll')}
+        </button>
+      </div>
+      <p className="visually-hidden" role="status" aria-live="polite">
+        {said}
+      </p>
+      <div className="shortcuts-groups">
+        {shortcutGroups(keymap).map((group) => (
+          <section key={group.id} aria-label={t(`shortcuts.group.${group.id}`)}>
+            <h5>{t(`shortcuts.group.${group.id}`)}</h5>
+            <div className="shortcut-list">
+              {group.shortcuts.map((shortcut) => {
+                const { id } = shortcut;
+                const here = id !== undefined && listening?.id === id;
+                const clashing = id !== undefined && clash?.proposal.id === id ? clash : null;
+                return (
+                  <div
+                    className="shortcut-row"
+                    key={`${group.id}-${shortcut.does}`}
+                    data-testid={id === undefined ? undefined : `shortcut-${id}`}
+                  >
+                    <span className="shortcut-does">{t(shortcut.does)}</span>
+                    <span className="shortcut-keys" data-testid={id && `shortcut-keys-${id}`}>
+                      {here ? (
+                        <span className="shortcut-listening">
+                          {t('settings.shortcuts.listening', sentences)}
+                        </span>
+                      ) : (
+                        shown(shortcut).map((binding, index) => (
+                          <span key={JSON.stringify(binding)}>
+                            {index > 0 && (
+                              <span className="shortcut-or"> {t('shortcuts.or')} </span>
+                            )}
+                            <KeyCap command={binding} />
+                          </span>
+                        ))
+                      )}
                     </span>
-                  ))}
-                </dt>
-                <dd>{t(shortcut.does)}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ))}
-    </div>
+                    <span className="shortcut-actions">
+                      {id !== undefined && shortcut.fixed === true && (
+                        <span className="shortcut-fixed">{t('settings.shortcuts.fixed')}</span>
+                      )}
+                      {id !== undefined && shortcut.fixed !== true && (
+                        <>
+                          <button
+                            type="button"
+                            id={`shortcut-change-${id}`}
+                            className={here ? 'tool listening' : 'tool quiet'}
+                            data-testid={`change-${id}`}
+                            aria-label={t('settings.shortcuts.changeLabel', {
+                              command: t(shortcut.does),
+                            })}
+                            aria-pressed={here}
+                            onClick={(event) => {
+                              setClash(null);
+                              event.currentTarget.focus();
+                              setListening(here ? null : { id, note: null });
+                            }}
+                            onKeyDownCapture={here ? onCapture(id) : undefined}
+                            onBlur={() => {
+                              if (here) setListening(null);
+                            }}
+                          >
+                            {t('settings.shortcuts.change')}
+                          </button>
+                          {differs(bindings, id) && (
+                            <button
+                              type="button"
+                              className="tool quiet"
+                              data-testid={`reset-${id}`}
+                              aria-label={t('settings.shortcuts.resetLabel', {
+                                command: t(shortcut.does),
+                              })}
+                              onClick={() => propose(proposeReset(id, layout, IS_MAC))}
+                            >
+                              {t('settings.shortcuts.reset')}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </span>
+                    {here && listening.note !== null && (
+                      <p className="shortcut-note" role="status" data-testid="shortcut-note">
+                        {listening.note}
+                      </p>
+                    )}
+                    {clashing !== null && (
+                      <div
+                        className="shortcut-clash"
+                        role="alert"
+                        data-testid="shortcut-clash"
+                        onKeyDown={(event) => {
+                          // Esc leaves the key where it was, not the dialog.
+                          if (event.key !== 'Escape') return;
+                          event.stopPropagation();
+                          setClash(null);
+                          changeButton(clashing.proposal.id);
+                        }}
+                      >
+                        <ClashWords
+                          words={t(
+                            clashing.canSwap
+                              ? 'settings.shortcuts.clash'
+                              : 'settings.shortcuts.clashFixed',
+                            { command: does(clashing.owner) },
+                          )}
+                          keys={keysOf(clashing.proposal)}
+                        />
+                        {clashing.canSwap && (
+                          <button
+                            ref={swapRef}
+                            type="button"
+                            className="tool"
+                            data-testid="clash-swap"
+                            onClick={() => {
+                              setSaid(
+                                t('settings.shortcuts.swapped', {
+                                  command: does(clashing.proposal.id),
+                                  other: does(clashing.owner),
+                                }),
+                              );
+                              done(swap(bindings, clashing.proposal, IS_MAC), clashing.proposal.id);
+                            }}
+                          >
+                            {t('settings.shortcuts.swap')}
+                          </button>
+                        )}
+                        <button
+                          ref={clashing.canSwap ? undefined : swapRef}
+                          type="button"
+                          className="tool quiet"
+                          data-testid="clash-cancel"
+                          onClick={() => {
+                            setClash(null);
+                            changeButton(clashing.proposal.id);
+                          }}
+                        >
+                          {t('settings.shortcuts.cancel')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** A clash's sentence with its keys as a cap where `{{keys}}` stands. */
+function ClashWords({ words, keys }: { words: string; keys: string }) {
+  const [before, after] = words.split('{{keys}}');
+  return (
+    <span>
+      {before}
+      <kbd>{keys}</kbd>
+      {after}
+    </span>
   );
 }

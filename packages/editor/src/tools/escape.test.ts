@@ -14,6 +14,7 @@ import { createRotateTool } from './rotateTool.js';
 import { createScaleTool } from './scaleTool.js';
 import { createSelectTool } from './selectTool.js';
 import { createTextTool } from './textTool.js';
+import { keyInput } from './keys.fixture.js';
 
 /**
  * Escape is claimed only when it gives something up (U.5).
@@ -22,7 +23,7 @@ import { createTextTool } from './textTool.js';
  * with nothing to give up leaves it to the window, where it closes an overlay
  * or leaves focus mode. Without the claim one press did both.
  */
-const ESCAPE: KeyInput = { key: 'Escape', shiftKey: false, ctrlKey: false };
+const ESCAPE: KeyInput = keyInput('Escape');
 
 function harness(): { ctx: ToolContext; store: DocumentStore } {
   const store = new DocumentStore(emptyDocument('proj'));

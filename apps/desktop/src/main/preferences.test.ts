@@ -235,6 +235,54 @@ describe('My tools (U.13)', () => {
   });
 });
 
+describe('the maker’s keys (U.12)', () => {
+  const stored = (keyBindings: unknown) =>
+    parsePreferences(JSON.stringify({ version: 2, keyBindings })).keyBindings;
+
+  it('has none changed in a file written before keys could be', () => {
+    expect(parsePreferences(JSON.stringify({ version: 2 })).keyBindings).toEqual({});
+    expect(DEFAULT_PREFERENCES.keyBindings).toEqual({});
+  });
+
+  it('keeps a usable change, and drops an unknown command, a malformed key, Enter and a clash', () => {
+    expect(
+      stored({
+        save: [{ code: 'F5' }],
+        nonsense: [{ code: 'F6' }],
+        print: [{ code: 'f7' }],
+        exportPdf: [{ code: 'Enter' }],
+        help: [{ code: 'F5' }],
+        sheets: 'F8',
+      }),
+    ).toEqual({ save: [{ code: 'F5' }] });
+  });
+
+  it('drops a map that is not one, and keeps the rest of the file', () => {
+    for (const keyBindings of [null, 'F5', 3, [{ code: 'F5' }]]) {
+      const parsed = parsePreferences(
+        JSON.stringify({ version: 2, keyBindings, partsFolded: true }),
+      );
+      expect(parsed.keyBindings).toEqual({});
+      expect(parsed.partsFolded).toBe(true);
+    }
+  });
+
+  it('takes the same changes from the renderer, by the same rules, and keeps them over a restart', async () => {
+    expect(
+      validChanges({ keyBindings: { save: [{ code: 'F5' }], quit: [{ code: 'KeyB' }] } }),
+    ).toEqual({ keyBindings: { save: [{ code: 'F5' }] } });
+    expect(validChanges({ legendOpen: true })).toEqual({ legendOpen: true });
+    const store = new PreferencesStore(file);
+    await store.update({ keyBindings: { 'tool.rectangle': [{ code: 'KeyQ' }] } });
+    expect(new PreferencesStore(file).preferences.keyBindings).toEqual({
+      'tool.rectangle': [{ code: 'KeyQ' }],
+    });
+    // Reset all is an empty map, written as one.
+    await store.update({ keyBindings: {} });
+    expect(new PreferencesStore(file).preferences.keyBindings).toEqual({});
+  });
+});
+
 describe('the recent list', () => {
   it('puts the latest first, once, and lets the oldest go', () => {
     let list: string[] = [];

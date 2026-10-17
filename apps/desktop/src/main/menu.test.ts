@@ -1,6 +1,7 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
 
+import { applyBindings } from '../renderer/src/keymap.js';
 import { createI18n } from '../shared/i18n.js';
 import { macMenuTemplate, windowKeyFor } from './menu.js';
 
@@ -103,6 +104,22 @@ describe('the keys the native menu used to give (8.7)', () => {
     expect(windowKeyFor(key('й', { code: 'KeyQ', control: true }), linux)).toBe('quit');
     // Super is not Ctrl.
     expect(windowKeyFor(key('q', { meta: true }), linux)).toBeNull();
+  });
+
+  it('follows the keys the maker changed (U.12)', () => {
+    try {
+      applyBindings({
+        fullScreen: [{ code: 'F9' }],
+        quit: [{ code: 'KeyQ', mod: true, alt: true }],
+      });
+      expect(windowKeyFor(key('F9'), linux)).toBe('full-screen');
+      expect(windowKeyFor(key('F11'), linux)).toBeNull();
+      expect(windowKeyFor(key('q', { control: true, alt: true }), linux)).toBe('quit');
+      expect(windowKeyFor(key('q', { control: true }), linux)).toBeNull();
+    } finally {
+      applyBindings({});
+    }
+    expect(windowKeyFor(key('F11'), linux)).toBe('full-screen');
   });
 
   it('opens the developer tools only in a development build', () => {
