@@ -347,6 +347,7 @@ and read once at start-up:
 {
   "version": 2,
   "legendOpen": true,
+  "selectionBar": true,
   "toolRailCollapsed": false,
   "partsFolded": false,
   "propertiesFolded": false,
@@ -378,6 +379,11 @@ window 1024 px wide or narrower, or shorter than 720 px, folds it to its chip fo
 never writes this. Version 1 wrote `legendOpen: false` out whenever any other preference changed,
 so a stored `false` cannot be told from the default it used to be: a version 1 file is reset to the
 new default once, and version 2 records the maker's real choice from then on.
+
+`selectionBar` (U.17) is Settings › Appearance's switch for the bar under the selected piece — its
+stitching and the next step. On by default; off, the bar is not drawn and its key (F6 unless
+moved) does nothing. A file written before U.17 has no such field, and the bar is on: the version
+stays 2, as for `keyBindings`.
 
 **My tools** (U.13) are the maker's irons and starting values, in this file rather than a library
 of their own. `irons` is a list in the maker's order, each with an `id`, a `name` and a `pitchMm`;

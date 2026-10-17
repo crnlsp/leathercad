@@ -16,6 +16,7 @@ import { SeverityGlyph } from '../SeverityGlyph.js';
 import {
   SPACING_DECIMALS,
   describeSpacing,
+  formatRuns,
   formatSpacing,
   spacingAgainstPitch,
   spacingGlyph,
@@ -149,7 +150,7 @@ export function StitchHoleSetEditor({
             {holes.runs.length > 1 && (
               <div className="readout-cell wide">
                 <span>{t('editor.runs')}</span>
-                <b>{holes.runs.map((run) => run.count).join(' · ')}</b>
+                <b data-testid="hole-runs">{formatRuns(holes.runs)}</b>
               </div>
             )}
           </div>

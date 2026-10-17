@@ -1,9 +1,6 @@
 import { formatMm, formatNumber } from '@leathercad/core';
 import {
   type DocumentStore,
-  addAllowance,
-  addStitchHoles,
-  addStitchLine,
   allowanceRefusal,
   deleteRefusal,
   flipFeatures,
@@ -29,7 +26,8 @@ import type { ReactNode } from 'react';
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { KeyCap, useKeysInSentences } from './keyCaps.js';
-import { defaultIron, type MakerTools } from './irons.js';
+import type { MakerTools } from './irons.js';
+import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nextSteps.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
 import { jobTotals, trailOf } from './propertyFacts.js';
@@ -718,13 +716,12 @@ function DeriveActions({
           testId="add-stitch-line"
           reason={null}
           hint={t('properties.addStitchLineHint')}
-          onClick={() => {
-            const id = nextId();
-            // The maker's margin, from My tools (U.13): values come from the
-            // maker's settings, never a constant here (D7, X8).
-            store.dispatch(addStitchLine(part.id, id, feature.id, tools.stitchMarginMm));
-            store.select([id]);
-          }}
+          // The maker's margin, from My tools (U.13): values come from the
+          // maker's settings, never a constant here (D7, X8). The selection
+          // bar's step runs the same (U.17).
+          onClick={() =>
+            derive(store, nextId, (id) => stitchLineCommand(part.id, feature.id, id, tools))
+          }
         >
           {t('properties.addStitchLine')}
         </ReasonedButton>
@@ -739,20 +736,10 @@ function DeriveActions({
           testId="add-stitch-holes"
           reason={null}
           hint={t('properties.addHolesHint')}
-          onClick={() => {
-            const id = nextId();
-            const iron = defaultIron(tools);
-            store.dispatch(
-              // Likewise the iron: the maker's default, its pitch and its name,
-              // so the panel names it. With no irons at all, the project's.
-              addStitchHoles(part.id, id, feature.id, {
-                mode: 'fit-whole',
-                corners: 'hole-at-corner',
-                ...(iron === undefined ? {} : { pitchMm: iron.pitchMm, ironLabel: iron.name }),
-              }),
-            );
-            store.select([id]);
-          }}
+          // Likewise the iron: the maker's default, its pitch and its name.
+          onClick={() =>
+            derive(store, nextId, (id) => holesCommand(part.id, feature.id, id, tools))
+          }
         >
           {t('properties.addHoles')}
         </ReasonedButton>
@@ -762,7 +749,7 @@ function DeriveActions({
           feature={feature}
           project={project}
           nextId={nextId}
-          allowanceMm={tools.stitchMarginMm}
+          tools={tools}
         />
       </div>
     );
@@ -785,7 +772,7 @@ function AllowanceButton({
   part,
   feature,
   nextId,
-  allowanceMm,
+  tools,
 }: {
   store: DocumentStore;
   project: Project;
@@ -793,7 +780,7 @@ function AllowanceButton({
   feature: Feature;
   nextId: () => string;
   /** The maker's margin (U.13), which a seam allowance grows by too. */
-  allowanceMm: number;
+  tools: MakerTools;
 }) {
   const { t } = useI18n();
   return (
@@ -801,11 +788,9 @@ function AllowanceButton({
       testId="add-allowance"
       reason={allowanceRefusal(project, feature.id)}
       hint={t('properties.addAllowanceHint')}
-      onClick={() => {
-        const id = nextId();
-        store.dispatch(addAllowance(part.id, id, feature.id, allowanceMm));
-        store.select([id]);
-      }}
+      onClick={() =>
+        derive(store, nextId, (id) => allowanceCommand(part.id, feature.id, id, tools))
+      }
     >
       {t('properties.addAllowance')}
     </ReasonedButton>

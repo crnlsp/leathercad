@@ -213,6 +213,8 @@ export function App({
       preferences.leatherThicknessMm,
     ],
   );
+  // The bar under the selected piece (U.17), unless Settings › Appearance turned it off.
+  const selectionBarOn = preferences.selectionBar;
   const makerDefaults = useMemo(
     () => ({
       stitchMarginMm: tools.stitchMarginMm,
@@ -563,6 +565,9 @@ export function App({
       toggleParts: () => togglePanel('parts', 'keyboard'),
       toggleProperties: () => togglePanel('properties', 'keyboard'),
       focusMode: () => setFocus((on) => !on),
+      // F6 (U.17): into the bar under the selected piece, and out again. Off
+      // in Settings, there is no bar and no key.
+      ...(selectionBarOn ? { selectionBar: () => canvasRef.current?.toggleSelectionBar() } : {}),
     };
     const onKey = (event: KeyboardEvent): void => {
       // A field's keys are its own, and so is a focused button's Space (U.12).
@@ -609,6 +614,7 @@ export function App({
     open,
     focus,
     closeOverlay,
+    selectionBarOn,
   ]);
 
   // macOS's native menu (8.7) sends what the platform keeps there; each runs
@@ -1013,6 +1019,7 @@ export function App({
               nextId={nextId}
               onStatus={handleStatus}
               panelOver={open}
+              selectionBar={selectionBarOn ? tools : null}
               drawAs={drawAs}
               makerDefaults={makerDefaults}
               hardware={hardware}

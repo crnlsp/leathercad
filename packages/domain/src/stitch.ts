@@ -41,6 +41,11 @@ export interface StitchHole {
 /** What one continuous run of stitching produced. */
 export interface RunReport {
   readonly lengthMm: Mm;
+  /**
+   * The holes on this run, a corner hole at either end included (U.17). A
+   * corner hole is on the two runs it joins, so a set's runs add up to its
+   * count plus one per shared corner: 24 · 51 · 24 · 51 round 146 holes.
+   */
   readonly count: number;
   readonly achievedPitchMm: Mm;
 }
@@ -121,9 +126,12 @@ export function distributeHoles(line: Path, op: StitchHolesOp): StitchHoles {
       holes.push({ point: p.point, tangent: p.tangent, runIndex, ordinal });
     }
 
+    // Every hole on the run, the corner holes at both its ends included: what
+    // a maker counts along that edge (U.17). A corner hole is on both runs it
+    // joins, and punched once.
     reports.push({
       lengthMm,
-      count: points.length,
+      count: distribution.points.length,
       achievedPitchMm: distribution.actualPitch,
     });
   }

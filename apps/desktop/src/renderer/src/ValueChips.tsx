@@ -45,15 +45,21 @@ export interface ValueChipsHandle {
   /**
    * Puts each chip where `placeValueChips` says for this camera, in the room
    * the board leaves it — clear of a panel over it and of the controls laid
-   * over it — and returns the lines they sit on for the board to draw; null
+   * over it — and returns the lines they sit on for the board to draw, and
+   * the boxes they take, which the selection bar keeps clear of (U.17); null
    * with no chips.
    */
   place(
     view: ViewportView,
     room: { area?: CssBox; obstacles: readonly CssBox[] },
-  ): DisplayList | null;
+  ): { lines: DisplayList; taken: CssBox[] } | null;
   /** Opens the first chip in view, as `Enter` on the board does; false with none. */
   open(): boolean;
+}
+
+/** An element's box on the board, from its top-left there. */
+function boxOf(left: number, top: number, element: HTMLElement): CssBox {
+  return { left, top, right: left + element.offsetWidth, bottom: top + element.offsetHeight };
 }
 
 /** The chips placed in view, in Tab's order: the width first. */
@@ -210,6 +216,7 @@ export const ValueChips = memo(function ValueChips({
                 },
               }),
         });
+        const taken: CssBox[] = [];
         for (const [chip, element] of chips.current) {
           const at = placed.at[chip];
           // The one being typed in stays where it was, rather than vanish
@@ -222,6 +229,9 @@ export const ValueChips = memo(function ValueChips({
           }
           element.style.transform = `translate(${String(at.x - element.offsetWidth / 2)}px, ${String(at.y - element.offsetHeight / 2)}px)`;
           element.style.visibility = 'visible';
+          taken.push(
+            boxOf(at.x - element.offsetWidth / 2, at.y - element.offsetHeight / 2, element),
+          );
         }
         if (hintElement !== null) {
           const at = placed.hintAt;
@@ -233,10 +243,11 @@ export const ValueChips = memo(function ValueChips({
           const at = placed.noteAt;
           if (at !== undefined) {
             noteElement.style.transform = `translate(${String(at.x)}px, ${String(at.y)}px)`;
+            taken.push(boxOf(at.x, at.y, noteElement));
           }
           noteElement.style.visibility = at === undefined ? 'hidden' : 'visible';
         }
-        return placed.lines;
+        return { lines: placed.lines, taken };
       },
       open() {
         // In Tab's order: the width first, unless it is out of view.

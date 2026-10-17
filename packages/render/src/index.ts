@@ -84,3 +84,5 @@ export type {
   ValueChipsInput,
 } from './valueChips.js';
 export { VALUE_CHIPS, placeValueChips } from './valueChips.js';
+export type { PlacedSelectionBar, SelectionBarInput } from './selectionBar.js';
+export { placeSelectionBar } from './selectionBar.js';
