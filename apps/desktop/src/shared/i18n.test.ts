@@ -169,4 +169,11 @@ describe('the languages LeatherCAD supports', () => {
     expect(languageName('de', 'en')).toBe('German');
     expect(languageName('en', 'pl')).toBe('angielski');
   });
+
+  it('are named by their tag when it names no language, as a C locale’s does (U.20)', () => {
+    // `Intl.DisplayNames` throws on `C`, which took Settings › Language down on
+    // a system whose language is C — Linux's C.UTF-8, and CI's.
+    expect(languageName('C', 'en')).toBe('C');
+    expect(languageName('en', 'C')).toBe('en');
+  });
 });
