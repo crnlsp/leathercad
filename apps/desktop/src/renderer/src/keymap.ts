@@ -72,6 +72,7 @@ export type CommandId =
   | 'toggleParts'
   | 'toggleProperties'
   | 'focusMode'
+  | 'selectionBar'
   | 'settings'
   | 'keyboardShortcuts'
   | 'help'
@@ -261,6 +262,15 @@ export const KEYMAP: readonly Command[] = [
     scope: 'window',
     keys: [key('Backslash')],
     aliases: [key('IntlBackslash')],
+  },
+  // F6 (U.17, R-14): into the bar under the selected piece and out again,
+  // where F6 moves between a window's regions in most apps.
+  {
+    id: 'selectionBar',
+    does: 'shortcuts.selectionBar',
+    group: 'view',
+    scope: 'window',
+    keys: [key('F6')],
   },
 
   {

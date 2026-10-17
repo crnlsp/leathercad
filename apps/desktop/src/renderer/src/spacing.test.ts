@@ -4,11 +4,18 @@ import { describe, expect, it } from 'vitest';
 import { SPACING_DEVIATION_FRACTION } from '@leathercad/domain';
 
 import { createI18n } from '../../shared/i18n.js';
-import { describeSpacing, formatSpacing, spacingAgainstPitch, spacingGlyph } from './spacing.js';
+import {
+  describeSpacing,
+  describeSpacingShort,
+  formatRuns,
+  formatSpacing,
+  spacingAgainstPitch,
+  spacingGlyph,
+} from './spacing.js';
 
 /**
  * Spacing against pitch, as Properties says it under a hole set (R-05) and the
- * selection bar will (R-14): "Spacing matches the pitch", or by how much it is
+ * selection bar does (R-14, U.17): "Spacing matches the pitch", or by how much it is
  * stretched or squeezed. "Matches" means the Spacing readout shows the Pitch
  * field's number, so the line never contradicts the two numbers above it.
  */
@@ -172,6 +179,24 @@ describe('describeSpacing', () => {
     );
     expect(describeSpacing({ kind: 'squeezed', percent: 2, underATenth: false }, t)).toBe(
       'Spacing is squeezed 2 %',
+    );
+  });
+});
+
+describe('the selection bar’s words (U.17)', () => {
+  it('says nothing more when the spacing matches, and how far when it does not', () => {
+    expect(describeSpacingShort({ kind: 'matches' }, t)).toBeNull();
+    expect(describeSpacingShort({ kind: 'stretched', percent: 1.8, underATenth: false }, t)).toBe(
+      'stretched 1.8 %',
+    );
+    expect(describeSpacingShort({ kind: 'squeezed', percent: 0.1, underATenth: true }, t)).toBe(
+      'squeezed less than 0.1 %',
+    );
+  });
+
+  it('writes runs as Properties does', () => {
+    expect(formatRuns([{ count: 24 }, { count: 51 }, { count: 24 }, { count: 51 }])).toBe(
+      '24 · 51 · 24 · 51',
     );
   });
 });

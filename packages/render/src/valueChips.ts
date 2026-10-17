@@ -350,7 +350,7 @@ function noteBeside(
 }
 
 /** Where a box's centre may not be, for all of it to keep `CONTROL_GAP_PX` off each control. */
-function keptOff(obstacles: readonly CssBox[], box: ChipBox): CssBox[] {
+export function keptOff(obstacles: readonly CssBox[], box: ChipBox): CssBox[] {
   return obstacles.map((control) => ({
     left: control.left - box.width / 2 - CONTROL_GAP_PX,
     top: control.top - box.height / 2 - CONTROL_GAP_PX,
@@ -360,7 +360,7 @@ function keptOff(obstacles: readonly CssBox[], box: ChipBox): CssBox[] {
 }
 
 /** Whether a centre is inside any keep-off box: on its edge is clear. */
-function blocked(point: Vec2, keepOff: readonly CssBox[]): boolean {
+export function blocked(point: Vec2, keepOff: readonly CssBox[]): boolean {
   return keepOff.some(
     (box) =>
       approxCmp(point.x, box.left) > 0 &&
@@ -416,7 +416,7 @@ function support(box: ChipBox, direction: Vec2): number {
 }
 
 /** The canvas inside its rulers, within the area given. */
-function clearArea(view: ViewportView, given: CssBox | undefined): CssBox {
+export function clearArea(view: ViewportView, given: CssBox | undefined): CssBox {
   const width = view.widthPx / view.dpr;
   const height = view.heightPx / view.dpr;
   return {

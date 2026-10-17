@@ -29,7 +29,13 @@ interface StoredPreferences extends Preferences {
 const EMPTY: StoredPreferences = { version: 2, ...DEFAULT_PREFERENCES, recentFiles: [] };
 
 /** The preferences that are on or off. */
-const FLAGS = ['legendOpen', 'toolRailCollapsed', 'partsFolded', 'propertiesFolded'] as const;
+const FLAGS = [
+  'legendOpen',
+  'selectionBar',
+  'toolRailCollapsed',
+  'partsFolded',
+  'propertiesFolded',
+] as const;
 
 /**
  * Reads `preferences.json`, keeping whatever of it is still usable.
@@ -74,6 +80,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
   return {
     version: 2,
     legendOpen,
+    // Absent before U.17: on, the default.
+    selectionBar: flag('selectionBar'),
     toolRailCollapsed: flag('toolRailCollapsed'),
     partsFolded: flag('partsFolded'),
     propertiesFolded: flag('propertiesFolded'),

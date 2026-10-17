@@ -87,6 +87,19 @@ describe('reading preferences.json', () => {
     expect(validChanges({ propertiesFolded: false })).toEqual({ propertiesFolded: false });
   });
 
+  it('keeps the selection bar on unless the maker turned it off (U.17)', () => {
+    // On a first launch, and in a file from before U.17, which has no field.
+    expect(DEFAULT_PREFERENCES.selectionBar).toBe(true);
+    expect(parsePreferences(null).selectionBar).toBe(true);
+    expect(parsePreferences(JSON.stringify({ version: 2, legendOpen: false })).selectionBar).toBe(
+      true,
+    );
+    expect(parsePreferences(JSON.stringify({ selectionBar: false })).selectionBar).toBe(false);
+    expect(parsePreferences(JSON.stringify({ selectionBar: 'off' })).selectionBar).toBe(true);
+    expect(validChanges({ selectionBar: false })).toEqual({ selectionBar: false });
+    expect(validChanges({ selectionBar: 0 })).toEqual({});
+  });
+
   it('keeps the interface language: following the system, or one the app ships', () => {
     expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
     expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');

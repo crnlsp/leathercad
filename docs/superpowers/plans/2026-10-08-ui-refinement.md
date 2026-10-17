@@ -1905,7 +1905,8 @@ matches the pitch — and offers the next step as one click with the maker's own
   `renderer/src/spacing.ts`: a check when the spacing shows as the pitch (`formatSpacing`, two
   decimals, the numbers Properties shows); "stretched 1.8 %" with a stretch mark when not; the
   warning glyph only when Problems warns about the set (`spacingGlyph`). Settle first what *runs*
-  add up to: the sample's 24 · 50 · 23 · 50 is 147 beside 146 holes, a corner counted twice.
+  add up to: the sample's 24 · 50 · 23 · 50 is 147 beside 146 holes, a corner counted twice
+  (settled: see *As built*).
 - **Line 2:** Next: Stitch line › Stitch holes › Seam allowance. Done steps show a check; the first
   undone step is a button that runs it with My tools' defaults; later steps are plain text. The
   commands are the panel's existing ones (`DeriveActions`, `AllowanceButton`).
@@ -1914,6 +1915,48 @@ matches the pitch — and offers the next step as one click with the maker's own
 
 **Done when.** Mockup 14's four states but the last; one click makes the next step, undoable; the
 bar never covers the piece, at any zoom; off in Settings means off.
+
+**As built.**
+- **Runs.** Only the first corner was counted twice: `distributeHoles` reported each run's holes
+  less the one shared with the run before, and dropped the ring's last hole (the first, again)
+  from the set but not from the last run. Each `RunReport.count` is now every hole on the run, its
+  corner holes included — equal sides read equal, and the runs add up to the set plus one per
+  shared corner. The holes themselves did not move. `formatRuns` (`spacing.ts`) writes them for
+  Properties and the bar.
+- **The steps** are `nextSteps.ts`: `stitchChain` finds the piece's outline, stitch line and hole
+  set from the derivation graph — inset from the outline, or the one the outline grows from, or one
+  drawn on the piece (the card pocket's), never one round a cut-out; `nextSteps` says which are
+  done; `runStep` makes the first with My tools' values through `derive`, which Properties'
+  *Add stitch line*, *Add holes* and *Add seam allowance* now call too — one path, the new feature
+  selected. The allowance is done once a piece has both edge and seam: on a piece drawn outline
+  first the command refuses it, so the bar never offers what would be refused.
+- **Placement** is `placeSelectionBar` (`packages/render/src/selectionBar.ts`): the piece's
+  drawn bounds, the chips' boxes (`ValueChips.place` returns them now), the area and the
+  controls; under the lowest of them by a dimension number's reach, its left edge on the piece's,
+  sliding clear of a control; over the piece and its caption when there is no room under; `null`
+  when neither, or the piece is out of view. `CanvasHost` places it each frame after the chips,
+  hidden while `store.inTransaction` or a tool has a shape under way.
+- **Keys:** `selectionBar` in `KEYMAP`, F6, window scope; `CanvasHandle.toggleSelectionBar`. Esc
+  in the bar goes to the board. The bar takes no press but on its button: the first full E2E run
+  showed a rectangle drawn where the bar was starting on the bar instead.
+- **On review** (three defects, fixed with a regression test each, each seen failing first):
+  - *A mirrored piece read as unstitched.* Mirror derives a counterpart from the original's
+    feature, so the counterpart's stitch line follows the original's outline, not its own:
+    the chain found nothing, and one click would have stitched it twice — duplicate holes on
+    paper. `builtFrom` follows two mirror images back to their originals; a line mirrored across
+    a fold does not take the original's holes. Today's Mirror button takes one feature at a time,
+    so only `mirrorFeatures` with several ids (a file, or a later gesture) builds such a piece.
+  - *A flipped bar ran into the caption.* The caption sits over a dimension's number on the
+    piece's top edge, which the bar did not count: 8 px into the name. `valueReachPx` in
+    `buildDisplayList.ts` is now the one measure of how far a number reaches from its line, which
+    the board's number box and the bar both read.
+  - *A failed or hidden step counted as made.* Steps have a status now: made means evaluated and,
+    for holes, shown — as the board's caption counts (`stitchingOf`). A step that failed is said in
+    Problems' own words with its glyph, and nothing after it is offered; a hidden hole set is said
+    as hidden. Cut ×N is on line 1 whatever the stitching, as R-14 lists it.
+- **For U.18:** the bar's step and *Stitch + allowance* both read `MakerTools` (`nextSteps.ts`
+  `stitchLineCommand`, `holesCommand`, `allowanceCommand`); a margin or iron edited in Properties'
+  *After the outline* reaches them through the same preferences.
 
 ---
 

@@ -585,7 +585,10 @@ decides *what the runs are*.
 - **`continuous`** treats the whole path as one run. Right for shapes made of generous radii.
 - **`hole-at-corner`** splits the line at every anchor and distributes each run independently, so a
   hole lands exactly on every corner. The shared hole where two runs meet is emitted once. Each run
-  reports its own spacing.
+  reports its own spacing, and its own count: every hole on it, the corner holes at both its ends
+  included — what a maker counts along that edge (U.17). A corner hole is on two runs, so the runs
+  of a set add up to its count plus one per shared corner: the sample's outer reads 24 · 51 · 24 ·
+  51 round 146 holes.
 
 **Later:** a configurable corner-angle threshold, and a radius-aware policy that flows round a large
 radius but puts a hole on a tight one. It should become the default once real projects show where

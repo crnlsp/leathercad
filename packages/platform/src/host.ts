@@ -243,6 +243,12 @@ export interface Preferences {
    * chip for the session, and that fold never reaches this file.
    */
   readonly legendOpen: boolean;
+  /**
+   * Whether the selection bar shows under the selected piece (U.17, R-14):
+   * its stitching, and the next step. On by default; off, it is not drawn and
+   * its key does nothing.
+   */
+  readonly selectionBar: boolean;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
   /**
@@ -325,6 +331,7 @@ export const STARTER_IRONS: readonly Iron[] = [
 /** What a first launch starts with, and what a damaged file falls back to. */
 export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: true,
+  selectionBar: true,
   toolRailCollapsed: false,
   partsFolded: false,
   propertiesFolded: false,

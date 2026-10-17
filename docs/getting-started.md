@@ -75,6 +75,12 @@ close it.
    from the iron's pitch because the holes have to fit the line exactly. The line under them says
    by how much: *Spacing matches the pitch*, or *Spacing is stretched 1.8 %*.
 
+The bar under the selected piece says the same in one line — holes, spacing against the pitch,
+the runs (each side's holes, its corner holes counted on both sides they join) and how many to cut
+— and under it *Next: Stitch line › Stitch holes › Seam allowance*: the next step is a button that
+makes it with your margin and default iron (*Settings → My tools*), and **Ctrl+Z** takes it back.
+**F6** goes into the bar and back to the board. *Settings → Appearance* turns it off.
+
 With nothing selected, **Properties** sums up the job: the pieces to cut, the holes to punch and the
 sheets to print.
 

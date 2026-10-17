@@ -73,3 +73,21 @@ export function describeSpacing(check: SpacingAgainstPitch, t: Translate): strin
     ? t('spacing.matches')
     : t(`spacing.${check.kind}${check.underATenth ? 'Under' : ''}`, { percent: check.percent });
 }
+
+/**
+ * A hole set's runs as Properties and the selection bar both show them:
+ * `24 · 51 · 24 · 51`. Each run counts its corner holes, so they add up to
+ * more than the set, by one per corner two runs share (U.17).
+ */
+export function formatRuns(runs: readonly { readonly count: number }[]): string {
+  return runs.map((run) => run.count).join(' · ');
+}
+
+/** The selection bar's shorter words for the same: "stretched 1.8 %"; nothing when it matches. */
+export function describeSpacingShort(check: SpacingAgainstPitch, t: Translate): string | null {
+  return check.kind === 'matches'
+    ? null
+    : t(`selectionBar.${check.kind}${check.underATenth ? 'Under' : ''}`, {
+        percent: check.percent,
+      });
+}

@@ -227,6 +227,13 @@ function Appearance({ preferences, onPreferences }: Props) {
         onChange={(on) => onPreferences({ legendOpen: on })}
       />
       <Toggle
+        id="selection-bar"
+        name={t('settings.selectionBar.name')}
+        note={t('settings.selectionBar.note')}
+        checked={preferences.selectionBar}
+        onChange={(on) => onPreferences({ selectionBar: on })}
+      />
+      <Toggle
         id="tool-names"
         name={t('settings.toolNames.name')}
         note={t('settings.toolNames.note')}
