@@ -200,8 +200,10 @@ test('Enter finishes a polyline before it opens the chips (U.14)', async () => {
     await window.getByTestId('tool-polyline').click();
     const canvas = window.getByTestId('editor-canvas');
     const box = (await canvas.boundingBox())!;
-    await window.mouse.click(box.x + 120, box.y + box.height - 60);
-    await window.mouse.click(box.x + 220, box.y + box.height - 60);
+    // The canvas's empty upper-left: the legend holds its lower-left (U.10)
+    // and the zoom control its lower-right (U.4).
+    await window.mouse.click(box.x + 120, box.y + 60);
+    await window.mouse.click(box.x + 220, box.y + 60);
     await onTheBoard(window);
     // Refused — an outline that does not close keeps its points — and the
     // run's all the same: the selected outline's sizes stay shut.
