@@ -25,6 +25,7 @@ import { defaultIron, withoutIron } from './irons.js';
 import { MenuButton } from './Menu.js';
 import { focusAfter } from './menus.js';
 import { NumberField } from './NumberField.js';
+import { getPlatformHost } from './platformBridge.js';
 import {
   IS_MAC,
   KeyCap,
@@ -601,6 +602,20 @@ function Shortcuts({ preferences, onPreferences }: Props) {
   const [said, setSaid] = useState('');
   const swapRef = useRef<HTMLButtonElement>(null);
   useEffect(() => swapRef.current?.focus(), [clash]);
+  // While a key is awaited the main process leaves F11 and Ctrl+Q alone, so
+  // they can be given to a command; closing the dialog ends it too.
+  const capturing = listening !== null;
+  useEffect(() => {
+    if (!capturing) return;
+    void getPlatformHost()
+      .setKeyCapture(true)
+      .catch(() => undefined);
+    return () => {
+      void getPlatformHost()
+        .setKeyCapture(false)
+        .catch(() => undefined);
+    };
+  }, [capturing]);
 
   const does = (id: CommandId): string => {
     const command = keymap.find((entry) => entry.id === id);

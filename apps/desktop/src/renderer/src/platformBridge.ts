@@ -28,6 +28,7 @@ interface PreloadBridge {
   getUserConfigDir(): Promise<string>;
   getAppVersion(): Promise<string>;
   setDocumentEdited(edited: boolean): Promise<void>;
+  setKeyCapture(capturing: boolean): Promise<void>;
   writeRecovery(data: Uint8Array): Promise<void>;
   clearRecovery(): Promise<void>;
   findRecovery(): Promise<RecoveredCopy | null>;

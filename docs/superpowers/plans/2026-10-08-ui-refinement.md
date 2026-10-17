@@ -1388,8 +1388,9 @@ French, Czech, Dvorak and Russian keyboards. What the plan did not know:
   menu's own).
 - **Full screen and Quit are heard by the main process before any field**, so a bare letter there
   would never be typed: they take a function key or keys held with a modifier, and they clash with
-  a field's own keys. A key the main process hears acts even while Settings listens, so F11 and
-  Ctrl+Q cannot be captured for another command until those two are moved.
+  a field's own keys. While Settings listens, it tells the main process (`setKeyCapture`), which
+  acts on none of its window keys (`windowKeyFor`'s `capturing`), so F11 and Ctrl+Q can be
+  captured for another command and name the clash with Full screen or Quit. Fixed after U.12.
 - **Space on a focused button is the button's** (`pressesControl`), once a window command may
   have Space. The `?` comes first in the list's keys, so the work bar's "all keys" is the list's
   first key, and follows a change.

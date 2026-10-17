@@ -141,9 +141,14 @@ export type WindowKey = 'full-screen' | 'quit' | 'developer-tools';
  */
 export function windowKeyFor(
   input: Pick<Input, 'type' | 'key' | 'code' | 'control' | 'meta' | 'shift' | 'alt'>,
-  platform: { readonly isMac: boolean; readonly packaged: boolean },
+  platform: {
+    readonly isMac: boolean;
+    readonly packaged: boolean;
+    /** Settings is listening for a new key (U.12): every key is the renderer's. */
+    readonly capturing?: boolean;
+  },
 ): WindowKey | null {
-  if (input.type !== 'keyDown') return null;
+  if (input.type !== 'keyDown' || platform.capturing === true) return null;
   const press = {
     code: input.code,
     key: input.key,

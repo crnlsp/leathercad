@@ -106,6 +106,14 @@ export class InMemoryPlatformHost implements PlatformHost {
     return Promise.resolve();
   }
 
+  /** Whether a key capture is under way, as the app last said. */
+  keyCapture = false;
+
+  setKeyCapture(capturing: boolean): Promise<void> {
+    this.keyCapture = capturing;
+    return Promise.resolve();
+  }
+
   /** This session's recovery copy, if any. */
   recovery: Uint8Array | null = null;
   /** What `findRecovery` returns: a copy a crashed session left. */

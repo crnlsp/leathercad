@@ -106,6 +106,14 @@ describe('the keys the native menu used to give (8.7)', () => {
     expect(windowKeyFor(key('q', { meta: true }), linux)).toBeNull();
   });
 
+  it('leaves every key to the renderer while Settings listens (U.12)', () => {
+    const listening = { ...linux, capturing: true };
+    expect(windowKeyFor(key('F11'), listening)).toBeNull();
+    expect(windowKeyFor(key('q', { control: true }), listening)).toBeNull();
+    expect(windowKeyFor(key('F12'), listening)).toBeNull();
+    expect(windowKeyFor(key('F11'), { ...linux, capturing: false })).toBe('full-screen');
+  });
+
   it('follows the keys the maker changed (U.12)', () => {
     try {
       applyBindings({
