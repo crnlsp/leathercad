@@ -156,8 +156,21 @@ export const ValueChips = memo(function ValueChips({
   };
   const noteRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
-  const [note, setNote] = useState<Note | null>(null);
+  const [typedNote, setNote] = useState<Note | null>(null);
   const noteId = useId();
+  // The tool refused to make the shape: its typed corner no longer fits what
+  // the pointer has left. Said beside the corner chip for as long as it is
+  // so, and that chip opened on it, where a second Enter takes what fits.
+  const refusals = drawing?.refusals ?? 0;
+  const refusedNote = useMemo((): Note | null => {
+    if (drawing === null || drawing.refusals === 0) return null;
+    const refusal = chipRefusal(drawnSubject(drawing), 'corner', drawing.corner, words);
+    return refusal === null ? null : { chip: 'corner', ...refusal };
+  }, [drawing, words]);
+  const note = typedNote ?? refusedNote;
+  useLayoutEffect(() => {
+    if (refusals > 0) chips.current.get('corner')?.querySelector('input')?.focus();
+  }, [refusals]);
 
   // New chips, new numbers, or a note: place them again.
   useLayoutEffect(() => {
@@ -348,7 +361,9 @@ function Chip({
   const apply = (leaving: Leaving): boolean => {
     const pending = draftRef.current;
     if (pending === null) return true;
-    const target = openedOn.current;
+    // A shape being drawn is checked as it is now — the pointer may have
+    // moved since the chip opened; an outline, as it was when it opened.
+    const target = drawn === null ? openedOn.current : (subjectNow() ?? openedOn.current);
     const current = chipValue(target, chip);
     const close = (): true => {
       updateDraft(null);

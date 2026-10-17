@@ -52,6 +52,7 @@ describe('rectangle tool, typed sizes', () => {
       width: 50,
       height: 30,
       corner: 0,
+      refusals: 0,
     });
   });
 
@@ -69,6 +70,7 @@ describe('rectangle tool, typed sizes', () => {
       width: 105,
       height: 75,
       corner: 8,
+      refusals: 0,
     });
     expect(store.getState().document.project.parts).toHaveLength(0);
     tool.finishSizing?.(ctx);
@@ -152,15 +154,54 @@ describe('rectangle tool, typed sizes', () => {
     expect(firstRect(store)).toMatchObject({ width: 40, height: 20 });
   });
 
-  it('never makes a corner larger than the rectangle draws, if the pointer shrank it since', () => {
+  it('refuses to make a typed corner the pointer has since left no room for, and stays open', () => {
     const { ctx, store } = harness();
     const tool = createRectangleTool(nextId);
     click(tool, ctx, { x: 0, y: 0 });
     tool.onPointerMove?.(ctx, pointer({ x: 60, y: 40 }));
     tool.setSize?.(ctx, 'corner', 15);
     tool.onPointerMove?.(ctx, pointer({ x: 60, y: 20 }));
+
+    // Enter: nothing is made, the typed corner is kept, and the app is told.
+    expect(tool.onKey?.(ctx, key('Enter'))).toBe(true);
+    expect(store.getState().document.project.parts).toHaveLength(0);
+    expect(tool.sizing?.()).toMatchObject({ width: 60, height: 20, corner: 15, refusals: 1 });
+
+    // `finishSizing`, the chips' Enter, is refused the same way.
     tool.finishSizing?.(ctx);
-    expect(firstRect(store)!.radii.topLeft).toBe(10);
+    expect(store.getState().document.project.parts).toHaveLength(0);
+    expect(tool.sizing?.()).toMatchObject({ corner: 15, refusals: 2 });
+
+    // A click on the board is too: it never takes a smaller corner either.
+    click(tool, ctx, { x: 60, y: 20 });
+    expect(store.getState().document.project.parts).toHaveLength(0);
+    expect(tool.sizing?.()).toMatchObject({ width: 60, height: 20, corner: 15, refusals: 3 });
+
+    // The smaller corner, typed — as the chip's second Enter does — is made, one undo step.
+    tool.setSize?.(ctx, 'corner', 10);
+    tool.finishSizing?.(ctx);
+    expect(firstRect(store)!.radii).toEqual({
+      topLeft: 10,
+      topRight: 10,
+      bottomRight: 10,
+      bottomLeft: 10,
+    });
+    expect(tool.sizing?.()).toBeNull();
+    store.undo();
+    expect(store.getState().document.project.parts).toHaveLength(0);
+  });
+
+  it('makes the typed corner once the pointer gives it room again', () => {
+    const { ctx, store } = harness();
+    const tool = createRectangleTool(nextId);
+    click(tool, ctx, { x: 0, y: 0 });
+    tool.setSize?.(ctx, 'corner', 15);
+    tool.onPointerMove?.(ctx, pointer({ x: 60, y: 20 }));
+    tool.finishSizing?.(ctx);
+    expect(store.getState().document.project.parts).toHaveLength(0);
+    tool.onPointerMove?.(ctx, pointer({ x: 60, y: 30 }));
+    tool.finishSizing?.(ctx);
+    expect(firstRect(store)!.radii.topLeft).toBe(15);
   });
 
   it('Shift still squares a drag, and a drag still ends in a rectangle', () => {

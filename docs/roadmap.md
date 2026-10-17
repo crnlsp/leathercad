@@ -267,8 +267,11 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   selected, its chips at rest), Esc gives it up, a click on the board makes what is typed. A drag
   still draws as before and is sized afterwards by the U.14 chips; Shift still squares a drag.
   Found on the way: the tool's Enter went to the window, which would have opened the sizes of
-  whatever outline was selected — the tool claims it now while it has a corner. Printed output
-  did not move: a rectangle that is dragged is stored as before, with square corners.
+  whatever outline was selected — the tool claims it now while it has a corner; and a typed
+  corner the pointer then left no room for was made smaller without a word — Enter, a click or a
+  chip's Enter is refused now, saying why in the corner chip, whose second Enter takes what
+  fits. Printed output did not move: a rectangle that is dragged is stored as before, with square
+  corners.
 - ☐ **U.17 The selection bar: stitch summary and next step** (R-14).
 - ☐ **U.18 Drawing defaults in Properties** (R-16).
 - ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the

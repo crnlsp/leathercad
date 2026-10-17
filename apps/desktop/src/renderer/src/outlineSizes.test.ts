@@ -269,7 +269,7 @@ describe('chipNumber', () => {
 });
 
 describe('drawnSubject (U.16)', () => {
-  const draft = { origin: { x: 10, y: 20 }, width: 105, height: 75, corner: 8 };
+  const draft = { origin: { x: 10, y: 20 }, width: 105, height: 75, corner: 8, refusals: 0 };
 
   it('has the three sizes of the shape in progress and no margin', () => {
     const subject = drawnSubject(draft);

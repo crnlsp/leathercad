@@ -170,6 +170,11 @@ export interface SizeDraft {
   readonly width: Mm;
   readonly height: Mm;
   readonly corner: Mm;
+  /**
+   * How many times making it was refused because the typed corner no longer
+   * fits — the pointer shrank a side since. The app says why on each.
+   */
+  readonly refusals: number;
 }
 
 /**

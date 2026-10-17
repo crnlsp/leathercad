@@ -1,6 +1,6 @@
-import { formatMm, formatNumber, quantiseAtMost } from '@leathercad/core';
+import { approxLte, formatMm, formatNumber } from '@leathercad/core';
 import { rectShape } from '@leathercad/document';
-import { Shapes } from '@leathercad/geometry';
+import { Shapes, cornerRoom, uniformRadii, type CornerRadii } from '@leathercad/geometry';
 import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import type { Mm } from '@leathercad/core';
@@ -23,9 +23,12 @@ import type { SizeDraft, SizeField, Tool, ToolContext } from '../tool.js';
  *
  * **Typed sizes (U.16).** Once a corner is placed the maker can type the size.
  * A number typed stays; what was not typed follows the pointer, which also
- * says which way from the corner the shape runs. Typing before any click starts the corner at the pointer. The chips and the
- * refusals are the app's (`ValueChips`); the tool takes numbers already
- * checked, and writes only through `draw.commit`.
+ * says which way from the corner the shape runs. Typing before any click
+ * starts the corner at the pointer. The chips and the refusals' words are the
+ * app's (`ValueChips`); the tool takes numbers already checked, and writes
+ * only through `draw.commit`. A typed corner the pointer has since left no
+ * room for is never made smaller without a word: making it is refused, and
+ * counted in `refusals`, for the app to say why and offer the corner that fits.
  */
 type Typed = { [field in SizeField]?: Mm };
 
@@ -38,7 +41,17 @@ type State =
       readonly currentMm: { x: number; y: number };
       /** The sizes the maker typed, once any was; null while the pointer sets them. */
       readonly typed: Typed | null;
+      /** How many times making it was refused, its typed corner not fitting. */
+      readonly refusals: number;
     };
+
+/** A typed corner is all four. */
+const ALL_CORNERS: readonly (keyof CornerRadii)[] = [
+  'bottomLeft',
+  'bottomRight',
+  'topRight',
+  'topLeft',
+];
 
 /** Under this a side is a click, not a rectangle. */
 const MIN_SIDE = 0.01;
@@ -62,8 +75,23 @@ export function createRectangleTool(nextId: () => string): Tool {
     // Nothing to make yet — a side still at the pointer's nothing: the
     // rectangle stays open for the other size to be typed, not lost.
     if (made.width < MIN_SIDE || made.height < MIN_SIDE) return;
+    if (refused(ctx, made)) return;
     reset(ctx);
     make(ctx, made);
+  };
+
+  /**
+   * Whether the typed corner is larger than the rectangle shown would draw
+   * it — the pointer shrank a side not typed since — and so not to be made:
+   * the shape stays open, in `phase`, as it is, and the refusal is counted.
+   */
+  const refused = (ctx: ToolContext, made: SizeDraft): boolean => {
+    if (state.kind !== 'spanning') return false;
+    const room = cornerRoom(made.width, made.height, uniformRadii(made.corner), ALL_CORNERS);
+    if (approxLte(made.corner, room.radiusMm)) return false;
+    state = { ...state, phase: 'placing', refusals: state.refusals + 1 };
+    ctx.invalidate();
+    return true;
   };
 
   const make = (ctx: ToolContext, made: SizeDraft): void => {
@@ -71,12 +99,9 @@ export function createRectangleTool(nextId: () => string): Tool {
     // zero-size part would leave something invisible in the parts list that
     // cannot be selected to delete.
     if (made.width < MIN_SIDE || made.height < MIN_SIDE) return;
-    // The chips refuse a corner too large for the sizes shown; a pointer that
-    // has since shrunk one cannot make a corner the rectangle would draw smaller.
-    const corner = Math.min(made.corner, quantiseAtMost(Math.min(made.width, made.height) / 2));
     draw.commit(ctx, nextId, 'Panel', {
       kind: 'shape',
-      shape: rectShape(made.origin, made.width, made.height, corner),
+      shape: rectShape(made.origin, made.width, made.height, made.corner),
     });
   };
 
@@ -98,6 +123,7 @@ export function createRectangleTool(nextId: () => string): Tool {
         startMm: event.at,
         currentMm: event.at,
         typed: null,
+        refusals: 0,
       };
       ctx.invalidate();
     },
@@ -128,6 +154,8 @@ export function createRectangleTool(nextId: () => string): Tool {
       // so `state.startMm` afterwards compiles fine and is undefined at run
       // time.
       const made = shapeOf(state.startMm, event.at, event, state.typed);
+      state = { ...state, currentMm: constrain(state.startMm, event.at, event.shiftKey) };
+      if (refused(ctx, made)) return;
       reset(ctx);
       make(ctx, made);
     },
@@ -182,7 +210,14 @@ export function createRectangleTool(nextId: () => string): Tool {
       if (state.kind === 'spanning') return state.phase === 'placing';
       if (hover === null) return false;
       draw.begin();
-      state = { kind: 'spanning', phase: 'placing', startMm: hover, currentMm: hover, typed: null };
+      state = {
+        kind: 'spanning',
+        phase: 'placing',
+        startMm: hover,
+        currentMm: hover,
+        typed: null,
+        refusals: 0,
+      };
       ctx.invalidate();
       return true;
     },
@@ -226,12 +261,16 @@ function shapeOf(
     width,
     height,
     corner: typed?.corner ?? 0,
+    refusals: 0,
   };
 }
 
 /** What the rectangle in progress is now. */
 function shown(state: Extract<State, { kind: 'spanning' }>): SizeDraft {
-  return shapeOf(state.startMm, state.currentMm, { shiftKey: false }, state.typed);
+  return {
+    ...shapeOf(state.startMm, state.currentMm, { shiftKey: false }, state.typed),
+    refusals: state.refusals,
+  };
 }
 
 /** Shift constrains to a square, using the larger of the two extents. */

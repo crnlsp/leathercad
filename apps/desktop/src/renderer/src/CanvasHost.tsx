@@ -1038,7 +1038,8 @@ function sameDraft(a: SizeDraft | null, b: SizeDraft | null): boolean {
     approxEq(a.origin.y, b.origin.y) &&
     approxEq(a.width, b.width) &&
     approxEq(a.height, b.height) &&
-    approxEq(a.corner, b.corner)
+    approxEq(a.corner, b.corner) &&
+    a.refusals === b.refusals
   );
 }
 

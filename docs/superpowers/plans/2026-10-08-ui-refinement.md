@@ -1788,8 +1788,13 @@ still works; Shift still makes a square. A hint under the shape: `Tab` next · `
   (`drawnSubject`), refuses with `chipRefusal` (`cornerRoom`, `cornerNeeds`) and reads with
   `parseLength`; its Tab goes round the three, since past the last is no longer out of the shape.
   Typed numbers reach the shape through the tool (`Tool.sizing`, `beginSizing`, `setSize`,
-  `finishSizing`), which alone dispatches (`draw.commit`); a corner the pointer has since made too
-  large is clamped by the tool to what the shape draws.
+  `finishSizing`), which alone dispatches (`draw.commit`).
+- **A typed corner the pointer has since left no room for** is refused, never made smaller
+  unsaid: Enter on the board, a click, or a chip's Enter makes nothing, opens the corner chip and
+  says why there ("Corner is larger than half the height (4.0). Enter uses 4.0."); only a second
+  Enter in it takes what fits — one undo step. A chip open while drawing is checked against the
+  shape as it is now, not as it was when the chip opened. As U.14 decided: a stored radius is
+  always the one drawn, and never one the maker did not see.
 - **A drag commits on release**, as before; "dragging first and typing after" is the U.14 chips on
   the outline it made. Between two clicks the chips replace the readout; during a drag the readout
   stays.

@@ -125,6 +125,66 @@ test('a corner the shape would not draw is refused, saying why, and Enter takes 
   });
 });
 
+/**
+ * Types an 8 mm corner on a shape the pointer has room for, then shrinks the
+ * shape with the pointer until 8 mm no longer fits: the board has the keys.
+ */
+async function cornerThenShrink(window: Page): Promise<{ x: number; y: number }> {
+  const corner = await firstCorner(window);
+  await chip(window, 'corner').click();
+  await field(window, 'corner').fill('8');
+  // Leaving the chip applies it; the board has the keys again.
+  await window.getByTestId('editor-canvas').focus();
+  await expect(window.getByTestId('drawing-corner')).toHaveText('8.0 mm');
+  const small = { x: corner.x + 12, y: corner.y - 8 };
+  await window.mouse.move(small.x, small.y);
+  return small;
+}
+
+test('a typed corner the pointer has left no room for is refused, never made smaller unsaid (U.16)', async () => {
+  await withApp(async (window) => {
+    const note = window.getByTestId('value-chip-note');
+    const parts = window.getByTestId('part-count');
+
+    // Enter on the board: refused, saying why, with the corner chip open on it.
+    await cornerThenShrink(window);
+    await window.keyboard.press('Enter');
+    await expect(note).toContainText('Corner is larger than half the');
+    await expect(parts).toHaveText('0');
+    await expect(field(window, 'corner')).toBeFocused();
+    await expect(field(window, 'corner')).toHaveValue('8');
+    // Only a second Enter, there, takes the corner that fits — one undo step.
+    await window.keyboard.press('Enter');
+    await expect(parts).toHaveText('1');
+    const taken = Number(await field(window, 'corner').inputValue());
+    expect(taken).toBeGreaterThan(0);
+    expect(taken).toBeLessThan(8);
+    await window.getByTestId('undo').click();
+    await expect(parts).toHaveText('0');
+    await expect(window.getByTestId('undo')).toBeDisabled();
+
+    // A click on the board: refused the same way, and never takes the smaller corner.
+    const at = await cornerThenShrink(window);
+    await window.mouse.click(at.x, at.y);
+    await expect(note).toContainText('Corner is larger than half the');
+    await expect(parts).toHaveText('0');
+    await expect(field(window, 'corner')).toBeFocused();
+    await window.keyboard.press('Escape');
+    await expect(parts).toHaveText('0');
+    await expect(window.getByTestId('value-chip-hint')).toHaveCount(0);
+
+    // Enter in the corner chip, opened on the shrunk shape: its own refusal.
+    await cornerThenShrink(window);
+    await chip(window, 'corner').click();
+    await window.keyboard.press('Enter');
+    await expect(note).toContainText('Corner is larger than half the');
+    await expect(parts).toHaveText('0');
+    await window.keyboard.press('Enter');
+    await expect(parts).toHaveText('1');
+    expect(Number(await field(window, 'corner').inputValue())).toBeLessThan(8);
+  });
+});
+
 test('a rectangle can still be dragged, and sized by the chips after (U.16)', async () => {
   await withApp(async (window) => {
     await window.getByTestId('tool-rectangle').click();
