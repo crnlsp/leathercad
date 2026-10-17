@@ -4,6 +4,7 @@ import {
   isScaleCheckOnly,
   type PartPrintStatus,
   type SheetPlan,
+  type SheetsWords,
   type TiledPart,
 } from '@leathercad/export';
 
@@ -50,6 +51,14 @@ export function describeSheetNumbers(sheets: readonly number[], i18n: I18n): str
   return isContiguous(sheets)
     ? i18n.t('sheetNumbers.range', { first: sheets[0]!, last: sheets[sheets.length - 1]! })
     : i18n.t('sheetNumbers.list', { numbers: i18n.list(sheets.map(String), 'unit') });
+}
+
+/** The numbers alone — `2`, `2–3`, `2, 4` — for a field that is already labelled. */
+export function describeSheetNumbersOnly(sheets: readonly number[], i18n: I18n): string {
+  if (sheets.length === 1) return String(sheets[0]!);
+  return isContiguous(sheets)
+    ? i18n.t('sheetsView.range', { first: sheets[0]!, last: sheets[sheets.length - 1]! })
+    : i18n.list(sheets.map(String), 'unit');
 }
 
 /** The same, inside a sentence: `Strap is taped across sheets 2–3.` */
@@ -117,4 +126,27 @@ export function describeTiled(entry: TiledPart, t: Translate): string {
         paper: best.paper.name,
         orientation: t(`sheets.orientation.${best.orientation}`),
       });
+}
+
+/**
+ * The Sheets view's labels in the interface's words (U.9, ADR 0018): a sheet's
+ * number and what is on it, a taped piece's name, and a piece turned to save a
+ * sheet. The paper keeps its own: "Sheet 2 of 3" in the PDF's footer.
+ */
+export function sheetsWords(i18n: I18n): SheetsWords {
+  const { t } = i18n;
+  return {
+    sheet: (number, count, pieces) =>
+      t('sheetsView.sheetHeading', {
+        sheet: t('status.sheetOf', { number, count }),
+        pieces: pieces === 0 ? t('sheetsView.noPieces') : t('parts.count', { count: pieces }),
+      }),
+    turned: (names) => t('sheetsView.pieceTurned', { names: i18n.list(names) }),
+    taped: (name, sheets) =>
+      // Parts' own words for it — "Sheets 2–3, taped" — after the name.
+      t('sheetsView.tapedLabel', {
+        name,
+        sheets: t('print.taped', { sheets: describeSheetNumbers(sheets, i18n) }),
+      }),
+  };
 }

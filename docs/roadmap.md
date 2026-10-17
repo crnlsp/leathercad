@@ -169,8 +169,25 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   and *Cut-out mirrored* wrap between their words, and *Card pocket ×2*'s marks take a line below
   its name. A selection paints in 4.5 ms with 32 features (3.0 ms
   before). Printed output did not move.
-- ☐ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
+- ✅ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
   the reminder to measure. No Turn: no piece is turned by hand.
+  ✅ Built as described, less Turn and Measure. The rail is Select and the note *Drawing tools are
+  in Design · Ctrl+1* (the key read from the keymap). Parts is the sheets in the PDF's order —
+  *Sheet 1 of 2 · 2 pieces* — with each piece's thumbnail, a *Taped* badge or a turned mark
+  (tooltip *Turned 90°*), then *Not printed* with the reason, then *Taped across sheets*
+  (*None. Every piece fits on one sheet.*). Properties is the paper (the paper button's own
+  fields, so one undo step), the sheet count, *Scale 100 % · locked*, then the picked piece's
+  sheet, placement and fit, then the reminder to measure the 100 × 5 mm box. The options row says
+  *Click a piece to see where it prints · ? all keys*; the sheet summary stays as a polite
+  announcement, out of sight. Every number is read from `sheetPlanFor` through `sheetContents.ts`
+  (`sheetContents`, `tapedPieces`, `placementOf`), never paginated again. On the board a sheet's
+  label is the board's own 12 px voice in `GROUND.label` (4.5:1 on the sheets' ground; the
+  furniture magenta was 3.5:1), in the app's words — *Sheet 1 of 3 · 2 pieces* — and a sheet
+  holding a turned piece names it below, *Pocket, turned 90°*, never over the pattern. Found on the
+  way: the label's halo, first tried, cut the paper's edge at fit zoom, and a caption laid over a
+  turned piece ran far wider than the piece at fit zoom, so neither is drawn. Parts' own print line
+  and its hover plumbing left `PartsList`, which Design alone uses. Printed output did not move: the PDFs of every
+  paper are the plan the panels read.
 - ✅ **U.10 The legend** (R-09). Open with names by default; folds to a chip that is remembered.
   ✅ Built as described. The legend sits at the canvas's bottom-left — moved from the top-right U.4
   left it at — and opens with names on any window with room; folded, it is a chip reading *Legend*
@@ -440,7 +457,7 @@ Also later, each already decided in principle:
 Left room for by the UI refinement (1.5):
 - **Hole matching and thread length** in the selection bar — "Matches Outer, right run 15 = 15 ·
   Thread ≈ 0.9 m". U.17 leaves room for this third line and builds nothing of it (R-14).
-- **Measuring on the sheets,** unless U.9 builds it: no tool acts on the Sheets view yet.
+- **Measuring on the sheets.** U.9 left it out: no tool acts on the Sheets view, so it would be new behaviour, not a change of window.
 
 Recorded from the QA pass (2026-09-24), with no work planned:
 
