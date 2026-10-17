@@ -177,9 +177,21 @@ export const SelectionBar = memo(function SelectionBar({
   )?.severity;
   const number = new Intl.NumberFormat(locale);
 
-  const steps = nextSteps(chain);
-  const first = steps.find((step) => !step.done)?.id;
+  const steps = nextSteps(project, chain);
+  // The first step not done: a button when it is still to make; when it
+  // failed or is hidden, said instead, and nothing after it is offered — holes
+  // on a stitch line that failed would fail too.
+  const next = steps.find((step) => step.status !== 'done');
+  const first = next?.status === 'todo' ? next.id : undefined;
   const refusal = first === undefined ? null : stepRefusal(project, chain, first);
+  const note =
+    next?.status === 'failed'
+      ? describeProblem(next.problem, t)
+      : next?.status === 'hidden'
+        ? t('selectionBar.holesHidden')
+        : refusal === null
+          ? null
+          : describeProblem(refusal, t);
   const make = (step: StepId): void => {
     runStep(store, nextId, chain, step, tools);
     // The keys stay in the bar, on the next step: F6, Enter, Enter makes two.
@@ -187,9 +199,10 @@ export const SelectionBar = memo(function SelectionBar({
   };
 
   const facts: ReactNode[] = [];
+  const counted = steps.find((step) => step.id === 'holes')?.status === 'done';
   if (chain.stitch === null) facts.push(t('selectionBar.noStitching'));
   else if (chain.holes === null) facts.push(t('selectionBar.noHoles'));
-  else if (holes !== undefined && op !== undefined) {
+  else if (counted && holes !== undefined && op !== undefined) {
     facts.push(
       <span key="holes" className="selection-bar-holes">
         <FeatureMark mark="stitch-holes" size={14} />
@@ -232,13 +245,16 @@ export const SelectionBar = memo(function SelectionBar({
         </span>,
       );
     }
-    const quantity = number.format(chain.part.quantity);
-    facts.push(
-      <span key="cut">
-        {emphasise(t('selectionBar.cut', { quantity: chain.part.quantity }), `×${quantity}`)}
-      </span>,
-    );
   }
+  // How many to cut, whatever the stitching (R-14's line 1).
+  facts.push(
+    <span key="cut" data-testid="selection-bar-cut">
+      {emphasise(
+        t('selectionBar.cut', { quantity: chain.part.quantity }),
+        `×${number.format(chain.part.quantity)}`,
+      )}
+    </span>,
+  );
 
   return (
     <div
@@ -257,20 +273,18 @@ export const SelectionBar = memo(function SelectionBar({
         }
       }}
     >
-      {facts.length > 0 && (
-        <p className="selection-bar-line" data-testid="selection-bar-summary">
-          {facts.map((fact, index) => (
-            <Fragment key={index}>
-              {index > 0 && (
-                <span className="selection-bar-dot" aria-hidden="true">
-                  ·
-                </span>
-              )}
-              {fact}
-            </Fragment>
-          ))}
-        </p>
-      )}
+      <p className="selection-bar-line" data-testid="selection-bar-summary">
+        {facts.map((fact, index) => (
+          <Fragment key={index}>
+            {index > 0 && (
+              <span className="selection-bar-dot" aria-hidden="true">
+                ·
+              </span>
+            )}
+            {fact}
+          </Fragment>
+        ))}
+      </p>
       <p className="selection-bar-line" data-testid="selection-bar-steps">
         <span className="selection-bar-next">{t('selectionBar.next')}</span>
         {steps.map((step, index) => (
@@ -280,8 +294,13 @@ export const SelectionBar = memo(function SelectionBar({
                 ›
               </span>
             )}
-            {step.done ? (
-              <span className="selection-bar-step" data-step={step.id} data-done="">
+            {step.status === 'done' ? (
+              <span
+                className="selection-bar-step"
+                data-step={step.id}
+                data-status={step.status}
+                data-done=""
+              >
                 <Icon of={Check} size={14} />
                 <span className="visually-hidden">{t('selectionBar.done')}</span>
                 {t(STEP_WORDS[step.id])}
@@ -300,16 +319,17 @@ export const SelectionBar = memo(function SelectionBar({
                 {t(STEP_WORDS[step.id])}
               </button>
             ) : (
-              <span className="selection-bar-step" data-step={step.id}>
+              <span className="selection-bar-step" data-step={step.id} data-status={step.status}>
                 {t(STEP_WORDS[step.id])}
               </span>
             )}
           </Fragment>
         ))}
       </p>
-      {refusal !== null && (
-        <p id={reasonId} className="selection-bar-reason">
-          {describeProblem(refusal, t)}
+      {note !== null && (
+        <p id={reasonId} className="selection-bar-reason" data-testid="selection-bar-reason">
+          {/* A step that failed is an error in Problems: its glyph as well as its words. */}
+          {next?.status === 'failed' && <SeverityGlyph severity="error" />} {note}
         </p>
       )}
     </div>

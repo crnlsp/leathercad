@@ -5,7 +5,14 @@ import {
   DocumentStore,
   addAllowancePart,
   addDrawnStitchLine,
+  addFoldLine,
   addPart,
+  addStitchHoles,
+  addStitchLine,
+  mirrorAcrossFold,
+  mirrorAxisFor,
+  mirrorFeatures,
+  setFeatureVisible,
   emptyDocument,
   rectShape,
   selectionOf,
@@ -13,7 +20,7 @@ import {
   type Command,
   type Selection,
 } from '@leathercad/document';
-import type { Feature, Project } from '@leathercad/domain';
+import { diagnose, type Feature, type Project } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
 import { loadProject } from '@leathercad/persist';
 import { STARTER_IRONS } from '@leathercad/platform';
@@ -60,8 +67,10 @@ const ids = (chain: StitchChain | null) =>
         stitch: chain.stitch?.id ?? null,
         holes: chain.holes?.id ?? null,
       };
-const done = (chain: StitchChain | null) =>
-  chain === null ? null : nextSteps(chain).map((step) => [step.id, step.done]);
+const done = (project: Project, chain: StitchChain | null) =>
+  chain === null
+    ? null
+    : nextSteps(project, chain).map((step) => [step.id, step.status === 'done']);
 
 /** A new outline, as Draw as › Outline makes one: a piece with nothing on it yet. */
 const newOutline = (w = 80, h = 50) =>
@@ -128,7 +137,7 @@ describe('stitchChain', () => {
     expect(ids(stitchChain(project, pick('s')))).toEqual(chain);
     expect(ids(stitchChain(project, pick('o')))).toEqual(chain);
     // The stitch line and the allowance are there; the holes are next.
-    expect(done(stitchChain(project, pick('o')))).toEqual([
+    expect(done(project, stitchChain(project, pick('o')))).toEqual([
       ['stitchLine', true],
       ['holes', false],
       ['allowance', true],
@@ -139,13 +148,13 @@ describe('stitchChain', () => {
 describe('nextSteps', () => {
   it('has the outer done, and a new outline with all three to do, the stitch line first', () => {
     const project = sample();
-    expect(done(stitchChain(project, pick('outer-holes')))).toEqual([
+    expect(done(project, stitchChain(project, pick('outer-holes')))).toEqual([
       ['stitchLine', true],
       ['holes', true],
       ['allowance', true],
     ]);
     const fresh = build(newOutline());
-    expect(done(stitchChain(fresh, pick('o')))).toEqual([
+    expect(done(fresh, stitchChain(fresh, pick('o')))).toEqual([
       ['stitchLine', false],
       ['holes', false],
       ['allowance', false],
@@ -167,7 +176,7 @@ describe('nextSteps', () => {
       addDrawnStitchLine('p', 's', { kind: 'path', path: ring }),
     );
     const chain = stitchChain(project, pick('s'))!;
-    expect(done(chain)).toEqual([
+    expect(done(project, chain)).toEqual([
       ['stitchLine', true],
       ['holes', false],
       ['allowance', false],
@@ -192,7 +201,7 @@ describe('runStep', () => {
     const step = (): void => {
       const { project } = store.getState().document;
       const chain = stitchChain(project, store.getState().selection)!;
-      const first = nextSteps(chain).find((each) => !each.done)!;
+      const first = nextSteps(project, chain).find((each) => each.status !== 'done')!;
       runStep(store, nextId, chain, first.id, TOOLS);
     };
 
@@ -210,7 +219,7 @@ describe('runStep', () => {
       op: { type: 'stitch-holes', pitchMm: 3, ironLabel: 'Crimson Hides 3.0 mm' },
     });
     const { project } = store.getState().document;
-    expect(done(stitchChain(project, store.getState().selection))).toEqual([
+    expect(done(project, stitchChain(project, store.getState().selection))).toEqual([
       ['stitchLine', true],
       ['holes', true],
       ['allowance', true],
@@ -235,23 +244,152 @@ describe('runStep', () => {
           for (let click = 0; click < 3; click++) {
             const { project } = store.getState().document;
             const chain = stitchChain(project, store.getState().selection)!;
-            const before = nextSteps(chain);
-            const first = before.find((each) => !each.done);
+            const before = nextSteps(project, chain);
+            const first = before.find((each) => each.status !== 'done');
             if (first === undefined) break;
             runStep(store, () => `new-${String(++n)}`, chain, first.id, TOOLS);
             const after = store.getState().document.project;
-            const steps = nextSteps(stitchChain(after, store.getState().selection)!);
+            const steps = nextSteps(after, stitchChain(after, store.getState().selection)!);
             // The step clicked is done, and every step done before still is.
-            expect(steps.find((each) => each.id === first.id)?.done).toBe(true);
-            for (const was of before.filter((each) => each.done)) {
-              expect(steps.find((each) => each.id === was.id)?.done).toBe(true);
+            expect(steps.find((each) => each.id === first.id)?.status).toBe('done');
+            for (const was of before.filter((each) => each.status === 'done')) {
+              expect(steps.find((each) => each.id === was.id)?.status).toBe('done');
             }
           }
           const { project } = store.getState().document;
           const chain = stitchChain(project, store.getState().selection)!;
-          expect(nextSteps(chain).every((each) => each.done)).toBe(true);
+          expect(nextSteps(project, chain).every((each) => each.status === 'done')).toBe(true);
         },
       ),
     );
+  });
+});
+
+/** A pocket stitched and punched: outline `o`, stitch line `s` 4 mm in, holes `h`. */
+const stitched = (w = 80, h = 50): Command[] => [
+  newOutline(w, h),
+  addStitchLine('p', 's', 'o', 4),
+  addStitchHoles('p', 'h', 's'),
+];
+
+describe('a counterpart reads as its original (review of U.17)', () => {
+  // Found on review: a piece made by Mirror is derived from the original's
+  // features, in the original's part, so its stitch line follows the
+  // original's outline, not its own. It read "No stitching yet", and one click
+  // made a second stitch line over the mirrored one — duplicate holes on paper.
+  const mirrored = (...extra: Command[]): Project => {
+    const before = build(...stitched(), ...extra);
+    const axis = mirrorAxisFor(before, ['o', 's', 'h'], 'horizontal')!;
+    return build(
+      ...stitched(),
+      ...extra,
+      mirrorFeatures(['o', 's', 'h'], ['mo', 'ms', 'mh'], axis, ['p2']),
+    );
+  };
+
+  it('finds a mirrored piece’s own stitch line and holes, from any of them or its heading', () => {
+    const project = mirrored();
+    const chain = { part: 'p2', outline: 'mo', stitch: 'ms', holes: 'mh' };
+    for (const id of ['mo', 'ms', 'mh']) {
+      expect(ids(stitchChain(project, pick(id)))).toEqual(chain);
+      expect(done(project, stitchChain(project, pick(id)))).toEqual([
+        ['stitchLine', true],
+        ['holes', true],
+        ['allowance', true],
+      ]);
+    }
+    expect(ids(stitchChain(project, { parts: new Set(['p2']), features: new Set() }))).toEqual(
+      chain,
+    );
+  });
+
+  it('still offers a stitch line on a piece whose outline alone was mirrored', () => {
+    const before = build(...stitched());
+    const axis = mirrorAxisFor(before, ['o'], 'vertical')!;
+    const project = build(...stitched(), mirrorFeatures(['o'], ['mo'], axis, ['p2']));
+    expect(ids(stitchChain(project, pick('mo')))).toEqual({
+      part: 'p2',
+      outline: 'mo',
+      stitch: null,
+      holes: null,
+    });
+  });
+
+  it('takes a stitch line mirrored across a fold with its own mirrored holes, never the original’s', () => {
+    const fold = addFoldLine('p', 'f', {
+      kind: 'path',
+      path: PathOps.polyline(
+        [
+          { x: 40, y: -10 },
+          { x: 40, y: 60 },
+        ],
+        false,
+      ),
+    });
+    // A seam on one half, drawn, and its holes; mirrored to the other half.
+    const seam = addDrawnStitchLine('p', 'd', {
+      kind: 'path',
+      path: PathOps.polyline(
+        [
+          { x: 10, y: 10 },
+          { x: 30, y: 10 },
+        ],
+        false,
+      ),
+    });
+    const base = [newOutline(), fold, seam, addStitchHoles('p', 'dh', 'd')];
+    const both = build(...base, mirrorAcrossFold(['d', 'dh'], ['fd', 'fdh'], 'f'));
+    expect(feature(both, 'fd').source).toMatchObject({ kind: 'derived', sourceId: 'd' });
+    expect(ids(stitchChain(both, pick('fd')))?.holes).toBe('fdh');
+    expect(ids(stitchChain(both, pick('fdh')))?.stitch).toBe('fd');
+
+    // The line alone mirrored: its holes are still to make, not the original's.
+    const line = build(...base, mirrorAcrossFold(['d'], ['fd'], 'f'));
+    expect(ids(stitchChain(line, pick('fd')))?.holes).toBeNull();
+  });
+
+  it('reads every mirrored piece as its original reads, whatever it carries', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 30, max: 200, noNaN: true }),
+        fc.double({ min: 30, max: 200, noNaN: true }),
+        fc.integer({ min: 1, max: 3 }),
+        fc.constantFrom('horizontal' as const, 'vertical' as const),
+        (w, h, depth, direction) => {
+          const commands = stitched(w, h).slice(0, depth);
+          const which = ['o', 's', 'h'].slice(0, depth);
+          const before = build(...commands);
+          const axis = mirrorAxisFor(before, which, direction)!;
+          const made = which.map((id) => `m${id}`);
+          const project = build(...commands, mirrorFeatures(which, made, axis, ['p2']));
+          for (const [original, counterpart] of which.map((id, i) => [id, made[i]!])) {
+            expect(done(project, stitchChain(project, pick(counterpart!)))).toEqual(
+              done(project, stitchChain(project, pick(original!))),
+            );
+          }
+        },
+      ),
+    );
+  });
+});
+
+describe('a step that failed or is hidden is not done (review of U.17)', () => {
+  it('says a stitch line that could not be made failed, with Problems’ own problem, and offers nothing after it', () => {
+    // 6 mm in from a 10 mm square leaves no line.
+    const project = build(newOutline(10, 10), addStitchLine('p', 's', 'o', 6));
+    const steps = nextSteps(project, stitchChain(project, pick('o'))!);
+    const [line] = steps;
+    expect(line).toMatchObject({ id: 'stitchLine', status: 'failed' });
+    const reported = diagnose(project).find((d) => d.featureId === 's');
+    expect(line!.status === 'failed' && line!.problem).toEqual(reported?.problem);
+  });
+
+  it('counts a hidden hole set as the board’s caption does: not as holes made', () => {
+    const project = build(...stitched(), setFeatureVisible(['h'], false));
+    expect(nextSteps(project, stitchChain(project, pick('o'))!)).toEqual([
+      { id: 'stitchLine', status: 'done' },
+      { id: 'holes', status: 'hidden' },
+      { id: 'allowance', status: 'done' },
+    ]);
   });
 });

@@ -1,5 +1,6 @@
 import { MatOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 
+import { valueReachPx } from './buildDisplayList.js';
 import { CANVAS } from './theme/index.js';
 import { blocked, clearArea, keptOff, type ChipBox, type CssBox } from './valueChips.js';
 import { worldToCss, zoomPercent, type ViewportView } from './view.js';
@@ -63,15 +64,17 @@ export function placeSelectionBar(
   }
   if (size.width > area.right - area.left) return null;
 
-  // A dimension's number sits centred on its line, so on the piece's lowest
-  // line it reaches this far under the piece's extent; the caption, its
-  // name and — at 40 % and over — its detail, this far over it.
+  // A dimension's number sits on its line, so on the piece's lowest line it
+  // reaches this far under the piece's extent, and on its highest this far
+  // over — where the caption starts: its name and, at 40 % and over, its
+  // detail. The display list's own measure, so the bar and the caption it
+  // places cannot disagree.
   const { text, caption } = CANVAS;
-  const valueReach = text.value.lineHeightPx / 2 + text.haloPx;
+  const value = valueReachPx();
   const lines = zoomPercent(view) >= caption.detailFromPercent ? 2 : 1;
-  const captionReach = caption.gapPx + lines * text.name.lineHeightPx;
+  const captionReach = value.above + caption.gapPx + lines * text.name.lineHeightPx;
   const taken = input.taken ?? [];
-  const low = Math.max(piece.bottom + valueReach, ...taken.map((box) => box.bottom));
+  const low = Math.max(piece.bottom + value.below, ...taken.map((box) => box.bottom));
   const high = Math.min(piece.top - captionReach, ...taken.map((box) => box.top));
 
   const keepOff = keptOff(input.obstacles ?? [], size);

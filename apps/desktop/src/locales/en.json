@@ -1210,6 +1210,7 @@
     "title": "Stitching of {{piece}}",
     "noStitching": "No stitching yet",
     "noHoles": "No holes yet",
+    "holesHidden": "The holes are hidden, so they are not counted and do not print.",
     "holes_one": "{{count}} hole",
     "holes_other": "{{count}} holes",
     "spacing": "{{spacing}} mm, pitch {{pitch}}",

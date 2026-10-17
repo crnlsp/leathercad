@@ -7,7 +7,7 @@ import {
   type DocumentStore,
   type Selection,
 } from '@leathercad/document';
-import type { Feature, Part, Problem, Project } from '@leathercad/domain';
+import { evaluate, type Feature, type Part, type Problem, type Project } from '@leathercad/domain';
 
 import { defaultIron, type MakerTools } from './irons.js';
 
@@ -17,10 +17,14 @@ import { defaultIron, type MakerTools } from './irons.js';
  */
 export type StepId = 'stitchLine' | 'holes' | 'allowance';
 
-export interface Step {
-  readonly id: StepId;
-  readonly done: boolean;
-}
+/**
+ * Where a step is: made, still to make, or made but not counted — failed,
+ * with the problem Problems lists for it, or hidden, which the board's caption
+ * does not count either (`stitchingOf`).
+ */
+export type Step =
+  | { readonly id: StepId; readonly status: 'done' | 'todo' | 'hidden' }
+  | { readonly id: StepId; readonly status: 'failed'; readonly problem: Problem };
 
 /**
  * One piece's stitching, as a selection is about it: its outline, the stitch
@@ -36,9 +40,36 @@ export interface StitchChain {
 const isOutline = (feature: Feature): boolean =>
   feature.kind === 'cut-contour' && feature.role === 'outer';
 
-/** Whether `feature` is built from `sourceId`. */
-const follows = (feature: Feature, sourceId: string): boolean =>
-  feature.source.kind === 'derived' && feature.source.sourceId === sourceId;
+/** The feature a mirrored counterpart is the image of; itself when it is not one. */
+const mirrorOf = (feature: Feature, byId: ReadonlyMap<string, Feature>): Feature | null =>
+  feature.source.kind === 'derived' && feature.source.op.type === 'mirror'
+    ? (byId.get(feature.source.sourceId) ?? null)
+    : null;
+
+/**
+ * Whether `feature` is built from `source` — inset, grown, holes on it — or
+ * is the mirror image of something built from what `source` is the image of.
+ * A piece made by Mirror is derived from the original's features, in the
+ * original's part: its stitch line is the image of the original's, and is
+ * its own outline's as surely as the original's is the original's (ADR 0012).
+ * Both must be images: a line mirrored across a fold is not the holes'
+ * original line.
+ */
+function builtFrom(feature: Feature, source: Feature, byId: ReadonlyMap<string, Feature>): boolean {
+  const { source: from } = feature;
+  if (from.kind === 'derived' && from.op.type !== 'mirror' && from.sourceId === source.id) {
+    return true;
+  }
+  const image = mirrorOf(feature, byId);
+  const sourceImage = mirrorOf(source, byId);
+  return image !== null && sourceImage !== null && builtFrom(image, sourceImage, byId);
+}
+
+/** Drawn by hand, or the mirror image of something that was. */
+function drawn(feature: Feature, byId: ReadonlyMap<string, Feature>): boolean {
+  const image = mirrorOf(feature, byId);
+  return image === null ? feature.source.kind !== 'derived' : drawn(image, byId);
+}
 
 /**
  * The piece's stitching a selection is about (U.17), or `null` for none: an
@@ -49,7 +80,9 @@ const follows = (feature: Feature, sourceId: string): boolean =>
  * the one inset from the outline, or — drawn as *Stitch + allowance* — the
  * one the outline grows from; failing both, one drawn on the piece by hand,
  * as the sample's card pocket's is. Never one inset round a cut-out: that is
- * a window's stitching, not the piece's.
+ * a window's stitching, not the piece's. A mirrored piece's own counterparts
+ * count as its original's do (`builtFrom`), so it is never offered stitching
+ * it already has.
  */
 export function stitchChain(project: Project, selection: Selection): StitchChain | null {
   let part: Part | undefined;
@@ -71,24 +104,26 @@ export function stitchChain(project: Project, selection: Selection): StitchChain
   if (part === undefined) return null;
 
   const { features } = part;
+  const byId = new Map(project.parts.flatMap((each) => each.features).map((f) => [f.id, f]));
+  const from = (feature: Feature, source: Feature): boolean => builtFrom(feature, source, byId);
   const outline = features.find(isOutline) ?? null;
   const lines = features.filter((f) => f.kind === 'stitch-line');
   const stitch =
     picked?.kind === 'stitch-line'
       ? picked
       : picked?.kind === 'stitch-hole-set'
-        ? (lines.find((line) => follows(picked, line.id)) ?? null)
+        ? (lines.find((line) => from(picked, line)) ?? null)
         : outline === null
           ? (lines[0] ?? null)
-          : (lines.find((line) => follows(line, outline.id) || follows(outline, line.id)) ??
-            lines.find((line) => line.source.kind !== 'derived') ??
+          : (lines.find((line) => from(line, outline) || from(outline, line)) ??
+            lines.find((line) => drawn(line, byId)) ??
             null);
   const holes =
     picked?.kind === 'stitch-hole-set'
       ? picked
       : stitch === null
         ? null
-        : (features.find((f) => f.kind === 'stitch-hole-set' && follows(f, stitch.id)) ?? null);
+        : (features.find((f) => f.kind === 'stitch-hole-set' && from(f, stitch)) ?? null);
 
   if (outline === null && stitch === null) return null;
   return { part, outline, stitch, holes };
@@ -96,18 +131,35 @@ export function stitchChain(project: Project, selection: Selection): StitchChain
 
 /**
  * Stitch line › Stitch holes › Seam allowance, each done or not. The first
- * not done is the one the bar offers.
+ * not done is the one the bar offers — when it is still to make: one that
+ * failed, or is hidden, is said instead, and nothing after it is offered.
  *
- * The allowance is the leather between the edge and the seam, so it is there
- * once a piece has both — whichever was drawn first. A piece drawn outline
- * first has it at its margin the moment its stitch line is made; adding one
- * would give it a second outline, which a piece cannot have.
+ * Made means evaluated and on the board: a stitch line its margin left no
+ * room for is not stitching, and holes made on it would fail too; a hidden
+ * hole set is neither counted nor printed. The allowance is the leather
+ * between the edge and the seam, so it is there once a piece has both —
+ * whichever was drawn first. A piece drawn outline first has it at its margin
+ * the moment its stitch line is made; adding one would give it a second
+ * outline, which a piece cannot have.
  */
-export function nextSteps(chain: StitchChain): readonly Step[] {
+export function nextSteps(project: Project, chain: StitchChain): readonly Step[] {
+  const resolved = new Map(
+    evaluate(project)
+      .parts.flatMap((part) => part.features)
+      .map((entry) => [entry.feature.id, entry] as const),
+  );
+  // Only a hole set's visibility counts against it: a hidden stitch line's
+  // holes are still drawn, and a hidden outline is still the piece.
+  const of = (id: StepId, feature: Feature | null, hides = false): Step => {
+    if (feature === null) return { id, status: 'todo' };
+    const entry = resolved.get(feature.id);
+    if (entry?.ok === false) return { id, status: 'failed', problem: entry.problem };
+    return { id, status: hides && !feature.visible ? 'hidden' : 'done' };
+  };
   return [
-    { id: 'stitchLine', done: chain.stitch !== null },
-    { id: 'holes', done: chain.holes !== null },
-    { id: 'allowance', done: chain.stitch !== null && chain.outline !== null },
+    of('stitchLine', chain.stitch),
+    of('holes', chain.holes, true),
+    chain.stitch === null ? { id: 'allowance', status: 'todo' } : of('allowance', chain.outline),
   ];
 }
 

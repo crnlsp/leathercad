@@ -341,8 +341,13 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   51, as a maker counts an edge and as mockup 14's 15 · 24 · 15 already read); the holes did not
   move. Mockups 02, 05 and 14 offer *Seam allowance* as the outer's and the card pocket's next step,
   but a piece drawn outline first is refused one (it would be a second outline): the bar shows it
-  done, its margin being the allowance, and offers it only where a seam has no edge yet.
-  Printed output did not move.
+  done, its margin being the allowance, and offers it only where a seam has no edge yet. On
+  review: a piece made by Mirror read as unstitched, its stitching being derived from the
+  original's — counterparts now count as their originals do; a bar flipped over a piece with a
+  dimension on top ran into its caption — the number's reach is one measure in `render` now; and
+  a stitch line that failed, or a hidden hole set, counted as made — a failed step is said in
+  Problems' words and nothing after it offered, and hidden holes are not counted, as the board's
+  caption does not count them. Printed output did not move.
 - ☐ **U.18 Drawing defaults in Properties** (R-16).
 - ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
   pixel baselines and the README's pictures retaken.
@@ -401,6 +406,7 @@ slice took, or will take, and is still open.
 | U.17 | Seam allowance on a piece drawn outline first, which the command refuses (a second outline) | Shown done: the margin between edge and seam is the allowance. The button appears only where a seam has no edge yet; mockups 02, 05 and 14 drew it on the outer |
 | U.17 | Which selection shows the bar | An outline, a stitch line, a hole set, or a piece by its heading — its piece's stitching. Not a fold, cut-out, marking, dimension or two things |
 | U.17 | No room under the piece or over it — the piece framed by `Shift+2`, or zoomed past the board | Left out, as a chip with no place is, and F6 then does nothing. Fitting the selection could keep the bar's room; not done |
+| U.17 | A step that failed (a margin too wide for the piece) or a hidden hole set | Not made: a failure is said in Problems' words, a hidden set as hidden, and no button follows either; Cut ×N stays on line 1 |
 | U.17 | What F6 does away from the board | Goes into the bar from anywhere but a field, and back to the board from inside it |
 | U.11 | The old sentence also said "scroll zooms · middle-drag pans"; the hints have no room for it | Left to `?` all keys, which lists both. Nothing else taught is a gesture the shortcut list does not have: Ctrl, which suspends snapping, is not offered until it is listed there |
 | U.11 | Three to five hints, with or without `? all keys` | With it: a tool's own hints are two to four, so the row is never more than five caps |

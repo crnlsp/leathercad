@@ -121,7 +121,9 @@ test('a new outline offers its stitch line, then its holes, each one click and o
     await window.getByTestId('tool-select').click();
 
     // Mockup 14's third state.
-    await expect(summary(window)).toHaveText('No stitching yet');
+    await expect(summary(window)).toContainText('No stitching yet');
+    // How many to cut, whatever the stitching (R-14's line 1).
+    await expect(window.getByTestId('selection-bar-cut')).toHaveText('Cut ×1');
     await expect(step(window)).toHaveText('Stitch line');
     await expect(step(window)).toHaveAttribute('data-step', 'stitchLine');
 
@@ -131,7 +133,7 @@ test('a new outline offers its stitch line, then its holes, each one click and o
     await expect(panel.locator('label', { hasText: /^Edge margin/ }).locator('input')).toHaveValue(
       '3.5',
     );
-    await expect(summary(window)).toHaveText('No holes yet');
+    await expect(summary(window)).toContainText('No holes yet');
     await expect(step(window)).toHaveAttribute('data-step', 'holes');
 
     // One more: holes from the default iron, 3.85, stretched on this line —
@@ -355,6 +357,64 @@ test('a drag that starts on the bar draws on the board under it; only its button
     await window.mouse.move(box.x + 120, box.y + 80, { steps: 4 });
     await window.mouse.up();
     await expect(window.getByTestId('part-count')).toHaveText('4');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('a stitch line that could not be made is said in Problems’ words, and nothing after it is offered (U.17)', async () => {
+  const { app, window } = await launch();
+  try {
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box.x + 250, box.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 430, box.y + 270, { steps: 5 });
+    await window.mouse.up();
+    const panel = window.getByTestId('property-panel');
+    const set = async (label: string, value: string): Promise<void> => {
+      const input = panel.locator('label', { hasText: new RegExp(`^${label}`) }).locator('input');
+      await input.fill(value);
+      await input.press('Enter');
+    };
+    // 3.5 mm in from both sides of a 6 mm piece leaves no line.
+    await set('Width', '6');
+    await set('Height', '6');
+    await window.getByTestId('tool-select').click();
+    await step(window).click();
+
+    await expect(window.getByTestId('property-header')).toContainText('Stitch line');
+    const said = (await panel.locator('.problem-message').first().textContent())!;
+    await expect(window.getByTestId('selection-bar-reason')).toContainText(said);
+    await expect(
+      window.getByTestId('selection-bar-steps').locator('[data-step="stitchLine"]'),
+    ).toHaveAttribute('data-status', 'failed');
+    // Holes on it would fail too: no button.
+    await expect(step(window)).toHaveCount(0);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('a hidden hole set is not counted, as the board’s caption does not count it (U.17)', async () => {
+  const { app, window } = await launch();
+  try {
+    await openSample(window);
+    await pick(window, 'outer-outline');
+    await expect(summary(window)).toContainText('146 holes');
+
+    await window.getByTestId('feature-row-outer-holes').hover();
+    await window.getByTestId('feature-visible-outer-holes').click();
+    await window.getByTestId('editor-canvas').focus();
+    await expect(summary(window)).not.toContainText('holes');
+    await expect(summary(window)).toContainText('Cut ×1');
+    await expect(window.getByTestId('selection-bar-reason')).toHaveText(
+      'The holes are hidden, so they are not counted and do not print.',
+    );
+    await expect(
+      window.getByTestId('selection-bar-steps').locator('[data-step="holes"]'),
+    ).toHaveAttribute('data-status', 'hidden');
+    await expect(step(window)).toHaveCount(0);
   } finally {
     await closeApp(app);
   }

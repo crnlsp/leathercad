@@ -1939,6 +1939,21 @@ bar never covers the piece, at any zoom; off in Settings means off.
 - **Keys:** `selectionBar` in `KEYMAP`, F6, window scope; `CanvasHandle.toggleSelectionBar`. Esc
   in the bar goes to the board. The bar takes no press but on its button: the first full E2E run
   showed a rectangle drawn where the bar was starting on the bar instead.
+- **On review** (three defects, fixed with a regression test each, each seen failing first):
+  - *A mirrored piece read as unstitched.* Mirror derives a counterpart from the original's
+    feature, so the counterpart's stitch line follows the original's outline, not its own:
+    the chain found nothing, and one click would have stitched it twice — duplicate holes on
+    paper. `builtFrom` follows two mirror images back to their originals; a line mirrored across
+    a fold does not take the original's holes. Today's Mirror button takes one feature at a time,
+    so only `mirrorFeatures` with several ids (a file, or a later gesture) builds such a piece.
+  - *A flipped bar ran into the caption.* The caption sits over a dimension's number on the
+    piece's top edge, which the bar did not count: 8 px into the name. `valueReachPx` in
+    `buildDisplayList.ts` is now the one measure of how far a number reaches from its line, which
+    the board's number box and the bar both read.
+  - *A failed or hidden step counted as made.* Steps have a status now: made means evaluated and,
+    for holes, shown — as the board's caption counts (`stitchingOf`). A step that failed is said in
+    Problems' own words with its glyph, and nothing after it is offered; a hidden hole set is said
+    as hidden. Cut ×N is on line 1 whatever the stitching, as R-14 lists it.
 - **For U.18:** the bar's step and *Stitch + allowance* both read `MakerTools` (`nextSteps.ts`
   `stitchLineCommand`, `holesCommand`, `allowanceCommand`); a margin or iron edited in Properties'
   *After the outline* reaches them through the same preferences.

@@ -1,4 +1,6 @@
-import { MatOps, type Rect, type Vec2 } from '@leathercad/geometry';
+import { DEFAULT_SETTINGS, evaluate, type Feature, type Project } from '@leathercad/domain';
+import { MatOps, PathOps, RectOps, uniformRadii, type Rect, type Vec2 } from '@leathercad/geometry';
+import { FONT } from '@leathercad/typography';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -7,6 +9,8 @@ import {
   type PlacedSelectionBar,
   type SelectionBarInput,
 } from './selectionBar.js';
+import { buildDisplayList } from './buildDisplayList.js';
+import type { DisplayItem } from './displayList.js';
 import { CANVAS } from './theme/index.js';
 import type { ChipBox, CssBox } from './valueChips.js';
 import { worldToCss, type ViewportView } from './view.js';
@@ -163,14 +167,32 @@ describe('placeSelectionBar (U.17, R-14)', () => {
         }),
         fc.array(box, { maxLength: 3 }),
         fc.array(box, { maxLength: 2 }),
-        (centre, zoom, dpr, x, y, w, h, size, taken, obstacles) => {
+        // A panel open over one side of the board, or none.
+        fc.option(fc.double({ min: 0, max: 500, noNaN: true }), { nil: undefined }),
+        fc.boolean(),
+        (centre, zoom, dpr, x, y, w, h, size, taken, obstacles, panel, fromLeft) => {
           const v = view(centre, zoom, dpr);
           const bounds = piece(x, y, w, h);
+          const area: CssBox | undefined =
+            panel === undefined
+              ? undefined
+              : fromLeft
+                ? { left: panel, top: 0, right: 800, bottom: 600 }
+                : { left: 0, top: 0, right: 800 - panel, bottom: 600 };
           const placed = placeSelectionBar(
             v,
-            input(bounds, { size, taken: taken.map(toBox), obstacles: obstacles.map(toBox) }),
+            input(bounds, {
+              size,
+              taken: taken.map(toBox),
+              obstacles: obstacles.map(toBox),
+              ...(area === undefined ? {} : { area }),
+            }),
           );
           if (placed === null) return;
+          if (area !== undefined) {
+            expect(placed.at.x).toBeGreaterThanOrEqual(area.left - EPS);
+            expect(placed.at.x + size.width).toBeLessThanOrEqual(area.right + EPS);
+          }
           const bar = barBox(placed, size);
           expect(overlap(bar, onScreen(v, bounds))).toBe(false);
           for (const chip of taken) expect(overlap(bar, toBox(chip))).toBe(false);
@@ -199,6 +221,99 @@ describe('placeSelectionBar (U.17, R-14)', () => {
           const placed = placeSelectionBar(v, input(bounds));
           if (box.bottom + 40 + BAR.height > 600) return;
           expect(placed?.side).toBe('below');
+        },
+      ),
+    );
+  });
+});
+
+describe('placeSelectionBar over a piece the display list captions (U.17)', () => {
+  /** A `w` × `h` panel, its width dimensioned along its top edge `offset` mm out. */
+  const panel = (w: number, h: number, offset: number): Project => {
+    const outline: Feature = {
+      id: 'outline',
+      kind: 'cut-contour',
+      role: 'outer',
+      name: 'Outline',
+      visible: true,
+      locked: false,
+      source: {
+        kind: 'shape',
+        shape: {
+          type: 'rect',
+          origin: { x: 0, y: 0 },
+          width: w,
+          height: h,
+          radii: uniformRadii(0),
+          rotation: 0,
+        },
+      },
+    };
+    const width: Feature = {
+      id: 'width',
+      kind: 'measurement',
+      name: 'Width',
+      visible: true,
+      locked: false,
+      source: {
+        kind: 'measurement',
+        measure: 'horizontal',
+        // Corners are numbered after each edge: 2 is the top left, 1 the top right.
+        a: { kind: 'anchor', featureId: 'outline', anchor: 2 },
+        b: { kind: 'anchor', featureId: 'outline', anchor: 1 },
+        offsetMm: offset,
+        precision: 1,
+      },
+    };
+    return {
+      id: 'p',
+      name: 'Test',
+      settings: DEFAULT_SETTINGS,
+      parts: [{ id: 'part-1', name: 'Panel', quantity: 1, features: [outline, width] }],
+    };
+  };
+
+  // A line's baseline, up from its bottom: as the board sets it.
+  const em = (FONT.ascender - FONT.descender) / FONT.unitsPerEm;
+  const below = (voice: { sizePx: number; lineHeightPx: number }): number =>
+    (voice.lineHeightPx - em * voice.sizePx) / 2 -
+    (FONT.descender / FONT.unitsPerEm) * voice.sizePx;
+
+  it('flips over the caption the board draws, which sits over a dimension on top, at any zoom', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.5, max: 6, noNaN: true }),
+        fc.double({ min: 10, max: 150, noNaN: true }),
+        fc.double({ min: 10, max: 120, noNaN: true }),
+        fc.double({ min: 2, max: 20, noNaN: true }),
+        (zoom, w, h, offset) => {
+          // The piece's foot at the canvas's: no room under it.
+          const v = view({ x: w / 2, y: 280 / zoom }, zoom);
+          const resolved = evaluate(panel(w, h, offset));
+          const bounds = RectOps.unionAll(
+            resolved.parts[0]!.features.flatMap((entry) =>
+              entry.ok ? (PathOps.bbox(entry.path) ?? []) : [],
+            ),
+          )!;
+          // The dimension really is on top.
+          expect(bounds.maxY).toBeGreaterThan(h + offset - 1);
+
+          const list = buildDisplayList(resolved, {
+            caption: (part) => ({ name: part.part.name, detail: '52 holes · 3.85 mm' }),
+            view: v,
+          });
+          const name = list.items.find(
+            (item): item is Extract<DisplayItem, { kind: 'overlay-text' }> =>
+              item.kind === 'overlay-text' && item.text === 'Panel',
+          )!;
+          const baseline = MatOps.apply(worldToCss(v), name.at).y;
+          const nameTop = baseline - (CANVAS.text.name.lineHeightPx - below(CANVAS.text.name));
+
+          const placed = placeSelectionBar(v, input(bounds));
+          // Too tall for the board above it, as well: left out.
+          if (placed === null) return;
+          expect(placed.side).toBe('above');
+          expect(placed.at.y + BAR.height).toBeLessThanOrEqual(nameTop + EPS);
         },
       ),
     );
