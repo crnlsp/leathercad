@@ -345,6 +345,8 @@ function polylineLike(
       };
     },
 
+    underway: () => state.kind === 'drawing',
+
     onDeactivate(ctx) {
       reset(ctx);
     },

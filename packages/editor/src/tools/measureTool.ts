@@ -156,6 +156,8 @@ export function createMeasureTool(nextId: () => string, measure: () => MeasureKi
       return { items };
     },
 
+    underway: () => state.kind === 'placing',
+
     onDeactivate(ctx) {
       refusal = null;
       reset(ctx);

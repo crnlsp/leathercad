@@ -144,6 +144,8 @@ export function createArcTool(nextId: () => string): Tool {
       return { items };
     },
 
+    underway: () => state.kind === 'placing',
+
     onDeactivate(ctx) {
       reset(ctx);
     },

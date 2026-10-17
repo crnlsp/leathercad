@@ -986,19 +986,63 @@ body {
   outline-offset: -2px;
 }
 
-/* The hint is the least important thing in the work bar, so it is the one
-   that gives when the window narrows. Without this the controls fold instead,
-   and a two-line bar is what the whole layout exists to remove. */
-.work-hint {
-  flex: 0 1 auto;
+/* The hints (U.11) are the least important thing in the work bar, so they are
+   what gives when the window narrows: the lowest-ranked go, whole, and "all
+   keys" stays (`OptionHints`). The slot takes the room the tool's options leave;
+   the copy is the same row, laid out and never seen, so each hint's width is
+   known before it is shown. */
+.work-hints {
+  position: relative;
+  flex: 1 1 0;
   min-width: 0;
   margin-left: var(--space-2);
   overflow: hidden;
+}
+
+.work-hints-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.work-hints-copy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.work-hint {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--text-dim);
   font: var(--t-label);
   font-weight: 400;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+}
+
+/* A key as a cap, outlined on the bar's own ground. */
+.work-hint kbd {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-800);
+  color: var(--text);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+}
+
+@media (forced-colors: active) {
+  .work-hint kbd {
+    border-color: CanvasText;
+  }
 }
 
 /* Counts, not measurements: emphasised by colour, at body weight. */

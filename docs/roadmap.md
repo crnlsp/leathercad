@@ -200,8 +200,22 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   by hand in a small window holds it open, and folding it there writes the choice; and the open
   legend covered the empty bottom-left corner a pixel reference clicked to deselect, so that
   reference now clicks an empty point below the ruler. Printed output did not move.
-- ☐ **U.11 Options-row hints** (R-11). Short hints with keys as caps, dropping from the right; `?`
+- ✅ **U.11 Options-row hints** (R-11). Short hints with keys as caps, dropping from the right; `?`
   never drops.
+  ✅ Built as described: the work bar's one sentence is three to five hints per tool and state —
+  Select with nothing picked, with something, with an outline (Enter edits its sizes); every drawing
+  tool idle and between its clicks (Esc cancels; a polyline's Enter, A and Backspace); a tool that
+  needs a selection says to press V first while there is none. Each hint is a key cap read from the
+  keymap and a few words from `en.json` (`hints.*`), with a rank; `fitHints` keeps the highest
+  ranks that fit the room measured, drops the rest whole — never a narrower hint out of turn, never
+  a word cut by the edge — and never drops `? all keys`, which is also how the Sheets view's row
+  reads now (Ctrl+P, Ctrl+E and `?`). The tools' `howTo` lines stay in the rail's tooltips. Found
+  on the way: a tool had no way to say a shape was between its clicks, so `Tool.underway` is new
+  (rectangle, circle, arc, line, polyline, measure), and the Esc a hint offers is the Esc the tool
+  claims. `Shift+2` in `value-chips.spec.ts` sent the key `2`, which a US keyboard never types
+  with Shift, so with a real pointer parked over the board it began a typed rectangle; it presses
+  `Shift+@` now. Not fixed, a decision: on a layout that types digits with Shift (French), Shift+`&`
+  is both *Fit* and a first digit typed into a rectangle's width. Printed output did not move.
 - ☐ **U.12 Change a key in Settings › Keyboard shortcuts** (§2).
 - ✅ **U.20 What Chromium still draws itself.** Light scrollbars, radios, checkboxes, a spin button
   and select lists in a dark window; focus rings in the desktop's colour; Ctrl+A selecting the
@@ -345,6 +359,10 @@ slice took, or will take, and is still open.
 | U.14 | A width or height that leaves the corners larger than the rectangle draws them | **Decided 2026-10-17:** refused, saying why, and Enter takes the least size the corners fit in — on the board and in Properties alike. A stored radius is always the one drawn |
 | U.14 | Chips near the legend or the zoom control | **Decided 2026-10-17:** kept clear of them, as of the rulers and panels — a chip slides along its line, or is left out; never laid over one |
 | U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
+| U.11 | The old sentence also said "scroll zooms · middle-drag pans"; the hints have no room for it | Left to `?` all keys, which lists both. Nothing else taught is a gesture the shortcut list does not have: Ctrl, which suspends snapping, is not offered until it is listed there |
+| U.11 | Three to five hints, with or without `? all keys` | With it: a tool's own hints are two to four, so the row is never more than five caps |
+| U.11 | Which hint drops first, when the mockup drops "from the right" | The lowest ranked, as R-11's text says — the keys a maker is least likely to guess stay longest (a polyline's A before its Backspace) |
+| U.11 | On French layouts Shift+`&` is *Fit* and types a `1` into a rectangle's width | Not decided: one press does both today. Letting the window's key win would leave no digit row to type a size with |
 | U.20 | Electron's spellchecker: keep it, or turn it off? On Linux it downloads an English dictionary whatever the interface language, and the leather words are not in it | **Decided 2026-10-15:** off. A name is a few words, and `SECURITY.md` says the app makes no network connections |
 | U.20 | A right-click menu in a text field | **Decided 2026-10-15:** Cut, Copy, Paste and Select all, in the app's own menu with its words from `en.json`; nothing outside fields |
 | U.20 | Which text can be selected? | **Decided 2026-10-15:** the fields, a problem's words, and About's version — what a maker might paste into a bug report. Nothing else. About shows no log folder to select: its button opens the folder |

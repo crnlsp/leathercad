@@ -14,10 +14,10 @@ export type ToolId =
 
 /**
  * A mode. Its words are the catalogue's (ADR 0018): `tools.<id>.name`, and
- * `tools.<id>.howTo` — how the tool is used, in one line, shown in the work
- * bar while it is the active mode and in its tooltip. That line replaced a
- * permanent "drag to draw" that was wrong for five of the tools (F.1), so each
- * has to be true of its own tool and no other.
+ * `tools.<id>.howTo` — how the tool is used, in one line, shown in its
+ * tooltip. That line replaced a permanent "drag to draw" that was wrong for
+ * five of the tools (F.1), so each has to be true of its own tool and no other.
+ * The work bar's hints (U.11) are `optionHints.ts`, per tool and state.
  */
 export interface ToolEntry {
   readonly id: ToolId;

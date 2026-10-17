@@ -165,4 +165,16 @@ describe('the measure tool', () => {
 
     expect(features(store).some((f) => f.kind === 'measurement')).toBe(false);
   });
+
+  it('is under way between its two corners, for the work bar (U.11)', () => {
+    const { ctx } = harness();
+    const tool = createMeasureTool(nextId, () => 'aligned');
+    expect(tool.underway!()).toBe(false);
+
+    tool.onPointerDown!(ctx, click(0, 0));
+    expect(tool.underway!()).toBe(true);
+
+    tool.onPointerDown!(ctx, click(100, 0));
+    expect(tool.underway!()).toBe(false);
+  });
 });

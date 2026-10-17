@@ -7,7 +7,6 @@ import type { ReactNode } from 'react';
 import type { I18n } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
-import { useKeysInSentences } from './keyCaps.js';
 import { PaperFields } from './PaperButton.js';
 import { PieceThumbnail, pieceName } from './PanelFold.js';
 import {
@@ -327,19 +326,5 @@ function PieceOnSheets({ project, part, i18n }: { project: Project; part: Part; 
         </>
       )}
     </section>
-  );
-}
-
-/**
- * The options row on the Sheets view: what a click does here, and the way to
- * every key (R-08). Nothing else acts on paper.
- */
-export function SheetsHint() {
-  const { t } = useI18n();
-  const keys = useKeysInSentences();
-  return (
-    <span className="work-hint" data-testid="sheets-hint">
-      {t('sheetsView.hint', keys)}
-    </span>
   );
 }

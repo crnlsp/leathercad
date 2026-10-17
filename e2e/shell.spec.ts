@@ -509,7 +509,7 @@ test('Draw as is offered only while a drawing tool is active (F.8)', async () =>
     for (const tool of ['select', 'rotate', 'scale', 'text', 'measure', 'hardware']) {
       await window.getByTestId(`tool-${tool}`).click();
       await expect(window.getByTestId('tool-how-to')).toContainText(
-        tool === 'select' ? 'Click to select' : '',
+        tool === 'select' ? 'Click selects' : '',
       );
       await expect(window.getByTestId('draw-as-outline'), tool).toHaveCount(0);
     }
@@ -1402,14 +1402,14 @@ test('every two-point tool takes a drag or two clicks (F.1)', async () => {
     };
 
     await window.getByTestId('tool-rectangle').click();
-    await expect(window.getByTestId('tool-how-to')).toContainText('click both corners');
+    await expect(window.getByTestId('tool-how-to')).toContainText('click two corners');
     await click(150, 150);
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await click(300, 260);
     await expect(window.getByTestId('part-count')).toHaveText('1');
 
     await window.getByTestId('tool-circle').click();
-    await expect(window.getByTestId('tool-how-to')).toContainText('the centre and then the rim');
+    await expect(window.getByTestId('tool-how-to')).toContainText('then the rim');
     await click(500, 200);
     await click(540, 230);
     await expect(window.getByTestId('part-count')).toHaveText('2');
@@ -1429,9 +1429,9 @@ test('every two-point tool takes a drag or two clicks (F.1)', async () => {
     await window.getByTestId('tool-polyline').click();
     await expect(window.getByTestId('tool-how-to')).toContainText('Click each point');
     await window.getByTestId('tool-arc').click();
-    await expect(window.getByTestId('tool-how-to')).toContainText('Click the start, the end');
+    await expect(window.getByTestId('tool-how-to')).toContainText('Click the start of the arc');
     await window.getByTestId('tool-select').click();
-    await expect(window.getByTestId('tool-how-to')).toContainText('Shift-click adds or removes');
+    await expect(window.getByTestId('tool-how-to')).toContainText('adds or removes');
   });
 });
 

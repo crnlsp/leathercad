@@ -145,6 +145,14 @@ export interface Tool {
   onDeactivate?(ctx: ToolContext): void;
 
   /**
+   * Whether a shape is under way, between its clicks: the first point is
+   * placed and the rest is to come (U.11, R-11). The work bar's hints read it
+   * — *Esc cancels* is offered only when there is something to cancel. A tool
+   * with no such state omits it.
+   */
+  underway?(): boolean;
+
+  /**
    * The size of what is being drawn, to be typed over (U.16, R-13): the
    * app shows it as chips beside the shape for as long as this is not null.
    * A tool that draws no sized shape omits all four of these.
@@ -371,6 +379,11 @@ export class ToolManager {
   /** Hands a key to the active tool; true when the tool claimed it. */
   key(event: KeyInput): boolean {
     return this.active.onKey?.(this.context, event) === true;
+  }
+
+  /** Whether the active tool has a shape under way (U.11). */
+  underway(): boolean {
+    return this.active.underway?.() ?? false;
   }
 
   /** The active tool's sized shape in progress, if it has one (U.16). */

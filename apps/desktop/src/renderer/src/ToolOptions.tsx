@@ -45,7 +45,7 @@ const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
  * Select, Rotate or Scale that is a setting with no effect. A fold line can be
  * drawn with any of the five drawing tools, so a tool per combination would be
  * fifteen buttons for three ideas. Hardware asks its own question here. Every
- * other tool leaves the space to its one line of guidance, which follows.
+ * other tool leaves the space to its hints, which follow (U.11).
  */
 export function ToolOptions({
   toolId,
