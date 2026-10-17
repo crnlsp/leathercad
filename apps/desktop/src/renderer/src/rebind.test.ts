@@ -509,26 +509,28 @@ describe('properties of changing keys', () => {
     fc.assert(
       fc.property(fc.array(arbitraryStep, { maxLength: 12 }), fc.boolean(), (steps, isMac) => {
         const keymap = withBindings(afterSteps(steps, true));
-        // Every key bound, pressed on every test keyboard, alone and with Shift.
-        const presses = keymap.flatMap((command) =>
-          allBindings(command).flatMap((binding) =>
-            LAYOUTS.flatMap(([, layout]) => {
+        // Every key bound, pressed on every test keyboard, alone and with Shift
+        // — each distinct press once: most keys press the same on every layout.
+        const presses = new Map<string, KeyPress>();
+        for (const command of keymap) {
+          for (const binding of allBindings(command)) {
+            for (const [, layout] of LAYOUTS) {
               const press = pressOn(binding, layout, isMac);
-              return press === null
-                ? []
-                : [press, { ...press, shiftKey: true, key: press.key.toUpperCase() }];
-            }),
-          ),
-        );
-        for (const press of presses) {
-          for (const place of PLACES) {
-            const heard = commandsHearing(press, place, isMac, keymap);
-            expect(
-              heard.length,
-              `${JSON.stringify(press)} in ${place.join()}: ${heard.join()}`,
-            ).toBeLessThanOrEqual(1);
+              if (press === null) continue;
+              const shifted = { ...press, shiftKey: true, key: press.key.toUpperCase() };
+              for (const each of [press, shifted]) presses.set(JSON.stringify(each), each);
+            }
           }
         }
+        // One assertion per run: an `expect` per press was most of the time under coverage.
+        const heardTwice: string[] = [];
+        for (const [shown, press] of presses) {
+          for (const place of PLACES) {
+            const heard = commandsHearing(press, place, isMac, keymap);
+            if (heard.length > 1) heardTwice.push(`${shown} in ${place.join()}: ${heard.join()}`);
+          }
+        }
+        expect(heardTwice).toEqual([]);
       }),
       { numRuns: 400 },
     );
