@@ -86,7 +86,7 @@ import { ROOM_PX, layoutFor, toggleOf, type Panel, type Room } from './panelLayo
 import { isTyping } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
-import { OptionHints } from './OptionHints.js';
+import { OptionHints } from './OptionHintsRow.js';
 import { SHEETS_HINTS, hintsFor } from './optionHints.js';
 import { chipSubject } from './outlineSizes.js';
 import { ALL_TOOLS } from './tools.js';

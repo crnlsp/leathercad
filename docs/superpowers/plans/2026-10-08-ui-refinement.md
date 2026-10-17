@@ -1329,7 +1329,7 @@ kept).
 
 **As built (2026-10-17).** `optionHints.ts` holds the sets (`hintsFor`: tool, whether anything is
 selected, whether an outline's sizes open on the board, whether a shape is between its clicks)
-and `fitHints` (widths, ranks, room, gap). `OptionHints.tsx` measures an unseen copy of the row
+and `fitHints` (widths, ranks, room, gap). `OptionHintsRow.tsx` measures an unseen copy of the row
 and keeps what fits. `Tool.underway` is new. The plan's "Today" cited `App.tsx` 650; the sentence
 was `ToolHowTo`, gone now, and the Sheets view's own `SheetsHint` is the same component.
 
