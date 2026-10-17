@@ -121,9 +121,11 @@
   },
   "view": {
     "design": "Design",
+    "designBoard": "Design board",
     "designTooltip": "Design the pieces",
     "label": "View",
     "sheets": "Sheets",
+    "sheetsBoard": "Sheets board",
     "sheetsNamed_one": "Sheets, {{count}} sheet",
     "sheetsNamed_other": "Sheets, {{count}} sheets",
     "sheetsTooltip": "See the pieces on the sheets they will print on"
@@ -232,6 +234,7 @@
     "contextMenu": "Open the menu for the selection, as a right-click does",
     "delete": "Delete what is selected (Select tool)",
     "design": "Design: the board you draw on",
+    "editSizes": "Type the sizes of the selected outline, beside it on the board",
     "exportPdf": "Export PDF",
     "finishPolyline": "Finish a polyline",
     "fit": "Fit the drawing in the window",
@@ -1063,5 +1066,22 @@
     "paste": "Paste",
     "selectAll": "Select all",
     "nothingSelected": "Select some of the text first"
+  },
+  "chips": {
+    "title": "Sizes of the selected outline",
+    "cornerName": "Corner radius, all four corners",
+    "corner": "r",
+    "margin": "margin",
+    "mixed": "mixed",
+    "tooLarge": {
+      "halfHeight": "Corner is larger than half the height ({{size}}). {{enter}} uses {{size}}.",
+      "halfWidth": "Corner is larger than half the width ({{size}}). {{enter}} uses {{size}}.",
+      "height": "Corner is larger than the height leaves it ({{size}}). {{enter}} uses {{size}}.",
+      "width": "Corner is larger than the width leaves it ({{size}}). {{enter}} uses {{size}}."
+    },
+    "tooSmall": {
+      "width": "Width is less than its corners need ({{size}}). {{enter}} uses {{size}}.",
+      "height": "Height is less than its corners need ({{size}}). {{enter}} uses {{size}}."
+    }
   }
 }

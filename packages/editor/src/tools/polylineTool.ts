@@ -271,9 +271,11 @@ function polylineLike(
       }
 
       if (event.key === 'Enter') {
-        // An arc with no bulge yet is not part of what was drawn.
+        // An arc with no bulge yet is not part of what was drawn. Claimed,
+        // finished or refused: the board's Enter opens the selected outline's
+        // sizes (U.14), and this press was the run's.
         finish(ctx, state.points, state.throughs, false);
-        return false;
+        return true;
       }
 
       // Undoing a misplaced point without abandoning the whole run: an arc's

@@ -45,7 +45,13 @@ export function CanvasLegend({
     'unit',
   );
   return (
-    <section className="canvas-legend" aria-label={t('legend.title')} data-testid="canvas-legend">
+    <section
+      className="canvas-legend"
+      aria-label={t('legend.title')}
+      data-testid="canvas-legend"
+      // Over the board: the value chips keep clear of it (U.14).
+      data-over-board=""
+    >
       <Tooltip text={open ? t('legend.hide') : t('legend.tooltip', { names })}>
         <button
           type="button"

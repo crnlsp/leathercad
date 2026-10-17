@@ -117,6 +117,21 @@ describe('polyline tool', () => {
     expect(p?.closed).toBe(false);
   });
 
+  it('claims the Enter that finishes a run, and leaves one with no run to the board (U.14)', () => {
+    // Since U.14 Enter on the board also opens the selected outline's sizes:
+    // the press that finishes — or is refused finishing — a run is the run's.
+    const { ctx } = harness('outline');
+    const tool = createPolylineTool(nextId);
+    const enter = { key: 'Enter', shiftKey: false, ctrlKey: false };
+    expect(tool.onKey?.(ctx, enter)).toBe(false);
+
+    click(tool, ctx, { x: 0, y: 0 });
+    click(tool, ctx, { x: 20, y: 0 });
+    click(tool, ctx, { x: 20, y: 20 });
+    // Refused — an outline that does not close — and still the run's.
+    expect(tool.onKey?.(ctx, enter)).toBe(true);
+  });
+
   it('makes an open run a marking line, not something to cut', () => {
     const { ctx, store } = withPart('marking');
     const tool = createPolylineTool(nextId);

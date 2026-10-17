@@ -1,17 +1,35 @@
 import type { ParametricShape } from '@leathercad/domain';
-import type { CornerRadii } from '@leathercad/geometry';
+import { cornerRoom, type CornerRadii } from '@leathercad/geometry';
 
 import { useI18n } from '../i18n.js';
+import { useKeysInSentences } from '../keyCaps.js';
 import { NumberField } from '../NumberField.js';
+import { cornerRefusal, sizeRefusal, type Refusal } from '../outlineSizes.js';
 
 type Rect = Extract<ParametricShape, { type: 'rect' }>;
 
-/** Position, size, and a radius per corner. */
+/**
+ * Position, size, and a radius per corner. A corner larger than the corners
+ * beside it leave is refused, with the largest that fits to take instead, and
+ * a width or height its corners do not fit in, with the least they do — as
+ * the chips on the board refuse them (U.14): stored, a radius that is never
+ * the one drawn would be a size the pattern does not have.
+ */
 export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape: Rect) => void }) {
   const { t } = useI18n();
+  const keys = useKeysInSentences();
+  const words = { t, enter: keys['enter'] ?? '' };
   const setRadius = (corner: keyof CornerRadii, value: number): void => {
     onChange({ ...shape, radii: { ...shape.radii, [corner]: value } });
   };
+  const refuse =
+    (corner: keyof CornerRadii) =>
+    (radius: number): Refusal | null =>
+      cornerRefusal(cornerRoom(shape.width, shape.height, shape.radii, [corner]), radius, words);
+  const refuseSize =
+    (side: 'width' | 'height') =>
+    (size: number): Refusal | null =>
+      sizeRefusal(shape.radii, side, size, words);
 
   return (
     <>
@@ -32,12 +50,14 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           label={t('editor.width')}
           value={shape.width}
           min={0.01}
+          refuse={refuseSize('width')}
           onCommit={(width) => onChange({ ...shape, width })}
         />
         <NumberField
           label={t('editor.height')}
           value={shape.height}
           min={0.01}
+          refuse={refuseSize('height')}
           onCommit={(height) => onChange({ ...shape, height })}
         />
       </div>
@@ -59,6 +79,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.topLeft}
           min={0}
           step={0.5}
+          refuse={refuse('topLeft')}
           onCommit={(v) => setRadius('topLeft', v)}
         />
         <NumberField
@@ -66,6 +87,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.topRight}
           min={0}
           step={0.5}
+          refuse={refuse('topRight')}
           onCommit={(v) => setRadius('topRight', v)}
         />
       </div>
@@ -75,6 +97,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.bottomLeft}
           min={0}
           step={0.5}
+          refuse={refuse('bottomLeft')}
           onCommit={(v) => setRadius('bottomLeft', v)}
         />
         <NumberField
@@ -82,6 +105,7 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           value={shape.radii.bottomRight}
           min={0}
           step={0.5}
+          refuse={refuse('bottomRight')}
           onCommit={(v) => setRadius('bottomRight', v)}
         />
       </div>

@@ -97,6 +97,49 @@ describe('round trip', () => {
     const empty: Project = { id: 'p', name: '', settings: DEFAULT_SETTINGS, parts: [] };
     expect(loadProject(saveProject(empty, options)).project).toEqual(empty);
   });
+
+  it('opens a corner larger than fits as it was saved, and draws it as it always has (U.14)', () => {
+    // The app refuses a 40 mm corner on an 80 × 60 rectangle since U.14, but a
+    // file saved before keeps it: it opens untouched and draws the 30 mm
+    // corners it always printed.
+    const base = sampleProject();
+    const oversize: Project = {
+      ...base,
+      parts: [
+        {
+          ...base.parts[0]!,
+          features: [
+            {
+              id: 'feat-1',
+              kind: 'cut-contour',
+              role: 'outer',
+              name: 'Outline',
+              visible: true,
+              locked: false,
+              source: {
+                kind: 'shape',
+                shape: {
+                  type: 'rect',
+                  origin: { x: 0, y: 0 },
+                  width: 80,
+                  height: 60,
+                  radii: uniformRadii(40),
+                  rotation: 0,
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const reopened = loadProject(saveProject(oversize, options)).project;
+    expect(reopened).toEqual(oversize);
+
+    const drawn = evaluate(reopened).parts[0]!.features[0]!;
+    expect(drawn.ok).toBe(true);
+    if (!drawn.ok) return;
+    expect(drawn.path).toEqual(Shapes.roundedRect({ x: 0, y: 0 }, 80, 60, 30));
+  });
 });
 
 describe('the archive itself', () => {

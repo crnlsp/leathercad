@@ -75,3 +75,12 @@ export { renderToSvgString } from './svg/backend.js';
 
 export type { PixelBox } from './thumbnail.js';
 export { thumbnailPath } from './thumbnail.js';
+
+export type {
+  ChipBox,
+  CssBox,
+  PlacedValueChips,
+  ValueChip,
+  ValueChipsInput,
+} from './valueChips.js';
+export { VALUE_CHIPS, placeValueChips } from './valueChips.js';

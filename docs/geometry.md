@@ -256,8 +256,25 @@ case for each one, and the engine would grow a special case per product feature.
 generic and parameters semantic is what stops that.
 
 Rounded rectangles with per-corner radii are the workhorse of leathercraft, so `roundedRect`
-deserves care: it must clamp radii that exceed half the shorter side, handle zero radii by emitting
-no arc, and produce line-arc-line-arc-… in a consistent winding.
+deserves care: it must shrink radii whose corners would overlap on a side, handle zero radii by
+emitting no arc, and produce line-arc-line-arc-… in a consistent winding.
+
+```ts
+shapes.fittedRadii(radii, w, h): CornerRadii;                 // the radii roundedRect draws
+shapes.cornerRoom(w, h, radii, corners): CornerRoom;          // the most `corners` take, and why
+shapes.cornerNeeds(radii): CornerNeeds;                        // the least w and h they are drawn in
+```
+
+`fittedRadii` is that shrink, exported so nothing else has to restate it: when two corners sharing a
+side ask for more than its length, **every** corner scales by the one factor that fits the tightest
+side, keeping an asymmetric design asymmetric. `cornerRoom` is its inverse question — the largest
+radius the named corners can be set to together, the others kept, that is drawn as asked — with
+the side that limits it and whether its two corners share it ("half the height"). The app refuses
+a typed corner by it (U.14), so a radius that would never be drawn is never stored; a file that
+already holds one still opens and draws as it always did. `cornerNeeds` asks the same of the
+rectangle: the least width and height — on each pair of sides, the longer sum of the two corners
+sharing one — in which every radius is drawn as asked, so a typed width or height that would
+shrink them is refused too. Both property-tested against `fittedRadii` and `roundedRect`.
 
 ### 4.1 Editing a drawn path's points (3.9b)
 

@@ -44,6 +44,7 @@ import {
   renderGrid,
   renderRulers,
   zoomPercent,
+  type CssBox,
 } from '@leathercad/render';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
@@ -53,8 +54,9 @@ import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { sheetPlanFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
-import { commandFor, keyForTools } from './keymap.js';
+import { commandFor, keyForTools, keysOf, matches } from './keymap.js';
 import { isTyping } from './shortcuts.js';
+import { ValueChips, type ValueChipsHandle } from './ValueChips.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -145,6 +147,7 @@ export function CanvasHost({
   onContextMenu,
   nextId,
   onStatus,
+  panelOver = null,
   ref,
   children,
 }: {
@@ -168,6 +171,8 @@ export function CanvasHost({
   onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
+  /** A panel open over the board (U.5), by its class: the value chips keep clear of it. */
+  panelOver?: string | null;
   ref?: React.Ref<CanvasHandle>;
   /** Drawn over the canvas without taking space from it: the legend (F.7). */
   children?: React.ReactNode;
@@ -254,6 +259,59 @@ export function CanvasHost({
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
   }, []);
+
+  /** The selected outline's sizes, beside it (U.14): placed as each frame is painted. */
+  const chipsRef = useRef<ValueChipsHandle>(null);
+  /** The keys back to the board, without scrolling the window to it. */
+  const toBoard = useCallback(() => canvasRef.current?.focus({ preventScroll: true }), []);
+  const panelOverRef = useRef(panelOver);
+  useEffect(() => {
+    panelOverRef.current = panelOver;
+    invalidate();
+  }, [panelOver, invalidate]);
+  /**
+   * Where on the board the chips may sit, as it is laid out now: the canvas,
+   * less a panel open over one side of it, and clear of the controls laid over
+   * it — the legend, the zoom control, whatever says `data-over-board`.
+   */
+  const chipRoom = useCallback((): { area?: CssBox; obstacles: CssBox[] } => {
+    const canvas = canvasRef.current;
+    if (canvas === null) return { obstacles: [] };
+    const board = canvas.getBoundingClientRect();
+    const onBoard = (rect: DOMRect): CssBox => ({
+      left: rect.left - board.left,
+      top: rect.top - board.top,
+      right: rect.right - board.left,
+      bottom: rect.bottom - board.top,
+    });
+    const obstacles = [...(containerRef.current?.querySelectorAll('[data-over-board]') ?? [])].map(
+      (control) => onBoard(control.getBoundingClientRect()),
+    );
+    const over = panelOverRef.current;
+    const panel = over === null ? null : document.querySelector(`.panel.${over}`);
+    if (panel === null) return { obstacles };
+    const covered = panel.getBoundingClientRect();
+    const fromLeft = covered.left + covered.width / 2 < board.left + board.width / 2;
+    return {
+      area: {
+        left: fromLeft ? covered.right - board.left : 0,
+        top: 0,
+        right: fromLeft ? board.width : covered.left - board.left,
+        bottom: board.height,
+      },
+      obstacles,
+    };
+  }, []);
+  // A control that changes size without the board changing — the legend
+  // folding to its chip — places the chips again.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container === null) return;
+    const observer = new ResizeObserver(() => invalidate());
+    for (const control of container.querySelectorAll('[data-over-board]'))
+      observer.observe(control);
+    return () => observer.disconnect();
+  }, [view, invalidate]);
 
   const handleDoubleClick = useCallback(() => {
     if (viewRef.current === 'sheets') {
@@ -523,6 +581,10 @@ export function CanvasHost({
       }),
       view,
     );
+    // The selected outline's dimension lines, under its value chips (U.14):
+    // screen furniture like the rest of this, never printed.
+    const chipLines = chipsRef.current?.place(view, chipRoom()) ?? null;
+    if (chipLines !== null) renderDisplayList(context, chipLines, view);
     // Where a taped piece's sheets will join (7.4b): screen furniture read from
     // the sheet plan the PDF writes, over the pattern and under the tool.
     renderDisplayList(context, tapeJoins(sheetPlanFor(document.project)), view);
@@ -533,7 +595,7 @@ export function CanvasHost({
     const next = managerRef.current?.notice() ?? null;
     setNotice((current) => (sameProblem(current, next) ? current : next));
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
-  }, [store, paintSheets]);
+  }, [store, paintSheets, chipRoom]);
 
   useEffect(() => {
     const tick = (): void => {
@@ -606,8 +668,8 @@ export function CanvasHost({
     onStatus?.({ cursorMm, zoomPercent: zoom, notice, sheet: sheetUnder });
   }, [cursorMm, notice, onStatus, sheetUnder, zoom]);
 
-  // Keyboard goes to the document: the canvas is not focusable and Escape or
-  // Delete should work wherever the pointer happens to be.
+  // Keyboard goes to the document: the board is one Tab stop (U.14), but
+  // Escape or Delete should work wherever focus and the pointer happen to be.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       // Never steal keys from a field, a list or anything editable (8.7).
@@ -633,7 +695,21 @@ export function CanvasHost({
       });
       // A key the tool claimed is not also a shortcut: the app's tool keys
       // skip an event whose default is prevented.
-      if (claimed === true) event.preventDefault();
+      if (claimed === true) {
+        event.preventDefault();
+        return;
+      }
+
+      // Enter on the board opens the selected outline's sizes (U.14) — on the
+      // board only: a focused button, field or Parts row keeps its own Enter.
+      const onBoard = event.target === document.body || event.target === canvasRef.current;
+      if (
+        onBoard &&
+        keysOf('editSizes').some((binding) => matches(event, binding, IS_MAC)) &&
+        chipsRef.current?.open() === true
+      ) {
+        event.preventDefault();
+      }
     };
 
     // On the document, which a key bubbles through before the window: the tool
@@ -844,12 +920,20 @@ export function CanvasHost({
     [store, toInput],
   );
 
+  // The board's name, for the one Tab stop it is (U.14).
+  const boardName = view === 'sheets' ? t('view.sheetsBoard') : t('view.designBoard');
+
   return (
     <div className="canvas-host" ref={containerRef}>
       <canvas
         ref={canvasRef}
         data-testid="editor-canvas"
         data-view={view}
+        // One Tab stop for the board (U.14): its keys are the tools', and
+        // Enter there opens the selected outline's sizes.
+        tabIndex={0}
+        role="application"
+        aria-label={boardName}
         style={{ cursor: view === 'sheets' ? 'default' : toolCursor }}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
@@ -869,6 +953,9 @@ export function CanvasHost({
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
       />
+      {view === 'design' && (
+        <ValueChips ref={chipsRef} store={store} invalidate={invalidate} toBoard={toBoard} />
+      )}
       {children}
       {sheetsNotice && pointerCss !== null && (
         <div

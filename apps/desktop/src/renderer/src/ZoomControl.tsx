@@ -85,6 +85,8 @@ export function ZoomControl({
       role="group"
       aria-label={t('zoom.title')}
       data-testid="zoom-control"
+      // Over the board: the value chips keep clear of it (U.14).
+      data-over-board=""
     >
       <Tooltip text={t('shortcuts.zoomOut')} keys="zoomOut">
         <button

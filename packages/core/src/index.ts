@@ -32,7 +32,7 @@ export {
   approxZero,
 } from './epsilon.js';
 
-export { QUANTUM_MM, quantise } from './quantise.js';
+export { QUANTUM_MM, quantise, quantiseAtLeast, quantiseAtMost } from './quantise.js';
 
 export {
   MINUS,
