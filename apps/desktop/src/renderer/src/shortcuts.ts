@@ -32,6 +32,7 @@ function listed(group: ShortcutGroupId): Shortcut[] {
 export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
   { id: 'file', shortcuts: listed('file') },
   { id: 'edit', shortcuts: listed('edit') },
+  { id: 'field', shortcuts: listed('field') },
   {
     id: 'view',
     shortcuts: [

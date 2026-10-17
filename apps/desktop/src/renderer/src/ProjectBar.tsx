@@ -1,16 +1,18 @@
 import { setProjectName, type DocumentStore } from '@leathercad/document';
 import type { Project, SeverityCounts } from '@leathercad/domain';
 import { isScaleCheckOnly } from '@leathercad/export';
-import type { RecentFile } from '@leathercad/platform';
+import type { RecentFile, RecentOutcome } from '@leathercad/platform';
 import { Check, ChevronDown, Circle, CircleHelp, Settings } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
+import { intoMenu } from './fieldMenu.js';
 import type { CanvasView } from './CanvasHost.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
 import { MenuButton } from './Menu.js';
+import { MessageDialog } from './MessageDialog.js';
 import { exportMenu, helpMenu, projectMenu } from './menus.js';
 import { pressOf, type Press } from './PanelFold.js';
 import type { Room } from './panelLayout.js';
@@ -87,7 +89,8 @@ export function ProjectBar({
   recent: readonly RecentFile[];
   /** The Project menu is opening: its recent projects are asked for again. */
   onProjectMenuOpen: () => void;
-  onOpenRecent: (path: string) => void;
+  /** One that is gone is taken off the list, and this bar says why (U.20). */
+  onOpenRecent: (path: string) => Promise<RecentOutcome>;
   onOpenSample: () => void;
   onAbout: () => void;
   onSettings: () => void;
@@ -106,213 +109,237 @@ export function ProjectBar({
   // Renaming (U.7, the roadmap's decision): *Rename…* in the Project menu turns
   // the name into the field it was before, and one edit is one undo step.
   const [renaming, setRenaming] = useState<Press | null>(null);
+  // A recent project that is no longer there: said in the app's own dialog,
+  // where the main process used to raise a native message box (U.20).
+  const [gone, setGone] = useState<string | null>(null);
 
   const saveWords = dirty ? t('projectBar.unsaved') : saved ? t('projectBar.saved') : '';
   const problems = describeCounts(counts, i18n);
   const indicator = indicatorOf(counts);
 
   return (
-    <header
-      className={room === 'wide' ? 'project-bar' : `project-bar ${room}`}
-      data-testid="project-bar"
-    >
-      {/* The product's name is the window title's and the icon's to carry;
+    <>
+      <header
+        className={room === 'wide' ? 'project-bar' : `project-bar ${room}`}
+        data-testid="project-bar"
+      >
+        {/* The product's name is the window title's and the icon's to carry;
           the document outline still starts with it. */}
-      <h1 className="visually-hidden">LeatherCAD</h1>
-      <div className="project-identity">
-        {renaming === null ? (
-          <MenuButton
-            label={t('projectBar.projectMenu', { name })}
-            tooltip={t('projectBar.projectMenuTooltip', { name })}
-            testId="project-menu"
-            className="tool quiet project-menu-button"
-            triggerRef={menuButton}
-            entries={projectMenu(
-              {
-                newProject: onNew,
-                open: onOpen,
-                saveAs: onSaveAs,
-                // A keyboard's choice gives focus back to the menu once the
-                // name is set; the pointer's leaves it with the page (U.4).
-                rename: (how) => setRenaming(how ?? 'keyboard'),
-                openRecent: onOpenRecent,
-              },
-              recent,
-              t,
-            )}
-            onOpen={onProjectMenuOpen}
-          >
-            <ProjectMark />
-            <span className="project-name" data-testid="project-name">
-              {name}
-            </span>
-            <Icon of={ChevronDown} size={12} />
-          </MenuButton>
-        ) : (
-          <NameField
-            name={project.name}
-            onDone={(next) => {
-              if (next !== null && next !== project.name) store.dispatch(setProjectName(next));
-              const back = renaming === 'keyboard';
-              setRenaming(null);
-              if (back) requestAnimationFrame(() => menuButton.current?.focus());
-            }}
-          />
-        )}
-        <SaveState dirty={dirty} saved={saved} room={room} />
-        <Tooltip
-          text={dirty ? t('projectBar.saveTooltip') : t('projectBar.nothingToSave')}
-          {...(dirty ? { keys: 'save' as const } : {})}
-        >
-          <button
-            type="button"
-            className="tool save-button"
-            data-testid="save"
-            // Not `disabled`: a disabled button shows no tooltip, and this one
-            // says why it has nothing to do (R-06).
-            aria-disabled={!dirty || undefined}
-            onClick={() => {
-              if (dirty) onSave();
-            }}
-          >
-            {t('actions.save')}
-            {dirty && room === 'wide' && <KeyCap command="save" />}
-          </button>
-        </Tooltip>
-      </div>
-
-      <ViewSwitch
-        view={view}
-        onView={onView}
-        sheets={plan.sheets.length}
-        compact={room === 'cramped'}
-      />
-
-      <div className="project-output" role="group" aria-label={t('projectBar.output')}>
-        <PaperButton
-          project={project}
-          store={store}
-          room={room}
-          onSeeSheets={() => onView('sheets')}
-        />
-        <div className="split secondary">
+        <h1 className="visually-hidden">LeatherCAD</h1>
+        <div className="project-identity">
+          {renaming === null ? (
+            <MenuButton
+              label={t('projectBar.projectMenu', { name })}
+              tooltip={t('projectBar.projectMenuTooltip', { name })}
+              testId="project-menu"
+              className="tool quiet project-menu-button"
+              triggerRef={menuButton}
+              entries={projectMenu(
+                {
+                  newProject: onNew,
+                  open: onOpen,
+                  saveAs: onSaveAs,
+                  // A keyboard's choice gives focus back to the menu once the
+                  // name is set; the pointer's leaves it with the page (U.4).
+                  rename: (how) => setRenaming(how ?? 'keyboard'),
+                  openRecent: (path) =>
+                    void onOpenRecent(path)
+                      .then((outcome) => {
+                        if (outcome === 'gone') setGone(path);
+                      })
+                      .catch(() => undefined),
+                },
+                recent,
+                t,
+              )}
+              onOpen={onProjectMenuOpen}
+            >
+              <ProjectMark />
+              <span className="project-name" data-testid="project-name">
+                {name}
+              </span>
+              <Icon of={ChevronDown} size={12} />
+            </MenuButton>
+          ) : (
+            <NameField
+              name={project.name}
+              onDone={(next) => {
+                if (next !== null && next !== project.name) store.dispatch(setProjectName(next));
+                const back = renaming === 'keyboard';
+                setRenaming(null);
+                if (back) requestAnimationFrame(() => menuButton.current?.focus());
+              }}
+            />
+          )}
+          <SaveState dirty={dirty} saved={saved} room={room} />
           <Tooltip
-            text={t('projectBar.exportTooltip', {
-              sheets: describeSheets(plan, t),
-            })}
-            keys="exportPdf"
+            text={dirty ? t('projectBar.saveTooltip') : t('projectBar.nothingToSave')}
+            {...(dirty ? { keys: 'save' as const } : {})}
           >
             <button
               type="button"
-              className="split-main"
-              data-testid="export-pdf"
-              onClick={onExport}
+              className="tool save-button"
+              data-testid="save"
+              // Not `disabled`: a disabled button shows no tooltip, and this one
+              // says why it has nothing to do (R-06).
+              aria-disabled={!dirty || undefined}
+              onClick={() => {
+                if (dirty) onSave();
+              }}
             >
-              {t('projectBar.exportPdf')}
+              {t('actions.save')}
+              {dirty && room === 'wide' && <KeyCap command="save" />}
             </button>
           </Tooltip>
-          {/* The other formats (6.2, 6.5), joined to *Export PDF*: files for a
+        </div>
+
+        <ViewSwitch
+          view={view}
+          onView={onView}
+          sheets={plan.sheets.length}
+          compact={room === 'cramped'}
+        />
+
+        <div className="project-output" role="group" aria-label={t('projectBar.output')}>
+          <PaperButton
+            project={project}
+            store={store}
+            room={room}
+            onSeeSheets={() => onView('sheets')}
+          />
+          <div className="split secondary">
+            <Tooltip
+              text={t('projectBar.exportTooltip', {
+                sheets: describeSheets(plan, t),
+              })}
+              keys="exportPdf"
+            >
+              <button
+                type="button"
+                className="split-main"
+                data-testid="export-pdf"
+                onClick={onExport}
+              >
+                {t('projectBar.exportPdf')}
+              </button>
+            </Tooltip>
+            {/* The other formats (6.2, 6.5), joined to *Export PDF*: files for a
               cutter or a vector editor, not paper. */}
+            <MenuButton
+              label={t('projectBar.exportMore')}
+              tooltip={t('projectBar.exportMoreTooltip')}
+              testId="export-more"
+              className="split-side"
+              align="end"
+              entries={exportMenu(
+                { svg: onExportSvg, dxf: onExportDxf },
+                !isScaleCheckOnly(plan),
+                t,
+              )}
+            >
+              <Icon of={ChevronDown} size={12} />
+            </MenuButton>
+          </div>
+          <div className="split primary">
+            <Tooltip
+              text={t('projectBar.printTooltip', {
+                sheets: describeSheets(plan, t),
+              })}
+              keys="print"
+            >
+              <button type="button" className="split-main" data-testid="print" onClick={onPrint}>
+                {t('projectBar.print')}
+              </button>
+            </Tooltip>
+            {/* The problems, on the button that would print them (R-06). Print
+              stays enabled: a warning is the maker's to weigh. */}
+            <Tooltip
+              text={
+                problems === null
+                  ? t('projectBar.problemsNoneTooltip')
+                  : t('projectBar.problemsTooltip', { counts: problems })
+              }
+            >
+              <button
+                type="button"
+                className={`split-side problems-indicator ${indicator.state}`}
+                data-testid="print-problems"
+                data-state={indicator.state}
+                aria-label={
+                  problems === null
+                    ? t('projectBar.problemsNone')
+                    : t('projectBar.problems', { counts: problems })
+                }
+                onClick={(event) => onShowProblems(pressOf(event))}
+              >
+                {indicator.state === 'clear' ? (
+                  <Icon of={Check} size={14} />
+                ) : (
+                  <>
+                    <SeverityGlyph severity={indicator.state} />
+                    <span aria-hidden="true">{indicator.count}</span>
+                  </>
+                )}
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+
+        {/* Past the rule is the application, not this project (8.7). */}
+        <div className="project-app" role="group" aria-label={t('projectBar.application')}>
+          <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
+            <button
+              type="button"
+              className="tool quiet icon-only"
+              data-testid="settings"
+              aria-label={t('projectBar.settings')}
+              onClick={onSettings}
+            >
+              <Icon of={Settings} />
+            </button>
+          </Tooltip>
           <MenuButton
-            label={t('projectBar.exportMore')}
-            tooltip={t('projectBar.exportMoreTooltip')}
-            testId="export-more"
-            className="split-side"
+            label={t('projectBar.help')}
+            tooltip={t('projectBar.helpTooltip')}
+            keys="help"
+            testId="help-menu"
+            className="tool quiet icon-only"
             align="end"
-            entries={exportMenu({ svg: onExportSvg, dxf: onExportDxf }, !isScaleCheckOnly(plan), t)}
+            triggerRef={helpRef}
+            entries={helpMenu({ openSample: onOpenSample, about: onAbout }, t)}
           >
-            <Icon of={ChevronDown} size={12} />
+            <Icon of={CircleHelp} />
           </MenuButton>
         </div>
-        <div className="split primary">
-          <Tooltip
-            text={t('projectBar.printTooltip', {
-              sheets: describeSheets(plan, t),
-            })}
-            keys="print"
-          >
-            <button type="button" className="split-main" data-testid="print" onClick={onPrint}>
-              {t('projectBar.print')}
-            </button>
-          </Tooltip>
-          {/* The problems, on the button that would print them (R-06). Print
-              stays enabled: a warning is the maker's to weigh. */}
-          <Tooltip
-            text={
-              problems === null
-                ? t('projectBar.problemsNoneTooltip')
-                : t('projectBar.problemsTooltip', { counts: problems })
-            }
-          >
-            <button
-              type="button"
-              className={`split-side problems-indicator ${indicator.state}`}
-              data-testid="print-problems"
-              data-state={indicator.state}
-              aria-label={
+
+        {/* Said politely, once per change (§2): the save state and the problems.
+          Text that does not change is not touched, so it is not said again;
+          during a drag the problems wait for it to end. */}
+        <div className="visually-hidden" aria-live="polite" data-testid="announcer">
+          <span data-testid="announce-save">{saveWords}</span>{' '}
+          <span data-testid="announce-problems">
+            <Settled
+              value={
                 problems === null
                   ? t('projectBar.problemsNone')
                   : t('projectBar.problems', { counts: problems })
               }
-              onClick={(event) => onShowProblems(pressOf(event))}
-            >
-              {indicator.state === 'clear' ? (
-                <Icon of={Check} size={14} />
-              ) : (
-                <>
-                  <SeverityGlyph severity={indicator.state} />
-                  <span aria-hidden="true">{indicator.count}</span>
-                </>
-              )}
-            </button>
-          </Tooltip>
+              settled={settled}
+            />
+          </span>
         </div>
-      </div>
-
-      {/* Past the rule is the application, not this project (8.7). */}
-      <div className="project-app" role="group" aria-label={t('projectBar.application')}>
-        <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
-          <button
-            type="button"
-            className="tool quiet icon-only"
-            data-testid="settings"
-            aria-label={t('projectBar.settings')}
-            onClick={onSettings}
-          >
-            <Icon of={Settings} />
-          </button>
-        </Tooltip>
-        <MenuButton
-          label={t('projectBar.help')}
-          tooltip={t('projectBar.helpTooltip')}
-          keys="help"
-          testId="help-menu"
-          className="tool quiet icon-only"
-          align="end"
-          triggerRef={helpRef}
-          entries={helpMenu({ openSample: onOpenSample, about: onAbout }, t)}
+      </header>
+      {gone !== null && (
+        <MessageDialog
+          title={t('menu.recentGone')}
+          testId="recent-gone"
+          onClose={() => setGone(null)}
         >
-          <Icon of={CircleHelp} />
-        </MenuButton>
-      </div>
-
-      {/* Said politely, once per change (§2): the save state and the problems.
-          Text that does not change is not touched, so it is not said again;
-          during a drag the problems wait for it to end. */}
-      <div className="visually-hidden" aria-live="polite" data-testid="announcer">
-        <span data-testid="announce-save">{saveWords}</span>{' '}
-        <span data-testid="announce-problems">
-          <Settled
-            value={
-              problems === null
-                ? t('projectBar.problemsNone')
-                : t('projectBar.problems', { counts: problems })
-            }
-            settled={settled}
-          />
-        </span>
-      </div>
-    </header>
+          <p className="dialog-part">{gone}</p>
+          <p>{t('menu.recentGoneDetail')}</p>
+        </MessageDialog>
+      )}
+    </>
   );
 }
 
@@ -381,7 +408,10 @@ function NameField({ name, onDone }: { name: string; onDone: (next: string | nul
             finish(null);
           }
         }}
-        onBlur={() => finish(draft)}
+        onBlur={(event) => {
+          // The field's own menu is not leaving it (U.20).
+          if (!intoMenu(event.relatedTarget)) finish(draft);
+        }}
       />
     </span>
   );

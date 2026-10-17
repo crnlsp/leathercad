@@ -10,6 +10,7 @@ import {
 } from '@leathercad/core';
 import { useId, useRef, useState } from 'react';
 
+import { intoMenu } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
 
 /**
@@ -131,7 +132,10 @@ export function NumberField({
           aria-invalid={unread !== null || undefined}
           aria-describedby={unread !== null ? reasonId : undefined}
           onChange={(event) => updateDraft(event.target.value)}
-          onBlur={() => commit(false)}
+          onBlur={(event) => {
+            // The field's own menu is not leaving it (U.20).
+            if (!intoMenu(event.relatedTarget)) commit(false);
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               commit(true);

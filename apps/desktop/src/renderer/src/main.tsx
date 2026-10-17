@@ -3,11 +3,14 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App.js';
+import { keepKeysInOpenLists, keepTabInDialogs } from './modalKeys.js';
 import { getPlatformHost } from './platformBridge.js';
 import { applyTheme } from './theme.js';
 import './styles.css';
 
 applyTheme(document.documentElement);
+keepTabInDialogs(document);
+keepKeysInOpenLists(document);
 
 const container = document.getElementById('root');
 if (container === null) throw new Error('#root missing from index.html');

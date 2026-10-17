@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { launchApp } from './launchApp.js';
 
 /**
@@ -115,7 +116,15 @@ test('the F.2 layout at work has no accessibility violations either', async () =
 });
 
 test('the top bar’s menus, Settings, About and the Print Preview have no accessibility violations', async () => {
-  const instance = await launchApp();
+  // A printer listed (U.20), so Print shows its printer, its sheets'
+  // checkboxes and Copies, which only a printer brings. Windows has no CUPS
+  // and saves a PDF instead.
+  const cups = fakeCups(ONE_PRINTER);
+  const instance = await launchApp(
+    process.platform === 'win32'
+      ? {}
+      : { env: { PATH: `${cups.bin}:${process.env['PATH'] ?? ''}` } },
+  );
   try {
     const window = await instance.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
@@ -147,7 +156,20 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-about').click();
     await scan('About');
+    await window.getByTestId('about-notices').click();
+    await expect(window.getByTestId('notices')).toBeVisible();
+    await scan('the third-party notices (U.20)');
+    await window.getByTestId('notices-close').click();
     await window.getByTestId('about-close').click();
+
+    // A field's own menu (U.20).
+    await window.getByTestId('project-menu').click();
+    await window.getByTestId('rename').click();
+    await window.getByTestId('project-name-input').click({ button: 'right' });
+    await expect(window.getByTestId('field-menu')).toBeVisible();
+    await scan('a field’s right-click menu');
+    await window.keyboard.press('Escape');
+    await window.keyboard.press('Escape');
 
     // 7.6: whichever this machine offers — its printers, or Save PDF.
     await window.getByTestId('print').click();
@@ -156,6 +178,11 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
     await expect(
       preview.getByTestId('print-no-scaling').or(preview.getByTestId('print-actual-size')),
     ).toBeVisible();
+    if (process.platform !== 'win32') {
+      await expect(preview.getByTestId('print-printer')).toHaveValue('LeatherCAD_Test');
+      await expect(preview.getByTestId('print-include').first()).toBeVisible();
+      await expect(preview.getByLabel('Copies')).toBeVisible();
+    }
     await scan('the Print Preview');
   } finally {
     await closeApp(instance);

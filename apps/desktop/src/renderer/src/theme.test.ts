@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { cssVariables } from '@leathercad/render';
+import { SHELL, cssVariables } from '@leathercad/render';
 import { describe, expect, it } from 'vitest';
 
 const stylesheet = readFileSync(resolve(import.meta.dirname, 'styles.css'), 'utf8');
@@ -44,6 +44,11 @@ describe('the stylesheet reads the theme', () => {
   it('writes no colour of its own', () => {
     expect(css.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).toEqual([]);
     expect(css.match(/\brgba?\(/g) ?? []).toEqual([]);
+  });
+
+  it('gives the window the shell’s colour behind its first frame (U.20)', () => {
+    const main = readFileSync(resolve(import.meta.dirname, '../../main/index.ts'), 'utf8');
+    expect(main).toContain(`backgroundColor: '${SHELL[800]}'`);
   });
 
   it('uses the three radii and nothing else', () => {

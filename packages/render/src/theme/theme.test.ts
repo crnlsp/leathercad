@@ -142,6 +142,15 @@ describe('the four planes (F.5)', () => {
     }
   });
 
+  it('shows a scrollbar on every shell surface that scrolls, and the focus ring too (U.20)', () => {
+    // The rail and the panels, the dialogs, and the menus.
+    for (const surface of [SHELL[700], SHELL[800], SHELL[900]]) {
+      expect(contrast(SHELL.scrollbar, surface), surface).toBeGreaterThanOrEqual(3);
+      expect(contrast(ACCENT.tan, surface), surface).toBeGreaterThanOrEqual(3);
+    }
+    expect(cssVariables('comfortable')['--scrollbar']).toBe(SHELL.scrollbar);
+  });
+
   it('gives the accent an on-dark and an on-light value', () => {
     expect(contrast(ACCENT.tan, SHELL[800])).toBeGreaterThan(3);
     expect(contrast(ACCENT.tanInk, GROUND.ground)).toBeGreaterThan(3);

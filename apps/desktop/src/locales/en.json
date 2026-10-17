@@ -86,7 +86,9 @@
     "rename": "Rename…",
     "renameNote": "The name is the file’s and the PDF footer’s",
     "saveAs": "Save as…",
-    "settings": "Settings…"
+    "settings": "Settings…",
+    "recentGone": "That project is no longer there",
+    "recentGoneDetail": "It was moved, renamed or deleted, so it has been taken off the recent projects."
   },
   "macMenu": {
     "edit": "Edit",
@@ -222,7 +224,8 @@
       "parts": "In Parts",
       "tools": "Tools",
       "view": "View",
-      "window": "Window"
+      "window": "Window",
+      "field": "In a text field"
     },
     "arcOrStraight": "Polyline: the next segment is an arc, or straight",
     "cancel": "Cancel what the tool is doing, clear the selection, or leave focus mode",
@@ -331,7 +334,8 @@
     "notices": "Third-party notices",
     "reporting": "To report a problem, attach the log.",
     "source": "Source code on GitHub",
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "noticesInDevelopment": "Third-party notices are written by a production build (pnpm build)."
   },
   "recovery": {
     "decline": "Not now",
@@ -378,12 +382,6 @@
     "project": "LeatherCAD project",
     "saveTitle": "Save project",
     "svg": "SVG"
-  },
-  "main": {
-    "noticesTitle": "Third-party notices",
-    "noticesInDevelopment": "Third-party notices are written by a production build (pnpm build).",
-    "recentGone": "That project is no longer there",
-    "recentGoneDetail": "{{path}}\n\nIt was moved, renamed or deleted, so it has been taken off the recent projects."
   },
   "hardware": {
     "eyelet": "Eyelet",
@@ -1057,5 +1055,13 @@
     "unlock_one": "Unlock",
     "unlock_other": "Unlock {{count}} features",
     "delete-part": "Delete part"
+  },
+  "fieldMenu": {
+    "label": "Edit",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select all",
+    "nothingSelected": "Select some of the text first"
   }
 }

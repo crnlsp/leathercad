@@ -18,6 +18,7 @@ import { offersPaper } from '../../shared/paper.js';
 import { ExportFindings } from './ExportNotice.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import { NumberField } from './NumberField.js';
 import { drawPage, openPdf } from './pdfPages.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ProblemRows } from './ProblemList.js';
@@ -335,26 +336,16 @@ export function PrintPreview({
             </div>
 
             {direct && (
-              <div className="field">
-                <label className="field-label" htmlFor={`${ids}copies`}>
-                  {t('printPreview.copies')}
-                </label>
-                <input
-                  id={`${ids}copies`}
-                  type="number"
-                  data-testid="print-copies"
-                  min={1}
-                  max={MAX_COPIES}
-                  step={1}
-                  value={copies}
-                  onChange={(event) => {
-                    const value = Math.round(Number(event.target.value));
-                    setCopies(
-                      Math.min(MAX_COPIES, Math.max(1, Number.isFinite(value) ? value : 1)),
-                    );
-                  }}
-                />
-              </div>
+              // A count, as a dimension's Decimals is: no unit, no sums, and
+              // none of Chromium's spin buttons (U.20). Clamped, not refused.
+              <NumberField
+                label={t('printPreview.copies')}
+                value={copies}
+                min={1}
+                precision={0}
+                suffix=""
+                onCommit={(value) => setCopies(Math.min(MAX_COPIES, Math.round(value)))}
+              />
             )}
 
             <dl className="print-facts">

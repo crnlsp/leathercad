@@ -35,6 +35,7 @@ import {
 
 import type { PartPrintStatus } from '@leathercad/export';
 
+import { intoMenu } from './fieldMenu.js';
 import type { RightClicked } from './contextMenu.js';
 import { CountBadge } from './CountBadge.js';
 import { useI18n } from './i18n.js';
@@ -760,7 +761,10 @@ function RowName({
           finish(null, 'keyboard');
         }
       }}
-      onBlur={() => finish(draft, 'blur')}
+      onBlur={(event) => {
+        // The field's own menu is not leaving it (U.20).
+        if (!intoMenu(event.relatedTarget)) finish(draft, 'blur');
+      }}
     />
   );
 }

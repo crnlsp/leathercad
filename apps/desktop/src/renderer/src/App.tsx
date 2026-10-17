@@ -46,6 +46,7 @@ import { CanvasLegend } from './CanvasLegend.js';
 import { selectionForRightClick, selectionMenu, type RightClicked } from './contextMenu.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
+import { TextFieldMenu } from './TextFieldMenu.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
 import {
@@ -794,11 +795,7 @@ export function App({
           onProjectMenuOpen={refreshRecent}
           // The main process checks it is on the list, grants it, and hands it
           // back through onOpenFile, which asks about unsaved work.
-          onOpenRecent={(path) =>
-            void getPlatformHost()
-              .openRecent(path)
-              .catch(() => undefined)
-          }
+          onOpenRecent={(path) => getPlatformHost().openRecent(path)}
           onOpenSample={() => void openSample()}
           onAbout={() => setAboutOpen(true)}
           onSettings={() => setSettings('general')}
@@ -1144,6 +1141,9 @@ export function App({
             onClose={() => setContextMenu(null)}
           />
         )}
+
+        {/* A text field's own (U.20): Cut, Copy, Paste and Select all. */}
+        <TextFieldMenu />
 
         {settings !== null && (
           <SettingsDialog

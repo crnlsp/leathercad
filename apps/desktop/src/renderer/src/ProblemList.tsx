@@ -44,7 +44,7 @@ export function ProblemRows({
           <>
             <span className={`problem-mark severity-${diagnostic.severity}`} aria-hidden="true" />
             <SeverityGlyph severity={diagnostic.severity} />
-            <span className="problem-text">
+            <span className="problem-text selectable">
               <span className="problem-title">{problemTitle(diagnostic.problem.code, t)}</span>
               {showWhere && where !== null && (
                 <span className="problem-where">

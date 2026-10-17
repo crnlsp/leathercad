@@ -11,6 +11,7 @@ import {
   resolveLocale,
   type MessageKey,
 } from '../../shared/i18n.js';
+import { intoMenu } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { defaultIron, withoutIron } from './irons.js';
@@ -407,7 +408,10 @@ function IronName({
         data-testid={`iron-name-${iron.id}`}
         value={draft ?? iron.name}
         onChange={(event) => setDraft(event.target.value)}
-        onBlur={commit}
+        onBlur={(event) => {
+          // The field's own menu is not leaving it (U.20).
+          if (!intoMenu(event.relatedTarget)) commit();
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
             commit();
