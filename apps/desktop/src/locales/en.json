@@ -658,6 +658,12 @@
     "addHolesHint": "Holes along this line, at the pitch of your iron",
     "addStitchLine": "Add stitch line",
     "addStitchLineHint": "A stitch line that follows this edge at a fixed margin, and keeps following it",
+    "afterOutline": {
+      "title": "After the outline",
+      "stitchLine": "Stitch line",
+      "holes": "Holes",
+      "note": "From {{tools}} in Settings, and a change here is kept there. Used when you pick Stitch + allowance, or the next steps on the new piece."
+    },
     "area": "Area",
     "arrange": "Arrange",
     "cut": "Cut",

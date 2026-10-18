@@ -1968,6 +1968,27 @@ bar never covers the piece, at any zoom; off in Settings means off.
 My tools ("3.5 mm in · My tools", the iron). *Stitch + allowance* and the Next steps use them.
 Editing them here edits My tools — one source.
 
+**As built.**
+- `AfterTheOutline` in `PropertyPanel.tsx`, on the nothing-selected panel, below the rectangle's
+  sizes and above the job totals; a ruled `panel-group` as mockup 03 draws it. *Stitch line*
+  (the margin, a millimetre `NumberField`, so it reads `95-2*3.5` and quantises) and *Holes* (the
+  maker's irons; *No irons yet …* when there are none), then a note naming My tools.
+- **One source:** it reads `tools` (`MakerTools`) and writes through `App`'s `changePreferences`,
+  the call Settings › My tools makes. Nothing is copied, so the editor's `makerDefaults`
+  (*Stitch + allowance*) and `nextSteps.ts` (the bar, Properties' *Add* actions) read the change
+  at once. The margin's floor and step are `MARGIN_MIN_MM` and `MARGIN_STEP_MM` in `irons.ts`,
+  for both fields.
+- **When:** `DRAWING_TOOL_IDS` and *Draw as* Outline or Stitch + allowance, nothing selected — not
+  only while `sizing` is set. A value has to be set before the click that uses it, the section
+  vanishing between clicks would be hard to reach by mouse, and the other tools have no sizes.
+  The empty window on first launch shows it too: Rectangle is the tool a launch starts with.
+  Not for Cut-out, Stitch, Fold or Marking, which draw onto a piece.
+- **Not built:** the mockup's "mm in · My tools" inside the field. `NumberField`'s unit is a
+  28 px column, and its `suffix` also decides that the field reads lengths; the note says where
+  the values live instead. Leather thickness is not shown: R-16 names the margin and the iron.
+- `e2e/drawing-defaults.spec.ts`: both directions with Settings, across a restart, mid-draw, and
+  *Stitch + allowance* and the bar's two steps making things with values set here.
+
 ---
 
 #### U.19 The pass, checked as one thing · S

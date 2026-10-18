@@ -18,6 +18,10 @@ export type MakerTools = Pick<
   'irons' | 'defaultIronId' | 'stitchMarginMm' | 'leatherThicknessMm'
 >;
 
+/** The stitch margin's floor and step, wherever it is typed: Settings › My tools, and Properties while drawing (U.18). */
+export const MARGIN_MIN_MM = 0.5;
+export const MARGIN_STEP_MM = 0.5;
+
 /** The maker's iron a hole set was made with — its name and its pitch — if they still have it. */
 export function ironOf(
   irons: readonly Iron[],
