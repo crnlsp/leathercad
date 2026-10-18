@@ -9,7 +9,8 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-14, for check 12, the macOS edited flag (U.7). First written for 1.0
+**Last updated:** 2026-10-18, for check 13, ⌘A on macOS (U.20), and the Flatpak among the
+release's files. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
@@ -209,12 +210,30 @@ Until this has passed on a Mac, **R10** in [`roadmap.md`](roadmap.md) stays ☐ 
 refuses the release. Tick it in the pull request that records the result, with the macOS version
 and the date.
 
+### 13. ⌘A outside a text field, on macOS
+
+Since 1.5 (U.20), in the same Mac session as check 12. The renderer stops `Ctrl+A` outside a text
+field, which the end-to-end test checks on Linux; on macOS, ⌘A is also the accelerator of the Edit
+menu's *Select All* (`role: 'selectAll'` in `apps/desktop/src/main/menu.ts`), and nobody has seen
+which one wins ([#97](https://github.com/crnlsp/leathercad/issues/97)).
+
+1. Open the sample project, and click the board so that no text field has focus. ⌘A: nothing is
+   highlighted anywhere in the window, the Problems drawer included.
+2. In the project's name field, and in a size in Properties, ⌘A selects that field's text and
+   nothing else.
+3. Choose *Edit › Select All* from the menu bar, once with the board focused and once in a field,
+   and note what each does.
+
+Record the result on #97. A failure is not on the list of blockers above, but say so in the release
+pull request, so the maintainer decides whether it waits.
+
 ## After it passes
 
 - Record one row per platform in [`print-verification-log.md`](print-verification-log.md), with
   the readings. A release never claims print accuracy without them.
 - Merge the release pull request (see
   [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)), and check that the release has
-  the AppImage, the Windows installer, the macOS dmg and the SBOM attached.
+  the AppImage, the Flatpak, the Windows installer, the macOS dmg and the SBOM attached — five
+  files, as `release.yml` attaches them.
 - The installers are not code-signed, by decision ([`roadmap.md`](roadmap.md), *Release
   engineering*); [`getting-started.md`](getting-started.md) tells makers how to open them.
