@@ -239,9 +239,96 @@ describe('a clean exit', () => {
   it('keeps everything when told the window crashed, so the next start can offer it', async () => {
     const me = session(101);
     await me.write(bytes('mine'));
-    me.keepOnQuit();
+    me.rendererGone();
     me.releaseOnQuit();
     expect(files()).toEqual(['101-1000.lcp']);
     expect(statSync(join(dir, '101-1000.lcp')).size).toBeGreaterThan(0);
+  });
+});
+
+describe('a window opened again after its renderer crashed (macOS keeps the app running)', () => {
+  it('offers the crashed renderer’s copy, though its process is still alive', async () => {
+    const me = session(101);
+    await me.write(bytes('before the crash'));
+    me.rendererGone();
+
+    const found = await me.findAbandoned();
+    expect(found?.id).toBe('101-1000');
+    expect(new TextDecoder().decode(found?.data)).toBe('before the crash');
+  });
+
+  it('never lets the new window’s clean start delete it', async () => {
+    const me = session(101);
+    await me.write(bytes('before the crash'));
+    me.rendererGone();
+
+    // The new renderer mounts clean and clears "its" copy.
+    await me.clear();
+    expect(files()).toContain('101-1000.lcp');
+  });
+
+  it('writes the new window’s copy under a name of its own', async () => {
+    const me = session(101);
+    await me.write(bytes('before the crash'));
+    me.rendererGone();
+    await me.write(bytes('after'));
+
+    expect(readFileSync(join(dir, '101-1000.lcp'), 'utf8')).toBe('before the crash');
+    expect(files()).toHaveLength(2);
+    // And the new copy is its own, so it is never offered back to itself.
+    expect((await me.findAbandoned())?.id).toBe('101-1000');
+  });
+
+  it('lets the copy go at a clean exit once the new window has taken it over', async () => {
+    const me = session(101);
+    await me.write(bytes('before the crash'));
+    me.rendererGone();
+    await me.adopt('101-1000');
+    me.releaseOnQuit();
+    expect(files()).toEqual([]);
+  });
+
+  it('still lets the new window’s own copy go at a clean exit', async () => {
+    const me = session(101);
+    me.rendererGone();
+    await me.write(bytes('after'));
+    me.releaseOnQuit();
+    expect(files()).toEqual([]);
+  });
+
+  it('keeps a copy taken over before the crash, for the next window or start to offer', async () => {
+    const earlier = session(202);
+    await earlier.write(bytes('an earlier crash'));
+    crash(202);
+    const me = session(101);
+    await me.adopt('202-1000');
+    me.rendererGone();
+    me.releaseOnQuit();
+
+    expect(files()).toEqual(['202-1000.lcp']);
+  });
+
+  it('offers what the second of two crashed windows left', async () => {
+    const me = session(101);
+    await me.write(bytes('first'));
+    me.rendererGone();
+    await me.adopt('101-1000');
+    await me.write(bytes('second'));
+    utimesSync(join(dir, '101-1000.lcp'), new Date(1000), new Date(1000));
+    me.rendererGone();
+
+    const found = await me.findAbandoned();
+    expect(found?.id).toBe('101-1001');
+    expect(new TextDecoder().decode(found?.data)).toBe('second');
+  });
+
+  it('puts a write the crashed window asked for where that window’s copy is', async () => {
+    const me = session(101);
+    const inFlight = me.write(bytes('last words'));
+    me.rendererGone();
+    await inFlight;
+    await me.clear();
+
+    expect(readFileSync(join(dir, '101-1000.lcp'), 'utf8')).toBe('last words');
   });
 });

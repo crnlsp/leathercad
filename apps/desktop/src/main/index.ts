@@ -147,9 +147,11 @@ function createWindow(): void {
   });
 
   // A renderer that dies takes the unsaved work with it, but the main process
-  // lives on to a normal quit — which must not delete the copy that is the
-  // only way back to that work.
-  mainWindow.webContents.on('render-process-gone', () => recovery.keepOnQuit());
+  // lives on — to a normal quit, or on macOS to a new window — and neither
+  // may delete the copy that is the only way back to that work.
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    if (details.reason !== 'clean-exit') recovery.rendererGone();
+  });
 
   // Avoid the white flash while the renderer boots.
   mainWindow.on('ready-to-show', () => mainWindow?.show());
