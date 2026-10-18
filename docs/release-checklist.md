@@ -9,8 +9,8 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-18, for check 13, ⌘A on macOS (U.20), and the Flatpak among the
-release's files. First written for 1.0
+**Last updated:** 2026-10-18, for check 13, ⌘A on macOS (U.20), the Flatpak among the release's
+files, and R10 left unverified for 1.5. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
@@ -206,9 +206,10 @@ flag; not the test host or the end-to-end mock, which replace it.
 2. Make an edit: the dot appears in the close button.
 3. *Save*: the dot clears.
 
-Until this has passed on a Mac, **R10** in [`roadmap.md`](roadmap.md) stays ☐ and the release gate
-refuses the release. Tick it in the pull request that records the result, with the macOS version
-and the date.
+**R10** left 1.5 unverified on 2026-10-18, by the maintainer's decision: no Mac was at hand. It is
+monitored in [`roadmap.md`](roadmap.md)'s 1.6 *Release engineering*, not a ☐, so the release gate
+does not wait for it. Tick it in the pull request that records a pass on a Mac, with the macOS
+version and the date.
 
 ### 13. ⌘A outside a text field, on macOS
 
