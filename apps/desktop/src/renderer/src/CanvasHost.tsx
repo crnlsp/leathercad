@@ -106,6 +106,8 @@ export interface CanvasHandle {
    * on the Sheets view, the sheets.
    */
   fit(): void;
+  /** Frames the pattern on the Design view's camera, whichever view is showing: an opened project. */
+  fitDrawing(): void;
   /**
    * Shift+2 (U.4): frames what is selected on the board, a part picked by its
    * heading included. Nothing on the Sheets view, or with nothing drawn picked.
@@ -365,6 +367,15 @@ export function CanvasHost({
     return () => observer.disconnect();
   }, [view, invalidate]);
 
+  const fitDrawing = useCallback(() => {
+    viewportRef.current.fitTo(
+      drawnBounds(evaluate(store.getState().document.project)) ??
+        RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
+      FIT_PADDING_PX * viewportRef.current.dpr,
+    );
+    invalidate();
+  }, [store, invalidate]);
+
   const handleDoubleClick = useCallback(() => {
     if (viewRef.current === 'sheets') {
       const viewport = sheetsViewportRef.current;
@@ -373,13 +384,8 @@ export function CanvasHost({
       invalidate();
       return;
     }
-    viewportRef.current.fitTo(
-      drawnBounds(evaluate(store.getState().document.project)) ??
-        RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
-      FIT_PADDING_PX * viewportRef.current.dpr,
-    );
-    invalidate();
-  }, [store, invalidate]);
+    fitDrawing();
+  }, [store, invalidate, fitDrawing]);
 
   /** What is selected, as the board draws it: a part picked by its heading is all of it (Q29). */
   const selectionBounds = useCallback((): Rect | null => {
@@ -408,6 +414,7 @@ export function CanvasHost({
         invalidate();
       },
       fit: handleDoubleClick,
+      fitDrawing,
       fitSelection() {
         if (viewRef.current === 'sheets') return;
         const box = selectionBounds();
@@ -440,7 +447,7 @@ export function CanvasHost({
         return barRef.current?.toggleFocus() ?? false;
       },
     }),
-    [camera, handleDoubleClick, invalidate, selectionBounds],
+    [camera, handleDoubleClick, fitDrawing, invalidate, selectionBounds],
   );
 
   // Settings the tools read at the moment they act. Refs rather than props

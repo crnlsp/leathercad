@@ -561,6 +561,7 @@
     "actualSize": "Save the PDF, then print it at Actual size (100 %), never Fit or Shrink.",
     "copies": "Copies",
     "failed": "{{printer}} did not take the job: {{reason}}",
+    "findingPrinters": "Looking for printers…",
     "include": "Print sheet {{number}}",
     "landscape": "Landscape",
     "loading": "Preparing the PDF…",
