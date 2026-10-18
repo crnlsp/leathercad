@@ -33,6 +33,7 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 | File | Purpose | Read when |
 |---|---|---|
 | `docs/product-spec.md` | What the product is and is not | Deciding whether something belongs |
+| `docs/product-roadmap.md` | Where the product is going: themes, milestones, dependencies, drawn | Proposing or ordering work beyond the next release |
 | `docs/architecture.md` | Stack, layering, data flow, canvas system, risks | Any structural change |
 | `docs/domain-model.md` | Features, derivation graph, stitching, validation | Any domain work |
 | `docs/geometry.md` | Representation, numerics, algorithms, the done-checklist | Any `packages/geometry` work |

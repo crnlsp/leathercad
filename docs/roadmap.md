@@ -1,13 +1,15 @@
 # Roadmap
 
-**Released:** v1.3.5 (2026-10-09) · **Next:** 1.5, then 1.6 · **Last updated:** 2026-10-15
+**Released:** v1.3.5 (2026-10-09) · **Next:** 1.5, then 1.6 · **Last updated:** 2026-10-17
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
 8.6, with what each found — is kept in [`history/roadmap-to-1.0.md`](history/roadmap-to-1.0.md),
 what shipped in 1.1.0 to 1.2.0 in [`history/roadmap-1.1-and-1.2.md`](history/roadmap-1.1-and-1.2.md),
 what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md), and what shipped in
-1.3.5 in [`history/roadmap-1.3.5.md`](history/roadmap-1.3.5.md).
+1.3.5 in [`history/roadmap-1.3.5.md`](history/roadmap-1.3.5.md). Where the work after 1.6 is
+heading, and why in that order, is drawn in [`product-roadmap.md`](product-roadmap.md): this file
+holds the items themselves, their status and their order.
 
 ---
 
@@ -28,6 +30,11 @@ what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md), and
 - **Scope rule,** carried over from 1.0: an idea that is not needed for everyday use, the
   leathercraft workflow, pattern correctness or print correctness waits for a later release — even
   when it turns up halfway through something else. Write it under *Later* instead.
+- **Later is candidate milestones,** each a theme, in the order suggested for work, then *Also
+  later*, *Exploring* and *Not planned*. A milestone becomes a release only when it is next, so
+  nothing in *Later* is a promise. Items 9.12 to 9.24 and the findings Q33 and Q34 were added on
+  2026-10-17 by the product roadmap refresh, whose evidence is in
+  [its record](superpowers/specs/2026-10-17-product-direction-audit.md).
 - **The UI refinement's slices are `U.1` to `U.20`** (1.5). Each builds requirements of
   [its spec](superpowers/specs/2026-10-08-ui-refinement-requirements.md), whose ids are `R-01` to
   `R-16` — not the release-engineering items `R1` to `R7` below. U.20, added later, fixes what
@@ -437,7 +444,8 @@ Everything found along the way that is not fixed yet, with where it was found. T
 
 | # | What | Where it was found | Plan |
 |---|---|---|---|
-| ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one |
+| ☐ **Q33** | **bug** · A hardware hole is checked by its centre alone. `OUTSIDE_PART` and `HOLE_TOO_CLOSE_TO_EDGE` read a hardware hole's centre (`holePoints` in `validate.ts`) and never its radius, so a 6 mm hole centred 2 mm inside the edge cuts 1 mm through it and nothing is said, and a 4 mm rivet hole whose rim crosses the edge is only *too close* | The product roadmap refresh (2026-10-17), reading the rules for hardware clearance | Measure a hardware hole by its rim: off the leather when its circle leaves it, too close when the rim is nearer an edge than the clearance — and decide whether a stitch hole's 1.5 mm is the right clearance for a rim. A stitch hole stays a point. Property tests over centre and radius. 9.23 builds on it |
+| ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one — 9.16, accepting a warning, will |
 | ☐ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | Decide which sizes a piece keeps (hardware, labels, card slots) before Scale takes the whole piece |
 
 #### Left from the independent QA pass (2026-09-24)
@@ -472,41 +480,260 @@ is felt.
 
 ## Later
 
-Ordered by expected value, not difficulty. The numbers are Phase 9's from the 1.0 record; the gaps
-are items that moved: DXF (9.4) into 1.1 as 6.5, and Windows and macOS (9.8) into 1.0.
+Candidate milestones, each a theme, in the order suggested for the work after 1.6. A milestone
+becomes a release only when it is next — named, and its items marked, in a change of its own — so
+nothing here is a promise, and the order may change as makers say what they need. Why these themes,
+why this order, and what depends on what are drawn in [`product-roadmap.md`](product-roadmap.md).
+
+The numbers are Phase 9's from the 1.0 record, continued from 9.12 on 2026-10-17. The gaps are items
+that moved: DXF (9.4) into 1.1 as 6.5, Windows and macOS (9.8) into 1.0, and nesting (9.9) to *Not
+planned*.
+
+### Pieces that fit
+
+Two edges sewn together must have the same holes, and a pocket must hold what it is for. Today each
+piece is checked on its own, and only a mirror makes two hole counts equal
+([domain-model](domain-model.md) §7).
+
+- **9.6 Seam pairing and hole-count parity** — catches a genuinely expensive mistake. Two runs of
+  holes — on two pieces, or on one piece folded over — are paired as a seam, and a seam whose counts
+  differ, or whose lengths differ by more than the slice decides is sewable, is a problem naming
+  both (`SEAM_HOLE_COUNT_MISMATCH`). The selection bar's third line, which U.17 leaves room for and
+  builds nothing of (R-14), reads the pair: "Matches Outer, right run 15 = 15".
+- **9.12 Thread, and the cutting and stitching list** — the thread a seam takes, beside its pair in
+  the selection bar (R-14's "Thread ≈ 0.9 m"), and one list for the project: the pieces to cut and
+  how many, the holes and thread per seam, the hardware, and the leather all the pieces take. One
+  home for the thread figure [domain-model](domain-model.md) §6.3 asks for and for
+  [printing](printing.md) §12's hole and thread report. Its formula is this item's to decide: those
+  two say 4–5× and 4× the seam's length, and a seam's thickness changes it.
+- **9.13 Alignment marks on mating edges** — marks at chosen holes along a seam, printed at the
+  matching hole on both pieces, so they line up when glued and stitched. Derived from the seam, so
+  they follow it. Printed, never cut: a notch in an edge that will be burnished is a flaw in the
+  goods. Not the registration crosses that line up paper sheets (7.2a). Today a marking line whose
+  purpose is *Alignment* is drawn by hand.
+- **9.14 A pocket that holds what it must** — the first requirement a maker states. The clear width
+  and depth inside an open stitch line, up to its opening, is geometry the board already has, so it
+  comes first as a reading. Then the maker says what the pocket holds — a card (ID-1, 85.60 × 53.98
+  mm) or a size they type, such as a banknote's — and a pocket too small for it, with the maker's
+  ease, is a problem. Stored as metadata, since it changes nothing drawn, cut or printed
+  ([file-format](file-format.md) §4.5, rule 3). One requirement on one kind of thing, not a
+  requirements engine.
+
+**Needs:** nothing unbuilt — runs, anchors and hole reports exist, and U.17's bar has room. To
+decide: whether a seam alone keeps the format version while printed marks bump it; where a
+requirement attaches; and the ease, which is not set until the maker sets it, as the leather's
+thickness is not (U.13).
+
+**Done when:**
+- two runs paired with different counts make one problem naming both, and equal ones read *Matches*;
+- the list gives thread per seam, and the leather each piece takes;
+- marks print at matching holes on both pieces and measure the same distance along each on paper;
+- a card pocket shows its clear size and, once an ease is set, warns when the card will not go in;
+- property tests: pairing is symmetric, marks land on matching holes, a larger pocket never fits
+  less.
+
+**Not in it:** changing a count to match (9.17 offers that); pieces placed as they are stacked
+(*Exploring*); ease that follows the leather's thickness (9.1); a table of every currency's notes.
+
+### Problems that explain themselves
+
+Every problem is listed, named and shown today (4.12, U.7), but a beginner cannot always act on one,
+and a warning the maker has weighed comes back on every print.
+
+- **9.15 Every problem explained** — beside each problem, why it matters to the leather and what to
+  do about it, in the app's words ([ADR 0018](adr/0018-interface-language.md)). Words only, no rule
+  changes; a code without its explanation fails a test, as the catalogue's audit does today.
+- **Q34 Printed text too small to read** — DR5's rule, `TEXT_TOO_SMALL_TO_PRINT`, was to arrive with
+  document text in 4.11 and never did: a label has had its own height since 4.11b, and nothing
+  checks it (`INVARIANTS_WITHOUT_A_CODE` still says *Planned*). [domain-model](domain-model.md) §8.6
+  gives its threshold, 1.5 mm.
+- **9.16 Accepting a warning** — the maker says a warning is meant, and it stops nagging: still
+  listed, marked accepted, and back as soon as what it is about changes. An error cannot be
+  accepted. Kept in the project as codes and the features they name, never words. Needs Q4 (1.6), so
+  that an acceptance finds its problem again after an edit.
+- **9.17 Fixes offered with a problem** — where one correction is plainly safe, the problem offers
+  it: a stitch margin that clears the edge, the iron that matches the spacing, the spacing that gives
+  a seam equal counts. Pointing at it previews it through the store's preview, which never touches
+  history; choosing it is one undo step; nothing is fixed without the maker choosing. A fix is an
+  ordinary command proposed from the problem, and one that no longer applies is refused, saying why
+  (X1).
+
+**Needs:** Q4 for 9.16; the store's transactions, built, for previews; 9.6 for the fix most worth
+having.
+
+**Done when:**
+- every code the drawer can list has its explanation, and an audit test holds it;
+- an accepted warning survives unrelated edits and a save and reopen, and returns when its cause
+  changes;
+- every fix previews without an undo step, applies as one, and is refused with a reason once it no
+  longer fits.
+
+**Not in it:** fixing anything automatically; fixes for refusals, which are never listed; blocking
+export; suggestions that no rule explains.
+
+### Start from something
+
+A new project is blank, and the sample wallet (8.3) is the only worked example. A maker's own good
+parts cannot be carried to the next project.
+
+- **9.18 New project from a template** — *New project* offers a few worked projects beside the blank
+  one — a card holder, a bifold, a key fob — each opened untitled from the app as the sample is
+  (`readSampleProject`), the sample wallet first among them.
+- **8.8b Copy, Paste and Duplicate of features,** after 8.8. Neither exists, and they carry a
+  domain question: what a pasted stitch line follows when its outline was not copied with it. A
+  command with property tests, not a menu item. A part pastes into another project too, carried as
+  a `.lcpart`-shaped copy ([file-format](file-format.md) §8).
+- **9.7 Templates** — a part saved to a library and inserted again (was 8.1): a copy with its
+  derivations re-pointed, never a live link ([domain-model](domain-model.md) §9). Parameterised
+  templates moved to *Exploring* on 2026-10-17.
+
+**Needs:** the sample's untitled opening (8.3) and duplicate-part re-pointing (4.3b), both built;
+8.8b's domain question answered before 9.7, which inserts a part the same way.
+
+**Done when:**
+- each template opens untitled, with no problems, and prints;
+- a pasted piece keeps its stitching, re-pointed to the copies, and nothing in it follows a feature
+  it left behind;
+- an inserted part evaluates the same on a machine that has never seen the library.
+
+**Not in it:** parameterised templates; a shared or online library; a template that changes the
+projects already made from it.
+
+### Bring patterns in
+
+Most makers arrive with patterns already drawn — in Inkscape or Illustrator, or on card. None of it
+comes in today except by drawing it again.
+
+- **9.19 Curves that can be stitched** — analytic offsetting refuses cubic segments
+  ([geometry](geometry.md) §6.2), so no stitch line can follow a curve that an import or a curve
+  editor brings — or a circle squashed after 3.12, if that makes cubics, which 3.12's slice should
+  weigh. Before 9.11, an offset through arcs fitted to the cubic within the flattening
+  tolerance would build that stitch line instead of refusing it; whether to do that or wait for 9.11
+  is the slice's to decide. Pure geometry under [geometry](geometry.md) §12's definition of done, so
+  it can start whenever there is room.
+- **9.20 SVG import** — an existing vector pattern, opened as pieces. Its size is read from the
+  file's units, then shown and confirmed before anything is made: px is 96 to the inch by the CSS
+  rule Inkscape follows, but Illustrator writes px at 72, and a file that gives no size is asked
+  about, never guessed. Closed shapes become outlines, and cut-outs by what they lie inside; open
+  ones become markings, unless a layer's name says otherwise; small circles along a path are
+  reported as likely stitch holes rather than made into hardware. Text, images, clipping and effects
+  are listed as left out. The importer is a package beside `export`, with its own Y flip
+  ([architecture](architecture.md) §2), and its XML parser a new dependency, so an ADR comes first.
+- **9.2 Tracing from images** — import a photo or scan, set its scale from a known dimension, trace
+  over it. The image is kept in the project's `assets/`, which [file-format](file-format.md) §1
+  reserves and nothing writes yet: a format change.
+
+**Needs:** 9.19 before an imported curve can be stitched; the parser's ADR; images in the `.lcp` for
+9.2.
+
+**Done when:**
+- a 100 mm square saved in mm, in pt and in Inkscape's px imports at 100.0 mm, one in Illustrator's
+  px is read at 72 to the inch or asked about, and a file with no size asks;
+- everything left out is listed by kind and count;
+- a stitch line follows an imported curve within the flattening tolerance;
+- a scan scaled from a known length reads that length.
+
+**Not in it:** turning an image into lines by itself; straightening a photo taken at an angle;
+importing PDF or DXF.
+
+### Leather has thickness
+
+A fold already stores the leather's thickness, and nothing reads it. A pattern drawn flat comes out
+short wherever leather wraps or folds over leather.
 
 - **9.1 Thickness and wrap compensation** — the gusset problem. The most requested thing in every
-  leathercraft forum, and the fold-line model already carries the fields for it.
-- **9.2 Tracing from images** — import a photo or scan, set its scale from a known dimension, trace
-  over it.
-- **9.3 Hardware library** — snaps, rivets, D-rings, zips and magnets, with real dimensions.
-- **9.5 Boolean operations** — built together with 9.11, since both have to find and remove the loops
-  an operation creates.
-- **9.6 Seam pairing and hole-count parity** — catches a genuinely expensive mistake.
-- **9.7 Templates** — a part saved to a library and inserted again (was 8.1), and parameterised ones
-  ("card slot, width 95 mm").
-- **9.9 Nesting on a hide** — needs boolean operations first.
-- **9.10 A constraint solver** — only if real use proves the derivation graph insufficient.
+  leathercraft forum, and the fold-line model already carries the fields for it. In steps, each
+  checked on real leather and recorded: the length a fold needs, as a reading from its thickness and
+  what lies inside it; then that length applied to the outline, as a derivation; then a gusset's
+  length along its seam (9.6). To decide first: whether thickness belongs to a piece or, as today, to
+  a fold.
+- **9.21 Skive bands** — where to thin the leather: a band derived inward from an edge at a width,
+  and printed. Today a marking line whose purpose is *Skive* is drawn by hand; a band follows the
+  edge as a stitch line does, a new row in the derivation table ([domain-model](domain-model.md)
+  §4.2). The thinner edge is what 9.1 then reads there.
+- **9.22 Grain direction** in the model: an arrow on the part, which turns with it on paper (7.8
+  turns parts to save sheets).
+
+**Needs:** 9.6 for gussets; where thickness lives, decided.
+
+**Done when:**
+- a fold reports the allowance it needs; applied, the outline grows by that, and undo removes it;
+- a bifold cut from such a pattern closes flat — a physical check, recorded as a print check is;
+- the grain arrow prints, and turns with its piece.
+
+**Not in it:** folding or draping simulation; stretch; anything 3D.
+
+### Hardware that fits
+
+A hardware hole knows its type and diameter, nothing else, and stays where it was put when its piece
+changes ([the 4.7 design](superpowers/specs/2026-09-05-fold-mark-hardware-design.md)).
+
+- **9.23 Hardware clearance** — first from the geometry already there: a hardware hole's rim against
+  the edge (Q33), against a stitch line and its holes, on a fold, and over another hole. Then, with
+  9.3's real sizes, a cap's or a ring's footprint against the same.
+- **9.3 Hardware library** — snaps, rivets, D-rings, zips and magnets, with real dimensions. The
+  maker's own, as their irons are (*My tools*, U.13), starting from a few common sizes; a placed
+  piece of hardware keeps its own dimensions, so a file opens the same on any machine
+  ([domain-model](domain-model.md) §6.2).
+- **9.24 Hardware placed from an edge** — "12 mm in from that edge", kept as the piece changes: a
+  derivation on the same feature, as the 4.7 design records, and so a format version, since it
+  changes what is cut ([file-format](file-format.md) §4.5).
+
+**Needs:** Q33 for the rim; 9.3 for footprints. The first half of 9.23 needs only Q33, and can move
+earlier.
+
+**Done when:**
+- a hole whose rim crosses an edge is an error;
+- a rivet over the stitching names the holes it hits;
+- a snap placed from an edge stays that far in when the piece is widened.
+
+**Not in it:** a supplier's catalogue shipped with the app; whether a post is long enough for its
+layers, which needs layers (*Exploring*).
+
+### Robust shapes
+
+Alongside the others: pure geometry that nothing here waits on, and that *Bring patterns in* gains
+most from.
+
 - **9.11 Robust offsetting, written here** — the concave outlines analytic offsetting refuses, and
   stitching *across* a concave join such as a thumb scoop. Two bindings were tried and rejected
   (ADR 0008); it will be written, not bought.
+- **9.5 Boolean operations** — built together with 9.11, since both have to find and remove the loops
+  an operation creates.
 
-Also later, each already decided in principle:
-- **A general curve editor** (Béziers) on top of 3.9.
-- **Grain direction** in the model: an arrow on the part, which turns with it on paper (7.8 turns
-  parts to save sheets).
+**Done when:** [geometry](geometry.md) §6.3's rules hold — integers at the quantum, `offsetPath`
+still the entry point, areas tested rather than bounds; a stitch line follows a thumb scoop; and
+`area(A ∪ B) + area(A ∩ B) = area(A) + area(B)` holds as a property. **Not in it:** nesting.
+
+### Also later, each already decided in principle
+
+- **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched only
+  after 9.19.
 - **Pieces gliding** between Design and Sheets.
 - **Radial, angular, chained and baseline dimensions,** and dimensions between parts.
 - **A screen-calibration step,** which would make 1:1 literal on screen too.
 - **Draw tools in their role's colour** — still an open question in the UI decisions record.
-- **8.8b Copy, Paste and Duplicate of features,** after 8.8. Neither exists, and they carry a
-  domain question: what a pasted stitch line follows when its outline was not copied with it. A
-  command with property tests, not a menu item.
+- **Measuring on the sheets.** U.9 left it out: no tool acts on the Sheets view, so it would be new
+  behaviour, not a change of window.
+- **A radius-aware corner policy,** and **slot or diamond holes, and leaving single holes out**
+  ([domain-model](domain-model.md) §3.3, §6.1).
+- **`.lcp.json`,** a project as plain JSON for version control ([file-format](file-format.md) §8).
 
-Left room for by the UI refinement (1.5):
-- **Hole matching and thread length** in the selection bar — "Matches Outer, right run 15 = 15 ·
-  Thread ≈ 0.9 m". U.17 leaves room for this third line and builds nothing of it (R-14).
-- **Measuring on the sheets.** U.9 left it out: no tool acts on the Sheets view, so it would be new behaviour, not a change of window.
+### Exploring — neither planned nor rejected
+
+Worth thinking about, and none of it a commitment. Each says what it would wait for.
+
+- **9.10 A constraint solver** — only if real use proves the derivation graph insufficient.
+- **Pieces placed as they are stacked.** A wallet is layers glued and then stitched through; placed
+  that way, the app could check holes through several layers, hardware across them and the stack's
+  thickness. Flat, never folded or 3D. After seams (9.6) show the need.
+- **Parameterised templates** ("card slot, width 95 mm"), from 9.7: named parameters read by shapes
+  and derivations. After the library, and watched for creeping toward a solver.
+- **Laying out pieces on a photographed hide,** by hand — grain, flaws, the best leather where it
+  shows. After 9.2 and 9.22. No optimising.
+- **A shared pattern library, as files.** A `.lcp` already opens the same anywhere; sharing happens
+  outside the app, with no accounts or servers in it.
+- **Comparing two versions of a design.** *Save as* serves today.
 
 Recorded from the QA pass (2026-09-24), with no work planned:
 
@@ -520,6 +747,28 @@ Recorded from the QA pass (2026-09-24), with no work planned:
 
 ## Not planned
 
-Auto-update, meaning a release installed from inside the app (8.9 only says one exists); material,
-cost or bill-of-materials metadata; a notes field separate from labels; 3D; an onboarding wizard;
-drag handles for values that are already typed.
+Each with its reason. Reviving one starts with new evidence.
+
+- **Auto-update,** meaning a release installed from inside the app. 8.9 only says one exists.
+- **Material, cost or bill-of-materials metadata,** and **a notes field separate from labels.** Not a
+  pattern editor's job, and a label prints what a note would say
+  ([the 1.0 audit](superpowers/specs/2026-09-23-pre-1.0-product-audit.md) §2.9).
+- **3D — a 3D view, folding or draping.** A boundary of the product, not a deferral
+  ([product-spec](product-spec.md) §2).
+- **An onboarding wizard.** The empty states, the sample and the hints teach where the maker is
+  already working.
+- **Drag handles for values that are already typed.** A gesture less exact than the field beside it.
+- **Stitch appearance simulation.** Cosmetic: a template needs the slit an iron cuts, which F.7
+  draws.
+- **9.9 Nesting on a hide,** moved here on 2026-10-17. It would need a hide's outline and flaws, its
+  grain and boolean operations before it could place one piece well, and a maker laying card
+  templates on leather does that better by eye; laser users nest in their own software, from the SVG
+  or DXF. What makers ask of it — how much leather a project takes — is 9.12's.
+- **Accounts, cloud storage, collaboration or a marketplace inside the app.** It works offline and
+  shares by file.
+- **An AI assistant for its own sake.** Help comes from rules a maker can read (9.15 to 9.17); if
+  more ever comes, it offers the same fixes.
+- **General illustration** — carving and tooling artwork. A logo is a marking, drawn or imported
+  (9.20).
+- **G-code.** Laser and CNC users have their own CAM and want DXF or SVG ([printing](printing.md)
+  §12).

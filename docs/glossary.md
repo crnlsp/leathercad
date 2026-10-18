@@ -32,6 +32,10 @@ records the pitch but not the tooth.
 through the same hole from both sides. Relevant because both mating pieces must have *the same
 number of holes* in the same positions.
 
+**Seam** — Two runs of stitching that are sewn to each other: on two pieces, or on one piece folded
+over itself. Saddle-stitched, both runs must have the same number of holes. Not the same as a *seam
+allowance*. Designed in [domain-model.md](domain-model.md) §7, not modelled yet (roadmap 9.6).
+
 **Seam allowance** — The margin of material outside the stitch line, between the stitching and the
 cut edge. In this codebase it is modelled as a *derivation direction*: a cut contour derived
 outward from a stitch line by the allowance distance. (The inverse derivation — stitch line inward
@@ -54,14 +58,21 @@ zero-radius line.
 **Marking line** — A non-cut, non-stitch guide printed on the template: glue-area boundaries, logo
 placement, alignment references.
 
+**Alignment mark** — A mark at the same place on two pieces that are sewn together — at a hole, a
+corner or a point along the seam — so they line up when glued and stitched. Printed on the template
+and transferred to the leather, never cut: a notch in an edge that will be finished is a flaw. About
+leather pieces; compare **registration mark**, which is about paper. Drawn by hand today, as a
+marking line whose purpose is *Alignment*; marks derived from a seam are roadmap 9.13.
+
 **Gusset** — A side panel that gives a bag or case its depth. The classic source of thickness-math
 errors, because its length must account for the material thickness it wraps around.
 
 **Grain direction** — Leather is anisotropic; it stretches more across the backbone than along it.
-Parts carry a grain direction annotation so the template can be oriented correctly on the hide.
+Parts will carry a grain direction — an arrow printed on the template, which turns with the piece
+on paper — so it can be oriented correctly on the hide. Not modelled yet (roadmap 9.22).
 
-**Skiving** — Thinning leather at an edge or fold. Represented (later) as a marking region, not
-geometry.
+**Skiving** — Thinning leather at an edge or fold. Marked today with a marking line whose purpose is
+*Skive*; a band that follows the edge at a width is roadmap 9.21. Never geometry to cut.
 
 **Burnishing / edge finishing** — Not modelled geometrically. Mentioned only because "edge
 allowance" sometimes means the burnishing margin rather than the seam allowance; the app uses
@@ -171,8 +182,10 @@ the sheet count, Parts labels and Sheets view read it.
 arranges and relates pieces, freely. *Sheets* shows the same pieces as the sheet plan puts them on
 paper. Board positions never affect the sheets, and nothing in the Sheets view is edited.
 
-**Registration mark** — Crosshairs, corner marks, and tile labels printed on tiled pages so the
-user can align and tape them together accurately.
+**Registration mark** — The join lines and crosses printed on the sheets of a taped piece, at the
+same place in the pattern on each sheet, so the maker can line the sheets up and tape them together
+(7.2a, [printing.md](printing.md) §7). About paper only; compare **alignment mark**, which is about
+the leather.
 
 **Calibration** — Two distinct things, kept separate in the docs:
 1. *Verification*: a 100 × 5 mm gauge printed on every sheet so the user can check scale with a
