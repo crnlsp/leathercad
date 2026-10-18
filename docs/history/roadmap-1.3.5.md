@@ -13,7 +13,7 @@ is the size that was drawn. It is the first part of what the roadmap called 1.4.
 split 1.4 on 2026-10-07 so that the print-scaling fix reaches people sooner: printed from a PDF
 viewer, a 1.3.0 PDF measured 96 % on paper (7.6). Everything else moved to the release after as it
 was, so this could ship first ([`CONTRIBUTING.md`](../../CONTRIBUTING.md#changelog-and-releases)); that
-release is [1.6](../roadmap.md#16--after-the-refinement) since the UI refinement took 1.5 on 2026-10-08. The
+release is [1.6](../roadmap.md#16--the-next-release) since the UI refinement took 1.5 on 2026-10-08. The
 order within each group is the suggested order of work.
 
 **It ships as 1.3.5, not 1.4** — the maintainer's decision on 2026-10-09: what is on `develop` is cut
@@ -83,7 +83,7 @@ they belong to.
 
 ## The window, refined — its first three slices
 
-From [1.5](../roadmap.md#15--the-next-release)'s UI refinement, done before this was cut, so they ship here.
+From [1.5](roadmap-1.5.md)'s UI refinement, done before this was cut, so they ship here.
 
 - ✅ **U.1 Pieces read as pieces** (R-02). Every piece filled on the board, the one being worked on
   warmer; no grid inside a piece; the 1 mm grid from 160 % and the 10 mm grid from 40 %; cut lines
