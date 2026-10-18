@@ -177,6 +177,8 @@ the print. [Glossary](docs/glossary.md) — the leathercraft words the app uses.
 
 | Document | What it covers |
 |---|---|
+| [product-spec.md](docs/product-spec.md) | What LeatherCAD is and is not, its principles and its direction |
+| [product-roadmap.md](docs/product-roadmap.md) | Where it is going: themes, milestones and what depends on what, drawn |
 | [architecture.md](docs/architecture.md) | The stack, the layers and the rules between them |
 | [domain-model.md](docs/domain-model.md) | Parts, features, derivation, stitching, validation |
 | [geometry.md](docs/geometry.md) | Representation, numerics, offsetting |

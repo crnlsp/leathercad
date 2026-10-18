@@ -3,7 +3,7 @@
 **Packages:** `packages/export`, `packages/print`
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-17
 
 ---
 
@@ -357,7 +357,7 @@ For tiled output, the difference between a usable pattern and a jigsaw puzzle.
   to the right`. That is what a maker with sheets spread on a table needs; the dashed line and its
   crosses show how. A printed sentence of instructions on every taped sheet did not earn its room,
   and `R1 C2` was a grid reference nobody holding paper needs.
-- **Not yet (7.2, 1.1):** edge arrows, the assembly sheet, and tape guides.
+- **Not yet (7.2, roadmap 1.6):** edge arrows, the assembly sheet, and tape guides.
 
 The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
 tiled part follows the packed parts on sheets of its own. A tiled part is never turned: it is tiled
@@ -638,7 +638,9 @@ that tests the units. Presets, choosing layers and the bounds are 6.4.
   and must never be presented as a printable pattern.
 - **Hole and thread report (CSV / Markdown)** — per part: contour length, stitch line length, hole
   count, achieved pitch, estimated thread length at 4× seam length. Trivial to generate from data
-  the evaluator already produces, and genuinely useful before starting a project.
+  the evaluator already produces, and genuinely useful before starting a project. Planned as
+  roadmap 9.12, the cutting and stitching list, which also settles the thread formula: the domain
+  model says 4–5×.
 - **G-code** — out of scope. Users with laser cutters have their own CAM and want DXF or SVG.
 
 ## 13. Printing from the app (7.6, 7.6b)

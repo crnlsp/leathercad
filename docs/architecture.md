@@ -2,7 +2,7 @@
 
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-17
 
 ---
 
@@ -164,6 +164,11 @@ Strict, one-directional dependency graph. An arrow means "may import".
 **As built in 1.0,** `ui`, `print` and `cli` are reserved in `.dependency-cruiser.cjs` but not created.
 The React panels and dialogs live in `apps/desktop/src/renderer`; pagination, tiling and the sheet
 plan live in `export`; and there is no CLI yet. The rules below hold for them the day they exist.
+
+**Import has no package yet.** When SVG import arrives (roadmap 9.20) it is the mirror of `export`:
+headless, above `domain` and `geometry`, reading untrusted bytes at a boundary as the loader does,
+and with its own Y flip, as `export/svg` has. Its XML parser is a new dependency, so it begins with
+an ADR, and the layering rules gain a line for it then.
 
 ### The rules, enforced by dependency-cruiser in CI
 
@@ -479,6 +484,8 @@ vertices — waits until real documents show that flat feature picking on the ca
 
 ### 6.6 Guides and alignment
 
+*Designed, not built: roadmap 3.10, in 1.6. Guides are not in the file format yet.*
+
 Guides are **document objects** (persisted): an origin point plus an angle, so diagonal guides work,
 not just horizontal and vertical. They are dragged out from the rulers and snapped to like any
 other candidate.
@@ -578,9 +585,10 @@ repaints during interaction.
 locale-dependent number formatting. *Mitigation:* vendored fonts, injected clock, seeded generators,
 fixed locale in test config, SVG-string snapshots preferred over pixel diffs.
 
-**R13 — Scope creep into constraints and 3D.** Both are multi-month diversions. *Mitigation:* they
-are named as v3 in the product spec, and the derivation DAG is documented as the deliberate
-alternative.
+**R13 — Scope creep into constraints and 3D.** Both are multi-month diversions. *Mitigation:* the
+product spec puts both outside the product (§2) — 3D as a boundary, a constraint solver unless real
+use proves the derivation graph insufficient (roadmap 9.10, *Exploring*) — and the derivation DAG is
+documented as the deliberate alternative.
 
 **R14 — Never physically verifying.** Software that says 100 mm and prints 97 mm. *Mitigation:*
 every printing slice ends with a printed page measured against a steel rule, recorded in
