@@ -334,11 +334,10 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
 
 ```
 ~/.config/leathercad/
-├── preferences.json      the frame as the maker left it, and the recent projects (8.2, 8.7)
+├── preferences.json      the frame as the maker left it, My tools, and the recent projects (8.2, 8.7, U.13)
 ├── printers.json         per-printer calibration factors — see printing.md §8
 └── library/
-    ├── parts/*.lcpart    saved part templates
-    └── irons.json        user-defined iron presets
+    └── parts/*.lcpart    saved part templates
 ```
 
 Only `preferences.json` exists so far (8.2). It is written by the main process alone, atomically,
@@ -346,10 +345,18 @@ and read once at start-up:
 
 ```json
 {
-  "version": 1,
-  "legendOpen": false,
+  "version": 2,
+  "legendOpen": true,
+  "selectionBar": true,
   "toolRailCollapsed": false,
+  "partsFolded": false,
+  "propertiesFolded": false,
   "language": "system",
+  "irons": [{ "id": "ks-3.85", "name": "KS Blade 3.85 mm", "pitchMm": 3.85 }],
+  "defaultIronId": "ks-3.85",
+  "stitchMarginMm": 3.5,
+  "leatherThicknessMm": null,
+  "keyBindings": { "save": [{ "code": "F5" }] },
   "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
 }
 ```
@@ -360,9 +367,50 @@ are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent 
 paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
 has gone is taken off the list when it is chosen. The rail's collapse applies to a wide window
-only; below 1200 px it collapses by itself, and opening it there lasts the session. `language` is
+only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
+and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
+room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode
+is the session's alone. `language` is
 the interface's: `system` to follow the operating system, or the tag of a language the app supports
 ([ADR 0018](adr/0018-interface-language.md)); one this version does not support follows the system.
+
+The file's `version` is 2 (U.10). On a window with room, the canvas legend opens with names; a
+window 1024 px wide or narrower, or shorter than 720 px, folds it to its chip for the session and
+never writes this. Version 1 wrote `legendOpen: false` out whenever any other preference changed,
+so a stored `false` cannot be told from the default it used to be: a version 1 file is reset to the
+new default once, and version 2 records the maker's real choice from then on.
+
+`selectionBar` (U.17) is Settings › Appearance's switch for the bar under the selected piece — its
+stitching and the next step. On by default; off, the bar is not drawn and its key (F6 unless
+moved) does nothing. A file written before U.17 has no such field, and the bar is on: the version
+stays 2, as for `keyBindings`.
+
+**My tools** (U.13) are the maker's irons and starting values, in this file rather than a library
+of their own. `irons` is a list in the maker's order, each with an `id`, a `name` and a `pitchMm`;
+an iron without a name, a positive pitch or an id of its own is dropped, and the rest kept. A file
+written before My tools has no `irons`, and starts from the irons the Iron menu offered then; a list
+the maker emptied stays empty. `defaultIronId` is always one of `irons`, the first when it names
+none, and `null` only with none. `stitchMarginMm` is a positive length (3.5 when not); and
+`leatherThicknessMm` is a positive length or `null`, which is the default — a thickness is a
+measurement of the maker's leather, and none is invented. **Nothing here reaches evaluation**: the
+app passes these values to the command that makes a stitch line, a hole set, a seam allowance or a
+fold, and that feature stores its own copy (a hole set its pitch and the iron's name), so a project
+evaluates the same on a machine with other tools. A project's own `settings.defaultStitchInsetMm`
+and `defaultIronPitchMm` are what a command takes when no maker's value is passed — a headless
+caller, or a maker with no irons.
+
+**The maker's keys** (U.12) are `keyBindings`: only the commands changed in Settings › Keyboard
+shortcuts, by the app's command id (`save`, `tool.rectangle`, `arc`), each with the keys it has in
+place of its defaults — one to four, each a `code` (`KeyboardEvent.code`, a letter as `KeyA` for the
+key that types *a* wherever the layout puts it) with `mod` (Ctrl, ⌘ on macOS), `shift` and `alt`
+when held, or a `char` with `mod`, as some defaults are. A command left out keeps its defaults, so
+a new default reaches every maker who never moved that key; a key changed back to its default is
+not stored. A command this version does not know or lets no one change (Esc, Enter, a text field's
+own keys, the menu key; Quit on macOS, the app menu's own ⌘Q), a key that is not one — Esc, Tab,
+Enter, a modifier alone, a bare arrow, a digit, `.` or `,` with nothing held (the board types
+sizes with them) — and a change that gives a key another command in the same place already hears
+are dropped, the later of two first; the rest is kept. A file written before U.12 has no
+`keyBindings` and every default. The version stays 2: a new field with a default is not a change of meaning.
 
 **The interface's language never reaches a project.** A `.lcp` holds no words chosen by it — problem
 sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads

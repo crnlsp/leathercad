@@ -3,7 +3,7 @@
 **Package:** `packages/geometry`
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-09-26
+**Last updated:** 2026-10-17
 
 ---
 
@@ -256,8 +256,25 @@ case for each one, and the engine would grow a special case per product feature.
 generic and parameters semantic is what stops that.
 
 Rounded rectangles with per-corner radii are the workhorse of leathercraft, so `roundedRect`
-deserves care: it must clamp radii that exceed half the shorter side, handle zero radii by emitting
-no arc, and produce line-arc-line-arc-… in a consistent winding.
+deserves care: it must shrink radii whose corners would overlap on a side, handle zero radii by
+emitting no arc, and produce line-arc-line-arc-… in a consistent winding.
+
+```ts
+shapes.fittedRadii(radii, w, h): CornerRadii;                 // the radii roundedRect draws
+shapes.cornerRoom(w, h, radii, corners): CornerRoom;          // the most `corners` take, and why
+shapes.cornerNeeds(radii): CornerNeeds;                        // the least w and h they are drawn in
+```
+
+`fittedRadii` is that shrink, exported so nothing else has to restate it: when two corners sharing a
+side ask for more than its length, **every** corner scales by the one factor that fits the tightest
+side, keeping an asymmetric design asymmetric. `cornerRoom` is its inverse question — the largest
+radius the named corners can be set to together, the others kept, that is drawn as asked — with
+the side that limits it and whether its two corners share it ("half the height"). The app refuses
+a typed corner by it (U.14), so a radius that would never be drawn is never stored; a file that
+already holds one still opens and draws as it always did. `cornerNeeds` asks the same of the
+rectangle: the least width and height — on each pair of sides, the longer sum of the two corners
+sharing one — in which every radius is drawn as asked, so a typed width or height that would
+shrink them is refused too. Both property-tested against `fittedRadii` and `roundedRect`.
 
 ### 4.1 Editing a drawn path's points (3.9b)
 
@@ -420,7 +437,10 @@ they overlap they are trimmed to their intersection. An open path's ends simply 
 along three sides of a pocket is an open offset, and it is the most common seam in leatherwork.
 It rejects, rather than guesses at:
 
-- **cubics**, which have no exact offset — the offset of a cubic is not a cubic;
+- **cubics**, which have no exact offset — the offset of a cubic is not a cubic. No drawing tool
+  makes one today, but a curve editor and an SVG import would, and so may a circle squashed after
+  3.12 converts it to a drawn path. Stitching along one is roadmap 9.19: arcs fitted to the cubic
+  within the flattening tolerance, or Tier 2;
 - **overlaps where either side is an arc**, which the line-line intersection this tier uses cannot
   solve;
 - **a result that self-intersects.** This replaced an input convexity test in slice 4.2a. Asking
@@ -491,14 +511,16 @@ Intersections feed snapping, trimming, and self-intersection detection in offset
 
 ## 8. Boolean operations
 
-Post-MVP as a *feature*, but the dependency arrives with offsetting, so the API is defined now:
+Post-MVP as a *feature*, and its hard part is robust offsetting's, so the API is defined now:
 
 ```ts
 booleanOp(a: Path[], b: Path[], op: 'union' | 'difference' | 'intersection' | 'xor'): Path[];
 ```
 
-Delegated to Clipper2 on flattened input, with **non-zero winding** as the fill rule, matching SVG's
-and PDF's default so that on-screen, exported, and computed results agree.
+Written here, together with Tier 2 offsetting (roadmap 9.5 and 9.11): both find and remove the loops
+an operation creates, and no Clipper binding is used ([ADR 0008](adr/0008-no-clipper-binding.md)).
+The fill rule is **non-zero winding**, matching SVG's and PDF's default so that on-screen, exported,
+and computed results agree.
 
 Property test: `area(A ∪ B) + area(A ∩ B) ≈ area(A) + area(B)`.
 

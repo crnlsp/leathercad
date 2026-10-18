@@ -41,7 +41,7 @@ pnpm test locales     # a translation against English: keys, placeholders, plura
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
-pnpm docs:media       # retakes the README's screenshots and demo from the real app (needs a display)
+pnpm docs:media       # retakes the README's screenshots and demo from the real app, in the pinned Playwright container (needs Docker)
 pnpm package          # this platform's installer, in apps/desktop/release/: AppImage, NSIS .exe, or dmg (ADR 0014)
 pnpm build
 pnpm typecheck        # tsc --build
@@ -157,7 +157,7 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | Phase 4's model (derivations, deletion, validation) | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
 | UI Foundations, F.0–F.7 | `docs/history/roadmap-to-1.0.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
 | The paper workflow and the window's bars (F.8, 7.4a–7.4d) | `docs/superpowers/specs/2026-09-24-sheets-workflow-design.md`; Design and Sheets stay separate views |
-| The UI refinement, U.1–U.19 (1.5) | `docs/superpowers/plans/2026-10-08-ui-refinement.md` — your slice's section is the task — and the requirements and mockups it links; the `ui-refinement` agent builds one slice |
+| The UI refinement, U.1–U.20 (1.5) | `docs/superpowers/plans/2026-10-08-ui-refinement.md` — your slice's section is the task — and the requirements and mockups it links; the `ui-refinement` agent builds one slice |
 | Tests | `docs/testing.md` |
 | Interface text, languages, Settings → Language | `docs/adr/0018-interface-language.md` |
 | Commits, pull requests, releases | `CONTRIBUTING.md` |

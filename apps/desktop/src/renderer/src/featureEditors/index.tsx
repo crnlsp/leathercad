@@ -10,7 +10,8 @@ import {
   setShape,
 } from '@leathercad/document';
 import type { DocumentStore } from '@leathercad/document';
-import type { Derivation, Feature, StitchHoles } from '@leathercad/domain';
+import type { Derivation, Feature, Severity, StitchHoles } from '@leathercad/domain';
+import type { Iron } from '@leathercad/platform';
 import type { JSX } from 'react';
 
 import { useI18n } from '../i18n.js';
@@ -41,10 +42,16 @@ export function FeatureEditor({
   store,
   feature,
   holes,
+  spacingReported,
+  irons,
 }: {
   store: DocumentStore;
   feature: Feature;
   holes: StitchHoles | undefined;
+  /** The maker's irons (U.13), for a hole set's Iron menu. */
+  irons: readonly Iron[];
+  /** How Problems rates a hole set's spacing, when it reports it at all. */
+  spacingReported?: Severity | undefined;
 }) {
   const { t } = useI18n();
   const keys = useKeysInSentences();
@@ -94,7 +101,15 @@ export function FeatureEditor({
       case 'offset':
         return <StitchLineEditor op={source.op} onChange={change} />;
       case 'stitch-holes':
-        return <StitchHoleSetEditor op={source.op} holes={holes} onChange={change} />;
+        return (
+          <StitchHoleSetEditor
+            op={source.op}
+            holes={holes}
+            reported={spacingReported}
+            irons={irons}
+            onChange={change}
+          />
+        );
       case 'mirror':
         // Nothing, deliberately. A counterpart's parameters are an axis and a
         // glide, and neither is a number anyone should have to reason about:

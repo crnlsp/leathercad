@@ -8,6 +8,12 @@ supersedes the paper reference in [paper reference and typography](2026-09-18-pa
 builds on [paper and orientation](2026-09-24-paper-and-orientation-design.md) (6.4a) and
 [tiling](2026-09-24-tiling-design.md) (7.2a)
 
+> **Since U.7 (2026-10-14):** the window's bars moved on as R-06 asks. Design | Sheets is a tab list
+> in the middle of the top bar, not at the work bar's right; the sheet indicator's list is a paper
+> button — "3 × A4 portrait" — whose popover holds the paper, which way up and the sheets; and Print
+> is in the paper's colour, its second half the problems. The views, the plan and the count are as
+> this document decided. See [the top bar's successor note](2026-09-29-top-bar-and-settings-design.md).
+
 ---
 
 ## 1. Decision
@@ -316,6 +322,10 @@ out on sheets here."* That matches the PDF, which is one scale-check sheet.
     problem aren't printed"*.
 
   This answers "which sheet?" without leaving Design.
+
+  *Since U.8 (R-07, 2026-10-14)* these lines are the Sheets view's: Design's Parts tree shows only a
+  piece that will not print, as a mark on its row with the reason in its tooltip, and a hidden
+  feature by its own mark. U.9 gives the Sheets view its own Parts.
 - **Oversized pieces show their joins.** A piece too large for the chosen sheet shows its join
   lines in Design, at the plan's model coordinates, in the same dash rhythm as the printed join,
   in the furniture magenta and labelled *Tape join*. The maker sees before printing where the tape

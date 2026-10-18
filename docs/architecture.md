@@ -2,7 +2,7 @@
 
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-17
 
 ---
 
@@ -164,6 +164,11 @@ Strict, one-directional dependency graph. An arrow means "may import".
 **As built in 1.0,** `ui`, `print` and `cli` are reserved in `.dependency-cruiser.cjs` but not created.
 The React panels and dialogs live in `apps/desktop/src/renderer`; pagination, tiling and the sheet
 plan live in `export`; and there is no CLI yet. The rules below hold for them the day they exist.
+
+**Import has no package yet.** When SVG import arrives (roadmap 9.20) it is the mirror of `export`:
+headless, above `domain` and `geometry`, reading untrusted bytes at a boundary as the loader does,
+and with its own Y flip, as `export/svg` has. Its XML parser is a new dependency, so it begins with
+an ADR, and the layering rules gain a line for it then.
 
 ### The rules, enforced by dependency-cruiser in CI
 
@@ -332,6 +337,7 @@ class Viewport {
   toWorld(p: Vec2): Vec2;
   pxToMm(len: number): number;                    // a distance on screen, in CSS px
   zoomAt(anchorPx: Vec2, factor: number): void;   // zoom about the cursor, not the centre
+  zoomToPercent(percent: number): void;           // 100 % is true size, about the centre
 }
 ```
 
@@ -340,9 +346,12 @@ testing converts its *tolerance* from px to mm and then does all comparisons in 
 other way around.
 
 **Zoom is CSS pixels per millimetre** (U.1): `cssPxPerMm(view)` in `render/view.ts`, and
-`zoomPercent(view)`, 100 % at 96 ÷ 25.4 CSS px per mm. Grid tiers, zoom bands and anything a later
-control shows read it, so they switch at the same zoom on a 1× and a 2× display. A distance on
-screen — a pick radius, a drag threshold, a handle — is CSS pixels too.
+`zoomPercent(view)`, 100 % at 96 ÷ 25.4 CSS px per mm, and its inverse `scaleAtZoomPercent`. Grid
+tiers, zoom bands and the zoom control (U.4) read it, so they switch at the same zoom on a 1× and a
+2× display. There is no screen calibration yet: 100 % is the CSS reference pixel, one constant,
+`TRUE_SIZE_CSS_PX_PER_MM`, which a calibration would replace. The control shows the showing view's
+camera, Design's or the Sheets', read as each frame is painted. A distance on screen — a pick
+radius, a drag threshold, a handle — is CSS pixels too.
 
 ### 6.2 Three stacked canvases
 
@@ -385,10 +394,13 @@ interface Tool {
 }
 ```
 
-A tool hears a key before the application's tool shortcuts do: the canvas listens on `document`, the
-shortcuts on `window`. A tool that returns `true` has **claimed** the key, and the shortcut does not
-fire. That is how the polyline takes A and L mid-run for its next segment (3.9a) without switching to
-the Arc or Line tool and losing the run.
+A tool hears a key before the application's shortcuts do: the canvas listens on `document`, the
+shortcuts on `window`. A tool that returns `true` has **claimed** the key, and no shortcut fires —
+not a tool's, nor any other (U.12). That is how the polyline takes A and L mid-run for its next
+segment (3.9a) without switching to the Arc or Line tool and losing the run. A tool reads what a key
+**means** — `KeyInput.means`, the commands the app's keymap makes of the press (`arc`, `takeBack`,
+`delete` …) — never which key it was, so a key the maker moves in Settings moves for the tool too;
+only Escape and Enter, whose roles no one can change, are read by name.
 
 The window's keys are one keymap, `apps/desktop/src/renderer/src/keymap.ts` (U.3): each command's
 binding by `KeyboardEvent.code` and its modifiers — `mod` is Ctrl, ⌘ on macOS — except a letter,
@@ -462,7 +474,7 @@ features belong to — and selection only ever chooses *where* something goes, n
 
 **A picked part is a real selection everywhere** (Q29). It stands for every feature in it
 (`selectedFeatureIds`): the board highlights them, the status bar counts "1 part selected",
-Properties shows the part — its fields, its outline's size, its problems, *Flip this piece* and
+Properties shows the part — its outline's size, its problems, its name and Cut, *Arrange*'s Flip and
 *Delete part* — and the Delete key deletes the part whole. Rotate, Flip and the right-click menu take
 it as the piece; Shift-click and Shift-box add to what it stands for rather than dropping it; Edit
 Points edits its outline. Scale says why it does not resize a whole part (Q31).
@@ -471,6 +483,8 @@ The drill-down sketched here originally — click for a part, double-click for i
 vertices — waits until real documents show that flat feature picking on the canvas is not enough.
 
 ### 6.6 Guides and alignment
+
+*Designed, not built: roadmap 3.10, in 1.6. Guides are not in the file format yet.*
 
 Guides are **document objects** (persisted): an origin point plus an angle, so diagonal guides work,
 not just horizontal and vertical. They are dragged out from the rulers and snapped to like any
@@ -571,9 +585,10 @@ repaints during interaction.
 locale-dependent number formatting. *Mitigation:* vendored fonts, injected clock, seeded generators,
 fixed locale in test config, SVG-string snapshots preferred over pixel diffs.
 
-**R13 — Scope creep into constraints and 3D.** Both are multi-month diversions. *Mitigation:* they
-are named as v3 in the product spec, and the derivation DAG is documented as the deliberate
-alternative.
+**R13 — Scope creep into constraints and 3D.** Both are multi-month diversions. *Mitigation:* the
+product spec puts both outside the product (§2) — 3D as a boundary, a constraint solver unless real
+use proves the derivation graph insufficient (roadmap 9.10, *Exploring*) — and the derivation DAG is
+documented as the deliberate alternative.
 
 **R14 — Never physically verifying.** Software that says 100 mm and prints 97 mm. *Mitigation:*
 every printing slice ends with a printed page measured against a steel rule, recorded in

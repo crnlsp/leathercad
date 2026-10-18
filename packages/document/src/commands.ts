@@ -1082,6 +1082,9 @@ export function addFoldLine(
   featureId: FeatureId,
   source: GeometrySource,
   direction: FoldLine['direction'] = 'valley',
+  // The maker's leather, written in when the fold is made (U.13): evaluation
+  // never reads a preference, so a file folds the same on every machine.
+  materialThicknessMm?: Mm,
 ): Command {
   return addFeature(partId, {
     id: featureId,
@@ -1091,6 +1094,7 @@ export function addFoldLine(
     visible: true,
     locked: false,
     source,
+    ...(materialThicknessMm === undefined ? {} : { materialThicknessMm }),
   });
 }
 

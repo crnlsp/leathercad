@@ -32,7 +32,7 @@ export {
   approxZero,
 } from './epsilon.js';
 
-export { QUANTUM_MM, quantise } from './quantise.js';
+export { QUANTUM_MM, quantise, quantiseAtLeast, quantiseAtMost } from './quantise.js';
 
 export {
   MINUS,
@@ -42,6 +42,8 @@ export {
   formatNumber,
   parseNumber,
 } from './format.js';
+
+export { MM_PER_INCH, parseLength, type LengthError } from './length.js';
 
 export { assertFinite, invariant } from './guard.js';
 

@@ -33,6 +33,8 @@ export function MeasurementEditor({
         min={0}
         step={1}
         precision={0}
+        // A count of decimals, not a length: no "mm" after it, and no sums.
+        suffix=""
         // Clamped rather than validated: a dimension showing four decimals
         // of a millimetre is noise, and refusing the keystroke teaches nothing.
         onCommit={(value) =>

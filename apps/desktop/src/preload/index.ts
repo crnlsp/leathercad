@@ -1,3 +1,4 @@
+import type { Preferences } from '@leathercad/platform';
 import { contextBridge, ipcRenderer } from 'electron';
 
 import { IPC } from '../shared/ipc.js';
@@ -33,6 +34,12 @@ const platformBridge = {
 
   getAppVersion: (): Promise<string> => ipcRenderer.invoke(IPC.getAppVersion),
 
+  setDocumentEdited: (edited: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.setDocumentEdited, edited),
+
+  setKeyCapture: (capturing: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.setKeyCapture, capturing),
+
   writeRecovery: (data: Uint8Array): Promise<void> => ipcRenderer.invoke(IPC.writeRecovery, data),
 
   clearRecovery: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery),
@@ -45,11 +52,7 @@ const platformBridge = {
 
   getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
 
-  getPreferences: (): Promise<{
-    legendOpen: boolean;
-    toolRailCollapsed: boolean;
-    language: string;
-  }> => ipcRenderer.invoke(IPC.getPreferences),
+  getPreferences: (): Promise<Preferences> => ipcRenderer.invoke(IPC.getPreferences),
 
   setPreferences: (changes: unknown): Promise<void> =>
     ipcRenderer.invoke(IPC.setPreferences, changes),
@@ -61,13 +64,14 @@ const platformBridge = {
   getRecentFiles: (): Promise<{ path: string; shown: string }[]> =>
     ipcRenderer.invoke(IPC.getRecentFiles),
 
-  openRecent: (path: string): Promise<void> => ipcRenderer.invoke(IPC.openRecent, path),
+  openRecent: (path: string): Promise<'opening' | 'gone' | 'unlisted'> =>
+    ipcRenderer.invoke(IPC.openRecent, path),
 
   clearRecent: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecent),
 
   showLogFolder: (): Promise<void> => ipcRenderer.invoke(IPC.showLogFolder),
 
-  openNotices: (): Promise<void> => ipcRenderer.invoke(IPC.openNotices),
+  readNotices: (): Promise<string | null> => ipcRenderer.invoke(IPC.readNotices),
 
   readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
 

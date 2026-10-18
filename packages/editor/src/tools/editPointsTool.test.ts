@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import type { PointerInput, Tool, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createEditPointsTool } from './editPointsTool.js';
+import { keyInput } from './keys.fixture.js';
 
 const OUTLINE = 'outline' as FeatureId;
 
@@ -67,7 +68,7 @@ function points(store: DocumentStore, id: FeatureId = OUTLINE): Vec2[] {
   return PathOps.vertices(source.path);
 }
 
-const key = (k: string) => ({ key: k, shiftKey: false, ctrlKey: false });
+const key = (k: string) => keyInput(k);
 
 function kinds(store: DocumentStore): string[] {
   const source = findFeature(store.getState().document.project, OUTLINE)!.feature.source;
@@ -93,6 +94,17 @@ describe('rounding and sharpening with R (3.9d)', () => {
 
     // Each is one step to undo.
     store.undo();
+    expect(kinds(store)).toContain('arc');
+  });
+
+  it('rounds by whatever key means it, so a key moved in Settings moves here (U.12)', () => {
+    const { ctx, store } = harness();
+    const tool = createEditPointsTool(() => ({ cornerRadiusMm: 10 }));
+
+    click(tool, ctx, vec(100, 50));
+    expect(tool.onKey?.(ctx, keyInput('r', []))).not.toBe(true);
+    expect(kinds(store)).toEqual(['line', 'line', 'line', 'line']);
+    expect(tool.onKey?.(ctx, keyInput('k', ['roundCorner']))).toBe(true);
     expect(kinds(store)).toContain('arc');
   });
 
@@ -230,7 +242,7 @@ describe('the Edit Points tool', () => {
 
     tool.onPointerDown?.(ctx, pointer(vec(100, 0)));
     tool.onPointerMove?.(ctx, pointer(vec(130, 0)));
-    tool.onKey?.(ctx, key('Escape'));
+    expect(tool.onKey?.(ctx, key('Escape'))).toBe(true);
 
     expect(store.getState().document).toBe(before);
   });

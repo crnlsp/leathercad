@@ -5,7 +5,7 @@ import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render
 
 import { createDrawCommit } from './commitDrawn.js';
 
-import type { Tool, ToolContext } from '../tool.js';
+import { means, type Tool, type ToolContext } from '../tool.js';
 import { constrainToAngleStep } from './angleConstraint.js';
 
 /**
@@ -85,18 +85,22 @@ export function createArcTool(nextId: () => string): Tool {
 
     onKey(ctx, event) {
       if (event.key === 'Escape') {
+        const busy = state.kind === 'placing';
         reset(ctx);
-        return;
+        return busy;
       }
 
-      if (event.key === 'Backspace' && state.kind === 'placing') {
+      if (means(event, 'takeBack') && state.kind === 'placing') {
         const points = state.points.slice(0, -1);
         state =
           points.length === 0
             ? { kind: 'idle', cursor: state.cursor }
             : { kind: 'placing', points, cursor: state.cursor };
         ctx.invalidate();
+        // Claimed (U.12): a key the maker gave it is not also another command.
+        return true;
       }
+      return false;
     },
 
     buildOverlay(): DisplayList {
@@ -141,6 +145,8 @@ export function createArcTool(nextId: () => string): Tool {
 
       return { items };
     },
+
+    underway: () => state.kind === 'placing',
 
     onDeactivate(ctx) {
       reset(ctx);

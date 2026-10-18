@@ -6,6 +6,7 @@ import type {
   PrintJob,
   PrinterList,
   RecentFile,
+  RecentOutcome,
   RecoveredCopy,
   SaveDialogOptions,
 } from '@leathercad/platform';
@@ -26,6 +27,8 @@ interface PreloadBridge {
   printPdf(data: Uint8Array, job: PrintJob): Promise<string>;
   getUserConfigDir(): Promise<string>;
   getAppVersion(): Promise<string>;
+  setDocumentEdited(edited: boolean): Promise<void>;
+  setKeyCapture(capturing: boolean): Promise<void>;
   writeRecovery(data: Uint8Array): Promise<void>;
   clearRecovery(): Promise<void>;
   findRecovery(): Promise<RecoveredCopy | null>;
@@ -37,10 +40,10 @@ interface PreloadBridge {
   getSystemLanguages(): Promise<readonly string[]>;
   noteRecentFile(path: string): Promise<void>;
   getRecentFiles(): Promise<readonly RecentFile[]>;
-  openRecent(path: string): Promise<void>;
+  openRecent(path: string): Promise<RecentOutcome>;
   clearRecent(): Promise<void>;
   showLogFolder(): Promise<void>;
-  openNotices(): Promise<void>;
+  readNotices(): Promise<string | null>;
   onOpenFile(listener: (path: string) => void): () => void;
   readSampleProject(): Promise<Uint8Array>;
   takeLaunchFile(): Promise<string | null>;

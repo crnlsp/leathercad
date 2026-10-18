@@ -1,4 +1,4 @@
-import { approxEq } from '@leathercad/core';
+import { approxEq, type Mm } from '@leathercad/core';
 import type { Vec2 } from '@leathercad/geometry';
 import type { Command, DocumentStore } from '@leathercad/document';
 import {
@@ -26,11 +26,24 @@ export interface PointerInput {
   readonly ctrlKey: boolean;
 }
 
+/**
+ * What a key means to the board's tools (U.12): the app's keymap decides, so
+ * a key the maker moved in Settings moves here too. `ToolKey` names the
+ * commands a tool answers to; their keys are the app's to show and change.
+ */
+export type ToolKey = 'delete' | 'takeBack' | 'arc' | 'straight' | 'removePoint' | 'roundCorner';
+
 export interface KeyInput {
+  /** The key's name, for Escape and Enter, whose roles no keymap changes. */
   readonly key: string;
+  /** The commands this press is, by the keymap: a tool acts on these, not on `key`. */
+  readonly means: ReadonlySet<string>;
   readonly shiftKey: boolean;
   readonly ctrlKey: boolean;
 }
+
+/** Whether a press means this tool command. */
+export const means = (event: KeyInput, command: ToolKey): boolean => event.means.has(command);
 
 /**
  * What a tool is allowed to do.
@@ -71,6 +84,23 @@ export interface ToolContext {
    * `deletePart` directly, which refuses when something does.
    */
   readonly requestDeletePart?: (partId: PartId) => void;
+  /**
+   * The maker's starting values (U.13, Settings › My tools), read when a tool
+   * makes something: *Stitch + allowance* grows by the margin, and a fold
+   * carries the leather's thickness. A function, like `drawAs`, because they
+   * change under a context built once.
+   *
+   * Absent means the project's own settings, as before — a test harness, or a
+   * headless caller with no maker.
+   */
+  readonly makerDefaults?: () => MakerDefaults;
+}
+
+/** What a tool takes from the maker's settings: values, never a reference to them. */
+export interface MakerDefaults {
+  readonly stitchMarginMm: Mm;
+  /** `null` when the maker has not set one: a new fold then carries none. */
+  readonly leatherThicknessMm: Mm | null;
 }
 
 /**
@@ -93,6 +123,10 @@ export interface Tool {
    * application's own shortcut for that key does not also fire — how the
    * polyline takes A and L for its next segment mid-run without switching to
    * the Arc or Line tool (3.9a). Anything else leaves shortcuts as they are.
+   *
+   * Escape is claimed when it gives something up — a gesture, a picked point,
+   * a selection — and left to the window when there is nothing to, where it
+   * closes an overlay or leaves focus mode (U.5): one press, one thing.
    */
   onKey?(ctx: ToolContext, event: KeyInput): boolean | void;
 
@@ -122,6 +156,47 @@ export interface Tool {
 
   /** Called when the tool is swapped out; must leave no transaction open. */
   onDeactivate?(ctx: ToolContext): void;
+
+  /**
+   * Whether a shape is under way, between its clicks: the first point is
+   * placed and the rest is to come (U.11, R-11). The work bar's hints read it
+   * — *Esc cancels* is offered only when there is something to cancel. A tool
+   * with no such state omits it.
+   */
+  underway?(): boolean;
+
+  /**
+   * The size of what is being drawn, to be typed over (U.16, R-13): the
+   * app shows it as chips beside the shape for as long as this is not null.
+   * A tool that draws no sized shape omits all four of these.
+   */
+  sizing?(): SizeDraft | null;
+  /**
+   * Typing begins with no corner placed: the shape starts at the pointer, or
+   * in the middle of the board if no pointer has been on it.
+   * True when there is something to size now.
+   */
+  beginSizing?(ctx: ToolContext): boolean;
+  /** One typed number, already quantised and checked against the others. */
+  setSize?(ctx: ToolContext, field: SizeField, value: Mm): void;
+  /** `Enter`: makes what is shown, as one command. */
+  finishSizing?(ctx: ToolContext): void;
+}
+
+/** What a sizing tool lets be typed, in `Tab`'s order. */
+export type SizeField = 'width' | 'height' | 'corner';
+
+/** The rectangle being drawn, as it would be made: its lower-left, its sizes, its corners. */
+export interface SizeDraft {
+  readonly origin: Vec2;
+  readonly width: Mm;
+  readonly height: Mm;
+  readonly corner: Mm;
+  /**
+   * How many times making it was refused because the typed corner no longer
+   * fits — the pointer shrank a side since. The app says why on each.
+   */
+  readonly refusals: number;
 }
 
 /**
@@ -318,6 +393,28 @@ export class ToolManager {
   /** Hands a key to the active tool; true when the tool claimed it. */
   key(event: KeyInput): boolean {
     return this.active.onKey?.(this.context, event) === true;
+  }
+
+  /** Whether the active tool has a shape under way (U.11). */
+  underway(): boolean {
+    return this.active.underway?.() ?? false;
+  }
+
+  /** The active tool's sized shape in progress, if it has one (U.16). */
+  sizing(): SizeDraft | null {
+    return this.active.sizing?.() ?? null;
+  }
+
+  beginSizing(): boolean {
+    return this.active.beginSizing?.(this.context) ?? false;
+  }
+
+  setSize(field: SizeField, value: Mm): void {
+    this.active.setSize?.(this.context, field, value);
+  }
+
+  finishSizing(): void {
+    this.active.finishSizing?.(this.context);
   }
 
   overlay(): DisplayList {

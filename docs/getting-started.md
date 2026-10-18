@@ -45,8 +45,22 @@ A card pocket, 96 × 60 mm, the shape a card holder is made from.
 1. Choose **Rectangle** (**R**) in the tool rail. With *Draw as: Outline*, drag out a rectangle
    anywhere. It becomes a new part, listed on the left.
 2. In **Properties** on the right, type **96** for *Width* and **60** for *Height*. Every number is
-   in millimetres, and every number is exact: what you type is what prints.
-3. Name the part *Pocket* at the top of the panel.
+   in millimetres, and every number is exact: what you type is what prints. A size can also be
+   typed as a sum or in another unit, and is shown in millimetres: `95-2*3.5`, `3.75in`, `3/4"`,
+   `9,5 cm`. A sum gives every number its unit, or none, so `10cm + 5mm` and not `10cm + 5`; and
+   3½ inches is `3.5in` or `(3+1/2)in`, since `3-1/2"` is a sum. What a field cannot read stays
+   in it after Enter, with the reason beneath; Escape puts the size back.
+
+   Or type them on the drawing: while the outline is selected, its width, height and corner
+   radius sit beside it — and, once it has a stitch line, the stitch margin just inside the edge.
+   Click one, or press **Enter** on the board — **Tab** reaches the board as it does any control —
+   type, and press **Enter** again; **Tab** goes on to the next, **Escape** puts it back. A corner
+   the rectangle cannot draw — larger than half its height, say — is refused with the reason, and
+   **Enter** takes the largest that fits; so is a width or height too small for its corners, and
+   **Enter** takes the least they fit in.
+3. Name the part *Pocket* in the panel's **Piece** field, beside how many to **Cut**. They are the
+   piece's, so they show while its outline is selected — under the outline's own **Name** — or
+   under **Part** when the piece itself is picked in **Parts**.
 
 For a thumb scoop, draw the outline with **Polyline** (**P**) instead: click the corners, press
 **A** before a segment to make it an arc, then **L** to go straight again. Click the first point to
@@ -58,7 +72,17 @@ close it.
    following it: change the outline and the stitch line moves with it.
 2. Select the stitch line, and choose **Add holes**. Pick your pricking iron in the panel. The panel
    shows how many holes that makes and the spacing they came out at, which is slightly different
-   from the iron's pitch because the holes have to fit the line exactly.
+   from the iron's pitch because the holes have to fit the line exactly. The line under them says
+   by how much: *Spacing matches the pitch*, or *Spacing is stretched 1.8 %*.
+
+The bar under the selected piece says the same in one line — holes, spacing against the pitch,
+the runs (each side's holes, its corner holes counted on both sides they join) and how many to cut
+— and under it *Next: Stitch line › Stitch holes › Seam allowance*: the next step is a button that
+makes it with your margin and default iron (*Settings → My tools*), and **Ctrl+Z** takes it back.
+**F6** goes into the bar and back to the board. *Settings → Appearance* turns it off.
+
+With nothing selected, **Properties** sums up the job: the pieces to cut, the holes to punch and the
+sheets to print.
 
 To stitch only some sides, as a pocket is, draw the stitch line yourself: *Draw as: Stitch* with
 the Polyline tool, along the sides to be sewn.
@@ -67,26 +91,37 @@ the Polyline tool, along the sides to be sewn.
 
 The **Problems** drawer at the bottom says if anything will not make a good template — holes too
 close to an edge, a stitch line that has lost its outline — and selecting a problem shows where.
+The narrow half of **Print** says it too: a check when there is nothing to fix, or the warning's
+△ or the error's ▲ and how many. Click it to open the drawer.
 
 ## 4. Save
 
-**Save** (**Ctrl+S**, **⌘S** on macOS) writes a `.lcp` file. If LeatherCAD or the computer stops
-unexpectedly, it offers your unsaved work back the next time it starts; if you close with unsaved
-changes, it asks first.
+**Save** (**Ctrl+S**, **⌘S** on macOS) writes a `.lcp` file. Beside the project's name the bar says
+*Unsaved changes* or *Saved*; with nothing to save, Save says so. If LeatherCAD or the computer
+stops unexpectedly, it offers your unsaved work back the next time it starts; if you close with
+unsaved changes, it asks first.
+
+The project's name is the file's and the PDF footer's. To change it, open the project menu — its
+button is the name — and choose **Rename…**; **Enter** keeps the new name, **Esc** puts the old one
+back.
 
 ## 5. Print, and check the print
 
-1. Choose the paper in your printer from the list beside **Print**. Each entry says what it
-   prints, for example *3 sheets of A4, portrait (Strap taped)* or *1 sheet of A4, landscape*, so
-   you can pick the one that uses the fewest sheets. **Parts** says which sheet each part prints
-   on, and why a part will not print (it is hidden, or it has a problem).
-2. Choose **Sheets** at the right of the bar under the project's name (**Ctrl+2**) to see the pieces
-   on the paper exactly as the PDF will put them. A part bigger than a sheet is printed across
+1. Choose the paper in your printer with the paper button beside **Export PDF** — it reads, for
+   example, *3 × A4 portrait*. Each paper in its list says how many sheets it takes, the
+   tooltip of **Portrait** and **Landscape** what the other way up would take, and the line under
+   them what is taped across sheets, so you can pick the one that uses the fewest sheets.
+   In Design, a piece that will not print has a mark on its row in **Parts**, whose tooltip says
+   why (it is hidden, or it has a problem); on the Sheets view, **Parts** says which sheet each
+   piece prints on.
+2. Choose **Sheets** in the middle of the top bar (**Ctrl+2**), or *See the sheets* under the paper,
+   to see the pieces on the paper exactly as the PDF will put them. A part bigger than a sheet is printed across
    several, taped together on a dashed join line with crosses on it; its joins also show on the
    board, labelled *Tape join*. Anything drawn in magenta is only on screen, never on paper.
    **Design** (**Ctrl+1**) takes you back to the board, where you left it.
-3. **Print** (**Ctrl+P**), the green button. LeatherCAD's Print Preview shows the PDF it will send,
-   sheet for sheet — numbered *Sheet 1 of 3* like the Sheets view. Choose the printer, the
+3. **Print** (**Ctrl+P**), the light button. Its Print Preview lists the problems first, if there
+   are any — the same list as the drawer; choose one to go to it — and nothing stops you printing
+   with them. It shows the PDF it will send, sheet for sheet — numbered *Sheet 1 of 3* like the Sheets view. Choose the printer, the
    sheets and how many copies; the scale is fixed at 100 %. **Print 3 sheets** sends them to the
    printer with scaling turned off. You do not set anything in a print dialog.
 
@@ -113,18 +148,45 @@ the size your software shows: it should be the size you drew.
 
 ## Where things are
 
-- **The top bar:** the project menu at its left — the LeatherCAD mark — holds *New project*,
-  *Open…*, *Save as…* and your recent projects. At its right, past the paper, **Export PDF** (with **▾** for SVG and DXF) and **Print**,
-  are **⚙** Settings and **?** Help.
+- **The top bar:** at its left, the project menu — the LeatherCAD mark and the project's name —
+  holds *New project*, *Open…*, *Save as…*, *Rename…* and your recent projects, then whether it is
+  saved. In the middle, **Design | Sheets**. At its right the paper, **Export PDF** (with **▾** for
+  SVG and DXF) and **Print** (with the problems), then **⚙** Settings and **?** Help (**F1**).
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*
-  (**Ctrl+/** or **?**) lists every key. **Ctrl+=** and **Ctrl+−** zoom, **Ctrl+0** fits the
-  pattern in the window, **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key works by where
-  it is on the keyboard — on a German or French one, Ctrl+= is the key right of 0 — and every list
-  and tooltip shows it as your keyboard prints it; a tool's letter stays its letter, wherever your
-  layout puts it.
+  (**Ctrl+/** or **?**) lists every key. **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key
+  works by where it is on the keyboard — **Shift+1** is the key with 1 on it, whatever it types
+  there — and every list and tooltip shows it as your keyboard prints it; a tool's letter stays its
+  letter, and zoom its **+** and **−**, wherever your layout puts them.
+- **Zoom:** the control at the board's bottom-right says the zoom and sets it: **−** and **+**
+  (**Ctrl+−** and **Ctrl+=**) step through round sizes — 50, 67, 75, 100, 125, 150, 200 % and on —
+  while the wheel zooms smoothly about the pointer; **Fit** (**Shift+1**, or double-click empty board), and the
+  percentage opens *Fit selection* (**Shift+2**), *True size, 100 %* (**Ctrl+0**) and 50, 200 and
+  400 %. At 100 % the board is drawn at 96 pixels to the inch, the size a screen is nominally
+  drawn at. Few screens are exactly that — a laptop often shows it a tenth or more smaller — so
+  hold a ruler to it before you trust it against a buckle. The zoom never changes what prints. Until 1.5, **Ctrl+0** fitted the pattern.
+- **Panels:** **[** folds Parts and **]** folds Properties to a 40 px strip, and the button at the
+  end of each panel's header does the same; **\\** is focus mode, which hides both and leaves the
+  rail its keys, until **\\** or **Esc** brings back what was there. Folded, Parts shows a
+  thumbnail of each piece — a click selects it, a locked one too — and Properties the mark of what
+  is selected. On a narrow window the app folds them itself (below 1280 px Properties, below 900 px
+  both), and a panel then opens over the board, until **Esc** or a click on the board; the three
+  chips at the status bar's right — *Parts*, *Focus*, *Properties* — reach them at every size. The
+  folds you make are kept for next time; the ones a small window makes are not. On a keyboard
+  other than a US one, the keys are where a US keyboard has `[`, `]` and `\`, shown as yours
+  prints them (`ü`, `+` and `#` on a German one).
+- **Parts:** each piece, with what it is made of nested the way it is built — *Outline › Stitch
+  line › Stitch holes* — and its hole counts. A piece folds with its arrow; a piece you pick on the
+  board opens and scrolls into view. Pointing at a row shows its lock and eye; a hidden or locked
+  feature keeps its mark. With a row focused, **↑** and **↓** move (and select), **→** opens a
+  piece, **←** closes it or goes up a level, **Space** hides or shows, **F2** renames, and
+  **Shift+F10** opens the row's menu; Tab leaves the tree. A locked feature is reached here.
 - **Settings** (**Ctrl+,**): clear the recent projects, and choose how the legend and the tool
   rail start. They stay as you left them.
+- **Settings › My tools:** the pricking irons you own, by your own names, and the one a new hole
+  set takes; and the stitch margin and leather thickness new stitch lines, seam allowances and
+  folds start with. Each new thing keeps its own numbers, so a pattern sent to someone with other
+  irons opens the same.
 - **Logs:** *Help → About LeatherCAD → Show log folder*. Nothing is ever uploaded; attach the log
   to a bug report.
 - **Licences:** *Help → About LeatherCAD → Third-party notices*, and `THIRD_PARTY_NOTICES.txt`

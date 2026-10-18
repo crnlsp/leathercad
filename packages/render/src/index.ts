@@ -30,6 +30,11 @@ export {
   cssPxPerMm,
   mmToPixels,
   pixelsToMm,
+  scaleAtZoomPercent,
+  nextZoomStop,
+  shownZoomPercent,
+  ZOOM_LIMITS,
+  ZOOM_STOPS,
   screenToWorld,
   visibleBoundsMm,
   worldToScreen,
@@ -67,3 +72,17 @@ export { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
 
 export type { SvgOptions } from './svg/backend.js';
 export { renderToSvgString } from './svg/backend.js';
+
+export type { PixelBox } from './thumbnail.js';
+export { thumbnailPath } from './thumbnail.js';
+
+export type {
+  ChipBox,
+  CssBox,
+  PlacedValueChips,
+  ValueChip,
+  ValueChipsInput,
+} from './valueChips.js';
+export { VALUE_CHIPS, placeValueChips } from './valueChips.js';
+export type { PlacedSelectionBar, SelectionBarInput } from './selectionBar.js';
+export { placeSelectionBar } from './selectionBar.js';

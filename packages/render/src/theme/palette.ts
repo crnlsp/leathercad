@@ -14,6 +14,12 @@ export const SHELL = {
   text: '#e6e8ea',
   textDim: '#8b929b',
   textMute: '#6b7079',
+  /**
+   * A scrollbar's thumb, on a track of whatever it scrolls (U.20): 3 : 1 on
+   * every surface that scrolls, so it is found without hunting. The value of
+   * `textMute`, which is kept for disabled words and placeholders.
+   */
+  scrollbar: '#6b7079',
 } as const;
 
 /**
@@ -57,15 +63,21 @@ export const ACCENT = {
 } as const;
 
 /**
- * Print (7.6): the one action that puts the pattern on paper, and the window's
- * primary action. Green, so it reads as *go* beside the tan of the maker's own
- * focus, and never drawn on the ground.
+ * The window's actions on the shell (R-06, U.7). **Print** is the one primary
+ * action, in the paper's colour: it is what goes on paper. Green left the
+ * actions in 1.5 — on the board green is the fold's colour (7.6 had Print
+ * green). Export PDF is a secondary action on `SHELL[600]`. Each is a split
+ * button whose narrow half is a shade apart: Print's problems indicator on
+ * `primarySide`, Export's menu on `secondarySide`.
  */
-export const GO = {
-  go: '#46b46b',
-  /** Its edge on hover. */
-  goInk: '#2f8f4e',
-  onGo: '#1d2126',
+export const ACTION = {
+  primary: GROUND.ground,
+  /** Print's main half under the pointer: lighter still. */
+  primaryHover: GROUND.pieceFill,
+  primarySide: GROUND.major,
+  secondarySide: '#3a3f47',
+  /** Words and glyphs on `primary`, `primarySide`, and the shell's warning and error. */
+  onPrimary: SHELL[900],
 } as const;
 
 /**

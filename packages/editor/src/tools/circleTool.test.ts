@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { PointerInput, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createCircleTool } from './circleTool.js';
+import { keyInput } from './keys.fixture.js';
 
 function harness(): { ctx: ToolContext; store: DocumentStore } {
   const store = new DocumentStore(emptyDocument('proj'));
@@ -88,7 +89,7 @@ describe('circle tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 0, y: 0 }));
     tool.onPointerMove?.(ctx, pointer({ x: 10, y: 0 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
     tool.onPointerUp?.(ctx, pointer({ x: 10, y: 0 }));
 
     expect(store.getState().document.project.parts).toHaveLength(0);

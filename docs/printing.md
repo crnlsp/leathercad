@@ -3,7 +3,7 @@
 **Packages:** `packages/export`, `packages/print`
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-17
 
 ---
 
@@ -256,7 +256,8 @@ before any tiled one:
   - The turn is exact: (x, y) becomes (−y, x), by a matrix with no rounding in it. No scale.
   - The part's words turn with it. Its name reads up its left side, from the sheet's right edge,
     as drafting reads a turned dimension, so the cut-out template is the same shape either way.
-  - Parts says *Sheet 1, turned*, since the board shows the part as drawn.
+  - Parts says *Sheet 1, turned* on the Sheets view, since the board shows the part as drawn
+    (Design's Parts tree no longer says where a part prints, U.8).
   - This lifts roadmap 7.2's "never turn until the model knows the grain", by decision
     (2026-10-01). A cut-out template carries nothing of the sheet it was printed on, and a taped
     join is the least accurate thing on a sheet. When grain arrives it will be an arrow on the
@@ -356,7 +357,7 @@ For tiled output, the difference between a usable pattern and a jigsaw puzzle.
   to the right`. That is what a maker with sheets spread on a table needs; the dashed line and its
   crosses show how. A printed sentence of instructions on every taped sheet did not earn its room,
   and `R1 C2` was a grid reference nobody holding paper needs.
-- **Not yet (7.2, 1.1):** edge arrows, the assembly sheet, and tape guides.
+- **Not yet (7.2, roadmap 1.6):** edge arrows, the assembly sheet, and tape guides.
 
 The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
 tiled part follows the packed parts on sheets of its own. A tiled part is never turned: it is tiled
@@ -637,7 +638,9 @@ that tests the units. Presets, choosing layers and the bounds are 6.4.
   and must never be presented as a printable pattern.
 - **Hole and thread report (CSV / Markdown)** — per part: contour length, stitch line length, hole
   count, achieved pitch, estimated thread length at 4× seam length. Trivial to generate from data
-  the evaluator already produces, and genuinely useful before starting a project.
+  the evaluator already produces, and genuinely useful before starting a project. Planned as
+  roadmap 9.12, the cutting and stitching list, which also settles the thread formula: the domain
+  model says 4–5×.
 - **G-code** — out of scope. Users with laser cutters have their own CAM and want DXF or SVG.
 
 ## 13. Printing from the app (7.6, 7.6b)
@@ -645,12 +648,14 @@ that tests the units. Presets, choosing layers and the bounds are 6.4.
 **Print → LeatherCAD's Print Preview → the printer.** The decision and what was measured are in
 [ADR 0019](adr/0019-print-from-the-app.md).
 
-**One PDF.** *Print* (green, the window's primary action, Ctrl+P) writes the PDF from the same
+**One PDF.** *Print* (the window's primary action, in the paper's colour since U.7, Ctrl+P) writes the PDF from the same
 `SheetPlan` as *Export PDF*, in the print form: every page upright, a landscape sheet turned a
 quarter on it (§6.1). The preview draws **that file** with pdf.js, so the sheets shown are the bytes
 sent, not a second drawing. Only its view of a landscape page is turned back, a quarter clockwise,
 so the sheet reads as the Sheets view shows it. `lp` then receives those bytes on its standard
-input. Its choices are only those that cannot change the size of what prints:
+input. The preview lists the design's problems first — the Problems drawer's list, in its order —
+and prints with them all the same (R-06). Its choices are only those that cannot change the size
+of what prints:
 
 | Choice | What it does |
 |---|---|

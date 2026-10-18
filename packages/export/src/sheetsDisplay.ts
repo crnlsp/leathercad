@@ -10,6 +10,7 @@ import {
 } from '@leathercad/geometry';
 import {
   CANVAS,
+  GROUND,
   PAPER_FURNITURE,
   ROLE_STYLES,
   SHEET,
@@ -130,6 +131,22 @@ export interface SheetsViewOptions {
   readonly selected?: ReadonlySet<string>;
   /** A part to halo, as under the pointer. */
   readonly hovered?: string | null;
+  /**
+   * The screen's words for what the view labels (U.9, ADR 0018), which the
+   * app supplies: a package below it holds no sentence of the interface's.
+   * Absent, the labels are the paper's own English and no piece is captioned.
+   */
+  readonly words?: SheetsWords;
+}
+
+/** The interface's words on the Sheets view. */
+export interface SheetsWords {
+  /** Above a sheet: "Sheet 1 of 2 · 2 pieces". */
+  readonly sheet: (number: number, count: number, pieces: number) => string;
+  /** Below a sheet holding pieces turned a quarter to save a sheet: "Outer, turned 90°". */
+  readonly turned: (names: readonly string[]) => string;
+  /** Below a taped piece's sheets: "Strap, taped: sheets 2–3". */
+  readonly taped: (name: string, sheets: readonly number[]) => string;
 }
 
 /**
@@ -155,6 +172,7 @@ export function sheetsView(
 ): readonly SheetsLayer[] {
   const selected = options.selected ?? new Set<string>();
   const hovered = options.hovered ?? null;
+  const { words } = options;
   const area = contentAreaMm(plan.setup);
   const m = plan.setup.marginsMm;
 
@@ -190,7 +208,8 @@ export function sheetsView(
     // Its number, above it: on screen only — the footer prints it.
     base.push(
       overlay(
-        sheetLabel(frame.index + 1, plan.sheets.length),
+        words?.sheet(frame.index + 1, plan.sheets.length, sheet.placements.length) ??
+          sheetLabel(frame.index + 1, plan.sheets.length),
         shift(0, frame.heightMm + 2),
         'left',
         'bottom',
@@ -218,6 +237,20 @@ export function sheetsView(
       pieces.push(...piece(placement, at, emphasis));
     }
 
+    // Pieces turned to save a sheet, named below it: the printed name runs up the
+    // piece's side, where nobody reads it. Screen only, and never over the pattern.
+    const turned = sheet.placements.filter((placement) => placement.turned);
+    if (words !== undefined && turned.length > 0) {
+      base.push(
+        overlay(
+          words.turned(turned.map((placement) => placement.part.name)),
+          shift(0, -2),
+          'left',
+          'top',
+        ),
+      );
+    }
+
     if (ink.clip === null) {
       base.push(...pieces);
     } else {
@@ -236,7 +269,8 @@ export function sheetsView(
   for (const group of layout.groups) {
     base.push(
       overlay(
-        `${group.name}, taped: ${describeSheetNumbers(group.sheets).toLowerCase()}`,
+        words?.taped(group.name, group.sheets) ??
+          `${group.name}, taped: ${describeSheetNumbers(group.sheets).toLowerCase()}`,
         { x: group.bounds.minX, y: group.bounds.minY - 2 },
         'left',
         'top',
@@ -313,20 +347,27 @@ function stroke(
   };
 }
 
+/**
+ * Screen-only words, in the board's own voice (R-01, U.2): 12 px at 600, in
+ * `GROUND.label`, 4.5:1 on the sheets' ground where the furniture magenta is
+ * not. They sit on the bare ground, so they need no halo.
+ */
 function overlay(
   text: string,
   at: Vec2,
   align: 'left' | 'center',
   baseline: 'top' | 'bottom',
 ): DisplayItem {
+  const { name } = CANVAS.text;
   return {
     kind: 'overlay-text',
     role: 'construction',
     at,
     text,
-    sizePx: SHEET.labelPx,
-    colour: SHEET.furniture,
+    sizePx: name.sizePx,
+    colour: GROUND.label,
     align,
     baseline,
+    weight: name.weight,
   };
 }

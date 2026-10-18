@@ -4,10 +4,15 @@ import { MatOps, RectOps } from '@leathercad/geometry';
 
 import {
   TRUE_SIZE_CSS_PX_PER_MM,
+  ZOOM_LIMITS,
+  ZOOM_STOPS,
   cssPxPerMm,
   mmToPixels,
   pixelsToMm,
+  nextZoomStop,
+  scaleAtZoomPercent,
   screenToWorld,
+  shownZoomPercent,
   visibleBoundsMm,
   worldToCss,
   worldToScreen,
@@ -141,6 +146,27 @@ describe('zoom as the maker reads it', () => {
       }),
     );
   });
+
+  it('turns a percentage into the scale that shows it, and back, on any display (U.4)', () => {
+    fc.assert(
+      fc.property(ratios, fc.double({ min: 1, max: 10_000, noNaN: true }), (dpr, percent) => {
+        const scale = scaleAtZoomPercent(percent, dpr);
+        return closeTo(zoomPercent({ ...view, scale, dpr }), percent, 1e-9 * percent);
+      }),
+    );
+    fc.assert(
+      fc.property(ratios, fc.double({ min: 0.05, max: 400, noNaN: true }), (dpr, scale) => {
+        const back = scaleAtZoomPercent(zoomPercent({ ...view, scale, dpr }), dpr);
+        return closeTo(back, scale, 1e-9 * scale);
+      }),
+    );
+  });
+
+  it('puts 100 % at true size: device pixels are the ratio times 96 to the inch', () => {
+    expect(scaleAtZoomPercent(100, 1)).toBeCloseTo(96 / 25.4, 12);
+    expect(scaleAtZoomPercent(100, 2)).toBeCloseTo((2 * 96) / 25.4, 12);
+    expect(scaleAtZoomPercent(50, 2)).toBeCloseTo(96 / 25.4, 12);
+  });
 });
 
 describe('worldToCss', () => {
@@ -171,5 +197,67 @@ describe('worldToCss', () => {
 
   it('is worldToScreen exactly on a 1× display', () => {
     expect(worldToCss(view)).toEqual(worldToScreen(view));
+  });
+});
+
+describe('the zoom ladder − and + step along (U.4)', () => {
+  /** Any zoom the camera can be at, and a little either side of its limits. */
+  const anyPercent = fc.double({ min: ZOOM_LIMITS.min / 2, max: ZOOM_LIMITS.max * 2, noNaN: true });
+
+  it('runs from the lower limit to the upper, in whole percentages, rising', () => {
+    expect(ZOOM_STOPS[0]).toBe(ZOOM_LIMITS.min);
+    expect(ZOOM_STOPS.at(-1)).toBe(ZOOM_LIMITS.max);
+    expect(ZOOM_STOPS).toContain(100);
+    for (const [i, stop] of ZOOM_STOPS.entries()) {
+      expect(Number.isInteger(stop)).toBe(true);
+      if (i > 0) expect(stop).toBeGreaterThan(ZOOM_STOPS[i - 1]!);
+    }
+  });
+
+  it('goes to a stop whose whole percentage is past the one shown, until a limit', () => {
+    fc.assert(
+      fc.property(anyPercent, (percent) => {
+        const shown = shownZoomPercent(percent);
+        const up = nextZoomStop(percent, 1);
+        const down = nextZoomStop(percent, -1);
+        expect(ZOOM_STOPS).toContain(up);
+        expect(ZOOM_STOPS).toContain(down);
+        if (shown < ZOOM_LIMITS.max) expect(up).toBeGreaterThan(shown);
+        else expect(up).toBe(ZOOM_LIMITS.max);
+        if (shown > ZOOM_LIMITS.min) expect(down).toBeLessThan(shown);
+        else expect(down).toBe(ZOOM_LIMITS.min);
+      }),
+    );
+  });
+
+  it('skips no stop: nothing on the ladder lies between the zoom shown and the next', () => {
+    fc.assert(
+      fc.property(anyPercent, (percent) => {
+        const shown = shownZoomPercent(percent);
+        const up = nextZoomStop(percent, 1);
+        const down = nextZoomStop(percent, -1);
+        return ZOOM_STOPS.every(
+          (stop) => !(stop > shown && stop < up) && !(stop < shown && stop > down),
+        );
+      }),
+    );
+  });
+
+  it('comes back to the same stop after + then −, or − then +', () => {
+    for (const stop of ZOOM_STOPS) {
+      if (stop < ZOOM_LIMITS.max) expect(nextZoomStop(nextZoomStop(stop, 1), -1)).toBe(stop);
+      if (stop > ZOOM_LIMITS.min) expect(nextZoomStop(nextZoomStop(stop, -1), 1)).toBe(stop);
+    }
+  });
+
+  it('judges the zoom by what the control shows: 99.6 % is on the 100 stop', () => {
+    expect(nextZoomStop(99.6, 1)).toBe(125);
+    expect(nextZoomStop(99.6, -1)).toBe(75);
+    expect(nextZoomStop(100.4, -1)).toBe(75);
+    // After a fit at 57 %: + gives 67, 75, then true size.
+    expect(nextZoomStop(57, 1)).toBe(67);
+    expect(nextZoomStop(67, 1)).toBe(75);
+    expect(nextZoomStop(75, 1)).toBe(100);
+    expect(nextZoomStop(57, -1)).toBe(50);
   });
 });

@@ -19,7 +19,7 @@ Draw in real millimetres, stitch along the edge, and print a template you can cu
 
 <br>
 
-<img src="docs/images/design.png" width="900" alt="LeatherCAD with a bifold wallet drafted: the outer panel stitched all round with a fold down the middle, the lining, and a card pocket with a thumb scoop. Parts on the left, the selected stitch holes' pitch and spacing on the right.">
+<img src="docs/images/design.png" width="900" alt="LeatherCAD with a bifold wallet drafted: the outer panel stitched all round with a fold down the middle, the lining, and a card pocket with a thumb scoop. Parts on the left as a tree, the selected stitch holes' pitch, spacing and runs on the right, and the same in a bar under the piece.">
 
 </div>
 
@@ -101,12 +101,12 @@ Closing with unsaved changes asks first, and after a crash LeatherCAD offers you
 <table>
 <tr>
 <td width="62%" align="center">
-<img src="docs/images/sheets.png" alt="The Sheets view: the pocket on sheet 1, and the outer and lining each taped across two A4 sheets, with the sheet numbers and join lines.">
+<img src="docs/images/sheets.png" alt="The Sheets view: the outer turned to fit sheet 1, and the lining and the card pocket on sheet 2, both A4, with the sheet numbers.">
 <br><sub><b>The Sheets view</b> — the pieces on the paper, exactly as the PDF places them.</sub>
 </td>
 <td width="38%" align="center">
-<img src="docs/images/print.png" alt="The first page of the exported PDF: the card pocket, labelled 'cut 2', with its stitch holes, and the 50 mm square and 100 mm ruler at the bottom.">
-<br><sub><b>The printed sheet</b> — with the square and ruler to check it by.</sub>
+<img src="docs/images/print.png" alt="The first page of the exported PDF: the outer, turned to fit, with its stitch holes and fold, and the 100 × 5 mm box at the foot of the sheet.">
+<br><sub><b>The printed sheet</b> — with the 100 × 5 mm box to check it by.</sub>
 </td>
 </tr>
 </table>
@@ -177,6 +177,8 @@ the print. [Glossary](docs/glossary.md) — the leathercraft words the app uses.
 
 | Document | What it covers |
 |---|---|
+| [product-spec.md](docs/product-spec.md) | What LeatherCAD is and is not, its principles and its direction |
+| [product-roadmap.md](docs/product-roadmap.md) | Where it is going: themes, milestones and what depends on what, drawn |
 | [architecture.md](docs/architecture.md) | The stack, the layers and the rules between them |
 | [domain-model.md](docs/domain-model.md) | Parts, features, derivation, stitching, validation |
 | [geometry.md](docs/geometry.md) | Representation, numerics, offsetting |

@@ -1,6 +1,15 @@
 import type { Mm } from '@leathercad/core';
 import { MatOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
-import { pixelsToMm, screenToWorld, worldToScreen, type ViewportView } from '@leathercad/render';
+import {
+  ZOOM_LIMITS,
+  nextZoomStop,
+  pixelsToMm,
+  scaleAtZoomPercent,
+  screenToWorld,
+  worldToScreen,
+  zoomPercent,
+  type ViewportView,
+} from '@leathercad/render';
 
 /**
  * The camera: the one object that knows how millimetres relate to pixels.
@@ -26,14 +35,16 @@ export class Viewport {
   dpr = 1;
 
   /**
-   * Zoom limits.
-   *
-   * The lower bound keeps a 2 m project on screen; the upper is well past the
-   * point where a 0.1 µm storage quantum is a whole pixel, so there is nothing
-   * further to see.
+   * The scale held between the zoom limits — percentages, `ZOOM_LIMITS`, so a
+   * 1× and a 2× display stop at the same zoom (U.4); they were device pixels.
    */
-  static readonly MIN_SCALE = 0.05;
-  static readonly MAX_SCALE = 400;
+  private clampScale(scale: number): number {
+    return clamp(
+      scale,
+      scaleAtZoomPercent(ZOOM_LIMITS.min, this.dpr),
+      scaleAtZoomPercent(ZOOM_LIMITS.max, this.dpr),
+    );
+  }
 
   /** The plain-data view the renderer consumes. */
   toView(): ViewportView {
@@ -47,9 +58,14 @@ export class Viewport {
   }
 
   resize(widthPx: number, heightPx: number, dpr = this.dpr): void {
+    // The scale is device pixels: on a display of another ratio — the window
+    // moved to another screen — the same zoom is that many more (U.4), or
+    // 100 % would stop being true size.
+    const scale = (this.scale * dpr) / this.dpr;
     this.widthPx = widthPx;
     this.heightPx = heightPx;
     this.dpr = dpr;
+    this.scale = this.clampScale(scale);
   }
 
   /**
@@ -108,13 +124,29 @@ export class Viewport {
    */
   zoomAt(anchorPx: Vec2, factor: number): void {
     const before = this.toWorld(anchorPx);
-    this.scale = clamp(this.scale * factor, Viewport.MIN_SCALE, Viewport.MAX_SCALE);
+    this.scale = this.clampScale(this.scale * factor);
     const after = this.toWorld(anchorPx);
 
     this.centreMm = {
       x: this.centreMm.x + (before.x - after.x),
       y: this.centreMm.y + (before.y - after.y),
     };
+  }
+
+  /**
+   * Zooms to a percentage, 100 % being true size (U.4), about the canvas
+   * centre: the camera centre is the millimetre there, so it stays.
+   */
+  zoomToPercent(percent: number): void {
+    this.scale = this.clampScale(scaleAtZoomPercent(percent, this.dpr));
+  }
+
+  /**
+   * − and + (U.4): to the next stop of the zoom ladder below or above the
+   * percentage shown, about the canvas centre. The wheel stays continuous.
+   */
+  stepZoom(direction: 1 | -1): void {
+    this.zoomToPercent(nextZoomStop(zoomPercent(this.toView()), direction));
   }
 
   /** Drags the drawing by a screen delta. */
@@ -141,7 +173,7 @@ export class Viewport {
     const scaleX = width > 0 ? usableWidth / width : Number.POSITIVE_INFINITY;
     const scaleY = height > 0 ? usableHeight / height : Number.POSITIVE_INFINITY;
 
-    this.scale = clamp(Math.min(scaleX, scaleY), Viewport.MIN_SCALE, Viewport.MAX_SCALE);
+    this.scale = this.clampScale(Math.min(scaleX, scaleY));
   }
 
   /** The millimetre rectangle currently on screen. */

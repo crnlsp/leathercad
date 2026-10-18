@@ -1,9 +1,6 @@
 import { formatMm, formatNumber } from '@leathercad/core';
 import {
   type DocumentStore,
-  addAllowance,
-  addStitchHoles,
-  addStitchLine,
   allowanceRefusal,
   deleteRefusal,
   flipFeatures,
@@ -20,17 +17,25 @@ import {
 } from '@leathercad/document';
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
+import type { SizeDraft } from '@leathercad/editor';
 import { PathOps } from '@leathercad/geometry';
-import { evaluate, followRefusal, type ResolvedFeature } from '@leathercad/domain';
+import { followRefusal, type ResolvedFeature } from '@leathercad/domain';
+import { Trash2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
-import { useKeysInSentences } from './keyCaps.js';
-import { IRON_PRESETS } from './irons.js';
+import { KeyCap, useKeysInSentences } from './keyCaps.js';
+import { MARGIN_MIN_MM, MARGIN_STEP_MM, type MakerTools } from './irons.js';
+import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nextSteps.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
+import { jobTotals, trailOf } from './propertyFacts.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
+import { resolvedFor } from './sheets.js';
 import { FeatureEditor } from './featureEditors/index.js';
+import { FLIP_ICON, MIRROR_ICON } from './icons/arrange.js';
+import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
 
 /**
@@ -48,6 +53,11 @@ export function PropertyPanel({
   nextId,
   requestDelete,
   requestDeletePart,
+  tools,
+  onTools,
+  drawingPiece = false,
+  sizing = null,
+  toggle,
 }: {
   store: DocumentStore;
   project: Project;
@@ -61,6 +71,16 @@ export function PropertyPanel({
   requestDelete: (ids: readonly string[]) => void;
   /** The same for a whole part, picked by its heading. */
   requestDeletePart: (partId: string) => void;
+  /** The maker's irons and starting values, from Settings › My tools (U.13). */
+  tools: MakerTools;
+  /** Changes My tools — the same preferences Settings writes, so there is one source (U.18). */
+  onTools: (changes: Partial<MakerTools>) => void;
+  /** A Draw tool is out that makes a new piece: an outline, or a stitch line with its allowance (U.18). */
+  drawingPiece?: boolean;
+  /** The rectangle being drawn, while one is (U.16): its sizes, as the chips on the board show them. */
+  sizing?: SizeDraft | null;
+  /** Its fold (U.5), at the end of the header's first row. */
+  toggle?: ReactNode;
 }) {
   const { t } = useI18n();
   const keys = useKeysInSentences();
@@ -75,6 +95,7 @@ export function PropertyPanel({
         part={parts[0]!}
         diagnostics={diagnostics}
         requestDeletePart={requestDeletePart}
+        toggle={toggle}
       />
     );
   }
@@ -83,11 +104,13 @@ export function PropertyPanel({
     return (
       <aside
         className="panel properties"
+        tabIndex={-1}
         data-testid="property-panel"
         aria-label={t('properties.title')}
       >
         <header className="panel-header">
-          <h2>{t('properties.title')}</h2>
+          <h2 className="header-name">{t('properties.title')}</h2>
+          {toggle}
         </header>
         <p className="panel-empty">
           {selected.size > 1
@@ -96,26 +119,60 @@ export function PropertyPanel({
               ? t('properties.manyPartsSelected', { count: parts.length })
               : t('properties.nothingSelected', keys)}
         </p>
+        {sizing !== null && selected.size === 0 && (
+          <section className="panel-section" data-testid="drawing-sizes">
+            <div className="panel-heading">{t('properties.drawing')}</div>
+            {(
+              [
+                ['width', t('editor.width'), sizing.width],
+                ['height', t('editor.height'), sizing.height],
+                ['corner', t('toolOptions.cornerRadius'), sizing.corner],
+              ] as const
+            ).map(([name, label, value]) => (
+              <div className="readout" key={name}>
+                <span>{label}</span>
+                <b data-testid={`drawing-${name}`}>{formatMm(value, 1)}</b>
+              </div>
+            ))}
+          </section>
+        )}
+        {drawingPiece && selected.size === 0 && parts.length === 0 && (
+          <AfterTheOutline tools={tools} onTools={onTools} />
+        )}
+        {sizing === null &&
+          selected.size === 0 &&
+          parts.length === 0 &&
+          project.parts.length > 0 && <JobTotals project={project} />}
       </aside>
     );
   }
 
   const { part, feature } = found;
   const problems = diagnostics.filter((d) => d.featureId === feature.id);
-  const resolved = evaluate(project)
+  const resolved = resolvedFor(project)
     .parts.flatMap((p) => p.features)
     .find((entry) => entry.feature.id === feature.id);
+  // The piece is its outline (Q28): selecting it is selecting the piece, so
+  // its name and how many to cut are asked here and nowhere else (R-05).
+  const isOutline = feature.kind === 'cut-contour' && feature.role === 'outer';
 
+  /*
+    R-05's order, the order of the work: what it is made of and what that came
+    out as; then what it is called and what it follows; then what to make
+    from it next; then arranging it; and deleting it last, alone at the foot.
+  */
   return (
     <aside
       className="panel properties"
+      tabIndex={-1}
       data-testid="property-panel"
       aria-label={t('properties.title')}
     >
       {/*
         What is selected stays in view however far the fields scroll: its mark,
         its name and what it is (UI Foundations §7.1) — named by the same mark
-        the parts tree uses (F.6).
+        the parts tree uses (F.6) — and under it, where it is: the piece, how
+        many are cut, and the chain it follows.
       */}
       <header className="panel-header" data-testid="property-header">
         <MarkOf feature={feature} />
@@ -133,12 +190,17 @@ export function PropertyPanel({
             {t('properties.locked')}
           </span>
         )}
+        {toggle}
+        <p className="header-trail" data-testid="property-trail">
+          {[
+            t('properties.where', { part: part.name, quantity: part.quantity }),
+            ...trailOf(project, feature),
+            t(`featureKind.${kindOf(feature)}`),
+          ].join(' › ')}
+        </p>
       </header>
 
-      <PartFields store={store} part={part} />
-
-      <section className="panel-section">
-        <div className="panel-heading">{t(`featureKind.${kindOf(feature)}`)}</div>
+      <div className="panel-group">
         {/*
           A `fieldset` rather than a `disabled` on each control: every field in
           here, and every field a later editor adds, is disabled by the fact of
@@ -152,6 +214,33 @@ export function PropertyPanel({
               {t('properties.lockedNote')}
             </p>
           )}
+          <FeatureEditor
+            store={store}
+            feature={feature}
+            holes={resolved?.ok === true ? resolved.holes : undefined}
+            spacingReported={
+              problems.find((d) => d.problem.code === 'HOLE_SPACING_DEVIATION')?.severity
+            }
+            irons={tools.irons}
+          />
+        </fieldset>
+
+        {resolved?.ok === true && (
+          <Measured project={project} feature={feature} resolved={resolved} />
+        )}
+
+        {problems.length > 0 && (
+          <section className="panel-section" data-testid="feature-problems">
+            <div className="panel-heading">
+              {t('properties.problems', { count: problems.length })}
+            </div>
+            <ProblemRows diagnostics={problems} project={project} showWhere={false} />
+          </section>
+        )}
+      </div>
+
+      <div className="panel-group" data-testid="property-identity">
+        <fieldset className="field-group" disabled={feature.locked}>
           <label className="field">
             <span className="field-label">{t('properties.name')}</span>
             <span className="field-input">
@@ -163,14 +252,14 @@ export function PropertyPanel({
             </span>
           </label>
 
+          {feature.source.kind === 'derived' && (
+            <FollowsField store={store} project={project} feature={feature} />
+          )}
+
           {feature.frozenFrom !== undefined && (
             <p className="panel-note" data-testid="frozen-note">
               {t('properties.frozenNote', { source: feature.frozenFrom })}
             </p>
-          )}
-
-          {feature.source.kind === 'derived' && (
-            <FollowsField store={store} project={project} feature={feature} />
           )}
 
           {feature.kind !== 'text-label' &&
@@ -196,75 +285,10 @@ export function PropertyPanel({
                     })}
               </p>
             )}
-
-          <FeatureEditor
-            store={store}
-            feature={feature}
-            holes={resolved?.ok === true ? resolved.holes : undefined}
-          />
         </fieldset>
-      </section>
 
-      {resolved?.ok === true && (
-        <Measured project={project} feature={feature} resolved={resolved} />
-      )}
-
-      {problems.length > 0 && (
-        <section className="panel-section" data-testid="feature-problems">
-          <div className="panel-heading">
-            {t('properties.problems', { count: problems.length })}
-          </div>
-          <ProblemRows diagnostics={problems} project={project} showWhere={false} />
-        </section>
-      )}
-
-      {/*
-        Flipping the piece itself, about its own centre — it stays where it is
-        and faces the other way, and nothing is linked afterwards. The mirror
-        below is the other one: a counterpart that keeps following this piece.
-      */}
-      {/*
-        Asked before the gesture is offered, from the same query the command
-        checks, so a button that would do nothing says why instead (X1).
-      */}
-      <section className="panel-section">
-        <div className="panel-heading small">{t('properties.flipHeading')}</div>
-        <ReasonedRow
-          buttons={[
-            flipButton(store, project, [feature.id], 'horizontal', t),
-            flipButton(store, project, [feature.id], 'vertical', t),
-          ]}
-        />
-      </section>
-
-      {/*
-        Mirror is the other thing entirely: flip changes this piece, mirror
-        makes a counterpart that stays matched to it (ADR 0012). Side by side
-        because that is where the maker looks for both, and named differently
-        because they are not variants of each other.
-      */}
-      <section className="panel-section">
-        <div className="panel-heading small">{t('properties.mirrorHeading')}</div>
-        <ReasonedRow
-          buttons={[
-            mirrorButton(store, project, feature, 'horizontal', nextId, t),
-            mirrorButton(store, project, feature, 'vertical', nextId, t),
-          ]}
-        />
-        {/*
-          On its own row: three buttons do not fit the panel's width, and a
-          properties panel that scrolls sideways is a broken one. It earns the
-          room — it is the only one of the three that makes a counterpart which
-          keeps following something.
-        */}
-        <FoldMirrorButton
-          store={store}
-          project={project}
-          part={part}
-          feature={feature}
-          nextId={nextId}
-        />
-      </section>
+        {isOutline && <PartFields store={store} part={part} underOutline />}
+      </div>
 
       <DeriveActions
         store={store}
@@ -272,7 +296,43 @@ export function PropertyPanel({
         part={part}
         feature={feature}
         nextId={nextId}
+        tools={tools}
       />
+
+      <section className="panel-group arrange" data-testid="arrange">
+        <div className="panel-heading">{t('properties.arrange')}</div>
+        {/*
+          Flipping the piece itself, about its own centre — it stays where it
+          is and faces the other way, and nothing is linked afterwards. Asked
+          before the gesture is offered, from the same query the command
+          checks, so a button that would do nothing says why instead (X1).
+        */}
+        <ReasonedRow
+          label={t('properties.flipLabel')}
+          buttons={[
+            flipButton(store, project, [feature.id], 'horizontal', t),
+            flipButton(store, project, [feature.id], 'vertical', t),
+          ]}
+        />
+        {/*
+          Mirror is the other thing entirely: flip changes this piece, mirror
+          makes a counterpart that stays matched to it (ADR 0012). Side by side
+          because that is where the maker looks for both, and named differently
+          because they are not variants of each other. Across fold is the only
+          one that keeps following something, so it carries its words.
+        */}
+        <ReasonedRow
+          label={t('properties.mirrorLabel')}
+          buttons={[
+            mirrorButton(store, project, feature, 'horizontal', nextId, t),
+            mirrorButton(store, project, feature, 'vertical', nextId, t),
+            ...foldMirrorButton(store, project, part, feature, nextId, t),
+          ]}
+        />
+        <p className="panel-note">
+          {t(`properties.mirrorNote.${isOutline ? 'piece' : 'counterpart'}`)}
+        </p>
+      </section>
 
       {/*
         Asked here too, and for the same reason as the flips: without it a
@@ -280,19 +340,105 @@ export function PropertyPanel({
         answers "delete them too", and nothing happens — a question asked
         about something that was never going to be allowed.
       */}
-      <DeleteButton project={project} feature={feature} requestDelete={requestDelete} />
+      <DeleteFooter
+        testId="delete-feature"
+        reason={deleteRefusal(project, [feature.id])}
+        onClick={() => requestDelete([feature.id])}
+      >
+        {t('actions.delete')}
+      </DeleteFooter>
     </aside>
   );
 }
 
-/** A part's own fields: what it is called and how many to cut. */
-function PartFields({ store, part }: { store: DocumentStore; part: Part }) {
+/**
+ * The job, with nothing selected (R-05, the spec's §7 question 4): the pieces
+ * to cut, the holes to punch, the sheets to print — "3 · 4 to cut", "250 ·
+ * 146 + 52 ×2", "2 · A4, portrait", as mockup 01 reads the sample.
+ */
+function JobTotals({ project }: { project: Project }) {
+  const { t } = useI18n();
+  const job = jobTotals(project);
+  const paper = {
+    paper: job.paper,
+    orientation: t(`sheets.orientation.${job.orientation}`),
+  };
+  const holeSets = job.holeSets.map((set) =>
+    set.cut > 1
+      ? t('properties.job.timesCut', { holes: set.holes, cut: set.cut })
+      : String(set.holes),
+  );
+  const rows = [
+    {
+      id: 'pieces',
+      label: t('properties.job.pieces'),
+      value: job.pieces,
+      detail: t('properties.job.toCut', { count: job.toCut }),
+    },
+    {
+      id: 'holes',
+      label: t('properties.job.holes'),
+      value: job.holes,
+      // Only when it adds something: one set cut once is the total again.
+      detail:
+        holeSets.length > 1 || job.holeSets.some((set) => set.cut > 1)
+          ? holeSets.join(' + ')
+          : null,
+    },
+    {
+      id: 'sheets',
+      label: t('properties.job.sheets'),
+      value: job.sheets,
+      detail: t(
+        job.scaleCheckOnly ? 'properties.job.scaleCheckOnly' : 'properties.job.paper',
+        paper,
+      ),
+    },
+  ];
+
+  return (
+    <section className="panel-group job" data-testid="job-totals">
+      <div className="panel-heading">
+        {project.name.trim() === '' ? t('app.untitled') : project.name}
+      </div>
+      {rows.map((row) => (
+        <div key={row.id} className="job-row" data-testid={`job-${row.id}`}>
+          <span className="field-label">{row.label}</span>
+          <span className="job-value">
+            <b>{row.value}</b>
+            {row.detail !== null && <span className="job-detail"> · {row.detail}</span>}
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/**
+ * A part's own fields: what it is called and how many to cut.
+ *
+ * Under an outline (`underOutline`) they follow the outline's own Name, so the
+ * piece's is labelled *Piece* and the heading goes: two fields both called
+ * Name, one renaming the outline and one the piece, invite typing into the
+ * wrong one.
+ */
+function PartFields({
+  store,
+  part,
+  underOutline = false,
+}: {
+  store: DocumentStore;
+  part: Part;
+  underOutline?: boolean;
+}) {
   const { t } = useI18n();
   return (
     <section className="panel-section">
-      <div className="panel-heading">{t('properties.part')}</div>
+      {!underOutline && <div className="panel-heading">{t('properties.part')}</div>}
       <label className="field">
-        <span className="field-label">{t('properties.name')}</span>
+        <span className="field-label">
+          {underOutline ? t('properties.piece') : t('properties.name')}
+        </span>
         <span className="field-input">
           <input
             type="text"
@@ -325,12 +471,14 @@ function PartProperties({
   part,
   diagnostics,
   requestDeletePart,
+  toggle,
 }: {
   store: DocumentStore;
   project: Project;
   part: Part;
   diagnostics: readonly Diagnostic[];
   requestDeletePart: (partId: string) => void;
+  toggle: ReactNode;
 }) {
   const { t } = useI18n();
   const ids = part.features.map((feature) => feature.id);
@@ -340,42 +488,51 @@ function PartProperties({
   const resolved =
     outline === undefined
       ? undefined
-      : evaluate(project)
+      : resolvedFor(project)
           .parts.flatMap((p) => p.features)
           .find((entry) => entry.feature.id === outline.id);
   const problems = diagnostics.filter((d) => d.partId === part.id);
+  // The piece's size is its outline's: the leather it takes.
+  const measured = outline !== undefined && resolved?.ok === true;
 
+  // The feature panel's order (R-05): what it came out as, what it is
+  // called, arranging it, and deleting it last.
   return (
     <aside
       className="panel properties"
+      tabIndex={-1}
       data-testid="property-panel"
       aria-label={t('properties.title')}
     >
       <header className="panel-header" data-testid="property-header">
         <FeatureMark mark="piece" />
         <h2 className="header-name">{part.name}</h2>
+        {toggle}
       </header>
 
-      <PartFields store={store} part={part} />
-
-      {/* The piece's size is its outline's: the leather it takes. */}
-      {outline !== undefined && resolved?.ok === true && (
-        <Measured project={project} feature={outline} resolved={resolved} />
+      {(measured || problems.length > 0) && (
+        <div className="panel-group">
+          {measured && <Measured project={project} feature={outline} resolved={resolved} />}
+          {problems.length > 0 && (
+            <section className="panel-section" data-testid="part-problems">
+              <div className="panel-heading">
+                {t('properties.problems', { count: problems.length })}
+              </div>
+              <ProblemRows diagnostics={problems} project={project} />
+            </section>
+          )}
+        </div>
       )}
 
-      {problems.length > 0 && (
-        <section className="panel-section" data-testid="part-problems">
-          <div className="panel-heading">
-            {t('properties.problems', { count: problems.length })}
-          </div>
-          <ProblemRows diagnostics={problems} project={project} />
-        </section>
-      )}
+      <div className="panel-group">
+        <PartFields store={store} part={part} />
+      </div>
 
       {ids.length > 0 && (
-        <section className="panel-section">
-          <div className="panel-heading small">{t('properties.flipHeading')}</div>
+        <section className="panel-group arrange" data-testid="arrange">
+          <div className="panel-heading">{t('properties.arrange')}</div>
           <ReasonedRow
+            label={t('properties.flipLabel')}
             buttons={[
               flipButton(store, project, ids, 'horizontal', t),
               flipButton(store, project, ids, 'vertical', t),
@@ -384,14 +541,13 @@ function PartProperties({
         </section>
       )}
 
-      <ReasonedButton
+      <DeleteFooter
         testId="delete-part"
-        variant="destructive"
         reason={deleteRefusal(project, ids)}
         onClick={() => requestDeletePart(part.id)}
       >
         {t('actions.deletePart')}
-      </ReasonedButton>
+      </DeleteFooter>
     </aside>
   );
 }
@@ -435,7 +591,8 @@ function mirrorButton(
       store.dispatch(mirrorFeatures([feature.id], [id], placement, [nextId()]));
       store.select([id]);
     },
-    children: t(`properties.mirror.${axis}`),
+    label: t(`properties.mirror.${axis}`),
+    children: <Icon of={MIRROR_ICON[axis]} />,
   };
 }
 
@@ -446,66 +603,74 @@ function mirrorButton(
  * it, because the fold is an explicit dependency and never a guess: a mirror
  * about the wrong crease is not visibly wrong until the leather is cut. With
  * several folds the maker has to say which, which is 4.8b's selection path
- * rather than this shortcut.
+ * rather than this shortcut. In Mirror's row, so its reason joins theirs.
  */
-function FoldMirrorButton({
-  store,
-  project,
-  part,
-  feature,
-  nextId,
-}: {
-  store: DocumentStore;
-  project: Project;
-  part: Part;
-  feature: Feature;
-  nextId: () => string;
-}) {
-  const { t } = useI18n();
+function foldMirrorButton(
+  store: DocumentStore,
+  project: Project,
+  part: Part,
+  feature: Feature,
+  nextId: () => string,
+  t: Translate,
+): ReasonedButtonProps[] {
   const folds = part.features.filter((candidate) => candidate.kind === 'fold-line');
-  if (folds.length !== 1) return null;
+  if (folds.length !== 1) return [];
 
   const fold = folds[0]!;
 
-  return (
-    <ReasonedButton
-      testId="mirror-across-fold"
-      reason={foldMirrorRefusal(project, [feature.id], fold.id)}
-      hint={t('properties.foldMirrorHint', { fold: fold.name })}
-      onClick={() => {
+  return [
+    {
+      testId: 'mirror-across-fold',
+      reason: foldMirrorRefusal(project, [feature.id], fold.id),
+      hint: t('properties.foldMirrorHint', { fold: fold.name }),
+      onClick: () => {
         const id = nextId();
         store.dispatch(mirrorAcrossFold([feature.id], [id], fold.id));
         store.select([id]);
-      }}
-    >
-      {t('properties.foldMirror')}
-    </ReasonedButton>
-  );
+      },
+      // "Across fold" beside the row's "Mirror"; named in full, which holds
+      // the words it shows.
+      label: t('properties.foldMirror'),
+      children: (
+        <>
+          <FeatureMark mark="mirror-across-fold" />
+          {t('properties.foldMirrorLabel')}
+        </>
+      ),
+    },
+  ];
 }
 
-/** Removing the piece, or saying why it cannot be removed. */
-function DeleteButton({
-  project,
-  feature,
-  requestDelete,
-}: {
-  project: Project;
-  feature: Feature;
-  requestDelete: (ids: readonly string[]) => void;
-}) {
-  const { t } = useI18n();
+/**
+ * Removing the piece or the feature, or saying why it cannot be removed —
+ * alone in a footer under a rule, red, with its glyph and its key (R-05), and
+ * in view however far the fields above it scroll. Deleting is one step of
+ * undo, and asks first when something depends on it (ADR 0009).
+ */
+function DeleteFooter({
+  testId,
+  reason,
+  onClick,
+  children,
+}: Pick<ReasonedButtonProps, 'testId' | 'reason' | 'onClick' | 'children'>) {
   return (
-    <ReasonedButton
-      testId="delete-feature"
-      variant="destructive"
-      // Over what the delete would take with it, as the command asks: a
-      // locked stitch line behind this outline refuses it too, and a button
-      // left enabled then did nothing (Q29).
-      reason={deleteRefusal(project, [feature.id])}
-      onClick={() => requestDelete([feature.id])}
-    >
-      {t('actions.delete')}
-    </ReasonedButton>
+    <footer className="panel-footer">
+      <ReasonedButton
+        testId={testId}
+        variant="destructive"
+        // Over what the delete would take with it, as the command asks: a
+        // locked stitch line behind this outline refuses it too, and a button
+        // left enabled then did nothing (Q29).
+        reason={reason}
+        onClick={onClick}
+      >
+        <Icon of={Trash2} />
+        {children}
+        <span className="footer-key" aria-hidden>
+          <KeyCap command="delete" />
+        </span>
+      </ReasonedButton>
+    </footer>
   );
 }
 
@@ -522,7 +687,8 @@ function flipButton(
     reason: flipRefusal(project, ids, axis),
     hint: t(`properties.flipHint.${axis}`),
     onClick: () => store.dispatch(flipFeatures(ids, axis)),
-    children: t(`properties.flip.${axis}`),
+    label: t(`properties.flip.${axis}`),
+    children: <Icon of={FLIP_ICON[axis]} />,
   };
 }
 
@@ -532,7 +698,9 @@ function flipButton(
  * Actions, not modes: each one fires once and finishes, so by the tool
  * palette's own rule they belong here in the selection scope rather than in
  * the mode rail. They appear only where they mean something — you cannot put
- * holes on an outline, only on the stitch line that follows it.
+ * holes on an outline, only on the stitch line that follows it. Between what
+ * the selection is called and arranging it (R-05), in the order the work
+ * goes: stitch line, holes, seam allowance (R-14).
  */
 function DeriveActions({
   store,
@@ -540,65 +708,59 @@ function DeriveActions({
   part,
   feature,
   nextId,
+  tools,
 }: {
   store: DocumentStore;
   project: Project;
   part: Part;
   feature: Feature;
   nextId: () => string;
+  tools: MakerTools;
 }) {
   const { t } = useI18n();
   if (feature.kind === 'cut-contour') {
     return (
-      <ReasonedButton
-        testId="add-stitch-line"
-        reason={null}
-        hint={t('properties.addStitchLineHint')}
-        onClick={() => {
-          const id = nextId();
-          // No inset given: the command reads the project's stitch margin, so
-          // a project set up for 4 mm gets 4 mm (D7, X8).
-          store.dispatch(addStitchLine(part.id, id, feature.id));
-          store.select([id]);
-        }}
-      >
-        {t('properties.addStitchLine')}
-      </ReasonedButton>
+      <div className="panel-group">
+        <ReasonedButton
+          testId="add-stitch-line"
+          reason={null}
+          hint={t('properties.addStitchLineHint')}
+          // The maker's margin, from My tools (U.13): values come from the
+          // maker's settings, never a constant here (D7, X8). The selection
+          // bar's step runs the same (U.17).
+          onClick={() =>
+            derive(store, nextId, (id) => stitchLineCommand(part.id, feature.id, id, tools))
+          }
+        >
+          {t('properties.addStitchLine')}
+        </ReasonedButton>
+      </div>
     );
   }
 
   if (feature.kind === 'stitch-line') {
     return (
-      <>
+      <div className="panel-group">
+        <ReasonedButton
+          testId="add-stitch-holes"
+          reason={null}
+          hint={t('properties.addHolesHint')}
+          // Likewise the iron: the maker's default, its pitch and its name.
+          onClick={() =>
+            derive(store, nextId, (id) => holesCommand(part.id, feature.id, id, tools))
+          }
+        >
+          {t('properties.addHoles')}
+        </ReasonedButton>
         <AllowanceButton
           store={store}
           part={part}
           feature={feature}
           project={project}
           nextId={nextId}
+          tools={tools}
         />
-        <ReasonedButton
-          testId="add-stitch-holes"
-          reason={null}
-          hint={t('properties.addHolesHint')}
-          onClick={() => {
-            const id = nextId();
-            store.dispatch(
-              // Likewise the iron: the pitch comes from the project's settings,
-              // and the label follows the pitch so the panel can still name the
-              // iron rather than calling every default "Custom".
-              addStitchHoles(part.id, id, feature.id, {
-                mode: 'fit-whole',
-                corners: 'hole-at-corner',
-                ...ironLabelFor(store.getState().document.project.settings.defaultIronPitchMm),
-              }),
-            );
-            store.select([id]);
-          }}
-        >
-          {t('properties.addHoles')}
-        </ReasonedButton>
-      </>
+      </div>
     );
   }
 
@@ -619,12 +781,15 @@ function AllowanceButton({
   part,
   feature,
   nextId,
+  tools,
 }: {
   store: DocumentStore;
   project: Project;
   part: Part;
   feature: Feature;
   nextId: () => string;
+  /** The maker's margin (U.13), which a seam allowance grows by too. */
+  tools: MakerTools;
 }) {
   const { t } = useI18n();
   return (
@@ -632,21 +797,13 @@ function AllowanceButton({
       testId="add-allowance"
       reason={allowanceRefusal(project, feature.id)}
       hint={t('properties.addAllowanceHint')}
-      onClick={() => {
-        const id = nextId();
-        store.dispatch(addAllowance(part.id, id, feature.id));
-        store.select([id]);
-      }}
+      onClick={() =>
+        derive(store, nextId, (id) => allowanceCommand(part.id, feature.id, id, tools))
+      }
     >
       {t('properties.addAllowance')}
     </ReasonedButton>
   );
-}
-
-/** The name of an iron with this pitch, if the presets know one. */
-function ironLabelFor(pitchMm: number): { ironLabel?: string } {
-  const iron = IRON_PRESETS.find((preset) => preset.pitchMm === pitchMm);
-  return iron === undefined ? {} : { ironLabel: iron.label };
 }
 
 function findSelected(
@@ -804,6 +961,58 @@ function Measured({
         <span>{t('properties.area')}</span>
         <b>{formatNumber(PathOps.area(resolved.path) / 100, 2)} cm²</b>
       </div>
+    </section>
+  );
+}
+
+/**
+ * What the app makes after a new outline (U.18, R-16): the stitch margin and
+ * the iron from Settings › My tools, shown while a piece is being drawn. They
+ * are My tools' own values, not a copy — *Stitch + allowance* and the selection
+ * bar's next steps read the same preferences, so a change here is a change
+ * there, and Settings shows it.
+ */
+function AfterTheOutline({
+  tools,
+  onTools,
+}: {
+  tools: MakerTools;
+  onTools: (changes: Partial<MakerTools>) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <section className="panel-group" data-testid="drawing-defaults">
+      <div className="panel-heading">{t('properties.afterOutline.title')}</div>
+      <NumberField
+        label={t('properties.afterOutline.stitchLine')}
+        value={tools.stitchMarginMm}
+        min={MARGIN_MIN_MM}
+        step={MARGIN_STEP_MM}
+        onCommit={(stitchMarginMm) => onTools({ stitchMarginMm })}
+      />
+      {tools.irons.length === 0 ? (
+        <p className="panel-note">{t('settings.tools.noIrons')}</p>
+      ) : (
+        <label className="field">
+          <span className="field-label">{t('properties.afterOutline.holes')}</span>
+          <span className="field-input">
+            <select
+              data-testid="drawing-iron"
+              value={tools.defaultIronId ?? ''}
+              onChange={(event) => onTools({ defaultIronId: event.target.value })}
+            >
+              {tools.irons.map((iron) => (
+                <option key={iron.id} value={iron.id}>
+                  {iron.name}
+                </option>
+              ))}
+            </select>
+          </span>
+        </label>
+      )}
+      <p className="panel-note">
+        {t('properties.afterOutline.note', { tools: t('settings.section.tools') })}
+      </p>
     </section>
   );
 }

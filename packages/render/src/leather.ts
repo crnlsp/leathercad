@@ -106,7 +106,9 @@ export function linkTickOn(path: Path): { at: Vec2; tangent: Vec2 } | null {
   let longestLength = -1;
   for (const segment of path.segments) {
     const length = SegmentOps.length(segment);
-    if (length > longestLength) {
+    // Longer by more than noise: of two equal sides the first keeps it, so the
+    // tick does not hop across a rectangle with the last bit of its numbers (U.5).
+    if (length > longestLength + EPS_LENGTH) {
       longest = segment;
       longestLength = length;
     }

@@ -56,10 +56,26 @@ export type Density = 'comfortable' | 'compact';
  * exists from day one, so choosing it later re-derives nothing.
  */
 export const DENSITY: Readonly<
-  Record<Density, { control: number; controlLg: number; rowPadY: number }>
+  Record<Density, { control: number; controlLg: number; rowPadY: number; row: number }>
 > = {
-  comfortable: { control: 28, controlLg: 32, rowPadY: 4 },
-  compact: { control: 24, controlLg: 28, rowPadY: 2 },
+  // `row` is a Parts tree row (§3 `row-height`, U.8): a piece and each thing it is made of.
+  comfortable: { control: 28, controlLg: 32, rowPadY: 4, row: 28 },
+  compact: { control: 24, controlLg: 28, rowPadY: 2, row: 24 },
 };
 
-export const RAIL_PX = { expanded: 152, collapsed: 52 } as const;
+/** The tool rail with its tools' names, and with their keys only (§5: `rail-wide`, `rail-narrow`). */
+export const RAIL_PX = { expanded: 152, collapsed: 56 } as const;
+
+/**
+ * The docked panels and a folded one's strip (§5, U.5). Parts gives up 16 px
+ * below 1280, where the rail has dropped its names: at 1024 that leaves the
+ * board 720 px.
+ */
+export const PANEL_PX = { parts: 224, partsNarrow: 208, properties: 264, strip: 40 } as const;
+
+/**
+ * The work bar's and the status bar's heights, whatever they hold (§7.1):
+ * reserved, so the board never moves when a tool's options or the panels'
+ * chips change (U.5).
+ */
+export const BAR_PX = { work: 36, status: 28 } as const;

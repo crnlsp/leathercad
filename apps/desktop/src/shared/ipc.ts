@@ -14,6 +14,8 @@ export const IPC = {
   printPdf: 'platform:printPdf',
   getUserConfigDir: 'platform:getUserConfigDir',
   getAppVersion: 'platform:getAppVersion',
+  setDocumentEdited: 'platform:setDocumentEdited',
+  setKeyCapture: 'platform:setKeyCapture',
   writeRecovery: 'platform:writeRecovery',
   clearRecovery: 'platform:clearRecovery',
   findRecovery: 'platform:findRecovery',
@@ -29,7 +31,7 @@ export const IPC = {
   openRecent: 'platform:openRecent',
   clearRecent: 'platform:clearRecent',
   showLogFolder: 'platform:showLogFolder',
-  openNotices: 'platform:openNotices',
+  readNotices: 'platform:readNotices',
   /** Main → renderer: an item of macOS's menu was chosen (8.5a, 8.7). */
   menuAction: 'menu:action',
   /** Main → renderer: open this project, which the main process granted (8.2). */

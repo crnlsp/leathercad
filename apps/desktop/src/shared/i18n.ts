@@ -226,9 +226,15 @@ export function createI18n(
  * A language by name, as `inLocale` writes it in a sentence — by default in
  * itself: `Deutsch`, `polski` (`Intl.DisplayNames`). `asEntry` capitalises it
  * as a list entry, `Polski`, the way a maker finds their own language in a
- * list whatever the interface is in.
+ * list whatever the interface is in. A tag that names no language — a C
+ * locale's `C` — is its own name: `Intl` throws on it.
  */
 export function languageName(tag: string, inLocale: string = tag, asEntry = false): string {
-  const name = new Intl.DisplayNames([inLocale], { type: 'language' }).of(tag) ?? tag;
+  let name: string;
+  try {
+    name = new Intl.DisplayNames([inLocale], { type: 'language' }).of(tag) ?? tag;
+  } catch {
+    return tag;
+  }
   return asEntry ? name.charAt(0).toLocaleUpperCase(inLocale) + name.slice(1) : name;
 }

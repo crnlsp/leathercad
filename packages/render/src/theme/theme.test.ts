@@ -6,7 +6,7 @@ import {
   ACCENT,
   CANVAS,
   DASH_LEGIBLE_PX,
-  GO,
+  ACTION,
   GROUND,
   PAPER_FURNITURE,
   ROLE_STYLES,
@@ -85,6 +85,33 @@ describe('cssVariables', () => {
       expect(compact[name]).toBe(comfortable[name]);
     }
   });
+
+  it('carries the frame’s columns, as the requirements’ §5 sizes them (U.5)', () => {
+    expect(cssVariables('comfortable')).toMatchObject({
+      '--rail-w-expanded': '152px',
+      '--rail-w-collapsed': '56px',
+      '--parts-width': '224px',
+      '--parts-width-narrow': '208px',
+      '--properties-width': '264px',
+      '--panel-strip': '40px',
+    });
+  });
+
+  it('gives the stylesheet the rulers’ widths, so what floats on the board keeps off them (U.19)', () => {
+    expect(cssVariables('comfortable')).toMatchObject({
+      '--ruler-top': `${String(CANVAS.ruler.thicknessPx)}px`,
+      '--ruler-left': `${String(CANVAS.ruler.leftThicknessPx)}px`,
+    });
+  });
+
+  it('holds the work bar and the status bar to fixed heights, whatever is in them (U.5)', () => {
+    // Set by their content, the status bar grew 1 px with the panels' chips
+    // and moved the board, its fit and every pixel reference.
+    expect(cssVariables('comfortable')).toMatchObject({
+      '--work-bar-h': '36px',
+      '--status-bar-h': '28px',
+    });
+  });
 });
 
 /** WCAG relative luminance and contrast — how the spec states its colour claims. */
@@ -122,6 +149,41 @@ describe('the four planes (F.5)', () => {
     }
   });
 
+  it('shows a scrollbar on every shell surface that scrolls, and the focus ring too (U.20)', () => {
+    // The rail and the panels, the dialogs, and the menus.
+    for (const surface of [SHELL[700], SHELL[800], SHELL[900]]) {
+      expect(contrast(SHELL.scrollbar, surface), surface).toBeGreaterThanOrEqual(3);
+      expect(contrast(ACCENT.tan, surface), surface).toBeGreaterThanOrEqual(3);
+    }
+    expect(cssVariables('comfortable')['--scrollbar']).toBe(SHELL.scrollbar);
+  });
+
+  it('sets the shell’s words at AA on every surface they sit on (U.19)', () => {
+    // Text reads on all four. text-dim — the selection bar, a key's cap, a
+    // count in Parts — on shell-0 to shell-2 only: on shell-3 it is 4.3 : 1,
+    // so nothing dim is set on a lit row or on Export PDF's main half.
+    for (const surface of [SHELL[900], SHELL[800], SHELL[700], SHELL[600]]) {
+      expect(contrast(SHELL.text, surface), surface).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const surface of [SHELL[900], SHELL[800], SHELL[700]]) {
+      expect(contrast(SHELL.textDim, surface), surface).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrast(ACCENT.onTan, ACCENT.tan)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('reads a severity’s words, Delete’s among them, wherever they are set (U.19)', () => {
+    // Panels, dialogs and menus, and a menu's lit row: a destructive item is
+    // lit with shell-2, since the error red on shell-3 is 4.2 : 1.
+    for (const severity of ['error', 'warning', 'info'] as const) {
+      for (const surface of [SHELL[900], SHELL[800], SHELL[700]]) {
+        expect(
+          contrast(STATE.shell[severity], surface),
+          `${severity} on ${surface}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   it('gives the accent an on-dark and an on-light value', () => {
     expect(contrast(ACCENT.tan, SHELL[800])).toBeGreaterThan(3);
     expect(contrast(ACCENT.tanInk, GROUND.ground)).toBeGreaterThan(3);
@@ -153,11 +215,30 @@ describe('the four planes (F.5)', () => {
     expect(contrast(GROUND.ink, GROUND.ground)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('gives Print a fill its label reads on, and that stands out on the shell', () => {
-    expect(contrast(GO.onGo, GO.go)).toBeGreaterThan(4.5);
-    for (const shell of [SHELL[800], SHELL[700]]) {
-      expect(contrast(GO.go, shell)).toBeGreaterThan(3);
-      expect(contrast(GO.goInk, shell)).toBeGreaterThan(3);
+  it('sets the Sheets view’s words at AA on what they sit on (U.9, R-08)', () => {
+    // A sheet's number and the names under it sit on the sheets' ground.
+    expect(contrast(GROUND.label, SHEET.ground)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('gives Print fills its words read on, standing out on the shell (U.7)', () => {
+    // R-06's on-primary: AA on Print's main half, hovered or not, on its
+    // narrow half, and on the indicator's warning and error.
+    for (const fill of [ACTION.primary, ACTION.primaryHover, ACTION.primarySide]) {
+      expect(contrast(ACTION.onPrimary, fill)).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const severity of ['warning', 'error'] as const) {
+      expect(contrast(ACTION.onPrimary, STATE.shell[severity]), severity).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    }
+    for (const shell of [SHELL[900], SHELL[800], SHELL[700]]) {
+      expect(contrast(ACTION.primary, shell)).toBeGreaterThan(3);
+    }
+  });
+
+  it('keeps Export PDF’s words readable on both of its halves (U.7)', () => {
+    for (const fill of [SHELL[600], ACTION.secondarySide]) {
+      expect(contrast(SHELL.text, fill)).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

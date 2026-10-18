@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { BrowserWindow, Menu, app, dialog, shell } from 'electron';
+import type { RecentOutcome } from '@leathercad/platform';
+import { BrowserWindow, Menu, app, session, shell } from 'electron';
 import log from 'electron-log/main';
 
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
@@ -12,6 +14,7 @@ import { IPC } from '../shared/ipc.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
 import { projectPathFromArgs } from './launchFile.js';
+import { applyBindings } from '../renderer/src/keymap.js';
 import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
@@ -54,6 +57,22 @@ function followLanguage(): boolean {
   return true;
 }
 
+/**
+ * Follows the maker's keys (U.12), as the renderer does: Full screen and Quit
+ * are heard here (`windowKeyFor`), and macOS's menu shows Settings', Undo's
+ * and Redo's. True when they changed.
+ */
+let keys = '{}';
+/** Settings is listening for a new key (U.12): the window's keys are not acted on. */
+let keyCapture = false;
+function followKeys(): boolean {
+  const next = JSON.stringify(preferences.preferences.keyBindings);
+  if (next === keys) return false;
+  keys = next;
+  applyBindings(preferences.preferences.keyBindings);
+  return true;
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 /**
@@ -89,6 +108,9 @@ function createWindow(): void {
     // Linux takes the window's icon from here; Windows and macOS from the
     // packaged executable (slice 8.5a).
     icon: windowIcon,
+    // The shell's own colour, SHELL[800], behind the first frame. Written out:
+    // the theme's package is the renderer's. The stylesheet's audit
+    // (renderer/src/theme.test.ts) holds it to the theme.
     backgroundColor: '#1b1d21',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -98,6 +120,11 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      // No spellchecker (U.20): on Linux it fetched an English dictionary
+      // from Google on first launch, whatever the interface's language, and
+      // underlined the leather words it does not know. SECURITY.md says the
+      // app makes no network connections.
+      spellcheck: false,
     },
   });
 
@@ -109,6 +136,7 @@ function createWindow(): void {
     const key = windowKeyFor(input, {
       isMac: process.platform === 'darwin',
       packaged: app.isPackaged,
+      capturing: keyCapture,
     });
     if (key === null) return;
     event.preventDefault();
@@ -147,40 +175,16 @@ function createWindow(): void {
 }
 
 /**
- * The third-party notices, from About (8.7): the file the build wrote beside the renderer
- * (8.6b), in a window of its own. Plain text, no preload, nothing to run, and
- * nowhere to navigate to.
+ * The third-party notices (8.6b): the file the build wrote beside the
+ * renderer, for About to show in the app's own dialog (U.20) — until then a
+ * bare window of its own, white and in a system face. A development build
+ * serves the renderer from Vite and has none: null, and About says so.
  */
-let noticesWindow: BrowserWindow | null = null;
-
-function openNotices(): void {
-  if (noticesWindow !== null) {
-    noticesWindow.focus();
-    return;
-  }
-  noticesWindow = new BrowserWindow({
-    width: 720,
-    height: 640,
-    title: i18n.t('main.noticesTitle'),
-    icon: windowIcon,
-    ...(mainWindow === null ? {} : { parent: mainWindow }),
-    autoHideMenuBar: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
-  });
-  noticesWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  noticesWindow.webContents.on('will-navigate', (event) => event.preventDefault());
-  noticesWindow.on('closed', () => {
-    noticesWindow = null;
-  });
-  // A development build serves the renderer from Vite and has no notices
-  // file; the window says so rather than showing an error page.
-  const file = join(__dirname, '../renderer', NOTICES_FILE);
-  if (existsSync(file)) {
-    void noticesWindow.loadFile(file);
-  } else {
-    void noticesWindow.loadURL(
-      `data:text/plain;charset=utf-8,${encodeURIComponent(i18n.t('main.noticesInDevelopment'))}`,
-    );
+async function readNotices(): Promise<string | null> {
+  try {
+    return await readFile(join(__dirname, '../renderer', NOTICES_FILE), 'utf8');
+  } catch {
+    return null;
   }
 }
 
@@ -207,23 +211,18 @@ function buildMenu(): void {
  * A recent project, chosen in the Project menu (8.2, 8.7): grants it, then
  * asks the renderer to open it, which asks about unsaved work first exactly
  * as Open does. Only a path on the list is opened. A project that is gone is
- * taken off the list, and the maker is told why it vanished.
+ * taken off the list, and the renderer tells the maker why it vanished, in
+ * the app's own dialog (U.20).
  */
-async function openRecent(path: string): Promise<void> {
-  if (!preferences.recentFiles.includes(path)) return;
+async function openRecent(path: string): Promise<RecentOutcome> {
+  if (!preferences.recentFiles.includes(path)) return 'unlisted';
   if (!existsSync(path)) {
     await preferences.forgetRecent(path);
-    const message = {
-      type: 'info' as const,
-      message: i18n.t('main.recentGone'),
-      detail: i18n.t('main.recentGoneDetail', { path }),
-    };
-    if (mainWindow === null) await dialog.showMessageBox(message);
-    else await dialog.showMessageBox(mainWindow, message);
-    return;
+    return 'gone';
   }
   grants.grant(path);
   mainWindow?.webContents.send(IPC.openFile, path);
+  return 'opening';
 }
 
 app.whenReady().then(() => {
@@ -246,16 +245,28 @@ app.whenReady().then(() => {
       return file;
     },
     (path) => openRecent(path),
-    openNotices,
+    readNotices,
     // A new language rebuilds macOS's menu in it, at once, as the window's
-    // own words change (8.7's Settings apply immediately).
+    // own words change (8.7's Settings apply immediately); so do new keys.
     () => {
-      if (followLanguage()) buildMenu();
+      const words = followLanguage();
+      if (followKeys() || words) buildMenu();
+    },
+    (capturing) => {
+      keyCapture = capturing;
     },
   );
 
   followLanguage();
+  followKeys();
   buildMenu();
+
+  // The session's spellchecker off too (U.20), and with no language: off
+  // alone, and the window's `spellcheck: false`, still let Chromium fetch
+  // en-US-10-1.bdic once a field was typed in. Chromium still makes an empty
+  // Dictionaries/ folder in userData; nothing is put in it.
+  session.defaultSession.setSpellCheckerEnabled(false);
+  session.defaultSession.setSpellCheckerLanguages([]);
 
   createWindow();
 

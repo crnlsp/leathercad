@@ -13,7 +13,7 @@ import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render
 import { isDrag } from './gesture.js';
 import { createDrawCommit } from './commitDrawn.js';
 
-import type { Tool, ToolContext } from '../tool.js';
+import { means, type Tool, type ToolContext } from '../tool.js';
 import { constrainToAngleStep } from './angleConstraint.js';
 
 /** An arc whose end is placed and whose bulge is not yet. */
@@ -257,33 +257,36 @@ function polylineLike(
 
       if (event.key === 'Escape') {
         reset(ctx);
-        return false;
+        return true;
       }
 
       // A and L choose the next segment. Claimed, so the app does not also
       // switch to the Arc or Line tool and throw the run away. The line tool
       // finishes itself at two points and never has a next segment to choose.
-      const letter = event.key.toLowerCase();
-      if (correctable && !event.ctrlKey && (letter === 'a' || letter === 'l')) {
-        state = { ...state, arc: letter === 'a' };
+      const arc = means(event, 'arc');
+      if (correctable && (arc || means(event, 'straight'))) {
+        state = { ...state, arc };
         ctx.invalidate();
         return true;
       }
 
       if (event.key === 'Enter') {
-        // An arc with no bulge yet is not part of what was drawn.
+        // An arc with no bulge yet is not part of what was drawn. Claimed,
+        // finished or refused: the board's Enter opens the selected outline's
+        // sizes (U.14), and this press was the run's.
         finish(ctx, state.points, state.throughs, false);
-        return false;
+        return true;
       }
 
       // Undoing a misplaced point without abandoning the whole run: an arc's
       // placed end first, then the point before it. Removing the last one
-      // leaves idle rather than an empty drawing state.
-      if (event.key === 'Backspace') {
+      // leaves idle rather than an empty drawing state. Claimed (U.12): a key
+      // the maker gave it — Ctrl+Z, R — must not also undo or switch tools.
+      if (means(event, 'takeBack')) {
         if (state.pending !== null) {
           state = { ...state, pending: null, cursor: state.points[state.points.length - 1]! };
           ctx.invalidate();
-          return false;
+          return true;
         }
         const points = state.points.slice(0, -1);
         if (points.length === 0) reset(ctx);
@@ -297,6 +300,7 @@ function polylineLike(
           };
           ctx.invalidate();
         }
+        return true;
       }
       return false;
     },
@@ -342,6 +346,8 @@ function polylineLike(
         ],
       };
     },
+
+    underway: () => state.kind === 'drawing',
 
     onDeactivate(ctx) {
       reset(ctx);

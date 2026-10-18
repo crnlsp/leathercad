@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import type { RecentOutcome } from '@leathercad/platform';
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
 
@@ -42,11 +43,13 @@ export function registerPlatformHandlers(
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
   /** Opens a project from the recent list, if it is on it (8.7). */
-  openRecent: (path: string) => Promise<void>,
-  /** Shows the third-party notices window (8.6b). */
-  openNotices: () => void,
+  openRecent: (path: string) => Promise<RecentOutcome>,
+  /** The third-party notices the build wrote (8.6b), or null in development (U.20). */
+  readNotices: () => Promise<string | null>,
   /** The preferences changed: the main process's own words may be in another language now. */
   onPreferencesChanged: () => void,
+  /** Settings is listening for a key (U.12): the window's own keys wait. */
+  onKeyCapture: (capturing: boolean) => void,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -106,6 +109,15 @@ export function registerPlatformHandlers(
 
   ipcMain.handle(IPC.getAppVersion, () => app.getVersion());
 
+  // The edited flag (U.7): macOS's dot in the close button. A no-op elsewhere.
+  ipcMain.handle(IPC.setDocumentEdited, (_event, edited: unknown) => {
+    getWindow()?.setDocumentEdited(edited === true);
+  });
+
+  ipcMain.handle(IPC.setKeyCapture, (_event, capturing: unknown) => {
+    onKeyCapture(capturing === true);
+  });
+
   // Crash recovery (5.3b). The renderer says what to keep; the files — their
   // names, their directory, their atomic writes — are the main process's alone.
   ipcMain.handle(IPC.writeRecovery, async (_event, data: Uint8Array) => {
@@ -156,9 +168,9 @@ export function registerPlatformHandlers(
   ipcMain.handle(IPC.getRecentFiles, () =>
     preferences.recentFiles.map((path) => ({ path, shown: shownPath(path, app.getPath('home')) })),
   );
-  ipcMain.handle(IPC.openRecent, async (_event, path: unknown) => {
-    if (typeof path === 'string') await openRecent(path);
-  });
+  ipcMain.handle(IPC.openRecent, (_event, path: unknown) =>
+    typeof path === 'string' ? openRecent(path) : 'unlisted',
+  );
   ipcMain.handle(IPC.clearRecent, async () => {
     await preferences.clearRecent();
     app.clearRecentDocuments();
@@ -166,7 +178,7 @@ export function registerPlatformHandlers(
   ipcMain.handle(IPC.showLogFolder, async () => {
     await shell.openPath(stateDirectory());
   });
-  ipcMain.handle(IPC.openNotices, () => openNotices());
+  ipcMain.handle(IPC.readNotices, () => readNotices());
 }
 
 /** The path, if the renderer may use it this way; otherwise logged and refused. */

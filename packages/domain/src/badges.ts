@@ -39,6 +39,20 @@ export function worstOf(severities: Iterable<Severity>): Severity | null {
   return worst;
 }
 
+/** How many of each severity: the one count by severity (U.7). */
+export type SeverityCounts = Readonly<Record<Severity, number>>;
+
+/**
+ * How many errors, warnings and infos a list holds — **the one place they are
+ * counted**, so the Print button's indicator, the Problems drawer and the
+ * export notice cannot give different numbers for the same list.
+ */
+export function countBySeverity(diagnostics: readonly Diagnostic[]): SeverityCounts {
+  const counts = { error: 0, warning: 0, info: 0 };
+  for (const diagnostic of diagnostics) counts[diagnostic.severity] += 1;
+  return counts;
+}
+
 /** Every badge in one pass over the one diagnostic list. */
 export function badgesOf(diagnostics: readonly Diagnostic[]): Badges {
   const parts = new Map<PartId, Severity[]>();

@@ -1,8 +1,9 @@
-import { badgesOf, type Diagnostic, type Project } from '@leathercad/domain';
+import { badgesOf, type Diagnostic, type Project, type SeverityCounts } from '@leathercad/domain';
 
 import { CountBadge } from './CountBadge.js';
 import { useI18n } from './i18n.js';
 import { ProblemRows } from './ProblemList.js';
+import { describeCounts } from './problemsIndicator.js';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Icon } from './icons/Icon.js';
 
@@ -18,25 +19,31 @@ import { Icon } from './icons/Icon.js';
  * every problem shrank the only route to a locked feature (audit §3.3). Under
  * the canvas it has the full width a list of sentences wants, and collapsed it
  * is a 28 px handle that still says the verdict — *Nothing to fix*, or how many
- * and how bad — so closing it never hides that something is wrong
- * (UI Foundations §7.1).
+ * of each severity — so closing it never hides that something is wrong
+ * (UI Foundations §7.1). The counts are `countBySeverity`'s, which Print's
+ * indicator reads too, so the two say one thing (U.7).
  */
 export function ProblemsPanel({
   project,
   diagnostics,
+  counts,
   onGoTo,
   open,
   onToggle,
 }: {
   project: Project;
   diagnostics: readonly Diagnostic[];
+  /** `countBySeverity(diagnostics)`. */
+  counts: SeverityCounts;
   onGoTo: (diagnostic: Diagnostic) => void;
   open: boolean;
   onToggle: () => void;
 }) {
-  const { t } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
   const badge = badgesOf(diagnostics).project;
   const count = diagnostics.length;
+  const verdict = describeCounts(counts, i18n);
 
   return (
     <section
@@ -54,8 +61,8 @@ export function ProblemsPanel({
       >
         <span className="drawer-title">{t('problems.panel.title')}</span>
         <CountBadge badge={badge} />
-        <span className="drawer-verdict">
-          {count === 0 ? t('problems.panel.none') : t('problems.panel.count', { count })}
+        <span className="drawer-verdict" data-testid="problems-verdict">
+          {verdict ?? t('problems.panel.none')}
         </span>
         <span className="drawer-chevron" aria-hidden="true">
           <Icon of={open ? ChevronDown : ChevronUp} />

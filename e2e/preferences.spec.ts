@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -6,6 +6,8 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
+import { resizeWindow } from './windowSize.js';
 
 /**
  * Slice 8.2: the app remembers how the maker likes it, and what they worked
@@ -57,9 +59,10 @@ test('the legend and the tool rail are as the maker left them', async () => {
   try {
     await drawAPanel(first.window);
     const toggle = first.window.getByTestId('canvas-legend-toggle');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await toggle.click();
+    // The legend opens with names by default (U.10, R-09); the maker folds it.
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
     await expect(first.window.getByTestId('tool-rail')).not.toHaveClass(/collapsed/);
     await first.window.getByTestId('rail-toggle').click();
@@ -72,12 +75,70 @@ test('the legend and the tool rail are as the maker left them', async () => {
   try {
     await expect(second.window.getByTestId('tool-rail')).toHaveClass(/collapsed/);
     await drawAPanel(second.window);
+    // The maker's fold was remembered, not the default.
     await expect(second.window.getByTestId('canvas-legend-toggle')).toHaveAttribute(
       'aria-expanded',
-      'true',
+      'false',
     );
   } finally {
     await closeApp(second.app);
+  }
+});
+
+test('a small window folds the legend for the session, not the file (U.10, R-09)', async () => {
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-legend-'));
+
+  const first = await launch(configHome);
+  try {
+    await drawAPanel(first.window);
+    const toggle = first.window.getByTestId('canvas-legend-toggle');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    // 1024 px wide or narrower folds it, with the maker touching nothing.
+    await resizeWindow(first.app, first.window, 1024, 800);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    // Wide again: the maker's choice was never written, so it opens again.
+    await resizeWindow(first.app, first.window, 1400, 860);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  } finally {
+    await closeApp(first.app);
+  }
+
+  const second = await launch(configHome);
+  try {
+    await drawAPanel(second.window);
+    // Under 720 px tall folds it too.
+    await resizeWindow(second.app, second.window, 1400, 700);
+    await expect(second.window.getByTestId('canvas-legend-toggle')).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  } finally {
+    await closeApp(second.app);
+  }
+});
+
+test('an upgraded install opens the legend with names too (U.10, R-09)', async () => {
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-legend-v1-'));
+  // A version 1 file: it wrote `legendOpen: false` out whenever any preference
+  // changed, so its false is not a choice. The upgrade resets it once, and
+  // everything else the file held survives.
+  mkdirSync(join(configHome, 'leathercad'), { recursive: true });
+  writeFileSync(
+    join(configHome, 'leathercad', 'preferences.json'),
+    JSON.stringify({ version: 1, legendOpen: false, toolRailCollapsed: true }),
+  );
+
+  const first = await launch(configHome);
+  try {
+    await drawAPanel(first.window);
+    await expect(first.window.getByTestId('canvas-legend-toggle')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await expect(first.window.getByTestId('tool-rail')).toHaveClass(/collapsed/);
+  } finally {
+    await closeApp(first.app);
   }
 });
 
@@ -150,7 +211,8 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
     await expect(dialog).toHaveCount(0);
 
     // Typing is typing: none of the three opens anything from a text field.
-    const name = window.getByTestId('project-name');
+    await fromProjectMenu(window, 'rename');
+    const name = window.getByTestId('project-name-input');
     await name.fill('Wallet');
     await name.press('Shift+?');
     await name.press('Control+/');
@@ -172,11 +234,12 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
     await drawAPanel(first.window);
     await first.window.getByTestId('settings').click();
     await first.window.getByTestId('settings-tab-appearance').click();
-    await first.window.getByTestId('setting-legend-open').check();
+    // It opens by default (U.10); the setting folds it away at once.
+    await first.window.getByTestId('setting-legend-open').uncheck();
     await first.window.getByTestId('settings-close').click();
     await expect(first.window.getByTestId('canvas-legend-toggle')).toHaveAttribute(
       'aria-expanded',
-      'true',
+      'false',
     );
 
     await first.app.evaluate(({ dialog }, path) => {
@@ -192,7 +255,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
   try {
     await second.window.getByTestId('settings').click();
     await second.window.getByTestId('settings-tab-appearance').click();
-    await expect(second.window.getByTestId('setting-legend-open')).toBeChecked();
+    await expect(second.window.getByTestId('setting-legend-open')).not.toBeChecked();
 
     await second.window.getByTestId('settings-tab-general').click();
     const general = second.window.getByTestId('settings-pane-general');
@@ -215,7 +278,7 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
     await window.getByTestId('tool-select').click();
     await window
       .getByTestId('parts-list')
-      .getByRole('button', { name: /Outline/ })
+      .getByRole('treeitem', { name: /Outline/ })
       .click();
     await expect(window.getByTestId('selected-count')).toHaveText('1');
 

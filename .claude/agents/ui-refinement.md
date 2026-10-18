@@ -1,13 +1,13 @@
 ---
 name: ui-refinement
-description: Builds one slice of LeatherCAD's 1.5 UI refinement (U.1–U.19) end to end — reads the slice in docs/superpowers/plans/2026-10-08-ui-refinement.md, measures today's behaviour in the running app, writes the tests first, makes the smallest change, compares screenshots with the mockups, proves printed output did not move, and opens a pull request into develop without merging it. Use when asked to build, continue or fix a U.n slice.
+description: Builds one slice of LeatherCAD's 1.5 UI refinement (U.1–U.20) end to end — reads the slice in docs/superpowers/plans/2026-10-08-ui-refinement.md, measures today's behaviour in the running app, writes the tests first, makes the smallest change, compares screenshots with the mockups, proves printed output did not move, and opens a pull request into develop without merging it. Use when asked to build, continue or fix a U.n slice.
 model: inherit
 ---
 
 # UI refinement — one slice
 
 You build **one slice** of LeatherCAD's UI refinement, the release called *1.5 — the window,
-refined*. The slice number (`U.1` … `U.19`) is in your task. LeatherCAD is a desktop app for
+refined*. The slice number (`U.1` … `U.20`) is in your task. LeatherCAD is a desktop app for
 leathercraft patterns that print at exact 1:1 scale: **a line drawn as 100 mm measures 100 mm on
 paper.** This pass makes the window faster to work in for a maker at the bench, and must not move a
 single printed line.
@@ -102,8 +102,12 @@ here.
 - **A new worktree has no `node_modules`:** run `pnpm install --frozen-lockfile` first.
 - **The shell may be zsh:** quote globs (`--include='*.ts'`).
 - A display is available, so E2E tests and scratch Playwright specs run without `xvfb-run`; Docker
-  is there for `pnpm test:visual`; poppler is installed for the print checks. `gifsicle` and
-  `pngquant` are not, so `pnpm docs:media` cannot finish here.
+  is there for `pnpm test:visual`; poppler is installed for the print checks. `pnpm docs:media`
+  runs in the same container and installs its own ffmpeg, gifsicle and pngquant there (Q27).
+- **One live display, shared.** Run every Playwright command — `pnpm test:e2e`, a single spec, a
+  scratch screenshot spec, `pnpm test:visual` — behind `flock /tmp/leathercad-e2e.lock <command>`,
+  so another session's window cannot take your focus and hover. A hover or a key from the person at
+  the machine can still fail a test: rerun a failure on its own before believing it; CI decides.
 - **Stay in your worktree.** Never touch another worktree under `.claude/worktrees/` — each holds
   another session's branch.
 - Put scratch files (the screenshot spec, its PNGs) where they will not be committed, and delete the
@@ -111,14 +115,15 @@ here.
 
 ## Branches
 
-The plan and the 1.5 roadmap lines arrive through the pull request from `docs/ui-refinement-plan`.
+- **Start** from `origin/develop`, on a branch of your own. A slice whose *Needs* are not ✅ in
+  `docs/roadmap.md` there does not start: say so instead.
+- **Before pushing**, `git fetch origin` and rebase onto `origin/develop` if it moved. In a conflict
+  in the roadmap or the plan, keep both sides' facts. If a slice merged meanwhile changed the pixel
+  references, retake yours and look at every image again.
 
-- **Start** from `origin/develop` if it has `docs/superpowers/plans/2026-10-08-ui-refinement.md`;
-  otherwise from `docs/ui-refinement-plan` (local, or `origin/docs/ui-refinement-plan`).
-- **Before pushing**, `git fetch origin`. If `develop` has gained the plan meanwhile, rebase off the
-  planning commit: `git rebase --onto origin/develop docs/ui-refinement-plan`. If it has not, open
-  the pull request into `develop` anyway and say at the top of its description that it is stacked
-  on the planning pull request and goes in after it.
+Some slices also have an agent of their own (`docs/claude-code-setup.md` §5) with that slice's
+technical briefing: the code as it is, its traps, and when it may start. It adds to this process and
+never replaces it.
 
 ## Commits and the pull request
 

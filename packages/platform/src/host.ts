@@ -71,6 +71,20 @@ export interface PlatformHost {
   getAppVersion(): Promise<string>;
 
   /**
+   * Whether the window holds unsaved work (U.7): macOS draws the dot in the
+   * close button and asks before closing the window from the Dock. Elsewhere
+   * the window title's leading dot says it, and this does nothing.
+   */
+  setDocumentEdited(edited: boolean): Promise<void>;
+
+  /**
+   * Whether Settings is listening for a new key (U.12). While it is, the main
+   * process leaves the keys it hears before any field — Full screen, Quit,
+   * the developer tools — to the renderer, so they can be given to a command.
+   */
+  setKeyCapture(capturing: boolean): Promise<void>;
+
+  /**
    * Crash recovery (slice 5.3b). Replaces this session's recovery copy with
    * `data`, atomically, in the app's state directory — never beside a project,
    * never under a project's name.
@@ -129,10 +143,12 @@ export interface PlatformHost {
   /**
    * Opens a project from the recent list (8.7). The main process opens only a
    * path on its own list: it grants it and hands it back through
-   * `onOpenFile`, so unsaved work is asked about as for *Open*. One that is
-   * gone is taken off the list, and the maker told why.
+   * `onOpenFile`, so unsaved work is asked about as for *Open* — `opening`.
+   * One that is `gone` is taken off the list, for the app to tell the maker
+   * why in its own dialog (U.20). A path not on the list is `unlisted`, and
+   * nothing happens.
    */
-  openRecent(path: string): Promise<void>;
+  openRecent(path: string): Promise<RecentOutcome>;
 
   /** Empties the recent list, and the operating system's (8.7). */
   clearRecent(): Promise<void>;
@@ -140,8 +156,11 @@ export interface PlatformHost {
   /** Opens the folder the log is in, to attach to a report (ADR 0015). */
   showLogFolder(): Promise<void>;
 
-  /** Shows the licences of what the app ships (8.6b). */
-  openNotices(): Promise<void>;
+  /**
+   * The licences of what the app ships (8.6b), as the text the build wrote,
+   * for About to show (U.20); null in a development build, which writes none.
+   */
+  readNotices(): Promise<string | null>;
 
   /**
    * Listens for a project the operating system side asks the app to open —
@@ -205,6 +224,9 @@ export interface PrintJob {
   readonly title: string;
 }
 
+/** What became of a recent project asked for (8.7, U.20). */
+export type RecentOutcome = 'opening' | 'gone' | 'unlisted';
+
 /** A project on the recent list (8.7). */
 export interface RecentFile {
   /** Absolute: what `openRecent` is given back. */
@@ -215,23 +237,110 @@ export interface RecentFile {
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
 export interface Preferences {
-  /** Whether the canvas legend is open, rather than a strip of marks. */
+  /**
+   * Whether the canvas legend is open, showing names, rather than its chip
+   * (U.10, R-09). Open by default; a window too small for it folds it to the
+   * chip for the session, and that fold never reaches this file.
+   */
   readonly legendOpen: boolean;
+  /**
+   * Whether the selection bar shows under the selected piece (U.17, R-14):
+   * its stitching, and the next step. On by default; off, it is not drawn and
+   * its key does nothing.
+   */
+  readonly selectionBar: boolean;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
+  /**
+   * Whether the maker folded Parts, or Properties, to its strip (U.5). Where
+   * the window has the room to dock it: a narrow window folds a panel by
+   * itself, and never writes this.
+   */
+  readonly partsFolded: boolean;
+  readonly propertiesFolded: boolean;
   /**
    * The interface's language (ADR 0018): `system` to follow the operating
    * system, or the tag of a language the app supports, such as `en`. The app's
    * words only — a project reads the same in every language.
    */
   readonly language: string;
+  /**
+   * The pricking irons the maker owns, in their order (U.13): what a hole
+   * set's Iron menu offers. A hole set stores the pitch and the iron's name it
+   * was made with, never a reference to this list, so a project opens the same
+   * on a machine with other irons.
+   */
+  readonly irons: readonly Iron[];
+  /** The iron a new hole set takes: one of `irons`, or `null` when there are none. */
+  readonly defaultIronId: string | null;
+  /**
+   * How far in from the edge the app starts a new stitch line, and how far out
+   * it grows a new seam allowance — one margin, as the project's own setting
+   * is (`settings.defaultStitchInsetMm`), which it is passed in place of.
+   */
+  readonly stitchMarginMm: number;
+  /**
+   * Written into each new fold (U.13). `null` until the maker sets one: a
+   * thickness is a measurement of their leather, and none is invented.
+   */
+  readonly leatherThicknessMm: number | null;
+  /**
+   * The keys the maker changed in Settings › Keyboard shortcuts (U.12), by
+   * the app's command id: each one's keys in place of its defaults. Only what
+   * differs is kept, so a new default reaches a command the maker never moved.
+   */
+  readonly keyBindings: Readonly<Record<string, readonly KeyBinding[]>>;
 }
+
+/**
+ * A key, as the app's keymap binds it: by its place on the keyboard
+ * (`KeyboardEvent.code`) and the modifiers held — `mod` is Ctrl, or ⌘ on
+ * macOS — or by the character it types.
+ */
+export type KeyBinding =
+  | {
+      readonly code: string;
+      readonly mod?: boolean;
+      readonly shift?: boolean;
+      readonly alt?: boolean;
+    }
+  | { readonly char: string; readonly mod?: boolean };
+
+/** A pricking iron, by the name the maker gives it and the pitch stamped on it. */
+export interface Iron {
+  readonly id: string;
+  readonly name: string;
+  readonly pitchMm: number;
+}
+
+/**
+ * The irons a first launch lists, so nothing a maker picked before My tools
+ * existed disappears; they delete what they do not own. The names are the ones
+ * hole sets already carry.
+ */
+export const STARTER_IRONS: readonly Iron[] = [
+  { id: 'ks-3.85', name: 'KS Blade 3.85 mm', pitchMm: 3.85 },
+  { id: 'ks-3.38', name: 'KS Blade 3.38 mm', pitchMm: 3.38 },
+  { id: 'ks-3.0', name: 'KS Blade 3.0 mm', pitchMm: 3.0 },
+  { id: 'crimson-3.85', name: 'Crimson Hides 3.85 mm', pitchMm: 3.85 },
+  { id: 'crimson-3.0', name: 'Crimson Hides 3.0 mm', pitchMm: 3.0 },
+  { id: 'amy-roke-3.0', name: 'Amy Roke 3.0 mm', pitchMm: 3.0 },
+  { id: 'amy-roke-2.7', name: 'Amy Roke 2.7 mm', pitchMm: 2.7 },
+];
 
 /** What a first launch starts with, and what a damaged file falls back to. */
 export const DEFAULT_PREFERENCES: Preferences = {
-  legendOpen: false,
+  legendOpen: true,
+  selectionBar: true,
   toolRailCollapsed: false,
+  partsFolded: false,
+  propertiesFolded: false,
   language: 'system',
+  irons: STARTER_IRONS,
+  defaultIronId: 'ks-3.85',
+  stitchMarginMm: 3.5,
+  leatherThicknessMm: null,
+  keyBindings: {},
 };
 
 /** What macOS's native menu can ask the renderer to do (8.7). */

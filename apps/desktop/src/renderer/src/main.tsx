@@ -3,11 +3,18 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App.js';
+import { IS_MAC } from './keyCaps.js';
+import { applyBindings } from './keymap.js';
+import { readBindings } from './rebind.js';
+import { keepKeysInOpenLists, keepTabInDialogs, returnFocusFromDialogs } from './modalKeys.js';
 import { getPlatformHost } from './platformBridge.js';
 import { applyTheme } from './theme.js';
 import './styles.css';
 
 applyTheme(document.documentElement);
+keepTabInDialogs(document);
+returnFocusFromDialogs(document);
+keepKeysInOpenLists(document);
 
 const container = document.getElementById('root');
 if (container === null) throw new Error('#root missing from index.html');
@@ -30,6 +37,8 @@ async function start(root: HTMLElement): Promise<void> {
   } catch {
     // Defaults: English, until the preference can be read.
   }
+  // The maker's keys (U.12), before anything shows one or hears one.
+  applyBindings(readBindings(preferences.keyBindings, IS_MAC));
   createRoot(root).render(
     <StrictMode>
       <App initialPreferences={preferences} systemLanguages={systemLanguages} />

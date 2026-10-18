@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 
-import { DEFAULT_PREFERENCES } from '@leathercad/platform';
+import { DEFAULT_PREFERENCES, STARTER_IRONS } from '@leathercad/platform';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -50,6 +50,7 @@ describe('reading preferences.json', () => {
   it('keeps each usable field and drops only the damaged ones', () => {
     const parsed = parsePreferences(
       JSON.stringify({
+        version: 2,
         legendOpen: true,
         toolRailCollapsed: 'yes',
         language: 'xx',
@@ -73,6 +74,32 @@ describe('reading preferences.json', () => {
     expect(validChanges('legendOpen')).toEqual({});
   });
 
+  it('keeps the panels the maker folded, each falling back on its own (U.5)', () => {
+    // A file from before U.5 has neither: both panels open, as they always did.
+    expect(parsePreferences(JSON.stringify({ legendOpen: true }))).toMatchObject({
+      partsFolded: false,
+      propertiesFolded: false,
+    });
+    expect(
+      parsePreferences(JSON.stringify({ partsFolded: true, propertiesFolded: 'yes' })),
+    ).toMatchObject({ partsFolded: true, propertiesFolded: false });
+    expect(validChanges({ partsFolded: true, propertiesFolded: 0 })).toEqual({ partsFolded: true });
+    expect(validChanges({ propertiesFolded: false })).toEqual({ propertiesFolded: false });
+  });
+
+  it('keeps the selection bar on unless the maker turned it off (U.17)', () => {
+    // On a first launch, and in a file from before U.17, which has no field.
+    expect(DEFAULT_PREFERENCES.selectionBar).toBe(true);
+    expect(parsePreferences(null).selectionBar).toBe(true);
+    expect(parsePreferences(JSON.stringify({ version: 2, legendOpen: false })).selectionBar).toBe(
+      true,
+    );
+    expect(parsePreferences(JSON.stringify({ selectionBar: false })).selectionBar).toBe(false);
+    expect(parsePreferences(JSON.stringify({ selectionBar: 'off' })).selectionBar).toBe(true);
+    expect(validChanges({ selectionBar: false })).toEqual({ selectionBar: false });
+    expect(validChanges({ selectionBar: 0 })).toEqual({});
+  });
+
   it('keeps the interface language: following the system, or one the app ships', () => {
     expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
     expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');
@@ -80,6 +107,192 @@ describe('reading preferences.json', () => {
     expect(validChanges({ language: 'system' })).toEqual({ language: 'system' });
     expect(validChanges({ language: 'xx' })).toEqual({});
     expect(validChanges({ language: 7 })).toEqual({});
+  });
+});
+
+describe('the legend opens with names by default (U.10, R-09)', () => {
+  it('starts open on a first launch, and over a damaged file', () => {
+    expect(DEFAULT_PREFERENCES.legendOpen).toBe(true);
+    expect(parsePreferences(null).legendOpen).toBe(true);
+    expect(parsePreferences('not json').legendOpen).toBe(true);
+  });
+
+  it('resets a version 1 file once: it never recorded a real choice', () => {
+    // Version 1 wrote `legendOpen: false` out whenever any preference changed,
+    // so a stored false cannot be told from the old default. Version 2 records
+    // a choice; a version 1 file is reset to the new default.
+    const parsed = parsePreferences(JSON.stringify({ version: 1, legendOpen: false }));
+    expect(parsed.legendOpen).toBe(true);
+    expect(parsed.version).toBe(2);
+  });
+
+  it('honours the maker’s choice in a version 2 file', () => {
+    const parsed = parsePreferences(JSON.stringify({ version: 2, legendOpen: false }));
+    expect(parsed.legendOpen).toBe(false);
+    expect(parsed.version).toBe(2);
+  });
+
+  it('keeps a folded legend across a restart, once version 2 has recorded it', async () => {
+    writeFileSync(file, JSON.stringify({ version: 1, legendOpen: false, toolRailCollapsed: true }));
+    const first = new PreferencesStore(file);
+    // The reset opens it, and the old choice did not survive.
+    expect(first.preferences.legendOpen).toBe(true);
+    // Everything else the file held is kept.
+    expect(first.preferences.toolRailCollapsed).toBe(true);
+
+    // The maker folds it: the choice is written as version 2 and survives.
+    await first.update({ legendOpen: false });
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ version: 2, legendOpen: false });
+    expect(new PreferencesStore(file).preferences.legendOpen).toBe(false);
+  });
+
+  it('does not reset again on the next restart', async () => {
+    writeFileSync(file, JSON.stringify({ version: 2, legendOpen: false }));
+    const first = new PreferencesStore(file);
+    expect(first.preferences.legendOpen).toBe(false);
+
+    // A later change must not re-open it: version 2 is not the version that is
+    // reset once, and it stays version 2 as the file is written again.
+    await first.update({ toolRailCollapsed: true });
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({
+      version: 2,
+      legendOpen: false,
+      toolRailCollapsed: true,
+    });
+    expect(new PreferencesStore(file).preferences.legendOpen).toBe(false);
+  });
+});
+
+describe('My tools (U.13)', () => {
+  const iron = (id: string, name: string, pitchMm: number) => ({ id, name, pitchMm });
+
+  it('lists the starter irons for a file written before My tools, and keeps a list emptied on purpose', () => {
+    const before = parsePreferences(JSON.stringify({ legendOpen: true }));
+    expect(before.irons).toEqual(STARTER_IRONS);
+    expect(before.defaultIronId).toBe('ks-3.85');
+    expect(before.stitchMarginMm).toBe(3.5);
+    expect(before.leatherThicknessMm).toBeNull();
+
+    const emptied = parsePreferences(JSON.stringify({ irons: [], defaultIronId: 'ks-3.85' }));
+    expect(emptied.irons).toEqual([]);
+    expect(emptied.defaultIronId).toBeNull();
+  });
+
+  it('keeps each usable iron, tidied, and drops only the damaged ones', () => {
+    const parsed = parsePreferences(
+      JSON.stringify({
+        irons: [
+          iron('a', '  Diamond 3.85  ', 3.85),
+          iron('a', 'Same id again', 3),
+          iron('b', '', 3),
+          iron('c', 'No pitch at all', 0),
+          { id: 'd', name: 'No pitch' },
+          iron('e', 'French 3.38', 3.380_04),
+          'not an iron',
+        ],
+        defaultIronId: 'e',
+      }),
+    );
+    expect(parsed.irons).toEqual([iron('a', 'Diamond 3.85', 3.85), iron('e', 'French 3.38', 3.38)]);
+    expect(parsed.defaultIronId).toBe('e');
+  });
+
+  it('makes the first iron the default when the default names none of them', () => {
+    const irons = [iron('a', 'Diamond 3.85', 3.85), iron('b', 'Diamond 2.7', 2.7)];
+    expect(parsePreferences(JSON.stringify({ irons, defaultIronId: 'gone' })).defaultIronId).toBe(
+      'a',
+    );
+    expect(parsePreferences(JSON.stringify({ irons, defaultIronId: null })).defaultIronId).toBe(
+      'a',
+    );
+  });
+
+  it('keeps a margin and a thickness that are real lengths, quantised, and falls back otherwise', () => {
+    const kept = parsePreferences(
+      JSON.stringify({ stitchMarginMm: 4.000_04, leatherThicknessMm: 1.2 }),
+    );
+    expect(kept.stitchMarginMm).toBe(4);
+    expect(kept.leatherThicknessMm).toBe(1.2);
+
+    for (const bad of [0, -3, '4', null, Number.MAX_VALUE * 10])
+      expect(parsePreferences(JSON.stringify({ stitchMarginMm: bad })).stitchMarginMm).toBe(3.5);
+    for (const bad of [0, -1, 'thick'])
+      expect(
+        parsePreferences(JSON.stringify({ leatherThicknessMm: bad })).leatherThicknessMm,
+      ).toBeNull();
+  });
+
+  it('takes the same changes from the renderer, by the same rules', () => {
+    expect(
+      validChanges({
+        irons: [iron('x', 'Mine', 3.2), iron('y', '', 3)],
+        defaultIronId: 'x',
+        stitchMarginMm: 4,
+        leatherThicknessMm: null,
+      }),
+    ).toEqual({
+      irons: [iron('x', 'Mine', 3.2)],
+      defaultIronId: 'x',
+      stitchMarginMm: 4,
+      leatherThicknessMm: null,
+    });
+    expect(validChanges({ stitchMarginMm: -1, leatherThicknessMm: 'x', irons: 'all' })).toEqual({});
+  });
+
+  it('keeps the default on an iron the maker still has, whatever the renderer sends', async () => {
+    const store = new PreferencesStore(file);
+    await store.update({ irons: [iron('a', 'Diamond 3.85', 3.85)], defaultIronId: 'a' });
+    await store.update({ irons: [iron('b', 'Diamond 2.7', 2.7)] });
+    expect(store.preferences.defaultIronId).toBe('b');
+    expect(new PreferencesStore(file).preferences.irons).toEqual([iron('b', 'Diamond 2.7', 2.7)]);
+  });
+});
+
+describe('the maker’s keys (U.12)', () => {
+  const stored = (keyBindings: unknown) =>
+    parsePreferences(JSON.stringify({ version: 2, keyBindings })).keyBindings;
+
+  it('has none changed in a file written before keys could be', () => {
+    expect(parsePreferences(JSON.stringify({ version: 2 })).keyBindings).toEqual({});
+    expect(DEFAULT_PREFERENCES.keyBindings).toEqual({});
+  });
+
+  it('keeps a usable change, and drops an unknown command, a malformed key, Enter and a clash', () => {
+    expect(
+      stored({
+        save: [{ code: 'F5' }],
+        nonsense: [{ code: 'F6' }],
+        print: [{ code: 'f7' }],
+        exportPdf: [{ code: 'Enter' }],
+        help: [{ code: 'F5' }],
+        sheets: 'F8',
+      }),
+    ).toEqual({ save: [{ code: 'F5' }] });
+  });
+
+  it('drops a map that is not one, and keeps the rest of the file', () => {
+    for (const keyBindings of [null, 'F5', 3, [{ code: 'F5' }]]) {
+      const parsed = parsePreferences(
+        JSON.stringify({ version: 2, keyBindings, partsFolded: true }),
+      );
+      expect(parsed.keyBindings).toEqual({});
+      expect(parsed.partsFolded).toBe(true);
+    }
+  });
+
+  it('takes the same changes from the renderer, by the same rules, and keeps them over a restart', async () => {
+    expect(
+      validChanges({ keyBindings: { save: [{ code: 'F5' }], quit: [{ code: 'KeyB' }] } }),
+    ).toEqual({ keyBindings: { save: [{ code: 'F5' }] } });
+    expect(validChanges({ legendOpen: true })).toEqual({ legendOpen: true });
+    const store = new PreferencesStore(file);
+    await store.update({ keyBindings: { 'tool.rectangle': [{ code: 'KeyQ' }] } });
+    expect(new PreferencesStore(file).preferences.keyBindings).toEqual({
+      'tool.rectangle': [{ code: 'KeyQ' }],
+    });
+    // Reset all is an empty map, written as one.
+    await store.update({ keyBindings: {} });
+    expect(new PreferencesStore(file).preferences.keyBindings).toEqual({});
   });
 });
 

@@ -29,8 +29,6 @@ export const SHEET = {
    * other pixel quantity, so the builders in `packages/export` name tokens
    * rather than hold pixel numbers of their own.
    */
-  /** A sheet's number and a taped piece's name. */
-  labelPx: 13,
   /** "Tape join" on the design board: no smaller than the board's own words (R-01). */
   joinLabelPx: 12,
   /** A tape join on the design board. */

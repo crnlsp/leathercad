@@ -245,7 +245,7 @@ export function renderToSvgString(
 }
 
 /** One path as an SVG `d` attribute, in millimetres. */
-function pathData(p: Path, n: (v: number) => string): string {
+export function pathData(p: Path, n: (v: number) => string): string {
   if (p.segments.length === 0) return '';
 
   const first = SegmentOps.start(p.segments[0]!);
@@ -296,7 +296,7 @@ function baseline(value: CanvasTextBaseline | undefined): string {
 }
 
 /** Strips the negative zero a flip produces, so snapshots do not show "-0". */
-function format(value: number, precision: number): string {
+export function format(value: number, precision: number): string {
   const rounded = Number(value.toFixed(precision));
   return Object.is(rounded, -0) ? '0' : String(rounded);
 }

@@ -1,6 +1,7 @@
 import {
   deleteFeatures,
   deletePart,
+  isEmptySelection,
   pieceScope,
   selectedFeatureIds,
   transformRefusal,
@@ -12,7 +13,7 @@ import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
 import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
 
 import { featuresWithin, hitTest } from '../hitTest.js';
-import type { Tool, ToolContext } from '../tool.js';
+import { means, type Tool, type ToolContext } from '../tool.js';
 import { isDrag } from './gesture.js';
 
 type State =
@@ -126,12 +127,17 @@ export function createSelectTool(): Tool {
 
     onKey(ctx, event) {
       if (event.key === 'Escape') {
+        // Claimed only when there was something to let go of (U.5): a drag,
+        // or a selection.
+        const busy = state.kind !== 'idle' || !isEmptySelection(ctx.store.getState().selection);
         reset(ctx);
         ctx.store.clearSelection();
-        return;
+        return busy;
       }
 
-      if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Claimed whenever it acts (U.12): the key is this delete's, and no
+      // command the maker gave the same key runs as well.
+      if (means(event, 'delete')) {
         const { selection } = ctx.store.getState();
         // A part picked by its heading goes whole, as its menu's Delete part
         // does (Q29), not feature by feature into an empty part.
@@ -139,20 +145,20 @@ export function createSelectTool(): Tool {
         if (partId !== undefined && selection.features.size === 0) {
           if (ctx.requestDeletePart !== undefined) {
             ctx.requestDeletePart(partId);
-            return;
+            return true;
           }
           const before = ctx.store.getState().document;
           ctx.dispatch(deletePart(partId));
           if (ctx.store.getState().document !== before) ctx.store.clearSelection();
-          return;
+          return true;
         }
 
         const selected = [...selection.features];
-        if (selected.length === 0) return;
+        if (selected.length === 0) return false;
 
         if (ctx.requestDelete !== undefined) {
           ctx.requestDelete(selected);
-          return;
+          return true;
         }
 
         // Without an app to ask, a delete with dependents is refused. Keep the
@@ -160,7 +166,9 @@ export function createSelectTool(): Tool {
         const before = ctx.store.getState().document;
         ctx.dispatch(deleteFeatures(selected));
         if (ctx.store.getState().document !== before) ctx.store.clearSelection();
+        return true;
       }
+      return false;
     },
 
     /**

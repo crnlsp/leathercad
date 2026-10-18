@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { cssVariables } from '@leathercad/render';
+import { SHELL, cssVariables } from '@leathercad/render';
 import { describe, expect, it } from 'vitest';
 
 const stylesheet = readFileSync(resolve(import.meta.dirname, 'styles.css'), 'utf8');
@@ -16,7 +16,8 @@ const stylesheet = readFileSync(resolve(import.meta.dirname, 'styles.css'), 'utf
  * Every token the stylesheet reads comes from `packages/render/src/theme`, the
  * module the canvas and the exporter read — so it cannot drift from them. The
  * only custom properties it may define itself are layout: the frame's column
- * widths, which are about arranging the window rather than how anything looks.
+ * widths, and a Parts row's depth in the tree (U.8), which its row sets —
+ * about arranging the window rather than how anything looks.
  */
 // Comments may name anything, including the colours they explain.
 const css = stylesheet.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -36,13 +37,18 @@ describe('the stylesheet reads the theme', () => {
   });
 
   it('defines no token of its own except the layout it arranges', () => {
-    expect([...LOCAL].sort()).toEqual(['--parts-w', '--properties-w', '--rail-w']);
+    expect([...LOCAL].sort()).toEqual(['--level', '--parts-w', '--properties-w', '--rail-w']);
     for (const name of LOCAL) expect(THEME.has(name), name).toBe(false);
   });
 
   it('writes no colour of its own', () => {
     expect(css.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).toEqual([]);
     expect(css.match(/\brgba?\(/g) ?? []).toEqual([]);
+  });
+
+  it('gives the window the shell’s colour behind its first frame (U.20)', () => {
+    const main = readFileSync(resolve(import.meta.dirname, '../../main/index.ts'), 'utf8');
+    expect(main).toContain(`backgroundColor: '${SHELL[800]}'`);
   });
 
   it('uses the three radii and nothing else', () => {

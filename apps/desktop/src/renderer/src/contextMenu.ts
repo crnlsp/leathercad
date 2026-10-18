@@ -11,18 +11,10 @@ import {
   type Selection,
 } from '@leathercad/document';
 import type { FeatureId, PartId, Problem, Project } from '@leathercad/domain';
-import {
-  Copy,
-  Eye,
-  EyeOff,
-  FlipHorizontal2,
-  FlipVertical2,
-  Lock,
-  LockOpen,
-  Trash2,
-} from 'lucide-react';
+import { Copy, Eye, EyeOff, Lock, LockOpen, Trash2 } from 'lucide-react';
 
 import type { I18n, Translate } from '../../shared/i18n.js';
+import { FLIP_ICON } from './icons/arrange.js';
 import type { MenuEntry } from './menus.js';
 import { describeProblem } from './problemText.js';
 
@@ -88,7 +80,7 @@ export function selectionMenu(
     kind: 'item',
     id: `context-flip-${axis}`,
     label: t(`contextMenu.flip.${axis}`),
-    icon: axis === 'horizontal' ? FlipHorizontal2 : FlipVertical2,
+    icon: FLIP_ICON[axis],
     refusal: empty ?? reason(flipRefusal(project, ids, axis), t),
     onChoose: () => actions.dispatch(flipFeatures(ids, axis)),
   });

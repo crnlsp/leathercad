@@ -20,6 +20,15 @@
   },
   "keys": {
     "Alt": "Alt",
+    "Down": "↓",
+    "End": "End",
+    "Home": "Home",
+    "Insert": "Ins",
+    "Left": "←",
+    "PageDown": "PgDn",
+    "PageUp": "PgUp",
+    "Right": "→",
+    "Up": "↑",
     "Backspace": "Backspace",
     "Ctrl": "Ctrl",
     "Delete": "Del",
@@ -29,6 +38,8 @@
     "Middle-drag": "Middle-drag",
     "Scroll": "Scroll",
     "Shift": "Shift",
+    "Space": "Space",
+    "Tab": "Tab",
     "drag": "drag"
   },
   "projectBar": {
@@ -38,18 +49,37 @@
     "exportPdf": "Export PDF",
     "exportTooltip": "Save {{sheets}} as a print-ready PDF at 1:1. To print it from another app, choose Actual size (100 %)",
     "help": "Help",
+    "helpTooltip": "Help",
     "name": "Project name",
-    "nameTooltip": "Project name — used for the file name and the PDF footer",
+    "nothingToSave": "Nothing to save",
     "output": "Output",
+    "paper": "Paper: {{sheets}}",
+    "paperLong": "{{count}} × {{paper}} {{orientation}}",
+    "paperPopover": {
+      "orientation": "Orientation",
+      "option_one": "{{paper}} · {{count}} sheet",
+      "option_other": "{{paper}} · {{count}} sheets",
+      "sheets_one": "{{count}} sheet",
+      "sheets_other": "{{count}} sheets",
+      "summary": "{{sheets}} · scale 100 %, locked · {{taped}}",
+      "nothingTaped": "nothing taped",
+      "seeSheets": "See the sheets"
+    },
+    "paperShort": "{{count}} × {{paper}}",
     "print": "Print",
     "printTooltip": "Preview {{sheets}}, then print them at 1:1",
-    "projectMenu": "Project menu",
-    "projectMenuTooltip": "New, open, save as, and recent projects",
+    "problems": "Problems: {{counts}}",
+    "problemsNone": "Problems: nothing to fix",
+    "problemsNoneTooltip": "Nothing to fix",
+    "problemsTooltip": "{{counts}}. Show them in Problems",
+    "projectMenu": "Project menu, {{name}}",
+    "projectMenuTooltip": "{{name}}. New, open, save as, rename, and recent projects",
     "saveTooltip": "Save the project",
     "saved": "Saved",
     "settings": "Settings",
     "settingsTooltip": "Settings",
-    "unsaved": "Unsaved changes"
+    "unsaved": "Unsaved changes",
+    "unsavedShort": "Unsaved"
   },
   "menu": {
     "about": "About LeatherCAD",
@@ -63,16 +93,66 @@
     "openSample": "Open sample project",
     "recent": "Recent projects",
     "recentEmpty": "Projects you open or save appear here.",
+    "rename": "Rename…",
+    "renameNote": "The name is the file’s and the PDF footer’s",
     "saveAs": "Save as…",
-    "settings": "Settings…"
+    "settings": "Settings…",
+    "recentGone": "That project is no longer there",
+    "recentGoneDetail": "It was moved, renamed or deleted, so it has been taken off the recent projects."
   },
   "macMenu": {
     "edit": "Edit",
     "redo": "Redo",
     "undo": "Undo"
   },
+  "hints": {
+    "addsOrRemoves": "adds or removes",
+    "allKeys": "all keys",
+    "arcNext": "Click the next point",
+    "arcStart": "Click the start of the arc",
+    "arcsNext": "arcs the next segment",
+    "backToSelect": "back to Select",
+    "cancels": "cancels",
+    "circleDrag": "Drag out from the centre, or click it and then the rim",
+    "circleRim": "Click the rim",
+    "clickSelects": "Click selects",
+    "deletes": "deletes",
+    "dragBox": "Drag a box to select",
+    "dragMoves": "Drag moves it",
+    "editsSizes": "edits the sizes",
+    "finishes": "finishes",
+    "hardwarePick": "picks the part to punch",
+    "hardwarePunch": "Click to punch a hole",
+    "holdsProportions": "holds the proportions",
+    "holdsSteps": "holds 15° steps",
+    "keepSquare": "keeps it square",
+    "lineDrag": "Drag end to end, or click both ends",
+    "lineEnd": "Click the end",
+    "measureFirst": "Click two corners to dimension them",
+    "measureSecond": "Click the second corner",
+    "pointsAdd": "Press an edge to add a point",
+    "pointsMove": "Drag a point to move it",
+    "pointsPick": "picks a drawn path to edit",
+    "pointsRemove": "removes the point",
+    "pointsRound": "rounds the corner",
+    "polylineClose": "Click the first to close",
+    "polylinePoints": "Click each point",
+    "rectangleCorner": "Click the other corner",
+    "rectangleDrag": "Drag, or click two corners",
+    "rotateDrag": "Drag around to turn it",
+    "rotatePick": "picks what to turn",
+    "scaleDrag": "Drag to resize it about its centre",
+    "scalePick": "picks what to resize",
+    "sheetsClick": "Click a piece to see where it prints",
+    "sheetsExport": "exports the PDF",
+    "sheetsPrint": "prints",
+    "takesBack": "takes back a point",
+    "textPick": "picks the part to label",
+    "textPlace": "Click to place a label",
+    "textType": "then type it in Properties",
+    "typeSize": "Type a size"
+  },
   "work": {
-    "howTo": "{{howTo}} · scroll zooms · middle-drag pans",
     "redo": "Redo",
     "region": "Work",
     "undo": "Undo",
@@ -82,6 +162,8 @@
   "status": {
     "features_one": "feature",
     "features_other": "features",
+    "focus": "Focus",
+    "panels": "Panels",
     "parts": "Parts",
     "partsCount_one": "part",
     "partsCount_other": "parts",
@@ -95,10 +177,27 @@
   },
   "view": {
     "design": "Design",
+    "designBoard": "Design board",
     "designTooltip": "Design the pieces",
     "label": "View",
     "sheets": "Sheets",
+    "sheetsBoard": "Sheets board",
+    "sheetsNamed_one": "Sheets, {{count}} sheet",
+    "sheetsNamed_other": "Sheets, {{count}} sheets",
     "sheetsTooltip": "See the pieces on the sheets they will print on"
+  },
+  "zoom": {
+    "fit": "Fit",
+    "fitDrawing": "Fit drawing",
+    "fitSelection": "Fit selection",
+    "fitTooltip": "Fit the drawing, or double-click empty board",
+    "level": "Zoom, {{percent}} %",
+    "levelTooltip": "Fit, or zoom to a size",
+    "nothingSelected": "Select something drawn on the board to fit it",
+    "onDesignOnly": "On Design only: the sheets are fitted whole",
+    "percent": "{{percent}} %",
+    "title": "Zoom",
+    "trueSize": "True size, {{percent}} %"
   },
   "tools": {
     "collapsedTooltip": "{{name}} — {{howTo}}",
@@ -180,18 +279,25 @@
       "edit": "Edit",
       "editingPoints": "While editing points",
       "file": "File",
+      "parts": "In Parts",
       "tools": "Tools",
       "view": "View",
-      "window": "Window"
+      "window": "Window",
+      "field": "In a text field"
     },
-    "arcOrStraight": "Polyline: the next segment is an arc, or straight",
-    "cancel": "Cancel what the tool is doing, or clear the selection",
+    "arc": "Polyline: the next segment is an arc",
+    "straight": "Polyline: the next segment is straight",
+    "cancel": "Cancel what the tool is doing, clear the selection, or leave focus mode",
     "contextMenu": "Open the menu for the selection, as a right-click does",
     "delete": "Delete what is selected (Select tool)",
     "design": "Design: the board you draw on",
+    "editSizes": "Type the sizes of the selected outline, beside it on the board",
     "exportPdf": "Export PDF",
     "finishPolyline": "Finish a polyline",
-    "fit": "Fit the pattern in the window",
+    "fit": "Fit the drawing in the window",
+    "fitSelection": "Fit the selection in the window",
+    "focusMode": "Focus mode: both panels hide, and the rail shows keys only",
+    "selectionBar": "Move to the selection bar, or back to the board",
     "fullScreen": "Full screen",
     "keyboardShortcuts": "Keyboard shortcuts",
     "newProject": "New project",
@@ -201,6 +307,7 @@
     "quit": "Quit",
     "redo": "Redo",
     "removePoint": "Remove the point last pressed",
+    "rename": "Rename the piece or feature",
     "roundCorner": "Round the corner last pressed to the corner radius, or sharpen a rounded one",
     "save": "Save",
     "saveAs": "Save as",
@@ -208,10 +315,15 @@
     "sheets": "Sheets: the paper it prints on",
     "square": "Keep a rectangle square; hold a line to 15° steps",
     "takeBack": "Remove the last point of a polyline or arc",
+    "toggleParts": "Show or hide Parts",
+    "toggleProperties": "Show or hide Properties",
+    "toggleVisible": "Hide or show the piece or feature",
+    "trueSize": "Zoom to true size, 100 %",
     "undo": "Undo",
     "zoom": "Zoom about the pointer",
     "zoomIn": "Zoom in",
-    "zoomOut": "Zoom out"
+    "zoomOut": "Zoom out",
+    "help": "Open the Help menu"
   },
   "settings": {
     "close": "Close settings",
@@ -221,7 +333,8 @@
       "appearance": "Appearance",
       "general": "General",
       "language": "Language",
-      "shortcuts": "Keyboard shortcuts"
+      "shortcuts": "Keyboard shortcuts",
+      "tools": "My tools"
     },
     "recent": {
       "clear": "Clear list",
@@ -233,11 +346,41 @@
     },
     "legend": {
       "name": "Name the marks in the canvas legend",
-      "note": "Off, the legend is a strip of marks until you open it."
+      "note": "Off, the legend folds to a chip until you open it."
+    },
+    "selectionBar": {
+      "name": "Show the selection bar under the selected piece",
+      "note": "How its stitching came out, and the next step in one click. Off, nothing is shown under the piece, and its key does nothing."
     },
     "toolNames": {
       "name": "Show tool names in the rail",
       "note": "Off, each tool shows only its key. In windows narrower than 1200 px, the rail shows only keys regardless."
+    },
+    "tools": {
+      "actions": "Actions",
+      "addIron": "Add iron",
+      "default": "Default",
+      "delete": "Delete",
+      "deleteNote": "Hole sets made with it keep their pitch",
+      "forNewPieces": "For new pieces",
+      "intro": "Your irons and starting values. The Iron menu on a hole set lists these irons; a new stitch line, seam allowance or fold takes these values, and keeps them.",
+      "ironActions": "Actions for {{name}}",
+      "irons": "Irons",
+      "makeDefault": "Make {{name}} the default",
+      "name": "Name",
+      "newIron": "Iron {{number}}",
+      "noIrons": "No irons yet. A new hole set takes the project’s pitch until you add one.",
+      "pitch": "Pitch",
+      "pitchOf": "Pitch of {{name}}",
+      "rename": "Rename",
+      "margin": {
+        "name": "Stitch margin",
+        "note": "How far in from the edge a new stitch line starts, and how far out a new seam allowance goes."
+      },
+      "thickness": {
+        "name": "Leather thickness",
+        "note": "Written into each new fold. Leave it blank to record none."
+      }
     },
     "language": {
       "invite": "LeatherCAD is translated by the people who use it. {{link}}",
@@ -248,6 +391,29 @@
       "unavailable": "Your system’s language, {{language}}, is not available yet, so LeatherCAD is in {{fallback}}.",
       "option": "{{own}} — {{here}}",
       "preview": "{{language}} (preview, not yet supported)"
+    },
+    "shortcuts": {
+      "intro": "To change a key, choose Change and press the new keys. {{escape}}, {{tab}} and {{enter}} keep their own roles, and a fixed key belongs to a text field or the system.",
+      "change": "Change",
+      "changeLabel": "Change the keys for {{command}}",
+      "listening": "Press the new keys · {{escape}} cancels",
+      "reset": "Reset",
+      "resetLabel": "Reset {{command}} to its default keys",
+      "resetAll": "Reset all",
+      "fixed": "Fixed",
+      "reserved": "{{key}} keeps its own role. Press other keys.",
+      "unusable": "That key, or a modifier held with it, can't be part of a shortcut. Press other keys.",
+      "needsModifier": "{{command}} works in text fields too: give it a function key, or keys held with a modifier.",
+      "clash": "{{keys}} is already used for “{{command}}”.",
+      "clashFixed": "{{keys}} is already used for “{{command}}”, and can't be swapped.",
+      "swap": "Swap",
+      "cancel": "Cancel",
+      "changed": "{{command}} has new keys.",
+      "wasReset": "{{command}} has its default keys again.",
+      "swapped": "{{command}} and {{other}} swapped keys.",
+      "allReset": "Every key is back to its default.",
+      "typesOther": "Held that way, the key types “{{typed}}” rather than its letter, so it can't be a shortcut. Press other keys.",
+      "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys."
     }
   },
   "about": {
@@ -256,7 +422,8 @@
     "notices": "Third-party notices",
     "reporting": "To report a problem, attach the log.",
     "source": "Source code on GitHub",
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "noticesInDevelopment": "Third-party notices are written by a production build (pnpm build)."
   },
   "recovery": {
     "decline": "Not now",
@@ -304,12 +471,6 @@
     "saveTitle": "Save project",
     "svg": "SVG"
   },
-  "main": {
-    "noticesTitle": "Third-party notices",
-    "noticesInDevelopment": "Third-party notices are written by a production build (pnpm build).",
-    "recentGone": "That project is no longer there",
-    "recentGoneDetail": "{{path}}\n\nIt was moved, renamed or deleted, so it has been taken off the recent projects."
-  },
   "hardware": {
     "eyelet": "Eyelet",
     "other": "Other",
@@ -324,7 +485,6 @@
     "failedNotPrinted_one": "{{count}} feature with a problem isn't printed.",
     "failedNotPrinted_other": "{{count}} features with problems aren't printed.",
     "paper": "Paper",
-    "paperAndSheets": "Paper and sheets",
     "partNotPrinted": "{{name}} isn't printed.",
     "partsNotPrinted_one": "{{count}} part isn't printed.",
     "partsNotPrinted_other": "{{count}} parts aren't printed.",
@@ -344,6 +504,36 @@
     "list": "Sheets {{numbers}}",
     "one": "Sheet {{number}}",
     "range": "Sheets {{first}}–{{last}}"
+  },
+  "sheetsView": {
+    "drawingTools": "Drawing tools are in Design · {{design}}",
+    "sheetCount_one": "{{count}} sheet",
+    "sheetCount_other": "{{count}} sheets",
+    "sheetHeading": "{{sheet}} · {{pieces}}",
+    "noPieces": "No pieces",
+    "pieceTurned": "{{names}}, turned 90°",
+    "tapedLabel": "{{name}} · {{sheets}}",
+    "turnedMark": "Turned 90°",
+    "tapedMark": "Taped",
+    "turnedLegend": "marks a piece turned to fit its sheet.",
+    "tapedHeading": "Taped across sheets",
+    "tapedNone": "None. Every piece fits on one sheet.",
+    "notPrintedHeading": "Not printed",
+    "onTheSheets": "on the sheets",
+    "scale": "Scale",
+    "scaleLocked": "100 % · locked",
+    "sheet_one": "Sheet",
+    "sheet_other": "Sheets",
+    "sheetsOf": "{{sheets}} of {{count}}",
+    "range": "{{first}}–{{last}}",
+    "placement": "Placement",
+    "asDrawn": "As drawn",
+    "turned": "Turned 90°",
+    "taped": "Taped",
+    "fitsOne": "Fits one sheet, no tape",
+    "manySelected_one": "{{count}} piece selected. Pick one to see where it prints.",
+    "manySelected_other": "{{count}} pieces selected. Pick one to see where it prints.",
+    "measure": "After printing, measure the 100 × 5 mm box at the foot of a sheet."
   },
   "tapedAcross": {
     "list": "{{name}} is taped across sheets {{numbers}}.",
@@ -386,6 +576,8 @@
     "printSheets_one": "Print {{count}} sheet",
     "printSheets_other": "Print {{count}} sheets",
     "printer": "Printer",
+    "problems": "Problems",
+    "problemsLead": "The design has {{counts}}. Everything that could be built is on the sheets.",
     "savePdf": "Save PDF…",
     "scale": "Scale",
     "scaleLocked": "100 % — locked",
@@ -402,10 +594,6 @@
   "exportNotice": {
     "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
     "countsFile": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the file.",
-    "errors_one": "{{count}} error",
-    "errors_other": "{{count}} errors",
-    "infos_one": "{{count}} to note",
-    "infos_other": "{{count}} to note",
     "inPart": "in {{part}}",
     "omitted": "— each failed to build, so it is missing from the PDF.",
     "omittedFile": "— each failed to build, so it is missing from the file.",
@@ -422,18 +610,31 @@
     "tiledNoPaper": "{{printed}} No supported paper holds it whole.",
     "titleCheck": "PDF exported, with something to check",
     "titleCheckFile": "{{format}} exported, with something to check",
-    "titleTiled": "PDF exported across several sheets",
-    "warnings_one": "{{count}} warning",
-    "warnings_other": "{{count}} warnings"
+    "titleTiled": "PDF exported across several sheets"
+  },
+  "panels": {
+    "featureIn": "{{feature}} · {{part}}",
+    "hideParts": "Hide Parts",
+    "hideProperties": "Hide Properties",
+    "partsFolded": "Parts, folded",
+    "propertiesFolded": "Properties, folded",
+    "showParts": "Show Parts",
+    "showProperties": "Show Properties"
   },
   "parts": {
     "actions": "Actions for {{name}}",
+    "count_one": "{{count}} piece",
+    "count_other": "{{count}} pieces",
     "duplicateNote": "A copy beside this one, with its own stitching",
     "empty": "No parts yet. Press {{rectangle}}, then drag or click two corners to draw one.",
     "emptyPart": "Empty",
     "hidePart": "Hide part",
+    "isHidden": "Hidden",
+    "isLocked": "Locked",
     "mirrorsMark": "Mirrors the feature it nests under",
+    "notPrinted": "Not printed. {{reason}}",
     "remove": "Delete part",
+    "rename": "Name",
     "sample": "Or take a finished one apart: {{link}}.",
     "sampleLink": "open the sample wallet",
     "showPart": "Show part",
@@ -457,11 +658,20 @@
     "addHolesHint": "Holes along this line, at the pitch of your iron",
     "addStitchLine": "Add stitch line",
     "addStitchLineHint": "A stitch line that follows this edge at a fixed margin, and keeps following it",
+    "afterOutline": {
+      "title": "After the outline",
+      "stitchLine": "Stitch line",
+      "holes": "Holes",
+      "note": "From {{tools}} in Settings, and a change here is kept there. Used when you pick Stitch + allowance, or the next steps on the new piece."
+    },
     "area": "Area",
+    "arrange": "Arrange",
     "cut": "Cut",
     "cutSuffix": "off",
-    "flipHeading": "Flip this piece",
+    "drawing": "Rectangle being drawn",
+    "flipLabel": "Flip",
     "foldMirror": "Mirror across fold",
+    "foldMirrorLabel": "Across fold",
     "foldMirrorHint": "A counterpart across {{fold}}, which re-mirrors whenever that fold moves",
     "follows": "Follows",
     "frozenNote": "Frozen from {{source}}: drawn geometry now, no longer following it.",
@@ -474,17 +684,19 @@
     "measured": "Measured",
     "measures": "Measures",
     "mirrorFoldNote": "Mirrors {{source}} across {{fold}}. Move that fold and this follows it; move {{source}} and this stays its mirror. It cannot be dragged on its own.",
-    "mirrorHeading": "Mirror into a counterpart",
+    "mirrorLabel": "Mirror",
     "mirrorLineNote": "Mirrors {{source}} across a line fixed where this was made — it does not follow {{source}} about. Moving {{source}} moves this the opposite way, and resizing it changes the gap between the two. Drag this piece to place the pair.",
     "mirrors": "Mirrors",
     "name": "Name",
     "nothingSelected": "Nothing selected. Draw with {{rectangle}}, or pick something with {{select}}.",
     "part": "Part",
+    "piece": "Piece",
     "perimeter": "Perimeter",
     "problems_one": "Problem",
     "problems_other": "Problems",
     "reads": "Reads",
     "title": "Properties",
+    "where": "{{part}} · Cut ×{{quantity}}",
     "flip": {
       "horizontal": "Flip ↔",
       "vertical": "Flip ↕"
@@ -506,6 +718,20 @@
         "horizontal": "A mirrored copy as a new part, to the right, mirrored across this piece's right edge as it is now. It follows this piece's shape; the mirror line stays where it is.",
         "vertical": "A mirrored copy as a new part, below, mirrored across this piece's bottom edge as it is now. It follows this piece's shape; the mirror line stays where it is."
       }
+    },
+    "mirrorNote": {
+      "counterpart": "Mirror makes a linked counterpart.",
+      "piece": "Mirror makes a counterpart piece."
+    },
+    "job": {
+      "holes": "Holes",
+      "paper": "{{paper}}, {{orientation}}",
+      "pieces": "Pieces",
+      "scaleCheckOnly": "{{paper}}, {{orientation}}, scale check only",
+      "sheets": "Sheets",
+      "timesCut": "{{holes}} ×{{cut}}",
+      "toCut_one": "{{count}} to cut",
+      "toCut_other": "{{count}} to cut"
     },
     "manyPartsSelected_one": "{{count}} part selected. Select one to edit it.",
     "manyPartsSelected_other": "{{count}} parts selected. Select one to edit it."
@@ -536,6 +762,13 @@
     "holes_other": "{{count}} holes · {{pitch}}",
     "unnamed": "Part"
   },
+  "spacing": {
+    "matches": "Spacing matches the pitch",
+    "squeezed": "Spacing is squeezed {{percent}} %",
+    "squeezedUnder": "Spacing is squeezed less than {{percent}} %",
+    "stretched": "Spacing is stretched {{percent}} %",
+    "stretchedUnder": "Spacing is stretched less than {{percent}} %"
+  },
   "problems": {
     "withSubject": "{{name}}: {{sentence}}",
     "badge_one": "{{count}} problem, worst: {{severity}}",
@@ -546,8 +779,6 @@
       "warning": "warning"
     },
     "panel": {
-      "count_one": "{{count}} problem",
-      "count_other": "{{count}} problems",
       "none": "Nothing to fix.",
       "title": "Problems"
     },
@@ -677,7 +908,7 @@
     },
     "DERIVED_MOVED_ALONE": {
       "title": "Moves with its source",
-      "description": "{{featureName}} follows {{rootName}}, so it moves when {{rootName}} does. Move {{rootName}} instead."
+      "description": "Follows {{rootName}}: move that instead."
     },
     "TRANSFORM_FLATTENS": {
       "title": "Would flatten",
@@ -814,6 +1045,14 @@
     "WHOLE_PART_NOT_SCALED": {
       "title": "A whole part is not scaled",
       "description": "Scale resizes the shapes you pick, not a whole part: that would resize its rivet holes and labels too. Pick its outline on the board to resize the edge alone."
+    },
+    "counts": {
+      "error_one": "{{count}} error",
+      "error_other": "{{count}} errors",
+      "warning_one": "{{count}} warning",
+      "warning_other": "{{count}} warnings",
+      "info_one": "{{count}} to note",
+      "info_other": "{{count}} to note"
     }
   },
   "contextMenu": {
@@ -863,6 +1102,13 @@
       "exact-pitch": "Exactly this pitch",
       "fit-whole": "Even, whole number",
       "hole-at-corner": "A hole on each corner"
+    },
+    "lengthError": {
+      "mixed": "Give every number in a sum its unit, as in 10cm + 5mm. For 3½ inches, type 3.5in",
+      "notALength": "That doesn’t come to a length: a unit goes on a number once, and a length is not multiplied or divided by a length",
+      "notFinite": "That doesn’t come to a number",
+      "syntax": "Not a size this reads. Try 95, 95-2*3.5 or 3.75in",
+      "unit": "“{{unit}}” is not a unit here. Use mm, cm or in"
     },
     "marking": {
       "alignment": "Alignment",
@@ -934,5 +1180,58 @@
     "unlock_one": "Unlock",
     "unlock_other": "Unlock {{count}} features",
     "delete-part": "Delete part"
+  },
+  "fieldMenu": {
+    "label": "Edit",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select all",
+    "nothingSelected": "Select some of the text first"
+  },
+  "chips": {
+    "title": "Sizes of the selected outline",
+    "titleDrawing": "Sizes of the rectangle being drawn",
+    "hint": {
+      "next": "next",
+      "make": "makes it",
+      "cancel": "cancels"
+    },
+    "cornerName": "Corner radius, all four corners",
+    "corner": "r",
+    "margin": "margin",
+    "mixed": "mixed",
+    "tooLarge": {
+      "halfHeight": "Corner is larger than half the height ({{size}}). {{enter}} uses {{size}}.",
+      "halfWidth": "Corner is larger than half the width ({{size}}). {{enter}} uses {{size}}.",
+      "height": "Corner is larger than the height leaves it ({{size}}). {{enter}} uses {{size}}.",
+      "width": "Corner is larger than the width leaves it ({{size}}). {{enter}} uses {{size}}."
+    },
+    "tooSmall": {
+      "width": "Width is less than its corners need ({{size}}). {{enter}} uses {{size}}.",
+      "height": "Height is less than its corners need ({{size}}). {{enter}} uses {{size}}."
+    }
+  },
+  "selectionBar": {
+    "title": "Stitching of {{piece}}",
+    "noStitching": "No stitching yet",
+    "noHoles": "No holes yet",
+    "holesHidden": "The holes are hidden, so they are not counted and do not print.",
+    "holes_one": "{{count}} hole",
+    "holes_other": "{{count}} holes",
+    "spacing": "{{spacing}} mm, pitch {{pitch}}",
+    "stretched": "stretched {{percent}} %",
+    "stretchedUnder": "stretched less than {{percent}} %",
+    "squeezed": "squeezed {{percent}} %",
+    "squeezedUnder": "squeezed less than {{percent}} %",
+    "runs": "runs {{runs}}",
+    "cut": "Cut ×{{quantity}}",
+    "next": "Next",
+    "done": "done:",
+    "step": {
+      "stitchLine": "Stitch line",
+      "holes": "Stitch holes",
+      "allowance": "Seam allowance"
+    }
   }
 }

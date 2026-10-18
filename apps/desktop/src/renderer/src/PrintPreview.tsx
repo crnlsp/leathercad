@@ -1,5 +1,12 @@
 import { setPageSetup, type DocumentStore } from '@leathercad/document';
-import { PAPER_SIZES, type Orientation, type PaperName, type Project } from '@leathercad/domain';
+import {
+  PAPER_SIZES,
+  countBySeverity,
+  type Diagnostic,
+  type Orientation,
+  type PaperName,
+  type Project,
+} from '@leathercad/domain';
 import { exportPdf } from '@leathercad/export';
 import type { PrinterList } from '@leathercad/platform';
 import { Check } from 'lucide-react';
@@ -11,8 +18,11 @@ import { offersPaper } from '../../shared/paper.js';
 import { ExportFindings } from './ExportNotice.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import { NumberField } from './NumberField.js';
 import { drawPage, openPdf } from './pdfPages.js';
 import { getPlatformHost } from './platformBridge.js';
+import { ProblemRows } from './ProblemList.js';
+import { describeCounts } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
@@ -45,23 +55,35 @@ type Sending =
  *
  * Where the app cannot print itself (Windows, the Flatpak, no CUPS) the same
  * preview saves the PDF instead, and says how it must be printed.
+ *
+ * **The problems come first** (R-06): the list the Problems drawer shows, in
+ * its order, before paper or leather is spent. Nothing is refused for them —
+ * a warning is the maker's to weigh — and choosing one closes the preview and
+ * goes to it, as from the drawer.
  */
 export function PrintPreview({
   project,
   store,
   appVersion,
+  diagnostics,
+  onGoTo,
   onSavePdf,
   onClose,
 }: {
   project: Project;
   store: DocumentStore;
   appVersion: string;
+  /** The one list (X7), as the Problems drawer shows it. */
+  diagnostics: readonly Diagnostic[];
+  onGoTo: (diagnostic: Diagnostic) => void;
   /** Where printing is not possible here: save these bytes, and close. */
   onSavePdf: (bytes: Uint8Array) => void;
   onClose: () => void;
 }) {
-  const { t } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
   const ids = useId();
+  const problems = describeCounts(countBySeverity(diagnostics), i18n);
   const plan = sheetPlanFor(project);
   const { paper, orientation } = project.settings;
   const report = useMemo(() => exportReportFor(project), [project]);
@@ -233,6 +255,20 @@ export function PrintPreview({
           </div>
 
           <div className="print-options">
+            {problems !== null && (
+              <section
+                className="print-problems"
+                aria-labelledby={`${ids}problems`}
+                data-testid="print-problems-list"
+              >
+                <h4 id={`${ids}problems`}>{t('printPreview.problems')}</h4>
+                <p>{t('printPreview.problemsLead', { counts: problems })}</p>
+                <div className="print-problem-rows">
+                  <ProblemRows diagnostics={diagnostics} project={project} onGoTo={onGoTo} />
+                </div>
+              </section>
+            )}
+
             <div className="field">
               <label className="field-label" htmlFor={`${ids}printer`}>
                 {t('printPreview.printer')}
@@ -300,26 +336,16 @@ export function PrintPreview({
             </div>
 
             {direct && (
-              <div className="field">
-                <label className="field-label" htmlFor={`${ids}copies`}>
-                  {t('printPreview.copies')}
-                </label>
-                <input
-                  id={`${ids}copies`}
-                  type="number"
-                  data-testid="print-copies"
-                  min={1}
-                  max={MAX_COPIES}
-                  step={1}
-                  value={copies}
-                  onChange={(event) => {
-                    const value = Math.round(Number(event.target.value));
-                    setCopies(
-                      Math.min(MAX_COPIES, Math.max(1, Number.isFinite(value) ? value : 1)),
-                    );
-                  }}
-                />
-              </div>
+              // A count, as a dimension's Decimals is: no unit, no sums, and
+              // none of Chromium's spin buttons (U.20). Clamped, not refused.
+              <NumberField
+                label={t('printPreview.copies')}
+                value={copies}
+                min={1}
+                precision={0}
+                suffix=""
+                onCommit={(value) => setCopies(Math.min(MAX_COPIES, Math.round(value)))}
+              />
             )}
 
             <dl className="print-facts">
@@ -352,7 +378,7 @@ export function PrintPreview({
             )}
             <p className="dialog-note">{t('printPreview.measure')}</p>
 
-            {report !== null && <ExportFindings report={report} />}
+            {report !== null && <ExportFindings report={report} withCounts={false} />}
           </div>
         </div>
 

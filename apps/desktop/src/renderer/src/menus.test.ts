@@ -58,7 +58,7 @@ describe('a recent project, in two lines (8.7)', () => {
 
 describe('the Project and Help menus (8.7)', () => {
   const noop = (): void => undefined;
-  const actions = { newProject: noop, open: noop, saveAs: noop, openRecent: noop };
+  const actions = { newProject: noop, open: noop, saveAs: noop, rename: noop, openRecent: noop };
   const { t } = createI18n('en');
 
   it('puts the actions first and the recent projects after, so the actions stay put', () => {
@@ -67,6 +67,7 @@ describe('the Project and Help menus (8.7)', () => {
       'new',
       'open',
       'save-as',
+      'rename',
       'separator',
       'group',
     ]);

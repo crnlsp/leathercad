@@ -1,31 +1,47 @@
+import { EPS_LENGTH, approxEq } from '@leathercad/core';
+import type { Iron, Preferences } from '@leathercad/platform';
+
 /**
- * Pricking irons, by the pitch stamped on them.
+ * Pricking irons, by the pitch stamped on them — the maker's own, from
+ * Settings › My tools (U.13).
  *
- * Application configuration, not document data. The pitch **value** is what
- * gets persisted on a hole set, so a file opens identically on a machine that
- * has never heard of this list; the label rides along only so the panel can
- * name what was chosen.
+ * Application configuration, not document data. A hole set stores the pitch
+ * **value** and the iron's name, so a file opens identically on a machine that
+ * has never heard of these irons; the name rides along only so the panel can
+ * say what was chosen.
  *
  * Pitch is nominal — the spacing actually achieved on a given outline is
  * derived and reported separately. See docs/glossary.md.
  */
-export interface IronPreset {
-  readonly id: string;
-  readonly label: string;
-  readonly pitchMm: number;
+export type MakerTools = Pick<
+  Preferences,
+  'irons' | 'defaultIronId' | 'stitchMarginMm' | 'leatherThicknessMm'
+>;
+
+/** The stitch margin's floor and step, wherever it is typed: Settings › My tools, and Properties while drawing (U.18). */
+export const MARGIN_MIN_MM = 0.5;
+export const MARGIN_STEP_MM = 0.5;
+
+/** The maker's iron a hole set was made with — its name and its pitch — if they still have it. */
+export function ironOf(
+  irons: readonly Iron[],
+  pitchMm: number,
+  name: string | undefined,
+): Iron | undefined {
+  return irons.find((iron) => iron.name === name && approxEq(iron.pitchMm, pitchMm, EPS_LENGTH));
 }
 
-export const IRON_PRESETS: readonly IronPreset[] = [
-  { id: 'ks-3.85', label: 'KS Blade 3.85 mm', pitchMm: 3.85 },
-  { id: 'ks-3.38', label: 'KS Blade 3.38 mm', pitchMm: 3.38 },
-  { id: 'ks-3.0', label: 'KS Blade 3.0 mm', pitchMm: 3.0 },
-  { id: 'crimson-3.85', label: 'Crimson Hides 3.85 mm', pitchMm: 3.85 },
-  { id: 'crimson-3.0', label: 'Crimson Hides 3.0 mm', pitchMm: 3.0 },
-  { id: 'amy-roke-3.0', label: 'Amy Roke 3.0 mm', pitchMm: 3.0 },
-  { id: 'amy-roke-2.7', label: 'Amy Roke 2.7 mm', pitchMm: 2.7 },
-];
+/** The iron a new hole set takes, if the maker has one. */
+export function defaultIron(tools: MakerTools): Iron | undefined {
+  return tools.irons.find((iron) => iron.id === tools.defaultIronId);
+}
 
-/** The preset whose pitch matches, if the pitch came from one of these. */
-export function presetForPitch(pitchMm: number, label?: string): IronPreset | undefined {
-  return IRON_PRESETS.find((iron) => iron.label === label && iron.pitchMm === pitchMm);
+/** The list without one iron; the default moves to the first left if it was that one. */
+export function withoutIron(
+  tools: MakerTools,
+  id: string,
+): Pick<MakerTools, 'irons' | 'defaultIronId'> {
+  const irons = tools.irons.filter((iron) => iron.id !== id);
+  const kept = irons.some((iron) => iron.id === tools.defaultIronId);
+  return { irons, defaultIronId: kept ? tools.defaultIronId : (irons[0]?.id ?? null) };
 }

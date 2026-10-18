@@ -4,6 +4,17 @@
 1.3 · **Supersedes:** the File menu note in
 [`2026-09-24-sheets-workflow-design.md`](2026-09-24-sheets-workflow-design.md) §4.1
 
+> **Successor, §3 (U.7, 2026-10-14).** The project bar became the top bar in three zones of R-06
+> ([requirements](2026-10-08-ui-refinement-requirements.md), the plan's §5 U.7). The Project menu's
+> button is the project's name, and *Rename…* in it renames the project (the name was a field in
+> the bar); the save state is a check and *Saved*, or an open dot and *Unsaved changes*, and Save
+> says *Nothing to save* when there is none. Design | Sheets moved here from the work bar, into
+> the middle, as a tab list. The sheet indicator's list became a paper button — "2 × A4 portrait"
+> — opening a popover with the paper, which way up, the sheets and *See the sheets*. Export PDF and
+> Print are split buttons: Export's second half is the export menu, Print's the problems
+> indicator, which opens the Problems drawer. Print is the paper's colour, no longer green. Help
+> opens on F1. The rest of this document is as decided for 8.7.
+
 ## 1. The problem
 
 The window's top row is Electron's native menu: *File, Edit, View, Tools, Paper, Help*. Nearly
@@ -144,7 +155,7 @@ Each menu owns one kind of thing. An item that belongs to none of them is not ad
 |---|---|---|
 | **General** | *Recent projects* — "The Project menu lists the last 10 projects you opened or saved." with how many are listed, and *Clear list* (disabled when there are none) | `PreferencesStore.clearRecent`, and the operating system's list, as the native menu cleared both |
 | **Appearance** | *Name the marks in the canvas legend*; *Show tool names in the rail* | the existing `legendOpen`, and `toolRailCollapsed` inverted — the same state the legend's own toggle and the rail's toggle change |
-| **Keyboard shortcuts** | the shortcut map, **read-only** — rebinding keys would change this pane, not the Settings structure around it — which gains *Ctrl+, Settings*; its *Ctrl+/ or ? This list* row stays | `SHORTCUT_GROUPS`, as the dialog shows it today |
+| **Keyboard shortcuts** | the shortcut map, which gains *Ctrl+, Settings*; its *Ctrl+/ or ? This list* row stays. *As built in U.12:* no longer read-only — each row has *Change* and, once changed, *Reset*, with *Reset all* above; rebinding changed this pane, not the Settings structure around it | `shortcutGroups(keymap)` (was `SHORTCUT_GROUPS`) |
 
 **How it grows.** The sections are one list at the top of `SettingsDialog.tsx`: an id, a title and
 the component that draws the pane. A new section is one entry. **No section is written before
@@ -213,10 +224,10 @@ fake:
 | Method | Does |
 |---|---|
 | `getRecentFiles()` | The recent list: each absolute path, and the path as shown, with `~` |
-| `openRecent(path)` | The main process checks the path is on its list, grants it and sends it back through `openFile`, exactly as the native item did — or takes it off the list and says why, if it is gone |
+| `openRecent(path)` | The main process checks the path is on its list, grants it and sends it back through `openFile`, exactly as the native item did — or takes it off the list and says why, if it is gone. *Since U.20 it answers `opening`, `gone` or `unlisted`, and the renderer says why in its own dialog* |
 | `clearRecent()` | Clears `preferences.json`'s list and the operating system's |
 | `showLogFolder()` | Opens the log folder in the file manager |
-| `openNotices()` | Opens the third-party notices window |
+| `openNotices()` | Opens the third-party notices window. *Since U.20 `readNotices()`: the text, which About shows in the app's own dialog* |
 
 The renderer never names a file the main process did not give it: `openRecent` refuses a path that
 is not on the list.

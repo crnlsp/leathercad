@@ -61,6 +61,7 @@
      nowhere else. Plex's digits are tabular by default, so this states the
      intent and survives a change of face. */
   font-variant-numeric: tabular-nums lining-nums !important;
+  scrollbar-width: thin;
 }
 
 /* Form controls do not inherit the page's font by default: a native button or
@@ -79,6 +80,98 @@ strong {
   font-weight: 600;
 }
 
+/*
+ * What Chromium would otherwise draw in its own light theme (U.20), said once
+ * for the whole shell. The board and the sheet previews are canvases, and
+ * read none of it.
+ *
+ * - `color-scheme`: a select's open list, a field's caret and the scrollbars
+ *   are dark.
+ * - Scrollbars thin, a thumb on the track of whatever scrolls. Chromium keeps
+ *   its small arrows, drawn in the thumb's colour: no standard property
+ *   removes them. `scrollbar-color` is inherited and `scrollbar-width` is not, so
+ *   the width is said on every element, above. A scrolling column is 11 px
+ *   narrower for it, not 16 (the Properties panel counts on that).
+ * - Radios and checkboxes in the accent: `accent-color` is inherited too.
+ */
+:root {
+  color-scheme: dark;
+  scrollbar-color: var(--scrollbar) transparent;
+  accent-color: var(--tan);
+}
+
+/*
+ * A select's open list (U.20). With `color-scheme` alone Chromium draws it
+ * dark, but marks the option under the pointer or the keyboard in the
+ * system's blue. `base-select` makes the list the page's own, in the menus'
+ * colours: the shell's darkest, the option at hand a step lighter, and the
+ * chosen one ticked in the accent.
+ */
+select,
+::picker(select) {
+  appearance: base-select;
+}
+
+::picker(select) {
+  padding: var(--space-1) 0;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  box-shadow: var(--elevation-raised);
+}
+
+option {
+  padding: var(--space-1) var(--space-2);
+}
+
+option:is(:hover, :focus-visible) {
+  background: var(--shell-600);
+  outline: none;
+}
+
+option::checkmark {
+  color: var(--tan);
+}
+
+select::picker-icon {
+  color: var(--text-dim);
+}
+
+/* Forced colours paint every background the window's: the option at hand
+   takes the system's highlight, as a native list's would. */
+@media (forced-colors: active) {
+  option:is(:hover, :focus-visible) {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
+/*
+ * The focus ring (UI Foundations §6.5): 2 px of the accent at 1 px, on
+ * :focus-visible only — never Chromium's `auto`, in the desktop's colour. For
+ * every stop that says nothing of its own: `:where` weighs nothing, so any
+ * component's ring wins, and one on the board says `--tan-ink`, the accent
+ * for the ground.
+ */
+:where(:focus-visible) {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+/*
+ * Text is not picked up by a drag, a double-click or Ctrl+A (U.20): the
+ * window is a tool, not a page. A field is always selectable, and so are the
+ * few words a maker might paste into a report — a problem's words, About's
+ * version — marked `.selectable`.
+ */
+input,
+textarea,
+[contenteditable],
+.selectable {
+  user-select: text;
+}
+
 html,
 body,
 #root {
@@ -87,6 +180,7 @@ body,
 }
 
 body {
+  user-select: none;
   background: var(--shell-800);
   color: var(--text);
   font: var(--t-body);
@@ -105,21 +199,22 @@ body {
 }
 
 /*
- * The frame (UI Foundations §7.1):
+ * The frame (UI Foundations §7.1, the requirements' §5):
  *
  *   rail | parts | tool options · canvas · problems drawer | properties
  *
  * Each panel has a column of its own, so none competes with another for
  * height — the tool rail above the parts tree is how the tree used to shrink
- * to nothing (audit §3.3). Properties steps down at 1280 px; below 1024 px
- * Properties becomes an overlay and below 900 px so does Parts, each opened
- * from the status bar (§7.2). **No panel is ever removed**: the parts tree is
- * the only route to a locked feature.
+ * to nothing (audit §3.3). Which width each column takes is `layoutFor`'s
+ * (panelLayout.ts), said here as classes: a panel docked, folded to a 40 px
+ * strip, or hidden, with only its chip in the status bar. **No panel is ever
+ * removed**: one that is not docked opens over the board, and the parts tree
+ * is the only route to a locked feature.
  */
 .workspace {
   --rail-w: var(--rail-w-expanded);
-  --parts-w: 220px;
-  --properties-w: 288px;
+  --parts-w: var(--parts-width);
+  --properties-w: var(--properties-width);
 
   position: relative;
   display: grid;
@@ -127,52 +222,182 @@ body {
   min-height: 0;
 }
 
+/* Each in its own column, so an empty one stays empty rather than taking the
+   board. A panel's slot is only its place in the DOM, not a box. */
+.workspace > .rail {
+  grid-column: 1;
+}
+
+.workspace .panel.parts,
+.panel-strip.parts {
+  grid-column: 2;
+}
+
+.workspace > .canvas-column {
+  grid-column: 3;
+}
+
+.workspace .panel.properties,
+.panel-strip.properties {
+  grid-column: 4;
+}
+
+.panel-slot {
+  display: contents;
+}
+
 .workspace.rail-collapsed {
   --rail-w: var(--rail-w-collapsed);
 }
 
-/* Parts keeps its width: at 200 px, with its scrollbar, the column beside
-   the toggles was narrower than "mirrored", and a name broke inside a word
-   (Q5). The canvas gives the 20 px instead. */
-@media (max-width: 1279px) {
-  .workspace {
-    --properties-w: 264px;
-  }
+/* Below 1280 px Parts gives up 16 px: at 1024 the board keeps 720. */
+.workspace.narrow {
+  --parts-w: var(--parts-width-narrow);
 }
 
-.workspace.properties-overlay {
-  grid-template-columns: var(--rail-w) var(--parts-w) minmax(0, 1fr);
+.workspace.parts-strip {
+  --parts-w: var(--panel-strip);
 }
 
-.workspace.properties-overlay.parts-overlay {
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+.workspace.parts-hidden {
+  --parts-w: 0px;
 }
 
-/* An overlay panel keeps its place in the DOM and is shown on request, over
-   the canvas, with the one elevation a floating surface gets. */
-.workspace.properties-overlay > .panel.properties,
-.workspace.parts-overlay > .panel.parts {
+.workspace.properties-strip {
+  --properties-w: var(--panel-strip);
+}
+
+.workspace.properties-hidden {
+  --properties-w: 0px;
+}
+
+/* A panel that is not docked keeps its place in the DOM and is shown on
+   request, over the board beside its strip, above the zoom control and the
+   legend, with the one elevation a floating surface gets. */
+.workspace:is(.parts-strip, .parts-hidden) .panel.parts,
+.workspace:is(.properties-strip, .properties-hidden) .panel.properties {
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 8;
+  grid-column: auto;
   display: none;
   box-shadow: var(--elevation-raised);
 }
 
-.workspace.properties-overlay > .panel.properties {
-  right: 0;
-  width: 288px;
+.workspace:is(.parts-strip, .parts-hidden) .panel.parts {
+  left: calc(var(--rail-w) + var(--parts-w));
+  width: var(--parts-width);
 }
 
-.workspace.parts-overlay > .panel.parts {
-  left: var(--rail-w);
-  width: 240px;
+.workspace:is(.properties-strip, .properties-hidden) .panel.properties {
+  right: var(--properties-w);
+  width: var(--properties-width);
 }
 
-.workspace.properties-open > .panel.properties,
-.workspace.parts-open > .panel.parts {
+.workspace.parts-open .panel.parts,
+.workspace.properties-open .panel.properties {
   display: flex;
+}
+
+/* A folded panel: icons only, no rotated text (R-04). Its toggle first, then
+   a piece's thumbnail or the selection's mark, each a 32 × 28 target. */
+.panel-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: var(--space-2) 0;
+  background: var(--shell-700);
+}
+
+.panel-strip.parts {
+  border-right: 1px solid var(--shell-line);
+}
+
+.panel-strip.properties {
+  border-left: 1px solid var(--shell-line);
+}
+
+.panel-strip > .tooltip-anchor {
+  display: flex;
+}
+
+.panel-strip .panel-toggle {
+  width: 32px;
+  min-height: var(--h-control);
+  margin-bottom: var(--space-1);
+}
+
+.strip-button {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: var(--h-control);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.strip-button:hover {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.strip-button[aria-pressed='true'],
+.strip-button.current {
+  border-color: var(--tan);
+  color: var(--text);
+}
+
+.strip-button.off {
+  opacity: 0.4;
+}
+
+.thumbnail path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+}
+
+/* How many are cut, or selected: the ×N of the caption, in the corner. */
+.strip-count {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  color: var(--text);
+  font: var(--t-micro);
+  line-height: 1;
+}
+
+/* "Parts", and its fold at the row's end. */
+.panel-title {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* "3 pieces", beside "Parts" (R-07). */
+.panel-count {
+  margin-right: auto;
+  color: var(--text-dim);
+  font: var(--t-micro);
+}
+
+.panel-toggle {
+  width: 24px;
+  min-height: 24px;
 }
 
 .rail {
@@ -278,10 +503,11 @@ body {
 /*
  * The two bars differ in kind, not only in place (F.8).
  *
- * The project bar is state: a title, whether it is saved, and what it will
- * print on, on the darkest shell with almost no chrome. The work bar is the
- * thing in hand: history, the tool's options as chips, its guidance — on the
- * panels' surface, so it reads as part of the workspace below it.
+ * The top bar is state, in three zones (R-06): the project and whether it is
+ * saved; Design | Sheets; the paper and the two ways out, Export PDF and Print.
+ * On the darkest shell with almost no chrome. The work bar is the thing in
+ * hand: history, the tool's options as chips, its guidance — on the panels'
+ * surface, so it reads as part of the workspace below it.
  */
 .project-bar {
   display: flex;
@@ -292,6 +518,11 @@ body {
   border-bottom: 1px solid var(--shell-line);
 }
 
+.project-bar.narrow,
+.project-bar.cramped {
+  gap: var(--space-3);
+}
+
 .project-identity,
 .project-output {
   display: flex;
@@ -300,7 +531,7 @@ body {
   min-width: 0;
 }
 
-/* When the window narrows, the name gives way before the output does. */
+/* When the window narrows, the name gives way before anything else does. */
 .project-identity {
   flex: 0 1 auto;
 }
@@ -309,19 +540,390 @@ body {
   flex: none;
 }
 
-.project-identity > :has(> .project-name) {
+.project-identity > .menu-anchor,
+.project-identity > .project-rename {
   display: flex;
   flex: 0 1 auto;
-  min-width: 6ch;
+  min-width: 10ch;
 }
 
-/* The output and the application sit at the right, the project at the left. */
+.project-identity > .menu-anchor > .tooltip-anchor {
+  min-width: 0;
+}
+
+/* The Project menu's face is the project: the pocket mark, the name, and the
+   chevron that says it opens. */
+.project-menu-button {
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0 6px;
+  color: var(--text);
+}
+
+.project-name {
+  min-width: 0;
+  overflow: hidden;
+  font: var(--t-panel);
+  letter-spacing: var(--tracking-title);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.project-menu-button .icon:last-child {
+  flex: none;
+  color: var(--text-dim);
+}
+
+/* Renaming (U.7): the name is the field it was before, where it stands. */
+.project-rename {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding-left: 6px;
+  color: var(--text);
+}
+
+.project-name-input {
+  field-sizing: content;
+  min-width: 10ch;
+  max-width: min(40ch, 100%);
+  padding: 3px 7px;
+  border: 1px solid var(--tan);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  font: var(--t-panel);
+  letter-spacing: var(--tracking-title);
+  outline: none;
+}
+
+/* Said once, beside the project it is about: a check and "Saved", or an open
+   dot and "Unsaved changes". */
+.save-state {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--text-mute);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.save-state.unsaved {
+  color: var(--text-dim);
+}
+
+.save-state.unsaved .icon {
+  color: var(--tan);
+}
+
+/* Nothing to save: the button stays, focusable and saying why (R-06). */
+.save-button[aria-disabled='true'] {
+  color: var(--text-mute);
+  border-color: transparent;
+  cursor: default;
+}
+
+/* Design | Sheets (R-06): a pill switch on a dark track, in the middle of the
+   bar. The tab shown is raised, with an accent outline and an accent icon. */
+.view-switch {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  margin: 0 auto;
+  padding: 2px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-pill);
+  background: var(--shell-900);
+}
+
+.view-tab {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-dim);
+  font: var(--t-label);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--motion);
+}
+
+.view-switch.compact .view-tab {
+  padding: 0 8px;
+}
+
+.view-tab:hover {
+  color: var(--text);
+}
+
+.view-tab.active {
+  border-color: var(--tan);
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.view-tab.active .icon {
+  color: var(--tan);
+}
+
+.view-tab:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+/* The sheet count, the same number as the paper button's. */
+.view-count {
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--shell-700);
+  color: var(--text-dim);
+  font: var(--t-num-micro);
+}
+
+/* The output and the application sit at the right. */
 .project-output {
   flex: none;
-  margin-left: auto;
 }
 
-/* The application (8.7): past a rule, because none of it is this project. */
+/* The paper (7.4a, R-06): quiet, its count first. */
+.paper-button {
+  gap: 6px;
+  color: var(--text-dim);
+}
+
+/* The page setup, over the bar: not a menu, a small panel. */
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: max-content;
+  min-width: 260px;
+  max-width: 360px;
+  padding: var(--space-3);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-md);
+  background: var(--shell-800);
+  box-shadow: var(--elevation-raised);
+}
+
+.popover.end {
+  right: 0;
+}
+
+.paper-popover .field select {
+  flex: 1;
+}
+
+.segmented {
+  display: inline-flex;
+  flex: 1;
+}
+
+.segmented > .tooltip-anchor {
+  flex: 1;
+}
+
+.segment {
+  flex: 1;
+  min-height: var(--h-control);
+  padding: 0 10px;
+  border: 1px solid var(--shell-line);
+  background: var(--shell-900);
+  color: var(--text-dim);
+  font: var(--t-label);
+  cursor: pointer;
+}
+
+.segmented > .tooltip-anchor:first-child .segment {
+  border-start-start-radius: var(--r-sm);
+  border-end-start-radius: var(--r-sm);
+}
+
+.segmented > .tooltip-anchor:last-child .segment {
+  border-left: none;
+  border-start-end-radius: var(--r-sm);
+  border-end-end-radius: var(--r-sm);
+}
+
+.segment.active {
+  border-color: var(--tan);
+  color: var(--text);
+}
+
+.segmented > .tooltip-anchor:last-child .segment.active {
+  border-left: 1px solid var(--tan);
+}
+
+.segment:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+.paper-summary {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+.paper-popover > .tool {
+  align-self: flex-start;
+}
+
+/*
+ * The two-tone split buttons (R-06): no icons on their main halves and no
+ * borders. Each half is its own button; hover lightens the main half, and
+ * focus draws the ring around the whole button.
+ */
+.split {
+  display: inline-flex;
+  flex: none;
+  border-radius: var(--r-sm);
+}
+
+.split > .tooltip-anchor,
+.split > .menu-anchor > .tooltip-anchor {
+  display: flex;
+}
+
+.split-main,
+.split-side {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  min-height: var(--h-control);
+  border: none;
+  font: var(--t-label);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--motion);
+}
+
+.split-main {
+  padding: 0 12px;
+  border-start-start-radius: var(--r-sm);
+  border-end-start-radius: var(--r-sm);
+}
+
+.split-side {
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 7px;
+  border-start-end-radius: var(--r-sm);
+  border-end-end-radius: var(--r-sm);
+}
+
+.split:has(:focus-visible) {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+.split-main:focus-visible,
+.split-side:focus-visible {
+  outline: none;
+}
+
+.split.secondary .split-main {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.split.secondary .split-main:hover,
+.split.secondary .split-main:focus-visible {
+  background: var(--secondary-side);
+}
+
+.split.secondary .split-side {
+  background: var(--secondary-side);
+  color: var(--text);
+}
+
+.split.secondary .split-side:hover,
+.split.secondary .split-side:focus-visible {
+  background: var(--shell-line);
+}
+
+/* Print, the one primary action: the paper's colour. */
+.split.primary .split-main {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+.split.primary .split-main:hover,
+.split.primary .split-main:focus-visible {
+  background: var(--primary-hover);
+}
+
+/* Print's second half is the problems indicator: a check on the paper's
+   shade, the warning's triangle and count on its orange, the error's on its
+   red. What is only to note shows its dot, as the drawer does. */
+.problems-indicator {
+  gap: 3px;
+  background: var(--primary-side);
+  color: var(--on-primary);
+  font: var(--t-num-micro);
+  font-weight: 600;
+}
+
+.problems-indicator.warning {
+  background: var(--warning);
+}
+
+.problems-indicator.error {
+  background: var(--error);
+}
+
+/* The glyph in the words' colour: the fill carries the hue, the shape the severity. */
+.split .problems-indicator .severity-glyph {
+  color: inherit;
+}
+
+.problems-indicator:hover,
+.problems-indicator:focus-visible {
+  background: var(--primary-hover);
+}
+
+.problems-indicator.warning:hover,
+.problems-indicator.warning:focus-visible,
+.problems-indicator.error:hover,
+.problems-indicator.error:focus-visible {
+  filter: brightness(1.08);
+}
+
+/* Forced colours draw no fills: the halves, the switch and its tabs get real
+   borders, and the system's highlight says which tab is shown. */
+@media (forced-colors: active) {
+  .split-main,
+  .split-side,
+  .view-switch,
+  .view-tab,
+  .segment {
+    border: 1px solid ButtonText;
+  }
+
+  .view-tab.active,
+  .segment.active {
+    border-color: Highlight;
+  }
+
+  .split:has(:focus-visible) {
+    outline-color: Highlight;
+  }
+}
+
+/* The application (8.7): past a hairline, because none of it is this project. */
 .project-app {
   display: flex;
   flex: none;
@@ -330,25 +932,6 @@ body {
   padding-left: var(--space-3);
   border-left: 1px solid var(--shell-line);
 }
-
-/* The Project menu's face: the pocket mark and its chevron, close together. */
-.project-menu-button {
-  gap: 2px;
-  padding: 0 6px;
-}
-
-/* Said once, beside the project it is about. */
-.save-state {
-  color: var(--text-mute);
-  font: var(--t-label);
-  font-weight: 400;
-  white-space: nowrap;
-}
-
-.save-state.unsaved {
-  color: var(--tan);
-}
-
 .work-bar {
   display: flex;
   align-items: center;
@@ -357,7 +940,7 @@ body {
      moves when the tool changes (§7.1), and chips and selects differ by a few
      pixels. */
   box-sizing: border-box;
-  height: 36px;
+  height: var(--work-bar-h);
   padding: 0 14px;
   font: var(--t-label);
   background: var(--shell-700);
@@ -369,28 +952,6 @@ body {
   flex: none;
   align-items: center;
   gap: 4px;
-}
-
-/* Design | Sheets, at the end of the work bar: it changes the board. */
-.view-switch {
-  display: flex;
-  flex: none;
-  gap: 2px;
-  margin-left: auto;
-  padding-left: var(--space-2);
-}
-
-/* The sheet plan in words, while the Sheets view shows. */
-.sheets-summary {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  color: var(--text);
-  font: var(--t-label);
-  font-weight: 400;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .visually-hidden {
@@ -418,19 +979,70 @@ body {
   cursor: grabbing;
 }
 
-/* The hint is the least important thing in the work bar, so it is the one
-   that gives when the window narrows. Without this the controls fold instead,
-   and a two-line bar is what the whole layout exists to remove. */
-.work-hint {
-  flex: 0 1 auto;
+/* The board is one Tab stop (U.14). Its ring is the ground's accent, and
+   inside its edge, where the panels beside it cannot hide it (§2). */
+.canvas-host canvas:focus-visible {
+  outline-color: var(--tan-ink);
+  outline-offset: -2px;
+}
+
+/* The hints (U.11) are the least important thing in the work bar, so they are
+   what gives when the window narrows: the lowest-ranked go, whole, and "all
+   keys" stays (`OptionHints`). The slot takes the room the tool's options leave;
+   the copy is the same row, laid out and never seen, so each hint's width is
+   known before it is shown. */
+.work-hints {
+  position: relative;
+  flex: 1 1 0;
   min-width: 0;
   margin-left: var(--space-2);
   overflow: hidden;
+}
+
+.work-hints-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.work-hints-copy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.work-hint {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--text-dim);
   font: var(--t-label);
   font-weight: 400;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+}
+
+/* A key as a cap, outlined on the bar's own ground. */
+.work-hint kbd {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-800);
+  color: var(--text);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+}
+
+@media (forced-colors: active) {
+  .work-hint kbd {
+    border-color: CanvasText;
+  }
 }
 
 /* Counts, not measurements: emphasised by colour, at body weight. */
@@ -441,9 +1053,13 @@ body {
 
 .app-status {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 6px 14px;
+  /* A fixed height, as the work bar's: set by its content, the panels' 24 px
+     chips made it a pixel taller, and the board a pixel shorter (U.5). */
+  height: var(--status-bar-h);
+  padding: 0 14px;
   background: var(--shell-700);
   border-top: 1px solid var(--shell-line);
   color: var(--text-dim);
@@ -479,9 +1095,49 @@ body {
    never push the counts or the cursor readout off the bar. */
 .status-left {
   display: flex;
+  flex: 1;
   gap: 16px;
   min-width: 0;
   overflow: hidden;
+}
+
+/* Parts [, Focus \, Properties ]: always there, by the cursor readout. */
+.status-panels {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+}
+
+.chip.panel-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 4px 0 6px;
+  font: var(--t-micro);
+}
+
+.panel-chip kbd {
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text-dim);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+}
+
+/* A panel hidden — folded, or by focus mode — says so on its chip. */
+.chip.hiding {
+  border-color: var(--tan);
+}
+
+/* Forced colours draw every border alike: the system's highlight says which. */
+@media (forced-colors: active) {
+  .chip.hiding,
+  .strip-button[aria-pressed='true'],
+  .strip-button.current {
+    border-color: Highlight;
+  }
 }
 
 .status-left .status-error {
@@ -504,18 +1160,19 @@ body {
   border-right: 1px solid var(--shell-line);
 }
 
-/* The one primary action in the window, and the Print Preview's last step:
-   Print, green (7.6). Tan stays the maker's own focus. */
+/* The Print Preview's last step: the primary action, in the paper's colour
+   as Print is on the top bar (U.7). Green was the fold's colour too. */
 .tool.primary {
-  border-color: var(--go);
-  background: var(--go);
-  color: var(--on-go);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
   font-weight: 600;
 }
 
 .tool.primary:hover:not(:disabled) {
-  border-color: var(--go-ink);
-  color: var(--on-go);
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: var(--on-primary);
 }
 
 /* Project management that is not the main thing: New and Open. */
@@ -572,14 +1229,6 @@ body {
   color: var(--text);
 }
 
-/* The paper, said as what it produces (7.4a): the sheets drawn small, then
-   "3 sheets of A4, portrait". */
-.sheet-indicator {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-
 .sheet-glyph {
   flex: none;
   color: var(--text-dim);
@@ -600,24 +1249,6 @@ body {
 .sheet-glyph-more {
   fill: currentColor;
   font: var(--t-micro);
-}
-
-.sheet-select {
-  /* A native select is as wide as its longest entry, and an entry names the
-     taped parts: long names must not push Export PDF off a narrow window. */
-  max-width: min(22rem, 34vw);
-  min-height: var(--h-control);
-  padding: 0 4px;
-  border: 1px solid var(--shell-line);
-  border-radius: var(--r-sm);
-  background: var(--shell-900);
-  color: var(--text);
-  font: var(--t-label);
-}
-
-.sheet-select:focus-visible {
-  border-color: var(--tan);
-  outline: none;
 }
 
 .tool.icon-only {
@@ -651,6 +1282,10 @@ body {
 }
 
 .panel.parts {
+  /* 12 px at the right, where the toggles end the rows and the scrollbar
+     follows: at 208 px (U.5) the 4 px are what keeps "Stitch holes" on the
+     one line it had at 220. */
+  padding-right: var(--space-3);
   border-left: none;
   border-right: 1px solid var(--shell-line);
 }
@@ -662,8 +1297,9 @@ body {
   top: calc(-1 * var(--space-4));
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1) var(--space-2);
   margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
   padding: var(--space-4) var(--space-4) 10px;
   border-bottom: 1px solid var(--shell-line);
@@ -681,10 +1317,10 @@ body {
   width: 14px;
 }
 
-/* An 88 px label column in Properties (§7.3), so the longest label — Edge
-   margin, Thickness — sits on one line beside its field. */
+/* A 68 px label column in Properties (R-05, was 88): the room goes to the
+   value, so "A hole on each corner" reads whole at the panel's 264 px. */
 .panel.properties .field-label {
-  flex-basis: 88px;
+  flex-basis: 68px;
 }
 
 .panel.properties .field-pair .field-label {
@@ -808,7 +1444,10 @@ body {
   padding-right: 32px;
 }
 
-.field input:focus {
+/* A field's border is its focus. Not a radio's or a checkbox's, which have no
+   border to light: they keep the ring (U.20) — Print's orientation had no
+   focus to see at all. */
+.field input:not([type='radio'], [type='checkbox']):focus {
   border-color: var(--tan);
   outline: none;
 }
@@ -821,6 +1460,33 @@ body {
   font: var(--t-label);
   font-weight: 400;
   pointer-events: none;
+}
+
+/* A size a field cannot read (U.15): the text stays, its border and the line
+   beneath it say why — the reason wraps under the field, so the row it sits
+   in does not change width. */
+.field {
+  flex-wrap: wrap;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.field-reason {
+  flex-basis: 100%;
+  color: var(--error);
+}
+
+/* In a pair the field is already a column, where wrapping would start a second
+   one over its neighbour: the reason simply follows the input, and the
+   neighbour stays at the top of the row the reason makes taller. */
+.field-pair {
+  align-items: start;
+}
+
+.field-pair .field {
+  flex-wrap: nowrap;
 }
 
 .field-pair {
@@ -861,28 +1527,145 @@ body {
   font: var(--t-num-lg);
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--row-pad-y) 5px;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  background: transparent;
+/* ——— R-05: Properties in the order of the work ———————————————————————————
+   Under the header, groups set apart by a rule edge to edge, as the header's
+   own: what it is and what it came out as; what it is called; what to make
+   next; Arrange. Delete is alone in the footer, in view however far the
+   groups scroll. */
+
+/* "A hole on each corner" needs 147 px of select; at 264 px a scrolling
+   panel's 16 px scrollbar left 140. The thin scrollbar (11 px, every
+   scrollbar's since U.20) and the chevron's own margin instead of padding
+   leave it 145 for 143. Parts the same (U.5): at 208 px a scrolling tree
+   left "Stitch holes" 58 px of its 65, and it wrapped where at 220 it had
+   not; with this and Parts' 12 px right padding it has 67. */
+
+.panel.properties .field select {
+  padding-right: 0;
+}
+
+/* Where the selection is: "Outer · Cut ×1 › Stitch line › Stitch holes". */
+.header-trail {
+  flex-basis: 100%;
+  margin: 0;
   color: var(--text-dim);
   font: var(--t-label);
-  text-align: left;
-  cursor: pointer;
+  font-weight: 400;
+  overflow-wrap: anywhere;
 }
 
-.row:hover {
-  color: var(--text);
-  background: var(--shell-600);
+.panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-4));
+  padding: var(--space-3) var(--space-4) 0;
+  border-top: 1px solid var(--shell-line);
 }
 
-.row.selected {
-  border-color: var(--tan);
+.panel-header + .panel-group {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Holes, Spacing and Runs at the size a number is read at, the label above. */
+.readouts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-3);
+}
+
+.readout-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.readout-cell b {
   color: var(--text);
+  font: var(--t-num-lg);
+}
+
+.readout-cell.wide {
+  grid-column: 1 / -1;
+}
+
+.readout-unit {
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+/* Spacing against the pitch: a glyph, then the words. */
+.spacing-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+/* Arrange: a row's name in the label column, then its icon buttons. They
+   wrap under the name rather than push the panel sideways. */
+.reasoned-row > .toolbar {
+  flex-wrap: wrap;
+}
+
+.reasoned-row > .toolbar > .field-label {
+  margin-right: 4px;
+  font: var(--t-label);
+}
+
+.arrange .tool {
+  padding: 0 6px;
+}
+
+.panel-footer {
+  position: sticky;
+  bottom: calc(-1 * var(--space-4));
+  z-index: 1;
+  margin: auto calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--shell-line);
+  background: var(--shell-700);
+}
+
+.panel-footer .reasoned > .tool {
+  align-self: stretch;
+  border-color: transparent;
+}
+
+.panel-footer .footer-key {
+  margin-left: auto;
+}
+
+.tool.danger .icon {
+  color: currentColor;
+}
+
+/* The job, with nothing selected: a count, then what it is made of. */
+.job-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font: var(--t-label);
+}
+
+.job-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-dim);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.job-value b {
+  color: var(--text);
+  font: var(--t-num);
 }
 
 .badge {
@@ -927,32 +1710,6 @@ body {
 .tool.danger:hover:not(:disabled) {
   border-color: var(--error);
   color: var(--error);
-}
-
-/* The window's one title: the project, editable where it stands. */
-.project-name {
-  field-sizing: content;
-  /* The name is what gives way when the window narrows, never the actions. */
-  min-width: 0;
-  max-width: min(40ch, 100%);
-  padding: 3px 7px;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--text);
-  font: var(--t-panel);
-  letter-spacing: var(--tracking-title);
-  text-overflow: ellipsis;
-}
-
-.project-name:hover {
-  border-color: var(--shell-line);
-}
-
-.project-name:focus {
-  border-color: var(--tan);
-  background: var(--shell-900);
-  outline: none;
 }
 
 /* The delete dialog (ADR 0009). Modal, centred, and quiet: the choice is the
@@ -1007,6 +1764,23 @@ body {
 
 .dialog-note {
   color: var(--text-dim);
+}
+
+/* The third-party notices, from About (U.20): long, and written for an
+   80-column terminal, so the text keeps its lines and scrolls on its own
+   while Close stays in view. */
+.notices-dialog {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.notices-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  color: var(--text-dim);
+  font: var(--t-body);
 }
 
 /* The Print Preview (7.6): the sheets down the left, the one looked at in the
@@ -1109,6 +1883,36 @@ body {
   border-left: 1px solid var(--shell-line);
 }
 
+/* The problems, first (R-06): the drawer's list, before any paper is chosen. */
+.print-problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.print-problems h4,
+.print-problems p {
+  margin: 0;
+}
+
+.print-problems h4 {
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.print-problems p {
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+}
+
+.print-problem-rows {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
 .print-choice {
   display: inline-flex;
   gap: 4px;
@@ -1151,7 +1955,7 @@ body {
 }
 
 .print-status.ok .icon {
-  color: var(--go);
+  color: var(--text);
 }
 
 .print-status.warning .severity-glyph {
@@ -1272,13 +2076,71 @@ body {
 
 .setting input[type='checkbox'] {
   flex: none;
-  accent-color: var(--tan);
 }
 
-/* The keyboard shortcut map (8.2), in Settings (8.7): in columns. */
+/* Settings › My tools (U.13): the irons as a table — a column for the default,
+   the name, the pitch and its menu — then the values for new pieces as
+   settings, each with its number at the right. */
+.settings-subhead {
+  margin: var(--space-4) 0 var(--space-1);
+  font: var(--t-body);
+  font-weight: 600;
+}
+
+.irons {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.irons th {
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+  text-align: left;
+}
+
+.irons td {
+  padding: var(--space-1) var(--space-2);
+  border-top: 1px solid var(--shell-line);
+}
+
+/* A name reads as text until it is pointed at or edited (mockup 06). */
+.irons .field input:not(:hover, :focus) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.irons .iron-pitch {
+  width: 112px;
+}
+
+.add-iron {
+  margin-top: var(--space-2);
+}
+
+.setting-number {
+  flex: 0 0 112px;
+}
+
+/* The keyboard shortcut map (8.2), in Settings (8.7), where a key is changed
+   (U.12): a group's rows share three columns — what it does, its keys as
+   caps, then Change and Reset — so the caps line up down the group. */
+.shortcuts-intro {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.shortcuts-intro .setting-note {
+  margin: 0;
+}
+
 .shortcuts-groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
@@ -1287,26 +2149,35 @@ body {
   font: var(--t-strong);
 }
 
-.shortcuts-groups dl {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
+.shortcut-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 2px var(--space-3);
+  align-items: center;
 }
 
 .shortcut-row {
-  display: grid;
-  grid-template-columns: minmax(96px, auto) 1fr;
-  gap: 8px;
-  align-items: baseline;
+  display: contents;
 }
 
-.shortcut-row dd {
-  margin: 0;
+.shortcut-does {
   color: var(--text-dim);
 }
 
-.shortcut-row kbd {
+.shortcut-keys {
+  justify-self: end;
+  text-align: right;
+}
+
+/* Change in one place on every row; Reset after it, when there is one. */
+.shortcut-actions {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 132px;
+}
+
+.shortcut-keys kbd,
+.shortcut-clash kbd {
   padding: 0 4px;
   border-radius: var(--r-sm);
   background: var(--shell-900);
@@ -1314,6 +2185,47 @@ body {
   font: var(--t-micro);
   letter-spacing: var(--tracking-micro);
   white-space: nowrap;
+}
+
+/* Listening: the row's keys give way to what to press, in the accent. */
+.shortcut-listening {
+  color: var(--tan);
+  font: var(--t-label);
+}
+
+.tool.listening {
+  border-color: var(--tan);
+  color: var(--text);
+}
+
+.shortcut-fixed {
+  padding-left: 11px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+/* A note on a press, and a clash: under their row, across it. */
+.shortcut-note,
+.shortcut-clash {
+  grid-column: 1 / -1;
+  margin: 0 0 var(--space-1);
+  color: var(--text);
+  font: var(--t-label);
+}
+
+.shortcut-clash {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--space-2);
+  border: 1px solid var(--warning);
+  border-radius: var(--r-sm);
+}
+
+.shortcut-clash span {
+  flex: 1 1 200px;
 }
 
 /* Dim, not muted: muted fails contrast on the dialog's surface (8.7's scan). */
@@ -1353,6 +2265,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding: 0 2px 4px 24px;
 }
 
 /* A destructive action reads as one, wherever it appears: the panel's Delete
@@ -1505,18 +2418,239 @@ button.problem-row:hover {
   margin-left: -8px;
 }
 
-.part-heading {
+/* The tree (R-07, U.8): one column of rows of one height, a feature indented
+   under what it follows — 12 px a level — and joined to it by an elbow. 12, and
+   4 px between a row's parts, rather than the mockup's 16 and 6: each row
+   keeps its lock and eye's room at rest (R-07), so a hole set's count never
+   moves, and at 208 px "Stitch holes" four levels deep still wraps between
+   its words, never inside one (F.6). */
+.parts-tree {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
 }
 
-.part-name {
+.tree-row {
+  /* How deep it is under its piece: a feature's row sets it, one a level. */
+  --level: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font: var(--t-label);
+  cursor: pointer;
+}
+
+.tree-row:hover {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.tree-row.selected {
+  border-color: var(--tan);
+  color: var(--text);
+}
+
+.tree-row:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: -1px;
+}
+
+/* Forced colours draw every row's transparent border, whatever colour it is
+   given: only the selected row keeps one, in the system's highlight. */
+@media (forced-colors: active) {
+  .tree-row {
+    border-style: none;
+    padding: 1px;
+  }
+
+  .tree-row.selected {
+    border-style: solid;
+    border-color: Highlight;
+    padding: 0;
+  }
+}
+
+.tree-line {
+  position: relative;
   display: flex;
-  flex: 1;
   align-items: center;
-  gap: 6px;
-  padding: 2px 4px;
+  gap: var(--space-1);
+  /* The row's 28 px (§3 row-height) include its 1 px border, top and bottom. */
+  min-height: calc(var(--row-height) - 2px);
+  padding: 0 2px 0 calc(var(--level) * var(--space-3) + 4px);
+}
+
+/* The marks and the thumbnail keep their size; the name is what gives way. */
+.tree-line > :is(svg, .feature-mark) {
+  flex: none;
+}
+
+.piece-row {
+  color: var(--text);
+  font: var(--t-strong);
+}
+
+.tree-fold {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  color: var(--text-dim);
+}
+
+/* Under the middle of the mark of the row it follows. */
+.tree-elbow {
+  position: absolute;
+  top: 0;
+  left: calc(var(--level) * var(--space-3) - 1px);
+  width: 5px;
+  height: 50%;
+  border-bottom: 1px solid var(--text-mute);
+  border-left: 1px solid var(--text-mute);
+  border-bottom-left-radius: 2px;
+}
+
+/* Names wrap rather than truncate (§7.1) — "Stitch hol…" told nobody which
+   feature it was. The name still gives way to the toggles: a long name must
+   not push the lock off the edge of the panel, because the lock is the way
+   back. */
+.part-label,
+.feature-name {
+  min-width: 0;
+  /* At word boundaries, and inside a word only when one cannot fit a line:
+     "Stit / ch / hole / s" told nobody which feature it was (F.6). */
+  overflow-wrap: break-word;
+}
+
+/* A piece's row holds the most — its fold, thumbnail, ×N, the actions' room
+   and a not-printed mark — so where those leave its name less than its
+   longest word ("Card pock / et" at 208 px, hidden), its marks take a line
+   of their own below, at the right, rather than the name breaking inside a
+   word. Decided by the row's room, never by hover, so nothing moves. */
+.piece-row .tree-line {
+  flex-wrap: wrap;
+}
+
+.part-label {
+  min-width: min(min-content, 100%);
+}
+
+/* From nothing, so the line breaks by its longest word, not by the whole
+   name: the name wraps between words first, and only where its longest word
+   cannot fit do the marks take the line below (U.19). */
+.part-title {
+  flex: 1 1 0;
+  min-width: min(min-content, 100%);
+}
+
+.part-title > .badge {
+  margin-left: var(--space-1);
+}
+
+/* The numbers a maker cares about, and the marks, at the row's right end. */
+.row-count {
+  flex: none;
+  margin-left: auto;
+  /* The row's: dim at rest, full on the hover's fill, where dim is short of 4.5:1. */
+  color: inherit;
+  font: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.row-end {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-self: stretch;
+  gap: 2px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.row-count + .row-end {
+  margin-left: 0;
+}
+
+.row-mark.not-printed {
+  color: var(--warning);
+}
+
+/* Lock and eye (and a piece's menu): their room kept at every row's end, at
+   rest as on hover, so nothing moves — not a name, not the hole count — when
+   they show on hover and keyboard focus (R-07). Faded out at rest rather than
+   removed: a pointer that reaches them has shown them. One that is on
+   (hidden, locked) stays in sight. */
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.row-actions > :not(:has(.persists)) {
+  opacity: 0;
+}
+
+/* …and while a piece's menu is open from them: its menu is inside, and
+   would fade with them as the pointer left the row for it. */
+.tree-row:is(:hover, :focus-visible) .row-actions > *,
+.row-actions:has([aria-expanded='true']) > * {
+  opacity: 1;
+}
+
+.row-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px;
+  border: 1px solid var(--tan);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  font: inherit;
+}
+
+/* The Sheets view's Parts (U.9): the sheets, and the pieces on each. Rows are
+   the tree's own look — a 28 px row, the accent border when picked — and a
+   piece under the pointer on the paper is lit here too (7.4d). */
+.sheets-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sheets-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sheets-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 4px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.sheets-group-count {
+  color: var(--text-dim);
+  font: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.sheets-pieces {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sheets-piece {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: var(--row-height);
+  padding: 0 2px 0 4px;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   background: transparent;
@@ -1526,52 +2660,97 @@ button.problem-row:hover {
   cursor: pointer;
 }
 
-.part-name:hover {
+.sheets-piece:hover,
+.sheets-piece.hovered {
   background: var(--shell-600);
 }
 
-/* Where the part prints (7.4b): quiet when all of it reaches paper, and in
-   the warning colour when something the board shows will not. */
-.part-print {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--space-2);
-  margin: 0 0 2px 30px;
-  color: var(--text-dim);
-  font: var(--t-micro);
-  font-weight: 400;
+.sheets-piece.selected {
+  border-color: var(--tan);
 }
 
-/* On the Sheets view, the part under the pointer there (7.4d). */
-.part.hovered {
-  background: var(--shell-600);
+.sheets-piece:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: -1px;
 }
 
-.part-print-note,
-.part-print.not-printed .part-print-sheets {
-  color: var(--warning);
+@media (forced-colors: active) {
+  .sheets-piece {
+    border-style: none;
+    padding: 1px;
+  }
+
+  .sheets-piece.selected {
+    border-style: solid;
+    border-color: Highlight;
+  }
 }
 
-.feature-row {
+.sheets-piece-line {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-1);
+  min-height: calc(var(--row-height) - 2px);
 }
 
-.feature-row .row {
+.sheets-piece-line > :is(svg, .thumbnail) {
+  flex: none;
+}
+
+.sheets-piece-line .part-label {
   flex: 1;
-  min-width: 0;
 }
 
-/* Names wrap rather than truncate (§7.1) — "Stitch hol…" told nobody which
-   feature it was. The name still gives way to the toggles: a long name must
-   not push the lock off the edge of the panel, because the lock is the way
-   back. */
-.feature-name {
-  min-width: 0;
-  /* At word boundaries, and inside a word only when one cannot fit a line:
-     "Stit / ch / hole / s" told nobody which feature it was (F.6). */
-  overflow-wrap: break-word;
+.sheets-taped-entry {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 4px;
+  color: var(--text);
+  font: var(--t-label);
+}
+
+.sheets-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* What the picked piece does on the paper: a line of its own, with its mark. */
+.sheets-fit,
+.sheets-measure {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.sheets-on {
+  margin-left: var(--space-2);
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.sheets-properties .field-value {
+  color: var(--text);
+  font: var(--t-body);
+}
+
+.rail-note {
+  margin: var(--space-3) 0 0;
+  padding: 0 4px;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+/* Where the part is not printed, and what was left off one that is. */
+.part-print-note {
+  color: var(--warning);
+  font: var(--t-micro);
+  font-weight: 400;
 }
 
 .icon-toggle {
@@ -1589,12 +2768,7 @@ button.problem-row:hover {
 }
 
 .icon-toggle:hover {
-  background: var(--shell-600);
-}
-
-/* Off reads as off at a glance, without a second colour to learn. */
-.icon-toggle.off {
-  opacity: 0.4;
+  background: var(--shell-line);
 }
 
 /* A button's menu (8.7): the Project and Help menus, and a part's actions in
@@ -1636,8 +2810,9 @@ button.problem-row:hover {
   position: fixed;
 }
 
-/* The Parts panel scrolls, and so clips a menu wider than itself. */
-.parts .menu {
+/* The Parts panel scrolls, and so clips a menu wider than itself — but not a
+   right-click menu, which is fixed to the window. */
+.parts .menu:not(.context) {
   width: 200px;
 }
 
@@ -1675,6 +2850,13 @@ button.problem-row:hover {
 
 .menu-item.danger {
   color: var(--error);
+}
+
+/* Lit a step less than the others: the error red on shell-600 is 4.2 : 1,
+   and on shell-700 4.7 (U.19). */
+.menu-item.danger:hover,
+.menu-item.danger:focus-visible {
+  background: var(--shell-700);
 }
 
 /* What cannot be chosen now — an empty group's line, or an action the
@@ -1835,9 +3017,11 @@ button.problem-row:hover {
 .canvas-legend {
   position: absolute;
   z-index: 4;
-  /* Below the 22 px top ruler. */
-  top: calc(22px + var(--space-2));
-  right: var(--space-2);
+  /* At the canvas's foot, by the ruler's corner and clear of the zoom control
+     (U.10, R-09); it grows upward from its chip. On the board, never over the
+     left ruler's numbers (U.19). */
+  bottom: var(--space-4);
+  left: calc(var(--ruler-left) + var(--space-4));
   max-width: 220px;
   border: 1px solid var(--ground-major);
   border-radius: var(--r-sm);
@@ -1870,11 +3054,6 @@ button.problem-row:hover {
   outline-offset: 1px;
 }
 
-.canvas-legend-strip {
-  display: flex;
-  gap: var(--space-1);
-}
-
 .canvas-legend-title {
   flex: 1;
   text-align: left;
@@ -1894,16 +3073,359 @@ button.problem-row:hover {
   gap: var(--space-2);
 }
 
+/* ——— U.4: the zoom control ———————————————————————————————————————————————
+   − · the zoom · + · Fit, on the shell, floating at the canvas's bottom-right
+   so it never moves the drawing (R-03). Each part is its own target, 28 px
+   tall, divided by a line, which forced colours turn into real borders. */
+
+.zoom-control {
+  position: absolute;
+  z-index: 4;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-md);
+  background: var(--shell-800);
+}
+
+.zoom-control > * + * {
+  border-left: 1px solid var(--shell-line);
+}
+
+.zoom-control .tooltip-anchor {
+  display: flex;
+}
+
+.zoom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: var(--h-control);
+  height: var(--h-control);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font: var(--t-label);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--motion),
+    color var(--motion);
+}
+
+.zoom-button:hover {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.zoom-button:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: -2px;
+}
+
+/* The zoom: as wide as "999 %", so the − beside it stays put as it changes. */
+.zoom-level {
+  min-width: 56px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* At the canvas's foot the canvas clips what runs below it: open upwards. */
+.menu.above {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+}
+
+/* ——— U.14: value chips ——————————————————————————————————————————————————
+   A selected outline's sizes on the board (R-12): on the ground, in the
+   dimension's colour and the canvas-value voice, each on its dimension line.
+   Where each sits is the canvas's, set once a frame from packages/render;
+   hidden until it is placed. They are fields on the canvas, so they take the
+   canvas's focus ring, the accent's ground value, and stay selectable. Above
+   the legend and the zoom control, below a panel opened over the board, which
+   they keep clear of. */
+
+.value-chips {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+}
+
+.value-chip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--role-annotation) 45%, var(--ground));
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  color: var(--role-annotation);
+  font: var(--t-label);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: auto;
+  cursor: text;
+  user-select: text;
+  transition: border-color var(--motion);
+}
+
+.value-chip:hover {
+  border-color: var(--role-annotation);
+}
+
+.value-chip input {
+  field-sizing: content;
+  min-width: 2ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  user-select: text;
+  cursor: text;
+}
+
+.value-chip input:focus,
+.value-chip input:focus-visible {
+  outline: none;
+}
+
+.value-chip-prefix,
+.value-chip-unit {
+  color: var(--ground-label);
+}
+
+.value-chip[data-editing] {
+  border-color: var(--tan-ink);
+  outline: 2px solid var(--tan-ink);
+  outline-offset: 0;
+  color: var(--ink);
+}
+
+.value-chip[data-editing] input {
+  text-align: left;
+}
+
+.value-chip input[aria-invalid='true'] {
+  color: var(--error-ground);
+}
+
+/* Why a value cannot apply, under its chip: on the ground, beside the drawing
+   it is about, with the warning's glyph. */
+.value-chip-note {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 360px;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--warning-ground);
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  color: var(--ink);
+  font: var(--t-label);
+  font-weight: 400;
+  visibility: hidden;
+}
+
+.value-chip-note .severity-glyph {
+  flex: none;
+  color: var(--warning-ground);
+}
+
+/* What the keys do while a rectangle is typed (U.16): a dark pill under the
+   shape, like the canvas notice, keys as the shell's key caps. Never printed. */
+.value-chip-hint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px var(--space-2);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  box-shadow: var(--elevation-raised);
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.value-chip-hint kbd {
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--shell-800);
+  color: var(--text);
+  font: var(--t-micro);
+  letter-spacing: var(--tracking-micro);
+}
+
+/* ——— U.17: the selection bar ————————————————————————————————————————————
+   Under the selected piece (R-14): how its stitching came out, then the next
+   step. On the shell, as the bars are: shell-1, its line, the middle radius,
+   no shadow. It takes no press but on its button, so the board under it
+   draws and pans as ever. Where it sits is the canvas's, set once a frame from
+   packages/render; hidden until placed, and hidden is not focusable. Under a
+   panel opened over the board, over the legend and the zoom control, which it
+   keeps clear of. Room for a third line when hole matching comes. */
+
+.selection-bar {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-md);
+  background: var(--shell-800);
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: nowrap;
+  visibility: hidden;
+  /* The board's, except its button: a drag that starts on the bar draws or
+     pans as it would on the board beside it. */
+  pointer-events: none;
+}
+
+.selection-bar:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+.selection-bar-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 24px;
+  margin: 0;
+}
+
+.selection-bar-line b {
+  color: var(--text);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.selection-bar-holes,
+.selection-bar-glyph,
+.selection-bar-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.selection-bar-glyph {
+  vertical-align: middle;
+}
+
+.selection-bar-dot,
+.selection-bar-chevron {
+  padding: 0 2px;
+  color: var(--text-mute);
+}
+
+.selection-bar-next {
+  margin-right: var(--space-1);
+}
+
+.selection-bar-step[data-done] {
+  color: var(--text);
+}
+
+.selection-bar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--tan);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color var(--motion);
+}
+
+.selection-bar-button .icon {
+  color: var(--tan);
+}
+
+.selection-bar-button:hover:not(:disabled) {
+  background: var(--shell-700);
+}
+
+.selection-bar-button:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+.selection-bar-button:disabled {
+  border-color: var(--shell-line);
+  color: var(--text-mute);
+  cursor: default;
+}
+
+.selection-bar-reason {
+  max-width: 360px;
+  margin: 0;
+  color: var(--text-dim);
+  white-space: normal;
+}
+
+/* A size Properties refuses (U.14), with the warning's glyph. */
+.field-reason.refused {
+  color: var(--text);
+}
+
+.field-reason.refused .severity-glyph {
+  color: var(--warning);
+}
+
+@media (forced-colors: active) {
+  .value-chip,
+  .value-chip-note,
+  .value-chip-hint {
+    border-color: CanvasText;
+  }
+
+  .value-chip[data-editing] {
+    outline-color: Highlight;
+  }
+}
+
 /* ——— F.4: motion ————————————————————————————————————————————————————————
    Colour-only acknowledgement of a press or a hover (§6.3): background, border,
    colour and opacity, never a transform. Off entirely for reduced motion. */
 
 .tool,
 .chip,
-.row,
+.tree-row,
 .menu-item,
 .icon-toggle,
-.part-name,
 .drawer-handle,
 button.problem-row,
 .field input,
@@ -2008,6 +3530,27 @@ button.problem-row,
 .tool-options .field-input {
   flex: none;
   width: 88px;
+}
+
+/* The work bar's height is fixed, so there a reason a size cannot be read
+   (U.15) hangs below the field, as a tooltip does, instead of wrapping. */
+.tool-options .field {
+  position: relative;
+  flex-wrap: nowrap;
+}
+
+.tool-options .field-reason {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: 360px;
+  padding: 6px 8px;
+  border: 1px solid var(--error);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  box-shadow: var(--elevation-raised);
 }
 
 .text-mark {

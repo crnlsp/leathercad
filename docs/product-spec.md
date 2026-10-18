@@ -1,8 +1,9 @@
 # Product Specification
 
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
-fix it in the same change.
-**Last updated:** 2026-09-26
+fix it in the same change. §9 is the exception: it describes the direction, and claims nothing as
+built that the roadmap does not.
+**Last updated:** 2026-10-17
 
 ---
 
@@ -18,15 +19,40 @@ stock, cut it out, and use it as a physical template on leather.
 The whole product succeeds or fails on one thing: **a line drawn as 100 mm must measure 100 mm on
 the printed page.** Every architectural decision in these documents serves that.
 
+### The north star
+
+**LeatherCAD should become the tool a leatherworker reaches for to design anything made of
+leather.** Three things make it that together, and none of them alone:
+
+- **Leathercraft first, and 2D.** Pieces, stitching, folds and hardware are what it draws — flat
+  and to the millimetre, as a pattern is.
+- **Easy on the first day, deep after years.** Someone who has never used design software makes a
+  stitched, printable piece in their first session. A maker who uses it for years keeps finding a
+  faster way to work, and nothing the expert uses stands in the beginner's way.
+- **It understands what it draws.** Because a line is an edge to cut or a seam to stitch, the app
+  can say whether the pieces will go together and hold what they are for, and explain what is wrong
+  before the leather is cut. §9 says how far that goes.
+
+IntelliJ IDEA is the model for the second and third, not for the look: one coherent environment,
+easy to start in and powerful enough for complex professional work.
+
 ## 2. What this is not
 
-- Not a generic vector editor. Geometry carries craft meaning (see [domain-model.md](domain-model.md)).
-  If a feature can be described as "like Inkscape but…", it is probably the wrong feature.
-- Not a 3D modeller. No folding simulation, no material draping, at least not before v3.
+- Not a generic vector editor, and not a general CAD program. Geometry carries craft meaning (see
+  [domain-model.md](domain-model.md)). If a feature can be described as "like Inkscape but…", it is
+  probably the wrong feature. That includes illustration: carving and tooling artwork is drawn
+  elsewhere, and a logo is placed as a marking.
+- **Not a 3D modeller: no 3D view, no folding simulation, no material draping.** This is a
+  boundary, not a deferral. A leather good is made from flat pieces, and the flat pattern is where
+  its mistakes can be caught (§9). Leather's thickness is a number the pattern uses, not a solid.
 - Not a parametric constraint solver (no "make these two edges equal and let the solver figure it
   out"). It has *one-way parametric derivation*, which covers ~90% of real leatherwork and costs
-  ~5% of the effort. See §6.
-- Not collaborative, not cloud-backed, not a web app.
+  ~5% of the effort. See §6. A solver is weighed only if real use proves the derivation graph
+  insufficient (roadmap 9.10, *Exploring*).
+- Not collaborative, not cloud-backed, not a web app. It works offline, and a project is shared as a
+  file that opens the same on any machine. No accounts, servers or marketplace inside the app.
+- Not an AI assistant. Where it helps, it helps from rules a maker can read, which give the same
+  answer every time (§9.3).
 
 ## 2a. Relationship to Leathercrafto
 
@@ -54,7 +80,9 @@ and immediate feedback over keyboard density.
 ## 3. Users and their actual workflow
 
 The target user is a hobbyist or small-shop leatherworker who currently designs patterns in
-Illustrator, Inkscape, Fusion 360, or on graph paper — all of which fight them.
+Illustrator, Inkscape, Fusion 360, or on graph paper — all of which fight them. They range from
+someone who has never used design software to a maker with years of patterns behind them, and the
+app serves both without a mode for each (§4, principle 7).
 
 A representative session, which the MVP must support end to end:
 
@@ -67,18 +95,23 @@ A representative session, which the MVP must support end to end:
 3. "Stitch line runs 3.5 mm in from the edge, all the way around."
 4. "My iron is 3.85 mm pitch. Put holes on that line, with a hole exactly on each corner."
 5. "How long is that stitch line? How many holes did that give me?" *(They need to buy thread and
-   know whether the two mating pieces have the same hole count.)*
+   know whether the two mating pieces have the same hole count. A mirrored counterpart has the same
+   count by construction; two pieces that are not mirrors are paired as a seam in roadmap 9.6, and
+   the thread a seam takes is 9.12.)*
 6. "Print it at 1:1 on A4."
 7. "Measure the printed 100 mm gauge with a steel rule. It reads 100 mm. Good."
 
 Steps 3, 4 and 7 are the ones no general-purpose tool does well. They are the product.
 
-### Secondary workflows (v1.x)
+### Secondary workflows
 
-- Mirror a part to make its left/right counterpart.
-- Trace an existing pattern from a photo or scan.
-- Drop in a reference outline for a snap, rivet, D-ring, or zipper.
-- Reuse a saved part ("my standard card slot") in a new project.
+- Mirror a part to make its left/right counterpart. *(Built: 4.8a, 4.8b.)*
+- Start a project from a worked one rather than a blank page. *(The sample wallet is built, 8.3;
+  templates are roadmap 9.18.)*
+- Trace an existing pattern from a photo or scan. *(Roadmap 9.2.)*
+- Bring in a pattern already drawn in another program. *(Roadmap 9.20, SVG.)*
+- Drop in a reference outline for a snap, rivet, D-ring, or zipper. *(Roadmap 9.3.)*
+- Reuse a saved part ("my standard card slot") in a new project. *(Roadmap 8.8b, 9.7.)*
 
 ## 4. Design principles
 
@@ -95,6 +128,14 @@ Steps 3, 4 and 7 are the ones no general-purpose tool does well. They are the pr
    asks a browser, a print dialog, or a driver to scale anything.
 6. **Correct beats featureful.** A wrong offset that looks plausible wastes the user's leather.
    Leather costs money and is not undoable.
+7. **Easy to start, deep with use.** The next step is offered where the maker is already looking —
+   on the board, under the selection, in the empty panel — with their own defaults (*My tools*).
+   Depth comes from keys, typed sums and the actions that appear with what is selected, never from
+   a mode, a wizard or a setting a beginner must understand first.
+8. **Explain; never overrule.** A design rule says what is probably wrong for leather and why, and
+   where one correction is plainly safe it offers it, to preview and to undo. It never changes the
+   pattern by itself and never blocks a print
+   ([ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md)). The maker decides.
 
 ## 5. MVP scope
 
@@ -158,22 +199,24 @@ The MVP is defined as: **the smallest version that a leatherworker would choose 
 
 ### Explicitly out of the MVP
 
-Deferred because they are expensive, not because they are unimportant. Rough ordering by value:
+Deferred because they are expensive, not because they are unimportant. Rough ordering by value.
+The version targets this table first gave (v1.1 to v3) were overtaken by the releases; the right
+column says where each item stands in the roadmap, which is where its status lives.
 
-| Feature | Why deferred | Target |
+| Feature | Why deferred | In the roadmap |
 |---|---|---|
-| Thickness / wrap compensation (gusset math) | High value, needs the fold-line model to mature first | v1.1 |
-| Hardware library (snaps, rivets, zips, D-rings) | Mostly data entry; needs a reference-geometry model | v1.1 |
-| Tracing from a scanned image | Needs image import, scale calibration, and a trace UX | v1.1 |
-| DXF export | Second export backend; SVG covers most of the need | v1.1 |
-| Part templates with exposed parameters | Needs a stable domain model first | v1.2 |
-| Boolean operations (union / subtract / intersect) | Shares the Clipper dependency with offsetting, but a big UX surface | v1.2 |
-| Seam pairing and hole-count parity validation | Needs an assembly model | v1.2 |
-| Stitch appearance simulation | Cosmetic | v2 |
-| Nesting / hide-yield optimisation | Genuinely hard; needs boolean ops | v2 |
-| Full constraint solver | Months of work; the derivation graph covers most real cases | v3 |
-| 3D preview / fold simulation | Different product | v3 |
-| ~~Windows / macOS builds~~ | **Moved into 1.0** at the boundary review: 1.0 is a public release on all three, with a measured print on each (roadmap 8.6, 7.7) | v1 |
+| Thickness / wrap compensation (gusset math) | High value, needs the fold-line model to mature first | 9.1, *Leather has thickness* |
+| Hardware library (snaps, rivets, zips, D-rings) | Mostly data entry; needs a reference-geometry model | 9.3, *Hardware that fits* |
+| Tracing from a scanned image | Needs image import, scale calibration, and a trace UX | 9.2, *Bring patterns in* |
+| DXF export | Second export backend; SVG covers most of the need | Shipped in 1.3.5 (6.5) |
+| Part templates with exposed parameters | Needs a stable domain model first | A part library is 9.7; parameters are *Exploring* |
+| Boolean operations (union / subtract / intersect) | Shares its hard part with robust offsetting, which is written here rather than bought (ADR 0008), and a big UX surface | 9.5 with 9.11, *Robust shapes* |
+| Seam pairing and hole-count parity validation | Needs an assembly model | 9.6, *Pieces that fit* |
+| Stitch appearance simulation | Cosmetic | *Not planned* |
+| Nesting / hide-yield optimisation | Genuinely hard; needs boolean ops | *Not planned* (9.9); the leather a project takes is 9.12 |
+| Full constraint solver | Months of work; the derivation graph covers most real cases | *Exploring*, only on evidence (9.10) |
+| 3D preview / fold simulation | Different product | *Not planned*: a boundary (§2) |
+| ~~Windows / macOS builds~~ | **Moved into 1.0** at the boundary review: 1.0 is a public release on all three, with a measured print on each (roadmap 8.6, 7.7) | Shipped in 1.0 |
 
 ### The four features that make v1 worth using
 
@@ -184,7 +227,9 @@ If schedule pressure forces cuts, cut anything *except* these:
 3. **Automatic stitch holes with correct corner behaviour.** This is the feature people buy
    Leathercraft CAD for.
 4. **Verified 1:1 tiled printing.** Without it, nothing else matters. *(Tiling is built, as 7.2a, and
-   measured through poppler. "Verified" means a steel rule on paper, which is 7.7.)*
+   measured through poppler. "Verified" means a steel rule on paper: done on Linux and recorded in
+   [print-verification-log.md](print-verification-log.md) (R1, 2026-10-09); the other platforms
+   are roadmap R8.)*
 
 ## 6. Why one-way derivation instead of constraints
 
@@ -222,12 +267,65 @@ See [domain-model.md](domain-model.md) §4.
 
 ## 8. Platform and licensing
 
-- **Linux, Windows and macOS for 1.0.** Linux was built first, as an AppImage; a Flatpak is 1.1.
+- **Linux, Windows and macOS for 1.0.** Linux was built first, as an AppImage; a Flatpak since 1.1.
   Windows and macOS are a packaging and print-path problem, not an architecture problem. The
   builds are not code-signed, by decision (roadmap 8.6).
   See [architecture.md](architecture.md) §7 and roadmap 8.6.
 - **Open source.** Recommended licence: **Apache-2.0** (permissive plus an explicit patent grant).
   All dependencies must be permissively licensed — MIT, Apache-2.0, BSD, or BSL-1.0. No GPL
   dependencies, so that the licence choice stays open.
-- Units are **millimetres only** in v1. The internal model is mm regardless; adding an inch display
-  layer later is a formatting change confined to the UI, not a model change.
+- Units are **millimetres**: in the model, in the file and in every readout. Since 1.5 (U.15) a size
+  may be *typed* in centimetres or inches, or as a sum, and is stored in millimetres. An inch display
+  would be a formatting change confined to the UI, not a model change.
+
+## 9. Where it is going
+
+The direction, not a schedule. What is built is described above; the order of what comes next,
+and why, is [product-roadmap.md](product-roadmap.md), and each item's scope and status is
+[roadmap.md](roadmap.md). A sentence here becomes a commitment only through the roadmap.
+
+### 9.1 The workflow it is built for
+
+1. Open LeatherCAD and choose *New project*.
+2. Start from a template, or from nothing. *(Today: from nothing, or the sample wallet.)*
+3. Design the pieces in a precise 2D workspace, with tools that know leather.
+4. Be told, while designing, whether the pieces go together and do their job.
+5. Print a pattern that measures true, with what is needed to cut, stitch and assemble it.
+
+### 9.2 Understanding what it draws
+
+What sets LeatherCAD apart. The app knows more about a leather good in layers, and each layer makes
+new checks possible:
+
+| The app knows | So it can check |
+|---|---|
+| What each line is: an edge, a stitch line, a fold, a hole | Holes off the leather or near its edge; stitching too uneven to sew; an outline that crosses itself |
+| How pieces go together: which edges are sewn to which | Mating seams with different hole counts or lengths; where alignment marks go; the thread a seam takes |
+| What the leather does: its thickness, skiving, grain | The extra length a fold or a wrap needs; a gusset that matches its panel |
+| What the maker wants: what a pocket must hold | A pocket too small for its card or notes; a strap too wide for its ring |
+
+The first layer is built (domain-model.md §8); the others are candidates, ordered in
+product-roadmap.md. Every check is a design rule: deterministic, run again on every change, never
+stored, and never a guarantee (domain-model.md §8.4). Some questions no flat outline can answer —
+whether a post is long enough for the layers it passes through, how much a pocket gives for six
+cards rather than one — and those wait for the knowledge they need rather than being guessed.
+
+### 9.3 Help, and who decides
+
+A problem says why it matters to the leather and what to do. Where one correction is plainly safe it
+offers it — previewed first, applied as one undo step, never by itself (principle 8). There is no AI
+subsystem: rules a maker can read come first, and anything later would offer the same fixes.
+
+### 9.4 Functional requirements
+
+A maker will be able to say what a part must do — hold an ID-1 card, take a 25 mm D-ring — and the
+app will check it on every change. A requirement is the maker's statement, stored as metadata, since
+it changes nothing drawn, cut or printed (file-format.md §4.5, rule 3), and checked by an ordinary
+design rule. The first is a pocket that holds what it must (roadmap 9.14). A general requirements
+engine waits until several kinds of requirement have shown what one would need.
+
+### 9.5 Firm boundaries
+
+§2 is the boundary, and it holds as the product grows: no 3D, no constraint solver without evidence,
+no cloud or accounts, no AI for its own sake, no general CAD or illustration. Each protects the
+product promise — a few things done exactly right for leather.

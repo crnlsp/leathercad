@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { choosePaper, fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 6.4a: choose the paper.
@@ -68,14 +68,18 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
       { pdf, project },
     );
 
-    const paper = window.getByTestId('paper');
-    const chosen = paper.locator('option:checked');
+    // The paper button (R-06) says what the paper comes to; its popover chooses it.
+    const paper = window.getByTestId('paper-button');
+    const on = (sheets: string | RegExp) =>
+      expect(paper).toHaveAccessibleName(
+        typeof sheets === 'string' ? `Paper: ${sheets}` : new RegExp(`^Paper: .*${sheets.source}`),
+      );
 
     // A new project prints on what every project printed on before: A4
     // portrait. With nothing drawn, the PDF is one sheet with the scale check,
-    // and the paper choice says exactly that (7.4a).
-    await expect(paper).toHaveValue('A4 portrait');
-    await expect(chosen).toHaveText('1 sheet of A4, portrait, scale check only');
+    // and the paper button says exactly that (7.4a).
+    await on('1 sheet of A4, portrait, scale check only');
+    await expect(paper).toHaveText('1 × A4 portrait');
 
     // A strap, 275 × 100 mm: longer than A4 portrait prints either way —
     // across, or turned down its 268.5 mm.
@@ -89,13 +93,20 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await type(window, 'Height', 100);
     await window.getByTestId('part-name').fill('Strap');
 
-    // Before exporting, the paper choice says what the PDF will be, and what
-    // turning the paper would give instead.
-    await expect(chosen).toHaveText('2 sheets of A4, portrait (Strap taped)');
-    await expect(paper.locator('option[value="A4 landscape"]')).toHaveText(
-      '1 sheet of A4, landscape',
+    // Before exporting, the paper says what the PDF will be, and what turning
+    // the paper would give instead.
+    await on('2 sheets of A4, portrait');
+    await expect(paper).toHaveAttribute('data-sheets', '2');
+    await paper.click();
+    await expect(window.getByTestId('paper-summary')).toHaveText(
+      '2 sheets · scale 100 %, locked · Strap taped',
     );
-    await expect(window.getByTestId('sheet-glyph')).toHaveAttribute('data-sheets', '2');
+    await expect(window.getByTestId('paper').locator('option:checked')).toHaveText('A4 · 2 sheets');
+    await window.getByTestId('paper-landscape').hover();
+    await expect(window.getByRole('tooltip', { name: '1 sheet of A4, landscape' })).toBeVisible();
+    await window.keyboard.press('Escape');
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('paper-popover')).toHaveCount(0);
 
     // Exported on A4 portrait: printed across two sheets at 1:1 (7.2a) — never
     // scaled, never left out — and the notice says so, with the way to print
@@ -113,16 +124,16 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     rmSync(pdf);
 
     // Turned. The choice is an edit to the project, so it is unsaved…
-    await paper.selectOption('A4 landscape');
-    await expect(chosen).toHaveText('1 sheet of A4, landscape');
-    await expect(window.getByTestId('sheet-glyph')).toHaveAttribute('data-sheets', '1');
+    await choosePaper(window, 'A4', 'landscape');
+    await on('1 sheet of A4, landscape');
+    await expect(paper).toHaveAttribute('data-sheets', '1');
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
 
-    // …one undoable step, not a paper change and a separate turn…
+    // …one undoable step…
     await window.getByTestId('undo').click();
-    await expect(paper).toHaveValue('A4 portrait');
+    await on('2 sheets of A4, portrait');
     await window.getByTestId('redo').click();
-    await expect(paper).toHaveValue('A4 landscape');
+    await on('1 sheet of A4, landscape');
 
     // …and the export uses it: the sheet is A4 landscape and the strap is on it.
     await window.getByTestId('export-pdf').click();
@@ -134,7 +145,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     rmSync(pdf);
 
     // A maker in North America loads Letter. 612 × 792 pt is exactly 8.5 × 11 in.
-    await paper.selectOption('Letter landscape');
+    await choosePaper(window, 'Letter', 'landscape');
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
     await expect(window.getByTestId('file-error')).toHaveCount(0);
@@ -149,19 +160,19 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
 
     // Undone like any edit.
     await window.getByTestId('undo').click();
-    await expect(paper).toHaveValue('A4 landscape');
+    await on(/of A4, landscape/);
     await window.getByTestId('redo').click();
-    await expect(paper).toHaveValue('Letter landscape');
+    await on(/of Letter, landscape/);
 
     // Saved with the project, and back when it is opened again.
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     await fromProjectMenu(window, 'new');
-    await expect(paper).toHaveValue('A4 portrait');
+    await on('1 sheet of A4, portrait, scale check only');
 
     await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(paper).toHaveValue('Letter landscape');
+    await on(/of Letter, landscape/);
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);

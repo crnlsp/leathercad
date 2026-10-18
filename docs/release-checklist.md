@@ -9,8 +9,9 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-09-26. First written for 1.0 (sheet plan, Sheets view, project and work
-bars), and passed for it on 2026-09-24.
+**Last updated:** 2026-10-18, for check 13, ⌘A on macOS (U.20), the Flatpak among the release's
+files, and R10 left unverified for 1.5. First written for 1.0
+(sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
 
@@ -42,7 +43,7 @@ Any one of these is a blocker:
   Windows: from the viewer at 100 % / Actual size).
 - The Print Preview offering any scale choice, or showing sheets that differ from the Sheets view.
 - The sheet count, the numbering or what is on a sheet differs between:
-  - the paper list;
+  - the paper button and the Sheets tab;
   - the Sheets view;
   - the PDF.
 - Anything magenta on paper. Magenta is screen-only furniture.
@@ -63,10 +64,11 @@ Record them anyway.
 ### 1. Start-up
 
 1. The window title reads **Untitled — LeatherCAD**.
-2. The top bar holds the project: name, *Save*, *New*, *Open*, the paper list, *Export PDF*, and
-   *Print*, the only green button.
-3. The second bar holds the work: *Undo*, *Redo*, *Draw as* and *Design | Sheets*.
-4. The paper list reads **1 sheet of A4, portrait, scale check only**.
+2. The top bar has three zones: the project menu, whose button is the name, and its save state and
+   *Save*; *Design | Sheets* in the middle; the paper button, *Export PDF* and *Print* — the only
+   primary button, in the paper's colour, its second half a check — then Settings and Help.
+3. The second bar holds the work: *Undo*, *Redo* and *Draw as*.
+4. The paper button reads **1 × A4 portrait**, and the Sheets tab **1**.
 
 ### 2. An empty project
 
@@ -97,7 +99,7 @@ Follow the procedure in [`print-verification-log.md`](print-verification-log.md)
 
 ### 4. Every paper, on the print test
 
-For each paper, check three things agree: the paper list's words, the Sheets view's summary, and
+For each paper, check three things agree: the paper button's count, the Sheets view's summary, and
 the PDF's page count.
 
 | Paper | Portrait | Landscape |
@@ -125,7 +127,7 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
    190 mm A4 prints across, so they print a quarter turned, whole, on two sheets. On A4 landscape
    they are as drawn.
 2. **On the paper you really print on:**
-   - the number in the paper list;
+   - the number on the paper button and the Sheets tab;
    - the number of sheets in the Sheets view;
    - the PDF's page count.
 
@@ -173,8 +175,9 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
    paper, and the other way round.
    - The viewer may scale it; the gauge must show that it did.
    - Record the viewer's behaviour. This is a procedure finding, not a software blocker.
-2. **Long names.** Long part and project names never hide *Save*, *New*, *Open*, the paper list or
-   *Export PDF* and *Print* at your usual window size.
+2. **Long names.** Long part and project names never hide the project menu, *Save*, *Design |
+   Sheets*, the paper button, *Export PDF* or *Print* at any window size: a long name gives way,
+   and its tooltip says it whole.
 3. **Undo.** Undo after a paper change brings back the previous paper, in one step.
 4. **Unsaved work.** Closing with unsaved changes asks first. Save, reopen, and everything —
    including the paper — is as it was.
@@ -194,12 +197,44 @@ and **Save** writes back to it without asking where. With the app already open a
 second double-click on macOS asks about the unsaved work first; on Linux and Windows it opens a
 second window. On Linux, the file manager calls the file a *LeatherCAD project*.
 
+### 12. The window's edited flag, on macOS
+
+Since 1.5 (U.7). On a **real Mac**, with the packaged dmg. Not Linux, where Electron ignores the
+flag; not the test host or the end-to-end mock, which replace it.
+
+1. Open a project, saved and unchanged: the window's close button shows no edited dot.
+2. Make an edit: the dot appears in the close button.
+3. *Save*: the dot clears.
+
+**R10** left 1.5 unverified on 2026-10-18, by the maintainer's decision: no Mac was at hand. It is
+monitored in [`roadmap.md`](roadmap.md)'s 1.6 *Release engineering*, not a ☐, so the release gate
+does not wait for it. Tick it in the pull request that records a pass on a Mac, with the macOS
+version and the date.
+
+### 13. ⌘A outside a text field, on macOS
+
+Since 1.5 (U.20), in the same Mac session as check 12. The renderer stops `Ctrl+A` outside a text
+field, which the end-to-end test checks on Linux; on macOS, ⌘A is also the accelerator of the Edit
+menu's *Select All* (`role: 'selectAll'` in `apps/desktop/src/main/menu.ts`), and nobody has seen
+which one wins ([#97](https://github.com/crnlsp/leathercad/issues/97)).
+
+1. Open the sample project, and click the board so that no text field has focus. ⌘A: nothing is
+   highlighted anywhere in the window, the Problems drawer included.
+2. In the project's name field, and in a size in Properties, ⌘A selects that field's text and
+   nothing else.
+3. Choose *Edit › Select All* from the menu bar, once with the board focused and once in a field,
+   and note what each does.
+
+Record the result on #97. A failure is not on the list of blockers above, but say so in the release
+pull request, so the maintainer decides whether it waits.
+
 ## After it passes
 
 - Record one row per platform in [`print-verification-log.md`](print-verification-log.md), with
   the readings. A release never claims print accuracy without them.
 - Merge the release pull request (see
   [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)), and check that the release has
-  the AppImage, the Windows installer, the macOS dmg and the SBOM attached.
+  the AppImage, the Flatpak, the Windows installer, the macOS dmg and the SBOM attached — five
+  files, as `release.yml` attaches them.
 - The installers are not code-signed, by decision ([`roadmap.md`](roadmap.md), *Release
   engineering*); [`getting-started.md`](getting-started.md) tells makers how to open them.

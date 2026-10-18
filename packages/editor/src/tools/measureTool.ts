@@ -110,10 +110,11 @@ export function createMeasureTool(nextId: () => string, measure: () => MeasureKi
     notice: () => refusal,
 
     onKey(ctx, event) {
-      if (event.key === 'Escape') {
-        refusal = null;
-        reset(ctx);
-      }
+      if (event.key !== 'Escape') return false;
+      const busy = state.kind === 'placing' || refusal !== null;
+      refusal = null;
+      reset(ctx);
+      return busy;
     },
 
     buildOverlay(ctx): DisplayList {
@@ -154,6 +155,8 @@ export function createMeasureTool(nextId: () => string, measure: () => MeasureKi
 
       return { items };
     },
+
+    underway: () => state.kind === 'placing',
 
     onDeactivate(ctx) {
       refusal = null;

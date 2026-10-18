@@ -17,14 +17,16 @@ export type {
   OpenDialogOptions,
   SaveDialogOptions,
   FileFilter,
+  Iron,
   MenuAction,
   Preferences,
   PrintJob,
   Printer,
   PrinterList,
   RecentFile,
+  RecentOutcome,
   RecoveredCopy,
 } from './host.js';
-export { DEFAULT_PREFERENCES } from './host.js';
+export { DEFAULT_PREFERENCES, STARTER_IRONS } from './host.js';
 export { InMemoryPlatformHost } from './fake.js';
 export { systemIdSource } from './systemIdSource.js';

@@ -1,6 +1,7 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { badgesOf, worstOf } from './badges.js';
+import { badgesOf, countBySeverity, worstOf } from './badges.js';
 import type { Diagnostic, Severity } from './problems/index.js';
 
 /** A diagnostic reduced to what a badge reads: where it is, and how bad. */
@@ -74,5 +75,33 @@ describe('badgesOf', () => {
     const badges = badgesOf([at('info', 'p2', 'f2')]);
 
     expect(badges.parts.has('p1')).toBe(false);
+  });
+});
+
+describe('countBySeverity', () => {
+  it('counts each severity once, and nothing for none', () => {
+    expect(countBySeverity([])).toEqual({ error: 0, warning: 0, info: 0 });
+    expect(
+      countBySeverity([at('warning', 'p1'), at('error', 'p1', 'f1'), at('warning', 'p2')]),
+    ).toEqual({ error: 1, warning: 2, info: 0 });
+  });
+
+  it('adds up to the list it was given, and agrees with the project badge', () => {
+    // The Print button's indicator, the Problems drawer and the export notice
+    // all read these counts (U.7): they cannot disagree with the list.
+    const severity = fc.constantFrom<Severity>('error', 'warning', 'info');
+    fc.assert(
+      fc.property(fc.array(severity, { maxLength: 40 }), (severities) => {
+        const list = severities.map((s, i) => at(s, `p${String(i % 3)}`));
+        const counts = countBySeverity(list);
+        expect(counts.error + counts.warning + counts.info).toBe(list.length);
+        for (const s of ['error', 'warning', 'info'] as const) {
+          expect(counts[s]).toBe(severities.filter((x) => x === s).length);
+        }
+        const badge = badgesOf(list).project;
+        expect(badge?.count ?? 0).toBe(list.length);
+        if (badge !== null) expect(counts[badge.worst]).toBeGreaterThan(0);
+      }),
+    );
   });
 });

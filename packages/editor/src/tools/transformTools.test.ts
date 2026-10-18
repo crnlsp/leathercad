@@ -6,6 +6,7 @@ import type { PointerInput, Tool, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createRotateTool } from './rotateTool.js';
 import { createScaleTool } from './scaleTool.js';
+import { keyInput } from './keys.fixture.js';
 
 /** A 100 x 50 panel with its centre at (50, 25). */
 function harness(): { ctx: ToolContext; store: DocumentStore } {
@@ -101,7 +102,7 @@ describe('rotate tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 150, y: 25 }));
     tool.onPointerMove?.(ctx, pointer({ x: 50, y: 125 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
 
     expect(rectIn(store).rotation).toBe(0);
   });
@@ -198,7 +199,7 @@ describe('scale tool', () => {
 
     tool.onPointerDown?.(ctx, pointer({ x: 100, y: 25 }));
     tool.onPointerMove?.(ctx, pointer({ x: 150, y: 25 }));
-    tool.onKey?.(ctx, { key: 'Escape', shiftKey: false, ctrlKey: false });
+    expect(tool.onKey?.(ctx, keyInput('Escape'))).toBe(true);
 
     expect(rectIn(store).width).toBe(100);
   });

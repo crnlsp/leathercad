@@ -3,8 +3,9 @@
 **Package:** `packages/domain`
 **Status:** Built through Phase 4, closed out in slice 4.13. The phase was designed as one in the
 [Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md). Each section
-says which parts are **built** or **later**.
-**Last updated:** 2026-09-23
+says which parts are **built** or **later**; a later part names its roadmap item, which is where its
+status lives.
+**Last updated:** 2026-10-17
 
 ---
 
@@ -44,9 +45,11 @@ Project                                     built
                └── TextLabel                 designed, 4.11 — an annotation
 ```
 
-**Later:** materials with thickness, grain direction and notes on a part, persisted guides, shipped
-iron presets as document data. **Not planned for Phase 4:** a per-part placement transform. A part
-is placed by its features' own geometry ([ADR 0012](adr/0012-mirror-is-a-derivation.md)).
+**Later:** the leather's thickness beyond a fold's own (roadmap 9.1), grain direction (9.22),
+persisted guides (3.10). **Not planned:** a notes field on a part — a text label prints what a note
+would say; and iron presets as document data — irons are the maker's, in *My tools*, and a hole set
+stores the pitch (§6.2). **Not planned for Phase 4:** a per-part placement transform. A part is
+placed by its features' own geometry ([ADR 0012](adr/0012-mirror-is-a-derivation.md)).
 
 ## 3. Features
 
@@ -140,7 +143,7 @@ the slit's length and slant are a rendering convention worked out from the pitch
 hole.
 
 **Later:** slot and diamond hole shapes, and suppressing individual holes, expressed as a list of
-ordinals on the set.
+ordinals on the set (roadmap *Also later*).
 
 ### 3.4 `FoldLine` — built
 
@@ -148,7 +151,7 @@ ordinals on the set.
 interface FoldLine extends GeometricFeature {
   kind: 'fold-line';
   direction: 'mountain' | 'valley';
-  materialThicknessMm?: Mm;           // stored now; consumed by thickness compensation (v1.1)
+  materialThicknessMm?: Mm;           // stored now; consumed by thickness compensation (9.1)
 }
 ```
 
@@ -183,7 +186,9 @@ and halve it before quantising.
 Kept distinct from a cut-out because a hardware hole is punched rather than cut, and is reported
 separately.
 
-**Later:** `hardwareRefId`, a link into the hardware library (v1.1).
+**Later:** `hardwareRefId`, a link into the hardware library (roadmap 9.3), and a placement measured
+from an edge, as a derivation (9.24). The rules that keep a hole on the leather read a hardware
+hole's centre and not its rim, which misses a hole that breaks the edge (Q33).
 
 ### 3.7 `Measurement` — linear built 4.10a
 
@@ -299,7 +304,8 @@ geometry-source kind each. The code has one `derived` kind carrying a typed op, 
 arrive as ops (the stitch derivation design, §2). **One source per derivation.** A genuinely
 two-input derivation, such as a boolean, would be a new variant when it is needed.
 
-**Later:** `ellipse` and `polygon` shapes; boolean derivations (v1.2).
+**Later:** `ellipse` and `polygon` shapes; boolean derivations (roadmap 9.5). Two more ops are in
+view: a skive band inset from an edge (9.21) and a hardware hole placed from an edge (9.24).
 
 ### 4.1 Why parametric shapes live here and not in `geometry`
 
@@ -585,7 +591,10 @@ decides *what the runs are*.
 - **`continuous`** treats the whole path as one run. Right for shapes made of generous radii.
 - **`hole-at-corner`** splits the line at every anchor and distributes each run independently, so a
   hole lands exactly on every corner. The shared hole where two runs meet is emitted once. Each run
-  reports its own spacing.
+  reports its own spacing, and its own count: every hole on it, the corner holes at both its ends
+  included — what a maker counts along that edge (U.17). A corner hole is on two runs, so the runs
+  of a set add up to its count plus one per shared corner: the sample's outer reads 24 · 51 · 24 ·
+  51 round 146 holes.
 
 **Later:** a configurable corner-angle threshold, and a radius-aware policy that flows round a large
 radius but puts a hole on a tight one. It should become the default once real projects show where
@@ -604,9 +613,10 @@ hint; the model never stores inches.
 - **Two levels of deviation** (DR4). Info above 5 %: the seam is visibly uneven. Warning above 25 %:
   holes crowd and can tear out between each other. Both are advice; the geometry is exactly what was
   asked for.
-- Total stitch line length, for estimating thread (roughly 4–5 × the seam length).
+- Total stitch line length, for estimating thread (roughly 4–5 × the seam length; roadmap 9.12
+  settles the formula, which printing.md §12 gives as 4×).
 
-## 7. Assembly and seams — designed for, built in v1.2
+## 7. Assembly and seams — designed for; roadmap 9.6
 
 Two parts stitched together must have **the same number of holes** along their mating edges. Getting
 it wrong is discovered once the leather is cut.
@@ -623,6 +633,13 @@ interface Seam {
 
 Phase 4 keeps this possible without a migration: hole sets are addressable by id, runs by anchors,
 holes by position, and a mirrored part's hole count equals its original's by construction.
+
+A seam is the first relationship between pieces rather than inside one, so what will read it is
+named here before it is built (roadmap *Pieces that fit*): the thread a seam takes (9.12), alignment
+marks at matching holes on both sides (9.13), and a gusset's length along the panel it wraps (9.1).
+`a` and `b` may name the same part: a pouch folded over and sewn up its sides is one piece with a
+seam. **Open:** whether a seam alone keeps the format version — it changes nothing drawn, cut or
+printed (file-format.md §4.5, rule 3) — while the marks, which print, bump it (rule 2).
 
 ## 8. Invariants and diagnostics
 
@@ -693,7 +710,7 @@ rules are exact — a hole is a point, and a point is either on the material or 
 | X5 | Text that can reach paper is set in millimetres, in the vendored typeface, laid out once | built 4.11a |
 | X6 | Text that restates a model value is generated, never stored | built 4.10a for dimensions |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
-| X8 | Defaults come from project settings | built 4.3a |
+| X8 | Defaults come from settings, never from constants in a component: the maker's (My tools, U.13) where the app makes something, the project's when no maker's value is passed | built 4.3a; the maker's in U.13 |
 | X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
 | X10 | A refusal keeps the user's work where it can still be corrected | built 4.3a for drawing |
 
@@ -817,7 +834,7 @@ The diagnostics themselves:
 | `HOLE_SPACING_UNEVEN` | info (runs differing by above 5 % of the pitch) | rule | DR4 | built 4.12a |
 | `HOLE_SPACING_DEVIATION` | warning (above 25 % from the iron) | rule | DR4 | built 4.12a |
 | `HOLE_COUNT_TOO_LOW` | warning (under 2 in a set) | rule | DR4 | built 4.12a — counted per set, because with a hole at every corner a short run legitimately contributes one |
-| `TEXT_TOO_SMALL_TO_PRINT` | warning (under 1.5 mm) | rule | DR5 | 4.11 |
+| `TEXT_TOO_SMALL_TO_PRINT` | warning (under 1.5 mm) | rule | DR5 | planned: labels came in 4.11, the rule did not (Q34) |
 | `EMPTY_PART` | info | rule | DR6 | built 4.12a (parts are kept since 4.2b) |
 
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
@@ -828,7 +845,9 @@ Since 4.3a the first two exist as **refusal** codes rather than diagnostics — 
 and `CONTOUR_NOT_CLOSED` — raised by the command and the loader that refuse them, never listed in the
 panel.
 
-**v1.2:** `SEAM_HOLE_COUNT_MISMATCH`, `PARTS_OVERLAP_ON_SHEET`.
+**With seams (roadmap 9.6):** `SEAM_HOLE_COUNT_MISMATCH`. `PARTS_OVERLAP_ON_SHEET`, planned beside
+it once, is not: since 7.4a the sheet plan places every piece itself, so two cannot overlap on a
+sheet.
 
 **An audit test holds the catalogue to this section** (`problems/audit.test.ts`, 4.12a). It reads
 the registry and the repository, so nothing in it depends on another test having run first:
@@ -842,12 +861,16 @@ the registry and the repository, so nothing in it depends on another test having
 
 ## 9. Templates
 
-**MVP:** save a part to a user library, insert a library part into a project. A copy, with no live
-link to the library, stored as `.lcp`-shaped JSON in the user config directory. Inserting re-points
-the part's internal derivations to the copies, exactly as duplicating does (§4.7).
+**First (roadmap 9.7):** save a part to a user library, insert a library part into a project. A
+copy, with no live link to the library, stored as `.lcp`-shaped JSON in the user config directory.
+Inserting re-points the part's internal derivations to the copies, exactly as duplicating does
+(§4.7). Copy and paste (8.8b) carries a part the same way, between projects too; and a template to
+start a project from (9.18) is a whole project opened untitled, as the sample is.
 
-**v1.2:** parameterised templates, whose named parameters (`cardWidth`, `stitchMargin`) are read by
-shapes and derivations instead of literals.
+**Exploring:** parameterised templates, whose named parameters (`cardWidth`, `stitchMargin`) are read
+by shapes and derivations instead of literals. A named value that several shapes read is one step
+from a solver's variable (§4, product-spec.md §6), so this waits until the library shows what makers
+reuse.
 
 **Not planned:** a template instance that live-updates when the library template changes.
 
@@ -860,14 +883,40 @@ shapes and derivations instead of literals.
 | `Measurement` (horizontal, vertical, aligned) | Built 4.10a | Radial, angular |
 | `TextLabel`, generated captions | Built: 4.11a, 4.11b | |
 | Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes` | Built | |
-| Op: `mirror`, by axis and across a fold | Built: 4.8a, 4.8b | Boolean (v1.2) |
+| Op: `mirror`, by axis and across a fold | Built: 4.8a, 4.8b | Boolean (9.5) |
 | Reference graph, explicit deletion, re-pointing | Built: 4.2b | References with 4.10 |
 | Anchors through derivations | Built: 4.4b | Vertex ids before 3.9 |
 | Evaluation with memoisation and per-feature failures | Built; typed 4.12a | |
 | Layer roles and export presets | Built | |
-| Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (v1.1) |
-| Validation, the §8.6 catalogue | Built: 4.12a–4.12 | Seam and layout rules (v1.2) |
-| Templates as copies | Later: 8.1 | Parameterised (v1.2) |
-| `Seam` and assembly | Design only | v1.2 |
-| Material thickness compensation | Fields stored | v1.1 |
-| Hardware library | `hardwareType` only | v1.1 |
+| Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (*Also later*) |
+| Validation, the §8.6 catalogue | Built: 4.12a–4.12 | Seam rules (9.6); text size (Q34) |
+| Templates as copies | Later: 9.7 (was 8.1) | Parameterised: *Exploring* |
+| `Seam` and assembly | Design only | 9.6 |
+| Material thickness compensation | Fields stored | 9.1 |
+| Hardware library | `hardwareType` only | 9.3 |
+
+## 11. Where the model is going
+
+The model's share of [product-roadmap.md](product-roadmap.md): what its next layers need, and the
+decisions still open. No schema is fixed here before its slice.
+
+- **Between pieces (9.6).** §7's `Seam` is the first relationship that is not inside a part. Open:
+  whether a seam alone keeps the format version (§7).
+- **What the maker wants (9.14).** A requirement — "this pocket holds an ID-1 card" — is the maker's
+  statement, stored as metadata on what it is about and checked by a design rule on every
+  evaluation; nothing the rule computes is stored. Open: whether it attaches to the open stitch line
+  that forms the pocket or to the part, and the ease it allows, which starts not set, as the
+  leather's thickness does (U.13).
+- **Accepting a warning (9.16).** Kept in the project as a problem's code and the features it names,
+  never words (ADR 0018). It has to find its problem again after an edit, which is Q4.
+- **Fixes (9.17).** A fix is an ordinary command made from a diagnostic, previewed through the
+  store's `preview` and `rollback`, and applied as one undo step — never without the maker.
+  Recommended: proposed in `document`, which may import the domain, so that the domain goes on
+  reporting facts (§8.6).
+- **Thickness (9.1).** A fold stores its own today, and the maker's default is copied into each new
+  fold (U.13). Compensation needs what lies inside a fold or along a seam — a stack. Open: whether
+  thickness belongs to a part, a fold, or both.
+- **Pieces placed as they are stacked** (*Exploring*). Each part placed where it sits in the
+  assembled good, still flat, would let holes through several layers and hardware across them be
+  checked. It would be the first per-part placement the model holds (§2), so it is weighed only
+  after seams.

@@ -33,6 +33,7 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 | File | Purpose | Read when |
 |---|---|---|
 | `docs/product-spec.md` | What the product is and is not | Deciding whether something belongs |
+| `docs/product-roadmap.md` | Where the product is going: themes, milestones, dependencies, drawn | Proposing or ordering work beyond the next release |
 | `docs/architecture.md` | Stack, layering, data flow, canvas system, risks | Any structural change |
 | `docs/domain-model.md` | Features, derivation graph, stitching, validation | Any domain work |
 | `docs/geometry.md` | Representation, numerics, algorithms, the done-checklist | Any `packages/geometry` work |
@@ -40,7 +41,7 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 | `docs/printing.md` | Export and print pipeline, accuracy budget | Any export or print work |
 | `docs/testing.md` | Layers, property catalogue, edge-case corpus | Writing tests, which is always |
 | `docs/roadmap.md` | What is planned, open findings | Starting a slice |
-| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3): every slice that shipped, and what it found | Before redoing something that was tried |
+| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3, 1.3.5): every slice that shipped, and what it found | Before redoing something that was tried |
 | `docs/glossary.md` | Craft vocabulary | Whenever domain naming is in question |
 | `docs/adr/NNNN-*.md` | Why a decision was made | Before revisiting a decision |
 | `docs/superpowers/specs/` | The dated design of each larger slice | Changing what a slice built |
@@ -122,7 +123,18 @@ instructions that every session would otherwise have to be given again.
 
 | Agent | Does |
 |---|---|
-| `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.19) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
+| `ui-refinement` | Builds one slice of 1.5's UI refinement (U.1–U.20) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
+| `panels-fold` | Builds U.5, panels that fold and focus mode, with its briefing: where the widths live today and where they go, the rail's remember-but-never-overwrite pattern, how `[`, `]` and `\` are matched by place, what already floats on the board, and who owns Escape first |
+| `top-bar` | Builds U.7, the top bar in three zones, with its briefing: the bar's parts as they are, the keys it has and the one it lacks (F1), what still uses green, the severity count that does not exist yet, and the edited flag's path through `PlatformHost` |
+| `parts-tree` | Builds U.8, the Parts tree, with its briefing: the nesting `featureTree` already gives, the print line that is also Design's *Not printed* warning, the test ids ten specs rely on, and keeping the tree's keys apart from the window's |
+
+**U.5, U.7 and U.8 run one at a time, in that order.** All three change `App.tsx`, `styles.css`,
+`keymap.ts`, `en.json` and the pixel references, and U.8 reuses U.5's thumbnail, so each agent starts
+only once the one before it is ✅ on `develop`. A slice agent carries only its slice's briefing; the
+process, the machine and the pull-request rules are `ui-refinement`'s, and the task is the plan's.
+All are Opus at high effort. **A slice agent is deleted once its slice is merged:** its briefing
+describes the code before the slice, and what the slice found is in the plan's *As built* and the
+roadmap. A later fix to that slice is `ui-refinement`'s.
 
 ## 6. Hooks
 

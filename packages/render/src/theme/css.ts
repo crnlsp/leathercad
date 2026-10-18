@@ -1,12 +1,15 @@
 import type { LayerRole } from '@leathercad/domain';
 
-import { ACCENT, GO, GROUND, SHELL, STATE } from './palette.js';
+import { CANVAS } from './canvas.js';
+import { ACCENT, ACTION, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
+  BAR_PX,
   DENSITY,
   ELEVATION,
   FONT_SANS,
   MOTION,
+  PANEL_PX,
   RADIUS,
   RAIL_PX,
   SPACE_PX,
@@ -37,6 +40,7 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--text'] = SHELL.text;
   variables['--text-dim'] = SHELL.textDim;
   variables['--text-mute'] = SHELL.textMute;
+  variables['--scrollbar'] = SHELL.scrollbar;
   for (const [name, value] of Object.entries(GROUND)) {
     variables[name === 'ground' ? '--ground' : `--ground-${kebab(name)}`] = value;
   }
@@ -45,9 +49,11 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--tan'] = ACCENT.tan;
   variables['--tan-ink'] = ACCENT.tanInk;
   variables['--on-tan'] = ACCENT.onTan;
-  variables['--go'] = GO.go;
-  variables['--go-ink'] = GO.goInk;
-  variables['--on-go'] = GO.onGo;
+  variables['--primary'] = ACTION.primary;
+  variables['--primary-hover'] = ACTION.primaryHover;
+  variables['--primary-side'] = ACTION.primarySide;
+  variables['--secondary-side'] = ACTION.secondarySide;
+  variables['--on-primary'] = ACTION.onPrimary;
   for (const [name, value] of Object.entries(STATE.shell)) variables[`--${name}`] = value;
   for (const [name, value] of Object.entries(STATE.ground)) variables[`--${name}-ground`] = value;
   for (const [role, style] of Object.entries(ROLE_STYLES) as [LayerRole, { colour: string }][]) {
@@ -71,8 +77,18 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--h-control'] = `${String(rows.control)}px`;
   variables['--h-control-lg'] = `${String(rows.controlLg)}px`;
   variables['--row-pad-y'] = `${String(rows.rowPadY)}px`;
+  variables['--row-height'] = `${String(rows.row)}px`;
   variables['--rail-w-expanded'] = `${String(RAIL_PX.expanded)}px`;
   variables['--rail-w-collapsed'] = `${String(RAIL_PX.collapsed)}px`;
+  variables['--parts-width'] = `${String(PANEL_PX.parts)}px`;
+  variables['--parts-width-narrow'] = `${String(PANEL_PX.partsNarrow)}px`;
+  variables['--properties-width'] = `${String(PANEL_PX.properties)}px`;
+  variables['--panel-strip'] = `${String(PANEL_PX.strip)}px`;
+  variables['--work-bar-h'] = `${String(BAR_PX.work)}px`;
+  variables['--status-bar-h'] = `${String(BAR_PX.status)}px`;
+  // The canvas draws its rulers this wide; what floats on the board keeps off them.
+  variables['--ruler-top'] = `${String(CANVAS.ruler.thicknessPx)}px`;
+  variables['--ruler-left'] = `${String(CANVAS.ruler.leftThicknessPx)}px`;
 
   return variables;
 }

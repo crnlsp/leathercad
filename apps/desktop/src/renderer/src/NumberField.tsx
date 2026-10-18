@@ -1,5 +1,30 @@
-import { formatEditable, parseNumber, quantise } from '@leathercad/core';
-import { useRef, useState } from 'react';
+import {
+  err,
+  formatEditable,
+  ok,
+  parseLength,
+  parseNumber,
+  quantise,
+  type LengthError,
+  type Result,
+} from '@leathercad/core';
+import { useId, useRef, useState } from 'react';
+
+import { intoMenu } from './fieldMenu.js';
+import { useI18n } from './i18n.js';
+import { SeverityGlyph } from './SeverityGlyph.js';
+import type { Refusal } from './outlineSizes.js';
+
+/**
+ * What a field's text comes to. A field in millimetres takes a size as a maker
+ * types it — `95-2*3.5`, `3.75in`, `9,5 cm` (U.15) — so the same text means the
+ * same thing in every one; any other field (a count, an angle) a plain number.
+ */
+function read(text: string, inMm: boolean): Result<number, LengthError> {
+  if (inMm) return parseLength(text);
+  const value = parseNumber(text);
+  return Number.isFinite(value) ? ok(value) : err({ kind: 'syntax' });
+}
 
 /**
  * A millimetre entry field.
@@ -11,7 +36,15 @@ import { useRef, useState } from 'react';
  * and accepts either minus back, so a value can be retyped as it reads.
  *
  * Typing an exact number is not a convenience here — it is the primary way to
- * work. Mouse precision is the fallback.
+ * work. Mouse precision is the fallback. So a field in millimetres reads a sum
+ * and a unit (`95-2*3.5`, `3.75in`) and shows the result in mm; and Enter on
+ * text it cannot read keeps the text, and says why beneath, rather than
+ * dropping what was typed. Leaving the field, or Escape, still reverts.
+ *
+ * **A value the field's owner refuses** (`refuse`) — a corner larger than the
+ * rectangle draws (U.14) — is kept on Enter with the reason and a warning
+ * glyph beneath, which names what a second Enter applies instead; the arrow
+ * keys stop there. Leaving the field drops it, as unread text is dropped.
  *
  * **An empty field is an answer only when the caller says so.** Pass `onClear`
  * and a `null` value renders blank with the `placeholder`, and clearing the
@@ -29,6 +62,8 @@ export function NumberField({
   suffix = 'mm',
   disabled = false,
   precision = 2,
+  hideLabel = false,
+  refuse,
 }: {
   label: string;
   value: number | null;
@@ -40,6 +75,10 @@ export function NumberField({
   suffix?: string;
   disabled?: boolean;
   precision?: number;
+  /** Named for a screen reader only, where a column heading or a setting's name says it (U.13). */
+  hideLabel?: boolean;
+  /** Why a value that reads cannot be stored as it is, and what to store instead (U.14). */
+  refuse?: (value: number) => Refusal | null;
 }) {
   // While the user is typing, their draft wins; otherwise the document does,
   // so an undo immediately shows the restored number.
@@ -49,53 +88,82 @@ export function NumberField({
   // again from the same render's closure, where the state variable is still
   // the old value. That produced two identical commands and so two history
   // entries, which made the first press of Undo appear to do nothing.
+  const { t } = useI18n();
+  const reasonId = useId();
   const [draft, setDraft] = useState<string | null>(null);
   const draftRef = useRef<string | null>(null);
+  const [unread, setUnread] = useState<LengthError | null>(null);
+  const [refused, setRefused] = useState<Refusal | null>(null);
   const shown = draft ?? (value === null ? '' : formatEditable(value, precision));
+  const inMm = suffix === 'mm';
 
   const updateDraft = (next: string | null): void => {
     draftRef.current = next;
     setDraft(next);
+    setUnread(null);
+    setRefused(null);
   };
 
-  const commit = (): void => {
+  /** `holdUnread`: Enter keeps text it cannot read, and says why; a blur drops it. */
+  const commit = (holdUnread: boolean): void => {
     const pending = draftRef.current;
     if (pending === null) return;
-    updateDraft(null);
 
     if (pending.trim() === '') {
+      updateDraft(null);
       // Only a field that allows it treats blank as a value; and clearing one
       // that is already blank is not an edit, so it writes no history.
       if (onClear !== undefined && value !== null) onClear();
       return;
     }
 
-    const parsed = parseNumber(pending);
-    if (!Number.isFinite(parsed)) return;
+    const parsed = read(pending, inMm);
+    if (!parsed.ok) {
+      if (holdUnread && inMm) setUnread(parsed.error);
+      else updateDraft(null);
+      return;
+    }
 
-    const clamped = min !== undefined ? Math.max(min, parsed) : parsed;
+    const clamped = min !== undefined ? Math.max(min, parsed.value) : parsed.value;
     const snapped = quantise(clamped);
-    if (snapped !== value) onCommit(snapped);
+    const refusal = refuse?.(snapped) ?? null;
+    if (refusal !== null && holdUnread && refused === null) {
+      // Said once; Enter again takes what it offers.
+      setRefused(refusal);
+      return;
+    }
+    updateDraft(null);
+    if (refusal !== null && !holdUnread) return;
+    const stored = refusal?.use ?? snapped;
+    if (stored !== value) onCommit(stored);
   };
 
   return (
     <label className="field">
-      <span className="field-label">{label}</span>
+      <span className={hideLabel ? 'visually-hidden' : 'field-label'}>{label}</span>
       <span className="field-input">
         <input
           type="text"
-          inputMode="decimal"
+          inputMode={inMm ? 'text' : 'decimal'}
           value={shown}
           placeholder={placeholder}
           disabled={disabled}
           step={step}
+          aria-invalid={unread !== null || refused !== null || undefined}
+          aria-describedby={unread !== null || refused !== null ? reasonId : undefined}
           onChange={(event) => updateDraft(event.target.value)}
-          onBlur={commit}
+          onBlur={(event) => {
+            // The field's own menu is not leaving it (U.20).
+            if (!intoMenu(event.relatedTarget)) commit(false);
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
-              commit();
-              event.currentTarget.blur();
+              commit(true);
+              if (draftRef.current === null) event.currentTarget.blur();
             } else if (event.key === 'Escape') {
+              // An edit in progress is what Escape cancels — not the dialog
+              // or the tool around the field (U.13, Settings › My tools).
+              if (draftRef.current !== null) event.stopPropagation();
               updateDraft(null);
               event.currentTarget.blur();
             } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
@@ -105,11 +173,13 @@ export function NumberField({
               // A blank field steps from its minimum, or from zero: there is no
               // current number to step from, and inventing one would be worse.
               const current = value ?? min ?? 0;
-              const next = quantise(
-                (draft === null ? current : parseNumber(draft) || current) + delta,
-              );
-              setDraft(null);
-              onCommit(min !== undefined ? Math.max(min, next) : next);
+              const typed = draft === null ? null : read(draft, inMm);
+              const next = quantise((typed?.ok === true ? typed.value : current) + delta);
+              updateDraft(null);
+              const floored = min !== undefined ? Math.max(min, next) : next;
+              // A step past what the field takes stops there.
+              const stored = refuse?.(floored)?.use ?? floored;
+              if (stored !== value) onCommit(stored);
             }
           }}
           // Stop canvas shortcuts firing while a field has focus.
@@ -117,6 +187,20 @@ export function NumberField({
         />
         {suffix !== '' && <span className="field-suffix">{suffix}</span>}
       </span>
+      {unread !== null && (
+        // Hidden from the label's name, which stays the field's; the input is
+        // described by it instead, as a reason beneath a button is (F.1).
+        <span id={reasonId} className="reason field-reason" aria-hidden="true">
+          {unread.kind === 'unit'
+            ? t('editor.lengthError.unit', { unit: unread.unit })
+            : t(`editor.lengthError.${unread.kind}`)}
+        </span>
+      )}
+      {refused !== null && (
+        <span id={reasonId} className="reason field-reason refused" aria-hidden="true">
+          <SeverityGlyph severity="warning" /> {refused.reason}
+        </span>
+      )}
     </label>
   );
 }

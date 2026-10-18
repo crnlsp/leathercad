@@ -57,6 +57,26 @@ describe('InMemoryPlatformHost', () => {
     expect(host.dialogCalls).toEqual([{ kind: 'save', options: { title: 'Save', filters } }]);
   });
 
+  it('keeps whether a key capture is under way (U.12)', async () => {
+    const host = new InMemoryPlatformHost();
+    await host.setKeyCapture(true);
+    expect(host.keyCapture).toBe(true);
+    await host.setKeyCapture(false);
+    expect(host.keyCapture).toBe(false);
+  });
+
+  it('keeps the window’s edited flag as last set (U.7)', async () => {
+    const host = new InMemoryPlatformHost();
+    expect(host.documentEdited).toBe(false);
+
+    await host.setDocumentEdited(true);
+    expect(host.documentEdited).toBe(true);
+    await host.setDocumentEdited(false);
+
+    expect(host.documentEdited).toBe(false);
+    expect(host.documentEditedCalls).toEqual([true, false]);
+  });
+
   it('records external open requests', async () => {
     const host = new InMemoryPlatformHost();
 

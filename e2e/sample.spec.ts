@@ -6,6 +6,7 @@ import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import { renameProject } from './projectMenu.js';
 
 /**
  * Slice 8.3: a finished pattern to take apart, from Help or from the empty
@@ -24,7 +25,7 @@ test('the sample wallet opens from the empty Parts panel and from Help, clean an
 
     await window.getByTestId('open-sample').click();
     await expect(window.getByTestId('part-count')).toHaveText('3');
-    await expect(window.getByTestId('project-name')).toHaveValue('Bifold wallet');
+    await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
     const parts = window.getByTestId('parts-list');
     for (const name of ['Outer', 'Lining', 'Card pocket']) await expect(parts).toContainText(name);
     // A sample that shows a problem teaches the wrong thing.
@@ -34,13 +35,13 @@ test('the sample wallet opens from the empty Parts panel and from Help, clean an
     expect(await window.title()).not.toContain('•');
 
     // From Help, over unsaved work: asked first, like any other open.
-    await window.getByTestId('project-name').fill('My changes');
+    await renameProject(window, 'My changes');
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-open-sample').click();
     const dialog = window.getByTestId('unsaved-dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('unsaved-discard').click();
-    await expect(window.getByTestId('project-name')).toHaveValue('Bifold wallet');
+    await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
   } finally {
     await closeApp(app);
   }
@@ -77,8 +78,9 @@ test('no feature name in Parts breaks inside a word, at any window width (Q5)', 
         return broken;
       });
 
-    // Each width band the frame steps through: wide, the step at 1280, the
-    // Properties overlay below 1024, and the Parts overlay below 900.
+    // Each width band the frame steps through (§5, U.5): wide; below 1280,
+    // the rail's keys, Parts at 208 and Properties a strip; and below 900,
+    // Parts opened over the board.
     for (const width of [1440, 1200, 1000, 880]) {
       await app.evaluate(({ BrowserWindow }, size) => {
         BrowserWindow.getAllWindows()[0]?.setContentSize(size, 640);

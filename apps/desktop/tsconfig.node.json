@@ -17,8 +17,10 @@
     "src/csp/**/*.ts",
     // The keymap, the shortcut map, the tool list and the top bar's menus are
     // plain data, compiled here too so src/main/shortcuts.test.ts can hold the
-    // map to the menus and the main process's keys (8.2, 8.7, U.3).
+    // map to the menus and the main process's keys (8.2, 8.7, U.3); and the
+    // rules for the maker's keys, which preferences.json is read by (U.12).
     "src/renderer/src/keymap.ts",
+    "src/renderer/src/rebind.ts",
     "src/renderer/src/menus.ts",
     "src/renderer/src/shortcuts.ts",
     "src/renderer/src/tools.ts",

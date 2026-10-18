@@ -19,7 +19,7 @@ import { PathOps, polyline, type Path, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, dotsItem, pathItem, type DisplayItem, type DisplayList } from '@leathercad/render';
 
 import { hitTest } from '../hitTest.js';
-import type { Tool, ToolContext } from '../tool.js';
+import { means, type Tool, type ToolContext } from '../tool.js';
 
 /** A handle's side, in screen pixels: big enough to grab, small beside a stitch hole. */
 const HANDLE_PX = 8;
@@ -176,16 +176,18 @@ export function createEditPointsTool(
           reset(ctx);
           return true;
         }
+        // A picked corner, or the reason one was refused, is let go of.
+        const busy = state.picked !== null || state.refusal !== null;
         state = { kind: 'idle', picked: null, refusal: null };
         ctx.invalidate();
-        return;
+        return busy;
       }
 
       // R reshapes the picked corner: rounds a sharp one to the work bar's
       // radius, sharpens a rounded one (3.9d). Only when a corner is picked —
       // otherwise R is the Rectangle tool's, as the polyline leaves A and L
       // to their tools outside a run.
-      if (event.key.toLowerCase() === 'r') {
+      if (means(event, 'roundCorner')) {
         if (state.kind !== 'idle' || state.picked === null) return;
         const target = editable(ctx);
         if (target === null) return;
@@ -205,7 +207,7 @@ export function createEditPointsTool(
         return true;
       }
 
-      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+      if (!means(event, 'removePoint')) return;
       if (state.kind !== 'idle' || state.picked === null) return;
       const target = editable(ctx);
       if (target === null) return;

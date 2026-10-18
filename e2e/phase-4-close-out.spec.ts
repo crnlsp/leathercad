@@ -8,7 +8,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { fromProjectMenu, renameProject } from './projectMenu.js';
 
 /**
  * Slice 4.13: one card holder, drafted the way a maker would, through every
@@ -35,7 +35,8 @@ function num(text: string | null): number {
  * readout at two points and solves for the view. Changing tool no longer moves
  * the canvas (F.2, F.3), so this is read once, and again only after the view is
  * deliberately reframed. Grid snapping is off and the probes sit in the
- * canvas's empty lower-left corner, so the readout is the raw pointer position.
+ * canvas's empty upper-left corner — the legend holds the lower-left (U.10) and
+ * the zoom control the lower-right (U.4) — so the readout is the raw pointer.
  */
 async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
@@ -45,15 +46,12 @@ async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [nu
     return { x: x!, y: y! };
   };
 
-  const a = await readAt(20, box.height - 20);
-  const b = await readAt(220, box.height - 220);
+  const a = await readAt(20, 20);
+  const b = await readAt(220, 220);
   const mmPerPx = (b.x - a.x) / 200;
 
   // Y is up in the model and down on screen.
-  return (xMm, yMm) => [
-    box.x + 20 + (xMm - a.x) / mmPerPx,
-    box.y + box.height - 20 - (yMm - a.y) / mmPerPx,
-  ];
+  return (xMm, yMm) => [box.x + 20 + (xMm - a.x) / mmPerPx, box.y + 20 + (a.y - yMm) / mmPerPx];
 }
 
 /**
@@ -127,7 +125,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     const problems = window.getByTestId('problems-panel');
     const features = window.getByTestId('feature-count');
 
-    await window.getByTestId('project-name').fill('Wizytownik łączony');
+    await renameProject(window, 'Wizytownik łączony');
 
     // ── The shell: drawn roughly, then typed exactly ─────────────────────────
     await useTool(window, 'rectangle', 'outline');
@@ -213,6 +211,10 @@ test('a card holder, from the first outline to the printed page', async () => {
     await type(window, 'Width', 90);
     await type(window, 'Height', 60);
     for (const corner of ['↖', '↗', '↙', '↘']) await type(window, corner, 0);
+    // Name and Cut are the piece's (R-05): the stitch line is what this mode
+    // leaves selected, so the piece is picked by its heading to be named.
+    await expect(panel.getByTestId('part-name')).toHaveCount(0);
+    await window.locator('[data-testid^="part-heading-"]').last().click();
     await window.getByTestId('part-name').fill('Pocket');
     await expect(problems).toContainText('Nothing to fix');
 

@@ -7,7 +7,15 @@
 
 export { Viewport } from './viewport.js';
 
-export type { KeyInput, PointerInput, Tool, ToolContext } from './tool.js';
+export type {
+  KeyInput,
+  MakerDefaults,
+  PointerInput,
+  SizeDraft,
+  SizeField,
+  Tool,
+  ToolContext,
+} from './tool.js';
 export { ToolManager } from './tool.js';
 
 export { featuresWithin, hitTest } from './hitTest.js';

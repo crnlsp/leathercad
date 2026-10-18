@@ -8,9 +8,11 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
+import type { CommandId } from './keymap.js';
 import { focusAfter, sharedReasons, type MenuEntry, type MenuItem } from './menus.js';
 import { Tooltip } from './Tooltip.js';
 
@@ -29,18 +31,30 @@ export function MenuButton({
   testId,
   className,
   align = 'start',
+  above = false,
   entries,
   onOpen,
+  keys,
+  triggerRef,
+  tabIndex,
   children,
 }: {
   /** The button's accessible name, and the menu's. */
   label: string;
   /** What the tooltip says while the menu is closed; the label if not given. */
   tooltip?: string;
+  /** The command that opens it, shown as a cap in the tooltip: Help's F1 (U.7). */
+  keys?: CommandId;
+  /** The button, for whoever opens the menu by its key, or gives focus back to it. */
+  triggerRef?: RefObject<HTMLButtonElement | null>;
+  /** -1 inside a widget that keeps one stop for Tab: a Parts row (U.8). */
+  tabIndex?: number;
   testId: string;
   className: string;
   /** Which edge of the button the menu lines up with. */
   align?: 'start' | 'end';
+  /** Opens upwards, for a button at the foot of the canvas, which clips what runs past it (U.4). */
+  above?: boolean;
   entries: readonly MenuEntry[];
   /** Called as the menu opens, for a menu that shows something that changes. */
   onOpen?: () => void;
@@ -49,21 +63,26 @@ export function MenuButton({
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  // Escape gives focus back to the button — once the menu has closed. The
-  // tooltip is off while the menu is open, which changes the button's
-  // wrapping, so the button focused before the render is not the one after.
+  const own = useRef<HTMLButtonElement>(null);
+  const trigger = triggerRef ?? own;
+  // Escape, or choosing an item by keyboard, gives focus back to the button —
+  // once the menu has closed. The tooltip is off while the menu is open, which
+  // changes the button's wrapping, so the button focused before the render is
+  // not the one after. Only if nothing else took it: a dialog the item opened
+  // keeps it. Choosing gave it to the page until U.4, so the keyboard lost its
+  // place; an item chosen by the pointer still leaves focus with the page.
   const giveBack = useRef(false);
 
   useEffect(() => {
     if (open) return;
-    if (giveBack.current) trigger.current?.focus();
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (giveBack.current && lost) trigger.current?.focus();
     giveBack.current = false;
-  }, [open]);
+  }, [open, trigger]);
 
   return (
     <div className="menu-anchor" ref={root}>
-      <Tooltip text={open ? null : (tooltip ?? label)}>
+      <Tooltip text={open ? null : (tooltip ?? label)} {...(keys === undefined ? {} : { keys })}>
         <button
           ref={trigger}
           type="button"
@@ -72,6 +91,7 @@ export function MenuButton({
           aria-label={label}
           aria-haspopup="menu"
           aria-expanded={open}
+          tabIndex={tabIndex}
           onClick={() => {
             if (!open) onOpen?.();
             setOpen((was) => !was);
@@ -84,13 +104,13 @@ export function MenuButton({
         <MenuPopup
           label={label}
           testId={`${testId}-items`}
-          className={`menu ${align}`}
+          className={`menu ${align}${above ? ' above' : ''}`}
           entries={entries}
           // The button is inside too: a press on it closes the menu through
           // its own click, not twice.
           inside={root}
-          onClose={(escaped) => {
-            giveBack.current = escaped;
+          onClose={(how) => {
+            giveBack.current = how !== 'away';
             setOpen(false);
           }}
         />
@@ -102,13 +122,15 @@ export function MenuButton({
 /**
  * The right-click menu (8.8): the same menu, opened at the pointer rather
  * than under a button, and turned back from the window's edges so it is never
- * cut off.
+ * cut off. It goes into the landmark it was opened from — the board, Parts, a
+ * dialog — so its words are in a region like everything else (U.20, U.19).
  *
  * Mounted to open and unmounted to close. Keyed by where it opens, so a second
  * right-click while one is open is a new menu with its first item focused.
  */
 export function ContextMenu({
   at,
+  from,
   label,
   testId,
   entries,
@@ -116,6 +138,8 @@ export function ContextMenu({
 }: {
   /** Where it opens, in CSS pixels from the window's top left. */
   at: { readonly x: number; readonly y: number };
+  /** What it is about, whose landmark it goes into; what had focus, if not given. */
+  from?: Element;
   label: string;
   testId: string;
   entries: readonly MenuEntry[];
@@ -138,7 +162,14 @@ export function ContextMenu({
     });
   }, [at]);
 
-  return (
+  const [home] = useState(
+    () =>
+      (from ?? opener)?.closest(
+        '[role="dialog"], header, main, aside, footer, nav, [role="region"]',
+      ) ?? document.body,
+  );
+
+  return createPortal(
     <MenuPopup
       ref={menu}
       label={label}
@@ -147,11 +178,12 @@ export function ContextMenu({
       style={{ left: place.x, top: place.y }}
       entries={entries}
       inside={menu}
-      onClose={(escaped) => {
-        if (escaped) opener?.focus();
+      onClose={(how) => {
+        if (how === 'escape') opener?.focus();
         onClose();
       }}
-    />
+    />,
+    home,
   );
 }
 
@@ -177,8 +209,11 @@ function MenuPopup({
   entries: readonly MenuEntry[];
   /** Where a press may land without closing the menu. */
   inside: RefObject<HTMLElement | null>;
-  /** `escaped` when Escape closed it, so focus can go back where it came from. */
-  onClose: (escaped: boolean) => void;
+  /**
+   * How it closed — Escape, an item chosen from the keyboard, or a press
+   * (elsewhere or on an item) or Tab — so focus can go back where it came from.
+   */
+  onClose: (how: 'escape' | 'chosen' | 'away') => void;
 }) {
   const own = useRef<HTMLDivElement>(null);
   const list = ref ?? own;
@@ -190,12 +225,12 @@ function MenuPopup({
   useEffect(() => {
     list.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const away = (event: PointerEvent): void => {
-      if (!inside.current?.contains(event.target as Node)) onCloseRef.current(false);
+      if (!inside.current?.contains(event.target as Node)) onCloseRef.current('away');
     };
     const escape = (event: globalThis.KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
       event.stopPropagation();
-      onCloseRef.current(true);
+      onCloseRef.current('escape');
     };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', escape, true);
@@ -209,7 +244,7 @@ function MenuPopup({
     // Keys in a menu are the menu's: a letter must not change the tool behind it.
     event.stopPropagation();
     if (event.key === 'Tab') {
-      onClose(false);
+      onClose('away');
       return;
     }
     const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
@@ -241,10 +276,12 @@ function MenuPopup({
         // keys still have to reach it to read why.
         aria-disabled={refused || undefined}
         aria-describedby={refused ? `${saidBy ?? item.id}-why` : undefined}
-        onClick={() => {
+        onClick={(event) => {
           if (refused) return;
-          onClose(false);
-          item.onChoose();
+          // Chosen by the pointer, focus is left where a press leaves it, as
+          // before U.4: on the button it would take the board's next Enter.
+          onClose(event.detail === 0 ? 'chosen' : 'away');
+          item.onChoose(event.detail === 0 ? 'keyboard' : 'pointer');
         }}
       >
         <span className="menu-label">
