@@ -101,6 +101,55 @@ test('while drawing, Properties shows My tools’ margin and iron, and editing e
   }
 });
 
+test('the margin typed mid-draw goes to the field, and the rectangle under way keeps its sizes and chips (U.18)', async () => {
+  const { app, window } = await launch(freshConfig());
+  try {
+    const widthChip = window.getByTestId('value-chip-width').locator('input');
+    await window.getByTestId('tool-rectangle').click();
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    const corner = { x: box.x + box.width * 0.3, y: box.y + box.height * 0.6 };
+    await window.mouse.move(corner.x, corner.y);
+    await window.mouse.click(corner.x, corner.y);
+    const other = { x: corner.x + 160, y: corner.y - 100 };
+    await window.mouse.move(other.x, other.y);
+    await expect(window.getByTestId('value-chips')).toBeVisible();
+    const sizes = await window.getByTestId('drawing-sizes').textContent();
+    const width = await widthChip.inputValue();
+
+    // Into the field by a click, its text replaced by keys pressed one at a
+    // time: on the board the first digit would open the width chip (U.16).
+    await margin(window).click();
+    await window.keyboard.press('ControlOrMeta+A');
+    for (const key of '4.5') {
+      await window.keyboard.press(key);
+      await expect(margin(window)).toBeFocused();
+      await expect(widthChip).not.toBeFocused();
+      await expect(widthChip).toHaveValue(width);
+    }
+    await expect(margin(window)).toHaveValue('4.5');
+    // Enter is the field's: it stores the margin and does not make the shape.
+    await window.keyboard.press('Enter');
+    await expect(margin(window)).toHaveValue('4.5');
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+
+    // The draft is as it was: its sizes in Properties, its chips on the board.
+    await expect(window.getByTestId('drawing-sizes')).toHaveText(sizes!);
+    await expect(window.getByTestId('value-chips')).toBeVisible();
+    await expect(widthChip).toHaveValue(width);
+    await expect(widthChip).not.toBeFocused();
+
+    // And it is still under way: the second click makes it, at that size.
+    await window.mouse.move(other.x, other.y);
+    await window.mouse.click(other.x, other.y);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('property-panel').getByLabel('Width')).toHaveValue(
+      width.replace(/\.?0+$/, ''),
+    );
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('Stitch + allowance and the next steps make things with the values set in Properties (U.18)', async () => {
   const { app, window } = await launch(freshConfig());
   try {
