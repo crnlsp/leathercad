@@ -17,7 +17,7 @@ vertical slices. A refinement pass, not a redesign.
 [mockups](../specs/2026-10-08-ui-refinement-mockups/). The mockups are not pixel specs: where an
 image and the text disagree, the text wins.
 
-**Roadmap:** [1.5 — the window, refined](../../roadmap.md#15--the-next-release), the next release.
+**Roadmap:** [1.5 — the window, refined](../../history/roadmap-1.5.md), released as 1.5.0 on 2026-10-18.
 
 **Stack:** React in `apps/desktop/src/renderer`; tokens in `packages/render/src/theme/`; the
 canvas2d and svg screen backends in `packages/render`; Playwright for the E2E and pixel tests.
@@ -29,8 +29,9 @@ canvas2d and svg screen backends in `packages/render`; Playwright for the E2E an
 | Order | What | Waits on | Who |
 |---|---|---|---|
 | 1 | ✅ **1.4, released as 1.3.5** on 2026-10-09, with U.1 to U.3: [the record](../../history/roadmap-1.3.5.md) | — | — |
-| 2 | **U.1 Pieces read as pieces** | nothing | the `ui-refinement` agent, from 2026-10-08 |
-| 3 | U.2 → U.19, in this document's order, which puts U.20 in Phase 2 | the slices named under each | one session per slice |
+| 2 | ✅ **U.1 Pieces read as pieces** | nothing | the `ui-refinement` agent, from 2026-10-08 |
+| 3 | ✅ U.2 → U.19, in this document's order, which puts U.20 in Phase 2 | the slices named under each | one session per slice |
+| 4 | ✅ **1.5, released as 1.5.0** on 2026-10-18, with U.4 to U.20: [the record](../../history/roadmap-1.5.md) | — | — |
 
 **Why U.1 comes first:**
 
