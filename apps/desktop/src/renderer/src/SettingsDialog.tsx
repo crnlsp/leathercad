@@ -21,7 +21,7 @@ import {
 import { intoMenu } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
-import { defaultIron, withoutIron } from './irons.js';
+import { MARGIN_MIN_MM, MARGIN_STEP_MM, defaultIron, withoutIron } from './irons.js';
 import { MenuButton } from './Menu.js';
 import { focusAfter } from './menus.js';
 import { NumberField } from './NumberField.js';
@@ -384,8 +384,8 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
             label={t('settings.tools.margin.name')}
             hideLabel
             value={preferences.stitchMarginMm}
-            min={0.5}
-            step={0.5}
+            min={MARGIN_MIN_MM}
+            step={MARGIN_STEP_MM}
             onCommit={(stitchMarginMm) => onPreferences({ stitchMarginMm })}
           />
         </span>

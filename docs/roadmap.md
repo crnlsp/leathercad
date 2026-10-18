@@ -355,7 +355,16 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   a stitch line that failed, or a hidden hole set, counted as made — a failed step is said in
   Problems' words and nothing after it offered, and hidden holes are not counted, as the board's
   caption does not count them. Printed output did not move.
-- ☐ **U.18 Drawing defaults in Properties** (R-16).
+- ✅ **U.18 Drawing defaults in Properties** (R-16).
+  ✅ Built as described. While a Draw tool would make a new piece — Rectangle, Circle, Arc, Line
+  or Polyline, drawn as Outline or Stitch + allowance — and nothing is selected, Properties shows
+  *After the outline*: the stitch margin and the default iron, under the rectangle's sizes while
+  one is drawn. They are My tools' own values, not a copy: a change there is a change in Settings,
+  and the reverse, kept in `preferences.json`; *Stitch + allowance* grows its edge by that margin
+  and the selection bar's steps make the stitch line and the holes with them. It shows before the
+  first click, not only between the rectangle's two, because *Stitch + allowance* applies the
+  margin when the shape is made and a polyline has no sizes to show. Found on the way: nothing
+  needed joining — U.13 had already put one source behind both paths. Printed output did not move.
 - ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
   pixel baselines and the README's pictures retaken.
 

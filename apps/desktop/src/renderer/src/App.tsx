@@ -90,7 +90,7 @@ import { getPlatformHost } from './platformBridge.js';
 import { OptionHints } from './OptionHintsRow.js';
 import { SHEETS_HINTS, hintsFor } from './optionHints.js';
 import { chipSubject } from './outlineSizes.js';
-import { ALL_TOOLS } from './tools.js';
+import { ALL_TOOLS, DRAWING_TOOL_IDS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
 import { useMediaQuery } from './useMediaQuery.js';
 import { ZoomControl, type ZoomCommand } from './ZoomControl.js';
@@ -1079,6 +1079,11 @@ export function App({
                 requestDelete={requestDelete}
                 requestDeletePart={requestDeletePart}
                 tools={tools}
+                onTools={changePreferences}
+                drawingPiece={
+                  DRAWING_TOOL_IDS.has(toolId) &&
+                  (drawAs === 'outline' || drawAs === 'stitch-allowance')
+                }
                 sizing={status?.sizing ?? null}
                 toggle={
                   <PanelToggle

@@ -26,7 +26,7 @@ import type { ReactNode } from 'react';
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { KeyCap, useKeysInSentences } from './keyCaps.js';
-import type { MakerTools } from './irons.js';
+import { MARGIN_MIN_MM, MARGIN_STEP_MM, type MakerTools } from './irons.js';
 import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nextSteps.js';
 import { NumberField } from './NumberField.js';
 import { ProblemRows } from './ProblemList.js';
@@ -54,6 +54,8 @@ export function PropertyPanel({
   requestDelete,
   requestDeletePart,
   tools,
+  onTools,
+  drawingPiece = false,
   sizing = null,
   toggle,
 }: {
@@ -71,6 +73,10 @@ export function PropertyPanel({
   requestDeletePart: (partId: string) => void;
   /** The maker's irons and starting values, from Settings › My tools (U.13). */
   tools: MakerTools;
+  /** Changes My tools — the same preferences Settings writes, so there is one source (U.18). */
+  onTools: (changes: Partial<MakerTools>) => void;
+  /** A Draw tool is out that makes a new piece: an outline, or a stitch line with its allowance (U.18). */
+  drawingPiece?: boolean;
   /** The rectangle being drawn, while one is (U.16): its sizes, as the chips on the board show them. */
   sizing?: SizeDraft | null;
   /** Its fold (U.5), at the end of the header's first row. */
@@ -129,6 +135,9 @@ export function PropertyPanel({
               </div>
             ))}
           </section>
+        )}
+        {drawingPiece && selected.size === 0 && parts.length === 0 && (
+          <AfterTheOutline tools={tools} onTools={onTools} />
         )}
         {sizing === null &&
           selected.size === 0 &&
@@ -952,6 +961,58 @@ function Measured({
         <span>{t('properties.area')}</span>
         <b>{formatNumber(PathOps.area(resolved.path) / 100, 2)} cm²</b>
       </div>
+    </section>
+  );
+}
+
+/**
+ * What the app makes after a new outline (U.18, R-16): the stitch margin and
+ * the iron from Settings › My tools, shown while a piece is being drawn. They
+ * are My tools' own values, not a copy — *Stitch + allowance* and the selection
+ * bar's next steps read the same preferences, so a change here is a change
+ * there, and Settings shows it.
+ */
+function AfterTheOutline({
+  tools,
+  onTools,
+}: {
+  tools: MakerTools;
+  onTools: (changes: Partial<MakerTools>) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <section className="panel-group" data-testid="drawing-defaults">
+      <div className="panel-heading">{t('properties.afterOutline.title')}</div>
+      <NumberField
+        label={t('properties.afterOutline.stitchLine')}
+        value={tools.stitchMarginMm}
+        min={MARGIN_MIN_MM}
+        step={MARGIN_STEP_MM}
+        onCommit={(stitchMarginMm) => onTools({ stitchMarginMm })}
+      />
+      {tools.irons.length === 0 ? (
+        <p className="panel-note">{t('settings.tools.noIrons')}</p>
+      ) : (
+        <label className="field">
+          <span className="field-label">{t('properties.afterOutline.holes')}</span>
+          <span className="field-input">
+            <select
+              data-testid="drawing-iron"
+              value={tools.defaultIronId ?? ''}
+              onChange={(event) => onTools({ defaultIronId: event.target.value })}
+            >
+              {tools.irons.map((iron) => (
+                <option key={iron.id} value={iron.id}>
+                  {iron.name}
+                </option>
+              ))}
+            </select>
+          </span>
+        </label>
+      )}
+      <p className="panel-note">
+        {t('properties.afterOutline.note', { tools: t('settings.section.tools') })}
+      </p>
     </section>
   );
 }
