@@ -305,6 +305,29 @@ export function buildDisplayList(
   return { items: [...pieces, ...items] };
 }
 
+/** A 12/16 line's baseline, up from the line's bottom: the half-leading and the typeface's descent. */
+function baselineAbove(voice: { sizePx: number; lineHeightPx: number }): number {
+  const em = (FONT.ascender - FONT.descender) / FONT.unitsPerEm;
+  return (
+    (voice.lineHeightPx - em * voice.sizePx) / 2 - (FONT.descender / FONT.unitsPerEm) * voice.sizePx
+  );
+}
+
+/**
+ * How far a dimension's number, halo and all, reaches above and below its line
+ * on screen, in CSS px: the box the caption clears, and what the selection
+ * bar keeps off (U.17) — one measure, so the two cannot disagree.
+ */
+export function valueReachPx(): { readonly above: number; readonly below: number } {
+  const voice = CANVAS.text.value;
+  const capital = (FONT.capHeight / FONT.unitsPerEm) * voice.sizePx;
+  const halo = CANVAS.text.haloPx;
+  return {
+    above: voice.lineHeightPx - baselineAbove(voice) - capital / 2 + halo,
+    below: capital / 2 + baselineAbove(voice) + halo,
+  };
+}
+
 /**
  * The board's own words (R-01), placed at this zoom: each is a constant size on
  * screen, so where it sits in millimetres, and the room it takes, depends on
@@ -313,12 +336,8 @@ export function buildDisplayList(
 function boardWords(zoom: number, view: ViewportView | undefined) {
   const { text, caption: spacing } = CANVAS;
   const mm = (px: number): number => px / zoom;
-  // A 12/16 line's baseline, up from the line's bottom: the half-leading and
-  // the typeface's descent — 3.5 px for Plex Sans.
-  const em = (FONT.ascender - FONT.descender) / FONT.unitsPerEm;
-  const below = (voice: { sizePx: number; lineHeightPx: number }): number =>
-    (voice.lineHeightPx - em * voice.sizePx) / 2 -
-    (FONT.descender / FONT.unitsPerEm) * voice.sizePx;
+  // A 12/16 line's baseline, up from the line's bottom — 3.5 px for Plex Sans.
+  const below = baselineAbove;
   const detailed = (zoom / TRUE_SIZE_CSS_PX_PER_MM) * 100 >= spacing.detailFromPercent;
   // The canvas the drawing is seen through: inside the rulers.
   const visible = view === undefined ? null : visibleBoundsMm(view);
@@ -344,12 +363,13 @@ function boardWords(zoom: number, view: ViewportView | undefined) {
       const capital = (FONT.capHeight / FONT.unitsPerEm) * voice.sizePx;
       const turn = MatOps.fromRotationAround(middle, rotationRad);
       const halfWidth = layoutText(words, mm(voice.sizePx)).widthMm / 2 + mm(text.haloPx);
+      const reach = valueReachPx();
       const box = RectOps.transform(
         {
           minX: middle.x - halfWidth,
           maxX: middle.x + halfWidth,
-          minY: middle.y - mm(capital / 2 + below(voice) + text.haloPx),
-          maxY: middle.y + mm(voice.lineHeightPx - below(voice) - capital / 2 + text.haloPx),
+          minY: middle.y - mm(reach.below),
+          maxY: middle.y + mm(reach.above),
         },
         turn,
       );

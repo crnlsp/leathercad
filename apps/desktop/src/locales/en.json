@@ -297,6 +297,7 @@
     "fit": "Fit the drawing in the window",
     "fitSelection": "Fit the selection in the window",
     "focusMode": "Focus mode: both panels hide, and the rail shows keys only",
+    "selectionBar": "Move to the selection bar, or back to the board",
     "fullScreen": "Full screen",
     "keyboardShortcuts": "Keyboard shortcuts",
     "newProject": "New project",
@@ -346,6 +347,10 @@
     "legend": {
       "name": "Name the marks in the canvas legend",
       "note": "Off, the legend folds to a chip until you open it."
+    },
+    "selectionBar": {
+      "name": "Show the selection bar under the selected piece",
+      "note": "How its stitching came out, and the next step in one click. Off, nothing is shown under the piece, and its key does nothing."
     },
     "toolNames": {
       "name": "Show tool names in the rail",
@@ -1199,6 +1204,28 @@
     "tooSmall": {
       "width": "Width is less than its corners need ({{size}}). {{enter}} uses {{size}}.",
       "height": "Height is less than its corners need ({{size}}). {{enter}} uses {{size}}."
+    }
+  },
+  "selectionBar": {
+    "title": "Stitching of {{piece}}",
+    "noStitching": "No stitching yet",
+    "noHoles": "No holes yet",
+    "holesHidden": "The holes are hidden, so they are not counted and do not print.",
+    "holes_one": "{{count}} hole",
+    "holes_other": "{{count}} holes",
+    "spacing": "{{spacing}} mm, pitch {{pitch}}",
+    "stretched": "stretched {{percent}} %",
+    "stretchedUnder": "stretched less than {{percent}} %",
+    "squeezed": "squeezed {{percent}} %",
+    "squeezedUnder": "squeezed less than {{percent}} %",
+    "runs": "runs {{runs}}",
+    "cut": "Cut ×{{quantity}}",
+    "next": "Next",
+    "done": "done:",
+    "step": {
+      "stitchLine": "Stitch line",
+      "holes": "Stitch holes",
+      "allowance": "Seam allowance"
     }
   }
 }

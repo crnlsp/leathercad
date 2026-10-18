@@ -3257,6 +3257,124 @@ button.problem-row:hover {
   letter-spacing: var(--tracking-micro);
 }
 
+/* ——— U.17: the selection bar ————————————————————————————————————————————
+   Under the selected piece (R-14): how its stitching came out, then the next
+   step. On the shell, as the bars are: shell-1, its line, the middle radius,
+   no shadow. It takes no press but on its button, so the board under it
+   draws and pans as ever. Where it sits is the canvas's, set once a frame from
+   packages/render; hidden until placed, and hidden is not focusable. Under a
+   panel opened over the board, over the legend and the zoom control, which it
+   keeps clear of. Room for a third line when hole matching comes. */
+
+.selection-bar {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-md);
+  background: var(--shell-800);
+  color: var(--text-dim);
+  font: var(--t-label);
+  font-weight: 400;
+  white-space: nowrap;
+  visibility: hidden;
+  /* The board's, except its button: a drag that starts on the bar draws or
+     pans as it would on the board beside it. */
+  pointer-events: none;
+}
+
+.selection-bar:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+.selection-bar-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 24px;
+  margin: 0;
+}
+
+.selection-bar-line b {
+  color: var(--text);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.selection-bar-holes,
+.selection-bar-glyph,
+.selection-bar-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.selection-bar-glyph {
+  vertical-align: middle;
+}
+
+.selection-bar-dot,
+.selection-bar-chevron {
+  padding: 0 2px;
+  color: var(--text-mute);
+}
+
+.selection-bar-next {
+  margin-right: var(--space-1);
+}
+
+.selection-bar-step[data-done] {
+  color: var(--text);
+}
+
+.selection-bar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--tan);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color var(--motion);
+}
+
+.selection-bar-button .icon {
+  color: var(--tan);
+}
+
+.selection-bar-button:hover:not(:disabled) {
+  background: var(--shell-700);
+}
+
+.selection-bar-button:focus-visible {
+  outline: 2px solid var(--tan);
+  outline-offset: 1px;
+}
+
+.selection-bar-button:disabled {
+  border-color: var(--shell-line);
+  color: var(--text-mute);
+  cursor: default;
+}
+
+.selection-bar-reason {
+  max-width: 360px;
+  margin: 0;
+  color: var(--text-dim);
+  white-space: normal;
+}
+
 /* A size Properties refuses (U.14), with the warning's glyph. */
 .field-reason.refused {
   color: var(--text);

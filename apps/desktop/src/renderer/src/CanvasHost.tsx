@@ -63,6 +63,8 @@ import { IS_MAC } from './keyCaps.js';
 import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
 import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
+import { SelectionBar, type SelectionBarHandle } from './SelectionBar.js';
+import type { MakerTools } from './irons.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -115,6 +117,11 @@ export interface CanvasHandle {
    * board in view, otherwise the middle of the canvas.
    */
   selectionPoint(): { x: number; y: number } | null;
+  /**
+   * F6 (U.17): focus into the selection bar, or out of it to the board.
+   * False when there is no bar in view to go to.
+   */
+  toggleSelectionBar(): boolean;
 }
 
 export interface CanvasStatus {
@@ -158,6 +165,7 @@ export function CanvasHost({
   nextId,
   onStatus,
   panelOver = null,
+  selectionBar = null,
   ref,
   children,
 }: {
@@ -183,6 +191,11 @@ export function CanvasHost({
   onStatus?: (status: CanvasStatus) => void;
   /** A panel open over the board (U.5), by its class: the value chips keep clear of it. */
   panelOver?: string | null;
+  /**
+   * The selection bar's My tools, which its step makes things with (U.17);
+   * null when Settings › Appearance turns the bar off, which leaves nothing.
+   */
+  selectionBar?: MakerTools | null;
   ref?: React.Ref<CanvasHandle>;
   /** Drawn over the canvas without taking space from it: the legend (F.7). */
   children?: React.ReactNode;
@@ -275,6 +288,8 @@ export function CanvasHost({
 
   /** The selected outline's sizes, beside it (U.14): placed as each frame is painted. */
   const chipsRef = useRef<ValueChipsHandle>(null);
+  /** The bar under the selected piece (U.17): placed after the chips, clear of them. */
+  const barRef = useRef<SelectionBarHandle>(null);
   /** What typing into a chip does to the shape being drawn: the tool's, never the document's. */
   const drawn = useMemo(
     (): DrawnChips => ({
@@ -419,6 +434,10 @@ export function CanvasHost({
         const y = rect.top + at.y / viewport.dpr;
         const inView = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
         return inView ? { x, y } : middle;
+      },
+      toggleSelectionBar() {
+        if (viewRef.current === 'sheets') return false;
+        return barRef.current?.toggleFocus() ?? false;
       },
     }),
     [camera, handleDoubleClick, invalidate, selectionBounds],
@@ -623,8 +642,17 @@ export function CanvasHost({
     );
     // The selected outline's dimension lines, under its value chips (U.14):
     // screen furniture like the rest of this, never printed.
-    const chipLines = chipsRef.current?.place(view, chipRoom()) ?? null;
-    if (chipLines !== null) renderDisplayList(context, chipLines, view);
+    const room = chipRoom();
+    const chips = chipsRef.current?.place(view, room) ?? null;
+    if (chips !== null) renderDisplayList(context, chips.lines, view);
+    // Under the piece and its chips (U.17), and away while a drag or a shape
+    // is under way: it would only cover what the maker is moving.
+    barRef.current?.place(
+      view,
+      room,
+      chips?.taken ?? [],
+      store.inTransaction || (managerRef.current?.underway() ?? false),
+    );
     // Where a taped piece's sheets will join (7.4b): screen furniture read from
     // the sheet plan the PDF writes, over the pattern and under the tool.
     renderDisplayList(context, tapeJoins(sheetPlanFor(document.project)), view);
@@ -1036,6 +1064,16 @@ export function CanvasHost({
           store={store}
           drawing={drawing}
           drawn={drawn}
+          invalidate={invalidate}
+          toBoard={toBoard}
+        />
+      )}
+      {view === 'design' && selectionBar !== null && (
+        <SelectionBar
+          ref={barRef}
+          store={store}
+          tools={selectionBar}
+          nextId={nextId}
           invalidate={invalidate}
           toBoard={toBoard}
         />

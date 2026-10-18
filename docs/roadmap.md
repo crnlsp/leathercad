@@ -327,7 +327,34 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   chip's Enter is refused now, saying why in the corner chip, whose second Enter takes what
   fits. Printed output did not move: a rectangle that is dragged is stored as before, with square
   corners.
-- ☐ **U.17 The selection bar: stitch summary and next step** (R-14).
+- ✅ **U.17 The selection bar: stitch summary and next step** (R-14).
+  ✅ Built as described. Under the selected piece — an outline, its stitch line, its hole set, or
+  the piece picked by its heading — a bar says *146 holes · 3.85 mm, pitch 3.85 ✓ · runs 24 · 51 ·
+  24 · 51 · Cut ×1*, from the functions Properties reads, and *Next: Stitch line › Stitch holes ›
+  Seam allowance*: done steps checked, the first left a button that makes it with My tools' margin
+  and default iron, one undo step, and later ones plain. Which is done is read from the derivation
+  graph, so a *Stitch + allowance* piece, whose outline follows its stitch line, has its holes
+  next; the card pocket's hand-drawn stitch line counts. It sits under the piece's dimension lines
+  and chips, its left edge on the piece's, over the piece and its caption where there is no room
+  under, and is left out where there is room for neither — `placeSelectionBar` in `render`,
+  property-tested never to cover the piece, a chip or a control at any zoom. It hides while a
+  drag or a shape is under way, and takes no press but on its button, so the board under it draws
+  as before. F6 goes into it from anywhere and out again (Esc too), a key like any other in
+  Settings › Keyboard shortcuts; Settings › Appearance turns it off (`selectionBar` in
+  `preferences.json`), and then there is no bar and no key. Never printed: it is not on the board.
+  Found on the way: **a set's runs counted its corners unevenly** — the first corner in two runs,
+  the others in one — so the sample's equal short sides read 24 and 23, beside 146 holes the runs
+  added to 147. Each run now counts every hole on it, its corner holes included (24 · 51 · 24 ·
+  51, as a maker counts an edge and as mockup 14's 15 · 24 · 15 already read); the holes did not
+  move. Mockups 02, 05 and 14 offer *Seam allowance* as the outer's and the card pocket's next step,
+  but a piece drawn outline first is refused one (it would be a second outline): the bar shows it
+  done, its margin being the allowance, and offers it only where a seam has no edge yet. On
+  review: a piece made by Mirror read as unstitched, its stitching being derived from the
+  original's — counterparts now count as their originals do; a bar flipped over a piece with a
+  dimension on top ran into its caption — the number's reach is one measure in `render` now; and
+  a stitch line that failed, or a hidden hole set, counted as made — a failed step is said in
+  Problems' words and nothing after it offered, and hidden holes are not counted, as the board's
+  caption does not count them. Printed output did not move.
 - ☐ **U.18 Drawing defaults in Properties** (R-16).
 - ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
   pixel baselines and the README's pictures retaken.
@@ -360,7 +387,7 @@ slice took, or will take, and is still open.
 | U.6 | When is the spacing "matched", and when does its line warn? | **Decided 2026-10-13:** matched when Spacing shows as the Pitch, to the two decimals both are shown at (`formatSpacing`); the warning glyph only when Problems warns about that set (a quarter of the pitch, `SPACING_DEVIATION_FRACTION`), so the line and Problems never disagree. A smaller warning would be the domain's to raise, so Problems says it too |
 | U.6 | An outline showed two fields called *Name* | **Decided 2026-10-13:** the piece's is *Piece*, beside *Cut* |
 | U.6 | Flip on a stitch line or hole set is always refused, and its reason takes Arrange's first rows | **Decided 2026-10-13:** stays refused, with its reason; U.19 words the reason shorter |
-| U.6 | A hole set's runs add to 147 beside 146 holes: a corner hole is counted in both its runs | **Decided 2026-10-13:** settled in U.17, before the selection bar shows runs |
+| U.6 | A hole set's runs add to 147 beside 146 holes: a corner hole is counted in both its runs | **Decided 2026-10-13:** settled in U.17, before the selection bar shows runs. U.17: only the first corner was counted twice. Each run now counts every hole on it, its corners included, so equal sides read equal (24 · 51 · 24 · 51) and the runs add to the set plus one per shared corner |
 | U.5 | Below 1280 px Properties is a strip: may the maker dock it there anyway, as the rail can be opened while narrow? | **Decided 2026-10-14:** no. `]` opens it over the board, as §5 says, and a press on the board closes it |
 | U.5 | Does a press on the board close a panel open over it even while the maker selects there? | **Decided 2026-10-14:** yes, as R-04 says; the press also selects. At 1024 px, `]` reopens Properties after picking a piece |
 | U.5 | Is focus mode remembered across a restart? | Built as recommended — no, it is the session's, like the view; the folds are remembered. Not yet decided |
@@ -383,6 +410,11 @@ slice took, or will take, and is still open.
 | U.14 | A width or height that leaves the corners larger than the rectangle draws them | **Decided 2026-10-17:** refused, saying why, and Enter takes the least size the corners fit in — on the board and in Properties alike. A stored radius is always the one drawn |
 | U.14 | Chips near the legend or the zoom control | **Decided 2026-10-17:** kept clear of them, as of the rulers and panels — a chip slides along its line, or is left out; never laid over one |
 | U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
+| U.17 | Seam allowance on a piece drawn outline first, which the command refuses (a second outline) | Shown done: the margin between edge and seam is the allowance. The button appears only where a seam has no edge yet; mockups 02, 05 and 14 drew it on the outer |
+| U.17 | Which selection shows the bar | An outline, a stitch line, a hole set, or a piece by its heading — its piece's stitching. Not a fold, cut-out, marking, dimension or two things |
+| U.17 | No room under the piece or over it — the piece framed by `Shift+2`, or zoomed past the board | Left out, as a chip with no place is, and F6 then does nothing. Fitting the selection could keep the bar's room; not done |
+| U.17 | A step that failed (a margin too wide for the piece) or a hidden hole set | Not made: a failure is said in Problems' words, a hidden set as hidden, and no button follows either; Cut ×N stays on line 1 |
+| U.17 | What F6 does away from the board | Goes into the bar from anywhere but a field, and back to the board from inside it |
 | U.11 | The old sentence also said "scroll zooms · middle-drag pans"; the hints have no room for it | Left to `?` all keys, which lists both. Nothing else taught is a gesture the shortcut list does not have: Ctrl, which suspends snapping, is not offered until it is listed there |
 | U.11 | Three to five hints, with or without `? all keys` | With it: a tool's own hints are two to four, so the row is never more than five caps |
 | U.11 | Which hint drops first, when the mockup drops "from the right" | The lowest ranked, as R-11's text says — the keys a maker is least likely to guess stay longest (a polyline's A before its Backspace) |
