@@ -414,6 +414,7 @@ slice took, or will take, and is still open.
 
 | Slice | Question | Recommended |
 |---|---|---|
+| Release | release-please names a release with features the next minor, 1.4.0 after 1.3.5, while this section and the docs a maker reads (`getting-started.md`: *Until 1.5*) say 1.5 | **Decided 2026-10-18:** 1.5.0, as 1.3.5 was cut with its own footer (#72). The pull request that ticks R8 and R10 ends its squash message with the footer `Release-As: 1.5.0`, as its last line; release-please's release pull request is then checked to say 1.5.0. Released as 1.4.0, this section would still read as unreleased to `tools/release-gate.sh`, and 1.6 would be proposed as 1.5.0 |
 | U.3 | On a French or German keyboard, does a tool key follow its letter or its position? | Its letter: R stays R. Punctuation and digits keep their position, shown as the local character — but zoom's + and −, named by their symbols, follow what the key types (decided on review) |
 | U.4 | The menu says *True size*, but nothing calibrates the screen | **Decided 2026-10-13:** kept. `getting-started.md` says to check the screen with a ruler first; a calibration step stays in *Later* |
 | U.4 | Does `Ctrl+0` centre on the selection? | **Decided 2026-10-13:** no, it zooms about the board's centre. `Shift+2`, then `Ctrl+0`, frames a piece at true size |
