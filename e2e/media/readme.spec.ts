@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -20,9 +20,12 @@ import { renameProject } from '../projectMenu.js';
  * - `print.png`, the first page of the exported PDF, rendered by poppler;
  * - `demo.gif`, the drafting itself, from the recorded video.
  *
- * Needs `pnpm build` first (the script runs it), a display (xvfb-run on a
- * server), and poppler, ffmpeg, gifsicle and pngquant on the PATH. Run it
- * again when the interface changes, and look at every image before committing.
+ * `pnpm docs:media` builds, then runs this in the pinned Playwright container
+ * (`tools/media.mjs`), with poppler, ffmpeg, gifsicle and pngquant installed
+ * there for the run: on the desktop it was found on, Electron never loaded a
+ * window that Playwright recorded (Q27), and the container's fonts and screen are the pixel
+ * tests' own. Run it again when the interface changes, and look at every image
+ * before committing.
  */
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -111,7 +114,7 @@ async function drag(window: Page, from: [number, number], to: [number, number]):
 async function fit(window: Page): Promise<void> {
   await useTool(window, 'select');
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  // On the left ruler: nothing is drawn there, and the legend sits top right.
+  // On the left ruler: nothing is drawn there, and the legend sits right of it.
   await window.mouse.dblclick(box.x + 12, box.y + box.height / 2);
 }
 
@@ -160,12 +163,18 @@ test('README media', async () => {
     demo.from = Date.now() - launchedAt;
 
     await renameProject(window, 'Bifold wallet');
+    // The legend opens at the board's foot (U.10), where the lining and the
+    // pocket are drawn, and over the fitted pattern it covers the pocket's
+    // edge: folded to its chip, as a maker who wants the room does.
+    const legend = window.getByTestId('canvas-legend-toggle');
     const panel = window.getByTestId('property-panel');
 
     // ── The outer: drawn roughly, then typed exactly ────────────────────────
     let at = await viewOf(window);
     await useTool(window, 'rectangle', 'outline');
     await drag(window, at(0, 0), at(120, 60));
+    await legend.click();
+    await expect(legend).toHaveAttribute('aria-expanded', 'false');
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await window.getByTestId('part-name').fill('Outer');
     await type(window, 'X', 0);
@@ -321,7 +330,8 @@ test('README media', async () => {
     pdf,
     join(work, 'print'),
   ]);
-  renameSync(join(work, 'print.png'), join(OUT, 'print.png'));
+  // Copied, not renamed: the work directory is often on another filesystem (Q27).
+  copyFileSync(join(work, 'print.png'), join(OUT, 'print.png'));
 
   // ── The demo, from the recorded video ─────────────────────────────────────
   const video = readdirSync(work).find((name) => name.endsWith('.webm'));

@@ -1860,7 +1860,8 @@ still works; Shift still makes a square. A hint under the shape: `Tab` next · `
 - **Where it goes:** at the pointer, as recommended. The first click still places a corner; typing
   sets the size from there towards the pointer (the pointer picks the side of each axis, so the
   shape follows it round the corner). With no corner placed, the first digit starts the corner at
-  the pointer's last position over the board.
+  the pointer's last position over the board — or, since U.19, in the middle of the board when no
+  pointer has been on it, so the keys alone can draw.
 - **What a number does:** a typed width, height or corner stays; what was not typed follows the
   pointer, so `105` `Enter` is 105 wide by however high the pointer shows. A side still at nothing
   is not made — the rectangle stays open for it to be typed. Freezing both sides on the first
@@ -2005,6 +2006,36 @@ of UI Foundations' identity test. Move what this plan found into the roadmap.
 **Carried here by decision (2026-10-13).** Flip on a stitch line or a hole set is always refused,
 and its reason fills Arrange's first rows (U.6): keep it refused, and word the reason in one short
 line.
+
+**As checked (2026-10-18).**
+- **How:** a scratch spec walked *open → draw → stitch → arrange → check sheets → print* in a fresh
+  window at each of the five sizes, at 1×, 2× (`devicePixelRatio` read 2), `forced-colors` and
+  reduced motion — 45 screenshots a mode, before and after — and a second one did it by the keys
+  alone at 1440 and 860: Tab to the board, `R`, `105 Tab 75 Enter`, `F6` and Enter twice for the
+  stitching, `[` and the tree's arrows to the outline, `]` and Tab to *Flip ↔*, `Ctrl+2`,
+  `Ctrl+P`, Esc. A third ran axe's contrast rule with rows lit by hover and focus, which the
+  scans at rest never see. Neither is committed; what they found is, as tests.
+- **Reduced motion:** the only motion is colour on `--motion`, and the reduce rule turns every
+  transition off; nothing uses `animation`, and the canvas never tweens.
+- **Contrast:** `theme.test.ts` now holds every pair a slice promised a ratio for. Missing were
+  `text-dim` on shell-0 to shell-2 (5.8, 5.4, 4.9 : 1; it is 4.3 on shell-3, so nothing dim sits on
+  a lit row), body text on all four, a severity's words on the shell, and `on-tan` on `tan`.
+- **The identity test** (UI Foundations §12), on a 1920 × 1080 window of the sample with a piece
+  drawn as *Stitch + allowance* for the band and the outer's holes selected: 1 ✅, 2 ✅, 3 ✅,
+  4 ✅ (the lining's slots hatched), 5 ✅, 6 ✅, 7 ✅, 8 ✅ (*Runs 24 · 51 · 24 · 51*), 9 ⚠ partly — the
+  number breaks its line on its halo since U.2, but there are still no arrowheads (4.10b, 1.6) —
+  10 ✅. **9 of 10; six needed.**
+- **Fixed, each with its test:** the keys alone could not draw (the rectangle tool started only at
+  a pointer it had seen over the board — now the board's middle, `rectangleTyping.test.ts`); a
+  typed size went to the wrong chip, or nowhere, where its chip had no place in view
+  (`placeValueChips`' `keepAll`, property-tested); the legend sat on the left ruler (`--ruler-left`
+  from `CANVAS.ruler`); closing a dialog, or `Ctrl+2` from a Design-only control, left the focus on
+  nothing (`returnFocusFromDialogs`, and an effect on the view); the right-click menu's Delete read
+  at 4.2 : 1 lit, and the menu sat outside any landmark (`ContextMenu` now goes into its opener's,
+  as U.20's field menu did); a piece's row with a Cut count wrapped its marks, not its name, onto
+  a blank line (`.part-title`). The flip reason is *Follows Outline: move that instead.*
+- **Q27:** fixed — see the roadmap. `pnpm docs:media` runs in the pinned container.
+- **Not changed, raised:** Design does not frame a project when it opens.
 
 ---
 

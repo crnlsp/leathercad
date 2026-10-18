@@ -302,6 +302,25 @@ test('at 208 px no name breaks inside a word, a hidden piece’s with both its m
   });
 });
 
+test('a piece’s marks drop below its name only where its longest word leaves them no room (U.19)', async () => {
+  // At 224 px "Card pocket ×2" took two lines with nothing on the second: the
+  // row's end wrapped whenever the whole name did not fit on one line, not
+  // only where its longest word did not (U.8), and left a blank row.
+  await withSample(async (window, app) => {
+    for (const [width, height] of [
+      [1920, 1080],
+      [1440, 900],
+    ] as const) {
+      await resizeWindow(app, window, width, height);
+      const [heading, end] = await piece(window, 'pocket').evaluate((row) => [
+        row.querySelector('.part-label')!.getBoundingClientRect().top,
+        row.querySelector('.row-end')!.getBoundingClientRect().top,
+      ]);
+      expect(end! - heading!, `at ${String(width)}`).toBeLessThan(8);
+    }
+  });
+});
+
 test('Tab into the tree changes no selection; the arrows then select', async () => {
   await withSample(async (window) => {
     const selected = window.getByTestId('selected-count');

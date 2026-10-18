@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 import { fieldMenu, isTextField } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
@@ -75,18 +74,16 @@ export function TextFieldMenu() {
 
   if (open === null) return null;
   const { field } = open;
-  const beside =
-    field.closest('[role="dialog"], header, main, aside, footer, nav, [role="region"]') ??
-    document.body;
   // Each acts on the field with focus back in it, as its key would.
   const edit = (command: 'cut' | 'copy' | 'selectAll'): void => {
     field.focus();
     document.execCommand(command);
   };
-  return createPortal(
+  return (
     <ContextMenu
       key={`${String(open.at.x)},${String(open.at.y)}`}
       at={open.at}
+      from={field}
       label={t('fieldMenu.label')}
       testId="field-menu"
       entries={fieldMenu(
@@ -111,7 +108,6 @@ export function TextFieldMenu() {
         if (field.isConnected) field.focus();
         setOpen(null);
       }}
-    />,
-    beside,
+    />
   );
 }

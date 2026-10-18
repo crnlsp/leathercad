@@ -1,4 +1,5 @@
 import { DocumentStore, emptyDocument } from '@leathercad/document';
+import fc from 'fast-check';
 import type { Vec2 } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
@@ -43,8 +44,6 @@ describe('rectangle tool, typed sizes', () => {
     const { ctx } = harness();
     const tool = createRectangleTool(nextId);
     expect(tool.sizing?.()).toBeNull();
-    // No pointer seen yet: nowhere to start.
-    expect(tool.beginSizing?.(ctx)).toBe(false);
 
     click(tool, ctx, { x: 10, y: 20 });
     tool.onPointerMove?.(ctx, pointer({ x: 60, y: 50 }));
@@ -55,6 +54,29 @@ describe('rectangle tool, typed sizes', () => {
       corner: 0,
       refusals: 0,
     });
+  });
+
+  it('starts in the middle of the board when no pointer has been on it, so the keys alone can draw (U.19)', () => {
+    // Tab to the board, R, 105 Tab 75 Enter: a maker without a mouse on the
+    // board still gets the rectangle, where they can see it.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.5, max: 20, noNaN: true }),
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        (scale, panX, panY) => {
+          const { ctx } = harness();
+          ctx.viewport.scale = scale;
+          ctx.viewport.panByPx(panX, panY);
+          const tool = createRectangleTool(nextId);
+          expect(tool.beginSizing?.(ctx)).toBe(true);
+          const bounds = ctx.viewport.visibleBounds();
+          const origin = tool.sizing?.()?.origin;
+          expect(origin?.x).toBeCloseTo((bounds.minX + bounds.maxX) / 2, 6);
+          expect(origin?.y).toBeCloseTo((bounds.minY + bounds.maxY) / 2, 6);
+        },
+      ),
+    );
   });
 
   it('105 × 75 with 8 mm corners, typed after the first click, is one outline and one undo step', () => {

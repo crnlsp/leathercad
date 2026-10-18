@@ -470,9 +470,12 @@ function PieceRow({
         {renaming ? (
           <RowName name={part.name} onDone={onRename} />
         ) : (
-          <span className="part-label">{part.name}</span>
+          // The name and its ×N give way together, the ×N after the name's last word.
+          <span className="part-title">
+            <span className="part-label">{part.name}</span>
+            {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
+          </span>
         )}
-        {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
         {/*
           Counting everything inside the part, its features included: a
           closed or scrolled-past piece must not be able to hide trouble.

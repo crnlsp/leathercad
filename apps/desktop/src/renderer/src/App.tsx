@@ -158,6 +158,19 @@ export function App({
     [toolId],
   );
 
+  // A view's own controls go with it — Design's tools, its Properties. A
+  // maker on the keys whose focus was on one lands on the board, not on
+  // nothing, which sent the next Tab back to the top of the window (U.19).
+  const shownView = useRef(view);
+  useEffect(() => {
+    if (shownView.current === view) return;
+    shownView.current = view;
+    const active = document.activeElement;
+    if (active === null || active === document.body) {
+      document.querySelector<HTMLElement>('[data-testid="editor-canvas"]')?.focus();
+    }
+  }, [view]);
+
   /**
    * Choosing a tool. On the Sheets view, any tool but Select means going back
    * to the board with it: tools act on the design, never on the paper.

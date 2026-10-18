@@ -85,9 +85,11 @@ test('a hole set reads in the order of the work, and says how its spacing came o
 
     // Arrange: icon pairs, each named, a disabled pair still saying why.
     await expect(panel.getByRole('button', { name: 'Flip ↔' })).toBeDisabled();
-    await expect(panel.getByTestId('arrange')).toContainText(
-      'Stitch holes follows Outline, so it moves when Outline does.',
-    );
+    // In one short line, so it no longer takes Arrange's first rows (U.6, U.19).
+    const reason = panel.getByTestId('arrange').getByTestId('reason');
+    await expect(reason).toHaveText('Follows Outline: move that instead.');
+    // An inline span: one client rect per line it takes.
+    expect(await reason.evaluate((el) => el.getClientRects().length)).toBe(1);
     await expect(panel.getByRole('button', { name: 'Mirror ↕' })).toBeEnabled();
     await expect(panel.getByRole('button', { name: 'Mirror across fold' })).toHaveText(
       'Across fold',

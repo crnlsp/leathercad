@@ -172,7 +172,8 @@ export interface Tool {
    */
   sizing?(): SizeDraft | null;
   /**
-   * Typing begins with no corner placed: the shape starts at the pointer.
+   * Typing begins with no corner placed: the shape starts at the pointer, or
+   * in the middle of the board if no pointer has been on it.
    * True when there is something to size now.
    */
   beginSizing?(ctx: ToolContext): boolean;

@@ -300,6 +300,50 @@ describe('placeValueChips', () => {
     );
   });
 
+  it('keeps every size of a shape being drawn, pinned in view where its line is not (U.19)', () => {
+    // 105 Tab 75 Tab 8 Enter is typed blind (U.16): a height chip left out
+    // made Tab skip it, and the 75 went to the corner, or out of the chips
+    // while the shape took the pointer's height. So while drawing, none is.
+    const { at } = placeValueChips(
+      view({ x: -150, y: 25 }),
+      input(rectShape(100, 50), { keepAll: true }),
+    );
+    for (const chip of ['width', 'height', 'corner'] as const) {
+      const box = boxAt(at[chip]!, SIZES[chip]);
+      expect(box.maxX, chip).toBeLessThanOrEqual(800 + EPS);
+      expect(box.minY, chip).toBeGreaterThanOrEqual(CANVAS.ruler.thicknessPx - EPS);
+    }
+  });
+
+  it('places every chip it is given while a shape is drawn, inside the area, wherever the shape is', () => {
+    fc.assert(
+      fc.property(shapes, views, sizes, (shape, v, chipSizes) => {
+        const area = {
+          left: 0,
+          top: 0,
+          right: v.widthPx / v.dpr - 120,
+          bottom: v.heightPx / v.dpr,
+        };
+        const { width, height, corner } = chipSizes;
+        const { at } = placeValueChips(
+          v,
+          input(shape, { sizes: { width, height, corner }, area, keepAll: true }),
+        );
+        return (['width', 'height', 'corner'] as const).every((chip) => {
+          const placed = at[chip];
+          if (placed === undefined) return false;
+          const box = boxAt(placed, chipSizes[chip]);
+          return (
+            box.minX >= CANVAS.ruler.leftThicknessPx - EPS &&
+            box.minY >= CANVAS.ruler.thicknessPx - EPS &&
+            box.maxX <= area.right + EPS &&
+            box.maxY <= area.bottom + EPS
+          );
+        });
+      }),
+    );
+  });
+
   it('is deterministic', () => {
     fc.assert(
       fc.property(shapes, views, sizes, (shape, v, chipSizes) => {

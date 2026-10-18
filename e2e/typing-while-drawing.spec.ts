@@ -204,3 +204,61 @@ test('a rectangle can still be dragged, and sized by the chips after (U.16)', as
     await expect(window.getByTestId('property-panel').getByLabel('Width')).toHaveValue('50');
   });
 });
+
+test('with the keys alone — Tab to the board, R, 105 Tab 75 Enter — the rectangle is made where it can be seen (U.19)', async () => {
+  // No pointer has been on the board: the shape starts in its middle, rather
+  // than not at all, which left a maker without a mouse no way to draw.
+  await withApp(async (window) => {
+    const board = window.getByTestId('editor-canvas');
+    for (let i = 0; i < 80; i++) {
+      await window.keyboard.press('Tab');
+      if (await board.evaluate((canvas) => canvas === document.activeElement)) break;
+    }
+    await expect(board).toBeFocused();
+    await window.keyboard.press('KeyR');
+    await window.keyboard.type('105');
+    await expect(field(window, 'width')).toBeFocused();
+    await window.keyboard.press('Tab');
+    await window.keyboard.type('75');
+    await window.keyboard.press('Enter');
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    const panel = window.getByTestId('property-panel');
+    await expect(panel.getByLabel('Width')).toHaveValue('105');
+    await expect(panel.getByLabel('Height')).toHaveValue('75');
+    // Its corner where the board's middle was: inside the board, so in view.
+    const box = (await board.boundingBox())!;
+    const corner = (await chip(window, 'width').boundingBox())!;
+    expect(corner.x).toBeGreaterThan(box.x);
+    expect(corner.x + corner.width).toBeLessThan(box.x + box.width);
+    expect(corner.y).toBeGreaterThan(box.y);
+    expect(corner.y + corner.height).toBeLessThan(box.y + box.height);
+  });
+});
+
+test('a size typed by the board’s edge goes where Tab says, even when its chip’s line is out of view (U.19)', async () => {
+  // Started by the right edge, the pointer gone off to the left: the shape
+  // runs left from its corner, the height's side at the edge. Its chip was
+  // left out, so Tab went past it, the 75 went nowhere, and Enter made the
+  // rectangle as tall as the pointer said.
+  await withApp(async (window, app) => {
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(860, 600));
+    await expect.poll(() => window.evaluate(() => innerWidth)).toBe(860);
+    const board = window.getByTestId('editor-canvas');
+    const box = (await board.boundingBox())!;
+    await window.mouse.move(box.x + box.width * 0.94, box.y + box.height * 0.5);
+    await board.focus();
+    await window.keyboard.press('KeyR');
+    await window.keyboard.type('105');
+    await window.mouse.move(box.x - 20, box.y + 10, { steps: 5 });
+    await window.keyboard.press('Tab');
+    await expect(field(window, 'height')).toBeFocused();
+    await window.keyboard.type('75');
+    await window.keyboard.press('Enter');
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await window.keyboard.press('BracketRight');
+    const panel = window.getByTestId('property-panel');
+    await expect(panel.getByLabel('Width')).toHaveValue('105');
+    await expect(panel.getByLabel('Height')).toHaveValue('75');
+  });
+});

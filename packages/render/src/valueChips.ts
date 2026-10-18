@@ -51,6 +51,13 @@ export interface ValueChipsInput {
    * left out. In the same CSS pixels as `area`.
    */
   readonly obstacles?: readonly CssBox[];
+  /**
+   * Keep every chip, as for a shape being drawn (U.16): its sizes are typed
+   * blind, `105` Tab `75`, so one left out would send the next number to the
+   * wrong size. A chip with no place on its line is pinned to the nearest
+   * place in the area instead — over a control, if it must.
+   */
+  readonly keepAll?: boolean;
   /** Why one chip's value cannot apply, said beside it: that chip, and the note's size. */
   readonly note?: { readonly chip: ValueChip; readonly size: ChipBox };
   /**
@@ -103,7 +110,8 @@ const CONTROL_GAP_PX = 4;
  * ever covers it; the margin's sits as far inside the stitch line. A chip on a
  * line slides along it to stay in view and clear of the controls laid over
  * the board, as near its middle as it can, and a chip with no such place —
- * under a ruler, past the canvas, under a panel, on the legend — is left out.
+ * under a ruler, past the canvas, under a panel, on the legend — is left out,
+ * or with `keepAll` pinned to the nearest place in view.
  * The app places an input at each centre and draws the lines on the board.
  */
 export function placeValueChips(view: ViewportView, input: ValueChipsInput): PlacedValueChips {
@@ -164,9 +172,11 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
     const from = Vec2Ops.add(side.a, Vec2Ops.scale(side.out, offset));
     const to = Vec2Ops.add(side.b, Vec2Ops.scale(side.out, offset));
     const range = clip(from, to, shrink(area, size));
-    if (range === null) return null;
-    const t = clearAlong(from, to, range, keptOff(obstacles, size));
-    return t === null ? null : { at: Vec2Ops.lerp(from, to, t), offset };
+    const t = range === null ? null : clearAlong(from, to, range, keptOff(obstacles, size));
+    if (t !== null) return { at: Vec2Ops.lerp(from, to, t), offset };
+    return input.keepAll === true
+      ? { at: pinned(Vec2Ops.midpoint(from, to), shrink(area, size)), offset }
+      : null;
   };
 
   for (const [chip, side] of [
@@ -201,9 +211,11 @@ export function placeValueChips(view: ViewportView, input: ValueChipsInput): Pla
       Vec2Ops.scale(diagonal, GAP_PX + support(cornerSize, diagonal)),
     );
     if (
-      inside(centreAt, shrink(area, cornerSize)) &&
-      !blocked(centreAt, keptOff(obstacles, cornerSize))
+      !inside(centreAt, shrink(area, cornerSize)) ||
+      blocked(centreAt, keptOff(obstacles, cornerSize))
     ) {
+      if (input.keepAll === true) at.corner = pinned(centreAt, shrink(area, cornerSize));
+    } else {
       at.corner = centreAt;
       const radiusPx = fittedRadii(rect.radii, rect.width, rect.height)[name] * zoom;
       const onArc = Vec2Ops.sub(
@@ -434,6 +446,14 @@ function shrink(area: CssBox, box: ChipBox): CssBox {
     top: area.top + box.height / 2,
     right: area.right - box.width / 2,
     bottom: area.bottom - box.height / 2,
+  };
+}
+
+/** The nearest point to `point` in `area`. */
+function pinned(point: Vec2, area: CssBox): Vec2 {
+  return {
+    x: Math.min(Math.max(point.x, area.left), area.right),
+    y: Math.min(Math.max(point.y, area.top), area.bottom),
   };
 }
 

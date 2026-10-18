@@ -53,6 +53,36 @@ export function keepTabInDialogs(document: Document): void {
 }
 
 /**
+ * Gives the focus back to what had it before a dialog opened, once the last
+ * dialog has closed (U.19). Without it, Esc out of Print or Settings left the
+ * focus on nothing, and a maker on the keys started again from the top of
+ * the window. Installed once, for every dialog. A dialog that sends the focus
+ * somewhere itself, or whose opener is gone, is left as it is.
+ */
+export function returnFocusFromDialogs(document: Document): void {
+  let before: HTMLElement | null = null;
+  let open = false;
+  document.addEventListener(
+    'focusin',
+    (event) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('[aria-modal="true"]') === null) {
+        before = target;
+      }
+    },
+    true,
+  );
+  new MutationObserver(() => {
+    const now = document.querySelector('[aria-modal="true"]') !== null;
+    const closed = open && !now;
+    open = now;
+    if (!closed || before === null || !before.isConnected) return;
+    const active = document.activeElement;
+    if (active === null || active === document.body) before.focus();
+  }).observe(document.body, { childList: true, subtree: true });
+}
+
+/**
  * Keeps every key pressed in a select's open list to the list (U.20). Since
  * the list is the page's own (`appearance: base-select`), its keys reach the
  * page: Escape closing the list closed the dialog under it too, and a letter
