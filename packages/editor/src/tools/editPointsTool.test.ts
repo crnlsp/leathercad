@@ -247,6 +247,23 @@ describe('the Edit Points tool', () => {
     expect(store.getState().document).toBe(before);
   });
 
+  it('picks nothing after undo cancelled the drag that added a point', () => {
+    // The added point is gone, so its index would name the next real corner,
+    // and Delete would take a corner the maker never picked.
+    const { tool, ctx, store } = harness();
+    const before = store.getState().document;
+
+    tool.onPointerDown?.(ctx, pointer(vec(40, 0.5)));
+    tool.onPointerMove?.(ctx, pointer(vec(40, -10)));
+    store.undo();
+    tool.onPointerMove?.(ctx, pointer(vec(40, -20)));
+    tool.onPointerUp?.(ctx, pointer(vec(40, -20)));
+
+    expect(store.getState().document).toBe(before);
+    expect(tool.onKey?.(ctx, key('Delete'))).not.toBe(true);
+    expect(points(store)).toHaveLength(4);
+  });
+
   it('does not let the dragged path snap to itself', () => {
     const { tool, ctx } = harness();
 

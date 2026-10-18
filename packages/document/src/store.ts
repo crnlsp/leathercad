@@ -81,8 +81,13 @@ export class DocumentStore {
     return () => this.listeners.delete(listener);
   }
 
-  /** Applies a command and pushes one history entry. */
+  /**
+   * Applies a command and pushes one history entry. A gesture still under way
+   * is cancelled first, so the command applies to what was there before it and
+   * the half-finished preview never enters history.
+   */
   dispatch(command: Command): void {
+    if (this.transaction !== null) this.rollback();
     const next = command.apply(this.present.document);
     if (next === this.present.document) return; // A no-op earns no history.
 
@@ -113,12 +118,14 @@ export class DocumentStore {
     this.transaction = { label, base: this.present };
   }
 
-  /** Updates the visible document without touching history. */
+  /**
+   * Updates the visible document without touching history. With no
+   * transaction open it does nothing: the gesture was cancelled — by undo,
+   * Escape or a command — and the pointer moving on must not make each move a
+   * step of history, applied onto the last.
+   */
   preview(command: Command): void {
-    if (this.transaction === null) {
-      this.dispatch(command);
-      return;
-    }
+    if (this.transaction === null) return;
     const next = command.apply(this.transaction.base.document);
     this.present = { ...this.present, document: next };
     this.emit();
@@ -175,6 +182,7 @@ export class DocumentStore {
   }
 
   redo(): void {
+    if (this.transaction !== null) this.rollback();
     const next = this.future.pop();
     if (next === undefined) return;
 

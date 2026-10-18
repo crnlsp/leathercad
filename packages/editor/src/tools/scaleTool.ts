@@ -64,6 +64,12 @@ export function createScaleTool(): Tool {
 
     onPointerMove(ctx, event) {
       if (state.kind !== 'scaling') return;
+      // Undo, or a command, cancelled the gesture under the pointer.
+      if (!ctx.store.inTransaction) {
+        state = { kind: 'idle' };
+        ctx.invalidate();
+        return;
+      }
 
       const factors = factorsFor(state.pivot, state.from, event.at, event.shiftKey);
       if (factors === null) return;

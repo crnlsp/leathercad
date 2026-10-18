@@ -275,6 +275,10 @@ store.commit();      // pushes one entry
 store.rollback();    // on Escape
 ```
 
+Undo, redo or any command during a transaction rolls it back first, and a `preview` with no
+transaction open does nothing — so a drag that undo cancelled stays cancelled while the pointer
+keeps moving, and nothing half-finished ever enters history.
+
 **What is *not* in the undoable document:** active tool, viewport, panel layout, hover state,
 window size. Selection is a borderline case — it is stored *alongside* each history entry so undo
 restores it, but it lives outside the document proper so that selecting something does not mark the
