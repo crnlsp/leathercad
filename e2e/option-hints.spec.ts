@@ -31,17 +31,22 @@ const hint = (window: Page, key: string): Locator =>
 
 /** The hints that are shown, each wholly inside the room the bar gives them. */
 async function expectWhole(window: Page): Promise<void> {
-  const slot = (await window.getByTestId('tool-how-to').locator('..').boundingBox())!;
-  for (const box of await hints(window).evaluateAll((items) =>
-    items.map((item) => {
-      const { left, right } = item.getBoundingClientRect();
-      return { left, right, clipped: item.scrollWidth > item.clientWidth };
-    }),
-  )) {
-    expect(box.clipped).toBe(false);
-    expect(box.left).toBeGreaterThanOrEqual(slot.x - 0.5);
-    expect(box.right).toBeLessThanOrEqual(slot.x + slot.width + 0.5);
-  }
+  // The row refits from a ResizeObserver, which sets React state: it renders
+  // a task after the resize, so the hints the last width kept can still be
+  // there when the window has its new size. Asked again until it settles.
+  await expect(async () => {
+    const slot = (await window.getByTestId('tool-how-to').locator('..').boundingBox())!;
+    for (const box of await hints(window).evaluateAll((items) =>
+      items.map((item) => {
+        const { left, right } = item.getBoundingClientRect();
+        return { left, right, clipped: item.scrollWidth > item.clientWidth };
+      }),
+    )) {
+      expect(box.clipped).toBe(false);
+      expect(box.left).toBeGreaterThanOrEqual(slot.x - 0.5);
+      expect(box.right).toBeLessThanOrEqual(slot.x + slot.width + 0.5);
+    }
+  }).toPass({ timeout: 5_000 });
 }
 
 test('Select says what a click, a key and a drag do, and what a selection adds (U.11)', async () => {

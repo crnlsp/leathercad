@@ -1,6 +1,6 @@
 import { approxLte, formatMm, formatNumber } from '@leathercad/core';
 import { rectShape } from '@leathercad/document';
-import { Shapes, cornerRoom, uniformRadii, type CornerRadii } from '@leathercad/geometry';
+import { RectOps, Shapes, cornerRoom, uniformRadii, type CornerRadii } from '@leathercad/geometry';
 import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
 
 import type { Mm } from '@leathercad/core';
@@ -24,7 +24,8 @@ import type { SizeDraft, SizeField, Tool, ToolContext } from '../tool.js';
  * **Typed sizes (U.16).** Once a corner is placed the maker can type the size.
  * A number typed stays; what was not typed follows the pointer, which also
  * says which way from the corner the shape runs. Typing before any click
- * starts the corner at the pointer. The chips and the refusals' words are the
+ * starts the corner at the pointer, or with none on the board yet, in its
+ * middle. The chips and the refusals' words are the
  * app's (`ValueChips`); the tool takes numbers already checked, and writes
  * only through `draw.commit`. A typed corner the pointer has since left no
  * room for is never made smaller without a word: making it is refused, and
@@ -210,13 +211,15 @@ export function createRectangleTool(nextId: () => string): Tool {
 
     beginSizing(ctx) {
       if (state.kind === 'spanning') return state.phase === 'placing';
-      if (hover === null) return false;
+      // No pointer on the board yet — the keys alone brought the maker here:
+      // the middle of what is on screen, where the shape will be seen (U.19).
+      const start = hover ?? RectOps.centre(ctx.viewport.visibleBounds());
       draw.begin();
       state = {
         kind: 'spanning',
         phase: 'placing',
-        startMm: hover,
-        currentMm: hover,
+        startMm: start,
+        currentMm: start,
         typed: null,
         refusals: 0,
       };

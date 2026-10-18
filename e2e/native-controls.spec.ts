@@ -166,6 +166,54 @@ test('every tab stop rings in the accent, in the window and every dialog, and Ta
   }
 });
 
+test('closing a dialog gives the keys back to what opened it (U.19)', async () => {
+  // Found walking the work by the keys alone: Esc out of Print left the focus
+  // on nothing, so the next Tab started again at the top of the window.
+  const { app, window } = await launch();
+  try {
+    await openSample(window);
+    const print = window.getByTestId('print');
+    await print.focus();
+    await window.keyboard.press('Enter');
+    await expect(window.getByTestId('print-preview')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('print-preview')).toHaveCount(0);
+    await expect(print).toBeFocused();
+
+    // By its key, from the board: back to the board.
+    const board = window.getByTestId('editor-canvas');
+    await board.focus();
+    await window.keyboard.press('Control+KeyP');
+    await expect(window.getByTestId('print-preview')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(board).toBeFocused();
+
+    const settings = window.getByTestId('settings');
+    await settings.focus();
+    await window.keyboard.press('Enter');
+    await expect(window.getByTestId('settings-dialog')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
+    await expect(settings).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('switching view from a control the other view does not have leaves the keys on the board (U.19)', async () => {
+  // Rectangle is not on the Sheets view's rail: Ctrl+2 from it left the focus
+  // on nothing, and the next Tab started from the top of the window.
+  const { app, window } = await launch();
+  try {
+    await window.getByTestId('tool-rectangle').focus();
+    await window.keyboard.press('Control+Digit2');
+    await expect(window.getByTestId('sheets-summary')).toBeVisible();
+    await expect(window.getByTestId('editor-canvas')).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('the recovery dialog rings, and keeps Tab', async () => {
   const state = freshStateHome();
   const env = { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' };

@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
@@ -121,13 +122,15 @@ export function MenuButton({
 /**
  * The right-click menu (8.8): the same menu, opened at the pointer rather
  * than under a button, and turned back from the window's edges so it is never
- * cut off.
+ * cut off. It goes into the landmark it was opened from — the board, Parts, a
+ * dialog — so its words are in a region like everything else (U.20, U.19).
  *
  * Mounted to open and unmounted to close. Keyed by where it opens, so a second
  * right-click while one is open is a new menu with its first item focused.
  */
 export function ContextMenu({
   at,
+  from,
   label,
   testId,
   entries,
@@ -135,6 +138,8 @@ export function ContextMenu({
 }: {
   /** Where it opens, in CSS pixels from the window's top left. */
   at: { readonly x: number; readonly y: number };
+  /** What it is about, whose landmark it goes into; what had focus, if not given. */
+  from?: Element;
   label: string;
   testId: string;
   entries: readonly MenuEntry[];
@@ -157,7 +162,14 @@ export function ContextMenu({
     });
   }, [at]);
 
-  return (
+  const [home] = useState(
+    () =>
+      (from ?? opener)?.closest(
+        '[role="dialog"], header, main, aside, footer, nav, [role="region"]',
+      ) ?? document.body,
+  );
+
+  return createPortal(
     <MenuPopup
       ref={menu}
       label={label}
@@ -170,7 +182,8 @@ export function ContextMenu({
         if (how === 'escape') opener?.focus();
         onClose();
       }}
-    />
+    />,
+    home,
   );
 }
 

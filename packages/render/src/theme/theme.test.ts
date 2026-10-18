@@ -97,6 +97,13 @@ describe('cssVariables', () => {
     });
   });
 
+  it('gives the stylesheet the rulers’ widths, so what floats on the board keeps off them (U.19)', () => {
+    expect(cssVariables('comfortable')).toMatchObject({
+      '--ruler-top': `${String(CANVAS.ruler.thicknessPx)}px`,
+      '--ruler-left': `${String(CANVAS.ruler.leftThicknessPx)}px`,
+    });
+  });
+
   it('holds the work bar and the status bar to fixed heights, whatever is in them (U.5)', () => {
     // Set by their content, the status bar grew 1 px with the panels' chips
     // and moved the board, its fit and every pixel reference.
@@ -149,6 +156,32 @@ describe('the four planes (F.5)', () => {
       expect(contrast(ACCENT.tan, surface), surface).toBeGreaterThanOrEqual(3);
     }
     expect(cssVariables('comfortable')['--scrollbar']).toBe(SHELL.scrollbar);
+  });
+
+  it('sets the shell’s words at AA on every surface they sit on (U.19)', () => {
+    // Text reads on all four. text-dim — the selection bar, a key's cap, a
+    // count in Parts — on shell-0 to shell-2 only: on shell-3 it is 4.3 : 1,
+    // so nothing dim is set on a lit row or on Export PDF's main half.
+    for (const surface of [SHELL[900], SHELL[800], SHELL[700], SHELL[600]]) {
+      expect(contrast(SHELL.text, surface), surface).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const surface of [SHELL[900], SHELL[800], SHELL[700]]) {
+      expect(contrast(SHELL.textDim, surface), surface).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrast(ACCENT.onTan, ACCENT.tan)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('reads a severity’s words, Delete’s among them, wherever they are set (U.19)', () => {
+    // Panels, dialogs and menus, and a menu's lit row: a destructive item is
+    // lit with shell-2, since the error red on shell-3 is 4.2 : 1.
+    for (const severity of ['error', 'warning', 'info'] as const) {
+      for (const surface of [SHELL[900], SHELL[800], SHELL[700]]) {
+        expect(
+          contrast(STATE.shell[severity], surface),
+          `${severity} on ${surface}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 
   it('gives the accent an on-dark and an on-light value', () => {

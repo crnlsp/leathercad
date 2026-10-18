@@ -6,13 +6,14 @@ import { App } from './App.js';
 import { IS_MAC } from './keyCaps.js';
 import { applyBindings } from './keymap.js';
 import { readBindings } from './rebind.js';
-import { keepKeysInOpenLists, keepTabInDialogs } from './modalKeys.js';
+import { keepKeysInOpenLists, keepTabInDialogs, returnFocusFromDialogs } from './modalKeys.js';
 import { getPlatformHost } from './platformBridge.js';
 import { applyTheme } from './theme.js';
 import './styles.css';
 
 applyTheme(document.documentElement);
 keepTabInDialogs(document);
+returnFocusFromDialogs(document);
 keepKeysInOpenLists(document);
 
 const container = document.getElementById('root');

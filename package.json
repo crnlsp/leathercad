@@ -38,7 +38,7 @@
     "test:mutation:domain": "cd packages/domain && stryker run ../../stryker.config.mjs",
     "package": "pnpm --filter @leathercad/desktop package",
     "package:flatpak": "pnpm --filter @leathercad/desktop package:flatpak",
-    "docs:media": "pnpm build && playwright test --config playwright.media.config.ts",
+    "docs:media": "pnpm build && node tools/media.mjs",
     "test:packaged": "pnpm --filter @leathercad/desktop package:e2e && playwright test --config playwright.packaged.config.ts"
   },
   "packageManager": "pnpm@11.25.0",

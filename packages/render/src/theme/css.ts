@@ -1,5 +1,6 @@
 import type { LayerRole } from '@leathercad/domain';
 
+import { CANVAS } from './canvas.js';
 import { ACCENT, ACTION, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
@@ -85,6 +86,9 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--panel-strip'] = `${String(PANEL_PX.strip)}px`;
   variables['--work-bar-h'] = `${String(BAR_PX.work)}px`;
   variables['--status-bar-h'] = `${String(BAR_PX.status)}px`;
+  // The canvas draws its rulers this wide; what floats on the board keeps off them.
+  variables['--ruler-top'] = `${String(CANVAS.ruler.thicknessPx)}px`;
+  variables['--ruler-left'] = `${String(CANVAS.ruler.leftThicknessPx)}px`;
 
   return variables;
 }

@@ -102,8 +102,8 @@ here.
 - **A new worktree has no `node_modules`:** run `pnpm install --frozen-lockfile` first.
 - **The shell may be zsh:** quote globs (`--include='*.ts'`).
 - A display is available, so E2E tests and scratch Playwright specs run without `xvfb-run`; Docker
-  is there for `pnpm test:visual`; poppler is installed for the print checks. `gifsicle` and
-  `pngquant` are not, so `pnpm docs:media` cannot finish here.
+  is there for `pnpm test:visual`; poppler is installed for the print checks. `pnpm docs:media`
+  runs in the same container and installs its own ffmpeg, gifsicle and pngquant there (Q27).
 - **One live display, shared.** Run every Playwright command — `pnpm test:e2e`, a single spec, a
   scratch screenshot spec, `pnpm test:visual` — behind `flock /tmp/leathercad-e2e.lock <command>`,
   so another session's window cannot take your focus and hover. A hover or a key from the person at

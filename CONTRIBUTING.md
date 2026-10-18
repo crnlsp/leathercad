@@ -30,7 +30,7 @@ pnpm dev            # runs the app, with hot reload
 | `pnpm test:visual` | Pixel diffs in the pinned Playwright container. Needs Docker and `pnpm build` |
 | `pnpm test:packaged` | Packages the app, then smoke-tests the packaged binary |
 | `pnpm package` | This platform's installer, in `apps/desktop/release/` |
-| `pnpm docs:media` | Retakes the README's screenshots and demo from the real app (needs a display, poppler, ffmpeg, gifsicle and pngquant) |
+| `pnpm docs:media` | Retakes the README's screenshots and demo from the real app, in the pinned Playwright container, which it gives poppler, ffmpeg, gifsicle and pngquant for the run (needs Docker and the network) |
 | `pnpm bench` | Benchmarks; `bench:compare` against the committed baseline |
 
 The layering in [`docs/architecture.md`](docs/architecture.md) §2 is enforced by `pnpm depcruise`: a

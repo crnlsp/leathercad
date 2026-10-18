@@ -404,6 +404,30 @@ test('no fold covers the zoom control or the legend, at any width', async () => 
   });
 });
 
+test('the legend sits on the board, clear of the left ruler’s numbers, open or folded (U.19)', async () => {
+  // U.10 put it 16 px from the canvas's edge, inside the 34 px ruler, so it
+  // cut the ruler's numbers at its height to "−1". The ruler is the theme's
+  // width, as the canvas draws it.
+  await withSample(async (window, app) => {
+    const toggle = window.getByTestId('canvas-legend-toggle');
+    for (const [width, height] of SIZES) {
+      await resize(app, window, width, height);
+      for (const open of [true, false]) {
+        if ((await toggle.getAttribute('aria-expanded')) !== String(open)) await toggle.click();
+        const gap = await window.evaluate(() => {
+          const ruler = Number.parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--ruler-left'),
+          );
+          const canvas = document.querySelector('[data-testid="editor-canvas"]')!;
+          const legend = document.querySelector('[data-testid="canvas-legend"]')!;
+          return legend.getBoundingClientRect().left - canvas.getBoundingClientRect().left - ruler;
+        });
+        expect(gap, `${open ? 'open' : 'folded'} at ${String(width)}`).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
 test('both strips, an overlay and focus mode have no accessibility violations', async () => {
   await withSample(async (window, app) => {
     const scan = async (what: string): Promise<void> => {

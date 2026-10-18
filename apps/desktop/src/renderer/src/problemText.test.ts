@@ -118,7 +118,7 @@ describe('the message catalogue, in English', () => {
     [problem('TRANSFORM_FLATTENS', {}), 'That would flatten the shape to nothing.'],
     [
       problem('DERIVED_MOVED_ALONE', { ...named, rootId: 'r', rootName: 'Outline' }),
-      'Stitch line follows Outline, so it moves when Outline does. Move Outline instead.',
+      'Follows Outline: move that instead.',
     ],
     [
       problem('NO_TARGET_PART', { what: 'line' }),

@@ -317,7 +317,8 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   own field, `parseLength`, the same refusals): width, height and corner, with a hint under the
   shape — Tab next, Enter makes it, Esc cancels, the keys read from the keymap — and Properties
   mirrors the three. The first digit typed on the board opens the width chip, with the first
-  corner placed or not: before any click the rectangle starts at the pointer, and the sizes run
+  corner placed or not: before any click the rectangle starts at the pointer (in the board's middle
+  when no pointer has been on it, since U.19), and the sizes run
   from the corner towards the pointer either way. Enter makes it (one undo step, the new outline
   selected, its chips at rest), Esc gives it up, a click on the board makes what is typed. A drag
   still draws as before and is sized afterwards by the U.14 chips; Shift still squares a drag.
@@ -365,14 +366,37 @@ U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14
   first click, not only between the rectangle's two, because *Stitch + allowance* applies the
   margin when the shape is made and a polyline has no sizes to show. Found on the way: nothing
   needed joining — U.13 had already put one source behind both paths. Printed output did not move.
-- ☐ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
+- ✅ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
   pixel baselines and the README's pictures retaken.
+  ✅ *Open → draw → stitch → arrange → check sheets → print* walked in the running app at 1920,
+  1440, 1280, 1024 and 860 × 600, a fresh window each: at 1×, at 2× (`devicePixelRatio` read 2),
+  in `forced-colors` and with reduced motion, and by the keys alone. Reduced motion holds: the only
+  motion is colour on `--motion`, which the reduce rule turns off, and nothing animates. Every
+  token pair with a promised ratio has its test now — `text-dim` on the shell surfaces it is used
+  on, body text, a severity's words and text on the accent had none. The axe scans cover a size
+  being typed with *After the outline*, the selection bar with focus in it, a key's clash in
+  Settings, and a lit right-click menu, which no scan saw. UI Foundations' identity test, on a
+  1920 × 1080 window of the sample and a piece drawn as *Stitch + allowance*: **9 of 10**, item 9
+  still partly — a dimension's number breaks its line now, but has no arrowheads (4.10b, 1.6). The
+  flip reason (U.6) is one short line: *Follows Outline: move that instead.* The pixel reference
+  that moved is the stitched panel's, by the legend alone. Printed output did not move: nothing in
+  `export`, `persist` or the pure layers changed, and no golden or `.lcp` fixture.
+  Fixed on the way, each with its test: **the keys alone could not draw** — typing on the board
+  started a rectangle only at a pointer that had been over it; **a size typed by the board's edge
+  went to the wrong chip, or nowhere** — a chip with no place in view was left out of Tab's way
+  while drawing, so `105 Tab 75` could make a 75 mm corner, or a rectangle as tall as the pointer
+  said; **the legend sat on the left ruler**, cutting its numbers to "−1" since U.10; **closing a
+  dialog dropped the focus**, so after Esc out of Print a maker on the keys started again from the
+  top of the window, and so did `Ctrl+2` from a control only Design has; **the right-click menu's Delete read at 4.2 : 1** under the pointer, and the
+  menu sat outside any landmark (U.20 had placed the field menu, not this one); **a piece's row
+  with a Cut count had a blank second line** wherever its whole name did not fit on one, its marks
+  wrapping rather than its name (U.8). Q27 is fixed, and the README's four pictures are retaken.
 
 ### Known issues and findings
 
 | # | What | Where it was found | Plan |
 |---|---|---|---|
-| ☐ **Q27** | `pnpm docs:media` fails where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loads the window while it records video — on `develop` as well. So the README's pictures still show the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | Copy instead of rename; find why recording stops the window loading; then retake all four on a machine with ffmpeg, gifsicle and pngquant |
+| ✅ **Q27** | `pnpm docs:media` failed where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loaded the window while it recorded video — on `develop` as well. So the README's pictures still showed the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | ✅ U.19: the PDF's page is copied, not renamed. The recording: on the Linux desktop it was found on (a Wayland session), Playwright 1.64 never let Electron 44 load a window it recorded — a bare `BrowserWindow` too, with Electron on X11 or Wayland, with or without the GPU — while under Xvfb in the pinned Playwright container it loads at once. Other desktops are untested. So `pnpm docs:media` runs there now (`tools/media.mjs`), installing poppler, ffmpeg, gifsicle and pngquant for the run. The spec had also gone stale with U.10: the legend, open at the board's foot, took the lining's drag and the pocket's corner; it is folded while drafting. All four pictures retaken and looked at |
 
 ### Release engineering
 
@@ -418,7 +442,7 @@ slice took, or will take, and is still open.
 | U.14 | Are the chips Tab stops at rest? | **Decided 2026-10-17:** no, as R-12 says. The board is one Tab stop; Enter there opens the first chip in view; while one is open, Tab and Shift+Tab go through the chips, and past either end out of them |
 | U.14 | A width or height that leaves the corners larger than the rectangle draws them | **Decided 2026-10-17:** refused, saying why, and Enter takes the least size the corners fit in — on the board and in Properties alike. A stored radius is always the one drawn |
 | U.14 | Chips near the legend or the zoom control | **Decided 2026-10-17:** kept clear of them, as of the rulers and panels — a chip slides along its line, or is left out; never laid over one |
-| U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer |
+| U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer; with no pointer on the board yet, in its middle (U.19) |
 | U.17 | Seam allowance on a piece drawn outline first, which the command refuses (a second outline) | Shown done: the margin between edge and seam is the allowance. The button appears only where a seam has no edge yet; mockups 02, 05 and 14 drew it on the outer |
 | U.17 | Which selection shows the bar | An outline, a stitch line, a hole set, or a piece by its heading — its piece's stitching. Not a fold, cut-out, marking, dimension or two things |
 | U.17 | No room under the piece or over it — the piece framed by `Shift+2`, or zoomed past the board | Left out, as a chip with no place is, and F6 then does nothing. Fitting the selection could keep the bar's room; not done |
@@ -428,6 +452,10 @@ slice took, or will take, and is still open.
 | U.11 | Three to five hints, with or without `? all keys` | With it: a tool's own hints are two to four, so the row is never more than five caps |
 | U.11 | Which hint drops first, when the mockup drops "from the right" | The lowest ranked, as R-11's text says — the keys a maker is least likely to guess stay longest (a polyline's A before its Backspace) |
 | U.11 | On French layouts Shift+`&` is *Fit* and types a `1` into a rectangle's width | Not decided: one press does both today. Letting the window's key win would leave no digit row to type a size with |
+| U.19 | Typing a size with no pointer on the board: U.16 started nothing, so a maker on the keys alone could not draw | In the middle of the board as shown. Every action works from the keyboard (§2); a corner by the pointer stays the rule whenever there is one |
+| U.19 | A typed size's chip with no place in view while drawing — U.14 leaves it out, so `105 Tab 75` put the 75 in the corner, or nowhere | Pinned to the nearest place in view, over a control if it must. Never laid over one (U.14) stays the rule for a selected outline's chips, which are not typed blind |
+| U.19 | Design does not frame a project when it opens: the sample opens at 79 % about the origin, partly off the board below 1440 px | Not changed — the camera has always stayed put, and nothing decides otherwise. Framing on open is a small feature of its own, if wanted |
+| U.19 | The README's `design.png` shows the legend folded to its chip | Open, it covers the pocket's edge over the fitted pattern. Shown folded, as a maker who wants the room has it |
 | U.20 | Electron's spellchecker: keep it, or turn it off? On Linux it downloads an English dictionary whatever the interface language, and the leather words are not in it | **Decided 2026-10-15:** off. A name is a few words, and `SECURITY.md` says the app makes no network connections |
 | U.20 | A right-click menu in a text field | **Decided 2026-10-15:** Cut, Copy, Paste and Select all, in the app's own menu with its words from `en.json`; nothing outside fields |
 | U.20 | Which text can be selected? | **Decided 2026-10-15:** the fields, a problem's words, and About's version — what a maker might paste into a bug report. Nothing else. About shows no log folder to select: its button opens the folder |

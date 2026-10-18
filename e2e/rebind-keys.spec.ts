@@ -102,7 +102,11 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
     // The bar's cap and its tooltip.
     await expect(window.getByTestId('save').locator('kbd')).toHaveText('F5');
     await window.getByTestId('save').hover();
-    await expect(window.getByRole('tooltip').locator('kbd')).toHaveText('F5');
+    // Save's own: Esc gave the keys back to the gear (U.19), whose tooltip
+    // shows at once for the keyboard, as R-10 has it.
+    await expect(
+      window.getByRole('tooltip', { name: /^Save the project/ }).locator('kbd'),
+    ).toHaveText('F5');
     await window.mouse.move(5, 400);
 
     // The old key does nothing; the new one saves.

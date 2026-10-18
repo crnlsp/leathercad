@@ -1,4 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
@@ -184,6 +188,74 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
       await expect(preview.getByLabel('Copies')).toBeVisible();
     }
     await scan('the Print Preview');
+  } finally {
+    await closeApp(instance);
+  }
+});
+
+test('what 1.5 added has no accessibility violations: a size being typed, the selection bar, a key changing, and Delete lit (U.19)', async () => {
+  // The scans above see each surface at rest. These are the ones a maker
+  // meets in the middle of the work, and a lit menu row, which axe sees only
+  // while it is lit: the right-click menu's Delete was 4.2 : 1 under the
+  // pointer until U.19.
+  const instance = await launchApp({
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-a11y-')) },
+  });
+  try {
+    const window = await instance.firstWindow();
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await instance.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(1440, 900);
+    });
+    const scan = async (what: string): Promise<void> => {
+      const results = await new AxeBuilder({ page: window })
+        .setLegacyMode(true)
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
+        .analyze();
+      const found = results.violations.map(
+        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
+      );
+      expect(found, what).toEqual([]);
+    };
+
+    // A rectangle typed before any click (U.16), and After the outline (U.18).
+    await window.getByTestId('tool-rectangle').click();
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.mouse.move(box.x + box.width * 0.35, box.y + box.height * 0.6);
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.type('105');
+    await window.keyboard.press('Tab');
+    await window.keyboard.type('75');
+    await expect(window.getByTestId('drawing-defaults')).toBeVisible();
+    await scan('a rectangle being typed, with After the outline');
+    await window.keyboard.press('Enter');
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    // The selection bar, its next step focused (U.17).
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('F6');
+    await expect(window.getByTestId('selection-bar-step').first()).toBeFocused();
+    await scan('the selection bar, with focus in it');
+    await window.keyboard.press('F6');
+
+    // The right-click menu, Delete under the pointer and then the keyboard.
+    const outline = window
+      .getByTestId('parts-list')
+      .locator('[data-testid^="feature-row-"]', { hasText: 'Outline' });
+    await outline.click({ button: 'right' });
+    const remove = window.getByTestId('context-delete');
+    await remove.hover();
+    await scan('the right-click menu, Delete under the pointer');
+    await window.keyboard.press('Escape');
+
+    // A key being changed, and the clash it makes (U.12).
+    await window.getByTestId('settings').click();
+    await window.getByTestId('settings-tab-shortcuts').click();
+    await window.getByTestId('change-settings').click();
+    await window.keyboard.press('Control+s');
+    await expect(window.getByTestId('shortcut-clash')).toBeVisible();
+    await scan('Settings › Keyboard shortcuts, a clash');
+    await window.getByTestId('clash-cancel').click();
   } finally {
     await closeApp(instance);
   }

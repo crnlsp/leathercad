@@ -2533,6 +2533,18 @@ button.problem-row:hover {
   min-width: min(min-content, 100%);
 }
 
+/* From nothing, so the line breaks by its longest word, not by the whole
+   name: the name wraps between words first, and only where its longest word
+   cannot fit do the marks take the line below (U.19). */
+.part-title {
+  flex: 1 1 0;
+  min-width: min(min-content, 100%);
+}
+
+.part-title > .badge {
+  margin-left: var(--space-1);
+}
+
 /* The numbers a maker cares about, and the marks, at the row's right end. */
 .row-count {
   flex: none;
@@ -2798,8 +2810,9 @@ button.problem-row:hover {
   position: fixed;
 }
 
-/* The Parts panel scrolls, and so clips a menu wider than itself. */
-.parts .menu {
+/* The Parts panel scrolls, and so clips a menu wider than itself — but not a
+   right-click menu, which is fixed to the window. */
+.parts .menu:not(.context) {
   width: 200px;
 }
 
@@ -2837,6 +2850,13 @@ button.problem-row:hover {
 
 .menu-item.danger {
   color: var(--error);
+}
+
+/* Lit a step less than the others: the error red on shell-600 is 4.2 : 1,
+   and on shell-700 4.7 (U.19). */
+.menu-item.danger:hover,
+.menu-item.danger:focus-visible {
+  background: var(--shell-700);
 }
 
 /* What cannot be chosen now — an empty group's line, or an action the
@@ -2998,9 +3018,10 @@ button.problem-row:hover {
   position: absolute;
   z-index: 4;
   /* At the canvas's foot, by the ruler's corner and clear of the zoom control
-     (U.10, R-09); it grows upward from its chip. */
+     (U.10, R-09); it grows upward from its chip. On the board, never over the
+     left ruler's numbers (U.19). */
   bottom: var(--space-4);
-  left: var(--space-4);
+  left: calc(var(--ruler-left) + var(--space-4));
   max-width: 220px;
   border: 1px solid var(--ground-major);
   border-radius: var(--r-sm);

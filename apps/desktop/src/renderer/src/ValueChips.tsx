@@ -204,6 +204,8 @@ export const ValueChips = memo(function ValueChips({
           sizes,
           ...(area === undefined ? {} : { area }),
           obstacles,
+          // Drawing, every size is typed blind: none may drop out of Tab's way.
+          keepAll: drawn.read() !== null,
           ...(hintElement === null
             ? {}
             : { hint: { width: hintElement.offsetWidth, height: hintElement.offsetHeight } }),
@@ -256,7 +258,7 @@ export const ValueChips = memo(function ValueChips({
         return first !== undefined && first !== null;
       },
     }),
-    [subjectNow],
+    [subjectNow, drawn],
   );
 
   if (subject === null) return null;

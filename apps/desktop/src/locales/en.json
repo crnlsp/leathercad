@@ -908,7 +908,7 @@
     },
     "DERIVED_MOVED_ALONE": {
       "title": "Moves with its source",
-      "description": "{{featureName}} follows {{rootName}}, so it moves when {{rootName}} does. Move {{rootName}} instead."
+      "description": "Follows {{rootName}}: move that instead."
     },
     "TRANSFORM_FLATTENS": {
       "title": "Would flatten",

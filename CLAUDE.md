@@ -41,7 +41,7 @@ pnpm test locales     # a translation against English: keys, placeholders, plura
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
-pnpm docs:media       # retakes the README's screenshots and demo from the real app (needs a display)
+pnpm docs:media       # retakes the README's screenshots and demo from the real app, in the pinned Playwright container (needs Docker)
 pnpm package          # this platform's installer, in apps/desktop/release/: AppImage, NSIS .exe, or dmg (ADR 0014)
 pnpm build
 pnpm typecheck        # tsc --build
