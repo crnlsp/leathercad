@@ -44,7 +44,6 @@ export {
 export type { DisplayItem, DisplayList, Stroke } from './displayList.js';
 export {
   ROLE_STROKES,
-  displayListBounds,
   documentTextItem,
   dotsItem,
   markerItem,

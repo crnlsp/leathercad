@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { err, isErr, isOk, mapOk, ok, unwrap, unwrapOr } from './result.js';
+import { err, isErr, isOk, ok, unwrap } from './result.js';
 
 describe('Result', () => {
   it('carries a value on success', () => {
@@ -18,27 +18,6 @@ describe('Result', () => {
 
   it('throws on unwrapping a failure, including the error in the message', () => {
     expect(() => unwrap(err('offset collapsed'))).toThrow(/offset collapsed/);
-  });
-
-  it('unwrapOr substitutes only on failure', () => {
-    expect(unwrapOr(ok(1), 9)).toBe(1);
-    expect(unwrapOr(err('nope'), 9)).toBe(9);
-  });
-
-  it('mapOk transforms a value and leaves an error untouched', () => {
-    expect(mapOk(ok(2), (n) => n * 3)).toEqual(ok(6));
-
-    const failure = err('bad');
-    expect(mapOk(failure, (n: number) => n * 3)).toBe(failure);
-  });
-
-  it('does not call the mapper for a failure', () => {
-    let called = false;
-    mapOk(err('bad'), (n: number) => {
-      called = true;
-      return n;
-    });
-    expect(called).toBe(false);
   });
 
   it('distinguishes a successful undefined from a failure', () => {

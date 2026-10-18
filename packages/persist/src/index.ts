@@ -4,7 +4,7 @@
  * Stores parameters, never derived geometry. See docs/file-format.md.
  */
 
-export type { Manifest, StoredProject } from './schema.js';
+export type { Manifest } from './schema.js';
 export { ManifestSchema, ProjectSchema } from './schema.js';
 
 export type { Migration } from './migrations/index.js';

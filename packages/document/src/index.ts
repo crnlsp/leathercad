@@ -21,12 +21,9 @@ export {
   command,
   drawnBounds,
   isEmptySelection,
-  isPartSelected,
-  isSelected,
   partSelectionOf,
   selectedFeatureIds,
   selectionOf,
-  toggleSelected,
 } from './document.js';
 
 export type { StoreState } from './store.js';

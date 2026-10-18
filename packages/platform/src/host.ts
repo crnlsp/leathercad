@@ -21,8 +21,8 @@ export interface SaveDialogOptions {
 /**
  * Everything the application is allowed to ask of the operating system.
  *
- * Implementations: `apps/desktop` over Electron IPC, and `InMemoryPlatformHost`
- * for tests. Application code depends on this interface only.
+ * Implemented by `apps/desktop` over Electron IPC. Application code depends on
+ * this interface only.
  */
 export interface PlatformHost {
   /** Reads a file. Rejects if it does not exist. */

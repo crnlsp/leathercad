@@ -1,4 +1,4 @@
-import { EPS_POINT, approxEq, approxZero, type Mm } from '@leathercad/core';
+import { approxEq, approxZero, type Mm } from '@leathercad/core';
 
 import { compose, fromMirror, fromTranslation, type Mat2x3 } from './mat2x3.js';
 import type { Vec2 } from './vec2.js';
@@ -94,14 +94,4 @@ export function decomposeGlide(m: Mat2x3): Glide | null {
     angleRad,
     glideMm,
   };
-}
-
-/** Whether two glide reflections are the same placement. */
-export function glideEquals(a: Glide, b: Glide, eps: number = EPS_POINT): boolean {
-  return (
-    Math.abs(a.origin.x - b.origin.x) <= eps &&
-    Math.abs(a.origin.y - b.origin.y) <= eps &&
-    approxEq(a.angleRad, b.angleRad, eps) &&
-    approxEq(a.glideMm, b.glideMm, eps)
-  );
 }

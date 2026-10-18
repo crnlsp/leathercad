@@ -22,8 +22,8 @@ function click(at: Vec2): PointerInput {
 describe('a fold line drawn across a panel', () => {
   it('lands exactly on the midpoints of the edges it was aimed at', () => {
     // The whole reason 3.3b came first. A bifold's fold must sit dead centre
-    // and run edge to edge; drawn by eye it misses both, and a drawn path has
-    // no numeric editor to correct it with until slice 3.9.
+    // and run edge to edge; drawn by eye it misses both, and before slice 3.9 a
+    // drawn path had no numeric editor to correct it with.
     const store = new DocumentStore(emptyDocument('doc'));
     store.dispatch(
       addPart(rectanglePart('part-1', 'cut-1', 'Panel', rectShape(vec(0, 0), 100, 60))),

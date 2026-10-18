@@ -355,7 +355,7 @@ export interface HardwareHole extends FeatureBase {
   /**
    * What the hole is *for*. Not what size it is — that is the radius, and it
    * stays independent because this application does not know what hole a
-   * given snap needs until the hardware library lands in v1.1.
+   * given snap needs until the hardware library (roadmap 9.3) lands.
    */
   readonly hardwareType: 'rivet' | 'snap' | 'screw' | 'eyelet' | 'other';
 }
@@ -445,10 +445,6 @@ export function roleOf(feature: Feature): LayerRole {
   }
 }
 
-export function isCutContour(feature: Feature): feature is CutContour {
-  return feature.kind === 'cut-contour';
-}
-
 /** Every feature in the project, with the part it belongs to. */
 export function* eachFeature(project: Project): Generator<{ part: Part; feature: Feature }> {
   for (const part of project.parts) {
@@ -464,8 +460,4 @@ export function findFeature(
     if (entry.feature.id === id) return entry;
   }
   return null;
-}
-
-export function findPart(project: Project, id: PartId): Part | null {
-  return project.parts.find((p) => p.id === id) ?? null;
 }

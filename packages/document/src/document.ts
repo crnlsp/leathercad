@@ -36,14 +36,6 @@ export function partSelectionOf(ids: Iterable<PartId>): Selection {
   return { parts: new Set(ids), features: new Set() };
 }
 
-export function isSelected(selection: Selection, id: FeatureId): boolean {
-  return selection.features.has(id);
-}
-
-export function isPartSelected(selection: Selection, id: PartId): boolean {
-  return selection.parts.has(id);
-}
-
 /**
  * Every feature the selection stands for: the ones picked, and all of each
  * part picked by its heading — what a gesture on the selection acts on (Q30).
@@ -72,14 +64,6 @@ export function drawnBounds(resolved: ResolvedProject, only?: ReadonlySet<Featur
 /** Whether anything at all is picked, of either kind. */
 export function isEmptySelection(selection: Selection): boolean {
   return selection.parts.size === 0 && selection.features.size === 0;
-}
-
-export function toggleSelected(selection: Selection, id: FeatureId): Selection {
-  const next = new Set(selection.features);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  // Picking a feature means the part heading is no longer what is picked.
-  return { parts: new Set(), features: next };
 }
 
 /**

@@ -50,8 +50,6 @@ export interface CubicSegment {
 
 export type Segment = LineSegment | ArcSegment | CubicSegment;
 
-export type SegmentKind = Segment['kind'];
-
 /** A whole turn. `|sweepAngle|` never exceeds this. */
 export const FULL_TURN = Math.PI * 2;
 

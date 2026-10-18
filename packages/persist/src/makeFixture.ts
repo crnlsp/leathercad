@@ -9,7 +9,7 @@ import { polyline, uniformRadii } from '@leathercad/geometry';
  * whatever the migration chain grows to, it must still open this file and
  * produce this project.
  *
- * Regenerate with `pnpm --filter @leathercad/persist fixture`. Regenerating
+ * Regenerate with `UPDATE_FIXTURES=1 pnpm test packages/persist`. Regenerating
  * changes what version 1 *means*, so do it only when version 1 genuinely
  * changes — which, once something has shipped, is never (docs/file-format.md
  * §4.2 rule 1).

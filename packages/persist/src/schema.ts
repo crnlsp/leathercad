@@ -259,5 +259,4 @@ export const ManifestSchema = z.object({
   modifiedUtc: z.string(),
 });
 
-export type StoredProject = z.infer<typeof ProjectSchema>;
 export type Manifest = z.infer<typeof ManifestSchema>;
