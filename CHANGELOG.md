@@ -7,6 +7,40 @@ yet is listed in the open
 [release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
 Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
 
+## [1.5.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.3.5...leathercad-v1.5.0) (2026-10-18)
+
+
+### Features
+
+* **desktop:** a bar under the selected piece says how its stitching came out and offers the next step (U.17) ([#104](https://github.com/crnlsp/leathercad/issues/104)) ([9f088eb](https://github.com/crnlsp/leathercad/commit/9f088ebaa2f8958333b87d7feb93892c13b14dfc))
+* **desktop:** a selected outline's sizes sit beside it on the board, typed there, and a size the rectangle would not draw as stored is refused (U.14) ([#95](https://github.com/crnlsp/leathercad/issues/95)) ([423d5e4](https://github.com/crnlsp/leathercad/commit/423d5e48907236f4e73267fb465d2bd7d0da83a1))
+* **desktop:** a zoom control says the zoom, Ctrl+0 is true size, and Shift+1 and Shift+2 fit (U.4) ([#78](https://github.com/crnlsp/leathercad/issues/78)) ([944f8f2](https://github.com/crnlsp/leathercad/commit/944f8f28e49388fcc593e0976869e4f845551652))
+* **desktop:** keys can be changed in Settings › Keyboard shortcuts, and every cap follows (U.12) ([#101](https://github.com/crnlsp/leathercad/issues/101)) ([594f30e](https://github.com/crnlsp/leathercad/commit/594f30e2f74565000444cbb1a6abc7a93e18db29))
+* **desktop:** Parts and Properties fold to strips, focus mode hides both, and the board gets the room at every window size (U.5) ([#85](https://github.com/crnlsp/leathercad/issues/85)) ([cd17f45](https://github.com/crnlsp/leathercad/commit/cd17f45798a094909863442ed2a5e0c7fbc83822))
+* **desktop:** Parts is a tree of pieces that fold, shows hole counts at rest, and answers its own keys (U.8) ([#89](https://github.com/crnlsp/leathercad/issues/89)) ([9d5dca0](https://github.com/crnlsp/leathercad/commit/9d5dca0de2257289f5f5a141c371c6bce0bc293c))
+* **desktop:** Properties follows the work, keeps Delete at its foot, and says what the job is (U.6) ([#79](https://github.com/crnlsp/leathercad/issues/79)) ([8104fe4](https://github.com/crnlsp/leathercad/commit/8104fe4aef08e2737d70de467aaf7e1d76e05ded))
+* **desktop:** Properties shows the stitch margin and iron while a piece is drawn, and editing them edits My tools (U.18) ([#106](https://github.com/crnlsp/leathercad/issues/106)) ([29b321a](https://github.com/crnlsp/leathercad/commit/29b321a3b5f4164a93ab61ee721ba2a8227af742))
+* **desktop:** Settings › My tools keeps the maker's irons, margin and leather, and new hole sets, stitch lines and folds start from them (U.13) ([#82](https://github.com/crnlsp/leathercad/issues/82)) ([b754880](https://github.com/crnlsp/leathercad/commit/b754880f8dd0d9dadcaefe0fe12b07e4d7f14116))
+* **desktop:** sizes can be typed as sums and in inches or centimetres, and a size that cannot be read says why (U.15) ([#80](https://github.com/crnlsp/leathercad/issues/80)) ([8ac7a52](https://github.com/crnlsp/leathercad/commit/8ac7a525f27f5ffa2ee052de9361552fbd4a9d8b))
+* **desktop:** the legend opens with names at the canvas's foot, and folds to a remembered chip (U.10) ([#96](https://github.com/crnlsp/leathercad/issues/96)) ([f03f62e](https://github.com/crnlsp/leathercad/commit/f03f62efd81b06dab02f6197ec2acc5f8a28aed5))
+* **desktop:** the Sheets view has its own rail, Parts and Properties, and its labels read (U.9) ([#99](https://github.com/crnlsp/leathercad/issues/99)) ([03b81d4](https://github.com/crnlsp/leathercad/commit/03b81d4df97f305b4ca01002099c3c17812be287))
+* **desktop:** the top bar says whether your work is saved, switches Design and Sheets, and shows the problems on Print before you print (U.7) ([#86](https://github.com/crnlsp/leathercad/issues/86)) ([f1fdcf3](https://github.com/crnlsp/leathercad/commit/f1fdcf3f378a0c933999ca59f3be1d8df7102453))
+* **desktop:** the window's own controls are dark, focus rings tan, and nothing reaches the network (U.20) ([#92](https://github.com/crnlsp/leathercad/issues/92)) ([b2c81ff](https://github.com/crnlsp/leathercad/commit/b2c81ff3cb548ebc55e7fc2b38b9c661605c61fe))
+* **desktop:** the work bar shows short hints with keys as caps, and ? all keys never drops (U.11) ([#100](https://github.com/crnlsp/leathercad/issues/100)) ([456938a](https://github.com/crnlsp/leathercad/commit/456938a1ab56b66b1e76fe81ab5161b826b6e5f8))
+* **desktop:** type a rectangle's size while drawing it, 105 Tab 75 Tab 8 Enter (U.16) ([#98](https://github.com/crnlsp/leathercad/issues/98)) ([37824b6](https://github.com/crnlsp/leathercad/commit/37824b61fb63e6ef85e373466fe61778615a74d7))
+
+
+### Bug Fixes
+
+* **desktop:** F11 and Ctrl+Q can be captured in Settings (U.12) ([#102](https://github.com/crnlsp/leathercad/issues/102)) ([a789bc9](https://github.com/crnlsp/leathercad/commit/a789bc9c4e5ec60d4e6aa008ab7f4bc238f55951))
+* **desktop:** Parts keeps a hole set's count in view while its lock and eye are shown (U.8) ([#90](https://github.com/crnlsp/leathercad/issues/90)) ([bfc878e](https://github.com/crnlsp/leathercad/commit/bfc878e69052172d9b1b3ce197c9fa396d269c7d))
+* **desktop:** the window checked as one tool — the keys alone draw, a typed size lands in its chip, and the legend keeps off the ruler (U.19) ([#107](https://github.com/crnlsp/leathercad/issues/107)) ([fae1665](https://github.com/crnlsp/leathercad/commit/fae1665ba7a09c5ce8c4083751f8d2b35efaf271))
+
+
+### Documentation
+
+* **roadmap:** 1.5 is done — R9 goes into the release notes, and R8 and R10 move to 1.6 unverified ([#110](https://github.com/crnlsp/leathercad/issues/110)) ([ac05e16](https://github.com/crnlsp/leathercad/commit/ac05e168b32cb8464c3710d13f42d608cb80d39e))
+
 ## [1.3.5](https://github.com/crnlsp/leathercad/compare/leathercad-v1.3.0...leathercad-v1.3.5) (2026-10-09)
 
 
