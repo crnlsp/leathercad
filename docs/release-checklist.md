@@ -9,8 +9,9 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-18, for check 13, ⌘A on macOS (U.20), the Flatpak among the release's
-files, and R10 left unverified for 1.5. First written for 1.0
+**Last updated:** 2026-10-18, for check 14, recovery after a renderer dies on macOS; before
+that for check 13, ⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left
+unverified for 1.5. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
@@ -227,6 +228,19 @@ which one wins ([#97](https://github.com/crnlsp/leathercad/issues/97)).
 
 Record the result on #97. A failure is not on the list of blockers above, but say so in the release
 pull request, so the maintainer decides whether it waits.
+
+### 14. Unsaved work after a window's renderer dies, on macOS
+
+Since the post-1.5 stabilization, in the same Mac session as check 12. On macOS a closed window does
+not quit the app, so a new window opens in the same process; it must offer the dead window's work,
+not delete it. `recovery.test.ts` checks the files; nobody has watched it on a Mac.
+
+1. Open the sample project and make an edit. Wait half a minute, for the recovery copy to be written.
+2. In Activity Monitor, force-quit *LeatherCAD Helper (Renderer)*. The window goes blank.
+3. Close the window, then click LeatherCAD in the Dock: the new window offers the unsaved work.
+   *Recover* brings back the edit.
+
+A failure is lost work, which is a blocker above.
 
 ## After it passes
 

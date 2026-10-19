@@ -47,9 +47,13 @@ export function processIsAlive(pid: number): boolean {
  * the session and the liveness check are given, so it is tested on real files.
  */
 export class RecoveryStore {
-  readonly id: string;
+  /** This session's copy: `<pid>-<start>`, moved on each time its renderer dies. */
+  private id: string;
   private readonly adopted = new Set<string>();
-  private keep = false;
+  /** Copies of this session's own renderers that died: offered, never cleared. */
+  private readonly orphaned = new Set<string>();
+  /** How many of this session's renderers have died: each next one is named past them. */
+  private deaths = 0;
   /** Set by a clean exit: from here on, a copy that lands is removed. */
   private released = false;
   /** This session's writes and clears, one after another in the order asked. */
@@ -57,7 +61,7 @@ export class RecoveryStore {
 
   constructor(
     private readonly directory: string,
-    session: { readonly pid: number; readonly startedAt: number },
+    private readonly session: { readonly pid: number; readonly startedAt: number },
     private readonly isAlive: (pid: number) => boolean = processIsAlive,
   ) {
     this.id = `${String(session.pid)}-${String(session.startedAt)}`;
@@ -72,17 +76,21 @@ export class RecoveryStore {
    * a stale copy, which a later start would offer as newer unsaved work.
    */
   write(data: Uint8Array): Promise<void> {
+    // Named when asked: a write the renderer asked for just before it died
+    // lands in that renderer's copy, not the next window's.
+    const path = this.pathOf(this.id);
     return this.inOrder(async () => {
       if (this.released) return;
-      await writeFileAtomic(this.pathOf(this.id), data);
+      await writeFileAtomic(path, data);
       // A clean exit released this session while the write was in flight.
-      if (this.released) await unlink(this.pathOf(this.id)).catch(() => undefined);
+      if (this.released) await unlink(path).catch(() => undefined);
     });
   }
 
   /** Removes this session's copy: the project is saved, or empty, again. */
   clear(): Promise<void> {
-    return this.inOrder(() => unlink(this.pathOf(this.id)).catch(() => undefined));
+    const path = this.pathOf(this.id);
+    return this.inOrder(() => unlink(path).catch(() => undefined));
   }
 
   /** Runs `task` after everything asked before it, whether that succeeded or not. */
@@ -115,7 +123,8 @@ export class RecoveryStore {
       const copy = COPY.exec(name);
       if (copy === null) continue;
       const id = name.slice(0, -'.lcp'.length);
-      if (id === this.id || this.adopted.has(id) || this.isAlive(Number(copy[1]))) continue;
+      if (id === this.id || this.adopted.has(id)) continue;
+      if (!this.orphaned.has(id) && this.isAlive(Number(copy[1]))) continue;
       const info = await stat(join(this.directory, name)).catch(() => null);
       if (info !== null) candidates.push({ id, modified: info.mtime });
     }
@@ -151,9 +160,21 @@ export class RecoveryStore {
     await rename(this.pathOf(id), `${this.pathOf(id)}.corrupt`).catch(() => undefined);
   }
 
-  /** The window crashed: everything stays on disk for the next start to offer. */
-  keepOnQuit(): void {
-    this.keep = true;
+  /**
+   * The window's renderer died, taking its unsaved work with it. The process
+   * lives on — to a quit, or on macOS to a new window — so the dead renderer's
+   * copy, and any it had taken over, are set aside: offered to the next window
+   * though this process lives, never cleared by it, and kept at quit for the
+   * next start unless a window takes them over again. The next window writes
+   * and clears a copy of its own.
+   */
+  rendererGone(): void {
+    this.orphaned.add(this.id);
+    for (const id of this.adopted) this.orphaned.add(id);
+    this.adopted.clear();
+    // A start time no other process of this pid can have: this one is running.
+    const next = this.session.startedAt + ++this.deaths;
+    this.id = `${String(this.session.pid)}-${String(next)}`;
   }
 
   /**
@@ -161,7 +182,6 @@ export class RecoveryStore {
    * because the process is on its way out and will not wait for a promise.
    */
   releaseOnQuit(): void {
-    if (this.keep) return;
     this.released = true;
     for (const id of [this.id, ...this.adopted]) {
       try {
