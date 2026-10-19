@@ -103,6 +103,12 @@ export function useProjectFile(
   blank: () => Document,
   /** The interface's words, for the file dialogs. */
   t: Translate,
+  /**
+   * Called once a project has been opened, the sample or recovered work among
+   * them — not for *New* — so the board can frame it rather than keep the camera
+   * the last one left.
+   */
+  onOpened: () => void = () => undefined,
 ): {
   state: ProjectFileState;
   /** True once the project is written; false when the maker cancelled or the write failed. */
@@ -207,11 +213,12 @@ export function useProjectFile(
         createdUtc.current = loaded.manifest.createdUtc;
         setState({ path: target, error: null, savedAt: null });
         void noteRecent(platform, target);
+        onOpened();
       } catch (error) {
         setState((previous) => ({ ...previous, error }));
       }
     },
-    [host, store],
+    [host, onOpened, store],
   );
 
   const openSample = useCallback(async () => {
@@ -221,10 +228,11 @@ export function useProjectFile(
       savedDocument.current = store.getState().document;
       createdUtc.current = undefined;
       setState({ path: null, error: null, savedAt: null });
+      onOpened();
     } catch (error) {
       setState((previous) => ({ ...previous, error }));
     }
-  }, [host, store]);
+  }, [host, onOpened, store]);
 
   const open = useCallback(async () => {
     let target: string | null;
@@ -341,8 +349,9 @@ export function useProjectFile(
       savedDocument.current = null;
       createdUtc.current = undefined;
       setState({ path: null, error: null, savedAt: null });
+      onOpened();
     },
-    [store],
+    [onOpened, store],
   );
 
   const isDirty = useCallback(() => savedDocument.current !== store.getState().document, [store]);

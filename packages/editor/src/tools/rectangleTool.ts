@@ -1,4 +1,4 @@
-import { approxLte, formatMm, formatNumber } from '@leathercad/core';
+import { EPS_LENGTH, approxLte, approxZero, formatMm, formatNumber } from '@leathercad/core';
 import { rectShape } from '@leathercad/document';
 import { RectOps, Shapes, cornerRoom, uniformRadii, type CornerRadii } from '@leathercad/geometry';
 import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
@@ -181,17 +181,24 @@ export function createRectangleTool(nextId: () => string): Tool {
       if (state.kind !== 'spanning') return { items: [] };
 
       const { origin, width, height, corner } = shown(state);
-      const preview = pathItem('construction', Shapes.roundedRect(origin, width, height, corner), {
-        colour: CANVAS.overlay.preview,
-        widthPx: 1,
-        dashPx: [4, 3],
-      });
+      // Before the pointer has left the first corner there is no rectangle to
+      // outline: a 0 × 0 one is no shape, and building it would throw.
+      const preview =
+        approxZero(width, EPS_LENGTH) && approxZero(height, EPS_LENGTH)
+          ? []
+          : [
+              pathItem('construction', Shapes.roundedRect(origin, width, height, corner), {
+                colour: CANVAS.overlay.preview,
+                widthPx: 1,
+                dashPx: [4, 3],
+              }),
+            ];
       // Between the clicks the numbers are chips, which can be typed over;
       // while dragging they are this readout. A millimetre tool shows its numbers.
-      if (state.phase === 'placing') return { items: [preview] };
+      if (state.phase === 'placing') return { items: preview };
       return {
         items: [
-          preview,
+          ...preview,
           textItem(
             'annotation',
             { x: origin.x, y: origin.y + height + 3 },

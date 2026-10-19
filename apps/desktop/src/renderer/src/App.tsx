@@ -400,7 +400,9 @@ export function App({
   useEffect(() => store.subscribe(() => setStoreState(store.getState())), [store]);
 
   const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
-  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank, t);
+  // An opened project is shown whole, not wherever the last one left the camera.
+  const frameDrawing = useCallback(() => canvasRef.current?.fitDrawing(), []);
+  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank, t, frameDrawing);
   const dirty = file.savedDocument.current !== storeState.document;
 
   // The window says which project it holds, and whether it has unsaved work

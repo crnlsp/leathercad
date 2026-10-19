@@ -286,14 +286,18 @@ export function PrintPreview({
                     </option>
                   ))}
                 </select>
+              ) : printers === null ? (
+                // Asking CUPS takes a second or two: say so, rather than an
+                // empty Printer and a Print button disabled for no stated reason.
+                <p id={`${ids}printer`} data-testid="print-finding-printers">
+                  {t('printPreview.findingPrinters')}
+                </p>
               ) : (
-                printers !== null && (
-                  <p id={`${ids}printer`} data-testid="print-unavailable">
-                    {printers.available
-                      ? t('printPreview.noPrinters')
-                      : t(`printPreview.unavailable.${printers.reason}`)}
-                  </p>
-                )
+                <p id={`${ids}printer`} data-testid="print-unavailable">
+                  {printers.available
+                    ? t('printPreview.noPrinters')
+                    : t(`printPreview.unavailable.${printers.reason}`)}
+                </p>
               )}
             </div>
 
