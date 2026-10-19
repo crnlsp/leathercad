@@ -2,11 +2,11 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { launchApp } from './launchApp.js';
+import { openApp, openSample } from './launchApp.js';
 
 /**
  * U.17, R-14: the bar under the selected piece — how its stitching came out,
@@ -19,22 +19,8 @@ import { launchApp } from './launchApp.js';
 
 const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-bar-'));
 
-async function launch(
-  configHome: string = fresh(),
-): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  await app.evaluate(({ BrowserWindow }) => {
-    BrowserWindow.getAllWindows()[0]?.setSize(1440, 900);
-  });
-  return { app, window };
-}
-
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('open-sample').click();
-  await expect(window.getByTestId('part-count')).toHaveText('3');
-}
+const launch = (configHome: string = fresh()) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1440, 900] });
 
 /** Picks a feature in Parts, gives the keys to the board, and frames the piece at 50 %. */
 async function pick(window: Page, row: string): Promise<void> {

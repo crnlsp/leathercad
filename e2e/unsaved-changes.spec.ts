@@ -2,10 +2,10 @@ import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { drawAPanel, openApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -17,31 +17,6 @@ import { fromProjectMenu } from './projectMenu.js';
  * from the moment it opened, so a guard built on that would have nagged about
  * a blank page. See the pre-1.0 audit §2.2 and §5.
  */
-
-async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp();
-  const window = await app.firstWindow();
-  // A refused unload makes Chromium report a "leave page?" dialog over the
-  // debugging protocol, which Electron never shows — the window just stays.
-  // Playwright's automatic dismissal then finds no dialog and throws, so the
-  // tests dismiss it themselves and let that pass.
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
-
-/** Draws one outline, which makes the project dirty. */
-async function drawAPanel(window: Page, parts = '1'): Promise<void> {
-  await window.getByTestId('tool-rectangle').click();
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  const x = parts === '1' ? 150 : 350;
-  await window.mouse.move(box.x + x, box.y + 150);
-  await window.mouse.down();
-  await window.mouse.move(box.x + x + 150, box.y + 260, { steps: 5 });
-  await window.mouse.up();
-  await expect(window.getByTestId('part-count')).toHaveText(parts);
-}
 
 /** Asks the window to close, as the window manager's close button does. */
 async function requestClose(app: ElectronApplication): Promise<void> {
@@ -62,7 +37,7 @@ async function closed(app: ElectronApplication): Promise<boolean> {
 }
 
 test('an untouched project is not unsaved, and closes without asking', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     await expect(window.getByTestId('status-bar')).not.toContainText('unsaved');
@@ -75,9 +50,9 @@ test('an untouched project is not unsaved, and closes without asking', async () 
 });
 
 test('closing with unsaved work asks, and Cancel keeps the work', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
 
     await requestClose(app);
@@ -110,9 +85,9 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
 });
 
 test('New asks first, and starts a clean, empty project', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
 
     await fromProjectMenu(window, 'new');
     const dialog = window.getByTestId('unsaved-dialog');
@@ -140,9 +115,9 @@ test('New asks first, and starts a clean, empty project', async () => {
 
 test('Save in the question saves first, and a cancelled save cancels the whole action', async () => {
   const file = join(tmpdir(), `leathercad-e2e-unsaved-${Date.now()}.lcp`);
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     const dialog = window.getByTestId('unsaved-dialog');
 
     // The maker backs out of the save dialog: nothing is replaced.
@@ -174,7 +149,7 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
 
     // …and a dirty one asks, with the same question.
-    await drawAPanel(window, '2');
+    await drawAPanel(window, { left: 350, parts: '2' });
     await fromProjectMenu(window, 'open');
     await expect(dialog).toContainText('Opening another project');
     await dialog.getByTestId('unsaved-cancel').click();
@@ -193,9 +168,9 @@ test('Save in the question saves first, and a cancelled save cancels the whole a
 test('a reload asks as a close does', async () => {
   // Electron's default menu offers View › Reload (Ctrl+R), which unloads the
   // page exactly as a close does — and threw the work away just as silently.
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0]?.webContents.reload(),
     );
@@ -209,9 +184,9 @@ test('a reload asks as a close does', async () => {
 });
 
 test('undoing back to what was saved is not unsaved', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('part-count')).toHaveText('0');

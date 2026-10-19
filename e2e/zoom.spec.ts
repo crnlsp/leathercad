@@ -1,8 +1,8 @@
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { launchApp } from './launchApp.js';
+import { openApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -13,15 +13,6 @@ import { fromProjectMenu } from './projectMenu.js';
 
 /** CSS pixels per millimetre at true size: 96 to the inch. */
 const TRUE_SIZE = 96 / 25.4;
-
-async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp();
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
 
 /** The zoom the control says, as a number. */
 async function percent(window: Page): Promise<number> {
@@ -40,7 +31,7 @@ async function press(
 }
 
 test('the control follows the zoom live, and Ctrl+0 is true size: 100 mm is 377.95 px', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     await window.getByTestId('tool-select').click();
     const board = (await window.getByTestId('editor-canvas').boundingBox())!;
@@ -79,7 +70,7 @@ test('the control follows the zoom live, and Ctrl+0 is true size: 100 mm is 377.
 });
 
 test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its heading included', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     await window.getByTestId('open-sample').click();
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
@@ -135,7 +126,7 @@ test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its h
 });
 
 test('the zoom menu works by keyboard alone, and gives focus back', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     const level = window.getByTestId('zoom-level');
     await level.focus();
@@ -178,7 +169,7 @@ test('the zoom menu works by keyboard alone, and gives focus back', async () => 
 });
 
 test('a press on the control with the pointer leaves the keys to the board', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     const level = window.getByTestId('zoom-level');
     await window.keyboard.press('Control+0');
@@ -205,7 +196,7 @@ test('a press on the control with the pointer leaves the keys to the board', asy
 });
 
 test('the same control drives the Sheets view, where Fit selection says why it cannot', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     await window.getByTestId('open-sample').click();
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
