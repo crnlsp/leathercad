@@ -276,7 +276,7 @@ rectangle: the least width and height — on each pair of sides, the longer sum 
 sharing one — in which every radius is drawn as asked, so a typed width or height that would
 shrink them is refused too. Both property-tested against `fittedRadii` and `roundedRect`.
 
-### 4.1 Editing a drawn path's points (3.9b)
+### 4.7 Editing a drawn path's points (3.9b)
 
 ```ts
 movePathVertex(p, index, to): PathEdit | null;
@@ -481,9 +481,10 @@ just as they did to a library's:
 ### 6.4 Offset direction
 
 Signed distance is defined relative to path direction: positive is to the **left** of travel.
-"Inward" and "outward" are domain concepts that require knowing the winding of a closed contour, so
-the domain layer normalises contour winding (outer contours counter-clockwise, holes clockwise) and
-converts inward/outward into a sign. Geometry stays direction-based and agnostic.
+"Inward" and "outward" are domain concepts. The domain does **not** normalise winding — reversing a
+path would renumber its anchors — so it resolves them against the part's material and converts
+them into a sign ([domain-model](domain-model.md) §3.1, §4.3). Geometry stays direction-based and
+agnostic.
 
 ## 7. Intersections
 
@@ -593,28 +594,34 @@ packages/geometry/src/
 ├── index.ts                 # public API surface — the only entry point
 ├── vec2.ts
 ├── mat2x3.ts
+├── glide.ts                 # glide reflections: a mirror and a slide along it
 ├── rect.ts                  # axis-aligned bounding boxes
+├── polynomial.ts            # the root finding the curves need
+├── tolerance.ts             # the export and screen tolerances, and arc steps for one
+├── shapes.ts                # Path constructors
 ├── segment/
 │   ├── index.ts             # the union + dispatch
+│   ├── types.ts
 │   ├── line.ts
 │   ├── arc.ts
 │   └── cubic.ts
 ├── path/
+│   ├── index.ts
 │   ├── path.ts              # construction, invariants, validation
-│   ├── measure.ts           # PathMeasure, arc-length
+│   ├── measure.ts           # arc length, points along a path
+│   ├── area.ts              # signed area, winding
 │   ├── flatten.ts
-│   ├── bbox.ts              # exact bounds
-│   ├── winding.ts
 │   └── contains.ts
-├── shapes.ts                # Path constructors
-├── ops/
-│   ├── offset.ts
-│   ├── boolean.ts
-│   ├── intersect.ts
-│   ├── distribute.ts
-│   ├── trim.ts
-│   └── fillet.ts            # corner rounding, post-MVP
+└── ops/
+    ├── offset.ts
+    ├── intersect.ts
+    ├── distribute.ts
+    ├── subPath.ts
+    └── editPath.ts          # a drawn path's points (§4.7)
 ```
+
+Not built yet: booleans (roadmap 9.5) and robust offsetting (9.11), which will settle where trimming
+lives.
 
 Tests are co-located (`vec2.test.ts` beside `vec2.ts`), with golden fixtures under
 `packages/geometry/__golden__/`.

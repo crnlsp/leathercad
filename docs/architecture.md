@@ -125,7 +125,8 @@ Strict, one-directional dependency graph. An arrow means "may import".
                      └──────┬───────┘
                             ▼
                      ┌──────────────┐
-                     │      ui      │  React panels, dialogs, canvas host
+                     │      ui      │  Reserved: the React panels, dialogs and canvas host
+                     │              │  live in apps/desktop/src/renderer
                      └──────┬───────┘
                             ▼
                      ┌──────────────┐
@@ -174,9 +175,11 @@ an ADR, and the layering rules gain a line for it then.
 
 1. `geometry` may import only `core`. It must not reference the DOM, canvas, pixels, DPI, colour,
    or any file format.
-2. `domain` may import `core` and `geometry`. It must not know about rendering or interaction.
+2. `domain` may import `core`, `geometry` and `typography`. It must not know about rendering or
+   interaction.
 3. `document` may import `core`, `geometry`, `domain`. It must not know about tools or the viewport.
-4. Nothing may import `ui`, `editor`, or `apps/desktop`.
+4. No package below them may import `ui`, `editor` or `apps/desktop`; only those three import one
+   another.
 5. `export` and `print` must not import `editor` or `ui` — so both are runnable headless, from
    tests and from the CLI.
 6. No package may import Electron except `apps/desktop`.
@@ -560,9 +563,11 @@ snapping and boolean failures that are not reproducible. *Mitigation:* one epsil
 [geometry.md](geometry.md) §3.
 
 **R6 — Y-axis ambiguity.** Mixing Y-up and Y-down produces mirrored exports that nobody notices
-until something is cut. *Mitigation:* the model is **Y-up**; the flip happens in exactly two places
-(the Canvas2D backend and the SVG writer) and both have tests asserting that a point at y = +10
-appears *above* one at y = 0.
+until something is cut. *Mitigation:* the model is **Y-up**. The screen flip is defined once, in
+`worldToScreen` (`render/src/view.ts`), and applied by the two screen backends, Canvas2D and SVG;
+`export/svg` has its own, because a file has no viewport; PDF and DXF are Y-up already. The view,
+the SVG export and the DXF have tests asserting that a point at y = +10 appears *above* one at
+y = 0 (CLAUDE.md invariant 2).
 
 **R7 — Printing through the browser.** `window.print()`, CSS `@page`, and "fit to page" silently
 destroy scale. *Mitigation:* generate PDFs from our own vector writer; never call the webview's

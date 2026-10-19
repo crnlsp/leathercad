@@ -62,5 +62,5 @@ body:
     id: log
     attributes:
       label: Log
-      description: Help → Show Log Folder opens it. It never leaves your machine unless you attach it here.
+      description: Help → About LeatherCAD → Show log folder opens it. It never leaves your machine unless you attach it here.
       render: text

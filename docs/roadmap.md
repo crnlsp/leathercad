@@ -132,8 +132,10 @@ process kill; `pnpm test:visual` and `pnpm test:packaged`; HiDPI, Windows and ma
 **Performance, recorded as information, not targets:** building the display list for the
 636-hole benchmark strap takes 87 µs (13 µs before F.7); offsetting a 500-point traced outline
 takes ~74 ms, over the 50 ms budget on its own; and a huge drawing at the smallest pitch makes
-millions of holes, so a hole-count budget may be wanted one day. None is to be optimised until it
-is felt.
+millions of holes, so a hole-count budget may be wanted one day. Moving the pointer over the sample
+wallet, hovering or dragging, kept every frame at about 6 ms and no pointer event over 16 ms in the
+built app (2026-10-18), although each move re-renders the whole window. None is to be optimised
+until it is felt.
 
 ### Release engineering
 
@@ -372,6 +374,30 @@ most from.
 **Done when:** [geometry](geometry.md) §6.3's rules hold — integers at the quantum, `offsetPath`
 still the entry point, areas tested rather than bounds; a stitch line follows a thumb scoop; and
 `area(A ∪ B) + area(A ∩ B) = area(A) + area(B)` holds as a property. **Not in it:** nesting.
+
+### Found by the post-1.5 stabilization (2026-10-19)
+
+Real, and not fixed in that pass because each needs a decision or a change of its own. None is in a
+release until it is moved into one.
+
+- **Q35 A save is not flushed to disk before it replaces the file.** `writeFileAtomic`
+  (`apps/desktop/src/main/atomicWrite.ts`) renames a temporary file into place without `fsync`ing
+  it or its folder, so a power cut just after a save can leave an empty `.lcp` on some file systems;
+  the rename also replaces a symlink with a plain file and resets the file's permissions.
+- **Q36 Ctrl+S during a drag saves the drag's preview,** not the document before it
+  (`useProjectFile.ts`); the crash-recovery copy already waits for the gesture to end.
+- **Q37 Cmd+Q, then *Discard*, closes the window but leaves the app running on macOS** — the quit
+  was cancelled by the question, and Discard only closes the window. Unverified: no Mac. Check it
+  in the same Mac session as release-checklist check 12.
+- **Q38 Local epsilons,** which invariant 7 forbids: `glide.ts`, `mat2x3.ts`, `segment/types.ts`,
+  `arc.ts` and `flatten.ts`'s step counts, `polynomial.ts`, `export/sheetsDisplay.ts` and
+  `persist/schema.ts`; and `arc.ts`'s `toCubics` checks a radius against `EPS_ANGLE`. Each moves
+  numbers on the geometry or export path, so they want one change with property tests and a lint
+  rule for `e-N` literals outside `core`.
+- **Q39 A tool under way is not reset when a project opens** — only an open drag is rolled back,
+  so a polyline half drawn continues into the new project.
+- **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF
+  writers that ship; fixing it moves the committed baseline.
 
 ### Also later, each already decided in principle
 

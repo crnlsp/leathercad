@@ -317,12 +317,8 @@ and everything past the loader assumes a sound graph
 
 - Parse failures produce a **path-qualified message** (`parts[2].features[0].source.distanceMm:
   expected number, got string`), not "invalid file".
-- Referential integrity is checked after schema parsing: every `fromId`, `stitchLineId`,
-  `materialId`, and `ironPresetId` must resolve. A dangling reference becomes a
-  `BROKEN_DERIVATION` diagnostic, not a load failure — the user should get their file back with a
-  problem flagged, not a refusal.
-- Cycle detection runs on load. A cyclic file (only reachable via hand-editing or a bug) loads with
-  the offending edges severed and an error diagnostic.
+- A part's structure is checked the same way (S5, S6): a part with two outlines, or an outline that
+  encloses nothing, refuses the file. Only hand-editing or a bug can make such a file.
 - Numeric sanity: reject `NaN`, `Infinity`, and coordinates outside ±100 000 mm.
 
 **Principle: recover where recovery is unambiguous; refuse where it is not.** A user's project file
@@ -488,5 +484,5 @@ place.
 7. **Unknown-field preservation.** A document with extra properties survives a load/save cycle,
    byte for byte, at any object in it. It also survives the commands that copy the objects they
    edit (`unknownFields.test.ts` in `persist` and `apps/desktop`).
-8. **Referential integrity.** A dangling `fromId` loads with a `BROKEN_DERIVATION` diagnostic rather
-   than throwing.
+8. **Referential integrity.** A dangling reference or a cycle is refused with an
+   `InvalidProjectFileError` naming the feature, never loaded half-broken and never a crash.

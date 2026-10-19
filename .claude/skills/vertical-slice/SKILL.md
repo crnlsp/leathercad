@@ -13,15 +13,8 @@ slice ends with the repo broken, and no slice is "just the model layer, UI next 
 1. **Read the slice** in `docs/roadmap.md` and restate its acceptance criteria in your own words.
    If the slice has no written acceptance criteria, write them first and get them confirmed — a
    slice without observable criteria cannot be finished, only abandoned.
-2. **Read the doc that governs the layer** you are about to touch:
-
-   | Touching | Read |
-   |---|---|
-   | `packages/geometry`, `packages/core` | `docs/geometry.md`, especially §12 |
-   | `packages/domain` | `docs/domain-model.md`, `docs/glossary.md` |
-   | `packages/persist` | `docs/file-format.md` |
-   | `packages/export`, `packages/print` | `docs/printing.md` |
-   | anything structural | `docs/architecture.md` |
+2. **Read the doc that governs the layer** you are about to touch: the table under *Working here*
+   in `CLAUDE.md` says which (`docs/geometry.md` §12 for `packages/geometry` and `packages/core`).
 
 3. **Say what you will change**, in which packages, in what order. Check it against the layer graph
    in `CLAUDE.md` — if the change needs a new edge in that graph, that is an architecture decision
