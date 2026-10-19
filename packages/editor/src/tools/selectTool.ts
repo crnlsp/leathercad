@@ -93,6 +93,13 @@ export function createSelectTool(): Tool {
         state = { kind: 'moving', startMm: state.startMm, moving: features, refusal: null };
       }
 
+      // Undo, or a command, cancelled the move under the pointer.
+      if (state.kind === 'moving' && !ctx.store.inTransaction) {
+        state = { kind: 'idle' };
+        ctx.invalidate();
+        return;
+      }
+
       if (state.kind === 'moving') {
         const delta = { x: event.at.x - state.startMm.x, y: event.at.y - state.startMm.y };
         const { document } = ctx.store.getState();

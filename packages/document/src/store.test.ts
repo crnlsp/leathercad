@@ -217,10 +217,115 @@ describe('transactions', () => {
     expect(store.getState().canUndo).toBe(false);
   });
 
-  it('dispatch outside a transaction still works', () => {
+  it('a preview with no transaction open changes nothing', () => {
+    // A gesture that undo cancelled keeps moving the pointer: its previews must
+    // not each become a step of history, applied onto one another.
     const store = new DocumentStore(docWithRect());
+    const start = store.getState().document;
     store.preview(renameFeature('feat-1', 'Direct'));
-    expect(store.getState().canUndo).toBe(true);
+    expect(store.getState().document).toBe(start);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('a drag that undo cancelled stays cancelled while the pointer keeps moving', () => {
+    const store = new DocumentStore(docWithRect());
+    const start = store.getState().document;
+    store.begin({ action: 'move' });
+    store.preview(translateFeatures(['feat-1'], { x: 5, y: 0 }));
+    store.undo();
+    for (let i = 6; i <= 15; i++) store.preview(translateFeatures(['feat-1'], { x: i, y: 0 }));
+    store.commit();
+
+    expect(store.getState().document).toBe(start);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('a command during a drag cancels the drag, then applies to what was there before it', () => {
+    const store = new DocumentStore(docWithRect());
+    const start = store.getState().document;
+    store.begin({ action: 'move' });
+    store.preview(translateFeatures(['feat-1'], { x: 25, y: 0 }));
+    store.dispatch(deleteFeatures(['feat-1']));
+    // The pointer keeps moving, then lets go.
+    store.preview(translateFeatures(['feat-1'], { x: 30, y: 0 }));
+    store.commit();
+
+    expect(store.getState().document.project.parts[0]!.features).toHaveLength(0);
+    store.undo();
+    expect(store.getState().document).toBe(start);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('redo during a drag cancels the drag, and never records the preview', () => {
+    const store = new DocumentStore(docWithRect());
+    store.dispatch(renameFeature('feat-1', 'Renamed'));
+    store.undo();
+    const start = store.getState().document;
+
+    store.begin({ action: 'move' });
+    store.preview(translateFeatures(['feat-1'], { x: 25, y: 0 }));
+    store.redo();
+    store.undo();
+
+    expect(store.getState().document).toBe(start);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('never makes more undo steps than commits and commands, in any order of gesture events', () => {
+    type Step =
+      | { readonly kind: 'begin' | 'commit' | 'rollback' | 'undo' | 'redo' | 'dispatch' }
+      | { readonly kind: 'preview'; readonly dx: number };
+    const stepArb: fc.Arbitrary<Step> = fc.oneof(
+      fc.constantFrom<Step>(
+        { kind: 'begin' },
+        { kind: 'commit' },
+        { kind: 'rollback' },
+        { kind: 'undo' },
+        { kind: 'redo' },
+        { kind: 'dispatch' },
+      ),
+      fc.integer({ min: 1, max: 50 }).map((dx): Step => ({ kind: 'preview', dx })),
+    );
+
+    fc.assert(
+      fc.property(fc.array(stepArb, { maxLength: 40 }), (steps) => {
+        const store = new DocumentStore(docWithRect());
+        const start = store.getState().document;
+        let recorded = 0;
+        let renames = 0;
+        for (const step of steps) {
+          switch (step.kind) {
+            case 'begin':
+              store.begin({ action: 'move' });
+              break;
+            case 'preview':
+              store.preview(translateFeatures(['feat-1'], { x: step.dx, y: 0 }));
+              break;
+            case 'commit':
+              if (store.inTransaction) recorded++;
+              store.commit();
+              break;
+            case 'dispatch':
+              recorded++;
+              store.dispatch(renameFeature('feat-1', `Name ${String(++renames)}`));
+              break;
+            default:
+              store[step.kind]();
+          }
+        }
+        store.rollback();
+
+        let undos = 0;
+        while (store.getState().canUndo) {
+          store.undo();
+          undos++;
+        }
+        // A redo can bring back at most what was recorded, so the history can
+        // never hold more steps than the gestures and commands that made them.
+        expect(undos).toBeLessThanOrEqual(recorded);
+        expect(store.getState().document).toBe(start);
+      }),
+    );
   });
 });
 
