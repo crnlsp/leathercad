@@ -1,43 +1,9 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page,
-} from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { drawAPanel, openApp } from './launchApp.js';
 
 /** Slice 8.8: the right-click menu, on the board and in Parts. */
-
-const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
-
-async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: DESKTOP_DIR,
-    env: { ...process.env, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-ctx-')) },
-  });
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
-
-/** A 150 × 110 px panel whose left edge is at x = 150 on the canvas. */
-async function drawAPanel(window: Page, left: number): Promise<void> {
-  await window.getByTestId('tool-rectangle').click();
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  await window.mouse.move(box.x + left, box.y + 150);
-  await window.mouse.down();
-  await window.mouse.move(box.x + left + 150, box.y + 260, { steps: 5 });
-  await window.mouse.up();
-}
 
 /** Right-clicks the canvas at a point on it. */
 async function rightClick(window: Page, x: number, y: number): Promise<void> {
@@ -48,9 +14,9 @@ async function rightClick(window: Page, x: number, y: number): Promise<void> {
 const menu = (window: Page) => window.getByTestId('context-menu');
 
 test('a right-click selects what is under it and offers what it can take (8.8)', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window, 150);
+    await drawAPanel(window, { left: 150 });
     await window.getByTestId('tool-select').click();
 
     await rightClick(window, 150, 200);
@@ -67,10 +33,10 @@ test('a right-click selects what is under it and offers what it can take (8.8)',
 });
 
 test('a right-click inside a selection keeps all of it, and one undo takes the action back (8.8)', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window, 100);
-    await drawAPanel(window, 350);
+    await drawAPanel(window, { left: 100 });
+    await drawAPanel(window, { left: 350 });
     await window.getByTestId('tool-select').click();
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.mouse.click(box.x + 100, box.y + 200);
@@ -96,9 +62,9 @@ test('a right-click inside a selection keeps all of it, and one undo takes the a
 });
 
 test('a locked piece is still reached by a right-click on the board, to unlock it (8.8)', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window, 150);
+    await drawAPanel(window, { left: 150 });
     await rightClick(window, 150, 200);
     await window.getByTestId('context-lock').click();
     await window.getByTestId('tool-select').click();
@@ -119,9 +85,9 @@ test('a locked piece is still reached by a right-click on the board, to unlock i
 });
 
 test('Shift+F10 opens the menu about what is selected on the board, wherever focus is (8.8)', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window, 150);
+    await drawAPanel(window, { left: 150 });
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box.x + 150, box.y + 200);
@@ -144,9 +110,9 @@ test('Shift+F10 opens the menu about what is selected on the board, wherever foc
 });
 
 test('flipping a piece from its outline takes its rivet to the mirrored place, as one undo (Q28)', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window, 150);
+    await drawAPanel(window, { left: 150 });
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.getByTestId('tool-hardware').click();
     await window.mouse.click(box.x + 170, box.y + 205);
@@ -180,9 +146,9 @@ test('flipping a piece from its outline takes its rivet to the mirrored place, a
 });
 
 test('the menu opens from the keyboard on a Parts row, and Escape gives focus back (8.8)', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
-    await drawAPanel(window, 150);
+    await drawAPanel(window, { left: 150 });
     const row = window.locator('[data-testid^="feature-row-"]').first();
     await row.focus();
 

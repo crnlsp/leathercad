@@ -1,12 +1,7 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { expect, test, type Page } from '@playwright/test';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
-
-import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { launchApp } from './launchApp.js';
+import { withSample } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -19,21 +14,6 @@ import { resizeWindow } from './windowSize.js';
  * layout types there. The layout the app shows keys in is
  * `navigator.keyboard.getLayoutMap()`, stubbed here with a German one.
  */
-
-async function withSample(body: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const app = await launchApp({
-    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
-  });
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).not.toHaveText('0');
-    await body(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 /** A key press as a keyboard of another layout sends it. */
 async function press(

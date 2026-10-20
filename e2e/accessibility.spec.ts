@@ -1,4 +1,3 @@
-import AxeBuilder from '@axe-core/playwright';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,7 +6,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { launchApp } from './launchApp.js';
+import { launchApp, scanA11y, expectNoViolations } from './launchApp.js';
 
 /**
  * An automated accessibility scan of the running window.
@@ -50,15 +49,7 @@ test('the main window has no accessibility violations beyond those recorded', as
   // and the panels are on screen to be scanned. See shell.spec.ts.
   await expect(window.getByTestId('app-version')).not.toBeEmpty();
 
-  // Legacy mode runs axe inside the page. The default opens a scratch page to
-  // merge frame results, and Electron cannot create one — nor does it need
-  // to, with a single frame.
-  const results = await new AxeBuilder({ page: window })
-    .setLegacyMode(true)
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-    .analyze();
-
-  const found = results.violations.map((violation) => ({
+  const found = (await scanA11y(window)).map((violation) => ({
     rule: violation.id,
     impact: violation.impact,
     help: violation.help,
@@ -103,11 +94,7 @@ test('the F.2 layout at work has no accessibility violations either', async () =
     await window.getByTestId('toggle-properties').click();
     await expect(panel).toBeVisible();
 
-    const results = await new AxeBuilder({ page: window })
-      .setLegacyMode(true)
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-      .analyze();
-    const found = results.violations.map((violation) => ({
+    const found = (await scanA11y(window)).map((violation) => ({
       rule: violation.id,
       help: violation.help,
       first: violation.nodes[0]?.target.join(' '),
@@ -132,16 +119,7 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
   try {
     const window = await instance.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    const scan = async (what: string): Promise<void> => {
-      const results = await new AxeBuilder({ page: window })
-        .setLegacyMode(true)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-        .analyze();
-      const found = results.violations.map(
-        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
-      );
-      expect(found, what).toEqual([]);
-    };
+    const scan = (what: string): Promise<void> => expectNoViolations(window, what);
 
     await window.getByTestId('project-menu').click();
     await scan('the Project menu, with no recent projects');
@@ -207,16 +185,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await instance.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0]?.setSize(1440, 900);
     });
-    const scan = async (what: string): Promise<void> => {
-      const results = await new AxeBuilder({ page: window })
-        .setLegacyMode(true)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-        .analyze();
-      const found = results.violations.map(
-        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
-      );
-      expect(found, what).toEqual([]);
-    };
+    const scan = (what: string): Promise<void> => expectNoViolations(window, what);
 
     // A rectangle typed before any click (U.16), and After the outline (U.18).
     await window.getByTestId('tool-rectangle').click();

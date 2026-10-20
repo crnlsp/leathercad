@@ -1,7 +1,6 @@
-import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { withSample } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -9,19 +8,6 @@ import { resizeWindow } from './windowSize.js';
  * and a few words, per tool and state — the lowest-ranked dropping first as the
  * bar narrows, "? all keys" never, and none cut short by the edge.
  */
-
-async function withSample(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const app = await launchApp();
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 const hints = (window: Page): Locator => window.getByTestId('tool-how-to').locator('.work-hint');
 const words = (window: Page): Promise<string[]> =>

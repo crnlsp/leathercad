@@ -2,10 +2,10 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { openApp } from './launchApp.js';
 
 /**
  * U.13, R-15: Settings › My tools. The maker's irons are what a hole set's
@@ -15,13 +15,8 @@ import { launchApp } from './launchApp.js';
  * keeps its iron's name after the iron is renamed or deleted.
  */
 
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1400, 860));
-  return { app, window };
-}
+const launch = (configHome: string) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1400, 860] });
 
 async function myTools(window: Page): Promise<ReturnType<Page['getByTestId']>> {
   await window.getByTestId('settings').click();

@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { freshStateHome, launchApp } from './launchApp.js';
+import { freshStateHome, openApp } from './launchApp.js';
 
 /**
  * Slice 5.3b: crash recovery.
@@ -15,15 +15,9 @@ import { freshStateHome, launchApp } from './launchApp.js';
  * ~/.local/state/leathercad.
  */
 
-async function launch(state: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ state, env: { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' } });
-  const window = await app.firstWindow();
-  // See unsaved-changes.spec.ts: a refused unload reports a phantom dialog.
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
+// A copy every quarter second, so a test need not wait for one.
+const launch = (state: string) =>
+  openApp({ state, env: { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' } });
 
 const recoveryDir = (state: string): string => join(state, 'leathercad', 'recovery');
 const entries = (state: string): string[] =>

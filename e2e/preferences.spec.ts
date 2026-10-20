@@ -2,10 +2,10 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { drawAPanel, openApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -15,31 +15,9 @@ import { resizeWindow } from './windowSize.js';
  * next, which is what a restart is.
  */
 
-async function launch(
-  configHome: string,
-  env: Readonly<Record<string, string>> = {},
-): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome, ...env } });
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  // The frame is sized for a wide rail, so its remembered state shows.
-  await app.evaluate(({ BrowserWindow }) => {
-    BrowserWindow.getAllWindows()[0]?.setSize(1400, 860);
-  });
-  return { app, window };
-}
-
-async function drawAPanel(window: Page): Promise<void> {
-  await window.getByTestId('tool-rectangle').click();
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  await window.mouse.move(box.x + 150, box.y + 150);
-  await window.mouse.down();
-  await window.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
-  await window.mouse.up();
-  await expect(window.getByTestId('part-count')).toHaveText('1');
-}
+// The frame is sized for a wide rail, so its remembered state shows.
+const launch = (configHome: string, env: Readonly<Record<string, string>> = {}) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome, ...env }, size: [1400, 860] });
 
 /** The names under the Project menu's *Recent projects* (8.7), as it shows them now. */
 async function recentNames(window: Page): Promise<string[]> {
@@ -274,7 +252,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
 test('hiding a part lets go of what was selected in it (Q14)', async () => {
   const { window, app } = await launch(mkdtempSync(join(tmpdir(), 'leathercad-e2e-hide-')));
   try {
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await window.getByTestId('tool-select').click();
     await window
       .getByTestId('parts-list')

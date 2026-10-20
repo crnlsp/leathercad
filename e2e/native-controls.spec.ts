@@ -2,11 +2,11 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { freshStateHome, launchApp } from './launchApp.js';
+import { freshStateHome, launchApp, openApp } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -18,14 +18,8 @@ import { resizeWindow } from './windowSize.js';
 
 const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-u20-'));
 
-async function launch(
-  env: Record<string, string> = {},
-): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: fresh(), ...env } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
+const launch = (env: Record<string, string> = {}) =>
+  openApp({ env: { XDG_CONFIG_HOME: fresh(), ...env } });
 
 async function openSample(window: Page): Promise<void> {
   await window.getByTestId('help-menu').click();

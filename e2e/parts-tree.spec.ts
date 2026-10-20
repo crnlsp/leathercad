@@ -1,8 +1,7 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { openApp, withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -12,26 +11,6 @@ import { resizeWindow } from './windowSize.js';
  * board opens its piece and scrolls its row into view; and where a piece
  * prints is the Sheets view's to say.
  */
-
-async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp();
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
-
-async function withSample(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const { app, window } = await launch();
-  try {
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 const row = (window: Page, id: string): Locator => window.getByTestId(`feature-row-${id}`);
 const piece = (window: Page, id: string): Locator => window.getByTestId(`part-heading-${id}`);
@@ -431,7 +410,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
 test('a rename ends with its row: undone away and redone, the row comes back as it was', async () => {
   // macOS's Edit menu undoes while the name field has focus (8.7): the row
   // goes without the field ever losing focus, so nothing said it ended.
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   const menu = (action: 'undo' | 'redo') =>
     app.evaluate(({ BrowserWindow }, sent) => {
       BrowserWindow.getAllWindows()[0]?.webContents.send('menu:action', sent);
@@ -493,7 +472,7 @@ test('a locked feature is reached from the tree by keyboard, and unlocked from i
 });
 
 test('a selection on the board opens its piece and scrolls its row into view, leaving focus alone', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     await resizeWindow(app, window, 1440, 600);
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
@@ -557,16 +536,7 @@ test('Design says only what does not print; the Sheets view says where each piec
 
 test('the tree has no accessibility violations, its pieces open or closed', async () => {
   await withSample(async (window) => {
-    const scan = async (what: string): Promise<void> => {
-      const results = await new AxeBuilder({ page: window })
-        .setLegacyMode(true)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-        .analyze();
-      const found = results.violations.map(
-        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
-      );
-      expect(found, what).toEqual([]);
-    };
+    const scan = (what: string): Promise<void> => expectNoViolations(window, what);
     await piece(window, 'outer').focus();
     await scan('every piece open, a row focused');
     for (const id of ['outer', 'lining', 'pocket']) {

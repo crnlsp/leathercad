@@ -1,7 +1,6 @@
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { withApp } from './launchApp.js';
 
 /**
  * U.16, R-13: typing the size while the rectangle is being drawn. `105` Tab
@@ -9,17 +8,6 @@ import { launchApp } from './launchApp.js';
  * step; the shape's numbers are the value chips (U.14), a hint under it says
  * what the keys do, and Properties mirrors Width, Height and Corner.
  */
-
-async function withApp(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const app = await launchApp();
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 const chip = (window: Page, name: 'width' | 'height' | 'corner') =>
   window.getByTestId(`value-chip-${name}`);

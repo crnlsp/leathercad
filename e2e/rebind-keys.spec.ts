@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { drawAPanel, openApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -19,25 +19,8 @@ import { fromProjectMenu } from './projectMenu.js';
 
 const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-keys-'));
 
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  await app.evaluate(({ BrowserWindow }) => {
-    BrowserWindow.getAllWindows()[0]?.setSize(1400, 900);
-  });
-  return { app, window };
-}
-
-async function drawAPanel(window: Page): Promise<void> {
-  await window.getByTestId('tool-rectangle').click();
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  await window.mouse.move(box.x + 150, box.y + 150);
-  await window.mouse.down();
-  await window.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
-  await window.mouse.up();
-  await expect(window.getByTestId('part-count')).toHaveText('1');
-}
+const launch = (configHome: string) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1400, 900] });
 
 async function openShortcuts(window: Page): Promise<Locator> {
   await window.getByTestId('settings').click();
@@ -89,7 +72,7 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
   const { app, window } = await launch(fresh());
   try {
     await stubSave(app, join(fresh(), 'Card holder.lcp'));
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await openShortcuts(window);
     await expect(keysOf(window, 'save')).toHaveText(['Ctrl+S']);
     await change(window, 'save', 'F5');
@@ -194,7 +177,7 @@ test('a clash names the command, and Cancel leaves both while Swap exchanges the
     await window.keyboard.press('Control+s');
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
     await window.keyboard.press('Escape');
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await window.keyboard.press('Control+Comma');
     await expect(window.getByTestId('file-path')).toContainText('Swap');
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
@@ -224,7 +207,7 @@ test('Ctrl+Q and F11 can be captured: they clash with Quit and Full screen, and 
   const { app, window } = await launch(fresh());
   try {
     // Unsaved work, so a Ctrl+Q that got through would raise the unsaved dialog.
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     const pane = await openShortcuts(window);
     const isFullScreen = (): Promise<boolean> =>
       app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFullScreen());

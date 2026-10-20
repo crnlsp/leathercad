@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -7,7 +7,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { launchApp } from './launchApp.js';
+import { launchApp, withApp } from './launchApp.js';
 import { fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -29,46 +29,6 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await closeApp(app);
 });
-
-/**
- * A dedicated app instance with an empty document.
- *
- * The read-only checks above happily share one window, but anything that
- * draws leaves parts behind. Sharing an instance across those made the tests
- * depend on the order they happened to run in — which is exactly the kind of
- * failure that wastes an afternoon.
- */
-async function withFreshApp(
-  body: (
-    window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
-    instance: ElectronApplication,
-  ) => Promise<void>,
-): Promise<void> {
-  // A config directory of its own: a test that collapses the rail or opens
-  // the legend changes a remembered preference (8.2), which must not reach
-  // the next test.
-  const instance = await launchApp({
-    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
-  });
-  try {
-    const window = await instance.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
-
-    // `domcontentloaded` only means the markup parsed. The canvas element
-    // exists on the first render, but its pointer handlers are attached in an
-    // effect — so a drag started too early lands on nothing and the test fails
-    // with an empty document rather than a useful message.
-    //
-    // The version arrives from the main process through an effect, so a
-    // non-empty one proves React mounted, effects ran, and the platform bridge
-    // answered. It is the earliest honest signal that the app is interactive.
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-
-    await body(window, instance);
-  } finally {
-    await closeApp(instance);
-  }
-}
 
 test('opens a window titled after its project, then LeatherCAD (F.8)', async () => {
   const window = await app.firstWindow();
@@ -153,7 +113,7 @@ test('draws a rectangle, moves it, and reverses both with undo', async () => {
   // The functional loop end to end: a drag makes a real cut contour, the
   // select tool moves it as one undoable step, and undo walks back through
   // both.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     expect(box).not.toBeNull();
 
@@ -189,7 +149,7 @@ test('draws a rectangle, moves it, and reverses both with undo', async () => {
 test('draw roughly, then type exact millimetres', async () => {
   // The reason to build this rather than use a vector editor: a panel is
   // 105 mm because it was typed, not because it was dragged carefully.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     expect(box).not.toBeNull();
 
@@ -229,7 +189,7 @@ test('the interface is set in the typeface the pattern prints in', async () => {
   // F.0. Checked on computed styles rather than on the stylesheet: a native
   // control that does not inherit the page's font, or a `font` shorthand that
   // resets the figure style, looks correct in the CSS and wrong on screen.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     await window.getByTestId('tool-hardware').click();
     const styles = await window.evaluate(async () => {
       await document.fonts.ready;
@@ -267,7 +227,7 @@ test('a negative reads with a true minus, and can be typed with either', async (
   // F.0. U+2212 is as wide as a digit, so a column of signed numbers lines up;
   // the hyphen is narrower and does not. What is typed is a keyboard's hyphen,
   // or the minus copied from the panel itself — both have to be read back.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 150, box!.y + 150);
@@ -290,7 +250,7 @@ test('a negative reads with a true minus, and can be typed with either', async (
 });
 
 test('the parts list selects what the canvas cannot reach', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 150, box!.y + 150);
@@ -441,7 +401,7 @@ test('denies in-page navigation away from the app', async () => {
 });
 
 test('the tool palette holds modes and nothing else', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const rail = window.getByTestId('tool-rail');
     await expect(rail).toBeVisible();
 
@@ -457,14 +417,14 @@ test('the tool palette holds modes and nothing else', async () => {
 });
 
 test('history sits apart from the file actions', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     await expect(window.getByTestId('history-group').getByTestId('undo')).toBeVisible();
     await expect(window.getByTestId('history-group').getByTestId('save')).toHaveCount(0);
   });
 });
 
 test('the project bar holds the project and its output; the work bar holds the work (F.8)', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const project = window.getByTestId('project-bar');
     const work = window.getByTestId('work-bar');
 
@@ -501,7 +461,7 @@ test('the project bar holds the project and its output; the work bar holds the w
 });
 
 test('Draw as is offered only while a drawing tool is active (F.8)', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     for (const tool of ['rectangle', 'circle', 'arc', 'line', 'polyline']) {
       await window.getByTestId(`tool-${tool}`).click();
       await expect(window.getByTestId('draw-as-outline'), tool).toBeVisible();
@@ -517,7 +477,7 @@ test('Draw as is offered only while a drawing tool is active (F.8)', async () =>
 });
 
 test('the window and the project bar say which project it is, and whether it is saved (F.8)', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     await expect(window).toHaveTitle('Untitled — LeatherCAD');
     await expect(window.getByTestId('save-state')).toHaveText('');
 
@@ -538,7 +498,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
   // locked feature — locking takes it out of hit-testing (audit §3.3). Below
   // 900 px both panels open over the board from their chips in the status bar
   // (U.5); the rail always stays.
-  await withFreshApp(async (window, instance) => {
+  await withApp(async (window, instance) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 150, box!.y + 150);
@@ -579,7 +539,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
 });
 
 test('the rail collapses below 1280 px, and the maker can open it (F.2, U.5)', async () => {
-  await withFreshApp(async (window, instance) => {
+  await withApp(async (window, instance) => {
     const rail = window.getByTestId('tool-rail');
     await expect(rail).not.toHaveClass(/collapsed/);
     await expect(window.getByTestId('tool-rectangle')).toContainText('Rectangle');
@@ -597,7 +557,7 @@ test('the rail collapses below 1280 px, and the maker can open it (F.2, U.5)', a
 });
 
 test('problems wait in a drawer that says the verdict, and part actions in a menu (F.2)', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const toggle = window.getByTestId('problems-toggle');
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(toggle).toContainText('Nothing to fix');
@@ -632,7 +592,7 @@ test('the drawing stays put when the drawer opens or the rail collapses (F.3)', 
   // canvas centre was what moved it: open a drawer below the canvas and the
   // centre rises, and everything with it. Now the millimetre under any window
   // point is the same before and after the canvas's box changes.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
     await window.getByTestId('parts-list').getByText('Stitch line').click();
     const inset = panel.locator('label', { hasText: /^Edge margin/ }).locator('input');
@@ -660,7 +620,7 @@ test('every line is named by its mark, and no emoji is left (F.6)', async () => 
   // colour, and could not show state by colour. Every tool now has an icon,
   // and every feature is named by the mark the tree, the property header and
   // the problems list all share.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
 
     for (const tool of [
@@ -717,7 +677,7 @@ test('the canvas legend is the key to what is drawn, and moves nothing (F.7, U.1
   // only what this document draws, opens with names on a window with room
   // (U.10, R-09), and floats over the canvas so opening it never moves the
   // drawing (§9.4).
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const legend = window.getByTestId('canvas-legend');
     await expect(legend).toHaveCount(0);
 
@@ -775,7 +735,7 @@ test('the canvas legend is the key to what is drawn, and moves nothing (F.7, U.1
 test('the Draw as row keeps all six marks on screen at 1200 and 1280 px (F.6)', async () => {
   // The marks made each chip wider, and at 1280 px the last one ran off the
   // edge of the 620 px canvas.
-  await withFreshApp(async (window, instance) => {
+  await withApp(async (window, instance) => {
     for (const width of [1280, 1200]) {
       await instance.evaluate(({ BrowserWindow }, w) => {
         BrowserWindow.getAllWindows()[0]?.setSize(w, 840);
@@ -796,7 +756,7 @@ test('the options row is always there, so the drawing never jumps (F.2)', async 
   // shrank by its height on every tool change and the drawing moved ~8.7 mm
   // under the pointer. Reserved, it removes that at its source, and keeps the
   // Draw as setting — what the next drawing will be — always on screen.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const canvas = window.getByTestId('editor-canvas');
 
     await window.getByTestId('tool-rectangle').click();
@@ -822,7 +782,7 @@ test('the canvas takes every pixel the problems drawer is not using', async () =
   // check while every drag below it silently misses. The work bar sits above
   // the whole workspace (F.8), the problems drawer's handle below the canvas,
   // and the canvas takes the rest of its column.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const heights = async (): Promise<{
       host: number;
       column: number;
@@ -853,7 +813,7 @@ test('the workspace narrows instead of pushing the properties panel off screen',
   // The canvas is a fixed-size element, so the column holding it will refuse to
   // shrink below that size unless told otherwise — and a panel the user cannot
   // reach is worse than the wrapping header this layout replaced.
-  await withFreshApp(async (window, instance) => {
+  await withApp(async (window, instance) => {
     await instance.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0]?.setSize(1024, 813);
     });
@@ -874,7 +834,7 @@ test('the project bar and the work bar each stay one row when the window narrows
   // A header that wrapped to two lines at 1280 is what prompted the whole
   // layout. The hint is the least important thing in the work bar, so it is
   // the thing that gives — the controls must not fold.
-  await withFreshApp(async (window, instance) => {
+  await withApp(async (window, instance) => {
     const headerHeight = async (): Promise<number> =>
       window.evaluate(() =>
         Math.round(
@@ -900,7 +860,7 @@ test('the project bar and the work bar each stay one row when the window narrows
 test('draws a circle from its centre and retypes the diameter', async () => {
   // Centre-out, not corner-to-corner: a hole or a strap end is positioned by
   // where its middle goes, and the record stores a centre and a radius.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     expect(box).not.toBeNull();
 
@@ -924,7 +884,7 @@ test('draws a circle from its centre and retypes the diameter', async () => {
 });
 
 test('C selects the circle tool and a click alone draws nothing', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     // Wait for the rail before pressing: keyboard.press waits for nothing, and
     // the shortcut listener does not exist until React has mounted.
     await expect(window.getByTestId('tool-rail')).toBeVisible();
@@ -942,7 +902,7 @@ test('C selects the circle tool and a click alone draws nothing', async () => {
 });
 
 test('draws an arc through three points and saves its parameters', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     expect(box).not.toBeNull();
 
@@ -986,7 +946,7 @@ test('draws an arc through three points and saves its parameters', async () => {
 });
 
 test('three points in a line make no arc', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-arc').click();
@@ -1001,7 +961,7 @@ test('three points in a line make no arc', async () => {
 });
 
 test('rotates a rectangle and it stays a rectangle', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -1043,7 +1003,7 @@ test('rotates a rectangle and it stays a rectangle', async () => {
 });
 
 test('refuses to squash a circle, and says why on screen', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-circle').click();
@@ -1071,7 +1031,7 @@ test('refuses to squash a circle, and says why on screen', async () => {
 });
 
 test('scales a circle evenly when Shift holds the aspect', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-circle').click();
@@ -1101,7 +1061,7 @@ test('scales a circle evenly when Shift holds the aspect', async () => {
 test('a stitch line and its holes follow the panel width', async () => {
   // M3. The whole product in one interaction: type a width, and the stitch
   // line and every hole on it follow, with nothing regenerated by hand.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -1168,7 +1128,7 @@ async function panelWithChain(window: Awaited<ReturnType<ElectronApplication['fi
 test('deleting an outline asks what to do with what follows it', async () => {
   // ADR 0009: never a silent cascade. The dialog names the dependents, and the
   // document does not change until a choice is made.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
     await panel.getByTestId('delete-feature').click();
 
@@ -1190,7 +1150,7 @@ test('deleting an outline asks what to do with what follows it', async () => {
 });
 
 test('keeping a stitch line frozen leaves it in place, still carrying its holes', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
     await panel.getByTestId('delete-feature').click();
     await window.getByTestId('delete-dialog').getByTestId('delete-freeze').click();
@@ -1207,7 +1167,7 @@ test('keeping a stitch line frozen leaves it in place, still carrying its holes'
 });
 
 test('cancelling a delete changes nothing', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
     await panel.getByTestId('delete-feature').click();
     await expect(window.getByTestId('delete-dialog')).toBeVisible();
@@ -1222,7 +1182,7 @@ test('cancelling a delete changes nothing', async () => {
 });
 
 test('an emptied part stays until it is removed on purpose', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 250, box!.y + 250);
@@ -1245,7 +1205,7 @@ test("a second panel starts exactly on the first panel's corner", async () => {
   // Snapping is what makes a drawn point trustworthy. Without it a corner
   // dropped "on" another corner is a fraction of a millimetre away, which is
   // invisible on screen and wrong on leather.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
     const numberIn = async (label: string): Promise<number> =>
@@ -1278,7 +1238,7 @@ test('a fold line joins the panel it is drawn on', async () => {
   // The reason 4.7 exists: a wallet body that folds needs to say where, and
   // that mark belongs to the panel — not to a "part" of its own that could
   // never be cut.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
       await window.mouse.move(box!.x + x1, box!.y + y1);
@@ -1329,7 +1289,7 @@ test('a fold line joins the panel it is drawn on', async () => {
 });
 
 test('drawing a fold line with nothing selected changes nothing, and says why', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-line').click();
@@ -1375,7 +1335,7 @@ test('the canvas cursor follows the tool at once, without a pointer move (Q3)', 
   // that switches the manager ran, so it was right only because something
   // else re-rendered straight after. It now comes from the tool the props
   // name; this holds the behaviour, not the race, which no test can force.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const canvas = window.getByTestId('editor-canvas');
     // The app opens on Rectangle, while the manager starts on Select.
     await expect(canvas).toHaveCSS('cursor', 'crosshair');
@@ -1393,7 +1353,7 @@ test('every two-point tool takes a drag or two clicks (F.1)', async () => {
   // Rectangle and Circle were drag-only and Line click-only, while the header
   // said "drag to draw" for all of them. Now each takes either gesture, and the
   // header says how the active tool is used.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const click = async (x: number, y: number): Promise<void> => {
       await window.mouse.move(box!.x + x, box!.y + y);
@@ -1438,7 +1398,7 @@ test('every two-point tool takes a drag or two clicks (F.1)', async () => {
 test('a tool says how it is used, on hover and on focus (F.1)', async () => {
   // A real tooltip replaces the native title: delayed on hover so sweeping the
   // rail does not flicker, immediate on focus, and tied to the control.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const polyline = window.getByTestId('tool-polyline');
     await polyline.hover();
     const tip = window.getByRole('tooltip', { name: /Enter finishes/ });
@@ -1462,7 +1422,7 @@ test('a tool says how it is used, on hover and on focus (F.1)', async () => {
 test('the panel measures what a feature has, and reads a dimension (F.1)', async () => {
   // A line has a length and no area; a hole set's numbers are its count and
   // spacing; a dimension's value is in the panel as well as on the drawing.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
     await expect(panel.getByText('Perimeter')).toBeVisible();
     await expect(panel.getByText('Area')).toBeVisible();
@@ -1519,7 +1479,7 @@ test('the panel measures what a feature has, and reads a dimension (F.1)', async
 });
 
 test('places a rivet hole on the selected panel, named for what it is', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -1546,7 +1506,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
   // Slice 4.12a. One diagnostic list behind every surface: the panel, the
   // status count and the property panel all show the same problem, and the
   // feature that follows the broken one is reported once, as a consequence.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
     await window.getByTestId('parts-list').getByText('Stitch line').click();
 
@@ -1613,7 +1573,7 @@ test('clicking a problem takes you to it, and the badges clear when it is fixed'
   // failed is what gets selected, while the view goes to the outline it was
   // being built from — which is both the only geometry that exists and the
   // thing that has to be edited to fix it.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const panel = await panelWithChain(window);
     await window.getByTestId('parts-list').getByText('Stitch line').click();
 
@@ -1798,7 +1758,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
 });
 
 test('placing a label with no part selected changes nothing, and says why', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-text').click();
@@ -1821,7 +1781,7 @@ test('flipping a panel mirrors it, rather than turning it round', async () => {
   // Slice 3.7b, defect D2. Before the fix a reflection kept the origin and
   // changed the rotation, so the panel stayed put with its rounded corners
   // diagonally opposite — which looks almost right until it is cut.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 250, box!.y + 250);
@@ -1869,7 +1829,7 @@ test('a label cannot be flipped, and the button says why', async () => {
   // Slice 3.7b keeps this a deliberate restriction: a mirror is a similarity,
   // so without refusing it the words would come out rotated rather than
   // reflected. What a mirrored label should mean is 4.8's question.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 250, box!.y + 250);
@@ -1904,7 +1864,7 @@ test('a label cannot be flipped, and the button says why', async () => {
 test('a cut-out joins the selected part, and an open one is refused', async () => {
   // Slice 4.3a. Each mode has one fixed result and selection only chooses the
   // part (X4); a cut-out has to enclose something (S6).
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     // Outline mode is the default, and never reads the selection.
@@ -1950,7 +1910,7 @@ test('a refused outline keeps its points, and closing it is the correction', asy
   // X10, from the 4.3a review. A refusal that discards eleven clicks round a
   // gusset is a correct rule delivered as a punishment: the run stays live
   // until the user closes it or gives it up.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const click = async (x: number, y: number) => {
       await window.mouse.move(box!.x + x, box!.y + y);
@@ -1989,7 +1949,7 @@ test('an arc drawn where it cannot be cut says so instead of vanishing', async (
   // The arc tool had no held refusal of its own, so three clicks in Outline
   // mode drew nothing and said nothing at all (X1). Every draw tool now
   // commits through the same boundary.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-arc').click();
@@ -2007,7 +1967,7 @@ test('an arc drawn where it cannot be cut says so instead of vanishing', async (
 test('the parts panel shows what follows what, and locks it down', async () => {
   // Slice 4.3b. The tree is where the reference graph becomes visible, and the
   // lock is what `locked` should have meant all along (D8).
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -2053,7 +2013,7 @@ test('the parts panel shows what follows what, and locks it down', async () => {
 test('a duplicated part gets its own stitching, beside the original', async () => {
   // §3.2: a duplicate is a copy with *no* relationship to its original, so the
   // copy's stitch line follows the copy's outline.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -2078,7 +2038,7 @@ test('a duplicated part gets its own stitching, beside the original', async () =
 });
 
 test('hiding a part takes it off the drawing, and brings it back', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -2105,7 +2065,7 @@ test('hiding a part takes it off the drawing, and brings it back', async () => {
 test('selecting a part heading makes it the target for a cut-out', async () => {
   // X4 plus §3.1: selection chooses *where*, and a part heading is a way to
   // say where without picking something inside it first.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -2138,7 +2098,7 @@ test('selecting a part heading makes it the target for a cut-out', async () => {
 test('a mirrored counterpart stays matched to the piece it came from', async () => {
   // Slice 4.8a. Flip changes this piece; mirror makes a counterpart that keeps
   // following it (ADR 0012).
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -2192,7 +2152,7 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
 });
 
 test('a counterpart follows when its original is resized', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
 
     await window.getByTestId('tool-rectangle').click();
@@ -2225,7 +2185,7 @@ test('the wallet scenario: card slots mirrored across a fold that then moves', a
   // Slice 4.8b, §2 of the design, end to end. The value is not the reflection
   // — it is that the two halves stay each other's mirror while the piece is
   // still being decided.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
 
@@ -2279,7 +2239,7 @@ test('the wallet scenario: card slots mirrored across a fold that then moves', a
 test('an outline cannot be completed by mirroring it across its own fold', async () => {
   // The refusal that keeps the door open for booleans instead of building a
   // workaround: a piece of leather has one edge (S5).
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
 
@@ -2308,7 +2268,7 @@ test('an outline cannot be completed by mirroring it across its own fold', async
 test('a pocket dimensioned from its opening, with the edge derived outward', async () => {
   // Slice 4.9. The other direction of one relationship: the maker specifies
   // the opening and the cut edge is whatever leaves the allowance outside it.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
 
@@ -2349,7 +2309,7 @@ test('a pocket dimensioned from its opening, with the edge derived outward', asy
 
 test('a seam allowance can be added to a stitch line drawn earlier', async () => {
   // The common order: draw the stitching, decide on the edge after.
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
 
@@ -2383,7 +2343,7 @@ test('a seam allowance can be added to a stitch line drawn earlier', async () =>
 test('a dimension reads the drawing, and keeps reading it', async () => {
   // Slice 4.10a. The point is not that it measures — it is that the number
   // cannot drift from the geometry the way a typed label does (X6).
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
 
@@ -2428,7 +2388,7 @@ test('a dimension reads the drawing, and keeps reading it', async () => {
 });
 
 test('a dimension is listed when what it measures is deleted, and cannot be frozen', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const panel = window.getByTestId('property-panel');
 
@@ -2464,7 +2424,7 @@ test('a dimension is listed when what it measures is deleted, and cannot be froz
 });
 
 test('Edit Points moves, adds and removes the points of a drawn outline (3.9c)', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const at = (x: number, y: number) => ({ x: box!.x + x, y: box!.y + y });
     const click = async (x: number, y: number) => {
@@ -2517,7 +2477,7 @@ test('Edit Points moves, adds and removes the points of a drawn outline (3.9c)',
 });
 
 test('Edit Points says a rectangle is changed by its measurements (3.9c)', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     await window.getByTestId('tool-rectangle').click();
     await window.mouse.move(box!.x + 200, box!.y + 200);
@@ -2533,7 +2493,7 @@ test('Edit Points says a rectangle is changed by its measurements (3.9c)', async
 });
 
 test('Edit Points rounds a corner to the radius in the work bar, and R again sharpens it (3.9d)', async () => {
-  await withFreshApp(async (window) => {
+  await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
     const at = (x: number, y: number) => ({ x: box!.x + x, y: box!.y + y });
     const click = async (x: number, y: number) => {
