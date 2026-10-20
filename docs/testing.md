@@ -26,8 +26,8 @@ invisible and expensive.
 | Export accuracy | Vitest + poppler (`pdftoppm`, `pdfinfo`) | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
 | Rendering (pixel diff) | Playwright `toHaveScreenshot`, in the pinned container | ~12 | ~60 s | Anti-aliasing, hairlines, grid |
-| E2E | Playwright + Electron, with an axe scan | ~4 | ~90 s | The app actually runs |
-| Packaged smoke | Playwright + the packaged binary | 4 | ~60 s | asar, fuses, resources |
+| E2E | Playwright + Electron, with axe scans | ~260, in 35 specs | ~4 min | The app actually runs, workflow by workflow |
+| Packaged smoke | Playwright + the packaged binary | 8 | ~60 s | asar, fuses, resources |
 | Loader fuzzing | Vitest + fast-check | 6 | < 1 s | A damaged `.lcp` refuses with a reason |
 | Benchmarks | Vitest 5 `bench` fixture | 15 | ~45 s | Accidental O(n²) |
 | Mutation | StrykerJS, weekly | — | hours | Tests that run code without checking it |

@@ -15,8 +15,9 @@ A useful report includes:
 - the LeatherCAD version, shown in the status bar, and the operating system;
 - what an attacker can do, and what they need first, such as the user opening a crafted `.lcp` file;
 - the steps, or a file, that show it;
-- the log if it helps: *Help → Show Log Folder* opens the folder that holds it. The log stays on your
-  machine and LeatherCAD never uploads it, so attach it yourself if it's relevant.
+- the log if it helps: *Help → About LeatherCAD → Show log folder* opens the folder that holds it.
+  The log stays on your machine and LeatherCAD never uploads it, so attach it yourself if it's
+  relevant.
 
 ## Supported versions
 

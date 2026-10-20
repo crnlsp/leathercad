@@ -1,8 +1,7 @@
 # The window, refined — the plan for 1.5 (U.1 – U.20)
 
-> **For agentic workers:** one slice per session. Start one with `/slice U.n`, or hand it to the
-> `ui-refinement` agent ([`.claude/agents/ui-refinement.md`](../../../.claude/agents/ui-refinement.md)),
-> which follows this document. Cite the requirement ids (`R-01` …) in commits and pull requests.
+> **For agentic workers:** one slice per session. Start one with `/slice U.n`. (The `ui-refinement`
+> agent that followed this document was retired once 1.5 shipped.) Cite the requirement ids (`R-01` …) in commits and pull requests.
 > Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** a maker gets more done at the bench: the pattern reads at every zoom, the board gets the

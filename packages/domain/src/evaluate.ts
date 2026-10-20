@@ -748,8 +748,8 @@ function followSource(
  * Inward is a domain concept; the geometry layer only knows left and right.
  *
  * On a counter-clockwise ring, left of travel is inward — so the sign depends
- * on the winding of the contour being followed, which is what
- * `docs/geometry.md` §6.4 means by the domain normalising it.
+ * on the winding of the contour being followed. The domain reads that winding
+ * rather than normalising it (`docs/geometry.md` §6.4).
  */
 function applyDerivation(
   feature: Feature,

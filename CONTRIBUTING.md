@@ -89,6 +89,12 @@ needs and ends with the app running, tests green, and something a person can see
 the app broken, and none is "just the model now, the UI next week". Roughly 200–600 lines of
 production code; bigger is two slices.
 
+**Where does it go?** The packages and what each may import are in
+[`CLAUDE.md` § Layout](CLAUDE.md#layout), and why, in [`docs/architecture.md`](docs/architecture.md)
+§2: millimetre maths in `geometry`, leathercraft rules in `domain`, edits as commands in
+`document`, drawing in `render`, tools in `editor`, files in `persist` and `export`, and the
+window, panels and every word on screen in `apps/desktop`.
+
 1. **Write the acceptance criteria first**, as things a person could check by using the app.
 2. **Tests first** in `packages/geometry` and `packages/domain`, including property tests
    ([`docs/testing.md`](docs/testing.md)). Plausible-but-wrong geometry is this project's

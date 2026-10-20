@@ -4,7 +4,7 @@ How this repository is configured to get useful work out of Claude Code, what is
 out, and what has been proposed but not built.
 
 **Status:** Describes what is in `.claude/` and `CLAUDE.md` today.
-**Last updated:** 2026-10-08
+**Last updated:** 2026-10-19
 
 ---
 
@@ -22,7 +22,8 @@ Everything here is chosen against one test: *would its absence let a wrong chang
 Short and load-bearing: the invariants, the commands, and the map, delegating everything else to
 `docs/`.
 
-- **Under ~150 lines.** A long `CLAUDE.md` is skimmed, which makes it worse than a short one.
+- **Kept short** — under ~200 lines, which it is near. A long `CLAUDE.md` is skimmed, which makes
+  it worse than a short one.
 - **Invariants, not explanations.** A rule earns its line; the reasoning belongs in `docs/`.
 - **Updated in the same commit** as any change that invalidates it. A stale `CLAUDE.md` is actively
   harmful, because it will be followed.
@@ -41,7 +42,7 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 | `docs/printing.md` | Export and print pipeline, accuracy budget | Any export or print work |
 | `docs/testing.md` | Layers, property catalogue, edge-case corpus | Writing tests, which is always |
 | `docs/roadmap.md` | What is planned, open findings | Starting a slice |
-| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3, 1.3.5): every slice that shipped, and what it found | Before redoing something that was tried |
+| `docs/history/` | One record per release (1.0, 1.1–1.2, 1.3, 1.3.5, 1.5): every slice that shipped, and what it found | Before redoing something that was tried |
 | `docs/glossary.md` | Craft vocabulary | Whenever domain naming is in question |
 | `docs/adr/NNNN-*.md` | Why a decision was made | Before revisiting a decision |
 | `docs/superpowers/specs/` | The dated design of each larger slice | Changing what a slice built |
@@ -91,8 +92,8 @@ Each of these was designed before 1.0 and would earn its place; none exists yet.
 - **`leather-domain-review`** — checks a change against craft reality: glossary terms, plausible
   pitches, corner behaviour a maker expects, true millimetres end to end.
 - **`export-validation`** — runs the fixtures through every export backend, parses the files back,
-  and tabulates expected against actual millimetres. Worth building with SVG and DXF export (6.2,
-  6.5).
+  and tabulates expected against actual millimetres. Both exports exist now (6.2, 6.5), so it could
+  be built whenever an export change wants it.
 - **`new-tool`** — the checklist for a canvas tool: a state discriminant, Escape rolls back, all
   mutation by command, overlay, snapping, cursor, numeric entry, shortcut, and the tests.
 - **`new-feature-type`** — every place a new `Feature` kind must be touched, from the type union
@@ -121,14 +122,11 @@ reserved in `.dependency-cruiser.cjs` for that and not yet created.
 In `.claude/agents/`. A subagent is worth defining when a run of slices shares one long set of
 instructions that every session would otherwise have to be given again.
 
-| Agent | Does |
-|---|---|
-| `ui-refinement` | Builds, or fixes, one slice of 1.5's UI refinement (U.1–U.20) from [its plan](superpowers/plans/2026-10-08-ui-refinement.md): measures today's behaviour in the running app, tests first, the smallest change, screenshots against the mockups, proof that print did not move, and a pull request into `develop` that it does not merge |
-
-**A slice agent is deleted once its slice is merged:** its briefing describes the code before the
-slice, and what the slice found is in the plan's *As built* and the roadmap's record. U.5's, U.7's
-and U.8's (`panels-fold`, `top-bar`, `parts-tree`) went when 1.5 shipped. A later fix to a slice of
-the UI refinement is `ui-refinement`'s, which is Opus at high effort.
+There are none today. **An agent is deleted once its work is merged:** its briefing describes the
+code before the work, and what the work found is in the plan's *As built* and the roadmap's record.
+The 1.5 UI refinement's agents — `ui-refinement` and the per-slice `panels-fold`, `top-bar` and
+`parts-tree` — went once 1.5 shipped; a fix to what it built starts from
+[its plan](superpowers/plans/2026-10-08-ui-refinement.md).
 
 ## 6. Hooks
 
@@ -138,13 +136,13 @@ edit, and a noisy one gets ignored.
 In `.claude/settings.json` there is one: **`PostToolUse` on `Edit`/`Write`** runs Prettier on the
 changed file if it is code or configuration. Fast, and it takes formatting out of review.
 
-**What is deliberately a lint rule instead**, because rules run in CI and in the editor while hooks
-only run in Claude Code:
+**What is deliberately a lint or layering rule instead**, because rules run in CI and in the editor
+while hooks only run in Claude Code:
 
 - Float equality in `geometry` and `domain`.
 - Pixel identifiers, `canvas`, `window`, `document` or `devicePixelRatio` inside the pure layers.
 - `Math.random()` or `Date.now()` outside approved modules.
-- Cross-package imports that bypass a package's `index.ts`.
+- Cross-package imports that bypass a package's `index.ts` (`pnpm depcruise`).
 - Any Clipper binding at all (`pnpm depcruise` refuses one; ADR 0008).
 
 **Deliberately CI-only:** the full suite, visual regression, E2E, and benchmarks — too slow for the

@@ -1,7 +1,7 @@
 # LeatherCAD
 
 Desktop application for designing leathercraft patterns that print at exact 1:1 scale.
-Electron + TypeScript, Linux first, Apache-2.0.
+Electron + TypeScript, for Linux, Windows and macOS, Apache-2.0.
 
 **The product promise: a line drawn as 100 mm measures 100 mm on paper.** Every rule below exists to
 protect that.
@@ -11,11 +11,11 @@ protect that.
 Violating any of these is a bug, even if tests pass.
 
 1. **Millimetres are the source of truth.** Pixels exist only inside `packages/render` and
-   `packages/editor/viewport.ts`. Nothing else converts between them.
+   `packages/editor/src/viewport.ts`. Nothing else converts between them.
 2. **Y is up.** The screen flip is defined in exactly one place — `worldToScreen` in
-   `render/view.ts` — and applied by the two screen backends, `render/canvas2d/*` and
-   `render/svg/*`, which never derive a flip of their own. `export/svg/*` has its own, because a
-   file has no viewport. PDF and DXF are Y-up already and need no flip.
+   `render/src/view.ts` — and applied by the two screen backends, `render/src/canvas2d/*` and
+   `render/src/svg/*`, which never derive a flip of their own. `export/src/svg/*` has its own,
+   because a file has no viewport. PDF and DXF are Y-up already and need no flip.
 3. **`packages/geometry` is pure.** No DOM, no canvas, no colour, no file formats, no state, no
    randomness, no clock. It may import only `packages/core`.
 4. **Derived geometry is never persisted.** Files store parameters; evaluation recomputes paths and
@@ -24,7 +24,7 @@ Violating any of these is a bug, even if tests pass.
    tool writes to the document store directly.
 6. **Never print through the webview.** No `window.print()`, no CSS `@page`. PDFs are generated as
    vector content by `packages/export/pdf`. See `docs/printing.md` §2.
-7. **No float equality.** Use `approxEq` and the epsilons from `packages/core/epsilon.ts`. Never
+7. **No float equality.** Use `approxEq` and the epsilons from `packages/core/src/epsilon.ts`. Never
    define a local epsilon.
 8. **Quantise user input** to 1e-4 mm via `quantise()` before storing it.
 9. **A shipped format migration is immutable.** Never edit one, never delete one.
@@ -67,10 +67,10 @@ refuses it and runs `pnpm check` on every push. Pull requests into `develop` are
 their title is a Conventional Commit: it becomes the changelog line. See `CONTRIBUTING.md`.
 
 **pnpm and Node are pinned**: `packageManager` in `package.json`, and `.node-version`. CI reads
-both. Any installed pnpm switches itself to the pinned version. pnpm is not on PATH unless you have
-run `sudo pacman -S pnpm`. A bootstrap copy lives at
-`~/.local/share/pnpm-bootstrap/node_modules/.bin`; prefix commands with
-`export PATH="$HOME/.local/share/pnpm-bootstrap/node_modules/.bin:$PATH"` until then. pnpm 11
+both. Any installed pnpm switches itself to the pinned version; how to get one is in
+`CONTRIBUTING.md` § Set up. On the maintainer's machine pnpm may not be on PATH: a bootstrap copy
+lives at `~/.local/share/pnpm-bootstrap/node_modules/.bin`, and commands need
+`export PATH="$HOME/.local/share/pnpm-bootstrap/node_modules/.bin:$PATH"` first. pnpm 11
 re-invokes itself from PATH before running scripts, so a bare path to the binary is not enough.
 
 A dependency version forced for a vulnerability goes in `pnpm-workspace.yaml` `overrides`, and a
@@ -100,7 +100,7 @@ apps/desktop  Electron main/preload/renderer, React panels — the ONLY package 
 `print`, `ui` and `cli` are reserved in `.dependency-cruiser.cjs` but not created: pagination and
 tiling live in `export`, and the React UI in `apps/desktop/src/renderer`.
 
-Nothing imports `ui`, `editor`, or `apps/desktop`. `export` and `print` run headless.
+No package below them imports `ui`, `editor` or `apps/desktop`. `export` and `print` run headless.
 
 ## Conventions
 
@@ -152,12 +152,12 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | `packages/geometry` | `docs/geometry.md`, especially §12 (definition of done) |
 | `packages/domain` | `docs/domain-model.md`, `docs/glossary.md` |
 | `packages/persist` | `docs/file-format.md` |
-| `packages/export`, `packages/print` | `docs/printing.md` |
+| `packages/export` | `docs/printing.md` |
 | Anything structural | `docs/architecture.md` |
 | Phase 4's model (derivations, deletion, validation) | `docs/superpowers/specs/2026-09-15-phase-4-reconciliation-design.md`, ADRs 0009–0013, `docs/domain-model.md` §8 |
-| UI Foundations, F.0–F.7 | `docs/history/roadmap-to-1.0.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
+| Changing what UI Foundations built, F.0–F.7 | `docs/history/roadmap-to-1.0.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
 | The paper workflow and the window's bars (F.8, 7.4a–7.4d) | `docs/superpowers/specs/2026-09-24-sheets-workflow-design.md`; Design and Sheets stay separate views |
-| The UI refinement, U.1–U.20 (1.5) | `docs/superpowers/plans/2026-10-08-ui-refinement.md` — your slice's section is the task — and the requirements and mockups it links; the `ui-refinement` agent builds one slice |
+| Changing what the UI refinement built, U.1–U.20 (1.5) | `docs/superpowers/plans/2026-10-08-ui-refinement.md` — the slice's section says why it is as it is — and the requirements and mockups it links |
 | Tests | `docs/testing.md` |
 | Interface text, languages, Settings → Language | `docs/adr/0018-interface-language.md` |
 | Commits, pull requests, releases | `CONTRIBUTING.md` |

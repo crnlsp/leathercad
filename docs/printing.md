@@ -1,6 +1,6 @@
 # Export and Printing
 
-**Packages:** `packages/export`, `packages/print`
+**Package:** `packages/export` (`packages/print` is reserved, not created)
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
 **Last updated:** 2026-10-17
@@ -75,8 +75,8 @@ Two properties this buys, and they are the reason for the shape:
 - **All writers consume the same `ExportScene`.** SVG, PDF, and DXF cannot drift apart in what they
   include or where they place it.
 
-`packages/export` and `packages/print` import nothing from `editor` or `ui`, so the whole pipeline
-runs headless — from tests, and from the CLI.
+`packages/export` imports nothing from `editor` or `ui`, nor will `packages/print` if it is ever
+created, so the whole pipeline runs headless — from tests, and from the CLI.
 
 ## 4. `ExportScene`
 

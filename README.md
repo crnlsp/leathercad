@@ -38,8 +38,9 @@ millimetre** — and every sheet carries a 100 mm gauge so you can check that wi
 
 1. **Draw roughly, then type it exactly.** Drag out a rectangle, then give it 200 × 95 mm and 5 mm
    corners. Every number is in millimetres, and what you type is what prints.
-2. **Stitch it.** *Add stitch line* follows the edge 3 mm in; *Add holes* places them at your iron's
-   pitch and shows how many there are and the spacing they came out at.
+2. **Stitch it.** *Add stitch line* follows the edge, 3.5 mm in unless you say otherwise; *Add
+   holes* places them at your iron's pitch and shows how many there are and the spacing they came
+   out at.
 3. **Fold it.** A fold line shows which way it folds.
 4. **Add the rest.** A lining, and a card pocket with a thumb scoop, stitched on three sides and
    marked *cut 2*.
@@ -84,8 +85,8 @@ sheets with join lines and registration crosses, never scaled to fit.
 
 ### Print, and check the print
 
-**Print** shows the PDF in LeatherCAD's own preview, and on Linux sends exactly that file to the
-printer with scaling turned off. There is no print dialog to get wrong. A vector PDF on A5, A4, A3,
+**Print** shows the PDF in LeatherCAD's own preview, and from the AppImage on Linux — and on macOS,
+not yet measured there — sends exactly that file to the printer with scaling turned off. There is no print dialog to get wrong. A vector PDF on A5, A4, A3,
 Letter or Legal, the same file *Export PDF* saves. Every sheet has a 100 × 5 mm gauge at its foot:
 if it measures true, so does everything on the sheet. For a laser cutter or a vector editor, *Export
 SVG* and *Export DXF* write the board in millimetres, a layer to each role.
@@ -113,17 +114,12 @@ Closing with unsaved changes asks first, and after a crash LeatherCAD offers you
 
 ## Download
 
-| System | File | Then |
-|---|---|---|
-| **Linux** | `LeatherCAD-…-x86_64.AppImage` | `chmod +x` it and run it. It installs nothing. |
-| **Windows** | `LeatherCAD-…-x64.exe` | Run it. It installs for your user only, no administrator needed. |
-| **macOS** | `LeatherCAD-…-universal.dmg` | Drag LeatherCAD to Applications. Apple silicon and Intel. |
-
-All three are on the **[latest release](https://github.com/crnlsp/leathercad/releases/latest)**.
+The **[latest release](https://github.com/crnlsp/leathercad/releases/latest)** has an AppImage
+and a Flatpak for Linux, an installer for Windows, and a dmg for macOS on Apple silicon and Intel.
 LeatherCAD is free and open source, and its installers are **not code-signed** — signing costs
 money every year — so Windows and macOS warn the first time you open it.
-[Getting started](docs/getting-started.md) shows how to open it anyway, and how to check that a
-download is the one this repository built.
+[Getting started](docs/getting-started.md#1-install) says which file to take, how to open it
+anyway, and how to check that a download is the one this repository built.
 
 ## The 1:1 promise
 
