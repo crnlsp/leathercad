@@ -186,3 +186,36 @@ test('the Flatpak never asks: Settings says Flathub keeps it up to date', async 
     await server.close();
   }
 });
+
+test('the version in the status bar says it checks for updates, and pressed, it does', async () => {
+  const server = await releases('leathercad-v0.0.1');
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-version-'));
+  try {
+    await withApp(
+      async (window, app) => {
+        const version = window.getByTestId('version-button');
+        await version.hover();
+        await expect(window.getByRole('tooltip', { name: 'Check for updates' })).toBeVisible();
+        const before = server.asked();
+
+        await version.click();
+        await expect(
+          window.getByRole('tooltip', { name: 'You have the latest version.' }),
+        ).toBeVisible();
+        await expect(window.getByTestId('version-check-result')).toHaveText(
+          'You have the latest version.',
+        );
+        expect(server.asked()).toBe(before + 1);
+
+        // A newer release, found by the press, marks Settings.
+        server.tag = await newerTag(app);
+        await version.click();
+        await expect(window.getByTestId('version-check-result')).toHaveText(/is available/);
+        await expect(window.getByTestId('update-mark')).toBeVisible();
+      },
+      { env: { XDG_CONFIG_HOME: configHome, LEATHERCAD_RELEASES_URL: server.url } },
+    );
+  } finally {
+    await server.close();
+  }
+});

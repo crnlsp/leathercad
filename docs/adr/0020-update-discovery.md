@@ -20,7 +20,8 @@ the running version (`apps/desktop/src/main/updates.ts`).
 
 - **When.** Once as the app starts, **on by default**, so a maker hears of a fix without having to
   know to look. Settings › Updates turns it off, and its *Check now* asks whenever the maker
-  presses it, whether the start does or not. The maintainer decided the default on 2026-10-20.
+  presses it, whether the start does or not; so does the version at the status bar's left, whose
+  tooltip says *Check for updates* and then what the check found. The maintainer decided the default on 2026-10-20.
 - **What is sent.** One GET with an `Accept` header and nothing about the maker or their patterns:
   no identifier, no project data, no preferences. GitHub sees what any request shows — the
   address, and Chromium's user agent with the app's name and version. Electron's `net.fetch`

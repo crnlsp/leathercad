@@ -1157,6 +1157,21 @@ body {
   }
 }
 
+/* The version (8.9): reads as the bar's text, and pressed checks for a new
+   one. Underlined under the pointer, so it shows it can be pressed. */
+.status-version {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-version:hover {
+  text-decoration: underline;
+}
+
 .status-left .status-error {
   overflow: hidden;
   text-overflow: ellipsis;

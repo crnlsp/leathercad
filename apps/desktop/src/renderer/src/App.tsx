@@ -66,6 +66,7 @@ import { selectedParts } from './sheetContents.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
+import { VersionButton } from './VersionButton.js';
 import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
@@ -1063,7 +1064,7 @@ export function App({
         */}
           <span className="status-left">
             <span data-testid="status-counts">
-              v<span data-testid="app-version">{version ?? '…'}</span>
+              <VersionButton version={version} updates={updates} onCheck={checkUpdates} />
               <span className="sep">·</span>
               <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
               {t('status.partsCount', { count: storeState.document.project.parts.length })}

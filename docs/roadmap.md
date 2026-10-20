@@ -79,7 +79,8 @@ Left from 1.3's *The window*: nothing says a new release exists.
   `leathercad-v` form (R4).
   **Done** (2026-10-20), as [ADR 0020](adr/0020-update-discovery.md): the check runs once as the
   app starts, **on by default** by the maintainer's decision, with a switch and *Check now* in
-  Settings › Updates; the Settings button opens there while its mark shows. `SECURITY.md` says why
+  Settings › Updates; the Settings button opens there while its mark shows. The version at the
+  status bar's left checks too, when pressed, and its tooltip says what it found. `SECURITY.md` says why
   the app makes the request and what it carries. No test asks GitHub: `LEATHERCAD_RELEASES_URL`
   points the check at a server of the test's own, or at nothing.
 
