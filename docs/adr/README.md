@@ -31,3 +31,4 @@ an amendment in place — 0007, 0010, 0011 and 0013 — so read an ADR to its en
 | [0017](0017-lucide-for-generic-icons.md) | Lucide for generic icons; LeatherCAD's own marks drawn here |
 | [0018](0018-interface-language.md) | The interface's words: a catalogue per language, and no words below the app |
 | [0019](0019-print-from-the-app.md) | Print from the app: pdf.js for the preview, the CUPS client with scaling off |
+| [0020](0020-update-discovery.md) | The update check: one request to GitHub as the app starts, and nothing installed |

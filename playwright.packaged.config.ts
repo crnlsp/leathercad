@@ -1,5 +1,10 @@
 import { defineConfig } from '@playwright/test';
 
+// The update check (8.9) never asks GitHub from a test: the app is pointed at
+// a port nothing listens on, so a start's check fails at once and says so
+// quietly. e2e/updates.spec.ts answers it from a server of its own.
+process.env['LEATHERCAD_RELEASES_URL'] ??= 'http://127.0.0.1:9/';
+
 /**
  * The smoke test for the packaged app. See e2e/packaged/packaged.spec.ts.
  *

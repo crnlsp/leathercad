@@ -35,6 +35,7 @@ const FLAGS = [
   'toolRailCollapsed',
   'partsFolded',
   'propertiesFolded',
+  'updateCheck',
 ] as const;
 
 /**
@@ -85,6 +86,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     toolRailCollapsed: flag('toolRailCollapsed'),
     partsFolded: flag('partsFolded'),
     propertiesFolded: flag('propertiesFolded'),
+    // Absent before 8.9: on, the default.
+    updateCheck: flag('updateCheck'),
     // A language this version does not support — one chosen in a newer
     // version, or a preview tried in `pnpm dev` — follows the system rather
     // than stopping the app starting.

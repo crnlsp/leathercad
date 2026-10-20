@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { RecentOutcome } from '@leathercad/platform';
-import { BrowserWindow, Menu, app, session, shell } from 'electron';
+import { BrowserWindow, Menu, app, net, session, shell } from 'electron';
 import log from 'electron-log/main';
 
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
@@ -20,6 +20,7 @@ import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
 import { PreferencesStore } from './preferences.js';
 import { RecoveryStore } from './recovery.js';
+import { UpdateChecker } from './updates.js';
 
 // Electron derives userData from the npm package name, which would give
 // ~/.config/@leathercad/desktop. docs/file-format.md §6 specifies
@@ -122,8 +123,8 @@ function createWindow(): void {
       webSecurity: true,
       // No spellchecker (U.20): on Linux it fetched an English dictionary
       // from Google on first launch, whatever the interface's language, and
-      // underlined the leather words it does not know. SECURITY.md says the
-      // app makes no network connections.
+      // underlined the leather words it does not know. SECURITY.md names the
+      // one request the app makes, its update check (ADR 0020).
       spellcheck: false,
     },
   });
@@ -230,6 +231,20 @@ async function openRecent(path: string): Promise<RecentOutcome> {
 app.whenReady().then(() => {
   preferences = new PreferencesStore(join(app.getPath('userData'), 'preferences.json'));
 
+  // The update check (8.9, ADR 0020): the app's one network request, through
+  // Chromium's stack so a system proxy applies. The Flatpak never asks —
+  // Flathub updates it, and it has no network. The tests point it elsewhere.
+  const releasesUrl = process.env['LEATHERCAD_RELEASES_URL'];
+  const updates = new UpdateChecker({
+    fetch: (url, init) => net.fetch(url, init),
+    running: app.getVersion(),
+    managed: process.env['FLATPAK_ID'] !== undefined,
+    ...(releasesUrl !== undefined && releasesUrl !== '' ? { url: releasesUrl } : {}),
+  });
+  if (preferences.preferences.updateCheck) {
+    void updates.check().then((status) => log.info(`update check, at the start: ${status.state}`));
+  }
+
   registerPlatformHandlers(
     () => mainWindow,
     recovery,
@@ -257,6 +272,7 @@ app.whenReady().then(() => {
     (capturing) => {
       keyCapture = capturing;
     },
+    updates,
   );
 
   followLanguage();

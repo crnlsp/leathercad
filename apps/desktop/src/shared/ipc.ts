@@ -32,6 +32,8 @@ export const IPC = {
   clearRecent: 'platform:clearRecent',
   showLogFolder: 'platform:showLogFolder',
   readNotices: 'platform:readNotices',
+  getUpdateStatus: 'platform:getUpdateStatus',
+  checkForUpdates: 'platform:checkForUpdates',
   /** Main → renderer: an item of macOS's menu was chosen (8.5a, 8.7). */
   menuAction: 'menu:action',
   /** Main → renderer: open this project, which the main process granted (8.2). */

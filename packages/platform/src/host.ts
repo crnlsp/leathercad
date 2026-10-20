@@ -185,7 +185,38 @@ export interface PlatformHost {
    * hands over later (macOS's *open-file*) comes through `onOpenFile`.
    */
   takeLaunchFile(): Promise<string | null>;
+
+  /**
+   * What the update check found (8.9): the start's, waited for while it runs,
+   * or the last *Check now*'s. `idle` when nothing has asked this session.
+   */
+  getUpdateStatus(): Promise<UpdateStatus>;
+
+  /**
+   * Asks GitHub for the latest release now (8.9), whether or not the start
+   * does, and resolves with what it found. Installs nothing.
+   */
+  checkForUpdates(): Promise<UpdateStatus>;
 }
+
+/**
+ * Whether a newer LeatherCAD has been released (8.9) — a fact, which the app
+ * words. `managed`: something else keeps this copy up to date (the Flatpak,
+ * Flathub), so the app never asks. `failed` covers no network, GitHub
+ * refusing and an answer that could not be read: none of them is news.
+ */
+export type UpdateStatus =
+  | { readonly state: 'idle' }
+  | { readonly state: 'current' }
+  | {
+      readonly state: 'available';
+      /** As `X.Y.Z`. */
+      readonly version: string;
+      /** The release's page, where its notes and downloads are. */
+      readonly url: string;
+    }
+  | { readonly state: 'failed' }
+  | { readonly state: 'managed' };
 
 /** What `listPrinters` found (7.6). */
 export type PrinterList =
@@ -290,6 +321,11 @@ export interface Preferences {
    * differs is kept, so a new default reaches a command the maker never moved.
    */
   readonly keyBindings: Readonly<Record<string, readonly KeyBinding[]>>;
+  /**
+   * Whether the app asks GitHub for the latest release as it starts (8.9). On
+   * by default, so a maker hears of a fix; *Check now* works either way.
+   */
+  readonly updateCheck: boolean;
 }
 
 /**
@@ -341,6 +377,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   stitchMarginMm: 3.5,
   leatherThicknessMm: null,
   keyBindings: {},
+  updateCheck: true,
 };
 
 /** What macOS's native menu can ask the renderer to do (8.7). */

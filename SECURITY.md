@@ -26,7 +26,16 @@ back-ported fixes to older versions.
 
 ## What's in scope
 
-LeatherCAD is an offline desktop app. It makes no network connections and loads no remote content.
+LeatherCAD is a desktop app that works offline and loads no remote content. It makes one network
+request: for your security, it checks whether the version you are using is the latest, so you hear
+of fixes — security fixes among them — when they are released. As it starts, and when you press
+*Check now* in Settings › Updates, the app asks GitHub for the latest release
+(`api.github.com/repos/crnlsp/leathercad/releases/latest`). The request carries nothing about you
+or your patterns, and nothing is downloaded or installed: a newer release is only named, with a
+link to its page. Settings › Updates turns the check at start-up off. The Flatpak never makes it,
+since Flathub keeps it up to date. See
+[ADR 0020](docs/adr/0020-update-discovery.md).
+
 The things most worth reporting are:
 
 - **Opening a file.** A `.lcp` project that crashes the app, hangs it, or gets anything to run.
@@ -38,8 +47,10 @@ The things most worth reporting are:
   `docs/architecture.md` §5.
 - **The packaged app.** Its Electron fuses, asar integrity, or the release pipeline and its
   artefacts.
-- **A network connection.** Anything that gets the app to reach the network. Chromium's
-  spellchecker did, fetching a dictionary from Google on Linux, until 1.5 turned it off.
+- **A network connection.** Anything that gets the app to reach the network beyond the update
+  check, or gets the update check to ask anywhere else, send anything about the user, or link
+  anywhere but this project's releases. Chromium's spellchecker reached the network, fetching a
+  dictionary from Google on Linux, until 1.5 turned it off.
 
 Out of scope: problems that need an attacker who already controls the user's account or machine,
 and bugs in a PDF viewer or printer driver that LeatherCAD's output merely passes through.

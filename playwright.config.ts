@@ -14,6 +14,11 @@ process.env['XDG_CONFIG_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-conf
 // directory of its own; this catches one that does not go through it.
 process.env['XDG_STATE_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-state-'));
 
+// The update check (8.9) never asks GitHub from a test: the app is pointed at
+// a port nothing listens on, so a start's check fails at once and says so
+// quietly. e2e/updates.spec.ts answers it from a server of its own.
+process.env['LEATHERCAD_RELEASES_URL'] ??= 'http://127.0.0.1:9/';
+
 export default defineConfig({
   testDir: './e2e',
   // Each has its own config and command: pixel diffs run in a pinned

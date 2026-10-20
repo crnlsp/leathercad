@@ -932,6 +932,23 @@ body {
   padding-left: var(--space-3);
   border-left: 1px solid var(--shell-line);
 }
+
+/* A new version exists (8.9): a quiet tan dot in the Settings button's corner,
+   and the button's name says it. Nothing moves and nothing asks. */
+.settings-button {
+  position: relative;
+}
+
+.update-mark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--tan);
+  pointer-events: none;
+}
 .work-bar {
   display: flex;
   align-items: center;

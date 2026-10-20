@@ -106,8 +106,9 @@ export default {
     // Electron picks between them at start-up — and the GPU for drawing;
     // the home directory, because a pattern is saved wherever the maker keeps
     // it and Open Recent reopens it from there after a restart, which a
-    // portal's per-session grant cannot; nothing else. No network — the app
-    // never goes online — and no audio.
+    // portal's per-session grant cannot; nothing else. No network — the one
+    // request the app makes, its update check, is not the Flatpak's to make:
+    // Flathub updates it (ADR 0020) — and no audio.
     finishArgs: [
       '--socket=wayland',
       '--socket=x11',

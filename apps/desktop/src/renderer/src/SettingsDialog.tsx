@@ -1,5 +1,5 @@
 import { MIN_PITCH_MM } from '@leathercad/domain';
-import type { Iron, Preferences } from '@leathercad/platform';
+import type { Iron, Preferences, UpdateStatus } from '@leathercad/platform';
 import { Ellipsis, Pencil, Plus, Trash2, X } from 'lucide-react';
 import {
   useEffect,
@@ -47,8 +47,10 @@ import {
   type Proposal,
 } from './rebind.js';
 import { shortcutGroups } from './shortcuts.js';
+import { UpdateLine } from './UpdateLine.js';
 
-export type SettingsSection = 'general' | 'appearance' | 'tools' | 'language' | 'shortcuts';
+export type SettingsSection =
+  'general' | 'appearance' | 'tools' | 'language' | 'shortcuts' | 'updates';
 
 /** Where a translator starts (README § Translations). */
 const TRANSLATE_URL = 'https://github.com/crnlsp/leathercad#translations';
@@ -66,6 +68,10 @@ interface Props {
   onClose: () => void;
   /** Ids for the irons a maker adds (U.13). */
   nextId: () => string;
+  /** What the update check last found (8.9). */
+  updates: UpdateStatus;
+  /** *Check now*: resolves once the answer is in `updates`. */
+  onCheckUpdates: () => Promise<void>;
 }
 
 /**
@@ -91,6 +97,7 @@ const SECTIONS: readonly {
     title: 'settings.section.shortcuts',
     pane: (props) => <Shortcuts {...props} />,
   },
+  { id: 'updates', title: 'settings.section.updates', pane: (props) => <Updates {...props} /> },
 ];
 
 /**
@@ -539,6 +546,55 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
         })}
       </select>
     </div>
+  );
+}
+
+/**
+ * Whether the app asks for a new version as it starts, and *Check now* (8.9).
+ * It links to the release and installs nothing. The Flatpak has neither:
+ * Flathub updates it, and this says so.
+ */
+function Updates({ preferences, onPreferences, updates, onCheckUpdates }: Props) {
+  const { t } = useI18n();
+  const [checking, setChecking] = useState(false);
+  if (updates.state === 'managed') {
+    return (
+      <p className="setting-note" data-testid="updates-managed">
+        {t('settings.updates.managed')}
+      </p>
+    );
+  }
+  return (
+    <>
+      <Toggle
+        id="update-check"
+        name={t('settings.updates.check.name')}
+        note={t('settings.updates.check.note')}
+        checked={preferences.updateCheck}
+        onChange={(on) => onPreferences({ updateCheck: on })}
+      />
+      <div className="setting">
+        <div className="setting-text" aria-live="polite">
+          {checking ? (
+            <p className="dialog-note">{t('settings.updates.checking')}</p>
+          ) : (
+            <UpdateLine status={updates} />
+          )}
+        </div>
+        <button
+          type="button"
+          className="tool"
+          data-testid="check-updates"
+          disabled={checking}
+          onClick={() => {
+            setChecking(true);
+            void onCheckUpdates().finally(() => setChecking(false));
+          }}
+        >
+          {t('settings.updates.now')}
+        </button>
+      </div>
+    </>
   );
 }
 

@@ -100,6 +100,19 @@ describe('reading preferences.json', () => {
     expect(validChanges({ selectionBar: 0 })).toEqual({});
   });
 
+  it('checks for a new version at the start unless the maker turned it off (8.9)', () => {
+    // On a first launch, and in a file from before 8.9, which has no field.
+    expect(DEFAULT_PREFERENCES.updateCheck).toBe(true);
+    expect(parsePreferences(null).updateCheck).toBe(true);
+    expect(parsePreferences(JSON.stringify({ version: 2, legendOpen: false })).updateCheck).toBe(
+      true,
+    );
+    expect(parsePreferences(JSON.stringify({ updateCheck: false })).updateCheck).toBe(false);
+    expect(parsePreferences(JSON.stringify({ updateCheck: 'no' })).updateCheck).toBe(true);
+    expect(validChanges({ updateCheck: false })).toEqual({ updateCheck: false });
+    expect(validChanges({ updateCheck: 0 })).toEqual({});
+  });
+
   it('keeps the interface language: following the system, or one the app ships', () => {
     expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
     expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');

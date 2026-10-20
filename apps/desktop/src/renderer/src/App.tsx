@@ -21,7 +21,12 @@ import {
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import { systemIdSource, type Preferences, type RecentFile } from '@leathercad/platform';
+import {
+  systemIdSource,
+  type Preferences,
+  type RecentFile,
+  type UpdateStatus,
+} from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -425,6 +430,24 @@ export function App({
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [confirmDiscard, file]);
 
+  // Whether a newer release exists (8.9): the start's check, which the main
+  // process runs, heard when it answers; *Check now* in Settings asks again.
+  const [updates, setUpdates] = useState<UpdateStatus>({ state: 'idle' });
+  useEffect(() => {
+    void getPlatformHost()
+      .getUpdateStatus()
+      .then(setUpdates)
+      .catch(() => undefined);
+  }, []);
+  const checkUpdates = useCallback(
+    () =>
+      getPlatformHost()
+        .checkForUpdates()
+        .then(setUpdates)
+        .catch(() => setUpdates({ state: 'failed' })),
+    [],
+  );
+
   useEffect(() => {
     void (async () => {
       try {
@@ -756,7 +779,9 @@ export function App({
           onOpenRecent={(path) => getPlatformHost().openRecent(path)}
           onOpenSample={() => void openSample()}
           onAbout={() => setAboutOpen(true)}
-          onSettings={() => setSettings('general')}
+          // The mark is news about Updates, so the button opens there while it shows.
+          onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
+          updateAvailable={updates.state === 'available'}
           onSave={() => void file.save()}
           onExport={() => void exportPdf()}
           onExportSvg={() => void exportDrawing('svg')}
@@ -1164,10 +1189,14 @@ export function App({
             }
             onClose={() => setSettings(null)}
             nextId={nextId}
+            updates={updates}
+            onCheckUpdates={checkUpdates}
           />
         )}
 
-        {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
+        {aboutOpen && (
+          <AboutDialog version={version} updates={updates} onClose={() => setAboutOpen(false)} />
+        )}
 
         {printing && (
           <PrintPreview
