@@ -728,8 +728,9 @@ nudge it, and you still want to hide it to see what is underneath. Lock protects
 view. A locked feature is also still selectable in the parts panel, and its dependents still follow
 it — it simply cannot change itself.
 
-Enforced by refusing inside `mapFeature` **by default**, with an explicit `evenIfLocked` on the two
-commands that may touch one, rather than by a check each command remembers to write. Same reasoning
+Enforced by refusing inside `mapFeature` **by default**, rather than by a check each command
+remembers to write. The two commands that may touch a locked feature — hiding it
+and unlocking it — set its flag without going through `mapFeature` (8.8). Same reasoning
 as 4.3a's draw commit boundary: an invariant every caller has to remember is one that eventually
 gets forgotten.
 

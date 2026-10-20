@@ -20,7 +20,8 @@ export default defineConfig({
       // Test support that lives in src/ beside what it serves, and is run only
       // by the performance step the coverage run leaves out (Q6). Counting it
       // reported a file of fixtures as 0 % covered production code.
-      exclude: ['packages/domain/src/workloads.ts'],
+      // Benchmarks likewise: `pnpm bench` runs them, and the coverage run does not.
+      exclude: ['packages/domain/src/workloads.ts', '**/*.bench.ts'],
       thresholds: {
         lines: 90,
         branches: 85,

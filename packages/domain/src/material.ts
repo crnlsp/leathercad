@@ -63,11 +63,3 @@ export function distanceToEdge(material: Material, point: Vec2): Mm {
 
   return nearest;
 }
-
-/** Whether every one of these points is on the material. */
-export function allOnMaterial(material: Material, points: Iterable<Vec2>): boolean {
-  for (const point of points) {
-    if (!isOnMaterial(material, point)) return false;
-  }
-  return true;
-}

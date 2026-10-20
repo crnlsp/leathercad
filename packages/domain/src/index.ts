@@ -46,14 +46,7 @@ export type {
   TextSource,
   FeatureSource,
 } from './feature.js';
-export {
-  DEFAULT_SETTINGS,
-  eachFeature,
-  findFeature,
-  findPart,
-  isCutContour,
-  roleOf,
-} from './feature.js';
+export { DEFAULT_SETTINGS, eachFeature, findFeature, roleOf } from './feature.js';
 
 export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.js';
 export { evaluate, evaluationErrors, pathForShape, resolvedFeatures } from './evaluate.js';
@@ -82,7 +75,7 @@ export type { CornerSite } from './anchors.js';
 export { anchorsOf, cornerDistances, cornerSites, cornersThroughEdit } from './anchors.js';
 
 export type { Material } from './material.js';
-export { allOnMaterial, distanceToEdge, isOnMaterial, materialOf } from './material.js';
+export { distanceToEdge, isOnMaterial, materialOf } from './material.js';
 
 export {
   dependentsOf,

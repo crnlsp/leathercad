@@ -140,8 +140,8 @@ export function setFeatureVisible(ids: readonly FeatureId[], visible: boolean): 
  * Pins features down, or lets them go (S7) — one, or a whole selection as one
  * step (8.8).
  *
- * The one command that may change a locked feature, because it is the only way
- * back: `hitTest` and `snap` already skip a locked feature, so without this —
+ * One of the two commands that may change a locked feature, with hiding it, and
+ * the only way back: `hitTest` and `snap` already skip a locked feature, so without this —
  * and without the parts panel it is reached from — locking an outline would
  * put it permanently out of reach (defect D8).
  */
@@ -1022,12 +1022,12 @@ function mapPart(project: Project, id: PartId, update: (part: Part) => Part): Pr
 /**
  * Edits one feature, **refusing a locked one** (S7).
  *
- * Refusing by default rather than at each call site is deliberate: a command
- * added later that forgets to think about the lock gets the safe answer, and
- * the two places that genuinely may touch a locked feature — hiding it and
- * unlocking it — say so out loud with `evenIfLocked`. The same reasoning as
- * the draw commit boundary in 4.3a: an invariant every caller has to remember
- * is one that eventually gets forgotten.
+ * Refusing here rather than at each call site is deliberate: a command added
+ * later that forgets to think about the lock gets the safe answer. The two
+ * that genuinely may touch a locked feature — hiding it and unlocking it — set
+ * its flag through `withFlag` instead, never through here. The same reasoning
+ * as the draw commit boundary in 4.3a: an invariant every caller has to
+ * remember is one that eventually gets forgotten.
  *
  * Returns the project unchanged when refused; `lockRefusal` is how the reason
  * reaches the user.
@@ -1036,9 +1036,8 @@ function mapFeature(
   project: Project,
   id: FeatureId,
   update: (feature: Feature) => Feature,
-  options: { readonly evenIfLocked?: boolean } = {},
 ): Project {
-  if (options.evenIfLocked !== true && lockRefusal(project, [id]) !== null) return project;
+  if (lockRefusal(project, [id]) !== null) return project;
 
   // Nothing to edit is not an edit. Without this the project object would be
   // rebuilt anyway and the store, which decides by identity, would push an

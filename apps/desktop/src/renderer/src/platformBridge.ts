@@ -15,7 +15,7 @@ import type {
  * Adapts the preload bridge to the PlatformHost interface.
  *
  * The rest of the renderer depends on PlatformHost, never on `window.platform`,
- * so it can be handed InMemoryPlatformHost in tests without Electron present.
+ * so nothing but this file knows how the preload exposes it.
  */
 interface PreloadBridge {
   readFile(path: string): Promise<Uint8Array>;

@@ -43,21 +43,28 @@ cubic, two almost-parallel lines, an arc sweeping 359.9999°.
 
 ### 3.1 Generators
 
-Build a shared `packages/geometry/test/arbitraries.ts` once and reuse it everywhere:
+The shared generators are in `packages/geometry/test/arbitraries.ts`; reuse them before writing
+another. A generator nothing uses is deleted, not kept for later — `pnpm knip` reports one.
 
 ```ts
-arbFiniteMm          // finite doubles in [-2000, 2000], biased toward small values and exact ints
-arbVec2
-arbLineSegment       // never zero-length
-arbArc               // includes 0°, 180°, 360°, and tiny sweeps
-arbCubic             // includes degenerate: collinear controls, cusps, all-coincident
-arbSimplePolygon     // non-self-intersecting, both windings
-arbConvexPolygon
-arbClosedPath        // mixed segment kinds
-arbOpenPath
-arbRigidTransform    // rotation + translation only
-arbProject           // whole documents, for round-trip and undo properties
+arbCoord                 // what a maker could type: [-2000, 2000] mm, biased to round numbers and 0
+arbVec2, arbNonZeroVec2
+arbAngle
+arbScaleFactor           // keeps a matrix comfortably invertible
+arbRigidTransform        // rotation, translation and mirroring — no scaling
+arbRadius                // positive, not vanishingly small
+arbSweep                 // includes the full turn and both half turns
+arbLineSegment, arbArcSegment, arbCubicSegment, arbSegment
+arbNonDegenerateSegment  // real extent, for properties a degenerate one cannot satisfy
+arbOpenPath, arbClosedPath
+arbPitch                 // the pitches irons come in, plus awkward ones
 ```
+
+There is no shared whole-document generator. The undo properties run a generated sequence of
+commands (`commandArb` in `packages/document/src/store.test.ts`) over a small document; the
+reference graph's properties build projects of their own (`arbProject` in
+`packages/domain/src/graph.test.ts`); and the loader is fuzzed by
+`packages/persist/src/lcp.fuzz.test.ts`.
 
 Bias matters. Uniform random doubles almost never produce the coincident points, right angles, and
 round numbers that real user input is full of, and those are exactly where epsilon bugs live. Mix

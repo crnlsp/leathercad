@@ -30,14 +30,6 @@ allowBuilds:
   # Its install script only prepares Windows tooling. See ADR 0014.
   electron-winstaller: false
 
-# pnpm gates very recent releases behind a minimum release age. These were
-# reviewed and accepted; see ADR 0004.
-minimumReleaseAgeExclude:
-  - '@vitest/coverage-v8@5.0.0'
-  - '@vitest/mocker@5.0.0'
-  - '@vitest/spy@5.0.0'
-  - vitest@5.0.0
-
 # Versions forced past what a dependency pins, each for a known vulnerability
 # that osv-scanner reports. Remove one when the dependency's own pin moves on.
 overrides:

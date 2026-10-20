@@ -150,7 +150,7 @@ Strict, one-directional dependency graph. An arrow means "may import".
                                        │
                                 ┌──────┴───────┐
                                 │   platform   │  PlatformHost — the OS boundary (§5).
-                                └──────────────┘  Implemented by apps/desktop, faked in tests.
+                                └──────────────┘  Implemented by apps/desktop.
 
      typography ─depends on─▶ core, geometry   (pure: glyph outlines and layout in mm — built 4.11a)
      domain   ──depends on──▶ typography, to ask whether a string can be printed (DR5)
@@ -301,8 +301,8 @@ interface PlatformHost {
 }
 ```
 
-Implemented once in `apps/desktop` over Electron IPC, and once as an in-memory fake in the test
-suite. Everything above `editor` depends on the interface, never on Electron.
+Implemented once, in `apps/desktop` over Electron IPC.
+Everything above `editor` depends on the interface, never on Electron.
 
 `printPdf` takes the bytes the Print Preview drew, not a path, so nothing is written to disk to
 print. The main process checks the job as untrusted: the printer must be one CUPS lists, and the

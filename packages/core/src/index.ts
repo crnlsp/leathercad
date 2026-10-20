@@ -49,15 +49,4 @@ export { assertFinite, invariant } from './guard.js';
 
 export { CROCKFORD_ALPHABET, createIdFactory, type IdSource, type Ulid } from './id.js';
 
-export {
-  err,
-  isErr,
-  isOk,
-  mapOk,
-  ok,
-  unwrap,
-  unwrapOr,
-  type Err,
-  type Ok,
-  type Result,
-} from './result.js';
+export { err, isErr, isOk, ok, unwrap, type Err, type Ok, type Result } from './result.js';

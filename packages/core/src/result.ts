@@ -38,12 +38,3 @@ export function unwrap<T, E>(result: Result<T, E>): T {
   if (result.ok) return result.value;
   throw new Error(`unwrap called on a failed Result: ${String(result.error)}`);
 }
-
-export function unwrapOr<T, E>(result: Result<T, E>, fallback: T): T {
-  return result.ok ? result.value : fallback;
-}
-
-/** Transforms a success and passes a failure through untouched. */
-export function mapOk<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> {
-  return result.ok ? ok(fn(result.value)) : result;
-}
