@@ -21,8 +21,9 @@ import { Tooltip } from './Tooltip.js';
  * project bar, under the system's title bar: the Project menu at its left,
  * the tabs, and *+*, a menu of a new project or one the maker has.
  *
- * The active tab is the project bar's colour and runs into it: the bar below
- * is that tab's. A tab says its project's name, and a dot where its close
+ * The tabs are drawing sheets: square, a hairline between them, and the open
+ * one laid on top — outlined on three sides, open into the project bar below,
+ * which is its. A tab says its project's name, and a dot where its close
  * button is while it has unsaved work — the button comes back under the
  * pointer, as in Notepad. A middle click closes it too, and a right-click
  * opens its own menu: rename, save, reload from disk, duplicate, show in

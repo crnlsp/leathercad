@@ -509,9 +509,8 @@ body {
 /*
  * The project tabs (8.12): a strip of their own above the project bar, on the
  * panels' surface. The active tab is the project bar's darkest shell and runs
- * into it, so the bar below reads as that tab's; the accent along its top is
- * the user's own focus, as everywhere on the shell. A tab with unsaved work
- * shows a dot where its close button is, until the pointer is on the tab.
+ * into it, so the bar below reads as that tab's. A tab with unsaved work shows
+ * a dot where its close button is, until the pointer is on the tab.
  */
 .tab-strip {
   display: flex;
@@ -525,12 +524,19 @@ body {
 .tab-list {
   display: flex;
   align-items: flex-end;
-  gap: 1px;
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
+/*
+ * The tabs are drawing sheets (8.12), filed as drafting software files them:
+ * square, side by side, a hairline between two that are not open. The open
+ * one is a sheet laid on top — lines on three sides, open into the project
+ * bar below, which is its. No rounding and no colour bar: the chrome of a
+ * drawing tool, not of a browser. A folded corner was tried and dropped: it
+ * met the close button.
+ */
 .tab {
   position: relative;
   display: flex;
@@ -539,30 +545,35 @@ body {
   min-width: 96px;
   height: 30px;
   padding: 0 var(--space-1) 0 0;
-  border-radius: var(--r-md) var(--r-md) 0 0;
+  border: 1px solid transparent;
+  border-bottom: 0;
   color: var(--text-dim);
 }
 
-.tab:hover {
+.tab + .tab {
+  margin-left: -1px;
+}
+
+.tab:not(.active) + .tab:not(.active)::before {
+  content: '';
+  position: absolute;
+  top: var(--space-2);
+  bottom: var(--space-2);
+  left: -1px;
+  width: 1px;
+  background: var(--shell-line);
+}
+
+.tab:hover:not(.active) {
   background: var(--shell-700);
   color: var(--text);
 }
 
 .tab.active {
+  z-index: 1;
+  border-color: var(--shell-line);
   background: var(--shell-900);
   color: var(--text);
-}
-
-.tab.active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: var(--space-2);
-  left: var(--space-2);
-  height: 2px;
-  border-bottom-right-radius: var(--r-sm);
-  border-bottom-left-radius: var(--r-sm);
-  background: var(--tan);
 }
 
 /*
