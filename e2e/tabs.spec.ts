@@ -107,11 +107,12 @@ test('with every project closed the app stays open, on its start screen', async 
     await expect(window.getByTestId('save-as')).toHaveAttribute('aria-disabled', 'true');
     await window.keyboard.press('Escape');
 
-    // The ways back in: a new project, the sample.
+    // The ways back in: a new project, one from a template.
     await start.getByTestId('start-new').click();
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await closeActiveTab(window);
-    await start.getByTestId('start-sample').click();
+    await start.getByTestId('start-template').click();
+    await window.getByTestId('template-builtin:bifold-wallet').dblclick();
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await expectNoViolations(window, 'a project open again');
   });
@@ -219,7 +220,8 @@ test('the app starts on its start screen, and a project opened again bounces its
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(0);
     await expect.poll(() => window.title()).toBe('LeatherCAD');
 
-    await window.getByTestId('start-sample').click();
+    await window.getByTestId('start-template').click();
+    await window.getByTestId('template-builtin:bifold-wallet').dblclick();
     await expect(window.getByTestId('part-count')).toHaveText('3');
   } finally {
     await closeApp(app);
@@ -561,10 +563,12 @@ test('a new project from a template, and any project saved as one (8.14)', async
   await withApp(
     async (window) => {
       // Typing goes to the search at once; it reads names and descriptions.
+      // "holder" names only the card holder: "card" is in the wallet's too.
       await fromProjectMenu(window, 'new-template');
       const dialog = window.getByTestId('template-dialog');
       await expect(dialog.getByTestId('template-search')).toBeFocused();
-      await window.keyboard.type('card');
+      await window.keyboard.type('holder');
+      await expect(dialog.getByTestId('template-builtin:bifold-wallet')).toHaveCount(0);
       await expect(dialog.getByTestId('template-builtin:card-holder')).toBeVisible();
       await expect(dialog.getByTestId('template-builtin:key-fob')).toHaveCount(0);
       // The chosen one, large: its facts beside it.
