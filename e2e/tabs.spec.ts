@@ -71,8 +71,10 @@ test('a tab with unsaved work shows a dot, and says so to a screen reader', asyn
 test('a middle click, the close button and the keys close a tab', async () => {
   await withApp(async (window) => {
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
-    await window.getByTestId('new-tab').click();
-    await window.getByTestId('new-tab').click();
+    for (let i = 0; i < 2; i++) {
+      await window.getByTestId('new-tab').click();
+      await window.getByTestId('tab-new').click();
+    }
     // An untouched Untitled is not replaced by New: New asks for a tab.
     await expect(tabs).toHaveCount(3);
 
@@ -146,4 +148,62 @@ test('the tab strip passes the accessibility scan', async () => {
     await openSample(window);
     await expectNoViolations(window, 'two tabs, one unsaved');
   });
+});
+
+test('+ offers a new project, Open… and the recent projects', async () => {
+  await withApp(async (window, app) => {
+    const file = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Belt.lcp');
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, file);
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await closeActiveTab(window);
+
+    await window.getByTestId('new-tab').click();
+    await expect(window.getByTestId('tab-new')).toBeVisible();
+    await expect(window.getByTestId('tab-open')).toBeVisible();
+    await window.getByTestId('tab-recent-0').click();
+    await expect(window.getByTestId('project-name')).toHaveText('Belt');
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+  });
+});
+
+test('the open tabs come back at the next start, the one in front in front', async () => {
+  const config = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+  const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+  const tabs = (window: Page) => window.getByTestId('tab-strip').getByRole('tab');
+
+  await withApp(
+    async (window, app) => {
+      for (const [name, parts] of [
+        ['Wallet', '1'],
+        ['Belt', '1'],
+      ] as const) {
+        await app.evaluate(
+          ({ dialog }, path) => {
+            dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+          },
+          join(folder, `${name}.lcp`),
+        );
+        await drawAPanel(window, { parts });
+        await window.getByTestId('save').click();
+        await expect(window.getByTestId('project-name')).toHaveText(name);
+        await window.keyboard.press('Control+n');
+      }
+      // Wallet in front; the empty Untitled is not kept.
+      await tabs(window).first().click();
+      await expect(tabs(window)).toHaveText(['Wallet', 'Belt', 'Untitled']);
+    },
+    { env: { XDG_CONFIG_HOME: config } },
+  );
+
+  await withApp(
+    async (window) => {
+      await expect(tabs(window)).toHaveText(['Wallet', 'Belt']);
+      await expect(window.getByTestId('project-name')).toHaveText('Wallet');
+    },
+    { env: { XDG_CONFIG_HOME: config } },
+  );
 });

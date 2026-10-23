@@ -11,7 +11,7 @@ import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
 import { OneAtATime } from './oneAtATime.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
-import { shownPath, type PreferencesStore } from './preferences.js';
+import { shownPath, type PreferencesStore, type Session } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
 import type { UpdateChecker } from './updates.js';
 
@@ -44,6 +44,8 @@ export function registerPlatformHandlers(
   sampleProjectPath: string,
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
+  /** The tabs open when the app last closed that are still there, granted (8.12); handed over once. */
+  takeSession: () => Session,
   /** Opens a project from the recent list, if it is on it (8.7). */
   openRecent: (path: string) => Promise<RecentOutcome>,
   /** The third-party notices the build wrote (8.6b), or null in development (U.20). */
@@ -162,6 +164,20 @@ export function registerPlatformHandlers(
   );
 
   ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
+
+  // The open tabs (8.12), kept for the next start. Only a project the maker
+  // chose this session is kept — as for the recent list — so the session can
+  // never become a way to reach any other file at the next start.
+  ipcMain.handle(IPC.takeSession, () => takeSession());
+  ipcMain.handle(IPC.keepSession, async (_event, projects: unknown, active: unknown) => {
+    const chosen = Array.isArray(projects)
+      ? projects.filter((path) => grants.allows(path, 'write'))
+      : [];
+    await preferences.keepSession({
+      projects: chosen,
+      active: grants.allows(active, 'write') ? (active as string) : null,
+    });
+  });
 
   // Preferences (8.2). The renderer names a change, never the file.
   ipcMain.handle(IPC.getPreferences, () => preferences.preferences);

@@ -11,8 +11,8 @@
     "close": "Close {{name}}",
     "closeTooltip": "Close this project",
     "unsaved": "{{name}}, unsaved changes",
-    "new": "New project",
-    "newTooltip": "Start a new project in a tab of its own",
+    "add": "New tab",
+    "addTooltip": "A new project, or one you have, in a tab of its own",
     "menu": "Project menu",
     "menuTooltip": "New, open, save as, rename, and recent projects",
     "noProject": "No project is open"

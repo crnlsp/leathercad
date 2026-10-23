@@ -13,6 +13,7 @@
  */
 
 export type {
+  OpenSession,
   PlatformHost,
   OpenDialogOptions,
   SaveDialogOptions,

@@ -56,7 +56,7 @@ import {
   type ExportReport,
 } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
-import { ProjectMenu } from './ProjectMenu.js';
+import { NewTabMenu, ProjectMenu } from './ProjectMenu.js';
 import { StartScreen } from './StartScreen.js';
 import { ProjectTabs, isDirty, newTab, tabName, type ProjectTab } from './projectTabs.js';
 import { TabStrip } from './TabStrip.js';
@@ -491,16 +491,50 @@ export function App({
     if (settings !== null) refreshRecent();
   }, [settings, refreshRecent]);
 
-  // A project double-clicked in the file manager (8.5), asked for once the
-  // app is ready to open it.
-  // `openPath` is stable, and the main process hands the file over once.
+  // The start (8.12): the tabs open when the app last closed, in their order,
+  // the one that was showing in front — then a project double-clicked in the
+  // file manager (8.5), in front of them. Asked for once the app is ready to
+  // open them; the main process hands each over once, so a second run of this
+  // effect (React's development double run) waits on the first.
+  // `openPath` is stable.
   const openPath = file.openPath;
+  const starting = useRef<Promise<void> | null>(null);
+  const [started, setStarted] = useState(false);
   useEffect(() => {
+    starting.current ??= (async () => {
+      const host = getPlatformHost();
+      try {
+        const session = await host.takeSession();
+        for (const path of session.projects) await openPath(path);
+        const shown = session.active === null ? undefined : tabs.byPath(session.active);
+        if (shown !== undefined) tabs.activate(shown.id);
+      } catch {
+        // A start without its tabs is better than a start that fails over them.
+      }
+      try {
+        const path = await host.takeLaunchFile();
+        if (path !== null) await openPath(path);
+      } catch {
+        // As above: the window opens all the same.
+      }
+    })();
+    void starting.current.then(() => setStarted(true));
+  }, [openPath, tabs]);
+
+  // The open tabs, kept for the next start (8.12): those with a file, in the
+  // strip's order, and the one in front. Not before the start has opened the
+  // last ones, or its empty *Untitled* would be kept over them.
+  const session = JSON.stringify([
+    openTabs.flatMap((each) => (each.file.path === null ? [] : [each.file.path])),
+    active?.file.path ?? null,
+  ]);
+  useEffect(() => {
+    if (!started) return;
+    const [projects, shown] = JSON.parse(session) as [string[], string | null];
     void getPlatformHost()
-      .takeLaunchFile()
-      .then((path) => (path === null ? undefined : openPath(path)))
+      .keepSession(projects, shown)
       .catch(() => undefined);
-  }, [openPath]);
+  }, [started, session]);
 
   // A recent project (8.2, 8.7), a second launch's (8.11), macOS's open-file:
   // the main process chose and granted the path, and it opens in a tab.
@@ -891,11 +925,19 @@ export function App({
               onOpenRecent={(path) => getPlatformHost().openRecent(path)}
             />
           }
+          add={
+            <NewTabMenu
+              recent={recent}
+              onMenuOpen={refreshRecent}
+              onNew={newProject}
+              onOpen={() => void openProject()}
+              onOpenRecent={(path) => getPlatformHost().openRecent(path)}
+            />
+          }
           renaming={renaming !== null}
           onRenamed={renamed}
           onActivate={(id) => tabs.activate(id)}
           onClose={(id) => void closeTab(id)}
-          onNew={newProject}
         />
         {active === null ? (
           <StartScreen

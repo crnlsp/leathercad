@@ -353,7 +353,8 @@ and read once at start-up:
   "stitchMarginMm": 3.5,
   "leatherThicknessMm": null,
   "keyBindings": { "save": [{ "code": "F5" }] },
-  "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
+  "recentFiles": ["/home/maker/Patterns/Wallet.lcp"],
+  "session": { "projects": ["/home/maker/Patterns/Wallet.lcp"], "active": "/home/maker/Patterns/Wallet.lcp" }
 }
 ```
 
@@ -362,7 +363,10 @@ or an unknown field falls back field by field to the defaults, and a newer versi
 are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent first, and only
 paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
-has gone is taken off the list when it is chosen. The rail's collapse applies to a wide window
+has gone is taken off the list when it is chosen. `session` is the projects open in tabs when the
+app last closed (8.12), in the strip's order, and the one in front: a start opens them again, those
+still on disk. By the same rule it holds only paths chosen in the app's dialogs, at most thirty, and
+never a project with no file — closing the window asked about those. The rail's collapse applies to a wide window
 only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
 and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
 room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode

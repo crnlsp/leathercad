@@ -19,7 +19,7 @@ import { applyBindings } from '../renderer/src/keymap.js';
 import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
-import { PreferencesStore } from './preferences.js';
+import { PreferencesStore, type Session } from './preferences.js';
 import { RecoveryStore } from './recovery.js';
 import { UpdateChecker } from './updates.js';
 
@@ -262,6 +262,22 @@ function buildMenu(): void {
  * taken off the list, and the renderer tells the maker why it vanished, in
  * the app's own dialog (U.20).
  */
+/**
+ * The tabs open when the app last closed (8.12), handed to the renderer once,
+ * as it starts: those still on disk, granted — the maker chose each in a
+ * dialog in an earlier session, as for the recent list. A second ask, from a
+ * reloaded page, gets none: what it shows now is the session.
+ */
+let sessionTaken = false;
+function takeSession(): Session {
+  if (sessionTaken) return { projects: [], active: null };
+  sessionTaken = true;
+  const { projects, active } = preferences.session;
+  const there = projects.filter((path) => existsSync(path));
+  for (const path of there) grants.grant(path);
+  return { projects: there, active: active !== null && there.includes(active) ? active : null };
+}
+
 async function openRecent(path: string): Promise<RecentOutcome> {
   if (!preferences.recentFiles.includes(path)) return 'unlisted';
   if (!existsSync(path)) {
@@ -309,6 +325,7 @@ app.whenReady().then(() => {
       launchFile = null;
       return file;
     },
+    takeSession,
     (path) => openRecent(path),
     readNotices,
     // A new language rebuilds macOS's menu in it, at once, as the window's

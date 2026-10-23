@@ -156,6 +156,54 @@ export function projectMenu(
 }
 
 /**
+ * What *+* on the tab strip opens (8.12): a tab for a new project, or for one
+ * the maker has — chosen on disk, or one of the recent projects, the Project
+ * menu's own list. Each opens in a tab of its own; one already open goes to
+ * its tab.
+ */
+export function newTabMenu(
+  actions: {
+    readonly newProject: () => void;
+    readonly open: () => void;
+    readonly openRecent: (path: string) => void;
+  },
+  recent: readonly RecentFile[],
+  t: Translate,
+): MenuEntry[] {
+  return [
+    {
+      kind: 'item',
+      id: 'tab-new',
+      label: t('menu.new'),
+      keys: 'newProject',
+      onChoose: actions.newProject,
+    },
+    {
+      kind: 'item',
+      id: 'tab-open',
+      label: t('menu.open'),
+      keys: 'openProject',
+      onChoose: actions.open,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'group',
+      label: t('menu.recent'),
+      empty: t('menu.recentEmpty'),
+      items: recent.map((file, index) => {
+        const { name, folder } = recentParts(file.shown);
+        return {
+          id: `tab-recent-${String(index)}`,
+          label: name,
+          note: folder,
+          onChoose: () => actions.openRecent(file.path),
+        };
+      }),
+    },
+  ];
+}
+
+/**
  * The other formats of *Export PDF* (6.2, 6.5), in the menu beside it: the files
  * a laser cutter, a plotter, a CNC program or a vector editor reads, in
  * millimetres. Not repeated in the Project menu — an export is the bar's.

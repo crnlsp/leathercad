@@ -197,6 +197,26 @@ export interface PlatformHost {
    * maker pressed something — and resolves with what it found. Installs nothing.
    */
   checkForUpdates(): Promise<UpdateStatus>;
+
+  /**
+   * The projects open in tabs when the app last closed (8.12), in their
+   * order, and the one that was showing — those still on disk, already paths
+   * the app may read and write. Once, as the window starts; empty after.
+   */
+  takeSession(): Promise<OpenSession>;
+
+  /**
+   * Keeps the projects open in tabs, for the next start (8.12). Only paths
+   * chosen in the app's dialogs this session, or opened again from the last,
+   * are kept; any other is dropped.
+   */
+  keepSession(projects: readonly string[], active: string | null): Promise<void>;
+}
+
+/** The tabs a start opens again (8.12). */
+export interface OpenSession {
+  readonly projects: readonly string[];
+  readonly active: string | null;
 }
 
 /**

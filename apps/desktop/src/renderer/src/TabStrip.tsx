@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { intoMenu } from './fieldMenu.js';
@@ -10,7 +10,7 @@ import { Tooltip } from './Tooltip.js';
 /**
  * The open projects, one tab each (8.12), on a strip of their own above the
  * project bar, under the system's title bar: the Project menu at its left,
- * the tabs, and *+*.
+ * the tabs, and *+*, a menu of a new project or one the maker has.
  *
  * The active tab is the project bar's colour and runs into it: the bar below
  * is that tab's. A tab says its project's name, and a dot where its close
@@ -28,17 +28,19 @@ export function TabStrip({
   tabs,
   active,
   menu,
+  add,
   renaming,
   onRenamed,
   onActivate,
   onClose,
-  onNew,
 }: {
   tabs: readonly ProjectTab[];
   /** None on the start screen. */
   active: ProjectTab | null;
   /** The Project menu's button, at the strip's left. */
   menu: ReactNode;
+  /** *+*, after the tabs: a new project, or one the maker has. */
+  add: ReactNode;
   /** The active tab's name is a field. */
   renaming: boolean;
   /** The name typed, or null when it was put back. */
@@ -46,7 +48,6 @@ export function TabStrip({
   onActivate: (id: string) => void;
   /** Asks first when the tab has unsaved work. */
   onClose: (id: string) => void;
-  onNew: () => void;
 }) {
   const { t } = useI18n();
   const list = useRef<HTMLDivElement>(null);
@@ -151,17 +152,7 @@ export function TabStrip({
           );
         })}
       </div>
-      <Tooltip text={t('tabs.newTooltip')} keys="newProject">
-        <button
-          type="button"
-          className="tool quiet icon-only tab-new"
-          data-testid="new-tab"
-          aria-label={t('tabs.new')}
-          onClick={onNew}
-        >
-          <Icon of={Plus} size={14} />
-        </button>
-      </Tooltip>
+      {add}
     </div>
   );
 }

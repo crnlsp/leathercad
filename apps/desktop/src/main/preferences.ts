@@ -24,9 +24,31 @@ interface StoredPreferences extends Preferences {
   readonly version: 2;
   /** Absolute paths, most recent first. */
   readonly recentFiles: readonly string[];
+  /** The projects open in tabs when the app last closed, in their order (8.12). */
+  readonly session: Session;
 }
 
-const EMPTY: StoredPreferences = { version: 2, ...DEFAULT_PREFERENCES, recentFiles: [] };
+/**
+ * The tabs to open again at the next start (8.12): the projects that had a
+ * file, in the strip's order, and the one that was showing. A project never
+ * saved is not here — closing the window asked about it.
+ */
+export interface Session {
+  readonly projects: readonly string[];
+  readonly active: string | null;
+}
+
+/** How many tabs a start opens again, at most. */
+export const SESSION_LIMIT = 30;
+
+const NO_SESSION: Session = { projects: [], active: null };
+
+const EMPTY: StoredPreferences = {
+  version: 2,
+  ...DEFAULT_PREFERENCES,
+  recentFiles: [],
+  session: NO_SESSION,
+};
 
 /** The preferences that are on or off. */
 const FLAGS = [
@@ -98,7 +120,21 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     // Each key the maker changed, kept only if this version can use it (U.12).
     keyBindings: readBindings(record['keyBindings'], IS_MAC),
     recentFiles: [...new Set(recent)].slice(0, RECENT_LIMIT),
+    // Absent before 8.12: nothing to open again.
+    session: readSession(record['session']),
   };
+}
+
+/**
+ * The tabs to open again, tidied: project paths only, each once, and an
+ * active one that is among them. Anything else is no session.
+ */
+export function readSession(value: unknown): Session {
+  if (typeof value !== 'object' || value === null) return NO_SESSION;
+  const { projects, active } = value as Record<string, unknown>;
+  if (!Array.isArray(projects)) return NO_SESSION;
+  const kept = [...new Set(projects.filter(isProjectPath))].slice(0, SESSION_LIMIT);
+  return { projects: kept, active: isProjectPath(active) && kept.includes(active) ? active : null };
 }
 
 /** A length a maker could have typed: finite, above zero, on the storage grid. */
@@ -201,8 +237,31 @@ export class PreferencesStore {
   }
 
   get preferences(): Preferences {
-    const { version: _version, recentFiles: _recent, ...preferences } = this.stored;
+    const {
+      version: _version,
+      recentFiles: _recent,
+      session: _session,
+      ...preferences
+    } = this.stored;
     return preferences;
+  }
+
+  get session(): Session {
+    return this.stored.session;
+  }
+
+  /** Keeps the open tabs, for the next start (8.12). Unchanged, nothing is written. */
+  keepSession(session: Session): Promise<void> {
+    const next = readSession(session);
+    const now = this.stored.session;
+    if (
+      next.active === now.active &&
+      next.projects.length === now.projects.length &&
+      next.projects.every((path, index) => path === now.projects[index])
+    ) {
+      return Promise.resolve();
+    }
+    return this.replace({ ...this.stored, session: next });
   }
 
   get recentFiles(): readonly string[] {

@@ -102,8 +102,8 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
 - ◐ **8.12 Project tabs.** A tab strip above the project bar: the Project menu as an icon at its
   left — where the project's name was the menu's button in the bar — then a tab per project, its
   project's name — its file's for a project with none of its own, *Untitled*, *Untitled 2*… for
-  new ones — with a dot for unsaved work where its close button is, and *+*, which always adds
-  a new one. *Rename…* turns the active tab's name into a field; a project first saved without a
+  new ones — with a dot for unsaved work where its close button is, and *+*, a menu of a new
+  project, *Open…* and the recent projects. *Rename…* turns the active tab's name into a field; a project first saved without a
   name is named after its file. New, Open, a recent project, the sample, a launch and a second
   launch each open a tab; a project already open goes to its tab, and an untouched *Untitled* is
   replaced. Each tab keeps its own document, history, selection, view, camera and file. Closing a
@@ -111,7 +111,8 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   start screen — New, Open, the sample and the recent projects — and closing the window asks about
   each unsaved tab in turn, *Cancel* stopping it. Ctrl+Page Down and Ctrl+Page Up go round the tabs
   and Ctrl+W closes one, through the keymap — never the digits, which Design and Sheets have; a
-  middle click closes too. One file dialog at a time: a second Open while one is up is not shown.
+  middle click closes too. The tabs with a file come back at the next start, the one in front in
+  front (`session` in `preferences.json`). One file dialog at a time: a second Open while one is up is not shown.
   The window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work.
   A `tablist` with arrow keys, clean under axe. Until 8.13 only the active tab's work is written to
   the recovery copy.

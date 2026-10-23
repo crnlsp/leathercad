@@ -27,6 +27,8 @@ export const IPC = {
   noteRecentFile: 'platform:noteRecentFile',
   readSampleProject: 'platform:readSampleProject',
   takeLaunchFile: 'platform:takeLaunchFile',
+  takeSession: 'platform:takeSession',
+  keepSession: 'platform:keepSession',
   getRecentFiles: 'platform:getRecentFiles',
   openRecent: 'platform:openRecent',
   clearRecent: 'platform:clearRecent',

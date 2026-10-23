@@ -1,6 +1,7 @@
 import type {
   MenuAction,
   OpenDialogOptions,
+  OpenSession,
   PlatformHost,
   Preferences,
   PrintJob,
@@ -50,6 +51,8 @@ interface PreloadBridge {
   takeLaunchFile(): Promise<string | null>;
   getUpdateStatus(): Promise<UpdateStatus>;
   checkForUpdates(): Promise<UpdateStatus>;
+  takeSession(): Promise<OpenSession>;
+  keepSession(projects: readonly string[], active: string | null): Promise<void>;
 }
 
 declare global {

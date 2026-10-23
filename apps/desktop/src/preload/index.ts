@@ -81,6 +81,12 @@ const platformBridge = {
 
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),
 
+  takeSession: (): Promise<{ projects: string[]; active: string | null }> =>
+    ipcRenderer.invoke(IPC.takeSession),
+
+  keepSession: (projects: readonly string[], active: string | null): Promise<void> =>
+    ipcRenderer.invoke(IPC.keepSession, projects, active),
+
   onOpenFile: (listener: (path: string) => void): (() => void) => {
     const handler = (_event: unknown, path: string): void => listener(path);
     ipcRenderer.on(IPC.openFile, handler);

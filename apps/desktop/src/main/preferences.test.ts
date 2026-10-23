@@ -8,7 +8,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   PreferencesStore,
   RECENT_LIMIT,
+  SESSION_LIMIT,
   parsePreferences,
+  readSession,
   shownPath,
   validChanges,
   withRecent,
@@ -380,5 +382,51 @@ describe('a recent project as the maker reads it (8.7)', () => {
   it('leaves every path whole when there is no home directory', () => {
     const path = ['', 'home', 'maker', 'Wallet.lcp'].join(sep);
     expect(shownPath(path, '')).toBe(path);
+  });
+});
+
+describe('the open tabs, for the next start (8.12)', () => {
+  it('has none in a file written before tabs', () => {
+    expect(new PreferencesStore(file).session).toEqual({ projects: [], active: null });
+  });
+
+  it('keeps project paths only, each once, and an active one that is among them', () => {
+    expect(
+      readSession({
+        projects: ['/p/wallet.lcp', 'relative.lcp', '/p/notes.txt', '/p/wallet.lcp', 7],
+        active: '/p/belt.lcp',
+      }),
+    ).toEqual({ projects: ['/p/wallet.lcp'], active: null });
+    expect(readSession({ projects: '/p/wallet.lcp' })).toEqual({ projects: [], active: null });
+    expect(readSession(null)).toEqual({ projects: [], active: null });
+    expect(
+      readSession({ projects: Array.from({ length: 50 }, (_, i) => `/p/${String(i)}.lcp`) })
+        .projects,
+    ).toHaveLength(SESSION_LIMIT);
+  });
+
+  it('survives a restart, beside the recent list, and is not a preference', async () => {
+    const first = new PreferencesStore(file);
+    await first.noteRecent('/p/wallet.lcp');
+    await first.keepSession({ projects: ['/p/wallet.lcp', '/p/belt.lcp'], active: '/p/belt.lcp' });
+
+    const second = new PreferencesStore(file);
+    expect(second.session).toEqual({
+      projects: ['/p/wallet.lcp', '/p/belt.lcp'],
+      active: '/p/belt.lcp',
+    });
+    expect(second.recentFiles).toEqual(['/p/wallet.lcp']);
+    expect(second.preferences).not.toHaveProperty('session');
+    // A preference changed later keeps it.
+    await second.update({ legendOpen: false });
+    expect(new PreferencesStore(file).session.projects).toEqual(['/p/wallet.lcp', '/p/belt.lcp']);
+  });
+
+  it('writes nothing when the tabs are as they were', async () => {
+    const store = new PreferencesStore(file);
+    await store.keepSession({ projects: ['/p/wallet.lcp'], active: '/p/wallet.lcp' });
+    writeFileSync(file, 'left alone');
+    await store.keepSession({ projects: ['/p/wallet.lcp'], active: '/p/wallet.lcp' });
+    expect(readFileSync(file, 'utf8')).toBe('left alone');
   });
 });
