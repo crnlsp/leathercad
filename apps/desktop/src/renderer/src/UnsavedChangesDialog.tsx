@@ -3,14 +3,15 @@ import { useEffect, useRef } from 'react';
 import { useI18n } from './i18n.js';
 
 /** What the maker was doing when they were asked; its consequence is `unsaved.consequence.<action>`. */
-export type DiscardingAction = 'close' | 'open' | 'new';
+export type DiscardingAction = 'close';
 
 /**
  * Asks before unsaved work is thrown away (slice 5.3a).
  *
- * One question for the three ordinary actions that used to destroy work
- * without a word: closing the window, opening another project, and starting a
- * new one. **Save** is where focus starts — the choice that loses nothing — and
+ * One question for what used to destroy work without a word: closing the
+ * window, or since 8.12 a project's tab. Opening a project and starting a new
+ * one no longer replace anything — each has a tab of its own — so they ask
+ * nothing. **Save** is where focus starts — the choice that loses nothing — and
  * Escape cancels. As in the delete dialog, key events stop here, so a shortcut
  * typed at the question cannot also switch tools behind it.
  */

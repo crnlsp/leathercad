@@ -5,6 +5,21 @@
     "windowTitleUnsaved": "• {{name}} — LeatherCAD",
     "drawing": "Drawing"
   },
+  "tabs": {
+    "region": "Open projects",
+    "close": "Close {{name}}",
+    "closeTooltip": "Close this project",
+    "unsaved": "{{name}}, unsaved changes",
+    "new": "New project",
+    "newTooltip": "Start a new project in a tab of its own",
+    "menu": "Project menu",
+    "menuTooltip": "New, open, save as, rename, and recent projects",
+    "noProject": "No project is open"
+  },
+  "start": {
+    "title": "No project open",
+    "lede": "Start a new pattern, open one from disk, or pick up where you left off."
+  },
   "actions": {
     "cancel": "Cancel",
     "close": "Close",
@@ -72,8 +87,6 @@
     "problemsNone": "Problems: nothing to fix",
     "problemsNoneTooltip": "Nothing to fix",
     "problemsTooltip": "{{counts}}. Show them in Problems",
-    "projectMenu": "Project menu, {{name}}",
-    "projectMenuTooltip": "{{name}}. New, open, save as, rename, and recent projects",
     "saveTooltip": "Save the project",
     "saved": "Saved",
     "settings": "Settings",
@@ -308,6 +321,9 @@
     "pan": "Pan",
     "print": "Print",
     "quit": "Quit",
+    "nextTab": "Go to the next project tab",
+    "previousTab": "Go to the previous project tab",
+    "closeTab": "Close the project tab",
     "redo": "Redo",
     "removePoint": "Remove the point last pressed",
     "rename": "Rename the piece or feature",
@@ -447,9 +463,7 @@
     "discard": "Don’t save",
     "title": "Save changes to “{{name}}”?",
     "consequence": {
-      "close": "If you close without saving, your changes are lost.",
-      "new": "Starting a new project replaces this one, and your changes are lost.",
-      "open": "Opening another project replaces this one, and your changes are lost."
+      "close": "If you close without saving, your changes are lost."
     }
   },
   "deleteDialog": {

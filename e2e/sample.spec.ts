@@ -34,14 +34,17 @@ test('the sample wallet opens from the empty Parts panel and from Help, clean an
     await expect(window.getByTestId('file-path')).toHaveCount(0);
     expect(await window.title()).not.toContain('•');
 
-    // From Help, over unsaved work: asked first, like any other open.
+    // From Help, over unsaved work: in a tab of its own (8.12), so nothing is
+    // asked and nothing is lost.
     await renameProject(window, 'My changes');
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-open-sample').click();
-    const dialog = window.getByTestId('unsaved-dialog');
-    await expect(dialog).toBeVisible();
-    await dialog.getByTestId('unsaved-discard').click();
+    await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
     await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
+    await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveText([
+      'My changes',
+      'Bifold wallet',
+    ]);
   } finally {
     await closeApp(app);
   }

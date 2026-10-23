@@ -193,9 +193,15 @@ body {
      min-content and drags every other row out with it, which is how one
      stubborn header pushed the properties panel past the window edge. */
   grid-template-columns: minmax(0, 1fr);
-  /* Project bar, work bar, the workspace, the status bar (F.8). */
-  grid-template-rows: auto auto 1fr auto;
+  /* The project tabs (8.12), project bar, work bar, the workspace, the status
+     bar (F.8). */
+  grid-template-rows: auto auto auto 1fr auto;
   height: 100%;
+}
+
+/* Every project closed (8.12): the tab strip, and the start screen under it. */
+.app.no-project {
+  grid-template-rows: auto 1fr;
 }
 
 /*
@@ -501,6 +507,235 @@ body {
 }
 
 /*
+ * The project tabs (8.12): a strip of their own above the project bar, on the
+ * panels' surface. The active tab is the project bar's darkest shell and runs
+ * into it, so the bar below reads as that tab's; the accent along its top is
+ * the user's own focus, as everywhere on the shell. A tab with unsaved work
+ * shows a dot where its close button is, until the pointer is on the tab.
+ */
+.tab-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-1) var(--space-2) 0;
+  background: var(--shell-800);
+}
+
+.tab-list {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  flex: 0 1 200px;
+  align-items: center;
+  min-width: 96px;
+  height: 30px;
+  padding: 0 var(--space-1) 0 0;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  color: var(--text-dim);
+}
+
+.tab:hover {
+  background: var(--shell-700);
+  color: var(--text);
+}
+
+.tab.active {
+  background: var(--shell-900);
+  color: var(--text);
+}
+
+.tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: var(--space-2);
+  left: var(--space-2);
+  height: 2px;
+  border-bottom-right-radius: var(--r-sm);
+  border-bottom-left-radius: var(--r-sm);
+  background: var(--tan);
+}
+
+.tab-name {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: var(--t-label);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab-name:focus-visible {
+  outline-offset: -2px;
+}
+
+.tab-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+}
+
+.tab-close:hover {
+  background: var(--shell-600);
+  color: var(--text);
+}
+
+.tab-dot {
+  display: none;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--text);
+}
+
+.tab.unsaved:not(:hover) .tab-dot {
+  display: block;
+}
+
+.tab.unsaved:not(:hover) .tab-close .icon {
+  display: none;
+}
+
+.tab-new {
+  flex: none;
+  margin-bottom: 2px;
+}
+
+/*
+ * The start screen (8.12): every project closed, the app still open. One
+ * column on the shell, the ways in first, then the recent projects — the
+ * Project menu's list, where a maker looks for yesterday's pattern.
+ */
+.start-screen {
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-4);
+  background: var(--shell-900);
+  border-top: 1px solid var(--shell-line);
+}
+
+.start-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(560px, 100%);
+}
+
+.start-title {
+  margin: 0;
+  color: var(--text);
+  font: var(--t-dialog);
+  letter-spacing: var(--tracking-title);
+}
+
+.start-lede {
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-body);
+}
+
+.start-error {
+  margin: 0;
+  color: var(--error);
+  font: var(--t-body);
+}
+
+.start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.start-action {
+  color: var(--text);
+}
+
+.start-recent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--shell-line);
+}
+
+.start-heading {
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.start-empty {
+  margin: 0;
+  color: var(--text-mute);
+  font: var(--t-body);
+}
+
+.start-recent-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.start-recent-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.start-recent-item:hover {
+  background: var(--shell-700);
+}
+
+.start-recent-name {
+  color: var(--text);
+  font: var(--t-strong);
+}
+
+.start-recent-folder {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-dim);
+  font: var(--t-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
  * The two bars differ in kind, not only in place (F.8).
  *
  * The top bar is state, in three zones (R-06): the project and whether it is
@@ -540,60 +775,22 @@ body {
   flex: none;
 }
 
-.project-identity > .menu-anchor,
-.project-identity > .project-rename {
-  display: flex;
-  flex: 0 1 auto;
-  min-width: 10ch;
-}
-
-.project-identity > .menu-anchor > .tooltip-anchor {
-  min-width: 0;
-}
-
-/* The Project menu's face is the project: the pocket mark, the name, and the
-   chevron that says it opens. */
+/* The Project menu (8.7), at the tab strip's left since 8.12: an icon. */
 .project-menu-button {
-  gap: var(--space-2);
-  min-width: 0;
-  padding: 0 6px;
-  color: var(--text);
+  margin-bottom: 2px;
 }
 
-.project-name {
-  min-width: 0;
-  overflow: hidden;
-  font: var(--t-panel);
-  letter-spacing: var(--tracking-title);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.project-menu-button .icon:last-child {
-  flex: none;
-  color: var(--text-dim);
-}
-
-/* Renaming (U.7): the name is the field it was before, where it stands. */
-.project-rename {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  padding-left: 6px;
-  color: var(--text);
-}
-
+/* Renaming (U.7): the active tab's name is the field it was in the bar. */
 .project-name-input {
-  field-sizing: content;
-  min-width: 10ch;
-  max-width: min(40ch, 100%);
-  padding: 3px 7px;
+  flex: 1;
+  min-width: 0;
+  margin: 0 var(--space-1) 0 var(--space-2);
+  padding: 2px 6px;
   border: 1px solid var(--tan);
   border-radius: var(--r-sm);
   background: var(--shell-900);
   color: var(--text);
-  font: var(--t-panel);
-  letter-spacing: var(--tracking-title);
+  font: var(--t-label);
   outline: none;
 }
 

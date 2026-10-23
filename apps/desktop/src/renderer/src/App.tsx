@@ -10,7 +10,9 @@ import {
   isEmptySelection,
   selectedFeatureIds,
   planDelete,
+  setProjectName,
   type DeleteResolution,
+  type Document,
 } from '@leathercad/document';
 import {
   badgesOf,
@@ -27,7 +29,7 @@ import {
   type RecentFile,
   type UpdateStatus,
 } from '@leathercad/platform';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import {
   DEFAULT_EDIT_POINTS,
@@ -54,6 +56,10 @@ import {
   type ExportReport,
 } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
+import { ProjectMenu } from './ProjectMenu.js';
+import { StartScreen } from './StartScreen.js';
+import { ProjectTabs, isDirty, newTab, type ProjectTab } from './projectTabs.js';
+import { TabStrip } from './TabStrip.js';
 import { printStatusFor } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
@@ -127,35 +133,68 @@ export function App({
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
   const [toolId, setToolId] = useState<string>('rectangle');
-  // Design or Sheets (7.4c). View state, like the tool: never saved.
-  const [view, setView] = useState<CanvasView>('design');
+
+  // The open projects (8.12): one tab each, and the one the window shows.
+  // Every document, its history and its file are a tab's; the window holds
+  // the list, and the chrome below shows the active tab.
+  const nextId = useMemo(() => createIdFactory(systemIdSource), []);
+  // Without a name: shown as *Untitled* in the interface's words, and named
+  // after its file when first saved (8.12).
+  const blank = useCallback(() => emptyDocument(nextId(), ''), [nextId]);
+  const tabFor = useCallback(
+    (opened: Document): ProjectTab => newTab(nextId(), new DocumentStore(opened)),
+    [nextId],
+  );
+  const tabs = useMemo(() => new ProjectTabs(tabFor(blank())), [tabFor, blank]);
+  const { tabs: openTabs, active } = useSyncExternalStore(tabs.subscribe, tabs.getSnapshot);
+  // With every project closed the window shows its start screen (8.12), and
+  // the chrome below is not shown. Its hooks still run, in their order, over
+  // an empty project of their own that is never shown, saved or written to
+  // recovery; the window's keys leave it alone.
+  const idle = useMemo(() => tabFor(blank()), [tabFor, blank]);
+  const tab = active ?? idle;
+  const store = tab.store;
+
+  // Design or Sheets (7.4c), the tab's own. View state, like the tool: never saved.
+  const view = tab.view;
   /**
    * A part under the pointer — on a sheet, or on its Parts row — so the other
    * side can show it too (7.4d). View state, never saved.
    */
   const [hoveredPart, setHoveredPart] = useState<string | null>(null);
-  const viewRef = useRef<CanvasView>('design');
   /** The tool the board had when the maker went to the sheets, to give back. */
   const designToolRef = useRef<string>('rectangle');
 
-  /**
-   * Going to the sheets leaves the drawing tools behind — nothing is drawn on
-   * paper — and coming back gives the board its tool again.
-   */
+  /** Shows the active tab on Design or Sheets. */
   const showView = useCallback(
     (next: CanvasView) => {
-      if (viewRef.current === next) return;
-      if (next === 'sheets') {
-        designToolRef.current = toolId;
-        setToolId('select');
-      } else {
-        setToolId(designToolRef.current);
-      }
-      viewRef.current = next;
-      setView(next);
+      const shown = tabs.active;
+      if (shown === null || shown.view === next) return;
+      tabs.update(shown.id, (each) => {
+        each.view = next;
+      });
     },
-    [toolId],
+    [tabs],
   );
+
+  /**
+   * Going to the sheets leaves the drawing tools behind — nothing is drawn on
+   * paper — and coming back gives the board its tool again. Whatever changed
+   * the view: the switch, a key, a problem gone to, or another tab (8.12).
+   */
+  const toolsView = useRef<CanvasView>(view);
+  useEffect(() => {
+    if (toolsView.current === view) return;
+    toolsView.current = view;
+    if (view === 'sheets') {
+      setToolId((current) => {
+        designToolRef.current = current;
+        return 'select';
+      });
+    } else {
+      setToolId(designToolRef.current);
+    }
+  }, [view]);
 
   // A view's own controls go with it — Design's tools, its Properties. A
   // maker on the keys whose focus was on one lands on the board, not on
@@ -174,13 +213,17 @@ export function App({
    * Choosing a tool. On the Sheets view, any tool but Select means going back
    * to the board with it: tools act on the design, never on the paper.
    */
-  const chooseTool = useCallback((id: string) => {
-    if (viewRef.current === 'sheets' && id !== 'select') {
-      viewRef.current = 'design';
-      setView('design');
-    }
-    setToolId(id);
-  }, []);
+  const chooseTool = useCallback(
+    (id: string) => {
+      if (tabs.active?.view === 'sheets' && id !== 'select') {
+        // The board takes this tool back when the view changes.
+        designToolRef.current = id;
+        showView('design');
+      }
+      setToolId(id);
+    },
+    [showView, tabs],
+  );
   // What a drawn line becomes, and what the hardware tool punches. Owned
   // here because both outlive the tool they configure: switching to the arc
   // tool and back must not silently put the user back on 'Cut'.
@@ -297,61 +340,82 @@ export function App({
   }, []);
   const zoomTo = useCallback((percent: number) => canvasRef.current?.zoomTo(percent), []);
 
-  const nextId = useMemo(() => createIdFactory(systemIdSource), []);
-  const store = useMemo(() => new DocumentStore(emptyDocument(nextId(), 'Untitled')), [nextId]);
+  // Mirror the active tab's store into React state so the chrome re-renders.
+  // The canvas does not go through this path — it repaints from its own loop.
+  // Another tab's store is read as the window renders it, React's pattern for
+  // state that follows a prop: no pass showing the last tab's document.
+  const [mirror, setMirror] = useState(() => ({ store, state: store.getState() }));
+  if (mirror.store !== store) setMirror({ store, state: store.getState() });
+  const storeState = mirror.store === store ? mirror.state : store.getState();
+  useEffect(() => store.subscribe(() => setMirror({ store, state: store.getState() })), [store]);
 
-  // Mirror the store into React state so the chrome re-renders. The canvas
-  // does not go through this path — it repaints from its own loop.
-  const [storeState, setStoreState] = useState(() => store.getState());
-  useEffect(() => store.subscribe(() => setStoreState(store.getState())), [store]);
+  // What went wrong opening a project from the start screen, where no tab is
+  // there to say it (8.12).
+  const [startError, setStartError] = useState<unknown>(null);
+  const file = useProjectFile(
+    tabs,
+    getPlatformHost,
+    version ?? '0.0.0',
+    tabFor,
+    blank,
+    t,
+    setStartError,
+  );
+  // Read from the tab, which the store's mirror re-renders for.
+  const dirty = isDirty(tab);
+  const anyDirty = openTabs.some(isDirty);
 
-  const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
-  // An opened project is shown whole, not wherever the last one left the camera.
-  const frameDrawing = useCallback(() => canvasRef.current?.fitDrawing(), []);
-  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank, t, frameDrawing);
-  const dirty = file.savedDocument.current !== storeState.document;
-
-  // The window says which project it holds, and whether it has unsaved work
+  // The window says which project it shows, and whether it has unsaved work
   // (F.8): the taskbar and the window switcher read this title.
+  // With none open, the product's name alone.
+  const hasProject = active !== null;
   useEffect(() => {
-    document.title = windowTitle(storeState.document.project, dirty, t);
-  }, [storeState.document.project, dirty, t]);
-  // And macOS's dot in the close button (U.7): the window's edited flag.
+    document.title = hasProject ? windowTitle(storeState.document.project, dirty, t) : 'LeatherCAD';
+  }, [hasProject, storeState.document.project, dirty, t]);
+  // And macOS's dot in the close button (U.7): the window's edited flag, lit
+  // while any of its projects has unsaved work (8.12).
   useEffect(() => {
     void getPlatformHost()
-      .setDocumentEdited(dirty)
+      .setDocumentEdited(anyDirty)
       .catch(() => undefined);
-  }, [dirty]);
+  }, [anyDirty]);
 
   // Crash recovery (5.3b): a copy while there is unsaved work, and an offer of
   // what a crash left behind.
+  const isActiveDirty = useCallback(() => tabs.active !== null && isDirty(tabs.active), [tabs]);
   const recovery = useRecovery({
     store,
     host: getPlatformHost,
     appVersion: version ?? '0.0.0',
-    isDirty: file.isDirty,
+    isDirty: isActiveDirty,
     dirty,
     adoptRecovered: file.adoptRecovered,
   });
 
-  // Never lose work silently (5.3a): closing the window, opening a project and
-  // starting a new one all ask first when there is unsaved work, with one
-  // question and one answer. Resolves true when the action may go ahead.
+  // Never lose work silently (5.3a): closing a project's tab, or the window,
+  // asks first about each project with unsaved work, with one question and
+  // one answer. Resolves true when the action may go ahead. Opening a project
+  // and starting one replace nothing since 8.12 — each has a tab — so they ask
+  // nothing.
   const [pendingDiscard, setPendingDiscard] = useState<{
     action: DiscardingAction;
+    tab: ProjectTab;
     resolve: (proceed: boolean) => void;
   } | null>(null);
   const discarding = useRef(false);
   const confirmDiscard = useCallback(
-    (action: DiscardingAction): Promise<boolean> => {
-      if (!file.isDirty()) return Promise.resolve(true);
+    (action: DiscardingAction, about: ProjectTab): Promise<boolean> => {
+      if (!isDirty(about)) return Promise.resolve(true);
       // One question at a time: a second close while it is on screen is
       // answered by the first.
       if (discarding.current) return Promise.resolve(false);
       discarding.current = true;
+      // The question is about the project in view.
+      tabs.activate(about.id);
       return new Promise((resolve) =>
         setPendingDiscard({
           action,
+          tab: about,
           resolve: (proceed) => {
             discarding.current = false;
             setPendingDiscard(null);
@@ -360,20 +424,34 @@ export function App({
         }),
       );
     },
-    [file],
+    [tabs],
   );
 
-  const newProject = useCallback(async () => {
-    if (await confirmDiscard('new')) file.newProject();
-  }, [confirmDiscard, file]);
-  const openProject = useCallback(async () => {
-    if (await confirmDiscard('open')) await file.open();
-  }, [confirmDiscard, file]);
+  /** Closes a project's tab, once its unsaved work is saved or let go. */
+  const closeTab = useCallback(
+    async (id: string) => {
+      const closing = tabs.tabs.find((each) => each.id === id);
+      if (closing === undefined) return;
+      if (await confirmDiscard('close', closing)) tabs.close(id);
+    },
+    [confirmDiscard, tabs],
+  );
 
+  /**
+   * Asks about every project with unsaved work, one after another, as the
+   * window closes (8.12). False as soon as one answer is *Cancel*.
+   */
+  const confirmDiscardAll = useCallback(async (): Promise<boolean> => {
+    for (const each of tabs.tabs) {
+      if (!(await confirmDiscard('close', each))) return false;
+    }
+    return true;
+  }, [confirmDiscard, tabs]);
+
+  const newProject = file.newProject;
+  const openProject = file.open;
   // Help's *Open sample project* (8.3, 8.7), and the empty Parts panel's offer of it.
-  const openSample = useCallback(async () => {
-    if (await confirmDiscard('open')) await file.openSample();
-  }, [confirmDiscard, file]);
+  const openSample = file.openSample;
 
   // The Project menu's recent projects (8.7), asked for each time it opens,
   // since saving and opening change them.
@@ -385,6 +463,27 @@ export function App({
       .catch(() => undefined);
   }, []);
   const [aboutOpen, setAboutOpen] = useState(false);
+
+  // The Project menu (8.7), at the tab strip's left since 8.12, and *Rename…*,
+  // which turns the active tab's name into a field. One edit, one undo step.
+  const projectMenuRef = useRef<HTMLButtonElement>(null);
+  const [renaming, setRenaming] = useState<Press | null>(null);
+  const renamed = useCallback(
+    (next: string | null) => {
+      const named = tabs.active;
+      if (
+        named !== null &&
+        next !== null &&
+        next !== named.store.getState().document.project.name
+      ) {
+        named.store.dispatch(setProjectName(next));
+      }
+      const back = renaming === 'keyboard';
+      setRenaming(null);
+      if (back) requestAnimationFrame(() => projectMenuRef.current?.focus());
+    },
+    [renaming, tabs],
+  );
   // General says how many are listed, so it asks as Settings opens.
   useEffect(() => {
     if (settings !== null) refreshRecent();
@@ -401,15 +500,9 @@ export function App({
       .catch(() => undefined);
   }, [openPath]);
 
-  // A recent project (8.2, 8.7): the main process chose and granted the path;
-  // unsaved work is asked about exactly as for Open.
-  useEffect(
-    () =>
-      getPlatformHost().onOpenFile((path) => {
-        void confirmDiscard('open').then((proceed) => (proceed ? file.openPath(path) : undefined));
-      }),
-    [confirmDiscard, file],
-  );
+  // A recent project (8.2, 8.7), a second launch's (8.11), macOS's open-file:
+  // the main process chose and granted the path, and it opens in a tab.
+  useEffect(() => getPlatformHost().onOpenFile((path) => void openPath(path)), [openPath]);
 
   // The window's close button, Ctrl+Q and a reload all unload the page. With
   // unsaved work the unload is refused — Electron then keeps the window — and
@@ -418,10 +511,10 @@ export function App({
   const closing = useRef(false);
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent): void => {
-      if (closing.current || !file.isDirty()) return;
+      if (closing.current || !tabs.tabs.some(isDirty)) return;
       event.preventDefault();
       event.returnValue = false;
-      void confirmDiscard('close').then((proceed) => {
+      void confirmDiscardAll().then((proceed) => {
         if (!proceed) return;
         closing.current = true;
         window.close();
@@ -429,7 +522,7 @@ export function App({
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [confirmDiscard, file]);
+  }, [confirmDiscardAll, tabs]);
 
   // Whether a newer release exists (8.9): asked only when the maker presses
   // *Check now* in Settings or the version in the status bar. The main
@@ -483,12 +576,16 @@ export function App({
     // Through the keymap (U.3): each key by where it is on the keyboard, a
     // letter by the letter it types.
     const actions: Partial<Record<CommandId, () => void>> = {
-      save: () => void file.save(),
-      saveAs: () => void file.save(true),
+      save: () => (tabs.active === null ? undefined : void file.save(tabs.active)),
+      saveAs: () => (tabs.active === null ? undefined : void file.save(tabs.active, true)),
       openProject: () => void openProject(),
       newProject: () => void newProject(),
       exportPdf: () => void exportPdf(),
       print: () => setPrinting(true),
+      // The project tabs (8.12).
+      nextTab: () => tabs.cycle(1),
+      previousTab: () => tabs.cycle(-1),
+      closeTab: () => (tabs.active === null ? undefined : void closeTab(tabs.active.id)),
       design: () => showView('design'),
       sheets: () => showView('sheets'),
       // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
@@ -525,6 +622,8 @@ export function App({
       }
       const command = commandFor(event, IS_MAC);
       if (command === null) return;
+      // On the start screen only the keys that need no project (8.12).
+      if (tabs.active === null && !WITHOUT_PROJECT.has(command)) return;
       // A key something before the window claimed is not also a shortcut: the
       // active tool's (the polyline's A mid-run), a Parts row's, a menu's or a
       // tab list's arrows — whichever command the maker gave that key (U.12).
@@ -544,6 +643,8 @@ export function App({
     return () => window.removeEventListener('keydown', onKey);
   }, [
     file,
+    tabs,
+    closeTab,
     exportPdf,
     newProject,
     openProject,
@@ -672,6 +773,17 @@ export function App({
     [store],
   );
 
+  // What was under way on one tab is not the next one's (8.12): reset as the
+  // window renders the next, like the store's mirror.
+  const [shownTab, setShownTab] = useState(tab);
+  if (shownTab !== tab) {
+    setShownTab(tab);
+    setHoveredPart(null);
+    setContextMenu(null);
+    setPendingDelete(null);
+    setStatus(null);
+  }
+
   // The Menu key and Shift+F10 (8.8). A Parts row answers for itself; from
   // anywhere else — the tool just chosen has focus, and the canvas cannot —
   // the menu is about the selection, opened where it is on the board. A
@@ -758,402 +870,442 @@ export function App({
 
   return (
     <I18nProvider value={i18n}>
-      <div className="app">
-        <ProjectBar
-          project={storeState.document.project}
-          store={store}
-          dirty={dirty}
-          saved={file.state.path !== null}
-          room={room}
-          view={view}
-          onView={showView}
-          counts={counts}
-          settled={!store.inTransaction}
-          onShowProblems={showProblems}
-          helpRef={helpRef}
-          onNew={() => void newProject()}
-          onOpen={() => void openProject()}
-          onSaveAs={() => void file.save(true)}
-          recent={recent}
-          onProjectMenuOpen={refreshRecent}
-          // The main process checks it is on the list, grants it, and hands it
-          // back through onOpenFile, which asks about unsaved work.
-          onOpenRecent={(path) => getPlatformHost().openRecent(path)}
-          onOpenSample={() => void openSample()}
-          onAbout={() => setAboutOpen(true)}
-          // The mark is news about Updates, so the button opens there while it shows.
-          onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
-          updateAvailable={updates.state === 'available'}
-          onSave={() => void file.save()}
-          onExport={() => void exportPdf()}
-          onExportSvg={() => void exportDrawing('svg')}
-          onExportDxf={() => void exportDrawing('dxf')}
-          onPrint={() => setPrinting(true)}
+      <div className={hasProject ? 'app' : 'app no-project'}>
+        <TabStrip
+          tabs={openTabs}
+          active={active}
+          menu={
+            <ProjectMenu
+              hasProject={hasProject}
+              recent={recent}
+              triggerRef={projectMenuRef}
+              onMenuOpen={refreshRecent}
+              onNew={newProject}
+              onOpen={() => void openProject()}
+              onSaveAs={() => (active === null ? undefined : void file.save(active, true))}
+              onRename={setRenaming}
+              // The main process checks it is on the list, grants it, and
+              // hands it back through onOpenFile, which opens it in a tab.
+              onOpenRecent={(path) => getPlatformHost().openRecent(path)}
+            />
+          }
+          renaming={renaming !== null}
+          onRenamed={renamed}
+          onActivate={(id) => tabs.activate(id)}
+          onClose={(id) => void closeTab(id)}
+          onNew={newProject}
         />
+        {active === null ? (
+          <StartScreen
+            recent={recent}
+            onRefreshRecent={refreshRecent}
+            error={startError === null ? null : fileErrorText(startError, t)}
+            onNew={newProject}
+            onOpen={() => void openProject()}
+            onOpenSample={() => void openSample()}
+            onOpenRecent={(path) =>
+              void getPlatformHost()
+                .openRecent(path)
+                .then(refreshRecent)
+                .catch(() => undefined)
+            }
+          />
+        ) : (
+          <>
+            <ProjectBar
+              project={storeState.document.project}
+              store={store}
+              dirty={dirty}
+              saved={tab.file.path !== null}
+              room={room}
+              view={view}
+              onView={showView}
+              counts={counts}
+              settled={!store.inTransaction}
+              onShowProblems={showProblems}
+              helpRef={helpRef}
+              onOpenSample={() => void openSample()}
+              onAbout={() => setAboutOpen(true)}
+              // The mark is news about Updates, so the button opens there while it shows.
+              onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
+              updateAvailable={updates.state === 'available'}
+              onSave={() => void file.save(tab)}
+              onExport={() => void exportPdf()}
+              onExportSvg={() => void exportDrawing('svg')}
+              onExportDxf={() => void exportDrawing('dxf')}
+              onPrint={() => setPrinting(true)}
+            />
 
-        {/* The work bar (F.8): what the maker is doing right now — history, the
+            {/* The work bar (F.8): what the maker is doing right now — history, the
           active tool's options and its hints (U.11). The project and
           its output are the bar above's; nothing here is about files. */}
-        <div
-          className="work-bar"
-          data-testid="work-bar"
-          role="region"
-          aria-label={t('work.region')}
-        >
-          <div className="toolbar history" data-testid="history-group">
-            {/* Names what it will undo. Disabled needs no reason beyond its own
+            <div
+              className="work-bar"
+              data-testid="work-bar"
+              role="region"
+              aria-label={t('work.region')}
+            >
+              <div className="toolbar history" data-testid="history-group">
+                {/* Names what it will undo. Disabled needs no reason beyond its own
               label: there is nothing to undo. */}
-            <Tooltip
-              text={
-                storeState.undoLabel === null
-                  ? null
-                  : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
-              }
-              keys="undo"
-            >
-              <button
-                type="button"
-                className="tool"
-                data-testid="undo"
-                disabled={!storeState.canUndo}
-                onClick={() => store.undo()}
-              >
-                {t('work.undo')}
-              </button>
-            </Tooltip>
-            <Tooltip
-              text={
-                storeState.redoLabel === null
-                  ? null
-                  : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
-              }
-              keys="redo"
-            >
-              <button
-                type="button"
-                className="tool"
-                data-testid="redo"
-                disabled={!storeState.canRedo}
-                onClick={() => store.redo()}
-              >
-                {t('work.redo')}
-              </button>
-            </Tooltip>
-          </div>
-          {view === 'design' ? (
-            <>
-              <ToolOptions
-                toolId={toolId}
-                drawAs={drawAs}
-                onDrawAs={setDrawAs}
-                hardware={hardware}
-                onHardware={setHardware}
-                points={pointOptions}
-                onPoints={setPointOptions}
-              />
-              {/* What the active tool does with a click, a drag and a key, true for that
+                <Tooltip
+                  text={
+                    storeState.undoLabel === null
+                      ? null
+                      : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
+                  }
+                  keys="undo"
+                >
+                  <button
+                    type="button"
+                    className="tool"
+                    data-testid="undo"
+                    disabled={!storeState.canUndo}
+                    onClick={() => store.undo()}
+                  >
+                    {t('work.undo')}
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  text={
+                    storeState.redoLabel === null
+                      ? null
+                      : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
+                  }
+                  keys="redo"
+                >
+                  <button
+                    type="button"
+                    className="tool"
+                    data-testid="redo"
+                    disabled={!storeState.canRedo}
+                    onClick={() => store.redo()}
+                  >
+                    {t('work.redo')}
+                  </button>
+                </Tooltip>
+              </div>
+              {view === 'design' ? (
+                <>
+                  <ToolOptions
+                    toolId={toolId}
+                    drawAs={drawAs}
+                    onDrawAs={setDrawAs}
+                    hardware={hardware}
+                    onHardware={setHardware}
+                    points={pointOptions}
+                    onPoints={setPointOptions}
+                  />
+                  {/* What the active tool does with a click, a drag and a key, true for that
                 tool and no other (F.1), and for the state it is in (U.11). The lowest
                 ranked give way as the bar narrows, whole; "all keys" never does. */}
-              <OptionHints hints={toolHints} testId="tool-how-to" />
-            </>
-          ) : (
-            <>
-              <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
-              {/* The plan in words, for a screen reader: the sheet count, what is taped and
+                  <OptionHints hints={toolHints} testId="tool-how-to" />
+                </>
+              ) : (
+                <>
+                  <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
+                  {/* The plan in words, for a screen reader: the sheet count, what is taped and
                   what is left off now sit in Parts and Properties. */}
-              <SheetsSummary project={storeState.document.project} />
-            </>
-          )}
-        </div>
+                  <SheetsSummary project={storeState.document.project} />
+                </>
+              )}
+            </div>
 
-        <div
-          className={[
-            'workspace',
-            layout.railNames ? '' : 'rail-collapsed',
-            room === 'wide' ? '' : 'narrow',
-            `parts-${layout.parts}`,
-            `properties-${layout.properties}`,
-            open === null ? '' : `${open}-open`,
-          ]
-            .filter((name) => name !== '')
-            .join(' ')}
-          // The room the frame is laid out for. It follows the window a frame
-          // late — media queries are evaluated as the window next renders — so
-          // a test waits for it after resizing before it presses anything.
-          data-room={room}
-        >
-          <ToolPalette
-            activeId={toolId}
-            onSelect={chooseTool}
-            collapsed={!layout.railNames}
-            onToggleCollapsed={focus ? undefined : toggleRail}
-            view={view}
-          />
-          {layout.parts === 'strip' && (
-            <PartsStrip
-              project={storeState.document.project}
-              selected={storeState.selection.features}
-              selectedParts={storeState.selection.parts}
-              onSelectPart={(partId) => store.selectParts([partId])}
-              toggle={
-                <PanelToggle
-                  panel="parts"
-                  shown={open === 'parts'}
-                  onToggle={(press) => togglePanel('parts', press, true)}
-                />
-              }
-            />
-          )}
-          {/* A panel's place in the DOM, docked or not (F.2): no panel is ever
-              removed. Esc pressed inside it, open over the board, closes it. */}
-          <div className="panel-slot" onKeyDown={overlayKeys('parts')}>
-            {view === 'sheets' ? (
-              <SheetsParts
-                store={store}
-                project={storeState.document.project}
-                printStatus={printStatusFor(storeState.document.project)}
-                selected={sheetsSelected}
-                hoveredPart={hoveredPart}
-                onHoverPart={setHoveredPart}
-                toggle={
-                  <PanelToggle
-                    panel="parts"
-                    shown
-                    onToggle={(press) => togglePanel('parts', press, true)}
-                  />
-                }
-              />
-            ) : (
-              <PartsList
-                store={store}
-                project={storeState.document.project}
-                selected={storeState.selection.features}
-                selectedParts={storeState.selection.parts}
-                badges={badges}
-                printStatus={printStatusFor(storeState.document.project)}
-                onRemovePart={requestDeletePart}
-                onDuplicatePart={requestDuplicatePart}
-                onContextMenu={openContextMenu}
-                onOpenSample={() => void openSample()}
-                toggle={
-                  <PanelToggle
-                    panel="parts"
-                    shown
-                    onToggle={(press) => togglePanel('parts', press, true)}
-                  />
-                }
-              />
-            )}
-          </div>
-          {/* The drawing is what the window is for: its main landmark. A press
-              on it closes a panel open over it. */}
-          <main
-            className="canvas-column"
-            aria-label={t('app.drawing')}
-            onPointerDown={open === null ? undefined : () => closeOverlay('pointer')}
-          >
-            <CanvasHost
-              ref={canvasRef}
-              store={store}
-              view={view}
-              hoveredPart={hoveredPart}
-              onHoverPart={setHoveredPart}
-              toolId={toolId}
-              nextId={nextId}
-              onStatus={handleStatus}
-              panelOver={open}
-              selectionBar={selectionBarOn ? tools : null}
-              drawAs={drawAs}
-              makerDefaults={makerDefaults}
-              hardware={hardware}
-              pointOptions={pointOptions}
-              requestDelete={requestDelete}
-              requestDeletePart={requestDeletePart}
-              onContextMenu={openContextMenu}
+            <div
+              className={[
+                'workspace',
+                layout.railNames ? '' : 'rail-collapsed',
+                room === 'wide' ? '' : 'narrow',
+                `parts-${layout.parts}`,
+                `properties-${layout.properties}`,
+                open === null ? '' : `${open}-open`,
+              ]
+                .filter((name) => name !== '')
+                .join(' ')}
+              // The room the frame is laid out for. It follows the window a frame
+              // late — media queries are evaluated as the window next renders — so
+              // a test waits for it after resizing before it presses anything.
+              data-room={room}
             >
-              {/* The legend explains the board's marks; the sheets are ink. */}
-              {view === 'design' && (
-                <CanvasLegend
+              <ToolPalette
+                activeId={toolId}
+                onSelect={chooseTool}
+                collapsed={!layout.railNames}
+                onToggleCollapsed={focus ? undefined : toggleRail}
+                view={view}
+              />
+              {layout.parts === 'strip' && (
+                <PartsStrip
                   project={storeState.document.project}
-                  open={legendOpen}
-                  onToggle={toggleLegend}
+                  selected={storeState.selection.features}
+                  selectedParts={storeState.selection.parts}
+                  onSelectPart={(partId) => store.selectParts([partId])}
+                  toggle={
+                    <PanelToggle
+                      panel="parts"
+                      shown={open === 'parts'}
+                      onToggle={(press) => togglePanel('parts', press, true)}
+                    />
+                  }
                 />
               )}
-              {status !== null && (
-                <ZoomControl
-                  percent={status.zoomPercent}
-                  run={runZoom}
-                  zoomTo={zoomTo}
-                  fitSelectionRefusal={fitSelectionRefusal}
+              {/* A panel's place in the DOM, docked or not (F.2): no panel is ever
+              removed. Esc pressed inside it, open over the board, closes it. */}
+              <div className="panel-slot" onKeyDown={overlayKeys('parts')}>
+                {view === 'sheets' ? (
+                  <SheetsParts
+                    store={store}
+                    project={storeState.document.project}
+                    printStatus={printStatusFor(storeState.document.project)}
+                    selected={sheetsSelected}
+                    hoveredPart={hoveredPart}
+                    onHoverPart={setHoveredPart}
+                    toggle={
+                      <PanelToggle
+                        panel="parts"
+                        shown
+                        onToggle={(press) => togglePanel('parts', press, true)}
+                      />
+                    }
+                  />
+                ) : (
+                  <PartsList
+                    store={store}
+                    project={storeState.document.project}
+                    selected={storeState.selection.features}
+                    selectedParts={storeState.selection.parts}
+                    badges={badges}
+                    printStatus={printStatusFor(storeState.document.project)}
+                    onRemovePart={requestDeletePart}
+                    onDuplicatePart={requestDuplicatePart}
+                    onContextMenu={openContextMenu}
+                    onOpenSample={() => void openSample()}
+                    toggle={
+                      <PanelToggle
+                        panel="parts"
+                        shown
+                        onToggle={(press) => togglePanel('parts', press, true)}
+                      />
+                    }
+                  />
+                )}
+              </div>
+              {/* The drawing is what the window is for: its main landmark. A press
+              on it closes a panel open over it. */}
+              <main
+                className="canvas-column"
+                aria-label={t('app.drawing')}
+                onPointerDown={open === null ? undefined : () => closeOverlay('pointer')}
+              >
+                <CanvasHost
+                  // Made again for each tab: its tools and gestures are that
+                  // project's, and its cameras the tab's (8.12).
+                  key={tab.id}
+                  cameras={tab.cameras}
+                  ref={canvasRef}
+                  store={store}
+                  view={view}
+                  hoveredPart={hoveredPart}
+                  onHoverPart={setHoveredPart}
+                  toolId={toolId}
+                  nextId={nextId}
+                  onStatus={handleStatus}
+                  panelOver={open}
+                  selectionBar={selectionBarOn ? tools : null}
+                  drawAs={drawAs}
+                  makerDefaults={makerDefaults}
+                  hardware={hardware}
+                  pointOptions={pointOptions}
+                  requestDelete={requestDelete}
+                  requestDeletePart={requestDeletePart}
+                  onContextMenu={openContextMenu}
+                >
+                  {/* The legend explains the board's marks; the sheets are ink. */}
+                  {view === 'design' && (
+                    <CanvasLegend
+                      project={storeState.document.project}
+                      open={legendOpen}
+                      onToggle={toggleLegend}
+                    />
+                  )}
+                  {status !== null && (
+                    <ZoomControl
+                      percent={status.zoomPercent}
+                      run={runZoom}
+                      zoomTo={zoomTo}
+                      fitSelectionRefusal={fitSelectionRefusal}
+                    />
+                  )}
+                </CanvasHost>
+                <ProblemsPanel
+                  project={storeState.document.project}
+                  diagnostics={diagnostics}
+                  counts={counts}
+                  onGoTo={goToDiagnostic}
+                  open={problemsOpen}
+                  onToggle={() => setProblemsOpen((open) => !open)}
+                />
+              </main>
+              <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
+                {view === 'sheets' ? (
+                  <SheetsProperties
+                    store={store}
+                    project={storeState.document.project}
+                    selected={sheetsSelected}
+                    toggle={
+                      <PanelToggle
+                        panel="properties"
+                        shown
+                        onToggle={(press) => togglePanel('properties', press, true)}
+                      />
+                    }
+                  />
+                ) : (
+                  <PropertyPanel
+                    store={store}
+                    project={storeState.document.project}
+                    selected={storeState.selection.features}
+                    selectedParts={storeState.selection.parts}
+                    diagnostics={diagnostics}
+                    nextId={nextId}
+                    requestDelete={requestDelete}
+                    requestDeletePart={requestDeletePart}
+                    tools={tools}
+                    onTools={changePreferences}
+                    drawingPiece={
+                      DRAWING_TOOL_IDS.has(toolId) &&
+                      (drawAs === 'outline' || drawAs === 'stitch-allowance')
+                    }
+                    sizing={status?.sizing ?? null}
+                    toggle={
+                      <PanelToggle
+                        panel="properties"
+                        shown
+                        onToggle={(press) => togglePanel('properties', press, true)}
+                      />
+                    }
+                  />
+                )}
+              </div>
+              {layout.properties === 'strip' && (
+                <PropertiesStrip
+                  project={storeState.document.project}
+                  selected={storeState.selection.features}
+                  selectedParts={storeState.selection.parts}
+                  onOpen={(press) => togglePanel('properties', press)}
+                  toggle={
+                    <PanelToggle
+                      panel="properties"
+                      shown={open === 'properties'}
+                      onToggle={(press) => togglePanel('properties', press, true)}
+                    />
+                  }
                 />
               )}
-            </CanvasHost>
-            <ProblemsPanel
-              project={storeState.document.project}
-              diagnostics={diagnostics}
-              counts={counts}
-              onGoTo={goToDiagnostic}
-              open={problemsOpen}
-              onToggle={() => setProblemsOpen((open) => !open)}
-            />
-          </main>
-          <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
-            {view === 'sheets' ? (
-              <SheetsProperties
-                store={store}
-                project={storeState.document.project}
-                selected={sheetsSelected}
-                toggle={
-                  <PanelToggle
-                    panel="properties"
-                    shown
-                    onToggle={(press) => togglePanel('properties', press, true)}
-                  />
-                }
-              />
-            ) : (
-              <PropertyPanel
-                store={store}
-                project={storeState.document.project}
-                selected={storeState.selection.features}
-                selectedParts={storeState.selection.parts}
-                diagnostics={diagnostics}
-                nextId={nextId}
-                requestDelete={requestDelete}
-                requestDeletePart={requestDeletePart}
-                tools={tools}
-                onTools={changePreferences}
-                drawingPiece={
-                  DRAWING_TOOL_IDS.has(toolId) &&
-                  (drawAs === 'outline' || drawAs === 'stitch-allowance')
-                }
-                sizing={status?.sizing ?? null}
-                toggle={
-                  <PanelToggle
-                    panel="properties"
-                    shown
-                    onToggle={(press) => togglePanel('properties', press, true)}
-                  />
-                }
-              />
-            )}
-          </div>
-          {layout.properties === 'strip' && (
-            <PropertiesStrip
-              project={storeState.document.project}
-              selected={storeState.selection.features}
-              selectedParts={storeState.selection.parts}
-              onOpen={(press) => togglePanel('properties', press)}
-              toggle={
-                <PanelToggle
-                  panel="properties"
-                  shown={open === 'properties'}
-                  onToggle={(press) => togglePanel('properties', press, true)}
-                />
-              }
-            />
-          )}
-        </div>
+            </div>
 
-        <footer className="app-status" data-testid="status-bar">
-          {/*
+            <footer className="app-status" data-testid="status-bar">
+              {/*
           The counts stay put whatever else is being said. A notice used to
           replace them, which was harmless while every notice was a momentary
           refusal — but "select a part first" stands for as long as it is true,
           and hiding how many parts exist while telling the user to pick one is
           the wrong way round.
         */}
-          <span className="status-left">
-            <span data-testid="status-counts">
-              <VersionButton version={version} updates={updates} onCheck={checkUpdates} />
-              <span className="sep">·</span>
-              <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
-              {t('status.partsCount', { count: storeState.document.project.parts.length })}
-              <span className="sep">·</span>
-              <b data-testid="feature-count">{featureCount}</b>{' '}
-              {t('status.features', { count: featureCount })}
-              <span className="sep">·</span>
-              {/* A part picked by its heading is a selection too (Q29), and says so. */}
-              {storeState.selection.features.size === 0 && storeState.selection.parts.size > 0 ? (
-                <>
-                  <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
-                  {t('status.partsSelected', { count: storeState.selection.parts.size })}
-                </>
-              ) : (
-                <>
-                  <b data-testid="selected-count">{storeState.selection.features.size}</b>{' '}
-                  {t('status.selected')}
-                </>
-              )}
-              {diagnostics.length > 0 && (
-                <>
+              <span className="status-left">
+                <span data-testid="status-counts">
+                  <VersionButton version={version} updates={updates} onCheck={checkUpdates} />
                   <span className="sep">·</span>
-                  <b className="status-error" data-testid="problem-count">
-                    {diagnostics.length}
-                  </b>{' '}
-                  {t('status.problems', { count: diagnostics.length })}
-                </>
-              )}
-              {file.state.path !== null && (
-                <>
+                  <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
+                  {t('status.partsCount', { count: storeState.document.project.parts.length })}
                   <span className="sep">·</span>
-                  <span data-testid="file-path">{fileName(file.state.path)}</span>
-                </>
-              )}
-            </span>
-            {status?.notice !== null && status?.notice !== undefined ? (
-              <span className="status-error" data-testid="tool-notice">
-                {describeProblem(status.notice, t)}
+                  <b data-testid="feature-count">{featureCount}</b>{' '}
+                  {t('status.features', { count: featureCount })}
+                  <span className="sep">·</span>
+                  {/* A part picked by its heading is a selection too (Q29), and says so. */}
+                  {storeState.selection.features.size === 0 &&
+                  storeState.selection.parts.size > 0 ? (
+                    <>
+                      <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
+                      {t('status.partsSelected', { count: storeState.selection.parts.size })}
+                    </>
+                  ) : (
+                    <>
+                      <b data-testid="selected-count">{storeState.selection.features.size}</b>{' '}
+                      {t('status.selected')}
+                    </>
+                  )}
+                  {diagnostics.length > 0 && (
+                    <>
+                      <span className="sep">·</span>
+                      <b className="status-error" data-testid="problem-count">
+                        {diagnostics.length}
+                      </b>{' '}
+                      {t('status.problems', { count: diagnostics.length })}
+                    </>
+                  )}
+                  {tab.file.path !== null && (
+                    <>
+                      <span className="sep">·</span>
+                      <span data-testid="file-path">{fileName(tab.file.path)}</span>
+                    </>
+                  )}
+                </span>
+                {status?.notice !== null && status?.notice !== undefined ? (
+                  <span className="status-error" data-testid="tool-notice">
+                    {describeProblem(status.notice, t)}
+                  </span>
+                ) : bridgeError !== null || tab.file.error !== null ? (
+                  <span className="status-error" data-testid="file-error">
+                    {bridgeError ?? fileErrorText(tab.file.error, t)}
+                  </span>
+                ) : null}
               </span>
-            ) : bridgeError !== null || file.state.error !== null ? (
-              <span className="status-error" data-testid="file-error">
-                {bridgeError ?? fileErrorText(file.state.error, t)}
-              </span>
-            ) : null}
-          </span>
 
-          {/* Always all three (R-04): whatever shape a panel is in, its chip
+              {/* Always all three (R-04): whatever shape a panel is in, its chip
               reaches it, so nothing is ever out of reach. */}
-          <span className="status-panels" role="group" aria-label={t('status.panels')}>
-            <PanelChip
-              testId="toggle-parts"
-              icon={CHIP_ICON.parts}
-              label={t('status.parts')}
-              command="toggleParts"
-              pressed={layout.parts === 'docked' || open === 'parts'}
-              hiding={layout.parts !== 'docked' && open !== 'parts'}
-              onPress={(press) => togglePanel('parts', press)}
-            />
-            <PanelChip
-              testId="toggle-focus"
-              icon={CHIP_ICON.focus}
-              label={t('status.focus')}
-              command="focusMode"
-              pressed={focus}
-              hiding={focus}
-              onPress={() => setFocus((on) => !on)}
-            />
-            <PanelChip
-              testId="toggle-properties"
-              icon={CHIP_ICON.properties}
-              label={t('status.properties')}
-              command="toggleProperties"
-              pressed={layout.properties === 'docked' || open === 'properties'}
-              hiding={layout.properties !== 'docked' && open !== 'properties'}
-              onPress={(press) => togglePanel('properties', press)}
-            />
-          </span>
+              <span className="status-panels" role="group" aria-label={t('status.panels')}>
+                <PanelChip
+                  testId="toggle-parts"
+                  icon={CHIP_ICON.parts}
+                  label={t('status.parts')}
+                  command="toggleParts"
+                  pressed={layout.parts === 'docked' || open === 'parts'}
+                  hiding={layout.parts !== 'docked' && open !== 'parts'}
+                  onPress={(press) => togglePanel('parts', press)}
+                />
+                <PanelChip
+                  testId="toggle-focus"
+                  icon={CHIP_ICON.focus}
+                  label={t('status.focus')}
+                  command="focusMode"
+                  pressed={focus}
+                  hiding={focus}
+                  onPress={() => setFocus((on) => !on)}
+                />
+                <PanelChip
+                  testId="toggle-properties"
+                  icon={CHIP_ICON.properties}
+                  label={t('status.properties')}
+                  command="toggleProperties"
+                  pressed={layout.properties === 'docked' || open === 'properties'}
+                  hiding={layout.properties !== 'docked' && open !== 'properties'}
+                  onPress={(press) => togglePanel('properties', press)}
+                />
+              </span>
 
-          <span className="status-right" data-testid="cursor-readout">
-            {view === 'sheets'
-              ? status?.sheet === null || status?.sheet === undefined
-                ? '—'
-                : t('status.sheetOf', status.sheet)
-              : status === null || status.cursorMm === null
-                ? '— , —'
-                : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
-          </span>
-        </footer>
+              <span className="status-right" data-testid="cursor-readout">
+                {view === 'sheets'
+                  ? status?.sheet === null || status?.sheet === undefined
+                    ? '—'
+                    : t('status.sheetOf', status.sheet)
+                  : status === null || status.cursorMm === null
+                    ? '— , —'
+                    : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
+              </span>
+            </footer>
+          </>
+        )}
 
         {/* A menu about nothing is not shown. */}
         {contextMenu !== null && !isEmptySelection(storeState.selection) && (
@@ -1236,11 +1388,13 @@ export function App({
 
         {pendingDiscard !== null && (
           <UnsavedChangesDialog
-            projectName={storeState.document.project.name}
+            projectName={pendingDiscard.tab.store.getState().document.project.name}
             action={pendingDiscard.action}
             // Saving an untitled project asks where; backing out of that asks
             // nothing further and changes nothing.
-            onSave={() => void file.save().then((saved) => pendingDiscard.resolve(saved))}
+            onSave={() =>
+              void file.save(pendingDiscard.tab).then((saved) => pendingDiscard.resolve(saved))
+            }
             onDiscard={() => pendingDiscard.resolve(true)}
             onCancel={() => pendingDiscard.resolve(false)}
           />
@@ -1258,6 +1412,15 @@ export function App({
     </I18nProvider>
   );
 }
+
+/** The window's keys that need no project: the ways in, and the app's own (8.12). */
+const WITHOUT_PROJECT: ReadonlySet<CommandId> = new Set<CommandId>([
+  'newProject',
+  'openProject',
+  'settings',
+  'keyboardShortcuts',
+  'help',
+]);
 
 interface PendingDelete {
   readonly ids: readonly string[];

@@ -76,18 +76,20 @@ test('a second launch opens its project in the running window, and ends', async 
   }
 });
 
-test('a second launch asks about unsaved work before it opens anything', async () => {
+test('a second launch opens beside unsaved work, in a tab of its own (8.12)', async () => {
   const config = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
   const { app, window } = await openApp({ env: { XDG_CONFIG_HOME: config } });
   try {
     await drawAPanel(window, { parts: '1' });
     expect(await launchAgain([aProject()], config, freshStateHome())).toBe(0);
 
-    await expect(window.getByTestId('unsaved-dialog')).toBeVisible();
-    await window.getByTestId('unsaved-cancel').click();
-    // Cancelled: the drawing stays, and the project was not opened.
+    // Nothing asked, nothing replaced: the drawing keeps its tab.
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
+    const tabs = window.getByTestId('tab-strip').getByRole('tab');
+    await expect(tabs).toHaveCount(2);
+    await tabs.first().click();
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('file-path')).toHaveCount(0);
   } finally {
     await closeApp(app);
   }

@@ -100,6 +100,11 @@ export function projectMenu(
   },
   recent: readonly RecentFile[],
   t: Translate,
+  /**
+   * Why *Save as* and *Rename* cannot be chosen: no project is open, on the
+   * start screen (8.12). Undefined while one is.
+   */
+  noProject?: string,
 ): MenuEntry[] {
   return [
     {
@@ -122,6 +127,7 @@ export function projectMenu(
       label: t('menu.saveAs'),
       keys: 'saveAs',
       onChoose: actions.saveAs,
+      refusal: noProject,
     },
     {
       kind: 'item',
@@ -129,6 +135,7 @@ export function projectMenu(
       label: t('menu.rename'),
       note: t('menu.renameNote'),
       onChoose: actions.rename,
+      refusal: noProject,
     },
     { kind: 'separator' },
     {

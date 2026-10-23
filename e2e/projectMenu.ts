@@ -41,3 +41,23 @@ export async function choosePaper(
   await window.keyboard.press('Escape');
   await expect(popover).toHaveCount(0);
 }
+
+/** The tab the window shows (8.12). */
+export function activeTab(window: Page): ReturnType<Page['locator']> {
+  return window.locator('[data-testid="project-tab"].active');
+}
+
+/**
+ * Closes the project's tab with its close button (8.12) — the way, since
+ * tabs, to throw unsaved work away and read a project again from disk, where
+ * opening it again only went back to its tab. With `discard`, answers the
+ * question unsaved work raises with *Don't save*.
+ */
+export async function closeActiveTab(
+  window: Page,
+  { discard = false }: { readonly discard?: boolean } = {},
+): Promise<void> {
+  await activeTab(window).getByTestId('close-tab').click();
+  if (discard) await window.getByTestId('unsaved-discard').click();
+  await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
+}

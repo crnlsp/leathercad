@@ -99,15 +99,21 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   the line names — after asking about unsaved work, as Open does and as macOS's `open-file` already
   did. A launch naming no project only brings the window forward. The lock is the configuration
   directory's, so the end-to-end tests, each with its own, still run side by side.
-- ☐ **8.12 Project tabs.** A tab strip above the project bar: each tab a project's name, a dot for
-  unsaved work and a close button, and *+* for a new one. New, Open, a recent project, the sample, a
-  launch and a second launch each open a tab; a project already open goes to its tab, and an
-  untouched *Untitled* is replaced. Each tab keeps its own document, history, selection, view,
-  camera and file. Closing a tab with unsaved work asks, as now; closing the last leaves an empty
-  *Untitled*; closing the window asks about each unsaved tab in turn, and *Cancel* stops it.
-  Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+W and Ctrl+1–9 through the keymap; a middle click closes. The
-  window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work. A
-  `tablist` with arrow keys, clean under axe.
+- ◐ **8.12 Project tabs.** A tab strip above the project bar: the Project menu as an icon at its
+  left — where the project's name was the menu's button in the bar — then a tab per project, its
+  project's name with a dot for unsaved work where its close button is, and *+*, which always adds
+  a new one. *Rename…* turns the active tab's name into a field; a project first saved without a
+  name is named after its file. New, Open, a recent project, the sample, a launch and a second
+  launch each open a tab; a project already open goes to its tab, and an untouched *Untitled* is
+  replaced. Each tab keeps its own document, history, selection, view, camera and file. Closing a
+  tab with unsaved work asks, as closing the window did; closing the last leaves the app open on a
+  start screen — New, Open, the sample and the recent projects — and closing the window asks about
+  each unsaved tab in turn, *Cancel* stopping it. Ctrl+Page Down and Ctrl+Page Up go round the tabs
+  and Ctrl+W closes one, through the keymap — never the digits, which Design and Sheets have; a
+  middle click closes too. One file dialog at a time: a second Open while one is up is not shown.
+  The window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work.
+  A `tablist` with arrow keys, clean under axe. Until 8.13 only the active tab's work is written to
+  the recovery copy.
 - ☐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy; after a crash
   every copy is offered in turn, each into a tab of its own. Copies from 1.5, one per session, are
   still found.

@@ -4,6 +4,8 @@ import { loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { ProjectTab } from './projectTabs.js';
+
 /** A copy a crashed session left, loaded and ready to offer. */
 export interface RecoveryOffer {
   readonly id: string;
@@ -43,7 +45,8 @@ export function useRecovery({
   isDirty: () => boolean;
   /** The same as `isDirty()`, as React state, so clearing follows it. */
   dirty: boolean;
-  adoptRecovered: (project: Project) => void;
+  /** Opens the recovered project in a tab of its own (8.12), and gives the tab back. */
+  adoptRecovered: (project: Project) => ProjectTab;
 }): { offer: RecoveryOffer | null; recover: () => Promise<void>; decline: () => Promise<void> } {
   const [offer, setOffer] = useState<RecoveryOffer | null>(null);
   // The document last written, so an unchanged project is not written again.
@@ -122,11 +125,11 @@ export function useRecovery({
 
   const recover = useCallback(async () => {
     if (offer === null) return;
-    adoptRecovered(offer.project);
+    const tab = adoptRecovered(offer.project);
     setOffer(null);
     // This session's own copy first, and only then is the old one let go (at a
     // clean exit): at every moment there is at least one copy on disk.
-    const { document } = store.getState();
+    const { document } = tab.store.getState();
     await host()
       .writeRecovery(copyOf(document.project))
       .then(() => {
@@ -136,7 +139,7 @@ export function useRecovery({
     await host()
       .resolveRecovery(offer.id, 'adopt')
       .catch(() => undefined);
-  }, [adoptRecovered, copyOf, host, offer, store]);
+  }, [adoptRecovered, copyOf, host, offer]);
 
   const decline = useCallback(async () => {
     if (offer === null) return;

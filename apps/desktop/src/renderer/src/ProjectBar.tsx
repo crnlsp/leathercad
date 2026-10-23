@@ -1,19 +1,16 @@
-import { setProjectName, type DocumentStore } from '@leathercad/document';
+import type { DocumentStore } from '@leathercad/document';
 import type { Project, SeverityCounts } from '@leathercad/domain';
 import { isScaleCheckOnly } from '@leathercad/export';
-import type { RecentFile, RecentOutcome } from '@leathercad/platform';
 import { Check, ChevronDown, Circle, CircleHelp, Settings } from 'lucide-react';
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useState, type RefObject } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
-import { intoMenu } from './fieldMenu.js';
 import type { CanvasView } from './CanvasHost.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
 import { MenuButton } from './Menu.js';
-import { MessageDialog } from './MessageDialog.js';
-import { exportMenu, helpMenu, projectMenu } from './menus.js';
+import { exportMenu, helpMenu } from './menus.js';
 import { pressOf, type Press } from './PanelFold.js';
 import type { Room } from './panelLayout.js';
 import { PaperButton } from './PaperButton.js';
@@ -29,8 +26,8 @@ import { ViewSwitch } from './ViewSwitch.js';
  * a glance: **is my work saved, am I designing or checking the sheets, and is
  * the pattern ready to print.**
  *
- * Left, the project: its menu, whose button is its name — new, open, save as,
- * rename, the recent projects — then whether it is saved, and Save. Centre,
+ * Left, the project: whether it is saved, and Save — its name and its menu are
+ * the tab strip's above since 8.12, the menu at the strip's left. Centre,
  * Design | Sheets. Right, where the workflow ends: the paper, *Export PDF* with
  * the menu of its other formats as its second half, and *Print* — the one
  * primary action, in the paper's colour — whose second half is the problems
@@ -50,12 +47,6 @@ export function ProjectBar({
   settled,
   onShowProblems,
   helpRef,
-  onNew,
-  onOpen,
-  onSaveAs,
-  recent,
-  onProjectMenuOpen,
-  onOpenRecent,
   onOpenSample,
   onAbout,
   onSettings,
@@ -83,15 +74,6 @@ export function ProjectBar({
   onShowProblems: (press: Press) => void;
   /** The Help menu's button, which F1 opens. */
   helpRef: RefObject<HTMLButtonElement | null>;
-  onNew: () => void;
-  onOpen: () => void;
-  onSaveAs: () => void;
-  /** The Project menu's recent projects (8.7), most recent first. */
-  recent: readonly RecentFile[];
-  /** The Project menu is opening: its recent projects are asked for again. */
-  onProjectMenuOpen: () => void;
-  /** One that is gone is taken off the list, and this bar says why (U.20). */
-  onOpenRecent: (path: string) => Promise<RecentOutcome>;
   onOpenSample: () => void;
   onAbout: () => void;
   onSettings: () => void;
@@ -107,14 +89,6 @@ export function ProjectBar({
   const i18n = useI18n();
   const { t } = i18n;
   const plan = sheetPlanFor(project);
-  const name = project.name.trim() === '' ? t('app.untitled') : project.name;
-  const menuButton = useRef<HTMLButtonElement>(null);
-  // Renaming (U.7, the roadmap's decision): *Rename…* in the Project menu turns
-  // the name into the field it was before, and one edit is one undo step.
-  const [renaming, setRenaming] = useState<Press | null>(null);
-  // A recent project that is no longer there: said in the app's own dialog,
-  // where the main process used to raise a native message box (U.20).
-  const [gone, setGone] = useState<string | null>(null);
 
   const saveWords = dirty ? t('projectBar.unsaved') : saved ? t('projectBar.saved') : '';
   const problems = describeCounts(counts, i18n);
@@ -130,50 +104,6 @@ export function ProjectBar({
           the document outline still starts with it. */}
         <h1 className="visually-hidden">LeatherCAD</h1>
         <div className="project-identity">
-          {renaming === null ? (
-            <MenuButton
-              label={t('projectBar.projectMenu', { name })}
-              tooltip={t('projectBar.projectMenuTooltip', { name })}
-              testId="project-menu"
-              className="tool quiet project-menu-button"
-              triggerRef={menuButton}
-              entries={projectMenu(
-                {
-                  newProject: onNew,
-                  open: onOpen,
-                  saveAs: onSaveAs,
-                  // A keyboard's choice gives focus back to the menu once the
-                  // name is set; the pointer's leaves it with the page (U.4).
-                  rename: (how) => setRenaming(how ?? 'keyboard'),
-                  openRecent: (path) =>
-                    void onOpenRecent(path)
-                      .then((outcome) => {
-                        if (outcome === 'gone') setGone(path);
-                      })
-                      .catch(() => undefined),
-                },
-                recent,
-                t,
-              )}
-              onOpen={onProjectMenuOpen}
-            >
-              <ProjectMark />
-              <span className="project-name" data-testid="project-name">
-                {name}
-              </span>
-              <Icon of={ChevronDown} size={12} />
-            </MenuButton>
-          ) : (
-            <NameField
-              name={project.name}
-              onDone={(next) => {
-                if (next !== null && next !== project.name) store.dispatch(setProjectName(next));
-                const back = renaming === 'keyboard';
-                setRenaming(null);
-                if (back) requestAnimationFrame(() => menuButton.current?.focus());
-              }}
-            />
-          )}
           <SaveState dirty={dirty} saved={saved} room={room} />
           <Tooltip
             text={dirty ? t('projectBar.saveTooltip') : t('projectBar.nothingToSave')}
@@ -333,16 +263,6 @@ export function ProjectBar({
           </span>
         </div>
       </header>
-      {gone !== null && (
-        <MessageDialog
-          title={t('menu.recentGone')}
-          testId="recent-gone"
-          onClose={() => setGone(null)}
-        >
-          <p className="dialog-part">{gone}</p>
-          <p>{t('menu.recentGoneDetail')}</p>
-        </MessageDialog>
-      )}
     </>
   );
 }
@@ -372,86 +292,6 @@ function SaveState({ dirty, saved, room }: { dirty: boolean; saved: boolean; roo
       <Icon of={dirty ? Circle : Check} size={dirty ? 8 : 12} />
       <span className={room === 'cramped' ? 'visually-hidden' : undefined}>{words}</span>
     </span>
-  );
-}
-
-/**
- * The name, being renamed: Enter or leaving keeps it, Escape puts it back.
- * One edit, so one undo step — typed into the bar before U.7, every letter
- * was a step of its own.
- */
-function NameField({ name, onDone }: { name: string; onDone: (next: string | null) => void }) {
-  const { t } = useI18n();
-  const [draft, setDraft] = useState(name);
-  const done = useRef(false);
-  const input = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    input.current?.focus();
-    input.current?.select();
-  }, []);
-  const finish = (next: string | null): void => {
-    if (done.current) return;
-    done.current = true;
-    onDone(next);
-  };
-  return (
-    <span className="project-rename">
-      <ProjectMark />
-      <input
-        ref={input}
-        className="project-name-input"
-        data-testid="project-name-input"
-        aria-label={t('projectBar.name')}
-        value={draft}
-        placeholder={t('app.untitled')}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') finish(draft);
-          else if (event.key === 'Escape') {
-            event.stopPropagation();
-            finish(null);
-          }
-        }}
-        onBlur={(event) => {
-          // The field's own menu is not leaving it (U.20).
-          if (!intoMenu(event.relatedTarget)) finish(draft);
-        }}
-      />
-    </span>
-  );
-}
-/** The icon's stitching (build/icon.svg), in the 16 px box: down, along and up. */
-const POCKET_HOLES: readonly (readonly [number, number])[] = [
-  [4.6, 6.2],
-  [4.6, 8.65],
-  [4.6, 11.1],
-  [6.87, 11.1],
-  [9.13, 11.1],
-  [11.4, 11.1],
-  [11.4, 8.65],
-  [11.4, 6.2],
-];
-
-/**
- * The Project menu's face (8.7): the icon's card pocket, drawn as the rail
- * draws a piece — the outline at the cut weight, the stitching as holes — in
- * the current colour. Never tan: the accent is the maker's own focus and the
- * primary action (UI Foundations §5.3).
- */
-function ProjectMark() {
-  return (
-    <svg className="icon" width={16} height={16} viewBox="0 0 16 16" aria-hidden>
-      <path
-        d="M2 2.5H5.46A2.62 2.62 0 0 0 10.54 2.5H14V12.4A1.3 1.3 0 0 1 12.7 13.7H3.3A1.3 1.3 0 0 1 2 12.4Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-      {POCKET_HOLES.map(([x, y]) => (
-        <circle key={`${String(x)},${String(y)}`} cx={x} cy={y} r={0.65} fill="currentColor" />
-      ))}
-    </svg>
   );
 }
 

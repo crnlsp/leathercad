@@ -9,6 +9,7 @@ import { IPC } from '../shared/ipc.js';
 import { writeFileAtomic } from './atomicWrite.js';
 import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
+import { OneAtATime } from './oneAtATime.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
 import { shownPath, type PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
@@ -63,17 +64,30 @@ export function registerPlatformHandlers(
     await writeFileAtomic(guard(grants, path, 'write'), data);
   });
 
-  ipcMain.handle(IPC.showOpenDialog, async (_event, options: Electron.OpenDialogOptions) => {
-    const window = getWindow();
-    const result = window
-      ? await dialog.showOpenDialog(window, { ...options, properties: ['openFile'] })
-      : await dialog.showOpenDialog({ ...options, properties: ['openFile'] });
-    const chosen = result.canceled ? null : (result.filePaths[0] ?? null);
-    if (chosen !== null) grants.grant(chosen);
-    return chosen;
-  });
+  // One file dialog at a time (8.12). A second Ctrl+O, or *Open…* chosen
+  // again while the first dialog is up — which a Linux file chooser does not
+  // stop, as it is not modal to the window everywhere — is answered as
+  // cancelled, rather than opening a second dialog whose answer would race the
+  // first's.
+  const oneDialog = new OneAtATime();
 
-  ipcMain.handle(IPC.showSaveDialog, async (_event, options: Electron.SaveDialogOptions) => {
+  ipcMain.handle(IPC.showOpenDialog, (_event, options: Electron.OpenDialogOptions) =>
+    oneDialog.run(null, async () => {
+      const window = getWindow();
+      const result = window
+        ? await dialog.showOpenDialog(window, { ...options, properties: ['openFile'] })
+        : await dialog.showOpenDialog({ ...options, properties: ['openFile'] });
+      const chosen = result.canceled ? null : (result.filePaths[0] ?? null);
+      if (chosen !== null) grants.grant(chosen);
+      return chosen;
+    }),
+  );
+
+  ipcMain.handle(IPC.showSaveDialog, (_event, options: Electron.SaveDialogOptions) =>
+    oneDialog.run(null, () => saveDialog(options)),
+  );
+
+  async function saveDialog(options: Electron.SaveDialogOptions): Promise<string | null> {
     const window = getWindow();
     const result = window
       ? await dialog.showSaveDialog(window, options)
@@ -86,7 +100,7 @@ export function registerPlatformHandlers(
       );
     }
     return chosen;
-  });
+  }
 
   ipcMain.handle(IPC.openInExternalViewer, async (_event, path: unknown) => {
     const error = await shell.openPath(guard(grants, path, 'view'));

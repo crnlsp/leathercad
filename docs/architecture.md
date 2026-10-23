@@ -287,6 +287,12 @@ window size. Selection is a borderline case — it is stored *alongside* each hi
 restores it, but it lives outside the document proper so that selecting something does not mark the
 file dirty.
 
+**One store per open project** (8.12). The window holds a project per tab, and each tab owns its
+`DocumentStore` — document, history and selection — with its file's path and the document it was
+last saved as. `ProjectTabs` (`apps/desktop/src/renderer/src/projectTabs.ts`) is the list and which
+tab is active; the chrome shows the active tab's store, and the canvas is made again for each tab,
+taking that tab's cameras. Undo never crosses from one project to another.
+
 ## 5. Platform boundary
 
 The only way application code touches the operating system:

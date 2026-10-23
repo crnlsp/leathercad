@@ -78,6 +78,9 @@ export type CommandId =
   | 'help'
   | 'fullScreen'
   | 'quit'
+  | 'nextTab'
+  | 'previousTab'
+  | 'closeTab'
   | 'cut'
   | 'copy'
   | 'paste'
@@ -298,6 +301,29 @@ export const KEYMAP: readonly Command[] = [
     keys: [key('F11')],
   },
   { id: 'quit', does: 'shortcuts.quit', group: 'window', scope: 'window', keys: [mod('KeyQ')] },
+  // The project tabs (8.12). Ctrl+Page Down and Up, as browsers and editors
+  // move between tabs; never the digits, which Design and Sheets have.
+  {
+    id: 'nextTab',
+    does: 'shortcuts.nextTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageDown')],
+  },
+  {
+    id: 'previousTab',
+    does: 'shortcuts.previousTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageUp')],
+  },
+  {
+    id: 'closeTab',
+    does: 'shortcuts.closeTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('KeyW')],
+  },
 
   // A text field's own (U.20): the field hears them, as every field does, and
   // its right-click menu shows them. Listed so that menu takes its keys from here.

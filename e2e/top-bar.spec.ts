@@ -125,8 +125,8 @@ async function openSample(window: Page): Promise<void> {
   await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
 }
 
+// The Project menu is the tab strip's since 8.12, at its left.
 const BAR = [
-  'project-menu',
   'save-state',
   'save',
   'view-design',
@@ -174,19 +174,14 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
       expect(await shown(window, 'print')).toBe('Print');
       // The switch keeps its icons and the count; the words go at 860 px.
       expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '5' : 'Sheets5');
-      // A long name gives way, and its tooltip says it whole.
-      const name = window.getByTestId('project-name');
-      expect(
-        await name.evaluate((element) => element.scrollWidth > element.clientWidth),
-        `${String(width)}: the name is cut short`,
-      ).toBe(width !== 1920);
     }
-    await window.getByTestId('project-menu').hover();
-    await expect(
-      window.getByRole('tooltip', {
-        name: /^Bifold wallet, lined, with a card pocket each side\./,
-      }),
-    ).toBeVisible();
+    // A long name gives way in its tab, which says it whole when pointed at (8.12).
+    const tab = window.getByTestId('tab-strip').getByRole('tab', { selected: true });
+    expect(await tab.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    await expect(tab).toHaveAttribute(
+      'title',
+      'Bifold wallet, lined, with a card pocket each side',
+    );
   } finally {
     await closeApp(app);
   }
@@ -240,7 +235,7 @@ test('Rename… in the Project menu renames the project, as one step, by keyboar
     await expect(window).toHaveTitle('• Card holder — LeatherCAD');
     // The keyboard is given back its place.
     await expect(menu).toBeFocused();
-    await expect(menu).toHaveAccessibleName('Project menu, Card holder');
+    await expect(menu).toHaveAccessibleName('Project menu');
 
     // Escape leaves the name as it was.
     await fromProjectMenu(window, 'rename');

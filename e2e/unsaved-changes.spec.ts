@@ -6,7 +6,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { drawAPanel, openApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { fromProjectMenu, renameProject } from './projectMenu.js';
 
 /**
  * Slice 5.3a: never lose work silently.
@@ -84,84 +84,112 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
   }
 });
 
-test('New asks first, and starts a clean, empty project', async () => {
-  const { app, window } = await openApp();
-  try {
-    await drawAPanel(window, { parts: '1' });
-
-    await fromProjectMenu(window, 'new');
-    const dialog = window.getByTestId('unsaved-dialog');
-    await expect(dialog).toContainText('new project');
-    await dialog.getByTestId('unsaved-cancel').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-
-    // Ctrl+N is the same action, behind the same question.
-    await window.keyboard.press('Control+n');
-    await expect(dialog).toBeVisible();
-    await dialog.getByTestId('unsaved-discard').click();
-
-    await expect(window.getByTestId('part-count')).toHaveText('0');
-    await expect(window.getByTestId('project-name')).toHaveText('Untitled');
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
-    await expect(window.getByTestId('undo')).toBeDisabled();
-
-    // A new, untouched project asks nothing of the next New.
-    await fromProjectMenu(window, 'new');
-    await expect(dialog).toHaveCount(0);
-  } finally {
-    await closeApp(app);
-  }
-});
-
-test('Save in the question saves first, and a cancelled save cancels the whole action', async () => {
+test('New and Open start a tab of their own, and ask nothing (8.12)', async () => {
   const file = join(tmpdir(), `leathercad-e2e-unsaved-${Date.now()}.lcp`);
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { parts: '1' });
     const dialog = window.getByTestId('unsaved-dialog');
+    const tabs = window.getByTestId('tab-strip').getByRole('tab');
 
-    // The maker backs out of the save dialog: nothing is replaced.
-    await app.evaluate(({ dialog: native }) => {
-      native.showSaveDialog = async () => ({ canceled: true, filePath: '' });
-    });
-    await fromProjectMenu(window, 'new');
-    await dialog.getByTestId('unsaved-save').click();
+    // Ctrl+N: a clean, empty project beside the work, which stays in its tab.
+    await window.keyboard.press('Control+n');
     await expect(dialog).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(tabs).toHaveCount(2);
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('undo')).toBeDisabled();
 
-    // Now they save it where they choose, and only then does New go ahead.
+    // Saved, then asked for again from the untouched Untitled.
     await app.evaluate(({ dialog: native }, path) => {
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
-    await fromProjectMenu(window, 'new');
-    await dialog.getByTestId('unsaved-save').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
-    expect(existsSync(file)).toBe(true);
-
-    // A clean project opens another without a question…
+    await tabs.first().click();
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await tabs.nth(1).click();
     await app.evaluate(({ dialog: native }, path) => {
       native.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, file);
     await fromProjectMenu(window, 'open');
-    await expect(dialog).toHaveCount(0);
+    // Open already: its tab, never a second copy to save over the first.
+    await expect(tabs).toHaveCount(2);
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
-
-    // …and a dirty one asks, with the same question.
-    await drawAPanel(window, { left: 350, parts: '2' });
-    await fromProjectMenu(window, 'open');
-    await expect(dialog).toContainText('Opening another project');
-    await dialog.getByTestId('unsaved-cancel').click();
-    await expect(window.getByTestId('part-count')).toHaveText('2');
-
-    await window.keyboard.press('Control+o');
-    await dialog.getByTestId('unsaved-discard').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);
     rmSync(file, { force: true });
+  }
+});
+
+test('closing a tab with unsaved work asks, and a cancelled save keeps it (8.12)', async () => {
+  const file = join(tmpdir(), `leathercad-e2e-unsaved-${Date.now()}.lcp`);
+  const { app, window } = await openApp();
+  try {
+    await drawAPanel(window, { parts: '1' });
+    await window.keyboard.press('Control+n');
+    const dialog = window.getByTestId('unsaved-dialog');
+    const tabs = window.getByTestId('tab-strip').getByRole('tab');
+    await expect(tabs).toHaveCount(2);
+
+    // An untouched tab closes without a word.
+    await window.keyboard.press('Control+w');
+    await expect(dialog).toHaveCount(0);
+    await expect(tabs).toHaveCount(1);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    // The maker backs out of the save dialog: the tab stays, unsaved.
+    await app.evaluate(({ dialog: native }) => {
+      native.showSaveDialog = async () => ({ canceled: true, filePath: '' });
+    });
+    await window.keyboard.press('Control+w');
+    await expect(dialog).toContainText('Save changes to “Untitled”?');
+    await dialog.getByTestId('unsaved-save').click();
+    await expect(dialog).toHaveCount(0);
+    await expect(tabs).toHaveCount(1);
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+
+    // Saved where they choose, and only then is the tab closed: the last one
+    // leaves the app open, on its start screen.
+    await app.evaluate(({ dialog: native }, path) => {
+      native.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, file);
+    await window.keyboard.press('Control+w');
+    await dialog.getByTestId('unsaved-save').click();
+    await expect(window.getByTestId('start-screen')).toBeVisible();
+    await expect(tabs).toHaveCount(0);
+    expect(existsSync(file)).toBe(true);
+  } finally {
+    await closeApp(app);
+    rmSync(file, { force: true });
+  }
+});
+
+test('closing the window asks about each unsaved project in turn (8.12)', async () => {
+  const { app, window } = await openApp();
+  try {
+    await drawAPanel(window, { parts: '1' });
+    await window.keyboard.press('Control+n');
+    await drawAPanel(window, { parts: '1' });
+    await renameProject(window, 'Second');
+    const dialog = window.getByTestId('unsaved-dialog');
+
+    // Cancel at the first question: nothing closes, nothing else is asked.
+    await requestClose(app);
+    await expect(dialog).toContainText('“Untitled”');
+    await dialog.getByTestId('unsaved-cancel').click();
+    await expect(dialog).toHaveCount(0);
+
+    // Each project in turn, shown as it is asked about.
+    await requestClose(app);
+    await expect(dialog).toContainText('“Untitled”');
+    await dialog.getByTestId('unsaved-discard').click();
+    await expect(dialog).toContainText('“Second”');
+    await expect(window.getByTestId('project-name')).toHaveText('Second');
+    await dialog.getByTestId('unsaved-discard').click();
+    expect(await closed(app)).toBe(true);
+  } finally {
+    await closeApp(app);
   }
 });
 

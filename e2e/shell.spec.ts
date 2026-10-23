@@ -8,7 +8,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp, withApp } from './launchApp.js';
-import { fromProjectMenu, renameProject } from './projectMenu.js';
+import { closeActiveTab, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
 let app: ElectronApplication;
@@ -323,10 +323,10 @@ test('saves a project and reopens it with its parameters intact', async () => {
     // The emptied part stays until it is removed on purpose (ADR 0009).
     await expect(window.getByTestId('feature-count')).toHaveText('0');
 
-    // The delete is unsaved work, so opening asks first (5.3a); throwing it
-    // away is the point of this step.
+    // The delete is unsaved work, so closing its tab asks first (5.3a, 8.12);
+    // throwing it away is the point of this step. Then read from disk again.
+    await closeActiveTab(window, { discard: true });
     await fromProjectMenu(window, 'open');
-    await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(window.getByTestId('parts-list')).toContainText('Card holder');
 
@@ -1742,9 +1742,10 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await window.keyboard.press('Delete');
     await expect(window.getByTestId('feature-count')).toHaveText('1');
 
-    // Unsaved, so opening asks first (5.3a), and throwing it away is the point.
+    // Unsaved, so closing its tab asks first (5.3a, 8.12), and throwing it
+    // away is the point. Then read from disk again.
+    await closeActiveTab(window, { discard: true });
     await fromProjectMenu(window, 'open');
-    await window.getByTestId('unsaved-discard').click();
     await expect(window.getByTestId('feature-count')).toHaveText('2');
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 
