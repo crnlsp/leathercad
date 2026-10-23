@@ -5,8 +5,7 @@ import { join, resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
-import { renameProject } from './projectMenu.js';
+import { drawAPanel, launchApp } from './launchApp.js';
 
 /**
  * Slice 8.5: a `.lcp` double-clicked in the file manager starts the app with
@@ -33,7 +32,8 @@ test('a project named on the command line opens, and saves back where it came fr
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await expect(window.getByTestId('file-path')).toContainText('Wallet from Files');
 
-    await renameProject(window, 'Wallet, edited');
+    // An edit to save — not a rename, which renames the file too (8.12).
+    await drawAPanel(window, { parts: '4' });
     // The button, not Ctrl+S: a key typed in a text field stays in it.
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).toHaveText('Saved');

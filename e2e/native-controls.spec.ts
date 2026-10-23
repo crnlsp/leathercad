@@ -150,8 +150,8 @@ test('every tab stop rings in the accent, in the window and every dialog, and Ta
     await window.getByTestId('rename').click();
     await window.getByTestId('project-name-input').fill('Gusset wallet');
     await window.getByTestId('project-name-input').press('Enter');
-    await window.getByTestId('help-menu').click();
-    await window.getByTestId('help-open-sample').click();
+    // Opening no longer replaces anything (8.12); closing the tab asks.
+    await window.keyboard.press('Control+w');
     await expect(window.getByTestId('unsaved-dialog')).toBeVisible();
     await expectRings(window, 'Unsaved changes', DIALOG);
   } finally {

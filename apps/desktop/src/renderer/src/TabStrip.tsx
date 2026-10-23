@@ -96,7 +96,9 @@ export function TabStrip({
   };
 
   return (
-    <div className="tab-strip" data-testid="tab-strip">
+    // A landmark of its own (axe's `region`): the open projects, and the ways
+    // to more of them.
+    <nav className="tab-strip" aria-label={t('tabs.strip')} data-testid="tab-strip">
       {menu}
       <div
         ref={list}
@@ -187,7 +189,7 @@ export function TabStrip({
       <span className="visually-hidden" aria-live="polite" data-testid="already-open">
         {alreadyOpen}
       </span>
-    </div>
+    </nav>
   );
 }
 

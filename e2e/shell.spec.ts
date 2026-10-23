@@ -428,11 +428,15 @@ test('the project bar holds the project and its output; the work bar holds the w
     const project = window.getByTestId('project-bar');
     const work = window.getByTestId('work-bar');
 
-    // The project and its menu, the sheets it prints on, printing, and — past
-    // a rule — the application (8.7).
+    // The project's menu and name are the tab strip's since 8.12.
+    const strip = window.getByTestId('tab-strip');
+    for (const id of ['project-menu', 'project-name']) {
+      await expect(strip.getByTestId(id), id).toHaveCount(1);
+      await expect(project.getByTestId(id), id).toHaveCount(0);
+    }
+    // Whether it is saved, the sheets it prints on, printing, and — past a
+    // rule — the application (8.7).
     for (const id of [
-      'project-menu',
-      'project-name',
       'save-state',
       'save',
       'view-design',

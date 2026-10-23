@@ -78,7 +78,8 @@ test('a tooltip waits 500 ms for the pointer, comes at once for the keyboard, an
     await expect(tip).toHaveCount(0);
 
     await window.mouse.move(600, 500);
-    await window.getByTestId('project-menu').focus();
+    // The stop before Save is the tab strip's + (8.12).
+    await window.getByTestId('new-tab').focus();
     await window.keyboard.press('Tab');
     await expect(save).toBeFocused();
     await expect(tip).toBeVisible({ timeout: 200 });

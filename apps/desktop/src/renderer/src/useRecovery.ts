@@ -89,12 +89,23 @@ export function useRecovery({
     void findNext();
   }, [findNext]);
 
-  /** Writes a tab's copy, and remembers the document it holds. */
+  /**
+   * Writes a tab's copy, and remembers the document it holds — before the
+   * write is asked for, not after it lands: a save made while it is in flight
+   * must find it to clear, or the copy outlives the work it was of. The main
+   * process runs the write and the clear in the order asked.
+   */
   const writeCopy = useCallback(
     async (tab: ProjectTab) => {
       const { document } = tab.store.getState();
-      await host().writeRecovery(tab.id, copyOf(document.project));
       written.current.set(tab.id, document);
+      try {
+        await host().writeRecovery(tab.id, copyOf(document.project));
+      } catch (error) {
+        // Not written: written again at the next interval.
+        if (written.current.get(tab.id) === document) written.current.set(tab.id, null);
+        throw error;
+      }
     },
     [copyOf, host],
   );
