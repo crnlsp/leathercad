@@ -9,9 +9,9 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-18, for check 14, recovery after a renderer dies on macOS; before
-that for check 13, ⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left
-unverified for 1.5. First written for 1.0
+**Last updated:** 2026-10-23, for check 10's Windows install directory; before that 2026-10-18,
+for check 14, recovery after a renderer dies on macOS; before that for check 13, ⌘A on macOS
+(U.20), the Flatpak among the release's files, and R10 left unverified for 1.5. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
@@ -189,6 +189,11 @@ Repeat checks 1–4 and 7 on macOS, with *Print*: the same CUPS path as Linux, a
 filters, and unverified until its row is in the log. Repeat them on Windows through *Save PDF…* and
 the default PDF viewer, noting the exact name of the viewer's actual-size setting. Record one row
 per platform in the log.
+
+On Windows, the installer puts the app in `%LOCALAPPDATA%\Programs\LeatherCAD`. Install it over
+1.5.0 or earlier, which lived in `Programs\@leathercaddesktop`: the old directory is gone, the
+Start menu entry starts the new version, and Settings and the Project menu's recent projects are
+as they were.
 
 ### 11. Opening a project from the file manager
 

@@ -34,6 +34,11 @@ export default {
   productName: 'LeatherCAD',
   executableName: 'leathercad',
   copyright: 'Copyright © 2026 crnlsp',
+  // The per-user NSIS installer names its directory after the package, not
+  // the product: `@leathercad/desktop` became Programs\@leathercaddesktop.
+  // Only the packaged package.json is renamed; the workspace keeps its name.
+  // An install left in the old directory moves on update: build/installer.nsh.
+  extraMetadata: { name: 'LeatherCAD' },
   directories: { output: 'release', buildResources: 'build' },
   files: ['out/**/*', 'package.json'],
   asar: true,
@@ -126,7 +131,8 @@ export default {
   // Unsigned, by decision (roadmap 8.6, Code signing); electron-builder would
   // sign if CSC_LINK were ever set, with no change here.
   win: { target: ['nsis'], icon: 'build/icon.ico' },
-  nsis: { oneClick: true, perMachine: false },
+  // It installs to %LOCALAPPDATA%\Programs\LeatherCAD (see extraMetadata).
+  nsis: { oneClick: true, perMachine: false, include: 'build/installer.nsh' },
   // macOS (8.6a): one dmg for Apple silicon and Intel. Flipping the fuses
   // rewrites the binary and invalidates Electron's own signature, and an
   // arm64 app with no valid signature will not start at all — so, with no
