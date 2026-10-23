@@ -81,6 +81,9 @@ export type CommandId =
   | 'nextTab'
   | 'previousTab'
   | 'closeTab'
+  | 'moveTabLeft'
+  | 'moveTabRight'
+  | 'reopenTab'
   | 'cut'
   | 'copy'
   | 'paste'
@@ -323,6 +326,29 @@ export const KEYMAP: readonly Command[] = [
     group: 'window',
     scope: 'window',
     keys: [mod('KeyW')],
+  },
+  // The tab along the strip, as a drag moves it — the keyboard's way to do it.
+  {
+    id: 'moveTabLeft',
+    does: 'shortcuts.moveTabLeft',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageUp', true)],
+  },
+  {
+    id: 'moveTabRight',
+    does: 'shortcuts.moveTabRight',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageDown', true)],
+  },
+  // The project last closed, opened again, as a browser reopens a tab.
+  {
+    id: 'reopenTab',
+    does: 'shortcuts.reopenTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('KeyT', true)],
   },
 
   // A text field's own (U.20): the field hears them, as every field does, and

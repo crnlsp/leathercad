@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { RecentOutcome } from '@leathercad/platform';
+import type { OpenSession, OpenSessionTab, RecentOutcome } from '@leathercad/platform';
 import { BrowserWindow, Menu, app, net, protocol, session, shell } from 'electron';
 import log from 'electron-log/main';
 
@@ -19,7 +19,8 @@ import { applyBindings } from '../renderer/src/keymap.js';
 import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
-import { PreferencesStore, type Session } from './preferences.js';
+import { KeptCopies } from './keptCopies.js';
+import { PreferencesStore } from './preferences.js';
 import { ProjectWatch } from './projectWatch.js';
 import { RecoveryStore } from './recovery.js';
 import { UpdateChecker } from './updates.js';
@@ -62,6 +63,10 @@ const recovery = new RecoveryStore(join(stateDirectory(), 'recovery'), {
   pid: process.pid,
   startedAt: Date.now(),
 });
+
+// The unsaved work kept as the window closes (8.12), with Keep unsaved
+// projects on: beside the preferences, in a folder of its own.
+const kept = new KeptCopies(join(app.getPath('userData'), 'unsaved'));
 
 // The files the renderer may touch: those chosen in the app's dialogs, or
 // from the recent projects (8.2). Shared by the handlers and the launch.
@@ -272,22 +277,33 @@ function buildMenu(): void {
  */
 /**
  * The tabs open when the app last closed (8.12), handed to the renderer once,
- * as it starts: those still on disk, granted — the maker chose each in a
- * dialog in an earlier session, as for the recent list. A second ask, from a
- * reloaded page, gets none: what it shows now is the session.
+ * as it starts: each project still on disk, granted — the maker chose each in
+ * a dialog in an earlier session, as for the recent list — and the unsaved
+ * work kept for any, read back. A second ask, from a reloaded page, gets none:
+ * what it shows now is the session. Kept copies the last session no longer
+ * names are let go.
  */
 let sessionTaken = false;
-function takeSession(): Session {
-  if (sessionTaken) return { projects: [], active: null };
+async function takeSession(): Promise<OpenSession> {
+  if (sessionTaken) return { tabs: [], active: null };
   sessionTaken = true;
-  const { projects, active } = preferences.session;
-  const there = projects.filter((path) => existsSync(path));
-  for (const path of there) grants.grant(path);
-  return { projects: there, active: active !== null && there.includes(active) ? active : null };
+  const { tabs, active } = preferences.session;
+  const handed: OpenSessionTab[] = [];
+  let front: number | null = null;
+  for (const [index, tab] of tabs.entries()) {
+    const path = tab.path !== null && existsSync(tab.path) ? tab.path : null;
+    const data = tab.kept === null ? null : await kept.read(tab.kept);
+    if (path === null && data === null) continue;
+    if (path !== null) grants.grant(path);
+    if (index === active) front = handed.length;
+    handed.push({ path, data, view: tab.view, camera: tab.camera });
+  }
+  await kept.keepOnly(new Set(tabs.flatMap((tab) => (tab.kept === null ? [] : [tab.kept]))));
+  return { tabs: handed, active: front };
 }
 
 async function openRecent(path: string): Promise<RecentOutcome> {
-  if (!preferences.recentFiles.includes(path)) return 'unlisted';
+  if (!preferences.lists(path)) return 'unlisted';
   if (!existsSync(path)) {
     await preferences.forgetRecent(path);
     return 'gone';
@@ -347,6 +363,7 @@ app.whenReady().then(() => {
     },
     updates,
     projectWatch,
+    kept,
   );
 
   followLanguage();

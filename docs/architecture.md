@@ -321,7 +321,12 @@ shell ([ADR 0019](adr/0019-print-from-the-app.md), [printing.md](printing.md) §
 The main process reads, writes and opens only paths the user chose in one of the app's own dialogs
 during the session — the path returned, or that path with one of the dialog's filter extensions
 appended — and opens only a PDF in the external viewer (`apps/desktop/src/main/pathGrants.ts`). A
-renderer that runs something it should not still cannot reach any other file.
+project the operating system hands over (a launch, a second launch, macOS's `open-file`), one on
+the recent list or the last session's tabs — each chosen in a dialog once — is granted the same
+way. A renderer that runs something it should not still cannot reach any other file, with one
+exception by design: a project dropped on the window (8.12) is granted on the renderer's word for
+its path, since the main process cannot see a drop, so only a `.lcp` that exists is, and each is
+logged.
 
 Electron security posture, non-negotiable: `contextIsolation: true`, `nodeIntegration: false`,
 `sandbox: true`, a preload exposing only the typed `PlatformHost` channel, and a strict CSP with no

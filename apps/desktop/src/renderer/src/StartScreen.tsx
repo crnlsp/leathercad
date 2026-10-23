@@ -1,11 +1,12 @@
 import type { RecentFile } from '@leathercad/platform';
-import { FilePlus, FolderOpen, Sparkles } from 'lucide-react';
+import { FilePlus, FolderOpen, Pin, PinOff, Sparkles, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
 import { recentParts } from './menus.js';
+import { Tooltip } from './Tooltip.js';
 
 /**
  * What the window shows with every project closed (8.12): the app stays open,
@@ -21,6 +22,8 @@ export function StartScreen({
   onOpen,
   onOpenSample,
   onOpenRecent,
+  onPin,
+  onRemove,
 }: {
   /** The recent projects (8.7), most recent first. */
   recent: readonly RecentFile[];
@@ -32,6 +35,10 @@ export function StartScreen({
   onOpen: () => void;
   onOpenSample: () => void;
   onOpenRecent: (path: string) => void;
+  /** Pins a project to the top of the list, or lets it go back among the rest (8.12). */
+  onPin: (path: string, pinned: boolean) => void;
+  /** Takes one project off the list: the file itself is left alone. */
+  onRemove: (path: string) => void;
 }) {
   const { t } = useI18n();
   useEffect(onRefreshRecent, [onRefreshRecent]);
@@ -94,16 +101,45 @@ export function StartScreen({
               {recent.map((file, index) => {
                 const { name, folder } = recentParts(file.shown);
                 return (
-                  <li key={file.path}>
+                  <li
+                    key={file.path}
+                    className={file.pinned ? 'start-recent-row pinned' : 'start-recent-row'}
+                  >
                     <button
                       type="button"
                       className="start-recent-item"
                       data-testid={`start-recent-${String(index)}`}
                       onClick={() => onOpenRecent(file.path)}
                     >
-                      <span className="start-recent-name">{name}</span>
+                      <span className="start-recent-name">
+                        {file.pinned && <Icon of={Pin} size={12} />}
+                        {name}
+                      </span>
                       <span className="start-recent-folder">{folder}</span>
                     </button>
+                    <Tooltip text={t(file.pinned ? 'start.unpinTooltip' : 'start.pinTooltip')}>
+                      <button
+                        type="button"
+                        className="tool quiet icon-only start-recent-action"
+                        data-testid={`start-pin-${String(index)}`}
+                        aria-label={t(file.pinned ? 'start.unpin' : 'start.pin', { name })}
+                        aria-pressed={file.pinned}
+                        onClick={() => onPin(file.path, !file.pinned)}
+                      >
+                        <Icon of={file.pinned ? PinOff : Pin} size={14} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip text={t('start.removeTooltip')}>
+                      <button
+                        type="button"
+                        className="tool quiet icon-only start-recent-action"
+                        data-testid={`start-remove-${String(index)}`}
+                        aria-label={t('start.remove', { name })}
+                        onClick={() => onRemove(file.path)}
+                      >
+                        <Icon of={X} size={14} />
+                      </button>
+                    </Tooltip>
                   </li>
                 );
               })}

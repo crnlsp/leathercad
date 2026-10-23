@@ -434,3 +434,128 @@ test('more tabs than the strip shows: a list of them all (8.12)', async () => {
     { size: [1024, 768] },
   );
 });
+
+test('a tab is dragged along the strip, or moved with Ctrl+Shift+Page Up and Down (8.12)', async () => {
+  await withApp(async (window) => {
+    await renameProject(window, 'Wallet');
+    await window.keyboard.press('Control+n');
+    await renameProject(window, 'Belt');
+    await window.keyboard.press('Control+n');
+    await renameProject(window, 'Strap');
+    const tabs = window.getByTestId('tab-strip').getByRole('tab');
+    await expect(tabs).toHaveText(['Wallet', 'Belt', 'Strap']);
+
+    await window
+      .getByTestId('project-tab')
+      .nth(2)
+      .dragTo(window.getByTestId('project-tab').first(), {
+        targetPosition: { x: 4, y: 10 },
+      });
+    await expect(tabs).toHaveText(['Strap', 'Wallet', 'Belt']);
+
+    // The keys move the active one, Strap, one place at a time.
+    await window.keyboard.press('Control+Shift+PageDown');
+    await expect(tabs).toHaveText(['Wallet', 'Strap', 'Belt']);
+    await window.keyboard.press('Control+Shift+PageUp');
+    await expect(tabs).toHaveText(['Strap', 'Wallet', 'Belt']);
+  });
+});
+
+test('Ctrl+Shift+T opens the project last closed again (8.12)', async () => {
+  await withApp(async (window, app) => {
+    const file = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Belt.lcp');
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, file);
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await window.keyboard.press('Control+w');
+    await expect(window.getByTestId('start-screen')).toBeVisible();
+    await window.keyboard.press('Control+Shift+t');
+    await expect(window.getByTestId('project-name')).toHaveText('Belt');
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+  });
+});
+
+test('a recent project is pinned to the top of the start screen, or taken off it (8.12)', async () => {
+  const config = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+  const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+  await withApp(
+    async (window, app) => {
+      for (const name of ['Wallet', 'Belt']) {
+        await app.evaluate(
+          ({ dialog }, path) => {
+            dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+          },
+          join(folder, `${name}.lcp`),
+        );
+        await window.keyboard.press('Control+n');
+        await drawAPanel(window, { parts: '1' });
+        await window.getByTestId('save').click();
+        await expect(window.getByTestId('project-name')).toHaveText(name);
+      }
+      for (let i = 0; i < 3; i++) await closeActiveTab(window);
+      const start = window.getByTestId('start-screen');
+      await expect(start).toBeVisible();
+      // Belt was saved last, so it is first; Wallet is pinned above it.
+      await expect(start.getByTestId('start-recent-0')).toContainText('Belt');
+      await start.getByTestId('start-recent-1').hover();
+      await start.getByTestId('start-pin-1').click();
+      await expect(start.getByTestId('start-recent-0')).toContainText('Wallet');
+      await expect(start.getByTestId('start-pin-0')).toHaveAttribute('aria-pressed', 'true');
+
+      // Removed from the list, and only from the list.
+      await start.getByTestId('start-recent-1').hover();
+      await start.getByTestId('start-remove-1').click();
+      await expect(start.getByTestId('start-recent-1')).toHaveCount(0);
+      expect(existsSync(join(folder, 'Belt.lcp'))).toBe(true);
+    },
+    { env: { XDG_CONFIG_HOME: config } },
+  );
+});
+
+test('the next start finds each tab on its view and zoom, and kept unsaved work too (8.12)', async () => {
+  const config = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+  const file = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Belt.lcp');
+  let leftAt: string | null = null;
+  await withApp(
+    async (window, app) => {
+      // Settings › General: keep unsaved projects when closing.
+      await window.keyboard.press('Control+Comma');
+      await window.getByTestId('setting-keep-unsaved').check();
+      await window.keyboard.press('Escape');
+
+      await app.evaluate(({ dialog }, path) => {
+        dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      }, file);
+      await drawAPanel(window, { parts: '1' });
+      await window.getByTestId('save').click();
+      await window.getByTestId('zoom-in').click();
+      leftAt = await window.getByTestId('zoom-level').textContent();
+      await window.getByTestId('view-sheets').click();
+
+      // An untitled project with work in it: kept, not asked about.
+      await window.keyboard.press('Control+n');
+      await drawAPanel(window, { parts: '1' });
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
+      await expect.poll(() => app.windows().length).toBe(0);
+    },
+    { env: { XDG_CONFIG_HOME: config } },
+  );
+
+  await withApp(
+    async (window) => {
+      const tabs = window.getByTestId('tab-strip').getByRole('tab');
+      await expect(tabs).toHaveText(['Belt', 'Untitled']);
+      // The untitled one, in front, unsaved, its drawing back.
+      await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+      await expect(window.getByTestId('part-count')).toHaveText('1');
+      // Belt on its sheets, at the zoom it was left.
+      await tabs.first().click();
+      await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
+      await window.getByTestId('view-design').click();
+      await expect(window.getByTestId('zoom-level')).toHaveText(leftAt ?? '');
+    },
+    { env: { XDG_CONFIG_HOME: config } },
+  );
+});

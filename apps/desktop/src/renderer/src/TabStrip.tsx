@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type DragEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
@@ -15,6 +16,9 @@ import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { isDirty, tabName, type ProjectTab } from './projectTabs.js';
 import { Tooltip } from './Tooltip.js';
+
+/** What a dragged tab carries: its id, and only for this strip. */
+const TAB_DRAG = 'application/x-leathercad-tab';
 
 /**
  * The open projects, one tab each (8.12), on a strip of their own above the
@@ -48,6 +52,7 @@ export function TabStrip({
   onActivate,
   onClose,
   onTabMenu,
+  onMove,
 }: {
   tabs: readonly ProjectTab[];
   /** None on the start screen. */
@@ -69,9 +74,19 @@ export function TabStrip({
   onClose: (id: string) => void;
   /** A tab's own menu, at a point in the window: a right-click, or the menu key. */
   onTabMenu: (id: string, at: { x: number; y: number }) => void;
+  /** A tab dragged to a new place among the tabs (8.12). */
+  onMove: (id: string, index: number) => void;
 }) {
   const { t } = useI18n();
   const list = useRef<HTMLDivElement>(null);
+  // A tab being dragged along the strip, and where it would land: before the
+  // tab at `at`, or after the last. Drawn as a line in the accent — the
+  // maker's own gesture — between two tabs.
+  const [dragging, setDragging] = useState<{ id: string; at: number } | null>(null);
+  const landing = (index: number, event: DragEvent<HTMLElement>): number => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return event.clientX < box.left + box.width / 2 ? index : index + 1;
+  };
   const bounced = tabs.find((tab) => tab.id === nudged.id);
   const alreadyOpen =
     bounced === undefined ? '' : t('tabs.alreadyOpen', { name: tabName(bounced, t) });
@@ -137,7 +152,7 @@ export function TabStrip({
           }
         }}
       >
-        {tabs.map((tab) => {
+        {tabs.map((tab, index) => {
           const name = tabName(tab, t);
           const unsaved = isDirty(tab);
           const selected = tab === active;
@@ -154,6 +169,40 @@ export function TabStrip({
                 .filter((each) => each !== '')
                 .join(' ')}
               data-testid="project-tab"
+              data-drop={
+                dragging === null || dragging.id === tab.id
+                  ? undefined
+                  : dragging.at === index
+                    ? 'before'
+                    : dragging.at === index + 1 && index === tabs.length - 1
+                      ? 'after'
+                      : undefined
+              }
+              // Dragged along the strip to another place (8.12). Not while its
+              // name is being typed.
+              draggable={!(selected && renaming)}
+              onDragStart={(event) => {
+                event.dataTransfer.setData(TAB_DRAG, tab.id);
+                event.dataTransfer.effectAllowed = 'move';
+                setDragging({ id: tab.id, at: index });
+              }}
+              onDragOver={(event) => {
+                if (dragging === null) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                const at = landing(index, event);
+                if (at !== dragging.at) setDragging({ ...dragging, at });
+              }}
+              onDrop={(event) => {
+                if (dragging === null) return;
+                event.preventDefault();
+                const from = tabs.findIndex((each) => each.id === dragging.id);
+                const at = landing(index, event);
+                // Past itself, the others close up behind it.
+                onMove(dragging.id, at > from ? at - 1 : at);
+                setDragging(null);
+              }}
+              onDragEnd={() => setDragging(null)}
               // A middle click closes, as in a browser; its press would start
               // Chromium's autoscroll.
               onMouseDown={(event) => {

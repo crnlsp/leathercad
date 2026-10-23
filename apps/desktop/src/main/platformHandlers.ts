@@ -1,7 +1,8 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { RecentOutcome } from '@leathercad/platform';
+import type { OpenSession, RecentOutcome } from '@leathercad/platform';
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
 
@@ -10,10 +11,11 @@ import { writeFileAtomic } from './atomicWrite.js';
 import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
 import { OneAtATime } from './oneAtATime.js';
+import type { KeptCopies } from './keptCopies.js';
 import type { ProjectWatch } from './projectWatch.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
 import { renameProjectFile } from './renameFile.js';
-import { isProjectPath, shownPath, type PreferencesStore, type Session } from './preferences.js';
+import { isProjectPath, readSession, shownPath, type PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
 import type { UpdateChecker } from './updates.js';
 
@@ -46,8 +48,8 @@ export function registerPlatformHandlers(
   sampleProjectPath: string,
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
-  /** The tabs open when the app last closed that are still there, granted (8.12); handed over once. */
-  takeSession: () => Session,
+  /** The tabs open when the app last closed, their files granted (8.12); handed over once. */
+  takeSession: () => Promise<OpenSession>,
   /** Opens a project from the recent list, if it is on it (8.7). */
   openRecent: (path: string) => Promise<RecentOutcome>,
   /** The third-party notices the build wrote (8.6b), or null in development (U.20). */
@@ -60,6 +62,8 @@ export function registerPlatformHandlers(
   updates: UpdateChecker,
   /** The open projects' files, watched for changes made outside the app (8.12). */
   projectWatch: ProjectWatch,
+  /** Unsaved work kept as the window closes, for the next start (8.12). */
+  kept: KeptCopies,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -71,6 +75,22 @@ export function registerPlatformHandlers(
     await writeFileAtomic(target, data);
     // The app's own write is not a change made outside it (8.12).
     await projectWatch.saw(target);
+  });
+
+  // Projects dropped on the window (8.12). A drop is the maker choosing a file,
+  // as a dialog is, but the main process cannot see it happen: it takes the
+  // renderer's word for the path. So only a `.lcp` that exists is granted —
+  // never another kind of file — and each is logged. SECURITY.md says so.
+  ipcMain.handle(IPC.openDropped, (_event, paths: unknown) => {
+    if (!Array.isArray(paths)) return [];
+    const granted: string[] = [];
+    for (const path of paths.slice(0, 20)) {
+      if (!isProjectPath(path) || !existsSync(path)) continue;
+      grants.grant(path);
+      granted.push(path);
+      log.info(`granted a dropped project: ${JSON.stringify(path)}`);
+    }
+    return granted;
   });
 
   // The open projects' files (8.12), watched from now on: only paths the
@@ -194,9 +214,11 @@ export function registerPlatformHandlers(
     const outcome = await renameProjectFile(from, name);
     if (outcome.kind === 'renamed') {
       grants.grant(outcome.path);
-      if (preferences.recentFiles.includes(from)) {
+      if (preferences.lists(from)) {
+        const pinned = preferences.pinnedFiles.includes(from);
         await preferences.forgetRecent(from);
         await preferences.noteRecent(outcome.path);
+        if (pinned) await preferences.pin(outcome.path, true);
         onRecentChanged(outcome.path);
       }
       log.info(`renamed a project file to ${JSON.stringify(outcome.path)}`);
@@ -217,14 +239,27 @@ export function registerPlatformHandlers(
     await preferences.forgetRecent(target);
     log.info(`moved a project file to the Trash: ${JSON.stringify(target)}`);
   });
-  ipcMain.handle(IPC.keepSession, async (_event, projects: unknown, active: unknown) => {
-    const chosen = Array.isArray(projects)
-      ? projects.filter((path) => grants.allows(path, 'write'))
-      : [];
+  ipcMain.handle(IPC.keepSession, async (_event, session: unknown) => {
+    const read = readSession(session);
+    // A path only if the maker chose it; a kept copy only if written now.
+    const tabs = read.tabs
+      .map((tab, index) => ({
+        index,
+        tab: {
+          ...tab,
+          path: grants.allows(tab.path, 'write') ? tab.path : null,
+          kept: tab.kept !== null && kept.wrote(tab.kept) ? tab.kept : null,
+        },
+      }))
+      .filter(({ tab }) => tab.path !== null || tab.kept !== null);
+    const active = tabs.findIndex(({ index }) => index === read.active);
     await preferences.keepSession({
-      projects: chosen,
-      active: grants.allows(active, 'write') ? (active as string) : null,
+      tabs: tabs.map(({ tab }) => tab),
+      active: active === -1 ? null : active,
     });
+  });
+  ipcMain.handle(IPC.keepUnsaved, async (_event, tab: unknown, data: Uint8Array) => {
+    await kept.write(String(tab), data);
   });
 
   // Preferences (8.2). The renderer names a change, never the file.
@@ -247,11 +282,22 @@ export function registerPlatformHandlers(
   // opened because it is on this list — `openRecent` checks — so the
   // renderer cannot name its way to any other file.
   ipcMain.handle(IPC.getRecentFiles, () =>
-    preferences.recentFiles.map((path) => ({ path, shown: shownPath(path, app.getPath('home')) })),
+    // The pinned first, in the order pinned (8.12), then the recent ones.
+    [
+      ...preferences.pinnedFiles.map((path) => ({ path, pinned: true })),
+      ...preferences.recentFiles.map((path) => ({ path, pinned: false })),
+    ].map((entry) => ({ ...entry, shown: shownPath(entry.path, app.getPath('home')) })),
   );
   ipcMain.handle(IPC.openRecent, (_event, path: unknown) =>
     typeof path === 'string' ? openRecent(path) : 'unlisted',
   );
+  // Pinning and removing one at a time (8.12): only a path on the list.
+  ipcMain.handle(IPC.pinRecent, async (_event, path: unknown, pinned: unknown) => {
+    if (typeof path === 'string') await preferences.pin(path, pinned === true);
+  });
+  ipcMain.handle(IPC.removeRecent, async (_event, path: unknown) => {
+    if (typeof path === 'string') await preferences.forgetRecent(path);
+  });
   ipcMain.handle(IPC.clearRecent, async () => {
     await preferences.clearRecent();
     app.clearRecentDocuments();

@@ -27,8 +27,12 @@ import {
   systemIdSource,
   type Preferences,
   type RecentFile,
+  type KeptSession,
+  type TabCamera,
   type UpdateStatus,
 } from '@leathercad/platform';
+import { saveProject } from '@leathercad/persist';
+import { zoomPercent } from '@leathercad/render';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import {
@@ -440,14 +444,42 @@ export function App({
     [tabs],
   );
 
+  // The projects closed this session that had a file, the last closed last:
+  // what Ctrl+Shift+T opens again (8.12). An untitled one's work was let go
+  // when it closed, so there is nothing of it to open.
+  const closedFiles = useRef<string[]>([]);
+
   /** Closes a project's tab, once its unsaved work is saved or let go. */
   const closeTab = useCallback(
     async (id: string) => {
       const closing = tabs.tabs.find((each) => each.id === id);
       if (closing === undefined) return;
-      if (await confirmDiscard('close', closing)) tabs.close(id);
+      if (!(await confirmDiscard('close', closing))) return;
+      const path = closing.file.path;
+      tabs.close(id);
+      if (path !== null) closedFiles.current = [...closedFiles.current, path].slice(-20);
     },
     [confirmDiscard, tabs],
+  );
+
+  /** Ctrl+Shift+T: the project last closed, opened again, unless it is open already. */
+  const reopenTab = useCallback(() => {
+    while (closedFiles.current.length > 0) {
+      const path = closedFiles.current.pop()!;
+      if (tabs.byPath(path) !== undefined) continue;
+      void file.openPath(path);
+      return;
+    }
+  }, [file, tabs]);
+
+  /** Ctrl+Shift+Page Up and Down: the active tab one place along the strip. */
+  const moveActiveTab = useCallback(
+    (step: 1 | -1) => {
+      const shown = tabs.active;
+      if (shown === null) return;
+      tabs.move(shown.id, tabs.tabs.indexOf(shown) + step);
+    },
+    [tabs],
   );
 
   /**
@@ -620,9 +652,20 @@ export function App({
       const host = getPlatformHost();
       try {
         const session = await host.takeSession();
-        for (const path of session.projects) await openPath(path);
-        const shown = session.active === null ? undefined : tabs.byPath(session.active);
-        if (shown !== undefined) tabs.activate(shown.id);
+        // Each tab as it was left: its file, or the work kept for it, on its
+        // view and at its place and zoom; then the one in front, in front.
+        const opened: (string | undefined)[] = [];
+        for (const entry of session.tabs) {
+          const restore = { view: entry.view, camera: entry.camera };
+          if (entry.data !== null) {
+            opened.push(file.restoreKept(entry.data, entry.path, restore)?.id);
+          } else if (entry.path !== null) {
+            await openPath(entry.path, restore);
+            opened.push(tabs.byPath(entry.path)?.id);
+          }
+        }
+        const front = session.active === null ? undefined : opened[session.active];
+        if (front !== undefined) tabs.activate(front);
       } catch {
         // A start without its tabs is better than a start that fails over them.
       }
@@ -634,26 +677,119 @@ export function App({
       }
     })();
     void starting.current.then(() => setStarted(true));
-  }, [openPath, tabs]);
+  }, [file, openPath, tabs]);
 
-  // The open tabs, kept for the next start (8.12): those with a file, in the
-  // strip's order, and the one in front. Not before the start has opened the
-  // last ones, or its empty *Untitled* would be kept over them.
-  const session = JSON.stringify([
-    openTabs.flatMap((each) => (each.file.path === null ? [] : [each.file.path])),
-    active?.file.path ?? null,
-  ]);
+  /**
+   * The open tabs, as the next start should find them (8.12): each with a
+   * file, its view, and where its board is looking. `kept` names the tabs
+   * whose unsaved work was just written for it, as the window closes.
+   */
+  const sessionOf = useCallback(
+    (kept: ReadonlySet<string> = new Set()): KeptSession => {
+      const listed = tabs.tabs.filter((each) => each.file.path !== null || kept.has(each.id));
+      const shown = tabs.active === null ? -1 : listed.indexOf(tabs.active);
+      return {
+        tabs: listed.map((each) => ({
+          path: each.file.path,
+          kept: kept.has(each.id) ? each.id : null,
+          view: each.view,
+          camera: cameraOf(each),
+        })),
+        active: shown === -1 ? null : shown,
+      };
+    },
+    [tabs],
+  );
+
+  /**
+   * Closing with *Keep unsaved projects* on (8.12): each unsaved tab's work
+   * written to a kept copy, then the session naming them, then the window
+   * goes. A copy that could not be written is asked about after all, as
+   * closing always did: nothing is let go without a word.
+   */
+  const keepUnsaved = preferences.keepUnsaved;
+  const keepUnsavedThenClose = useCallback(async () => {
+    const host = getPlatformHost();
+    const unsaved = tabs.tabs.filter(isDirty);
+    const kept = new Set<string>();
+    for (const each of unsaved) {
+      try {
+        const bytes = saveProject(each.store.getState().document.project, {
+          applicationVersion: version ?? '0.0.0',
+          now: () => new Date(),
+          ...(each.createdUtc === undefined ? {} : { createdUtc: each.createdUtc }),
+        });
+        await host.keepUnsaved(each.id, bytes);
+        kept.add(each.id);
+      } catch {
+        // Asked about below, as before.
+      }
+    }
+    const left = unsaved.filter((each) => !kept.has(each.id));
+    for (const each of left) if (!(await confirmDiscard('close', each))) return;
+    closing.current = true;
+    await host.keepSession(sessionOf(kept)).catch(() => undefined);
+    window.close();
+  }, [confirmDiscard, sessionOf, tabs, version]);
+
+  // Kept as the tabs change, and every few seconds for the cameras, which
+  // move without telling the window. Not before the start has opened the last
+  // session's tabs, or the empty window would be kept over them.
+  const lastKept = useRef('');
+  const keepSessionNow = useCallback(() => {
+    // Closing with kept work: that session is the one to keep.
+    if (closing.current) return;
+    const session = sessionOf();
+    const text = JSON.stringify(session);
+    if (text === lastKept.current) return;
+    lastKept.current = text;
+    void getPlatformHost()
+      .keepSession(session)
+      .catch(() => undefined);
+  }, [sessionOf]);
   useEffect(() => {
     if (!started) return;
-    const [projects, shown] = JSON.parse(session) as [string[], string | null];
-    void getPlatformHost()
-      .keepSession(projects, shown)
-      .catch(() => undefined);
-  }, [started, session]);
+    keepSessionNow();
+    const timer = window.setInterval(keepSessionNow, 3000);
+    return () => window.clearInterval(timer);
+  }, [started, keepSessionNow, openTabs, active]);
 
   // A recent project (8.2, 8.7), a second launch's (8.11), macOS's open-file:
   // the main process chose and granted the path, and it opens in a tab.
   useEffect(() => getPlatformHost().onOpenFile((path) => void openPath(path)), [openPath]);
+
+  // Projects dropped on the window (8.12), each into a tab, as Open does. Only
+  // files: a tab dragged along the strip is the strip's own.
+  useEffect(() => {
+    const carriesFiles = (event: DragEvent): boolean =>
+      event.dataTransfer?.types.includes('Files') ?? false;
+    const onDragOver = (event: DragEvent): void => {
+      if (!carriesFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer !== null) event.dataTransfer.dropEffect = 'copy';
+    };
+    const onDrop = (event: DragEvent): void => {
+      if (!carriesFiles(event)) return;
+      event.preventDefault();
+      const host = getPlatformHost();
+      const paths = [...(event.dataTransfer?.files ?? [])]
+        .map((each) => host.pathForFile(each))
+        .filter((path) => path.toLowerCase().endsWith('.lcp'));
+      if (paths.length === 0) return;
+      void host
+        .openDropped(paths)
+        .then(async (granted) => {
+          for (const path of granted) await openPath(path);
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [openPath]);
 
   // The open projects' files, watched for another program's changes (8.12):
   // the list follows the tabs, and a change marks its tab, whose bar asks.
@@ -684,9 +820,18 @@ export function App({
   const closing = useRef(false);
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent): void => {
-      if (closing.current || !tabs.tabs.some(isDirty)) return;
+      if (closing.current) return;
+      // Where every board is looking now, for the next start (8.12).
+      keepSessionNow();
+      if (!tabs.tabs.some(isDirty)) return;
       event.preventDefault();
       event.returnValue = false;
+      // *Keep unsaved projects* (8.12): nothing is asked; the work goes with
+      // the session, and comes back at the next start, unsaved.
+      if (keepUnsaved) {
+        void keepUnsavedThenClose();
+        return;
+      }
       void confirmDiscardAll().then((proceed) => {
         if (!proceed) return;
         closing.current = true;
@@ -695,7 +840,7 @@ export function App({
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [confirmDiscardAll, tabs]);
+  }, [confirmDiscardAll, keepSessionNow, keepUnsaved, keepUnsavedThenClose, tabs]);
 
   // Whether a newer release exists (8.9): asked only when the maker presses
   // *Check now* in Settings or the version in the status bar. The main
@@ -759,6 +904,9 @@ export function App({
       nextTab: () => tabs.cycle(1),
       previousTab: () => tabs.cycle(-1),
       closeTab: () => (tabs.active === null ? undefined : void closeTab(tabs.active.id)),
+      moveTabLeft: () => moveActiveTab(-1),
+      moveTabRight: () => moveActiveTab(1),
+      reopenTab,
       design: () => showView('design'),
       sheets: () => showView('sheets'),
       // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
@@ -818,6 +966,8 @@ export function App({
     file,
     tabs,
     closeTab,
+    moveActiveTab,
+    reopenTab,
     exportPdf,
     newProject,
     openProject,
@@ -1077,6 +1227,7 @@ export function App({
           onActivate={(id) => tabs.activate(id)}
           onClose={(id) => void closeTab(id)}
           onTabMenu={(id, at) => setTabMenuAt({ id, ...at })}
+          onMove={(id, index) => tabs.move(id, index)}
           // On the start screen there is no project bar: Settings and Help
           // stand at the strip's end, F1 and the update mark with them.
           trailing={
@@ -1107,6 +1258,18 @@ export function App({
               onOpenRecent={(path) =>
                 void getPlatformHost()
                   .openRecent(path)
+                  .then(refreshRecent)
+                  .catch(() => undefined)
+              }
+              onPin={(path, pinned) =>
+                void getPlatformHost()
+                  .pinRecent(path, pinned)
+                  .then(refreshRecent)
+                  .catch(() => undefined)
+              }
+              onRemove={(path) =>
+                void getPlatformHost()
+                  .removeRecent(path)
                   .then(refreshRecent)
                   .catch(() => undefined)
               }
@@ -1736,6 +1899,16 @@ export function App({
   );
 }
 
+/**
+ * Where a tab's board is looking (8.12), for the next start: its centre in
+ * millimetres and its zoom. A tab never shown keeps what it was restored to.
+ */
+function cameraOf(tab: ProjectTab): TabCamera | null {
+  const { design, fitted, restore } = tab.cameras;
+  if (!fitted) return restore;
+  return { x: design.centreMm.x, y: design.centreMm.y, percent: zoomPercent(design.toView()) };
+}
+
 /** The window's keys that need no project: the ways in, and the app's own (8.12). */
 const WITHOUT_PROJECT: ReadonlySet<CommandId> = new Set<CommandId>([
   'newProject',
@@ -1743,6 +1916,7 @@ const WITHOUT_PROJECT: ReadonlySet<CommandId> = new Set<CommandId>([
   'settings',
   'keyboardShortcuts',
   'help',
+  'reopenTab',
 ]);
 
 interface PendingDelete {

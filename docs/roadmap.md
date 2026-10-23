@@ -113,7 +113,12 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   file another program changes, moves or deletes is said over the board, with *Reload* or *Keep
   mine* (*Save it again* for one that went). Settings and Help stand at the strip's end on the
   start screen. More tabs than fit: the wheel scrolls the strip, and *All tabs* lists them.
-  Closing the window with several unsaved projects asks once: *Save all*, *Don't save*, *Cancel*. New, Open, a recent project, the sample, a launch and a second
+  Closing the window with several unsaved projects asks once: *Save all*, *Don't save*, *Cancel*.
+  Tabs are dragged along the strip, or moved with Ctrl+Shift+Page Up and Down; Ctrl+Shift+T opens
+  the project last closed again; a `.lcp` dropped on the window opens in a tab. The start screen's
+  recent projects are pinned or taken off the list one at a time. Each tab comes back on its view,
+  at its place and zoom; with *Keep unsaved projects when closing* on in Settings › General, the
+  window closes without asking, and unsaved projects come back, still unsaved. New, Open, a recent project, the sample, a launch and a second
   launch each open a tab; a project already open goes to its tab, and an untouched *Untitled* is
   replaced. Each tab keeps its own document, history, selection, view, camera and file. Closing a
   tab with unsaved work asks, as closing the window did; closing the last leaves the app open on a

@@ -569,6 +569,25 @@ body {
   color: var(--text);
 }
 
+/* Where a dragged tab would land: a line in the accent, the maker's own move. */
+.tab[data-drop]::after {
+  content: '';
+  position: absolute;
+  top: var(--space-1);
+  bottom: 0;
+  z-index: 2;
+  width: 2px;
+  background: var(--tan);
+}
+
+.tab[data-drop='before']::after {
+  left: -1px;
+}
+
+.tab[data-drop='after']::after {
+  right: -1px;
+}
+
 .tab.active {
   z-index: 1;
   border-color: var(--shell-line);
@@ -808,10 +827,27 @@ body {
   list-style: none;
 }
 
+.start-recent-row {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+/* Pin and remove: there to be found, quiet until the row is pointed at or reached. */
+.start-recent-row:not(:hover, :focus-within) .start-recent-action {
+  opacity: 0;
+}
+
+.start-recent-row.pinned .start-recent-name .icon {
+  color: var(--tan);
+}
+
 .start-recent-item {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: flex-start;
+  min-width: 0;
   width: 100%;
   padding: var(--space-2);
   border: 0;
@@ -826,6 +862,9 @@ body {
 }
 
 .start-recent-name {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
   color: var(--text);
   font: var(--t-strong);
 }

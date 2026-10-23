@@ -1,4 +1,5 @@
 import { approxEq } from '@leathercad/core';
+import type { TabCamera } from '@leathercad/platform';
 import { drawnBounds, selectedFeatureIds, type DocumentStore } from '@leathercad/document';
 import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import {
@@ -103,6 +104,11 @@ export interface TabCameras {
   fitted: boolean;
   /** Its first placing frames the drawing: an opened project is shown whole. */
   frameDrawing: boolean;
+  /**
+   * Its first placing puts the board where the last session left it (8.12):
+   * millimetres at the centre, and the zoom. Over `frameDrawing`.
+   */
+  restore: TabCamera | null;
   /** The sheets' extent the Sheets camera was last fitted to: a new one frames again. */
   sheetsFramed: string | null;
 }
@@ -747,11 +753,16 @@ export function CanvasHost({
           : { width: clientWidth, height: clientHeight },
       );
 
-      // A tab's first showing (8.12): an opened project framed whole, a new
-      // one at the usual place. Shown again, it is wherever it was left.
+      // A tab's first showing (8.12): where the last session left it, an
+      // opened project framed whole, a new one at the usual place. Shown
+      // again, it is wherever it was left.
       if (!camerasRef.current.fitted) {
         camerasRef.current.fitted = true;
-        if (camerasRef.current.frameDrawing) {
+        const restore = camerasRef.current.restore;
+        if (restore !== null) {
+          viewportRef.current.centreMm = { x: restore.x, y: restore.y };
+          viewportRef.current.zoomToPercent(restore.percent);
+        } else if (camerasRef.current.frameDrawing) {
           fitDrawing();
         } else {
           viewportRef.current.centreMm = { x: 60, y: 40 };

@@ -233,3 +233,36 @@ describe('the window', () => {
     expect(seen[1]).not.toBe(seen[0]);
   });
 });
+
+describe('moving a tab (8.12)', () => {
+  it('puts it where it is dropped, the active one still active', () => {
+    const [a, b, c] = [anEditedTab(), anEditedTab(), anEditedTab()];
+    const tabs = tabsOf(a, b, c);
+    tabs.activate(b.id);
+    tabs.move(a.id, 2);
+    expect(tabs.tabs).toEqual([b, c, a]);
+    expect(tabs.active).toBe(b);
+    // Past either end, it stops there.
+    tabs.move(a.id, -5);
+    expect(tabs.tabs).toEqual([a, b, c]);
+    tabs.move(a.id, 99);
+    expect(tabs.tabs).toEqual([b, c, a]);
+  });
+
+  it('keeps every tab, once, whatever is moved where', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 7 }),
+        fc.array(fc.tuple(fc.nat(), fc.integer({ min: -2, max: 9 })), { maxLength: 15 }),
+        (count, moves) => {
+          const all = Array.from({ length: count }, () => anEditedTab());
+          const tabs = tabsOf(...all);
+          for (const [which, to] of moves) tabs.move(tabs.tabs[which % count]!.id, to);
+          expect([...tabs.tabs].sort((x, y) => x.id.localeCompare(y.id))).toEqual(
+            [...all].sort((x, y) => x.id.localeCompare(y.id)),
+          );
+        },
+      ),
+    );
+  });
+});

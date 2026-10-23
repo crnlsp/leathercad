@@ -1,5 +1,5 @@
 import type { Preferences } from '@leathercad/platform';
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import { IPC } from '../shared/ipc.js';
 
@@ -62,7 +62,7 @@ const platformBridge = {
 
   noteRecentFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.noteRecentFile, path),
 
-  getRecentFiles: (): Promise<{ path: string; shown: string }[]> =>
+  getRecentFiles: (): Promise<{ path: string; shown: string; pinned: boolean }[]> =>
     ipcRenderer.invoke(IPC.getRecentFiles),
 
   openRecent: (path: string): Promise<'opening' | 'gone' | 'unlisted'> =>
@@ -70,6 +70,10 @@ const platformBridge = {
 
   clearRecent: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecent),
 
+  pinRecent: (path: string, pinned: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.pinRecent, path, pinned),
+
+  removeRecent: (path: string): Promise<void> => ipcRenderer.invoke(IPC.removeRecent, path),
   showLogFolder: (): Promise<void> => ipcRenderer.invoke(IPC.showLogFolder),
 
   readNotices: (): Promise<string | null> => ipcRenderer.invoke(IPC.readNotices),
@@ -82,11 +86,12 @@ const platformBridge = {
 
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),
 
-  takeSession: (): Promise<{ projects: string[]; active: string | null }> =>
-    ipcRenderer.invoke(IPC.takeSession),
+  takeSession: (): Promise<unknown> => ipcRenderer.invoke(IPC.takeSession),
 
-  keepSession: (projects: readonly string[], active: string | null): Promise<void> =>
-    ipcRenderer.invoke(IPC.keepSession, projects, active),
+  keepSession: (session: unknown): Promise<void> => ipcRenderer.invoke(IPC.keepSession, session),
+
+  keepUnsaved: (tab: string, data: Uint8Array): Promise<void> =>
+    ipcRenderer.invoke(IPC.keepUnsaved, tab, data),
 
   renameProjectFile: (
     path: string,
@@ -100,6 +105,19 @@ const platformBridge = {
   showInFolder: (path: string): Promise<void> => ipcRenderer.invoke(IPC.showInFolder, path),
 
   trashProjectFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.trashProjectFile, path),
+
+  // A file dropped on the window (8.12): its path, which a sandboxed page
+  // cannot read off the File itself. Empty for anything that is not a file.
+  pathForFile: (file: File): string => {
+    try {
+      return webUtils.getPathForFile(file);
+    } catch {
+      return '';
+    }
+  },
+
+  openDropped: (paths: readonly string[]): Promise<string[]> =>
+    ipcRenderer.invoke(IPC.openDropped, paths),
 
   watchProjects: (paths: readonly string[]): Promise<void> =>
     ipcRenderer.invoke(IPC.watchProjects, paths),

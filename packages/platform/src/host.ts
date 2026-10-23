@@ -153,6 +153,12 @@ export interface PlatformHost {
   /** Empties the recent list, and the operating system's (8.7). */
   clearRecent(): Promise<void>;
 
+  /** Pins a listed project to the top of the recent list, or unpins it (8.12). */
+  pinRecent(path: string, pinned: boolean): Promise<void>;
+
+  /** Takes one project off the recent list, pinned or not (8.12). */
+  removeRecent(path: string): Promise<void>;
+
   /** Opens the folder the log is in, to attach to a report (ADR 0015). */
   showLogFolder(): Promise<void>;
 
@@ -199,18 +205,26 @@ export interface PlatformHost {
   checkForUpdates(): Promise<UpdateStatus>;
 
   /**
-   * The projects open in tabs when the app last closed (8.12), in their
-   * order, and the one that was showing — those still on disk, already paths
-   * the app may read and write. Once, as the window starts; empty after.
+   * The tabs open when the app last closed (8.12), in their order, and the one
+   * in front: each a project's file — still on disk, already a path the app may
+   * read and write — or unsaved work kept as the window closed, or both. Once,
+   * as the window starts; empty after.
    */
   takeSession(): Promise<OpenSession>;
 
   /**
-   * Keeps the projects open in tabs, for the next start (8.12). Only paths
-   * chosen in the app's dialogs this session, or opened again from the last,
-   * are kept; any other is dropped.
+   * Keeps the open tabs, for the next start (8.12). A path is kept only if
+   * chosen in the app's dialogs this session, or opened again from the last;
+   * a kept copy only if written this session (`keepUnsaved`).
    */
-  keepSession(projects: readonly string[], active: string | null): Promise<void>;
+  keepSession(session: KeptSession): Promise<void>;
+
+  /**
+   * Keeps a tab's unsaved work as the window closes (8.12), with *Keep unsaved
+   * projects* on: an ordinary `.lcp` in the app's own folder, named for the
+   * tab, which the next start opens again as unsaved work.
+   */
+  keepUnsaved(tab: string, data: Uint8Array): Promise<void>;
 
   /**
    * Renames a project's file to its new name, in the same folder (8.12) —
@@ -234,6 +248,19 @@ export interface PlatformHost {
    */
   watchProjects(paths: readonly string[]): Promise<void>;
 
+  /**
+   * A file dropped on the window (8.12): its path, or empty for what is not a
+   * file. Takes a DOM `File`; typed loosely so this package needs no DOM.
+   */
+  pathForFile(file: unknown): string;
+
+  /**
+   * Projects dropped on the window (8.12): those that are `.lcp` files and
+   * exist, granted as a dialog's choice is. Resolves with the paths granted,
+   * which the caller then opens.
+   */
+  openDropped(paths: readonly string[]): Promise<readonly string[]>;
+
   /** A watched project's file changed outside the app, or went (8.12). */
   onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
@@ -249,10 +276,38 @@ export type FileRename =
 /** What happened to an open project's file outside the app (8.12). */
 export type OutsideChange = 'changed' | 'gone';
 
-/** The tabs a start opens again (8.12). */
+/** Where a tab's board was looking (8.12): millimetres, and the zoom in percent. */
+export interface TabCamera {
+  readonly x: number;
+  readonly y: number;
+  readonly percent: number;
+}
+
+/** A tab a start opens again (8.12). */
+export interface OpenSessionTab {
+  readonly path: string | null;
+  /** The unsaved work kept for it, as `.lcp` bytes, or null. */
+  readonly data: Uint8Array | null;
+  readonly view: 'design' | 'sheets';
+  readonly camera: TabCamera | null;
+}
+
+/** The tabs a start opens again (8.12), and the index of the one in front. */
 export interface OpenSession {
-  readonly projects: readonly string[];
-  readonly active: string | null;
+  readonly tabs: readonly OpenSessionTab[];
+  readonly active: number | null;
+}
+
+/** The tabs kept for the next start (8.12), as the renderer names them. */
+export interface KeptSession {
+  readonly tabs: readonly {
+    readonly path: string | null;
+    /** A copy written with `keepUnsaved`: the tab's id. */
+    readonly kept: string | null;
+    readonly view: 'design' | 'sheets';
+    readonly camera: TabCamera | null;
+  }[];
+  readonly active: number | null;
 }
 
 /**
@@ -331,6 +386,8 @@ export interface RecentFile {
   readonly path: string;
   /** As the maker reads it, with the home directory as `~`. */
   readonly shown: string;
+  /** Pinned to the top of the list (8.12): kept there, and by *Clear list*. */
+  readonly pinned: boolean;
 }
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
@@ -347,6 +404,11 @@ export interface Preferences {
    * its key does nothing.
    */
   readonly selectionBar: boolean;
+  /**
+   * Closing the window keeps unsaved projects for the next start rather than
+   * asking about them (8.12), as Notepad does. Off unless the maker turns it on.
+   */
+  readonly keepUnsaved: boolean;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
   /**
@@ -430,6 +492,7 @@ export const STARTER_IRONS: readonly Iron[] = [
 export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: true,
   selectionBar: true,
+  keepUnsaved: false,
   toolRailCollapsed: false,
   partsFolded: false,
   propertiesFolded: false,

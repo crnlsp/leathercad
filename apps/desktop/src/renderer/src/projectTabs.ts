@@ -67,6 +67,7 @@ export function newTab(id: string, store: DocumentStore, untitled = 0): ProjectT
       sheets: new Viewport(),
       fitted: false,
       frameDrawing: false,
+      restore: null,
       sheetsFramed: null,
     },
   };
@@ -259,6 +260,23 @@ export class ProjectTabs {
   cycle(step: 1 | -1): void {
     const { active } = this.snapshot;
     if (active !== null) this.activate(cycled(this.ids(), active.id, step));
+  }
+
+  /**
+   * Moves a tab to `index` among the tabs (8.12): dragged along the strip, or
+   * Ctrl+Shift+Page Up and Down. Clamped to the strip's ends; the active tab
+   * stays active.
+   */
+  move(id: string, index: number): void {
+    const { tabs, active } = this.snapshot;
+    const from = tabs.findIndex((tab) => tab.id === id);
+    if (from === -1) return;
+    const to = Math.max(0, Math.min(index, tabs.length - 1));
+    if (to === from) return;
+    const next = [...tabs];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    this.set(next, active);
   }
 
   /**

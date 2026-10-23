@@ -20,7 +20,8 @@
     "alreadyOpen": "{{name}} is open already",
     "all": "All tabs",
     "allTooltip": "Every open project, when there are more than the strip shows",
-    "unsavedNote": "Unsaved changes"
+    "unsavedNote": "Unsaved changes",
+    "dropHere": "Move here"
   },
   "tabMenu": {
     "label": "Menu for {{name}}",
@@ -60,7 +61,13 @@
   },
   "start": {
     "title": "No project open",
-    "lede": "Start a new pattern, open one from disk, or pick up where you left off."
+    "lede": "Start a new pattern, open one from disk, or pick up where you left off.",
+    "pin": "Pin {{name}}",
+    "unpin": "Unpin {{name}}",
+    "pinTooltip": "Keep it at the top of the list",
+    "unpinTooltip": "Let it go back among the recent projects",
+    "remove": "Remove {{name}} from the list",
+    "removeTooltip": "Remove from the list. The file stays where it is"
   },
   "actions": {
     "cancel": "Cancel",
@@ -366,6 +373,9 @@
     "nextTab": "Go to the next project tab",
     "previousTab": "Go to the previous project tab",
     "closeTab": "Close the project tab",
+    "moveTabLeft": "Move the project tab left",
+    "moveTabRight": "Move the project tab right",
+    "reopenTab": "Open the project last closed again",
     "redo": "Redo",
     "removePoint": "Remove the point last pressed",
     "rename": "Rename the piece or feature",
@@ -405,6 +415,10 @@
       "name": "Recent projects",
       "none": "No projects are listed now.",
       "note": "The Project menu lists the projects you opened or saved most recently."
+    },
+    "keepUnsaved": {
+      "name": "Keep unsaved projects when closing",
+      "note": "Close without being asked: projects with unsaved changes open again at the next start, still unsaved."
     },
     "legend": {
       "name": "Name the marks in the canvas legend",

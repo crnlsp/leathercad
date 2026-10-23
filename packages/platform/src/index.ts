@@ -13,6 +13,9 @@
  */
 
 export type {
+  KeptSession,
+  OpenSessionTab,
+  TabCamera,
   OutsideChange,
   FileRename,
   OpenSession,

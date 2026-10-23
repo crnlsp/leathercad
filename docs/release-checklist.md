@@ -271,6 +271,11 @@ Since 8.11–8.13, on each platform, with the packaged app.
     a bar over the board says so; *Reload* reads it. Delete the file: the bar says it went;
     *Save it again* writes it back.
 11. With two projects unsaved, close the window: one question names both; *Cancel* keeps them.
+12. Drag a tab along the strip; drop a `.lcp` from the file manager on the window: it opens in a
+    tab. Close a saved project, then Ctrl+Shift+T: it opens again.
+13. Turn on Settings › General › *Keep unsaved projects when closing*, make an untitled project
+    with a drawing, and close the window: nothing is asked. Start again: it is back, unsaved, and
+    each tab is on its view and zoom.
 
 ## After it passes
 

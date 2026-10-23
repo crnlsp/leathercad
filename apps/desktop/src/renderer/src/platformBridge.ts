@@ -1,6 +1,7 @@
 import type {
   MenuAction,
   FileRename,
+  KeptSession,
   OpenDialogOptions,
   OpenSession,
   OutsideChange,
@@ -46,6 +47,8 @@ interface PreloadBridge {
   getRecentFiles(): Promise<readonly RecentFile[]>;
   openRecent(path: string): Promise<RecentOutcome>;
   clearRecent(): Promise<void>;
+  pinRecent(path: string, pinned: boolean): Promise<void>;
+  removeRecent(path: string): Promise<void>;
   showLogFolder(): Promise<void>;
   readNotices(): Promise<string | null>;
   onOpenFile(listener: (path: string) => void): () => void;
@@ -54,11 +57,14 @@ interface PreloadBridge {
   getUpdateStatus(): Promise<UpdateStatus>;
   checkForUpdates(): Promise<UpdateStatus>;
   takeSession(): Promise<OpenSession>;
-  keepSession(projects: readonly string[], active: string | null): Promise<void>;
+  keepSession(session: KeptSession): Promise<void>;
+  keepUnsaved(tab: string, data: Uint8Array): Promise<void>;
   renameProjectFile(path: string, name: string): Promise<FileRename>;
   showInFolder(path: string): Promise<void>;
   trashProjectFile(path: string): Promise<void>;
   watchProjects(paths: readonly string[]): Promise<void>;
+  pathForFile(file: unknown): string;
+  openDropped(paths: readonly string[]): Promise<readonly string[]>;
   onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
 

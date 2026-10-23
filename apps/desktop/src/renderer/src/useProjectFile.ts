@@ -9,7 +9,7 @@ import {
   loadProject,
   saveProject,
 } from '@leathercad/persist';
-import type { PlatformHost } from '@leathercad/platform';
+import type { PlatformHost, TabCamera } from '@leathercad/platform';
 import { useCallback } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -115,7 +115,12 @@ export function useProjectFile(
    * launch, a recent project (8.2, 8.7, 8.11) — in a tab of its own, or goes
    * to the tab that already has it.
    */
-  openPath: (target: string) => Promise<void>;
+  openPath: (target: string, restore?: TabRestore) => Promise<void>;
+  /**
+   * Work kept unsaved as the window last closed (8.12), in a tab of its own:
+   * unsaved, with the file it belongs to if it had one.
+   */
+  restoreKept: (data: Uint8Array, path: string | null, restore: TabRestore) => ProjectTab | null;
   /**
    * Opens the sample project that ships with the app (8.3), **untitled** and
    * unchanged: *Save* asks where, and closing it untouched asks nothing.
@@ -156,13 +161,25 @@ export function useProjectFile(
     [onStartError, tabs],
   );
 
-  /** A project read from a file or the sample, in a tab of its own, framed whole when shown. */
+  /**
+   * A project read from a file or the sample, in a tab of its own: framed
+   * whole when shown, or as the last session left it.
+   */
   const show = useCallback(
-    (document: Document, path: string | null, createdUtc: string | undefined) => {
+    (
+      document: Document,
+      path: string | null,
+      createdUtc: string | undefined,
+      restore?: TabRestore,
+    ) => {
       const tab = tabFor(document);
       tab.file = { path, error: null, savedAt: null };
       tab.createdUtc = createdUtc;
       tab.cameras.frameDrawing = true;
+      if (restore !== undefined) {
+        tab.view = restore.view;
+        tab.cameras.restore = restore.camera;
+      }
       tabs.open(tab);
       onStartError(null);
     },
@@ -220,7 +237,7 @@ export function useProjectFile(
   );
 
   const openPath = useCallback(
-    async (target: string) => {
+    async (target: string, restore?: TabRestore) => {
       // Open already: its tab, as it is — never a second copy to save over the
       // first — and the tab bounces, so the maker sees it was open (8.12).
       const open = tabs.byPath(target);
@@ -231,7 +248,7 @@ export function useProjectFile(
       try {
         const platform = host();
         const loaded = loadProject(await platform.readFile(target));
-        show({ project: loaded.project }, target, loaded.manifest.createdUtc);
+        show({ project: loaded.project }, target, loaded.manifest.createdUtc, restore);
         void noteRecent(platform, target);
       } catch (error) {
         fail(tabs.active, error);
@@ -393,7 +410,30 @@ export function useProjectFile(
     [blank, tabFor, tabs],
   );
 
+  const restoreKept = useCallback(
+    (data: Uint8Array, path: string | null, restore: TabRestore): ProjectTab | null => {
+      try {
+        const loaded = loadProject(data);
+        const tab = tabFor({ project: loaded.project });
+        tab.file = { path, error: null, savedAt: null };
+        tab.createdUtc = loaded.manifest.createdUtc;
+        // Unsaved by construction: the work was never written to its file.
+        tab.savedDocument = null;
+        tab.view = restore.view;
+        tab.cameras.restore = restore.camera;
+        tab.cameras.frameDrawing = true;
+        tabs.open(tab);
+        return tab;
+      } catch {
+        // A copy that does not load is not worth a start that fails over it.
+        return null;
+      }
+    },
+    [tabFor, tabs],
+  );
+
   return {
+    restoreKept,
     reload,
     duplicate,
     save,
@@ -405,6 +445,12 @@ export function useProjectFile(
     exportPdfFile,
     exportDrawingFile,
   };
+}
+
+/** How the last session left a tab (8.12): its view, and where its board was. */
+export interface TabRestore {
+  readonly view: 'design' | 'sheets';
+  readonly camera: TabCamera | null;
 }
 
 /** An export was written: the tab's earlier error is gone, and the time is said. */

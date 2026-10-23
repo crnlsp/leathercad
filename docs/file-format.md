@@ -363,10 +363,14 @@ or an unknown field falls back field by field to the defaults, and a newer versi
 are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent first, and only
 paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
-has gone is taken off the list when it is chosen. `session` is the projects open in tabs when the
-app last closed (8.12), in the strip's order, and the one in front: a start opens them again, those
-still on disk. By the same rule it holds only paths chosen in the app's dialogs, at most thirty, and
-never a project with no file — closing the window asked about those. The rail's collapse applies to a wide window
+has gone is taken off the list when it is chosen. `session` is the tabs open when the app last
+closed (8.12), in the strip's order, and the index of the one in front: each a project's `path`, a
+`kept` copy's name, or both, with its `view` and its `camera` (centre in millimetres, zoom in
+percent). A start opens them again, the files still on disk. By the same rule it holds only paths
+chosen in the app's dialogs, at most thirty. A kept copy is unsaved work written as the window
+closed with *Keep unsaved projects* on: an ordinary `.lcp` named for its tab in `unsaved/` beside
+this file, let go at the next start once nothing names it. `pinnedFiles` are the recent projects
+pinned to the top of the list, in the order pinned, kept by *Clear list*. The rail's collapse applies to a wide window
 only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
 and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
 room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode
