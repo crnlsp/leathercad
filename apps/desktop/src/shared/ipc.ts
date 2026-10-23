@@ -25,7 +25,6 @@ export const IPC = {
   setPreferences: 'platform:setPreferences',
   getSystemLanguages: 'platform:getSystemLanguages',
   noteRecentFile: 'platform:noteRecentFile',
-  readSampleProject: 'platform:readSampleProject',
   takeLaunchFile: 'platform:takeLaunchFile',
   takeSession: 'platform:takeSession',
   keepSession: 'platform:keepSession',

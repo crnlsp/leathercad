@@ -121,11 +121,6 @@ export function useProjectFile(
    * unsaved, with the file it belongs to if it had one.
    */
   restoreKept: (data: Uint8Array, path: string | null, restore: TabRestore) => ProjectTab | null;
-  /**
-   * Opens the sample project that ships with the app (8.3), **untitled** and
-   * unchanged: *Save* asks where, and closing it untouched asks nothing.
-   */
-  openSample: () => Promise<void>;
   /** Starts an empty, untitled project in a tab of its own. */
   newProject: () => void;
   /**
@@ -264,15 +259,6 @@ export function useProjectFile(
     },
     [fail, host, show, tabs],
   );
-
-  const openSample = useCallback(async () => {
-    try {
-      const loaded = loadProject(await host().readSampleProject());
-      show({ project: loaded.project }, null, undefined);
-    } catch (error) {
-      fail(tabs.active, error);
-    }
-  }, [fail, host, show, tabs]);
 
   const open = useCallback(async () => {
     let target: string | null;
@@ -474,7 +460,6 @@ export function useProjectFile(
     save,
     open,
     openPath,
-    openSample,
     newProject,
     adoptRecovered,
     exportPdfFile,

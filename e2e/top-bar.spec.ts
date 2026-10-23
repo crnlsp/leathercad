@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { drawAPanel, openApp } from './launchApp.js';
+import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -118,12 +118,6 @@ const shown = (window: Page, id: string): Promise<string> =>
     for (const heard of copy.querySelectorAll('.visually-hidden')) heard.remove();
     return (copy.textContent ?? '').trim();
   });
-
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('help-menu').click();
-  await window.getByTestId('help-open-sample').click();
-  await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
-}
 
 // The Project menu is the tab strip's since 8.12, at its left.
 const BAR = [
@@ -399,7 +393,7 @@ test('F1 opens Help, and the keyboard gets its place back (U.7)', async () => {
     await expect(window.getByRole('tooltip', { name: /Help/ }).locator('kbd')).toHaveText('F1');
     await window.mouse.move(600, 500);
     await window.keyboard.press('F1');
-    await expect(window.getByTestId('help-open-sample')).toBeFocused();
+    await expect(window.getByTestId('help-about')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
     await expect(window.getByTestId('help-menu')).toBeFocused();

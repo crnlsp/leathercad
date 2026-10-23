@@ -223,7 +223,7 @@ field, which the end-to-end test checks on Linux; on macOS, ⌘A is also the acc
 menu's *Select All* (`role: 'selectAll'` in `apps/desktop/src/main/menu.ts`), and nobody has seen
 which one wins ([#97](https://github.com/crnlsp/leathercad/issues/97)).
 
-1. Open the sample project, and click the board so that no text field has focus. ⌘A: nothing is
+1. Open the *Bifold wallet* template, and click the board so that no text field has focus. ⌘A: nothing is
    highlighted anywhere in the window, the Problems drawer included.
 2. In the project's name field, and in a size in Properties, ⌘A selects that field's text and
    nothing else.
@@ -239,7 +239,7 @@ Since the post-1.5 stabilization, in the same Mac session as check 12. On macOS 
 not quit the app, so a new window opens in the same process; it must offer the dead window's work,
 not delete it. `recovery.test.ts` checks the files; nobody has watched it on a Mac.
 
-1. Open the sample project and make an edit. Wait half a minute, for the recovery copy to be written.
+1. Open the *Bifold wallet* template and make an edit. Wait half a minute, for the recovery copy to be written.
 2. In Activity Monitor, force-quit *LeatherCAD Helper (Renderer)*. The window goes blank.
 3. Close the window, then click LeatherCAD in the Dock: the new window offers the unsaved work.
    *Recover* brings back the edit.

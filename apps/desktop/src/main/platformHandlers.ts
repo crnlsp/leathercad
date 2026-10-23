@@ -45,8 +45,6 @@ export function registerPlatformHandlers(
   preferences: PreferencesStore,
   /** A project joined the recent list: the operating system's list is told too. */
   onRecentChanged: (path: string) => void,
-  /** Where the bundled sample project is (8.3): a fixed path, never the renderer's. */
-  sampleProjectPath: string,
   /** The project this launch names, already granted (8.5); handed over once. */
   takeLaunchFile: () => string | null,
   /** The tabs open when the app last closed, their files granted (8.12); handed over once. */
@@ -206,13 +204,6 @@ export function registerPlatformHandlers(
     }
   });
   ipcMain.handle(IPC.getRecoveryIntervalMs, () => recoveryIntervalMs());
-
-  // The sample (8.3). Its path is the main process's own; the renderer only
-  // ever gets the bytes, so there is nothing of it to write back to.
-  ipcMain.handle(
-    IPC.readSampleProject,
-    async () => new Uint8Array(await readFile(sampleProjectPath)),
-  );
 
   ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
 

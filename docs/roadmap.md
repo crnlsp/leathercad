@@ -135,7 +135,8 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   template…* in the Project menu and a tab's menu saves any project as one, never over another of
   the same name unless asked; the maker's are removed from the picker. A project from a template
   opens untitled, unchanged and with an id of its own, so Save asks where and the template is never
-  written.
+  written. The sample wallet is the first template, and *Open sample project* is gone from Help, the
+  empty Parts panel and the start screen.
 - ◐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
   `<pid>-<start>-<tab>.lcp`, written while it is in front or not; closing a tab or saving it clears
   it. After a crash every copy is offered in turn, each into a tab of its own. Copies from 1.5, one

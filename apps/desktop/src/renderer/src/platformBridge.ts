@@ -54,7 +54,6 @@ interface PreloadBridge {
   showLogFolder(): Promise<void>;
   readNotices(): Promise<string | null>;
   onOpenFile(listener: (path: string) => void): () => void;
-  readSampleProject(): Promise<Uint8Array>;
   takeLaunchFile(): Promise<string | null>;
   getUpdateStatus(): Promise<UpdateStatus>;
   checkForUpdates(): Promise<UpdateStatus>;

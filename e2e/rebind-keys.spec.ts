@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { drawAPanel, openApp } from './launchApp.js';
+import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -339,7 +339,7 @@ test('a damaged list of keys in preferences.json is dropped, and the app starts'
 test('a key moved stays out of fields, and a drawing tool keeps its own', async () => {
   const { app, window } = await launch(fresh());
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
     const pane = await openShortcuts(window);
     // Focus mode takes A from the Arc tool, which gets \ in its place.
@@ -411,7 +411,7 @@ test('the polyline’s arc moved to Q is Q mid-run, and A is the Arc tool again'
 test('Parts’ rename moved to F4 renames a focused row, and nothing on the board', async () => {
   const { app, window } = await launch(fresh());
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
     await openShortcuts(window);
     await change(window, 'rename', 'F4');

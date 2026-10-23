@@ -177,13 +177,6 @@ export interface PlatformHost {
   onOpenFile(listener: (path: string) => void): () => void;
 
   /**
-   * The worked sample project that ships with the app (slice 8.3), as the
-   * bytes of an ordinary `.lcp`. Read-only: it opens untitled, so saving it
-   * asks where, and the copy inside the app is never written.
-   */
-  readSampleProject(): Promise<Uint8Array>;
-
-  /**
    * The project this launch was asked to open — a `.lcp` double-clicked in
    * the file manager (slice 8.5) — once, or null. Already a path the app may
    * read and write. Asked for by the renderer when it is ready, so the answer

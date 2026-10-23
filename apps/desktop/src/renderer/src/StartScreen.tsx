@@ -1,5 +1,5 @@
 import type { RecentFile } from '@leathercad/platform';
-import { FilePlus, FolderOpen, LayoutTemplate, Pin, PinOff, Sparkles, X } from 'lucide-react';
+import { FilePlus, FolderOpen, LayoutTemplate, Pin, PinOff, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -11,7 +11,7 @@ import { Tooltip } from './Tooltip.js';
 /**
  * What the window shows with every project closed (8.12): the app stays open,
  * as Notepad's does not but a maker's bench does, and offers the ways in —
- * a new project, one from disk, the sample, and the recent projects, the
+ * a new project — from scratch or from a template — one from disk, and the recent projects, the
  * Project menu's own list. The tab strip stays above it, with the menu and *+*.
  */
 export function StartScreen({
@@ -21,7 +21,6 @@ export function StartScreen({
   onNew,
   onNewFromTemplate,
   onOpen,
-  onOpenSample,
   onOpenRecent,
   onPin,
   onRemove,
@@ -36,7 +35,6 @@ export function StartScreen({
   /** *New project from template…* (8.12): the picker. */
   onNewFromTemplate: () => void;
   onOpen: () => void;
-  onOpenSample: () => void;
   onOpenRecent: (path: string) => void;
   /** Pins a project to the top of the list, or lets it go back among the rest (8.12). */
   onPin: (path: string, pinned: boolean) => void;
@@ -90,15 +88,6 @@ export function StartScreen({
             <Icon of={FolderOpen} />
             {t('menu.open')}
             <KeyCap command="openProject" />
-          </button>
-          <button
-            type="button"
-            className="tool start-action"
-            data-testid="start-sample"
-            onClick={onOpenSample}
-          >
-            <Icon of={Sparkles} />
-            {t('menu.openSample')}
           </button>
         </div>
 

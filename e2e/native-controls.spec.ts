@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { freshStateHome, launchApp, openApp } from './launchApp.js';
+import { freshStateHome, launchApp, openApp, openSample } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -20,12 +20,6 @@ const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-u20-'));
 
 const launch = (env: Record<string, string> = {}) =>
   openApp({ env: { XDG_CONFIG_HOME: fresh(), ...env } });
-
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('help-menu').click();
-  await window.getByTestId('help-open-sample').click();
-  await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
-}
 
 interface Stop {
   readonly name: string;

@@ -153,7 +153,6 @@
     "exportSvgNote": "Millimetres, for laser cutters, plotters and vector editors",
     "new": "New project from scratch",
     "open": "Open…",
-    "openSample": "Open sample project",
     "recent": "Recent projects",
     "recentEmpty": "Projects you open or save appear here.",
     "rename": "Rename…",
@@ -727,8 +726,6 @@
     "notPrinted": "Not printed. {{reason}}",
     "remove": "Delete part",
     "rename": "Name",
-    "sample": "Or take a finished one apart: {{link}}.",
-    "sampleLink": "open the sample wallet",
     "showPart": "Show part",
     "title": "Parts"
   },

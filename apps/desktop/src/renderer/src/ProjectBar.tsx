@@ -47,7 +47,6 @@ export function ProjectBar({
   settled,
   onShowProblems,
   helpRef,
-  onOpenSample,
   onAbout,
   onSettings,
   updateAvailable,
@@ -74,7 +73,6 @@ export function ProjectBar({
   onShowProblems: (press: Press) => void;
   /** The Help menu's button, which F1 opens. */
   helpRef: RefObject<HTMLButtonElement | null>;
-  onOpenSample: () => void;
   onAbout: () => void;
   onSettings: () => void;
   /** A newer release exists (8.9): Settings carries a quiet mark. */
@@ -223,7 +221,6 @@ export function ProjectBar({
         <div className="project-app" role="group" aria-label={t('projectBar.application')}>
           <AppControls
             helpRef={helpRef}
-            onOpenSample={onOpenSample}
             onAbout={onAbout}
             onSettings={onSettings}
             updateAvailable={updateAvailable}
@@ -295,14 +292,12 @@ export function windowTitle(name: string, dirty: boolean, t: Translate): string 
  */
 export function AppControls({
   helpRef,
-  onOpenSample,
   onAbout,
   onSettings,
   updateAvailable,
 }: {
   /** The Help menu's button, which F1 opens. */
   helpRef: RefObject<HTMLButtonElement | null>;
-  onOpenSample: () => void;
   onAbout: () => void;
   onSettings: () => void;
   /** A newer LeatherCAD is out (8.9): Settings is marked. */
@@ -331,7 +326,7 @@ export function AppControls({
         className="tool quiet icon-only"
         align="end"
         triggerRef={helpRef}
-        entries={helpMenu({ openSample: onOpenSample, about: onAbout }, t)}
+        entries={helpMenu({ about: onAbout }, t)}
       >
         <Icon of={CircleHelp} />
       </MenuButton>

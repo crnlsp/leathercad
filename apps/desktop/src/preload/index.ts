@@ -82,8 +82,6 @@ const platformBridge = {
 
   checkForUpdates: (): Promise<unknown> => ipcRenderer.invoke(IPC.checkForUpdates),
 
-  readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
-
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),
 
   takeSession: (): Promise<unknown> => ipcRenderer.invoke(IPC.takeSession),

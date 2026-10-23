@@ -369,21 +369,12 @@ export function exportMenu(
  */
 export function helpMenu(
   actions: {
-    readonly openSample: () => void;
     readonly about: () => void;
   },
   t: Translate,
 ): MenuEntry[] {
-  return [
-    {
-      kind: 'item',
-      id: 'help-open-sample',
-      label: t('menu.openSample'),
-      onChoose: actions.openSample,
-    },
-    { kind: 'separator' },
-    { kind: 'item', id: 'help-about', label: t('menu.about'), onChoose: actions.about },
-  ];
+  // The sample wallet is a template since 8.14: New project from template.
+  return [{ kind: 'item', id: 'help-about', label: t('menu.about'), onChoose: actions.about }];
 }
 
 /**

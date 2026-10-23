@@ -139,9 +139,15 @@ export async function withApp(
   }
 }
 
-/** Opens the sample wallet from the empty Parts panel: three pieces. */
+/**
+ * Opens the sample wallet, three pieces, from *New project from template…*
+ * (8.14): the template picker's first, a double click to use it. It used to
+ * have a button of its own, in Help and in the empty Parts panel.
+ */
 export async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('open-sample').click();
+  await window.getByTestId('project-menu').click();
+  await window.getByTestId('new-template').click();
+  await window.getByTestId('template-builtin:bifold-wallet').dblclick();
   await expect(window.getByTestId('part-count')).toHaveText('3');
 }
 

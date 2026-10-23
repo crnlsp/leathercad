@@ -5,16 +5,17 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { launchApp, openSample } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
 
 /**
- * Slice 8.3: a finished pattern to take apart, from Help or from the empty
- * Parts panel. It opens untitled and clean, so Save asks where and the copy
- * inside the app is never written.
+ * Slice 8.3: a finished pattern to take apart. Since 8.14 it is the first
+ * template — *New project from template…* — and has no button of its own. It
+ * opens untitled and clean, so Save asks where and the copy inside the app is
+ * never written.
  */
 
-test('the sample wallet opens from the empty Parts panel and from Help, clean and untitled', async () => {
+test('the sample wallet opens as a template, clean and untitled, and nowhere else', async () => {
   const app = await launchApp({
     env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')) },
   });
@@ -23,7 +24,13 @@ test('the sample wallet opens from the empty Parts panel and from Help, clean an
     await window.waitForLoadState('domcontentloaded');
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
 
-    await window.getByTestId('open-sample').click();
+    // No offer of it in the empty Parts panel, nor in Help.
+    await expect(window.getByTestId('parts-list')).not.toContainText('sample');
+    await window.getByTestId('help-menu').click();
+    await expect(window.getByTestId('help-menu-items')).not.toContainText('sample');
+    await window.keyboard.press('Escape');
+
+    await openSample(window);
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
     const parts = window.getByTestId('parts-list');
@@ -34,11 +41,10 @@ test('the sample wallet opens from the empty Parts panel and from Help, clean an
     await expect(window.getByTestId('file-path')).toHaveCount(0);
     expect(await window.title()).not.toContain('•');
 
-    // From Help, over unsaved work: in a tab of its own (8.12), so nothing is
+    // Again, over unsaved work: in a tab of its own (8.12), so nothing is
     // asked and nothing is lost.
     await renameProject(window, 'My changes');
-    await window.getByTestId('help-menu').click();
-    await window.getByTestId('help-open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
     await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveText([
@@ -62,7 +68,7 @@ test('no feature name in Parts breaks inside a word, at any window width (Q5)', 
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).toHaveText('3');
 
     const brokenWords = (): Promise<string[]> =>

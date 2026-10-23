@@ -111,7 +111,7 @@ describe('the Project and Help menus (8.7)', () => {
   });
 
   it('keeps Help to help and the application: no configuration', () => {
-    const labels = helpMenu({ openSample: noop, about: noop }, t).flatMap((entry) =>
+    const labels = helpMenu({ about: noop }, t).flatMap((entry) =>
       entry.kind === 'item' ? [entry.label] : [],
     );
     expect(labels).toEqual(['Open sample project', 'About LeatherCAD']);

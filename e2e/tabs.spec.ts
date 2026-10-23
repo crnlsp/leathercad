@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { drawAPanel, expectNoViolations, launchApp, withApp } from './launchApp.js';
+import { drawAPanel, expectNoViolations, launchApp, openSample, withApp } from './launchApp.js';
 import { activeTab, closeActiveTab, fromProjectMenu, renameProject } from './projectMenu.js';
 
 /**
@@ -21,13 +21,6 @@ import { activeTab, closeActiveTab, fromProjectMenu, renameProject } from './pro
  * Each tab keeps its own document, history, selection, view and camera. The
  * strip sits above the project bar, under the system's title bar.
  */
-
-/** The sample wallet from Help, in a tab of its own beside the drawing. */
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('help-menu').click();
-  await window.getByTestId('help-open-sample').click();
-  await expect(window.getByTestId('part-count')).toHaveText('3');
-}
 
 test('each tab keeps its own project, history and view', async () => {
   await withApp(async (window) => {

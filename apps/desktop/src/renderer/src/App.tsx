@@ -531,8 +531,6 @@ export function App({
 
   const newProject = file.newProject;
   const openProject = file.open;
-  // Help's *Open sample project* (8.3, 8.7), and the empty Parts panel's offer of it.
-  const openSample = file.openSample;
 
   // The Project menu's recent projects (8.7), asked for each time it opens,
   // since saving and opening change them.
@@ -1262,7 +1260,6 @@ export function App({
             hasProject ? null : (
               <AppControls
                 helpRef={helpRef}
-                onOpenSample={() => void openSample()}
                 onAbout={() => setAboutOpen(true)}
                 onSettings={() =>
                   setSettings(updates.state === 'available' ? 'updates' : 'general')
@@ -1283,7 +1280,6 @@ export function App({
               onNew={newProject}
               onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
-              onOpenSample={() => void openSample()}
               onOpenRecent={(path) =>
                 void getPlatformHost()
                   .openRecent(path)
@@ -1318,7 +1314,6 @@ export function App({
               settled={!store.inTransaction}
               onShowProblems={showProblems}
               helpRef={helpRef}
-              onOpenSample={() => void openSample()}
               onAbout={() => setAboutOpen(true)}
               // The mark is news about Updates, so the button opens there while it shows.
               onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
@@ -1473,7 +1468,6 @@ export function App({
                     onRemovePart={requestDeletePart}
                     onDuplicatePart={requestDuplicatePart}
                     onContextMenu={openContextMenu}
-                    onOpenSample={() => void openSample()}
                     toggle={
                       <PanelToggle
                         panel="parts"

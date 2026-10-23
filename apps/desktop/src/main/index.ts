@@ -359,7 +359,6 @@ app.whenReady().then(() => {
       // on Windows.
       app.addRecentDocument(path);
     },
-    sampleProject,
     () => {
       const file = launchFile;
       launchFile = null;

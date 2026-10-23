@@ -44,7 +44,7 @@ describe('the keyboard shortcut map', () => {
         [],
         t,
       ),
-      ...helpMenu({ openSample: noop, about: noop }, t),
+      ...helpMenu({ about: noop }, t),
     ].flatMap((entry) => (entry.kind === 'item' && entry.keys !== undefined ? [entry.keys] : []));
     expect(shown.length).toBeGreaterThan(0);
     for (const command of shown) {
