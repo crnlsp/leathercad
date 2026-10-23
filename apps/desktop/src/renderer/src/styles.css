@@ -1006,8 +1006,49 @@ body {
   font: var(--t-label);
 }
 
-.template-detail textarea {
+/*
+ * The description and the tags: the search's own control — its ground,
+ * border and words, the accent's border while typing — with the name of what
+ * goes in it above, in the dimmer words, as a pane's fields read.
+ */
+.template-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.template-field-label {
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.template-field textarea,
+.template-field input,
+.template-rename input {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text);
+  font: var(--t-body);
+}
+
+.template-field textarea {
+  min-height: 56px;
   resize: vertical;
+}
+
+.template-field textarea::placeholder,
+.template-field input::placeholder {
+  color: var(--text-mute);
+}
+
+.template-field textarea:focus,
+.template-field input:focus,
+.template-rename input:focus {
+  border-color: var(--tan);
+  outline: none;
 }
 
 /* The maker's tags, read: small labels under the description. Over the dialogs' list indent. */
@@ -1071,8 +1112,7 @@ body {
   gap: var(--space-1);
 }
 
-.template-rename input {
-  width: 100%;
+.template-dialog .template-rename input {
   font: var(--t-panel);
 }
 

@@ -736,8 +736,8 @@ function Detail({
           <h4 id="template-words-title" className="template-heading">
             {t('templates.wordsTitle')}
           </h4>
-          <label className="field">
-            <span>{t('templates.description')}</span>
+          <label className="template-field">
+            <span className="template-field-label">{t('templates.description')}</span>
             <textarea
               id="template-description"
               data-testid="template-description"
@@ -747,8 +747,8 @@ function Detail({
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>
-          <label className="field">
-            <span>{t('templates.tags')}</span>
+          <label className="template-field">
+            <span className="template-field-label">{t('templates.tags')}</span>
             <input
               id="template-tags"
               data-testid="template-tags"
