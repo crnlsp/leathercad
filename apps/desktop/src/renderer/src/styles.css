@@ -749,33 +749,37 @@ body {
 }
 
 /*
- * The template picker (8.12): the ones that ship, each with a line on what it
- * is, then the maker's own. A list of choices, not cards.
+ * The template picker (8.14). Each template is shown as what it is: its
+ * pieces drawn small on the board's ground, beside its name, what it is for
+ * and how many pieces it cuts. A list, not cards: rows on the dialog's own
+ * surface, the chosen one a shade lighter with its drawing outlined in the
+ * accent — the maker's own choice, as everywhere on the shell.
  */
-.template-dialog {
-  width: min(480px, calc(100vw - 2 * var(--space-6)));
+.dialog.template-dialog {
+  width: min(560px, calc(100vw - 32px));
+  gap: var(--space-3);
 }
 
 .template-lists {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-height: 60vh;
+  max-height: min(60vh, 520px);
+  margin: 0 calc(-1 * var(--space-2));
+  padding: 0 var(--space-2);
   overflow-y: auto;
+}
+
+.template-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .template-heading {
   margin: 0 0 var(--space-1);
   color: var(--text-dim);
   font: var(--t-label);
-}
-
-.template-list {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .template-row {
@@ -787,20 +791,52 @@ body {
 .template-choice {
   display: flex;
   flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
+  gap: var(--space-3);
+  align-items: center;
   min-width: 0;
   padding: var(--space-2);
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  text-align: left;
+  border-radius: var(--r-md);
   cursor: pointer;
 }
 
-.template-choice:hover,
+.template-choice:hover {
+  background: var(--shell-600);
+}
+
+.template-choice[aria-selected='true'] {
+  background: var(--shell-600);
+}
+
 .template-choice:focus-visible {
-  background: var(--shell-700);
+  outline-offset: -2px;
+}
+
+.template-preview {
+  display: block;
+  flex: none;
+  width: 112px;
+  height: 72px;
+  overflow: hidden;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--ground);
+}
+
+.template-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.template-choice[aria-selected='true'] .template-preview {
+  border-color: var(--tan);
+}
+
+.template-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .template-name {
@@ -808,9 +844,29 @@ body {
   font: var(--t-strong);
 }
 
-.template-note,
+.template-note {
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.template-pieces {
+  color: var(--text-mute);
+  font: var(--t-label);
+}
+
+.template-remove {
+  flex: none;
+}
+
+.template-row:not(:hover, :focus-within) .template-remove {
+  opacity: 0;
+}
+
 .template-empty {
   margin: 0;
+  padding: var(--space-3);
+  border: 1px dashed var(--shell-line);
+  border-radius: var(--r-md);
   color: var(--text-dim);
   font: var(--t-label);
 }

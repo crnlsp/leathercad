@@ -29,10 +29,9 @@ import {
   type RecentFile,
   type KeptSession,
   type TabCamera,
-  type TemplateEntry,
   type UpdateStatus,
 } from '@leathercad/platform';
-import { saveProject } from '@leathercad/persist';
+import { loadProject, saveProject } from '@leathercad/persist';
 import { zoomPercent } from '@leathercad/render';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
@@ -65,7 +64,7 @@ import { OutsideChangeBar } from './OutsideChangeBar.js';
 import { UnsavedProjectsDialog } from './UnsavedProjectsDialog.js';
 import { MessageDialog } from './MessageDialog.js';
 import { NewTabMenu, ProjectMenu } from './ProjectMenu.js';
-import { SaveTemplateDialog, TemplateDialog } from './TemplateDialog.js';
+import { SaveTemplateDialog, TemplateDialog, type TemplateChoice } from './TemplateDialog.js';
 import { StartScreen } from './StartScreen.js';
 import {
   ProjectTabs,
@@ -593,13 +592,26 @@ export function App({
 
   // The templates (8.12): the picker, open with what the main process listed,
   // and the tab being saved as one.
-  const [templateList, setTemplateList] = useState<readonly TemplateEntry[] | null>(null);
+  const [templateList, setTemplateList] = useState<readonly TemplateChoice[] | null>(null);
   const [savingTemplate, setSavingTemplate] = useState<ProjectTab | null>(null);
+  // Each template read and loaded, so the picker can draw it. One that does
+  // not load is still listed, without its picture.
   const showTemplates = useCallback(() => {
-    void getPlatformHost()
-      .listTemplates()
-      .then(setTemplateList)
-      .catch(() => undefined);
+    void (async () => {
+      const host = getPlatformHost();
+      const entries = await host.listTemplates();
+      const choices = await Promise.all(
+        entries.map(async (entry): Promise<TemplateChoice> => {
+          try {
+            const data = await host.readTemplate(entry.id);
+            return { entry, project: data === null ? null : loadProject(data).project };
+          } catch {
+            return { entry, project: null };
+          }
+        }),
+      );
+      setTemplateList(choices);
+    })().catch(() => undefined);
   }, []);
 
   // A tab's own menu (8.12), open at a point, and the tab whose file is being
@@ -1759,13 +1771,13 @@ export function App({
               setTemplateList(null);
               void file.newFromTemplate(id);
             }}
-            onRemove={(id) =>
+            onRemove={(id) => {
+              // Gone from the picker at once; the file goes after.
+              setTemplateList((list) => list?.filter((choice) => choice.entry.id !== id) ?? null);
               void getPlatformHost()
                 .removeTemplate(id)
-                .then(() => getPlatformHost().listTemplates())
-                .then(setTemplateList)
-                .catch(() => undefined)
-            }
+                .catch(() => undefined);
+            }}
             onClose={() => setTemplateList(null)}
           />
         )}

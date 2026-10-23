@@ -1339,7 +1339,7 @@
     "title": "New project from template",
     "builtIn": "Templates",
     "mine": "My templates",
-    "mineEmpty": "Projects you save as templates appear here.",
+    "mineEmpty": "Save any project as a template, from the Project menu or its tab’s menu, and it is listed here.",
     "use": "Use template",
     "remove": "Remove {{name}}",
     "removeTooltip": "Remove this template. Projects made from it are not changed",
@@ -1365,6 +1365,8 @@
     "replace": "Replace",
     "exists": "A template named “{{name}}” already exists. Replace it, or choose another name.",
     "invalid": "A template cannot be called “{{name}}”. Choose another name.",
-    "saved": "Saved as the template “{{name}}”."
+    "saved": "Saved as the template “{{name}}”.",
+    "pieces_one": "{{count}} piece to cut",
+    "pieces_other": "{{count}} pieces to cut"
   }
 }

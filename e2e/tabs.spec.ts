@@ -568,7 +568,16 @@ test('a new project from a template, and any project saved as one (8.14)', async
       await fromProjectMenu(window, 'new-template');
       const dialog = window.getByTestId('template-dialog');
       await expect(dialog.getByTestId('template-builtin:bifold-wallet')).toBeFocused();
+      // Chosen, then used: a click picks, Use template opens it.
       await dialog.getByTestId('template-builtin:card-holder').click();
+      await expect(dialog.getByTestId('template-builtin:card-holder')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      await expect(dialog.getByTestId('template-builtin:card-holder')).toContainText(
+        '3 pieces to cut',
+      );
+      await dialog.getByTestId('template-use').click();
       await expect(window.getByTestId('project-name')).toHaveText('Card holder');
       await expect(window.getByTestId('part-count')).toHaveText('2');
       // Untitled and unchanged: no file, nothing to save.
@@ -593,7 +602,8 @@ test('a new project from a template, and any project saved as one (8.14)', async
       // Listed under My templates, used, and removed.
       await window.getByTestId('new-tab').click();
       await window.getByTestId('tab-template').click();
-      await dialog.getByTestId('template-mine:My card holder').click();
+      // A double click uses one at once.
+      await dialog.getByTestId('template-mine:My card holder').dblclick();
       await expect(window.getByTestId('part-count')).toHaveText('2');
       await fromProjectMenu(window, 'new-template');
       await dialog.getByTestId('template-remove-mine:My card holder').click();

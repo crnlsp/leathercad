@@ -1,20 +1,31 @@
+import type { Project } from '@leathercad/domain';
 import type { TemplateEntry } from '@leathercad/platform';
 import { X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import { PREVIEW_HEIGHT, PREVIEW_WIDTH, piecesOf, templatePreview } from './templatePreview.js';
 import { BUILT_IN_TEMPLATES } from './templates.js';
 import { Tooltip } from './Tooltip.js';
 
+/** A template, as the picker shows it: what the main process listed, and the project it holds. */
+export interface TemplateChoice {
+  readonly entry: TemplateEntry;
+  /** Null when its file did not load: it is still listed, with no picture. */
+  readonly project: Project | null;
+}
+
 /**
- * *New project from template…* (8.12): the templates that ship with the app,
- * each with a line on what it is, then the maker's own, which can be removed
- * here. Choosing one opens it as a new project in a tab of its own — untitled,
- * so Save asks where, and the template itself is never written.
+ * *New project from template…* (8.14): the templates that ship with the app,
+ * then the maker's own. Each is shown as what it is — its pieces drawn small,
+ * as the board draws them, its name, what it is for and how many pieces it
+ * cuts — and chosen, then used: *Use template*, a double click, or Enter.
+ * The project opens in a tab of its own, untitled, and the template itself is
+ * never written.
  *
- * A list of choices, as a dialog's: the arrows go up and down it, Enter takes
- * the one with focus, and Escape closes.
+ * A listbox: the arrows choose, Enter uses, Delete removes one of the
+ * maker's, and Escape closes.
  */
 export function TemplateDialog({
   templates,
@@ -22,67 +33,104 @@ export function TemplateDialog({
   onRemove,
   onClose,
 }: {
-  /** What the main process lists: the built-in ones, then the maker's. */
-  templates: readonly TemplateEntry[];
+  templates: readonly TemplateChoice[];
   onChoose: (id: string) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
   const list = useRef<HTMLDivElement>(null);
-  const [focused, setFocused] = useState(0);
+
+  const rows = useMemo(() => {
+    const builtIn = BUILT_IN_TEMPLATES.flatMap((each) => {
+      const found = templates.find((choice) => choice.entry.id === `builtin:${each.id}`);
+      return found === undefined
+        ? []
+        : [{ ...found, name: t(each.name), note: t(each.description) }];
+    });
+    const mine = templates
+      .filter((choice) => choice.entry.kind === 'mine')
+      .map((choice) => ({ ...choice, name: choice.entry.name, note: '' }));
+    return { builtIn, mine, all: [...builtIn, ...mine] };
+  }, [templates, t]);
+  const previews = useMemo(
+    () =>
+      new Map(
+        rows.all.map((row) => [
+          row.entry.id,
+          row.project === null ? null : templatePreview(row.project),
+        ]),
+      ),
+    [rows],
+  );
+
+  // The one chosen; once removed, the first.
+  const [picked, setChosen] = useState(rows.all[0]?.entry.id ?? null);
+  const chosen = rows.all.some((row) => row.entry.id === picked)
+    ? picked
+    : (rows.all[0]?.entry.id ?? null);
   useEffect(() => {
-    list.current?.querySelector<HTMLElement>('[data-template]')?.focus();
+    list.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
   }, []);
-
-  const builtIn = BUILT_IN_TEMPLATES.filter((each) =>
-    templates.some((entry) => entry.id === `builtin:${each.id}`),
-  ).map((each) => ({
-    id: `builtin:${each.id}`,
-    name: t(each.name),
-    note: t(each.description),
-    mine: false,
-  }));
-  const mine = templates
-    .filter((entry) => entry.kind === 'mine')
-    .map((entry) => ({ id: entry.id, name: entry.name, note: '', mine: true }));
-  const all = [...builtIn, ...mine];
-
-  const move = (to: number): void => {
-    const next = (to + all.length) % all.length;
-    setFocused(next);
-    list.current?.querySelectorAll<HTMLElement>('[data-template]')[next]?.focus();
+  const at = rows.all.findIndex((row) => row.entry.id === chosen);
+  const choose = (index: number): void => {
+    const row = rows.all[(index + rows.all.length) % rows.all.length];
+    if (row === undefined) return;
+    setChosen(row.entry.id);
+    requestAnimationFrame(() =>
+      list.current
+        ?.querySelector<HTMLElement>(`[data-template="${CSS.escape(row.entry.id)}"]`)
+        ?.focus(),
+    );
   };
 
-  const row = (entry: (typeof all)[number], index: number) => (
-    <li key={entry.id} className="template-row">
-      <button
-        type="button"
-        className="template-choice"
-        data-template={entry.id}
-        data-testid={`template-${entry.id}`}
-        tabIndex={index === focused ? 0 : -1}
-        onFocus={() => setFocused(index)}
-        onClick={() => onChoose(entry.id)}
-      >
-        <span className="template-name">{entry.name}</span>
-        {entry.note !== '' && <span className="template-note">{entry.note}</span>}
-      </button>
-      {entry.mine && (
-        <Tooltip text={t('templates.removeTooltip')}>
-          <button
-            type="button"
-            className="tool quiet icon-only"
-            data-testid={`template-remove-${entry.id}`}
-            aria-label={t('templates.remove', { name: entry.name })}
-            onClick={() => onRemove(entry.id)}
-          >
-            <Icon of={X} size={14} />
-          </button>
-        </Tooltip>
-      )}
-    </li>
-  );
+  const option = (row: (typeof rows.all)[number]) => {
+    const selected = row.entry.id === chosen;
+    const preview = previews.get(row.entry.id) ?? null;
+    return (
+      <div key={row.entry.id} role="presentation" className="template-row">
+        <div
+          role="option"
+          aria-selected={selected}
+          tabIndex={selected ? 0 : -1}
+          className="template-choice"
+          data-template={row.entry.id}
+          data-testid={`template-${row.entry.id}`}
+          onClick={() => setChosen(row.entry.id)}
+          onDoubleClick={() => onChoose(row.entry.id)}
+        >
+          <span className="template-preview" aria-hidden="true">
+            {preview !== null && (
+              <img src={preview} alt="" width={PREVIEW_WIDTH} height={PREVIEW_HEIGHT} />
+            )}
+          </span>
+          <span className="template-text">
+            <span className="template-name">{row.name}</span>
+            {row.note !== '' && <span className="template-note">{row.note}</span>}
+            {row.project !== null && (
+              <span className="template-pieces">
+                {t('templates.pieces', { count: piecesOf(row.project) })}
+              </span>
+            )}
+          </span>
+        </div>
+        {row.entry.kind === 'mine' && (
+          <Tooltip text={t('templates.removeTooltip')}>
+            <button
+              type="button"
+              className="tool quiet icon-only template-remove"
+              data-testid={`template-remove-${row.entry.id}`}
+              tabIndex={-1}
+              aria-label={t('templates.remove', { name: row.name })}
+              onClick={() => onRemove(row.entry.id)}
+            >
+              <Icon of={X} size={14} />
+            </button>
+          </Tooltip>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="dialog-backdrop" onClick={onClose}>
@@ -96,36 +144,60 @@ export function TemplateDialog({
         onKeyDown={(event) => {
           event.stopPropagation();
           if (event.key === 'Escape') onClose();
-          else if (event.key === 'ArrowDown') move(focused + 1);
-          else if (event.key === 'ArrowUp') move(focused - 1);
-          else return;
+          else if (event.key === 'ArrowDown') choose(at + 1);
+          else if (event.key === 'ArrowUp') choose(at - 1);
+          else if (event.key === 'Home') choose(0);
+          else if (event.key === 'End') choose(rows.all.length - 1);
+          else if (
+            event.key === 'Enter' &&
+            chosen !== null &&
+            !(event.target instanceof HTMLButtonElement)
+          ) {
+            onChoose(chosen);
+          } else if (event.key === 'Delete' && chosen?.startsWith('mine:') === true) {
+            onRemove(chosen);
+          } else return;
           event.preventDefault();
         }}
       >
         <h3 id="template-dialog-title">{t('templates.title')}</h3>
-        <div ref={list} className="template-lists">
-          <section aria-labelledby="templates-built-in">
+        <div
+          ref={list}
+          className="template-lists"
+          role="listbox"
+          aria-labelledby="template-dialog-title"
+        >
+          <div role="group" aria-labelledby="templates-built-in" className="template-group">
             <h4 id="templates-built-in" className="template-heading">
               {t('templates.builtIn')}
             </h4>
-            <ul className="template-list">{builtIn.map((entry, index) => row(entry, index))}</ul>
-          </section>
-          <section aria-labelledby="templates-mine">
+            {rows.builtIn.map(option)}
+          </div>
+          <div role="group" aria-labelledby="templates-mine" className="template-group">
             <h4 id="templates-mine" className="template-heading">
               {t('templates.mine')}
             </h4>
-            {mine.length === 0 ? (
-              <p className="template-empty">{t('templates.mineEmpty')}</p>
+            {rows.mine.length === 0 ? (
+              <p className="template-empty" role="presentation">
+                {t('templates.mineEmpty')}
+              </p>
             ) : (
-              <ul className="template-list">
-                {mine.map((entry, index) => row(entry, builtIn.length + index))}
-              </ul>
+              rows.mine.map(option)
             )}
-          </section>
+          </div>
         </div>
         <div className="dialog-actions">
           <button type="button" className="tool" data-testid="template-close" onClick={onClose}>
             {t('actions.cancel')}
+          </button>
+          <button
+            type="button"
+            className="tool primary"
+            data-testid="template-use"
+            disabled={chosen === null}
+            onClick={() => (chosen === null ? undefined : onChoose(chosen))}
+          >
+            {t('templates.use')}
           </button>
         </div>
       </div>
