@@ -932,6 +932,23 @@ body {
   padding-left: var(--space-3);
   border-left: 1px solid var(--shell-line);
 }
+
+/* A new version exists (8.9): a quiet tan dot in the Settings button's corner,
+   and the button's name says it. Nothing moves and nothing asks. */
+.settings-button {
+  position: relative;
+}
+
+.update-mark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--tan);
+  pointer-events: none;
+}
 .work-bar {
   display: flex;
   align-items: center;
@@ -1137,6 +1154,138 @@ body {
   .strip-button[aria-pressed='true'],
   .strip-button.current {
     border-color: Highlight;
+  }
+}
+
+/* The version (8.9): reads as the bar's text, and pressed checks for a new
+   one. Underlined under the pointer, so it shows it can be pressed. Its pill
+   is drawn only once a check has answered. No negative margin to line the
+   number up with the bar's edge: .status-left hides what overflows it, and
+   would cut the pill's left side off. */
+.status-version {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: none;
+  color: inherit;
+  font: inherit;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.status-version:not([aria-disabled='true']):hover {
+  text-decoration: underline;
+}
+
+/* Answered, it waits five minutes before it asks again: not a button meanwhile. */
+.status-version[aria-disabled='true'] {
+  cursor: default;
+}
+
+/* The latest: a sage pill and tick. Newer: a tan pill, the arrow and the
+   number. Failed: an orange triangle — the warning's colour and glyph. */
+.status-version[data-state='current'] {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--shell-line));
+  color: var(--text);
+}
+
+.status-version[data-state='current'] .icon {
+  color: var(--ok);
+}
+
+.status-version[data-state='available'] {
+  border-color: color-mix(in srgb, var(--tan) 60%, var(--shell-line));
+  background: color-mix(in srgb, var(--tan) 16%, var(--shell-700));
+  color: var(--text);
+}
+
+.status-version[data-state='available'] .icon {
+  color: var(--tan);
+}
+
+.status-version-next {
+  color: var(--text-dim);
+}
+
+.status-version[data-state='failed'] {
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--shell-line));
+}
+
+.status-version[data-state='failed'] .icon {
+  color: var(--warning);
+}
+
+/* What the check found, in Settings › Updates (8.9): the status bar's glyph in
+   a disc, beside what it means. A newer version tints the whole card tan. */
+.update-card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-md);
+  background: var(--shell-700);
+}
+
+.update-card .setting-name {
+  font: var(--t-strong);
+}
+
+.update-badge {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-pill);
+  background: var(--shell-600);
+  color: var(--text-dim);
+}
+
+.update-card[data-state='current'] .update-badge {
+  background: color-mix(in srgb, var(--ok) 18%, var(--shell-700));
+  color: var(--ok);
+}
+
+.update-card[data-state='available'] {
+  border-color: color-mix(in srgb, var(--tan) 55%, var(--shell-line));
+  background: color-mix(in srgb, var(--tan) 9%, var(--shell-700));
+}
+
+.update-card[data-state='available'] .update-badge {
+  background: var(--tan);
+  color: var(--on-tan);
+}
+
+.update-card[data-state='failed'] .update-badge {
+  background: color-mix(in srgb, var(--warning) 18%, var(--shell-700));
+  color: var(--warning);
+}
+
+/* A check for updates is running (8.9): the one motion that is not a colour,
+   since a press that seems to do nothing feels broken. Reduced motion keeps
+   the circle and stops it turning. */
+.spinner {
+  display: inline-flex;
+  flex: none;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
   }
 }
 

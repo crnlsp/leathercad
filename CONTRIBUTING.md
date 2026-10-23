@@ -36,8 +36,8 @@ pnpm dev            # runs the app, with hot reload
 The layering in [`docs/architecture.md`](docs/architecture.md) §2 is enforced by `pnpm depcruise`: a
 violation fails the build, deliberately.
 
-Nothing reads a `.env` file, and no part of development needs a secret: the app never goes online,
-and CI's only credential is the token GitHub gives each run. A few variables change how the tests
+Nothing reads a `.env` file, and no part of development needs a secret: the app's one request is
+its update check, which no test sends to GitHub, and CI's only credential is the token GitHub gives each run. A few variables change how the tests
 run:
 
 | Variable | What it does |
@@ -48,6 +48,7 @@ run:
 | `UPDATE_FIXTURES=1` | Rewrites a committed fixture from the code that builds it: the current format version's, the sample project, the print test. Read the diff before committing it |
 | `LEATHERCAD_TEST_TIMEOUT` | Every test's timeout, in milliseconds. Mutation testing sets it ([`docs/testing.md`](docs/testing.md) §3.4) |
 | `LEATHERCAD_RECOVERY_INTERVAL_MS` | How often the app writes a crash-recovery copy. The E2E tests shorten it |
+| `LEATHERCAD_RELEASES_URL` | Where the update check asks for the latest release, in place of GitHub ([ADR 0020](docs/adr/0020-update-discovery.md)). The Playwright configs point it at a port nothing listens on |
 
 The scripts set the rest themselves: `LEATHERCAD_BENCH`, `LEATHERCAD_PACKAGE_FOR_E2E` and
 `LEATHERCAD_IN_CONTAINER`.

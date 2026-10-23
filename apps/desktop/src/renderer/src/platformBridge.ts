@@ -9,6 +9,7 @@ import type {
   RecentOutcome,
   RecoveredCopy,
   SaveDialogOptions,
+  UpdateStatus,
 } from '@leathercad/platform';
 
 /**
@@ -47,6 +48,8 @@ interface PreloadBridge {
   onOpenFile(listener: (path: string) => void): () => void;
   readSampleProject(): Promise<Uint8Array>;
   takeLaunchFile(): Promise<string | null>;
+  getUpdateStatus(): Promise<UpdateStatus>;
+  checkForUpdates(): Promise<UpdateStatus>;
 }
 
 declare global {

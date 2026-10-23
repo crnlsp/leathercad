@@ -59,6 +59,7 @@ export function ProjectBar({
   onOpenSample,
   onAbout,
   onSettings,
+  updateAvailable,
   onSave,
   onExport,
   onExportSvg,
@@ -94,6 +95,8 @@ export function ProjectBar({
   onOpenSample: () => void;
   onAbout: () => void;
   onSettings: () => void;
+  /** A newer release exists (8.9): Settings carries a quiet mark. */
+  updateAvailable: boolean;
   onSave: () => void;
   onExport: () => void;
   /** *Export SVG…* and *Export DXF…* (6.2, 6.5), from the menu beside *Export PDF*. */
@@ -290,12 +293,13 @@ export function ProjectBar({
           <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
             <button
               type="button"
-              className="tool quiet icon-only"
+              className="tool quiet icon-only settings-button"
               data-testid="settings"
-              aria-label={t('projectBar.settings')}
+              aria-label={t(updateAvailable ? 'projectBar.settingsUpdate' : 'projectBar.settings')}
               onClick={onSettings}
             >
               <Icon of={Settings} />
+              {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
             </button>
           </Tooltip>
           <MenuButton

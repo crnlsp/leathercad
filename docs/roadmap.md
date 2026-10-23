@@ -71,12 +71,21 @@ order of work, and *The window* comes before the other groups.
 
 Left from 1.3's *The window*: nothing says a new release exists.
 
-- ☐ **8.9 Update discovery.** The main process asks GitHub for the latest release and compares it
+- ✅ **8.9 Update discovery.** The main process asks GitHub for the latest release and compares it
   with the running version: *Check for updates* in Settings › Updates, the result in About, and a
   quiet mark on Settings when one exists. It links to the release page and installs nothing (see
   *Not planned*). The app's first network request, so `SECURITY.md`'s "no network connections"
   changes with it, in an ADR; the Flatpak skips it, as Flathub updates it. Reads tags in the
   `leathercad-v` form (R4).
+  **Done** (2026-10-20), as [ADR 0020](adr/0020-update-discovery.md): the check runs only when
+  the maker asks for it, never as the app starts, by the maintainer's decision (2026-10-23):
+  *Check now* in Settings › Updates, or the version at the status bar's left, whose tooltip says
+  what it found; a spinner turns while it asks. Answered, the version becomes a chip — a sage tick,
+  or a tan arrow and the new number — and Settings › Updates a card with the same glyph; neither
+  asks again for five minutes, though a failed check may. The Settings button opens on Updates
+  while its mark shows. `SECURITY.md` says why
+  the app makes the request and what it carries. No test asks GitHub: `LEATHERCAD_RELEASES_URL`
+  points the check at a server of the test's own, or at nothing.
 
 ### Drawing and editing
 
