@@ -15,7 +15,7 @@ process.env['XDG_CONFIG_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-conf
 process.env['XDG_STATE_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-state-'));
 
 // The update check (8.9) never asks GitHub from a test: the app is pointed at
-// a port nothing listens on, so a start's check fails at once and says so
+// a port nothing listens on, so a check a test asks for fails at once and says so
 // quietly. e2e/updates.spec.ts answers it from a server of its own.
 process.env['LEATHERCAD_RELEASES_URL'] ??= 'http://127.0.0.1:9/';
 

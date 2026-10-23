@@ -419,10 +419,7 @@
       "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys."
     },
     "updates": {
-      "check": {
-        "name": "Check for a new version when LeatherCAD starts",
-        "note": "Once each time it starts, LeatherCAD asks GitHub which version is the latest, so you hear of fixes, security fixes among them. Nothing about you or your patterns is sent, and nothing is downloaded or installed."
-      },
+      "note": "LeatherCAD asks GitHub which version is the latest only when you ask it to, here or by pressing the version in the status bar. Nothing about you or your patterns is sent, and nothing is downloaded or installed.",
       "now": "Check now",
       "checking": "Checking…",
       "managed": "Flathub keeps this copy of LeatherCAD up to date, so it does not check for itself."

@@ -1,7 +1,7 @@
-# 20. The update check: one request to GitHub as the app starts, and nothing installed
+# 20. The update check: one request to GitHub when the maker asks, and nothing installed
 
 **Status:** Accepted
-**Date:** 2026-10-20
+**Date:** 2026-10-20, revised 2026-10-23
 
 ## Context
 
@@ -18,10 +18,12 @@ Three questions decide the shape of this. When the app asks, what it sends, and 
 `GET https://api.github.com/repos/crnlsp/leathercad/releases/latest` — and compares its tag with
 the running version (`apps/desktop/src/main/updates.ts`).
 
-- **When.** Once as the app starts, **on by default**, so a maker hears of a fix without having to
-  know to look. Settings › Updates turns it off, and its *Check now* asks whenever the maker
-  presses it, whether the start does or not; so does the version at the status bar's left, whose
-  tooltip says *Check for updates* and then what the check found. The maintainer decided the default on 2026-10-20.
+- **When.** **Only when the maker asks**, never by itself: not as the app starts, not in the
+  background, not on a timer. *Check now* in Settings › Updates asks, and so does the version at
+  the status bar's left, whose tooltip says *Check for updates* and then what the check found. A
+  spinner turns while it asks. There is no switch, since there is nothing automatic to turn off.
+  The maintainer decided on 2026-10-23 that every request is one the maker made knowingly,
+  revising the first decision of 2026-10-20, which asked once at every start.
 - **What is sent.** One GET with an `Accept` header and nothing about the maker or their patterns:
   no identifier, no project data, no preferences. GitHub sees what any request shows — the
   address, and Chromium's user agent with the app's name and version. Electron's `net.fetch`
@@ -34,7 +36,8 @@ the running version (`apps/desktop/src/main/updates.ts`).
   An answer that could not be had, or could not be read, is said there just as quietly, and the
   app carries on.
 - **Who is left out.** The Flatpak never asks: Flathub keeps it up to date, and its sandbox has
-  no network. Settings › Updates says so instead of offering the switch.
+  no network. Settings › Updates says so instead of offering *Check now*, and its version in the
+  status bar is plain text.
 - **The renderer still connects to nothing.** It hears the answer over IPC. Its
   Content-Security-Policy keeps `connect-src 'self'`.
 
@@ -46,15 +49,20 @@ of its own.
 
 - `SECURITY.md` no longer says the app makes no network connections. It names this one request,
   and a way to get the app to make any other stays in scope.
-- A maker who starts the app with no network sees a line saying the check failed, in About and
-  Settings, and nothing else.
-- GitHub's unauthenticated limit, 60 requests an hour from one address, is far above one a start.
-  A check over it fails quietly, like any other.
+- An app that is never asked makes no network connection at all, as before 1.6. A maker with no
+  network who asks sees a line saying the check failed, in About and Settings, and nothing else.
+- A maker who never asks never hears of a fix from the app. That is the price of the request
+  being theirs alone; the release page and Flathub remain.
+- GitHub's unauthenticated limit, 60 requests an hour from one address, is far above what anyone
+  presses. A check over it fails quietly, like any other.
 
 ## Alternatives rejected
 
-- **Off until the maker turns it on.** Keeps the offline promise whole, but the people who most
-  need a fix are the ones who never open Settings.
+- **Once at every start, on by default, with a switch to turn it off.** The first decision
+  (2026-10-20): a maker hears of a fix without knowing to look. Rejected on 2026-10-23, because the
+  app would reach the network on every start before the maker had asked it anything.
+- **Off until the maker turns it on.** A switch for a check at start-up adds a setting without
+  changing who decides: pressing *Check now* is already the maker's choice, made each time.
 - **Ask on the first start.** A dialog before the first pattern, for a question most people answer
   without reading.
 - **electron-updater or Squirrel.** They install, which is *Not planned*, and they need signed

@@ -246,9 +246,10 @@ app.whenReady().then(() => {
 
   preferences = new PreferencesStore(join(app.getPath('userData'), 'preferences.json'));
 
-  // The update check (8.9, ADR 0020): the app's one network request, through
-  // Chromium's stack so a system proxy applies. The Flatpak never asks —
-  // Flathub updates it, and it has no network. The tests point it elsewhere.
+  // The update check (8.9, ADR 0020): the app's one network request, made
+  // only when the maker asks for it, through Chromium's stack so a system
+  // proxy applies. The Flatpak never asks — Flathub updates it, and it has no
+  // network. The tests point it elsewhere.
   const releasesUrl = process.env['LEATHERCAD_RELEASES_URL'];
   const updates = new UpdateChecker({
     fetch: (url, init) => net.fetch(url, init),
@@ -256,9 +257,6 @@ app.whenReady().then(() => {
     managed: process.env['FLATPAK_ID'] !== undefined,
     ...(releasesUrl !== undefined && releasesUrl !== '' ? { url: releasesUrl } : {}),
   });
-  if (preferences.preferences.updateCheck) {
-    void updates.check().then((status) => log.info(`update check, at the start: ${status.state}`));
-  }
 
   registerPlatformHandlers(
     () => mainWindow,

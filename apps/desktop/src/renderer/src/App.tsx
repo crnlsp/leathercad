@@ -431,8 +431,9 @@ export function App({
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [confirmDiscard, file]);
 
-  // Whether a newer release exists (8.9): the start's check, which the main
-  // process runs, heard when it answers; *Check now* in Settings asks again.
+  // Whether a newer release exists (8.9): asked only when the maker presses
+  // *Check now* in Settings or the version in the status bar. The main
+  // process keeps the last answer, so a new window on macOS still shows it.
   const [updates, setUpdates] = useState<UpdateStatus>({ state: 'idle' });
   useEffect(() => {
     void getPlatformHost()

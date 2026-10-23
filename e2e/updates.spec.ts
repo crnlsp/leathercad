@@ -9,9 +9,9 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { withApp } from './launchApp.js';
 
 /**
- * Slice 8.9: the app hears of a new release and says so quietly, links to it,
- * and installs nothing. GitHub is never asked from a test: a server here
- * answers as its releases API would.
+ * Slice 8.9: asked by the maker, and only then, the app hears of a new release
+ * and says so quietly, links to it, and installs nothing. GitHub is never
+ * asked from a test: a server here answers as its releases API would.
  */
 
 /** A stand-in for GitHub's latest release, counting the times it is asked. */
@@ -59,15 +59,14 @@ async function openAbout(window: Page): Promise<void> {
 }
 
 test('a newer release marks Settings, which opens on Updates, and About links to it', async () => {
-  // Tagged after launch, from the version the app reports; until then the
-  // server answers with a tag no release has, which reads as a failed check.
+  // Tagged after launch, from the version the app reports.
   const server = await releases('none');
   try {
     await withApp(
       async (window, app) => {
         server.tag = await newerTag(app);
         const settings = window.getByTestId('settings');
-        // The start's check found nothing it could read: no mark.
+        // Nothing was asked yet: no mark.
         await expect(window.getByTestId('update-mark')).toHaveCount(0);
 
         await settings.click();
@@ -100,14 +99,24 @@ test('a newer release marks Settings, which opens on Updates, and About links to
   }
 });
 
-test('the newest version running says so, and asks once as it starts', async () => {
+test('the app asks nothing as it starts, and Check now asks once', async () => {
   const server = await releases('leathercad-v0.0.1');
   try {
     await withApp(
       async (window) => {
         await openAbout(window);
+        await expect(window.getByTestId('about-dialog').getByTestId('update-status')).toHaveCount(
+          0,
+        );
+        await window.keyboard.press('Escape');
+        expect(server.asked()).toBe(0);
+
+        await window.getByTestId('settings').click();
+        await window.getByTestId('settings-tab-updates').click();
+        await expect(window.getByTestId('updates-note')).toBeVisible();
+        await window.getByTestId('check-updates').click();
         await expect(
-          window.getByTestId('about-dialog').getByTestId('update-status'),
+          window.getByTestId('settings-pane-updates').getByTestId('update-status'),
         ).toHaveAttribute('data-state', 'current');
         await expect(window.getByTestId('update-mark')).toHaveCount(0);
         expect(server.asked()).toBe(1);
@@ -119,53 +128,24 @@ test('the newest version running says so, and asks once as it starts', async () 
   }
 });
 
-test('with no network the app carries on, and About says it could not check', async () => {
+test('with no network the app carries on, and Check now says it could not check', async () => {
   // playwright.config.ts points the check at a port nothing listens on.
   await withApp(async (window) => {
+    await window.getByTestId('settings').click();
+    await window.getByTestId('settings-tab-updates').click();
+    await window.getByTestId('check-updates').click();
+    await expect(
+      window.getByTestId('settings-pane-updates').getByTestId('update-status'),
+    ).toHaveAttribute('data-state', 'failed');
+    await window.getByTestId('settings-close').click();
+    await expect(window.getByTestId('update-mark')).toHaveCount(0);
+
     await openAbout(window);
     await expect(window.getByTestId('about-dialog').getByTestId('update-status')).toHaveAttribute(
       'data-state',
       'failed',
     );
-    await expect(window.getByTestId('update-mark')).toHaveCount(0);
   });
-});
-
-test('turned off, the next start asks nothing, and Check now still asks', async () => {
-  const server = await releases('leathercad-v0.0.1');
-  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-updates-'));
-  const env = { XDG_CONFIG_HOME: configHome, LEATHERCAD_RELEASES_URL: server.url };
-  try {
-    await withApp(
-      async (window) => {
-        await window.getByTestId('settings').click();
-        await window.getByTestId('settings-tab-updates').click();
-        const toggle = window.getByTestId('setting-update-check');
-        await expect(toggle).toBeChecked();
-        await toggle.uncheck();
-      },
-      { env },
-    );
-    const before = server.asked();
-
-    await withApp(
-      async (window) => {
-        await window.getByTestId('settings').click();
-        await window.getByTestId('settings-tab-updates').click();
-        await expect(window.getByTestId('setting-update-check')).not.toBeChecked();
-        expect(server.asked()).toBe(before);
-
-        await window.getByTestId('check-updates').click();
-        await expect(
-          window.getByTestId('settings-pane-updates').getByTestId('update-status'),
-        ).toHaveAttribute('data-state', 'current');
-        expect(server.asked()).toBe(before + 1);
-      },
-      { env },
-    );
-  } finally {
-    await server.close();
-  }
 });
 
 test('the Flatpak never asks: Settings says Flathub keeps it up to date', async () => {
@@ -177,7 +157,7 @@ test('the Flatpak never asks: Settings says Flathub keeps it up to date', async 
         await window.getByTestId('settings-tab-updates').click();
         await expect(window.getByTestId('updates-managed')).toBeVisible();
         await expect(window.getByTestId('check-updates')).toHaveCount(0);
-        await expect(window.getByTestId('setting-update-check')).toHaveCount(0);
+        await expect(window.getByTestId('updates-note')).toHaveCount(0);
         expect(server.asked()).toBe(0);
       },
       { env: { LEATHERCAD_RELEASES_URL: server.url, FLATPAK_ID: 'io.github.crnlsp.LeatherCAD' } },

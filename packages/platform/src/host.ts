@@ -187,14 +187,14 @@ export interface PlatformHost {
   takeLaunchFile(): Promise<string | null>;
 
   /**
-   * What the update check found (8.9): the start's, waited for while it runs,
-   * or the last *Check now*'s. `idle` when nothing has asked this session.
+   * What the update check found (8.9): the last one the maker asked for,
+   * waited for while it runs. `idle` when nothing has asked this session.
    */
   getUpdateStatus(): Promise<UpdateStatus>;
 
   /**
-   * Asks GitHub for the latest release now (8.9), whether or not the start
-   * does, and resolves with what it found. Installs nothing.
+   * Asks GitHub for the latest release now (8.9) — only ever because the
+   * maker pressed something — and resolves with what it found. Installs nothing.
    */
   checkForUpdates(): Promise<UpdateStatus>;
 }
@@ -321,11 +321,6 @@ export interface Preferences {
    * differs is kept, so a new default reaches a command the maker never moved.
    */
   readonly keyBindings: Readonly<Record<string, readonly KeyBinding[]>>;
-  /**
-   * Whether the app asks GitHub for the latest release as it starts (8.9). On
-   * by default, so a maker hears of a fix; *Check now* works either way.
-   */
-  readonly updateCheck: boolean;
 }
 
 /**
@@ -377,7 +372,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
   stitchMarginMm: 3.5,
   leatherThicknessMm: null,
   keyBindings: {},
-  updateCheck: true,
 };
 
 /** What macOS's native menu can ask the renderer to do (8.7). */

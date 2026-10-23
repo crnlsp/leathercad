@@ -22,7 +22,7 @@ export function VersionButton({
 }) {
   const { t } = useI18n();
   const [checking, check] = useChecking(onCheck);
-  // What this button's own check found is said; the start's is Settings' news.
+  // What this button's own check found is said; Check now's is Settings' news.
   const [asked, setAsked] = useState(false);
   const found =
     !asked || checking

@@ -353,7 +353,6 @@ and read once at start-up:
   "stitchMarginMm": 3.5,
   "leatherThicknessMm": null,
   "keyBindings": { "save": [{ "code": "F5" }] },
-  "updateCheck": true,
   "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
 }
 ```
@@ -381,10 +380,6 @@ new default once, and version 2 records the maker's real choice from then on.
 stitching and the next step. On by default; off, the bar is not drawn and its key (F6 unless
 moved) does nothing. A file written before U.17 has no such field, and the bar is on: the version
 stays 2, as for `keyBindings`.
-
-`updateCheck` (8.9) is Settings › Updates' switch for asking GitHub for the latest release as the
-app starts ([ADR 0020](adr/0020-update-discovery.md)). On by default, and on in a file written
-before 8.9, which has no such field; the version stays 2.
 
 **My tools** (U.13) are the maker's irons and starting values, in this file rather than a library
 of their own. `irons` is a list in the maker's order, each with an `id`, a `name` and a `pitchMm`;

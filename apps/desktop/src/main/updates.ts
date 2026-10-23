@@ -67,8 +67,9 @@ export function statusFrom(body: unknown, running: string): UpdateStatus {
  * The update check (8.9): one GET for the latest release, which says nothing
  * about the maker or their patterns. It downloads and installs nothing.
  *
- * Held by the main process for the session, so the window — or a new one on
- * macOS — reads the start's answer rather than asking again.
+ * Never asks by itself: only when the maker presses *Check now* or the
+ * version in the status bar. Held by the main process for the session, so a
+ * new window on macOS reads the last answer rather than asking again.
  */
 export class UpdateChecker {
   private last: Promise<UpdateStatus> | null = null;

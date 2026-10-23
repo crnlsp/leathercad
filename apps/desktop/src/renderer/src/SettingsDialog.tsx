@@ -551,11 +551,12 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
 }
 
 /**
- * Whether the app asks for a new version as it starts, and *Check now* (8.9).
- * It links to the release and installs nothing. The Flatpak has neither:
- * Flathub updates it, and this says so.
+ * *Check now* (8.9): the app asks for a new version only when the maker
+ * presses it, or the version in the status bar, never by itself. It links to
+ * the release and installs nothing. The Flatpak has none: Flathub updates it,
+ * and this says so.
  */
-function Updates({ preferences, onPreferences, updates, onCheckUpdates }: Props) {
+function Updates({ updates, onCheckUpdates }: Props) {
   const { t } = useI18n();
   const [checking, check] = useChecking(onCheckUpdates);
   if (updates.state === 'managed') {
@@ -567,13 +568,9 @@ function Updates({ preferences, onPreferences, updates, onCheckUpdates }: Props)
   }
   return (
     <>
-      <Toggle
-        id="update-check"
-        name={t('settings.updates.check.name')}
-        note={t('settings.updates.check.note')}
-        checked={preferences.updateCheck}
-        onChange={(on) => onPreferences({ updateCheck: on })}
-      />
+      <p className="setting-note" data-testid="updates-note">
+        {t('settings.updates.note')}
+      </p>
       <div className="setting">
         <div className="setting-text" aria-live="polite">
           {checking ? (
