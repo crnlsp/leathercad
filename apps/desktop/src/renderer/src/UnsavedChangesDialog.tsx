@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useI18n } from './i18n.js';
 
 /** What the maker was doing when they were asked; its consequence is `unsaved.consequence.<action>`. */
-export type DiscardingAction = 'close';
+export type DiscardingAction = 'close' | 'reload';
 
 /**
  * Asks before unsaved work is thrown away (slice 5.3a).

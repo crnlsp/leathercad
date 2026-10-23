@@ -41,13 +41,29 @@ export function launchApp(
     readonly env?: Readonly<Record<string, string>>;
     /** The XDG state home to start in. A new, empty one when omitted. */
     readonly state?: string;
+    /**
+     * Leave the app on its start screen (8.12). Otherwise a launch naming no
+     * project starts a new one there, as every test written before the start
+     * screen expects: an *Untitled* to draw on.
+     */
+    readonly startScreen?: boolean;
   } = {},
 ): Promise<ElectronApplication> {
-  return electron.launch({
+  const app = await electron.launch({
     args: ['.', ...(options.args ?? [])],
     cwd: DESKTOP_DIR,
     env: { ...process.env, ...options.env, XDG_STATE_HOME: options.state ?? freshStateHome() },
   });
+  const namesProject = (options.args ?? []).some((arg) => arg.toLowerCase().endsWith('.lcp'));
+  if (options.startScreen !== true && !namesProject) {
+    // Not awaited: the start screen shows once the app is up, after the tabs
+    // a last session left come back — then there is none, and nothing to press.
+    void app
+      .firstWindow()
+      .then((window) => window.getByTestId('start-new').click({ timeout: 20_000 }))
+      .catch(() => undefined);
+  }
+  return app;
 }
 
 /** What `launchApp` takes. */

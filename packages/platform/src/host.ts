@@ -211,7 +211,31 @@ export interface PlatformHost {
    * are kept; any other is dropped.
    */
   keepSession(projects: readonly string[], active: string | null): Promise<void>;
+
+  /**
+   * Renames a project's file to its new name, in the same folder (8.12) —
+   * never over another file, which comes back as `exists` with nothing
+   * touched. Only a file the app may write; the new path may be too.
+   */
+  renameProjectFile(path: string, name: string): Promise<FileRename>;
+
+  /** Shows a project's file in the system's file manager, selected (8.12). */
+  showInFolder(path: string): Promise<void>;
+
+  /**
+   * Moves a project's file to the system's Trash (8.12), where it can be
+   * restored — never deleted outright. Only a file the app may write.
+   */
+  trashProjectFile(path: string): Promise<void>;
 }
+
+/** What renaming a project's file came to (8.12). */
+export type FileRename =
+  | { readonly kind: 'renamed' | 'unchanged'; readonly path: string }
+  /** Another file in the folder has the name: nothing was touched. */
+  | { readonly kind: 'exists'; readonly file: string }
+  /** No file can have the name. */
+  | { readonly kind: 'invalid' };
 
 /** The tabs a start opens again (8.12). */
 export interface OpenSession {

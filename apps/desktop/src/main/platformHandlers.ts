@@ -11,7 +11,8 @@ import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
 import { OneAtATime } from './oneAtATime.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
-import { shownPath, type PreferencesStore, type Session } from './preferences.js';
+import { renameProjectFile } from './renameFile.js';
+import { isProjectPath, shownPath, type PreferencesStore, type Session } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
 import type { UpdateChecker } from './updates.js';
 
@@ -169,6 +170,39 @@ export function registerPlatformHandlers(
   // chose this session is kept — as for the recent list — so the session can
   // never become a way to reach any other file at the next start.
   ipcMain.handle(IPC.takeSession, () => takeSession());
+
+  // A project renamed renames its file (8.12): only one the renderer may
+  // write, in its own folder, never over another file. The new name is the
+  // maker's as much as the old, so it is granted, and the recent list follows.
+  ipcMain.handle(IPC.renameProjectFile, async (_event, path: unknown, name: unknown) => {
+    const from = guard(grants, path, 'write');
+    if (typeof name !== 'string') return { kind: 'invalid' };
+    const outcome = await renameProjectFile(from, name);
+    if (outcome.kind === 'renamed') {
+      grants.grant(outcome.path);
+      if (preferences.recentFiles.includes(from)) {
+        await preferences.forgetRecent(from);
+        await preferences.noteRecent(outcome.path);
+        onRecentChanged(outcome.path);
+      }
+      log.info(`renamed a project file to ${JSON.stringify(outcome.path)}`);
+    }
+    return outcome;
+  });
+
+  // A tab's menu (8.12): its file shown in the file manager, or moved to the
+  // Trash — the system's, from which it can be restored. Only a project the
+  // renderer may write, and only a project file.
+  ipcMain.handle(IPC.showInFolder, (_event, path: unknown) => {
+    shell.showItemInFolder(guard(grants, path, 'read'));
+  });
+  ipcMain.handle(IPC.trashProjectFile, async (_event, path: unknown) => {
+    const target = guard(grants, path, 'write');
+    if (!isProjectPath(target)) throw new Error('Only a project file is moved to the Trash.');
+    await shell.trashItem(target);
+    await preferences.forgetRecent(target);
+    log.info(`moved a project file to the Trash: ${JSON.stringify(target)}`);
+  });
   ipcMain.handle(IPC.keepSession, async (_event, projects: unknown, active: unknown) => {
     const chosen = Array.isArray(projects)
       ? projects.filter((path) => grants.allows(path, 'write'))

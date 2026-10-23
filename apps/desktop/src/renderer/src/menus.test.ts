@@ -8,6 +8,7 @@ import {
   projectMenu,
   recentParts,
   sharedReasons,
+  tabMenu,
   type MenuEntry,
 } from './menus.js';
 
@@ -170,5 +171,44 @@ describe('a reason several items share (8.8)', () => {
       refused('c', 'Empty'),
     ]);
     expect(said.size).toBe(0);
+  });
+});
+
+describe('a tab’s menu (8.12)', () => {
+  const { t } = createI18n('en');
+  const none = (): void => undefined;
+  const actions = {
+    rename: none,
+    save: none,
+    saveAs: none,
+    reload: none,
+    duplicate: none,
+    showInFolder: none,
+    copyPath: none,
+    trash: none,
+    close: none,
+    closeOthers: none,
+  };
+  const refused = (entries: readonly MenuEntry[]): string[] =>
+    entries.flatMap((entry) =>
+      entry.kind === 'item' && entry.refusal !== undefined ? [entry.id] : [],
+    );
+
+  it('refuses, saying why, what needs a file while there is none', () => {
+    const entries = tabMenu(actions, { hasFile: false, othersOpen: true }, t);
+    expect(refused(entries)).toEqual(['tab-reload', 'tab-show', 'tab-copy-path', 'tab-trash']);
+  });
+
+  it('offers all of it to a saved project beside others, the Trash marked as danger', () => {
+    const entries = tabMenu(actions, { hasFile: true, othersOpen: true }, t);
+    expect(refused(entries)).toEqual([]);
+    const trash = entries.find((entry) => entry.kind === 'item' && entry.id === 'tab-trash');
+    expect(trash).toMatchObject({ danger: true });
+  });
+
+  it('has no other tab to close when it is the only one', () => {
+    expect(refused(tabMenu(actions, { hasFile: true, othersOpen: false }, t))).toEqual([
+      'tab-close-others',
+    ]);
   });
 });

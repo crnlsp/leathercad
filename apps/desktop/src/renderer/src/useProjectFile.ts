@@ -136,6 +136,13 @@ export function useProjectFile(
   exportPdfFile: (shown?: Uint8Array) => Promise<ExportReport | null>;
   /** The same, for a drawing as an SVG or a DXF (6.2, 6.5): written, not opened. */
   exportDrawingFile: (format: DrawingFormat) => Promise<ExportReport | null>;
+  /**
+   * Reads a tab's file again, as it was last saved (8.12), in the same tab:
+   * its history starts again there. The caller asks about unsaved work first.
+   */
+  reload: (tab: ProjectTab) => Promise<void>;
+  /** A copy of a tab's project in a new tab: unsaved, with no file, as recovered work is. */
+  duplicate: (tab: ProjectTab) => void;
 } {
   /** What went wrong, said in the tab it went wrong for — or on the start screen, with none. */
   const fail = useCallback(
@@ -214,10 +221,11 @@ export function useProjectFile(
 
   const openPath = useCallback(
     async (target: string) => {
-      // Open already: its tab, as it is — never a second copy to save over the first.
+      // Open already: its tab, as it is — never a second copy to save over the
+      // first — and the tab bounces, so the maker sees it was open (8.12).
       const open = tabs.byPath(target);
       if (open !== undefined) {
-        tabs.activate(open.id);
+        tabs.nudge(open.id);
         return;
       }
       try {
@@ -354,7 +362,40 @@ export function useProjectFile(
     [onStartError, tabFor, tabs],
   );
 
+  const reload = useCallback(
+    async (tab: ProjectTab) => {
+      const path = tab.file.path;
+      if (path === null) return;
+      try {
+        const loaded = loadProject(await host().readFile(path));
+        tab.store.reset({ project: loaded.project });
+        tabs.update(tab.id, (each) => {
+          each.savedDocument = each.store.getState().document;
+          each.createdUtc = loaded.manifest.createdUtc;
+          each.file = { path, error: null, savedAt: null };
+        });
+      } catch (error) {
+        fail(tab, error);
+      }
+    },
+    [fail, host, tabs],
+  );
+
+  const duplicate = useCallback(
+    (tab: ProjectTab) => {
+      // A project of its own: a new id, from the same place new projects get theirs.
+      const project = { ...tab.store.getState().document.project, id: blank().project.id };
+      const copy = tabFor({ project });
+      copy.savedDocument = null;
+      copy.cameras.frameDrawing = true;
+      tabs.add(copy);
+    },
+    [blank, tabFor, tabs],
+  );
+
   return {
+    reload,
+    duplicate,
     save,
     open,
     openPath,

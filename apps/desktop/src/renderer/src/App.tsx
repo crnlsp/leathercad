@@ -56,10 +56,11 @@ import {
   type ExportReport,
 } from './useProjectFile.js';
 import { ProjectBar, windowTitle } from './ProjectBar.js';
+import { MessageDialog } from './MessageDialog.js';
 import { NewTabMenu, ProjectMenu } from './ProjectMenu.js';
 import { StartScreen } from './StartScreen.js';
 import { ProjectTabs, isDirty, newTab, tabName, type ProjectTab } from './projectTabs.js';
-import { TabStrip } from './TabStrip.js';
+import { TabContextMenu, TabStrip } from './TabStrip.js';
 import { printStatusFor } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
@@ -146,7 +147,8 @@ export function App({
       newTab(nextId(), new DocumentStore(opened), untitled),
     [nextId],
   );
-  const tabs = useMemo(() => new ProjectTabs(tabFor(blank(), 1)), [tabFor, blank]);
+  // None at first: the start screen, unless the last session's tabs come back.
+  const tabs = useMemo(() => new ProjectTabs(), []);
   const { tabs: openTabs, active } = useSyncExternalStore(tabs.subscribe, tabs.getSnapshot);
   // With every project closed the window shows its start screen (8.12), and
   // the chrome below is not shown. Its hooks still run, in their order, over
@@ -470,21 +472,57 @@ export function App({
   // which turns the active tab's name into a field. One edit, one undo step.
   const projectMenuRef = useRef<HTMLButtonElement>(null);
   const [renaming, setRenaming] = useState<Press | null>(null);
+  // Something the maker must read about a project's file (8.12): why a rename
+  // was refused — its new name is taken, or no file can have it — or why a
+  // file could not go to the Trash.
+  const [notice, setNotice] = useState<{ title: string; text: string } | null>(null);
+  const setRenameRefusal = useCallback(
+    (text: string) => setNotice({ title: t('rename.title'), text }),
+    [t],
+  );
+  // A tab's own menu (8.12), open at a point, and the tab whose file is being
+  // asked about before it goes to the Trash.
+  const [tabMenuAt, setTabMenuAt] = useState<{ id: string; x: number; y: number } | null>(null);
+  const menuTab =
+    tabMenuAt === null ? undefined : openTabs.find((each) => each.id === tabMenuAt.id);
+  const [trashing, setTrashing] = useState<ProjectTab | null>(null);
+
   const renamed = useCallback(
     (next: string | null) => {
       const named = tabs.active;
-      if (
-        named !== null &&
-        next !== null &&
-        next !== named.store.getState().document.project.name
-      ) {
-        named.store.dispatch(setProjectName(next));
-      }
       const back = renaming === 'keyboard';
       setRenaming(null);
       if (back) requestAnimationFrame(() => projectMenuRef.current?.focus());
+      if (named === null || next === null) return;
+      if (next.trim() === named.store.getState().document.project.name.trim()) return;
+      void (async () => {
+        // A project with a file renames its file too (8.12) — never over
+        // another: then nothing is renamed, and the maker is told why. A
+        // name cleared leaves the file as it is; the tab shows its name.
+        const path = named.file.path;
+        if (path !== null && next.trim() !== '') {
+          try {
+            const outcome = await getPlatformHost().renameProjectFile(path, next);
+            if (outcome.kind === 'exists') {
+              setRenameRefusal(t('rename.exists', { file: outcome.file }));
+              return;
+            }
+            if (outcome.kind === 'invalid') {
+              setRenameRefusal(t('rename.invalid', { name: next.trim() }));
+              return;
+            }
+            tabs.update(named.id, (each) => {
+              each.file = { ...each.file, path: outcome.path };
+            });
+          } catch (error) {
+            setRenameRefusal(t('rename.failed', { reason: fileErrorText(error, t) }));
+            return;
+          }
+        }
+        named.store.dispatch(setProjectName(next.trim()));
+      })();
     },
-    [renaming, tabs],
+    [renaming, setRenameRefusal, t, tabs],
   );
   // General says how many are listed, so it asks as Settings opens.
   useEffect(() => {
@@ -934,26 +972,32 @@ export function App({
               onOpenRecent={(path) => getPlatformHost().openRecent(path)}
             />
           }
+          nudged={tabs.nudged}
           renaming={renaming !== null}
           onRenamed={renamed}
           onActivate={(id) => tabs.activate(id)}
           onClose={(id) => void closeTab(id)}
+          onTabMenu={(id, at) => setTabMenuAt({ id, ...at })}
         />
+        {/* Not before the start has opened the last session's tabs: the start
+            screen would show for a moment before them. */}
         {active === null ? (
-          <StartScreen
-            recent={recent}
-            onRefreshRecent={refreshRecent}
-            error={startError === null ? null : fileErrorText(startError, t)}
-            onNew={newProject}
-            onOpen={() => void openProject()}
-            onOpenSample={() => void openSample()}
-            onOpenRecent={(path) =>
-              void getPlatformHost()
-                .openRecent(path)
-                .then(refreshRecent)
-                .catch(() => undefined)
-            }
-          />
+          !started ? null : (
+            <StartScreen
+              recent={recent}
+              onRefreshRecent={refreshRecent}
+              error={startError === null ? null : fileErrorText(startError, t)}
+              onNew={newProject}
+              onOpen={() => void openProject()}
+              onOpenSample={() => void openSample()}
+              onOpenRecent={(path) =>
+                void getPlatformHost()
+                  .openRecent(path)
+                  .then(refreshRecent)
+                  .catch(() => undefined)
+              }
+            />
+          )
         ) : (
           <>
             <ProjectBar
@@ -1394,6 +1438,90 @@ export function App({
 
         {aboutOpen && (
           <AboutDialog version={version} updates={updates} onClose={() => setAboutOpen(false)} />
+        )}
+
+        {notice !== null && (
+          <MessageDialog title={notice.title} testId="file-notice" onClose={() => setNotice(null)}>
+            <p>{notice.text}</p>
+          </MessageDialog>
+        )}
+
+        {tabMenuAt !== null && menuTab !== undefined && (
+          <TabContextMenu
+            key={`${tabMenuAt.id}:${String(tabMenuAt.x)},${String(tabMenuAt.y)}`}
+            tab={menuTab}
+            at={tabMenuAt}
+            othersOpen={openTabs.length > 1}
+            actions={{
+              rename: (how) => {
+                tabs.activate(menuTab.id);
+                setRenaming(how ?? 'pointer');
+              },
+              save: () => void file.save(menuTab),
+              saveAs: () => void file.save(menuTab, true),
+              reload: () =>
+                void confirmDiscard('reload', menuTab).then((proceed) =>
+                  proceed ? file.reload(menuTab) : undefined,
+                ),
+              duplicate: () => file.duplicate(menuTab),
+              showInFolder: () => {
+                if (menuTab.file.path !== null) {
+                  void getPlatformHost()
+                    .showInFolder(menuTab.file.path)
+                    .catch(() => undefined);
+                }
+              },
+              copyPath: () => {
+                if (menuTab.file.path !== null) {
+                  void navigator.clipboard.writeText(menuTab.file.path).catch(() => undefined);
+                }
+              },
+              trash: () => setTrashing(menuTab),
+              close: () => void closeTab(menuTab.id),
+              closeOthers: () =>
+                void (async () => {
+                  for (const other of tabs.tabs.filter((each) => each !== menuTab)) {
+                    // Each asks about its own unsaved work; Cancel keeps it and goes on.
+                    await closeTab(other.id);
+                  }
+                })(),
+            }}
+            onClose={() => setTabMenuAt(null)}
+          />
+        )}
+
+        {trashing !== null && trashing.file.path !== null && (
+          <MessageDialog
+            title={t('tabMenu.trashTitle', { name: tabName(trashing, t) })}
+            testId="trash-dialog"
+            onClose={() => setTrashing(null)}
+            confirm={{
+              label: t('tabMenu.trashConfirm'),
+              danger: true,
+              onConfirm: () => {
+                const doomed = trashing;
+                const path = doomed.file.path;
+                setTrashing(null);
+                if (path === null) return;
+                void getPlatformHost()
+                  .trashProjectFile(path)
+                  // Its file is gone: the tab goes without a question.
+                  .then(() => tabs.close(doomed.id))
+                  .catch((error: unknown) =>
+                    setNotice({
+                      title: t('tabMenu.trashTitle', { name: tabName(doomed, t) }),
+                      text: t('tabMenu.trashFailed', { reason: fileErrorText(error, t) }),
+                    }),
+                  );
+              },
+            }}
+          >
+            <p>
+              {t(isDirty(trashing) ? 'tabMenu.trashBodyUnsaved' : 'tabMenu.trashBody', {
+                file: trashing.file.path,
+              })}
+            </p>
+          </MessageDialog>
         )}
 
         {printing && (

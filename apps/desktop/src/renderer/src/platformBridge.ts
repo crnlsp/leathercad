@@ -1,5 +1,6 @@
 import type {
   MenuAction,
+  FileRename,
   OpenDialogOptions,
   OpenSession,
   PlatformHost,
@@ -53,6 +54,9 @@ interface PreloadBridge {
   checkForUpdates(): Promise<UpdateStatus>;
   takeSession(): Promise<OpenSession>;
   keepSession(projects: readonly string[], active: string | null): Promise<void>;
+  renameProjectFile(path: string, name: string): Promise<FileRename>;
+  showInFolder(path: string): Promise<void>;
+  trashProjectFile(path: string): Promise<void>;
 }
 
 declare global {

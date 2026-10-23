@@ -156,6 +156,100 @@ export function projectMenu(
 }
 
 /**
+ * A tab's own menu (8.12), from a right-click on it or the menu key: what can
+ * be done to that project and its file. What needs a file — reload, show,
+ * copy its path, move it to the Trash — says so while there is none.
+ */
+export function tabMenu(
+  actions: {
+    readonly rename: (how?: 'keyboard' | 'pointer') => void;
+    readonly save: () => void;
+    readonly saveAs: () => void;
+    readonly reload: () => void;
+    readonly duplicate: () => void;
+    readonly showInFolder: () => void;
+    readonly copyPath: () => void;
+    readonly trash: () => void;
+    readonly close: () => void;
+    readonly closeOthers: () => void;
+  },
+  facts: { readonly hasFile: boolean; readonly othersOpen: boolean },
+  t: Translate,
+): MenuEntry[] {
+  const noFile = facts.hasFile ? undefined : t('tabMenu.noFile');
+  return [
+    { kind: 'item', id: 'tab-rename', label: t('tabMenu.rename'), onChoose: actions.rename },
+    {
+      kind: 'item',
+      id: 'tab-save',
+      label: t('tabMenu.save'),
+      keys: 'save',
+      onChoose: actions.save,
+    },
+    {
+      kind: 'item',
+      id: 'tab-save-as',
+      label: t('tabMenu.saveAs'),
+      keys: 'saveAs',
+      onChoose: actions.saveAs,
+    },
+    {
+      kind: 'item',
+      id: 'tab-reload',
+      label: t('tabMenu.reload'),
+      note: t('tabMenu.reloadNote'),
+      onChoose: actions.reload,
+      refusal: noFile,
+    },
+    {
+      kind: 'item',
+      id: 'tab-duplicate',
+      label: t('tabMenu.duplicate'),
+      onChoose: actions.duplicate,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'item',
+      id: 'tab-show',
+      label: t('tabMenu.showInFolder'),
+      onChoose: actions.showInFolder,
+      refusal: noFile,
+    },
+    {
+      kind: 'item',
+      id: 'tab-copy-path',
+      label: t('tabMenu.copyPath'),
+      onChoose: actions.copyPath,
+      refusal: noFile,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'item',
+      id: 'tab-trash',
+      label: t('tabMenu.trash'),
+      danger: true,
+      onChoose: actions.trash,
+      refusal: noFile,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'item',
+      id: 'tab-close',
+      label: t('tabMenu.close'),
+      keys: 'closeTab',
+      onChoose: actions.close,
+    },
+    {
+      kind: 'item',
+      id: 'tab-close-others',
+      label: t('tabMenu.closeOthers'),
+      onChoose: actions.closeOthers,
+      refusal: facts.othersOpen ? undefined : t('tabMenu.onlyTab'),
+    },
+  ];
+}
+
+/**
  * What *+* on the tab strip opens (8.12): a tab for a new project, or for one
  * the maker has — chosen on disk, or one of the recent projects, the Project
  * menu's own list. Each opens in a tab of its own; one already open goes to

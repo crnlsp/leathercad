@@ -15,7 +15,35 @@
     "addTooltip": "A new project, or one you have, in a tab of its own",
     "menu": "Project menu",
     "menuTooltip": "New, open, save as, rename, and recent projects",
-    "noProject": "No project is open"
+    "noProject": "No project is open",
+    "alreadyOpen": "{{name}} is open already"
+  },
+  "tabMenu": {
+    "label": "Menu for {{name}}",
+    "rename": "Rename…",
+    "save": "Save",
+    "saveAs": "Save as…",
+    "reload": "Reload from disk",
+    "reloadNote": "The file as it was last saved",
+    "duplicate": "Duplicate as a new project",
+    "showInFolder": "Show in folder",
+    "copyPath": "Copy path",
+    "trash": "Move file to Trash…",
+    "close": "Close",
+    "closeOthers": "Close other tabs",
+    "noFile": "Not saved to a file yet",
+    "onlyTab": "No other tab is open",
+    "trashTitle": "Move “{{name}}” to the Trash?",
+    "trashBody": "{{file}} goes to the system’s Trash, where it can be restored, and its tab closes.",
+    "trashBodyUnsaved": "{{file}} goes to the system’s Trash, where it can be restored, and its tab closes. Its unsaved changes are lost.",
+    "trashConfirm": "Move to Trash",
+    "trashFailed": "The file could not be moved to the Trash. {{reason}}"
+  },
+  "rename": {
+    "title": "Not renamed",
+    "exists": "A file named “{{file}}” is already in this project’s folder. Choose another name: the project and its file keep the one they have.",
+    "invalid": "A file cannot be called “{{name}}”: it has a character such as / \\ : * ? \" < > |, or is a name the system keeps. Choose another name.",
+    "failed": "The project’s file could not be renamed, so the project keeps its name. {{reason}}"
   },
   "start": {
     "title": "No project open",
@@ -464,7 +492,8 @@
     "discard": "Don’t save",
     "title": "Save changes to “{{name}}”?",
     "consequence": {
-      "close": "If you close without saving, your changes are lost."
+      "close": "If you close without saving, your changes are lost.",
+      "reload": "Reloading reads the file as it was last saved, and your changes are lost."
     }
   },
   "deleteDialog": {

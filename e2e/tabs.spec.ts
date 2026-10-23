@@ -1,11 +1,12 @@
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
-import { activeTab, closeActiveTab, renameProject } from './projectMenu.js';
+import { closeApp } from './closeApp.js';
+import { drawAPanel, expectNoViolations, launchApp, withApp } from './launchApp.js';
+import { activeTab, closeActiveTab, fromProjectMenu, renameProject } from './projectMenu.js';
 
 /**
  * Slice 8.12: several projects in one window, a tab each, as in Notepad.
@@ -199,11 +200,140 @@ test('the open tabs come back at the next start, the one in front in front', asy
     { env: { XDG_CONFIG_HOME: config } },
   );
 
-  await withApp(
-    async (window) => {
-      await expect(tabs(window)).toHaveText(['Wallet', 'Belt']);
-      await expect(window.getByTestId('project-name')).toHaveText('Wallet');
-    },
-    { env: { XDG_CONFIG_HOME: config } },
-  );
+  const again = await launchApp({ env: { XDG_CONFIG_HOME: config }, startScreen: true });
+  try {
+    const window = await again.firstWindow();
+    await expect(tabs(window)).toHaveText(['Wallet', 'Belt']);
+    await expect(window.getByTestId('project-name')).toHaveText('Wallet');
+    await expect(window.getByTestId('start-screen')).toHaveCount(0);
+  } finally {
+    await closeApp(again);
+  }
+});
+
+test('the app starts on its start screen, and a project opened again bounces its tab', async () => {
+  const app = await launchApp({ startScreen: true });
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByTestId('start-screen')).toBeVisible();
+    await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(0);
+    await expect.poll(() => window.title()).toBe('LeatherCAD');
+
+    await window.getByTestId('start-sample').click();
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('opening a project that is open already goes to its tab, which bounces', async () => {
+  await withApp(async (window, app) => {
+    const file = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet.lcp');
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+    }, file);
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await window.keyboard.press('Control+n');
+
+    await fromProjectMenu(window, 'open');
+    const tabs = window.getByTestId('tab-strip').getByRole('tab');
+    await expect(tabs).toHaveCount(2);
+    await expect(window.getByTestId('project-name')).toHaveText('Wallet');
+    await expect(window.getByTestId('project-tab').first()).toHaveClass(/\bnudged\b/);
+    await expect(window.getByTestId('already-open')).toHaveText('Wallet is open already');
+  });
+});
+
+test('renaming a saved project renames its file, never over another', async () => {
+  await withApp(async (window, app) => {
+    const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+    await app.evaluate(
+      ({ dialog }, path) => {
+        dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      },
+      join(folder, 'Belt.lcp'),
+    );
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('project-name')).toHaveText('Belt');
+    writeFileSync(join(folder, 'Wallet.lcp'), 'another project');
+
+    // Taken: nothing is renamed, and the maker is told.
+    await renameProject(window, 'Wallet');
+    await expect(window.getByTestId('file-notice')).toContainText('Wallet.lcp');
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('project-name')).toHaveText('Belt');
+    expect(existsSync(join(folder, 'Belt.lcp'))).toBe(true);
+    expect(readFileSync(join(folder, 'Wallet.lcp'), 'utf8')).toBe('another project');
+
+    // Free: the project and its file both take the name.
+    await renameProject(window, 'Watch strap');
+    await expect(window.getByTestId('project-name')).toHaveText('Watch strap');
+    await expect(window.getByTestId('file-path')).toContainText('Watch strap.lcp');
+    expect(existsSync(join(folder, 'Belt.lcp'))).toBe(false);
+    expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(true);
+  });
+});
+
+test('a tab’s own menu: reload from disk, duplicate, close others, move to the Trash', async () => {
+  await withApp(async (window, app) => {
+    const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+    const file = join(folder, 'Belt.lcp');
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, file);
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('project-name')).toHaveText('Belt');
+    const tabs = window.getByTestId('tab-strip').getByRole('tab');
+    const menuOf = async (index: number): Promise<void> => {
+      await window.getByTestId('project-tab').nth(index).click({ button: 'right' });
+      await expect(window.getByTestId('tab-menu')).toBeVisible();
+    };
+
+    // Reload over unsaved work asks first, then reads the file as saved.
+    await drawAPanel(window, { left: 350, parts: '2' });
+    await menuOf(0);
+    await window.getByTestId('tab-reload').click();
+    await expect(window.getByTestId('unsaved-dialog')).toContainText('Reloading');
+    await window.getByTestId('unsaved-discard').click();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+
+    // A copy, unsaved and with no file, in a tab of its own.
+    await menuOf(0);
+    await window.getByTestId('tab-duplicate').click();
+    await expect(tabs).toHaveCount(2);
+    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('file-path')).toHaveCount(0);
+
+    // Without a file, what needs one is refused and says why.
+    await menuOf(1);
+    await expect(window.getByTestId('tab-reload')).toHaveAttribute('aria-disabled', 'true');
+    await expect(window.getByTestId('tab-trash')).toHaveAttribute('aria-disabled', 'true');
+    await window.keyboard.press('Escape');
+
+    // Close the others: the copy's unsaved work is asked about.
+    await menuOf(0);
+    await window.getByTestId('tab-close-others').click();
+    await window.getByTestId('unsaved-discard').click();
+    await expect(tabs).toHaveCount(1);
+
+    // To the Trash, after a question, and the tab goes with it.
+    await app.evaluate(({ shell }) => {
+      shell.trashItem = async (path: string) => {
+        (globalThis as { trashed?: string }).trashed = path;
+      };
+    });
+    await menuOf(0);
+    await window.getByTestId('tab-trash').click();
+    const dialog = window.getByTestId('trash-dialog');
+    await expect(dialog).toContainText('Belt.lcp');
+    await expect(dialog.getByTestId('trash-dialog-close')).toBeFocused();
+    await dialog.getByTestId('trash-dialog-confirm').click();
+    await expect(tabs).toHaveCount(0);
+    expect(await app.evaluate(() => (globalThis as { trashed?: string }).trashed)).toBe(file);
+  });
 });

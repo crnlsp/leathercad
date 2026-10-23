@@ -188,8 +188,9 @@ export interface TabsSnapshot {
 /**
  * The open projects, in their order, and which one the window shows (8.12).
  *
- * The app starts with one, an *Untitled*; closing the last leaves none, and
- * the app running, on its start screen. A plain store with `subscribe`, like
+ * The app starts with none, on its start screen — or with the projects its
+ * last session had open — and closing the last leaves none again, the app
+ * still running. A plain store with `subscribe`, like
  * the document's, so React reads it through `useSyncExternalStore` and
  * nothing else holds the list.
  */
@@ -197,8 +198,9 @@ export class ProjectTabs {
   private snapshot: TabsSnapshot;
   private readonly listeners = new Set<() => void>();
 
-  constructor(first: ProjectTab) {
-    this.snapshot = { tabs: [first], active: first };
+  constructor(first?: ProjectTab) {
+    this.snapshot =
+      first === undefined ? { tabs: [], active: null } : { tabs: [first], active: first };
   }
 
   getSnapshot = (): TabsSnapshot => this.snapshot;
@@ -242,6 +244,21 @@ export class ProjectTabs {
   add(tab: ProjectTab): void {
     this.set([...this.snapshot.tabs, tab], tab);
   }
+
+  /**
+   * Draws the eye to a tab (8.12): a project opened again that was open
+   * already is not opened twice, and its tab says so with a small bounce.
+   * A count, so the same tab asked for twice bounces twice.
+   */
+  nudge(id: string): void {
+    const tab = this.snapshot.tabs.find((each) => each.id === id);
+    if (tab === undefined) return;
+    this.nudged = { id, count: this.nudged.count + 1 };
+    this.set(this.snapshot.tabs, tab);
+  }
+
+  /** The tab last nudged, and how many nudges there have been. */
+  nudged: { readonly id: string | null; readonly count: number } = { id: null, count: 0 };
 
   activate(id: string): void {
     const tab = this.snapshot.tabs.find((each) => each.id === id);

@@ -2,6 +2,8 @@ import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { intoMenu } from './fieldMenu.js';
+import { ContextMenu } from './Menu.js';
+import { tabMenu } from './menus.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { isDirty, tabName, type ProjectTab } from './projectTabs.js';
@@ -15,7 +17,9 @@ import { Tooltip } from './Tooltip.js';
  * The active tab is the project bar's colour and runs into it: the bar below
  * is that tab's. A tab says its project's name, and a dot where its close
  * button is while it has unsaved work — the button comes back under the
- * pointer, as in Notepad. A middle click closes it too. *Rename…* in the
+ * pointer, as in Notepad. A middle click closes it too, and a right-click
+ * opens its own menu: rename, save, reload from disk, duplicate, show in
+ * folder, copy path, move to the Trash, close. *Rename…* in the
  * Project menu turns the active tab's name into a field (U.7's rename, moved
  * here with the name).
  *
@@ -29,10 +33,12 @@ export function TabStrip({
   active,
   menu,
   add,
+  nudged,
   renaming,
   onRenamed,
   onActivate,
   onClose,
+  onTabMenu,
 }: {
   tabs: readonly ProjectTab[];
   /** None on the start screen. */
@@ -41,6 +47,8 @@ export function TabStrip({
   menu: ReactNode;
   /** *+*, after the tabs: a new project, or one the maker has. */
   add: ReactNode;
+  /** A tab to bounce: its project was opened again, and was open already. */
+  nudged: { readonly id: string | null; readonly count: number };
   /** The active tab's name is a field. */
   renaming: boolean;
   /** The name typed, or null when it was put back. */
@@ -48,9 +56,14 @@ export function TabStrip({
   onActivate: (id: string) => void;
   /** Asks first when the tab has unsaved work. */
   onClose: (id: string) => void;
+  /** A tab's own menu, at a point in the window: a right-click, or the menu key. */
+  onTabMenu: (id: string, at: { x: number; y: number }) => void;
 }) {
   const { t } = useI18n();
   const list = useRef<HTMLDivElement>(null);
+  const bounced = tabs.find((tab) => tab.id === nudged.id);
+  const alreadyOpen =
+    bounced === undefined ? '' : t('tabs.alreadyOpen', { name: tabName(bounced, t) });
 
   // The active tab in view, when there are more than the strip can show.
   useEffect(() => {
@@ -100,7 +113,12 @@ export function TabStrip({
             <div
               key={tab.id}
               role="presentation"
-              className={['tab', selected ? 'active' : '', unsaved ? 'unsaved' : '']
+              className={[
+                'tab',
+                selected ? 'active' : '',
+                unsaved ? 'unsaved' : '',
+                tab.id === nudged.id ? `nudged nudged-${String(nudged.count % 2)}` : '',
+              ]
                 .filter((each) => each !== '')
                 .join(' ')}
               data-testid="project-tab"
@@ -108,6 +126,18 @@ export function TabStrip({
               // Chromium's autoscroll.
               onMouseDown={(event) => {
                 if (event.button === 1) event.preventDefault();
+              }}
+              // Its menu (8.12): where the pointer is, or from the menu key or
+              // Shift+F10, under the tab.
+              onContextMenu={(event) => {
+                event.preventDefault();
+                const box = event.currentTarget.getBoundingClientRect();
+                onTabMenu(
+                  tab.id,
+                  event.button === -1
+                    ? { x: box.left, y: box.bottom }
+                    : { x: event.clientX, y: event.clientY },
+                );
               }}
               onAuxClick={(event) => {
                 if (event.button === 1) onClose(tab.id);
@@ -153,6 +183,10 @@ export function TabStrip({
         })}
       </div>
       {add}
+      {/* Said politely, as the tab bounces: what was asked for was open already. */}
+      <span className="visually-hidden" aria-live="polite" data-testid="already-open">
+        {alreadyOpen}
+      </span>
     </div>
   );
 }
@@ -196,6 +230,32 @@ function NameField({ name, onDone }: { name: string; onDone: (next: string | nul
         // The field's own menu is not leaving it (U.20).
         if (!intoMenu(event.relatedTarget)) finish(draft);
       }}
+    />
+  );
+}
+
+/** A tab's own menu (8.12), open at a point: `tabMenu`'s entries for that tab. */
+export function TabContextMenu({
+  tab,
+  at,
+  othersOpen,
+  actions,
+  onClose,
+}: {
+  tab: ProjectTab;
+  at: { readonly x: number; readonly y: number };
+  othersOpen: boolean;
+  actions: Parameters<typeof tabMenu>[0];
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <ContextMenu
+      at={at}
+      label={t('tabMenu.label', { name: tabName(tab, t) })}
+      testId="tab-menu"
+      entries={tabMenu(actions, { hasFile: tab.file.path !== null, othersOpen }, t)}
+      onClose={onClose}
     />
   );
 }

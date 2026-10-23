@@ -13,6 +13,7 @@
  */
 
 export type {
+  FileRename,
   OpenSession,
   PlatformHost,
   OpenDialogOptions,

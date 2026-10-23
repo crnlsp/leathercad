@@ -565,6 +565,47 @@ body {
   background: var(--tan);
 }
 
+/*
+ * A project opened again that was open already (8.12): its tab bounces once,
+ * so the eye finds it. Two names for one animation, swapped on each nudge, so
+ * a second nudge starts it again. Still, with reduced motion: the tab is in
+ * front, and the live region says it.
+ */
+.tab.nudged-0 {
+  animation: tab-nudge-0 360ms ease-out;
+}
+
+.tab.nudged-1 {
+  animation: tab-nudge-1 360ms ease-out;
+}
+
+@keyframes tab-nudge-0 {
+  30% {
+    transform: translateY(-4px);
+  }
+
+  60% {
+    transform: translateY(1px);
+  }
+}
+
+@keyframes tab-nudge-1 {
+  30% {
+    transform: translateY(-4px);
+  }
+
+  60% {
+    transform: translateY(1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab.nudged-0,
+  .tab.nudged-1 {
+    animation: none;
+  }
+}
+
 .tab-name {
   flex: 1;
   min-width: 0;

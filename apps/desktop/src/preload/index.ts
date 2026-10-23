@@ -87,6 +87,19 @@ const platformBridge = {
   keepSession: (projects: readonly string[], active: string | null): Promise<void> =>
     ipcRenderer.invoke(IPC.keepSession, projects, active),
 
+  renameProjectFile: (
+    path: string,
+    name: string,
+  ): Promise<
+    | { kind: 'renamed' | 'unchanged'; path: string }
+    | { kind: 'exists'; file: string }
+    | { kind: 'invalid' }
+  > => ipcRenderer.invoke(IPC.renameProjectFile, path, name),
+
+  showInFolder: (path: string): Promise<void> => ipcRenderer.invoke(IPC.showInFolder, path),
+
+  trashProjectFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.trashProjectFile, path),
+
   onOpenFile: (listener: (path: string) => void): (() => void) => {
     const handler = (_event: unknown, path: string): void => listener(path);
     ipcRenderer.on(IPC.openFile, handler);
