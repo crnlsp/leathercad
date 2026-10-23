@@ -94,12 +94,12 @@ instance, with a project per tab like Notepad's, the tabs on a strip of their ow
 bar under the system's title bar (variant A; a strip in a frameless title bar stays decided against
 by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-design.md) §4.4).
 
-- ◐ **8.11 One instance.** A second launch hands its command line to the running app and ends,
+- ✅ **8.11 One instance.** A second launch hands its command line to the running app and ends,
   before it writes anything. The window comes forward, restored if minimised, and opens the project
-  the line names — after asking about unsaved work, as Open does and as macOS's `open-file` already
-  did. A launch naming no project only brings the window forward. The lock is the configuration
+  the line names in a tab of its own, beside any unsaved work (8.12), as macOS's `open-file` does
+  too. A launch naming no project only brings the window forward. The lock is the configuration
   directory's, so the end-to-end tests, each with its own, still run side by side.
-- ◐ **8.12 Project tabs.** A tab strip above the project bar: the Project menu as an icon at its
+- ✅ **8.12 Project tabs.** A tab strip above the project bar: the Project menu as an icon at its
   left — where the project's name was the menu's button in the bar — then a tab per project, its
   project's name — its file's for a project with none of its own, *Untitled*, *Untitled 2*… for
   new ones — with a dot for unsaved work where its close button is, and *+*, a menu of a new
@@ -122,24 +122,27 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   launch each open a tab; a project already open goes to its tab, and an untouched *Untitled* is
   replaced. Each tab keeps its own document, history, selection, view, camera and file. Closing a
   tab with unsaved work asks, as closing the window did; closing the last leaves the app open on a
-  start screen — New, Open, the sample and the recent projects — and closing the window asks about
-  each unsaved tab in turn, *Cancel* stopping it. Ctrl+Page Down and Ctrl+Page Up go round the tabs
+  start screen — New, Open, the sample and the recent projects. Ctrl+Page Down and Ctrl+Page Up go round the tabs
   and Ctrl+W closes one, through the keymap — never the digits, which Design and Sheets have; a
   middle click closes too. The tabs with a file come back at the next start, the one in front in
   front (`session` in `preferences.json`). One file dialog at a time: a second Open while one is up is not shown.
   The window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work.
   A `tablist` with arrow keys, clean under axe.
-- ◐ **8.14 New from a template.** *New project* is two: *from scratch*, still Ctrl+N, and *from
+- ✅ **8.14 New from a template.** *New project* is two: *from scratch*, still Ctrl+N, and *from
   template…*, a picker of the templates that ship — the sample wallet, a card holder, a key fob and
   a coaster, each built from the app's own commands and clean — and the maker's own. *Save as
   template…* in the Project menu and a tab's menu saves any project as one, never over another of
   the same name unless asked; the maker's are removed from the picker. A project from a template
   opens untitled, unchanged and with an id of its own, so Save asks where and the template is never
   written.
-- ◐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
+- ✅ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
   `<pid>-<start>-<tab>.lcp`, written while it is in front or not; closing a tab or saving it clears
   it. After a crash every copy is offered in turn, each into a tab of its own. Copies from 1.5, one
   per session, are still found.
+
+8.11–8.14 were **done** on 2026-10-23, together, with `pnpm check` and `pnpm test:e2e` green on
+Linux; on Windows and macOS they wait for [`release-checklist.md`](release-checklist.md) §11 and §15
+with the packaged app.
 
 ### Drawing and editing
 
