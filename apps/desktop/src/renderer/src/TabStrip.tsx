@@ -7,6 +7,7 @@ import {
   type DragEvent,
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
 } from 'react';
 
 import { intoMenu } from './fieldMenu.js';
@@ -79,6 +80,7 @@ export function TabStrip({
 }) {
   const { t } = useI18n();
   const list = useRef<HTMLDivElement>(null);
+  const activeTab = useRef<HTMLDivElement>(null);
   // A tab being dragged along the strip, and where it would land: before the
   // tab at `at`, or after the last. Drawn as a line in the accent — the
   // maker's own gesture — between two tabs.
@@ -159,6 +161,7 @@ export function TabStrip({
           return (
             <div
               key={tab.id}
+              ref={selected ? activeTab : undefined}
               role="presentation"
               className={[
                 'tab',
@@ -224,24 +227,22 @@ export function TabStrip({
                 if (event.button === 1) onClose(tab.id);
               }}
             >
-              {selected && renaming ? (
-                <NameField name={tab.store.getState().document.project.name} onDone={onRenamed} />
-              ) : (
-                <button
-                  type="button"
-                  role="tab"
-                  className="tab-name"
-                  data-tab-id={tab.id}
-                  aria-selected={selected}
-                  tabIndex={selected ? 0 : -1}
-                  aria-label={unsaved ? t('tabs.unsaved', { name }) : name}
-                  // Its file, where the name alone may be one of two.
-                  title={tab.file.path ?? name}
-                  onClick={() => onActivate(tab.id)}
-                >
-                  <span {...(selected ? { 'data-testid': 'project-name' } : {})}>{name}</span>
-                </button>
-              )}
+              <button
+                type="button"
+                role="tab"
+                className={selected && renaming ? 'tab-name renaming' : 'tab-name'}
+                data-tab-id={tab.id}
+                aria-selected={selected}
+                tabIndex={selected && !renaming ? 0 : -1}
+                aria-label={unsaved ? t('tabs.unsaved', { name }) : name}
+                // Its file, where the name alone may be one of two.
+                title={tab.file.path ?? name}
+                onClick={() => onActivate(tab.id)}
+              >
+                <span {...(selected && !renaming ? { 'data-testid': 'project-name' } : {})}>
+                  {name}
+                </span>
+              </button>
               <Tooltip
                 text={t('tabs.closeTooltip')}
                 {...(selected ? { keys: 'closeTab' as const } : {})}
@@ -263,6 +264,15 @@ export function TabStrip({
           );
         })}
       </div>
+      {/* The name being typed lies over its tab, but outside the tab list,
+      which holds only tabs; the tab stays in it meanwhile. */}
+      {renaming && active !== null && (
+        <NameField
+          name={active.store.getState().document.project.name}
+          over={activeTab}
+          onDone={onRenamed}
+        />
+      )}
       {overflowing && (
         <MenuButton
           label={t('tabs.all')}
@@ -299,11 +309,32 @@ export function TabStrip({
  * One edit, so one undo step — typed into the bar before U.7, every letter
  * was a step of its own.
  */
-function NameField({ name, onDone }: { name: string; onDone: (next: string | null) => void }) {
+function NameField({
+  name,
+  over,
+  onDone,
+}: {
+  name: string;
+  /** The tab it lies over. */
+  over: RefObject<HTMLElement | null>;
+  onDone: (next: string | null) => void;
+}) {
   const { t } = useI18n();
   const [draft, setDraft] = useState(name);
   const done = useRef(false);
   const input = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    const field = input.current;
+    const tab = over.current;
+    const strip = field?.offsetParent;
+    if (field === null || tab === null || strip === null || strip === undefined) return;
+    const at = tab.getBoundingClientRect();
+    const from = strip.getBoundingClientRect();
+    field.style.left = `${String(at.left - from.left)}px`;
+    field.style.top = `${String(at.top - from.top)}px`;
+    field.style.width = `${String(at.width)}px`;
+    field.style.height = `${String(at.height)}px`;
+  }, [over]);
   useEffect(() => {
     input.current?.focus();
     input.current?.select();

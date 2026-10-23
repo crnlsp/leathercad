@@ -513,6 +513,7 @@ body {
  * a dot where its close button is, until the pointer is on the tab.
  */
 .tab-strip {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: var(--space-1);
@@ -1333,6 +1334,19 @@ body {
 }
 
 /* Renaming (U.7): the active tab's name is the field it was in the bar. */
+/* Renaming a tab (8.12): the field lies over it, outside the tab list. */
+.tab-strip > .project-name-input {
+  position: absolute;
+  /* Over the active tab, which is raised above its neighbours. */
+  z-index: 2;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.tab-name.renaming > span {
+  visibility: hidden;
+}
+
 .project-name-input {
   flex: 1;
   min-width: 0;

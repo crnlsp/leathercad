@@ -120,7 +120,7 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
 
     // ── Saved, and the same pocket when it is opened again ──────────────────
     await window.getByTestId('save').click();
-    await expect(window.getByTestId('save')).toHaveText('Save');
+    await expect(window.getByTestId('save')).toHaveAttribute('aria-disabled', 'true');
     // Its tab closed, so opening reads the file again rather than going back
     // to the tab (8.12).
     await closeActiveTab(window);

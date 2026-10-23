@@ -26,6 +26,8 @@ test('the Project menu opens by mouse and by keyboard, and gives focus back (8.7
     await window.keyboard.press('Enter');
     await expect(window.getByTestId('new')).toBeFocused();
     await window.keyboard.press('ArrowDown');
+    await expect(window.getByTestId('new-template')).toBeFocused();
+    await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('open')).toBeFocused();
     await window.keyboard.press('End');
     // An empty recent list: its line is the last thing focus reaches.

@@ -97,7 +97,8 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
 - ✅ **8.11 One instance.** A second launch — a `.lcp` double-clicked while the app runs, or the
   Start menu — hands its command line to the running app and ends, before it writes anything. The
   window comes forward, restored if minimised, and opens the project the line names in a tab of its
-  own (8.12); a launch naming no project only brings the window forward. The lock is the
+  own, beside any unsaved work (8.12), as macOS's `open-file` does too; a launch naming no project
+  only brings the window forward. The lock is the
   configuration directory's, so the end-to-end tests, each with its own, still run side by side.
   **Done** (2026-10-23).
 - ✅ **8.12 Project tabs.** A tab per project on a strip above the project bar, drawn as drawing
@@ -152,6 +153,10 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
   the template, exported, shown in the file manager and removed, with *Undo* for a few seconds; a
   `.lcp` is imported as one (`templates/` beside `preferences.json`). **Done** (2026-10-23).
+
+8.11–8.14 were **done** on 2026-10-23, together, with `pnpm check` and `pnpm test:e2e` green on
+Linux; on Windows and macOS they wait for [`release-checklist.md`](release-checklist.md) §11 and §15
+with the packaged app.
 
 ### Drawing and editing
 

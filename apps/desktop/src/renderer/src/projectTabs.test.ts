@@ -232,6 +232,16 @@ describe('the window', () => {
     expect(seen[0]).not.toBe(before);
     expect(seen[1]).not.toBe(seen[0]);
   });
+
+  it('gets a new list when a tab changes, so an effect over the tabs sees a save', () => {
+    const tabs = tabsOf(anEditedTab());
+    const before = tabs.tabs;
+    tabs.update(tabs.active!.id, (tab) => {
+      tab.savedDocument = tab.store.getState().document;
+    });
+    expect(tabs.tabs).not.toBe(before);
+    expect(tabs.tabs).toEqual(before);
+  });
 });
 
 describe('moving a tab (8.12)', () => {

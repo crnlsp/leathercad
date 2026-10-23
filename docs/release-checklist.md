@@ -248,7 +248,7 @@ A failure is lost work, which is a blocker above.
 
 ### 15. Project tabs
 
-Since 8.11–8.13, on each platform, with the packaged app.
+Since 8.11–8.14, on each platform, with the packaged app.
 
 1. Start the app: the start screen shows, with *New*, *Open*, the sample and the recent projects.
 2. Open two saved projects and start a new one: three tabs, the new one *Untitled*. Edit two of
@@ -263,7 +263,7 @@ Since 8.11–8.13, on each platform, with the packaged app.
    afterwards, from which it can be restored.
 6. With two tabs holding unsaved work, force-quit LeatherCAD (Task Manager, Activity Monitor,
    `kill -9`). Start it again: both projects are offered, one after the other, each into a tab.
-7. Close the window with unsaved tabs: each is asked about in turn; *Cancel* keeps the window.
+7. Close the window with unsaved tabs: one question names them all; *Cancel* keeps the window.
    Save them, close, and start again: the tabs come back, the one in front in front.
 8. On macOS, ⌘W closes the tab, not the window, and the Window menu has no *Close* on ⌘W.
 9. Rename a saved project, then Undo: the project and its file both have the old name again.
@@ -276,6 +276,9 @@ Since 8.11–8.13, on each platform, with the packaged app.
 13. Turn on Settings › General › *Keep unsaved projects when closing*, make an untitled project
     with a drawing, and close the window: nothing is asked. Start again: it is back, unsaved, and
     each tab is on its view and zoom.
+14. *New project › from template…*: the card holder opens *Untitled*, unchanged, with no problems;
+    *Save* asks where. *Save as template…* the project under a name already used: it asks before
+    replacing. The maker's template is in the picker, and removing it there takes it off.
 14. *New project from template…*: each template that ships opens, untitled, with nothing to fix in
     Problems. *Save as template…* on a project of yours: it is listed under *My templates*, and a
     second save under the same name asks before replacing it. In the picker, search, *Show*, *Kind*
