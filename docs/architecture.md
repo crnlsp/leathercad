@@ -503,7 +503,8 @@ vertices — waits until real documents show that flat feature picking on the ca
 
 Guides are **document objects** (persisted): an origin point plus an angle, so diagonal guides work,
 not just horizontal and vertical. They are dragged out from the rulers and snapped to like any
-other candidate. The Guides tool and Properties also place them. Select moves a guide as one
+other candidate. The Guides tool places one with a click, or through two snapped points with a
+drag; Properties adds one by orientation or parallel to the selected guide at a typed distance. Select moves a guide as one
 transaction; Properties edits its position and angle or deletes it. Guides live on the project,
 outside the leather parts, and draw only on the Design board: they do not print or frame exports.
 

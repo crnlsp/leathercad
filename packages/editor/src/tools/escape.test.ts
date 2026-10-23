@@ -6,6 +6,7 @@ import { Viewport } from '../viewport.js';
 import { createArcTool } from './arcTool.js';
 import { createCircleTool } from './circleTool.js';
 import { createEditPointsTool } from './editPointsTool.js';
+import { createGuideTool } from './guideTool.js';
 import { createHardwareTool } from './hardwareTool.js';
 import { createMeasureTool } from './measureTool.js';
 import { createLineTool, createPolylineTool } from './polylineTool.js';
@@ -67,6 +68,7 @@ const TOOLS: readonly [string, () => Tool][] = [
   ['text', () => createTextTool(nextId)],
   ['hardware', () => createHardwareTool(nextId)],
   ['points', () => createEditPointsTool()],
+  ['guide', () => createGuideTool(nextId)],
 ];
 
 describe('Escape with nothing to give up', () => {

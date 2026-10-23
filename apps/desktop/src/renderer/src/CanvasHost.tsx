@@ -870,6 +870,15 @@ export function CanvasHost({
     };
   }, []);
 
+  /** Where a guide dragged from a ruler lies: snapped like a tool's point, never to itself. */
+  const rulerGuideAt = useCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>, id: string): Vec2 => {
+      const input = toInput(event);
+      return managerRef.current?.snapGesture(input, [id]).at ?? input.at;
+    },
+    [toInput],
+  );
+
   /** The sheet and piece under an event on the Sheets view. */
   const pickOnSheets = useCallback(
     (
@@ -930,13 +939,13 @@ export function CanvasHost({
         const guide = { id: nextId(), angleRad: y < thickness ? 0 : Math.PI / 2 };
         rulerGuideRef.current = guide;
         store.begin({ action: 'add-guide' });
-        store.preview(addGuide({ ...guide, origin: toInput(event).at }));
+        store.preview(addGuide({ ...guide, origin: rulerGuideAt(event, guide.id) }));
         invalidate();
         return;
       }
       managerRef.current?.pointerDown(toInput(event));
     },
-    [pickOnSheets, toInput, onToolChange, nextId, store, invalidate],
+    [pickOnSheets, toInput, rulerGuideAt, onToolChange, nextId, store, invalidate],
   );
 
   const handlePointerMove = useCallback(
@@ -953,7 +962,7 @@ export function CanvasHost({
           rulerGuideRef.current = null;
           return;
         }
-        store.preview(addGuide({ ...guide, origin: raw }));
+        store.preview(addGuide({ ...guide, origin: rulerGuideAt(event, guide.id) }));
         invalidate();
         return;
       }
@@ -1012,7 +1021,7 @@ export function CanvasHost({
       hoveredRef.current = hovered;
       invalidate();
     },
-    [camera, invalidate, pickOnSheets, store, toInput],
+    [camera, invalidate, pickOnSheets, rulerGuideAt, store, toInput],
   );
 
   /**
@@ -1088,18 +1097,16 @@ export function CanvasHost({
         ) {
           store.rollback();
         } else {
-          store.preview(addGuide({ ...guide, origin: toInput(event).at }));
+          store.preview(addGuide({ ...guide, origin: rulerGuideAt(event, guide.id) }));
           store.commit();
           store.selectGuide(guide.id);
         }
         invalidate();
         return;
       }
-      if (event.type === 'pointercancel' && store.getState().selection.guide !== undefined)
-        store.rollback();
       managerRef.current?.pointerUp(toInput(event));
     },
-    [store, toInput, invalidate],
+    [store, toInput, rulerGuideAt, invalidate],
   );
 
   // The board's name, for the one Tab stop it is (U.14).

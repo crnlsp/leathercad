@@ -88,8 +88,10 @@ const BY_TOOL: Readonly<Record<Exclude<ToolId, 'select'>, ToolHints>> = {
     idle: [
       gesture('guides.placeHint', 1),
       press(SHIFT, 'guides.verticalHint', 2),
-      BACK_TO_SELECT(3),
+      gesture('guides.dragHint', 3),
+      BACK_TO_SELECT(4),
     ],
+    underway: [gesture('guides.dragHint', 1), CANCELS(2)],
   },
   rectangle: {
     idle: [

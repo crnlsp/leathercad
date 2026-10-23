@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { parseNumber } from '../packages/core/src/index.js';
 
-import { expectNoViolations, withApp } from './launchApp.js';
+import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 async function number(window: Page, label: string, value: number): Promise<void> {
@@ -186,5 +186,64 @@ test('drawing snaps to a selected guide and the snap-suspension modifier release
       await window.keyboard.up('Control');
     }
     expect(Math.abs((await x()) - guideX)).toBeGreaterThan(0.2);
+  });
+});
+
+test('a guide dragged from a ruler snaps to a corner, and Ctrl releases it (3.10)', async () => {
+  await withApp(async (window) => {
+    await drawAPanel(window, { parts: '1' });
+    const panel = window.getByTestId('property-panel');
+    const top =
+      parseNumber(await panel.getByLabel('Y').inputValue()) +
+      parseNumber(await panel.getByLabel('Height').inputValue());
+    const bottom = parseNumber(await panel.getByLabel('Y').inputValue());
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    if (box === null) throw new Error('canvas is missing');
+    const dragFromTopRuler = async (y: number) => {
+      await window.mouse.move(box.x + 300, box.y + 8);
+      await window.mouse.down();
+      await window.mouse.move(box.x + 151, box.y + y, { steps: 5 });
+      await window.mouse.up();
+      return parseNumber(await window.getByLabel('Guide y').inputValue());
+    };
+    // Pressed a pixel off the panel's top-left corner: the guide takes the corner.
+    const snapped = await dragFromTopRuler(151);
+    expect(Math.min(Math.abs(snapped - top), Math.abs(snapped - bottom))).toBeLessThan(0.001);
+    await window.keyboard.down('Control');
+    try {
+      const free = await dragFromTopRuler(153);
+      expect(Math.min(Math.abs(free - top), Math.abs(free - bottom))).toBeGreaterThan(0.2);
+    } finally {
+      await window.keyboard.up('Control');
+    }
+  });
+});
+
+test('the Guides tool drags a guide through two points, and Properties adds a parallel one (3.10)', async () => {
+  await withApp(async (window) => {
+    await window.getByTestId('tool-guide').click();
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    if (box === null) throw new Error('canvas is missing');
+    await window.mouse.move(box.x + 200, box.y + 300);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 300, box.y + 200, { steps: 5 });
+    await window.mouse.up();
+    await expect(window.getByLabel('Guide angle')).toHaveValue('45');
+    const y = parseNumber(await window.getByLabel('Guide y').inputValue());
+    const x = parseNumber(await window.getByLabel('Guide x').inputValue());
+
+    await number(window, 'Parallel distance', 15);
+    await window.getByTestId('guide-parallel-above').click();
+    await expect(window.locator('[data-testid^="guide-"][aria-pressed]')).toHaveCount(2);
+    await expect(window.getByLabel('Guide angle')).toHaveValue('45');
+    const movedX = parseNumber(await window.getByLabel('Guide x').inputValue()) - x;
+    const movedY = parseNumber(await window.getByLabel('Guide y').inputValue()) - y;
+    // Fifteen millimetres across a 45° guide, towards the top of the board, as
+    // near as the fields' two decimals read.
+    expect(movedY).toBeGreaterThan(0);
+    expect(Math.hypot(movedX, movedY)).toBeCloseTo(15, 1);
+    await window.getByTestId('undo').click();
+    await expect(window.locator('[data-testid^="guide-"][aria-pressed]')).toHaveCount(1);
+    await expectNoViolations(window, 'parallel guide controls');
   });
 });

@@ -359,9 +359,12 @@ export class ToolManager {
    * nothing draws it, and snapping to a grid the user cannot see is worse than
    * not snapping. Turning it on means reconciling those two first.
    */
-  private snapped(event: PointerInput): PointerInput {
+  private snapped(
+    event: PointerInput,
+    exclude: readonly string[] = this.active.snapExclusions?.(this.context) ?? NOTHING_EXCLUDED,
+  ): PointerInput {
     const before = this.caught;
-    this.caught = event.ctrlKey ? null : this.findSnap(event);
+    this.caught = event.ctrlKey ? null : this.findSnap(event, exclude);
 
     // A hovering pointer changes no document, and an idle tool asks for no
     // repaint — so without this the glyph is computed and never drawn until
@@ -371,13 +374,22 @@ export class ToolManager {
     return this.caught === null ? event : { ...event, at: this.caught.point };
   }
 
-  private findSnap(event: PointerInput): SnapCandidate | null {
+  /**
+   * Snaps a gesture the canvas handles itself rather than a tool — a guide
+   * dragged from a ruler (3.10) — with the same Ctrl and glyph, excluding what
+   * that gesture is moving. The active tool is not told.
+   */
+  snapGesture(event: PointerInput, exclude: readonly string[]): PointerInput {
+    return this.snapped(event, exclude);
+  }
+
+  private findSnap(event: PointerInput, exclude: readonly string[]): SnapCandidate | null {
     const { resolved, index } = this.snapIndex();
     return snap(index, resolved, event.at, {
       // A pick radius in pixels, so the feel is identical at any zoom — the
       // same rule `hitTest` follows. See CLAUDE.md invariant 1.
       toleranceMm: this.context.viewport.pickToleranceMm(),
-      exclude: this.active.snapExclusions?.(this.context) ?? NOTHING_EXCLUDED,
+      exclude,
     });
   }
 

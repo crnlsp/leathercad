@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { formatNumber } from '@leathercad/core';
 import { addGuide, deleteGuide, setGuide, type DocumentStore } from '@leathercad/document';
-import type { Project } from '@leathercad/domain';
+import { guideSides, parallelGuide, type GuideSide, type Project } from '@leathercad/domain';
 
 import { NumberField } from './NumberField.js';
 import { useI18n } from './i18n.js';
@@ -18,9 +19,19 @@ export function GuidesPanel({
   const selected = store.getState().selection.guide;
   const guides = project.guides ?? [];
   const picked = guides.find((guide) => guide.id === selected);
+  // How far a parallel guide goes: the maker's last answer, not the document's.
+  const [distance, setDistance] = useState(10);
   const add = (angleRad: number) => {
     const id = nextId();
     store.dispatch(addGuide({ id, origin: { x: 0, y: 0 }, angleRad }));
+    store.selectGuide(id);
+  };
+  const addParallel = (side: GuideSide) => {
+    if (picked === undefined) return;
+    const moved = parallelGuide(picked, side, distance);
+    if (moved === null) return;
+    const id = nextId();
+    store.dispatch(addGuide({ id, origin: moved.origin, angleRad: moved.angleRad }));
     store.selectGuide(id);
   };
   return (
@@ -75,6 +86,26 @@ export function GuidesPanel({
               store.dispatch(setGuide({ ...picked, angleRad: (degrees * Math.PI) / 180 }))
             }
           />
+          <div className="guide-parallel" role="group" aria-label={t('guides.parallel.title')}>
+            <NumberField
+              label={t('guides.parallel.distance')}
+              value={distance}
+              min={0}
+              onCommit={setDistance}
+            />
+            <div className="guide-actions">
+              {guideSides(picked).map((side) => (
+                <button
+                  key={side}
+                  className="tool"
+                  data-testid={`guide-parallel-${side}`}
+                  onClick={() => addParallel(side)}
+                >
+                  {t(`guides.parallel.${side}`)}
+                </button>
+              ))}
+            </div>
+          </div>
           <button
             className="tool danger"
             data-testid="guide-delete"

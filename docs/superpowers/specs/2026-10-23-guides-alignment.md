@@ -6,13 +6,20 @@ them, so the operation is one undo step and preserves the piece's internal relat
 
 ## Acceptance criteria
 
-- Drag from the top ruler for a horizontal guide, or the left ruler for a vertical one. A release
-  back on the rulers or outside the board cancels creation, as do Escape and pointer cancellation.
-  Undo during the drag cancels it without creating a later history entry.
-- The Guides tool places a horizontal guide; the modifier shown in its hint places a vertical one.
+- Drag from the top ruler for a horizontal guide, or the left ruler for a vertical one. The guide
+  snaps as a tool's point does, to corners, crossings and other guides, and the snap-suspension
+  modifier releases it. A release back on the rulers or outside the board cancels creation, as do
+  Escape and pointer cancellation. Undo during the drag cancels it without creating a later
+  history entry.
+- The Guides tool places a horizontal guide on a click; the modifier shown in its hint places a
+  vertical one. A drag places a guide through the press and the release, both snapped, so a guide
+  can run along an edge or from corner to corner without typing an angle. Escape cancels the drag.
   Properties can also add either orientation without the pointer. A guide's origin and angle can
   be typed, including diagonal angles, and the guide can be selected, moved, deleted and restored
   by undo. A feature at the same point remains selectable ahead of the guide.
+- A selected guide offers a parallel guide at a typed distance, on either side: above or below a
+  guide nearer horizontal, left or right of one nearer vertical. With a guide along an edge, this
+  is "15 mm in from this edge". Each is one undo step.
 - Drawing and moving snap to infinite guide lines, crossings between guides, and crossings with
   drawn geometry. The existing snap-suspension modifier works; a guide being moved excludes its
   own line and intersections. Guide positions remain world millimetres at every zoom and ratio.
@@ -31,6 +38,10 @@ Guides are a project-level array of `{ id, origin, angleRad }`, not features in 
 An absent array means no guides. Selection can name one guide, independently of feature/part
 selection, and history restores that selection. The initial UI has no guide names, visibility
 flags, locks or groups: exact position, angle and deletion are sufficient for this slice.
+
+A guide is a free line, not a reference: one placed along an edge or parallel to another does
+not follow when that edge or guide later moves. Following would make guides derived geometry,
+with the derivation graph's rules; that waits until makers ask for it.
 
 A line's origin is not canonicalised: it is the point the maker placed and can retype. Angles are
 stored exactly, like path geometry, so a save does not tilt a vertical guide or move a diagonal
@@ -54,7 +65,7 @@ placement. References within a whole piece stay together, through the existing t
 
 ## Verification
 
-Co-located tests cover projection/crossing properties, arrangement and history, snap priority and
+Co-located tests cover projection/crossing, two-point and parallel-offset properties, arrangement and history, snap priority and
 exclusions, schema rejection, the full old format corpus, exact guide round trips and export
 exclusion. `e2e/guides-alignment.spec.ts` exercises the user workflows and accessibility. The
 standard app, visual and packaged suites cover the rest of the shell.

@@ -1,8 +1,15 @@
 import { EPS_POINT, approxEq } from '@leathercad/core';
+import { dist } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { guideCrossing, projectToGuide } from './guides.js';
+import {
+  guideCrossing,
+  guideSides,
+  guideThrough,
+  parallelGuide,
+  projectToGuide,
+} from './guides.js';
 
 const coordinate = fc.double({ min: -2000, max: 2000, noNaN: true });
 const point = fc.record({ x: coordinate, y: coordinate });
@@ -65,6 +72,70 @@ describe('construction guides', () => {
         }
         expect(approxEq(crossing.x, reversed.x)).toBe(true);
         expect(approxEq(crossing.y, reversed.y)).toBe(true);
+      }),
+    );
+  });
+
+  it('runs a guide through two points, and through none when they coincide', () => {
+    const along = guideThrough({ x: 0, y: 0 }, { x: 10, y: 10 });
+    expect(along?.origin).toEqual({ x: 0, y: 0 });
+    expect(along?.angleRad).toBeCloseTo(Math.PI / 4);
+    expect(guideThrough({ x: 3, y: 4 }, { x: 3, y: 4 })).toBeNull();
+  });
+
+  it('passes through both of its points, for any two distinct points', () => {
+    fc.assert(
+      fc.property(point, point, (a, b) => {
+        fc.pre(Math.hypot(b.x - a.x, b.y - a.y) > 1e-3);
+        const guide = guideThrough(a, b);
+        expect(guide).not.toBeNull();
+        if (guide === null) return;
+        for (const at of [a, b]) {
+          const projected = projectToGuide(guide, at);
+          expect(approxEq(projected.x, at.x, 1e-6)).toBe(true);
+          expect(approxEq(projected.y, at.y, 1e-6)).toBe(true);
+        }
+      }),
+    );
+  });
+
+  it('offers the sides a maker reads: above/below a horizontal guide, left/right a vertical one', () => {
+    expect(guideSides({ origin: { x: 0, y: 0 }, angleRad: 0 })).toEqual(['above', 'below']);
+    expect(guideSides({ origin: { x: 0, y: 0 }, angleRad: Math.PI / 2 })).toEqual([
+      'left',
+      'right',
+    ]);
+    expect(guideSides({ origin: { x: 0, y: 0 }, angleRad: Math.PI })).toEqual(['above', 'below']);
+    const above = parallelGuide({ origin: { x: 5, y: 2 }, angleRad: Math.PI }, 'above', 15);
+    expect(above?.origin.y).toBeCloseTo(17);
+    expect(above?.angleRad).toBe(Math.PI);
+    const right = parallelGuide({ origin: { x: 5, y: 2 }, angleRad: -Math.PI / 2 }, 'right', 3);
+    expect(right?.origin.x).toBeCloseTo(8);
+    expect(parallelGuide({ origin: { x: 0, y: 0 }, angleRad: 0 }, 'left', 3)).toBeNull();
+  });
+
+  it('puts a parallel guide exactly the distance away, on the side asked for', () => {
+    const distance = fc.double({ min: 0, max: 500, noNaN: true });
+    fc.assert(
+      fc.property(point, angle, distance, fc.boolean(), (origin, angleRad, d, first) => {
+        const guide = { origin, angleRad };
+        const side = guideSides(guide)[first ? 0 : 1];
+        const result = parallelGuide(guide, side, d);
+        expect(result).not.toBeNull();
+        if (result === null) return;
+        expect(result.angleRad).toBe(angleRad);
+        // The distance between the two lines is the distance asked for.
+        expect(approxEq(dist(projectToGuide(guide, result.origin), result.origin), d, 1e-6)).toBe(
+          true,
+        );
+        const towards = {
+          above: { x: 0, y: 1 },
+          below: { x: 0, y: -1 },
+          left: { x: -1, y: 0 },
+          right: { x: 1, y: 0 },
+        }[side];
+        const moved = { x: result.origin.x - origin.x, y: result.origin.y - origin.y };
+        expect(moved.x * towards.x + moved.y * towards.y).toBeGreaterThanOrEqual(-1e-9);
       }),
     );
   });
