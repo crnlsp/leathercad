@@ -295,8 +295,10 @@ function SaveState({ dirty, saved, room }: { dirty: boolean; saved: boolean; roo
   );
 }
 
-/** `LeatherCAD print test — LeatherCAD`, with a leading dot while there is unsaved work. */
-export function windowTitle(project: Project, dirty: boolean, t: Translate): string {
-  const name = project.name.trim() === '' ? t('app.untitled') : project.name.trim();
+/**
+ * `LeatherCAD print test — LeatherCAD`, with a leading dot while there is
+ * unsaved work: the active tab's name (8.12).
+ */
+export function windowTitle(name: string, dirty: boolean, t: Translate): string {
   return t(dirty ? 'app.windowTitleUnsaved' : 'app.windowTitle', { name });
 }

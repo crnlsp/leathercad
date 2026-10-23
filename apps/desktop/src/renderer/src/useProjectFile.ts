@@ -14,7 +14,13 @@ import { useCallback } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
 import { describeProblemWithSubject } from './problemText.js';
-import type { ProjectTab, ProjectTabs } from './projectTabs.js';
+import {
+  isUnnamed,
+  nextUntitled,
+  projectNameOf,
+  type ProjectTab,
+  type ProjectTabs,
+} from './projectTabs.js';
 import { sheetPlanFor } from './sheets.js';
 
 /**
@@ -89,8 +95,11 @@ export function useProjectFile(
   tabs: ProjectTabs,
   host: () => PlatformHost,
   appVersion: string,
-  /** A tab of its own for a project: its own store and history (8.12). */
-  tabFor: (document: Document) => ProjectTab,
+  /**
+   * A tab of its own for a project: its own store and history (8.12); for a
+   * new one, which *Untitled* it is.
+   */
+  tabFor: (document: Document, untitled?: number) => ProjectTab,
   /** A fresh, empty document, for *New*. */
   blank: () => Document,
   /** The interface's words, for the file dialogs. */
@@ -173,7 +182,7 @@ export function useProjectFile(
 
         // A project with no name is named after the file it is first saved as
         // (8.12): its tab, the window's title and the next export say it.
-        if (tab.store.getState().document.project.name.trim() === '') {
+        if (isUnnamed(tab.store.getState().document.project.name)) {
           tab.store.dispatch(setProjectName(projectNameOf(target)));
         }
 
@@ -327,7 +336,7 @@ export function useProjectFile(
   );
 
   const newProject = useCallback(() => {
-    tabs.add(tabFor(blank()));
+    tabs.add(tabFor(blank(), nextUntitled(tabs.tabs)));
     onStartError(null);
   }, [blank, onStartError, tabFor, tabs]);
 
@@ -355,12 +364,6 @@ export function useProjectFile(
     exportPdfFile,
     exportDrawingFile,
   };
-}
-
-/** `Wallet` for `/p/Wallet.lcp`, on either platform's paths. */
-export function projectNameOf(path: string): string {
-  const file = path.split(/[\\/]/).pop() ?? path;
-  return file.replace(/\.lcp$/i, '');
 }
 
 /** An export was written: the tab's earlier error is gone, and the time is said. */

@@ -2,6 +2,8 @@ import { DocumentStore, emptyDocument, setProjectName } from '@leathercad/docume
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
+import { createI18n } from '../../shared/i18n.js';
+
 import {
   ProjectTabs,
   activeAfterClose,
@@ -9,6 +11,7 @@ import {
   isDirty,
   isPristine,
   newTab,
+  nextUntitled,
   tabName,
   type ProjectTab,
 } from './projectTabs.js';
@@ -70,13 +73,42 @@ describe('a tab', () => {
 });
 
 describe('a tab’s name', () => {
+  const { t } = createI18n('en');
+
   it('is its project’s', () => {
-    expect(tabName(aTab('Wallet'), 'Untitled')).toBe('Wallet');
+    expect(tabName(aTab('Wallet'), t)).toBe('Wallet');
   });
 
-  it('is Untitled, in the interface’s words, for a project with no name', () => {
-    expect(tabName(aTab(''), 'Bez nazwy')).toBe('Bez nazwy');
-    expect(tabName(aTab('  '), 'Bez nazwy')).toBe('Bez nazwy');
+  it('is its file’s for a project with no name of its own, the former default among them', () => {
+    for (const unnamed of ['', '  ', 'Untitled']) {
+      const tab = aTab(unnamed);
+      tab.file = { path: '/p/Portfel.lcp', error: null, savedAt: null };
+      expect(tabName(tab, t)).toBe('Portfel');
+    }
+  });
+
+  it('is Untitled for a new one, numbered from the second', () => {
+    expect(tabName(newTab('a', aTab('').store, 1), t)).toBe('Untitled');
+    expect(tabName(newTab('b', aTab('').store, 2), t)).toBe('Untitled 2');
+    expect(tabName(newTab('c', aTab('Untitled').store, 3), t)).toBe('Untitled 3');
+  });
+});
+
+describe('a new Untitled’s number', () => {
+  const untitled = (number: number, path: string | null = null): ProjectTab => {
+    const tab = newTab(`u${String(number)}`, aTab('').store, number);
+    tab.file = { path, error: null, savedAt: null };
+    return tab;
+  };
+
+  it('is the lowest no open, never-saved tab has', () => {
+    expect(nextUntitled([])).toBe(1);
+    expect(nextUntitled([untitled(1), untitled(2)])).toBe(3);
+    expect(nextUntitled([untitled(1), untitled(3)])).toBe(2);
+    // Saved, it is called by its file, and its number is free again.
+    expect(nextUntitled([untitled(1, '/p/Wallet.lcp')])).toBe(1);
+    // A project from a file has none.
+    expect(nextUntitled([aTab('Wallet')])).toBe(1);
   });
 });
 

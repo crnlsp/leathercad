@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { projectNameOf } from './useProjectFile.js';
+import { projectNameOf } from './projectTabs.js';
 
 /** A project saved without a name is named after its file (8.12): which part of the path. */
 describe('the name a file gives a project', () => {

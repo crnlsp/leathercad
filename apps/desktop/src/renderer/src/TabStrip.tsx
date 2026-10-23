@@ -92,7 +92,7 @@ export function TabStrip({
         onKeyDown={onKeyDown}
       >
         {tabs.map((tab) => {
-          const name = tabName(tab, t('app.untitled'));
+          const name = tabName(tab, t);
           const unsaved = isDirty(tab);
           const selected = tab === active;
           return (

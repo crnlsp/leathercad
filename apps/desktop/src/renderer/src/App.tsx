@@ -58,7 +58,7 @@ import {
 import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { ProjectMenu } from './ProjectMenu.js';
 import { StartScreen } from './StartScreen.js';
-import { ProjectTabs, isDirty, newTab, type ProjectTab } from './projectTabs.js';
+import { ProjectTabs, isDirty, newTab, tabName, type ProjectTab } from './projectTabs.js';
 import { TabStrip } from './TabStrip.js';
 import { printStatusFor } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
@@ -142,10 +142,11 @@ export function App({
   // after its file when first saved (8.12).
   const blank = useCallback(() => emptyDocument(nextId(), ''), [nextId]);
   const tabFor = useCallback(
-    (opened: Document): ProjectTab => newTab(nextId(), new DocumentStore(opened)),
+    (opened: Document, untitled = 0): ProjectTab =>
+      newTab(nextId(), new DocumentStore(opened), untitled),
     [nextId],
   );
-  const tabs = useMemo(() => new ProjectTabs(tabFor(blank())), [tabFor, blank]);
+  const tabs = useMemo(() => new ProjectTabs(tabFor(blank(), 1)), [tabFor, blank]);
   const { tabs: openTabs, active } = useSyncExternalStore(tabs.subscribe, tabs.getSnapshot);
   // With every project closed the window shows its start screen (8.12), and
   // the chrome below is not shown. Its hooks still run, in their order, over
@@ -369,9 +370,10 @@ export function App({
   // (F.8): the taskbar and the window switcher read this title.
   // With none open, the product's name alone.
   const hasProject = active !== null;
+  const shownName = tabName(tab, t);
   useEffect(() => {
-    document.title = hasProject ? windowTitle(storeState.document.project, dirty, t) : 'LeatherCAD';
-  }, [hasProject, storeState.document.project, dirty, t]);
+    document.title = hasProject ? windowTitle(shownName, dirty, t) : 'LeatherCAD';
+  }, [hasProject, shownName, dirty, t]);
   // And macOS's dot in the close button (U.7): the window's edited flag, lit
   // while any of its projects has unsaved work (8.12).
   useEffect(() => {
@@ -1388,7 +1390,7 @@ export function App({
 
         {pendingDiscard !== null && (
           <UnsavedChangesDialog
-            projectName={pendingDiscard.tab.store.getState().document.project.name}
+            projectName={tabName(pendingDiscard.tab, t)}
             action={pendingDiscard.action}
             // Saving an untitled project asks where; backing out of that asks
             // nothing further and changes nothing.

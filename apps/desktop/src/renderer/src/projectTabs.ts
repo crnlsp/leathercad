@@ -1,6 +1,7 @@
 import type { DocumentStore } from '@leathercad/document';
 import { Viewport } from '@leathercad/editor';
 
+import type { Translate } from '../../shared/i18n.js';
 import type { CanvasView } from './CanvasHost.js';
 
 /** A project's file, as its tab last left it: where it is, and what went wrong with it. */
@@ -52,13 +53,20 @@ export interface ProjectTab {
   createdUtc: string | undefined;
   view: CanvasView;
   readonly cameras: TabCameras;
+  /**
+   * Which *Untitled* a new project is (8.12): 1, 2, 3… for one made with
+   * *New*, its name until it has one; 0 for a project that came from a file,
+   * the sample or recovery.
+   */
+  readonly untitled: number;
 }
 
 /** A tab for `store`, which counts as saved as it is: an untouched project has nothing to lose. */
-export function newTab(id: string, store: DocumentStore): ProjectTab {
+export function newTab(id: string, store: DocumentStore, untitled = 0): ProjectTab {
   return {
     id,
     store,
+    untitled,
     file: { path: null, error: null, savedAt: null },
     savedDocument: store.getState().document,
     createdUtc: undefined,
@@ -74,13 +82,51 @@ export function newTab(id: string, store: DocumentStore): ProjectTab {
 }
 
 /**
- * What a tab is called (8.12): its project's name, or *Untitled* for one with
- * none. A project first saved without a name is named after its file, so
- * *Save as* names the tab, as in Notepad.
+ * The name every new project had until 8.12, written into its file: a
+ * project saved before then is called this, and means it has no name.
  */
-export function tabName(tab: ProjectTab, untitled: string): string {
+const FORMER_DEFAULT_NAME = 'Untitled';
+
+/**
+ * A project with no name of its own (8.12): none at all, or the one every new
+ * project was given before. It is shown by its file's name, or as *Untitled*,
+ * and named after its file when first saved.
+ */
+export function isUnnamed(name: string): boolean {
+  const trimmed = name.trim();
+  return trimmed === '' || trimmed === FORMER_DEFAULT_NAME;
+}
+
+/** `Wallet` for `/p/Wallet.lcp`, on either platform's paths. */
+export function projectNameOf(path: string): string {
+  const file = path.split(/[\\/]/).pop() ?? path;
+  return file.replace(/\.lcp$/i, '');
+}
+
+/**
+ * What a tab is called (8.12): its project's name; for a project with no name
+ * of its own, its file's; and for a new one never saved, *Untitled*, numbered
+ * from the second — *Untitled 2*, *Untitled 3* — so no two tabs read the same.
+ * The window's title and the unsaved-work question say the same name.
+ */
+export function tabName(tab: ProjectTab, t: Translate): string {
   const name = tab.store.getState().document.project.name.trim();
-  return name === '' ? untitled : name;
+  if (!isUnnamed(name)) return name;
+  if (tab.file.path !== null) return projectNameOf(tab.file.path);
+  return tab.untitled > 1 ? t('app.untitledNumbered', { number: tab.untitled }) : t('app.untitled');
+}
+
+/**
+ * The number a new *Untitled* takes: the lowest no open, never-saved tab has,
+ * so closing *Untitled 2* lets the next new project be *Untitled 2* again.
+ */
+export function nextUntitled(tabs: readonly ProjectTab[]): number {
+  const taken = new Set(
+    tabs.filter((tab) => tab.file.path === null && tab.untitled > 0).map((tab) => tab.untitled),
+  );
+  let number = 1;
+  while (taken.has(number)) number += 1;
+  return number;
 }
 
 /** Whether the project differs from what was last saved or opened. */

@@ -1,6 +1,7 @@
 {
   "app": {
     "untitled": "Untitled",
+    "untitledNumbered": "Untitled {{number}}",
     "windowTitle": "{{name}} — LeatherCAD",
     "windowTitleUnsaved": "• {{name}} — LeatherCAD",
     "drawing": "Drawing"

@@ -101,7 +101,8 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   directory's, so the end-to-end tests, each with its own, still run side by side.
 - ◐ **8.12 Project tabs.** A tab strip above the project bar: the Project menu as an icon at its
   left — where the project's name was the menu's button in the bar — then a tab per project, its
-  project's name with a dot for unsaved work where its close button is, and *+*, which always adds
+  project's name — its file's for a project with none of its own, *Untitled*, *Untitled 2*… for
+  new ones — with a dot for unsaved work where its close button is, and *+*, which always adds
   a new one. *Rename…* turns the active tab's name into a field; a project first saved without a
   name is named after its file. New, Open, a recent project, the sample, a launch and a second
   launch each open a tab; a project already open goes to its tab, and an untouched *Untitled* is
