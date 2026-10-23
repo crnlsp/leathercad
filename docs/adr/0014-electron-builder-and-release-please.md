@@ -23,9 +23,8 @@ script from `file://`. Every other test was green.
   `apps/desktop` is a devDependency, and the archive holds `out/` and `package.json`.
 - **Fuses are set by electron-builder's `electronFuses` option**, not by `@electron/fuses` as a
   direct dependency. Off: `RunAsNode`, `NODE_OPTIONS`, the inspector arguments, and loading the app
-  from anything but the asar. `GrantFileProtocolExtraPrivileges` has to stay **on** while the
-  renderer loads from `file://`. Turning it off needs a custom `app://` protocol first, which is a
-  main-process change.
+  from anything but the asar. **R6 now also disables `GrantFileProtocolExtraPrivileges`:** the
+  renderer loads from `app://leathercad/index.html`, as described in the amendment below.
 - **A packaged smoke test runs on every pull request** (`pnpm test:packaged`, CI's `package` job).
   It launches the unpacked build, checks it runs from `app.asar` in the vendored typeface, and
   exports a PDF that `pdfinfo` reads as A4. The build it drives differs from the shipped one in a
@@ -64,3 +63,28 @@ private. Attestations on a private repository need GitHub Enterprise Cloud.
   request the owner merges, which suits a project that reviews every change.
 - **changesets.** Built for publishing many npm packages. This repository publishes one application
   and no npm packages.
+
+## R6 amendment — a bundled app origin (2026-10-23)
+
+The built renderer now loads from `app://leathercad/index.html`, including in an unpackaged
+preview. Before Electron is ready, the main process registers `app` as standard and secure, with
+Fetch support and CORS enforcement. It grants neither CSP bypass nor service-worker support.
+Once ready, `protocol.handle` serves only files beneath `out/renderer` in the app's own directory
+(inside `app.asar` when packaged). It never proxies a network request.
+
+The handler accepts only GET and HEAD for the `leathercad` host, with no credentials or port. It
+decodes the path once, rejects traversal and Windows path syntax, and verifies the resolved path
+and its real target remain inside the renderer directory. Missing files and directories fail;
+there is no HTML fallback for an absent script. Electron's `net.fetch` reads the validated file
+URL, preserving MIME handling and asar support. Files chosen by the maker still go through the
+typed platform bridge and its path grants, never this protocol.
+
+`GrantFileProtocolExtraPrivileges` is off in both release and smoke-test builds. The latter still
+differs only in the inspector fuse. `pnpm dev` keeps its Vite URL and HMR, but a packaged app
+ignores `ELECTRON_RENDERER_URL` even if inherited from the environment. Preferences remain in
+`preferences.json`; this origin change needs no browser-storage migration.
+
+Acceptance: a packaged app opens on the app origin, loads its vendored fonts and PDF preview
+worker, and exports the existing measured print fixture with the file-protocol fuse off. Protocol
+unit tests cover hostile paths and symlink escapes; packaged tests exercise the actual asar
+handler, CSP and sandbox, and supply a development URL to prove it is ignored in a release.

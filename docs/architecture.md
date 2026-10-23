@@ -324,6 +324,14 @@ dev server serves also allows its HMR socket (`apps/desktop/src/csp/devServerCsp
 opens a second window or navigates; a request to open a link goes to the system browser only if it
 is `https:` (`apps/desktop/src/main/externalLinks.ts`).
 
+The built renderer loads from `app://leathercad/index.html` (R6), a standard, secure origin with
+Fetch support and CORS enforcement, without CSP bypass or service workers. Its protocol serves
+only GET/HEAD requests for bundled files under `out/renderer`: decoded paths and real targets
+must stay inside that directory, including when it is in `app.asar`. It never serves user files
+or forwards a network request. The `GrantFileProtocolExtraPrivileges` fuse is disabled. The Vite
+URL is accepted only in an unpackaged development run; a packaged app always uses the bundled
+origin. See [ADR 0014](adr/0014-electron-builder-and-release-please.md#r6-amendment--a-bundled-app-origin-2026-10-23).
+
 ## 6. Canvas and interaction system
 
 This is the part most likely to rot as the app grows, so it gets explicit structure.

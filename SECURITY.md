@@ -37,7 +37,9 @@ The things most worth reporting are:
   to run another command, or to send a job to a printer CUPS does not list, is in scope. See
   `docs/architecture.md` §5.
 - **The packaged app.** Its Electron fuses, asar integrity, or the release pipeline and its
-  artefacts.
+  artefacts. The renderer loads from a local `app://leathercad` origin that serves only bundled
+  renderer assets; the `GrantFileProtocolExtraPrivileges` fuse is off. Files chosen by the user
+  remain accessible only through the platform bridge, with its path grants.
 - **A network connection.** Anything that gets the app to reach the network. Chromium's
   spellchecker did, fetching a dictionary from Google on Linux, until 1.5 turned it off.
 
