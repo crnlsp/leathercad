@@ -1424,6 +1424,11 @@
     "copyName": "{{name}} copy",
     "importTitle": "Import a template",
     "exportTitle": "Export the template",
-    "nothingChosen": "Choose a template."
+    "nothingChosen": "Choose a template.",
+    "wordsTitle": "Description and tags",
+    "saveWords": "Save",
+    "discardWords": "Discard",
+    "kindChosen": "Kind: {{kind}}",
+    "sortChosen": "Sort: {{sort}}"
   }
 }

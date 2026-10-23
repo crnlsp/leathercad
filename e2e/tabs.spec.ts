@@ -583,8 +583,13 @@ test('a new project from a template, and any project saved as one (8.14)', async
       await dialog.getByTestId('template-show-mine').click();
       await expect(dialog.getByTestId('template-builtin:card-holder')).toHaveCount(0);
       await dialog.getByTestId('template-mine:My card holder').click();
+      // Kept only when saved: Save shows once something differs.
+      await expect(dialog.getByTestId('template-words-save')).toHaveCount(0);
       await dialog.getByTestId('template-description').fill('Three pockets, brown');
       await dialog.getByTestId('template-tags').fill('wallets, brown');
+      await dialog.getByTestId('template-words-save').click();
+      await expect(dialog.getByTestId('template-words-save')).toHaveCount(0);
+      await expect(dialog.getByTestId('template-detail')).toContainText('Three pockets, brown');
       await dialog.getByTestId('template-pin').click();
       await expect(dialog.getByTestId('template-pin')).toHaveAttribute('aria-pressed', 'true');
       await dialog.getByTestId('template-duplicate').click();
@@ -602,10 +607,11 @@ test('a new project from a template, and any project saved as one (8.14)', async
       await expect(dialog.getByTestId('template-mine:Slim card holder')).toBeVisible();
 
       // The order and filter are kept for the next time.
-      await dialog.getByTestId('template-sort').selectOption('newest');
+      await dialog.getByTestId('template-sort').click();
+      await window.getByTestId('template-sort-newest').click();
       await dialog.getByTestId('template-close').click();
       await fromProjectMenu(window, 'new-template');
-      await expect(dialog.getByTestId('template-sort')).toHaveValue('newest');
+      await expect(dialog.getByTestId('template-sort')).toContainText('Newest first');
       await expect(dialog.getByTestId('template-show-mine')).toHaveClass(/\bactive\b/);
     },
     { env: { XDG_CONFIG_HOME: config } },

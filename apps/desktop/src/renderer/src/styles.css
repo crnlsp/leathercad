@@ -804,8 +804,33 @@ body {
   outline: none;
 }
 
-.template-bar select {
+/*
+ * Kind and Sort: the app's own menus, not the system's drop-downs, so the bar
+ * reads as one row of the shell's controls — the search's height, border and
+ * ground, the name of what they set in the dimmer words, its value in the
+ * brighter.
+ */
+.template-bar .template-filter {
+  flex: none;
+  gap: var(--space-1);
+  min-height: 30px;
   height: 30px;
+  background: var(--shell-900);
+}
+
+.template-filter-label {
+  color: var(--text-mute);
+}
+
+.template-filter-value {
+  max-width: 16ch;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+}
+
+.template-bar .segment {
+  min-height: 30px;
 }
 
 /* The segmented control, without the tooltips that round its ends elsewhere. */
@@ -983,6 +1008,43 @@ body {
 
 .template-detail textarea {
   resize: vertical;
+}
+
+/* The maker's tags, read: small labels under the description. Over the dialogs' list indent. */
+.dialog .template-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.template-tag {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-pill);
+  color: var(--text-dim);
+  font: var(--t-micro);
+}
+
+/*
+ * Editing them: at the pane's foot, apart from what the template is, with
+ * Save and Discard only once something differs from what is kept.
+ */
+.template-words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--shell-line);
+}
+
+.template-words-actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
 }
 
 .template-facts {

@@ -1,10 +1,13 @@
 import type { Project } from '@leathercad/domain';
 import type { TemplateEntry, TemplateShow, TemplateSort } from '@leathercad/platform';
-import { Pin, PinOff, Search, X } from 'lucide-react';
+import { Check, ChevronDown, Pin, PinOff, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import type { MessageKey } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import { MenuButton } from './Menu.js';
+import type { MenuEntry } from './menus.js';
 import { overallOf, piecesOf, templatePreview } from './templatePreview.js';
 import { BUILT_IN_TEMPLATES, TEMPLATE_CATEGORIES, type TemplateCategory } from './templates.js';
 import { Tooltip } from './Tooltip.js';
@@ -31,6 +34,14 @@ export interface TemplateActions {
   readonly remove: (id: string) => void;
   readonly importFile: () => Promise<void>;
 }
+
+/** Each order's words, in the order the Sort menu lists them. */
+const SORT_WORDS = {
+  name: 'templates.sort.name',
+  'name-desc': 'templates.sort.nameDesc',
+  newest: 'templates.sort.newest',
+  oldest: 'templates.sort.oldest',
+} as const satisfies Record<TemplateSort, MessageKey>;
 
 /** How long a removed template can be brought back, before its file goes. */
 const UNDO_MS = 6000;
@@ -207,6 +218,12 @@ export function TemplateDialog({
 
   const order = (nextSort: TemplateSort, nextShow: TemplateShow): void =>
     onOrder(nextSort, nextShow);
+  const kindName =
+    kind === ''
+      ? t('templates.allKinds')
+      : kind.startsWith('category:')
+        ? t(`templates.category.${kind.slice('category:'.length) as TemplateCategory}`)
+        : kind.slice('tag:'.length);
 
   const remove = (row: Row): void => {
     // The one before, if any, goes now: one undo at a time.
@@ -273,6 +290,8 @@ export function TemplateDialog({
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           event.stopPropagation();
+          // A menu open over the picker — Kind, Sort — has its own keys.
+          if (event.defaultPrevented) return;
           const typing =
             event.target instanceof HTMLInputElement && event.target !== search.current
               ? true
@@ -343,37 +362,48 @@ export function TemplateDialog({
               </button>
             ))}
           </div>
-          <select
-            id="template-kind"
-            data-testid="template-kind"
-            aria-label={t('templates.kindLabel')}
-            value={kind}
-            onChange={(event) => setKind(event.target.value)}
+          <MenuButton
+            label={t('templates.kindChosen', { kind: kindName })}
+            tooltip={t('templates.kindLabel')}
+            testId="template-kind"
+            className="tool template-filter"
+            entries={[
+              { id: '', label: t('templates.allKinds') },
+              ...TEMPLATE_CATEGORIES.map((category) => ({
+                id: `category:${category}`,
+                label: t(`templates.category.${category}`),
+              })),
+              ...tags.map((tag) => ({ id: `tag:${tag}`, label: tag })),
+            ].map((choice): MenuEntry => ({
+              kind: 'item',
+              id: `template-kind-${choice.id === '' ? 'all' : choice.id}`,
+              label: choice.label,
+              ...(choice.id === kind ? { icon: Check } : {}),
+              onChoose: () => setKind(choice.id),
+            }))}
           >
-            <option value="">{t('templates.allKinds')}</option>
-            {TEMPLATE_CATEGORIES.map((category) => (
-              <option key={category} value={`category:${category}`}>
-                {t(`templates.category.${category}`)}
-              </option>
-            ))}
-            {tags.map((tag) => (
-              <option key={tag} value={`tag:${tag}`}>
-                {tag}
-              </option>
-            ))}
-          </select>
-          <select
-            id="template-sort"
-            data-testid="template-sort"
-            aria-label={t('templates.sortLabel')}
-            value={sort}
-            onChange={(event) => order(event.target.value as TemplateSort, show)}
+            <span className="template-filter-label">{t('templates.kindLabel')}</span>
+            <span className="template-filter-value">{kindName}</span>
+            <Icon of={ChevronDown} size={12} />
+          </MenuButton>
+          <MenuButton
+            label={t('templates.sortChosen', { sort: t(SORT_WORDS[sort]) })}
+            tooltip={t('templates.sortLabel')}
+            testId="template-sort"
+            className="tool template-filter"
+            align="end"
+            entries={(Object.keys(SORT_WORDS) as TemplateSort[]).map((each): MenuEntry => ({
+              kind: 'item',
+              id: `template-sort-${each}`,
+              label: t(SORT_WORDS[each]),
+              ...(each === sort ? { icon: Check } : {}),
+              onChoose: () => order(each, show),
+            }))}
           >
-            <option value="name">{t('templates.sort.name')}</option>
-            <option value="name-desc">{t('templates.sort.nameDesc')}</option>
-            <option value="newest">{t('templates.sort.newest')}</option>
-            <option value="oldest">{t('templates.sort.oldest')}</option>
-          </select>
+            <span className="template-filter-label">{t('templates.sortLabel')}</span>
+            <span className="template-filter-value">{t(SORT_WORDS[sort])}</span>
+            <Icon of={ChevronDown} size={12} />
+          </MenuButton>
         </div>
 
         <div className="template-body">
@@ -508,15 +538,25 @@ function Detail({
   const [description, setDescription] = useState(row.entry.description);
   const [tags, setTags] = useState(row.entry.tags.join(', '));
 
-  const keepWords = (): void => {
-    const nextTags = tags
+  // The maker's words about it, edited at the foot of the pane and kept only
+  // when they say so: *Save* shows once something differs, *Discard* puts
+  // back what is kept.
+  const tagList = (text: string): string[] =>
+    text
       .split(',')
       .map((tag) => tag.trim())
       .filter((tag) => tag !== '');
-    if (description === row.entry.description && nextTags.join(',') === row.entry.tags.join(',')) {
-      return;
-    }
-    void actions.describe(id, description, nextTags);
+  const edited =
+    description.trim() !== row.entry.description ||
+    tagList(tags).join(',') !== row.entry.tags.join(',');
+  const [saving, setSaving] = useState(false);
+  const keepWords = (): void => {
+    setSaving(true);
+    void actions.describe(id, description, tagList(tags)).finally(() => setSaving(false));
+  };
+  const discardWords = (): void => {
+    setDescription(row.entry.description);
+    setTags(row.entry.tags.join(', '));
   };
 
   return (
@@ -567,29 +607,16 @@ function Detail({
       )}
       {mine ? (
         <>
-          <label className="field">
-            <span>{t('templates.description')}</span>
-            <textarea
-              id="template-description"
-              data-testid="template-description"
-              rows={2}
-              placeholder={t('templates.descriptionPlaceholder')}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              onBlur={keepWords}
-            />
-          </label>
-          <label className="field">
-            <span>{t('templates.tags')}</span>
-            <input
-              id="template-tags"
-              data-testid="template-tags"
-              placeholder={t('templates.tagsPlaceholder')}
-              value={tags}
-              onChange={(event) => setTags(event.target.value)}
-              onBlur={keepWords}
-            />
-          </label>
+          {row.entry.description !== '' && <p className="template-note">{row.entry.description}</p>}
+          {row.entry.tags.length > 0 && (
+            <ul className="template-tags" aria-label={t('templates.tags')}>
+              {row.entry.tags.map((tag) => (
+                <li key={tag} className="template-tag">
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       ) : (
         row.note !== '' && <p className="template-note">{row.note}</p>
@@ -697,6 +724,61 @@ function Detail({
         )}
       </div>
       {!mine && <p className="template-note">{t('templates.builtInLocked')}</p>}
+      {mine && (
+        <form
+          className="template-words"
+          aria-labelledby="template-words-title"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (edited && !saving) keepWords();
+          }}
+        >
+          <h4 id="template-words-title" className="template-heading">
+            {t('templates.wordsTitle')}
+          </h4>
+          <label className="field">
+            <span>{t('templates.description')}</span>
+            <textarea
+              id="template-description"
+              data-testid="template-description"
+              rows={2}
+              placeholder={t('templates.descriptionPlaceholder')}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>{t('templates.tags')}</span>
+            <input
+              id="template-tags"
+              data-testid="template-tags"
+              placeholder={t('templates.tagsPlaceholder')}
+              value={tags}
+              onChange={(event) => setTags(event.target.value)}
+            />
+          </label>
+          {edited && (
+            <div className="template-words-actions">
+              <button
+                type="button"
+                className="tool"
+                data-testid="template-words-discard"
+                onClick={discardWords}
+              >
+                {t('templates.discardWords')}
+              </button>
+              <button
+                type="submit"
+                className="tool primary"
+                data-testid="template-words-save"
+                disabled={saving}
+              >
+                {t('templates.saveWords')}
+              </button>
+            </div>
+          )}
+        </form>
+      )}
     </>
   );
 }
