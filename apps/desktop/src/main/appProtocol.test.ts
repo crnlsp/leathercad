@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,8 @@ const fetchFile = vi.fn(
 let handle: ReturnType<typeof createAppProtocolHandler>;
 
 beforeEach(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'leathercad-protocol-'));
+  // Real path: macOS links /var to /private/var, Windows may hand out 8.3 names.
+  directory = await realpath(await mkdtemp(join(tmpdir(), 'leathercad-protocol-')));
   // Spaces and a literal URL metacharacter must survive a file URL round trip.
   root = join(directory, 'renderer #1');
   await mkdir(join(root, 'assets'), { recursive: true });

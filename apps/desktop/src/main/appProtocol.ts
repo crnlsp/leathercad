@@ -24,6 +24,8 @@ export function createAppProtocolHandler(
   fetchFile: (url: string) => Promise<Response>,
 ): (request: Request) => Promise<Response> {
   const root = resolve(rendererRoot);
+  // The install does not move while the app runs: resolve its real path once.
+  let realRoot: Promise<string> | undefined;
   return async (request) => {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } });
@@ -62,8 +64,9 @@ export function createAppProtocolHandler(
     }
 
     try {
-      const [realRoot, realFile] = await Promise.all([realpath(root), realpath(file)]);
-      if (!isInside(realRoot, realFile)) return new Response(null, { status: 403 });
+      realRoot ??= realpath(root);
+      const [rootPath, realFile] = await Promise.all([realRoot, realpath(file)]);
+      if (!isInside(rootPath, realFile)) return new Response(null, { status: 403 });
       if (!(await stat(realFile)).isFile()) return new Response(null, { status: 404 });
       const response = await fetchFile(pathToFileURL(realFile).href);
       if (request.method === 'HEAD') {
