@@ -68,6 +68,7 @@ export { DEFAULT_RULER_STYLE, renderGrid, renderRulers } from './canvas2d/grid.j
 
 export type { BuildOptions, Caption } from './buildDisplayList.js';
 export { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
+export { guideDisplayList } from './guides.js';
 
 export type { SvgOptions } from './svg/backend.js';
 export { renderToSvgString } from './svg/backend.js';

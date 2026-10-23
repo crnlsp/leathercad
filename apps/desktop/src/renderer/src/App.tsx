@@ -1581,6 +1581,7 @@ export function App({
                   onHoverPart={setHoveredPart}
                   toolId={toolId}
                   nextId={nextId}
+                  onToolChange={chooseTool}
                   onStatus={handleStatus}
                   panelOver={open}
                   selectionBar={selectionBarOn ? tools : null}
@@ -1662,6 +1663,7 @@ export function App({
                     requestDeletePart={requestDeletePart}
                     tools={tools}
                     onTools={changePreferences}
+                    guidesMode={toolId === 'guide'}
                     drawingPiece={
                       DRAWING_TOOL_IDS.has(toolId) &&
                       (drawAs === 'outline' || drawAs === 'stitch-allowance')
@@ -1721,7 +1723,11 @@ export function App({
                     </>
                   ) : (
                     <>
-                      <b data-testid="selected-count">{storeState.selection.features.size}</b>{' '}
+                      <b data-testid="selected-count">
+                        {storeState.selection.guide === undefined
+                          ? storeState.selection.features.size
+                          : 1}
+                      </b>{' '}
                       {t('status.selected')}
                     </>
                   )}

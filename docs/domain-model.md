@@ -32,6 +32,7 @@ Everything below serves those four.
 ```
 Project                                     built
 ├── settings          grid, default stitch margin, default iron pitch
+├── guides[]          origin, angle — non-printing construction lines (3.10)
 └── parts[]
      └── Part         name, quantity         built
           └── features[]
@@ -45,8 +46,7 @@ Project                                     built
                └── TextLabel                 designed, 4.11 — an annotation
 ```
 
-**Later:** the leather's thickness beyond a fold's own (roadmap 9.1), grain direction (9.22),
-persisted guides (3.10). **Not planned:** a notes field on a part — a text label prints what a note
+**Later:** the leather's thickness beyond a fold's own (roadmap 9.1), grain direction (9.22). **Not planned:** a notes field on a part — a text label prints what a note
 would say; and iron presets as document data — irons are the maker's, in *My tools*, and a hole set
 stores the pitch (§6.2). **Not planned for Phase 4:** a per-part placement transform. A part is
 placed by its features' own geometry ([ADR 0012](adr/0012-mirror-is-a-derivation.md)).

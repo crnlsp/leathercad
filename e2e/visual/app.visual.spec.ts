@@ -10,6 +10,7 @@ import {
 
 import { closeApp } from '../closeApp.js';
 import { fromProjectMenu } from '../projectMenu.js';
+import { drawAPanel } from '../launchApp.js';
 
 /**
  * What the app looks like, pixel for pixel. See docs/testing.md §5.2.
@@ -85,6 +86,51 @@ test('the empty window', async () => {
     await pointerAway(window);
     await blankVersion(window);
     await expect(window).toHaveScreenshot('empty-window.png');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('a diagonal construction guide and its exact controls', async () => {
+  const { app, window } = await launch();
+  try {
+    await window.getByTestId('tool-guide').click();
+    await window.getByTestId('guide-add-horizontal').click();
+    for (const [label, value] of [
+      ['Guide x', '60'],
+      ['Guide y', '40'],
+      ['Guide angle', '45'],
+    ]) {
+      if (label === undefined || value === undefined) throw new Error('missing guide field');
+      await window.getByLabel(label).fill(value);
+      await window.getByLabel(label).press('Enter');
+    }
+    await pointerAway(window);
+    await blankVersion(window);
+    await expect(window).toHaveScreenshot('diagonal-guide.png');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the arrangement controls for independent pieces', async () => {
+  const { app, window } = await launch();
+  try {
+    for (const left of [60, 240, 420]) await drawAPanel(window, { left });
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    if (box === null) throw new Error('canvas is missing');
+    await window.getByTestId('tool-select').click();
+    await window.mouse.move(box.x + 40, box.y + 120);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 600, box.y + 320, { steps: 5 });
+    await window.mouse.up();
+    const panel = window.getByTestId('property-panel');
+    await expect(window.getByTestId('arrange-panel')).toBeVisible();
+    await expect
+      .poll(() => panel.evaluate((element) => element.scrollWidth - element.clientWidth))
+      .toBeLessThanOrEqual(1);
+    await pointerAway(window);
+    await expect(panel).toHaveScreenshot('arrange-controls.png');
   } finally {
     await closeApp(app);
   }

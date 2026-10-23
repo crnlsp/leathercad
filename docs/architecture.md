@@ -512,14 +512,17 @@ vertices — waits until real documents show that flat feature picking on the ca
 
 ### 6.6 Guides and alignment
 
-*Designed, not built: roadmap 3.10, in 1.6. Guides are not in the file format yet.*
-
 Guides are **document objects** (persisted): an origin point plus an angle, so diagonal guides work,
 not just horizontal and vertical. They are dragged out from the rulers and snapped to like any
-other candidate.
+other candidate. The Guides tool places one with a click, or through two snapped points with a
+drag; Properties adds one by orientation or parallel to the selected guide at a typed distance. Select moves a guide as one
+transaction; Properties edits its position and angle or deletes it. Guides live on the project,
+outside the leather parts, and draw only on the Design board: they do not print or frame exports.
 
 Alignment and distribution operate on selection bounding boxes and are ordinary commands — no
-special machinery.
+special machinery. An outline carries its whole piece. Distribution holds the outer items fixed
+and equalises the edge gaps; locks and independent items linked to one another refuse the action
+whole. The detailed contract is in [3.10's design](superpowers/specs/2026-10-23-guides-alignment.md).
 
 ### 6.7 Grid and rulers
 
@@ -549,8 +552,10 @@ No geometry, domain, document, export, or print-pagination code changes.
 
 Measure before optimising, but the known shapes of the problem:
 
-- **Evaluation is memoised per node**, keyed on the node's parameter hash plus its inputs' resolved
-  hashes. Editing one part does not re-evaluate the other thirty-nine.
+- **Evaluation is memoised per feature**, keyed on object identity: the document is updated
+  immutably with structural sharing, so an unchanged feature is the same object, and a derived one
+  is reused only while its source is too (`domain/src/evaluate.ts`). Editing one part does not
+  re-evaluate the other thirty-nine.
 - **Stitch holes render as a single batched path** (one `Path2D` of many small circles) rather than
   3 000 individual `arc()` + `fill()` pairs.
 - **Culling**: the content layer skips features whose bounding box does not intersect the viewport.

@@ -244,12 +244,34 @@ const settings = z.looseObject({
   orientation: z.enum(ORIENTATIONS as [Orientation, ...Orientation[]]),
 });
 
-export const ProjectSchema = z.looseObject({
-  id: z.string().min(1),
-  name: z.string(),
-  settings,
-  parts: z.array(part),
-});
+export const ProjectSchema = z
+  .looseObject({
+    id: z.string().min(1),
+    name: z.string(),
+    settings,
+    parts: z.array(part),
+    guides: z
+      .array(
+        z.looseObject({
+          id: z.string().min(1),
+          origin: vec2,
+          angleRad: z.number().finite(),
+        }),
+      )
+      .optional(),
+  })
+  .superRefine((project, context) => {
+    const ids = new Set(project.parts.flatMap((piece) => piece.features.map((entry) => entry.id)));
+    for (const [index, guide] of (project.guides ?? []).entries()) {
+      if (ids.has(guide.id))
+        context.addIssue({
+          code: 'custom',
+          path: ['guides', index, 'id'],
+          message: 'duplicate guide id',
+        });
+      ids.add(guide.id);
+    }
+  });
 
 export const ManifestSchema = z.object({
   formatVersion: z.number().int().min(1),

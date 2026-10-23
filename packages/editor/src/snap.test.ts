@@ -56,6 +56,24 @@ const options = (overrides: Partial<SnapOptions> = {}): SnapOptions => ({
 const square = polyline([vec(0, 0), vec(20, 0), vec(20, 20), vec(0, 20)], true);
 
 describe('snap', () => {
+  it('catches a guide crossing an ordinary edge, and excludes the guide during a drag', () => {
+    const original = resolvedOf(square);
+    const resolved = {
+      ...original,
+      project: {
+        ...original.project,
+        guides: [{ id: 'guide', origin: { x: 7, y: 0 }, angleRad: Math.PI / 2 }],
+      },
+    };
+    const index = buildSnapIndex(resolved);
+    const hit = snap(index, resolved, vec(7.5, 0.5), options());
+    expect(hit?.kind).toBe('intersection');
+    expect(hit?.point.x).toBeCloseTo(7);
+    expect(hit?.point.y).toBeCloseTo(0);
+    expect(snap(index, resolved, vec(7.5, 0.5), options({ exclude: ['guide'] }))?.kind).toBe(
+      'on-path',
+    );
+  });
   it('finds an endpoint', () => {
     const resolved = resolvedOf(square);
     const hit = snap(buildSnapIndex(resolved), resolved, vec(19.5, 0.3), options());

@@ -22,6 +22,8 @@ export interface Document {
  * target-part rule would have two answers.
  */
 export interface Selection {
+  /** A guide is picked on its own, never as a piece or a feature. */
+  readonly guide?: string;
   readonly parts: ReadonlySet<PartId>;
   readonly features: ReadonlySet<FeatureId>;
 }
@@ -63,7 +65,9 @@ export function drawnBounds(resolved: ResolvedProject, only?: ReadonlySet<Featur
 
 /** Whether anything at all is picked, of either kind. */
 export function isEmptySelection(selection: Selection): boolean {
-  return selection.parts.size === 0 && selection.features.size === 0;
+  return (
+    selection.parts.size === 0 && selection.features.size === 0 && selection.guide === undefined
+  );
 }
 
 /**
@@ -95,6 +99,11 @@ export function command(label: HistoryLabel, apply: (document: Document) => Docu
 
 /** Every kind of step in the undo history. An id: the app has the words for each (ADR 0018). */
 export type HistoryAction =
+  | 'add-guide'
+  | 'edit-guide'
+  | 'delete-guide'
+  | 'align'
+  | 'distribute'
   | 'new-document'
   | 'open'
   | 'open-sample'

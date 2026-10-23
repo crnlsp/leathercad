@@ -149,7 +149,12 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
 
 ### Drawing and editing
 
-- ☐ **3.10 Guides, alignment and distribution.**
+- ✅ **3.10 Guides, alignment and distribution.** Persisted horizontal, vertical and diagonal
+  guides, placed from the rulers, the Guides tool (a click, or a drag through two points) or
+  Properties, and parallel to another guide at a typed distance; snapping, exact editing,
+  deletion and undo. Multi-selection alignment and equal-gap distribution move whole pieces and explain
+  refusals. Guides stay off paper; format 10 keeps them on reopen.
+  [Design and acceptance criteria](superpowers/specs/2026-10-23-guides-alignment.md).
 - ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.
   Until then, 3.7 refuses those transforms.

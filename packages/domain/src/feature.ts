@@ -417,11 +417,20 @@ export const DEFAULT_SETTINGS: ProjectSettings = {
   orientation: 'portrait',
 };
 
+/** A non-printing, infinite construction line in world millimetres (3.10). */
+export interface Guide {
+  readonly id: Ulid;
+  readonly origin: Vec2;
+  readonly angleRad: Radians;
+}
+
 export interface Project {
   readonly id: Ulid;
   readonly name: string;
   readonly settings: ProjectSettings;
   readonly parts: readonly Part[];
+  /** Absent in projects made before guides existed. */
+  readonly guides?: readonly Guide[];
 }
 
 /** The layer role a feature kind belongs to. One kind, one role, always. */

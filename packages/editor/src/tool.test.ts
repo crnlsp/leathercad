@@ -132,6 +132,21 @@ describe('ToolManager snapping', () => {
     expect(tool.points).toEqual([vec(0, 0), vec(20, 20)]);
   });
 
+  it('snaps a gesture the canvas runs itself, with its own exclusions and Ctrl (3.10)', () => {
+    const { manager, tool, store } = harness();
+    addSquare(store);
+
+    expect(manager.snapGesture(pointer(vec(19.5, 0.3)), []).at).toEqual(vec(20, 0));
+    expect(manager.snapPoint()).toEqual(vec(20, 0));
+    expect(manager.snapGesture(pointer(vec(19.5, 0.3), { ctrlKey: true }), []).at).toEqual(
+      vec(19.5, 0.3),
+    );
+    const id = store.getState().document.project.parts[0]!.features[0]!.id;
+    expect(manager.snapGesture(pointer(vec(19.5, 0.3)), [id]).at).toEqual(vec(19.5, 0.3));
+    // The active tool was not handed the gesture.
+    expect(tool.points).toEqual([]);
+  });
+
   it('excludes what the active tool says it is moving', () => {
     const { store, viewport } = harness();
     addSquare(store);

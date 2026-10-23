@@ -220,5 +220,6 @@ without one.
 
 The repository is set up for it: [`CLAUDE.md`](CLAUDE.md) holds the invariants, and
 [`docs/claude-code-setup.md`](docs/claude-code-setup.md) lists the project's skills, commands and
-hooks. One slice per session works best. Start with `/slice <number>`, and let `/geo-check` and
+hooks, and the engineering rules in `.claude/rules/`. Other agents reach the same instructions
+through [`AGENTS.md`](AGENTS.md). One slice per session works best. Start with `/slice <number>`, and let `/geo-check` and
 `/arch-check` run before calling it done.

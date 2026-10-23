@@ -14,6 +14,7 @@ import {
   setSource,
   setPartName,
   setPartQuantity,
+  selectedFeatureIds,
 } from '@leathercad/document';
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
@@ -29,6 +30,8 @@ import { KeyCap, useKeysInSentences } from './keyCaps.js';
 import { MARGIN_MIN_MM, MARGIN_STEP_MM, type MakerTools } from './irons.js';
 import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nextSteps.js';
 import { NumberField } from './NumberField.js';
+import { GuidesPanel } from './GuidesPanel.js';
+import { ArrangePanel } from './ArrangePanel.js';
 import { ProblemRows } from './ProblemList.js';
 import { jobTotals, trailOf } from './propertyFacts.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
@@ -56,6 +59,7 @@ export function PropertyPanel({
   tools,
   onTools,
   drawingPiece = false,
+  guidesMode = false,
   sizing = null,
   toggle,
 }: {
@@ -77,6 +81,7 @@ export function PropertyPanel({
   onTools: (changes: Partial<MakerTools>) => void;
   /** A Draw tool is out that makes a new piece: an outline, or a stitch line with its allowance (U.18). */
   drawingPiece?: boolean;
+  guidesMode?: boolean;
   /** The rectangle being drawn, while one is (U.16): its sizes, as the chips on the board show them. */
   sizing?: SizeDraft | null;
   /** Its fold (U.5), at the end of the header's first row. */
@@ -113,12 +118,26 @@ export function PropertyPanel({
           {toggle}
         </header>
         <p className="panel-empty">
-          {selected.size > 1
-            ? t('properties.manySelected', { count: selected.size })
-            : parts.length > 1
-              ? t('properties.manyPartsSelected', { count: parts.length })
-              : t('properties.nothingSelected', keys)}
+          {store.getState().selection.guide !== undefined
+            ? t('guides.selected')
+            : selected.size > 1
+              ? t('properties.manySelected', { count: selected.size })
+              : parts.length > 1
+                ? t('properties.manyPartsSelected', { count: parts.length })
+                : t('properties.nothingSelected', keys)}
         </p>
+        {(selected.size > 1 || parts.length > 1) && (
+          <ArrangePanel
+            store={store}
+            project={project}
+            ids={selectedFeatureIds(project, store.getState().selection)}
+          />
+        )}
+        {selected.size === 0 &&
+          parts.length === 0 &&
+          (guidesMode || (project.guides?.length ?? 0) > 0) && (
+            <GuidesPanel store={store} project={project} nextId={nextId} />
+          )}
         {sizing !== null && selected.size === 0 && (
           <section className="panel-section" data-testid="drawing-sizes">
             <div className="panel-heading">{t('properties.drawing')}</div>

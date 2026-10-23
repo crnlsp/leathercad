@@ -4,9 +4,9 @@
 # It is advisory — not a required check — and tuned to say little: CI already
 # enforces format, lint, layering, dead code and tests, and the pull request
 # template already says what changed. It reads CLAUDE.md for the invariants
-# (its default code-guideline files); the path instructions below point at
-# the docs that hold the detail. See CONTRIBUTING.md, "Commits and pull
-# requests".
+# and .claude/rules/ for engineering practice (both among its default
+# code-guideline files); the path instructions below point at the docs that
+# hold the detail. See CONTRIBUTING.md, "Commits and pull requests".
 
 language: en-GB
 tone_instructions: >-
@@ -82,9 +82,10 @@ reviews:
         input to it is untrusted.
     - path: '.github/workflows/**'
       instructions: >-
-        Actions pinned to a commit with the version in a comment, the least
-        permissions per job, and expressions passed through env rather than
-        interpolated into run scripts.
+        Hold to .claude/rules/workflows.md: actions pinned to a commit with
+        the version in a comment, the least permissions per job, and
+        expressions passed through env rather than interpolated into run
+        scripts.
 
   # Generated docstrings and tests would not meet this project's bar for
   # either; the pull request title is checked by CI (pr-title.yml).
