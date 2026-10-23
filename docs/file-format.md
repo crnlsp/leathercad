@@ -370,7 +370,9 @@ percent). A start opens them again, the files still on disk. By the same rule it
 chosen in the app's dialogs, at most thirty. A kept copy is unsaved work written as the window
 closed with *Keep unsaved projects* on: an ordinary `.lcp` named for its tab in `unsaved/` beside
 this file, let go at the next start once nothing names it. `pinnedFiles` are the recent projects
-pinned to the top of the list, in the order pinned, kept by *Clear list*. The rail's collapse applies to a wide window
+pinned to the top of the list, in the order pinned, kept by *Clear list*. The maker's project
+templates (8.14) are ordinary `.lcp` files in `templates/` beside this file, each named as the
+maker named it; the ones that ship are inside the app. The rail's collapse applies to a wide window
 only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
 and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
 room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode

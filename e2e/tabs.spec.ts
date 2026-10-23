@@ -559,3 +559,46 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
     { env: { XDG_CONFIG_HOME: config } },
   );
 });
+
+test('a new project from a template, and any project saved as one (8.14)', async () => {
+  const config = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+  await withApp(
+    async (window) => {
+      // From the Project menu: the templates that ship, the sample first.
+      await fromProjectMenu(window, 'new-template');
+      const dialog = window.getByTestId('template-dialog');
+      await expect(dialog.getByTestId('template-builtin:bifold-wallet')).toBeFocused();
+      await dialog.getByTestId('template-builtin:card-holder').click();
+      await expect(window.getByTestId('project-name')).toHaveText('Card holder');
+      await expect(window.getByTestId('part-count')).toHaveText('2');
+      // Untitled and unchanged: no file, nothing to save.
+      await expect(window.getByTestId('file-path')).toHaveCount(0);
+      await expect(window.getByTestId('save')).toHaveAttribute('aria-disabled', 'true');
+
+      // Saved as one of the maker's own, under a new name.
+      await fromProjectMenu(window, 'save-template');
+      const save = window.getByTestId('save-template-dialog');
+      await save.getByTestId('template-name').fill('My card holder');
+      await save.getByTestId('template-save').click();
+      await expect(save).toHaveCount(0);
+
+      // The same name again is said, and replaced only when asked.
+      await fromProjectMenu(window, 'save-template');
+      await save.getByTestId('template-name').fill('My card holder');
+      await save.getByTestId('template-save').click();
+      await expect(save.getByTestId('template-problem')).toContainText('already exists');
+      await save.getByTestId('template-replace').click();
+      await expect(save).toHaveCount(0);
+
+      // Listed under My templates, used, and removed.
+      await window.getByTestId('new-tab').click();
+      await window.getByTestId('tab-template').click();
+      await dialog.getByTestId('template-mine:My card holder').click();
+      await expect(window.getByTestId('part-count')).toHaveText('2');
+      await fromProjectMenu(window, 'new-template');
+      await dialog.getByTestId('template-remove-mine:My card holder').click();
+      await expect(dialog.getByTestId('template-mine:My card holder')).toHaveCount(0);
+    },
+    { env: { XDG_CONFIG_HOME: config } },
+  );
+});

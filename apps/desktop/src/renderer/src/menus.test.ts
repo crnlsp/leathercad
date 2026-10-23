@@ -59,7 +59,15 @@ describe('a recent project, in two lines (8.7)', () => {
 
 describe('the Project and Help menus (8.7)', () => {
   const noop = (): void => undefined;
-  const actions = { newProject: noop, open: noop, saveAs: noop, rename: noop, openRecent: noop };
+  const actions = {
+    newProject: noop,
+    newFromTemplate: noop,
+    open: noop,
+    saveAs: noop,
+    saveAsTemplate: noop,
+    rename: noop,
+    openRecent: noop,
+  };
   const { t } = createI18n('en');
 
   it('puts the actions first and the recent projects after, so the actions stay put', () => {
@@ -70,8 +78,10 @@ describe('the Project and Help menus (8.7)', () => {
     );
     expect(entries.map((entry) => (entry.kind === 'item' ? entry.id : entry.kind))).toEqual([
       'new',
+      'new-template',
       'open',
       'save-as',
+      'save-template',
       'rename',
       'separator',
       'group',
@@ -185,6 +195,7 @@ describe('a tab’s menu (8.12)', () => {
     rename: none,
     save: none,
     saveAs: none,
+    saveAsTemplate: none,
     reload: none,
     duplicate: none,
     showInFolder: none,

@@ -9,7 +9,7 @@ import {
   loadProject,
   saveProject,
 } from '@leathercad/persist';
-import type { PlatformHost, TabCamera } from '@leathercad/platform';
+import type { PlatformHost, TabCamera, TemplateSave } from '@leathercad/platform';
 import { useCallback } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -128,6 +128,14 @@ export function useProjectFile(
   openSample: () => Promise<void>;
   /** Starts an empty, untitled project in a tab of its own. */
   newProject: () => void;
+  /**
+   * A new project from a template (8.12), in a tab of its own: untitled and
+   * unchanged, so Save asks where and closing it untouched asks nothing, and
+   * a project of its own, with a new id. The template is never written.
+   */
+  newFromTemplate: (id: string) => Promise<void>;
+  /** Saves a tab's project as one of the maker's templates (8.12). */
+  saveAsTemplate: (tab: ProjectTab, name: string, replace: boolean) => Promise<TemplateSave>;
   /**
    * Opens a recovered project **untitled and unsaved** (5.3b): it has no path,
    * so *Save* asks where, and the file it once came from is never written.
@@ -410,6 +418,31 @@ export function useProjectFile(
     [blank, tabFor, tabs],
   );
 
+  const newFromTemplate = useCallback(
+    async (id: string) => {
+      try {
+        const data = await host().readTemplate(id);
+        if (data === null) return;
+        const loaded = loadProject(data);
+        show({ project: { ...loaded.project, id: blank().project.id } }, null, undefined);
+      } catch (error) {
+        fail(tabs.active, error);
+      }
+    },
+    [blank, fail, host, show, tabs],
+  );
+
+  const saveAsTemplate = useCallback(
+    (tab: ProjectTab, name: string, replace: boolean): Promise<TemplateSave> => {
+      const bytes = saveProject(tab.store.getState().document.project, {
+        applicationVersion: appVersion,
+        now: () => new Date(),
+      });
+      return host().saveTemplate(name, bytes, replace);
+    },
+    [appVersion, host],
+  );
+
   const restoreKept = useCallback(
     (data: Uint8Array, path: string | null, restore: TabRestore): ProjectTab | null => {
       try {
@@ -433,6 +466,8 @@ export function useProjectFile(
   );
 
   return {
+    newFromTemplate,
+    saveAsTemplate,
     restoreKept,
     reload,
     duplicate,

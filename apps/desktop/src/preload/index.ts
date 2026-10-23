@@ -116,6 +116,16 @@ const platformBridge = {
     }
   },
 
+  listTemplates: (): Promise<unknown> => ipcRenderer.invoke(IPC.listTemplates),
+
+  readTemplate: (id: string): Promise<Uint8Array | null> =>
+    ipcRenderer.invoke(IPC.readTemplate, id),
+
+  saveTemplate: (name: string, data: Uint8Array, replace: boolean): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.saveTemplate, name, data, replace),
+
+  removeTemplate: (id: string): Promise<void> => ipcRenderer.invoke(IPC.removeTemplate, id),
+
   openDropped: (paths: readonly string[]): Promise<string[]> =>
     ipcRenderer.invoke(IPC.openDropped, paths),
 

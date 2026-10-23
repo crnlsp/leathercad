@@ -749,6 +749,73 @@ body {
 }
 
 /*
+ * The template picker (8.12): the ones that ship, each with a line on what it
+ * is, then the maker's own. A list of choices, not cards.
+ */
+.template-dialog {
+  width: min(480px, calc(100vw - 2 * var(--space-6)));
+}
+
+.template-lists {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.template-heading {
+  margin: 0 0 var(--space-1);
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.template-row {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.template-choice {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template-choice:hover,
+.template-choice:focus-visible {
+  background: var(--shell-700);
+}
+
+.template-name {
+  color: var(--text);
+  font: var(--t-strong);
+}
+
+.template-note,
+.template-empty {
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
+/*
  * The start screen (8.12): every project closed, the app still open. One
  * column on the shell, the ways in first, then the recent projects — the
  * Project menu's list, where a maker looks for yesterday's pattern.

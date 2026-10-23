@@ -93,8 +93,12 @@ export function focusAfter(key: string, current: number, count: number): number 
 export function projectMenu(
   actions: {
     readonly newProject: () => void;
+    /** A new project from one of the templates (8.12): the picker. */
+    readonly newFromTemplate: () => void;
     readonly open: () => void;
     readonly saveAs: () => void;
+    /** Saves the project as one of the maker's templates (8.12). */
+    readonly saveAsTemplate: () => void;
     readonly rename: (how?: 'keyboard' | 'pointer') => void;
     readonly openRecent: (path: string) => void;
   },
@@ -116,6 +120,12 @@ export function projectMenu(
     },
     {
       kind: 'item',
+      id: 'new-template',
+      label: t('menu.newFromTemplate'),
+      onChoose: actions.newFromTemplate,
+    },
+    {
+      kind: 'item',
       id: 'open',
       label: t('menu.open'),
       keys: 'openProject',
@@ -127,6 +137,13 @@ export function projectMenu(
       label: t('menu.saveAs'),
       keys: 'saveAs',
       onChoose: actions.saveAs,
+      refusal: noProject,
+    },
+    {
+      kind: 'item',
+      id: 'save-template',
+      label: t('menu.saveAsTemplate'),
+      onChoose: actions.saveAsTemplate,
       refusal: noProject,
     },
     {
@@ -165,6 +182,7 @@ export function tabMenu(
     readonly rename: (how?: 'keyboard' | 'pointer') => void;
     readonly save: () => void;
     readonly saveAs: () => void;
+    readonly saveAsTemplate: () => void;
     readonly reload: () => void;
     readonly duplicate: () => void;
     readonly showInFolder: () => void;
@@ -192,6 +210,12 @@ export function tabMenu(
       label: t('tabMenu.saveAs'),
       keys: 'saveAs',
       onChoose: actions.saveAs,
+    },
+    {
+      kind: 'item',
+      id: 'tab-save-template',
+      label: t('menu.saveAsTemplate'),
+      onChoose: actions.saveAsTemplate,
     },
     {
       kind: 'item',
@@ -258,6 +282,7 @@ export function tabMenu(
 export function newTabMenu(
   actions: {
     readonly newProject: () => void;
+    readonly newFromTemplate: () => void;
     readonly open: () => void;
     readonly openRecent: (path: string) => void;
   },
@@ -271,6 +296,12 @@ export function newTabMenu(
       label: t('menu.new'),
       keys: 'newProject',
       onChoose: actions.newProject,
+    },
+    {
+      kind: 'item',
+      id: 'tab-template',
+      label: t('menu.newFromTemplate'),
+      onChoose: actions.newFromTemplate,
     },
     {
       kind: 'item',

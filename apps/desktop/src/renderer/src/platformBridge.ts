@@ -1,6 +1,8 @@
 import type {
   MenuAction,
   FileRename,
+  TemplateEntry,
+  TemplateSave,
   KeptSession,
   OpenDialogOptions,
   OpenSession,
@@ -65,6 +67,10 @@ interface PreloadBridge {
   watchProjects(paths: readonly string[]): Promise<void>;
   pathForFile(file: unknown): string;
   openDropped(paths: readonly string[]): Promise<readonly string[]>;
+  listTemplates(): Promise<readonly TemplateEntry[]>;
+  readTemplate(id: string): Promise<Uint8Array | null>;
+  saveTemplate(name: string, data: Uint8Array, replace: boolean): Promise<TemplateSave>;
+  removeTemplate(id: string): Promise<void>;
   onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
 

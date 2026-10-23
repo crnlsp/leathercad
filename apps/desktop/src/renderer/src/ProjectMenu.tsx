@@ -21,8 +21,10 @@ export function ProjectMenu({
   triggerRef,
   onMenuOpen,
   onNew,
+  onNewFromTemplate,
   onOpen,
   onSaveAs,
+  onSaveAsTemplate,
   onRename,
   onOpenRecent,
 }: {
@@ -35,8 +37,12 @@ export function ProjectMenu({
   /** The menu is opening: its recent projects are asked for again. */
   onMenuOpen: () => void;
   onNew: () => void;
+  /** *New project from template…* (8.12): the picker. */
+  onNewFromTemplate: () => void;
   onOpen: () => void;
   onSaveAs: () => void;
+  /** *Save as template…* (8.12). */
+  onSaveAsTemplate: () => void;
   /** *Rename…*: the active tab's name becomes a field. */
   onRename: (how: Press) => void;
   /** One that is gone is taken off the list, and this menu says why (U.20). */
@@ -58,8 +64,10 @@ export function ProjectMenu({
         entries={projectMenu(
           {
             newProject: onNew,
+            newFromTemplate: onNewFromTemplate,
             open: onOpen,
             saveAs: onSaveAs,
+            saveAsTemplate: onSaveAsTemplate,
             // A keyboard's choice gives focus back to the menu once the name
             // is set; the pointer's leaves it with the page (U.4).
             rename: (how) => onRename(how ?? 'keyboard'),
@@ -92,6 +100,7 @@ export function NewTabMenu({
   recent,
   onMenuOpen,
   onNew,
+  onNewFromTemplate,
   onOpen,
   onOpenRecent,
 }: {
@@ -99,6 +108,7 @@ export function NewTabMenu({
   /** The menu is opening: its recent projects are asked for again. */
   onMenuOpen: () => void;
   onNew: () => void;
+  onNewFromTemplate: () => void;
   onOpen: () => void;
   onOpenRecent: (path: string) => Promise<RecentOutcome>;
 }) {
@@ -114,6 +124,7 @@ export function NewTabMenu({
         entries={newTabMenu(
           {
             newProject: onNew,
+            newFromTemplate: onNewFromTemplate,
             open: onOpen,
             openRecent: (path) =>
               void onOpenRecent(path)

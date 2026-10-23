@@ -12,6 +12,7 @@ import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
 import { OneAtATime } from './oneAtATime.js';
 import type { KeptCopies } from './keptCopies.js';
+import type { Templates } from './templates.js';
 import type { ProjectWatch } from './projectWatch.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
 import { renameProjectFile } from './renameFile.js';
@@ -64,6 +65,8 @@ export function registerPlatformHandlers(
   projectWatch: ProjectWatch,
   /** Unsaved work kept as the window closes, for the next start (8.12). */
   kept: KeptCopies,
+  /** The project templates: the built-in ones and the maker's own (8.12). */
+  templates: Templates,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -91,6 +94,19 @@ export function registerPlatformHandlers(
       log.info(`granted a dropped project: ${JSON.stringify(path)}`);
     }
     return granted;
+  });
+
+  // Templates (8.12). The renderer names one by its id, never by a path, and
+  // names one it saves by a name that is checked as a file name.
+  ipcMain.handle(IPC.listTemplates, () => templates.list());
+  ipcMain.handle(IPC.readTemplate, (_event, id: unknown) =>
+    typeof id === 'string' ? templates.read(id) : null,
+  );
+  ipcMain.handle(IPC.saveTemplate, (_event, name: unknown, data: Uint8Array, replace: unknown) =>
+    typeof name === 'string' ? templates.save(name, data, replace === true) : { kind: 'invalid' },
+  );
+  ipcMain.handle(IPC.removeTemplate, async (_event, id: unknown) => {
+    if (typeof id === 'string') await templates.remove(id);
   });
 
   // The open projects' files (8.12), watched from now on: only paths the

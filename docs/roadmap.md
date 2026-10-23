@@ -129,6 +129,13 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   front (`session` in `preferences.json`). One file dialog at a time: a second Open while one is up is not shown.
   The window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work.
   A `tablist` with arrow keys, clean under axe.
+- ◐ **8.14 New from a template.** *New project* is two: *from scratch*, still Ctrl+N, and *from
+  template…*, a picker of the templates that ship — the sample wallet, a card holder, a key fob and
+  a coaster, each built from the app's own commands and clean — and the maker's own. *Save as
+  template…* in the Project menu and a tab's menu saves any project as one, never over another of
+  the same name unless asked; the maker's are removed from the picker. A project from a template
+  opens untitled, unchanged and with an id of its own, so Save asks where and the template is never
+  written.
 - ◐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
   `<pid>-<start>-<tab>.lcp`, written while it is in front or not; closing a tab or saving it clears
   it. After a crash every copy is offered in turn, each into a tab of its own. Copies from 1.5, one

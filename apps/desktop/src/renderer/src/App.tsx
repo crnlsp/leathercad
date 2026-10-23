@@ -29,6 +29,7 @@ import {
   type RecentFile,
   type KeptSession,
   type TabCamera,
+  type TemplateEntry,
   type UpdateStatus,
 } from '@leathercad/platform';
 import { saveProject } from '@leathercad/persist';
@@ -64,6 +65,7 @@ import { OutsideChangeBar } from './OutsideChangeBar.js';
 import { UnsavedProjectsDialog } from './UnsavedProjectsDialog.js';
 import { MessageDialog } from './MessageDialog.js';
 import { NewTabMenu, ProjectMenu } from './ProjectMenu.js';
+import { SaveTemplateDialog, TemplateDialog } from './TemplateDialog.js';
 import { StartScreen } from './StartScreen.js';
 import {
   ProjectTabs,
@@ -588,6 +590,17 @@ export function App({
       })
       .catch(() => undefined);
   }, [storeState, tabs, t]);
+
+  // The templates (8.12): the picker, open with what the main process listed,
+  // and the tab being saved as one.
+  const [templateList, setTemplateList] = useState<readonly TemplateEntry[] | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState<ProjectTab | null>(null);
+  const showTemplates = useCallback(() => {
+    void getPlatformHost()
+      .listTemplates()
+      .then(setTemplateList)
+      .catch(() => undefined);
+  }, []);
 
   // A tab's own menu (8.12), open at a point, and the tab whose file is being
   // asked about before it goes to the Trash.
@@ -1204,8 +1217,10 @@ export function App({
               triggerRef={projectMenuRef}
               onMenuOpen={refreshRecent}
               onNew={newProject}
+              onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
               onSaveAs={() => (active === null ? undefined : void file.save(active, true))}
+              onSaveAsTemplate={() => setSavingTemplate(active)}
               onRename={setRenaming}
               // The main process checks it is on the list, grants it, and
               // hands it back through onOpenFile, which opens it in a tab.
@@ -1217,6 +1232,7 @@ export function App({
               recent={recent}
               onMenuOpen={refreshRecent}
               onNew={newProject}
+              onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
               onOpenRecent={(path) => getPlatformHost().openRecent(path)}
             />
@@ -1253,6 +1269,7 @@ export function App({
               onRefreshRecent={refreshRecent}
               error={startError === null ? null : fileErrorText(startError, t)}
               onNew={newProject}
+              onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
               onOpenSample={() => void openSample()}
               onOpenRecent={(path) =>
@@ -1735,6 +1752,47 @@ export function App({
           <AboutDialog version={version} updates={updates} onClose={() => setAboutOpen(false)} />
         )}
 
+        {templateList !== null && (
+          <TemplateDialog
+            templates={templateList}
+            onChoose={(id) => {
+              setTemplateList(null);
+              void file.newFromTemplate(id);
+            }}
+            onRemove={(id) =>
+              void getPlatformHost()
+                .removeTemplate(id)
+                .then(() => getPlatformHost().listTemplates())
+                .then(setTemplateList)
+                .catch(() => undefined)
+            }
+            onClose={() => setTemplateList(null)}
+          />
+        )}
+
+        {savingTemplate !== null && (
+          <SaveTemplateDialog
+            initialName={tabName(savingTemplate, t)}
+            onSave={async (name, replace) => {
+              const outcome = await file
+                .saveAsTemplate(savingTemplate, name, replace)
+                .catch((error: unknown) => ({ kind: 'failed' as const, error }));
+              if (outcome.kind === 'failed') {
+                return { said: fileErrorText(outcome.error, t), taken: false };
+              }
+              if (outcome.kind === 'saved') {
+                setSavingTemplate(null);
+                return null;
+              }
+              if (outcome.kind === 'exists') {
+                return { said: t('templates.exists', { name: outcome.name }), taken: true };
+              }
+              return { said: t('templates.invalid', { name: name.trim() }), taken: false };
+            }}
+            onClose={() => setSavingTemplate(null)}
+          />
+        )}
+
         {notice !== null && (
           <MessageDialog title={notice.title} testId="file-notice" onClose={() => setNotice(null)}>
             <p>{notice.text}</p>
@@ -1754,6 +1812,7 @@ export function App({
               },
               save: () => void file.save(menuTab),
               saveAs: () => void file.save(menuTab, true),
+              saveAsTemplate: () => setSavingTemplate(menuTab),
               reload: () =>
                 void confirmDiscard('reload', menuTab).then((proceed) =>
                   proceed ? file.reload(menuTab) : undefined,

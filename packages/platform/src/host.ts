@@ -261,6 +261,21 @@ export interface PlatformHost {
    */
   openDropped(paths: readonly string[]): Promise<readonly string[]>;
 
+  /** The project templates (8.12): the built-in ones, then the maker's own. */
+  listTemplates(): Promise<readonly TemplateEntry[]>;
+
+  /** A template's bytes, by its id, or null. Only an id crosses, never a path. */
+  readTemplate(id: string): Promise<Uint8Array | null>;
+
+  /**
+   * Saves a project as one of the maker's templates (8.12): never over one of
+   * the same name, which comes back as `exists`, unless `replace`.
+   */
+  saveTemplate(name: string, data: Uint8Array, replace: boolean): Promise<TemplateSave>;
+
+  /** Removes one of the maker's templates; a built-in one cannot be. */
+  removeTemplate(id: string): Promise<void>;
+
   /** A watched project's file changed outside the app, or went (8.12). */
   onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
@@ -272,6 +287,19 @@ export type FileRename =
   | { readonly kind: 'exists'; readonly file: string }
   /** No file can have the name. */
   | { readonly kind: 'invalid' };
+
+/** A template the picker lists (8.12). */
+export interface TemplateEntry {
+  /** `builtin:<id>` or `mine:<name>`. */
+  readonly id: string;
+  readonly kind: 'builtin' | 'mine';
+  /** The maker's name for one of theirs; a built-in one's id, which the app words. */
+  readonly name: string;
+}
+
+/** What saving a template came to (8.12). */
+export type TemplateSave =
+  { readonly kind: 'saved' | 'exists'; readonly name: string } | { readonly kind: 'invalid' };
 
 /** What happened to an open project's file outside the app (8.12). */
 export type OutsideChange = 'changed' | 'gone';

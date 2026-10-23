@@ -276,6 +276,9 @@ Since 8.11–8.13, on each platform, with the packaged app.
 13. Turn on Settings › General › *Keep unsaved projects when closing*, make an untitled project
     with a drawing, and close the window: nothing is asked. Start again: it is back, unsaved, and
     each tab is on its view and zoom.
+14. *New project from template…*: each template that ships opens, untitled, with nothing to fix in
+    Problems. *Save as template…* on a project of yours: it is listed under *My templates*, and a
+    second save under the same name asks before replacing it.
 
 ## After it passes
 

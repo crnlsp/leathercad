@@ -1,5 +1,5 @@
 import type { RecentFile } from '@leathercad/platform';
-import { FilePlus, FolderOpen, Pin, PinOff, Sparkles, X } from 'lucide-react';
+import { FilePlus, FolderOpen, LayoutTemplate, Pin, PinOff, Sparkles, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -19,6 +19,7 @@ export function StartScreen({
   onRefreshRecent,
   error,
   onNew,
+  onNewFromTemplate,
   onOpen,
   onOpenSample,
   onOpenRecent,
@@ -32,6 +33,8 @@ export function StartScreen({
   /** What went wrong opening a project from here, in words, or null. */
   error: string | null;
   onNew: () => void;
+  /** *New project from template…* (8.12): the picker. */
+  onNewFromTemplate: () => void;
   onOpen: () => void;
   onOpenSample: () => void;
   onOpenRecent: (path: string) => void;
@@ -68,6 +71,15 @@ export function StartScreen({
             <Icon of={FilePlus} />
             {t('menu.new')}
             <KeyCap command="newProject" />
+          </button>
+          <button
+            type="button"
+            className="tool start-action"
+            data-testid="start-template"
+            onClick={onNewFromTemplate}
+          >
+            <Icon of={LayoutTemplate} />
+            {t('menu.newFromTemplate')}
           </button>
           <button
             type="button"

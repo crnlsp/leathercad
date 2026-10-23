@@ -13,6 +13,8 @@
  */
 
 export type {
+  TemplateEntry,
+  TemplateSave,
   KeptSession,
   OpenSessionTab,
   TabCamera,

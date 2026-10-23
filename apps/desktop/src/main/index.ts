@@ -7,6 +7,9 @@ import { BrowserWindow, Menu, app, net, protocol, session, shell } from 'electro
 import log from 'electron-log/main';
 
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
+import cardHolderTemplate from '../../../../fixtures/projects/card-holder.lcp?asset';
+import coasterTemplate from '../../../../fixtures/projects/coaster.lcp?asset';
+import keyFobTemplate from '../../../../fixtures/projects/key-fob.lcp?asset';
 import windowIcon from '../../build/icon.png?asset';
 import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { SOURCE_LOCALE, createI18n, resolveLocale, type I18n } from '../shared/i18n.js';
@@ -20,6 +23,7 @@ import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
 import { KeptCopies } from './keptCopies.js';
+import { Templates } from './templates.js';
 import { PreferencesStore } from './preferences.js';
 import { ProjectWatch } from './projectWatch.js';
 import { RecoveryStore } from './recovery.js';
@@ -63,6 +67,18 @@ const recovery = new RecoveryStore(join(stateDirectory(), 'recovery'), {
   pid: process.pid,
   startedAt: Date.now(),
 });
+
+// The project templates (8.12): the ones that ship, in the picker's order —
+// the sample wallet first — and the maker's own, beside the preferences.
+const templates = new Templates(
+  {
+    'bifold-wallet': sampleProject,
+    'card-holder': cardHolderTemplate,
+    'key-fob': keyFobTemplate,
+    coaster: coasterTemplate,
+  },
+  join(app.getPath('userData'), 'templates'),
+);
 
 // The unsaved work kept as the window closes (8.12), with Keep unsaved
 // projects on: beside the preferences, in a folder of its own.
@@ -364,6 +380,7 @@ app.whenReady().then(() => {
     updates,
     projectWatch,
     kept,
+    templates,
   );
 
   followLanguage();
