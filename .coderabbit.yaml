@@ -4,9 +4,9 @@
 # It is advisory — not a required check — and tuned to say little: CI already
 # enforces format, lint, layering, dead code and tests, and the pull request
 # template already says what changed. It reads CLAUDE.md for the invariants
-# (its default code-guideline files); the path instructions below point at
-# the docs that hold the detail. See CONTRIBUTING.md, "Commits and pull
-# requests".
+# and .claude/rules/ for engineering practice (both among its default
+# code-guideline files); the path instructions below point at the docs that
+# hold the detail. See CONTRIBUTING.md, "Commits and pull requests".
 
 language: en-GB
 tone_instructions: >-
