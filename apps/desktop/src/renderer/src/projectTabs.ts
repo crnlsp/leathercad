@@ -291,12 +291,15 @@ export class ProjectTabs {
     this.set(rest, rest.find((tab) => tab.id === next) ?? null);
   }
 
-  /** Changes a tab's own fields, and tells the window. */
+  /**
+   * Changes a tab's own fields, and tells the window — with a new list, so an
+   * effect that reads the tabs (the session, the recovery copies) sees a save.
+   */
   update(id: string, change: (tab: ProjectTab) => void): void {
     const tab = this.snapshot.tabs.find((each) => each.id === id);
     if (tab === undefined) return;
     change(tab);
-    this.set(this.snapshot.tabs, this.snapshot.active);
+    this.set([...this.snapshot.tabs], this.snapshot.active);
   }
 
   private ids(): string[] {

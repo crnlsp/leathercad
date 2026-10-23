@@ -530,7 +530,10 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
       }, file);
       await drawAPanel(window, { parts: '1' });
       await window.getByTestId('save').click();
+      // Read once it has moved: straight after the click it still says the old zoom.
+      const before = await window.getByTestId('zoom-level').textContent();
       await window.getByTestId('zoom-in').click();
+      await expect(window.getByTestId('zoom-level')).not.toHaveText(before ?? '');
       leftAt = await window.getByTestId('zoom-level').textContent();
       await window.getByTestId('view-sheets').click();
 
