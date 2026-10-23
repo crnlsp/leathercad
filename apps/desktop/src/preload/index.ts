@@ -73,6 +73,10 @@ const platformBridge = {
 
   readNotices: (): Promise<string | null> => ipcRenderer.invoke(IPC.readNotices),
 
+  getUpdateStatus: (): Promise<unknown> => ipcRenderer.invoke(IPC.getUpdateStatus),
+
+  checkForUpdates: (): Promise<unknown> => ipcRenderer.invoke(IPC.checkForUpdates),
+
   readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
 
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),

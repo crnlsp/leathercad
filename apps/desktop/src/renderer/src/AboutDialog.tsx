@@ -1,16 +1,27 @@
+import type { UpdateStatus } from '@leathercad/platform';
 import { useEffect, useRef, useState } from 'react';
 
 import iconUrl from '../../../build/icon.svg';
 import { useI18n } from './i18n.js';
 import { MessageDialog } from './MessageDialog.js';
 import { getPlatformHost } from './platformBridge.js';
+import { UpdateLine } from './UpdateLine.js';
 
 /**
  * About LeatherCAD (8.7), from Help and from macOS's app menu: the one place
  * the application says what it is. The full-colour icon is the product's
  * picture, not chrome, so this is the one place in the window it appears.
+ * Under the version, whether a newer one exists (8.9).
  */
-export function AboutDialog({ version, onClose }: { version: string | null; onClose: () => void }) {
+export function AboutDialog({
+  version,
+  updates,
+  onClose,
+}: {
+  version: string | null;
+  updates: UpdateStatus;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const closeRef = useRef<HTMLButtonElement>(null);
   const noticesRef = useRef<HTMLButtonElement>(null);
@@ -46,6 +57,7 @@ export function AboutDialog({ version, onClose }: { version: string | null; onCl
               </p>
             </div>
           </div>
+          <UpdateLine status={updates} />
           <p>{t('about.blurb')}</p>
           {/* An https link: the window-open handler sends it to the browser. */}
           <p>

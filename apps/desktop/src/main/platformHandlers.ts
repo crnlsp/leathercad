@@ -12,6 +12,7 @@ import type { PathGrants, PathUse } from './pathGrants.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
 import { shownPath, type PreferencesStore } from './preferences.js';
 import type { RecoveryStore } from './recovery.js';
+import type { UpdateChecker } from './updates.js';
 
 /**
  * How often the renderer writes a recovery copy while there is unsaved work.
@@ -50,6 +51,8 @@ export function registerPlatformHandlers(
   onPreferencesChanged: () => void,
   /** Settings is listening for a key (U.12): the window's own keys wait. */
   onKeyCapture: (capturing: boolean) => void,
+  /** Whether a newer release exists (8.9): the start's answer, or *Check now*. */
+  updates: UpdateChecker,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -179,6 +182,15 @@ export function registerPlatformHandlers(
     await shell.openPath(stateDirectory());
   });
   ipcMain.handle(IPC.readNotices, () => readNotices());
+
+  // The update check (8.9): the main process asks, the renderer only hears
+  // the answer, so its Content-Security-Policy still connects to nothing.
+  ipcMain.handle(IPC.getUpdateStatus, () => updates.status());
+  ipcMain.handle(IPC.checkForUpdates, async () => {
+    const status = await updates.check();
+    log.info(`update check, asked for: ${status.state}`);
+    return status;
+  });
 }
 
 /** The path, if the renderer may use it this way; otherwise logged and refused. */

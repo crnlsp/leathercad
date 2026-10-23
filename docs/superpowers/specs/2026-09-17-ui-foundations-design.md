@@ -245,6 +245,10 @@ glyph**, never by recolouring geometry (§8.5) — so colour is never the only c
 | `--warning` | `#D9891F` | `#B5651A` |
 | `--info` | `#6F9FD8` | `#3C6FA8` |
 
+`--ok`, `#7DAE8B` on the shell only, came with 8.9: a sage for *the version is the latest*. It is
+not a severity, and it never appears without its tick. The ground has none, since green there is
+the fold's.
+
 **Warning moves from `#E0A93A` to an orange**, `#D9891F`. It sat one step from the accent, and the two
 co-occur constantly. Hardware vacates the amber family entirely (§8), so the orange is free.
 

@@ -21,7 +21,12 @@ import {
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import { systemIdSource, type Preferences, type RecentFile } from '@leathercad/platform';
+import {
+  systemIdSource,
+  type Preferences,
+  type RecentFile,
+  type UpdateStatus,
+} from '@leathercad/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -61,6 +66,7 @@ import { selectedParts } from './sheetContents.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
+import { VersionButton } from './VersionButton.js';
 import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
@@ -425,6 +431,25 @@ export function App({
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [confirmDiscard, file]);
 
+  // Whether a newer release exists (8.9): asked only when the maker presses
+  // *Check now* in Settings or the version in the status bar. The main
+  // process keeps the last answer, so a new window on macOS still shows it.
+  const [updates, setUpdates] = useState<UpdateStatus>({ state: 'idle' });
+  useEffect(() => {
+    void getPlatformHost()
+      .getUpdateStatus()
+      .then(setUpdates)
+      .catch(() => undefined);
+  }, []);
+  const checkUpdates = useCallback(
+    () =>
+      getPlatformHost()
+        .checkForUpdates()
+        .then(setUpdates)
+        .catch(() => setUpdates({ state: 'failed' })),
+    [],
+  );
+
   useEffect(() => {
     void (async () => {
       try {
@@ -756,7 +781,9 @@ export function App({
           onOpenRecent={(path) => getPlatformHost().openRecent(path)}
           onOpenSample={() => void openSample()}
           onAbout={() => setAboutOpen(true)}
-          onSettings={() => setSettings('general')}
+          // The mark is news about Updates, so the button opens there while it shows.
+          onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
+          updateAvailable={updates.state === 'available'}
           onSave={() => void file.save()}
           onExport={() => void exportPdf()}
           onExportSvg={() => void exportDrawing('svg')}
@@ -1038,7 +1065,7 @@ export function App({
         */}
           <span className="status-left">
             <span data-testid="status-counts">
-              v<span data-testid="app-version">{version ?? '…'}</span>
+              <VersionButton version={version} updates={updates} onCheck={checkUpdates} />
               <span className="sep">·</span>
               <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
               {t('status.partsCount', { count: storeState.document.project.parts.length })}
@@ -1164,10 +1191,14 @@ export function App({
             }
             onClose={() => setSettings(null)}
             nextId={nextId}
+            updates={updates}
+            onCheckUpdates={checkUpdates}
           />
         )}
 
-        {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
+        {aboutOpen && (
+          <AboutDialog version={version} updates={updates} onClose={() => setAboutOpen(false)} />
+        )}
 
         {printing && (
           <PrintPreview

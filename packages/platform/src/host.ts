@@ -185,6 +185,48 @@ export interface PlatformHost {
    * hands over later (macOS's *open-file*) comes through `onOpenFile`.
    */
   takeLaunchFile(): Promise<string | null>;
+
+  /**
+   * What the update check found (8.9): the last one the maker asked for,
+   * waited for while it runs. `idle` when nothing has asked this session.
+   */
+  getUpdateStatus(): Promise<UpdateStatus>;
+
+  /**
+   * Asks GitHub for the latest release now (8.9) — only ever because the
+   * maker pressed something — and resolves with what it found. Installs nothing.
+   */
+  checkForUpdates(): Promise<UpdateStatus>;
+}
+
+/**
+ * Whether a newer LeatherCAD has been released (8.9) — a fact, which the app
+ * words. `managed`: something else keeps this copy up to date (the Flatpak,
+ * Flathub), so the app never asks. `failed` covers no network, GitHub
+ * refusing and an answer that could not be read: none of them is news.
+ */
+export type UpdateStatus =
+  | { readonly state: 'idle' }
+  | ({ readonly state: 'current' } & UpdateAnswer)
+  | ({
+      readonly state: 'available';
+      /** As `X.Y.Z`. */
+      readonly version: string;
+      /** The release's page, where its notes and downloads are. */
+      readonly url: string;
+    } & UpdateAnswer)
+  | { readonly state: 'failed' }
+  | { readonly state: 'managed' };
+
+/**
+ * When an answer came, and when the app will ask again (8.9). Until `againAt`
+ * a press reads this answer back rather than asking: GitHub is not asked twice
+ * in five minutes. A failed check has neither, so it can be tried again at once.
+ * Both are milliseconds since the epoch, by the main process's clock.
+ */
+export interface UpdateAnswer {
+  readonly checkedAt: number;
+  readonly againAt: number;
 }
 
 /** What `listPrinters` found (7.6). */

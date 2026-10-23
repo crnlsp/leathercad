@@ -79,7 +79,8 @@
     "settings": "Settings",
     "settingsTooltip": "Settings",
     "unsaved": "Unsaved changes",
-    "unsavedShort": "Unsaved"
+    "unsavedShort": "Unsaved",
+    "settingsUpdate": "Settings — a new version is available"
   },
   "menu": {
     "about": "About LeatherCAD",
@@ -173,7 +174,9 @@
     "selected": "selected",
     "sheetOf": "Sheet {{number}} of {{count}}",
     "partsSelected_one": "part selected",
-    "partsSelected_other": "parts selected"
+    "partsSelected_other": "parts selected",
+    "checkForUpdates": "Check for updates",
+    "versionNext": "to {{version}}"
   },
   "view": {
     "design": "Design",
@@ -334,7 +337,8 @@
       "general": "General",
       "language": "Language",
       "shortcuts": "Keyboard shortcuts",
-      "tools": "My tools"
+      "tools": "My tools",
+      "updates": "Updates"
     },
     "recent": {
       "clear": "Clear list",
@@ -414,6 +418,14 @@
       "allReset": "Every key is back to its default.",
       "typesOther": "Held that way, the key types “{{typed}}” rather than its letter, so it can't be a shortcut. Press other keys.",
       "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys."
+    },
+    "updates": {
+      "note": "LeatherCAD asks GitHub which version is the latest only when you ask it to, here or by pressing the version in the status bar. Nothing about you or your patterns is sent, and nothing is downloaded or installed.",
+      "now": "Check now",
+      "checking": "Checking…",
+      "again_one": "Check again in {{count}} minute",
+      "again_other": "Check again in {{count}} minutes",
+      "managed": "Flathub keeps this copy of LeatherCAD up to date, so it does not check for itself."
     }
   },
   "about": {
@@ -1234,5 +1246,14 @@
       "holes": "Stitch holes",
       "allowance": "Seam allowance"
     }
+  },
+  "updates": {
+    "current": "You have the latest version.",
+    "available": "LeatherCAD {{version}} is available.",
+    "availableLink": "See what is new, and download it",
+    "failed": "Could not check for a new version. Check your connection, or try again later.",
+    "checkedAt": "Checked at {{time}}",
+    "again_one": "You can check again in {{count}} minute.",
+    "again_other": "You can check again in {{count}} minutes."
   }
 }

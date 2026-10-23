@@ -100,6 +100,14 @@ describe('reading preferences.json', () => {
     expect(validChanges({ selectionBar: 0 })).toEqual({});
   });
 
+  it('keeps no switch for checking for a new version: only the maker asks (8.9)', () => {
+    expect(DEFAULT_PREFERENCES).not.toHaveProperty('updateCheck');
+    expect(parsePreferences(JSON.stringify({ updateCheck: true }))).not.toHaveProperty(
+      'updateCheck',
+    );
+    expect(validChanges({ updateCheck: true })).toEqual({});
+  });
+
   it('keeps the interface language: following the system, or one the app ships', () => {
     expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
     expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');

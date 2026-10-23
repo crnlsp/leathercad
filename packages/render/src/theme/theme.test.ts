@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACCENT,
   CANVAS,
+  CONFIRM,
   DASH_LEGIBLE_PX,
   ACTION,
   GROUND,
@@ -147,6 +148,14 @@ describe('the four planes (F.5)', () => {
       expect(contrast(STATE.ground[severity], GROUND.ground), severity).toBeGreaterThan(3);
       expect(contrast(STATE.shell[severity], SHELL[800]), severity).toBeGreaterThan(3);
     }
+  });
+
+  it('draws the latest-version tick, and its chip, readably on the shell (8.9)', () => {
+    // The status bar, Settings, and a chip tinted from either.
+    for (const surface of [SHELL[700], SHELL[800], SHELL[900]]) {
+      expect(contrast(CONFIRM.ok, surface), surface).toBeGreaterThanOrEqual(3);
+    }
+    expect(cssVariables('comfortable')['--ok']).toBe(CONFIRM.ok);
   });
 
   it('shows a scrollbar on every shell surface that scrolls, and the focus ring too (U.20)', () => {
