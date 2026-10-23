@@ -47,6 +47,7 @@ import {
   type Proposal,
 } from './rebind.js';
 import { shortcutGroups } from './shortcuts.js';
+import { Spinner, useChecking } from './Spinner.js';
 import { UpdateLine } from './UpdateLine.js';
 
 export type SettingsSection =
@@ -556,7 +557,7 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
  */
 function Updates({ preferences, onPreferences, updates, onCheckUpdates }: Props) {
   const { t } = useI18n();
-  const [checking, setChecking] = useState(false);
+  const [checking, check] = useChecking(onCheckUpdates);
   if (updates.state === 'managed') {
     return (
       <p className="setting-note" data-testid="updates-managed">
@@ -586,11 +587,9 @@ function Updates({ preferences, onPreferences, updates, onCheckUpdates }: Props)
           className="tool"
           data-testid="check-updates"
           disabled={checking}
-          onClick={() => {
-            setChecking(true);
-            void onCheckUpdates().finally(() => setChecking(false));
-          }}
+          onClick={check}
         >
+          {checking ? <Spinner /> : null}
           {t('settings.updates.now')}
         </button>
       </div>

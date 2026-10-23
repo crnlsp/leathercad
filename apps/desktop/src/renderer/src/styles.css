@@ -1172,6 +1172,32 @@ body {
   text-decoration: underline;
 }
 
+/* A check for updates is running (8.9): the one motion that is not a colour,
+   since a press that seems to do nothing feels broken. Reduced motion keeps
+   the circle and stops it turning. */
+.spinner {
+  display: inline-flex;
+  flex: none;
+  animation: spin 800ms linear infinite;
+}
+
+.status-version .spinner {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
 .status-left .status-error {
   overflow: hidden;
   text-overflow: ellipsis;
