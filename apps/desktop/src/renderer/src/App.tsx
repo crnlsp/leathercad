@@ -29,6 +29,7 @@ import {
   type RecentFile,
   type KeptSession,
   type TabCamera,
+  type TemplateSave,
   type UpdateStatus,
 } from '@leathercad/platform';
 import { loadProject, saveProject } from '@leathercad/persist';
@@ -64,7 +65,12 @@ import { OutsideChangeBar } from './OutsideChangeBar.js';
 import { UnsavedProjectsDialog } from './UnsavedProjectsDialog.js';
 import { MessageDialog } from './MessageDialog.js';
 import { NewTabMenu, ProjectMenu } from './ProjectMenu.js';
-import { SaveTemplateDialog, TemplateDialog, type TemplateChoice } from './TemplateDialog.js';
+import {
+  SaveTemplateDialog,
+  TemplateDialog,
+  type TemplateActions,
+  type TemplateChoice,
+} from './TemplateDialog.js';
 import { StartScreen } from './StartScreen.js';
 import {
   ProjectTabs,
@@ -594,23 +600,101 @@ export function App({
   const [savingTemplate, setSavingTemplate] = useState<ProjectTab | null>(null);
   // Each template read and loaded, so the picker can draw it. One that does
   // not load is still listed, without its picture.
-  const showTemplates = useCallback(() => {
-    void (async () => {
-      const host = getPlatformHost();
-      const entries = await host.listTemplates();
-      const choices = await Promise.all(
-        entries.map(async (entry): Promise<TemplateChoice> => {
-          try {
-            const data = await host.readTemplate(entry.id);
-            return { entry, project: data === null ? null : loadProject(data).project };
-          } catch {
-            return { entry, project: null };
-          }
-        }),
-      );
-      setTemplateList(choices);
-    })().catch(() => undefined);
+  const listTemplates = useCallback(async (): Promise<TemplateChoice[]> => {
+    const host = getPlatformHost();
+    const entries = await host.listTemplates();
+    return Promise.all(
+      entries.map(async (entry): Promise<TemplateChoice> => {
+        try {
+          const data = await host.readTemplate(entry.id);
+          return { entry, project: data === null ? null : loadProject(data).project };
+        } catch {
+          return { entry, project: null };
+        }
+      }),
+    );
   }, []);
+  const showTemplates = useCallback(() => {
+    void listTemplates()
+      .then(setTemplateList)
+      .catch(() => undefined);
+  }, [listTemplates]);
+
+  /**
+   * Managing templates from the picker (8.14). Each change is the main
+   * process's to make; the picker then reads the library again, so what it
+   * shows is what is on disk.
+   */
+  const templateActions = useMemo((): TemplateActions => {
+    const host = getPlatformHost();
+    // Read again, but only into a picker still open: a removal can land after it closed.
+    const refresh = async (): Promise<void> => {
+      const fresh = await listTemplates();
+      setTemplateList((list) => (list === null ? null : fresh));
+    };
+    const said = (outcome: TemplateSave): string | null =>
+      outcome.kind === 'saved'
+        ? null
+        : outcome.kind === 'exists'
+          ? t('templates.exists', { name: outcome.name })
+          : t('templates.invalid', { name: '' });
+    return {
+      use: (id) => {
+        setTemplateList(null);
+        void file.newFromTemplate(id);
+      },
+      rename: async (id, name) => {
+        const outcome = await host.renameTemplate(id, name);
+        if (outcome.kind === 'saved') await refresh();
+        return outcome.kind === 'invalid'
+          ? t('templates.invalid', { name: name.trim() })
+          : said(outcome);
+      },
+      duplicate: async (id, name) => {
+        await host.duplicateTemplate(id, name);
+        await refresh();
+      },
+      describe: async (id, description, tags) => {
+        await host.describeTemplate(id, description, tags);
+        await refresh();
+      },
+      pin: async (id, pinned) => {
+        await host.pinTemplate(id, pinned);
+        await refresh();
+      },
+      edit: (id) => {
+        setTemplateList(null);
+        void host
+          .editTemplate(id)
+          .then((path) => (path === null ? undefined : file.openPath(path)))
+          .catch(() => undefined);
+      },
+      exportTo: async (id) => {
+        const entry = templateList?.find((choice) => choice.entry.id === id)?.entry;
+        await host.exportTemplate(id, {
+          title: t('templates.exportTitle'),
+          defaultPath: `${entry?.kind === 'mine' ? entry.name : 'template'}.lcp`,
+          filters: [{ name: t('file.project'), extensions: ['lcp'] }],
+        });
+      },
+      show: (id) => {
+        void host.showTemplate(id).catch(() => undefined);
+      },
+      remove: (id) => {
+        void host
+          .removeTemplate(id)
+          .then(refresh)
+          .catch(() => undefined);
+      },
+      importFile: async () => {
+        await host.importTemplate({
+          title: t('templates.importTitle'),
+          filters: [{ name: t('file.project'), extensions: ['lcp'] }],
+        });
+        await refresh();
+      },
+    };
+  }, [file, listTemplates, t, templateList]);
 
   // A tab's own menu (8.12), open at a point, and the tab whose file is being
   // asked about before it goes to the Trash.
@@ -1761,17 +1845,12 @@ export function App({
         {templateList !== null && (
           <TemplateDialog
             templates={templateList}
-            onChoose={(id) => {
-              setTemplateList(null);
-              void file.newFromTemplate(id);
-            }}
-            onRemove={(id) => {
-              // Gone from the picker at once; the file goes after.
-              setTemplateList((list) => list?.filter((choice) => choice.entry.id !== id) ?? null);
-              void getPlatformHost()
-                .removeTemplate(id)
-                .catch(() => undefined);
-            }}
+            sort={preferences.templateSort}
+            show={preferences.templateShow}
+            onOrder={(templateSort, templateShow) =>
+              changePreferences({ templateSort, templateShow })
+            }
+            actions={templateActions}
             onClose={() => setTemplateList(null)}
           />
         )}

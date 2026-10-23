@@ -411,6 +411,10 @@ export function useProjectFile(
         if (data === null) return;
         const loaded = loadProject(data);
         show({ project: { ...loaded.project, id: blank().project.id } }, null, undefined);
+        // It leads *Recently used* the next time the picker opens (8.14).
+        void host()
+          .templateUsed(id)
+          .catch(() => undefined);
       } catch (error) {
         fail(tabs.active, error);
       }

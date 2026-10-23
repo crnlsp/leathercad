@@ -372,7 +372,11 @@ closed with *Keep unsaved projects* on: an ordinary `.lcp` named for its tab in 
 this file, let go at the next start once nothing names it. `pinnedFiles` are the recent projects
 pinned to the top of the list, in the order pinned, kept by *Clear list*. The maker's project
 templates (8.14) are ordinary `.lcp` files in `templates/` beside this file, each named as the
-maker named it; the ones that ship are inside the app. The rail's collapse applies to a wide window
+maker named it; the ones that ship are inside the app. `templates/templates.json` keeps what the
+app knows about each template beyond its file, by its id (`builtin:<id>` or `mine:<name>`): the
+maker's `description` and `tags`, whether it is `pinned`, and `usedAt`, when a project was last made
+from it. A damaged one is read as empty. `templateSort` and `templateShow` here are how the picker
+was last ordered and filtered. The rail's collapse applies to a wide window
 only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
 and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
 room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode

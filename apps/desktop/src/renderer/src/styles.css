@@ -749,25 +749,107 @@ body {
 }
 
 /*
- * The template picker (8.14). Each template is shown as what it is: its
- * pieces drawn small on the board's ground, beside its name, what it is for
- * and how many pieces it cuts. A list, not cards: rows on the dialog's own
- * surface, the chosen one a shade lighter with its drawing outlined in the
- * accent — the maker's own choice, as everywhere on the shell.
+ * The template picker (8.14), a browser for a library that grows: a search,
+ * the filters and the order across the top; the list on the left, each
+ * template's pieces drawn small; the chosen one on the right, drawn large on
+ * the board's ground, with its facts and what can be done to it. Rows on the
+ * dialog's own surface, not cards; the chosen one a shade lighter, its
+ * drawing outlined in the accent — the maker's own choice.
  */
 .dialog.template-dialog {
-  width: min(560px, calc(100vw - 32px));
+  width: min(860px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
   gap: var(--space-3);
+}
+
+.template-head {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.template-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.template-search {
+  display: flex;
+  flex: 1 1 200px;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+  height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  background: var(--shell-900);
+  color: var(--text-dim);
+}
+
+.template-search:focus-within {
+  border-color: var(--tan);
+}
+
+.template-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: var(--t-body);
+  outline: none;
+}
+
+.template-bar select {
+  height: 30px;
+}
+
+/* The segmented control, without the tooltips that round its ends elsewhere. */
+.template-show {
+  flex: none;
+}
+
+.template-show .segment + .segment {
+  border-left: none;
+}
+
+.template-show .segment:first-child {
+  border-start-start-radius: var(--r-sm);
+  border-end-start-radius: var(--r-sm);
+}
+
+.template-show .segment:last-child {
+  border-start-end-radius: var(--r-sm);
+  border-end-end-radius: var(--r-sm);
+}
+
+.template-show .segment.active + .segment,
+.template-show .segment + .segment.active {
+  border-left: 1px solid var(--tan);
+}
+
+.template-body {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: var(--space-4);
+  min-height: 0;
 }
 
 .template-lists {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  max-height: min(60vh, 520px);
-  margin: 0 calc(-1 * var(--space-2));
-  padding: 0 var(--space-2);
+  gap: var(--space-3);
+  height: min(56vh, 460px);
+  padding-right: var(--space-1);
   overflow-y: auto;
+}
+
+.template-lists:focus-visible {
+  outline-offset: 2px;
 }
 
 .template-group {
@@ -782,44 +864,39 @@ body {
   font: var(--t-label);
 }
 
-.template-row {
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
-}
-
 .template-choice {
   display: flex;
-  flex: 1;
-  gap: var(--space-3);
+  gap: var(--space-2);
   align-items: center;
   min-width: 0;
-  padding: var(--space-2);
+  padding: var(--space-1);
   border-radius: var(--r-md);
   cursor: pointer;
 }
 
-.template-choice:hover {
-  background: var(--shell-600);
-}
-
+.template-choice:hover,
 .template-choice[aria-selected='true'] {
   background: var(--shell-600);
-}
-
-.template-choice:focus-visible {
-  outline-offset: -2px;
 }
 
 .template-preview {
   display: block;
   flex: none;
-  width: 112px;
-  height: 72px;
   overflow: hidden;
   border: 1px solid var(--shell-line);
   border-radius: var(--r-sm);
   background: var(--ground);
+}
+
+.template-preview.small {
+  width: 64px;
+  height: 42px;
+}
+
+.template-preview.large {
+  width: 100%;
+  aspect-ratio: 360 / 200;
+  max-width: 100%;
 }
 
 .template-preview img {
@@ -835,40 +912,147 @@ body {
 .template-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 .template-name {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  overflow: hidden;
   color: var(--text);
   font: var(--t-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-name .icon {
+  flex: none;
+  color: var(--tan);
+}
+
+.template-name.large {
+  font: var(--t-panel);
+  white-space: normal;
+}
+
+.template-name mark {
+  background: none;
+  color: var(--tan);
+}
+
+.template-meta,
+.template-count {
+  color: var(--text-mute);
+  font: var(--t-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.template-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  height: min(56vh, 460px);
+  padding-left: var(--space-4);
+  overflow-y: auto;
+  border-left: 1px solid var(--shell-line);
+}
+
+.template-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.template-badge {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font: var(--t-micro);
 }
 
 .template-note {
+  margin: 0;
   color: var(--text-dim);
   font: var(--t-label);
 }
 
-.template-pieces {
-  color: var(--text-mute);
+.template-detail textarea {
+  resize: vertical;
+}
+
+.template-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
   font: var(--t-label);
 }
 
-.template-remove {
-  flex: none;
+.template-facts dt {
+  color: var(--text-mute);
 }
 
-.template-row:not(:hover, :focus-within) .template-remove {
-  opacity: 0;
+.template-facts dd {
+  margin: 0;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.template-manage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.template-rename input {
+  width: 100%;
+  font: var(--t-panel);
+}
+
+.template-foot {
+  align-items: center;
+}
+
+.template-foot > :first-child {
+  margin-right: auto;
+}
+
+.template-removed {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--text-dim);
+  font: var(--t-label);
 }
 
 .template-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
   margin: 0;
   padding: var(--space-3);
   border: 1px dashed var(--shell-line);
   border-radius: var(--r-md);
   color: var(--text-dim);
   font: var(--t-label);
+}
+
+@media (max-width: 720px) {
+  .template-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .template-detail {
+    height: auto;
+    padding-left: 0;
+    border-left: 0;
+  }
 }
 
 /*

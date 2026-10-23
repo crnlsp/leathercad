@@ -133,6 +133,73 @@ export function registerPlatformHandlers(
     }),
   );
 
+  // Managing templates (8.14). A template is named by its id; a name is
+  // checked as a file name; import and export ask in the main process's own
+  // dialogs and copy here, so the renderer never names a path. Only *Edit
+  // template* hands one over, the maker's own template's, granted as a
+  // dialog's choice is, so Save writes the template.
+  ipcMain.handle(IPC.renameTemplate, (_event, id: unknown, name: unknown) =>
+    typeof id === 'string' && typeof name === 'string'
+      ? templates.rename(id, name)
+      : { kind: 'invalid' },
+  );
+  ipcMain.handle(IPC.duplicateTemplate, (_event, id: unknown, name: unknown) =>
+    typeof id === 'string' && typeof name === 'string'
+      ? templates.duplicate(id, name)
+      : { kind: 'invalid' },
+  );
+  ipcMain.handle(
+    IPC.describeTemplate,
+    async (_event, id: unknown, description: unknown, tags: unknown) => {
+      if (typeof id !== 'string' || typeof description !== 'string' || !Array.isArray(tags)) return;
+      await templates.describe(
+        id,
+        description,
+        tags.filter((tag): tag is string => typeof tag === 'string'),
+      );
+    },
+  );
+  ipcMain.handle(IPC.pinTemplate, async (_event, id: unknown, pinned: unknown) => {
+    if (typeof id === 'string') await templates.pin(id, pinned === true);
+  });
+  ipcMain.handle(IPC.templateUsed, async (_event, id: unknown) => {
+    if (typeof id === 'string') await templates.used(id);
+  });
+  ipcMain.handle(IPC.importTemplate, (_event, options: Electron.OpenDialogOptions) =>
+    oneDialog.run(null, async () => {
+      const window = getWindow();
+      const asked = { ...options, properties: ['openFile' as const] };
+      const result = window
+        ? await dialog.showOpenDialog(window, asked)
+        : await dialog.showOpenDialog(asked);
+      const chosen = result.canceled ? null : (result.filePaths[0] ?? null);
+      if (chosen === null || !isProjectPath(chosen)) return null;
+      return templates.importFrom(chosen);
+    }),
+  );
+  ipcMain.handle(IPC.exportTemplate, (_event, id: unknown, options: Electron.SaveDialogOptions) =>
+    oneDialog.run(false, async () => {
+      if (typeof id !== 'string') return false;
+      const window = getWindow();
+      const result = window
+        ? await dialog.showSaveDialog(window, options)
+        : await dialog.showSaveDialog(options);
+      if (result.canceled || result.filePath === undefined || result.filePath === '') return false;
+      const target = /\.lcp$/i.test(result.filePath) ? result.filePath : `${result.filePath}.lcp`;
+      await templates.exportTo(id, target);
+      return true;
+    }),
+  );
+  ipcMain.handle(IPC.editTemplate, (_event, id: unknown) => {
+    const path = typeof id === 'string' ? templates.fileOf(id) : null;
+    if (path !== null) grants.grant(path);
+    return path;
+  });
+  ipcMain.handle(IPC.showTemplate, (_event, id: unknown) => {
+    const path = typeof id === 'string' ? templates.fileOf(id) : null;
+    if (path !== null) shell.showItemInFolder(path);
+  });
+
   ipcMain.handle(IPC.showSaveDialog, (_event, options: Electron.SaveDialogOptions) =>
     oneDialog.run(null, () => saveDialog(options)),
   );

@@ -2,7 +2,13 @@ import { readFileSync } from 'node:fs';
 import { extname, isAbsolute, sep } from 'node:path';
 
 import { quantise } from '@leathercad/core';
-import { DEFAULT_PREFERENCES, type Iron, type Preferences } from '@leathercad/platform';
+import {
+  DEFAULT_PREFERENCES,
+  type Iron,
+  type Preferences,
+  type TemplateShow,
+  type TemplateSort,
+} from '@leathercad/platform';
 
 import { readBindings } from '../renderer/src/rebind.js';
 import { isLanguagePreference } from '../shared/i18n.js';
@@ -131,6 +137,13 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     selectionBar: flag('selectionBar'),
     // Absent before 8.12: off, the default.
     keepUnsaved: flag('keepUnsaved'),
+    // Absent before 8.14: by name, all of them.
+    templateSort: isTemplateSort(record['templateSort'])
+      ? record['templateSort']
+      : DEFAULT_PREFERENCES.templateSort,
+    templateShow: isTemplateShow(record['templateShow'])
+      ? record['templateShow']
+      : DEFAULT_PREFERENCES.templateShow,
     toolRailCollapsed: flag('toolRailCollapsed'),
     partsFolded: flag('partsFolded'),
     propertiesFolded: flag('propertiesFolded'),
@@ -211,6 +224,14 @@ function readCamera(value: unknown): SessionTab['camera'] {
   return { x, y, percent };
 }
 
+function isTemplateSort(value: unknown): value is TemplateSort {
+  return value === 'name' || value === 'name-desc' || value === 'newest' || value === 'oldest';
+}
+
+function isTemplateShow(value: unknown): value is TemplateShow {
+  return value === 'all' || value === 'builtin' || value === 'mine';
+}
+
 /** A length a maker could have typed: finite, above zero, on the storage grid. */
 function readLength(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
@@ -254,6 +275,8 @@ export function validChanges(changes: unknown): Partial<Preferences> {
     if (typeof value === 'boolean') out[key] = value;
   }
   if (isLanguagePreference(record['language'])) out.language = record['language'];
+  if (isTemplateSort(record['templateSort'])) out.templateSort = record['templateSort'];
+  if (isTemplateShow(record['templateShow'])) out.templateShow = record['templateShow'];
   const irons = readIrons(record['irons']);
   if (irons !== undefined) out.irons = irons;
   if (typeof record['defaultIronId'] === 'string' || record['defaultIronId'] === null)

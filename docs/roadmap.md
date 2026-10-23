@@ -136,7 +136,12 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   the same name unless asked; the maker's are removed from the picker. A project from a template
   opens untitled, unchanged and with an id of its own, so Save asks where and the template is never
   written. The sample wallet is the first template, and *Open sample project* is gone from Help, the
-  empty Parts panel and the start screen.
+  empty Parts panel and the start screen. The picker is a browser: a search over names, descriptions
+  and tags; *Show* (all, built in, mine), *Kind* (the built-in categories and the maker's tags) and
+  *Sort* (name either way, newest, oldest), kept between openings; pinned and recently used first;
+  the chosen template drawn large with its facts. The maker's own are renamed, described, tagged,
+  duplicated, edited as a project, exported, shown in the file manager and removed — with *Undo*
+  for a few seconds — and a `.lcp` is imported as one.
 - ◐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
   `<pid>-<start>-<tab>.lcp`, written while it is in front or not; closing a tab or saving it clears
   it. After a crash every copy is offered in turn, each into a tab of its own. Copies from 1.5, one

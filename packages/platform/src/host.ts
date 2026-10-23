@@ -269,6 +269,40 @@ export interface PlatformHost {
   /** Removes one of the maker's templates; a built-in one cannot be. */
   removeTemplate(id: string): Promise<void>;
 
+  /** Renames one of the maker's templates, never over another (8.14). */
+  renameTemplate(id: string, name: string): Promise<TemplateSave>;
+
+  /** Copies any template as one of the maker's, under the first free name of `name`. */
+  duplicateTemplate(id: string, name: string): Promise<TemplateSave>;
+
+  /** The maker's words about one of theirs: a description and tags. */
+  describeTemplate(id: string, description: string, tags: readonly string[]): Promise<void>;
+
+  /** Pins any template to the top of the picker, or lets it go. */
+  pinTemplate(id: string, pinned: boolean): Promise<void>;
+
+  /** A project was made from a template: it leads *Recently used*. */
+  templateUsed(id: string): Promise<void>;
+
+  /**
+   * A `.lcp` chosen in a dialog, as one of the maker's templates (8.14). The
+   * main process asks and copies: the renderer sees no path. Null when the
+   * maker cancels.
+   */
+  importTemplate(options: OpenDialogOptions): Promise<TemplateSave | null>;
+
+  /** A template written to a file chosen in a dialog; false when the maker cancels. */
+  exportTemplate(id: string, options: SaveDialogOptions): Promise<boolean>;
+
+  /**
+   * *Edit template* (8.14): the maker's template's own file, granted, to open
+   * as a project whose Save writes the template. Null for a built-in one.
+   */
+  editTemplate(id: string): Promise<string | null>;
+
+  /** Shows one of the maker's templates in the file manager. */
+  showTemplate(id: string): Promise<void>;
+
   /** A watched project's file changed outside the app, or went (8.12). */
   onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
@@ -281,18 +315,32 @@ export type FileRename =
   /** No file can have the name. */
   | { readonly kind: 'invalid' };
 
-/** A template the picker lists (8.12). */
+/** A template the picker lists (8.12, 8.14). */
 export interface TemplateEntry {
   /** `builtin:<id>` or `mine:<name>`. */
   readonly id: string;
   readonly kind: 'builtin' | 'mine';
   /** The maker's name for one of theirs; a built-in one's id, which the app words. */
   readonly name: string;
+  /** When the maker's was saved, and last changed, in ms; null for a built-in one. */
+  readonly created: number | null;
+  readonly changed: number | null;
+  /** The maker's words about one of theirs; empty for a built-in one, which the app words. */
+  readonly description: string;
+  readonly tags: readonly string[];
+  readonly pinned: boolean;
+  /** When a project was last made from it, in ms, or null. */
+  readonly usedAt: number | null;
 }
 
 /** What saving a template came to (8.12). */
 export type TemplateSave =
   { readonly kind: 'saved' | 'exists'; readonly name: string } | { readonly kind: 'invalid' };
+
+/** The template picker's order (8.14): by name, either way, or by when saved. */
+export type TemplateSort = 'name' | 'name-desc' | 'newest' | 'oldest';
+/** Which templates the picker shows (8.14). */
+export type TemplateShow = 'all' | 'builtin' | 'mine';
 
 /** What happened to an open project's file outside the app (8.12). */
 export type OutsideChange = 'changed' | 'gone';
@@ -430,6 +478,9 @@ export interface Preferences {
    * asking about them (8.12), as Notepad does. Off unless the maker turns it on.
    */
   readonly keepUnsaved: boolean;
+  /** How the template picker was last sorted and filtered (8.14), to open the same way. */
+  readonly templateSort: TemplateSort;
+  readonly templateShow: TemplateShow;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
   /**
@@ -514,6 +565,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: true,
   selectionBar: true,
   keepUnsaved: false,
+  templateSort: 'name',
+  templateShow: 'all',
   toolRailCollapsed: false,
   partsFolded: false,
   propertiesFolded: false,

@@ -1339,7 +1339,6 @@
     "mineEmpty": "Save any project as a template, from the Project menu or its tab’s menu, and it is listed here.",
     "use": "Use template",
     "remove": "Remove {{name}}",
-    "removeTooltip": "Remove this template. Projects made from it are not changed",
     "bifoldWallet": {
       "name": "Bifold wallet",
       "description": "An outer and a lining, each folded, and two card pockets"
@@ -1364,6 +1363,67 @@
     "invalid": "A template cannot be called “{{name}}”. Choose another name.",
     "saved": "Saved as the template “{{name}}”.",
     "pieces_one": "{{count}} piece to cut",
-    "pieces_other": "{{count}} pieces to cut"
+    "pieces_other": "{{count}} pieces to cut",
+    "search": "Search templates",
+    "searchLabel": "Search templates by name, description or tag",
+    "show": {
+      "all": "All",
+      "builtin": "Built in",
+      "mine": "Mine"
+    },
+    "showLabel": "Show",
+    "sortLabel": "Sort",
+    "sort": {
+      "name": "Name, A–Z",
+      "nameDesc": "Name, Z–A",
+      "newest": "Newest first",
+      "oldest": "Oldest first"
+    },
+    "kindLabel": "Kind",
+    "allKinds": "All kinds",
+    "category": {
+      "wallets": "Wallets and cases",
+      "small": "Small goods"
+    },
+    "group": {
+      "pinned": "Pinned",
+      "recent": "Recently used"
+    },
+    "count": "{{shown}} of {{total}}",
+    "noMatch": "No template is called or described as “{{query}}”.",
+    "clearSearch": "Clear the search",
+    "builtInBadge": "Built in",
+    "savedOn": "Saved {{date}}",
+    "fact": {
+      "pieces": "Pieces to cut",
+      "overall": "Overall",
+      "saved": "Saved",
+      "changed": "Changed"
+    },
+    "overallSize": "{{width}} × {{height}} mm",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "rename": "Rename…",
+    "renameLabel": "Template name",
+    "duplicate": "Duplicate",
+    "duplicateMine": "Duplicate as my template",
+    "edit": "Edit template",
+    "editTooltip": "Open the template itself in a tab: Save writes the template",
+    "export": "Export…",
+    "showInFolder": "Show in folder",
+    "delete": "Delete",
+    "import": "Import…",
+    "importTooltip": "Add a project file from disk as one of your templates",
+    "builtInLocked": "Built-in templates stay as they ship. Duplicate one to make it yours.",
+    "description": "Description",
+    "descriptionPlaceholder": "What it is for, and what to watch for",
+    "tags": "Tags",
+    "tagsPlaceholder": "Comma-separated, such as belts, brown",
+    "removed": "Removed “{{name}}”.",
+    "undo": "Undo",
+    "copyName": "{{name}} copy",
+    "importTitle": "Import a template",
+    "exportTitle": "Export the template",
+    "nothingChosen": "Choose a template."
   }
 }

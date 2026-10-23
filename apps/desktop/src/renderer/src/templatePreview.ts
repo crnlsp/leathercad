@@ -14,12 +14,17 @@ export const PREVIEW_HEIGHT = 72;
  * thumbnail is the drawing, not a picture of it. Null for a project that
  * draws nothing. An image's `src`: a `data:` URL, which the CSP allows.
  */
-export function templatePreview(project: Project, dpr = 2): string | null {
+export function templatePreview(
+  project: Project,
+  width = PREVIEW_WIDTH,
+  height = PREVIEW_HEIGHT,
+  dpr = 2,
+): string | null {
   const resolved = evaluate(project);
   const bounds = drawnBounds(resolved);
   if (bounds === null) return null;
   const viewport = new Viewport();
-  viewport.resize(PREVIEW_WIDTH * dpr, PREVIEW_HEIGHT * dpr, dpr);
+  viewport.resize(width * dpr, height * dpr, dpr);
   viewport.fitTo(bounds, 8 * dpr);
   const view = viewport.toView();
   const svg = renderToSvgString(buildDisplayList(resolved, { view }), view, {
@@ -31,4 +36,12 @@ export function templatePreview(project: Project, dpr = 2): string | null {
 /** How many pieces a template cuts: each part as many times as it is cut. */
 export function piecesOf(project: Project): number {
   return project.parts.reduce((total, part) => total + part.quantity, 0);
+}
+
+/** A template's overall size in millimetres: the box its pieces are drawn in, or null. */
+export function overallOf(project: Project): { width: number; height: number } | null {
+  const bounds = drawnBounds(evaluate(project));
+  return bounds === null
+    ? null
+    : { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
 }

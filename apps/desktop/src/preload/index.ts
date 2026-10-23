@@ -124,6 +124,30 @@ const platformBridge = {
 
   removeTemplate: (id: string): Promise<void> => ipcRenderer.invoke(IPC.removeTemplate, id),
 
+  renameTemplate: (id: string, name: string): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.renameTemplate, id, name),
+
+  duplicateTemplate: (id: string, name: string): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.duplicateTemplate, id, name),
+
+  describeTemplate: (id: string, description: string, tags: readonly string[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.describeTemplate, id, description, tags),
+
+  pinTemplate: (id: string, pinned: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.pinTemplate, id, pinned),
+
+  templateUsed: (id: string): Promise<void> => ipcRenderer.invoke(IPC.templateUsed, id),
+
+  importTemplate: (options: unknown): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.importTemplate, options),
+
+  exportTemplate: (id: string, options: unknown): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.exportTemplate, id, options),
+
+  editTemplate: (id: string): Promise<string | null> => ipcRenderer.invoke(IPC.editTemplate, id),
+
+  showTemplate: (id: string): Promise<void> => ipcRenderer.invoke(IPC.showTemplate, id),
+
   openDropped: (paths: readonly string[]): Promise<string[]> =>
     ipcRenderer.invoke(IPC.openDropped, paths),
 

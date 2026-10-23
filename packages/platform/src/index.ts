@@ -13,6 +13,8 @@
  */
 
 export type {
+  TemplateShow,
+  TemplateSort,
   TemplateEntry,
   TemplateSave,
   KeptSession,

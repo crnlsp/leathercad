@@ -557,50 +557,56 @@ test('a new project from a template, and any project saved as one (8.14)', async
   const config = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
   await withApp(
     async (window) => {
-      // From the Project menu: the templates that ship, the sample first.
+      // Typing goes to the search at once; it reads names and descriptions.
       await fromProjectMenu(window, 'new-template');
       const dialog = window.getByTestId('template-dialog');
-      await expect(dialog.getByTestId('template-builtin:bifold-wallet')).toBeFocused();
-      // Chosen, then used: a click picks, Use template opens it.
-      await dialog.getByTestId('template-builtin:card-holder').click();
-      await expect(dialog.getByTestId('template-builtin:card-holder')).toHaveAttribute(
-        'aria-selected',
-        'true',
-      );
-      await expect(dialog.getByTestId('template-builtin:card-holder')).toContainText(
-        '3 pieces to cut',
-      );
+      await expect(dialog.getByTestId('template-search')).toBeFocused();
+      await window.keyboard.type('card');
+      await expect(dialog.getByTestId('template-builtin:card-holder')).toBeVisible();
+      await expect(dialog.getByTestId('template-builtin:key-fob')).toHaveCount(0);
+      // The chosen one, large: its facts beside it.
+      await expect(dialog.getByTestId('template-detail')).toContainText('3');
       await dialog.getByTestId('template-use').click();
       await expect(window.getByTestId('project-name')).toHaveText('Card holder');
-      await expect(window.getByTestId('part-count')).toHaveText('2');
-      // Untitled and unchanged: no file, nothing to save.
       await expect(window.getByTestId('file-path')).toHaveCount(0);
-      await expect(window.getByTestId('save')).toHaveAttribute('aria-disabled', 'true');
 
-      // Saved as one of the maker's own, under a new name.
+      // Saved as one of the maker's own; the same name again is said.
       await fromProjectMenu(window, 'save-template');
       const save = window.getByTestId('save-template-dialog');
       await save.getByTestId('template-name').fill('My card holder');
       await save.getByTestId('template-save').click();
       await expect(save).toHaveCount(0);
 
-      // The same name again is said, and replaced only when asked.
-      await fromProjectMenu(window, 'save-template');
-      await save.getByTestId('template-name').fill('My card holder');
-      await save.getByTestId('template-save').click();
-      await expect(save.getByTestId('template-problem')).toContainText('already exists');
-      await save.getByTestId('template-replace').click();
-      await expect(save).toHaveCount(0);
-
-      // Listed under My templates, used, and removed.
-      await window.getByTestId('new-tab').click();
-      await window.getByTestId('tab-template').click();
-      // A double click uses one at once.
-      await dialog.getByTestId('template-mine:My card holder').dblclick();
-      await expect(window.getByTestId('part-count')).toHaveText('2');
+      // Recently used leads; Mine shows only the maker's; described, pinned,
+      // duplicated, renamed.
       await fromProjectMenu(window, 'new-template');
-      await dialog.getByTestId('template-remove-mine:My card holder').click();
-      await expect(dialog.getByTestId('template-mine:My card holder')).toHaveCount(0);
+      await dialog.getByTestId('template-show-mine').click();
+      await expect(dialog.getByTestId('template-builtin:card-holder')).toHaveCount(0);
+      await dialog.getByTestId('template-mine:My card holder').click();
+      await dialog.getByTestId('template-description').fill('Three pockets, brown');
+      await dialog.getByTestId('template-tags').fill('wallets, brown');
+      await dialog.getByTestId('template-pin').click();
+      await expect(dialog.getByTestId('template-pin')).toHaveAttribute('aria-pressed', 'true');
+      await dialog.getByTestId('template-duplicate').click();
+      await expect(dialog.getByTestId('template-mine:My card holder copy')).toBeVisible();
+      await dialog.getByTestId('template-mine:My card holder copy').click();
+      await dialog.getByTestId('template-rename').click();
+      await dialog.getByTestId('template-rename-field').fill('Slim card holder');
+      await dialog.getByTestId('template-rename-field').press('Enter');
+      await expect(dialog.getByTestId('template-mine:Slim card holder')).toBeVisible();
+
+      // Removed at once, and brought back with Undo.
+      await dialog.getByTestId('template-delete').click();
+      await expect(dialog.getByTestId('template-mine:Slim card holder')).toHaveCount(0);
+      await dialog.getByTestId('template-undo').click();
+      await expect(dialog.getByTestId('template-mine:Slim card holder')).toBeVisible();
+
+      // The order and filter are kept for the next time.
+      await dialog.getByTestId('template-sort').selectOption('newest');
+      await dialog.getByTestId('template-close').click();
+      await fromProjectMenu(window, 'new-template');
+      await expect(dialog.getByTestId('template-sort')).toHaveValue('newest');
+      await expect(dialog.getByTestId('template-show-mine')).toHaveClass(/\bactive\b/);
     },
     { env: { XDG_CONFIG_HOME: config } },
   );

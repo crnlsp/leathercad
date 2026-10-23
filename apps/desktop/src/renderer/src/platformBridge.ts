@@ -70,6 +70,15 @@ interface PreloadBridge {
   readTemplate(id: string): Promise<Uint8Array | null>;
   saveTemplate(name: string, data: Uint8Array, replace: boolean): Promise<TemplateSave>;
   removeTemplate(id: string): Promise<void>;
+  renameTemplate(id: string, name: string): Promise<TemplateSave>;
+  duplicateTemplate(id: string, name: string): Promise<TemplateSave>;
+  describeTemplate(id: string, description: string, tags: readonly string[]): Promise<void>;
+  pinTemplate(id: string, pinned: boolean): Promise<void>;
+  templateUsed(id: string): Promise<void>;
+  importTemplate(options: OpenDialogOptions): Promise<TemplateSave | null>;
+  exportTemplate(id: string, options: SaveDialogOptions): Promise<boolean>;
+  editTemplate(id: string): Promise<string | null>;
+  showTemplate(id: string): Promise<void>;
   onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
 

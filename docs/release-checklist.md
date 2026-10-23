@@ -278,7 +278,10 @@ Since 8.11–8.13, on each platform, with the packaged app.
     each tab is on its view and zoom.
 14. *New project from template…*: each template that ships opens, untitled, with nothing to fix in
     Problems. *Save as template…* on a project of yours: it is listed under *My templates*, and a
-    second save under the same name asks before replacing it.
+    second save under the same name asks before replacing it. In the picker, search, *Show*, *Kind*
+    and *Sort* narrow and order the list, and open the same way next time; rename, describe, tag,
+    pin, duplicate, export, import and remove (then *Undo*) one of yours; *Edit template* opens it,
+    and Save writes the template.
 
 ## After it passes
 
