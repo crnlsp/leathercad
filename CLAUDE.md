@@ -43,6 +43,7 @@ pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `p
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
 pnpm docs:media       # retakes the README's screenshots and demo from the real app, in the pinned Playwright container (needs Docker)
 pnpm package          # this platform's installer, in apps/desktop/release/: AppImage, NSIS .exe, or dmg (ADR 0014)
+pnpm package:win      # the Windows installer from Linux or macOS, in the pinned Wine container (needs Docker)
 pnpm build
 pnpm typecheck        # tsc --build
 pnpm lint

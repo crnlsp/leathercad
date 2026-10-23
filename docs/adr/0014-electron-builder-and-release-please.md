@@ -88,3 +88,20 @@ Acceptance: a packaged app opens on the app origin, loads its vendored fonts and
 worker, and exports the existing measured print fixture with the file-protocol fuse off. Protocol
 unit tests cover hostile paths and symlink escapes; packaged tests exercise the actual asar
 handler, CSP and sandbox, and supply a development URL to prove it is ignored in a release.
+
+## Amendment — the Windows installer from Linux (2026-10-23)
+
+`pnpm package:win` (`tools/package-win.mjs`) builds the NSIS installer on Linux or macOS, so a
+change to the Windows build can be tried on a Windows machine without building there. The bundles
+are built on the host; electron-builder runs in its own image, `electronuserland/builder` with Wine
+and Node 22, pinned by digest. electron-builder needs Wine to edit the `.exe`'s resources: its
+icon, version information, and the hash `enableEmbeddedAsarIntegrityValidation` checks, without
+which the installed app does not start. The image is a development tool and nothing from it ships.
+
+Releases do not change: `release.yml` builds the installer on `windows-latest`, and `package.yml`
+runs the packaged smoke test there, which a Wine build cannot. An installer from the container is
+for trying, not for publishing.
+
+Rejected: Wine installed on the host, which every contributor would have to set up and keep at a
+version that works; and a Windows virtual machine in a container (`dockur/windows`), which
+downloads and installs Windows before its first build.

@@ -34,6 +34,7 @@ directory of its own — on Linux, `XDG_CONFIG_HOME=/tmp/lc-dev pnpm dev`.
 | `pnpm test:visual` | Pixel diffs in the pinned Playwright container. Needs Docker and `pnpm build` |
 | `pnpm test:packaged` | Packages the app, then smoke-tests the packaged binary |
 | `pnpm package` | This platform's installer, in `apps/desktop/release/` |
+| `pnpm package:win` | The Windows installer, built on Linux or macOS in electron-builder's pinned Wine container, in `apps/desktop/release/`. Needs Docker. Releases are still built on Windows by CI |
 | `pnpm docs:media` | Retakes the README's screenshots and demo from the real app, in the pinned Playwright container, which it gives poppler, ffmpeg, gifsicle and pngquant for the run (needs Docker and the network) |
 | `pnpm bench` | Benchmarks; `bench:compare` against the committed baseline |
 
