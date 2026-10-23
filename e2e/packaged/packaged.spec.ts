@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
@@ -57,16 +58,29 @@ const VERSION = (
 ).version;
 
 let app: ElectronApplication;
+let profile: string | undefined;
 
 test.beforeAll(async () => {
   expect(existsSync(EXECUTABLE), `no packaged app at ${EXECUTABLE} — run pnpm package:e2e`).toBe(
     true,
   );
-  app = await electron.launch({ executablePath: EXECUTABLE, args: [] });
+  profile = mkdtempSync(join(tmpdir(), 'leathercad-packaged-profile-'));
+  app = await electron.launch({
+    executablePath: EXECUTABLE,
+    args: [],
+    env: {
+      ...process.env,
+      XDG_CONFIG_HOME: join(profile, 'config'),
+      XDG_STATE_HOME: join(profile, 'state'),
+      // A packaged app must ignore the development server override (R6).
+      ELECTRON_RENDERER_URL: 'http://127.0.0.1:1/',
+    },
+  });
 });
 
 test.afterAll(async () => {
   await closeApp(app);
+  if (profile !== undefined) rmSync(profile, { recursive: true, force: true });
 });
 
 test('starts, and reports the packaged version through the bridge', async () => {
@@ -75,6 +89,68 @@ test('starts, and reports the packaged version through the bridge', async () => 
   await expect(window).toHaveTitle('Untitled — LeatherCAD');
   await expect(window.getByTestId('bridge-error')).toHaveCount(0);
   await expect(window.getByTestId('app-version')).toContainText(VERSION);
+});
+
+test('loads from the app origin with the sandbox and CSP intact (R6)', async () => {
+  const window = await app.firstWindow();
+  expect(window.url()).toBe('app://leathercad/index.html');
+  expect(
+    await window.evaluate(() => ({ origin: location.origin, secure: isSecureContext })),
+  ).toEqual({ origin: 'app://leathercad', secure: true });
+  const preferences = await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0]!.webContents.getLastWebPreferences(),
+  );
+  expect(preferences).toMatchObject({
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+    webSecurity: true,
+  });
+
+  const file = pathToFileURL(
+    join(await app.evaluate(({ app: electronApp }) => electronApp.getAppPath()), 'package.json'),
+  ).href;
+  const result = await window.evaluate(async (url) => {
+    const violation = new Promise<string>((done) => {
+      document.addEventListener(
+        'securitypolicyviolation',
+        (event) => done(event.effectiveDirective),
+        { once: true },
+      );
+    });
+    let blocked = false;
+    try {
+      await fetch(url);
+    } catch {
+      blocked = true;
+    }
+    return { blocked, directive: await violation };
+  }, file);
+  expect(result.blocked).toBe(true);
+  expect(result.directive).toBe('connect-src');
+});
+
+test('serves assets only from the renderer directory in the archive (R6)', async () => {
+  // Main-process requests reach the real handler without the page's CSP
+  // hiding a permissive handler. Unit tests cover further encoded paths and
+  // symlinks; this proves the boundary also holds inside app.asar.
+  const replies = await app.evaluate(async ({ net }) => {
+    const requests = [
+      ['app://leathercad/index.html', 'HEAD'],
+      ['app://elsewhere/index.html', 'GET'],
+      ['app://leathercad/..%2fmain/index.js', 'GET'],
+      ['app://leathercad/assets/missing.js', 'GET'],
+      ['app://leathercad/package.json', 'GET'],
+      ['app://leathercad/index.html', 'POST'],
+    ];
+    return Promise.all(
+      requests.map(async ([url, method]) => {
+        const response = await net.fetch(url!, { method });
+        return { status: response.status, body: await response.text() };
+      }),
+    );
+  });
+  expect(replies).toEqual([200, 403, 403, 404, 404, 405].map((status) => ({ status, body: '' })));
 });
 
 test('has no menu off macOS, and no Reload or developer tools anywhere (8.5a, 8.7)', async () => {
@@ -203,7 +279,13 @@ test('previews the print test with pdf.js, its worker loaded from inside the arc
   const window = await app.firstWindow();
   // The export notice the test before left open.
   await window.keyboard.press('Escape');
-  await window.getByTestId('print').click();
+  const [worker] = await Promise.all([
+    window.waitForEvent('worker'),
+    window.getByTestId('print').click(),
+  ]);
+  // pdf.js can fall back to running on the page when a worker fails. Assert
+  // a real worker so a protocol/CSP regression cannot hide behind that path.
+  expect(worker.url()).toMatch(/^app:\/\/leathercad\/assets\/pdf\.worker\..*\.mjs$/);
   const preview = window.getByTestId('print-preview');
   await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
   await expect

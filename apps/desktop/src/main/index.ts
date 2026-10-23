@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { RecentOutcome } from '@leathercad/platform';
-import { BrowserWindow, Menu, app, session, shell } from 'electron';
+import { BrowserWindow, Menu, app, net, protocol, session, shell } from 'electron';
 import log from 'electron-log/main';
 
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
@@ -11,6 +11,7 @@ import windowIcon from '../../build/icon.png?asset';
 import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { SOURCE_LOCALE, createI18n, resolveLocale, type I18n } from '../shared/i18n.js';
 import { IPC } from '../shared/ipc.js';
+import { APP_URL, createAppProtocolHandler } from './appProtocol.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
 import { projectPathFromArgs } from './launchFile.js';
@@ -26,6 +27,15 @@ import { RecoveryStore } from './recovery.js';
 // ~/.config/leathercad. Both calls must happen before the app is ready.
 app.setName('LeatherCAD');
 app.setPath('userData', join(app.getPath('appData'), 'leathercad'));
+
+// Before ready: a real origin for modules, fonts and the PDF preview worker.
+// CSP and CORS still apply; service workers and CSP bypass stay disabled.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
+  },
+]);
 
 // The log and the crash handler, before anything else can fail.
 startDiagnostics();
@@ -169,10 +179,10 @@ function createWindow(): void {
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
 
   const devServerUrl = process.env['ELECTRON_RENDERER_URL'];
-  if (devServerUrl !== undefined && devServerUrl !== '') {
+  if (!app.isPackaged && devServerUrl !== undefined && devServerUrl !== '') {
     void mainWindow.loadURL(devServerUrl);
   } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    void mainWindow.loadURL(APP_URL);
   }
 }
 
@@ -228,6 +238,11 @@ async function openRecent(path: string): Promise<RecentOutcome> {
 }
 
 app.whenReady().then(() => {
+  protocol.handle(
+    'app',
+    createAppProtocolHandler(join(__dirname, '../renderer'), (url) => net.fetch(url)),
+  );
+
   preferences = new PreferencesStore(join(app.getPath('userData'), 'preferences.json'));
 
   registerPlatformHandlers(

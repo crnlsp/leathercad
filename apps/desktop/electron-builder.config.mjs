@@ -47,11 +47,9 @@ export default {
     enableEmbeddedAsarIntegrityValidation: true,
     onlyLoadAppFromAsar: true,
     loadBrowserProcessSpecificV8Snapshot: false,
-    // Must stay on while the window loads index.html from file://. With it
-    // off, the packaged window stays blank: the packaged smoke test caught
-    // exactly that. Turning it off means serving the renderer from a custom
-    // protocol (`protocol.handle('app', …)`), a main-process change.
-    grantFileProtocolExtraPrivileges: true,
+    // R6: the renderer and its assets now load from app://leathercad, so
+    // file:// pages need none of Electron's extra privileges (ADR 0014).
+    grantFileProtocolExtraPrivileges: false,
   },
   // The licences, beside app.asar in every install (8.6b): LeatherCAD's own,
   // and the third-party notices the build wrote from what it bundled. The app
