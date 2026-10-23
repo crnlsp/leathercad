@@ -24,6 +24,10 @@ the running version (`apps/desktop/src/main/updates.ts`).
   spinner turns while it asks. There is no switch, since there is nothing automatic to turn off.
   The maintainer decided on 2026-10-23 that every request is one the maker made knowingly,
   revising the first decision of 2026-10-20, which asked once at every start.
+- **Not twice in five minutes.** An answer stands for five minutes: until then neither the
+  version nor *Check now* asks again, and each says how many minutes are left. The main process
+  keeps the time, so the status bar, Settings and every window share it. A check that failed is
+  not an answer and can be tried again at once.
 - **What is sent.** One GET with an `Accept` header and nothing about the maker or their patterns:
   no identifier, no project data, no preferences. GitHub sees what any request shows — the
   address, and Chromium's user agent with the app's name and version. Electron's `net.fetch`
@@ -31,10 +35,12 @@ the running version (`apps/desktop/src/main/updates.ts`).
 - **What is read.** The tag alone, in the `leathercad-vX.Y.Z` form (R4). A pre-release, a draft
   or any other tag is never announced. The link shown is built from the tag, never taken from the
   answer, so the answer can send the maker nowhere but this project's own releases page.
-- **What is done.** Nothing is downloaded or installed. A newer release puts a quiet mark on the
-  Settings button and a line in About and Settings › Updates, with a link to the release page.
-  An answer that could not be had, or could not be read, is said there just as quietly, and the
-  app carries on.
+- **What is done.** Nothing is downloaded or installed. Once answered, the version in the status
+  bar becomes a chip: a sage tick for the latest, a tan arrow and the new number for a newer one,
+  an orange triangle for a check that failed. Settings › Updates shows the same glyph on a card
+  with what it means — the time of the check, or a link to the release page — and a newer release
+  also puts a quiet mark on the Settings button and a line in About. An answer that could not be
+  had, or could not be read, is said there just as quietly, and the app carries on.
 - **Who is left out.** The Flatpak never asks: Flathub keeps it up to date, and its sandbox has
   no network. Settings › Updates says so instead of offering *Check now*, and its version in the
   status bar is plain text.
@@ -54,7 +60,8 @@ of its own.
 - A maker who never asks never hears of a fix from the app. That is the price of the request
   being theirs alone; the release page and Flathub remain.
 - GitHub's unauthenticated limit, 60 requests an hour from one address, is far above what anyone
-  presses. A check over it fails quietly, like any other.
+  presses, and the five minutes keep a row of presses to one request. A check over it fails
+  quietly, like any other.
 
 ## Alternatives rejected
 

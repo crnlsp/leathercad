@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  AGAIN_AFTER_MS,
   RELEASES_URL,
   UpdateChecker,
   isNewer,
@@ -93,7 +94,7 @@ describe('statusFrom', () => {
   it('says a release is available exactly when it is newer than the one running', () => {
     fc.assert(
       fc.property(version, version, (latest, running) => {
-        const status = statusFrom({ tag_name: `leathercad-v${latest}` }, running);
+        const status = statusFrom({ tag_name: `leathercad-v${latest}` }, running, 0);
         expect(status.state).toBe(isNewer(latest, running) ? 'available' : 'current');
       }),
     );
@@ -104,18 +105,30 @@ describe('statusFrom', () => {
       statusFrom(
         { tag_name: 'leathercad-v1.6.0', html_url: 'https://elsewhere.example/' },
         '1.5.0',
+        1_000,
       ),
     ).toEqual({
       state: 'available',
       version: '1.6.0',
       url: 'https://github.com/crnlsp/leathercad/releases/tag/leathercad-v1.6.0',
+      checkedAt: 1_000,
+      againAt: 1_000 + AGAIN_AFTER_MS,
     });
+  });
+
+  it('says when it answered, and that it will not ask again for five minutes', () => {
+    fc.assert(
+      fc.property(version, version, fc.nat(), (latest, running, at) => {
+        const status = statusFrom({ tag_name: `leathercad-v${latest}` }, running, at);
+        expect(status).toMatchObject({ checkedAt: at, againAt: at + 5 * 60_000 });
+      }),
+    );
   });
 
   it.each([null, 'leathercad-v1.6.0', {}, { tag_name: 'v9.0.0' }, { tag_name: 9 }])(
     'calls %j a failed check, not news',
     (body) => {
-      expect(statusFrom(body, '1.5.0')).toEqual({ state: 'failed' });
+      expect(statusFrom(body, '1.5.0', 0)).toEqual({ state: 'failed' });
     },
   );
 });
@@ -168,11 +181,50 @@ describe('UpdateChecker', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('asks again when asked again: Check now', async () => {
+  it('asks again only once five minutes have passed since the answer', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.nat({ max: 2 * AGAIN_AFTER_MS }), async (later) => {
+        const fetch = answering(latest);
+        let now = 10_000;
+        const checker = new UpdateChecker({
+          fetch,
+          running: '1.5.0',
+          managed: false,
+          now: () => now,
+        });
+        const first = await checker.check();
+        now += later;
+        const second = await checker.check();
+        const asked = later >= AGAIN_AFTER_MS;
+        expect(fetch).toHaveBeenCalledTimes(asked ? 2 : 1);
+        // Read back, it is the same answer, with the same five minutes.
+        if (!asked) expect(second).toEqual(first);
+        else expect(second).toMatchObject({ checkedAt: now });
+      }),
+    );
+  });
+
+  it('shares the five minutes with `status`, which never asks', async () => {
+    const fetch = answering(latest);
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false, now: () => 0 });
+    await checker.check();
+    expect(await checker.status()).toMatchObject({ state: 'available', againAt: AGAIN_AFTER_MS });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for a check that is running rather than asking twice at once', async () => {
     const fetch = answering(latest);
     const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false });
-    await checker.check();
-    await checker.check();
+    const [a, b] = await Promise.all([checker.check(), checker.check()]);
+    expect(a).toEqual(b);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries again at once after a failed check: no five minutes', async () => {
+    const fetch = answering(latest, false);
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false, now: () => 0 });
+    expect(await checker.check()).toEqual({ state: 'failed' });
+    expect(await checker.check()).toEqual({ state: 'failed' });
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 

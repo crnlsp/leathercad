@@ -80,8 +80,10 @@ Left from 1.3's *The window*: nothing says a new release exists.
   **Done** (2026-10-20), as [ADR 0020](adr/0020-update-discovery.md): the check runs only when
   the maker asks for it, never as the app starts, by the maintainer's decision (2026-10-23):
   *Check now* in Settings › Updates, or the version at the status bar's left, whose tooltip says
-  what it found; a spinner turns while it asks. The Settings button opens on Updates while its mark
-  shows. `SECURITY.md` says why
+  what it found; a spinner turns while it asks. Answered, the version becomes a chip — a sage tick,
+  or a tan arrow and the new number — and Settings › Updates a card with the same glyph; neither
+  asks again for five minutes, though a failed check may. The Settings button opens on Updates
+  while its mark shows. `SECURITY.md` says why
   the app makes the request and what it carries. No test asks GitHub: `LEATHERCAD_RELEASES_URL`
   points the check at a server of the test's own, or at nothing.
 

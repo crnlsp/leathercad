@@ -26,6 +26,7 @@ export type {
   RecentFile,
   RecentOutcome,
   RecoveredCopy,
+  UpdateAnswer,
   UpdateStatus,
 } from './host.js';
 export { DEFAULT_PREFERENCES, STARTER_IRONS } from './host.js';

@@ -1,4 +1,4 @@
-import type { UpdateStatus } from '@leathercad/platform';
+import type { UpdateAnswer, UpdateStatus } from '@leathercad/platform';
 
 /**
  * Where the latest release is asked for (8.9). GitHub's `latest` is the newest
@@ -11,6 +11,13 @@ const RELEASE_PAGE = 'https://github.com/crnlsp/leathercad/releases/tag/';
 
 /** How long a check may take before it is called failed. */
 const TIMEOUT_MS = 10_000;
+
+/**
+ * How long an answer stands before a press asks again: five minutes. A release
+ * is not that frequent, and GitHub's unauthenticated API allows sixty requests
+ * an hour from one address, which a row of presses should not spend.
+ */
+export const AGAIN_AFTER_MS = 5 * 60_000;
 
 /** The part of `fetch` a check uses: Electron's `net.fetch`, or a test's. */
 export type Fetch = (
@@ -53,14 +60,15 @@ export function isNewer(candidate: string, running: string): boolean {
  * the page linked to is built here, so an answer cannot send the maker
  * anywhere but this project's own releases.
  */
-export function statusFrom(body: unknown, running: string): UpdateStatus {
+export function statusFrom(body: unknown, running: string, checkedAt: number): UpdateStatus {
   const tag =
     typeof body === 'object' && body !== null ? (body as { tag_name?: unknown }).tag_name : null;
   const version = releaseVersion(tag);
   if (version === null) return { state: 'failed' };
+  const answer: UpdateAnswer = { checkedAt, againAt: checkedAt + AGAIN_AFTER_MS };
   return isNewer(version, running)
-    ? { state: 'available', version, url: `${RELEASE_PAGE}leathercad-v${version}` }
-    : { state: 'current' };
+    ? { state: 'available', version, url: `${RELEASE_PAGE}leathercad-v${version}`, ...answer }
+    : { state: 'current', ...answer };
 }
 
 /**
@@ -68,11 +76,14 @@ export function statusFrom(body: unknown, running: string): UpdateStatus {
  * about the maker or their patterns. It downloads and installs nothing.
  *
  * Never asks by itself: only when the maker presses *Check now* or the
- * version in the status bar. Held by the main process for the session, so a
- * new window on macOS reads the last answer rather than asking again.
+ * version in the status bar, and not again for five minutes after an answer.
+ * Held by the main process for the session, so the status bar, Settings and a
+ * new window on macOS all read the last answer and share its five minutes.
  */
 export class UpdateChecker {
   private last: Promise<UpdateStatus> | null = null;
+  /** The last answer once it is in: what a press within its five minutes reads. */
+  private answered: UpdateStatus | null = null;
 
   constructor(
     private readonly options: {
@@ -83,6 +94,8 @@ export class UpdateChecker {
       readonly managed: boolean;
       /** Another address than GitHub's, for the tests. */
       readonly url?: string;
+      /** Milliseconds since the epoch; `Date.now` but in a test. */
+      readonly now?: () => number;
     },
   ) {}
 
@@ -92,11 +105,29 @@ export class UpdateChecker {
     return this.last ?? Promise.resolve({ state: 'idle' });
   }
 
-  /** Asks now, and keeps the answer for `status`. */
+  /**
+   * Asks now, and keeps the answer for `status` — unless a check is running,
+   * which is waited for, or an answer is not five minutes old, which is read
+   * back. A failed check is never kept that way: it can be tried again at once.
+   */
   check(): Promise<UpdateStatus> {
     if (this.options.managed) return Promise.resolve({ state: 'managed' });
-    this.last = this.ask();
-    return this.last;
+    const answered = this.answered;
+    if (this.last !== null && answered === null) return this.last;
+    if (answered !== null && 'againAt' in answered && this.now() < answered.againAt) {
+      return Promise.resolve(answered);
+    }
+    this.answered = null;
+    const asking = this.ask().then((status) => {
+      this.answered = status;
+      return status;
+    });
+    this.last = asking;
+    return asking;
+  }
+
+  private now(): number {
+    return (this.options.now ?? Date.now)();
   }
 
   private async ask(): Promise<UpdateStatus> {
@@ -106,7 +137,7 @@ export class UpdateChecker {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
       if (!response.ok) return { state: 'failed' };
-      return statusFrom(await response.json(), this.options.running);
+      return statusFrom(await response.json(), this.options.running, this.now());
     } catch {
       return { state: 'failed' };
     }

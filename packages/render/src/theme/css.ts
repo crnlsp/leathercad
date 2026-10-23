@@ -1,7 +1,7 @@
 import type { LayerRole } from '@leathercad/domain';
 
 import { CANVAS } from './canvas.js';
-import { ACCENT, ACTION, GROUND, SHELL, STATE } from './palette.js';
+import { ACCENT, ACTION, CONFIRM, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
   BAR_PX,
@@ -56,6 +56,7 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--on-primary'] = ACTION.onPrimary;
   for (const [name, value] of Object.entries(STATE.shell)) variables[`--${name}`] = value;
   for (const [name, value] of Object.entries(STATE.ground)) variables[`--${name}-ground`] = value;
+  variables['--ok'] = CONFIRM.ok;
   for (const [role, style] of Object.entries(ROLE_STYLES) as [LayerRole, { colour: string }][]) {
     variables[`--role-${role}`] = style.colour;
   }

@@ -207,16 +207,27 @@ export interface PlatformHost {
  */
 export type UpdateStatus =
   | { readonly state: 'idle' }
-  | { readonly state: 'current' }
-  | {
+  | ({ readonly state: 'current' } & UpdateAnswer)
+  | ({
       readonly state: 'available';
       /** As `X.Y.Z`. */
       readonly version: string;
       /** The release's page, where its notes and downloads are. */
       readonly url: string;
-    }
+    } & UpdateAnswer)
   | { readonly state: 'failed' }
   | { readonly state: 'managed' };
+
+/**
+ * When an answer came, and when the app will ask again (8.9). Until `againAt`
+ * a press reads this answer back rather than asking: GitHub is not asked twice
+ * in five minutes. A failed check has neither, so it can be tried again at once.
+ * Both are milliseconds since the epoch, by the main process's clock.
+ */
+export interface UpdateAnswer {
+  readonly checkedAt: number;
+  readonly againAt: number;
+}
 
 /** What `listPrinters` found (7.6). */
 export type PrinterList =

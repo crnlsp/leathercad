@@ -137,8 +137,12 @@ test('with no network the app carries on, and Check now says it could not check'
     await expect(
       window.getByTestId('settings-pane-updates').getByTestId('update-status'),
     ).toHaveAttribute('data-state', 'failed');
+    // A failed check can be tried again at once: no five minutes.
+    await expect(window.getByTestId('check-updates')).toBeEnabled();
     await window.getByTestId('settings-close').click();
     await expect(window.getByTestId('update-mark')).toHaveCount(0);
+    await expect(window.getByTestId('version-button')).toHaveAttribute('data-state', 'failed');
+    await expect(window.getByTestId('version-button')).not.toHaveAttribute('aria-disabled', 'true');
 
     await openAbout(window);
     await expect(window.getByTestId('about-dialog').getByTestId('update-status')).toHaveAttribute(
@@ -172,7 +176,7 @@ test('the version in the status bar says it checks for updates, and pressed, it 
   const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-version-'));
   try {
     await withApp(
-      async (window, app) => {
+      async (window) => {
         const version = window.getByTestId('version-button');
         await version.hover();
         await expect(window.getByRole('tooltip', { name: 'Check for updates' })).toBeVisible();
@@ -186,14 +190,53 @@ test('the version in the status bar says it checks for updates, and pressed, it 
           'You have the latest version.',
         );
         expect(server.asked()).toBe(before + 1);
+        await expect(version).toHaveAttribute('data-state', 'current');
 
-        // A newer release, found by the press, marks Settings.
-        server.tag = await newerTag(app);
-        await version.click();
-        await expect(window.getByTestId('version-check-result')).toHaveText(/is available/);
-        await expect(window.getByTestId('update-mark')).toBeVisible();
+        // Answered, it does not ask again for five minutes, and says so. It is
+        // aria-disabled, which Playwright will not press unless forced.
+        await expect(version).toHaveAttribute('aria-disabled', 'true');
+        await version.click({ force: true });
+        await version.hover();
+        await expect(
+          window.getByRole('tooltip', {
+            name: 'You have the latest version. You can check again in 5 minutes.',
+          }),
+        ).toBeVisible();
+        expect(server.asked()).toBe(before + 1);
+        // Nor does Check now: the five minutes are the app's, not the button's.
+        await window.getByTestId('settings').click();
+        await window.getByTestId('settings-tab-updates').click();
+        const checkNow = window.getByTestId('check-updates');
+        await expect(checkNow).toBeDisabled();
+        await expect(checkNow).toHaveText('Check again in 5 minutes');
+        await expect(
+          window.getByTestId('settings-pane-updates').getByTestId('update-status'),
+        ).toHaveAttribute('data-state', 'current');
+        expect(server.asked()).toBe(before + 1);
       },
       { env: { XDG_CONFIG_HOME: configHome, LEATHERCAD_RELEASES_URL: server.url } },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test('a newer release, found by the version, turns it into a tan chip with the new number', async () => {
+  const server = await releases('none');
+  try {
+    await withApp(
+      async (window, app) => {
+        server.tag = await newerTag(app);
+        const latest = server.tag.slice('leathercad-v'.length);
+        const version = window.getByTestId('version-button');
+        await version.click();
+        await expect(window.getByTestId('version-check-result')).toHaveText(/is available/);
+        await expect(version).toHaveAttribute('data-state', 'available');
+        await expect(version).toContainText(`to ${latest}`);
+        await expect(version).toHaveAttribute('aria-disabled', 'true');
+        await expect(window.getByTestId('update-mark')).toBeVisible();
+      },
+      { env: { LEATHERCAD_RELEASES_URL: server.url } },
     );
   } finally {
     await server.close();

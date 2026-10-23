@@ -1,6 +1,16 @@
 import { MIN_PITCH_MM } from '@leathercad/domain';
 import type { Iron, Preferences, UpdateStatus } from '@leathercad/platform';
-import { Ellipsis, Pencil, Plus, Trash2, X } from 'lucide-react';
+import {
+  ArrowUp,
+  Check,
+  Clock,
+  Ellipsis,
+  Pencil,
+  Plus,
+  Trash2,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
 import {
   useEffect,
   useId,
@@ -48,7 +58,7 @@ import {
 } from './rebind.js';
 import { shortcutGroups } from './shortcuts.js';
 import { Spinner, useChecking } from './Spinner.js';
-import { UpdateLine } from './UpdateLine.js';
+import { useMinutesUntilAgain } from './updateWait.js';
 
 export type SettingsSection =
   'general' | 'appearance' | 'tools' | 'language' | 'shortcuts' | 'updates';
@@ -552,13 +562,16 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
 
 /**
  * *Check now* (8.9): the app asks for a new version only when the maker
- * presses it, or the version in the status bar, never by itself. It links to
- * the release and installs nothing. The Flatpak has none: Flathub updates it,
- * and this says so.
+ * presses it, or the version in the status bar, never by itself, and not
+ * again for five minutes after an answer — the button says how long is left.
+ * What the check found stands above it, as a card with the status bar's
+ * glyph. It links to the release and installs nothing. The Flatpak has none:
+ * Flathub updates it, and this says so.
  */
 function Updates({ updates, onCheckUpdates }: Props) {
   const { t } = useI18n();
   const [checking, check] = useChecking(onCheckUpdates);
+  const wait = useMinutesUntilAgain(updates);
   if (updates.state === 'managed') {
     return (
       <p className="setting-note" data-testid="updates-managed">
@@ -568,29 +581,71 @@ function Updates({ updates, onCheckUpdates }: Props) {
   }
   return (
     <>
-      <p className="setting-note" data-testid="updates-note">
-        {t('settings.updates.note')}
-      </p>
+      <div aria-live="polite">
+        {checking || updates.state !== 'idle' ? (
+          <UpdateCard status={checking ? null : updates} />
+        ) : null}
+      </div>
       <div className="setting">
-        <div className="setting-text" aria-live="polite">
-          {checking ? (
-            <p className="dialog-note">{t('settings.updates.checking')}</p>
-          ) : (
-            <UpdateLine status={updates} />
-          )}
-        </div>
+        <p className="setting-note" data-testid="updates-note">
+          {t('settings.updates.note')}
+        </p>
         <button
           type="button"
           className="tool"
           data-testid="check-updates"
-          disabled={checking}
+          disabled={checking || wait !== null}
           onClick={check}
         >
-          {checking ? <Spinner /> : null}
-          {t('settings.updates.now')}
+          {checking ? <Spinner /> : wait !== null ? <Icon of={Clock} size={14} /> : null}
+          {wait !== null ? t('settings.updates.again', { count: wait }) : t('settings.updates.now')}
         </button>
       </div>
     </>
+  );
+}
+
+/** What the check found, or null while it runs: a glyph in a disc, and what it means. */
+function UpdateCard({ status }: { status: UpdateStatus | null }) {
+  const { t, locale } = useI18n();
+  const state = status?.state ?? 'checking';
+  return (
+    <div className="update-card" data-testid="update-status" data-state={state}>
+      <span className="update-badge">
+        {status === null ? (
+          <Spinner />
+        ) : status.state === 'available' ? (
+          <Icon of={ArrowUp} />
+        ) : status.state === 'current' ? (
+          <Icon of={Check} />
+        ) : (
+          <Icon of={TriangleAlert} />
+        )}
+      </span>
+      <div className="setting-text">
+        <span className="setting-name">
+          {status === null
+            ? t('settings.updates.checking')
+            : status.state === 'available'
+              ? t('updates.available', { version: status.version })
+              : status.state === 'current'
+                ? t('updates.current')
+                : t('updates.failed')}
+        </span>
+        {status?.state === 'available' ? (
+          // An https link: the window-open handler sends it to the browser.
+          <a href={status.url} target="_blank" rel="noreferrer" data-testid="update-link">
+            {t('updates.availableLink')}
+          </a>
+        ) : status?.state === 'current' ? (
+          <span className="setting-note">
+            {t('updates.checkedAt', {
+              time: new Date(status.checkedAt).toLocaleTimeString(locale, { timeStyle: 'short' }),
+            })}
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

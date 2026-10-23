@@ -175,7 +175,8 @@
     "sheetOf": "Sheet {{number}} of {{count}}",
     "partsSelected_one": "part selected",
     "partsSelected_other": "parts selected",
-    "checkForUpdates": "Check for updates"
+    "checkForUpdates": "Check for updates",
+    "versionNext": "to {{version}}"
   },
   "view": {
     "design": "Design",
@@ -422,6 +423,8 @@
       "note": "LeatherCAD asks GitHub which version is the latest only when you ask it to, here or by pressing the version in the status bar. Nothing about you or your patterns is sent, and nothing is downloaded or installed.",
       "now": "Check now",
       "checking": "Checking…",
+      "again_one": "Check again in {{count}} minute",
+      "again_other": "Check again in {{count}} minutes",
       "managed": "Flathub keeps this copy of LeatherCAD up to date, so it does not check for itself."
     }
   },
@@ -1248,6 +1251,9 @@
     "current": "You have the latest version.",
     "available": "LeatherCAD {{version}} is available.",
     "availableLink": "See what is new, and download it",
-    "failed": "Could not check for a new version. Check your connection, or try again later."
+    "failed": "Could not check for a new version. Check your connection, or try again later.",
+    "checkedAt": "Checked at {{time}}",
+    "again_one": "You can check again in {{count}} minute.",
+    "again_other": "You can check again in {{count}} minutes."
   }
 }
