@@ -46,7 +46,11 @@ interface Ended {
  * see it wrote nothing.
  */
 function launchAgain(args: readonly string[], config: string, state: string): Promise<Ended> {
-  const second = spawn(ELECTRON, ['.', ...args], {
+  // Started as Playwright starts the first, without Chromium's sandbox on
+  // Linux: a runner whose SUID helper is not set up aborts with SIGTRAP
+  // before the app runs a line. A packaged app's sandbox is not this test's.
+  const sandbox = process.platform === 'linux' ? ['--no-sandbox'] : [];
+  const second = spawn(ELECTRON, ['.', ...sandbox, ...args], {
     cwd: DESKTOP_DIR,
     env: { ...process.env, XDG_CONFIG_HOME: config, XDG_STATE_HOME: state },
     stdio: ['ignore', 'pipe', 'pipe'],
