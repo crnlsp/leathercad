@@ -84,6 +84,13 @@ interface ToolHints {
 }
 
 const BY_TOOL: Readonly<Record<Exclude<ToolId, 'select'>, ToolHints>> = {
+  guide: {
+    idle: [
+      gesture('guides.placeHint', 1),
+      press(SHIFT, 'guides.verticalHint', 2),
+      BACK_TO_SELECT(3),
+    ],
+  },
   rectangle: {
     idle: [
       gesture('hints.rectangleDrag', 1),

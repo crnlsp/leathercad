@@ -67,7 +67,7 @@ ordering.
 
 ### 3.1 Shape
 
-Format version 9, as the writer emits it (key order shown for reading; the writer sorts keys):
+Format version 10, as the writer emits it (key order shown for reading; the writer sorts keys):
 
 ```jsonc
 {
@@ -75,6 +75,9 @@ Format version 9, as the writer emits it (key order shown for reading; the write
   "name": "Bifold Wallet",
   "settings": { "gridSpacingMm": 1, "defaultStitchInsetMm": 3.5, "defaultIronPitchMm": 3.85,
                 "paper": "A4", "orientation": "portrait" },
+  "guides": [
+    { "id": "01JBQG…", "origin": { "x": 12, "y": 30 }, "angleRad": 0 }
+  ],
   "parts": [
     {
       "id": "01JBQ9…",
@@ -122,8 +125,8 @@ version 4), the `text-label` kind and its `text` source (4.11b, format version 5
 (4.8a, format version 6), the **fold-tracking mirror axis** (4.8b, format version 7 — the first
 migration that rewrites data rather than passing it through), and the `measurement` kind with its
 `measurement` source of two anchor references (4.10a, format version 8). The paper a project prints
-on followed in 5.5, as version 9 (§4.1a). Materials, guides and a per-part placement transform are
-not in the format.
+on followed in 5.5, as version 9 (§4.1a). Construction guides followed in 3.10, as version 10
+(§4.1b). Materials and a per-part placement transform are not in the format.
 
 A **fold-tracked mirror** stores *which fold*, never where that fold happens to be — the first
 **references** edge in the format. Move the fold in a later session and the counterpart moves with
@@ -149,7 +152,7 @@ of its ~120 hole positions. Three parameter blocks regenerate all of it.
 - **Numbers** are written with at most 6 decimal places. Combined with the 1e-4 mm input
   quantisation ([geometry.md](geometry.md) §3.3), this makes saving an unmodified file
   byte-identical and makes `.lcp` diffs readable.
-- **Except a stored path's segments, which are written exactly** (JavaScript's shortest round-trip
+- **Except a stored path's segments and construction guides, which are written exactly** (JavaScript's shortest round-trip
   form, so the same doubles come back).
   - A path, drawn or frozen, is geometry rather than a typed parameter, and it stores an arc as a
     centre, a radius and two angles.
@@ -220,6 +223,20 @@ vocabulary lives in the domain at all: `ProjectSettings` has to name it, and `do
 **Margins and the verification strip are deliberately not stored.** They are constants in
 `packages/export`, they are already correct, and changing them has print-accuracy consequences — a
 setting nobody has asked for is a setting that can be got wrong.
+
+### 4.1b Version 10 — construction guides
+
+The optional project-level `guides` array holds `{ id, origin: { x, y }, angleRad }`. An absent
+array means no guides. Guides are infinite, non-printing construction lines, separate from a
+part's printed marking lines. Coordinates follow the ordinary millimetre range and input
+quantisation; angles are finite radians, counter-clockwise from +X. Guide ids are unique and do
+not collide with feature ids.
+
+The v9→v10 migration is an identity: older projects had no guides, and none are invented on open.
+The version increases because guides change what the board draws (§4.5 rule 2), even though
+export output is unchanged. Guide parameters are written exactly so saving does not tilt a
+vertical guide or change a diagonal snap. The loose schema preserves unknown fields on a guide
+and its origin, and in-place edits preserve them too.
 
 ### 4.2 The rules
 

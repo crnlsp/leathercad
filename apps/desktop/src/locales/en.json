@@ -259,6 +259,10 @@
     "text": {
       "howTo": "Click to place a label on the selected part, then type it in the panel",
       "name": "Text"
+    },
+    "guide": {
+      "name": "Guides",
+      "howTo": "Click to place a horizontal guide; hold {{shift}} for a vertical guide. Select a guide to edit its position and angle in Properties."
     }
   },
   "toolOptions": {
@@ -1192,7 +1196,12 @@
     "transform": "Transform",
     "unlock_one": "Unlock",
     "unlock_other": "Unlock {{count}} features",
-    "delete-part": "Delete part"
+    "delete-part": "Delete part",
+    "add-guide": "Add guide",
+    "edit-guide": "Edit guide",
+    "delete-guide": "Delete guide",
+    "align": "Align selection",
+    "distribute": "Distribute selection"
   },
   "fieldMenu": {
     "label": "Edit",
@@ -1255,5 +1264,41 @@
     "checkedAt": "Checked at {{time}}",
     "again_one": "You can check again in {{count}} minute.",
     "again_other": "You can check again in {{count}} minutes."
+  },
+  "guides": {
+    "title": "Guides",
+    "help": "Drag a guide from a ruler, or place one on the board. Guides are saved and snap targets; they never print. Select a guide to move it or type its position and angle.",
+    "horizontal": "Horizontal guide",
+    "vertical": "Vertical guide",
+    "item": "Guide {{number}}",
+    "x": "Guide x",
+    "y": "Guide y",
+    "angle": "Guide angle",
+    "delete": "Delete guide",
+    "placeHint": "Click places a horizontal guide",
+    "verticalHint": "places a vertical guide",
+    "selected": "Guide selected"
+  },
+  "arrange": {
+    "title": "Align and distribute",
+    "help": "Arrange the selected bounding boxes. A piece moves whole. Distribution keeps the outer items fixed and makes the gaps equal.",
+    "x": {
+      "min": "Align left",
+      "centre": "Centre horizontally",
+      "max": "Align right",
+      "distribute": "Equal horizontal gaps"
+    },
+    "y": {
+      "min": "Align bottom",
+      "centre": "Centre vertically",
+      "max": "Align top",
+      "distribute": "Equal vertical gaps"
+    },
+    "reason": {
+      "count": "Select at least {{count}} independent items.",
+      "unresolved": "The selection contains geometry that cannot be resolved.",
+      "linked": "These items follow one another. Arrange independent pieces, or move their source instead.",
+      "order": "These sizes cannot have equal gaps without reordering. Move the outer items farther apart."
+    }
   }
 }

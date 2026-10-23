@@ -17,6 +17,7 @@ import {
   fixtureProjectV7,
   fixtureProjectV8,
   fixtureProjectV9,
+  fixtureProjectV10,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -28,6 +29,7 @@ const FIXTURE_V5 = resolve(import.meta.dirname, '../../../fixtures/format/v5.lcp
 const FIXTURE_V6 = resolve(import.meta.dirname, '../../../fixtures/format/v6.lcp');
 const FIXTURE_V7 = resolve(import.meta.dirname, '../../../fixtures/format/v7.lcp');
 const FIXTURE_V8 = resolve(import.meta.dirname, '../../../fixtures/format/v8.lcp');
+const FIXTURE_V10 = resolve(import.meta.dirname, '../../../fixtures/format/v10.lcp');
 const FIXTURE_V9 = resolve(import.meta.dirname, '../../../fixtures/format/v9.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
@@ -55,9 +57,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V9), { recursive: true });
-      writeFileSync(FIXTURE_V9, saveProject(fixtureProjectV9(), OPTIONS));
-      expect(existsSync(FIXTURE_V9)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V10), { recursive: true });
+      writeFileSync(FIXTURE_V10, saveProject(fixtureProjectV10(), OPTIONS));
+      expect(existsSync(FIXTURE_V10)).toBe(true);
     });
   }
 
@@ -202,10 +204,10 @@ describe('the format baseline fixture', () => {
     expect(loadProject(readFileSync(FIXTURE_V8)).project).toEqual(fixtureProjectV8());
   });
 
-  it('names its paper at the current version', () => {
+  it('names its paper at version 9', () => {
     const loaded = loadProject(readFileSync(FIXTURE_V9));
 
-    expect(readManifest(readFileSync(FIXTURE_V9)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+    expect(readManifest(readFileSync(FIXTURE_V9)).formatVersion).toBe(9);
     expect(loaded.project).toEqual(fixtureProjectV9());
   });
 
@@ -407,4 +409,9 @@ describe('the format baseline fixture', () => {
 
     expect(new Set(shapes)).toEqual(new Set(['rect', 'circle', 'arc']));
   });
+});
+
+it('keeps the guides and their exact angles in the version 10 fixture', () => {
+  expect(readManifest(readFileSync(FIXTURE_V10)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  expect(loadProject(readFileSync(FIXTURE_V10)).project).toEqual(fixtureProjectV10());
 });

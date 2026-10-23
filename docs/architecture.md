@@ -501,14 +501,16 @@ vertices — waits until real documents show that flat feature picking on the ca
 
 ### 6.6 Guides and alignment
 
-*Designed, not built: roadmap 3.10, in 1.6. Guides are not in the file format yet.*
-
 Guides are **document objects** (persisted): an origin point plus an angle, so diagonal guides work,
 not just horizontal and vertical. They are dragged out from the rulers and snapped to like any
-other candidate.
+other candidate. The Guides tool and Properties also place them. Select moves a guide as one
+transaction; Properties edits its position and angle or deletes it. Guides live on the project,
+outside the leather parts, and draw only on the Design board: they do not print or frame exports.
 
 Alignment and distribution operate on selection bounding boxes and are ordinary commands — no
-special machinery.
+special machinery. An outline carries its whole piece. Distribution holds the outer items fixed
+and equalises the edge gaps; locks and independent items linked to one another refuse the action
+whole. The detailed contract is in [3.10's design](superpowers/specs/2026-10-23-guides-alignment.md).
 
 ### 6.7 Grid and rulers
 

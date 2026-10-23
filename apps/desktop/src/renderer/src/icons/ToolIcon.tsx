@@ -20,6 +20,12 @@ function Node({ x, y }: { x: number; y: number }) {
  * (decisions §4.2).
  */
 const GEOMETRY: Readonly<Record<string, ReactElement>> = {
+  guide: (
+    <>
+      <path d="M2 5h12M6 2v12" strokeDasharray="2 2" />
+      <Node x={6} y={5} />
+    </>
+  ),
   rectangle: (
     <>
       <rect x="3" y="4.5" width="10" height="7" />

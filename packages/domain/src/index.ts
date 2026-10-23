@@ -27,6 +27,7 @@ export type {
   FeatureKind,
   FoldLine,
   GeometrySource,
+  Guide,
   HardwareHole,
   MarkingLine,
   Derivation,
@@ -47,6 +48,7 @@ export type {
   FeatureSource,
 } from './feature.js';
 export { DEFAULT_SETTINGS, eachFeature, findFeature, roleOf } from './feature.js';
+export { guideCrossing, projectToGuide } from './guides.js';
 
 export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.js';
 export { evaluate, evaluationErrors, pathForShape, resolvedFeatures } from './evaluate.js';

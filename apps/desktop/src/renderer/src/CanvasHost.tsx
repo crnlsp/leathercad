@@ -1,5 +1,10 @@
 import { approxEq } from '@leathercad/core';
-import { drawnBounds, selectedFeatureIds, type DocumentStore } from '@leathercad/document';
+import {
+  addGuide,
+  drawnBounds,
+  selectedFeatureIds,
+  type DocumentStore,
+} from '@leathercad/document';
 import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import {
   layoutSheets,
@@ -26,6 +31,7 @@ import {
   createMeasureTool,
   createScaleTool,
   createSelectTool,
+  createGuideTool,
   createTextTool,
   hitTest,
   type DrawMode,
@@ -44,6 +50,7 @@ import {
   clearCanvas,
   renderDisplayList,
   renderGrid,
+  guideDisplayList,
   renderRulers,
   zoomPercent,
   type CssBox,
@@ -157,6 +164,7 @@ export function CanvasHost({
   hoveredPart = null,
   onHoverPart,
   toolId,
+  onToolChange,
   drawAs,
   makerDefaults,
   hardware,
@@ -178,6 +186,7 @@ export function CanvasHost({
   /** The part under the pointer on the Sheets view, for Parts to highlight. */
   onHoverPart?: (partId: string | null) => void;
   toolId: string;
+  onToolChange: (id: string) => void;
   drawAs: DrawMode;
   /** The maker's margin and leather (U.13): what *Stitch + allowance* and a new fold take. */
   makerDefaults: MakerDefaults;
@@ -228,6 +237,7 @@ export function CanvasHost({
   /** Where the canvas last sat in the window, so a resize can hold the drawing still. */
   const placedRef = useRef<{ left: number; top: number; dpr: number } | null>(null);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
+  const rulerGuideRef = useRef<{ id: string; angleRad: number } | null>(null);
   const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
   /**
    * The same pointer, for the painter: the rulers' cursor tick (§9.2). A ref,
@@ -471,6 +481,7 @@ export function CanvasHost({
   const tools = useMemo(
     () => [
       createSelectTool(),
+      createGuideTool(nextId),
       createRectangleTool(nextId),
       createCircleTool(nextId),
       createArcTool(nextId),
@@ -627,6 +638,11 @@ export function CanvasHost({
     renderGrid(context, view);
     renderDisplayList(
       context,
+      guideDisplayList(document.project.guides ?? [], view, selection.guide),
+      view,
+    );
+    renderDisplayList(
+      context,
       buildDisplayList(evaluate(document.project), {
         // A part picked by its heading shows as picked (Q30): Rotate turns it,
         // so the board has to say what will turn.
@@ -762,6 +778,12 @@ export function CanvasHost({
       // Never steal keys from a field, a list or anything editable (8.7), nor
       // a focused button's Space (U.12).
       if (isTyping(event.target) || pressesControl(event)) return;
+      if (event.key === 'Escape' && rulerGuideRef.current !== null) {
+        rulerGuideRef.current = null;
+        store.rollback();
+        event.preventDefault();
+        return;
+      }
 
       // Ctrl on Linux and Windows, ⌘ on macOS: the keymap's (U.3).
       const command = commandFor(event, IS_MAC);
@@ -898,9 +920,23 @@ export function CanvasHost({
         }
         return;
       }
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const thickness = DEFAULT_RULER_STYLE.thicknessPx;
+      if (event.button === 0 && (x < DEFAULT_RULER_STYLE.leftThicknessPx || y < thickness)) {
+        managerRef.current?.activate('select');
+        onToolChange('select');
+        const guide = { id: nextId(), angleRad: y < thickness ? 0 : Math.PI / 2 };
+        rulerGuideRef.current = guide;
+        store.begin({ action: 'add-guide' });
+        store.preview(addGuide({ ...guide, origin: toInput(event).at }));
+        invalidate();
+        return;
+      }
       managerRef.current?.pointerDown(toInput(event));
     },
-    [pickOnSheets, toInput],
+    [pickOnSheets, toInput, onToolChange, nextId, store, invalidate],
   );
 
   const handlePointerMove = useCallback(
@@ -911,6 +947,16 @@ export function CanvasHost({
       const rect = event.currentTarget.getBoundingClientRect();
       const raw = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
       setPointerCss({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+      const guide = rulerGuideRef.current;
+      if (guide !== null) {
+        if (!store.inTransaction) {
+          rulerGuideRef.current = null;
+          return;
+        }
+        store.preview(addGuide({ ...guide, origin: raw }));
+        invalidate();
+        return;
+      }
 
       if (panning !== null) {
         const press = pressRef.current;
@@ -1027,9 +1073,33 @@ export function CanvasHost({
         return;
       }
       if (viewRef.current === 'sheets') return;
+      const guide = rulerGuideRef.current;
+      if (guide !== null) {
+        rulerGuideRef.current = null;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        if (
+          event.type === 'pointercancel' ||
+          x < DEFAULT_RULER_STYLE.leftThicknessPx ||
+          y < DEFAULT_RULER_STYLE.thicknessPx ||
+          x > rect.width ||
+          y > rect.height
+        ) {
+          store.rollback();
+        } else {
+          store.preview(addGuide({ ...guide, origin: toInput(event).at }));
+          store.commit();
+          store.selectGuide(guide.id);
+        }
+        invalidate();
+        return;
+      }
+      if (event.type === 'pointercancel' && store.getState().selection.guide !== undefined)
+        store.rollback();
       managerRef.current?.pointerUp(toInput(event));
     },
-    [store, toInput],
+    [store, toInput, invalidate],
   );
 
   // The board's name, for the one Tab stop it is (U.14).

@@ -574,3 +574,17 @@ export function fixtureProjectV9(): Project {
     settings: { ...previous.settings, paper: 'A4', orientation: 'portrait' },
   };
 }
+
+/** Version 10 keeps horizontal, vertical and diagonal construction guides. */
+export function fixtureProjectV10(): Project {
+  return {
+    ...fixtureProjectV9(),
+    id: 'fixture-v10',
+    name: 'Format baseline v10',
+    guides: [
+      { id: 'guide-horizontal', origin: { x: 0, y: 15 }, angleRad: 0 },
+      { id: 'guide-vertical', origin: { x: 40, y: 0 }, angleRad: Math.PI / 2 },
+      { id: 'guide-diagonal', origin: { x: 10, y: 20 }, angleRad: Math.PI / 4 },
+    ],
+  };
+}
