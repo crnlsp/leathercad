@@ -43,5 +43,6 @@ export { createRectangleTool } from './tools/rectangleTool.js';
 export { createRotateTool } from './tools/rotateTool.js';
 export { createScaleTool } from './tools/scaleTool.js';
 export { createSelectTool } from './tools/selectTool.js';
+export { createGuideTool } from './tools/guideTool.js';
 export { createTextTool } from './tools/textTool.js';
 export { selectionPivot } from './tools/selectionPivot.js';

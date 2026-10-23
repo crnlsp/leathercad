@@ -230,6 +230,10 @@ export class DocumentStore {
     this.setSelection(EMPTY_SELECTION);
   }
 
+  selectGuide(id: string): void {
+    this.setSelection({ parts: new Set(), features: new Set(), guide: id });
+  }
+
   private emit(): void {
     for (const listener of this.listeners) listener();
   }
@@ -246,6 +250,11 @@ export class DocumentStore {
  * how it is shown again.
  */
 function keptSelection(selection: Selection, before: Document, after: Document): Selection {
+  if (selection.guide !== undefined) {
+    return after.project.guides?.some((guide) => guide.id === selection.guide)
+      ? selection
+      : EMPTY_SELECTION;
+  }
   if (selection.parts.size === 0 && selection.features.size === 0) return selection;
 
   const visibleBefore = new Map<FeatureId, boolean>();

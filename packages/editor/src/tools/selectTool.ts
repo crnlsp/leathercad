@@ -6,10 +6,12 @@ import {
   selectedFeatureIds,
   transformRefusal,
   translateFeatures,
+  setGuide,
+  deleteGuide,
 } from '@leathercad/document';
 import type { FeatureId } from '@leathercad/domain';
-import { evaluate, type Problem } from '@leathercad/domain';
-import { MatOps, RectOps, Shapes } from '@leathercad/geometry';
+import { evaluate, projectToGuide, type Guide, type Problem } from '@leathercad/domain';
+import { MatOps, RectOps, Shapes, dist, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
 
 import { featuresWithin, hitTest } from '../hitTest.js';
@@ -17,6 +19,7 @@ import { means, type Tool, type ToolContext } from '../tool.js';
 import { isDrag } from './gesture.js';
 
 type State =
+  | { readonly kind: 'guide'; readonly guide: Guide; readonly startMm: Vec2 }
   | { readonly kind: 'idle' }
   /** Pressed on a feature; becomes a move once the pointer actually travels. */
   | { readonly kind: 'maybe-move'; readonly startMm: { x: number; y: number } }
@@ -55,6 +58,23 @@ export function createSelectTool(): Tool {
       const hit = hitTest(resolved, event.at, ctx.viewport.pickToleranceMm());
 
       if (hit === null) {
+        const guides = ctx.store.getState().document.project.guides ?? [];
+        let guide: Guide | undefined;
+        let closest = ctx.viewport.pickToleranceMm();
+        for (const entry of guides) {
+          const distance = dist(projectToGuide(entry, event.at), event.at);
+          if (distance <= closest) {
+            guide = entry;
+            closest = distance;
+          }
+        }
+        if (guide !== undefined) {
+          ctx.store.selectGuide(guide.id);
+          ctx.store.begin({ action: 'edit-guide' });
+          state = { kind: 'guide', guide, startMm: event.at };
+          ctx.invalidate();
+          return;
+        }
         if (!event.shiftKey) ctx.store.clearSelection();
         state = { kind: 'band', startMm: event.at, currentMm: event.at };
         ctx.invalidate();
@@ -78,6 +98,23 @@ export function createSelectTool(): Tool {
     },
 
     onPointerMove(ctx, event) {
+      if (state.kind === 'guide') {
+        if (!ctx.store.inTransaction) {
+          state = { kind: 'idle' };
+          return;
+        }
+        ctx.store.preview(
+          setGuide({
+            ...state.guide,
+            origin: {
+              x: state.guide.origin.x + event.at.x - state.startMm.x,
+              y: state.guide.origin.y + event.at.y - state.startMm.y,
+            },
+          }),
+        );
+        ctx.invalidate();
+        return;
+      }
       if (state.kind === 'band') {
         state = { ...state, currentMm: event.at };
         ctx.invalidate();
@@ -124,7 +161,7 @@ export function createSelectTool(): Tool {
         const { selection, document } = ctx.store.getState();
         const existing = event.shiftKey ? selectedFeatureIds(document.project, selection) : [];
         ctx.store.select([...existing, ...found]);
-      } else if (state.kind === 'moving') {
+      } else if (state.kind === 'moving' || state.kind === 'guide') {
         ctx.store.commit();
       }
 
@@ -146,6 +183,10 @@ export function createSelectTool(): Tool {
       // command the maker gave the same key runs as well.
       if (means(event, 'delete')) {
         const { selection } = ctx.store.getState();
+        if (selection.guide !== undefined) {
+          ctx.dispatch(deleteGuide(selection.guide));
+          return true;
+        }
         // A part picked by its heading goes whole, as its menu's Delete part
         // does (Q29), not feature by feature into an empty part.
         const [partId] = selection.parts;
@@ -185,7 +226,11 @@ export function createSelectTool(): Tool {
      * carried by its outline catches its own slot.
      */
     snapExclusions() {
-      return state.kind === 'moving' ? state.moving : [];
+      return state.kind === 'guide'
+        ? [state.guide.id]
+        : state.kind === 'moving'
+          ? state.moving
+          : [];
     },
 
     notice() {

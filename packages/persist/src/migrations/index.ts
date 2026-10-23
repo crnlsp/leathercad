@@ -21,6 +21,7 @@ import { v5ToV6 } from './v5_to_v6.js';
 import { v6ToV7 } from './v6_to_v7.js';
 import { v7ToV8 } from './v7_to_v8.js';
 import { v8ToV9 } from './v8_to_v9.js';
+import { v9ToV10 } from './v9_to_v10.js';
 
 export interface Migration {
   readonly from: number;
@@ -40,9 +41,10 @@ export const MIGRATIONS: readonly Migration[] = [
   { from: 7, to: 8, migrate: v7ToV8 },
   // Fills in the paper every earlier file already printed on.
   { from: 8, to: 9, migrate: v8ToV9 },
+  { from: 9, to: 10, migrate: v9ToV10 },
 ];
 
-export const CURRENT_FORMAT_VERSION = 9;
+export const CURRENT_FORMAT_VERSION = 10;
 
 export class NewerFormatError extends Error {
   /**
