@@ -17,7 +17,10 @@
     "menu": "Project menu",
     "menuTooltip": "New, open, save as, rename, and recent projects",
     "noProject": "No project is open",
-    "alreadyOpen": "{{name}} is open already"
+    "alreadyOpen": "{{name}} is open already",
+    "all": "All tabs",
+    "allTooltip": "Every open project, when there are more than the strip shows",
+    "unsavedNote": "Unsaved changes"
   },
   "tabMenu": {
     "label": "Menu for {{name}}",
@@ -40,11 +43,20 @@
     "trashConfirm": "Move to Trash",
     "trashFailed": "The file could not be moved to the Trash. {{reason}}"
   },
+  "outside": {
+    "changed": "{{file}} was changed outside LeatherCAD.",
+    "gone": "{{file}} was moved or deleted outside LeatherCAD.",
+    "reload": "Reload",
+    "keep": "Keep mine",
+    "save": "Save it again",
+    "dismiss": "Dismiss"
+  },
   "rename": {
     "title": "Not renamed",
     "exists": "A file named “{{file}}” is already in this project’s folder. Choose another name: the project and its file keep the one they have.",
     "invalid": "A file cannot be called “{{name}}”: it has a character such as / \\ : * ? \" < > |, or is a name the system keeps. Choose another name.",
-    "failed": "The project’s file could not be renamed, so the project keeps its name. {{reason}}"
+    "failed": "The project’s file could not be renamed, so the project keeps its name. {{reason}}",
+    "followExists": "The project is called “{{name}}” again, but its file keeps the name it has: a file named “{{file}}” is already in its folder."
   },
   "start": {
     "title": "No project open",
@@ -496,6 +508,12 @@
       "close": "If you close without saving, your changes are lost.",
       "reload": "Reloading reads the file as it was last saved, and your changes are lost."
     }
+  },
+  "unsavedProjects": {
+    "title_one": "Save changes to {{count}} project?",
+    "title_other": "Save changes to {{count}} projects?",
+    "consequence": "If you close without saving, their changes are lost.",
+    "saveAll": "Save all"
   },
   "deleteDialog": {
     "deleteAll": "Delete all",

@@ -227,6 +227,15 @@ export interface PlatformHost {
    * restored — never deleted outright. Only a file the app may write.
    */
   trashProjectFile(path: string): Promise<void>;
+
+  /**
+   * Watches the open projects' files for what another program does to them
+   * (8.12): exactly these paths from now on. Only paths the app may read.
+   */
+  watchProjects(paths: readonly string[]): Promise<void>;
+
+  /** A watched project's file changed outside the app, or went (8.12). */
+  onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
 
 /** What renaming a project's file came to (8.12). */
@@ -236,6 +245,9 @@ export type FileRename =
   | { readonly kind: 'exists'; readonly file: string }
   /** No file can have the name. */
   | { readonly kind: 'invalid' };
+
+/** What happened to an open project's file outside the app (8.12). */
+export type OutsideChange = 'changed' | 'gone';
 
 /** The tabs a start opens again (8.12). */
 export interface OpenSession {

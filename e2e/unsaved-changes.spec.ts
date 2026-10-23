@@ -165,28 +165,38 @@ test('closing a tab with unsaved work asks, and a cancelled save keeps it (8.12)
   }
 });
 
-test('closing the window asks about each unsaved project in turn (8.12)', async () => {
+test('closing the window with several unsaved projects asks once, about them all (8.12)', async () => {
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { parts: '1' });
     await window.keyboard.press('Control+n');
     await drawAPanel(window, { parts: '1' });
     await renameProject(window, 'Second');
-    const dialog = window.getByTestId('unsaved-dialog');
+    const dialog = window.getByTestId('unsaved-projects-dialog');
 
-    // Cancel at the first question: nothing closes, nothing else is asked.
+    // One question, naming both; Save all is where focus starts.
     await requestClose(app);
-    await expect(dialog).toContainText('“Untitled”');
-    await dialog.getByTestId('unsaved-cancel').click();
+    await expect(dialog.getByTestId('unsaved-projects')).toHaveText(/Untitled[\s\S]*Second/);
+    await expect(dialog.getByTestId('unsaved-projects-save')).toBeFocused();
+    await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
+
+    // Cancel keeps the window and both projects.
+    await dialog.getByTestId('unsaved-projects-cancel').click();
     await expect(dialog).toHaveCount(0);
+    await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(2);
 
-    // Each project in turn, shown as it is asked about.
+    // Save all stops at the first save the maker backs out of: the window stays.
+    await app.evaluate(({ dialog: native }) => {
+      native.showSaveDialog = async () => ({ canceled: true, filePath: '' });
+    });
     await requestClose(app);
-    await expect(dialog).toContainText('“Untitled”');
-    await dialog.getByTestId('unsaved-discard').click();
-    await expect(dialog).toContainText('“Second”');
-    await expect(window.getByTestId('project-name')).toHaveText('Second');
-    await dialog.getByTestId('unsaved-discard').click();
+    await dialog.getByTestId('unsaved-projects-save').click();
+    await expect(dialog).toHaveCount(0);
+    expect(app.windows()).toHaveLength(1);
+
+    // Don't save lets them all go.
+    await requestClose(app);
+    await dialog.getByTestId('unsaved-projects-discard').click();
     expect(await closed(app)).toBe(true);
   } finally {
     await closeApp(app);

@@ -101,6 +101,18 @@ const platformBridge = {
 
   trashProjectFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.trashProjectFile, path),
 
+  watchProjects: (paths: readonly string[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.watchProjects, paths),
+
+  onProjectChanged: (
+    listener: (path: string, change: 'changed' | 'gone') => void,
+  ): (() => void) => {
+    const handler = (_event: unknown, path: string, change: 'changed' | 'gone'): void =>
+      listener(path, change);
+    ipcRenderer.on(IPC.projectChanged, handler);
+    return () => ipcRenderer.removeListener(IPC.projectChanged, handler);
+  },
+
   onOpenFile: (listener: (path: string) => void): (() => void) => {
     const handler = (_event: unknown, path: string): void => listener(path);
     ipcRenderer.on(IPC.openFile, handler);

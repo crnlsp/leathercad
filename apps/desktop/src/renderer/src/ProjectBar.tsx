@@ -220,30 +220,13 @@ export function ProjectBar({
 
         {/* Past the rule is the application, not this project (8.7). */}
         <div className="project-app" role="group" aria-label={t('projectBar.application')}>
-          <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
-            <button
-              type="button"
-              className="tool quiet icon-only settings-button"
-              data-testid="settings"
-              aria-label={t(updateAvailable ? 'projectBar.settingsUpdate' : 'projectBar.settings')}
-              onClick={onSettings}
-            >
-              <Icon of={Settings} />
-              {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
-            </button>
-          </Tooltip>
-          <MenuButton
-            label={t('projectBar.help')}
-            tooltip={t('projectBar.helpTooltip')}
-            keys="help"
-            testId="help-menu"
-            className="tool quiet icon-only"
-            align="end"
-            triggerRef={helpRef}
-            entries={helpMenu({ openSample: onOpenSample, about: onAbout }, t)}
-          >
-            <Icon of={CircleHelp} />
-          </MenuButton>
+          <AppControls
+            helpRef={helpRef}
+            onOpenSample={onOpenSample}
+            onAbout={onAbout}
+            onSettings={onSettings}
+            updateAvailable={updateAvailable}
+          />
         </div>
 
         {/* Said politely, once per change (§2): the save state and the problems.
@@ -301,4 +284,56 @@ function SaveState({ dirty, saved, room }: { dirty: boolean; saved: boolean; roo
  */
 export function windowTitle(name: string, dirty: boolean, t: Translate): string {
   return t(dirty ? 'app.windowTitleUnsaved' : 'app.windowTitle', { name });
+}
+
+/**
+ * The application's own controls (8.7): Settings — with 8.9's mark when a new
+ * version is out — and the Help menu. Past the project bar's rule while a
+ * project is open; at the tab strip's end on the start screen (8.12), where
+ * there is no project bar, so F1 and the update mark are never out of reach.
+ */
+export function AppControls({
+  helpRef,
+  onOpenSample,
+  onAbout,
+  onSettings,
+  updateAvailable,
+}: {
+  /** The Help menu's button, which F1 opens. */
+  helpRef: RefObject<HTMLButtonElement | null>;
+  onOpenSample: () => void;
+  onAbout: () => void;
+  onSettings: () => void;
+  /** A newer LeatherCAD is out (8.9): Settings is marked. */
+  updateAvailable: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
+        <button
+          type="button"
+          className="tool quiet icon-only settings-button"
+          data-testid="settings"
+          aria-label={t(updateAvailable ? 'projectBar.settingsUpdate' : 'projectBar.settings')}
+          onClick={onSettings}
+        >
+          <Icon of={Settings} />
+          {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
+        </button>
+      </Tooltip>
+      <MenuButton
+        label={t('projectBar.help')}
+        tooltip={t('projectBar.helpTooltip')}
+        keys="help"
+        testId="help-menu"
+        className="tool quiet icon-only"
+        align="end"
+        triggerRef={helpRef}
+        entries={helpMenu({ openSample: onOpenSample, about: onAbout }, t)}
+      >
+        <Icon of={CircleHelp} />
+      </MenuButton>
+    </>
+  );
 }

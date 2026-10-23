@@ -55,11 +55,21 @@ import {
   type DrawingFormat,
   type ExportReport,
 } from './useProjectFile.js';
-import { ProjectBar, windowTitle } from './ProjectBar.js';
+import { AppControls, ProjectBar, windowTitle } from './ProjectBar.js';
+import { OutsideChangeBar } from './OutsideChangeBar.js';
+import { UnsavedProjectsDialog } from './UnsavedProjectsDialog.js';
 import { MessageDialog } from './MessageDialog.js';
 import { NewTabMenu, ProjectMenu } from './ProjectMenu.js';
 import { StartScreen } from './StartScreen.js';
-import { ProjectTabs, isDirty, newTab, tabName, type ProjectTab } from './projectTabs.js';
+import {
+  ProjectTabs,
+  isDirty,
+  isUnnamed,
+  newTab,
+  projectNameOf,
+  tabName,
+  type ProjectTab,
+} from './projectTabs.js';
 import { TabContextMenu, TabStrip } from './TabStrip.js';
 import { printStatusFor } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
@@ -444,12 +454,47 @@ export function App({
    * Asks about every project with unsaved work, one after another, as the
    * window closes (8.12). False as soon as one answer is *Cancel*.
    */
+  const [pendingAll, setPendingAll] = useState<{
+    tabs: readonly ProjectTab[];
+    resolve: (proceed: boolean) => void;
+  } | null>(null);
   const confirmDiscardAll = useCallback(async (): Promise<boolean> => {
-    for (const each of tabs.tabs) {
-      if (!(await confirmDiscard('close', each))) return false;
+    const unsaved = tabs.tabs.filter(isDirty);
+    // One unsaved project: its own question, as for its tab.
+    if (unsaved.length <= 1) {
+      for (const each of unsaved) if (!(await confirmDiscard('close', each))) return false;
+      return true;
     }
-    return true;
+    // Several: one question about them all (8.12), answered once.
+    if (discarding.current) return false;
+    discarding.current = true;
+    const answer = await new Promise<'save' | 'discard' | 'cancel'>((resolve) =>
+      setPendingAll({
+        tabs: unsaved,
+        resolve: (proceed) => resolve(proceed ? 'discard' : 'cancel'),
+      }),
+    ).finally(() => {
+      discarding.current = false;
+    });
+    return answer !== 'cancel';
   }, [confirmDiscard, tabs]);
+
+  /**
+   * *Save all*: each unsaved project in turn, in front as it is saved — an
+   * untitled one asks where — stopping at the first the maker backs out of,
+   * and then the window stays.
+   */
+  const saveAllThenClose = useCallback(
+    async (unsaved: readonly ProjectTab[]): Promise<boolean> => {
+      for (const each of unsaved) {
+        if (!isDirty(each)) continue;
+        tabs.activate(each.id);
+        if (!(await file.save(each))) return false;
+      }
+      return true;
+    },
+    [file, tabs],
+  );
 
   const newProject = file.newProject;
   const openProject = file.open;
@@ -479,6 +524,39 @@ export function App({
     (text: string) => setNotice({ title: t('rename.title'), text }),
     [t],
   );
+  // The file follows the project's name (8.12): Rename renames both, and so
+  // do Undo and Redo of it, so the two never part. Only a change with a
+  // history behind it — reading the file again starts a history afresh, and a
+  // project opened under another name keeps its file's. A name taken in the
+  // folder leaves the file as it is, and says so.
+  const namesSeen = useRef(new Map<string, string>());
+  useEffect(() => {
+    const named = tabs.active;
+    if (named === null) return;
+    const name = storeState.document.project.name.trim();
+    const last = namesSeen.current.get(named.id);
+    namesSeen.current.set(named.id, name);
+    const path = named.file.path;
+    if (last === undefined || last === name || path === null || isUnnamed(name)) return;
+    if (!storeState.canUndo && !storeState.canRedo) return;
+    if (projectNameOf(path) === name) return;
+    void getPlatformHost()
+      .renameProjectFile(path, name)
+      .then((outcome) => {
+        if (outcome.kind === 'renamed') {
+          tabs.update(named.id, (each) => {
+            each.file = { ...each.file, path: outcome.path };
+          });
+        } else if (outcome.kind === 'exists') {
+          setNotice({
+            title: t('rename.title'),
+            text: t('rename.followExists', { name, file: outcome.file }),
+          });
+        }
+      })
+      .catch(() => undefined);
+  }, [storeState, tabs, t]);
+
   // A tab's own menu (8.12), open at a point, and the tab whose file is being
   // asked about before it goes to the Trash.
   const [tabMenuAt, setTabMenuAt] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -576,6 +654,28 @@ export function App({
   // A recent project (8.2, 8.7), a second launch's (8.11), macOS's open-file:
   // the main process chose and granted the path, and it opens in a tab.
   useEffect(() => getPlatformHost().onOpenFile((path) => void openPath(path)), [openPath]);
+
+  // The open projects' files, watched for another program's changes (8.12):
+  // the list follows the tabs, and a change marks its tab, whose bar asks.
+  const watched = JSON.stringify(
+    openTabs.flatMap((each) => (each.file.path === null ? [] : [each.file.path])),
+  );
+  useEffect(() => {
+    void getPlatformHost()
+      .watchProjects(JSON.parse(watched) as string[])
+      .catch(() => undefined);
+  }, [watched]);
+  useEffect(
+    () =>
+      getPlatformHost().onProjectChanged((path, change) => {
+        const changed = tabs.byPath(path);
+        if (changed === undefined) return;
+        tabs.update(changed.id, (each) => {
+          each.file = { ...each.file, outside: change };
+        });
+      }),
+    [tabs],
+  );
 
   // The window's close button, Ctrl+Q and a reload all unload the page. With
   // unsaved work the unload is refused — Electron then keeps the window — and
@@ -977,6 +1077,21 @@ export function App({
           onActivate={(id) => tabs.activate(id)}
           onClose={(id) => void closeTab(id)}
           onTabMenu={(id, at) => setTabMenuAt({ id, ...at })}
+          // On the start screen there is no project bar: Settings and Help
+          // stand at the strip's end, F1 and the update mark with them.
+          trailing={
+            hasProject ? null : (
+              <AppControls
+                helpRef={helpRef}
+                onOpenSample={() => void openSample()}
+                onAbout={() => setAboutOpen(true)}
+                onSettings={() =>
+                  setSettings(updates.state === 'available' ? 'updates' : 'general')
+                }
+                updateAvailable={updates.state === 'available'}
+              />
+            )
+          }
         />
         {/* Not before the start has opened the last session's tabs: the start
             screen would show for a moment before them. */}
@@ -1221,6 +1336,24 @@ export function App({
                       run={runZoom}
                       zoomTo={zoomTo}
                       fitSelectionRefusal={fitSelectionRefusal}
+                    />
+                  )}
+                  {tab.file.outside !== undefined && tab.file.path !== null && (
+                    <OutsideChangeBar
+                      change={tab.file.outside}
+                      file={fileName(tab.file.path)}
+                      onReload={() =>
+                        void confirmDiscard('reload', tab).then((proceed) =>
+                          proceed ? file.reload(tab) : undefined,
+                        )
+                      }
+                      onSave={() => void file.save(tab)}
+                      onKeep={() =>
+                        tabs.update(tab.id, (each) => {
+                          const { outside: _outside, ...rest } = each.file;
+                          each.file = rest;
+                        })
+                      }
                     />
                   )}
                 </CanvasHost>
@@ -1554,6 +1687,25 @@ export function App({
             savedAt={recovery.offer.savedAt}
             onRecover={() => void recovery.recover()}
             onDecline={() => void recovery.decline()}
+          />
+        )}
+
+        {pendingAll !== null && (
+          <UnsavedProjectsDialog
+            names={pendingAll.tabs.map((each) => tabName(each, t))}
+            onSaveAll={() => {
+              const unsaved = pendingAll.tabs;
+              setPendingAll(null);
+              void saveAllThenClose(unsaved).then((saved) => pendingAll.resolve(saved));
+            }}
+            onDiscard={() => {
+              setPendingAll(null);
+              pendingAll.resolve(true);
+            }}
+            onCancel={() => {
+              setPendingAll(null);
+              pendingAll.resolve(false);
+            }}
           />
         )}
 

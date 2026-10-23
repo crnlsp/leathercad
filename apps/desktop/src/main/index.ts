@@ -20,6 +20,7 @@ import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
 import { PreferencesStore, type Session } from './preferences.js';
+import { ProjectWatch } from './projectWatch.js';
 import { RecoveryStore } from './recovery.js';
 import { UpdateChecker } from './updates.js';
 
@@ -99,6 +100,13 @@ function followKeys(): boolean {
 }
 
 let mainWindow: BrowserWindow | null = null;
+
+// The open projects' files, watched for what another program does to them
+// (8.12): the window is told, and offers to read the file again.
+const projectWatch = new ProjectWatch((path, change) => {
+  mainWindow?.webContents.send(IPC.projectChanged, path, change);
+});
+app.on('will-quit', () => projectWatch.close());
 
 /**
  * A project the operating system asked this launch to open (8.5): a `.lcp`
@@ -338,6 +346,7 @@ app.whenReady().then(() => {
       keyCapture = capturing;
     },
     updates,
+    projectWatch,
   );
 
   followLanguage();

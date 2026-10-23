@@ -1,4 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -336,4 +343,94 @@ test('a tab’s own menu: reload from disk, duplicate, close others, move to the
     await expect(tabs).toHaveCount(0);
     expect(await app.evaluate(() => (globalThis as { trashed?: string }).trashed)).toBe(file);
   });
+});
+
+test('undoing a rename gives the file its name back, as the project gets its own (8.12)', async () => {
+  await withApp(async (window, app) => {
+    const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+    await app.evaluate(
+      ({ dialog }, path) => {
+        dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      },
+      join(folder, 'Belt.lcp'),
+    );
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await renameProject(window, 'Watch strap');
+    await expect.poll(() => existsSync(join(folder, 'Watch strap.lcp'))).toBe(true);
+
+    await window.getByTestId('undo').click();
+    await expect(window.getByTestId('project-name')).toHaveText('Belt');
+    await expect.poll(() => existsSync(join(folder, 'Belt.lcp'))).toBe(true);
+    expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(false);
+    await expect(window.getByTestId('file-path')).toContainText('Belt.lcp');
+  });
+});
+
+test('a file changed outside the app is said over the board, and reloads on request (8.12)', async () => {
+  await withApp(async (window, app) => {
+    const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
+    const file = join(folder, 'Belt.lcp');
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, file);
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    // The app's own save is not news.
+    await window.waitForTimeout(800);
+    await expect(window.getByTestId('outside-bar')).toHaveCount(0);
+
+    // Another program writes the sample over it.
+    copyFileSync(join(import.meta.dirname, '../fixtures/projects/bifold-wallet.lcp'), file);
+    const bar = window.getByTestId('outside-bar');
+    await expect(bar).toContainText('Belt.lcp was changed outside LeatherCAD');
+    await bar.getByTestId('outside-reload').click();
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expect(bar).toHaveCount(0);
+
+    // Moved away: said, and Save writes it back where it was.
+    unlinkSync(file);
+    await expect(bar).toContainText('moved or deleted');
+    await bar.getByTestId('outside-save').click();
+    await expect.poll(() => existsSync(file)).toBe(true);
+    await expect(bar).toHaveCount(0);
+  });
+});
+
+test('the start screen has Settings and Help, and F1 opens Help there (8.12)', async () => {
+  const app = await launchApp({ startScreen: true });
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByTestId('start-screen')).toBeVisible();
+    const strip = window.getByTestId('tab-strip');
+    await expect(strip.getByTestId('settings')).toBeVisible();
+    await window.keyboard.press('F1');
+    await expect(window.getByTestId('help-about')).toBeVisible();
+    await window.keyboard.press('Escape');
+    // With a project open, they are the project bar's again, once.
+    await window.getByTestId('start-new').click();
+    await expect(window.getByTestId('settings')).toHaveCount(1);
+    await expect(window.getByTestId('project-bar').getByTestId('settings')).toBeVisible();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('more tabs than the strip shows: a list of them all (8.12)', async () => {
+  await withApp(
+    async (window) => {
+      const all = window.getByTestId('all-tabs');
+      await expect(all).toHaveCount(0);
+      for (let i = 0; i < 14; i++) await window.keyboard.press('Control+n');
+      await expect(all).toBeVisible();
+      await all.click();
+      await window.getByTestId('all-tabs-0').click();
+      await expect(window.getByTestId('project-name')).toHaveText('Untitled');
+      await expect(window.getByTestId('tab-strip').getByRole('tab', { selected: true })).toHaveText(
+        'Untitled',
+      );
+    },
+    { size: [1024, 768] },
+  );
 });

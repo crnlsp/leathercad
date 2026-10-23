@@ -3,6 +3,7 @@ import type {
   FileRename,
   OpenDialogOptions,
   OpenSession,
+  OutsideChange,
   PlatformHost,
   Preferences,
   PrintJob,
@@ -57,6 +58,8 @@ interface PreloadBridge {
   renameProjectFile(path: string, name: string): Promise<FileRename>;
   showInFolder(path: string): Promise<void>;
   trashProjectFile(path: string): Promise<void>;
+  watchProjects(paths: readonly string[]): Promise<void>;
+  onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
 
 declare global {

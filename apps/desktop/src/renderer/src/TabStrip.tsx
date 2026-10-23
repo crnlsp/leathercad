@@ -1,8 +1,15 @@
-import { X } from 'lucide-react';
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { ChevronDown, X } from 'lucide-react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 
 import { intoMenu } from './fieldMenu.js';
-import { ContextMenu } from './Menu.js';
+import { ContextMenu, MenuButton } from './Menu.js';
 import { tabMenu } from './menus.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
@@ -33,6 +40,7 @@ export function TabStrip({
   active,
   menu,
   add,
+  trailing,
   nudged,
   renaming,
   onRenamed,
@@ -47,6 +55,8 @@ export function TabStrip({
   menu: ReactNode;
   /** *+*, after the tabs: a new project, or one the maker has. */
   add: ReactNode;
+  /** At the strip's far end: the application's own controls, on the start screen. */
+  trailing?: ReactNode;
   /** A tab to bounce: its project was opened again, and was open already. */
   nudged: { readonly id: string | null; readonly count: number };
   /** The active tab's name is a field. */
@@ -64,6 +74,19 @@ export function TabStrip({
   const bounced = tabs.find((tab) => tab.id === nudged.id);
   const alreadyOpen =
     bounced === undefined ? '' : t('tabs.alreadyOpen', { name: tabName(bounced, t) });
+
+  // More tabs than the strip can show (8.12): the wheel scrolls them, and a
+  // list of them all is one press away.
+  const [overflowing, setOverflowing] = useState(false);
+  useLayoutEffect(() => {
+    const element = list.current;
+    if (element === null) return;
+    const measure = (): void => setOverflowing(element.scrollWidth > element.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [tabs]);
 
   // The active tab in view, when there are more than the strip can show.
   useEffect(() => {
@@ -106,6 +129,12 @@ export function TabStrip({
         role="tablist"
         aria-label={t('tabs.region')}
         onKeyDown={onKeyDown}
+        // An upright wheel scrolls the strip sideways, the only way it goes.
+        onWheel={(event) => {
+          if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+            event.currentTarget.scrollLeft += event.deltaY;
+          }
+        }}
       >
         {tabs.map((tab) => {
           const name = tabName(tab, t);
@@ -184,11 +213,33 @@ export function TabStrip({
           );
         })}
       </div>
+      {overflowing && (
+        <MenuButton
+          label={t('tabs.all')}
+          tooltip={t('tabs.allTooltip')}
+          testId="all-tabs"
+          className="tool quiet icon-only tab-all"
+          entries={tabs.map((tab, index) => ({
+            kind: 'item' as const,
+            id: `all-tabs-${String(index)}`,
+            label: tabName(tab, t),
+            ...(isDirty(tab) ? { note: t('tabs.unsavedNote') } : {}),
+            onChoose: () => onActivate(tab.id),
+          }))}
+        >
+          <Icon of={ChevronDown} size={14} />
+        </MenuButton>
+      )}
       {add}
       {/* Said politely, as the tab bounces: what was asked for was open already. */}
       <span className="visually-hidden" aria-live="polite" data-testid="already-open">
         {alreadyOpen}
       </span>
+      {trailing !== undefined && trailing !== null && (
+        <div className="tab-strip-end" role="group" aria-label={t('projectBar.application')}>
+          {trailing}
+        </div>
+      )}
     </nav>
   );
 }

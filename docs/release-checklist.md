@@ -266,6 +266,11 @@ Since 8.11–8.13, on each platform, with the packaged app.
 7. Close the window with unsaved tabs: each is asked about in turn; *Cancel* keeps the window.
    Save them, close, and start again: the tabs come back, the one in front in front.
 8. On macOS, ⌘W closes the tab, not the window, and the Window menu has no *Close* on ⌘W.
+9. Rename a saved project, then Undo: the project and its file both have the old name again.
+10. Open a saved project, and change its file in another program (copy another `.lcp` over it):
+    a bar over the board says so; *Reload* reads it. Delete the file: the bar says it went;
+    *Save it again* writes it back.
+11. With two projects unsaved, close the window: one question names both; *Cancel* keeps them.
 
 ## After it passes
 

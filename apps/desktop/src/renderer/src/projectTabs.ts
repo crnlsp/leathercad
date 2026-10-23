@@ -1,6 +1,8 @@
 import type { DocumentStore } from '@leathercad/document';
 import { Viewport } from '@leathercad/editor';
 
+import type { OutsideChange } from '@leathercad/platform';
+
 import type { Translate } from '../../shared/i18n.js';
 import type { CanvasView, TabCameras } from './CanvasHost.js';
 
@@ -14,6 +16,11 @@ export interface ProjectFileState {
    */
   readonly error: unknown;
   readonly savedAt: string | null;
+  /**
+   * Another program changed the file, or moved or deleted it, since the app
+   * last read or wrote it (8.12). Asked about over the board until answered.
+   */
+  readonly outside?: OutsideChange;
 }
 
 /**

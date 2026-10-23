@@ -10,6 +10,7 @@ import { writeFileAtomic } from './atomicWrite.js';
 import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
 import { OneAtATime } from './oneAtATime.js';
+import type { ProjectWatch } from './projectWatch.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
 import { renameProjectFile } from './renameFile.js';
 import { isProjectPath, shownPath, type PreferencesStore, type Session } from './preferences.js';
@@ -57,6 +58,8 @@ export function registerPlatformHandlers(
   onKeyCapture: (capturing: boolean) => void,
   /** Whether a newer release exists (8.9): the start's answer, or *Check now*. */
   updates: UpdateChecker,
+  /** The open projects' files, watched for changes made outside the app (8.12). */
+  projectWatch: ProjectWatch,
 ): void {
   ipcMain.handle(IPC.readFile, async (_event, path: unknown) => {
     const buffer = await readFile(guard(grants, path, 'read'));
@@ -64,7 +67,17 @@ export function registerPlatformHandlers(
   });
 
   ipcMain.handle(IPC.writeFile, async (_event, path: unknown, data: Uint8Array) => {
-    await writeFileAtomic(guard(grants, path, 'write'), data);
+    const target = guard(grants, path, 'write');
+    await writeFileAtomic(target, data);
+    // The app's own write is not a change made outside it (8.12).
+    await projectWatch.saw(target);
+  });
+
+  // The open projects' files (8.12), watched from now on: only paths the
+  // renderer may read, so a watch can never be a way to learn of any other.
+  ipcMain.handle(IPC.watchProjects, async (_event, paths: unknown) => {
+    const allowed = Array.isArray(paths) ? paths.filter((path) => grants.allows(path, 'read')) : [];
+    await projectWatch.watch(allowed as string[]);
   });
 
   // One file dialog at a time (8.12). A second Ctrl+O, or *Open…* chosen

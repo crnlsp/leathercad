@@ -32,6 +32,7 @@ export const IPC = {
   renameProjectFile: 'platform:renameProjectFile',
   showInFolder: 'platform:showInFolder',
   trashProjectFile: 'platform:trashProjectFile',
+  watchProjects: 'platform:watchProjects',
   getRecentFiles: 'platform:getRecentFiles',
   openRecent: 'platform:openRecent',
   clearRecent: 'platform:clearRecent',
@@ -41,6 +42,8 @@ export const IPC = {
   checkForUpdates: 'platform:checkForUpdates',
   /** Main → renderer: an item of macOS's menu was chosen (8.5a, 8.7). */
   menuAction: 'menu:action',
+  /** Main → renderer: an open project's file changed, or went, outside the app (8.12). */
+  projectChanged: 'platform:projectChanged',
   /** Main → renderer: open this project, which the main process granted (8.2). */
   openFile: 'platform:openFile',
 } as const;

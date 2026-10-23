@@ -109,7 +109,11 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   right-click menu: rename, save, save as, reload from disk, duplicate as a new project, show in
   folder, copy path, move the file to the Trash (asked first), close, close the others. The app
   starts on a start screen, or with the last session's tabs; a project opened again that is open
-  already goes to its tab, which bounces. New, Open, a recent project, the sample, a launch and a second
+  already goes to its tab, which bounces. The file follows the name through Undo and Redo too. A
+  file another program changes, moves or deletes is said over the board, with *Reload* or *Keep
+  mine* (*Save it again* for one that went). Settings and Help stand at the strip's end on the
+  start screen. More tabs than fit: the wheel scrolls the strip, and *All tabs* lists them.
+  Closing the window with several unsaved projects asks once: *Save all*, *Don't save*, *Cancel*. New, Open, a recent project, the sample, a launch and a second
   launch each open a tab; a project already open goes to its tab, and an untouched *Untitled* is
   replaced. Each tab keeps its own document, history, selection, view, camera and file. Closing a
   tab with unsaved work asks, as closing the window did; closing the last leaves the app open on a
