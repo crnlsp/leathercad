@@ -4533,18 +4533,25 @@ button.problem-row,
   border-color: var(--tan);
 }
 
-/* The thirteenth tool still fits an expanded rail at the 600 px minimum
-   height: reduce space between groups, keeping every control's target size. */
+/* The thirteenth tool still fits the rail at the 600 px minimum height, under
+   the tab strip (8.12) too: less space between groups, and an expanded rail's
+   headings drawn as the collapsed rail's rules — still headings to a screen
+   reader. Every control keeps its target size. */
 @media (max-height: 650px) {
-  .rail:not(.collapsed) {
+  .rail,
+  .rail.collapsed {
     padding-block: var(--space-1);
   }
 
-  .rail:not(.collapsed) .rail-group + .rail-group {
+  .rail .rail-group + .rail-group,
+  .rail.collapsed .rail-group + .rail-group {
     margin-top: var(--space-1);
   }
 
   .rail:not(.collapsed) .rail-heading {
-    margin-bottom: 0;
+    height: 0;
+    margin: 0 0 4px;
+    overflow: hidden;
+    border-top: 1px solid var(--shell-line);
   }
 }
