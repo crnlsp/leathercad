@@ -538,8 +538,10 @@ No geometry, domain, document, export, or print-pagination code changes.
 
 Measure before optimising, but the known shapes of the problem:
 
-- **Evaluation is memoised per node**, keyed on the node's parameter hash plus its inputs' resolved
-  hashes. Editing one part does not re-evaluate the other thirty-nine.
+- **Evaluation is memoised per feature**, keyed on object identity: the document is updated
+  immutably with structural sharing, so an unchanged feature is the same object, and a derived one
+  is reused only while its source is too (`domain/src/evaluate.ts`). Editing one part does not
+  re-evaluate the other thirty-nine.
 - **Stitch holes render as a single batched path** (one `Path2D` of many small circles) rather than
   3 000 individual `arc()` + `fill()` pairs.
 - **Culling**: the content layer skips features whose bounding box does not intersect the viewport.
