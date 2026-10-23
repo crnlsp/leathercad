@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-18
+**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-23
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -86,6 +86,31 @@ Left from 1.3's *The window*: nothing says a new release exists.
   while its mark shows. `SECURITY.md` says why
   the app makes the request and what it carries. No test asks GitHub: `LEATHERCAD_RELEASES_URL`
   points the check at a server of the test's own, or at nothing.
+
+Several projects in one window (2026-10-23). On Linux and Windows a second launch — a `.lcp`
+double-clicked while the app runs — started a second process: both wrote `preferences.json`, the
+last one winning, and the same project could be open and saved in both. The maintainer chose one
+instance, with a project per tab like Notepad's, the tabs on a strip of their own above the project
+bar under the system's title bar (variant A; a strip in a frameless title bar stays decided against
+by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-design.md) §4.4).
+
+- ◐ **8.11 One instance.** A second launch hands its command line to the running app and ends,
+  before it writes anything. The window comes forward, restored if minimised, and opens the project
+  the line names — after asking about unsaved work, as Open does and as macOS's `open-file` already
+  did. A launch naming no project only brings the window forward. The lock is the configuration
+  directory's, so the end-to-end tests, each with its own, still run side by side.
+- ☐ **8.12 Project tabs.** A tab strip above the project bar: each tab a project's name, a dot for
+  unsaved work and a close button, and *+* for a new one. New, Open, a recent project, the sample, a
+  launch and a second launch each open a tab; a project already open goes to its tab, and an
+  untouched *Untitled* is replaced. Each tab keeps its own document, history, selection, view,
+  camera and file. Closing a tab with unsaved work asks, as now; closing the last leaves an empty
+  *Untitled*; closing the window asks about each unsaved tab in turn, and *Cancel* stops it.
+  Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+W and Ctrl+1–9 through the keymap; a middle click closes. The
+  window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work. A
+  `tablist` with arrow keys, clean under axe.
+- ☐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy; after a crash
+  every copy is offered in turn, each into a tab of its own. Copies from 1.5, one per session, are
+  still found.
 
 ### Drawing and editing
 

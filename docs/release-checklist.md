@@ -195,8 +195,11 @@ per platform in the log.
 Since 8.5. On each platform — the Windows installer, the macOS dmg, and on Linux the `.flatpak`
 installed with `flatpak install --user` — double-click a saved `.lcp`. The app starts with it open,
 and **Save** writes back to it without asking where. With the app already open and unsaved work, a
-second double-click on macOS asks about the unsaved work first; on Linux and Windows it opens a
-second window. On Linux, the file manager calls the file a *LeatherCAD project*.
+second double-click — of another `.lcp` — asks about the unsaved work first, then opens it in the
+same window, on every platform: since 8.11 a second launch on Linux and Windows starts no second
+process. Minimise the window and double-click again: it comes back to the front. Start LeatherCAD
+from the Start menu or the launcher while it runs: the window comes forward, and nothing else
+happens. On Linux, the file manager calls the file a *LeatherCAD project*.
 
 ### 12. The window's edited flag, on macOS
 

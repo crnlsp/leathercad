@@ -29,6 +29,20 @@ import { UpdateChecker } from './updates.js';
 app.setName('LeatherCAD');
 app.setPath('userData', join(app.getPath('appData'), 'leathercad'));
 
+// One LeatherCAD at a time (8.11). A second launch — a `.lcp` double-clicked
+// on Linux or Windows while the app runs, or the Start menu — hands its
+// command line to the running app (`second-instance`, below) and ends here,
+// before it writes a log, a recovery copy or preferences.json. Two processes
+// shared one preferences.json, last writer wins, and could hold the same
+// project open and save over each other. The lock is the userData
+// directory's, so a test that starts the app with a configuration of its own
+// is a LeatherCAD of its own. macOS never starts a second copy: it sends
+// `open-file` to this one. `process.exit`, not `app.exit`: the latter returns,
+// and everything below this line would still run — the log's first line
+// among it. The running app has the command line by now: asking for the lock
+// waits until it has been delivered.
+if (!app.requestSingleInstanceLock()) process.exit(0);
+
 // Before ready: a real origin for modules, fonts and the PDF preview worker.
 // CSP and CORS still apply; service workers and CSP bypass stay disabled.
 protocol.registerSchemesAsPrivileged([
@@ -96,14 +110,35 @@ let mainWindow: BrowserWindow | null = null;
 let launchFile: string | null = projectPathFromArgs(process.argv.slice(1), process.cwd());
 if (launchFile !== null) grants.grant(launchFile);
 
-// macOS hands a project to the running app rather than starting another: one
-// that arrives before the window is up waits with the launch file; after, it
-// goes to the renderer, which asks about unsaved work first, as for Open.
-app.on('open-file', (event, path) => {
-  event.preventDefault();
+/**
+ * A project the operating system handed to the running app: granted, as the
+ * launch file is. One that arrives before the window is up waits with the
+ * launch file; after, it goes to the renderer, which asks about unsaved work
+ * first, as for Open.
+ */
+function openFromSystem(path: string): void {
   grants.grant(path);
   if (mainWindow === null) launchFile = path;
   else mainWindow.webContents.send(IPC.openFile, path);
+}
+
+// macOS hands a project to the running app rather than starting another.
+app.on('open-file', (event, path) => {
+  event.preventDefault();
+  openFromSystem(path);
+});
+
+// Linux and Windows start another process, which hands over its command line
+// and its directory and quits (8.11). The window comes forward either way —
+// a launch from the Start menu names no project, and still means "show me
+// LeatherCAD" — and then opens what the line names, as a first launch would.
+app.on('second-instance', (_event, argv, workingDirectory) => {
+  if (mainWindow !== null) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+  const path = projectPathFromArgs(argv, workingDirectory);
+  if (path !== null) openFromSystem(path);
 });
 
 function createWindow(): void {

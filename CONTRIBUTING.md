@@ -22,6 +22,10 @@ pnpm install        # also installs the pre-push hook
 pnpm dev            # runs the app, with hot reload
 ```
 
+LeatherCAD runs once per configuration directory (8.11): with an installed LeatherCAD open, `pnpm
+dev` hands its command line to that one and ends. Quit it first, or give the development build a
+directory of its own — on Linux, `XDG_CONFIG_HOME=/tmp/lc-dev pnpm dev`.
+
 | Command | What it does |
 |---|---|
 | `pnpm check` | Typecheck, lint, format, layering, dead code, tests with coverage, performance ceilings, in a minute or two. **Run it before every push** — the pre-push hook does |
