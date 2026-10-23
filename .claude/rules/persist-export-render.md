@@ -14,9 +14,9 @@ pattern they print and cut. See `docs/file-format.md` and `docs/printing.md`.
 - **Validate once, at the edge.** `persist` parses a file with its zod schemas and migrations and
   hands on a typed project; nothing past it re-checks the shape. A file that fails is refused whole
   with a typed error (`InvalidProjectFileError`, `NewerFormatError`), never half-loaded.
-- **Old files keep opening.** A schema change is a new version and a new migration, and every
-  version bump commits `fixtures/format/v<N>.lcp`, which must keep loading (`docs/file-format.md`
-  §4.2). Shipped migrations and their fixtures are never edited.
+- **Old files keep opening** *(strict)*. A schema change is a new version and a new migration,
+  and every version bump commits `fixtures/format/v<N>.lcp`, which must keep loading
+  (`docs/file-format.md` §4.2). Shipped migrations and their fixtures are never edited.
 - **Output is deterministic.** The same project gives the same bytes: no clock, no randomness, no
   dependence on map iteration order the code did not choose. Pass the creation date in.
 - **One table for styles.** A colour, stroke, dash or type size comes from `render/src/theme/`. An

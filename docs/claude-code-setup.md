@@ -32,7 +32,9 @@ Short and load-bearing: the invariants, the commands, and the map, delegating ev
 ## 2a. `.claude/rules/`
 
 Engineering practice — KISS, YAGNI, DRY, SOLID, and how each applies here — kept out of
-`CLAUDE.md` to hold that file to its invariants. Where they meet, `CLAUDE.md` wins.
+`CLAUDE.md` to hold that file to its invariants. Where they meet, `CLAUDE.md` wins. A rule marked
+*(strict)* guards a trust boundary, the user's data or a file's compatibility and binds like an
+invariant; the rest are defaults, broken with a stated reason.
 
 | File | Loaded |
 |---|---|
@@ -40,9 +42,10 @@ Engineering practice — KISS, YAGNI, DRY, SOLID, and how each applies here — 
 | `pure-layers.md` | Working in `core`, `geometry`, `typography`, `domain` |
 | `document-and-editor.md` | Working in `document`, `editor` |
 | `persist-export-render.md` | Working in `persist`, `export`, `render`, `fixtures/` |
-| `desktop-main.md` | Working in the main process, preload, `shared/`, `csp/` |
+| `desktop-main.md` | Working in the main process, preload, `shared/`, `csp/`, packaging, `packages/platform` |
 | `desktop-renderer.md` | Working in the renderer |
 | `tests.md` | Working on a test, a benchmark or `e2e/` |
+| `workflows.md` | Working on `.github/workflows/`, zizmor or Dependabot config |
 
 A file with a `paths:` list in its front matter loads only when Claude Code reads a matching file,
 so area rules cost nothing elsewhere. Other agents reach the same files through `AGENTS.md`, which

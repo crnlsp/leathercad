@@ -11,7 +11,8 @@ drift apart.
    - Each other file starts with a `paths:` list. Read it whenever you touch a file that matches
      one of those globs.
 
-Where a rule file and `CLAUDE.md` disagree, `CLAUDE.md` wins.
+A rule marked *(strict)* binds like an invariant. An unmarked rule is a default: break it only with
+a reason you state. Where a rule file and `CLAUDE.md` disagree, `CLAUDE.md` wins.
 
 `CLAUDE.md` points to slash commands and skills under `.claude/`. If your tool cannot run them,
 read the matching file in `.claude/commands/` or `.claude/skills/` and do its steps by hand.

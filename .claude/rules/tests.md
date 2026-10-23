@@ -1,7 +1,6 @@
 ---
 paths:
   - '**/*.test.ts'
-  - '**/*.test.tsx'
   - '**/*.bench.ts'
   - 'e2e/**'
 ---

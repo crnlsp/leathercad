@@ -16,6 +16,8 @@ only their own view state.
 - **Memoise what is expensive, not by reflex.** `useMemo` over a whole-project derivation earns its
   place; a `useCallback` around every handler does not. The React Compiler runs as a lint check,
   not as a build step, so do not assume it memoises.
+- **Keep pointer moves out of React where you can.** Per-move state belongs to the tool or a ref,
+  read as the canvas paints. A `setState` on every move re-renders the panels around the canvas.
 - **Effects synchronise with something outside React** — the canvas, the main process, a timer.
   Computing a value from props or state is not an effect.
 - **Every word through `t()`**, every key through the keymap. `untranslated.test.ts` catches words

@@ -1,7 +1,14 @@
 # Engineering practices
 
-How to write code here, beyond the invariants in `CLAUDE.md`. Those win where the two meet. Each
-rule below is a default: break it when you can say why, and say why in the commit or the review.
+How to write code here, beyond the invariants in `CLAUDE.md`. Those win where the two meet.
+
+The rules in `.claude/rules/` come in two strengths:
+
+- **Strict**, marked *(strict)*: a trust boundary, the user's data, or a file's compatibility.
+  Like an invariant in `CLAUDE.md`, breaking one is a bug however good the reason. To change one,
+  change the rule first, in a reviewed change of its own.
+- **Defaults**, everything unmarked: break one when you can say why, and say why in the commit or
+  the review.
 
 ## Understand first
 
@@ -19,8 +26,8 @@ rule below is a default: break it when you can say why, and say why in the commi
   value, no hook "in case". Later can add it, with the requirement in hand.
 - **Boring over clever.** A loop that reads plainly beats a chain someone must decode. Optimise only
   what `pnpm bench` shows is slow, and keep the benchmark.
-- **Prefer deletion.** Dead code, unused exports and stale flags go — `pnpm knip` finds most of them.
-  A smaller codebase is cheaper to keep correct.
+- **Prefer deletion.** Dead code, unused exports and stale flags go — `pnpm knip` finds most of
+  them. A smaller codebase is cheaper to keep correct.
 - **Reach for what exists, in order:** this codebase, the standard library and platform, an
   installed dependency, and only then new code. A new dependency needs an ADR.
 
@@ -64,8 +71,9 @@ rule below is a default: break it when you can say why, and say why in the commi
   — a zero pitch, a negative radius — throws a `RangeError` naming the value it received.
 - **Pure where possible.** Inputs in, value out, no hidden state. Side effects live at the edges,
   where they can be seen and faked.
-- **Validate at trust boundaries, trust inside.** Files, IPC and user input are checked once (zod in
-  `persist`, quantising user input); code past that boundary does not re-check.
+- **Validate at trust boundaries, trust inside** *(strict)*. Files, IPC and user input are
+  checked once (zod in `persist`, quantising user input); code past that boundary does not
+  re-check.
 - **No `any`, no non-null `!` to silence the compiler, no `as` that lies.** If the type is wrong,
   fix the type.
 - **Small and named.** A function fits on a screen and its name says what it returns or does. Names
@@ -77,8 +85,8 @@ rule below is a default: break it when you can say why, and say why in the commi
 
 - **Fail loudly at the cause.** No empty `catch`, no swallowed `Result`. An error carries enough
   context to act on, as a code the app words — never a sentence below `apps/desktop`.
-- **Never lose the user's work.** Any path that writes or discards a document handles failure
-  explicitly and leaves the previous state intact.
+- **Never lose the user's work** *(strict)*. Any path that writes or discards a document handles
+  failure explicitly and leaves the previous state intact.
 
 ## Tests
 
@@ -95,7 +103,11 @@ rule below is a default: break it when you can say why, and say why in the commi
 
 - **One objective per change**, plus the bugs and clear gaps found in the same area. Unrelated
   clean-up goes in its own pull request.
-- **Leave it working.** Every commit builds and passes `pnpm check`; a slice ends demonstrable.
+- **The full checks gate the finished change, not every commit.** A finished slice or pull
+  request passes `pnpm check`, plus `pnpm test:e2e` when it changes the app, and ends
+  demonstrable. The pre-push hook and CI enforce this. A local commit on the way should build and
+  read well, but it need not pass the whole suite: the squash-merge makes the pull request the
+  unit.
 - **Refactor and change behaviour in separate commits**, so each can be reviewed and reverted alone.
 - **Evidence over assertion.** "Done" means the command ran and its output says so; "fixed" means a
   test failed before and passes now. Say plainly what was not verified.

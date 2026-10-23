@@ -17,10 +17,13 @@ A wrong answer here is invisible until leather is cut. The done-checklist is `do
 - **Total functions, or a loud contract.** Every public function either handles all input it can
   be given — the degenerate cases included — or refuses at entry with a `RangeError` that names
   the received value. Nothing returns `NaN`, and nothing half-works on bad input.
-- **Inputs are never mutated.** Take `readonly` data and return new values. A caller must be able
-  to reuse what it passed in.
-- **No hidden state.** No module-level caches, counters or lazily filled tables. Something a
-  benchmark proves needs caching gets a cache with an explicit owner, passed in.
+- **Inputs are never mutated** *(strict)*. Take `readonly` data and return new values, sharing
+  whatever did not change. Evaluation's cache relies on this: an unchanged feature is the same
+  object between revisions (`domain/src/evaluate.ts`).
+- **No state that can change an answer.** No counters, no clock, no lazily filled table that a
+  call's result depends on. Memoising is allowed when the result cannot go stale: a `WeakMap`
+  keyed on immutable input, as evaluation does, holds no invalidation logic to get wrong. Add one
+  only where a benchmark shows the need.
 - **Tolerances come from `core/epsilon.ts`.** Choose the one whose meaning fits — length, angle,
   parameter — and say in a comment why when it is not obvious. A test's tolerance is never looser
   than the code's.

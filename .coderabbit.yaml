@@ -82,9 +82,10 @@ reviews:
         input to it is untrusted.
     - path: '.github/workflows/**'
       instructions: >-
-        Actions pinned to a commit with the version in a comment, the least
-        permissions per job, and expressions passed through env rather than
-        interpolated into run scripts.
+        Hold to .claude/rules/workflows.md: actions pinned to a commit with
+        the version in a comment, the least permissions per job, and
+        expressions passed through env rather than interpolated into run
+        scripts.
 
   # Generated docstrings and tests would not meet this project's bar for
   # either; the pull request title is checked by CI (pr-title.yml).
