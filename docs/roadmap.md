@@ -94,58 +94,64 @@ instance, with a project per tab like Notepad's, the tabs on a strip of their ow
 bar under the system's title bar (variant A; a strip in a frameless title bar stays decided against
 by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-design.md) §4.4).
 
-- ◐ **8.11 One instance.** A second launch hands its command line to the running app and ends,
-  before it writes anything. The window comes forward, restored if minimised, and opens the project
-  the line names — after asking about unsaved work, as Open does and as macOS's `open-file` already
-  did. A launch naming no project only brings the window forward. The lock is the configuration
-  directory's, so the end-to-end tests, each with its own, still run side by side.
-- ◐ **8.12 Project tabs.** A tab strip above the project bar: the Project menu as an icon at its
-  left — where the project's name was the menu's button in the bar — then a tab per project, its
-  project's name — its file's for a project with none of its own, *Untitled*, *Untitled 2*… for
-  new ones — with a dot for unsaved work where its close button is, and *+*, a menu of a new
-  project, *Open…* and the recent projects. *Rename…* turns the active tab's name into a field, and renames a saved project's file
-  with it — never over another file: a name taken in that folder, or one no file can have, renames
-  nothing and says why. A project first saved without a name is named after its file. A tab's
-  right-click menu: rename, save, save as, reload from disk, duplicate as a new project, show in
-  folder, copy path, move the file to the Trash (asked first), close, close the others. The app
-  starts on a start screen, or with the last session's tabs; a project opened again that is open
-  already goes to its tab, which bounces. The file follows the name through Undo and Redo too. A
-  file another program changes, moves or deletes is said over the board, with *Reload* or *Keep
-  mine* (*Save it again* for one that went). Settings and Help stand at the strip's end on the
-  start screen. More tabs than fit: the wheel scrolls the strip, and *All tabs* lists them.
-  Closing the window with several unsaved projects asks once: *Save all*, *Don't save*, *Cancel*.
-  Tabs are dragged along the strip, or moved with Ctrl+Shift+Page Up and Down; Ctrl+Shift+T opens
-  the project last closed again; a `.lcp` dropped on the window opens in a tab. The start screen's
-  recent projects are pinned or taken off the list one at a time. Each tab comes back on its view,
-  at its place and zoom; with *Keep unsaved projects when closing* on in Settings › General, the
-  window closes without asking, and unsaved projects come back, still unsaved. New, Open, a recent project, the sample, a launch and a second
-  launch each open a tab; a project already open goes to its tab, and an untouched *Untitled* is
-  replaced. Each tab keeps its own document, history, selection, view, camera and file. Closing a
-  tab with unsaved work asks, as closing the window did; closing the last leaves the app open on a
-  start screen — New, Open, the sample and the recent projects — and closing the window asks about
-  each unsaved tab in turn, *Cancel* stopping it. Ctrl+Page Down and Ctrl+Page Up go round the tabs
-  and Ctrl+W closes one, through the keymap — never the digits, which Design and Sheets have; a
-  middle click closes too. The tabs with a file come back at the next start, the one in front in
-  front (`session` in `preferences.json`). One file dialog at a time: a second Open while one is up is not shown.
-  The window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work.
-  A `tablist` with arrow keys, clean under axe.
-- ◐ **8.14 New from a template.** *New project* is two: *from scratch*, still Ctrl+N, and *from
-  template…*, a picker of the templates that ship — the sample wallet, a card holder, a key fob and
-  a coaster, each built from the app's own commands and clean — and the maker's own. *Save as
-  template…* in the Project menu and a tab's menu saves any project as one, never over another of
-  the same name unless asked; the maker's are removed from the picker. A project from a template
-  opens untitled, unchanged and with an id of its own, so Save asks where and the template is never
-  written. The sample wallet is the first template, and *Open sample project* is gone from Help, the
-  empty Parts panel and the start screen. The picker is a browser: a search over names, descriptions
-  and tags; *Show* (all, built in, mine), *Kind* (the built-in categories and the maker's tags) and
-  *Sort* (name either way, newest, oldest), kept between openings; pinned and recently used first;
-  the chosen template drawn large with its facts. The maker's own are renamed, described, tagged,
-  duplicated, edited as a project, exported, shown in the file manager and removed — with *Undo*
-  for a few seconds — and a `.lcp` is imported as one.
-- ◐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
-  `<pid>-<start>-<tab>.lcp`, written while it is in front or not; closing a tab or saving it clears
-  it. After a crash every copy is offered in turn, each into a tab of its own. Copies from 1.5, one
-  per session, are still found.
+- ✅ **8.11 One instance.** A second launch — a `.lcp` double-clicked while the app runs, or the
+  Start menu — hands its command line to the running app and ends, before it writes anything. The
+  window comes forward, restored if minimised, and opens the project the line names in a tab of its
+  own (8.12); a launch naming no project only brings the window forward. The lock is the
+  configuration directory's, so the end-to-end tests, each with its own, still run side by side.
+  **Done** (2026-10-23).
+- ✅ **8.12 Project tabs.** A tab per project on a strip above the project bar, drawn as drawing
+  sheets: square, the open one outlined and running into the bar below it. A tab says its
+  project's name — its file's for a project with none of its own, *Untitled*, *Untitled 2*… for new
+  ones — with a dot where its close button is while it has unsaved work. Each keeps its own
+  document, history, selection, view, camera and file; the window's title is the active tab's, and
+  macOS's edited dot is lit while any tab has unsaved work.
+
+  The Project menu is an icon at the strip's left, and *+* after the tabs is a menu of a new
+  project, *Open…* and the recent projects. Every way a project opens — New, Open, a recent one, a
+  template, a launch, a second launch, a `.lcp` dropped on the window — opens it in a tab; one
+  already open goes to its tab, which bounces, and an untouched *Untitled* is replaced. *Rename…*
+  turns the active tab's name into a field and renames a saved project's file with it, never over
+  another file, and Undo and Redo of it rename the file back; a project first saved without a name
+  is named after its file. A tab's right-click menu renames, saves, saves as a template, reloads
+  from disk, duplicates, shows in the folder, copies the path, moves the file to the Trash (asked
+  first) and closes it or the others. A file another program changes, moves or deletes is said over
+  the board, with *Reload*, *Keep mine* or *Save it again*.
+
+  Closing a tab with unsaved work asks; closing the last leaves the app open on a start screen —
+  new, from a template, open, and the recent projects, pinned or taken off the list one at a time,
+  with Settings and Help at the strip's end — which is also where the app starts when the last
+  session left no tabs. Closing the window asks about one unsaved project, or once about several:
+  *Save all*, *Don't save*, *Cancel*. The tabs come back at the next start, each on its view, place
+  and zoom (`session` in `preferences.json`); with *Keep unsaved projects when closing* on in
+  Settings › General the window closes without asking, and unsaved projects come back unsaved.
+
+  Ctrl+Page Down and Up go round the tabs, Ctrl+Shift+Page Down and Up move one, Ctrl+W closes one
+  and Ctrl+Shift+T opens the project last closed again, all through the keymap — never the digits,
+  which Design and Sheets have. Tabs drag along the strip, a middle click closes one, the wheel
+  scrolls a strip too full to show them all and *All tabs* lists them. A `tablist` with arrow keys,
+  clean under axe. One file dialog at a time. Save looks the same with nothing to save, and is only
+  inert. **Done** (2026-10-23).
+- ✅ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
+  `<pid>-<start>-<tab>.lcp`, written while it is in front or not; saving, reloading or closing the
+  tab clears it, and a save while a copy is being written clears that one too. After a crash every
+  copy is offered in turn, each into a tab of its own. Copies from 1.5, one per session, are still
+  found. **Done** (2026-10-23).
+- ✅ **8.14 New from a template.** *New project* is two: *from scratch*, still Ctrl+N, and *from
+  template…*. The templates that ship are the sample wallet, a card holder, a key fob and a
+  coaster, each built from the app's own commands and clean; the sample has no other way in since,
+  and *Open sample project* is gone from Help, the empty Parts panel and the start screen. A
+  project from a template opens untitled, unchanged and with an id of its own, so Save asks where
+  and the template is never written. *Save as template…*, in the Project menu and a tab's menu,
+  saves any project as one of the maker's, never over another of the same name unless asked.
+
+  The picker is a browser: a search over names, descriptions and tags; *Show* (all, built in,
+  mine), *Kind* (the built-in categories and the maker's tags) and *Sort* (name either way, newest,
+  oldest), the app's own menus, kept between openings; the pinned and the recently used first; the
+  chosen template drawn large with its facts. The maker's own are described and tagged — saved when
+  asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
+  the template, exported, shown in the file manager and removed, with *Undo* for a few seconds; a
+  `.lcp` is imported as one (`templates/` beside `preferences.json`). **Done** (2026-10-23).
 
 ### Drawing and editing
 
