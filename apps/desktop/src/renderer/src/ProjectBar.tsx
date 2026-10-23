@@ -121,7 +121,8 @@ export function ProjectBar({
               }}
             >
               {t('actions.save')}
-              {dirty && room === 'wide' && <KeyCap command="save" />}
+              {/* The same button either way, its key too: only whether it acts changes. */}
+              {room === 'wide' && <KeyCap command="save" />}
             </button>
           </Tooltip>
         </div>

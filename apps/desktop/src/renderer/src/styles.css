@@ -907,11 +907,19 @@ body {
   color: var(--tan);
 }
 
-/* Nothing to save: the button stays, focusable and saying why (R-06). */
+/*
+ * Nothing to save: the button looks as it does with work to save — it does
+ * not come and go, nor its key — but does nothing when pressed, and its
+ * pointer and hover say so. It stays focusable, and its tooltip says why
+ * (R-06).
+ */
 .save-button[aria-disabled='true'] {
-  color: var(--text-mute);
-  border-color: transparent;
-  cursor: default;
+  cursor: not-allowed;
+}
+
+.save-button[aria-disabled='true']:hover {
+  color: var(--text-dim);
+  border-color: var(--shell-line);
 }
 
 /* Design | Sheets (R-06): a pill switch on a dark track, in the middle of the
