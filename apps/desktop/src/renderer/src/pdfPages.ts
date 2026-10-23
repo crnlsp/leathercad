@@ -12,8 +12,8 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
  * pattern. ADR 0019.
  *
  * Each document gets a worker of its own, from the bundled worker file — it
- * loads from file:// under the app's content security policy, proved in
- * Electron 44 before this was written — and `doc.loadingTask.destroy()` ends
+ * loads from app://leathercad under the app's content security policy in a
+ * built app (R6) — and `doc.loadingTask.destroy()` ends
  * it with the document. A worker shared between documents cannot be: pdf.js
  * refuses a new document on a port while the last one is being destroyed.
  */
