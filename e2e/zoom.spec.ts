@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { openApp } from './launchApp.js';
+import { openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -72,7 +72,7 @@ test('the control follows the zoom live, and Ctrl+0 is true size: 100 mm is 377.
 test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its heading included', async () => {
   const { app, window } = await openApp();
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
     await window.getByTestId('tool-select').click();
     const level = window.getByTestId('zoom-level');
@@ -198,7 +198,7 @@ test('a press on the control with the pointer leaves the keys to the board', asy
 test('the same control drives the Sheets view, where Fit selection says why it cannot', async () => {
   const { app, window } = await openApp();
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
     const level = window.getByTestId('zoom-level');
     await window.keyboard.press('Control+0');

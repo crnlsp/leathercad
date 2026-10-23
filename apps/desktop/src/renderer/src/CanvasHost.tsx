@@ -1,4 +1,5 @@
 import { approxEq } from '@leathercad/core';
+import type { TabCamera } from '@leathercad/platform';
 import {
   addGuide,
   drawnBounds,
@@ -18,7 +19,6 @@ import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 import {
   ToolManager,
-  Viewport,
   createArcTool,
   createCircleTool,
   createHardwareTool,
@@ -40,6 +40,7 @@ import {
   type MakerDefaults,
   type PointerInput,
   type SizeDraft,
+  type Viewport,
 } from '@leathercad/editor';
 import {
   CANVAS,
@@ -97,6 +98,27 @@ const CLICK_SLOP_PX = 4;
  * state: never saved, never part of the document.
  */
 export type CanvasView = 'design' | 'sheets';
+
+/**
+ * The board's two cameras (7.4c), kept by the tab so a project comes back
+ * exactly where it was left. The canvas is made again for each tab it shows,
+ * and takes these rather than new ones.
+ */
+export interface TabCameras {
+  readonly design: Viewport;
+  readonly sheets: Viewport;
+  /** The design camera has been placed once: a tab shown again is not re-placed. */
+  fitted: boolean;
+  /** Its first placing frames the drawing: an opened project is shown whole. */
+  frameDrawing: boolean;
+  /**
+   * Its first placing puts the board where the last session left it (8.12):
+   * millimetres at the centre, and the zoom. Over `frameDrawing`.
+   */
+  restore: TabCamera | null;
+  /** The sheets' extent the Sheets camera was last fitted to: a new one frames again. */
+  sheetsFramed: string | null;
+}
 
 export interface CanvasHandle {
   /** Frames a millimetre rectangle, leaving the usual margin. */
@@ -176,6 +198,7 @@ export function CanvasHost({
   onStatus,
   panelOver = null,
   selectionBar = null,
+  cameras,
   ref,
   children,
 }: {
@@ -207,23 +230,28 @@ export function CanvasHost({
    * null when Settings › Appearance turns the bar off, which leaves nothing.
    */
   selectionBar?: MakerTools | null;
+  /**
+   * The project's cameras, which its tab keeps (8.12): the canvas is made
+   * again for each tab it shows, and the board comes back where it was left.
+   */
+  cameras: TabCameras;
   ref?: React.Ref<CanvasHandle>;
   /** Drawn over the canvas without taking space from it: the legend (F.7). */
   children?: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const viewportRef = useRef<Viewport>(new Viewport());
+  // The tab's, read once: the canvas is keyed by its tab, so they never change under it.
+  const camerasRef = useRef(cameras);
+  const viewportRef = useRef<Viewport>(cameras.design);
   /**
    * The Sheets view's own camera (7.4c), so going to the sheets and back finds
    * the board exactly where it was left. The tool manager only ever sees the
    * design one.
    */
-  const sheetsViewportRef = useRef<Viewport>(new Viewport());
+  const sheetsViewportRef = useRef<Viewport>(cameras.sheets);
   const viewRef = useRef<CanvasView>(view);
   viewRef.current = view;
-  /** The sheets' extent the Sheets camera was last fitted to: a new one frames again. */
-  const sheetsFramedRef = useRef<string | null>(null);
   const sheetsCacheRef = useRef<SheetsCache | null>(null);
   /** The camera for whichever view is showing. */
   const camera = useCallback(
@@ -233,7 +261,6 @@ export function CanvasHost({
   );
   const dirtyRef = useRef(true);
   const frameRef = useRef(0);
-  const hasFittedRef = useRef(false);
   /** Where the canvas last sat in the window, so a resize can hold the drawing still. */
   const placedRef = useRef<{ left: number; top: number; dpr: number } | null>(null);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
@@ -572,8 +599,8 @@ export function CanvasHost({
       // a new paper or a new sheet — otherwise the maker's camera stays.
       const extent = layout.extent;
       const key = [extent.minX, extent.minY, extent.maxX, extent.maxY].join(',');
-      if (sheetsFramedRef.current !== key) {
-        sheetsFramedRef.current = key;
+      if (camerasRef.current.sheetsFramed !== key) {
+        camerasRef.current.sheetsFramed = key;
         viewport.fitTo(extent, FIT_PADDING_PX * viewport.dpr);
       }
 
@@ -742,10 +769,21 @@ export function CanvasHost({
           : { width: clientWidth, height: clientHeight },
       );
 
-      if (!hasFittedRef.current) {
-        hasFittedRef.current = true;
-        viewportRef.current.centreMm = { x: 60, y: 40 };
-        viewportRef.current.scale = 3 * dpr;
+      // A tab's first showing (8.12): where the last session left it, an
+      // opened project framed whole, a new one at the usual place. Shown
+      // again, it is wherever it was left.
+      if (!camerasRef.current.fitted) {
+        camerasRef.current.fitted = true;
+        const restore = camerasRef.current.restore;
+        if (restore !== null) {
+          viewportRef.current.centreMm = { x: restore.x, y: restore.y };
+          viewportRef.current.zoomToPercent(restore.percent);
+        } else if (camerasRef.current.frameDrawing) {
+          fitDrawing();
+        } else {
+          viewportRef.current.centreMm = { x: 60, y: 40 };
+          viewportRef.current.scale = 3 * dpr;
+        }
       }
 
       // Paint straight away: requestAnimationFrame does not run while a window
@@ -758,7 +796,7 @@ export function CanvasHost({
     observer.observe(container);
     resize();
     return () => observer.disconnect();
-  }, [paint]);
+  }, [paint, fitDrawing]);
 
   useEffect(() => {
     onStatus?.({

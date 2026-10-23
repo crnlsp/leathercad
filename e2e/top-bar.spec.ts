@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { drawAPanel, openApp } from './launchApp.js';
+import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -25,6 +25,8 @@ test('the Project menu opens by mouse and by keyboard, and gives focus back (8.7
     await button.focus();
     await window.keyboard.press('Enter');
     await expect(window.getByTestId('new')).toBeFocused();
+    await window.keyboard.press('ArrowDown');
+    await expect(window.getByTestId('new-template')).toBeFocused();
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('open')).toBeFocused();
     await window.keyboard.press('End');
@@ -119,14 +121,8 @@ const shown = (window: Page, id: string): Promise<string> =>
     return (copy.textContent ?? '').trim();
   });
 
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('help-menu').click();
-  await window.getByTestId('help-open-sample').click();
-  await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
-}
-
+// The Project menu is the tab strip's since 8.12, at its left.
 const BAR = [
-  'project-menu',
   'save-state',
   'save',
   'view-design',
@@ -174,19 +170,14 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
       expect(await shown(window, 'print')).toBe('Print');
       // The switch keeps its icons and the count; the words go at 860 px.
       expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '5' : 'Sheets5');
-      // A long name gives way, and its tooltip says it whole.
-      const name = window.getByTestId('project-name');
-      expect(
-        await name.evaluate((element) => element.scrollWidth > element.clientWidth),
-        `${String(width)}: the name is cut short`,
-      ).toBe(width !== 1920);
     }
-    await window.getByTestId('project-menu').hover();
-    await expect(
-      window.getByRole('tooltip', {
-        name: /^Bifold wallet, lined, with a card pocket each side\./,
-      }),
-    ).toBeVisible();
+    // A long name gives way in its tab, which says it whole when pointed at (8.12).
+    const tab = window.getByTestId('tab-strip').getByRole('tab', { selected: true });
+    expect(await tab.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    await expect(tab).toHaveAttribute(
+      'title',
+      'Bifold wallet, lined, with a card pocket each side',
+    );
   } finally {
     await closeApp(app);
   }
@@ -240,7 +231,7 @@ test('Rename… in the Project menu renames the project, as one step, by keyboar
     await expect(window).toHaveTitle('• Card holder — LeatherCAD');
     // The keyboard is given back its place.
     await expect(menu).toBeFocused();
-    await expect(menu).toHaveAccessibleName('Project menu, Card holder');
+    await expect(menu).toHaveAccessibleName('Project menu');
 
     // Escape leaves the name as it was.
     await fromProjectMenu(window, 'rename');
@@ -404,7 +395,7 @@ test('F1 opens Help, and the keyboard gets its place back (U.7)', async () => {
     await expect(window.getByRole('tooltip', { name: /Help/ }).locator('kbd')).toHaveText('F1');
     await window.mouse.move(600, 500);
     await window.keyboard.press('F1');
-    await expect(window.getByTestId('help-open-sample')).toBeFocused();
+    await expect(window.getByTestId('help-about')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
     await expect(window.getByTestId('help-menu')).toBeFocused();

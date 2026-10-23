@@ -93,13 +93,22 @@ export function focusAfter(key: string, current: number, count: number): number 
 export function projectMenu(
   actions: {
     readonly newProject: () => void;
+    /** A new project from one of the templates (8.12): the picker. */
+    readonly newFromTemplate: () => void;
     readonly open: () => void;
     readonly saveAs: () => void;
+    /** Saves the project as one of the maker's templates (8.12). */
+    readonly saveAsTemplate: () => void;
     readonly rename: (how?: 'keyboard' | 'pointer') => void;
     readonly openRecent: (path: string) => void;
   },
   recent: readonly RecentFile[],
   t: Translate,
+  /**
+   * Why *Save as* and *Rename* cannot be chosen: no project is open, on the
+   * start screen (8.12). Undefined while one is.
+   */
+  noProject?: string,
 ): MenuEntry[] {
   return [
     {
@@ -108,6 +117,12 @@ export function projectMenu(
       label: t('menu.new'),
       keys: 'newProject',
       onChoose: actions.newProject,
+    },
+    {
+      kind: 'item',
+      id: 'new-template',
+      label: t('menu.newFromTemplate'),
+      onChoose: actions.newFromTemplate,
     },
     {
       kind: 'item',
@@ -122,6 +137,14 @@ export function projectMenu(
       label: t('menu.saveAs'),
       keys: 'saveAs',
       onChoose: actions.saveAs,
+      refusal: noProject,
+    },
+    {
+      kind: 'item',
+      id: 'save-template',
+      label: t('menu.saveAsTemplate'),
+      onChoose: actions.saveAsTemplate,
+      refusal: noProject,
     },
     {
       kind: 'item',
@@ -129,6 +152,7 @@ export function projectMenu(
       label: t('menu.rename'),
       note: t('menu.renameNote'),
       onChoose: actions.rename,
+      refusal: noProject,
     },
     { kind: 'separator' },
     {
@@ -139,6 +163,162 @@ export function projectMenu(
         const { name, folder } = recentParts(file.shown);
         return {
           id: `recent-${String(index)}`,
+          label: name,
+          note: folder,
+          onChoose: () => actions.openRecent(file.path),
+        };
+      }),
+    },
+  ];
+}
+
+/**
+ * A tab's own menu (8.12), from a right-click on it or the menu key: what can
+ * be done to that project and its file. What needs a file — reload, show,
+ * copy its path, move it to the Trash — says so while there is none.
+ */
+export function tabMenu(
+  actions: {
+    readonly rename: (how?: 'keyboard' | 'pointer') => void;
+    readonly save: () => void;
+    readonly saveAs: () => void;
+    readonly saveAsTemplate: () => void;
+    readonly reload: () => void;
+    readonly duplicate: () => void;
+    readonly showInFolder: () => void;
+    readonly copyPath: () => void;
+    readonly trash: () => void;
+    readonly close: () => void;
+    readonly closeOthers: () => void;
+  },
+  facts: { readonly hasFile: boolean; readonly othersOpen: boolean },
+  t: Translate,
+): MenuEntry[] {
+  const noFile = facts.hasFile ? undefined : t('tabMenu.noFile');
+  return [
+    { kind: 'item', id: 'tab-rename', label: t('tabMenu.rename'), onChoose: actions.rename },
+    {
+      kind: 'item',
+      id: 'tab-save',
+      label: t('tabMenu.save'),
+      keys: 'save',
+      onChoose: actions.save,
+    },
+    {
+      kind: 'item',
+      id: 'tab-save-as',
+      label: t('tabMenu.saveAs'),
+      keys: 'saveAs',
+      onChoose: actions.saveAs,
+    },
+    {
+      kind: 'item',
+      id: 'tab-save-template',
+      label: t('menu.saveAsTemplate'),
+      onChoose: actions.saveAsTemplate,
+    },
+    {
+      kind: 'item',
+      id: 'tab-reload',
+      label: t('tabMenu.reload'),
+      note: t('tabMenu.reloadNote'),
+      onChoose: actions.reload,
+      refusal: noFile,
+    },
+    {
+      kind: 'item',
+      id: 'tab-duplicate',
+      label: t('tabMenu.duplicate'),
+      onChoose: actions.duplicate,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'item',
+      id: 'tab-show',
+      label: t('tabMenu.showInFolder'),
+      onChoose: actions.showInFolder,
+      refusal: noFile,
+    },
+    {
+      kind: 'item',
+      id: 'tab-copy-path',
+      label: t('tabMenu.copyPath'),
+      onChoose: actions.copyPath,
+      refusal: noFile,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'item',
+      id: 'tab-trash',
+      label: t('tabMenu.trash'),
+      danger: true,
+      onChoose: actions.trash,
+      refusal: noFile,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'item',
+      id: 'tab-close',
+      label: t('tabMenu.close'),
+      keys: 'closeTab',
+      onChoose: actions.close,
+    },
+    {
+      kind: 'item',
+      id: 'tab-close-others',
+      label: t('tabMenu.closeOthers'),
+      onChoose: actions.closeOthers,
+      refusal: facts.othersOpen ? undefined : t('tabMenu.onlyTab'),
+    },
+  ];
+}
+
+/**
+ * What *+* on the tab strip opens (8.12): a tab for a new project, or for one
+ * the maker has — chosen on disk, or one of the recent projects, the Project
+ * menu's own list. Each opens in a tab of its own; one already open goes to
+ * its tab.
+ */
+export function newTabMenu(
+  actions: {
+    readonly newProject: () => void;
+    readonly newFromTemplate: () => void;
+    readonly open: () => void;
+    readonly openRecent: (path: string) => void;
+  },
+  recent: readonly RecentFile[],
+  t: Translate,
+): MenuEntry[] {
+  return [
+    {
+      kind: 'item',
+      id: 'tab-new',
+      label: t('menu.new'),
+      keys: 'newProject',
+      onChoose: actions.newProject,
+    },
+    {
+      kind: 'item',
+      id: 'tab-template',
+      label: t('menu.newFromTemplate'),
+      onChoose: actions.newFromTemplate,
+    },
+    {
+      kind: 'item',
+      id: 'tab-open',
+      label: t('menu.open'),
+      keys: 'openProject',
+      onChoose: actions.open,
+    },
+    { kind: 'separator' },
+    {
+      kind: 'group',
+      label: t('menu.recent'),
+      empty: t('menu.recentEmpty'),
+      items: recent.map((file, index) => {
+        const { name, folder } = recentParts(file.shown);
+        return {
+          id: `tab-recent-${String(index)}`,
           label: name,
           note: folder,
           onChoose: () => actions.openRecent(file.path),
@@ -189,21 +369,12 @@ export function exportMenu(
  */
 export function helpMenu(
   actions: {
-    readonly openSample: () => void;
     readonly about: () => void;
   },
   t: Translate,
 ): MenuEntry[] {
-  return [
-    {
-      kind: 'item',
-      id: 'help-open-sample',
-      label: t('menu.openSample'),
-      onChoose: actions.openSample,
-    },
-    { kind: 'separator' },
-    { kind: 'item', id: 'help-about', label: t('menu.about'), onChoose: actions.about },
-  ];
+  // The sample wallet is a template since 8.14: New project from template.
+  return [{ kind: 'item', id: 'help-about', label: t('menu.about'), onChoose: actions.about }];
 }
 
 /**

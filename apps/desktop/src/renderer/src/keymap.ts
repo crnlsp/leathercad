@@ -78,6 +78,12 @@ export type CommandId =
   | 'help'
   | 'fullScreen'
   | 'quit'
+  | 'nextTab'
+  | 'previousTab'
+  | 'closeTab'
+  | 'moveTabLeft'
+  | 'moveTabRight'
+  | 'reopenTab'
   | 'cut'
   | 'copy'
   | 'paste'
@@ -298,6 +304,52 @@ export const KEYMAP: readonly Command[] = [
     keys: [key('F11')],
   },
   { id: 'quit', does: 'shortcuts.quit', group: 'window', scope: 'window', keys: [mod('KeyQ')] },
+  // The project tabs (8.12). Ctrl+Page Down and Up, as browsers and editors
+  // move between tabs; never the digits, which Design and Sheets have.
+  {
+    id: 'nextTab',
+    does: 'shortcuts.nextTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageDown')],
+  },
+  {
+    id: 'previousTab',
+    does: 'shortcuts.previousTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageUp')],
+  },
+  {
+    id: 'closeTab',
+    does: 'shortcuts.closeTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('KeyW')],
+  },
+  // The tab along the strip, as a drag moves it — the keyboard's way to do it.
+  {
+    id: 'moveTabLeft',
+    does: 'shortcuts.moveTabLeft',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageUp', true)],
+  },
+  {
+    id: 'moveTabRight',
+    does: 'shortcuts.moveTabRight',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('PageDown', true)],
+  },
+  // The project last closed, opened again, as a browser reopens a tab.
+  {
+    id: 'reopenTab',
+    does: 'shortcuts.reopenTab',
+    group: 'window',
+    scope: 'window',
+    keys: [mod('KeyT', true)],
+  },
 
   // A text field's own (U.20): the field hears them, as every field does, and
   // its right-click menu shows them. Listed so that menu takes its keys from here.

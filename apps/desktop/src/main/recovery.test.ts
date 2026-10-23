@@ -28,6 +28,9 @@ const alive = new Set<number>();
 const isAlive = (pid: number): boolean => alive.has(pid);
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
 const files = (): string[] => readdirSync(dir).sort();
+/** A tab's id, which names its copy since 8.12: a ULID. */
+const TAB = '01JB5M0000000000000000TAB1';
+const OTHER_TAB = '01JB5M0000000000000000TAB2';
 
 function session(pid: number, startedAt = 1000): RecoveryStore {
   alive.add(pid);
@@ -51,29 +54,29 @@ afterEach(() => {
 describe('writing a copy', () => {
   it('writes the whole copy under the session’s own name, with nothing left over', async () => {
     const store = session(101);
-    await store.write(bytes('first'));
-    await store.write(bytes('second'));
+    await store.write(TAB, bytes('first'));
+    await store.write(TAB, bytes('second'));
 
-    expect(files()).toEqual(['101-1000.lcp']);
-    expect(readFileSync(join(dir, '101-1000.lcp'), 'utf8')).toBe('second');
+    expect(files()).toEqual([`101-1000-${TAB}.lcp`]);
+    expect(readFileSync(join(dir, `101-1000-${TAB}.lcp`), 'utf8')).toBe('second');
   });
 
   it('creates the directory it needs', async () => {
     const nested = join(dir, 'state', 'recovery');
     const store = new RecoveryStore(nested, { pid: 7, startedAt: 1 }, () => true);
-    await store.write(bytes('x'));
-    expect(readdirSync(nested)).toEqual(['7-1.lcp']);
+    await store.write(TAB, bytes('x'));
+    expect(readdirSync(nested)).toEqual([`7-1-${TAB}.lcp`]);
   });
 
   it('clears only its own copy', async () => {
     const mine = session(101);
     const theirs = session(202);
-    await mine.write(bytes('mine'));
-    await theirs.write(bytes('theirs'));
+    await mine.write(TAB, bytes('mine'));
+    await theirs.write(TAB, bytes('theirs'));
 
-    await mine.clear();
-    await mine.clear(); // clearing twice is not an error
-    expect(files()).toEqual(['202-1000.lcp']);
+    await mine.clear(TAB);
+    await mine.clear(TAB); // clearing twice is not an error
+    expect(files()).toEqual([`202-1000-${TAB}.lcp`]);
   });
 });
 
@@ -86,8 +89,8 @@ describe('saving while a copy is being written', () => {
   // after it.
   it('clears a copy whose write was still in flight when the project was saved', async () => {
     const store = session(101);
-    const writing = store.write(bytes('unsaved work'));
-    const clearing = store.clear(); // the save lands mid-write
+    const writing = store.write(TAB, bytes('unsaved work'));
+    const clearing = store.clear(TAB); // the save lands mid-write
     await Promise.all([writing, clearing]);
 
     expect(files()).toEqual([]);
@@ -97,12 +100,12 @@ describe('saving while a copy is being written', () => {
 
   it('keeps the order it was asked in: a write after the clear is kept', async () => {
     const store = session(101);
-    const first = store.write(bytes('before the save'));
-    const cleared = store.clear();
-    const after = store.write(bytes('edited after the save'));
+    const first = store.write(TAB, bytes('before the save'));
+    const cleared = store.clear(TAB);
+    const after = store.write(TAB, bytes('edited after the save'));
     await Promise.all([first, cleared, after]);
 
-    expect(readFileSync(join(dir, '101-1000.lcp'), 'utf8')).toBe('edited after the save');
+    expect(readFileSync(join(dir, `101-1000-${TAB}.lcp`), 'utf8')).toBe('edited after the save');
   });
 
   it('does not let a write still in flight at a clean exit leave a copy behind', async () => {
@@ -110,7 +113,7 @@ describe('saving while a copy is being written', () => {
     // after it would be offered by the next start as work the maker never
     // saved.
     const store = session(101);
-    const writing = store.write(bytes('unsaved work'));
+    const writing = store.write(TAB, bytes('unsaved work'));
     store.releaseOnQuit();
     await writing;
     expect(files()).toEqual([]);
@@ -120,8 +123,8 @@ describe('saving while a copy is being written', () => {
     const store = session(101);
     rmSync(dir, { recursive: true, force: true });
     writeFileSync(dir, 'not a directory'); // the write cannot succeed
-    const failing = store.write(bytes('x'));
-    const clearing = store.clear();
+    const failing = store.write(TAB, bytes('x'));
+    const clearing = store.clear(TAB);
     await expect(failing).rejects.toThrow();
     await expect(clearing).resolves.toBeUndefined();
     rmSync(dir, { force: true });
@@ -136,48 +139,48 @@ describe('finding what a crash left behind', () => {
 
   it('never offers a copy whose session is still running, nor its own', async () => {
     const other = session(202);
-    await other.write(bytes('still working'));
+    await other.write(TAB, bytes('still working'));
     const me = session(101);
-    await me.write(bytes('mine'));
+    await me.write(TAB, bytes('mine'));
 
     expect(await me.findAbandoned()).toBeNull();
   });
 
   it('offers a crashed session’s copy, the newest first', async () => {
     const older = session(301, 1);
-    await older.write(bytes('older'));
+    await older.write(TAB, bytes('older'));
     const newer = session(302, 2);
-    await newer.write(bytes('newer'));
+    await newer.write(TAB, bytes('newer'));
     crash(301);
     crash(302);
-    utimesSync(join(dir, '301-1.lcp'), new Date(1_000_000), new Date(1_000_000));
-    utimesSync(join(dir, '302-2.lcp'), new Date(2_000_000), new Date(2_000_000));
+    utimesSync(join(dir, `301-1-${TAB}.lcp`), new Date(1_000_000), new Date(1_000_000));
+    utimesSync(join(dir, `302-2-${TAB}.lcp`), new Date(2_000_000), new Date(2_000_000));
 
     const found = await session(101).findAbandoned();
-    expect(found?.id).toBe('302-2');
+    expect(found?.id).toBe(`302-2-${TAB}`);
     expect(new TextDecoder().decode(found!.data)).toBe('newer');
     expect(found?.savedAt).toBe(new Date(2_000_000).toISOString());
   });
 
   it('survives a crash in the middle of a write: the last whole copy is what is found', async () => {
     const crashed = session(401);
-    await crashed.write(bytes('whole'));
+    await crashed.write(TAB, bytes('whole'));
     // The process died between writing the temporary file and renaming it.
-    writeFileSync(join(dir, '401-1000.lcp.abc123.tmp'), 'half a zi');
+    writeFileSync(join(dir, `401-1000-${TAB}.lcp.abc123.tmp`), 'half a zi');
     crash(401);
 
     const me = session(101);
     const found = await me.findAbandoned();
     expect(new TextDecoder().decode(found!.data)).toBe('whole');
     // The dead session's scrap is swept; nothing ever reads it.
-    expect(files()).toEqual(['401-1000.lcp']);
+    expect(files()).toEqual([`401-1000-${TAB}.lcp`]);
   });
 
   it('leaves a live session’s temporary file alone — it may be mid-write', async () => {
     session(501);
-    writeFileSync(join(dir, '501-1000.lcp.def456.tmp'), 'being written');
+    writeFileSync(join(dir, `501-1000-${TAB}.lcp.def456.tmp`), 'being written');
     await session(101).findAbandoned();
-    expect(files()).toContain('501-1000.lcp.def456.tmp');
+    expect(files()).toContain(`501-1000-${TAB}.lcp.def456.tmp`);
   });
 
   it('ignores files that are not recovery copies', async () => {
@@ -191,7 +194,7 @@ describe('finding what a crash left behind', () => {
 describe('answering the offer', () => {
   it('keeps a copy the maker declined, and lets it go only at a clean exit', async () => {
     const crashed = session(601);
-    await crashed.write(bytes('declined'));
+    await crashed.write(TAB, bytes('declined'));
     crash(601);
 
     const me = session(101);
@@ -199,7 +202,7 @@ describe('answering the offer', () => {
     await me.adopt(found!.id);
     // Not offered twice in the same session, and still on disk.
     expect(await me.findAbandoned()).toBeNull();
-    expect(files()).toEqual(['601-1000.lcp']);
+    expect(files()).toEqual([`601-1000-${TAB}.lcp`]);
 
     me.releaseOnQuit();
     expect(files()).toEqual([]);
@@ -207,14 +210,14 @@ describe('answering the offer', () => {
 
   it('sets a corrupt copy aside instead of offering it again or deleting it', async () => {
     const crashed = session(701);
-    await crashed.write(bytes('not a zip at all'));
+    await crashed.write(TAB, bytes('not a zip at all'));
     crash(701);
 
     const me = session(101);
     const found = await me.findAbandoned();
     await me.markCorrupt(found!.id);
 
-    expect(files()).toEqual(['701-1000.lcp.corrupt']);
+    expect(files()).toEqual([`701-1000-${TAB}.lcp.corrupt`]);
     expect(await me.findAbandoned()).toBeNull();
   });
 
@@ -228,62 +231,62 @@ describe('answering the offer', () => {
 describe('a clean exit', () => {
   it('removes this session’s copy and the ones it took over, and nobody else’s', async () => {
     const other = session(202);
-    await other.write(bytes('theirs'));
+    await other.write(TAB, bytes('theirs'));
     const me = session(101);
-    await me.write(bytes('mine'));
+    await me.write(TAB, bytes('mine'));
 
     me.releaseOnQuit();
-    expect(files()).toEqual(['202-1000.lcp']);
+    expect(files()).toEqual([`202-1000-${TAB}.lcp`]);
   });
 
   it('keeps everything when told the window crashed, so the next start can offer it', async () => {
     const me = session(101);
-    await me.write(bytes('mine'));
+    await me.write(TAB, bytes('mine'));
     me.rendererGone();
     me.releaseOnQuit();
-    expect(files()).toEqual(['101-1000.lcp']);
-    expect(statSync(join(dir, '101-1000.lcp')).size).toBeGreaterThan(0);
+    expect(files()).toEqual([`101-1000-${TAB}.lcp`]);
+    expect(statSync(join(dir, `101-1000-${TAB}.lcp`)).size).toBeGreaterThan(0);
   });
 });
 
 describe('a window opened again after its renderer crashed (macOS keeps the app running)', () => {
   it('offers the crashed renderer’s copy, though its process is still alive', async () => {
     const me = session(101);
-    await me.write(bytes('before the crash'));
+    await me.write(TAB, bytes('before the crash'));
     me.rendererGone();
 
     const found = await me.findAbandoned();
-    expect(found?.id).toBe('101-1000');
+    expect(found?.id).toBe(`101-1000-${TAB}`);
     expect(new TextDecoder().decode(found?.data)).toBe('before the crash');
   });
 
   it('never lets the new window’s clean start delete it', async () => {
     const me = session(101);
-    await me.write(bytes('before the crash'));
+    await me.write(TAB, bytes('before the crash'));
     me.rendererGone();
 
     // The new renderer mounts clean and clears "its" copy.
-    await me.clear();
-    expect(files()).toContain('101-1000.lcp');
+    await me.clear(TAB);
+    expect(files()).toContain(`101-1000-${TAB}.lcp`);
   });
 
   it('writes the new window’s copy under a name of its own', async () => {
     const me = session(101);
-    await me.write(bytes('before the crash'));
+    await me.write(TAB, bytes('before the crash'));
     me.rendererGone();
-    await me.write(bytes('after'));
+    await me.write(TAB, bytes('after'));
 
-    expect(readFileSync(join(dir, '101-1000.lcp'), 'utf8')).toBe('before the crash');
+    expect(readFileSync(join(dir, `101-1000-${TAB}.lcp`), 'utf8')).toBe('before the crash');
     expect(files()).toHaveLength(2);
     // And the new copy is its own, so it is never offered back to itself.
-    expect((await me.findAbandoned())?.id).toBe('101-1000');
+    expect((await me.findAbandoned())?.id).toBe(`101-1000-${TAB}`);
   });
 
   it('lets the copy go at a clean exit once the new window has taken it over', async () => {
     const me = session(101);
-    await me.write(bytes('before the crash'));
+    await me.write(TAB, bytes('before the crash'));
     me.rendererGone();
-    await me.adopt('101-1000');
+    await me.adopt(`101-1000-${TAB}`);
     me.releaseOnQuit();
     expect(files()).toEqual([]);
   });
@@ -291,44 +294,103 @@ describe('a window opened again after its renderer crashed (macOS keeps the app 
   it('still lets the new window’s own copy go at a clean exit', async () => {
     const me = session(101);
     me.rendererGone();
-    await me.write(bytes('after'));
+    await me.write(TAB, bytes('after'));
     me.releaseOnQuit();
     expect(files()).toEqual([]);
   });
 
   it('keeps a copy taken over before the crash, for the next window or start to offer', async () => {
     const earlier = session(202);
-    await earlier.write(bytes('an earlier crash'));
+    await earlier.write(TAB, bytes('an earlier crash'));
     crash(202);
     const me = session(101);
-    await me.adopt('202-1000');
+    await me.adopt(`202-1000-${TAB}`);
     me.rendererGone();
     me.releaseOnQuit();
 
-    expect(files()).toEqual(['202-1000.lcp']);
+    expect(files()).toEqual([`202-1000-${TAB}.lcp`]);
   });
 
   it('offers what the second of two crashed windows left', async () => {
     const me = session(101);
-    await me.write(bytes('first'));
+    await me.write(TAB, bytes('first'));
     me.rendererGone();
-    await me.adopt('101-1000');
-    await me.write(bytes('second'));
-    utimesSync(join(dir, '101-1000.lcp'), new Date(1000), new Date(1000));
+    await me.adopt(`101-1000-${TAB}`);
+    await me.write(TAB, bytes('second'));
+    utimesSync(join(dir, `101-1000-${TAB}.lcp`), new Date(1000), new Date(1000));
     me.rendererGone();
 
     const found = await me.findAbandoned();
-    expect(found?.id).toBe('101-1001');
+    expect(found?.id).toBe(`101-1001-${TAB}`);
     expect(new TextDecoder().decode(found?.data)).toBe('second');
   });
 
   it('puts a write the crashed window asked for where that window’s copy is', async () => {
     const me = session(101);
-    const inFlight = me.write(bytes('last words'));
+    const inFlight = me.write(TAB, bytes('last words'));
     me.rendererGone();
     await inFlight;
-    await me.clear();
+    await me.clear(TAB);
 
-    expect(readFileSync(join(dir, '101-1000.lcp'), 'utf8')).toBe('last words');
+    expect(readFileSync(join(dir, `101-1000-${TAB}.lcp`), 'utf8')).toBe('last words');
+  });
+});
+
+describe('a copy per tab (8.12)', () => {
+  it('keeps each tab’s copy apart, and clears only the one asked', async () => {
+    const me = session(101);
+    await me.write(TAB, bytes('wallet'));
+    await me.write(OTHER_TAB, bytes('belt'));
+    expect(files()).toEqual([`101-1000-${TAB}.lcp`, `101-1000-${OTHER_TAB}.lcp`]);
+
+    await me.clear(TAB);
+    expect(files()).toEqual([`101-1000-${OTHER_TAB}.lcp`]);
+  });
+
+  it('offers every tab a crashed session left, one after another', async () => {
+    const crashed = session(301);
+    await crashed.write(TAB, bytes('wallet'));
+    await crashed.write(OTHER_TAB, bytes('belt'));
+    crash(301);
+
+    const me = session(101);
+    const first = await me.findAbandoned();
+    await me.adopt(first!.id);
+    const second = await me.findAbandoned();
+    expect(second).not.toBeNull();
+    expect(second!.id).not.toBe(first!.id);
+    await me.adopt(second!.id);
+    expect(await me.findAbandoned()).toBeNull();
+  });
+
+  it('still finds a copy 1.5 left, one per session with no tab', async () => {
+    writeFileSync(join(dir, '301-1000.lcp'), 'from 1.5');
+    const found = await session(101).findAbandoned();
+    expect(found?.id).toBe('301-1000');
+  });
+
+  it('removes all of this session’s tabs’ copies at a clean exit', async () => {
+    const me = session(101);
+    await me.write(TAB, bytes('wallet'));
+    await me.write(OTHER_TAB, bytes('belt'));
+    me.releaseOnQuit();
+    expect(files()).toEqual([]);
+  });
+
+  it('keeps every tab’s copy when the window crashed, and offers them', async () => {
+    const me = session(101);
+    await me.write(TAB, bytes('wallet'));
+    await me.write(OTHER_TAB, bytes('belt'));
+    me.rendererGone();
+    const first = await me.findAbandoned();
+    await me.adopt(first!.id);
+    expect(await me.findAbandoned()).not.toBeNull();
+  });
+
+  it('refuses a tab that is not a ULID: a tab never names a path', async () => {
+    const me = session(101);
+    await expect(me.write('../../project', bytes('x'))).rejects.toThrow();
+    await expect(me.clear('a/b')).rejects.toThrow();
+    expect(files()).toEqual([]);
   });
 });

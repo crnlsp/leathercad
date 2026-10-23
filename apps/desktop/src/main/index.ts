@@ -2,11 +2,14 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { RecentOutcome } from '@leathercad/platform';
+import type { OpenSession, OpenSessionTab, RecentOutcome } from '@leathercad/platform';
 import { BrowserWindow, Menu, app, net, protocol, session, shell } from 'electron';
 import log from 'electron-log/main';
 
 import sampleProject from '../../../../fixtures/projects/bifold-wallet.lcp?asset';
+import cardHolderTemplate from '../../../../fixtures/projects/card-holder.lcp?asset';
+import coasterTemplate from '../../../../fixtures/projects/coaster.lcp?asset';
+import keyFobTemplate from '../../../../fixtures/projects/key-fob.lcp?asset';
 import windowIcon from '../../build/icon.png?asset';
 import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { SOURCE_LOCALE, createI18n, resolveLocale, type I18n } from '../shared/i18n.js';
@@ -19,7 +22,10 @@ import { applyBindings } from '../renderer/src/keymap.js';
 import { macMenuTemplate, windowKeyFor } from './menu.js';
 import { PathGrants } from './pathGrants.js';
 import { registerPlatformHandlers } from './platformHandlers.js';
+import { KeptCopies } from './keptCopies.js';
+import { Templates } from './templates.js';
 import { PreferencesStore } from './preferences.js';
+import { ProjectWatch } from './projectWatch.js';
 import { RecoveryStore } from './recovery.js';
 import { UpdateChecker } from './updates.js';
 
@@ -28,6 +34,20 @@ import { UpdateChecker } from './updates.js';
 // ~/.config/leathercad. Both calls must happen before the app is ready.
 app.setName('LeatherCAD');
 app.setPath('userData', join(app.getPath('appData'), 'leathercad'));
+
+// One LeatherCAD at a time (8.11). A second launch — a `.lcp` double-clicked
+// on Linux or Windows while the app runs, or the Start menu — hands its
+// command line to the running app (`second-instance`, below) and ends here,
+// before it writes a log, a recovery copy or preferences.json. Two processes
+// shared one preferences.json, last writer wins, and could hold the same
+// project open and save over each other. The lock is the userData
+// directory's, so a test that starts the app with a configuration of its own
+// is a LeatherCAD of its own. macOS never starts a second copy: it sends
+// `open-file` to this one. `process.exit`, not `app.exit`: the latter returns,
+// and everything below this line would still run — the log's first line
+// among it. The running app has the command line by now: asking for the lock
+// waits until it has been delivered.
+if (!app.requestSingleInstanceLock()) process.exit(0);
 
 // Before ready: a real origin for modules, fonts and the PDF preview worker.
 // CSP and CORS still apply; service workers and CSP bypass stay disabled.
@@ -47,6 +67,22 @@ const recovery = new RecoveryStore(join(stateDirectory(), 'recovery'), {
   pid: process.pid,
   startedAt: Date.now(),
 });
+
+// The project templates (8.12): the ones that ship, in the picker's order —
+// the sample wallet first — and the maker's own, beside the preferences.
+const templates = new Templates(
+  {
+    'bifold-wallet': sampleProject,
+    'card-holder': cardHolderTemplate,
+    'key-fob': keyFobTemplate,
+    coaster: coasterTemplate,
+  },
+  join(app.getPath('userData'), 'templates'),
+);
+
+// The unsaved work kept as the window closes (8.12), with Keep unsaved
+// projects on: beside the preferences, in a folder of its own.
+const kept = new KeptCopies(join(app.getPath('userData'), 'unsaved'));
 
 // The files the renderer may touch: those chosen in the app's dialogs, or
 // from the recent projects (8.2). Shared by the handlers and the launch.
@@ -86,6 +122,13 @@ function followKeys(): boolean {
 
 let mainWindow: BrowserWindow | null = null;
 
+// The open projects' files, watched for what another program does to them
+// (8.12): the window is told, and offers to read the file again.
+const projectWatch = new ProjectWatch((path, change) => {
+  mainWindow?.webContents.send(IPC.projectChanged, path, change);
+});
+app.on('will-quit', () => projectWatch.close());
+
 /**
  * A project the operating system asked this launch to open (8.5): a `.lcp`
  * double-clicked on Linux or Windows arrives on the command line, one opened
@@ -96,14 +139,35 @@ let mainWindow: BrowserWindow | null = null;
 let launchFile: string | null = projectPathFromArgs(process.argv.slice(1), process.cwd());
 if (launchFile !== null) grants.grant(launchFile);
 
-// macOS hands a project to the running app rather than starting another: one
-// that arrives before the window is up waits with the launch file; after, it
-// goes to the renderer, which asks about unsaved work first, as for Open.
-app.on('open-file', (event, path) => {
-  event.preventDefault();
+/**
+ * A project the operating system handed to the running app: granted, as the
+ * launch file is. One that arrives before the window is up waits with the
+ * launch file; after, it goes to the renderer, which asks about unsaved work
+ * first, as for Open.
+ */
+function openFromSystem(path: string): void {
   grants.grant(path);
   if (mainWindow === null) launchFile = path;
   else mainWindow.webContents.send(IPC.openFile, path);
+}
+
+// macOS hands a project to the running app rather than starting another.
+app.on('open-file', (event, path) => {
+  event.preventDefault();
+  openFromSystem(path);
+});
+
+// Linux and Windows start another process, which hands over its command line
+// and its directory and quits (8.11). The window comes forward either way —
+// a launch from the Start menu names no project, and still means "show me
+// LeatherCAD" — and then opens what the line names, as a first launch would.
+app.on('second-instance', (_event, argv, workingDirectory) => {
+  if (mainWindow !== null) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+  const path = projectPathFromArgs(argv, workingDirectory);
+  if (path !== null) openFromSystem(path);
 });
 
 function createWindow(): void {
@@ -227,8 +291,35 @@ function buildMenu(): void {
  * taken off the list, and the renderer tells the maker why it vanished, in
  * the app's own dialog (U.20).
  */
+/**
+ * The tabs open when the app last closed (8.12), handed to the renderer once,
+ * as it starts: each project still on disk, granted — the maker chose each in
+ * a dialog in an earlier session, as for the recent list — and the unsaved
+ * work kept for any, read back. A second ask, from a reloaded page, gets none:
+ * what it shows now is the session. Kept copies the last session no longer
+ * names are let go.
+ */
+let sessionTaken = false;
+async function takeSession(): Promise<OpenSession> {
+  if (sessionTaken) return { tabs: [], active: null };
+  sessionTaken = true;
+  const { tabs, active } = preferences.session;
+  const handed: OpenSessionTab[] = [];
+  let front: number | null = null;
+  for (const [index, tab] of tabs.entries()) {
+    const path = tab.path !== null && existsSync(tab.path) ? tab.path : null;
+    const data = tab.kept === null ? null : await kept.read(tab.kept);
+    if (path === null && data === null) continue;
+    if (path !== null) grants.grant(path);
+    if (index === active) front = handed.length;
+    handed.push({ path, data, view: tab.view, camera: tab.camera });
+  }
+  await kept.keepOnly(new Set(tabs.flatMap((tab) => (tab.kept === null ? [] : [tab.kept]))));
+  return { tabs: handed, active: front };
+}
+
 async function openRecent(path: string): Promise<RecentOutcome> {
-  if (!preferences.recentFiles.includes(path)) return 'unlisted';
+  if (!preferences.lists(path)) return 'unlisted';
   if (!existsSync(path)) {
     await preferences.forgetRecent(path);
     return 'gone';
@@ -268,12 +359,12 @@ app.whenReady().then(() => {
       // on Windows.
       app.addRecentDocument(path);
     },
-    sampleProject,
     () => {
       const file = launchFile;
       launchFile = null;
       return file;
     },
+    takeSession,
     (path) => openRecent(path),
     readNotices,
     // A new language rebuilds macOS's menu in it, at once, as the window's
@@ -286,6 +377,9 @@ app.whenReady().then(() => {
       keyCapture = capturing;
     },
     updates,
+    projectWatch,
+    kept,
+    templates,
   );
 
   followLanguage();

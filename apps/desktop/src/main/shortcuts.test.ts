@@ -32,11 +32,19 @@ describe('the keyboard shortcut map', () => {
     const noop = (): void => undefined;
     const shown = [
       ...projectMenu(
-        { newProject: noop, open: noop, saveAs: noop, rename: noop, openRecent: noop },
+        {
+          newProject: noop,
+          newFromTemplate: noop,
+          open: noop,
+          saveAs: noop,
+          saveAsTemplate: noop,
+          rename: noop,
+          openRecent: noop,
+        },
         [],
         t,
       ),
-      ...helpMenu({ openSample: noop, about: noop }, t),
+      ...helpMenu({ about: noop }, t),
     ].flatMap((entry) => (entry.kind === 'item' && entry.keys !== undefined ? [entry.keys] : []));
     expect(shown.length).toBeGreaterThan(0);
     for (const command of shown) {

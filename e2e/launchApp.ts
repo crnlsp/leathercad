@@ -29,11 +29,13 @@ export function freshStateHome(): string {
  * Each launch gets a new directory unless it passes `state`, which a test does
  * to start again where a crash left off, or to read what the app wrote there.
  *
- * Preferences are not handled here. playwright.config.ts gives the run a
- * configuration directory, and a test that changes a preference passes its own
- * XDG_CONFIG_HOME in `env`.
+ * And in a configuration directory of its own, unless `env` names one: one
+ * LeatherCAD runs per configuration directory (8.11), so a second launch on
+ * the run's shared one ended at once, and the tabs one test left open came back
+ * in the next (8.12). A test that means to share one across launches — a
+ * restart — passes the same XDG_CONFIG_HOME to each.
  */
-export function launchApp(
+export async function launchApp(
   options: {
     /** Arguments after the app's own directory, such as a project to open. */
     readonly args?: readonly string[];
@@ -41,13 +43,38 @@ export function launchApp(
     readonly env?: Readonly<Record<string, string>>;
     /** The XDG state home to start in. A new, empty one when omitted. */
     readonly state?: string;
+    /**
+     * Leave the app on its start screen (8.12). Otherwise a launch naming no
+     * project starts a new one there, as every test written before the start
+     * screen expects: an *Untitled* to draw on.
+     */
+    readonly startScreen?: boolean;
   } = {},
 ): Promise<ElectronApplication> {
-  return electron.launch({
+  const app = await electron.launch({
     args: ['.', ...(options.args ?? [])],
     cwd: DESKTOP_DIR,
-    env: { ...process.env, ...options.env, XDG_STATE_HOME: options.state ?? freshStateHome() },
+    env: {
+      ...process.env,
+      XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-')),
+      ...options.env,
+      XDG_STATE_HOME: options.state ?? freshStateHome(),
+    },
   });
+  const namesProject = (options.args ?? []).some((arg) => arg.toLowerCase().endsWith('.lcp'));
+  if (options.startScreen !== true && !namesProject) {
+    // Waited for, so a test never races it: the start screen, once the app has
+    // opened what a last session left — or that session's project, and then
+    // nothing to press. Pressed in the page, so a recovery offer standing over
+    // the start screen leaves it an Untitled underneath, as before 8.12.
+    const window = await app.firstWindow();
+    const start = window.getByTestId('start-new');
+    await expect(start.or(window.getByTestId('app-version'))).toBeAttached({ timeout: 30_000 });
+    if ((await start.count()) > 0) {
+      await start.evaluate((button) => (button as HTMLButtonElement).click());
+    }
+  }
+  return app;
 }
 
 /** What `launchApp` takes. */
@@ -112,9 +139,15 @@ export async function withApp(
   }
 }
 
-/** Opens the sample wallet from the empty Parts panel: three pieces. */
+/**
+ * Opens the sample wallet, three pieces, from *New project from template…*
+ * (8.14): the template picker's first, a double click to use it. It used to
+ * have a button of its own, in Help and in the empty Parts panel.
+ */
 export async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('open-sample').click();
+  await window.getByTestId('project-menu').click();
+  await window.getByTestId('new-template').click();
+  await window.getByTestId('template-builtin:bifold-wallet').dblclick();
   await expect(window.getByTestId('part-count')).toHaveText('3');
 }
 

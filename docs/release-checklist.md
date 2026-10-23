@@ -195,8 +195,12 @@ per platform in the log.
 Since 8.5. On each platform — the Windows installer, the macOS dmg, and on Linux the `.flatpak`
 installed with `flatpak install --user` — double-click a saved `.lcp`. The app starts with it open,
 and **Save** writes back to it without asking where. With the app already open and unsaved work, a
-second double-click on macOS asks about the unsaved work first; on Linux and Windows it opens a
-second window. On Linux, the file manager calls the file a *LeatherCAD project*.
+second double-click — of another `.lcp` — opens it in a tab of its own beside the unsaved work, in
+the same window, on every platform: since 8.11 a second launch on Linux and Windows starts no second
+process, and since 8.12 each project has a tab. Double-click the first project again: its tab comes
+forward, and no second tab opens. Minimise the window and double-click again: it comes back to the front. Start LeatherCAD
+from the Start menu or the launcher while it runs: the window comes forward, and nothing else
+happens. On Linux, the file manager calls the file a *LeatherCAD project*.
 
 ### 12. The window's edited flag, on macOS
 
@@ -219,7 +223,7 @@ field, which the end-to-end test checks on Linux; on macOS, ⌘A is also the acc
 menu's *Select All* (`role: 'selectAll'` in `apps/desktop/src/main/menu.ts`), and nobody has seen
 which one wins ([#97](https://github.com/crnlsp/leathercad/issues/97)).
 
-1. Open the sample project, and click the board so that no text field has focus. ⌘A: nothing is
+1. Open the *Bifold wallet* template, and click the board so that no text field has focus. ⌘A: nothing is
    highlighted anywhere in the window, the Problems drawer included.
 2. In the project's name field, and in a size in Properties, ⌘A selects that field's text and
    nothing else.
@@ -235,12 +239,52 @@ Since the post-1.5 stabilization, in the same Mac session as check 12. On macOS 
 not quit the app, so a new window opens in the same process; it must offer the dead window's work,
 not delete it. `recovery.test.ts` checks the files; nobody has watched it on a Mac.
 
-1. Open the sample project and make an edit. Wait half a minute, for the recovery copy to be written.
+1. Open the *Bifold wallet* template and make an edit. Wait half a minute, for the recovery copy to be written.
 2. In Activity Monitor, force-quit *LeatherCAD Helper (Renderer)*. The window goes blank.
 3. Close the window, then click LeatherCAD in the Dock: the new window offers the unsaved work.
    *Recover* brings back the edit.
 
 A failure is lost work, which is a blocker above.
+
+### 15. Project tabs
+
+Since 8.11–8.14, on each platform, with the packaged app.
+
+1. Start the app: the start screen shows, with *New*, *Open*, the sample and the recent projects.
+2. Open two saved projects and start a new one: three tabs, the new one *Untitled*. Edit two of
+   them. Ctrl+Page Down and Ctrl+Page Up go round them (⌘ on macOS); each keeps its own drawing,
+   undo, Design or Sheets view and zoom.
+3. Choose *Open…* on a project that is already open: its tab comes forward and bounces, and no
+   second tab opens.
+4. Rename a saved project to the name of another project in its folder: *Not renamed*, and both
+   files are as they were. Rename it to a free name: the tab and the file in the folder both change.
+5. Right-click a saved tab: *Reload from disk* asks about unsaved work first; *Show in folder* opens
+   the file manager on the file; *Move file to Trash…* asks, and the file is in the system's Trash
+   afterwards, from which it can be restored.
+6. With two tabs holding unsaved work, force-quit LeatherCAD (Task Manager, Activity Monitor,
+   `kill -9`). Start it again: both projects are offered, one after the other, each into a tab.
+7. Close the window with unsaved tabs: one question names them all; *Cancel* keeps the window.
+   Save them, close, and start again: the tabs come back, the one in front in front.
+8. On macOS, ⌘W closes the tab, not the window, and the Window menu has no *Close* on ⌘W.
+9. Rename a saved project, then Undo: the project and its file both have the old name again.
+10. Open a saved project, and change its file in another program (copy another `.lcp` over it):
+    a bar over the board says so; *Reload* reads it. Delete the file: the bar says it went;
+    *Save it again* writes it back.
+11. With two projects unsaved, close the window: one question names both; *Cancel* keeps them.
+12. Drag a tab along the strip; drop a `.lcp` from the file manager on the window: it opens in a
+    tab. Close a saved project, then Ctrl+Shift+T: it opens again.
+13. Turn on Settings › General › *Keep unsaved projects when closing*, make an untitled project
+    with a drawing, and close the window: nothing is asked. Start again: it is back, unsaved, and
+    each tab is on its view and zoom.
+14. *New project › from template…*: the card holder opens *Untitled*, unchanged, with no problems;
+    *Save* asks where. *Save as template…* the project under a name already used: it asks before
+    replacing. The maker's template is in the picker, and removing it there takes it off.
+14. *New project from template…*: each template that ships opens, untitled, with nothing to fix in
+    Problems. *Save as template…* on a project of yours: it is listed under *My templates*, and a
+    second save under the same name asks before replacing it. In the picker, search, *Show*, *Kind*
+    and *Sort* narrow and order the list, and open the same way next time; rename, describe, tag,
+    pin, duplicate, export, import and remove (then *Undo*) one of yours; *Edit template* opens it,
+    and Save writes the template.
 
 ## After it passes
 
