@@ -85,14 +85,14 @@ export interface PlatformHost {
   setKeyCapture(capturing: boolean): Promise<void>;
 
   /**
-   * Crash recovery (slice 5.3b). Replaces this session's recovery copy with
-   * `data`, atomically, in the app's state directory — never beside a project,
-   * never under a project's name.
+   * Crash recovery (slice 5.3b). Replaces a tab's recovery copy with `data`,
+   * atomically, in the app's state directory — never beside a project, never
+   * under a project's name. One copy per tab since 8.12; `tab` is its id.
    */
-  writeRecovery(data: Uint8Array): Promise<void>;
+  writeRecovery(tab: string, data: Uint8Array): Promise<void>;
 
-  /** Removes this session's recovery copy: the project is saved, or empty. */
-  clearRecovery(): Promise<void>;
+  /** Removes a tab's recovery copy: its project is saved, closed, or clean again. */
+  clearRecovery(tab: string): Promise<void>;
 
   /** The newest copy a session that did not end cleanly left behind, or null. */
   findRecovery(): Promise<RecoveredCopy | null>;

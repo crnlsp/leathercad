@@ -119,11 +119,11 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   middle click closes too. The tabs with a file come back at the next start, the one in front in
   front (`session` in `preferences.json`). One file dialog at a time: a second Open while one is up is not shown.
   The window's title is the active tab's; macOS's edited dot is lit while any tab has unsaved work.
-  A `tablist` with arrow keys, clean under axe. Until 8.13 only the active tab's work is written to
-  the recovery copy.
-- ☐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy; after a crash
-  every copy is offered in turn, each into a tab of its own. Copies from 1.5, one per session, are
-  still found.
+  A `tablist` with arrow keys, clean under axe.
+- ◐ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
+  `<pid>-<start>-<tab>.lcp`, written while it is in front or not; closing a tab or saving it clears
+  it. After a crash every copy is offered in turn, each into a tab of its own. Copies from 1.5, one
+  per session, are still found.
 
 ### Drawing and editing
 

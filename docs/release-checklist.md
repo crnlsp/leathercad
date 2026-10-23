@@ -246,6 +246,27 @@ not delete it. `recovery.test.ts` checks the files; nobody has watched it on a M
 
 A failure is lost work, which is a blocker above.
 
+### 15. Project tabs
+
+Since 8.11–8.13, on each platform, with the packaged app.
+
+1. Start the app: the start screen shows, with *New*, *Open*, the sample and the recent projects.
+2. Open two saved projects and start a new one: three tabs, the new one *Untitled*. Edit two of
+   them. Ctrl+Page Down and Ctrl+Page Up go round them (⌘ on macOS); each keeps its own drawing,
+   undo, Design or Sheets view and zoom.
+3. Choose *Open…* on a project that is already open: its tab comes forward and bounces, and no
+   second tab opens.
+4. Rename a saved project to the name of another project in its folder: *Not renamed*, and both
+   files are as they were. Rename it to a free name: the tab and the file in the folder both change.
+5. Right-click a saved tab: *Reload from disk* asks about unsaved work first; *Show in folder* opens
+   the file manager on the file; *Move file to Trash…* asks, and the file is in the system's Trash
+   afterwards, from which it can be restored.
+6. With two tabs holding unsaved work, force-quit LeatherCAD (Task Manager, Activity Monitor,
+   `kill -9`). Start it again: both projects are offered, one after the other, each into a tab.
+7. Close the window with unsaved tabs: each is asked about in turn; *Cancel* keeps the window.
+   Save them, close, and start again: the tabs come back, the one in front in front.
+8. On macOS, ⌘W closes the tab, not the window, and the Window menu has no *Close* on ⌘W.
+
 ## After it passes
 
 - Record one row per platform in [`print-verification-log.md`](print-verification-log.md), with

@@ -65,7 +65,6 @@ import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 import { SelectionBar, type SelectionBarHandle } from './SelectionBar.js';
 import type { MakerTools } from './irons.js';
-import type { TabCameras } from './projectTabs.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -91,6 +90,22 @@ const CLICK_SLOP_PX = 4;
  * state: never saved, never part of the document.
  */
 export type CanvasView = 'design' | 'sheets';
+
+/**
+ * The board's two cameras (7.4c), kept by the tab so a project comes back
+ * exactly where it was left. The canvas is made again for each tab it shows,
+ * and takes these rather than new ones.
+ */
+export interface TabCameras {
+  readonly design: Viewport;
+  readonly sheets: Viewport;
+  /** The design camera has been placed once: a tab shown again is not re-placed. */
+  fitted: boolean;
+  /** Its first placing frames the drawing: an opened project is shown whole. */
+  frameDrawing: boolean;
+  /** The sheets' extent the Sheets camera was last fitted to: a new one frames again. */
+  sheetsFramed: string | null;
+}
 
 export interface CanvasHandle {
   /** Frames a millimetre rectangle, leaving the usual margin. */

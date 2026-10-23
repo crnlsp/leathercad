@@ -32,8 +32,8 @@ interface PreloadBridge {
   getAppVersion(): Promise<string>;
   setDocumentEdited(edited: boolean): Promise<void>;
   setKeyCapture(capturing: boolean): Promise<void>;
-  writeRecovery(data: Uint8Array): Promise<void>;
-  clearRecovery(): Promise<void>;
+  writeRecovery(tab: string, data: Uint8Array): Promise<void>;
+  clearRecovery(tab: string): Promise<void>;
   findRecovery(): Promise<RecoveredCopy | null>;
   resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void>;
   getRecoveryIntervalMs(): Promise<number>;

@@ -33,7 +33,7 @@ export function freshStateHome(): string {
  * configuration directory, and a test that changes a preference passes its own
  * XDG_CONFIG_HOME in `env`.
  */
-export function launchApp(
+export async function launchApp(
   options: {
     /** Arguments after the app's own directory, such as a project to open. */
     readonly args?: readonly string[];

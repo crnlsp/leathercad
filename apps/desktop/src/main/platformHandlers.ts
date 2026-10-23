@@ -140,11 +140,12 @@ export function registerPlatformHandlers(
 
   // Crash recovery (5.3b). The renderer says what to keep; the files — their
   // names, their directory, their atomic writes — are the main process's alone.
-  ipcMain.handle(IPC.writeRecovery, async (_event, data: Uint8Array) => {
-    await recovery.write(data);
+  ipcMain.handle(IPC.writeRecovery, async (_event, tab: unknown, data: Uint8Array) => {
+    // The tab's id names the copy; the store refuses anything but a ULID.
+    await recovery.write(String(tab), data);
   });
-  ipcMain.handle(IPC.clearRecovery, async () => {
-    await recovery.clear();
+  ipcMain.handle(IPC.clearRecovery, async (_event, tab: unknown) => {
+    await recovery.clear(String(tab));
   });
   ipcMain.handle(IPC.findRecovery, () => recovery.findAbandoned());
   ipcMain.handle(IPC.resolveRecovery, async (_event, id: string, how: 'adopt' | 'corrupt') => {

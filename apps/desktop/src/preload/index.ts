@@ -40,9 +40,10 @@ const platformBridge = {
   setKeyCapture: (capturing: boolean): Promise<void> =>
     ipcRenderer.invoke(IPC.setKeyCapture, capturing),
 
-  writeRecovery: (data: Uint8Array): Promise<void> => ipcRenderer.invoke(IPC.writeRecovery, data),
+  writeRecovery: (tab: string, data: Uint8Array): Promise<void> =>
+    ipcRenderer.invoke(IPC.writeRecovery, tab, data),
 
-  clearRecovery: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery),
+  clearRecovery: (tab: string): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery, tab),
 
   findRecovery: (): Promise<{ id: string; savedAt: string; data: Uint8Array } | null> =>
     ipcRenderer.invoke(IPC.findRecovery),

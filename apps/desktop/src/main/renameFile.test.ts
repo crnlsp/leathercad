@@ -37,9 +37,11 @@ describe('the file name a project name gives', () => {
     for (const name of ['', '  ', '.', '..', 'a/b', 'a\\b', 'Belt: brown', 'why?', 'tab\there']) {
       expect(projectFileName(name), name).toBeNull();
     }
-    for (const name of ['CON', 'nul', 'Com1', 'LPT9.old', 'Wallet.', 'Wallet ', 'x'.repeat(201)]) {
+    for (const name of ['CON', 'nul', 'Com1', 'LPT9.old', 'Wallet.', 'x'.repeat(201)]) {
       expect(projectFileName(name), name).toBeNull();
     }
+    // Spaces around a name are the field's, not the name's.
+    expect(projectFileName('Wallet ')).toBe('Wallet.lcp');
   });
 });
 

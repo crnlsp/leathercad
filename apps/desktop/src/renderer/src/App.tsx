@@ -386,13 +386,12 @@ export function App({
 
   // Crash recovery (5.3b): a copy while there is unsaved work, and an offer of
   // what a crash left behind.
-  const isActiveDirty = useCallback(() => tabs.active !== null && isDirty(tabs.active), [tabs]);
   const recovery = useRecovery({
-    store,
+    tabs,
+    openTabs,
+    revision: storeState.document,
     host: getPlatformHost,
     appVersion: version ?? '0.0.0',
-    isDirty: isActiveDirty,
-    dirty,
     adoptRecovered: file.adoptRecovered,
   });
 

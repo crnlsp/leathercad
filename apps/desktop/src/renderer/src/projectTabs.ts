@@ -2,7 +2,7 @@ import type { DocumentStore } from '@leathercad/document';
 import { Viewport } from '@leathercad/editor';
 
 import type { Translate } from '../../shared/i18n.js';
-import type { CanvasView } from './CanvasHost.js';
+import type { CanvasView, TabCameras } from './CanvasHost.js';
 
 /** A project's file, as its tab last left it: where it is, and what went wrong with it. */
 export interface ProjectFileState {
@@ -14,22 +14,6 @@ export interface ProjectFileState {
    */
   readonly error: unknown;
   readonly savedAt: string | null;
-}
-
-/**
- * The board's two cameras (7.4c), kept by the tab so a project comes back
- * exactly where it was left. The canvas is made again for each tab it shows,
- * and takes these rather than new ones.
- */
-export interface TabCameras {
-  readonly design: Viewport;
-  readonly sheets: Viewport;
-  /** The design camera has been placed once: a tab shown again is not re-placed. */
-  fitted: boolean;
-  /** Its first placing frames the drawing: an opened project is shown whole. */
-  frameDrawing: boolean;
-  /** The sheets' extent the Sheets camera was last fitted to: a new one frames again. */
-  sheetsFramed: string | null;
 }
 
 /**

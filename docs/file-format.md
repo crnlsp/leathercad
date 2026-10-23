@@ -438,23 +438,25 @@ size — belongs in preferences.
 
 *As built in 5.3b.* See [the crash-recovery design](superpowers/specs/2026-09-23-crash-recovery-design.md).
 
-- **What and when.** While the project has unsaved changes, it is written as an ordinary `.lcp` at
-  most once a minute. It is never written in the middle of a drag, and never again until it
-  changes.
-- **Where.** `stateDirectory()/recovery/<pid>-<start>.lcp`: one file per session, never beside
-  the project, and never under a project's name. Two running copies of the app never touch each
-  other's file.
+- **What and when.** While a tab's project has unsaved changes, it is written as an ordinary
+  `.lcp` at most once a minute — every such tab, in front or not (8.13). It is never written in the
+  middle of a drag, and never again until it changes.
+- **Where.** `stateDirectory()/recovery/<pid>-<start>-<tab>.lcp`: one file per tab of a session,
+  the tab's ULID naming it, never beside the project, and never under a project's name. Two
+  running copies of the app never touch each other's file. 1.5 wrote one per session,
+  `<pid>-<start>.lcp`; such a copy is still found and offered.
 - **How.** Every write goes through a temporary file and a `rename()` over the target. `rename`
   within a filesystem is atomic, so a crash mid-write leaves the previous copy whole. **The same
   applies to normal saves**: never write in place over the user's project.
 - **On startup.** A copy whose process is no longer running belongs to a session that did not end
-  cleanly, and the newest one that loads is offered.
+  cleanly. Each that loads is offered, newest first, one after another, each into a tab of its
+  own.
   - *Recover* opens it **untitled and unsaved**, so it can never be saved over the file it came
     from.
   - *Not now* keeps it until the next clean exit.
   - A copy that does not load is renamed `.corrupt` and never offered again.
-- **Cleanup.** The copy is deleted when the project is clean again (saved, new or opened) and at a
-  clean exit. A renderer crash keeps it through the quit that follows.
+- **Cleanup.** A tab's copy is deleted when its project is clean again (saved or reloaded), when
+  the tab is closed, and at a clean exit. A renderer crash keeps it through the quit that follows.
   - **The invariant:** saving never leaves a stale copy that a later start would offer as newer
     unsaved work.
   - This session's writes and clears run in the order they were asked, so a save that lands while a
