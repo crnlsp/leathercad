@@ -2,7 +2,6 @@ import { formatEditable } from '@leathercad/core';
 import { setPageSetup, type DocumentStore } from '@leathercad/document';
 import { PAPER_SIZES, type Orientation, type PaperName, type Project } from '@leathercad/domain';
 import { contentAreaMm, type SheetPlan } from '@leathercad/export';
-import { ChevronDown, File } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -117,9 +116,9 @@ export function PaperButton({
           aria-controls={open ? `${ids}popover` : undefined}
           onClick={() => setOpen((was) => !was)}
         >
-          <Icon of={File} />
+          <Icon of="paper" />
           <span className="paper-face">{face}</span>
-          <Icon of={ChevronDown} size={12} />
+          <Icon of="chevron-down" size={12} />
         </button>
       </Tooltip>
       {open && (

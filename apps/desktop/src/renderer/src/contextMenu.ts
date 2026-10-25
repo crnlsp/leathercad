@@ -11,7 +11,6 @@ import {
   type Selection,
 } from '@leathercad/document';
 import type { FeatureId, PartId, Problem, Project } from '@leathercad/domain';
-import { Copy, Eye, EyeOff, Lock, LockOpen, Trash2 } from 'lucide-react';
 
 import type { I18n, Translate } from '../../shared/i18n.js';
 import { FLIP_ICON } from './icons/arrange.js';
@@ -90,7 +89,7 @@ export function selectionMenu(
       kind: 'item',
       id: 'context-duplicate-part',
       label: t('actions.duplicatePart'),
-      icon: Copy,
+      icon: 'duplicate',
       refusal:
         parts.length === 1 ? undefined : t('contextMenu.spansParts', { count: parts.length }),
       onChoose: () => actions.duplicatePart(parts[0]!.id),
@@ -103,7 +102,7 @@ export function selectionMenu(
       kind: 'item',
       id: 'context-lock',
       label: allLocked ? t('actions.unlock') : t('actions.lock'),
-      icon: allLocked ? LockOpen : Lock,
+      icon: allLocked ? 'unlocked' : 'locked',
       refusal: empty,
       onChoose: () => actions.dispatch(setFeatureLocked(ids, !allLocked)),
     },
@@ -111,7 +110,7 @@ export function selectionMenu(
       kind: 'item',
       id: 'context-visible',
       label: allHidden ? t('actions.show') : t('actions.hide'),
-      icon: allHidden ? Eye : EyeOff,
+      icon: allHidden ? 'visible' : 'hidden',
       // The print leaves out what the board hides: said before, not found
       // on the paper.
       ...(allHidden ? {} : { note: t('contextMenu.hideNote') }),
@@ -123,7 +122,7 @@ export function selectionMenu(
       kind: 'item',
       id: 'context-delete',
       label: wholeParts ? t('actions.deletePart') : t('actions.delete'),
-      icon: Trash2,
+      icon: 'delete',
       danger: true,
       refusal: reason(deleteRefusal(project, ids), t),
       onChoose: () => (wholeParts ? actions.deletePart(parts[0]!.id) : actions.deleteFeatures(ids)),

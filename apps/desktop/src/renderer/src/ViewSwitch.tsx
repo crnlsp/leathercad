@@ -1,10 +1,10 @@
 import type { Project } from '@leathercad/domain';
-import { Files, PenTool, type LucideIcon } from 'lucide-react';
 import { useRef, type KeyboardEvent } from 'react';
 
 import type { CanvasView } from './CanvasHost.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import type { IconName } from './icons/names.js';
 import { pressOf } from './PanelFold.js';
 import { describeSheets, describeTapedAcross } from './sheetWords.js';
 import { printStatusFor, sheetPlanFor } from './sheets.js';
@@ -45,15 +45,15 @@ export function ViewSwitch({
     label: string;
     name?: string;
     tip: string;
-    icon: LucideIcon;
+    icon: IconName;
   }[] = [
-    { id: 'design', label: t('view.design'), tip: t('view.designTooltip'), icon: PenTool },
+    { id: 'design', label: t('view.design'), tip: t('view.designTooltip'), icon: 'view-design' },
     {
       id: 'sheets',
       label: t('view.sheets'),
       name: t('view.sheetsNamed', { count: sheets }),
       tip: t('view.sheetsTooltip'),
-      icon: Files,
+      icon: 'view-sheets',
     },
   ];
 

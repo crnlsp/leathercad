@@ -1,5 +1,4 @@
 import type { UpdateStatus } from '@leathercad/platform';
-import { ArrowUp, Check, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -69,7 +68,7 @@ export function VersionButton({
             check();
           }}
         >
-          {updates.state === 'available' ? <Icon of={ArrowUp} size={12} /> : null}
+          {updates.state === 'available' ? <Icon of="update" size={12} /> : null}
           <span>
             v<span data-testid="app-version">{version ?? '…'}</span>
           </span>
@@ -81,9 +80,9 @@ export function VersionButton({
           {checking ? (
             <Spinner size={12} />
           ) : updates.state === 'current' ? (
-            <Icon of={Check} size={12} />
+            <Icon of="check" size={12} />
           ) : updates.state === 'failed' ? (
-            <Icon of={TriangleAlert} size={12} />
+            <Icon of="warning" size={12} />
           ) : null}
         </button>
       </Tooltip>

@@ -3635,6 +3635,13 @@ button.problem-row,
   flex: none;
 }
 
+/* An icon's strokes are 1.5 px at any size (§10.1), so one drawn at 12 px is
+   no fainter than its 16 px neighbour, and a rail tool at 20 px no heavier.
+   vector-effect is not inherited: it is set on the shapes. */
+.icon :is(path, circle, rect, ellipse) {
+  vector-effect: non-scaling-stroke;
+}
+
 .tool .icon {
   color: var(--text-dim);
 }

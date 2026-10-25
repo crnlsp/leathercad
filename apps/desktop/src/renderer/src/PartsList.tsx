@@ -10,18 +10,6 @@ import {
 import type { Badges, Feature, Part, PartId, Project } from '@leathercad/domain';
 
 import {
-  ChevronDown,
-  ChevronRight,
-  Copy,
-  Ellipsis,
-  Eye,
-  EyeOff,
-  Lock,
-  LockOpen,
-  PrinterX,
-  Trash2,
-} from 'lucide-react';
-import {
   useEffect,
   useId,
   useRef,
@@ -463,7 +451,7 @@ function PieceRow({
           }}
         >
           {treeProps['aria-expanded'] !== undefined && (
-            <Icon of={treeProps['aria-expanded'] ? ChevronDown : ChevronRight} size={14} />
+            <Icon of={treeProps['aria-expanded'] ? 'chevron-down' : 'chevron-right'} size={14} />
           )}
         </span>
         <PieceThumbnail project={project} part={part} />
@@ -488,7 +476,7 @@ function PieceRow({
               on={visible}
               onLabel={t('parts.hidePart')}
               offLabel={t('parts.showPart')}
-              glyph={<Icon of={visible ? Eye : EyeOff} />}
+              glyph={<Icon of={visible ? 'visible' : 'hidden'} />}
               keys="toggleVisible"
               persists={!visible}
               onToggle={() => store.dispatch(setPartVisible(part.id, !visible))}
@@ -498,7 +486,7 @@ function PieceRow({
           {notPrinted !== null && (
             <Tooltip text={notPrinted}>
               <span className="row-mark not-printed" data-testid={`part-not-printed-${part.id}`}>
-                <Icon of={PrinterX} size={14} />
+                <Icon of="not-printed" size={14} />
               </span>
             </Tooltip>
           )}
@@ -560,7 +548,7 @@ function PartMenu({
             kind: 'item',
             id: `duplicate-part-${part.id}`,
             label: t('actions.duplicate'),
-            icon: Copy,
+            icon: 'duplicate',
             note: t('parts.duplicateNote'),
             onChoose: () => onDuplicatePart(part.id),
           },
@@ -570,7 +558,7 @@ function PartMenu({
                   kind: 'item' as const,
                   id: `delete-part-${part.id}`,
                   label: t('actions.deletePart'),
-                  icon: Trash2,
+                  icon: 'delete' as const,
                   danger: true,
                   onChoose: () => onRemovePart(part.id),
                 },
@@ -578,7 +566,7 @@ function PartMenu({
             : []),
         ]}
       >
-        <Icon of={Ellipsis} />
+        <Icon of="more" />
       </MenuButton>
     </span>
   );
@@ -658,7 +646,7 @@ function FeatureRow({
               on={feature.locked}
               onLabel={t('actions.unlock')}
               offLabel={t('actions.lock')}
-              glyph={<Icon of={feature.locked ? Lock : LockOpen} />}
+              glyph={<Icon of={feature.locked ? 'locked' : 'unlocked'} />}
               persists={feature.locked}
               onToggle={() => store.dispatch(setFeatureLocked([feature.id], !feature.locked))}
             />
@@ -667,7 +655,7 @@ function FeatureRow({
               on={feature.visible}
               onLabel={t('actions.hide')}
               offLabel={t('actions.show')}
-              glyph={<Icon of={feature.visible ? Eye : EyeOff} />}
+              glyph={<Icon of={feature.visible ? 'visible' : 'hidden'} />}
               keys="toggleVisible"
               persists={!feature.visible}
               onToggle={() => store.dispatch(setFeatureVisible([feature.id], !feature.visible))}
