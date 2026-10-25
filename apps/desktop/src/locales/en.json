@@ -686,6 +686,12 @@
     },
     "area": "Area",
     "arrange": "Arrange",
+    "convertToPath": "Convert to drawn path",
+    "convertToPathNote": {
+      "circle": "It stops being a circle: its centre and diameter can no longer be typed, but it can be stretched into an oval and its points moved. A stitch line cannot follow an oval yet.",
+      "arc": "It stops being an arc: its radius and sweep can no longer be typed, but it can be stretched unevenly and its points moved.",
+      "rect": "It stops being a rectangle: its width, height and corners can no longer be typed, but it can be sheared and its points moved. A stitch line cannot follow rounded corners stretched unevenly yet."
+    },
     "cut": "Cut",
     "cutSuffix": "off",
     "drawing": "Rectangle being drawn",
@@ -906,7 +912,15 @@
     },
     "NOT_A_DRAWN_PATH": {
       "title": "No points to edit",
-      "description": "{{featureName}} is not a drawn path, so it has no points of its own. A shape is changed by its measurements, and a derived feature follows what it was made from."
+      "description": "{{featureName}} is not a drawn path, so it has no points of its own. A shape is changed by its measurements, unless it is converted to a drawn path in Properties; a derived feature follows what it was made from."
+    },
+    "NOT_A_SHAPE": {
+      "title": "Already drawn",
+      "description": "{{featureName}} is not a shape, so there is nothing to convert: a drawn path already has points, and a derived feature follows what it was made from."
+    },
+    "HOLE_STAYS_ROUND": {
+      "title": "A punched hole stays round",
+      "description": "{{featureName}} is punched, and a punch is round, so it stays a circle. For an oval opening, draw a cut-out."
     },
     "POINT_EDIT_DEGENERATE": {
       "title": "Too few points",
@@ -938,11 +952,11 @@
     },
     "WOULD_BECOME_ELLIPSE": {
       "title": "Would become an ellipse",
-      "description": "A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this editor cannot represent. Scale it evenly instead."
+      "description": "A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this editor cannot represent. Scale it evenly, or convert it to a drawn path in Properties first."
     },
     "WOULD_SHEAR": {
       "title": "Would shear",
-      "description": "A turned rectangle cannot be stretched along one axis — it would shear, and its corners would stop being square. Rotate it back to 0°, or scale it evenly."
+      "description": "A turned rectangle cannot be stretched along one axis — it would shear, and its corners would stop being square. Rotate it back to 0°, scale it evenly, or convert it to a drawn path in Properties first."
     },
     "TEXT_WOULD_DISTORT": {
       "title": "Would distort the letters",
@@ -1155,6 +1169,7 @@
     "change-hardware-type": "Change hardware type",
     "change-marking-purpose": "Change marking purpose",
     "change-paper": "Change paper",
+    "convert-to-path": "Convert to drawn path",
     "delete": "Delete {{what}}",
     "deleteKeepFrozen": "Delete {{what}}, keep {{frozen}} frozen",
     "deleteWithDependents_one": "Delete {{what}} and {{count}} dependent",
