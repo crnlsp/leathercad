@@ -426,68 +426,17 @@ written: before they did, they tested only what had already shipped. Two consequ
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
 machine that recorded it; the committed one is from the maintainer's.
 
+Benchmark discovery is pinned: each package that has benchmarks sets
+`benchmark.include: ['src/**/*.bench.ts']`, because `tsc --build` emits `dist/src/*.bench.js` and
+Vitest's default glob would run every case twice (30, not 15). `apps/desktop/src/bench-discovery.test.ts` fails if a
+package drops that line. Vitest warns that the benchmarks "accessed module export getters too many
+times": the benchmarks import source through Vitest's module runner, whose export getters add
+overhead. The committed baselines were recorded the same way, so a comparison is like for like; the
+absolute numbers are not what a bundled production build costs, and the warning is left visible
+rather than suppressed. `perf.test.ts` asserts upper ceilings only, never that something is slow.
+
 The [performance backlog](performance-backlog.md) records the 2026-10-25 audit's environment,
-workloads and measurements, plus implementation acceptance criteria. Start with
-[PERF-017](performance-backlog.md#perf-017) before interpreting benchmark comparisons: the audit
-found duplicate source/build discovery and timing-wrapper overhead. Its
+workloads and measurements, plus implementation acceptance criteria. Its
 [verification plan](performance-backlog.md#verification-and-evidence) distinguishes reliable CI
-checks from controlled-machine trends. These are open tasks, not changes already made to the suite.
-
-## 10. Test-driven development, concretely
-
-For `geometry` and `domain`, tests come first. Not as ritual — because in this domain the test *is*
-the specification, and writing it first is how the specification gets pinned down before an
-implementation quietly redefines it.
-
-The loop for a new geometry function:
-
-1. Write the signature and a doc comment stating the contract, including behaviour on degenerate
-   input.
-2. Write the **property** tests. What must be true of every output?
-3. Write the specific **edge cases** from §4 that apply.
-4. Implement.
-5. Add a **golden** fixture for a representative case, and review the committed output by hand once
-   (§11).
-6. Run the `geometry-review` skill's checklist.
-
-For UI work, the order relaxes: write the command and its test first, then wire the interface to it.
-The command is the part with a contract; the panel is not.
-
-## 11. Golden fixtures
-
-Properties say what must hold of every answer. A golden says what the answer *was*, so that a change
-which moves a stitch hole is seen, read and explained instead of shipped. They exist for the two
-algorithms where silent drift costs leather: offsetting, which makes every derived stitch line, and
-hole distribution.
-
-`packages/geometry/src/golden.test.ts` builds a corpus of real pieces — a wallet panel, a panel
-whose 3 mm corners an inset consumes, a strap with round ends, the three sewn sides of a card
-pocket, the pocket with a V thumb notch and with the sample project's scooped one, a stitch line
-drawn by hand with its seam allowance, and a pouch front of arcs and a cubic — sets each stitch line
-3 and 4 mm in from the edge, or its allowance 3 and 4 mm out, and places holes along it with a
-3.0 mm and a 3.85 mm iron, `fit-whole` as the app does. Each piece is one JSON file in
-`packages/geometry/__golden__/`, compared with Vitest's own `toMatchFileSnapshot`: no dependency.
-
-**Reading one.** Each stitch line opens with what a reviewer looks at first: its `lengthMm`, then
-per iron the number of `holes` and the `spacingMm` achieved (pitch is nominal, spacing achieved —
-[glossary](glossary.md)). Then come its segments, and every hole's position, one per line, so a
-moved hole is a one-line diff. `[]` is an offset that gave nothing back: the strap inset by its
-half-width collapses, and the scooped pocket's inset would trim an arc against a line at its tips,
-which Tier 1 does not do ([geometry.md](geometry.md) §6.2). `"refused"` is an offset that threw:
-a cubic has no exact one.
-
-**No float noise.** Every number is millimetres on the model's 0.1 µm grid (`quantise`). An arc's
-sweep is written as its length along the arc, signed like the sweep, so even that is a length. A
-difference in the last bits of a double never reaches a file; a hole that moves by more than half a
-grid step does.
-
-**Updating.** A changed golden is a behaviour change. When it is meant, `pnpm test golden -u`
-rewrites the files. **Look at every changed golden before committing it**, and say in the commit
-message what moved and why ([geometry.md](geometry.md) §12). An unexplained golden diff is a silent
-behaviour change, and the reason this layer exists. A run writes a golden that is missing; CI, with
-`CI` set, never writes one, so a golden left uncommitted fails there. `.gitattributes` keeps the
-files' `\n` line endings on a Windows checkout, so every platform compares the same bytes.
-
-What they do not cover: the domain's corner policy. `hole-at-corner`, the default, splits a stitch
-line at its sharp corners and distributes each run on its own; on a line with no sharp corners it
-is the single run these goldens record. Its own tests are in `packages/domain/src/stitch.test.ts`.
+checks from controlled-machine trends. The rest of [PERF-017](performance-backlog.md#perf-017)
+is still open.
