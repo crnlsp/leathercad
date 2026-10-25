@@ -382,7 +382,9 @@ This split is what keeps dragging at 60 fps with 3 000 holes on screen: a drag r
 overlay, which holds a handful of shapes.
 
 All drawing is scheduled through a single `requestAnimationFrame` loop driven by dirty flags.
-Nothing draws synchronously from an event handler.
+Nothing draws synchronously from an event handler. Two things paint at once instead: sizing the
+canvas, and a change of view (Design or Sheets). A hidden or unshown window runs no animation
+frame, and until one came it would show a blank board, or the other view's zoom.
 
 DPR handling: back the canvas at `cssSize * dpr`. Every screen-constant size — a stroke, a halo, a
 dash in pixels, a glyph, a label, the grid and the rulers — is in **CSS pixels**, and each screen

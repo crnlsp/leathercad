@@ -531,15 +531,6 @@ export function CanvasHost({
   // Any change to the document or selection means a repaint.
   useEffect(() => store.subscribe(invalidate), [store, invalidate]);
 
-  // Changing view: nothing the tool had under way carries across, and the
-  // view repaints on its own camera.
-  useEffect(() => {
-    managerRef.current?.pointerLeave();
-    hoveredRef.current = null;
-    hoveredPartRef.current = null;
-    invalidate();
-  }, [view, invalidate]);
-
   // The first frame can be painted before the vendored typeface has loaded,
   // which would leave the board's words in a fallback face. Repaint once every
   // weight the canvas sets is here: Regular, and the Medium and SemiBold of the
@@ -759,6 +750,18 @@ export function CanvasHost({
     resize();
     return () => observer.disconnect();
   }, [paint]);
+
+  // Changing view: nothing the tool had under way carries across, and the
+  // view repaints on its own camera at once, as a resize does. The zoom
+  // control says the camera painted last, so waiting for an animation frame —
+  // which a hidden window never runs — left Design saying the Sheets' zoom.
+  useEffect(() => {
+    managerRef.current?.pointerLeave();
+    hoveredRef.current = null;
+    hoveredPartRef.current = null;
+    dirtyRef.current = false;
+    paint();
+  }, [view, paint]);
 
   useEffect(() => {
     onStatus?.({

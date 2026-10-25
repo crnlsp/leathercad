@@ -233,3 +233,37 @@ test('the same control drives the Sheets view, where Fit selection says why it c
     await closeApp(app);
   }
 });
+
+test('a change of view says its own zoom at once, with no animation frame to paint it', async () => {
+  const { app, window } = await openApp();
+  try {
+    const level = window.getByTestId('zoom-level');
+    await window.keyboard.press('Control+0');
+    await expect(level).toHaveText('100 %');
+    await window.keyboard.press('Control+2');
+    await expect.poll(() => percent(window)).not.toBe(100);
+    const sheets = (await level.textContent()) ?? '';
+
+    // A window that is hidden, or unshown under xvfb, runs no animation frame.
+    // The control showed the other view's zoom until one came, so a project
+    // opened from Sheets read as unframed in Design (open-framed.spec.ts).
+    // Hiding the window does not stop frames everywhere, so the frame clock
+    // stops instead: no new frame is given, and the one asked for already
+    // runs the board's last tick before this resolves.
+    await window.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          const frame = globalThis.requestAnimationFrame.bind(globalThis);
+          globalThis.requestAnimationFrame = () => 0;
+          frame(() => done());
+        }),
+    );
+
+    await window.keyboard.press('Control+1');
+    await expect(level).toHaveText('100 %');
+    await window.keyboard.press('Control+2');
+    await expect(level).toHaveText(sheets);
+  } finally {
+    await closeApp(app);
+  }
+});

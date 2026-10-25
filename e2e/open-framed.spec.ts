@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * A project that opens is shown whole. The camera used to stay where it was,
@@ -55,15 +56,29 @@ test('an opened project is framed: Fit then changes nothing', async () => {
 
 test('a project opened from the Sheets view is framed in Design too', async () => {
   const { app, window, before } = await launch();
+  const zoom = window.getByTestId('zoom-control');
   try {
+    // How Design frames the sample when it is opened there.
+    await window.getByTestId('open-sample').click();
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expect(zoom).not.toHaveText(before);
+    const framed = await zoomOf(window);
+
+    // A new project leaves the camera where it was; true size moves it off.
+    await fromProjectMenu(window, 'new');
+    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await window.keyboard.press('Control+0');
+    await expect(window.getByTestId('zoom-level')).toHaveText('100 %');
+
     await window.getByTestId('view-sheets').click();
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-open-sample').click();
     await expect(window.getByTestId('part-count')).toHaveText('3');
 
+    // Waited for, not read once the zoom has changed: for a moment after the
+    // switch the control can still say the Sheets' zoom, which has changed too.
     await window.getByTestId('view-design').click();
-    await expect(window.getByTestId('zoom-control')).not.toHaveText(before);
-    await expectFitted(window);
+    await expect(zoom).toHaveText(framed);
   } finally {
     await closeApp(app);
   }
