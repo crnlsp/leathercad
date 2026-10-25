@@ -251,6 +251,11 @@ export interface ProblemFacts {
 
   // ——— Design rules (DR): legal, and probably wrong for leather ———
   readonly CONTOUR_SELF_INTERSECTS: About & { readonly crossings: number };
+  readonly HOLES_OVERLAP: About & {
+    /** The nearest two neighbours, centre to centre. */
+    readonly spacingMm: Mm;
+    readonly diameterMm: Mm;
+  };
   readonly HOLE_SPACING_DEVIATION: About & { readonly achievedMm: Mm; readonly pitchMm: Mm };
   readonly HOLE_SPACING_UNEVEN: About & { readonly narrowestMm: Mm; readonly widestMm: Mm };
   readonly HOLE_COUNT_TOO_LOW: About & { readonly count: number };

@@ -1029,6 +1029,10 @@
       "description_one": "{{featureName}} crosses itself once, so where to cut is ambiguous. Redraw it so the line never crosses.",
       "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous. Redraw it so the line never crosses."
     },
+    "HOLES_OVERLAP": {
+      "title": "Holes run into each other",
+      "description": "{{featureName}} has holes {{spacing}} apart that are {{diameter}} across, so no leather is left between them and they cut as one slot. Widen the pitch or use a smaller punch."
+    },
     "HOLE_SPACING_DEVIATION": {
       "title": "Spacing differs from the iron",
       "description": "The holes are {{achieved}} apart, but the iron’s pitch is {{pitch}}. Change the pitch or the edge margin to bring them closer."

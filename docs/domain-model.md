@@ -232,8 +232,11 @@ What it decided, and why:
 - The pitch has the hole set's floor, `MIN_PITCH_MM`, for its reason; a radius that is not positive
   punches nothing and fails with `PARAMETER_INVALID`.
 
-**Not checked:** holes that overlap because the pitch is under the diameter. That may be meant — a
-slot punched as a run of holes — and nothing asks for the rule yet.
+- **Holes that run into each other** (DR3): `HOLES_OVERLAP` warns when neighbouring holes are no
+  more than a diameter apart, centre to centre, so they cut as one slot rather than the holes drawn.
+  A warning and not a refusal, because a slot punched as a run of holes is a real technique. Only
+  neighbours are compared: holes that meet across a tight bend without being neighbours are not
+  found.
 
 ### 3.7 `Measurement` — linear built 4.10a
 
@@ -878,6 +881,7 @@ The diagnostics themselves:
 | `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33; a row's holes by theirs, 4.14 |
 | `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33 |
 | `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | built 4.3a |
+| `HOLES_OVERLAP` | warning (a row's neighbouring holes no more than a diameter apart) | rule | DR3 | built 4.14 |
 | `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | built 4.3a |
 | `HOLE_SPACING_UNEVEN` | info (runs differing by above 5 % of the pitch) | rule | DR4 | built 4.12a |
 | `HOLE_SPACING_DEVIATION` | warning (above 25 % from the iron) | rule | DR4 | built 4.12a |

@@ -113,8 +113,9 @@ Left from 1.3's *The window*: nothing says a new release exists.
   the pitch and the diameter and reads the count and the spacing achieved; a new row is 25 mm apart
   and 4 mm across, the 4.7 design's belt holes and the Hardware tool's first punch. Only a marking
   line hosts one: a stitch line's holes are a hole set, and holes along an outline or a fold would
-  be cut through it. *Exactly this pitch*, a corner policy and a check for holes that overlap are
-  left until someone asks. Format 11 holds it.
+  be cut through it. Holes no more than a diameter apart are warned about (`HOLES_OVERLAP`): they
+  cut as one slot. *Exactly this pitch* and a corner policy are left until someone asks. Format 11
+  holds it.
   [Domain model §3.6a](domain-model.md#36a-holerow--built-414).
 
 ### Output

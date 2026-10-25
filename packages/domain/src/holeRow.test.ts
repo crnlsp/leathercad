@@ -440,3 +440,66 @@ describe('a row of holes on the leather (DR2, by its rim as Q33 decided)', () =>
     expect(found).toEqual([]);
   });
 });
+
+describe('a row whose holes run into each other (DR3)', () => {
+  /** A row along 160 mm of a 200 × 40 strap, down its middle. */
+  const middleRow = (pitchMm: number, radiusMm: number) =>
+    validate(
+      evaluate(
+        project([
+          panel(),
+          marking(segmentFrom({ x: 20, y: 20 }, { x: 180, y: 20 })),
+          row('mark-1', pitchMm, radiusMm),
+        ]),
+      ),
+    ).filter((d) => d.featureId === 'row-1');
+
+  it('warns when the pitch is under the diameter, naming every hole that touches another', () => {
+    // 4 mm punches 3.2 mm apart: 51 holes, each cutting into the next.
+    const [found] = middleRow(3.2, 2);
+
+    expect(found).toMatchObject({
+      severity: 'warning',
+      problem: { code: 'HOLES_OVERLAP', facts: { diameterMm: 4 } },
+      location: { kind: 'points' },
+    });
+    expect(found?.problem.code === 'HOLES_OVERLAP' && found.problem.facts.spacingMm).toBeCloseTo(
+      3.2,
+      6,
+    );
+    expect(found?.location?.kind === 'points' && found.location.points).toHaveLength(51);
+  });
+
+  it('is reported exactly when neighbouring holes are no further apart than a diameter', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: MIN_PITCH_MM, max: 30, noNaN: true }),
+        fc.double({ min: 0.5, max: 5, noNaN: true }),
+        (pitchMm, radiusMm) => {
+          const line = segmentFrom({ x: 20, y: 20 }, { x: 180, y: 20 });
+          const spacingMm = rowOfHoles(line, {
+            type: 'hole-row',
+            pitchMm,
+            radiusMm,
+          }).achievedPitchMm;
+          // Away from the threshold, where the quantum decides.
+          fc.pre(Math.abs(spacingMm - 2 * radiusMm) > 1e-3);
+
+          const overlaps = middleRow(pitchMm, radiusMm).some(
+            (d) => d.problem.code === 'HOLES_OVERLAP',
+          );
+          expect(overlaps).toBe(spacingMm < 2 * radiusMm);
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+
+  it('counts holes that only touch: no leather is left between them', () => {
+    expect(middleRow(4, 2).map((d) => d.problem.code)).toEqual(['HOLES_OVERLAP']);
+  });
+
+  it('is quiet with any leather between the holes', () => {
+    expect(middleRow(4.1, 2)).toEqual([]);
+  });
+});

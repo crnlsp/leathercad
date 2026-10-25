@@ -5,6 +5,7 @@ import {
   selfIntersections,
   type Intersection,
   type Path,
+  Vec2Ops,
   type Vec2,
 } from '@leathercad/geometry';
 import { missingGlyphs } from '@leathercad/typography';
@@ -198,6 +199,26 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
         }
       }
 
+      // A row's holes are circles; a mirrored row's are too, so this asks the
+      // resolved holes rather than the op.
+      if (entry.holes?.radiusMm !== undefined) {
+        const overlap = overlappingHoles(entry.holes, entry.holes.radiusMm, entry.path.closed);
+        if (overlap !== null) {
+          found.push(
+            placed(
+              problem('HOLES_OVERLAP', {
+                ...about,
+                spacingMm: overlap.spacingMm,
+                diameterMm: 2 * entry.holes.radiusMm,
+              }),
+              part.id,
+              feature.id,
+              { kind: 'points', points: overlap.points },
+            ),
+          );
+        }
+      }
+
       const source = feature.source;
       if (
         entry.holes !== undefined &&
@@ -250,6 +271,39 @@ function holeProblems(
   }
 
   return found;
+}
+
+/**
+ * The holes of a row that cut into a neighbour, and the nearest spacing; null
+ * when none do.
+ *
+ * Two punches nearer than a diameter leave no leather between them, so the
+ * cut is one slot rather than the holes drawn. A warning, not a refusal: a
+ * slot punched as a run of holes is a real technique. Touching within a
+ * storage quantum counts, since a bridge that thin is no bridge.
+ *
+ * Neighbours only, centre to centre in a straight line, the pair across a
+ * closed line's join included. ponytail: holes that are not neighbours but
+ * meet across a tight bend are not found; an all-pairs check if one is drawn.
+ */
+function overlappingHoles(
+  holes: StitchHoles,
+  radiusMm: Mm,
+  closed: boolean,
+): { spacingMm: Mm; points: readonly Vec2[] } | null {
+  const points = holes.holes.map((hole) => hole.point);
+  const pairs = closed && points.length > 2 ? points.length : points.length - 1;
+  const touching = new Set<number>();
+  let spacingMm = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < pairs; i++) {
+    const j = (i + 1) % points.length;
+    const apartMm = Vec2Ops.dist(points[i]!, points[j]!);
+    if (apartMm - 2 * radiusMm >= QUANTUM_MM) continue;
+    spacingMm = Math.min(spacingMm, apartMm);
+    touching.add(i).add(j);
+  }
+  if (!Number.isFinite(spacingMm)) return null;
+  return { spacingMm, points: [...touching].sort((a, b) => a - b).map((i) => points[i]!) };
 }
 
 /**
