@@ -21,7 +21,6 @@ import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import type { SizeDraft } from '@leathercad/editor';
 import { PathOps } from '@leathercad/geometry';
 import { followRefusal, type ResolvedFeature } from '@leathercad/domain';
-import { Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -683,7 +682,7 @@ function DeleteFooter({
         reason={reason}
         onClick={onClick}
       >
-        <Icon of={Trash2} />
+        <Icon of="delete" />
         {children}
         <span className="footer-key" aria-hidden>
           <KeyCap command="delete" />

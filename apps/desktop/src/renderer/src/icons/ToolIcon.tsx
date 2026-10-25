@@ -1,4 +1,3 @@
-import { MousePointer2, Type } from 'lucide-react';
 import type { ReactElement } from 'react';
 
 import { Icon } from './Icon.js';
@@ -12,7 +11,7 @@ function Node({ x, y }: { x: number; y: number }) {
 }
 
 /**
- * The geometry tools, drawn in Lucide's visual language (ADR 0017) — 1.5 px
+ * The geometry tools, drawn in the hand of the app's icons (ADR 0021) — a 1.5
  * stroke, round caps, the current colour — and each showing its
  * **construction nodes**: the corners, the centre and rim, the arc's three
  * points. That is the drafting convention that tells *the tool* from *a
@@ -100,8 +99,8 @@ const GEOMETRY: Readonly<Record<string, ReactElement>> = {
  * current colour so the rail's state colours apply to them too.
  */
 export function ToolIcon({ toolId, size = 16 }: { toolId: string; size?: number }) {
-  if (toolId === 'select') return <Icon of={MousePointer2} size={size} />;
-  if (toolId === 'text') return <Icon of={Type} size={size} />;
+  if (toolId === 'select') return <Icon of="select" size={size} />;
+  if (toolId === 'text') return <Icon of="text" size={size} />;
   if (toolId === 'hardware') return <FeatureMark mark="hardware-hole" size={size} tone="current" />;
   if (toolId === 'measure') return <FeatureMark mark="measurement" size={size} tone="current" />;
 

@@ -2,7 +2,6 @@ import { useI18n } from './i18n.js';
 import { KeyCap, useKeysInSentences } from './keyCaps.js';
 import { TOOL_GROUPS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Icon } from './icons/Icon.js';
 import { ToolIcon } from './icons/ToolIcon.js';
 
@@ -100,7 +99,7 @@ export function ToolPalette({
             aria-label={toggle}
             onClick={onToggleCollapsed}
           >
-            <Icon of={collapsed ? ChevronsRight : ChevronsLeft} />
+            <Icon of={collapsed ? 'chevrons-right' : 'chevrons-left'} />
           </button>
         </Tooltip>
       )}
