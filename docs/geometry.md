@@ -438,7 +438,7 @@ along three sides of a pocket is an open offset, and it is the most common seam 
 It rejects, rather than guesses at:
 
 - **cubics**, which have no exact offset — the offset of a cubic is not a cubic. No drawing tool
-  makes one today, but a curve editor and an SVG import would, and so may a circle squashed after
+  makes one today, but a curve editor and an SVG import would, and so does a circle squashed after
   3.12 converts it to a drawn path. Stitching along one is roadmap 9.19: arcs fitted to the cubic
   within the flattening tolerance, or Tier 2;
 - **overlaps where either side is an arc**, which the line-line intersection this tier uses cannot
