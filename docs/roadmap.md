@@ -101,7 +101,22 @@ Left from 1.3's *The window*: nothing says a new release exists.
 - ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
-- ☐ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
+- ✅ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
+  **Done** (2026-10-25): a selected marking line offers *Add a row of holes* in Properties, and the
+  row is a feature of its own, `HoleRow`, derived from that line as a hole set is from its stitch
+  line — so it follows the line when it is edited, mirrors with its piece, goes with the line when
+  the line is deleted, and is never stored as holes. Holes are placed as a hole set's defaults place
+  them: one on each end of an open line, the rest evenly between, one on every corner, and a closed
+  line divided with no doubled hole. Each is a round hole at a true diameter, in the `hardware` role:
+  drawn and printed at its size, cut by a laser export, and kept on the leather by its rim (Q33's
+  rule). The spacing rules for stitching do not apply — a row is punched, not sewn. Properties edits
+  the pitch and the diameter and reads the count and the spacing achieved; a new row is 25 mm apart
+  and 4 mm across, the 4.7 design's belt holes and the Hardware tool's first punch. Only a marking
+  line hosts one: a stitch line's holes are a hole set, and holes along an outline or a fold would
+  be cut through it. Holes no more than a diameter apart are warned about (`HOLES_OVERLAP`): they
+  cut as one slot. *Exactly this pitch* and a corner policy are left until someone asks. Format 11
+  holds it.
+  [Domain model §3.6a](domain-model.md#36a-holerow--built-414).
 
 ### Output
 

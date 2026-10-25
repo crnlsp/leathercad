@@ -5,7 +5,7 @@
 [Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md). Each section
 says which parts are **built** or **later**; a later part names its roadmap item, which is where its
 status lives.
-**Last updated:** 2026-10-17
+**Last updated:** 2026-10-25
 
 ---
 
@@ -42,6 +42,7 @@ Project                                     built
                ├── FoldLine                  built
                ├── MarkingLine               built
                ├── HardwareHole              built
+               ├── HoleRow                   built 4.14
                ├── Measurement               designed, 4.10 — an annotation
                └── TextLabel                 designed, 4.11 — an annotation
 ```
@@ -188,7 +189,54 @@ separately.
 
 **Later:** `hardwareRefId`, a link into the hardware library (roadmap 9.3), and a placement measured
 from an edge, as a derivation (9.24). The rules that keep a hole on the leather read a hardware
-hole's centre and not its rim, which misses a hole that breaks the edge (Q33).
+hole's rim since Q33. Several holes in a row are not this feature: they are a `HoleRow` (§3.6a).
+
+### 3.6a `HoleRow` — built, 4.14
+
+```ts
+interface HoleRow extends GeometricFeature {
+  kind: 'hole-row';                   // source is always `derived` with a `hole-row` op
+}
+
+{ type: 'hole-row'; pitchMm: Mm; radiusMm: Mm }
+```
+
+Holes punched along a **marking line**: a belt's adjustment holes, rivets along a strap, lacing,
+decorative punching. The canonical hardware task the 4.7 design left out on purpose — five holes at
+25 mm is five clicks and five corrections as single holes — because it is a *set* distributed at a
+pitch, which is what a hole set already is. So it is built the way a hole set is: derived, its holes
+placed by `distributeHoles` and never stored, and gone with its line when the line is deleted (it
+has no drawn form to freeze).
+
+What it decided, and why:
+
+- **It follows a marking line, and nothing else** (§4.2). A stitch line's holes are a hole set; an
+  outline or a fold would put the holes through the edge or the crease. A marking line is what a
+  maker draws to put holes on — straight, bent, an arc, a circle — and it prints, so the row's
+  centre line is on the template.
+- **Placed as a hole set's defaults are, and only so**: `fit-whole` with a hole on every corner. An
+  open line gets a hole on each end and the rest evenly between; a closed one is divided evenly with
+  no doubled hole where it closes. *Exactly this pitch* and the corner policy are not offered: nobody
+  has asked for them, and a maker who wants five holes 25 mm apart draws a 100 mm line.
+- **Each hole is a circle of `radiusMm`**, punched at its true size like a hardware hole, so its role
+  is `hardware`: drawn at true size at every zoom, printed at its diameter rather than as a stitch
+  hole's 1 mm centre mark, and in the cutting export. The record holds a radius and the panel asks
+  for a diameter, as for a hardware hole. The resolved holes carry the radius
+  (`StitchHoles.radiusMm`), so a mirrored row — whose op is its mirror — has it too.
+- **Starts as 25 mm apart, 4 mm across**: the 4.7 design's five adjustment holes at 25 mm, and the
+  Hardware tool's first punch. A hole set's iron would overlap 4 mm holes at 3.85 mm, and a row has
+  no setting of its own; one waits until makers say what they reach for.
+- **On the leather by its rim** (DR2, as Q33 decided for a hardware hole): `OUTSIDE_PART` and
+  `HOLE_TOO_CLOSE_TO_EDGE` read each hole's circle. **DR4 does not apply**: a row is punched, not
+  sewn, so there is no iron to match and no seam to close.
+- The pitch has the hole set's floor, `MIN_PITCH_MM`, for its reason; a radius that is not positive
+  punches nothing and fails with `PARAMETER_INVALID`.
+
+- **Holes that run into each other** (DR3): `HOLES_OVERLAP` warns when neighbouring holes are no
+  more than a diameter apart, centre to centre, so they cut as one slot rather than the holes drawn.
+  A warning and not a refusal, because a slot punched as a run of holes is a real technique. Only
+  neighbours are compared: holes that meet across a tight bend without being neighbours are not
+  found.
 
 ### 3.7 `Measurement` — linear built 4.10a
 
@@ -287,6 +335,7 @@ type FeatureSource = GeometrySource | TextSource;
 type Derivation =
   | { type: 'offset'; distanceMm: Mm; side: 'inward' | 'outward'; run: Run }          // built
   | { type: 'stitch-holes'; pitchMm: Mm; mode: …; corners: …; … }                     // built
+  | { type: 'hole-row'; pitchMm: Mm; radiusMm: Mm }                                     // built 4.14
   | { type: 'mirror'; axis: { origin: Vec2; angleRad: Radians }; glideMm: Mm };       // built 4.8a
 
 type Run =
@@ -334,6 +383,7 @@ reason, and the loader refuses files that break them, naming the feature:
 | Stitch line | offset, inward | Cut contour (outer or cut-out) | Whole run or partial run |
 | Outer cut contour | offset, outward | Stitch line | Source closed; whole run only — built 4.9 |
 | Stitch hole set | stitch holes | Stitch line | |
+| Row of holes | hole row | Marking line | — built 4.14 |
 | The same kind | mirror | The same kind | A cut contour keeps its role — built 4.8a |
 
 A representative card-holder panel:
@@ -430,8 +480,8 @@ the user did not name without first showing them, and never leaves a reference d
     and records `frozenFrom`;
   - **cancel**.
 
-  Dependents with no drawn form — references and stitch hole sets — are listed as deleted either
-  way.
+  Dependents with no drawn form — references, stitch hole sets and rows of holes — are listed as
+  deleted either way.
 - **Re-pointing** keeps a relationship while replacing its source: every derived feature can be
   pointed at another compatible source (*Follows*).
 - **Parts are removed only by deleting the part.** An emptied part stays, and is reported as
@@ -459,7 +509,7 @@ How a derivation maps anchors:
 
 - an **offset** maps each source corner to the corner it produced;
 - a **mirror** maps each anchor through its transform;
-- a **hole set** exposes its stitch line's anchors.
+- a **hole set** exposes its stitch line's anchors, and a **row of holes** its marking line's.
 
 The mapping comes from the code that built the geometry, never from searching for the nearest point:
 `offsetPathTraced` reports where each input segment and corner ended up, and the domain maps through
@@ -573,7 +623,7 @@ role drives three tables.
 | `stitch-holes` | `StitchHoleSet` | dots on screen; true-size marks on paper | `stitch-holes` | optional |
 | `fold` | `FoldLine` | dash-dot, green | `fold` | no |
 | `mark` | `MarkingLine` | solid, light grey | `mark` | no |
-| `hardware` | `HardwareHole` | circle at true size, orange | `hardware` | yes |
+| `hardware` | `HardwareHole`, `HoleRow` | circle at true size, orange | `hardware` | yes |
 | `annotation` | `Measurement`, `TextLabel` | grey, thin | `annotation` | no |
 
 Export presets are role sets: **template print** (everything), **laser or CNC cut** (`cut` and
@@ -828,9 +878,10 @@ The diagnostics themselves:
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
-| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33 |
-| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware hole's rim) | rule | DR2 | built 4.3a; the rim, Q33 |
+| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33; a row's holes by theirs, 4.14 |
+| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33 |
 | `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | built 4.3a |
+| `HOLES_OVERLAP` | warning (a row's neighbouring holes no more than a diameter apart) | rule | DR3 | built 4.14 |
 | `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | built 4.3a |
 | `HOLE_SPACING_UNEVEN` | info (runs differing by above 5 % of the pitch) | rule | DR4 | built 4.12a |
 | `HOLE_SPACING_DEVIATION` | warning (above 25 % from the iron) | rule | DR4 | built 4.12a |
@@ -880,10 +931,11 @@ reuse.
 | Concept | Status | Later |
 |---|---|---|
 | `CutContour`, `StitchLine`, `StitchHoleSet`, `FoldLine`, `MarkingLine`, `HardwareHole` | Built | |
+| `HoleRow`, along a marking line | Built 4.14 | |
 | Cut-outs, drawn stitch lines, drawing modes | Built: 4.3a, 4.9 | |
 | `Measurement` (horizontal, vertical, aligned) | Built 4.10a | Radial, angular |
 | `TextLabel`, generated captions | Built: 4.11a, 4.11b | |
-| Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes` | Built | |
+| Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes`, `hole-row` | Built; `hole-row` 4.14 | |
 | Op: `mirror`, by axis and across a fold | Built: 4.8a, 4.8b | Boolean (9.5) |
 | Reference graph, explicit deletion, re-pointing | Built: 4.2b | References with 4.10 |
 | Anchors through derivations | Built: 4.4b | Vertex ids before 3.9 |

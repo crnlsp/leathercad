@@ -251,6 +251,14 @@ function compatibilityRefusal(
       if (source.kind !== 'stitch-line') return 'holes-need-stitch-line';
       return null;
 
+    case 'hole-row':
+      // Along a line the maker drew to put it on (4.14). Not a stitch line,
+      // whose holes are a hole set; not an outline or a fold, where holes
+      // along the line itself would be cut through the edge or the crease.
+      if (target.kind !== 'hole-row') return 'row-needs-hole-row';
+      if (source.kind !== 'marking-line') return 'row-needs-marking-line';
+      return null;
+
     case 'offset':
       if (op.side === 'inward') {
         if (target.kind !== 'stitch-line') return 'inset-needs-stitch-line';

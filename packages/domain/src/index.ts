@@ -29,6 +29,7 @@ export type {
   GeometrySource,
   Guide,
   HardwareHole,
+  HoleRow,
   MarkingLine,
   Derivation,
   MeasureKind,
@@ -47,7 +48,13 @@ export type {
   TextSource,
   FeatureSource,
 } from './feature.js';
-export { DEFAULT_SETTINGS, eachFeature, findFeature, roleOf } from './feature.js';
+export {
+  DEFAULT_SETTINGS,
+  eachFeature,
+  findFeature,
+  isHolesAlongALine,
+  roleOf,
+} from './feature.js';
 export type { GuideSide } from './guides.js';
 export {
   guideCrossing,

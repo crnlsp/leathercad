@@ -1,4 +1,5 @@
 import type { DeletePlan, DeleteResolution, PlannedDependent } from '@leathercad/document';
+import { isHolesAlongALine } from '@leathercad/domain';
 import { useEffect, useRef } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -104,7 +105,7 @@ export function DeleteDialog({
 /** What happens to one dependent under each choice, in a few words. */
 function noteFor(dependent: PlannedDependent, t: Translate): string {
   if (dependent.freezable) return t('deleteDialog.note.freezable');
-  if (dependent.direct && dependent.kind === 'stitch-hole-set') return t('deleteDialog.note.holes');
+  if (dependent.direct && isHolesAlongALine(dependent.kind)) return t('deleteDialog.note.holes');
   if (dependent.direct) return t('deleteDialog.note.direct');
   return t('deleteDialog.note.indirect');
 }

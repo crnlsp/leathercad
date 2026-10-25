@@ -28,6 +28,7 @@ import {
   evaluate,
   findFeature,
   followRefusal,
+  isHolesAlongALine,
   lockRefusal,
   motionBetween,
   problem,
@@ -947,6 +948,26 @@ export function addStitchHoles(
   };
 }
 
+/**
+ * What a new row of holes starts as: five adjustment holes at 25 mm, the case
+ * the 4.7 design left for rows, punched at the 4 mm the Hardware tool starts
+ * with. A row has no setting of its own to start from, and a hole set's iron
+ * would overlap 4 mm holes at 3.85 mm.
+ */
+const NEW_ROW = { pitchMm: 25, radiusMm: 2 } as const;
+
+/** Holes punched along a marking line, evenly spaced at a pitch (4.14). */
+export function addHoleRow(partId: PartId, featureId: FeatureId, sourceId: FeatureId): Command {
+  return addDerived(partId, sourceId, {
+    id: featureId,
+    kind: 'hole-row',
+    name: 'Row of holes',
+    visible: true,
+    locked: false,
+    source: { kind: 'derived', sourceId, op: { type: 'hole-row', ...NEW_ROW } },
+  });
+}
+
 /** Changes what a derived feature does — the inset, the pitch, the run. */
 export function setDerivation(id: FeatureId, op: Derivation): Command {
   return command({ action: 'edit-derivation' }, (document) => ({
@@ -1575,7 +1596,7 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
       freezable:
         withCapturedAxis(project, feature, requestedSet) !== null ||
         (direct &&
-          feature.kind !== 'stitch-hole-set' &&
+          !isHolesAlongALine(feature.kind) &&
           feature.kind !== 'measurement' &&
           resolved.get(id)?.ok === true),
     };

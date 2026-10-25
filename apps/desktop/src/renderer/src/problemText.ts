@@ -104,6 +104,12 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
       featureName: f.featureName,
       count: Math.max(1, f.crossings),
     }),
+  HOLES_OVERLAP: (f, t) =>
+    t('problems.HOLES_OVERLAP.description', {
+      featureName: f.featureName,
+      spacing: formatMm(f.spacingMm),
+      diameter: formatMm(f.diameterMm),
+    }),
   HOLE_SPACING_DEVIATION: (f, t) =>
     t('problems.HOLE_SPACING_DEVIATION.description', {
       achieved: formatMm(f.achievedMm),

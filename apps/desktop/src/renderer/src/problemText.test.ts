@@ -75,6 +75,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
     characters: '漢',
   },
   CONTOUR_SELF_INTERSECTS: { featureId: 'f-1', featureName: 'Outline', crossings: 1 },
+  HOLES_OVERLAP: { ...named, spacingMm: 3.2, diameterMm: 4 },
   HOLE_SPACING_DEVIATION: { ...named, achievedMm: 5, pitchMm: 3.85 },
   HOLE_SPACING_UNEVEN: { ...named, narrowestMm: 3.7, widestMm: 4.1 },
   HOLE_COUNT_TOO_LOW: { ...named, count: 1 },

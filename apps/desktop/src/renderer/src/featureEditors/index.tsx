@@ -19,6 +19,7 @@ import { useKeysInSentences } from '../keyCaps.js';
 import { ShapeEditor } from '../shapeEditors/index.js';
 import { FoldLineEditor } from './FoldLineEditor.js';
 import { HardwareHoleEditor } from './HardwareHoleEditor.js';
+import { HoleRowEditor } from './HoleRowEditor.js';
 import { MarkingLineEditor } from './MarkingLineEditor.js';
 import { MeasurementEditor } from './MeasurementEditor.js';
 import { StitchHoleSetEditor } from './StitchHoleSetEditor.js';
@@ -110,6 +111,8 @@ export function FeatureEditor({
             onChange={change}
           />
         );
+      case 'hole-row':
+        return <HoleRowEditor op={source.op} holes={holes} onChange={change} />;
       case 'mirror':
         // Nothing, deliberately. A counterpart's parameters are an axis and a
         // glide, and neither is a number anyone should have to reason about:

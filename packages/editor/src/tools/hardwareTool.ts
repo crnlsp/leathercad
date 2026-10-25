@@ -26,8 +26,8 @@ export const DEFAULT_HARDWARE: HardwareOptions = { diameterMm: 4, hardwareType: 
  *
  * Rows of holes — a belt's adjustment holes, rivets along a strap — are
  * deliberately not here. A row is a *set* distributed along a path at a pitch,
- * which is what `StitchHoleSet` already is; building it as repeated single
- * holes would be the wrong shape to later fix.
+ * so it is a `HoleRow` derived from a marking line (4.14), not repeated single
+ * holes.
  */
 export function createHardwareTool(
   nextId: () => string,

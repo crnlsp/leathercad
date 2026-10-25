@@ -100,6 +100,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   TEXT_GLYPH_MISSING: outcome('E2', 'warning'),
 
   CONTOUR_SELF_INTERSECTS: rule('DR3', 'error'),
+  HOLES_OVERLAP: rule('DR3', 'warning'),
   HOLE_SPACING_DEVIATION: rule('DR4', 'warning'),
   HOLE_SPACING_UNEVEN: rule('DR4', 'info'),
   HOLE_COUNT_TOO_LOW: rule('DR4', 'warning'),
