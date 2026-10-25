@@ -67,6 +67,12 @@ export const MIN_HOLES_IN_A_SET = 2;
  * edge tears out — at the awl, at the needle, or in use. It is a warning
  * rather than a refusal because thin, firm leather and a small iron can carry
  * less, and the maker knows which they have.
+ *
+ * Measured from where the leather is cut: a stitch hole's point, and a
+ * hardware hole's **rim** (Q33). It is the same strip of leather between a cut
+ * and an edge that tears, whatever made the cut, so the one figure serves
+ * both. Hardware that pulls harder may want more; that is a footprint's
+ * question (roadmap 9.23), not this one's.
  */
 export const MIN_HOLE_EDGE_CLEARANCE_MM: Mm = 1.5;
 
@@ -282,25 +288,37 @@ function offMaterial(
     return found;
   }
 
-  const punched = holePoints(entry);
+  const punched = punchesOf(entry);
   if (punched !== null) {
-    const off = punched.filter((point) => !isOnMaterial(material, point));
-    if (off.length > 0) {
-      found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }), points: off });
-      // Where a hole is off the material entirely, how near the edge it sits
-      // is not the thing to say about it.
-      return found;
+    // One pass rather than a filter, a min and a filter: whether a hole is off,
+    // the nearest clearance, and the holes that share it all come out of the
+    // same distance, which is the expensive part for three thousand holes.
+    const off: Vec2[] = [];
+    const tight: Vec2[] = [];
+    let clearanceMm = Number.POSITIVE_INFINITY;
+    for (const { centre, radiusMm } of punched) {
+      if (!isOnMaterial(material, centre)) {
+        off.push(centre);
+        continue;
+      }
+      // A circle whose centre is on the leather stays on it unless an edge
+      // passes nearer the centre than its radius — exact, not sampled. A rim
+      // within a storage quantum of an edge is on it, as for a line (Q2).
+      const rimMm = distanceToEdge(material, centre) - radiusMm;
+      if (rimMm < -QUANTUM_MM) {
+        off.push(centre);
+        continue;
+      }
+      if (rimMm >= MIN_HOLE_EDGE_CLEARANCE_MM) continue;
+      clearanceMm = Math.min(clearanceMm, Math.max(0, rimMm));
+      tight.push(centre);
     }
 
-    // One pass rather than a min and then a filter: the nearest clearance and
-    // the holes that share it come out of the same walk.
-    let clearanceMm = Number.POSITIVE_INFINITY;
-    const tight: Vec2[] = [];
-    for (const point of punched) {
-      const distance = distanceToEdge(material, point);
-      if (distance >= MIN_HOLE_EDGE_CLEARANCE_MM) continue;
-      if (distance < clearanceMm) clearanceMm = distance;
-      tight.push(point);
+    if (off.length > 0) {
+      found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }), points: off });
+      // Where a hole is off the material, how near the edge it sits is not
+      // the thing to say about it.
+      return found;
     }
 
     if (tight.length > 0) {
@@ -334,14 +352,23 @@ function offMaterial(
   return found;
 }
 
+/** A hole the leather is cut by: a circle, or a point where the radius is 0. */
+interface Punch {
+  readonly centre: Vec2;
+  readonly radiusMm: Mm;
+}
+
 /**
  * Where this feature is punched, or null when it punches nothing.
  *
- * A hole set is its holes; a hardware hole is the centre of its circle, which
- * is what the punch is lined up on.
+ * A hole set is its holes, each a point where the iron's tooth goes in. A
+ * hardware hole is its whole circle, because a 6 mm punch centred 2 mm in from
+ * the edge cuts through it (Q33).
  */
-function holePoints(entry: Extract<ResolvedFeature, { ok: true }>): readonly Vec2[] | null {
-  if (entry.holes !== undefined) return entry.holes.holes.map((hole) => hole.point);
+function punchesOf(entry: Extract<ResolvedFeature, { ok: true }>): readonly Punch[] | null {
+  if (entry.holes !== undefined) {
+    return entry.holes.holes.map((hole) => ({ centre: hole.point, radiusMm: 0 }));
+  }
 
   const source = entry.feature.source;
   if (
@@ -349,7 +376,7 @@ function holePoints(entry: Extract<ResolvedFeature, { ok: true }>): readonly Vec
     source.kind === 'shape' &&
     source.shape.type === 'circle'
   ) {
-    return [source.shape.centre];
+    return [{ centre: source.shape.centre, radiusMm: source.shape.radius }];
   }
   return null;
 }

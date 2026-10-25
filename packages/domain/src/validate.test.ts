@@ -6,7 +6,7 @@ import { diagnose } from './diagnose.js';
 import { evaluate, type ResolvedProject } from './evaluate.js';
 import { DEFAULT_SETTINGS, type Feature, type Project } from './feature.js';
 import type { RunReport, StitchHoles } from './stitch.js';
-import { validate } from './validate.js';
+import { MIN_HOLE_EDGE_CLEARANCE_MM, validate } from './validate.js';
 
 // ——— Builders ————————————————————————————————————————————————————————————
 
@@ -597,10 +597,12 @@ describe('the rules about a part and its material', () => {
   });
 
   describe('HOLE_TOO_CLOSE_TO_EDGE', () => {
+    // The rivet's radius is 2 mm, so its rim is 2 mm nearer the edge than its
+    // centre (Q33).
     const rivetAt = (x: number) => rivet({ x, y: 37 });
 
-    it('warns about a rivet under 1.5 mm from the edge, saying how near', () => {
-      const [diagnostic] = validate(evaluate(project([panel(), rivetAt(1)]))).filter(
+    it('warns about a rivet whose rim is under 1.5 mm from the edge, saying how near', () => {
+      const [diagnostic] = validate(evaluate(project([panel(), rivetAt(3)]))).filter(
         (d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
       );
 
@@ -611,16 +613,16 @@ describe('the rules about a part and its material', () => {
       });
     });
 
-    it('does not warn at 1.5 mm exactly, or further in', () => {
-      expect(codes(evaluate(project([panel(), rivetAt(1.5)])))).toEqual([]);
+    it('does not warn with the rim 1.5 mm in exactly, or further', () => {
+      expect(codes(evaluate(project([panel(), rivetAt(3.5)])))).toEqual([]);
       expect(codes(evaluate(project([panel(), rivetAt(8)])))).toEqual([]);
     });
 
     it('measures to a cut-out’s edge as readily as to the outline', () => {
-      // A rivet 1 mm outside the slot: far from the outline, far too near the
-      // hole. Both are edges the leather can tear to.
+      // A rivet whose rim is 1 mm outside the slot: far from the outline, far
+      // too near the hole. Both are edges the leather can tear to.
       const [diagnostic] = validate(
-        evaluate(project([panel(), slot(), rivet({ x: 52 - 21, y: 37 })])),
+        evaluate(project([panel(), slot(), rivet({ x: 52 - 23, y: 37 })])),
       ).filter((d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE');
 
       expect(diagnostic).toBeDefined();
@@ -734,10 +736,10 @@ describe('a hole rule names the holes at fault', () => {
   };
 
   it('points HOLE_TOO_CLOSE_TO_EDGE at the hole, not at the whole feature', () => {
-    const resolved = evaluate(project([panel(105, 75, 0), rivetAt({ x: 1, y: 37 })]));
+    const resolved = evaluate(project([panel(105, 75, 0), rivetAt({ x: 3, y: 37 })]));
 
     expect(codes(resolved)).toContain('HOLE_TOO_CLOSE_TO_EDGE');
-    expect(pointsOf(resolved, 'HOLE_TOO_CLOSE_TO_EDGE')).toEqual([{ x: 1, y: 37 }]);
+    expect(pointsOf(resolved, 'HOLE_TOO_CLOSE_TO_EDGE')).toEqual([{ x: 3, y: 37 }]);
   });
 
   it('points OUTSIDE_PART at the hole that is off the leather', () => {
@@ -767,5 +769,167 @@ describe('a hole rule names the holes at fault', () => {
     expect(named.length).toBeLessThan(total);
     // Each one really is near the slot rather than merely in the set.
     for (const point of named) expect(point.y).toBeGreaterThan(20);
+  });
+});
+
+// ——— A hardware hole is its rim (Q33) ——————————————————————————————————————
+
+describe('a hardware hole is measured by its rim, not its centre (Q33)', () => {
+  const hardware = (centre: Vec2, radius: number): Feature => ({
+    ...base('rivet-1', 'Hole'),
+    kind: 'hardware-hole',
+    hardwareType: 'rivet',
+    source: { kind: 'shape', shape: { type: 'circle', centre, radius } },
+  });
+
+  const roundPart = (radius: number): Feature => ({
+    ...base('cut-1', 'Outline'),
+    kind: 'cut-contour',
+    role: 'outer',
+    source: { kind: 'shape', shape: { type: 'circle', centre: { x: 0, y: 0 }, radius } },
+  });
+
+  const holeCodes = (...features: Feature[]): string[] =>
+    codes(evaluate(project(features))).filter(
+      (code) => code === 'OUTSIDE_PART' || code === 'HOLE_TOO_CLOSE_TO_EDGE',
+    );
+
+  const clearanceOf = (...features: Feature[]): number | undefined => {
+    const found = validate(evaluate(project(features))).find(
+      (d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
+    );
+    return found?.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE'
+      ? found.problem.facts.clearanceMm
+      : undefined;
+  };
+
+  it('reports a 6 mm hole centred 2 mm inside the edge as off the material', () => {
+    // Its rim cuts 1 mm through the edge: the punch takes a bite out of it.
+    const [diagnostic, ...rest] = validate(
+      evaluate(project([panel(105, 75, 0), hardware({ x: 2, y: 37 }, 3)])),
+    );
+
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({
+      problem: { code: 'OUTSIDE_PART', facts: { what: 'holes' } },
+      severity: 'error',
+      location: { kind: 'points', points: [{ x: 2, y: 37 }] },
+    });
+  });
+
+  it('reports a 4 mm rivet hole whose rim crosses the edge as off, not merely too close', () => {
+    expect(holeCodes(panel(105, 75, 0), hardware({ x: 1, y: 37 }, 2))).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('takes a rim that touches the edge as on the leather, with no clearance at all', () => {
+    // Tangent circles, the numerically fragile case: within a storage quantum
+    // of the edge is on it, as for a line (Q2).
+    const outline = panel(105, 75, 0);
+
+    expect(holeCodes(outline, hardware({ x: 2, y: 37 }, 2))).toEqual(['HOLE_TOO_CLOSE_TO_EDGE']);
+    expect(clearanceOf(outline, hardware({ x: 2, y: 37 }, 2))).toBeCloseTo(0, 9);
+    // Never a negative clearance, a fraction of a quantum over the edge.
+    expect(clearanceOf(outline, hardware({ x: 2, y: 37 }, 2.00005))).toBe(0);
+  });
+
+  it('catches a rim crossing a rounded corner that the straight sides would not', () => {
+    // 3 mm from both sides, and 0.93 mm inside the 8 mm corner's arc.
+    expect(holeCodes(panel(105, 75, 8), hardware({ x: 3, y: 3 }, 2))).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('reports a rim that crosses into a cut-out', () => {
+    const slot: Feature = {
+      ...base('hole-1', 'Thumb slot'),
+      kind: 'cut-contour',
+      role: 'inner',
+      source: { kind: 'shape', shape: { type: 'circle', centre: { x: 52, y: 37 }, radius: 20 } },
+    };
+    // Centre 1 mm outside the slot, radius 2.
+    expect(holeCodes(panel(), slot, hardware({ x: 31, y: 37 }, 2))).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('reports a hole wider than the part it is punched in', () => {
+    expect(holeCodes(roundPart(3), hardware({ x: 0, y: 0 }, 5))).toEqual(['OUTSIDE_PART']);
+  });
+
+  // —— Properties ——
+
+  type Verdict = 'fine' | 'too-close' | 'outside';
+  const verdict = (found: string[]): Verdict =>
+    found.includes('OUTSIDE_PART')
+      ? 'outside'
+      : found.includes('HOLE_TOO_CLOSE_TO_EDGE')
+        ? 'too-close'
+        : 'fine';
+  const rank: Record<Verdict, number> = { fine: 0, 'too-close': 1, outside: 2 };
+
+  /** Kept clear of the thresholds, where the answer is decided by the last bit. */
+  const MARGIN = 1e-3;
+
+  it('agrees with the exact rim clearance on a square-cornered panel', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 20, max: 2000, noNaN: true }),
+        fc.double({ min: 20, max: 2000, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0.5, max: 10, noNaN: true }),
+        (width, height, u, v, radius) => {
+          const centre = { x: width * (0.001 + 0.998 * u), y: height * (0.001 + 0.998 * v) };
+          const rimMm = Math.min(centre.x, width - centre.x, centre.y, height - centre.y) - radius;
+          const near = (threshold: number) => Math.abs(rimMm - threshold) < MARGIN;
+          fc.pre(!near(0) && !near(MIN_HOLE_EDGE_CLEARANCE_MM));
+
+          const outline = panel(width, height, 0);
+          const expected: Verdict =
+            rimMm < 0 ? 'outside' : rimMm < MIN_HOLE_EDGE_CLEARANCE_MM ? 'too-close' : 'fine';
+
+          expect(verdict(holeCodes(outline, hardware(centre, radius)))).toBe(expected);
+          if (expected === 'too-close') {
+            expect(clearanceOf(outline, hardware(centre, radius))).toBeCloseTo(rimMm, 6);
+          }
+        },
+      ),
+    );
+  });
+
+  it('always reports a hole whose centre is on a round part and whose rim leaves it', () => {
+    // An arc-bounded edge, where the nearest point is not on a straight side.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 5, max: 500, noNaN: true }),
+        fc.double({ min: 0, max: 0.99, noNaN: true }),
+        fc.double({ min: 0, max: 2 * Math.PI, noNaN: true }),
+        fc.double({ min: MARGIN, max: 20, noNaN: true }),
+        (partRadius, along, angle, overshoot) => {
+          const out = partRadius * along;
+          const centre = { x: out * Math.cos(angle), y: out * Math.sin(angle) };
+          const radius = partRadius - out + overshoot;
+
+          expect(verdict(holeCodes(roundPart(partRadius), hardware(centre, radius)))).toBe(
+            'outside',
+          );
+        },
+      ),
+    );
+  });
+
+  it('never finds a new problem with a hole when its radius shrinks', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0.5, max: 15, noNaN: true }),
+        fc.double({ min: 0.05, max: 1, noNaN: true }),
+        (u, v, radius, shrink) => {
+          const outline = panel(105, 75, 8);
+          const centre = { x: 105 * u, y: 75 * v };
+          const before = verdict(holeCodes(outline, hardware(centre, radius)));
+          const after = verdict(holeCodes(outline, hardware(centre, radius * shrink)));
+
+          expect(rank[after]).toBeLessThanOrEqual(rank[before]);
+        },
+      ),
+    );
   });
 });

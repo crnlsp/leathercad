@@ -120,7 +120,7 @@ needs:
 | The maker asks | From the outline alone? | What else it needs | Where |
 |---|---|---|---|
 | Are the stitch holes too close to an edge? | Yes — built (`HOLE_TOO_CLOSE_TO_EDGE`) | — | Built |
-| Does a hardware hole clear the edge, the stitching, a fold? | Yes, measured by the hole's rim — today by its centre | Nothing new | Q33 (1.6), 9.23 |
+| Does a hardware hole clear the edge, the stitching, a fold? | Yes, measured by the hole's rim — the edge built (Q33), the rest not | Nothing new | 9.23 |
 | Do two mating seams have the same holes, lined up? | No: nothing says which edges are sewn together | A seam | 9.6, 9.13 |
 | Will a card go in this pocket? | Partly: the clear size inside the stitching is geometry | What it must hold; ease, which grows with thickness | 9.14, then 9.1 |
 | Will these banknotes go in? | As the card, with the note's size typed | The same | 9.14 |
@@ -210,8 +210,8 @@ flowchart LR
   gusset's length all read a seam; nothing else unlocks as much.
 - **Q4 before acceptance.** A warning the maker accepted has to find its problem again after an
   edit, and problems have no stable identity yet.
-- **Q33 before hardware rules.** Every clearance rule starts from the rim; today's rules read the
-  centre.
+- **Q33 before hardware rules.** Every clearance rule starts from the rim, which the edge rules
+  have read since Q33 (2026-10-25).
 - A dotted line is a refinement, not a block: thread can be estimated before thickness is known, and
   pocket fit works with an ease the maker types.
 
