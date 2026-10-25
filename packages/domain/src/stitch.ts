@@ -4,7 +4,15 @@ import { PathOps, distributeAlongPath, subPath, type Path, type Vec2 } from '@le
 import { cornerDistances } from './anchors.js';
 import type { Derivation } from './feature.js';
 
-type StitchHolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
+/**
+ * What distribution reads of a hole set's op: the pitch and the policy, not
+ * the iron's name. Narrow, so a row of holes (4.14) can be placed by the same
+ * code with its own fixed policy.
+ */
+type Distribution = Pick<
+  Extract<Derivation, { type: 'stitch-holes' }>,
+  'pitchMm' | 'mode' | 'corners' | 'startOffsetMm' | 'endOffsetMm'
+>;
 
 /**
  * The finest pitch a hole set may have: the editor's floor, and evaluation's.
@@ -88,7 +96,7 @@ export interface StitchHoles {
  * as `start + k x pitch` rather than by accumulating, so hundreds of holes do
  * not drift.
  */
-export function distributeHoles(line: Path, op: StitchHolesOp): StitchHoles {
+export function distributeHoles(line: Path, op: Distribution): StitchHoles {
   // The precondition behind evaluate's check: holes are made here and nowhere
   // else, so a pitch under the floor cannot reach generation from any caller.
   // evaluate refuses it first with a Problem naming the hole set (5.6).
