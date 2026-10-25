@@ -247,16 +247,17 @@ test('a change of view says its own zoom at once, with no animation frame to pai
     // A window that is hidden, or unshown under xvfb, runs no animation frame.
     // The control showed the other view's zoom until one came, so a project
     // opened from Sheets read as unframed in Design (open-framed.spec.ts).
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.hide());
-    const frameRuns = (): Promise<boolean> =>
-      window.evaluate(
-        () =>
-          new Promise<boolean>((done) => {
-            requestAnimationFrame(() => done(true));
-            setTimeout(() => done(false), 250);
-          }),
-      );
-    await expect.poll(frameRuns).toBe(false);
+    // Hiding the window does not stop frames everywhere, so the frame clock
+    // stops instead: no new frame is given, and the one asked for already
+    // runs the board's last tick before this resolves.
+    await window.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          const frame = globalThis.requestAnimationFrame.bind(globalThis);
+          globalThis.requestAnimationFrame = () => 0;
+          frame(() => done());
+        }),
+    );
 
     await window.keyboard.press('Control+1');
     await expect(level).toHaveText('100 %');
