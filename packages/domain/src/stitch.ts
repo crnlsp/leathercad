@@ -74,6 +74,14 @@ export interface StitchHoles {
    * is a design rule's decision, not distribution's: see `validate.ts`.
    */
   readonly runs: readonly RunReport[];
+  /**
+   * How big each hole is punched, on a row of holes (4.14) and its mirrors.
+   *
+   * Absent on a stitch hole set, whose holes are points: where the iron's
+   * tooth goes in. Carried here rather than read from the feature because a
+   * mirrored row's op is its mirror, not the row's.
+   */
+  readonly radiusMm?: Mm;
 }
 
 /**
@@ -160,6 +168,29 @@ export function distributeHoles(line: Path, op: Distribution): StitchHoles {
     achievedPitchMm,
     runs: reports,
   };
+}
+
+/**
+ * Places a row of punched holes along a line (4.14).
+ *
+ * The same placement as a hole set's defaults — a hole on each end of an open
+ * line, the rest evenly between, one on every corner, and a closed line
+ * divided with no doubled hole where it closes — with each hole a circle of
+ * `op.radiusMm`.
+ *
+ * **Precondition:** the radius is positive and finite, and the pitch at least
+ * `MIN_PITCH_MM`, or this throws a `RangeError`. `evaluate` checks both first.
+ */
+export function rowOfHoles(line: Path, op: Extract<Derivation, { type: 'hole-row' }>): StitchHoles {
+  if (!(Number.isFinite(op.radiusMm) && op.radiusMm > 0)) {
+    throw new RangeError(`radiusMm must be greater than zero, received ${String(op.radiusMm)}`);
+  }
+  const placed = distributeHoles(line, {
+    pitchMm: op.pitchMm,
+    mode: 'fit-whole',
+    corners: 'hole-at-corner',
+  });
+  return { ...placed, radiusMm: op.radiusMm };
 }
 
 /**

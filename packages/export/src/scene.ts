@@ -133,12 +133,15 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
       // A hole is a mark to punch through, so it prints as a circle at a true
       // millimetre size — not as a screen dot, which would come out whatever
       // size the renderer felt like. Its path is the stitch line the holes sit
-      // on, and that line draws itself.
+      // on, and that line draws itself. A stitch hole is a centre mark for the
+      // awl; a row's hole (4.14) is punched, so it prints at the punch's size,
+      // in the hardware layer a cutter takes.
       if (entry.holes !== undefined) {
+        const radiusMm = entry.holes.radiusMm ?? STITCH_HOLE_MARKER_DIAMETER_MM / 2;
         for (const hole of entry.holes.holes) {
           paths.push({
             role: entry.role,
-            path: Shapes.circle(hole.point, STITCH_HOLE_MARKER_DIAMETER_MM / 2),
+            path: Shapes.circle(hole.point, radiusMm),
             style: PRINT_STYLES[entry.role],
           });
         }

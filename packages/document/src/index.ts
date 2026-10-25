@@ -39,6 +39,7 @@ export {
   addMeasurement,
   addPart,
   allowanceRefusal,
+  addHoleRow,
   addStitchHoles,
   addAllowance,
   addAllowancePart,

@@ -363,11 +363,12 @@ interface Punch {
  *
  * A hole set is its holes, each a point where the iron's tooth goes in. A
  * hardware hole is its whole circle, because a 6 mm punch centred 2 mm in from
- * the edge cuts through it (Q33).
+ * the edge cuts through it (Q33), and so is each hole of a row (4.14).
  */
 function punchesOf(entry: Extract<ResolvedFeature, { ok: true }>): readonly Punch[] | null {
   if (entry.holes !== undefined) {
-    return entry.holes.holes.map((hole) => ({ centre: hole.point, radiusMm: 0 }));
+    const radiusMm = entry.holes.radiusMm ?? 0;
+    return entry.holes.holes.map((hole) => ({ centre: hole.point, radiusMm }));
   }
 
   const source = entry.feature.source;

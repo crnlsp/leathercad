@@ -238,6 +238,18 @@ export output is unchanged. Guide parameters are written exactly so saving does 
 vertical guide or change a diagonal snap. The loose schema preserves unknown fields on a guide
 and its origin, and in-place edits preserve them too.
 
+### 4.1c Version 11 — a row of holes
+
+A feature of kind `hole-row`, always `derived` from a marking line with the op
+`{ "type": "hole-row", "pitchMm": 25, "radiusMm": 2 }` (roadmap 4.14,
+[domain-model.md](domain-model.md) §3.6a). The pitch and the radius are stored; the holes are not
+(§3.3), so a row's five holes are placed again on every load. Both numbers are checked for range by
+evaluation, which names the row, rather than by the schema, as a hole set's pitch is.
+
+The v10→v11 migration is an identity: no older project has a row. The version increases because a
+row is cut and printed (§4.5 rule 2): an older build would not know the kind, and refuses the file
+rather than opening it without the holes. `fixtures/format/v11.lcp` holds a belt end with its row.
+
 ### 4.2 The rules
 
 1. **Version 1 and a working runner ship with the first save implementation**, before any release.

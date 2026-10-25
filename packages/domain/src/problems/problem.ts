@@ -64,6 +64,8 @@ export type DrawnContour = 'outline' | 'seam' | 'cut-out';
 export type CompatibilityRule =
   | 'holes-need-hole-set'
   | 'holes-need-stitch-line'
+  | 'row-needs-hole-row'
+  | 'row-needs-marking-line'
   | 'inset-needs-stitch-line'
   | 'inset-needs-outline'
   | 'allowance-needs-outline'

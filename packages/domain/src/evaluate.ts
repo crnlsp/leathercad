@@ -39,7 +39,7 @@ import { roleOf } from './feature.js';
 import { anchorsOf } from './anchors.js';
 import { mapAnchorsThroughOffset } from './derivedAnchors.js';
 import { keepLargestPiece } from './offsetPieces.js';
-import { MIN_PITCH_MM, distributeHoles, type StitchHoles } from './stitch.js';
+import { MIN_PITCH_MM, distributeHoles, rowOfHoles, type StitchHoles } from './stitch.js';
 import type { LayerRole } from './layerRole.js';
 import {
   problem,
@@ -59,7 +59,7 @@ export type ResolvedFeature =
        * circles. The holes travel beside it.
        */
       readonly path: Path;
-      /** Present only on a stitch hole set. */
+      /** Present only on a stitch hole set and a row of holes (4.14). */
       readonly holes?: StitchHoles;
       /**
        * Present only on a text label: the words, laid out once in millimetres.
@@ -569,7 +569,7 @@ function build(
         };
       }
 
-      if (source.op.type === 'stitch-holes') {
+      if (source.op.type === 'stitch-holes' || source.op.type === 'hole-row') {
         // The holes are the output, but a feature still needs a path — for
         // selection, for a bounding box, for fitting the view. It is the line
         // they were placed along, so it carries that line's anchors unchanged
@@ -578,7 +578,10 @@ function build(
           from,
           refsFrom,
           path: sourcePath,
-          holes: distributeHoles(sourcePath, source.op),
+          holes:
+            source.op.type === 'stitch-holes'
+              ? distributeHoles(sourcePath, source.op)
+              : rowOfHoles(sourcePath, source.op),
           text: undefined,
           anchors: sourceAnchors,
           notes: undefined,
@@ -951,6 +954,13 @@ function parameterProblem(feature: Feature): Problem | null {
             ['mirror angle', op.axis.angleRad, 'finite'],
           );
         }
+      } else if (op.type === 'hole-row') {
+        // The hole set's floor, for the hole set's reason. A hole with no size
+        // punches nothing.
+        checks.push(
+          ['pitch', op.pitchMm, { atLeast: MIN_PITCH_MM }],
+          ['radius', op.radiusMm, 'positive'],
+        );
       } else {
         // The editor's floor, not merely "more than zero": distribution places
         // `length / pitch` holes, and a file holding 1e-300 ran the process out

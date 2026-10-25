@@ -834,6 +834,7 @@ describe('leather-specific treatment (F.7)', () => {
     'fold-line': 'fold',
     'marking-line': 'mark',
     'hardware-hole': 'hardware',
+    'hole-row': 'hardware',
     'text-label': 'annotation',
     measurement: 'annotation',
   };

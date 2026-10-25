@@ -588,3 +588,77 @@ export function fixtureProjectV10(): Project {
     ],
   };
 }
+
+/**
+ * Version 11 — a row of holes along a marking line (4.14).
+ *
+ * A belt end with its adjustment holes: an outline, a line down its middle,
+ * and the row that follows it. What the file holds is the pitch and the
+ * radius; the five holes are not in it, and evaluation places them.
+ */
+export function fixtureProjectV11(): Project {
+  const previous = fixtureProjectV10();
+  const base = { visible: true, locked: false };
+
+  return {
+    ...previous,
+    id: 'fixture-v11',
+    name: 'Format baseline v11',
+    parts: [
+      ...previous.parts,
+      {
+        id: 'part-belt',
+        name: 'Belt end',
+        quantity: 1,
+        features: [
+          {
+            ...base,
+            id: 'belt-cut',
+            kind: 'cut-contour',
+            role: 'outer',
+            name: 'Outline',
+            source: {
+              kind: 'shape',
+              shape: {
+                type: 'rect',
+                origin: { x: 0, y: 0 },
+                width: 140,
+                height: 30,
+                radii: uniformRadii(0),
+                rotation: 0,
+              },
+            },
+          },
+          {
+            ...base,
+            id: 'belt-line',
+            kind: 'marking-line',
+            purpose: 'alignment',
+            name: 'Alignment',
+            source: {
+              kind: 'path',
+              path: polyline(
+                [
+                  { x: 20, y: 15 },
+                  { x: 120, y: 15 },
+                ],
+                false,
+              ),
+            },
+          },
+          {
+            ...base,
+            id: 'belt-holes',
+            kind: 'hole-row',
+            name: 'Row of holes',
+            source: {
+              kind: 'derived',
+              sourceId: 'belt-line',
+              op: { type: 'hole-row', pitchMm: 25, radiusMm: 2 },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
