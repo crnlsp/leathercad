@@ -1,4 +1,3 @@
-import { Fullscreen, Minus, Plus } from 'lucide-react';
 import type { MouseEvent } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -96,7 +95,7 @@ export function ZoomControl({
           aria-label={t('shortcuts.zoomOut')}
           onClick={press('zoomOut')}
         >
-          <Icon of={Minus} />
+          <Icon of="minus" />
         </button>
       </Tooltip>
       <MenuButton
@@ -118,12 +117,12 @@ export function ZoomControl({
           aria-label={t('shortcuts.zoomIn')}
           onClick={press('zoomIn')}
         >
-          <Icon of={Plus} />
+          <Icon of="plus" />
         </button>
       </Tooltip>
       <Tooltip text={t('zoom.fitTooltip')} keys="fit">
         <button type="button" className="zoom-button" data-testid="zoom-fit" onClick={press('fit')}>
-          <Icon of={Fullscreen} />
+          <Icon of="fit" />
           {t('zoom.fit')}
         </button>
       </Tooltip>

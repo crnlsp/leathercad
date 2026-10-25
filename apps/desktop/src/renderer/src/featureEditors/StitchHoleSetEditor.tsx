@@ -6,7 +6,6 @@ import {
   type StitchHoles,
 } from '@leathercad/domain';
 import type { Iron } from '@leathercad/platform';
-import { Check, FoldHorizontal, UnfoldHorizontal } from 'lucide-react';
 
 import { NumberField } from '../NumberField.js';
 import { ironOf } from '../irons.js';
@@ -194,11 +193,11 @@ function SpacingLine({
       data-glyph={glyph}
     >
       {glyph === 'check' ? (
-        <Icon of={Check} size={14} />
+        <Icon of="check" size={14} />
       ) : glyph === 'stretched' ? (
-        <Icon of={UnfoldHorizontal} size={14} />
+        <Icon of="stretched" size={14} />
       ) : glyph === 'squeezed' ? (
-        <Icon of={FoldHorizontal} size={14} />
+        <Icon of="squeezed" size={14} />
       ) : (
         <SeverityGlyph severity={glyph} />
       )}

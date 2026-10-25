@@ -1,4 +1,3 @@
-import { LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import { Icon } from './icons/Icon.js';
@@ -10,7 +9,7 @@ import { Icon } from './icons/Icon.js';
 export function Spinner({ size = 16 }: { size?: number }) {
   return (
     <span className="spinner" data-testid="spinner">
-      <Icon of={LoaderCircle} size={size} />
+      <Icon of="spinner" size={size} />
     </span>
   );
 }
