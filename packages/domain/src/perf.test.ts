@@ -68,8 +68,9 @@ describe('what an edit costs the panel', () => {
   });
 
   it('validates the traced outline it evaluated, inside the same ceiling', () => {
-    // Evaluation and validation are timed apart so a slow half names itself.
-    // No lower bound: making validation faster must never fail this.
+    // Validation timed on its own, so a regression in it names itself rather
+    // than hiding in diagnose's total. No lower bound: making validation
+    // faster must never fail this.
     const project = tracedOutline(500);
 
     const resolved = evaluate(project);
