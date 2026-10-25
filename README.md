@@ -182,6 +182,7 @@ the print. [Glossary](docs/glossary.md) — the leathercraft words the app uses.
 | [printing.md](docs/printing.md) | Export, pagination, tiling, the accuracy budget |
 | [testing.md](docs/testing.md) | Test layers, property tests, CI |
 | [roadmap.md](docs/roadmap.md) | What is next, and what is known but not fixed |
+| [performance-backlog.md](docs/performance-backlog.md) | Measured performance findings, priorities, tasks and acceptance criteria |
 | [adr/](docs/adr/) | Why each decision was made |
 
 [`CLAUDE.md`](CLAUDE.md) holds the invariants no change may break. Found a security problem?

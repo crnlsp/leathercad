@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-18
+**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-25
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -148,8 +148,10 @@ process kill; `pnpm test:visual` and `pnpm test:packaged`; HiDPI, Windows and ma
 takes ~74 ms, over the 50 ms budget on its own; and a huge drawing at the smallest pitch makes
 millions of holes, so a hole-count budget may be wanted one day. Moving the pointer over the sample
 wallet, hovering or dragging, kept every frame at about 6 ms and no pointer event over 16 ms in the
-built app (2026-10-18), although each move re-renders the whole window. None is to be optimised
-until it is felt.
+built app (2026-10-18), although each move re-renders the whole window. The later
+[performance audit](performance-backlog.md#measurement-record) recorded user-visible problems
+with history retention, complex outlines and tiled output. Its prioritized tasks are tracked
+under [Later](#performance-and-resource-efficiency), without adding them to this release gate.
 
 ### Release engineering
 
@@ -172,6 +174,26 @@ why this order, and what depends on what are drawn in [`product-roadmap.md`](pro
 The numbers are Phase 9's from the 1.0 record, continued from 9.12 on 2026-10-17. The gaps are items
 that moved: DXF (9.4) into 1.1 as 6.5, Windows and macOS (9.8) into 1.0, and nesting (9.9) to *Not
 planned*.
+
+### Performance and resource efficiency
+
+The [performance backlog](performance-backlog.md) owns the status and acceptance criteria for
+**PERF-001 through PERF-017**, recorded by the 2026-10-25 audit of `5cf7294`. All are initially
+planned and unassigned to a release. Reproduce on the implementation revision: `develop` has
+advanced since those measurements. Promote selected items into a release explicitly, linking
+their stable IDs rather than copying the task lists here.
+
+**Work first:** export geometry retained through history (PERF-001), blocking tiled PDF export
+(PERF-002), slow complex-outline snapping (PERF-004), and many-page Sheets rendering (PERF-003).
+Start with the small benchmark corrections in PERF-017 so before/after evidence is trustworthy.
+The backlog includes [the full priority register](performance-backlog.md#task-register),
+[independent PR order and dependencies](performance-backlog.md#recommended-implementation-order),
+and [verification requirements](performance-backlog.md#verification-and-evidence).
+
+Small follow-ups include clearing previous-project caches, idle frame scheduling and DPI-change
+handling. Coordinate lifecycle work with Q39, persistence with Q35/Q36, and benchmark work with
+Q40. This work preserves millimetre accuracy, exact 1:1 output and document/history correctness;
+no renderer rewrite or unmeasured speedup is implied.
 
 ### Pieces that fit
 

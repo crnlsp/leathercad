@@ -426,6 +426,13 @@ written: before they did, they tested only what had already shipped. Two consequ
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
 machine that recorded it; the committed one is from the maintainer's.
 
+The [performance backlog](performance-backlog.md) records the 2026-10-25 audit's environment,
+workloads and measurements, plus implementation acceptance criteria. Start with
+[PERF-017](performance-backlog.md#perf-017) before interpreting benchmark comparisons: the audit
+found duplicate source/build discovery and timing-wrapper overhead. Its
+[verification plan](performance-backlog.md#verification-and-evidence) distinguishes reliable CI
+checks from controlled-machine trends. These are open tasks, not changes already made to the suite.
+
 ## 10. Test-driven development, concretely
 
 For `geometry` and `domain`, tests come first. Not as ritual — because in this domain the test *is*
