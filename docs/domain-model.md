@@ -611,6 +611,32 @@ that names it fails with `ANCHOR_MISSING`.
   produce a different one — which is why `evaluate` has a second place that produces a `holes` field
   and deliberately so.
 
+### 4.8 Converting a shape to a drawn path — built 3.12
+
+X9 refuses a transform a shape's parameters cannot say — a circle squashed, an arc stretched, a
+turned rectangle sheared. *Convert to drawn path* is the way past it that the maker asks for:
+`convertToPath(id)` replaces a `shape` source with a `path` source holding exactly `pathForShape`'s
+output. Nothing is drawn differently, and nothing is detached (X3):
+
+- the feature keeps its id, name, kind and role, so every derivation and reference to it stays;
+- the path is the one evaluation already built, so its corners are the same corners — a rectangle's
+  four anchors keep their indices (§4.6), and a dimension to one reads the same number;
+- every dependent resolves exactly as it did, holes and failures alike.
+
+What goes is the parameters: the panel offers points rather than a radius or a width, and the
+feature now transforms as drawn geometry does (`geometry.md` §4.2 rule 2). So a squashed circle is
+made of cubics, and an offset refuses cubics until 9.19 — a stitch line round a converted, squashed
+circle reports `OFFSET_UNSUPPORTED`, and the note beside the button says so first.
+
+Offered for `circle`, `arc` and `rect`, whatever the feature. Refused, with the reason under the
+button (`convertToPathRefusal`): a locked feature (S7); a hardware hole (`HOLE_STAYS_ROUND`), because
+a punch is round and the panel sizes it by diameter — an oval opening is a cut-out; and anything
+that is not a shape (`NOT_A_SHAPE`). One undo step (`convert-to-path`) brings the shape back. No
+format change: a drawn path was already stored, exactly (`file-format.md` §3.2).
+
+Unlike a **freeze** (§4.5), which a delete offers for a derived feature whose source is going, this
+is asked for, on a root, and the feature keeps everything that follows it.
+
 ## 5. Layer roles — built
 
 Fixed by the domain, not managed by the user. Each feature kind maps to exactly one role, and the
@@ -761,7 +787,7 @@ rules are exact — a hole is a point, and a point is either on the material or 
 | X6 | Text that restates a model value is generated, never stored | built 4.10a for dimensions |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
 | X8 | Defaults come from settings, never from constants in a component: the maker's (My tools, U.13) where the app makes something, the project's when no maker's value is passed | built 4.3a; the maker's in U.13 |
-| X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
+| X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a; the asked-for way past it 3.12 (§4.8) |
 | X10 | A refusal keeps the user's work where it can still be corrected | built 4.3a for drawing |
 
 **S7 — what the lock protects** (built 4.3b). Before it, `locked` was a *pick lock* and nothing
@@ -844,6 +870,8 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `FEATURE_MISSING` | interaction | X1 | Commands |
 | `NOT_DERIVED` | interaction | X1 | Commands |
 | `NOT_A_DRAWN_PATH` | interaction | X1 | Point-editing commands |
+| `NOT_A_SHAPE` | interaction | X1 | *Convert to drawn path* (3.12) |
+| `HOLE_STAYS_ROUND` | interaction | X1 | *Convert to drawn path* (3.12) |
 | `POINT_EDIT_DEGENERATE` | interaction | X1 | Point-editing commands |
 | `ROUNDING_DOES_NOT_FIT` | interaction | X1 | Point-editing commands |
 | `NOT_A_ROUNDED_CORNER` | interaction | X1 | Point-editing commands |

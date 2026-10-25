@@ -118,6 +118,10 @@ resolved shape, instead of deleting it. For a counterpart whose fold is deleted,
 line the fold was on instead, so the counterpart still mirrors its source. Only ever the user's
 explicit choice.
 
+**Convert to drawn path** — Replacing a shape's parameters — a circle's radius, a rectangle's
+width and corners — with the path they drew, keeping the feature and everything that follows it.
+Nothing moves; what can be typed does. The way past a transform a shape refuses (3.12).
+
 **Re-point** — Changing which feature a derived feature follows, keeping the relationship's
 parameters. How an outline is replaced without losing its stitching.
 

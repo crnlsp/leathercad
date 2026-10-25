@@ -95,9 +95,23 @@ Left from 1.3's *The window*: nothing says a new release exists.
   deletion and undo. Multi-selection alignment and equal-gap distribution move whole pieces and explain
   refusals. Guides stay off paper; format 10 keeps them on reopen.
   [Design and acceptance criteria](superpowers/specs/2026-10-23-guides-alignment.md).
-- ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
+- ✅ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.
   Until then, 3.7 refuses those transforms.
+  **Done** (2026-10-25): a selected circle, arc or rectangle offers *Convert to drawn path* in
+  Properties, under its fields, with what it costs said beside the button — it stops being a circle,
+  and its centre and diameter can no longer be typed. The path is the one the shape already drew, so
+  nothing on the board or the paper moves: the feature keeps its id, name, kind and role, a
+  rectangle keeps its four corners as anchors, and every stitch line, hole set, row of holes and
+  dimension following it resolves exactly as before. One step of undo brings the shape back. After
+  it, the squash and the shear 3.7 refused go through, and *Edit points* reshapes it; the two
+  refusals now name the way out. A rectangle is offered it too, because a turned one is refused a
+  stretch (`WOULD_SHEAR`) for the same reason a circle is. A hardware hole is not: a punch is round,
+  and an oval opening is a cut-out (`HOLE_STAYS_ROUND`). **A squashed circle is made of cubics** —
+  the rule every drawn path already follows ([geometry](geometry.md) §4.2 rule 2) — so a stitch line
+  round one reports that it cannot follow it (`OFFSET_UNSUPPORTED`) until 9.19; the note beside the
+  button says so before the maker converts. No format change: a drawn path was already stored.
+  [Domain model §4.8](domain-model.md#48-converting-a-shape-to-a-drawn-path--built-312).
 - ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
@@ -327,8 +341,8 @@ comes in today except by drawing it again.
 
 - **9.19 Curves that can be stitched** — analytic offsetting refuses cubic segments
   ([geometry](geometry.md) §6.2), so no stitch line can follow a curve that an import or a curve
-  editor brings — or a circle squashed after 3.12, if that makes cubics, which 3.12's slice should
-  weigh. Before 9.11, an offset through arcs fitted to the cubic within the flattening
+  editor brings — or a circle squashed after 3.12, which does make cubics (3.12 kept
+  [geometry](geometry.md) §4.2 rule 2 rather than fit arcs of its own). Before 9.11, an offset through arcs fitted to the cubic within the flattening
   tolerance would build that stitch line instead of refusing it; whether to do that or wait for 9.11
   is the slice's to decide. Pure geometry under [geometry](geometry.md) §12's definition of done, so
   it can start whenever there is room.

@@ -49,6 +49,8 @@ export {
   addTextLabel,
   arcShape,
   circleShape,
+  convertToPath,
+  convertToPathRefusal,
   deleteFeatures,
   deletePart,
   deleteRefusal,

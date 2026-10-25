@@ -33,6 +33,8 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   FEATURE_MISSING: { featureId: 'f-1' },
   NOT_DERIVED: named,
   NOT_A_DRAWN_PATH: named,
+  NOT_A_SHAPE: named,
+  HOLE_STAYS_ROUND: named,
   POINT_EDIT_DEGENERATE: named,
   ROUNDING_DOES_NOT_FIT: { ...named, radiusMm: 60 },
   NOT_A_ROUNDED_CORNER: named,

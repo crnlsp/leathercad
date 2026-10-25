@@ -44,6 +44,8 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
   FEATURE_LOCKED: (f, t) => t('problems.FEATURE_LOCKED.description', f),
   FEATURE_MISSING: (_, t) => t('problems.FEATURE_MISSING.description'),
   NOT_A_DRAWN_PATH: (f, t) => t('problems.NOT_A_DRAWN_PATH.description', f),
+  NOT_A_SHAPE: (f, t) => t('problems.NOT_A_SHAPE.description', f),
+  HOLE_STAYS_ROUND: (f, t) => t('problems.HOLE_STAYS_ROUND.description', f),
   POINT_EDIT_DEGENERATE: (f, t) => t('problems.POINT_EDIT_DEGENERATE.description', f),
   ROUNDING_DOES_NOT_FIT: (f, t) =>
     t('problems.ROUNDING_DOES_NOT_FIT.description', {

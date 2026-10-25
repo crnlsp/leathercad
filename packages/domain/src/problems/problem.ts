@@ -172,6 +172,16 @@ export interface ProblemFacts {
    */
   readonly NOT_A_DRAWN_PATH: About;
   /**
+   * X1: only a shape has parameters to give up (3.12). A drawn path already is
+   * one, and a derived feature follows what it was made from.
+   */
+  readonly NOT_A_SHAPE: About;
+  /**
+   * X1: a hardware hole is punched, and a punch is round, so it is never
+   * converted to a drawn path (3.12). An oval hole is a cut-out.
+   */
+  readonly HOLE_STAYS_ROUND: About;
+  /**
    * X1: a point edit that would leave too few points — three for a closed
    * path, two for an open one — or a side of no length (3.9b).
    */
