@@ -1048,12 +1048,12 @@
     },
     "OUTSIDE_PART": {
       "title": "Off the material",
-      "holes": "{{featureName}} has holes off the material — through the outline, or into a cut-out. They cannot be punched.",
+      "holes": "{{featureName}} has holes that leave the material — through the outline, or into a cut-out. They cannot be punched there.",
       "line": "{{featureName}} runs off the material, so part of it cannot be marked."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {
       "title": "Too near the edge",
-      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a stitch needs. Leather tears out between a hole and an edge."
+      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a hole needs. Leather tears out between a hole and an edge."
     },
     "EMPTY_PART": {
       "title": "Empty part",
