@@ -426,12 +426,20 @@ written: before they did, they tested only what had already shipped. Two consequ
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
 machine that recorded it; the committed one is from the maintainer's.
 
+Benchmark discovery is pinned: each package that has benchmarks sets
+`benchmark.include: ['src/**/*.bench.ts']`, because `tsc --build` emits `dist/src/*.bench.js` and
+Vitest's default glob would run every case twice (30, not 15).
+`apps/desktop/src/bench-discovery.test.ts` fails if a package drops that line. Vitest warns that the benchmarks "accessed module export getters too many
+times": the benchmarks import source through Vitest's module runner, whose export getters add
+overhead. The committed baselines were recorded the same way, so a comparison is like for like; the
+absolute numbers are not what a bundled production build costs, and the warning is left visible
+rather than suppressed. `perf.test.ts` asserts upper ceilings only, never that something is slow.
+
 The [performance backlog](performance-backlog.md) records the 2026-10-25 audit's environment,
-workloads and measurements, plus implementation acceptance criteria. Start with
-[PERF-017](performance-backlog.md#perf-017) before interpreting benchmark comparisons: the audit
-found duplicate source/build discovery and timing-wrapper overhead. Its
+workloads and measurements, plus implementation acceptance criteria. Its
 [verification plan](performance-backlog.md#verification-and-evidence) distinguishes reliable CI
-checks from controlled-machine trends. These are open tasks, not changes already made to the suite.
+checks from controlled-machine trends. The rest of [PERF-017](performance-backlog.md#perf-017)
+is still open.
 
 ## 10. Test-driven development, concretely
 

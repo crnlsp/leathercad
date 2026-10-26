@@ -69,7 +69,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
 | ☐ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | Unassigned |
 | ☐ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | Unassigned |
-| ☐ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | Unassigned |
+| ◐ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | Unassigned |
 
 ## Recommended implementation order
 
@@ -528,10 +528,13 @@ take more than half evaluation time, so an improvement could fail. Historical ba
 matching environment/workload provenance. The later regeneration warmup change does not address
 these remaining issues.
 
-- [ ] Restrict benchmark discovery to intended source cases, including when build output exists.
+- [x] Restrict benchmark discovery to intended source cases, including when build output exists.
+  Per-package `benchmark.include`, guarded by `apps/desktop/src/bench-discovery.test.ts`: 30 cases back to 15. The
+  export-getter warning is Vitest module-runner overhead, not a config fault; left visible and
+  documented in `docs/testing.md`.
 - [ ] Add production-representative bundled timing where needed; distinguish it from Vitest
   timings and record commit, workload, runtime, hardware and sample method.
-- [ ] Replace minimum-slowness assertions with meaningful upper budgets/behavior verification.
+- [x] Replace minimum-slowness assertions with meaningful upper budgets/behavior verification.
 - [ ] Coordinate roadmap Q40: measure shipping SVG/DXF writers rather than only render SVG.
 - [ ] Preserve existing baselines; version deliberate replacements with their environment.
 - [ ] Reconcile performance claims in architecture/testing docs with actual implementation:
