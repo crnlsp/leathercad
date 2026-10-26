@@ -195,6 +195,10 @@ On Windows, the installer puts the app in `%LOCALAPPDATA%\Programs\LeatherCAD`. 
 Start menu entry starts the new version, and Settings and the Project menu's recent projects are
 as they were.
 
+Still on Windows, pin LeatherCAD to the taskbar from its Start menu entry, close it, start it from
+the pin and open a saved project: the window belongs to the pin — one taskbar button, not a second
+one beside it — and right-clicking the pin lists the project under *Recent*.
+
 ### 11. Opening a project from the file manager
 
 Since 8.5. On each platform — the Windows installer, the macOS dmg, and on Linux the `.flatpak`

@@ -5,6 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { LCP_EXTENSION, LCP_MIME } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
+import { APP_USER_MODEL_ID } from './appUserModelId.js';
+
 /**
  * Desktop integration as packaged (slice 8.5a), checked against the files it
  * names — so the configuration and the icons cannot drift apart unnoticed.
@@ -13,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 const DESKTOP = resolve(import.meta.dirname, '../..');
 
 interface BuilderConfig {
+  appId: string;
   executableName: string;
   directories: { buildResources: string };
   linux: { icon: string; syncDesktopName: boolean };
@@ -44,6 +47,13 @@ describe('desktop integration', () => {
     };
     expect(pkg.desktopName).toBe(`${executableName}.desktop`);
     expect(linux.syncDesktopName).toBe(true);
+  });
+
+  it('gives the running app the id the Windows shortcuts carry', async () => {
+    // Otherwise a window started from a pinned shortcut is a second taskbar
+    // button, and the jump list's recent documents belong to neither.
+    const { appId } = await config();
+    expect(APP_USER_MODEL_ID).toBe(appId);
   });
 
   it('has an icon drawn at every size the Linux set names', async () => {
