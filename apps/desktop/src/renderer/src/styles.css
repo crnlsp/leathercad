@@ -990,9 +990,15 @@ body {
 
 .template-text {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+}
+
+/* At the row's end, where the start screen's recent projects keep theirs. */
+.template-row-pin {
+  flex: none;
 }
 
 .template-name {
