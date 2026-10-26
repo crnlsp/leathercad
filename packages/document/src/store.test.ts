@@ -156,6 +156,21 @@ describe('transactions', () => {
     expect(store.getState().inTransaction).toBe(false);
   });
 
+  it('keeps the document from before a gesture as the committed one, for what must not write a preview', () => {
+    const store = new DocumentStore(docWithRect());
+    const before = store.getState().document;
+    expect(store.committedDocument).toBe(before);
+
+    store.begin({ action: 'move' });
+    store.preview(translateFeatures(['feat-1'], { x: 5, y: 0 }));
+    expect(store.getState().document).not.toBe(before);
+    expect(store.committedDocument).toBe(before);
+
+    store.commit();
+    expect(store.committedDocument).toBe(store.getState().document);
+    expect(store.committedDocument).not.toBe(before);
+  });
+
   it('collapses a drag into a single undo step', () => {
     // Without this, one drag of a rectangle would need three hundred presses
     // of undo to reverse.

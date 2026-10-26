@@ -239,7 +239,9 @@ export function useProjectFile(
         // The document these bytes are made from is the one marked saved — not
         // whatever the store holds once the write returns. An edit landing
         // during a slow write is not on disk, so it must stay unsaved (Q16).
-        const written = tab.store.getState().document;
+        // Nor a drag's preview, which the maker may yet cancel: the document
+        // from before the gesture (Q36).
+        const written = tab.store.committedDocument;
         const bytes = saveProject(written.project, {
           applicationVersion: appVersion,
           now: () => new Date(),
@@ -450,7 +452,7 @@ export function useProjectFile(
 
   const saveAsTemplate = useCallback(
     (tab: ProjectTab, name: string, replace: boolean): Promise<TemplateSave> => {
-      const bytes = saveProject(tab.store.getState().document.project, {
+      const bytes = saveProject(tab.store.committedDocument.project, {
         applicationVersion: appVersion,
         now: () => new Date(),
       });
