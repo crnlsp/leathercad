@@ -396,6 +396,11 @@ parts cannot be carried to the next project.
 - **9.7 Templates** — a part saved to a library and inserted again (was 8.1): a copy with its
   derivations re-pointed, never a live link ([domain-model](domain-model.md) §9). Parameterised
   templates moved to *Exploring* on 2026-10-17.
+- **9.25 Search templates by tag** (added 2026-10-26) — the picker finds a tag today only as words
+  in its search, beside the names and descriptions (8.14). Tags become something to search by on
+  their own: the tags in use offered as the maker types, a tag chosen narrowing the list to the
+  templates that carry it. The built-in categories left the picker in 8.14 for the same reason: a
+  tag the maker gave is the filter that means something to them.
 
 **Needs:** the sample's untitled opening (8.3) and duplicate-part re-pointing (4.3b), both built;
 8.8b's domain question answered before 9.7, which inserts a part the same way.
