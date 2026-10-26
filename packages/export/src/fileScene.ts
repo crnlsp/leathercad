@@ -22,6 +22,8 @@ import type { ExportScene, ExportText } from './scene.js';
 export interface FileLayer {
   readonly role: LayerRole;
   readonly paths: readonly Path[];
+  /** Filled shapes — a dimension's arrowheads (4.10b) — in the layer's colour. */
+  readonly fills: readonly Path[];
   /** Words, as filled glyph outlines: never a font (ADR 0011). */
   readonly texts: readonly ExportText[];
 }
@@ -36,13 +38,13 @@ export interface FileLayer {
  */
 export function fileLayersOf(scene: ExportScene): FileLayer[] {
   return LAYER_ROLES.flatMap((role) => {
-    const paths = scene.parts.flatMap((part) =>
-      part.paths.filter((item) => item.role === role).map((item) => item.path),
-    );
+    const inRole = scene.parts.flatMap((part) => part.paths.filter((item) => item.role === role));
+    const paths = inRole.filter((item) => item.filled !== true).map((item) => item.path);
+    const fills = inRole.filter((item) => item.filled === true).map((item) => item.path);
     const texts = scene.parts.flatMap((part) =>
       part.texts.filter((text) => text.role === role && text.glyphs.length > 0),
     );
-    return paths.length === 0 && texts.length === 0 ? [] : [{ role, paths, texts }];
+    return inRole.length === 0 && texts.length === 0 ? [] : [{ role, paths, fills, texts }];
   });
 }
 
@@ -58,6 +60,7 @@ export function fileLayersOf(scene: ExportScene): FileLayer[] {
 export function fileBoundsOf(layers: readonly FileLayer[]): Rect | null {
   const drawn = layers.flatMap((layer) => [
     ...layer.paths,
+    ...layer.fills,
     ...layer.texts.flatMap((text) => text.glyphs),
   ]);
   return RectOps.unionAll(drawn.flatMap((path) => PathOps.bbox(path) ?? []));

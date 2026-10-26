@@ -155,11 +155,21 @@ const textSource = z.looseObject({
   rotationRad: z.number().finite(),
 });
 
-const measureRef = z.looseObject({
-  kind: z.literal('anchor'),
-  featureId: z.string().min(1),
-  anchor: z.number().int().nonnegative(),
-});
+const measureRef = z.discriminatedUnion('kind', [
+  z.looseObject({
+    kind: z.literal('anchor'),
+    featureId: z.string().min(1),
+    anchor: z.number().int().nonnegative(),
+  }),
+  // Version 12 (Q15): a corner of the box an outline fills, which a piece's
+  // overall size is measured between. Which corner, never where it is.
+  z.looseObject({
+    kind: z.literal('extent'),
+    featureId: z.string().min(1),
+    x: z.enum(['min', 'max']),
+    y: z.enum(['min', 'max']),
+  }),
+]);
 
 /**
  * A dimension's two ends, and how to read between them.

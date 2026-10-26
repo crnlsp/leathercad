@@ -100,6 +100,22 @@ export const ROLE_STYLES: Readonly<Record<LayerRole, RoleStyle>> = {
   },
 };
 /**
+ * A dimension's marks (4.10b): drawn in both media, like a role's line —
+ * constant on screen, in CSS pixels, and true millimetres on paper. ISO 129-1's
+ * filled arrowhead, three times as long as it is wide, and about as long as
+ * the paper's 3 mm figures are tall; on screen, about as long as at true
+ * size, and a little fuller, to read beside a 1 px line.
+ */
+export const DIMENSION_MARKS = {
+  arrow: { lengthPx: 10, widthPx: 3.5, lengthMm: 2.5, widthMm: 0.85 },
+  /**
+   * Between the paper's number and the ends of the line it breaks. On screen
+   * the break is the number's halo (`CANVAS.text.haloPx`).
+   */
+  clearanceMm: 1,
+} as const;
+
+/**
  * The smallest dash or gap, in CSS pixels, that still reads as one.
  * Below it a rhythm is noise, and the line is drawn solid instead.
  */

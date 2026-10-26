@@ -1,5 +1,5 @@
 import { PathOps, SegmentOps, dist, type Vec2 } from '@leathercad/geometry';
-import type { FeatureId, MeasureRef, ResolvedProject } from '@leathercad/domain';
+import type { AnchorRef, FeatureId, ResolvedProject } from '@leathercad/domain';
 
 /**
  * Resolving a click to a **durable** place on the drawing.
@@ -29,8 +29,8 @@ export function anchorNear(
   resolved: ResolvedProject,
   atMm: Vec2,
   toleranceMm: number,
-): MeasureRef | null {
-  let best: { ref: MeasureRef; distance: number } | null = null;
+): AnchorRef | null {
+  let best: { ref: AnchorRef; distance: number } | null = null;
 
   for (const part of resolved.parts) {
     for (const entry of part.features) {
@@ -61,7 +61,7 @@ export function anchorNear(
 }
 
 /** Where an anchor is, for drawing the tool's feedback. */
-export function anchorPointOf(resolved: ResolvedProject, ref: MeasureRef): Vec2 | null {
+export function anchorPointOf(resolved: ResolvedProject, ref: AnchorRef): Vec2 | null {
   for (const part of resolved.parts) {
     for (const entry of part.features) {
       if (!entry.ok || entry.feature.id !== ref.featureId) continue;

@@ -1,4 +1,4 @@
-import { PathOps, RectOps, polyline } from '@leathercad/geometry';
+import { PathOps, RectOps, polyline, type Path } from '@leathercad/geometry';
 import { CANVAS, GROUND, PAPER_FURNITURE, SHEET } from '@leathercad/render';
 import { describe, expect, it } from 'vitest';
 
@@ -153,6 +153,38 @@ describe('the Sheets view (7.4c)', () => {
       'Sheet 3 of 3',
       'strap, taped: sheets 2–3',
     ]);
+  });
+
+  it('fills an arrowhead in its print grey, as the paper does (4.10b)', () => {
+    const head = polyline(
+      [
+        { x: 0, y: 0 },
+        { x: 2.5, y: 0.425 },
+        { x: 2.5, y: -0.425 },
+      ],
+      true,
+    );
+    const marked: ExportPart = {
+      ...outlined('panel', 100, 70),
+      paths: [
+        ...outlined('panel', 100, 70).paths,
+        { role: 'annotation', style: PRINT_STYLES.annotation, path: head, filled: true },
+      ],
+    };
+    const solo = planSheets(scene([marked]), DEFAULT_PAGE_SETUP);
+    const items = sheetsView(solo, layoutSheets(solo), { now: NOW }).flatMap((l) => l.list.items);
+    // The arrowhead: the one triangle among the strip's filled words.
+    const triangle = (path: Path) => path.segments.length === 3;
+    const heads = items.filter(
+      (item) => item.kind === 'fill' && item.role === 'annotation' && item.paths.every(triangle),
+    );
+    expect(heads).toHaveLength(1);
+    expect(heads[0]).toMatchObject({ colour: expect.stringMatching(/^#([0-9a-f]{2})\1\1$/) });
+    expect(
+      items.some(
+        (item) => item.kind === 'path' && item.role === 'annotation' && triangle(item.path),
+      ),
+    ).toBe(false);
   });
 
   it("words the labels in the app's language, and says which pieces were turned (U.9)", () => {

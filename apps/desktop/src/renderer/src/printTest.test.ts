@@ -56,10 +56,9 @@ function printTestProject(): Project {
     setProjectName('LeatherCAD print test'),
 
     // A panel with rounded top corners and a stitch line all round it. The
-    // bottom corners are sharp, so the dimension between them reads a true
-    // 100.0 — a rounded corner's anchor is the middle of its arc — and the
-    // stitch run along the bottom is straight: 93 mm, which holes at a 3.85 mm
-    // iron divide into 24 gaps of 3.875 mm.
+    // dimension between its sharp bottom corners reads 100.0, and the stitch
+    // run along the bottom is straight: 93 mm, which holes at a 3.85 mm iron
+    // divide into 24 gaps of 3.875 mm.
     addPart(
       shapePart('panel', 'panel-outline', 'Outer panel', {
         ...rectShape(at(0, 0), 100, 70),

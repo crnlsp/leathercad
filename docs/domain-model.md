@@ -255,7 +255,10 @@ interface MeasureSource {
   precision: 0 | 1 | 2;
 }
 
-type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
+type MeasureRef =
+  | { kind: 'anchor'; featureId: FeatureId; anchor: number }
+  // Version 12 (Q15): a corner of the box the feature's outline fills.
+  | { kind: 'extent'; featureId: FeatureId; x: 'min' | 'max'; y: 'min' | 'max' };
 ```
 
 - **An annotation, and an ordinary feature.** Its references live in its `GeometrySource`, because the
@@ -266,7 +269,26 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
   mirror's fold; this is its second and larger user, and `edgesFrom` carries both.
 - **Every end references an anchor.** No segment indices (S9) and no free points, because a dimension
   that silently goes stale is worse than no dimension.
+- **A piece's overall size is asked for, not inferred** (Q15, 2026-10-26). A dimension between two
+  corners measures between those corners: on a rounded piece a corner is the middle of its rounding,
+  so a 97 × 67 panel rounded at 5 mm reads 94.1 between its top corners, and it keeps reading that
+  whatever else changes — a dimension never silently starts measuring something else. *Add overall
+  size*, on a selected outline, adds its width above it and its height to its left, each between
+  `extent` ends: corners of the box its actual outline fills, read from the outline's exact bounds
+  on every evaluation. That reads 97 × 67, and so does the band a 3.5 mm seam allowance grows round a
+  90 × 60 stitch line. The actual outline rather than where the edges would meet if carried on (the
+  *virtual sharp*): it is defined for every outline — drawn, curved, grown, a strap's round end —
+  it is the leather to cut, and it never runs off the piece, where the meeting point of two edges
+  runs away as a rounding nears a half turn. A turned piece reads the box it takes on the sheet,
+  as a horizontal dimension between its corners does. An extent end follows evaluated bounds, so
+  it is the least durable reference, and only an outline's own button makes one.
 - **The value is generated**, never stored (X6), and shown at `precision`.
+- **Drawn like drafting** (4.10b): arrowheads on its ends and its number breaking its line, on the
+  board and on paper. Evaluation lays out the paper's number, centred on the line; a number with
+  no room between the extension lines is moved past the far arrowhead, in each medium by its own
+  width there. The line's marks are sized per medium — constant on screen, true millimetres on
+  paper — by `draftDimensionLine`, which the display list and the export scene both call. The
+  resolved `path` is still the extension lines and the whole line, for selection and bounds.
 - A missing anchor fails the measurement (E4). It never attaches to a neighbouring corner.
 - **Never freezable.** Deleting what it measures offers no "keep it": a frozen dimension is a number
   that no longer means anything, which is the stale label this feature exists to replace.
@@ -280,8 +302,7 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
   rounding, which is where a rounded rectangle's corner anchor has always been, and sharpening it
   brings it back to the point.
 
-**Later:** `radial`, and with it `centre` references; `extent` references, which are the least durable
-kind because they follow evaluated bounds rather than a place; angular measurements.
+**Later:** `radial`, and with it `centre` references; angular measurements.
 
 ### 3.8 `TextLabel` — built, 4.11b
 
@@ -500,10 +521,17 @@ cascades. Both change without telling the user; see the ADR.
 
 | Feature | Anchors | Stable under |
 |---|---|---|
-| `rect` shape | Its 4 corners | Width, height, radius, rotation: always 4 |
+| `rect` shape | Its 4 corners: the middle of each rounding, or the point | Width, height, radius, rotation: always 4, rounded to a circle too |
 | Drawn path | Its corners, in order | Moving a point; **not** inserting one. Vertex ids come before slice 3.9 |
 | `circle`, `arc` | None | Everything |
 | Derived | The source's anchors, mapped by the derivation | Whatever the source is stable under |
+
+A rectangle's anchors come from its parameters (ADR 0010, 2), so it has four whatever its radii:
+rounded to half its shorter side, with no straight left between two roundings, each corner is still
+the middle of its rounding. Until 2026-10-26 they were read off the path, which lost them there — a
+square rounded to a circle had none, and a rounding across a whole side hid the sharp corner after
+it and renumbered the rest. A file that resolved before resolves to the same numbers now: where the
+path shows all four corners they are still read off it.
 
 How a derivation maps anchors:
 
@@ -621,6 +649,11 @@ output. Nothing is drawn differently, and nothing is detached (X3):
 - the feature keeps its id, name, kind and role, so every derivation and reference to it stays;
 - the path is the one evaluation already built, so its corners are the same corners — a rectangle's
   four anchors keep their indices (§4.6), and a dimension to one reads the same number;
+- except where a rounding uses up a side: a rectangle rounded to a circle or a strap, or across a
+  whole side, still has four corners (§4.6), but the drawn path has only those its path shows. Each
+  corner is followed to the drawn corner at the same distance along the same path and renumbered,
+  and a run or dimension on one the path does not show refuses the conversion (`CORNER_IN_USE`),
+  as a point edit that takes a corner away does;
 - every dependent resolves exactly as it did, holes and failures alike.
 
 What goes is the parameters: the panel offers points rather than a radius or a width, and the
@@ -631,7 +664,8 @@ circle reports `OFFSET_UNSUPPORTED`, and the note beside the button says so firs
 Offered for `circle`, `arc` and `rect`, whatever the feature. Refused, with the reason under the
 button (`convertToPathRefusal`): a locked feature (S7); a hardware hole (`HOLE_STAYS_ROUND`), because
 a punch is round and the panel sizes it by diameter — an oval opening is a cut-out; and anything
-that is not a shape (`NOT_A_SHAPE`). One undo step (`convert-to-path`) brings the shape back. No
+that is not a shape (`NOT_A_SHAPE`); and a corner in use that the drawn path would not have
+(`CORNER_IN_USE`). One undo step (`convert-to-path`) brings the shape back. No
 format change: a drawn path was already stored, exactly (`file-format.md` §3.2).
 
 Unlike a **freeze** (§4.5), which a delete offers for a derived feature whose source is going, this

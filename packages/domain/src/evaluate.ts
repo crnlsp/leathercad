@@ -21,13 +21,15 @@ import {
   type Path,
   type Vec2,
 } from '@leathercad/geometry';
-import { placedText, type PlacedText } from '@leathercad/typography';
+import { FONT, placedText, type PlacedText } from '@leathercad/typography';
 
 import type {
   Derivation,
   Feature,
   FeatureId,
   FeatureSource,
+  ExtentRef,
+  MeasureRef,
   MeasureSource,
   MirrorAxis,
   ParametricShape,
@@ -625,8 +627,8 @@ function drawMeasurement(
   refA: Referenced,
   refB: Referenced,
 ): { path: Path; text: PlacedText } {
-  const a = anchorPoint(feature, refA, source.a.anchor);
-  const b = anchorPoint(feature, refB, source.b.anchor);
+  const a = refPoint(feature, refA, source.a);
+  const b = refPoint(feature, refB, source.b);
 
   // What the dimension reads between, which for a horizontal or vertical one
   // is the pair projected onto that axis.
@@ -666,18 +668,51 @@ function drawMeasurement(
 
   const label = formatNumber(valueMm, source.precision);
   const midpoint = { x: (fromOff.x + toOff.x) / 2, y: (fromOff.y + toOff.y) / 2 };
-  // Set above the dimension line, reading along it, and never upside down —
-  // a number a maker has to tilt their head for is a number they misread.
+  // Reading along the dimension line, and never upside down — a number a maker
+  // has to tilt their head for is a number they misread.
   const along = Math.atan2(unit.y, unit.x);
   const rotationRad = along > Math.PI / 2 || along < -Math.PI / 2 ? along + Math.PI : along;
 
-  const placed = placedText(label, MEASUREMENT_TEXT_MM, midpoint, { rotationRad });
+  // Centred on the line, its figures across it, so the number breaks the line
+  // as drafting sets it (4.10b): the baseline half a capital below the line,
+  // as the board sets its own number.
+  const halfCapital = ((FONT.capHeight / FONT.unitsPerEm) * MEASUREMENT_TEXT_MM) / 2;
+  const baseline = {
+    x: midpoint.x + Math.sin(rotationRad) * halfCapital,
+    y: midpoint.y - Math.cos(rotationRad) * halfCapital,
+  };
+  const placed = placedText(label, MEASUREMENT_TEXT_MM, baseline, {
+    rotationRad,
+    align: 'centre',
+  });
 
   return { path, text: placed };
 }
 
 /** How big a dimension's number is set, in millimetres on the sheet. */
 const MEASUREMENT_TEXT_MM = 3;
+
+/** Where one end of a dimension is, as a point. */
+function refPoint(feature: Feature, ref: Referenced, at: MeasureRef): Vec2 {
+  switch (at.kind) {
+    case 'anchor':
+      return anchorPoint(feature, ref, at.anchor);
+    case 'extent':
+      return extentPoint(feature, ref, at);
+  }
+}
+
+/**
+ * A corner of the box the referenced outline fills (Q15): its exact bounds,
+ * arcs and curves to where they reach rather than their control points, so
+ * an overall dimension reads the leather to cut.
+ */
+function extentPoint(feature: Feature, ref: Referenced, at: ExtentRef): Vec2 {
+  const box = PathOps.bbox(ref.path);
+  // An outline with nothing in it has no size to read: nothing is there.
+  if (box === null) throw new Failure(problem('MEASURE_REF_MISSING', about(feature)));
+  return { x: at.x === 'min' ? box.minX : box.maxX, y: at.y === 'min' ? box.minY : box.maxY };
+}
 
 /**
  * Where an anchor is, as a point.

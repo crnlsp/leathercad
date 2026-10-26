@@ -760,6 +760,8 @@
     "addHoleRowHint": "Holes punched along this line, a hole on each end and the rest evenly between — for a belt’s adjustment holes, rivets or lacing",
     "addHoles": "Add holes",
     "addHolesHint": "Holes along this line, at the pitch of your iron",
+    "addOverallSize": "Add overall size",
+    "addOverallSizeHint": "The piece’s width and height, edge to edge — the leather to cut. A dimension between two corners measures between those corners, which on a rounded piece is less",
     "addStitchLine": "Add stitch line",
     "addStitchLineHint": "A stitch line that follows this edge at a fixed margin, and keeps following it",
     "afterOutline": {
@@ -1245,6 +1247,7 @@
   "history": {
     "add": "Add {{name}}",
     "add-dimension": "Add dimension",
+    "add-overall-size": "Add overall size",
     "add-label": "Add label",
     "add-point": "Add point",
     "add-seam-allowance": "Add seam allowance",

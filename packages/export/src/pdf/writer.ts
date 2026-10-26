@@ -192,6 +192,16 @@ function drawText(page: PDFPage, text: ExportText, offsetMm: Vec2, grey = 0): vo
 
 /** Emits one path in millimetre-derived points. */
 function drawPath(page: PDFPage, item: ExportPath, offsetMm: Vec2): void {
+  if (item.filled === true) {
+    page.pushOperators(
+      pushGraphicsState(),
+      setFillingGrayscaleColor(item.style.grey),
+      ...tracePath(item.path, offsetMm),
+      fill(),
+      popGraphicsState(),
+    );
+    return;
+  }
   const operators = [
     pushGraphicsState(),
     setLineWidth(mmToPt(item.style.widthMm)),

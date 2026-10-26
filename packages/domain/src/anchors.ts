@@ -1,7 +1,7 @@
 import { EPS_ANGLE, approxZero, type Mm } from '@leathercad/core';
-import { SegmentOps, type Path, type PathEdit } from '@leathercad/geometry';
+import { SegmentOps, fittedRadii, type Path, type PathEdit } from '@leathercad/geometry';
 
-import type { FeatureSource } from './feature.js';
+import type { FeatureSource, ParametricShape } from './feature.js';
 
 /**
  * The durable landmarks a source offers, as distances along its path.
@@ -28,8 +28,15 @@ export function anchorsOf(source: FeatureSource, path: Path): readonly Mm[] {
       return [];
     case 'shape':
       switch (source.shape.type) {
-        case 'rect':
-          return cornerDistances(path);
+        case 'rect': {
+          // Read off the path where it shows all four, so they are the path's
+          // own numbers to the last bit — a rectangle converted to a drawn
+          // path keeps exactly the anchors it had (3.12). It shows fewer only
+          // once a rounding has used up a side, and then the parameters say
+          // where all four are.
+          const seen = cornerDistances(path);
+          return seen.length === 4 ? seen : rectCornerDistances(source.shape);
+        }
         case 'circle':
         case 'arc':
           // Round or already open: there is no corner to name, so a run on one
@@ -48,6 +55,46 @@ export function anchorsOf(source: FeatureSource, path: Path): readonly Mm[] {
       // allowing it would mean anchors that move when their own source moves.
       return [];
   }
+}
+
+/**
+ * A rectangle's four corners, as distances along the path `roundedRect` draws
+ * for it: the middle of each rounding, or the point of a sharp corner.
+ *
+ * From the parameters (ADR 0010, 2), for the rectangles whose path does not
+ * show them: rounded to half its shorter side, a rectangle has no straight
+ * between two roundings, and `cornerDistances`, which looks for an arc between
+ * two straights, finds no corner there — a square rounded to a circle lost all
+ * four, and a strap rounded right round at both ends; a rounding that took a
+ * whole side hid the sharp corner after it and renumbered the rest. Here a
+ * corner is a corner whatever its radius, and keeps its index.
+ *
+ * In `roundedRect`'s order: the bottom side, then each corner's rounding and
+ * the side after it, anticlockwise — so bottom-right, top-right, top-left,
+ * bottom-left, the last at the very end of the path when it is sharp, as
+ * `cornerDistances` places it. Turning the rectangle moves no distance.
+ */
+function rectCornerDistances(shape: Extract<ParametricShape, { type: 'rect' }>): readonly Mm[] {
+  const width = Math.abs(shape.width);
+  const height = Math.abs(shape.height);
+  const r = fittedRadii(shape.radii, width, height);
+  const quarter = Math.PI / 2;
+  const sides = [
+    [width - r.bottomLeft - r.bottomRight, r.bottomRight],
+    [height - r.bottomRight - r.topRight, r.topRight],
+    [width - r.topRight - r.topLeft, r.topLeft],
+    [height - r.topLeft - r.bottomLeft, r.bottomLeft],
+  ] as const;
+
+  let along = 0;
+  return sides.map(([side, radius]) => {
+    // A side the roundings use up entirely has no straight; fitting can leave
+    // it a rounding error below zero, which is still none.
+    along += Math.max(0, side);
+    const corner = along + (quarter * radius) / 2;
+    along += quarter * radius;
+    return corner;
+  });
 }
 
 /**

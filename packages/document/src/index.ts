@@ -37,6 +37,7 @@ export {
   addHardwareHole,
   addMarkingLine,
   addMeasurement,
+  addOverallSize,
   addPart,
   allowanceRefusal,
   addHoleRow,
