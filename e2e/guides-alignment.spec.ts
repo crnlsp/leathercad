@@ -207,8 +207,10 @@ test('a guide dragged from a ruler snaps to a corner, and Ctrl releases it (3.10
       return parseNumber(await window.getByLabel('Guide y').inputValue());
     };
     // Pressed a pixel off the panel's top-left corner: the guide takes the corner.
+    // The fields show hundredths, and Y and Height are each rounded before they
+    // are added, so the corner read from them can be a hundredth off the guide's.
     const snapped = await dragFromTopRuler(151);
-    expect(Math.min(Math.abs(snapped - top), Math.abs(snapped - bottom))).toBeLessThan(0.001);
+    expect(Math.min(Math.abs(snapped - top), Math.abs(snapped - bottom))).toBeLessThan(0.0101);
     await window.keyboard.down('Control');
     try {
       const free = await dragFromTopRuler(153);

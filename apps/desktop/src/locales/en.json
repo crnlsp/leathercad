@@ -1,9 +1,75 @@
 {
   "app": {
     "untitled": "Untitled",
+    "untitledNumbered": "Untitled {{number}}",
     "windowTitle": "{{name}} — LeatherCAD",
     "windowTitleUnsaved": "• {{name}} — LeatherCAD",
     "drawing": "Drawing"
+  },
+  "tabs": {
+    "strip": "Projects",
+    "region": "Open projects",
+    "close": "Close {{name}}",
+    "closeTooltip": "Close this project",
+    "unsaved": "{{name}}, unsaved changes",
+    "add": "New tab",
+    "addTooltip": "A new project, or one you have, in a tab of its own",
+    "menu": "Project menu",
+    "menuTooltip": "New, open, save as, rename, and recent projects",
+    "noProject": "No project is open",
+    "alreadyOpen": "{{name}} is open already",
+    "all": "All tabs",
+    "allTooltip": "Every open project, when there are more than the strip shows",
+    "unsavedNote": "Unsaved changes",
+    "dropHere": "Move here"
+  },
+  "tabMenu": {
+    "label": "Menu for {{name}}",
+    "rename": "Rename…",
+    "save": "Save",
+    "saveAs": "Save as…",
+    "reload": "Reload from disk",
+    "reloadNote": "The file as it was last saved",
+    "duplicate": "Duplicate as a new project",
+    "showInFolder": "Show in folder",
+    "copyPath": "Copy path",
+    "trash": "Move file to Trash…",
+    "close": "Close",
+    "closeOthers": "Close other tabs",
+    "noFile": "Not saved to a file yet",
+    "onlyTab": "No other tab is open",
+    "trashTitle": "Move “{{name}}” to the Trash?",
+    "trashBody": "{{file}} goes to the system’s Trash, where it can be restored, and its tab closes.",
+    "trashBodyUnsaved": "{{file}} goes to the system’s Trash, where it can be restored, and its tab closes. Its unsaved changes are lost.",
+    "trashConfirm": "Move to Trash",
+    "trashFailed": "The file could not be moved to the Trash. {{reason}}"
+  },
+  "outside": {
+    "changed": "{{file}} was changed outside LeatherCAD.",
+    "gone": "{{file}} was moved or deleted outside LeatherCAD.",
+    "reload": "Reload",
+    "keep": "Keep mine",
+    "save": "Save it again",
+    "dismiss": "Dismiss"
+  },
+  "rename": {
+    "title": "Not renamed",
+    "exists": "A file named “{{file}}” is already in this project’s folder. Choose another name: the project and its file keep the one they have.",
+    "invalid": "A file cannot be called “{{name}}”: it has a character such as / \\ : * ? \" < > |, or is a name the system keeps. Choose another name.",
+    "failed": "The project’s file could not be renamed, so the project keeps its name. {{reason}}",
+    "followExists": "The project is called “{{name}}” again, but its file keeps the name it has: a file named “{{file}}” is already in its folder."
+  },
+  "start": {
+    "title": "Start new project",
+    "fromTemplate": "New project from template",
+    "open": "Open existing project",
+    "lede": "Start a new pattern, open one from disk, or pick up where you left off.",
+    "pin": "Pin {{name}}",
+    "unpin": "Unpin {{name}}",
+    "pinTooltip": "Keep it at the top of the list",
+    "unpinTooltip": "Let it go back among the recent projects",
+    "remove": "Remove {{name}} from the list",
+    "removeTooltip": "Remove from the list. The file stays where it is"
   },
   "actions": {
     "cancel": "Cancel",
@@ -72,8 +138,6 @@
     "problemsNone": "Problems: nothing to fix",
     "problemsNoneTooltip": "Nothing to fix",
     "problemsTooltip": "{{counts}}. Show them in Problems",
-    "projectMenu": "Project menu, {{name}}",
-    "projectMenuTooltip": "{{name}}. New, open, save as, rename, and recent projects",
     "saveTooltip": "Save the project",
     "saved": "Saved",
     "settings": "Settings",
@@ -89,9 +153,8 @@
     "exportNothing": "Nothing to export yet. No part has a line to cut.",
     "exportSvg": "Export SVG…",
     "exportSvgNote": "Millimetres, for laser cutters, plotters and vector editors",
-    "new": "New project",
+    "new": "New project from scratch",
     "open": "Open…",
-    "openSample": "Open sample project",
     "recent": "Recent projects",
     "recentEmpty": "Projects you open or save appear here.",
     "rename": "Rename…",
@@ -99,7 +162,9 @@
     "saveAs": "Save as…",
     "settings": "Settings…",
     "recentGone": "That project is no longer there",
-    "recentGoneDetail": "It was moved, renamed or deleted, so it has been taken off the recent projects."
+    "recentGoneDetail": "It was moved, renamed or deleted, so it has been taken off the recent projects.",
+    "newFromTemplate": "New project from template…",
+    "saveAsTemplate": "Save as template…"
   },
   "macMenu": {
     "edit": "Edit",
@@ -314,6 +379,12 @@
     "pan": "Pan",
     "print": "Print",
     "quit": "Quit",
+    "nextTab": "Go to the next project tab",
+    "previousTab": "Go to the previous project tab",
+    "closeTab": "Close the project tab",
+    "moveTabLeft": "Move the project tab left",
+    "moveTabRight": "Move the project tab right",
+    "reopenTab": "Open the project last closed again",
     "redo": "Redo",
     "removePoint": "Remove the point last pressed",
     "rename": "Rename the piece or feature",
@@ -353,6 +424,10 @@
       "name": "Recent projects",
       "none": "No projects are listed now.",
       "note": "The Project menu lists the projects you opened or saved most recently."
+    },
+    "keepUnsaved": {
+      "name": "Keep unsaved projects when closing",
+      "note": "Close without being asked: projects with unsaved changes open again at the next start, still unsaved."
     },
     "legend": {
       "name": "Name the marks in the canvas legend",
@@ -454,9 +529,14 @@
     "title": "Save changes to “{{name}}”?",
     "consequence": {
       "close": "If you close without saving, your changes are lost.",
-      "new": "Starting a new project replaces this one, and your changes are lost.",
-      "open": "Opening another project replaces this one, and your changes are lost."
+      "reload": "Reloading reads the file as it was last saved, and your changes are lost."
     }
+  },
+  "unsavedProjects": {
+    "title_one": "Save changes to {{count}} project?",
+    "title_other": "Save changes to {{count}} projects?",
+    "consequence": "If you close without saving, their changes are lost.",
+    "saveAll": "Save all"
   },
   "deleteDialog": {
     "deleteAll": "Delete all",
@@ -658,8 +738,6 @@
     "rowHoles_other": "{{count}} holes",
     "rowProblems_one": "{{count}} (problem, worst: {{severity}})",
     "rowProblems_other": "{{count}} (problems, worst: {{severity}})",
-    "sample": "Or take a finished one apart: {{link}}.",
-    "sampleLink": "open the sample wallet",
     "showPart": "Show part",
     "title": "Parts"
   },
@@ -1294,6 +1372,101 @@
     "checkedAt": "Checked at {{time}}",
     "again_one": "You can check again in {{count}} minute.",
     "again_other": "You can check again in {{count}} minutes."
+  },
+  "templates": {
+    "title": "New project from template",
+    "mineEmpty": "Save any project as a template, from the Project menu or its tab’s menu, and it is listed here.",
+    "use": "Use template",
+    "remove": "Remove {{name}}",
+    "bifoldWallet": {
+      "name": "Bifold wallet",
+      "description": "An outer and a lining, each folded, and two card pockets"
+    },
+    "cardHolder": {
+      "name": "Card holder",
+      "description": "An outer stitched all round, and a pocket for each face"
+    },
+    "keyFob": {
+      "name": "Key fob",
+      "description": "A strap with round ends, folded through a ring and riveted"
+    },
+    "coaster": {
+      "name": "Coaster",
+      "description": "A 100 mm square with soft corners, stitched all round"
+    },
+    "saveTitle": "Save as template",
+    "saveName": "Template name",
+    "save": "Save template",
+    "replace": "Replace",
+    "exists": "A template named “{{name}}” already exists. Replace it, or choose another name.",
+    "invalid": "A template cannot be called “{{name}}”. Choose another name.",
+    "saved": "Saved as the template “{{name}}”.",
+    "pieces_one": "{{count}} piece to cut",
+    "pieces_other": "{{count}} pieces to cut",
+    "search": "Search templates",
+    "searchLabel": "Search templates by name, description or tag",
+    "show": {
+      "all": "All",
+      "builtin": "Built-in",
+      "mine": "Mine"
+    },
+    "showLabel": "Show",
+    "sortLabel": "Sort",
+    "sort": {
+      "name": "Name (A–Z)",
+      "nameDesc": "Name (Z–A)",
+      "recent": "Recently used",
+      "newest": "Newest first",
+      "oldest": "Oldest first"
+    },
+    "group": {
+      "pinned": "Pinned",
+      "others": "Other templates",
+      "foldPinned": "Fold the pinned templates",
+      "unfoldPinned": "Show the pinned templates"
+    },
+    "count": "{{shown}} of {{total}}",
+    "countAll_one": "{{count}} template",
+    "countAll_other": "{{count}} templates",
+    "noMatch": "No template is called or described as “{{query}}”.",
+    "clearSearch": "Clear the search",
+    "builtInBadge": "Built-in",
+    "changedOn": "Modified {{date}}",
+    "fact": {
+      "pieces": "Pieces to cut",
+      "layout": "Pattern layout",
+      "changed": "Modified"
+    },
+    "overallSize": "{{width}} × {{height}} mm",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "rename": "Rename…",
+    "renameLabel": "Template name",
+    "duplicate": "Duplicate",
+    "duplicateMine": "Duplicate as my template",
+    "edit": "Edit template",
+    "editTooltip": "Open the template itself in a tab: Save writes the template",
+    "export": "Export…",
+    "showInFolder": "Show in folder",
+    "delete": "Delete",
+    "import": "Import template…",
+    "importTooltip": "Add a project file from disk as one of your templates",
+    "builtInLocked": "Built-in templates stay as they ship. Duplicate one to make it yours.",
+    "description": "Description",
+    "descriptionPlaceholder": "What it is for, and what to watch for",
+    "tags": "Tags",
+    "tagsPlaceholder": "Comma-separated, such as belts, brown",
+    "removed": "Removed “{{name}}”.",
+    "undo": "Undo",
+    "copyName": "{{name}} copy",
+    "importTitle": "Import a template",
+    "exportTitle": "Export the template",
+    "nothingChosen": "Choose a template.",
+    "wordsTitle": "Description and tags",
+    "saveWords": "Save",
+    "editDetails": "Edit details…",
+    "actionsFor": "Actions for {{name}}",
+    "sortChosen": "Sort: {{sort}}"
   },
   "guides": {
     "title": "Guides",

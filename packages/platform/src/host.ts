@@ -85,14 +85,14 @@ export interface PlatformHost {
   setKeyCapture(capturing: boolean): Promise<void>;
 
   /**
-   * Crash recovery (slice 5.3b). Replaces this session's recovery copy with
-   * `data`, atomically, in the app's state directory — never beside a project,
-   * never under a project's name.
+   * Crash recovery (slice 5.3b). Replaces a tab's recovery copy with `data`,
+   * atomically, in the app's state directory — never beside a project, never
+   * under a project's name. One copy per tab since 8.12; `tab` is its id.
    */
-  writeRecovery(data: Uint8Array): Promise<void>;
+  writeRecovery(tab: string, data: Uint8Array): Promise<void>;
 
-  /** Removes this session's recovery copy: the project is saved, or empty. */
-  clearRecovery(): Promise<void>;
+  /** Removes a tab's recovery copy: its project is saved, closed, or clean again. */
+  clearRecovery(tab: string): Promise<void>;
 
   /** The newest copy a session that did not end cleanly left behind, or null. */
   findRecovery(): Promise<RecoveredCopy | null>;
@@ -153,6 +153,12 @@ export interface PlatformHost {
   /** Empties the recent list, and the operating system's (8.7). */
   clearRecent(): Promise<void>;
 
+  /** Pins a listed project to the top of the recent list, or unpins it (8.12). */
+  pinRecent(path: string, pinned: boolean): Promise<void>;
+
+  /** Takes one project off the recent list, pinned or not (8.12). */
+  removeRecent(path: string): Promise<void>;
+
   /** Opens the folder the log is in, to attach to a report (ADR 0015). */
   showLogFolder(): Promise<void>;
 
@@ -169,13 +175,6 @@ export interface PlatformHost {
    * the way to stop listening.
    */
   onOpenFile(listener: (path: string) => void): () => void;
-
-  /**
-   * The worked sample project that ships with the app (slice 8.3), as the
-   * bytes of an ordinary `.lcp`. Read-only: it opens untitled, so saving it
-   * asks where, and the copy inside the app is never written.
-   */
-  readSampleProject(): Promise<Uint8Array>;
 
   /**
    * The project this launch was asked to open — a `.lcp` double-clicked in
@@ -197,6 +196,187 @@ export interface PlatformHost {
    * maker pressed something — and resolves with what it found. Installs nothing.
    */
   checkForUpdates(): Promise<UpdateStatus>;
+
+  /**
+   * The tabs open when the app last closed (8.12), in their order, and the one
+   * in front: each a project's file — still on disk, already a path the app may
+   * read and write — or unsaved work kept as the window closed, or both. Once,
+   * as the window starts; empty after.
+   */
+  takeSession(): Promise<OpenSession>;
+
+  /**
+   * Keeps the open tabs, for the next start (8.12). A path is kept only if
+   * chosen in the app's dialogs this session, or opened again from the last;
+   * a kept copy only if written this session (`keepUnsaved`).
+   */
+  keepSession(session: KeptSession): Promise<void>;
+
+  /**
+   * Keeps a tab's unsaved work as the window closes (8.12), with *Keep unsaved
+   * projects* on: an ordinary `.lcp` in the app's own folder, named for the
+   * tab, which the next start opens again as unsaved work.
+   */
+  keepUnsaved(tab: string, data: Uint8Array): Promise<void>;
+
+  /**
+   * Renames a project's file to its new name, in the same folder (8.12) —
+   * never over another file, which comes back as `exists` with nothing
+   * touched. Only a file the app may write; the new path may be too.
+   */
+  renameProjectFile(path: string, name: string): Promise<FileRename>;
+
+  /** Shows a project's file in the system's file manager, selected (8.12). */
+  showInFolder(path: string): Promise<void>;
+
+  /**
+   * Moves a project's file to the system's Trash (8.12), where it can be
+   * restored — never deleted outright. Only a file the app may write.
+   */
+  trashProjectFile(path: string): Promise<void>;
+
+  /**
+   * Watches the open projects' files for what another program does to them
+   * (8.12): exactly these paths from now on. Only paths the app may read.
+   */
+  watchProjects(paths: readonly string[]): Promise<void>;
+
+  /**
+   * A file dropped on the window (8.12): its path, or empty for what is not a
+   * file. Takes a DOM `File`; typed loosely so this package needs no DOM.
+   */
+  pathForFile(file: unknown): string;
+
+  /**
+   * Projects dropped on the window (8.12): those that are `.lcp` files and
+   * exist, granted as a dialog's choice is. Resolves with the paths granted,
+   * which the caller then opens.
+   */
+  openDropped(paths: readonly string[]): Promise<readonly string[]>;
+
+  /** The project templates (8.12): the built-in ones, then the maker's own. */
+  listTemplates(): Promise<readonly TemplateEntry[]>;
+
+  /** A template's bytes, by its id, or null. Only an id crosses, never a path. */
+  readTemplate(id: string): Promise<Uint8Array | null>;
+
+  /**
+   * Saves a project as one of the maker's templates (8.12): never over one of
+   * the same name, which comes back as `exists`, unless `replace`.
+   */
+  saveTemplate(name: string, data: Uint8Array, replace: boolean): Promise<TemplateSave>;
+
+  /** Removes one of the maker's templates; a built-in one cannot be. */
+  removeTemplate(id: string): Promise<void>;
+
+  /** Renames one of the maker's templates, never over another (8.14). */
+  renameTemplate(id: string, name: string): Promise<TemplateSave>;
+
+  /** Copies any template as one of the maker's, under the first free name of `name`. */
+  duplicateTemplate(id: string, name: string): Promise<TemplateSave>;
+
+  /** The maker's words about one of theirs: a description and tags. */
+  describeTemplate(id: string, description: string, tags: readonly string[]): Promise<void>;
+
+  /** Pins any template to the top of the picker, or lets it go. */
+  pinTemplate(id: string, pinned: boolean): Promise<void>;
+
+  /** A project was made from a template: it leads *Recently used*. */
+  templateUsed(id: string): Promise<void>;
+
+  /**
+   * A `.lcp` chosen in a dialog, as one of the maker's templates (8.14). The
+   * main process asks and copies: the renderer sees no path. Null when the
+   * maker cancels.
+   */
+  importTemplate(options: OpenDialogOptions): Promise<TemplateSave | null>;
+
+  /** A template written to a file chosen in a dialog; false when the maker cancels. */
+  exportTemplate(id: string, options: SaveDialogOptions): Promise<boolean>;
+
+  /**
+   * *Edit template* (8.14): the maker's template's own file, granted, to open
+   * as a project whose Save writes the template. Null for a built-in one.
+   */
+  editTemplate(id: string): Promise<string | null>;
+
+  /** Shows one of the maker's templates in the file manager. */
+  showTemplate(id: string): Promise<void>;
+
+  /** A watched project's file changed outside the app, or went (8.12). */
+  onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
+}
+
+/** What renaming a project's file came to (8.12). */
+export type FileRename =
+  | { readonly kind: 'renamed' | 'unchanged'; readonly path: string }
+  /** Another file in the folder has the name: nothing was touched. */
+  | { readonly kind: 'exists'; readonly file: string }
+  /** No file can have the name. */
+  | { readonly kind: 'invalid' };
+
+/** A template the picker lists (8.12, 8.14). */
+export interface TemplateEntry {
+  /** `builtin:<id>` or `mine:<name>`. */
+  readonly id: string;
+  readonly kind: 'builtin' | 'mine';
+  /** The maker's name for one of theirs; a built-in one's id, which the app words. */
+  readonly name: string;
+  /** When the maker's was saved, and last changed, in ms; null for a built-in one. */
+  readonly created: number | null;
+  readonly changed: number | null;
+  /** The maker's words about one of theirs; empty for a built-in one, which the app words. */
+  readonly description: string;
+  readonly tags: readonly string[];
+  readonly pinned: boolean;
+  /** When a project was last made from it, in ms, or null. */
+  readonly usedAt: number | null;
+}
+
+/** What saving a template came to (8.12). */
+export type TemplateSave =
+  { readonly kind: 'saved' | 'exists'; readonly name: string } | { readonly kind: 'invalid' };
+
+/** The template picker's order (8.14): by name, either way, by when last used, or by when last changed. */
+export type TemplateSort = 'name' | 'name-desc' | 'recent' | 'newest' | 'oldest';
+/** Which templates the picker shows (8.14). */
+export type TemplateShow = 'all' | 'builtin' | 'mine';
+
+/** What happened to an open project's file outside the app (8.12). */
+export type OutsideChange = 'changed' | 'gone';
+
+/** Where a tab's board was looking (8.12): millimetres, and the zoom in percent. */
+export interface TabCamera {
+  readonly x: number;
+  readonly y: number;
+  readonly percent: number;
+}
+
+/** A tab a start opens again (8.12). */
+export interface OpenSessionTab {
+  readonly path: string | null;
+  /** The unsaved work kept for it, as `.lcp` bytes, or null. */
+  readonly data: Uint8Array | null;
+  readonly view: 'design' | 'sheets';
+  readonly camera: TabCamera | null;
+}
+
+/** The tabs a start opens again (8.12), and the index of the one in front. */
+export interface OpenSession {
+  readonly tabs: readonly OpenSessionTab[];
+  readonly active: number | null;
+}
+
+/** The tabs kept for the next start (8.12), as the renderer names them. */
+export interface KeptSession {
+  readonly tabs: readonly {
+    readonly path: string | null;
+    /** A copy written with `keepUnsaved`: the tab's id. */
+    readonly kept: string | null;
+    readonly view: 'design' | 'sheets';
+    readonly camera: TabCamera | null;
+  }[];
+  readonly active: number | null;
 }
 
 /**
@@ -275,6 +455,8 @@ export interface RecentFile {
   readonly path: string;
   /** As the maker reads it, with the home directory as `~`. */
   readonly shown: string;
+  /** Pinned to the top of the list (8.12): kept there, and by *Clear list*. */
+  readonly pinned: boolean;
 }
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
@@ -291,6 +473,16 @@ export interface Preferences {
    * its key does nothing.
    */
   readonly selectionBar: boolean;
+  /**
+   * Closing the window keeps unsaved projects for the next start rather than
+   * asking about them (8.12), as Notepad does. Off unless the maker turns it on.
+   */
+  readonly keepUnsaved: boolean;
+  /** How the template picker was last sorted and filtered (8.14), to open the same way. */
+  readonly templateSort: TemplateSort;
+  readonly templateShow: TemplateShow;
+  /** Whether the picker's pinned templates are folded away under their heading. */
+  readonly templatePinnedFolded: boolean;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
   /**
@@ -374,6 +566,10 @@ export const STARTER_IRONS: readonly Iron[] = [
 export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: true,
   selectionBar: true,
+  keepUnsaved: false,
+  templateSort: 'name',
+  templateShow: 'all',
+  templatePinnedFolded: false,
   toolRailCollapsed: false,
   partsFolded: false,
   propertiesFolded: false,

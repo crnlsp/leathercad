@@ -33,9 +33,9 @@ provenance, with the [GitHub CLI](https://cli.github.com/):
 When a project was saved by a newer LeatherCAD than yours, the app says so and names the version:
 update, and it opens.
 
-**To see a finished pattern first,** choose *Open sample project* from **?** (Help) at the top
-right, or *open the sample wallet* in the empty **Parts** panel: the bifold wallet this page draws, with its lining and card
-pocket. It opens untitled, so saving it asks where, and nothing you change reaches the copy inside
+**To see a finished pattern first,** choose *New project from template…* — in the Project menu, under
+*+*, or on the start screen — and then *Bifold wallet*: the wallet this page draws, with its lining and
+card pocket. It opens untitled, so saving it asks where, and nothing you change reaches the copy inside
 the app.
 
 ## 2. Draw a part

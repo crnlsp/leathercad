@@ -74,7 +74,6 @@ export function PartsList({
   onRemovePart,
   onDuplicatePart,
   onContextMenu,
-  onOpenSample,
   toggle,
 }: {
   store: DocumentStore;
@@ -98,8 +97,6 @@ export function PartsList({
   onDuplicatePart: (partId: string) => void;
   /** A right-click on a row (8.8): the same menu as on the board. */
   onContextMenu: OpenMenu;
-  /** Opens the worked sample (8.3): a finished pattern to take apart. */
-  onOpenSample: () => void;
   /** Its fold (U.5), at the header's end. */
   toggle?: ReactNode;
 }) {
@@ -139,8 +136,6 @@ export function PartsList({
   if (renaming !== null && !rows.some((row) => row.key === renaming)) setRenaming(null);
 
   if (project.parts.length === 0) {
-    // The link sits where the language puts it in the sentence.
-    const [before, after] = t('parts.sample').split('{{link}}');
     return (
       <aside
         className="panel parts"
@@ -150,18 +145,6 @@ export function PartsList({
       >
         <PartsTitle toggle={toggle} count={null} />
         <p className="panel-empty">{t('parts.empty', keys)}</p>
-        <p className="panel-empty">
-          {before}
-          <button
-            type="button"
-            className="link-button"
-            data-testid="open-sample"
-            onClick={onOpenSample}
-          >
-            {t('parts.sampleLink')}
-          </button>
-          {after}
-        </p>
       </aside>
     );
   }

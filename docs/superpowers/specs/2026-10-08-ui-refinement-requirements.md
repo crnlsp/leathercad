@@ -123,7 +123,7 @@ LeatherCAD is an Electron desktop app (Linux, Windows, macOS) for leathercraft p
 **R-06 Top bar in three zones** `[08]` — S
 - **Left:**
   - The project menu and the name are one control. A long name truncates with an ellipsis, and its tooltip shows the full name.
-  - Then the save state. Saved: a check, "Saved", and Save disabled with the tooltip "Nothing to save". Unsaved: an open dot, "Unsaved changes", and Save enabled with its key cap.
+  - Then the save state. Saved: a check, "Saved", and Save disabled with the tooltip "Nothing to save". Unsaved: an open dot, "Unsaved changes", and Save enabled with its key cap. *Since 8.12, at the maintainer's request:* Save looks the same either way, its key cap too, so it never changes shape; with nothing to save it is only inert — a not-allowed pointer, no hover — and its tooltip still says "Nothing to save".
 - **Centre:** Design | Sheets as a pill switch on a dark track.
   - Icons: a pen nib for Design; stacked sheets plus the sheet count ("2") for Sheets.
   - The active tab is raised, with an accent outline and an accent icon.

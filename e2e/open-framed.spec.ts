@@ -5,8 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { launchApp, openSample } from './launchApp.js';
 
 /**
  * A project that opens is shown whole. The camera used to stay where it was,
@@ -44,7 +43,7 @@ async function launch(): Promise<{
 test('an opened project is framed: Fit then changes nothing', async () => {
   const { app, window, before } = await launch();
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).toHaveText('3');
     // The sample is larger than the empty board's view: framing it zooms out.
     await expect(window.getByTestId('zoom-control')).not.toHaveText(before);
@@ -59,21 +58,16 @@ test('a project opened from the Sheets view is framed in Design too', async () =
   const zoom = window.getByTestId('zoom-control');
   try {
     // How Design frames the sample when it is opened there.
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await openSample(window);
     await expect(zoom).not.toHaveText(before);
     const framed = await zoomOf(window);
 
-    // A new project leaves the camera where it was; true size moves it off.
-    await fromProjectMenu(window, 'new');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    // True size moves this tab's camera off, so the next is not framed by chance.
     await window.keyboard.press('Control+0');
     await expect(window.getByTestId('zoom-level')).toHaveText('100 %');
 
     await window.getByTestId('view-sheets').click();
-    await window.getByTestId('help-menu').click();
-    await window.getByTestId('help-open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await openSample(window);
 
     // Waited for, not read once the zoom has changed: for a moment after the
     // switch the control can still say the Sheets' zoom, which has changed too.

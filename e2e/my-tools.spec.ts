@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { openApp } from './launchApp.js';
+import { openApp, openSample } from './launchApp.js';
 
 /**
  * U.13, R-15: Settings › My tools. The maker's irons are what a hole set's
@@ -48,7 +48,7 @@ test('a maker’s own iron becomes the default a new hole set takes, and is kept
     await row.getByRole('radio').check();
     await window.getByTestId('settings-close').click();
 
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await window.getByTestId('feature-row-outer-stitch').click();
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('add-stitch-holes').click();
@@ -74,7 +74,7 @@ test('a hole set keeps its iron’s name after the iron is renamed or deleted (U
   const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-tools-'));
   const { app, window } = await launch(configHome);
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await window.getByTestId('feature-row-outer-stitch').click();
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('add-stitch-holes').click();
@@ -135,7 +135,7 @@ test('a new stitch line, allowance and fold take the maker’s margin and leathe
     await expect(thickness).toHaveValue('1.4');
     await window.getByTestId('settings-close').click();
 
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     const panel = window.getByTestId('property-panel');
     await window.getByTestId('feature-row-outer-outline').click();
     await panel.getByTestId('add-stitch-line').click();

@@ -50,6 +50,20 @@ describe('the macOS menu (8.7)', () => {
     for (const item of keyed) expect(item.registerAccelerator, item.label).toBe(false);
   });
 
+  it('leaves Cmd+W to the renderer, which closes a tab with it (8.12)', () => {
+    // Nothing of ours closes the window: no Close role, no item on the key.
+    // Electron's Window role on macOS has Minimize, Zoom and Bring All to
+    // Front, and its Close only elsewhere — checked on a Mac by the release
+    // checklist, since this test cannot see inside a role.
+    const items = template.flatMap(
+      (top) => (top.submenu as MenuItemConstructorOptions[] | undefined) ?? [],
+    );
+    for (const item of [...template, ...items]) {
+      expect(String(item.role ?? '').toLowerCase(), item.label).not.toBe('close');
+      expect(item.accelerator, item.label).not.toBe('CmdOrCtrl+W');
+    }
+  });
+
   it('has no Reload and no developer tools: those are keys of a development build', () => {
     const roles = template
       .flatMap((top) => (top.submenu as MenuItemConstructorOptions[] | undefined) ?? [])

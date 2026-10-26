@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
 
 /**
  * Slice 3.9a: the product spec's own example — "the card pockets are 95 × 60 mm
@@ -120,9 +120,11 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
 
     // ── Saved, and the same pocket when it is opened again ──────────────────
     await window.getByTestId('save').click();
-    await expect(window.getByTestId('save')).toHaveText('Save');
-    await fromProjectMenu(window, 'new');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expect(window.getByTestId('save')).toHaveAttribute('aria-disabled', 'true');
+    // Its tab closed, so opening reads the file again rather than going back
+    // to the tab (8.12).
+    await closeActiveTab(window);
+    await expect(window.getByTestId('start-screen')).toBeVisible();
     await fromProjectMenu(window, 'open');
 
     await expect(window.getByTestId('feature-count')).toHaveText('3');

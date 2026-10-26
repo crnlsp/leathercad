@@ -51,6 +51,7 @@ export const ICON_NAMES = [
   'new-project',
   'from-template',
   'open',
+  'export',
   'search',
   'menu',
   'changed-outside',

@@ -13,6 +13,16 @@
  */
 
 export type {
+  TemplateShow,
+  TemplateSort,
+  TemplateEntry,
+  TemplateSave,
+  KeptSession,
+  OpenSessionTab,
+  TabCamera,
+  OutsideChange,
+  FileRename,
+  OpenSession,
   PlatformHost,
   OpenDialogOptions,
   SaveDialogOptions,

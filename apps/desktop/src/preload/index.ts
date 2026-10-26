@@ -1,5 +1,5 @@
 import type { Preferences } from '@leathercad/platform';
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import { IPC } from '../shared/ipc.js';
 
@@ -40,9 +40,10 @@ const platformBridge = {
   setKeyCapture: (capturing: boolean): Promise<void> =>
     ipcRenderer.invoke(IPC.setKeyCapture, capturing),
 
-  writeRecovery: (data: Uint8Array): Promise<void> => ipcRenderer.invoke(IPC.writeRecovery, data),
+  writeRecovery: (tab: string, data: Uint8Array): Promise<void> =>
+    ipcRenderer.invoke(IPC.writeRecovery, tab, data),
 
-  clearRecovery: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery),
+  clearRecovery: (tab: string): Promise<void> => ipcRenderer.invoke(IPC.clearRecovery, tab),
 
   findRecovery: (): Promise<{ id: string; savedAt: string; data: Uint8Array } | null> =>
     ipcRenderer.invoke(IPC.findRecovery),
@@ -61,7 +62,7 @@ const platformBridge = {
 
   noteRecentFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.noteRecentFile, path),
 
-  getRecentFiles: (): Promise<{ path: string; shown: string }[]> =>
+  getRecentFiles: (): Promise<{ path: string; shown: string; pinned: boolean }[]> =>
     ipcRenderer.invoke(IPC.getRecentFiles),
 
   openRecent: (path: string): Promise<'opening' | 'gone' | 'unlisted'> =>
@@ -69,6 +70,10 @@ const platformBridge = {
 
   clearRecent: (): Promise<void> => ipcRenderer.invoke(IPC.clearRecent),
 
+  pinRecent: (path: string, pinned: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.pinRecent, path, pinned),
+
+  removeRecent: (path: string): Promise<void> => ipcRenderer.invoke(IPC.removeRecent, path),
   showLogFolder: (): Promise<void> => ipcRenderer.invoke(IPC.showLogFolder),
 
   readNotices: (): Promise<string | null> => ipcRenderer.invoke(IPC.readNotices),
@@ -77,9 +82,86 @@ const platformBridge = {
 
   checkForUpdates: (): Promise<unknown> => ipcRenderer.invoke(IPC.checkForUpdates),
 
-  readSampleProject: (): Promise<Uint8Array> => ipcRenderer.invoke(IPC.readSampleProject),
-
   takeLaunchFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeLaunchFile),
+
+  takeSession: (): Promise<unknown> => ipcRenderer.invoke(IPC.takeSession),
+
+  keepSession: (session: unknown): Promise<void> => ipcRenderer.invoke(IPC.keepSession, session),
+
+  keepUnsaved: (tab: string, data: Uint8Array): Promise<void> =>
+    ipcRenderer.invoke(IPC.keepUnsaved, tab, data),
+
+  renameProjectFile: (
+    path: string,
+    name: string,
+  ): Promise<
+    | { kind: 'renamed' | 'unchanged'; path: string }
+    | { kind: 'exists'; file: string }
+    | { kind: 'invalid' }
+  > => ipcRenderer.invoke(IPC.renameProjectFile, path, name),
+
+  showInFolder: (path: string): Promise<void> => ipcRenderer.invoke(IPC.showInFolder, path),
+
+  trashProjectFile: (path: string): Promise<void> => ipcRenderer.invoke(IPC.trashProjectFile, path),
+
+  // A file dropped on the window (8.12): its path, which a sandboxed page
+  // cannot read off the File itself. Empty for anything that is not a file.
+  pathForFile: (file: File): string => {
+    try {
+      return webUtils.getPathForFile(file);
+    } catch {
+      return '';
+    }
+  },
+
+  listTemplates: (): Promise<unknown> => ipcRenderer.invoke(IPC.listTemplates),
+
+  readTemplate: (id: string): Promise<Uint8Array | null> =>
+    ipcRenderer.invoke(IPC.readTemplate, id),
+
+  saveTemplate: (name: string, data: Uint8Array, replace: boolean): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.saveTemplate, name, data, replace),
+
+  removeTemplate: (id: string): Promise<void> => ipcRenderer.invoke(IPC.removeTemplate, id),
+
+  renameTemplate: (id: string, name: string): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.renameTemplate, id, name),
+
+  duplicateTemplate: (id: string, name: string): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.duplicateTemplate, id, name),
+
+  describeTemplate: (id: string, description: string, tags: readonly string[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.describeTemplate, id, description, tags),
+
+  pinTemplate: (id: string, pinned: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.pinTemplate, id, pinned),
+
+  templateUsed: (id: string): Promise<void> => ipcRenderer.invoke(IPC.templateUsed, id),
+
+  importTemplate: (options: unknown): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.importTemplate, options),
+
+  exportTemplate: (id: string, options: unknown): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.exportTemplate, id, options),
+
+  editTemplate: (id: string): Promise<string | null> => ipcRenderer.invoke(IPC.editTemplate, id),
+
+  showTemplate: (id: string): Promise<void> => ipcRenderer.invoke(IPC.showTemplate, id),
+
+  openDropped: (paths: readonly string[]): Promise<string[]> =>
+    ipcRenderer.invoke(IPC.openDropped, paths),
+
+  watchProjects: (paths: readonly string[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.watchProjects, paths),
+
+  onProjectChanged: (
+    listener: (path: string, change: 'changed' | 'gone') => void,
+  ): (() => void) => {
+    const handler = (_event: unknown, path: string, change: 'changed' | 'gone'): void =>
+      listener(path, change);
+    ipcRenderer.on(IPC.projectChanged, handler);
+    return () => ipcRenderer.removeListener(IPC.projectChanged, handler);
+  },
 
   onOpenFile: (listener: (path: string) => void): (() => void) => {
     const handler = (_event: unknown, path: string): void => listener(path);
