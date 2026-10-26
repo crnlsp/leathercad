@@ -1854,6 +1854,8 @@ export function App({
             onOrder={(templateSort, templateShow) =>
               changePreferences({ templateSort, templateShow })
             }
+            pinnedFolded={preferences.templatePinnedFolded}
+            onFoldPinned={(templatePinnedFolded) => changePreferences({ templatePinnedFolded })}
             actions={templateActions}
             onClose={() => setTemplateList(null)}
           />

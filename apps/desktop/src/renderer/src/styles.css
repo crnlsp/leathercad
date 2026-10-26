@@ -878,13 +878,19 @@ body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-1);
   min-height: 0;
   padding-right: var(--space-1);
   overflow-y: auto;
 }
 
-.template-lists:focus-visible {
+.template-listbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.template-listbox:focus-visible {
   outline-offset: 2px;
 }
 
@@ -892,6 +898,43 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* The pinned sit in a well of their own, set into the dialog, so the line
+   between them and the rest is plain at a glance. */
+.template-group.pinned {
+  padding: var(--space-1);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-md);
+  background: var(--shell-800);
+}
+
+.template-group.pinned + .template-group {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--shell-line);
+}
+
+.template-fold {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: var(--h-control);
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font: var(--t-label);
+  text-align: start;
+  cursor: pointer;
+}
+
+.template-fold:hover {
+  color: var(--text);
+}
+
+.template-fold-count {
+  color: var(--text-mute);
 }
 
 .template-heading {

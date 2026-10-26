@@ -1420,7 +1420,10 @@
       "oldest": "Oldest first"
     },
     "group": {
-      "pinned": "Pinned"
+      "pinned": "Pinned",
+      "others": "Other templates",
+      "foldPinned": "Fold the pinned templates",
+      "unfoldPinned": "Show the pinned templates"
     },
     "count": "{{shown}} of {{total}}",
     "countAll_one": "{{count}} template",

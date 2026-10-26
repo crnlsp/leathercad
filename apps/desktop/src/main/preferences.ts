@@ -85,6 +85,7 @@ const FLAGS = [
   'toolRailCollapsed',
   'partsFolded',
   'propertiesFolded',
+  'templatePinnedFolded',
 ] as const;
 
 /**
@@ -144,6 +145,7 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     templateShow: isTemplateShow(record['templateShow'])
       ? record['templateShow']
       : DEFAULT_PREFERENCES.templateShow,
+    templatePinnedFolded: flag('templatePinnedFolded'),
     toolRailCollapsed: flag('toolRailCollapsed'),
     partsFolded: flag('partsFolded'),
     propertiesFolded: flag('propertiesFolded'),

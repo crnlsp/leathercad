@@ -481,6 +481,8 @@ export interface Preferences {
   /** How the template picker was last sorted and filtered (8.14), to open the same way. */
   readonly templateSort: TemplateSort;
   readonly templateShow: TemplateShow;
+  /** Whether the picker's pinned templates are folded away under their heading. */
+  readonly templatePinnedFolded: boolean;
   /** Whether the tool rail is collapsed to icons on a wide window. */
   readonly toolRailCollapsed: boolean;
   /**
@@ -567,6 +569,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   keepUnsaved: false,
   templateSort: 'name',
   templateShow: 'all',
+  templatePinnedFolded: false,
   toolRailCollapsed: false,
   partsFolded: false,
   propertiesFolded: false,

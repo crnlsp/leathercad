@@ -149,7 +149,8 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   The picker is a browser: a search over names, descriptions and tags; *Show* (all, built-in,
   mine) and *Sort* (name either way, recently
   used, newest, oldest — by when last changed), the app's own menus, kept between openings; the
-  pinned first, in the order chosen, then one list in that order; the
+  pinned first, in a well of their own that folds away (kept between openings), then the rest,
+  both in the order chosen; the
   chosen template drawn large with its facts. The maker's own are described and tagged — saved when
   asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
   the template, exported, shown in the file manager and removed, with *Undo* for a few seconds; a

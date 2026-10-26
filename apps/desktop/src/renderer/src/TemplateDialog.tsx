@@ -75,8 +75,8 @@ const earliest = (a: number | null, b: number | null): number =>
  *
  * Typing goes to the search at once, which reads names, descriptions and
  * tags; *Show* narrows the list, *Sort* orders it, and the picker
- * opens again as it was left. The pinned come first, in the same order as
- * the rest. A removed template is gone at
+ * opens again as it was left. The pinned come first, in a fold of their
+ * own that can be closed, in the same order as the rest. A removed template is gone at
  * once and can be brought back for a few seconds, rather than asked about.
  *
  * A listbox: the arrows choose, Enter uses, Delete removes one of the
@@ -87,6 +87,8 @@ export function TemplateDialog({
   sort,
   show,
   onOrder,
+  pinnedFolded,
+  onFoldPinned,
   actions,
   onClose,
 }: {
@@ -95,6 +97,9 @@ export function TemplateDialog({
   show: TemplateShow;
   /** The order and filter changed: kept for the next time the picker opens. */
   onOrder: (sort: TemplateSort, show: TemplateShow) => void;
+  /** Whether the pinned are folded away: kept for the next time too. */
+  pinnedFolded: boolean;
+  onFoldPinned: (folded: boolean) => void;
   actions: TemplateActions;
   onClose: () => void;
 }) {
@@ -156,19 +161,11 @@ export function TemplateDialog({
     return kept.sort(by[sort]);
   }, [rows, show, query, sort]);
 
-  // The pinned first, under their heading, then the rest: the one order chosen
-  // runs through both, searched or not.
-  const groups = useMemo((): { id: string; label: string; rows: Row[] }[] => {
-    const pinned = shown.filter((row) => row.entry.pinned);
-    const rest = shown.filter((row) => !row.entry.pinned);
-    return [
-      ...(pinned.length > 0
-        ? [{ id: 'pinned', label: t('templates.group.pinned'), rows: pinned }]
-        : []),
-      { id: 'all', label: '', rows: rest },
-    ];
-  }, [shown, t]);
-  const ordered = groups.flatMap((group) => group.rows);
+  // The pinned first, in their fold, then the rest: the one order chosen runs
+  // through both, searched or not. Folded, the arrows pass the pinned by.
+  const pinned = useMemo(() => shown.filter((row) => row.entry.pinned), [shown]);
+  const others = useMemo(() => shown.filter((row) => !row.entry.pinned), [shown]);
+  const ordered = pinnedFolded ? others : [...pinned, ...others];
 
   const [picked, setPicked] = useState<string | null>(null);
   const chosen = ordered.find((row) => row.entry.id === picked) ?? ordered[0] ?? null;
@@ -352,41 +349,78 @@ export function TemplateDialog({
                 onChange={(event) => setQuery(event.target.value)}
               />
             </label>
-            <div
-              ref={list}
-              className="template-lists"
-              role="listbox"
-              tabIndex={0}
-              aria-labelledby="template-dialog-title"
-              aria-activedescendant={chosen === null ? undefined : `template-option-${String(at)}`}
-              data-testid="template-list"
-            >
-              {ordered.length === 0 ? (
-                <div className="template-empty" role="presentation">
-                  {query.trim() !== '' ? (
-                    <>
-                      {t('templates.noMatch', { query: query.trim() })}
-                      <button type="button" className="tool" onClick={() => setQuery('')}>
-                        {t('templates.clearSearch')}
-                      </button>
-                    </>
-                  ) : (
-                    t('templates.mineEmpty')
+            {/* The fold's toggle heads the scroll, outside the listbox, which holds only options. */}
+            <div ref={list} className="template-lists">
+              {pinned.length > 0 && (
+                <button
+                  type="button"
+                  className="template-fold"
+                  data-testid="template-fold-pinned"
+                  aria-expanded={!pinnedFolded}
+                  aria-controls="template-pinned"
+                  aria-label={t(
+                    pinnedFolded ? 'templates.group.unfoldPinned' : 'templates.group.foldPinned',
                   )}
-                </div>
-              ) : (
-                groups.map((group) => (
-                  <div
-                    key={group.id}
-                    role="group"
-                    aria-label={group.label || undefined}
-                    className="template-group"
-                  >
-                    {group.label !== '' && <h4 className="template-heading">{group.label}</h4>}
-                    {group.rows.map(option)}
-                  </div>
-                ))
+                  onClick={() => onFoldPinned(!pinnedFolded)}
+                >
+                  <Icon of={pinnedFolded ? 'chevron-right' : 'chevron-down'} size={12} />
+                  <Icon of="pin" size={12} />
+                  {t('templates.group.pinned')}
+                  <span className="template-fold-count">{pinned.length}</span>
+                </button>
               )}
+              <div
+                className="template-listbox"
+                role="listbox"
+                tabIndex={0}
+                aria-labelledby="template-dialog-title"
+                aria-activedescendant={
+                  chosen === null ? undefined : `template-option-${String(at)}`
+                }
+                data-testid="template-list"
+              >
+                {shown.length === 0 ? (
+                  <div className="template-empty" role="presentation">
+                    {query.trim() !== '' ? (
+                      <>
+                        {t('templates.noMatch', { query: query.trim() })}
+                        <button type="button" className="tool" onClick={() => setQuery('')}>
+                          {t('templates.clearSearch')}
+                        </button>
+                      </>
+                    ) : (
+                      t('templates.mineEmpty')
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {pinned.length > 0 && !pinnedFolded && (
+                      <div
+                        id="template-pinned"
+                        role="group"
+                        aria-label={t('templates.group.pinned')}
+                        className="template-group pinned"
+                      >
+                        {pinned.map(option)}
+                      </div>
+                    )}
+                    {others.length > 0 && (
+                      <div
+                        role="group"
+                        aria-label={pinned.length > 0 ? t('templates.group.others') : undefined}
+                        className="template-group"
+                      >
+                        {pinned.length > 0 && (
+                          <h4 className="template-heading" aria-hidden="true">
+                            {t('templates.group.others')}
+                          </h4>
+                        )}
+                        {others.map(option)}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -420,7 +454,7 @@ export function TemplateDialog({
               {show === 'all' && query.trim() === ''
                 ? t('templates.countAll', { count: rows.length })
                 : t('templates.count', {
-                    shown: ordered.length,
+                    shown: shown.length,
                     total: rows.length,
                   })}
             </span>
