@@ -151,8 +151,10 @@ describe('a dimension line drawn like drafting (4.10b)', () => {
           const m = MatOps.compose(MatOps.fromRotation(angle), MatOps.fromTranslation(by));
           const moved = draftDimensionLine(line(MatOps.apply(m, from), MatOps.apply(m, to)), size);
           const original = draftDimensionLine(line(from, to), size);
-          const flat = (d: typeof original): Vec2[] =>
-            [...d.arrowheads, ...d.lines].flatMap(corners);
+          const flat = (d: typeof original): Vec2[] => [
+            ...[...d.arrowheads, ...d.lines].flatMap(corners),
+            d.number,
+          ];
           const there = flat(original).map((p) => MatOps.apply(m, p));
           const here = flat(moved);
           return (
@@ -163,8 +165,40 @@ describe('a dimension line drawn like drafting (4.10b)', () => {
     );
   });
 
+  it('centres the number on the line whenever it and its clearance fit between the ends', () => {
+    fc.assert(
+      fc.property(ends, sizes, ({ from, to, span }, size) => {
+        fc.pre(span >= size.gapMm + EPS);
+        const { number } = draftDimensionLine(line(from, to), size);
+        return near(number, { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }, EPS);
+      }),
+    );
+  });
+
+  it('sets a number too wide for its line outside, past the arrowhead at the far end', () => {
+    fc.assert(
+      fc.property(ends, sizes, ({ from, to, span }, size) => {
+        fc.pre(span < size.gapMm - EPS);
+        const { number, lines, arrowheads } = draftDimensionLine(line(from, to), size);
+        const { s, off } = along(from, to, number);
+        // Its near edge, the clearance included, is clear of the line and of
+        // the arrowhead turned outside at `to`; the line is whole.
+        const farthest = Math.max(
+          ...arrowheads.flatMap(corners).map((corner) => along(from, to, corner).s),
+        );
+        return (
+          Math.abs(off) <= EPS &&
+          Math.abs(s - size.gapMm / 2 - farthest) <= EPS &&
+          Math.abs(farthest - (span + size.arrowLengthMm)) <= EPS &&
+          lines.length === 1 &&
+          Math.abs(PathOps.length(lines[0]!) - span) <= EPS
+        );
+      }),
+    );
+  });
+
   it('draws the 97 mm width of a piece as drafting does', () => {
-    const { lines, arrowheads } = draftDimensionLine(
+    const { lines, arrowheads, number } = draftDimensionLine(
       line({ x: 0, y: -8 }, { x: 97, y: -8 }),
       PRINT_SIZES,
     );
@@ -179,12 +213,24 @@ describe('a dimension line drawn like drafting (4.10b)', () => {
       [2.5, 44.5],
       [52.5, 94.5],
     ]);
+    expect(number).toEqual({ x: 48.5, y: -8 });
+  });
+
+  it('sets the number of a 5 mm dimension beside it, as drafting does', () => {
+    // An 8 mm break does not fit in 5 mm: the arrowheads turn out, and the
+    // number goes past the one at the far end, 1 mm clear of it.
+    const { lines, number } = draftDimensionLine(line({ x: 0, y: 0 }, { x: 5, y: 0 }), PRINT_SIZES);
+
+    expect(lines.map((piece) => PathOps.length(piece))).toEqual([5]);
+    expect(number.x).toBeCloseTo(5 + 2.5 + 4, 12);
+    expect(number.y).toBe(0);
   });
 
   it('draws nothing along a line of no length, which has no direction to point', () => {
     expect(draftDimensionLine(line({ x: 3, y: 4 }, { x: 3, y: 4 }), PRINT_SIZES)).toEqual({
       lines: [],
       arrowheads: [],
+      number: { x: 3, y: 4 },
     });
   });
 

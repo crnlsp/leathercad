@@ -290,6 +290,27 @@ describe('a dimension on paper', () => {
     expect(ink.maxY).toBeGreaterThan(-8);
   });
 
+  it('prints a number too wide for its line beside it, past the far arrowhead', () => {
+    // A 5 mm piece: "5.0" and 1 mm either side of it do not fit, so the
+    // arrowheads turn out, the line is whole, and the number sits past the
+    // arrowhead at x = 5, 1 mm clear of it, across the line.
+    const part = buildExportScene(evaluate(dimensioned(5)), 'Test').parts[0]!;
+    const number = part.texts.find((text) => text.source === '5.0')!;
+    const ink = RectOps.unionAll(number.glyphs.flatMap((glyph) => PathOps.bbox(glyph) ?? []))!;
+    const pieces = part.paths
+      .filter((path) => path.role === 'annotation' && path.filled !== true)
+      .map((path) => PathOps.bbox(path.path)!)
+      .filter((box) => RectOps.height(box) < 1e-9);
+    const clear = 5 + DIMENSION_MARKS.arrow.lengthMm + DIMENSION_MARKS.clearanceMm;
+
+    expect(pieces.map((box) => [box.minX, box.maxX])).toEqual([[0, 5]]);
+    // The figures' ink starts a little inside their advance, never before it.
+    expect(ink.minX).toBeGreaterThanOrEqual(clear - 1e-9);
+    expect(ink.minX).toBeLessThan(clear + 0.5);
+    expect(ink.minY).toBeLessThan(-8);
+    expect(ink.maxY).toBeGreaterThan(-8);
+  });
+
   it('fills the arrowheads on the page, in the measuring grey', async () => {
     const bytes = await pdfFor(dimensioned());
     const document = await PDFDocument.load(bytes);

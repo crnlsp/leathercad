@@ -135,7 +135,9 @@ number sits — the number centred on the line, reading along it — and a fille
 its tip on the extension line. The arrowhead is 2.5 × 0.85 mm, ISO 129-1's three to one, and the
 break is the number's width and 1 mm either side: true millimetres, from `DIMENSION_MARKS` in
 `packages/render/src/theme/`. When the arrowheads and the number do not both fit between the
-extension lines, the arrowheads turn outside, pointing in. The arrowheads are the one filled shape
+extension lines, the arrowheads turn outside, pointing in; when the number and its clearance do not
+fit either, the line is drawn whole and the number goes past the arrowhead at the far end, 1 mm
+clear of it — decided from the number's real width, as the board decides from its own. The arrowheads are the one filled shape
 in an export's pattern (`ExportPath.filled`): filled in the PDF and the SVG, and outlined in a DXF,
 whose lines have no fill. The print test measures a dimension between its extension lines, since
 its line is no longer one stroke.

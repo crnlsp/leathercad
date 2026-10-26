@@ -11,7 +11,11 @@ export interface DimensionLineSizes {
   readonly arrowLengthMm: Mm;
   /** Across an arrowhead's base. */
   readonly arrowWidthMm: Mm;
-  /** The break in the line the number sits in: its width and the clearance either side. */
+  /**
+   * The room the number takes along the line: its own width and the clearance
+   * either side. The line breaks for it, or it goes outside when it does not
+   * fit.
+   */
   readonly gapMm: Mm;
 }
 
@@ -21,21 +25,28 @@ export interface DraftedDimensionLine {
   readonly lines: readonly Path[];
   /** One closed triangle at each end, the tip first: on `from`, then on `to`. */
   readonly arrowheads: readonly Path[];
+  /**
+   * Where the number's centre goes: the middle of the line when the number
+   * and its clearance fit between the ends, and otherwise on the line carried
+   * on past the arrowhead at `to`, clear of it by the clearance.
+   */
+  readonly number: Vec2;
 }
 
 /**
  * A dimension line with **arrowheads, and the number breaking it** (4.10b) —
  * UI Foundations' identity item 9, on the board and on paper alike.
  *
- * Each arrowhead's tip is on its end, where the extension line is. They point
- * outward from inside the line when both and the number fit between the ends,
- * and inward from outside when not, as a drawing office turns them for a short
- * dimension. The line breaks for `gapMm` about its middle when that is shorter
- * than the line.
+ * Laid out as a drawing office does, from the number's real width and the
+ * arrowheads' real length in the medium, never a fixed threshold:
  *
- * ponytail: a number wider than its line stays in the middle, over the line;
- * drafting would set it outside, beside an arrowhead. Leather rarely needs a
- * dimension that short — add it when one does.
+ * - room for the number and both arrowheads: the arrowheads inside, pointing
+ *   out to the ends, and the line broken about its middle for the number;
+ * - room for the number alone: the arrowheads outside, pointing in, and the
+ *   number still breaking the line in the middle;
+ * - no room for the number: the arrowheads outside, the line whole, and the
+ *   number past the arrowhead at `to`, so it never sits over the line it
+ *   measures.
  *
  * A line of no length has no direction to point an arrowhead, so it draws
  * nothing: the extension lines still say where it is.
@@ -60,11 +71,12 @@ export function draftDimensionLine(
 
   const { a: from, b: to } = dimension;
   const span = Math.hypot(to.x - from.x, to.y - from.y);
-  if (span <= EPS_LENGTH) return { lines: [], arrowheads: [] };
+  if (span <= EPS_LENGTH) return { lines: [], arrowheads: [], number: from };
 
   const u = { x: (to.x - from.x) / span, y: (to.y - from.y) / span };
   const at = (s: Mm): Vec2 => ({ x: from.x + u.x * s, y: from.y + u.y * s });
 
+  const numberFits = approxGte(span, gap, EPS_LENGTH);
   // Inside, each tip points out to its end; outside, in to it.
   const inside = approxGte(span, 2 * length + gap, EPS_LENGTH);
   const towardsTo = inside ? 1 : -1;
@@ -79,18 +91,21 @@ export function draftDimensionLine(
   const end = span - start;
   // A number exactly as wide as the line leaves pieces of no length, which
   // the filter drops, so the comparison needs no tolerance.
-  const pieces: [Mm, Mm][] =
-    span > gap
-      ? [
-          [start, (span - gap) / 2],
-          [(span + gap) / 2, end],
-        ]
-      : [[0, span]];
+  const pieces: [Mm, Mm][] = numberFits
+    ? [
+        [start, (span - gap) / 2],
+        [(span + gap) / 2, end],
+      ]
+    : [[0, span]];
   const lines = pieces
     .filter(([s0, s1]) => s1 - s0 > EPS_LENGTH)
     .map(([s0, s1]) => open([line(at(s0), at(s1))]));
 
-  return { lines, arrowheads };
+  // Outside, the arrowhead at `to` reaches `length` past it, and the number's
+  // room starts there: its clearance is the gap between them.
+  const number = at(numberFits ? span / 2 : span + length + gap / 2);
+
+  return { lines, arrowheads, number };
 }
 
 /** A filled drafting arrowhead: its tip, then the two corners of its base. */

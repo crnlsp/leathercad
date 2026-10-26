@@ -1,11 +1,20 @@
-import type { Mm } from '@leathercad/core';
+import { EPS_LENGTH, approxZero, type Mm } from '@leathercad/core';
 import {
   LAYER_ROLES,
   draftDimensionLine,
   type LayerRole,
   type ResolvedProject,
 } from '@leathercad/domain';
-import { PathOps, RectOps, Shapes, type Path, type Rect } from '@leathercad/geometry';
+import {
+  MatOps,
+  PathOps,
+  RectOps,
+  SegmentOps,
+  Shapes,
+  type Path,
+  type Rect,
+  type Vec2,
+} from '@leathercad/geometry';
 import {
   CAPTION_GAP_MM,
   CAPTION_SIZE_MM,
@@ -13,7 +22,7 @@ import {
   ROLE_STYLES,
   describePart,
 } from '@leathercad/render';
-import { outlinesOf, placedText } from '@leathercad/typography';
+import { outlinesOf, placedText, type PlacedText } from '@leathercad/typography';
 
 /**
  * How a layer role is drawn on paper.
@@ -137,14 +146,22 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
       // are what say what the number measures, so they print with it — a
       // bare "100.0" on the paper measures nothing (found preparing 7.7).
       if (entry.text !== undefined) {
+        const drafted =
+          entry.feature.kind === 'text-label'
+            ? null
+            : draftedOnPaper(entry.role, entry.path, entry.text);
+        const glyphs = outlinesOf(entry.text);
+        const moved = drafted?.numberMoved;
         texts.push({
           role: entry.role,
           source: entry.text.layout.text,
-          glyphs: outlinesOf(entry.text),
+          glyphs:
+            moved === undefined
+              ? glyphs
+              : glyphs.map((glyph) => PathOps.transform(glyph, MatOps.fromTranslation(moved))),
           sizeMm: entry.text.layout.sizeMm,
         });
-        if (entry.feature.kind === 'text-label') continue;
-        paths.push(...draftedOnPaper(entry.role, entry.path, entry.text.layout.widthMm));
+        if (drafted !== null) paths.push(...drafted.paths);
         continue;
       }
 
@@ -201,29 +218,38 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
 /**
  * A dimension as drafting prints it (4.10b): its extension lines, its line
  * broken where the number sits, and a filled arrowhead on each end, all in
- * true millimetres. The path is the extension lines either side of the line,
- * as evaluation builds it.
+ * true millimetres; and its number, which evaluation centred on the line,
+ * moved beside it when the line is too short for it. The path is the
+ * extension lines either side of the line, as evaluation builds it.
  */
-function draftedOnPaper(role: LayerRole, path: Path, numberWidthMm: Mm): ExportPath[] {
+function draftedOnPaper(
+  role: LayerRole,
+  path: Path,
+  number: PlacedText,
+): { paths: ExportPath[]; numberMoved: Vec2 | undefined } {
   const [extensionFrom, dimensionLine, extensionTo] = path.segments;
   const style = PRINT_STYLES[role];
   if (extensionFrom === undefined || dimensionLine?.kind !== 'line' || extensionTo === undefined) {
-    return [{ role, path, style }];
+    return { paths: [{ role, path, style }], numberMoved: undefined };
   }
   const { arrow, clearanceMm } = DIMENSION_MARKS;
-  const { lines, arrowheads } = draftDimensionLine(dimensionLine, {
+  const drafted = draftDimensionLine(dimensionLine, {
     arrowLengthMm: arrow.lengthMm,
     arrowWidthMm: arrow.widthMm,
-    gapMm: numberWidthMm + 2 * clearanceMm,
+    gapMm: number.layout.widthMm + 2 * clearanceMm,
   });
-  return [
-    ...[extensionFrom, extensionTo, ...lines.flatMap((piece) => piece.segments)].map((segment) => ({
-      role,
-      path: { closed: false, segments: [segment] },
-      style,
-    })),
-    ...arrowheads.map((head) => ({ role, path: head, style, filled: true as const })),
+  const paths = [
+    ...[extensionFrom, extensionTo, ...drafted.lines.flatMap((piece) => piece.segments)].map(
+      (segment) => ({ role, path: { closed: false, segments: [segment] }, style }),
+    ),
+    ...drafted.arrowheads.map((head) => ({ role, path: head, style, filled: true as const })),
   ];
+  // Evaluation centred the number on the line's middle; drafting may have put
+  // it beside the line instead.
+  const middle = SegmentOps.pointAt(dimensionLine, 0.5);
+  const by = { x: drafted.number.x - middle.x, y: drafted.number.y - middle.y };
+  const stays = approxZero(by.x, EPS_LENGTH) && approxZero(by.y, EPS_LENGTH);
+  return { paths, numberMoved: stays ? undefined : by };
 }
 
 /** The caption above a piece, so a printed sheet says what each one is. */

@@ -670,7 +670,8 @@ describe('a dimension’s value on the board (R-01)', () => {
 
   it('is 12 px in the measuring colour, centred on its line, on a halo of the ground', () => {
     const resolved = evaluate(dimensioned());
-    for (const zoom of [1, 4, 12]) {
+    // From 4 px/mm the 30 mm line has room for its number (see below for 1).
+    for (const zoom of [4, 12]) {
       const number = valueIn(resolved, { pxPerMm: zoom });
       expect(number).toMatchObject({
         sizePx: 12,
@@ -686,6 +687,18 @@ describe('a dimension’s value on the board (R-01)', () => {
       expect((58 - number!.at.y) * zoom).toBeCloseTo((FONT.capHeight / FONT.unitsPerEm) * 6, 9);
       expect(number!.rotationRad ?? 0).toBe(0);
     }
+  });
+
+  it('goes beside its line, past the far arrowhead, when the line is too short for it', () => {
+    // At 1 px/mm the 30 mm line is 30 px, and "30.0" with its halo is wider:
+    // drafting sets it outside, clear of the arrowhead turned out at x = 30.
+    const zoom = 1;
+    const number = valueIn(evaluate(dimensioned()), { pxPerMm: zoom })!;
+    const room = layoutText('30.0', 12 / zoom).widthMm + (2 * CANVAS.text.haloPx) / zoom;
+    expect(room).toBeGreaterThan(30);
+
+    expect(number.at.x).toBeCloseTo(30 + DIMENSION_MARKS.arrow.lengthPx / zoom + room / 2, 9);
+    expect((58 - number.at.y) * zoom).toBeCloseTo((FONT.capHeight / FONT.unitsPerEm) * 6, 9);
   });
 
   it('reads along a vertical line, as the printed one does', () => {

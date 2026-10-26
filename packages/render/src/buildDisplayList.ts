@@ -12,7 +12,6 @@ import {
   MatOps,
   PathOps,
   RectOps,
-  SegmentOps,
   Shapes,
   type Path,
   type Rect,
@@ -185,20 +184,21 @@ export function buildDisplayList(
           continue;
         }
         const colour = ROLE_STROKES[entry.role].colour;
-        const number = words.value(
-          SegmentOps.pointAt(dimensionLine, 0.5),
-          entry.text.layout.text,
-          entry.text.rotationRad,
-          colour,
-        );
         // Drawn like drafting (4.10b): arrowheads, and the line broken where
-        // the number sits — the marks as constant on screen as the number.
+        // the number sits, or the number beside it when the line is too short
+        // for it — the marks as constant on screen as the number.
         const { arrow } = DIMENSION_MARKS;
         const drafted = draftDimensionLine(dimensionLine, {
           arrowLengthMm: arrow.lengthPx / zoom,
           arrowWidthMm: arrow.widthPx / zoom,
-          gapMm: number.gapMm,
+          gapMm: words.valueRoomMm(entry.text.layout.text),
         });
+        const number = words.value(
+          drafted.number,
+          entry.text.layout.text,
+          entry.text.rotationRad,
+          colour,
+        );
         for (const extension of [extensionFrom, extensionTo]) {
           items.push(pathItem(entry.role, { closed: false, segments: [extension] }));
         }
@@ -380,6 +380,12 @@ function boardWords(zoom: number, view: ViewportView | undefined) {
         };
   // How far down from the canvas's top the pinned captions reach, in CSS px.
   let pinnedPx = 0;
+  /**
+   * The room a dimension's value takes along its line: the number and its
+   * halo either side — the break in the line, or what has to fit beside it.
+   */
+  const valueRoomMm = (words: string): number =>
+    layoutText(words, mm(text.value.sizePx)).widthMm + 2 * mm(text.haloPx);
 
   return {
     /**
@@ -391,7 +397,7 @@ function boardWords(zoom: number, view: ViewportView | undefined) {
       const voice = text.value;
       const capital = (FONT.capHeight / FONT.unitsPerEm) * voice.sizePx;
       const turn = MatOps.fromRotationAround(middle, rotationRad);
-      const halfWidth = layoutText(words, mm(voice.sizePx)).widthMm / 2 + mm(text.haloPx);
+      const halfWidth = valueRoomMm(words) / 2;
       const reach = valueReachPx();
       const box = RectOps.transform(
         {
@@ -404,9 +410,10 @@ function boardWords(zoom: number, view: ViewportView | undefined) {
       );
       const at = MatOps.apply(turn, { x: middle.x, y: middle.y - mm(capital / 2) });
       const item = boardTextItem(at, words, voice, colour, { align: 'center', rotationRad });
-      // The break in its line: the number and its halo either side.
-      return { item, box, gapMm: 2 * halfWidth };
+      return { item, box };
     },
+
+    valueRoomMm,
 
     /**
      * A piece's caption: its name over its detail, left-aligned above the

@@ -129,9 +129,10 @@ Left from 1.3's *The window*: nothing says a new release exists.
   Property tests: each arrowhead's tip on its end, its size and axis; the line on
   itself, broken exactly for the number, with no other break; inside or outside by the room there
   is; and a rigid motion moves it all. The print test's rasterised check measures the dimension
-  between its extension lines now, since its line is no longer one stroke. A number wider than its
-  line stays over the middle of it — drafting would set it outside — until a dimension that short is
-  wanted. No format change. [Domain model §3.7](domain-model.md#37-measurement--linear-built-410a),
+  between its extension lines now, since its line is no longer one stroke. A number with no room
+  between the extension lines goes outside, past the arrowhead at the far end and clear of it,
+  decided from the number's real width and the arrowheads' real length in each medium, never a
+  fixed threshold; the line is then drawn whole. No format change for the drawing itself. [Domain model §3.7](domain-model.md#37-measurement--linear-built-410a),
   [printing](printing.md).
 - ✅ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
   **Done** (2026-10-25): a selected marking line offers *Add a row of holes* in Properties, and the
