@@ -1,6 +1,6 @@
 # 5. Pin TypeScript to 5.9.3
 
-**Status:** Accepted
+**Status:** Superseded by [0022](0022-typescript-7-beside-typescript-6.md)
 **Date:** 2026-09-03
 
 ## Context

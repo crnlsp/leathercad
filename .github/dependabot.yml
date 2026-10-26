@@ -43,11 +43,21 @@ updates:
     # routine bump and so held the whole group hostage to a change that
     # overrules an ADR.
     ignore:
-      # ADR 0005 pins TypeScript to an exact 5.9.x on purpose, so the
-      # constraint is visible rather than silently satisfied by a resolver.
-      # Patches within 5.9 are still welcome; anything further is a decision
-      # that belongs in an ADR, not in an automated PR.
+      # ADR 0022 builds with TypeScript 7, installed as `@typescript/native`,
+      # and keeps TypeScript 6 as `typescript`, for typescript-eslint. Both are
+      # npm: aliases, and Dependabot does not document whether it matches an
+      # alias by its own name or by the package it points at, so all three
+      # names are listed. Patches are still welcome; a minor or a major is a
+      # decision that belongs in an ADR, not in an automated PR.
       - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+      - dependency-name: '@typescript/native'
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+      - dependency-name: '@typescript/typescript6'
         update-types:
           - version-update:semver-major
           - version-update:semver-minor
