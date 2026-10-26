@@ -393,7 +393,8 @@ and read once at start-up:
   "stitchMarginMm": 3.5,
   "leatherThicknessMm": null,
   "keyBindings": { "save": [{ "code": "F5" }] },
-  "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
+  "recentFiles": ["/home/maker/Patterns/Wallet.lcp"],
+  "session": { "projects": ["/home/maker/Patterns/Wallet.lcp"], "active": "/home/maker/Patterns/Wallet.lcp" }
 }
 ```
 
@@ -402,7 +403,20 @@ or an unknown field falls back field by field to the defaults, and a newer versi
 are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent first, and only
 paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
-has gone is taken off the list when it is chosen. The rail's collapse applies to a wide window
+has gone is taken off the list when it is chosen. `session` is the tabs open when the app last
+closed (8.12), in the strip's order, and the index of the one in front: each a project's `path`, a
+`kept` copy's name, or both, with its `view` and its `camera` (centre in millimetres, zoom in
+percent). A start opens them again, the files still on disk. By the same rule it holds only paths
+chosen in the app's dialogs, at most thirty. A kept copy is unsaved work written as the window
+closed with *Keep unsaved projects* on: an ordinary `.lcp` named for its tab in `unsaved/` beside
+this file, let go at the next start once nothing names it. `pinnedFiles` are the recent projects
+pinned to the top of the list, in the order pinned, kept by *Clear list*. The maker's project
+templates (8.14) are ordinary `.lcp` files in `templates/` beside this file, each named as the
+maker named it; the ones that ship are inside the app. `templates/templates.json` keeps what the
+app knows about each template beyond its file, by its id (`builtin:<id>` or `mine:<name>`): the
+maker's `description` and `tags`, whether it is `pinned`, and `usedAt`, when a project was last made
+from it. A damaged one is read as empty. `templateSort` and `templateShow` here are how the picker
+was last ordered and filtered. The rail's collapse applies to a wide window
 only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
 and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
 room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode
@@ -474,23 +488,25 @@ size — belongs in preferences.
 
 *As built in 5.3b.* See [the crash-recovery design](superpowers/specs/2026-09-23-crash-recovery-design.md).
 
-- **What and when.** While the project has unsaved changes, it is written as an ordinary `.lcp` at
-  most once a minute. It is never written in the middle of a drag, and never again until it
-  changes.
-- **Where.** `stateDirectory()/recovery/<pid>-<start>.lcp`: one file per session, never beside
-  the project, and never under a project's name. Two running copies of the app never touch each
-  other's file.
+- **What and when.** While a tab's project has unsaved changes, it is written as an ordinary
+  `.lcp` at most once a minute — every such tab, in front or not (8.13). It is never written in the
+  middle of a drag, and never again until it changes.
+- **Where.** `stateDirectory()/recovery/<pid>-<start>-<tab>.lcp`: one file per tab of a session,
+  the tab's ULID naming it, never beside the project, and never under a project's name. Two
+  running copies of the app never touch each other's file. 1.5 wrote one per session,
+  `<pid>-<start>.lcp`; such a copy is still found and offered.
 - **How.** Every write goes through a temporary file and a `rename()` over the target. `rename`
   within a filesystem is atomic, so a crash mid-write leaves the previous copy whole. **The same
   applies to normal saves**: never write in place over the user's project.
 - **On startup.** A copy whose process is no longer running belongs to a session that did not end
-  cleanly, and the newest one that loads is offered.
+  cleanly. Each that loads is offered, newest first, one after another, each into a tab of its
+  own.
   - *Recover* opens it **untitled and unsaved**, so it can never be saved over the file it came
     from.
   - *Not now* keeps it until the next clean exit.
   - A copy that does not load is renamed `.corrupt` and never offered again.
-- **Cleanup.** The copy is deleted when the project is clean again (saved, new or opened) and at a
-  clean exit. A renderer crash keeps it through the quit that follows.
+- **Cleanup.** A tab's copy is deleted when its project is clean again (saved or reloaded), when
+  the tab is closed, and at a clean exit. A renderer crash keeps it through the quit that follows.
   - **The invariant:** saving never leaves a stale copy that a later start would offer as newer
     unsaved work.
   - This session's writes and clears run in the order they were asked, so a save that lands while a

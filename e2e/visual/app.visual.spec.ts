@@ -43,6 +43,8 @@ async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
   });
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
+  // The app starts on its start screen (8.12); the pictures are of a project.
+  await window.getByTestId('start-new').click();
   await expect(window.getByTestId('app-version')).not.toBeEmpty();
   await app.evaluate(({ BrowserWindow }, { width, height }) => {
     BrowserWindow.getAllWindows()[0]?.setContentSize(width, height);

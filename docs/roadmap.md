@@ -87,6 +87,81 @@ Left from 1.3's *The window*: nothing says a new release exists.
   the app makes the request and what it carries. No test asks GitHub: `LEATHERCAD_RELEASES_URL`
   points the check at a server of the test's own, or at nothing.
 
+Several projects in one window (2026-10-23). On Linux and Windows a second launch — a `.lcp`
+double-clicked while the app runs — started a second process: both wrote `preferences.json`, the
+last one winning, and the same project could be open and saved in both. The maintainer chose one
+instance, with a project per tab like Notepad's, the tabs on a strip of their own above the project
+bar under the system's title bar (variant A; a strip in a frameless title bar stays decided against
+by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-design.md) §4.4).
+
+- ✅ **8.11 One instance.** A second launch — a `.lcp` double-clicked while the app runs, or the
+  Start menu — hands its command line to the running app and ends, before it writes anything. The
+  window comes forward, restored if minimised, and opens the project the line names in a tab of its
+  own, beside any unsaved work (8.12), as macOS's `open-file` does too; a launch naming no project
+  only brings the window forward. The lock is the
+  configuration directory's, so the end-to-end tests, each with its own, still run side by side.
+  **Done** (2026-10-23).
+- ✅ **8.12 Project tabs.** A tab per project on a strip above the project bar, drawn as drawing
+  sheets: square, the open one outlined and running into the bar below it. A tab says its
+  project's name — its file's for a project with none of its own, *Untitled*, *Untitled 2*… for new
+  ones — with a dot where its close button is while it has unsaved work. Each keeps its own
+  document, history, selection, view, camera and file; the window's title is the active tab's, and
+  macOS's edited dot is lit while any tab has unsaved work.
+
+  The Project menu is an icon at the strip's left, and *+* after the tabs is a menu of a new
+  project, *Open…* and the recent projects. Every way a project opens — New, Open, a recent one, a
+  template, a launch, a second launch, a `.lcp` dropped on the window — opens it in a tab; one
+  already open goes to its tab, which bounces, and an untouched *Untitled* is replaced. *Rename…*
+  turns the active tab's name into a field and renames a saved project's file with it, never over
+  another file, and Undo and Redo of it rename the file back; a project first saved without a name
+  is named after its file. A tab's right-click menu renames, saves, saves as a template, reloads
+  from disk, duplicates, shows in the folder, copies the path, moves the file to the Trash (asked
+  first) and closes it or the others. A file another program changes, moves or deletes is said over
+  the board, with *Reload*, *Keep mine* or *Save it again*.
+
+  Closing a tab with unsaved work asks; closing the last leaves the app open on a start screen —
+  new, from a template, open, and the recent projects, pinned or taken off the list one at a time,
+  with Settings and Help at the strip's end — which is also where the app starts when the last
+  session left no tabs. Closing the window asks about one unsaved project, or once about several:
+  *Save all*, *Don't save*, *Cancel*. The tabs come back at the next start, each on its view, place
+  and zoom (`session` in `preferences.json`); with *Keep unsaved projects when closing* on in
+  Settings › General the window closes without asking, and unsaved projects come back unsaved.
+
+  Ctrl+Page Down and Up go round the tabs, Ctrl+Shift+Page Down and Up move one, Ctrl+W closes one
+  and Ctrl+Shift+T opens the project last closed again, all through the keymap — never the digits,
+  which Design and Sheets have. Tabs drag along the strip, a middle click closes one, the wheel
+  scrolls a strip too full to show them all and *All tabs* lists them. A `tablist` with arrow keys,
+  clean under axe. One file dialog at a time. Save looks the same with nothing to save, and is only
+  inert. **Done** (2026-10-23).
+- ✅ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
+  `<pid>-<start>-<tab>.lcp`, written while it is in front or not; saving, reloading or closing the
+  tab clears it, and a save while a copy is being written clears that one too. After a crash every
+  copy is offered in turn, each into a tab of its own. Copies from 1.5, one per session, are still
+  found. **Done** (2026-10-23).
+- ✅ **8.14 New from a template.** *New project* is two: *from scratch*, still Ctrl+N, and *from
+  template…*. The templates that ship are the sample wallet, a card holder, a key fob and a
+  coaster, each built from the app's own commands and clean; the sample has no other way in since,
+  and *Open sample project* is gone from Help, the empty Parts panel and the start screen. A
+  project from a template opens untitled, unchanged and with an id of its own, so Save asks where
+  and the template is never written. *Save as template…*, in the Project menu and a tab's menu,
+  saves any project as one of the maker's, never over another of the same name unless asked.
+
+  The picker is a browser: a search over names, descriptions and tags; *Show* (all, built-in,
+  mine) and *Sort* (name either way, recently
+  used, newest, oldest — by when last changed), the app's own menus, kept between openings; the
+  pinned first, in a well of their own that folds away (kept between openings), then the rest,
+  both in the order chosen; the
+  chosen template drawn large with its facts, *Edit template* (or, for a built-in one, *Duplicate as
+  my template*) beside its name and the rest as a row of icons under it, held above the scroll;
+  a row pins from the list too. The maker's own are described and tagged through
+  *Edit details…* — read until then, saved when asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
+  the template, exported, shown in the file manager and removed, with *Undo* for a few seconds; a
+  `.lcp` is imported as one (`templates/` beside `preferences.json`). **Done** (2026-10-23).
+
+8.11–8.14 were **done** on 2026-10-23, together, with `pnpm check` and `pnpm test:e2e` green on
+Linux; on Windows and macOS they wait for [`release-checklist.md`](release-checklist.md) §11 and §15
+with the packaged app.
+
 ### Drawing and editing
 
 - ✅ **3.10 Guides, alignment and distribution.** Persisted horizontal, vertical and diagonal
@@ -340,6 +415,11 @@ parts cannot be carried to the next project.
 - **9.7 Templates** — a part saved to a library and inserted again (was 8.1): a copy with its
   derivations re-pointed, never a live link ([domain-model](domain-model.md) §9). Parameterised
   templates moved to *Exploring* on 2026-10-17.
+- **9.25 Search templates by tag** (added 2026-10-26) — the picker finds a tag today only as words
+  in its search, beside the names and descriptions (8.14). Tags become something to search by on
+  their own: the tags in use offered as the maker types, a tag chosen narrowing the list to the
+  templates that carry it. The built-in categories left the picker in 8.14 for the same reason: a
+  tag the maker gave is the filter that means something to them.
 
 **Needs:** the sample's untitled opening (8.3) and duplicate-part re-pointing (4.3b), both built;
 8.8b's domain question answered before 9.7, which inserts a part the same way.

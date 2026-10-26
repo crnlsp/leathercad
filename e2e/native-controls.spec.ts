@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { freshStateHome, launchApp, openApp } from './launchApp.js';
+import { freshStateHome, launchApp, openApp, openSample } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -20,12 +20,6 @@ const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-u20-'));
 
 const launch = (env: Record<string, string> = {}) =>
   openApp({ env: { XDG_CONFIG_HOME: fresh(), ...env } });
-
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('help-menu').click();
-  await window.getByTestId('help-open-sample').click();
-  await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
-}
 
 interface Stop {
   readonly name: string;
@@ -150,8 +144,8 @@ test('every tab stop rings in the accent, in the window and every dialog, and Ta
     await window.getByTestId('rename').click();
     await window.getByTestId('project-name-input').fill('Gusset wallet');
     await window.getByTestId('project-name-input').press('Enter');
-    await window.getByTestId('help-menu').click();
-    await window.getByTestId('help-open-sample').click();
+    // Opening no longer replaces anything (8.12); closing the tab asks.
+    await window.keyboard.press('Control+w');
     await expect(window.getByTestId('unsaved-dialog')).toBeVisible();
     await expectRings(window, 'Unsaved changes', DIALOG);
   } finally {

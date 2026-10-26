@@ -369,6 +369,12 @@ const GLYPHS = {
       <path d="M4 10.75h8" strokeWidth="1" strokeDasharray="1.25 1.25" strokeLinecap="butt" />
     </>
   ),
+  export: (
+    <>
+      <path d="M8 10V2.5M4.75 5.75 8 2.5l3.25 3.25" />
+      <path d="M2.5 9.25v3.5a.75.75 0 0 0 .75.75h9.5a.75.75 0 0 0 .75-.75v-3.5" />
+    </>
+  ),
   search: (
     <>
       <circle cx="7" cy="7" r="4.5" />

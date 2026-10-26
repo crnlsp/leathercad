@@ -21,6 +21,8 @@ test('a part picked by its heading is shown, counted and deleted as the part (Q2
     const window = await app.firstWindow();
     window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
     await window.waitForLoadState('domcontentloaded');
+    // The app starts on its start screen (8.12).
+    await window.getByTestId('start-new').click();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
@@ -71,6 +73,8 @@ test('Delete in Properties says so when a locked stitch line behind the outline 
     const window = await app.firstWindow();
     window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
     await window.waitForLoadState('domcontentloaded');
+    // The app starts on its start screen (8.12).
+    await window.getByTestId('start-new').click();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;

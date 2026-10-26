@@ -133,14 +133,9 @@ export async function openPrintTest(
     { project: PRINT_TEST, pdf },
   );
 
+  // A drawing left from an earlier test keeps its own tab (8.12): the print
+  // test opens in one of its own, or goes back to the one it is open in.
   await fromProjectMenu(window, 'open');
-  // A drawing left from an earlier test is not this one's to keep. Wait for
-  // whichever comes first — the question, or the project opened — rather than
-  // glancing once before the question has had time to appear.
-  const discard = window.getByTestId('unsaved-discard');
-  const opened = window.getByTestId('part-count').filter({ hasText: /^3$/ });
-  await expect(discard.or(opened)).toBeVisible();
-  if (await discard.isVisible()) await discard.click();
   await expect(window.getByTestId('part-count')).toHaveText('3');
 }
 

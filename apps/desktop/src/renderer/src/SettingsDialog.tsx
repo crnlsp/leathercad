@@ -196,29 +196,38 @@ export function SettingsDialog(props: Props) {
   );
 }
 
-function General({ recentCount, onClearRecent }: Props) {
+function General({ recentCount, onClearRecent, preferences, onPreferences }: Props) {
   const { t } = useI18n();
   return (
-    <div className="setting">
-      <div className="setting-text">
-        <span className="setting-name">{t('settings.recent.name')}</span>
-        <span className="setting-note">
-          {t('settings.recent.note')}{' '}
-          {recentCount === 0
-            ? t('settings.recent.none')
-            : t('settings.recent.count', { count: recentCount })}
-        </span>
+    <>
+      <Toggle
+        id="keep-unsaved"
+        name={t('settings.keepUnsaved.name')}
+        note={t('settings.keepUnsaved.note')}
+        checked={preferences.keepUnsaved}
+        onChange={(on) => onPreferences({ keepUnsaved: on })}
+      />
+      <div className="setting">
+        <div className="setting-text">
+          <span className="setting-name">{t('settings.recent.name')}</span>
+          <span className="setting-note">
+            {t('settings.recent.note')}{' '}
+            {recentCount === 0
+              ? t('settings.recent.none')
+              : t('settings.recent.count', { count: recentCount })}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="tool"
+          data-testid="clear-recent"
+          disabled={recentCount === 0}
+          onClick={onClearRecent}
+        >
+          {t('settings.recent.clear')}
+        </button>
       </div>
-      <button
-        type="button"
-        className="tool"
-        data-testid="clear-recent"
-        disabled={recentCount === 0}
-        onClick={onClearRecent}
-      >
-        {t('settings.recent.clear')}
-      </button>
-    </div>
+    </>
   );
 }
 

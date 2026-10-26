@@ -13,6 +13,9 @@ type PathRules = Pick<PlatformPath, 'extname' | 'isAbsolute' | 'resolve'>;
  * `.lcp`, resolved against the directory the launch came from. The first
  * wins; the app has one window.
  *
+ * A second launch while the app runs (8.11) is read the same way: the running
+ * app is given that launch's whole command line and its directory.
+ *
  * Only a **name** is checked here. Whether the file exists, and whether it is
  * a project, is found out by opening it, which says so in the app.
  *

@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { drawAPanel, openApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -141,9 +141,12 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
 
   const second = await launch(configHome);
   try {
-    // Chosen from the menu, not a dialog: the main process grants the path
+    // Its tab came back with the restart (8.12); closed, the project is
+    // chosen from the menu, not a dialog: the main process grants the path
     // because it is on its own list.
-    await expect(second.window.getByTestId('part-count')).toHaveText('0');
+    await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await closeActiveTab(second.window);
+    await expect(second.window.getByTestId('start-screen')).toBeVisible();
     await second.window.getByTestId('project-menu').click();
     await second.window.getByRole('menuitem', { name: /Wallet v1\.2/ }).click();
 

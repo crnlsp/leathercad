@@ -4,6 +4,13 @@
 1.3 · **Supersedes:** the File menu note in
 [`2026-09-24-sheets-workflow-design.md`](2026-09-24-sheets-workflow-design.md) §4.1
 
+> **Successor, the Project menu (8.12, 2026-10-23).** Projects open in tabs, on a strip above the
+> project bar. The Project menu left the bar for an icon at the strip's left, and the project's
+> name for its tab: *Rename…* turns the active tab's name into a field, and renames a saved
+> project's file with it, never over another. The bar's left zone keeps the save state and Save.
+> With every project closed, the window shows a start screen. See [`roadmap.md`](../../roadmap.md)
+> 8.11–8.13.
+
 > **Successor, §3 (U.7, 2026-10-14).** The project bar became the top bar in three zones of R-06
 > ([requirements](2026-10-08-ui-refinement-requirements.md), the plan's §5 U.7). The Project menu's
 > button is the project's name, and *Rename…* in it renames the project (the name was a field in

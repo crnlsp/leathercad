@@ -1,6 +1,12 @@
 import type {
   MenuAction,
+  FileRename,
+  TemplateEntry,
+  TemplateSave,
+  KeptSession,
   OpenDialogOptions,
+  OpenSession,
+  OutsideChange,
   PlatformHost,
   Preferences,
   PrintJob,
@@ -30,8 +36,8 @@ interface PreloadBridge {
   getAppVersion(): Promise<string>;
   setDocumentEdited(edited: boolean): Promise<void>;
   setKeyCapture(capturing: boolean): Promise<void>;
-  writeRecovery(data: Uint8Array): Promise<void>;
-  clearRecovery(): Promise<void>;
+  writeRecovery(tab: string, data: Uint8Array): Promise<void>;
+  clearRecovery(tab: string): Promise<void>;
   findRecovery(): Promise<RecoveredCopy | null>;
   resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void>;
   getRecoveryIntervalMs(): Promise<number>;
@@ -43,13 +49,37 @@ interface PreloadBridge {
   getRecentFiles(): Promise<readonly RecentFile[]>;
   openRecent(path: string): Promise<RecentOutcome>;
   clearRecent(): Promise<void>;
+  pinRecent(path: string, pinned: boolean): Promise<void>;
+  removeRecent(path: string): Promise<void>;
   showLogFolder(): Promise<void>;
   readNotices(): Promise<string | null>;
   onOpenFile(listener: (path: string) => void): () => void;
-  readSampleProject(): Promise<Uint8Array>;
   takeLaunchFile(): Promise<string | null>;
   getUpdateStatus(): Promise<UpdateStatus>;
   checkForUpdates(): Promise<UpdateStatus>;
+  takeSession(): Promise<OpenSession>;
+  keepSession(session: KeptSession): Promise<void>;
+  keepUnsaved(tab: string, data: Uint8Array): Promise<void>;
+  renameProjectFile(path: string, name: string): Promise<FileRename>;
+  showInFolder(path: string): Promise<void>;
+  trashProjectFile(path: string): Promise<void>;
+  watchProjects(paths: readonly string[]): Promise<void>;
+  pathForFile(file: unknown): string;
+  openDropped(paths: readonly string[]): Promise<readonly string[]>;
+  listTemplates(): Promise<readonly TemplateEntry[]>;
+  readTemplate(id: string): Promise<Uint8Array | null>;
+  saveTemplate(name: string, data: Uint8Array, replace: boolean): Promise<TemplateSave>;
+  removeTemplate(id: string): Promise<void>;
+  renameTemplate(id: string, name: string): Promise<TemplateSave>;
+  duplicateTemplate(id: string, name: string): Promise<TemplateSave>;
+  describeTemplate(id: string, description: string, tags: readonly string[]): Promise<void>;
+  pinTemplate(id: string, pinned: boolean): Promise<void>;
+  templateUsed(id: string): Promise<void>;
+  importTemplate(options: OpenDialogOptions): Promise<TemplateSave | null>;
+  exportTemplate(id: string, options: SaveDialogOptions): Promise<boolean>;
+  editTemplate(id: string): Promise<string | null>;
+  showTemplate(id: string): Promise<void>;
+  onProjectChanged(listener: (path: string, change: OutsideChange) => void): () => void;
 }
 
 declare global {

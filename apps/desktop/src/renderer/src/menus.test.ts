@@ -8,6 +8,7 @@ import {
   projectMenu,
   recentParts,
   sharedReasons,
+  tabMenu,
   type MenuEntry,
 } from './menus.js';
 
@@ -58,15 +59,29 @@ describe('a recent project, in two lines (8.7)', () => {
 
 describe('the Project and Help menus (8.7)', () => {
   const noop = (): void => undefined;
-  const actions = { newProject: noop, open: noop, saveAs: noop, rename: noop, openRecent: noop };
+  const actions = {
+    newProject: noop,
+    newFromTemplate: noop,
+    open: noop,
+    saveAs: noop,
+    saveAsTemplate: noop,
+    rename: noop,
+    openRecent: noop,
+  };
   const { t } = createI18n('en');
 
   it('puts the actions first and the recent projects after, so the actions stay put', () => {
-    const entries = projectMenu(actions, [{ path: '/p/Wallet.lcp', shown: '/p/Wallet.lcp' }], t);
+    const entries = projectMenu(
+      actions,
+      [{ path: '/p/Wallet.lcp', shown: '/p/Wallet.lcp', pinned: false }],
+      t,
+    );
     expect(entries.map((entry) => (entry.kind === 'item' ? entry.id : entry.kind))).toEqual([
       'new',
+      'new-template',
       'open',
       'save-as',
+      'save-template',
       'rename',
       'separator',
       'group',
@@ -81,7 +96,7 @@ describe('the Project and Help menus (8.7)', () => {
     const opened: string[] = [];
     const entries = projectMenu(
       { ...actions, openRecent: (path) => opened.push(path) },
-      [{ path: '/home/m/Wallet.lcp', shown: '~/Wallet.lcp' }],
+      [{ path: '/home/m/Wallet.lcp', shown: '~/Wallet.lcp', pinned: false }],
       t,
     );
     const group = entries.at(-1)!;
@@ -96,10 +111,10 @@ describe('the Project and Help menus (8.7)', () => {
   });
 
   it('keeps Help to help and the application: no configuration', () => {
-    const labels = helpMenu({ openSample: noop, about: noop }, t).flatMap((entry) =>
+    const labels = helpMenu({ about: noop }, t).flatMap((entry) =>
       entry.kind === 'item' ? [entry.label] : [],
     );
-    expect(labels).toEqual(['Open sample project', 'About LeatherCAD']);
+    expect(labels).toEqual(['About LeatherCAD']);
   });
 });
 
@@ -170,5 +185,45 @@ describe('a reason several items share (8.8)', () => {
       refused('c', 'Empty'),
     ]);
     expect(said.size).toBe(0);
+  });
+});
+
+describe('a tab’s menu (8.12)', () => {
+  const { t } = createI18n('en');
+  const none = (): void => undefined;
+  const actions = {
+    rename: none,
+    save: none,
+    saveAs: none,
+    saveAsTemplate: none,
+    reload: none,
+    duplicate: none,
+    showInFolder: none,
+    copyPath: none,
+    trash: none,
+    close: none,
+    closeOthers: none,
+  };
+  const refused = (entries: readonly MenuEntry[]): string[] =>
+    entries.flatMap((entry) =>
+      entry.kind === 'item' && entry.refusal !== undefined ? [entry.id] : [],
+    );
+
+  it('refuses, saying why, what needs a file while there is none', () => {
+    const entries = tabMenu(actions, { hasFile: false, othersOpen: true }, t);
+    expect(refused(entries)).toEqual(['tab-reload', 'tab-show', 'tab-copy-path', 'tab-trash']);
+  });
+
+  it('offers all of it to a saved project beside others, the Trash marked as danger', () => {
+    const entries = tabMenu(actions, { hasFile: true, othersOpen: true }, t);
+    expect(refused(entries)).toEqual([]);
+    const trash = entries.find((entry) => entry.kind === 'item' && entry.id === 'tab-trash');
+    expect(trash).toMatchObject({ danger: true });
+  });
+
+  it('has no other tab to close when it is the only one', () => {
+    expect(refused(tabMenu(actions, { hasFile: true, othersOpen: false }, t))).toEqual([
+      'tab-close-others',
+    ]);
   });
 });

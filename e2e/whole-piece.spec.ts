@@ -22,6 +22,8 @@ test('dragging or retyping a piece’s outline moves its rivet with it (Q30)', a
     const window = await app.firstWindow();
     window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
     await window.waitForLoadState('domcontentloaded');
+    // The app starts on its start screen (8.12).
+    await window.getByTestId('start-new').click();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;

@@ -6,18 +6,28 @@ import { writeFileAtomic } from './atomicWrite.js';
 
 /** A copy a crashed session left behind, as found at startup. */
 export interface AbandonedCopy {
-  /** The session it came from: `<pid>-<start time>`. Also its file name, without `.lcp`. */
+  /**
+   * Its file name, without `.lcp`: the session it came from, `<pid>-<start
+   * time>`, and since 8.12 the tab, `-<tab id>`. A copy from 1.5 or earlier,
+   * one per session, has no tab.
+   */
   readonly id: string;
   /** When it was last written, ISO 8601 — what the offer tells the maker. */
   readonly savedAt: string;
   readonly data: Uint8Array;
 }
 
-/** `<pid>-<start>.lcp`: a recovery copy, and the only file this store reads. */
-const COPY = /^(\d+)-(\d+)\.lcp$/;
-/** `<pid>-<start>.lcp.<hex>.tmp`: a write that has not been renamed into place yet. */
-const SCRAP = /^(\d+)-(\d+)\.lcp\.[0-9a-f]+\.tmp$/;
-const ID = /^\d+-\d+$/;
+/**
+ * `<pid>-<start>-<tab>.lcp`: a recovery copy, and the only file this store
+ * reads. The tab is a ULID (8.12); 1.5 wrote one copy per session, without
+ * one, and such a copy is still found.
+ */
+const COPY = /^(\d+)-(\d+)(?:-[0-9A-Z]{26})?\.lcp$/;
+/** A write that has not been renamed into place yet: the copy's name, `.<hex>.tmp`. */
+const SCRAP = /^(\d+)-(\d+)(?:-[0-9A-Z]{26})?\.lcp\.[0-9a-f]+\.tmp$/;
+const ID = /^\d+-\d+(?:-[0-9A-Z]{26})?$/;
+/** A tab's id, as the renderer names its copy: a ULID, never a path. */
+const TAB = /^[0-9A-Z]{26}$/;
 
 /**
  * Whether a process is running. Signal 0 checks without sending anything; a
@@ -35,9 +45,9 @@ export function processIsAlive(pid: number): boolean {
 /**
  * The recovery copies of crash recovery (slice 5.3b), in one directory.
  *
- * **One file per session**, named for the process and the moment it started,
- * so two copies of the app running at once never overwrite or delete each
- * other's. A copy is written atomically — a temporary file renamed into place —
+ * **One file per tab of a session** (8.12), named for the process, the moment
+ * it started and the tab, so two copies of the app running at once never
+ * overwrite or delete each other's, and each open project has its own. A copy is written atomically — a temporary file renamed into place —
  * so a reader only ever sees a whole one, and a crash mid-write leaves the
  * previous copy intact. A copy whose process is no longer running belongs to a
  * session that did not end cleanly; that is what startup offers.
@@ -47,8 +57,10 @@ export function processIsAlive(pid: number): boolean {
  * the session and the liveness check are given, so it is tested on real files.
  */
 export class RecoveryStore {
-  /** This session's copy: `<pid>-<start>`, moved on each time its renderer dies. */
+  /** This session: `<pid>-<start>`, moved on each time its renderer dies. */
   private id: string;
+  /** The tabs this session has written a copy for, since its renderer last died. */
+  private readonly tabs = new Set<string>();
   private readonly adopted = new Set<string>();
   /** Copies of this session's own renderers that died: offered, never cleared. */
   private readonly orphaned = new Set<string>();
@@ -68,17 +80,19 @@ export class RecoveryStore {
   }
 
   /**
-   * Replaces this session's copy with `data`, whole or not at all.
+   * Replaces a tab's copy with `data`, whole or not at all.
    *
    * Writes and clears run **in the order they were asked**. A write is a
    * temporary file and a rename; a clear that ran while one was in flight was
    * undone when the rename landed after it — so a project saved mid-write kept
    * a stale copy, which a later start would offer as newer unsaved work.
    */
-  write(data: Uint8Array): Promise<void> {
+  async write(tab: string, data: Uint8Array): Promise<void> {
+    this.checkTab(tab);
     // Named when asked: a write the renderer asked for just before it died
     // lands in that renderer's copy, not the next window's.
-    const path = this.pathOf(this.id);
+    this.tabs.add(tab);
+    const path = this.pathOf(`${this.id}-${tab}`);
     return this.inOrder(async () => {
       if (this.released) return;
       await writeFileAtomic(path, data);
@@ -87,9 +101,10 @@ export class RecoveryStore {
     });
   }
 
-  /** Removes this session's copy: the project is saved, or empty, again. */
-  clear(): Promise<void> {
-    const path = this.pathOf(this.id);
+  /** Removes a tab's copy: its project is saved, or closed, or clean again. */
+  async clear(tab: string): Promise<void> {
+    this.checkTab(tab);
+    const path = this.pathOf(`${this.id}-${tab}`);
     return this.inOrder(() => unlink(path).catch(() => undefined));
   }
 
@@ -123,7 +138,7 @@ export class RecoveryStore {
       const copy = COPY.exec(name);
       if (copy === null) continue;
       const id = name.slice(0, -'.lcp'.length);
-      if (id === this.id || this.adopted.has(id)) continue;
+      if (this.isOwn(id) || this.adopted.has(id)) continue;
       if (!this.orphaned.has(id) && this.isAlive(Number(copy[1]))) continue;
       const info = await stat(join(this.directory, name)).catch(() => null);
       if (info !== null) candidates.push({ id, modified: info.mtime });
@@ -169,7 +184,8 @@ export class RecoveryStore {
    * and clears a copy of its own.
    */
   rendererGone(): void {
-    this.orphaned.add(this.id);
+    for (const tab of this.tabs) this.orphaned.add(`${this.id}-${tab}`);
+    this.tabs.clear();
     for (const id of this.adopted) this.orphaned.add(id);
     this.adopted.clear();
     // A start time no other process of this pid can have: this one is running.
@@ -183,7 +199,8 @@ export class RecoveryStore {
    */
   releaseOnQuit(): void {
     this.released = true;
-    for (const id of [this.id, ...this.adopted]) {
+    const own = [...this.tabs].map((tab) => `${this.id}-${tab}`);
+    for (const id of [...own, ...this.adopted]) {
       try {
         unlinkSync(this.pathOf(id));
       } catch {
@@ -196,13 +213,23 @@ export class RecoveryStore {
   private sweepOwnScraps(): void {
     try {
       for (const name of readdirSync(this.directory)) {
-        if (name.startsWith(`${this.id}.lcp.`) && name.endsWith('.tmp')) {
+        if (name.startsWith(`${this.id}-`) && name.endsWith('.tmp')) {
           unlinkSync(join(this.directory, name));
         }
       }
     } catch {
       // No directory: nothing was ever written.
     }
+  }
+
+  /** A copy this session is writing: its session part is this one's. Never offered to itself. */
+  private isOwn(id: string): boolean {
+    return id === this.id || id.startsWith(`${this.id}-`);
+  }
+
+  private checkTab(tab: string): void {
+    // A tab's id names its copy: never a path, never anything but a ULID.
+    if (!TAB.test(tab)) throw new Error(`Not a tab: ${tab}`);
   }
 
   private checkId(id: string): void {
