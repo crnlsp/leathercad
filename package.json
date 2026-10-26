@@ -7,7 +7,7 @@
   "author": "crnlsp",
   "type": "module",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=24.11.0",
     "pnpm": ">=12"
   },
   "scripts": {
@@ -49,7 +49,7 @@
     "@playwright/test": "^1.64.1",
     "@stryker-mutator/core": "^10.1.1",
     "@stryker-mutator/vitest-runner": "^10.1.1",
-    "@types/node": "^22.20.5",
+    "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.0.5",
     "dependency-cruiser": "^18.7.0",
     "eslint": "^10.13.0",
