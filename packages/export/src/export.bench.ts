@@ -1,19 +1,27 @@
 import { DEFAULT_SETTINGS, evaluate, type Project } from '@leathercad/domain';
 import { uniformRadii } from '@leathercad/geometry';
-import { buildDisplayList, renderToSvgString, type Caption } from '@leathercad/render';
+import { buildDisplayList, type Caption } from '@leathercad/render';
 import { test, type Bench } from 'vitest';
 
-import { DEFAULT_PAGE_SETUP } from './paper.js';
-import { exportPdf } from './pdf/writer.js';
-import { buildExportScene } from './scene.js';
-import { planSheets } from './sheetPlan.js';
+import {
+  DEFAULT_PAGE_SETUP,
+  buildExportScene,
+  exportDxf,
+  exportPdf,
+  exportSvg,
+  planSheets,
+} from './index.js';
 
 /**
- * From a resolved project to what reaches the screen and the paper.
+ * From a resolved project to what reaches the screen and the files.
  *
- * The screen half runs on every frame that has an edit behind it; the paper
+ * The screen half runs on every frame that has an edit behind it; the file
  * half on every export. Both are measured on a long stitched strap. Paginated
  * onto A4, it makes several pages, so the pagination is exercised too.
+ *
+ * The files are the writers that ship, reached through this package's index
+ * as the app reaches them. The SVG case once timed the render package's SVG
+ * backend, which draws a screen's view and writes no file (Q40).
  */
 
 /** One workload, three ways. See `measure` in packages/geometry/src/geometry.bench.ts. */
@@ -93,8 +101,6 @@ const project: Project = {
 const resolved = evaluate(project);
 const scene = buildExportScene(resolved, project.name);
 
-const view = { centreMm: { x: 600, y: 20 }, scale: 1, widthPx: 1400, heightPx: 400, dpr: 1 };
-
 /**
  * The board captions every piece on every frame. The words are the app's
  * (ADR 0018), so these stand in for them; the drawing of them is what counts.
@@ -104,9 +110,6 @@ const caption = (): Caption => ({ name: 'Strap', detail: '636 holes · 3.85 mm' 
 
 test('build the display list', ({ bench }) =>
   measure(bench, 'display-list', () => buildDisplayList(resolved, { caption })));
-
-test('render the display list as SVG', ({ bench }) =>
-  measure(bench, 'svg', () => renderToSvgString(buildDisplayList(resolved, { caption }), view)));
 
 test('build the export scene', ({ bench }) =>
   measure(bench, 'export-scene', () => buildExportScene(resolved, project.name)));
@@ -118,3 +121,7 @@ test('write the PDF', ({ bench }) =>
       applicationVersion: 'bench',
     }),
   ));
+
+test('write the SVG', ({ bench }) => measure(bench, 'svg', () => exportSvg(scene)));
+
+test('write the DXF', ({ bench }) => measure(bench, 'dxf', () => exportDxf(scene)));
