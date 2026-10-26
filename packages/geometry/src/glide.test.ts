@@ -1,4 +1,4 @@
-import { EPS_POINT, approxEq } from '@leathercad/core';
+import { EPS_ANGLE, EPS_POINT, approxEq } from '@leathercad/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -94,6 +94,34 @@ describe('decomposeGlide', () => {
     expect(a!.angleRad).toBeCloseTo(b!.angleRad, 9);
     expect(a!.glideMm).toBeCloseTo(b!.glideMm, 9);
     expect(dist(a!.origin, b!.origin)).toBeLessThan(EPS_POINT);
+  });
+
+  it('reads an axis within EPS_ANGLE under a half turn as no turn, so near-equal mirrors store near-equal axes (Q38)', () => {
+    // Rounding in a composed gesture leaves an axis a hair either side of
+    // horizontal. Read with a 1e-12 cut, the one just under came back at
+    // π − δ with its glide negated — the same transform, stored as numbers
+    // half a turn from its neighbour's.
+    const hair = fc.double({ min: 1e-12, max: EPS_ANGLE / 2, noNaN: true });
+    fc.assert(
+      fc.property(point(), finite(-200, 200), hair, (origin, glideMm, delta) => {
+        const under = decomposeGlide(glideMatrix(origin, -delta, glideMm));
+        const over = decomposeGlide(glideMatrix(origin, delta, glideMm));
+        if (under === null || over === null) return false;
+        // Snapping the axis turns it by at most δ: every image moves by no
+        // more than 2δ times its reach, a few nanometres on this board.
+        const reach = Math.hypot(origin.x, origin.y) + Math.abs(glideMm);
+        const rebuilt = glideMatrix(under.origin, under.angleRad, under.glideMm);
+        return (
+          under.angleRad === 0 &&
+          approxEq(under.glideMm, over.glideMm, 4 * EPS_ANGLE * reach + EPS_POINT) &&
+          MatOps.equals(
+            rebuilt,
+            glideMatrix(origin, -delta, glideMm),
+            4 * EPS_ANGLE * reach + EPS_POINT,
+          )
+        );
+      }),
+    );
   });
 
   it('puts the axis origin at the foot of the perpendicular, so equal mirrors compare equal', () => {

@@ -1,4 +1,4 @@
-import { EPS_POINT, assertFinite, type Mm } from '@leathercad/core';
+import { EPS_POINT, EPS_RATIO, assertFinite, type Mm } from '@leathercad/core';
 
 import { solveCubic } from '../polynomial.js';
 import * as Seg from '../segment/index.js';
@@ -26,9 +26,6 @@ export function windingNumber(p: Path, point: Vec2): number {
   }
   return 0;
 }
-
-/** How flat a crossing may be, against the ray, before it reads as a graze. */
-const RAY_AMBIGUITY = 1e-9;
 
 /**
  * Ray heights to try, in order.
@@ -143,7 +140,7 @@ function arcCrossings(s: Seg.ArcSegment, point: Vec2): number | null {
 
       // dy/dθ = r·cosθ, travelled in the direction of the sweep.
       const direction = Math.cos(angle) * Math.sign(s.sweepAngle);
-      if (Math.abs(direction) < RAY_AMBIGUITY) return null; // grazes the extreme
+      if (Math.abs(direction) < EPS_RATIO) return null; // grazes the extreme
       winding += direction > 0 ? 1 : -1;
     }
   }
@@ -198,7 +195,9 @@ function cubicCrossings(s: Seg.CubicSegment, point: Vec2): number | null {
     const slope = Seg.CubicOps.derivativeAt(s, t).y;
     // A tangent touch does not change the winding, but a near-tangent crossing
     // does — and the two are indistinguishable here. Let the caller re-cast.
-    if (Math.abs(slope) < RAY_AMBIGUITY) return null;
+    // A speed in mm per unit t: below EPS_POINT the curve is stationary, as
+    // `CubicOps.tangentAt` reads it.
+    if (Math.abs(slope) < EPS_POINT) return null;
     winding += slope > 0 ? 1 : -1;
   }
   return winding;

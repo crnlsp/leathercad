@@ -345,6 +345,7 @@ function newton(a: Segment, b: Segment, startA: number, startB: number): Interse
  * ever converged.
  */
 function derivative(s: Segment, t: number): Vec2 {
+  // eslint-disable-next-line no-restricted-syntax -- a finite-difference step, not a tolerance
   const h = 1e-6;
   const lo = Math.max(0, t - h);
   const hi = Math.min(1, t + h);

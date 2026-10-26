@@ -1,4 +1,4 @@
-import { formatNumber } from '@leathercad/core';
+import { approxZero, formatNumber } from '@leathercad/core';
 import { transformFeatures, transformRefusal } from '@leathercad/document';
 import { problem, type Problem } from '@leathercad/domain';
 import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
@@ -27,7 +27,12 @@ type State =
       readonly refusal: Problem | null;
     };
 
-/** Below this the shape collapses, and a zero-size part cannot be selected to delete. */
+/**
+ * Below this the shape collapses, and a zero-size part cannot be selected to
+ * delete. A bound on what may be asked for, not a tolerance: a 100 mm piece
+ * scaled by it is one 1e-4 mm quantum.
+ */
+// eslint-disable-next-line no-restricted-syntax -- the smallest factor allowed, not a tolerance
 const MIN_FACTOR = 1e-6;
 
 export function createScaleTool(): Tool {
@@ -146,10 +151,11 @@ export function createScaleTool(): Tool {
 function factorsFor(pivot: Vec2, from: Vec2, to: Vec2, uniform: boolean): Vec2 | null {
   const startX = from.x - pivot.x;
   const startY = from.y - pivot.y;
-  if (Math.abs(startX) < MIN_FACTOR && Math.abs(startY) < MIN_FACTOR) return null;
+  // Offsets in millimetres: within EPS_POINT the grab is on the pivot.
+  if (approxZero(startX) && approxZero(startY)) return null;
 
-  const x = Math.abs(startX) < MIN_FACTOR ? 1 : (to.x - pivot.x) / startX;
-  const y = Math.abs(startY) < MIN_FACTOR ? 1 : (to.y - pivot.y) / startY;
+  const x = approxZero(startX) ? 1 : (to.x - pivot.x) / startX;
+  const y = approxZero(startY) ? 1 : (to.y - pivot.y) / startY;
 
   if (Math.abs(x) < MIN_FACTOR || Math.abs(y) < MIN_FACTOR) return null;
   if (!uniform) return { x, y };

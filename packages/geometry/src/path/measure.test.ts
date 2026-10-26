@@ -23,6 +23,19 @@ describe('totalLength', () => {
     }
   });
 
+  it('agrees with the exact path length at any tolerance, down to none at all (Q38)', () => {
+    // The table's spacing has a floor of EPS_LENGTH, so a vanishing tolerance
+    // asks for the most entries a segment may have rather than for infinitely many.
+    const tolerance = fc.oneof(fc.constant(0), fc.double({ min: 1e-15, max: 1, noNaN: true }));
+    fc.assert(
+      fc.property(tolerance, (t) =>
+        [square, circle, wiggle].every((p) =>
+          closeTo(new P.PathMeasure(p, t).totalLength(), P.length(p), 1e-9),
+        ),
+      ),
+    );
+  });
+
   it('matches the circumference of a circle', () => {
     expect(closeTo(new P.PathMeasure(circle).totalLength(), 2 * Math.PI * 10, 1e-6)).toBe(true);
   });

@@ -369,6 +369,9 @@ importers:
 
   packages/persist:
     dependencies:
+      '@leathercad/core':
+        specifier: workspace:*
+        version: link:../core
       '@leathercad/domain':
         specifier: workspace:*
         version: link:../domain

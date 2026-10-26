@@ -44,7 +44,10 @@ precision loss but *inconsistent comparison*.
 
 ### 3.2 Epsilons
 
-One module, `core/epsilon.ts`. Nothing defines its own.
+One module, `core/epsilon.ts`. Nothing defines its own, and an ESLint rule refuses a literal written
+as `1e-9` anywhere outside `packages/core` and the tests. The few that are not tolerances — the arc
+error coefficient, a finite-difference step, the smallest scale factor, a pick band — say so in the
+disable comment where they stand.
 
 ```ts
 export const EPS_POINT  = 1e-7;    // mm — two points are the same point
@@ -52,6 +55,7 @@ export const EPS_PARAM  = 1e-9;    // dimensionless — t along a segment
 export const EPS_ANGLE  = 1e-9;    // radians
 export const EPS_AREA   = 1e-12;   // mm²
 export const EPS_LENGTH = 1e-7;    // mm — a segment shorter than this is degenerate
+export const EPS_RATIO  = 1e-9;    // dimensionless — a matrix entry, a cosine, a count before rounding
 
 export function approxEq(a: number, b: number, eps = EPS_POINT): boolean;
 export function approxZero(a: number, eps = EPS_POINT): boolean;
@@ -59,6 +63,12 @@ export function approxZero(a: number, eps = EPS_POINT): boolean;
 
 `EPS_POINT` at 1e-7 mm (0.1 nanometre) sits far above floating-point noise and far below any
 meaningful leather dimension, which is the property an epsilon needs.
+
+Pick the one whose **unit** fits the quantity, not the one with the right value: a radius checked
+against `EPS_ANGLE`, or a crossing judged in `t` while the ray that resolves it moves in
+millimetres, is how Q38's bugs happened. The polynomial solvers' tolerances live there too
+(`EPS_COEFFICIENT`, `EPS_NEWTON_SLOPE`, and three `EPS_REL_` values), and are the module's only
+relative ones: rounding in a root grows with the coefficients it came from.
 
 **Rule: no `===`, `<`, or `>` on floating-point quantities that could be equal.** Ordering
 comparisons where equality is impossible are fine. An ESLint rule flags float equality in
