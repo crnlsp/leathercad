@@ -281,7 +281,7 @@ Since 8.11–8.14, on each platform, with the packaged app.
     replacing. The maker's template is in the picker, and removing it there takes it off.
 14. *New project from template…*: each template that ships opens, untitled, with nothing to fix in
     Problems. *Save as template…* on a project of yours: it is listed under *My templates*, and a
-    second save under the same name asks before replacing it. In the picker, search, *Show*, *Kind*
+    second save under the same name asks before replacing it. In the picker, search, *Show*, *Category*
     and *Sort* narrow and order the list, and open the same way next time; rename, describe, tag,
     pin, duplicate, export, import and remove (then *Undo*) one of yours; *Edit template* opens it,
     and Save writes the template.

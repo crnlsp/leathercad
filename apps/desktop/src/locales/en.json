@@ -1420,8 +1420,8 @@
       "newest": "Newest first",
       "oldest": "Oldest first"
     },
-    "kindLabel": "Kind",
-    "allKinds": "All kinds",
+    "categoryLabel": "Category",
+    "allCategories": "All categories",
     "category": {
       "wallets": "Wallets and cases",
       "small": "Small goods"
@@ -1470,7 +1470,7 @@
     "wordsTitle": "Description and tags",
     "saveWords": "Save",
     "discardWords": "Discard",
-    "kindChosen": "Kind: {{kind}}",
+    "categoryChosen": "Category: {{category}}",
     "sortChosen": "Sort: {{sort}}"
   },
   "guides": {
