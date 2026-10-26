@@ -9,6 +9,9 @@
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // TypeScript 6 stopped including every @types package by default (ADR 0022).
+    // Node's were the only ones found, so naming them keeps what each package sees.
+    "types": ["node"],
 
     "strict": true,
     "noUncheckedIndexedAccess": true,

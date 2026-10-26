@@ -1190,7 +1190,11 @@ the visible rows (unit); E2E for keys and reveal.
 - **One flat tree**: `role="tree"` holds every row, `aria-level` says the nesting, and each
   piece's `section` (`part-section-<id>`, `role="none"`) only groups its rows. Nested groups would
   have named each piece by every feature in it. A row is named by its name alone; its state is
-  its description. The Sheets view's print line and an empty piece's *Delete part* are inside the
+  its description. *Since axe-core 4.14, which holds rows to WCAG 2.5.3 (Label in Name), a row is
+  named by all it shows, in its order — `Stitch holes, 2 (problems, worst: error), 146 holes`,
+  an empty piece's *Empty* and *Delete part* too (`rowName` in `partsTree.ts`). Label-in-name
+  matching passes over the parentheses, so the problem count stays beside a hole count shown
+  beside it.* The Sheets view's print line and an empty piece's *Delete part* are inside the
   piece's row, where a tree allows them.
 - **Selection follows focus**: ↑ and ↓ select the row they reach, so Delete acts on the row the
   maker is on; Enter selects, as the row's button did, and lets the key go on. Space, F2 and the

@@ -16,7 +16,7 @@ an amendment in place — 0007, 0010, 0011 and 0013 — so read an ADR to its en
 | [0002](0002-electron-over-tauri.md) | Electron over Tauri |
 | [0003](0003-typescript-geometry-core.md) | TypeScript geometry core, not Rust |
 | [0004](0004-pnpm-workspaces.md) | pnpm workspaces |
-| [0005](0005-typescript-5-9.md) | Pin TypeScript to 5.9.3 |
+| [0005](0005-typescript-5-9.md) | Pin TypeScript to 5.9.3 — superseded by 0022 |
 | [0006](0006-lcp-file-format-dependencies.md) | fflate and zod for the .lcp file format |
 | [0007](0007-pdf-lib-for-export.md) | pdf-lib for PDF export |
 | [0008](0008-no-clipper-binding.md) | No Clipper binding |
@@ -33,3 +33,4 @@ an amendment in place — 0007, 0010, 0011 and 0013 — so read an ADR to its en
 | [0019](0019-print-from-the-app.md) | Print from the app: pdf.js for the preview, the CUPS client with scaling off |
 | [0020](0020-update-discovery.md) | The update check: one request to GitHub as the app starts, and nothing installed |
 | [0021](0021-leathercad-draws-its-own-icons.md) | LeatherCAD draws all its own icons: a conventional outline, a leather detail |
+| [0022](0022-typescript-7-beside-typescript-6.md) | Typecheck with TypeScript 7; keep TypeScript 6 for the tools that read its API |

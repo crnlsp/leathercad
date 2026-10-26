@@ -7,8 +7,8 @@
   "author": "crnlsp",
   "type": "module",
   "engines": {
-    "node": ">=22.12.0",
-    "pnpm": ">=11"
+    "node": ">=24.11.0",
+    "pnpm": ">=12"
   },
   "scripts": {
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
@@ -41,25 +41,26 @@
     "docs:media": "pnpm build && node tools/media.mjs",
     "test:packaged": "pnpm --filter @leathercad/desktop package:e2e && playwright test --config playwright.packaged.config.ts"
   },
-  "packageManager": "pnpm@11.25.0",
+  "packageManager": "pnpm@12.15.0",
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
     "@ibm/plex-sans": "1.1.0",
     "@playwright/test": "^1.64.1",
-    "@stryker-mutator/core": "^10.0.0",
-    "@stryker-mutator/vitest-runner": "^10.0.0",
-    "@types/node": "^22.20.5",
-    "@vitest/coverage-v8": "^5.0.4",
-    "dependency-cruiser": "^18.6.0",
-    "eslint": "^10.12.0",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
+    "@types/node": "^24.19.2",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "@vitest/coverage-v8": "^5.0.5",
+    "dependency-cruiser": "^18.7.0",
+    "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "fast-check": "^4.10.2",
-    "knip": "^6.41.0",
+    "knip": "^6.43.0",
     "opentype.js": "2.0.0",
     "prettier": "^3.9.10",
-    "typescript": "5.9.3",
-    "typescript-eslint": "^8.71.2",
-    "vitest": "^5.0.4"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
   }
 }
