@@ -1,33 +1,49 @@
 import { drawnBounds } from '@leathercad/document';
 import { evaluate, type Project } from '@leathercad/domain';
 import { Viewport } from '@leathercad/editor';
-import { GROUND, buildDisplayList, renderToSvgString } from '@leathercad/render';
+import { GROUND, buildDisplayList, renderToSvgString, type DisplayItem } from '@leathercad/render';
 
-/** A thumbnail's size in CSS pixels: the template picker's row (8.14). */
-export const PREVIEW_WIDTH = 112;
-export const PREVIEW_HEIGHT = 72;
+/** Device pixels to each CSS pixel: sharp on a dense display, and still small. */
+const DPR = 2;
 
 /**
- * A template drawn small (8.14): its pieces as the board draws them, on the
- * board's ground, framed whole. Built by the board's own pipeline — the
- * display list and the SVG backend, which own the screen's flip — so a
- * thumbnail is the drawing, not a picture of it. Null for a project that
+ * What a list row's thumbnail keeps: the lines, fills and folds that make the
+ * shape. Words, dimensions, holes, markers and construction are a few pixels
+ * there, and only blur what it is (8.14); the large preview keeps them.
+ */
+const SHAPE_KINDS: ReadonlySet<DisplayItem['kind']> = new Set([
+  'path',
+  'fill',
+  'hatch',
+  'fold-tick',
+]);
+const shapeOnly = (item: DisplayItem): boolean =>
+  SHAPE_KINDS.has(item.kind) && item.role !== 'annotation' && item.role !== 'construction';
+
+/**
+ * A template drawn (8.14): its pieces as the board draws them, on the board's
+ * ground, framed whole in `width` × `height` CSS pixels — `full`, all of it;
+ * `shape`, only what makes its outline, for a list row. Built by the board's
+ * own pipeline — the display list and the SVG backend, which own the screen's
+ * flip — so a thumbnail is the drawing, not a picture of it. Null for a project that
  * draws nothing. An image's `src`: a `data:` URL, which the CSP allows.
  */
 export function templatePreview(
   project: Project,
-  width = PREVIEW_WIDTH,
-  height = PREVIEW_HEIGHT,
-  dpr = 2,
+  width: number,
+  height: number,
+  detail: 'shape' | 'full',
 ): string | null {
   const resolved = evaluate(project);
   const bounds = drawnBounds(resolved);
   if (bounds === null) return null;
   const viewport = new Viewport();
-  viewport.resize(width * dpr, height * dpr, dpr);
-  viewport.fitTo(bounds, 8 * dpr);
+  viewport.resize(width * DPR, height * DPR, DPR);
+  viewport.fitTo(bounds, 8 * DPR);
   const view = viewport.toView();
-  const svg = renderToSvgString(buildDisplayList(resolved, { view }), view, {
+  const drawn = buildDisplayList(resolved, { view });
+  const list = detail === 'shape' ? { items: drawn.items.filter(shapeOnly) } : drawn;
+  const svg = renderToSvgString(list, view, {
     background: GROUND.ground,
   });
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

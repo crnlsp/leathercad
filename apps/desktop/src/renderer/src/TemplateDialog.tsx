@@ -209,7 +209,7 @@ export function TemplateDialog({
 
   const option = (row: Row) => {
     const selected = row === chosen;
-    const preview = row.project === null ? null : templatePreview(row.project, 64, 42);
+    const preview = row.project === null ? null : templatePreview(row.project, 64, 42, 'shape');
     return (
       <div
         key={row.entry.id}
@@ -514,7 +514,7 @@ function Detail({
   const mine = row.entry.kind === 'mine';
   const id = row.entry.id;
   const preview = useMemo(
-    () => (row.project === null ? null : templatePreview(row.project, 360, 200)),
+    () => (row.project === null ? null : templatePreview(row.project, 360, 200, 'full')),
     [row.project],
   );
   const overall = row.project === null ? null : overallOf(row.project);
