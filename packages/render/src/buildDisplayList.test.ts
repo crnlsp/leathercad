@@ -8,8 +8,8 @@ import type {
   ResolvedPart,
   ResolvedProject,
 } from '@leathercad/domain';
-import { PathOps, Shapes, uniformRadii, type Path } from '@leathercad/geometry';
-import { FONT, placedText } from '@leathercad/typography';
+import { PathOps, SegmentOps, Shapes, uniformRadii, type Path } from '@leathercad/geometry';
+import { FONT, layoutText, placedText } from '@leathercad/typography';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -20,7 +20,7 @@ import {
   type Caption,
 } from './buildDisplayList.js';
 import { ROLE_STROKES, type DisplayItem } from './displayList.js';
-import { CANVAS, GROUND, NOMINAL_IRON } from './theme/index.js';
+import { CANVAS, DIMENSION_MARKS, GROUND, NOMINAL_IRON } from './theme/index.js';
 import { TRUE_SIZE_CSS_PX_PER_MM, type ViewportView } from './view.js';
 
 /** The piece fills: the leather itself (R-02). */
@@ -723,6 +723,67 @@ describe('a dimension’s value on the board (R-01)', () => {
         expect(detail.at.y - 3.5 / zoom).toBeGreaterThan(number.at.y + (12.5 + 4) / zoom);
       }),
     );
+  });
+});
+
+describe('a dimension drawn like drafting on the board (4.10b)', () => {
+  const resolved = evaluate(dimensioned());
+  /** The dimension's arrowheads, and the pieces of line at its height, y = 58. */
+  const marksAt = (zoom: number) => {
+    const items = buildDisplayList(resolved, { pxPerMm: zoom }).items;
+    const heads = items.filter(
+      (item): item is Extract<DisplayItem, { kind: 'fill' }> =>
+        item.kind === 'fill' && item.role === 'annotation',
+    );
+    const pieces = items.filter(
+      (item): item is Extract<DisplayItem, { kind: 'path' }> =>
+        item.kind === 'path' &&
+        item.role === 'annotation' &&
+        item.path.segments.every((segment) => {
+          const box = SegmentOps.bbox(segment);
+          return Math.abs(box.minY - 58) < 1e-9 && Math.abs(box.maxY - 58) < 1e-9;
+        }),
+    );
+    return { heads: heads.flatMap((item) => item.paths), pieces };
+  };
+
+  it('puts a filled arrowhead on each end, in the measuring colour', () => {
+    const items = buildDisplayList(resolved, { pxPerMm: 4 }).items;
+    const fill = items.find((item) => item.kind === 'fill' && item.role === 'annotation');
+    expect(fill).toMatchObject({ colour: ROLE_STROKES.annotation.colour });
+    const tips = marksAt(4).heads.map((head) => SegmentOps.start(head.segments[0]!));
+    expect(tips.map((tip) => [tip.x, tip.y])).toEqual([
+      [0, 58],
+      [30, 58],
+    ]);
+  });
+
+  it('keeps the arrowheads the same size on screen at every zoom', () => {
+    fc.assert(
+      fc.property(fc.double({ min: 0.5, max: 60, noNaN: true }), (zoom) => {
+        for (const head of marksAt(zoom).heads) {
+          const box = PathOps.bbox(head)!;
+          expect((box.maxX - box.minX) * zoom).toBeCloseTo(DIMENSION_MARKS.arrow.lengthPx, 6);
+          expect((box.maxY - box.minY) * zoom).toBeCloseTo(DIMENSION_MARKS.arrow.widthPx, 6);
+        }
+      }),
+    );
+  });
+
+  it('breaks the line where the number and its halo sit', () => {
+    // At 4 px/mm the 30 mm line is 120 px: room for both arrowheads and "30.0".
+    const { pieces } = marksAt(4);
+    const number = texts(buildDisplayList(resolved, { pxPerMm: 4 })).find(
+      (item) => item.text === '30.0',
+    )!;
+    const half = (layoutText('30.0', 12 / 4).widthMm + (2 * CANVAS.text.haloPx) / 4) / 2;
+    const ends = pieces
+      .map((piece) => PathOps.bbox(piece.path)!)
+      .map((box) => [box.minX, box.maxX]);
+
+    expect(ends).toHaveLength(2);
+    expect(ends[0]![1]).toBeCloseTo(number.at.x - half, 9);
+    expect(ends[1]![0]).toBeCloseTo(number.at.x + half, 9);
   });
 });
 

@@ -1,7 +1,18 @@
 import type { Mm } from '@leathercad/core';
-import { LAYER_ROLES, type LayerRole, type ResolvedProject } from '@leathercad/domain';
+import {
+  LAYER_ROLES,
+  draftDimensionLine,
+  type LayerRole,
+  type ResolvedProject,
+} from '@leathercad/domain';
 import { PathOps, RectOps, Shapes, type Path, type Rect } from '@leathercad/geometry';
-import { CAPTION_GAP_MM, CAPTION_SIZE_MM, ROLE_STYLES, describePart } from '@leathercad/render';
+import {
+  CAPTION_GAP_MM,
+  CAPTION_SIZE_MM,
+  DIMENSION_MARKS,
+  ROLE_STYLES,
+  describePart,
+} from '@leathercad/render';
 import { outlinesOf, placedText } from '@leathercad/typography';
 
 /**
@@ -50,6 +61,11 @@ export interface ExportPath {
   readonly role: LayerRole;
   readonly path: Path;
   readonly style: PrintStyle;
+  /**
+   * Filled in the style's grey rather than stroked: a dimension's arrowhead
+   * (4.10b). A file that cannot fill — a DXF — draws its outline.
+   */
+  readonly filled?: true;
 }
 
 /**
@@ -128,6 +144,8 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
           sizeMm: entry.text.layout.sizeMm,
         });
         if (entry.feature.kind === 'text-label') continue;
+        paths.push(...draftedOnPaper(entry.role, entry.path, entry.text.layout.widthMm));
+        continue;
       }
 
       // A hole is a mark to punch through, so it prints as a circle at a true
@@ -178,6 +196,34 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
   }
 
   return { projectName, parts };
+}
+
+/**
+ * A dimension as drafting prints it (4.10b): its extension lines, its line
+ * broken where the number sits, and a filled arrowhead on each end, all in
+ * true millimetres. The path is the extension lines either side of the line,
+ * as evaluation builds it.
+ */
+function draftedOnPaper(role: LayerRole, path: Path, numberWidthMm: Mm): ExportPath[] {
+  const [extensionFrom, dimensionLine, extensionTo] = path.segments;
+  const style = PRINT_STYLES[role];
+  if (extensionFrom === undefined || dimensionLine?.kind !== 'line' || extensionTo === undefined) {
+    return [{ role, path, style }];
+  }
+  const { arrow, clearanceMm } = DIMENSION_MARKS;
+  const { lines, arrowheads } = draftDimensionLine(dimensionLine, {
+    arrowLengthMm: arrow.lengthMm,
+    arrowWidthMm: arrow.widthMm,
+    gapMm: numberWidthMm + 2 * clearanceMm,
+  });
+  return [
+    ...[extensionFrom, extensionTo, ...lines.flatMap((piece) => piece.segments)].map((segment) => ({
+      role,
+      path: { closed: false, segments: [segment] },
+      style,
+    })),
+    ...arrowheads.map((head) => ({ role, path: head, style, filled: true as const })),
+  ];
 }
 
 /** The caption above a piece, so a printed sheet says what each one is. */

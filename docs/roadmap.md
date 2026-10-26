@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-25
+**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-26
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -112,9 +112,27 @@ Left from 1.3's *The window*: nothing says a new release exists.
   round one reports that it cannot follow it (`OFFSET_UNSUPPORTED`) until 9.19; the note beside the
   button says so before the maker converts. No format change: a drawn path was already stored.
   [Domain model §4.8](domain-model.md#48-converting-a-shape-to-a-drawn-path--built-312).
-- ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
+- ✅ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
+  **Done** (2026-10-26): a dimension ends in a filled arrowhead at each extension line and its line
+  breaks where its number sits, on the board and on paper, so identity item 9 passes. One pure
+  function in `domain`, `draftDimensionLine`, places the arrowheads and the break in millimetres; the
+  display list calls it with the board's constant sizes (10 × 3.5 px, the break the number's halo), and
+  the export scene with true millimetres (2.5 × 0.85 mm, ISO 129-1's three to one, and 1 mm either
+  side of the number), both from `DIMENSION_MARKS` in the theme. When the arrowheads and the number
+  do not both fit between the extension lines, the arrowheads turn outside and point in. The paper's
+  number, laid out by evaluation, now sits centred on its line rather than beside it, as the board's
+  already did. An arrowhead is the first filled shape in an export's pattern: `ExportPath.filled`,
+  filled in the PDF, the SVG and the Sheets view, outlined in a DXF. The resolved path is unchanged —
+  the extension lines and the whole line — so selection, the halo and bounds are as they were.
+  Property tests: each arrowhead's tip on its end, its size and axis; the line on
+  itself, broken exactly for the number, with no other break; inside or outside by the room there
+  is; and a rigid motion moves it all. The print test's rasterised check measures the dimension
+  between its extension lines now, since its line is no longer one stroke. A number wider than its
+  line stays over the middle of it — drafting would set it outside — until a dimension that short is
+  wanted. No format change. [Domain model §3.7](domain-model.md#37-measurement--linear-built-410a),
+  [printing](printing.md).
 - ✅ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
   **Done** (2026-10-25): a selected marking line offers *Add a row of holes* in Properties, and the
   row is a feature of its own, `HoleRow`, derived from that line as a hole set is from its stitch

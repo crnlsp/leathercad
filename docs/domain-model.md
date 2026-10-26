@@ -267,6 +267,11 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
 - **Every end references an anchor.** No segment indices (S9) and no free points, because a dimension
   that silently goes stale is worse than no dimension.
 - **The value is generated**, never stored (X6), and shown at `precision`.
+- **Drawn like drafting** (4.10b): arrowheads on its ends and its number breaking its line, on the
+  board and on paper. Evaluation lays out the paper's number, centred on the line; the line's
+  marks are sized per medium — constant on screen, true millimetres on paper — by
+  `draftDimensionLine`, which the display list and the export scene both call. The resolved `path`
+  is still the extension lines and the whole line, for selection and bounds.
 - A missing anchor fails the measurement (E4). It never attaches to a neighbouring corner.
 - **Never freezable.** Deleting what it measures offers no "keep it": a frozen dimension is a number
   that no longer means anything, which is the stale label this feature exists to replace.

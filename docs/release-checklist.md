@@ -89,7 +89,7 @@ Follow the procedure in [`print-verification-log.md`](print-verification-log.md)
    - gauge **100.0** across;
    - gauge **5.0** up;
    - panel edge **100.0**;
-   - dimension line **100.0**;
+   - the dimension **100.0**, tip to tip;
    - the 25-hole row **93.0**;
    - 10 gaps **38.75**;
    - the taped strap **275.0** end to end;

@@ -1,4 +1,5 @@
 import { MatOps, PathOps, SegmentOps, polyline, uniformRadii } from '@leathercad/geometry';
+import { FONT } from '@leathercad/typography';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -337,5 +338,24 @@ describe('the value, whatever the rectangle', () => {
         },
       ),
     );
+  });
+});
+describe('the number on paper breaks the dimension line (4.10b)', () => {
+  it('sits centred on the line, turned along it, its figures across it', () => {
+    const entry = entryOf(project(panel(100, 60), dimension('horizontal', 1, 2)), 'dim-1');
+    if (!entry.ok || entry.text === undefined) throw new Error('did not resolve');
+
+    const lineSegment = entry.path.segments[1]!;
+    const middle = SegmentOps.pointAt(lineSegment, 0.5);
+    const { origin, rotationRad, layout } = entry.text;
+    // Back into the run's own frame: along it from its left end, and up from
+    // its baseline.
+    const d = { x: middle.x - origin.x, y: middle.y - origin.y };
+    const alongRun = d.x * Math.cos(rotationRad) + d.y * Math.sin(rotationRad);
+    const upRun = -d.x * Math.sin(rotationRad) + d.y * Math.cos(rotationRad);
+    const capital = (FONT.capHeight / FONT.unitsPerEm) * layout.sizeMm;
+
+    expect(alongRun).toBeCloseTo(layout.widthMm / 2, 9);
+    expect(upRun).toBeCloseTo(capital / 2, 9);
   });
 });

@@ -21,7 +21,7 @@ import {
   type Path,
   type Vec2,
 } from '@leathercad/geometry';
-import { placedText, type PlacedText } from '@leathercad/typography';
+import { FONT, placedText, type PlacedText } from '@leathercad/typography';
 
 import type {
   Derivation,
@@ -666,12 +666,23 @@ function drawMeasurement(
 
   const label = formatNumber(valueMm, source.precision);
   const midpoint = { x: (fromOff.x + toOff.x) / 2, y: (fromOff.y + toOff.y) / 2 };
-  // Set above the dimension line, reading along it, and never upside down —
-  // a number a maker has to tilt their head for is a number they misread.
+  // Reading along the dimension line, and never upside down — a number a maker
+  // has to tilt their head for is a number they misread.
   const along = Math.atan2(unit.y, unit.x);
   const rotationRad = along > Math.PI / 2 || along < -Math.PI / 2 ? along + Math.PI : along;
 
-  const placed = placedText(label, MEASUREMENT_TEXT_MM, midpoint, { rotationRad });
+  // Centred on the line, its figures across it, so the number breaks the line
+  // as drafting sets it (4.10b): the baseline half a capital below the line,
+  // as the board sets its own number.
+  const halfCapital = ((FONT.capHeight / FONT.unitsPerEm) * MEASUREMENT_TEXT_MM) / 2;
+  const baseline = {
+    x: midpoint.x + Math.sin(rotationRad) * halfCapital,
+    y: midpoint.y - Math.cos(rotationRad) * halfCapital,
+  };
+  const placed = placedText(label, MEASUREMENT_TEXT_MM, baseline, {
+    rotationRad,
+    align: 'centre',
+  });
 
   return { path, text: placed };
 }

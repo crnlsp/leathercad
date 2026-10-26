@@ -61,7 +61,11 @@ export interface PrintTestMeasurements {
     readonly edgeMm: number;
     /** Between the centre-lines of its two straight sides. */
     readonly widthMm: number;
-    /** The dimension line printed under it. */
+    /**
+     * The dimension printed under it, between its extension lines' centres —
+     * what it measures. Its line is broken by its number and ends in
+     * arrowheads (4.10b), so the line itself is not one stroke to measure.
+     */
     readonly dimensionLineMm: number;
     /** From the edge down to the dimension line. */
     readonly dimensionOffsetMm: number;
@@ -197,7 +201,7 @@ export function expectAccurate(measured: PrintTestMeasurements, sheets = 3): voi
   const { panel, strap } = measured;
   close(panel.edgeMm, 100, 0.2, 'panel edge');
   close(panel.widthMm, 100, 0.2, 'panel width');
-  close(panel.dimensionLineMm, 100, 0.2, 'dimension line');
+  close(panel.dimensionLineMm, 100, 0.2, 'dimension, between its extension lines');
   close(panel.dimensionOffsetMm, 8, 0.2, 'dimension offset');
 
   // The straight run along the panel's bottom: 25 holes, 24 gaps, evenly
@@ -403,29 +407,37 @@ function gaugeOn(image: Gray): { widthMm: number; heightMm: number } {
 }
 
 /**
- * The outer panel: its bottom edge, the dimension line under it, its sides,
- * and the holes along its bottom.
+ * The outer panel: its bottom edge, the dimension under it, its sides, and the
+ * holes along its bottom.
  *
- * The edge and the dimension line are the one pair of equal ~100 mm strokes a
- * few millimetres apart above the verification strip — the gauge's long sides
- * are another, below it; the pocket's bottom edge has no twin.
+ * The edge is the ~100 mm stroke with the dimension's line a few millimetres
+ * under it: two strokes on one row, broken where the number sits (4.10b). The
+ * gauge's long sides are below the verification strip, and the pocket's
+ * bottom edge has nothing under it.
  */
 function panelOn(image: Gray): PrintTestMeasurements['panel'] {
   const long = horizontalStrokes(image, 80)
     .filter((s) => within(s.length, 90, 110))
     .filter(inPattern(image));
+  const pieces = horizontalStrokes(image, 20).filter(inPattern(image));
   let edge: Stroke | undefined;
-  let line: Stroke | undefined;
+  let lineAt: number | undefined;
   for (const a of long) {
-    for (const b of long) {
-      const below = b.at - a.at;
-      if (within(below, 4, 12) && Math.abs(a.from - b.from) < 0.5 && Math.abs(a.to - b.to) < 0.5) {
+    const under = pieces.filter(
+      (p) => within(p.at - a.at, 4, 12) && p.from > a.from - 1 && p.to < a.to + 1,
+    );
+    for (const p of under) {
+      if (under.some((q) => Math.abs(q.at - p.at) < 0.3 && q.from > p.to)) {
         edge = a;
-        line = b;
+        lineAt = p.at;
       }
     }
   }
-  if (edge === undefined || line === undefined) throw new Error('no dimensioned edge on sheet 1');
+  if (edge === undefined || lineAt === undefined) throw new Error('no dimensioned edge on sheet 1');
+
+  // Its extension lines, down from the edge's ends to the line: halfway down,
+  // the ink at each end of the row.
+  const extensions = sidesAcross(image, (edge.at + lineAt) / 2, [edge.from, edge.to]);
 
   // Its straight sides, 30 mm up from that edge: the ink at each end of the
   // row, clear of the stitching inside them.
@@ -438,8 +450,8 @@ function panelOn(image: Gray): PrintTestMeasurements['panel'] {
   return {
     edgeMm: edge.length,
     widthMm: sides[1] - sides[0],
-    dimensionLineMm: line.length,
-    dimensionOffsetMm: line.at - edge.at,
+    dimensionLineMm: extensions[1] - extensions[0],
+    dimensionOffsetMm: lineAt - edge.at,
     holes: centres.length,
     spacingMm: spacing,
     worstGapErrorMm: Math.max(...gaps.map((gap) => Math.abs(gap - spacing))),

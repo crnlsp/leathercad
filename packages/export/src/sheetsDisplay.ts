@@ -303,6 +303,14 @@ function inkColour(grey: number): string {
 }
 
 function inkPath(item: ExportPath, at: Vec2): DisplayItem {
+  if (item.filled === true) {
+    return {
+      kind: 'fill',
+      role: item.role,
+      paths: [moved(item.path, at)],
+      colour: inkColour(item.style.grey),
+    };
+  }
   return {
     kind: 'path',
     role: item.role,

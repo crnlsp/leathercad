@@ -1,4 +1,5 @@
 import {
+  draftDimensionLine,
   isHolesAlongALine,
   type Diagnostic,
   type Feature,
@@ -35,7 +36,7 @@ import {
   type DisplayList,
 } from './displayList.js';
 import { foldTicksAlong, linkTickOn, slitsFor } from './leather.js';
-import { CANVAS, GROUND, ROLE_STYLES, STATE } from './theme/index.js';
+import { CANVAS, DIMENSION_MARKS, GROUND, ROLE_STYLES, STATE } from './theme/index.js';
 import { TRUE_SIZE_CSS_PX_PER_MM, cssPxPerMm, visibleBoundsMm, type ViewportView } from './view.js';
 
 /** What a piece is called on the board: its name, and the detail under it (R-01). */
@@ -173,22 +174,40 @@ export function buildDisplayList(
           items.push(placedTextItem(entry.role, entry.text));
           continue;
         }
-        items.push(pathItem(entry.role, entry.path));
         // Its number is the board's own: the same size at every zoom, centred
         // on the line (R-01). Paper sets the glyphs evaluation laid out.
-        const dimensionLine = entry.path.segments[1];
-        if (dimensionLine !== undefined) {
-          const number = words.value(
-            SegmentOps.pointAt(dimensionLine, 0.5),
-            entry.text.layout.text,
-            entry.text.rotationRad,
-            ROLE_STROKES[entry.role].colour,
-          );
-          items.push(number.item);
-          // It counts towards the part's extent, as it does on paper: the
-          // caption goes above it.
-          drawn.push(number.box);
+        const [extensionFrom, dimensionLine, extensionTo] = entry.path.segments;
+        if (
+          extensionFrom === undefined ||
+          dimensionLine?.kind !== 'line' ||
+          extensionTo === undefined
+        ) {
+          continue;
         }
+        const colour = ROLE_STROKES[entry.role].colour;
+        const number = words.value(
+          SegmentOps.pointAt(dimensionLine, 0.5),
+          entry.text.layout.text,
+          entry.text.rotationRad,
+          colour,
+        );
+        // Drawn like drafting (4.10b): arrowheads, and the line broken where
+        // the number sits — the marks as constant on screen as the number.
+        const { arrow } = DIMENSION_MARKS;
+        const drafted = draftDimensionLine(dimensionLine, {
+          arrowLengthMm: arrow.lengthPx / zoom,
+          arrowWidthMm: arrow.widthPx / zoom,
+          gapMm: number.gapMm,
+        });
+        for (const extension of [extensionFrom, extensionTo]) {
+          items.push(pathItem(entry.role, { closed: false, segments: [extension] }));
+        }
+        for (const piece of drafted.lines) items.push(pathItem(entry.role, piece));
+        items.push(fillItem(entry.role, drafted.arrowheads, colour));
+        items.push(number.item);
+        // It counts towards the part's extent, as it does on paper: the
+        // caption goes above it, and above an arrowhead turned outside.
+        drawn.push(number.box, ...drafted.arrowheads.flatMap((head) => PathOps.bbox(head) ?? []));
         continue;
       }
 
@@ -385,7 +404,8 @@ function boardWords(zoom: number, view: ViewportView | undefined) {
       );
       const at = MatOps.apply(turn, { x: middle.x, y: middle.y - mm(capital / 2) });
       const item = boardTextItem(at, words, voice, colour, { align: 'center', rotationRad });
-      return { item, box };
+      // The break in its line: the number and its halo either side.
+      return { item, box, gapMm: 2 * halfWidth };
     },
 
     /**

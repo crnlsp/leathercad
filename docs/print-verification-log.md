@@ -16,7 +16,7 @@ against the packaged binary, on Linux in CI and on Windows and macOS in the Pack
 |---|---|
 | The verification gauge, every sheet | 100.0 × 5.0 mm |
 | Outer panel's bottom edge, and between its straight sides | 100.0 mm |
-| The dimension line under it | 100.0 mm, 8.0 mm below the edge |
+| The dimension under it, between its extension lines | 100.0 mm, its line 8.0 mm below the edge |
 | Outer panel's straight bottom run of holes | 25 holes, 3.875 mm apart, evenly |
 | The strap, sheet 2's end to the join plus the join to sheet 3's end | 275.0 mm |
 | Each registration cross | on its join line, at the same place on the strap on both sheets |
@@ -65,7 +65,7 @@ default PDF viewer.
    | A | Every sheet, bottom left | The gauge's long side, across | 100.0 mm |
    | B | Every sheet, bottom left | The gauge's short side, up | 5.0 mm |
    | C | Sheet 1, *Outer panel* | Its bottom edge, corner to corner | 100.0 mm |
-   | D | Sheet 1, under the panel | The dimension line marked *100.0* | 100.0 mm |
+   | D | Sheet 1, under the panel | The dimension marked *100.0*, arrowhead tip to arrowhead tip | 100.0 mm |
    | E | Sheet 1, *Outer panel* | Its bottom row of holes, centre of the first to centre of the last: 25 holes, 24 gaps | 93.0 mm |
    | F | Sheet 1, *Outer panel* | The same row, hole 1 to hole 11: 10 gaps | 38.75 mm |
    | G | Sheets 2 + 3, *Strap* | Cut sheet 2 along its dashed line, lay it on sheet 3 with the crosses and the dashed lines together, tape it; then the strap end to end | 275.0 mm |

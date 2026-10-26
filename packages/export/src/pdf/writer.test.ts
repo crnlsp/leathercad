@@ -12,7 +12,8 @@ import {
   type Project,
   type ProjectSettings,
 } from '@leathercad/domain';
-import { PathOps, RectOps, uniformRadii } from '@leathercad/geometry';
+import { PathOps, RectOps, SegmentOps, uniformRadii } from '@leathercad/geometry';
+import { DIMENSION_MARKS } from '@leathercad/render';
 import {
   PDFArray,
   PDFDocument,
@@ -34,7 +35,7 @@ import {
   verificationLayout,
   type PageSetup,
 } from '../paper.js';
-import { buildExportScene } from '../scene.js';
+import { PRINT_STYLES, buildExportScene } from '../scene.js';
 import { planSheets } from '../sheetPlan.js';
 
 import { exportPdf } from './writer.js';
@@ -254,10 +255,49 @@ describe('a dimension on paper', () => {
     expect(scene.parts[0]!.texts.map((text) => text.source)).toContain('100.0');
     expect(annotations.length).toBeGreaterThan(0);
 
-    // The dimension line spans the edge it measures, 8 mm below it.
-    const spans = annotations.map((path) => PathOps.bbox(path.path)!);
-    const longest = spans.reduce((a, b) => (RectOps.width(b) > RectOps.width(a) ? b : a));
-    expect(RectOps.width(longest)).toBeCloseTo(100, 6);
+    // The dimension spans the edge it measures, 8 mm below it.
+    const span = RectOps.unionAll(annotations.map((path) => PathOps.bbox(path.path)!))!;
+    expect(RectOps.width(span)).toBeCloseTo(100, 6);
+  });
+
+  it('prints it like drafting: true-size filled arrowheads on its ends, its line broken by its number', () => {
+    const part = buildExportScene(evaluate(dimensioned()), 'Test').parts[0]!;
+    const marks = part.paths.filter((path) => path.role === 'annotation');
+    const heads = marks.filter((path) => path.filled === true);
+    // The line, 8 mm below the edge: the pieces of it, without the extension lines.
+    const pieces = marks
+      .filter((path) => path.filled !== true)
+      .map((path) => PathOps.bbox(path.path)!)
+      .filter((box) => RectOps.height(box) < 1e-9);
+    const number = part.texts.find((text) => text.source === '100.0')!;
+    const ink = RectOps.unionAll(number.glyphs.flatMap((glyph) => PathOps.bbox(glyph) ?? []))!;
+
+    expect(heads.map((head) => SegmentOps.start(head.path.segments[0]!))).toEqual([
+      { x: 0, y: -8 },
+      { x: 100, y: -8 },
+    ]);
+    for (const head of heads) {
+      const box = PathOps.bbox(head.path)!;
+      expect(RectOps.width(box)).toBeCloseTo(DIMENSION_MARKS.arrow.lengthMm, 9);
+      expect(RectOps.height(box)).toBeCloseTo(DIMENSION_MARKS.arrow.widthMm, 9);
+    }
+    // Two pieces, and the number in the break between them, across the line.
+    expect(pieces).toHaveLength(2);
+    const [left, right] = pieces.sort((a, b) => a.minX - b.minX);
+    expect(left!.maxX).toBeLessThan(ink.minX);
+    expect(right!.minX).toBeGreaterThan(ink.maxX);
+    expect(ink.minY).toBeLessThan(-8);
+    expect(ink.maxY).toBeGreaterThan(-8);
+  });
+
+  it('fills the arrowheads on the page, in the measuring grey', async () => {
+    const bytes = await pdfFor(dimensioned());
+    const document = await PDFDocument.load(bytes);
+    const content = contentOf(document.getPage(0));
+    // A fill in the annotation's grey, which nothing else on the sheet uses.
+    expect(content).toMatch(
+      new RegExp(`${String(PRINT_STYLES.annotation.grey)} g[\\s\\S]*?\\nf\\n`),
+    );
   });
 
   it('keeps the part’s caption clear of a dimension along its top edge', () => {

@@ -66,6 +66,8 @@ export {
 
 export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.js';
 export { evaluate, evaluationErrors, pathForShape, resolvedFeatures } from './evaluate.js';
+export type { DimensionLineSizes, DraftedDimensionLine } from './dimensionLine.js';
+export { draftDimensionLine } from './dimensionLine.js';
 
 export { motionBetween, transformShape, transformTextSource } from './transformShape.js';
 
