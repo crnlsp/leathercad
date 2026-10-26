@@ -48,12 +48,16 @@ private. Attestations on a private repository need GitHub Enterprise Cloud.
 - Slice 8.5 shrinks to icons, the desktop entry, `.lcp` MIME registration and Flatpak. The pipeline
   it would have built is here.
 - `electron-builder` depends on `electron-winstaller`, whose install script is declined in
-  `pnpm-workspace.yaml`. Windows is not built.
+  `pnpm-workspace.yaml`. It is Squirrel's; the NSIS installer that Windows ships as (8.6a) does not
+  use it. *(Amended 2026-10-26: this said Windows was not built, which 8.6a changed.)*
 - The release pull request is opened with the workflow's own token, and GitHub does not run CI on
   pull requests opened that way. Its only changes are version numbers and the changelog. If that
   ever matters, a GitHub App token fixes it.
-- `enableEmbeddedAsarIntegrityValidation` is on for when macOS and Windows builds exist. Electron
-  does not implement it on Linux, so it protects nothing yet.
+- `enableEmbeddedAsarIntegrityValidation` is on. Electron does not implement it on Linux; on
+  Windows and macOS the app refuses an `app.asar` that differs from the hash in its executable. The
+  executable is not signed, so whoever can change `app.asar` can change that hash too: it catches a
+  damaged install, not a deliberate one, until the builds are signed. *(Amended 2026-10-26: this
+  said it protected nothing, written before Windows and macOS were built.)*
 
 ## Alternatives rejected
 
