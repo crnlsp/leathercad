@@ -250,7 +250,8 @@ A failure is lost work, which is a blocker above.
 
 Since 8.11–8.14, on each platform, with the packaged app.
 
-1. Start the app: the start screen shows, with *New*, *Open*, the sample and the recent projects.
+1. Start the app: the start screen shows, headed *Start new project*, with *New project from
+   scratch*, *New project from template*, *Open existing project* and the recent projects.
 2. Open two saved projects and start a new one: three tabs, the new one *Untitled*. Edit two of
    them. Ctrl+Page Down and Ctrl+Page Up go round them (⌘ on macOS); each keeps its own drawing,
    undo, Design or Sheets view and zoom.
