@@ -1415,8 +1415,8 @@
     "showLabel": "Show",
     "sortLabel": "Sort",
     "sort": {
-      "name": "Name, alphabetical",
-      "nameDesc": "Name, reverse alphabetical",
+      "name": "Name (A–Z)",
+      "nameDesc": "Name (Z–A)",
       "newest": "Newest first",
       "oldest": "Oldest first"
     },
@@ -1431,15 +1431,16 @@
       "recent": "Recently used"
     },
     "count": "{{shown}} of {{total}}",
+    "countAll_one": "{{count}} template",
+    "countAll_other": "{{count}} templates",
     "noMatch": "No template is called or described as “{{query}}”.",
     "clearSearch": "Clear the search",
     "builtInBadge": "Built in",
-    "savedOn": "Saved {{date}}",
+    "changedOn": "Modified {{date}}",
     "fact": {
       "pieces": "Pieces to cut",
-      "overall": "Overall",
-      "saved": "Saved",
-      "changed": "Changed"
+      "layout": "Pattern layout",
+      "changed": "Modified"
     },
     "overallSize": "{{width}} × {{height}} mm",
     "pin": "Pin",
@@ -1453,7 +1454,7 @@
     "export": "Export…",
     "showInFolder": "Show in folder",
     "delete": "Delete",
-    "import": "Import…",
+    "import": "Import template…",
     "importTooltip": "Add a project file from disk as one of your templates",
     "builtInLocked": "Built-in templates stay as they ship. Duplicate one to make it yours.",
     "description": "Description",

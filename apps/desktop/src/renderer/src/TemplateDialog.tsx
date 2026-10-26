@@ -272,8 +272,8 @@ export function TemplateDialog({
           <span className="template-meta">
             {row.entry.kind === 'builtin'
               ? t('templates.builtInBadge')
-              : t('templates.savedOn', {
-                  date: dates.format(row.entry.created ?? 0),
+              : t('templates.changedOn', {
+                  date: dates.format(row.entry.changed ?? row.entry.created ?? 0),
                 })}
           </span>
         </span>
@@ -473,10 +473,12 @@ export function TemplateDialog({
             </span>
           ) : (
             <span className="template-count" aria-live="polite">
-              {t('templates.count', {
-                shown: ordered.length,
-                total: rows.length,
-              })}
+              {show === 'all' && kind === '' && query.trim() === ''
+                ? t('templates.countAll', { count: rows.length })
+                : t('templates.count', {
+                    shown: ordered.length,
+                    total: rows.length,
+                  })}
             </span>
           )}
           <button type="button" className="tool" data-testid="template-close" onClick={onClose}>
@@ -538,6 +540,8 @@ function Detail({
     [row.project],
   );
   const overall = row.project === null ? null : overallOf(row.project);
+  // One date for the maker's own: when it last changed, or was saved if it never has.
+  const modified = mine ? (row.entry.changed ?? row.entry.created) : null;
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(row.name);
   const [problem, setProblem] = useState<string | null>(null);
@@ -639,7 +643,7 @@ function Detail({
         )}
         {overall !== null && (
           <>
-            <dt>{t('templates.fact.overall')}</dt>
+            <dt>{t('templates.fact.layout')}</dt>
             <dd>
               {t('templates.overallSize', {
                 width: Math.round(overall.width),
@@ -648,16 +652,10 @@ function Detail({
             </dd>
           </>
         )}
-        {mine && row.entry.created !== null && (
-          <>
-            <dt>{t('templates.fact.saved')}</dt>
-            <dd>{dates.format(row.entry.created)}</dd>
-          </>
-        )}
-        {mine && row.entry.changed !== null && (
+        {modified !== null && (
           <>
             <dt>{t('templates.fact.changed')}</dt>
-            <dd>{dates.format(row.entry.changed)}</dd>
+            <dd>{dates.format(modified)}</dd>
           </>
         )}
       </dl>
