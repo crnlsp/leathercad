@@ -144,6 +144,29 @@ function plan(project: Project, edit: PathPointEdit): Plan {
   }
 
   const corners = cornersThroughEdit(before, edited);
+  // A drawn path stays one, with its new points; its kind and everything
+  // else about it are unchanged.
+  const drawn = { ...feature, source: { kind: 'path', path: edited.path } } as Feature;
+  return renumberCorners(project, drawn, corners);
+}
+
+/**
+ * `feature` put in place of the feature with its id, and everything attached
+ * to its corners renumbered in the same step: `corners[k]` is the new index of
+ * what was corner `k`, or `null` when the change takes that corner away.
+ *
+ * An attachment is a stitch run between two corners or a dimension to one, on
+ * the feature or on anything derived from it, which carries its corners under
+ * its own numbers (ADR 0010, amended). The first attachment that would lose
+ * its corner refuses the whole change, rather than letting it slide to a
+ * neighbour.
+ */
+export function renumberCorners(
+  project: Project,
+  feature: Feature,
+  corners: readonly (number | null)[],
+): Plan {
+  const about = { featureId: feature.id, featureName: feature.name };
   const family = carriesCornersOf(project, feature.id);
 
   // Every attachment, renumbered — or the first one that would lose its
@@ -168,11 +191,7 @@ function plan(project: Project, edit: PathPointEdit): Plan {
 
   const parts = project.parts.map((part) => {
     const features = part.features.map((f): Feature => {
-      // A drawn path stays one, with its new points; its kind and everything
-      // else about it are unchanged.
-      if (f.id === feature.id) {
-        return { ...feature, source: { kind: 'path', path: edited.path } } as Feature;
-      }
+      if (f.id === feature.id) return feature;
       if (f.kind === 'text-label') return f;
 
       const source = f.source;
