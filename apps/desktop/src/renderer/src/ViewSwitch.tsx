@@ -110,9 +110,15 @@ export function ViewSwitch({
               <Icon of={choice.icon} />
               <span className={compact ? 'visually-hidden' : 'view-label'}>{choice.label}</span>
               {choice.id === 'sheets' && (
-                <span className="view-count" aria-hidden="true">
-                  {sheets}
-                </span>
+                // The space collapses in the flex row, but keeps the visible
+                // text "Sheets 1", not "Sheets1", so the name contains it as
+                // speech input needs (WCAG 2.5.3).
+                <>
+                  {' '}
+                  <span className="view-count" aria-hidden="true">
+                    {sheets}
+                  </span>
+                </>
               )}
             </button>
           </Tooltip>

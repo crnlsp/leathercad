@@ -78,7 +78,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     // A new project prints on what every project printed on before: A4
     // portrait. With nothing drawn, the PDF is one sheet with the scale check,
     // and the paper button says exactly that (7.4a).
-    await on('1 sheet of A4, portrait, scale check only');
+    await on('1 × A4 portrait, scale check only');
     await expect(paper).toHaveText('1 × A4 portrait');
 
     // A strap, 275 × 100 mm: longer than A4 portrait prints either way —
@@ -95,7 +95,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
 
     // Before exporting, the paper says what the PDF will be, and what turning
     // the paper would give instead.
-    await on('2 sheets of A4, portrait');
+    await on('2 × A4 portrait');
     await expect(paper).toHaveAttribute('data-sheets', '2');
     await paper.click();
     await expect(window.getByTestId('paper-summary')).toHaveText(
@@ -125,15 +125,15 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
 
     // Turned. The choice is an edit to the project, so it is unsaved…
     await choosePaper(window, 'A4', 'landscape');
-    await on('1 sheet of A4, landscape');
+    await on('1 × A4 landscape');
     await expect(paper).toHaveAttribute('data-sheets', '1');
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
 
     // …one undoable step…
     await window.getByTestId('undo').click();
-    await on('2 sheets of A4, portrait');
+    await on('2 × A4 portrait');
     await window.getByTestId('redo').click();
-    await on('1 sheet of A4, landscape');
+    await on('1 × A4 landscape');
 
     // …and the export uses it: the sheet is A4 landscape and the strap is on it.
     await window.getByTestId('export-pdf').click();
@@ -160,19 +160,19 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
 
     // Undone like any edit.
     await window.getByTestId('undo').click();
-    await on(/of A4, landscape/);
+    await on(/A4 landscape/);
     await window.getByTestId('redo').click();
-    await on(/of Letter, landscape/);
+    await on(/Letter landscape/);
 
     // Saved with the project, and back when it is opened again.
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
     await fromProjectMenu(window, 'new');
-    await on('1 sheet of A4, portrait, scale check only');
+    await on('1 × A4 portrait, scale check only');
 
     await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await on(/of Letter, landscape/);
+    await on(/Letter landscape/);
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);

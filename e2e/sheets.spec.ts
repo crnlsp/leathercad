@@ -156,9 +156,7 @@ test('Parts groups the pieces by sheet, lists what is taped, and says why a part
     await window.getByTestId('view-design').click();
     const strap = window.getByTestId('parts-list').locator('section', { hasText: 'Strap' });
     await strap.locator('[data-testid^="part-visible-"]').click();
-    await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
-      'Paper: 1 sheet of A4, portrait',
-    );
+    await expect(window.getByTestId('paper-button')).toHaveAccessibleName('Paper: 1 × A4 portrait');
     // Design says only that it does not print, with the reason in its tooltip.
     await expect(strap.locator('[data-testid^="part-not-printed-"]')).toBeVisible();
     await window.getByTestId('view-sheets').click();
@@ -267,7 +265,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(props.getByTestId('sheets-count')).toContainText('1');
     await expect(window.getByTestId('sheets-taped-none')).toBeVisible();
     await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
-      'Paper: 1 sheet of A4, landscape',
+      'Paper: 1 × A4 landscape',
     );
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
@@ -385,7 +383,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     const strapRow = pieceRow(window, 'Strap');
 
     // 1. The paper says what it will print, before anything is exported.
-    await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
+    await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
 
     // 2. The sheets: the same answer, in pictures and in words — and Parts
     //    says where each piece prints, as Design's no longer does (U.8).
@@ -450,7 +448,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await window.mouse.up();
     // A move is an edit: undo has something to undo.
     await expect(window.getByTestId('undo')).toBeEnabled();
-    await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
+    await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
 
     // 5. Nor does the window's size.
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
@@ -499,7 +497,7 @@ test('an empty project is one scale-check sheet, on screen and in the PDF (7.4d)
     await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
-      'Paper: 1 sheet of A4, portrait, scale check only',
+      'Paper: 1 × A4 portrait, scale check only',
     );
     await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(

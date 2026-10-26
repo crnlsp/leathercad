@@ -28,7 +28,7 @@ are complementary and neither replaces the other.
 - pnpm must be installed. It is not bundled with Node, and Arch's `nodejs-lts-jod` package does not
   ship corepack. See *Set up* in `CONTRIBUTING.md`.
 - The lockfile is `pnpm-lock.yaml`; CI uses `pnpm/action-setup`.
-- pnpm 11 gates very recent releases behind a minimum release age; accepted exclusions are recorded
+- pnpm gates very recent releases behind a minimum release age; accepted exclusions are recorded
   in `pnpm-workspace.yaml` under `minimumReleaseAgeExclude`.
 - Diverges from the sibling Leathercrafto project, which uses npm. Accepted — that project is a
   single package with no layering to enforce.

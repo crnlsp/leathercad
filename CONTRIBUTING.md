@@ -11,7 +11,7 @@ to every change, whoever or whatever writes it.
 
 ## Set up
 
-You need **Node 22** and **pnpm 11**. The exact versions are pinned in `.node-version` and in
+You need **Node 22** and **pnpm 12**. The exact versions are pinned in `.node-version` and in
 `package.json`'s `packageManager`; any installed pnpm switches itself to the pinned one, and CI reads
 the same pins. pnpm is not bundled with Node: run `corepack enable pnpm` where your Node ships
 corepack, as the installers from nodejs.org do, or install it with your package manager
