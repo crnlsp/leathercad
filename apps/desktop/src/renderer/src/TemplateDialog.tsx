@@ -41,14 +41,13 @@ export interface TemplateActions {
 const SORT_WORDS = {
   name: 'templates.sort.name',
   'name-desc': 'templates.sort.nameDesc',
+  recent: 'templates.sort.recent',
   newest: 'templates.sort.newest',
   oldest: 'templates.sort.oldest',
 } as const satisfies Record<TemplateSort, MessageKey>;
 
 /** How long a removed template can be brought back, before its file goes. */
 const UNDO_MS = 6000;
-/** How many templates *Recently used* lists. */
-const RECENT = 4;
 
 /** One row of the list, with what the picker reads about it. */
 interface Row extends TemplateChoice {
@@ -56,6 +55,17 @@ interface Row extends TemplateChoice {
   readonly note: string;
   readonly words: string;
 }
+
+/** When the maker last changed one of theirs; a built-in template has no date. */
+const modified = (row: Row): number | null => row.entry.changed ?? row.entry.created;
+
+/** Later first, and anything with no date after everything with one. */
+const latest = (a: number | null, b: number | null): number =>
+  a === b ? 0 : a === null ? 1 : b === null ? -1 : b - a;
+
+/** Earlier first, and anything with no date still last. */
+const earliest = (a: number | null, b: number | null): number =>
+  a === b ? 0 : a === null ? 1 : b === null ? -1 : a - b;
 
 /**
  * *New project from template…* (8.14), a browser for a library that grows:
@@ -65,8 +75,8 @@ interface Row extends TemplateChoice {
  *
  * Typing goes to the search at once, which reads names, descriptions and
  * tags; *Show* narrows the list, *Sort* orders it, and the picker
- * opens again as it was left. With nothing searched and the list by name,
- * the pinned and the recently used come first. A removed template is gone at
+ * opens again as it was left. The pinned come first, in the same order as
+ * the rest. A removed template is gone at
  * once and can be brought back for a few seconds, rather than asked about.
  *
  * A listbox: the arrows choose, Enter uses, Delete removes one of the
@@ -138,50 +148,26 @@ export function TemplateDialog({
     const by: Record<TemplateSort, (a: Row, b: Row) => number> = {
       name: (a, b) => a.name.localeCompare(b.name),
       'name-desc': (a, b) => b.name.localeCompare(a.name),
-      // Built-in templates have no date: after the maker's when newest come first.
-      newest: (a, b) =>
-        (b.entry.created ?? 0) - (a.entry.created ?? 0) || a.name.localeCompare(b.name),
-      oldest: (a, b) =>
-        (a.entry.created ?? Infinity) - (b.entry.created ?? Infinity) ||
-        a.name.localeCompare(b.name),
+      // Never used, or built in with no date: after the rest, either way, by name.
+      recent: (a, b) => latest(a.entry.usedAt, b.entry.usedAt) || a.name.localeCompare(b.name),
+      newest: (a, b) => latest(modified(a), modified(b)) || a.name.localeCompare(b.name),
+      oldest: (a, b) => earliest(modified(a), modified(b)) || a.name.localeCompare(b.name),
     };
     return kept.sort(by[sort]);
   }, [rows, show, query, sort]);
 
-  // With nothing searched and the list by name: the pinned, then the recently
-  // used, then the rest by kind. Otherwise one list, the pinned still first.
+  // The pinned first, under their heading, then the rest: the one order chosen
+  // runs through both, searched or not.
   const groups = useMemo((): { id: string; label: string; rows: Row[] }[] => {
     const pinned = shown.filter((row) => row.entry.pinned);
     const rest = shown.filter((row) => !row.entry.pinned);
-    const browsing = query.trim() === '' && sort.startsWith('name');
-    if (!browsing) {
-      return [
-        ...(pinned.length > 0
-          ? [{ id: 'pinned', label: t('templates.group.pinned'), rows: pinned }]
-          : []),
-        { id: 'all', label: '', rows: rest },
-      ];
-    }
-    const recent = rest
-      .filter((row) => row.entry.usedAt !== null)
-      .sort((a, b) => (b.entry.usedAt ?? 0) - (a.entry.usedAt ?? 0))
-      .slice(0, RECENT);
-    const others = rest.filter((row) => !recent.includes(row));
     return [
-      { id: 'pinned', label: t('templates.group.pinned'), rows: pinned },
-      { id: 'recent', label: t('templates.group.recent'), rows: recent },
-      {
-        id: 'builtin',
-        label: t('templates.builtIn'),
-        rows: others.filter((row) => row.entry.kind === 'builtin'),
-      },
-      {
-        id: 'mine',
-        label: t('templates.mine'),
-        rows: others.filter((row) => row.entry.kind === 'mine'),
-      },
-    ].filter((group) => group.rows.length > 0);
-  }, [shown, query, sort, t]);
+      ...(pinned.length > 0
+        ? [{ id: 'pinned', label: t('templates.group.pinned'), rows: pinned }]
+        : []),
+      { id: 'all', label: '', rows: rest },
+    ];
+  }, [shown, t]);
   const ordered = groups.flatMap((group) => group.rows);
 
   const [picked, setPicked] = useState<string | null>(null);

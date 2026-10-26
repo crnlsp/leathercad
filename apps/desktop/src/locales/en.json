@@ -1375,8 +1375,6 @@
   },
   "templates": {
     "title": "New project from template",
-    "builtIn": "Templates",
-    "mine": "My templates",
     "mineEmpty": "Save any project as a template, from the Project menu or its tab’s menu, and it is listed here.",
     "use": "Use template",
     "remove": "Remove {{name}}",
@@ -1417,12 +1415,12 @@
     "sort": {
       "name": "Name (A–Z)",
       "nameDesc": "Name (Z–A)",
+      "recent": "Recently used",
       "newest": "Newest first",
       "oldest": "Oldest first"
     },
     "group": {
-      "pinned": "Pinned",
-      "recent": "Recently used"
+      "pinned": "Pinned"
     },
     "count": "{{shown}} of {{total}}",
     "countAll_one": "{{count}} template",

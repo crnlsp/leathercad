@@ -584,7 +584,7 @@ test('a new project from a template, and any project saved as one (8.14)', async
       await save.getByTestId('template-save').click();
       await expect(save).toHaveCount(0);
 
-      // Recently used leads; Mine shows only the maker's; described, pinned,
+      // Mine shows only the maker's; described, pinned,
       // duplicated, renamed.
       await fromProjectMenu(window, 'new-template');
       await dialog.getByTestId('template-show-mine').click();

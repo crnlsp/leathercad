@@ -337,8 +337,8 @@ export interface TemplateEntry {
 export type TemplateSave =
   { readonly kind: 'saved' | 'exists'; readonly name: string } | { readonly kind: 'invalid' };
 
-/** The template picker's order (8.14): by name, either way, or by when saved. */
-export type TemplateSort = 'name' | 'name-desc' | 'newest' | 'oldest';
+/** The template picker's order (8.14): by name, either way, by when last used, or by when last changed. */
+export type TemplateSort = 'name' | 'name-desc' | 'recent' | 'newest' | 'oldest';
 /** Which templates the picker shows (8.14). */
 export type TemplateShow = 'all' | 'builtin' | 'mine';
 

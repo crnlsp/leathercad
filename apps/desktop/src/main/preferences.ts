@@ -225,7 +225,13 @@ function readCamera(value: unknown): SessionTab['camera'] {
 }
 
 function isTemplateSort(value: unknown): value is TemplateSort {
-  return value === 'name' || value === 'name-desc' || value === 'newest' || value === 'oldest';
+  return (
+    value === 'name' ||
+    value === 'name-desc' ||
+    value === 'recent' ||
+    value === 'newest' ||
+    value === 'oldest'
+  );
 }
 
 function isTemplateShow(value: unknown): value is TemplateShow {
