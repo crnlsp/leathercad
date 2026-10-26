@@ -590,25 +590,33 @@ test('a new project from a template, and any project saved as one (8.14)', async
       await dialog.getByTestId('template-show-mine').click();
       await expect(dialog.getByTestId('template-builtin:card-holder')).toHaveCount(0);
       await dialog.getByTestId('template-mine:My card holder').click();
-      // Kept only when saved: Save shows once something differs.
-      await expect(dialog.getByTestId('template-words-save')).toHaveCount(0);
+      // Read until Edit details… opens the form; Save waits for a change, and
+      // saving closes the form again.
+      await expect(dialog.getByTestId('template-description')).toHaveCount(0);
+      await dialog.getByTestId('template-edit-details').click();
+      await expect(dialog.getByTestId('template-words-save')).toBeDisabled();
       await dialog.getByTestId('template-description').fill('Three pockets, brown');
       await dialog.getByTestId('template-tags').fill('wallets, brown');
       await dialog.getByTestId('template-words-save').click();
       await expect(dialog.getByTestId('template-words-save')).toHaveCount(0);
       await expect(dialog.getByTestId('template-detail')).toContainText('Three pockets, brown');
-      await dialog.getByTestId('template-pin').click();
-      await expect(dialog.getByTestId('template-pin')).toHaveAttribute('aria-pressed', 'true');
-      await dialog.getByTestId('template-duplicate').click();
+      // The rest is under ⋯.
+      await dialog.getByTestId('template-more').click();
+      await window.getByTestId('template-pin').click();
+      await expect(dialog.getByTestId('template-fold-pinned')).toBeVisible();
+      await dialog.getByTestId('template-more').click();
+      await window.getByTestId('template-duplicate').click();
       await expect(dialog.getByTestId('template-mine:My card holder copy')).toBeVisible();
       await dialog.getByTestId('template-mine:My card holder copy').click();
-      await dialog.getByTestId('template-rename').click();
+      await dialog.getByTestId('template-more').click();
+      await window.getByTestId('template-rename').click();
       await dialog.getByTestId('template-rename-field').fill('Slim card holder');
       await dialog.getByTestId('template-rename-field').press('Enter');
       await expect(dialog.getByTestId('template-mine:Slim card holder')).toBeVisible();
 
       // Removed at once, and brought back with Undo.
-      await dialog.getByTestId('template-delete').click();
+      await dialog.getByTestId('template-more').click();
+      await window.getByTestId('template-delete').click();
       await expect(dialog.getByTestId('template-mine:Slim card holder')).toHaveCount(0);
       await dialog.getByTestId('template-undo').click();
       await expect(dialog.getByTestId('template-mine:Slim card holder')).toBeVisible();

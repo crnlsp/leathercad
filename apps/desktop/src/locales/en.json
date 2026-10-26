@@ -1464,7 +1464,8 @@
     "nothingChosen": "Choose a template.",
     "wordsTitle": "Description and tags",
     "saveWords": "Save",
-    "discardWords": "Discard",
+    "editDetails": "Edit details…",
+    "moreActions": "More actions for {{name}}",
     "sortChosen": "Sort: {{sort}}"
   },
   "guides": {

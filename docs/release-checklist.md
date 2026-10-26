@@ -280,10 +280,11 @@ Since 8.11–8.14, on each platform, with the packaged app.
     *Save* asks where. *Save as template…* the project under a name already used: it asks before
     replacing. The maker's template is in the picker, and removing it there takes it off.
 14. *New project from template…*: each template that ships opens, untitled, with nothing to fix in
-    Problems. *Save as template…* on a project of yours: it is listed under *My templates*, and a
+    Problems. *Save as template…* on a project of yours: it is listed under *Mine*, and a
     second save under the same name asks before replacing it. In the picker, search, *Show*
-    and *Sort* narrow and order the list, and open the same way next time; rename, describe, tag,
-    pin, duplicate, export, import and remove (then *Undo*) one of yours; *Edit template* opens it,
+    and *Sort* narrow and order the list, and open the same way next time; describe and tag one of
+    yours through *Edit details…*; rename, pin, duplicate, export and remove (then *Undo*) it from
+    ⋯, and import one; *Edit template* opens it,
     and Save writes the template.
 
 ## After it passes

@@ -151,8 +151,9 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   used, newest, oldest — by when last changed), the app's own menus, kept between openings; the
   pinned first, in a well of their own that folds away (kept between openings), then the rest,
   both in the order chosen; the
-  chosen template drawn large with its facts. The maker's own are described and tagged — saved when
-  asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
+  chosen template drawn large with its facts, *Edit template* (or, for a built-in one, *Duplicate as
+  my template*) beside it and the rest under ⋯. The maker's own are described and tagged through
+  *Edit details…* — read until then, saved when asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
   the template, exported, shown in the file manager and removed, with *Undo* for a few seconds; a
   `.lcp` is imported as one (`templates/` beside `preferences.json`). **Done** (2026-10-23).
 

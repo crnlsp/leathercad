@@ -526,9 +526,9 @@ function Detail({
   const [description, setDescription] = useState(row.entry.description);
   const [tags, setTags] = useState(row.entry.tags.join(', '));
 
-  // The maker's words about it, edited at the foot of the pane and kept only
-  // when they say so: *Save* shows once something differs, *Discard* puts
-  // back what is kept.
+  // The maker's words about it, read until *Edit details…* opens them as a
+  // form: kept only when they say so, put back as kept on *Cancel*.
+  const [editing, setEditing] = useState(false);
   const tagList = (text: string): string[] =>
     text
       .split(',')
@@ -540,12 +540,73 @@ function Detail({
   const [saving, setSaving] = useState(false);
   const keepWords = (): void => {
     setSaving(true);
-    void actions.describe(id, description, tagList(tags)).finally(() => setSaving(false));
+    void actions
+      .describe(id, description, tagList(tags))
+      .then(() => setEditing(false))
+      .finally(() => setSaving(false));
   };
   const discardWords = (): void => {
     setDescription(row.entry.description);
     setTags(row.entry.tags.join(', '));
+    setEditing(false);
   };
+
+  // One action to hand, the rest under ⋯: the maker's own are edited, a
+  // built-in one is made theirs first.
+  const more: MenuEntry[] = [
+    {
+      kind: 'item',
+      id: 'template-pin',
+      label: t(row.entry.pinned ? 'templates.unpin' : 'templates.pin'),
+      icon: row.entry.pinned ? 'unpin' : 'pin',
+      onChoose: () => void actions.pin(id, !row.entry.pinned),
+    },
+    ...(mine
+      ? [
+          {
+            kind: 'item' as const,
+            id: 'template-rename',
+            label: t('templates.rename'),
+            icon: 'rename' as const,
+            // After the menu has closed and settled focus, so the field keeps it.
+            onChoose: () => requestAnimationFrame(() => setRenaming(true)),
+          },
+          {
+            kind: 'item' as const,
+            id: 'template-duplicate',
+            label: t('templates.duplicate'),
+            icon: 'duplicate' as const,
+            onChoose: () => void actions.duplicate(id, t('templates.copyName', { name: row.name })),
+          },
+        ]
+      : []),
+    {
+      kind: 'item',
+      id: 'template-export',
+      label: t('templates.export'),
+      onChoose: () => void actions.exportTo(id),
+    },
+    ...(mine
+      ? [
+          {
+            kind: 'item' as const,
+            id: 'template-show',
+            label: t('templates.showInFolder'),
+            icon: 'open' as const,
+            onChoose: () => actions.show(id),
+          },
+          { kind: 'separator' as const },
+          {
+            kind: 'item' as const,
+            id: 'template-delete',
+            label: t('templates.delete'),
+            icon: 'delete' as const,
+            danger: true,
+            onChoose: () => onRemove(row),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -596,22 +657,33 @@ function Detail({
           {!mine && <span className="template-badge">{t('templates.builtInBadge')}</span>}
         </div>
       )}
-      {mine ? (
-        <>
-          {row.entry.description !== '' && <p className="template-note">{row.entry.description}</p>}
-          {row.entry.tags.length > 0 && (
-            <ul className="template-tags" aria-label={t('templates.tags')}>
-              {row.entry.tags.map((tag) => (
-                <li key={tag} className="template-tag">
-                  {tag}
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      ) : (
-        row.note !== '' && <p className="template-note">{row.note}</p>
-      )}
+      {mine
+        ? !editing && (
+            <>
+              {row.entry.description !== '' && (
+                <p className="template-note">{row.entry.description}</p>
+              )}
+              {row.entry.tags.length > 0 && (
+                <ul className="template-tags" aria-label={t('templates.tags')}>
+                  {row.entry.tags.map((tag) => (
+                    <li key={tag} className="template-tag">
+                      {tag}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                className="tool quiet template-edit-details"
+                data-testid="template-edit-details"
+                onClick={() => setEditing(true)}
+              >
+                <Icon of="rename" size={14} />
+                {t('templates.editDetails')}
+              </button>
+            </>
+          )
+        : row.note !== '' && <p className="template-note">{row.note}</p>}
       <dl className="template-facts">
         {row.project !== null && (
           <>
@@ -638,35 +710,7 @@ function Detail({
         )}
       </dl>
       <div className="template-manage">
-        <button
-          type="button"
-          className="tool"
-          data-testid="template-pin"
-          aria-pressed={row.entry.pinned}
-          onClick={() => void actions.pin(id, !row.entry.pinned)}
-        >
-          <Icon of={row.entry.pinned ? 'unpin' : 'pin'} size={14} />
-          {t(row.entry.pinned ? 'templates.unpin' : 'templates.pin')}
-        </button>
-        {mine && (
-          <button
-            type="button"
-            className="tool"
-            data-testid="template-rename"
-            onClick={() => setRenaming(true)}
-          >
-            {t('templates.rename')}
-          </button>
-        )}
-        <button
-          type="button"
-          className="tool"
-          data-testid="template-duplicate"
-          onClick={() => void actions.duplicate(id, t('templates.copyName', { name: row.name }))}
-        >
-          {t(mine ? 'templates.duplicate' : 'templates.duplicateMine')}
-        </button>
-        {mine && (
+        {mine ? (
           <Tooltip text={t('templates.editTooltip')}>
             <button
               type="button"
@@ -677,45 +721,41 @@ function Detail({
               {t('templates.edit')}
             </button>
           </Tooltip>
-        )}
-        <button
-          type="button"
-          className="tool"
-          data-testid="template-export"
-          onClick={() => void actions.exportTo(id)}
-        >
-          {t('templates.export')}
-        </button>
-        {mine && (
+        ) : (
           <button
             type="button"
             className="tool"
-            data-testid="template-show"
-            onClick={() => actions.show(id)}
+            data-testid="template-duplicate"
+            onClick={() => void actions.duplicate(id, t('templates.copyName', { name: row.name }))}
           >
-            {t('templates.showInFolder')}
+            <Icon of="duplicate" size={14} />
+            {t('templates.duplicateMine')}
           </button>
         )}
-        {mine && (
-          <button
-            type="button"
-            className="tool danger"
-            data-testid="template-delete"
-            onClick={() => onRemove(row)}
-          >
-            <Icon of="close" size={14} />
-            {t('templates.delete')}
-          </button>
-        )}
+        <MenuButton
+          label={t('templates.moreActions', { name: row.name })}
+          testId="template-more"
+          className="tool icon-only"
+          entries={more}
+        >
+          <Icon of="more" />
+        </MenuButton>
       </div>
       {!mine && <p className="template-note">{t('templates.builtInLocked')}</p>}
-      {mine && (
+      {mine && editing && (
         <form
           className="template-words"
           aria-labelledby="template-words-title"
           onSubmit={(event) => {
             event.preventDefault();
             if (edited && !saving) keepWords();
+          }}
+          onKeyDown={(event) => {
+            // Escape leaves the form, not the picker.
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              discardWords();
+            }
           }}
         >
           <h4 id="template-words-title" className="template-heading">
@@ -725,6 +765,7 @@ function Detail({
             <span className="template-field-label">{t('templates.description')}</span>
             <textarea
               id="template-description"
+              autoFocus
               data-testid="template-description"
               rows={2}
               placeholder={t('templates.descriptionPlaceholder')}
@@ -742,26 +783,24 @@ function Detail({
               onChange={(event) => setTags(event.target.value)}
             />
           </label>
-          {edited && (
-            <div className="template-words-actions">
-              <button
-                type="button"
-                className="tool"
-                data-testid="template-words-discard"
-                onClick={discardWords}
-              >
-                {t('templates.discardWords')}
-              </button>
-              <button
-                type="submit"
-                className="tool primary"
-                data-testid="template-words-save"
-                disabled={saving}
-              >
-                {t('templates.saveWords')}
-              </button>
-            </div>
-          )}
+          <div className="template-words-actions">
+            <button
+              type="button"
+              className="tool"
+              data-testid="template-words-discard"
+              onClick={discardWords}
+            >
+              {t('actions.cancel')}
+            </button>
+            <button
+              type="submit"
+              className="tool primary"
+              data-testid="template-words-save"
+              disabled={!edited || saving}
+            >
+              {t('templates.saveWords')}
+            </button>
+          </div>
         </form>
       )}
     </>
