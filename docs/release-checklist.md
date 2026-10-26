@@ -285,7 +285,7 @@ Since 8.11–8.14, on each platform, with the packaged app.
     second save under the same name asks before replacing it. In the picker, search, *Show*
     and *Sort* narrow and order the list, and open the same way next time; describe and tag one of
     yours through *Edit details…*; rename, pin, duplicate, export and remove (then *Undo*) it from
-    ⋯, and import one; *Edit template* opens it,
+    the icons above its details, and import one; *Edit template* opens it,
     and Save writes the template.
 
 ## After it passes

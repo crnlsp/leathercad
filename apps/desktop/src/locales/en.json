@@ -1465,7 +1465,7 @@
     "wordsTitle": "Description and tags",
     "saveWords": "Save",
     "editDetails": "Edit details…",
-    "moreActions": "More actions for {{name}}",
+    "actionsFor": "Actions for {{name}}",
     "sortChosen": "Sort: {{sort}}"
   },
   "guides": {

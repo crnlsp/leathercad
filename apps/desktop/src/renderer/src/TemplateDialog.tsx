@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { MessageKey } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import type { IconName } from './icons/names.js';
 import { MenuButton } from './Menu.js';
 import type { MenuEntry } from './menus.js';
 import { overallOf, piecesOf, templatePreview } from './templatePreview.js';
@@ -107,7 +108,6 @@ export function TemplateDialog({
   const { t } = i18n;
   const search = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
-  const detail = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [removed, setRemoved] = useState<{ id: string; name: string } | null>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -170,11 +170,6 @@ export function TemplateDialog({
   const [picked, setPicked] = useState<string | null>(null);
   const chosen = ordered.find((row) => row.entry.id === picked) ?? ordered[0] ?? null;
   const at = chosen === null ? -1 : ordered.indexOf(chosen);
-  const chosenId = chosen?.entry.id ?? null;
-  // Another template chosen: its preview, not the foot of the last one's details.
-  useEffect(() => {
-    detail.current?.scrollTo({ top: 0 });
-  }, [chosenId]);
   const choose = (index: number): void => {
     const row = ordered[(index + ordered.length) % ordered.length];
     if (row === undefined) return;
@@ -228,7 +223,6 @@ export function TemplateDialog({
         </span>
         <span className="template-text">
           <span className="template-name">
-            {row.entry.pinned && <Icon of="pin" size={11} />}
             <Marked text={row.name} query={query} />
           </span>
           <span className="template-meta">
@@ -239,6 +233,22 @@ export function TemplateDialog({
                 })}
           </span>
         </span>
+        {/* The pointer's shortcut, as on the start screen. The keyboard pins
+            from the details' row of actions, so an option holds no control. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          className={`tool quiet icon-only template-row-pin${row.entry.pinned ? ' active' : ''}`}
+          data-testid={`template-row-pin-${row.entry.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            void actions.pin(row.entry.id, !row.entry.pinned);
+          }}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
+          <Icon of="pin" size={14} />
+        </button>
       </div>
     );
   };
@@ -424,7 +434,7 @@ export function TemplateDialog({
             </div>
           </div>
 
-          <div ref={detail} className="template-detail" data-testid="template-detail">
+          <div className="template-detail" data-testid="template-detail">
             {chosen === null ? (
               <p className="template-note">{t('templates.nothingChosen')}</p>
             ) : (
@@ -551,258 +561,264 @@ function Detail({
     setEditing(false);
   };
 
-  // One action to hand, the rest under ⋯: the maker's own are edited, a
-  // built-in one is made theirs first.
-  const more: MenuEntry[] = [
-    {
-      kind: 'item',
-      id: 'template-pin',
-      label: t(row.entry.pinned ? 'templates.unpin' : 'templates.pin'),
-      icon: row.entry.pinned ? 'unpin' : 'pin',
-      onChoose: () => void actions.pin(id, !row.entry.pinned),
-    },
-    ...(mine
-      ? [
-          {
-            kind: 'item' as const,
-            id: 'template-rename',
-            label: t('templates.rename'),
-            icon: 'rename' as const,
-            // After the menu has closed and settled focus, so the field keeps it.
-            onChoose: () => requestAnimationFrame(() => setRenaming(true)),
-          },
-          {
-            kind: 'item' as const,
-            id: 'template-duplicate',
-            label: t('templates.duplicate'),
-            icon: 'duplicate' as const,
-            onChoose: () => void actions.duplicate(id, t('templates.copyName', { name: row.name })),
-          },
-        ]
-      : []),
-    {
-      kind: 'item',
-      id: 'template-export',
-      label: t('templates.export'),
-      onChoose: () => void actions.exportTo(id),
-    },
-    ...(mine
-      ? [
-          {
-            kind: 'item' as const,
-            id: 'template-show',
-            label: t('templates.showInFolder'),
-            icon: 'open' as const,
-            onChoose: () => actions.show(id),
-          },
-          { kind: 'separator' as const },
-          {
-            kind: 'item' as const,
-            id: 'template-delete',
-            label: t('templates.delete'),
-            icon: 'delete' as const,
-            danger: true,
-            onChoose: () => onRemove(row),
-          },
-        ]
-      : []),
-  ];
+  // One action to hand beside the name — the maker's own are edited, a
+  // built-in one is made theirs first — and the rest as a row of icons under
+  // it, all out of the scroll so none is ever below the fold (8.14).
+  const iconAction = (
+    testId: string,
+    label: string,
+    icon: IconName,
+    onClick: () => void,
+    extra: { className?: string | undefined; pressed?: boolean } = {},
+  ) => (
+    <Tooltip key={testId} text={label}>
+      <button
+        type="button"
+        className={`tool quiet icon-only${extra.className === undefined ? '' : ` ${extra.className}`}`}
+        data-testid={testId}
+        aria-label={label}
+        {...(extra.pressed === undefined ? {} : { 'aria-pressed': extra.pressed })}
+        onClick={onClick}
+      >
+        <Icon of={icon} size={16} />
+      </button>
+    </Tooltip>
+  );
 
   return (
     <>
-      <span className="template-preview large" aria-hidden="true">
-        {preview !== null && <img src={preview} alt="" width={360} height={200} />}
-      </span>
-      {renaming ? (
-        <form
-          className="template-rename"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void actions.rename(id, name).then((outcome) => {
-              if ('problem' in outcome) setProblem(outcome.problem);
-              else {
-                setRenaming(false);
-                onRenamed(outcome.renamed);
-              }
-            });
-          }}
-        >
-          <input
-            id="template-rename"
-            data-testid="template-rename-field"
-            aria-label={t('templates.renameLabel')}
-            value={name}
-            autoFocus
-            onChange={(event) => {
-              setName(event.target.value);
-              setProblem(null);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                event.stopPropagation();
-                setRenaming(false);
-                setName(row.name);
-              }
-            }}
-          />
-          {problem !== null && (
-            <p className="status-error" role="alert" data-testid="template-problem">
-              {problem}
-            </p>
+      <div className="template-detail-head">
+        <div className="template-detail-title">
+          {renaming ? (
+            <form
+              className="template-rename"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void actions.rename(id, name).then((outcome) => {
+                  if ('problem' in outcome) setProblem(outcome.problem);
+                  else {
+                    setRenaming(false);
+                    onRenamed(outcome.renamed);
+                  }
+                });
+              }}
+            >
+              <input
+                id="template-rename"
+                data-testid="template-rename-field"
+                aria-label={t('templates.renameLabel')}
+                value={name}
+                autoFocus
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setProblem(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.stopPropagation();
+                    setRenaming(false);
+                    setName(row.name);
+                  }
+                }}
+              />
+              {problem !== null && (
+                <p className="status-error" role="alert" data-testid="template-problem">
+                  {problem}
+                </p>
+              )}
+            </form>
+          ) : (
+            <div className="template-title">
+              <span className="template-name large">{row.name}</span>
+              {!mine && <span className="template-badge">{t('templates.builtInBadge')}</span>}
+            </div>
           )}
-        </form>
-      ) : (
-        <div className="template-title">
-          <span className="template-name large">{row.name}</span>
-          {!mine && <span className="template-badge">{t('templates.builtInBadge')}</span>}
-        </div>
-      )}
-      {mine
-        ? !editing && (
-            <>
-              {row.entry.description !== '' && (
-                <p className="template-note">{row.entry.description}</p>
-              )}
-              {row.entry.tags.length > 0 && (
-                <ul className="template-tags" aria-label={t('templates.tags')}>
-                  {row.entry.tags.map((tag) => (
-                    <li key={tag} className="template-tag">
-                      {tag}
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {mine ? (
+            <Tooltip text={t('templates.editTooltip')}>
               <button
                 type="button"
-                className="tool quiet template-edit-details"
-                data-testid="template-edit-details"
-                onClick={() => setEditing(true)}
+                className="tool"
+                data-testid="template-edit"
+                onClick={() => actions.edit(id)}
               >
-                <Icon of="rename" size={14} />
-                {t('templates.editDetails')}
+                {t('templates.edit')}
               </button>
-            </>
-          )
-        : row.note !== '' && <p className="template-note">{row.note}</p>}
-      <dl className="template-facts">
-        {row.project !== null && (
-          <>
-            <dt>{t('templates.fact.pieces')}</dt>
-            <dd>{piecesOf(row.project)}</dd>
-          </>
-        )}
-        {overall !== null && (
-          <>
-            <dt>{t('templates.fact.layout')}</dt>
-            <dd>
-              {t('templates.overallSize', {
-                width: Math.round(overall.width),
-                height: Math.round(overall.height),
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              className="tool"
+              data-testid="template-duplicate"
+              onClick={() =>
+                void actions.duplicate(id, t('templates.copyName', { name: row.name }))
+              }
+            >
+              <Icon of="duplicate" size={14} />
+              {t('templates.duplicateMine')}
+            </button>
+          )}
+        </div>
+        <div
+          className="template-actions"
+          role="group"
+          aria-label={t('templates.actionsFor', { name: row.name })}
+        >
+          {iconAction(
+            'template-pin',
+            t(row.entry.pinned ? 'templates.unpin' : 'templates.pin'),
+            'pin',
+            () => void actions.pin(id, !row.entry.pinned),
+            { className: row.entry.pinned ? 'active' : undefined, pressed: row.entry.pinned },
+          )}
+          {mine &&
+            iconAction('template-rename', t('templates.rename'), 'rename', () => setRenaming(true))}
+          {mine &&
+            iconAction(
+              'template-duplicate',
+              t('templates.duplicate'),
+              'duplicate',
+              () => void actions.duplicate(id, t('templates.copyName', { name: row.name })),
+            )}
+          {iconAction(
+            'template-export',
+            t('templates.export'),
+            'export',
+            () => void actions.exportTo(id),
+          )}
+          {mine &&
+            iconAction('template-show', t('templates.showInFolder'), 'open', () =>
+              actions.show(id),
+            )}
+          {mine && (
+            <>
+              <span className="template-actions-gap" aria-hidden="true" />
+              {iconAction('template-delete', t('templates.delete'), 'delete', () => onRemove(row), {
+                className: 'danger',
               })}
-            </dd>
-          </>
-        )}
-        {modified !== null && (
-          <>
-            <dt>{t('templates.fact.changed')}</dt>
-            <dd>{dates.format(modified)}</dd>
-          </>
-        )}
-      </dl>
-      <div className="template-manage">
-        {mine ? (
-          <Tooltip text={t('templates.editTooltip')}>
-            <button
-              type="button"
-              className="tool"
-              data-testid="template-edit"
-              onClick={() => actions.edit(id)}
-            >
-              {t('templates.edit')}
-            </button>
-          </Tooltip>
-        ) : (
-          <button
-            type="button"
-            className="tool"
-            data-testid="template-duplicate"
-            onClick={() => void actions.duplicate(id, t('templates.copyName', { name: row.name }))}
-          >
-            <Icon of="duplicate" size={14} />
-            {t('templates.duplicateMine')}
-          </button>
-        )}
-        <MenuButton
-          label={t('templates.moreActions', { name: row.name })}
-          testId="template-more"
-          className="tool icon-only"
-          entries={more}
-        >
-          <Icon of="more" />
-        </MenuButton>
+            </>
+          )}
+        </div>
       </div>
-      {!mine && <p className="template-note">{t('templates.builtInLocked')}</p>}
-      {mine && editing && (
-        <form
-          className="template-words"
-          aria-labelledby="template-words-title"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (edited && !saving) keepWords();
-          }}
-          onKeyDown={(event) => {
-            // Escape leaves the form, not the picker.
-            if (event.key === 'Escape') {
-              event.stopPropagation();
-              discardWords();
-            }
-          }}
-        >
-          <h4 id="template-words-title" className="template-heading">
-            {t('templates.wordsTitle')}
-          </h4>
-          <label className="template-field">
-            <span className="template-field-label">{t('templates.description')}</span>
-            <textarea
-              id="template-description"
-              autoFocus
-              data-testid="template-description"
-              rows={2}
-              placeholder={t('templates.descriptionPlaceholder')}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </label>
-          <label className="template-field">
-            <span className="template-field-label">{t('templates.tags')}</span>
-            <input
-              id="template-tags"
-              data-testid="template-tags"
-              placeholder={t('templates.tagsPlaceholder')}
-              value={tags}
-              onChange={(event) => setTags(event.target.value)}
-            />
-          </label>
-          <div className="template-words-actions">
-            <button
-              type="button"
-              className="tool"
-              data-testid="template-words-discard"
-              onClick={discardWords}
-            >
-              {t('actions.cancel')}
-            </button>
-            <button
-              type="submit"
-              className="tool primary"
-              data-testid="template-words-save"
-              disabled={!edited || saving}
-            >
-              {t('templates.saveWords')}
-            </button>
-          </div>
-        </form>
-      )}
+
+      <div className="template-detail-body">
+        <span className="template-preview large" aria-hidden="true">
+          {preview !== null && <img src={preview} alt="" width={360} height={200} />}
+        </span>
+        {mine
+          ? !editing && (
+              <>
+                {row.entry.description !== '' && (
+                  <p className="template-note">{row.entry.description}</p>
+                )}
+                {row.entry.tags.length > 0 && (
+                  <ul className="template-tags" aria-label={t('templates.tags')}>
+                    {row.entry.tags.map((tag) => (
+                      <li key={tag} className="template-tag">
+                        {tag}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  type="button"
+                  className="tool quiet template-edit-details"
+                  data-testid="template-edit-details"
+                  onClick={() => setEditing(true)}
+                >
+                  <Icon of="rename" size={14} />
+                  {t('templates.editDetails')}
+                </button>
+              </>
+            )
+          : row.note !== '' && <p className="template-note">{row.note}</p>}
+        <dl className="template-facts">
+          {row.project !== null && (
+            <>
+              <dt>{t('templates.fact.pieces')}</dt>
+              <dd>{piecesOf(row.project)}</dd>
+            </>
+          )}
+          {overall !== null && (
+            <>
+              <dt>{t('templates.fact.layout')}</dt>
+              <dd>
+                {t('templates.overallSize', {
+                  width: Math.round(overall.width),
+                  height: Math.round(overall.height),
+                })}
+              </dd>
+            </>
+          )}
+          {modified !== null && (
+            <>
+              <dt>{t('templates.fact.changed')}</dt>
+              <dd>{dates.format(modified)}</dd>
+            </>
+          )}
+        </dl>
+        {!mine && <p className="template-note">{t('templates.builtInLocked')}</p>}
+        {mine && editing && (
+          <form
+            className="template-words"
+            aria-labelledby="template-words-title"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (edited && !saving) keepWords();
+            }}
+            onKeyDown={(event) => {
+              // Escape leaves the form, not the picker.
+              if (event.key === 'Escape') {
+                event.stopPropagation();
+                discardWords();
+              }
+            }}
+          >
+            <h4 id="template-words-title" className="template-heading">
+              {t('templates.wordsTitle')}
+            </h4>
+            <label className="template-field">
+              <span className="template-field-label">{t('templates.description')}</span>
+              <textarea
+                id="template-description"
+                autoFocus
+                data-testid="template-description"
+                rows={2}
+                placeholder={t('templates.descriptionPlaceholder')}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </label>
+            <label className="template-field">
+              <span className="template-field-label">{t('templates.tags')}</span>
+              <input
+                id="template-tags"
+                data-testid="template-tags"
+                placeholder={t('templates.tagsPlaceholder')}
+                value={tags}
+                onChange={(event) => setTags(event.target.value)}
+              />
+            </label>
+            <div className="template-words-actions">
+              <button
+                type="button"
+                className="tool"
+                data-testid="template-words-discard"
+                onClick={discardWords}
+              >
+                {t('actions.cancel')}
+              </button>
+              <button
+                type="submit"
+                className="tool primary"
+                data-testid="template-words-save"
+                disabled={!edited || saving}
+              >
+                {t('templates.saveWords')}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </>
   );
 }

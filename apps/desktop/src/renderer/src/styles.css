@@ -1006,11 +1006,6 @@ body {
   white-space: nowrap;
 }
 
-.template-name .icon {
-  flex: none;
-  color: var(--tan);
-}
-
 .template-name.large {
   font: var(--t-panel);
   white-space: normal;
@@ -1031,12 +1026,54 @@ body {
 .template-detail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
   height: min(56vh, 460px);
   padding-left: var(--space-4);
-  overflow-y: auto;
   border-left: 1px solid var(--shell-line);
+}
+
+/* The name and every action, held above the scroll: nothing to reach for
+   below the fold, and no menu for a scroll to swallow (8.14). */
+.template-detail-head {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.template-detail-title {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.template-detail-title > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-actions {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.template-actions-gap {
+  flex: 1;
+}
+
+/* Each template's details start at the top: a new one is a new scroll. */
+.template-detail-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+  padding-right: var(--space-1);
+  overflow-y: auto;
 }
 
 .template-title {
@@ -1160,10 +1197,10 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.template-manage {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+/* Shown on the row under the pointer, and on the pinned, as the start
+   screen's recent projects show theirs. */
+.template-choice:not(:hover) .template-row-pin:not(.active) {
+  opacity: 0;
 }
 
 .template-dialog .template-rename input {
