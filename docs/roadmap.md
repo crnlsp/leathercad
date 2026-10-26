@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-23
+**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-26
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -166,13 +166,42 @@ with the packaged app.
   deletion and undo. Multi-selection alignment and equal-gap distribution move whole pieces and explain
   refusals. Guides stay off paper; format 10 keeps them on reopen.
   [Design and acceptance criteria](superpowers/specs/2026-10-23-guides-alignment.md).
-- ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
+- ✅ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.
   Until then, 3.7 refuses those transforms.
+  **Done** (2026-10-25): a selected circle, arc or rectangle offers *Convert to drawn path* in
+  Properties, under its fields, with what it costs said beside the button — it stops being a circle,
+  and its centre and diameter can no longer be typed. The path is the one the shape already drew, so
+  nothing on the board or the paper moves: the feature keeps its id, name, kind and role, a
+  rectangle keeps its four corners as anchors, and every stitch line, hole set, row of holes and
+  dimension following it resolves exactly as before. One step of undo brings the shape back. After
+  it, the squash and the shear 3.7 refused go through, and *Edit points* reshapes it; the two
+  refusals now name the way out. A rectangle is offered it too, because a turned one is refused a
+  stretch (`WOULD_SHEAR`) for the same reason a circle is. A hardware hole is not: a punch is round,
+  and an oval opening is a cut-out (`HOLE_STAYS_ROUND`). **A squashed circle is made of cubics** —
+  the rule every drawn path already follows ([geometry](geometry.md) §4.2 rule 2) — so a stitch line
+  round one reports that it cannot follow it (`OFFSET_UNSUPPORTED`) until 9.19; the note beside the
+  button says so before the maker converts. No format change: a drawn path was already stored.
+  [Domain model §4.8](domain-model.md#48-converting-a-shape-to-a-drawn-path--built-312).
 - ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
-- ☐ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
+- ✅ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
+  **Done** (2026-10-25): a selected marking line offers *Add a row of holes* in Properties, and the
+  row is a feature of its own, `HoleRow`, derived from that line as a hole set is from its stitch
+  line — so it follows the line when it is edited, mirrors with its piece, goes with the line when
+  the line is deleted, and is never stored as holes. Holes are placed as a hole set's defaults place
+  them: one on each end of an open line, the rest evenly between, one on every corner, and a closed
+  line divided with no doubled hole. Each is a round hole at a true diameter, in the `hardware` role:
+  drawn and printed at its size, cut by a laser export, and kept on the leather by its rim (Q33's
+  rule). The spacing rules for stitching do not apply — a row is punched, not sewn. Properties edits
+  the pitch and the diameter and reads the count and the spacing achieved; a new row is 25 mm apart
+  and 4 mm across, the 4.7 design's belt holes and the Hardware tool's first punch. Only a marking
+  line hosts one: a stitch line's holes are a hole set, and holes along an outline or a fold would
+  be cut through it. Holes no more than a diameter apart are warned about (`HOLES_OVERLAP`): they
+  cut as one slot. *Exactly this pitch* and a corner policy are left until someone asks. Format 11
+  holds it.
+  [Domain model §3.6a](domain-model.md#36a-holerow--built-414).
 
 ### Output
 
@@ -195,7 +224,7 @@ Everything found along the way that is not fixed yet, with where it was found. T
 
 | # | What | Where it was found | Plan |
 |---|---|---|---|
-| ☐ **Q33** | **bug** · A hardware hole is checked by its centre alone. `OUTSIDE_PART` and `HOLE_TOO_CLOSE_TO_EDGE` read a hardware hole's centre (`holePoints` in `validate.ts`) and never its radius, so a 6 mm hole centred 2 mm inside the edge cuts 1 mm through it and nothing is said, and a 4 mm rivet hole whose rim crosses the edge is only *too close* | The product roadmap refresh (2026-10-17), reading the rules for hardware clearance | Measure a hardware hole by its rim: off the leather when its circle leaves it, too close when the rim is nearer an edge than the clearance — and decide whether a stitch hole's 1.5 mm is the right clearance for a rim. A stitch hole stays a point. Property tests over centre and radius. 9.23 builds on it |
+| ✅ **Q33** | **bug** · A hardware hole is checked by its centre alone. `OUTSIDE_PART` and `HOLE_TOO_CLOSE_TO_EDGE` read a hardware hole's centre (`holePoints` in `validate.ts`) and never its radius, so a 6 mm hole centred 2 mm inside the edge cuts 1 mm through it and nothing is said, and a 4 mm rivet hole whose rim crosses the edge is only *too close* | The product roadmap refresh (2026-10-17), reading the rules for hardware clearance | ✅ Fixed (2026-10-25): a hardware hole is its circle. It is off the material when an edge — the outline's or a cut-out's — passes nearer its centre than its radius, which is exact rather than sampled, and too close when its rim is under 1.5 mm from one. A rim within a storage quantum of an edge is on it, as a line's end is (Q2). The clearance stays the stitch hole's 1.5 mm, measured from the rim: what tears is the same strip of leather between a cut and an edge, whatever made the cut, and hardware that pulls harder is 9.23's footprint question, not a second figure now. A stitch hole stays a point. Property tests over centre and radius: the verdict matches the exact rim clearance on a square panel, a rim leaving a round part is always off, and shrinking a hole never finds a new problem. The two sentences now say *leave the material* and *a hole needs* |
 | ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one — 9.16, accepting a warning, will |
 | ☐ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | Decide which sizes a piece keeps (hardware, labels, card slots) before Scale takes the whole piece |
 
@@ -219,8 +248,10 @@ process kill; `pnpm test:visual` and `pnpm test:packaged`; HiDPI, Windows and ma
 takes ~74 ms, over the 50 ms budget on its own; and a huge drawing at the smallest pitch makes
 millions of holes, so a hole-count budget may be wanted one day. Moving the pointer over the sample
 wallet, hovering or dragging, kept every frame at about 6 ms and no pointer event over 16 ms in the
-built app (2026-10-18), although each move re-renders the whole window. None is to be optimised
-until it is felt.
+built app (2026-10-18), although each move re-renders the whole window. The later
+[performance audit](performance-backlog.md#measurement-record) recorded user-visible problems
+with history retention, complex outlines and tiled output. Its prioritized tasks are tracked
+under [Later](#performance-and-resource-efficiency), without adding them to this release gate.
 
 ### Release engineering
 
@@ -243,6 +274,26 @@ why this order, and what depends on what are drawn in [`product-roadmap.md`](pro
 The numbers are Phase 9's from the 1.0 record, continued from 9.12 on 2026-10-17. The gaps are items
 that moved: DXF (9.4) into 1.1 as 6.5, Windows and macOS (9.8) into 1.0, and nesting (9.9) to *Not
 planned*.
+
+### Performance and resource efficiency
+
+The [performance backlog](performance-backlog.md) owns the status and acceptance criteria for
+**PERF-001 through PERF-017**, recorded by the 2026-10-25 audit of `5cf7294`. All are initially
+planned and unassigned to a release. Reproduce on the implementation revision: `develop` has
+advanced since those measurements. Promote selected items into a release explicitly, linking
+their stable IDs rather than copying the task lists here.
+
+**Work first:** export geometry retained through history (PERF-001), blocking tiled PDF export
+(PERF-002), slow complex-outline snapping (PERF-004), and many-page Sheets rendering (PERF-003).
+Start with the small benchmark corrections in PERF-017 so before/after evidence is trustworthy.
+The backlog includes [the full priority register](performance-backlog.md#task-register),
+[independent PR order and dependencies](performance-backlog.md#recommended-implementation-order),
+and [verification requirements](performance-backlog.md#verification-and-evidence).
+
+Small follow-ups include clearing previous-project caches, idle frame scheduling and DPI-change
+handling. Coordinate lifecycle work with Q39, persistence with Q35/Q36, and benchmark work with
+Q40. This work preserves millimetre accuracy, exact 1:1 output and document/history correctness;
+no renderer rewrite or unmeasured speedup is implied.
 
 ### Pieces that fit
 
@@ -361,8 +412,8 @@ comes in today except by drawing it again.
 
 - **9.19 Curves that can be stitched** — analytic offsetting refuses cubic segments
   ([geometry](geometry.md) §6.2), so no stitch line can follow a curve that an import or a curve
-  editor brings — or a circle squashed after 3.12, if that makes cubics, which 3.12's slice should
-  weigh. Before 9.11, an offset through arcs fitted to the cubic within the flattening
+  editor brings — or a circle squashed after 3.12, which does make cubics (3.12 kept
+  [geometry](geometry.md) §4.2 rule 2 rather than fit arcs of its own). Before 9.11, an offset through arcs fitted to the cubic within the flattening
   tolerance would build that stitch line instead of refusing it; whether to do that or wait for 9.11
   is the slice's to decide. Pure geometry under [geometry](geometry.md) §12's definition of done, so
   it can start whenever there is room.

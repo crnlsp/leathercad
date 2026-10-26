@@ -1,5 +1,4 @@
 import type { RecentFile, RecentOutcome } from '@leathercad/platform';
-import { Menu as MenuIcon, Plus } from 'lucide-react';
 import { useState, type RefObject } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -84,7 +83,7 @@ export function ProjectMenu({
         )}
         onOpen={onMenuOpen}
       >
-        <Icon of={MenuIcon} />
+        <Icon of="menu" />
       </MenuButton>
       {gone !== null && <GoneDialog path={gone} onClose={() => setGone(null)} />}
     </>
@@ -138,7 +137,7 @@ export function NewTabMenu({
         )}
         onOpen={onMenuOpen}
       >
-        <Icon of={Plus} size={14} />
+        <Icon of="plus" size={14} />
       </MenuButton>
       {gone !== null && <GoneDialog path={gone} onClose={() => setGone(null)} />}
     </>

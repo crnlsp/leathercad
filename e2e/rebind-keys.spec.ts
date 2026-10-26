@@ -101,6 +101,14 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
     await window.keyboard.press('F5');
     await expect(window.getByTestId('file-path')).toContainText('Card holder');
     expect(await saveDialogs(app)).toBe(1);
+
+    // Saving a saved project is still acknowledged: the second save asks
+    // nowhere and changes no state, so the note is all that says it happened.
+    await expect(window.getByTestId('written-note')).toContainText('Saved Card holder');
+    await expect(window.getByTestId('written-note')).toHaveCount(0, { timeout: 6000 });
+    await window.keyboard.press('F5');
+    await expect(window.getByTestId('written-note')).toContainText('Saved Card holder');
+    expect(await saveDialogs(app)).toBe(1);
   } finally {
     await closeApp(app);
   }

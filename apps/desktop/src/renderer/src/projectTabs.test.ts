@@ -63,7 +63,7 @@ describe('a tab', () => {
     expect(isPristine(undone)).toBe(false);
 
     const opened = aTab();
-    opened.file = { path: '/p/Wallet.lcp', error: null, savedAt: null };
+    opened.file = { path: '/p/Wallet.lcp', error: null };
     expect(isPristine(opened)).toBe(false);
 
     const recovered = aTab();
@@ -82,7 +82,7 @@ describe('a tab’s name', () => {
   it('is its file’s for a project with no name of its own, the former default among them', () => {
     for (const unnamed of ['', '  ', 'Untitled']) {
       const tab = aTab(unnamed);
-      tab.file = { path: '/p/Portfel.lcp', error: null, savedAt: null };
+      tab.file = { path: '/p/Portfel.lcp', error: null };
       expect(tabName(tab, t)).toBe('Portfel');
     }
   });
@@ -97,7 +97,7 @@ describe('a tab’s name', () => {
 describe('a new Untitled’s number', () => {
   const untitled = (number: number, path: string | null = null): ProjectTab => {
     const tab = newTab(`u${String(number)}`, aTab('').store, number);
-    tab.file = { path, error: null, savedAt: null };
+    tab.file = { path, error: null };
     return tab;
   };
 
@@ -144,7 +144,7 @@ describe('opening a project', () => {
 
   it('is found again by its file', () => {
     const wallet = aTab('Wallet');
-    wallet.file = { path: '/p/Wallet.lcp', error: null, savedAt: null };
+    wallet.file = { path: '/p/Wallet.lcp', error: null };
     const tabs = tabsOf(anEditedTab(), wallet);
     expect(tabs.byPath('/p/Wallet.lcp')).toBe(wallet);
     expect(tabs.byPath('/p/Belt.lcp')).toBeUndefined();

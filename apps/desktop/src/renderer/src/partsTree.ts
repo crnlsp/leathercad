@@ -1,4 +1,12 @@
-import { featureTree, type FeatureNode, type Part, type PartId } from '@leathercad/domain';
+import {
+  featureTree,
+  type Badge,
+  type FeatureNode,
+  type Part,
+  type PartId,
+} from '@leathercad/domain';
+
+import type { I18n } from '../../shared/i18n.js';
 
 /**
  * The Parts tree as rows (R-07, U.8): each piece, and — while it is open —
@@ -120,4 +128,37 @@ export function revealed(
   const next = new Set(closed);
   for (const part of opening) next.delete(part.id);
   return next;
+}
+
+/** What a row shows, in the order it shows it. */
+export interface RowFace {
+  /** The piece's name and its ×N, or the feature's name. */
+  readonly name: string;
+  readonly problems: Badge | null;
+  readonly holes: number | null;
+  /** A piece with nothing in it, which shows *Empty* and *Delete part*. */
+  readonly empty: boolean;
+}
+
+/**
+ * What a row is called: everything it shows, in the order shown, so speech
+ * input reaches it by whatever the maker reads there (WCAG 2.5.3, Label in
+ * Name) — `Stitch holes, 2 (problems, worst: error), 146 holes`. Each count
+ * is followed by its words. The problem count's are in parentheses, which
+ * label-in-name matching passes over, so on a row that shows both counts
+ * side by side they are side by side in its name too; speech reads them alike.
+ */
+export function rowName(face: RowFace, { t, list }: I18n): string {
+  const said = [face.name];
+  if (face.problems !== null) {
+    said.push(
+      t('parts.rowProblems', {
+        count: face.problems.count,
+        severity: t(`problems.severity.${face.problems.worst}`),
+      }),
+    );
+  }
+  if (face.holes !== null) said.push(t('parts.rowHoles', { count: face.holes }));
+  if (face.empty) said.push(t('parts.emptyPart'), t('parts.remove'));
+  return list(said, 'unit');
 }

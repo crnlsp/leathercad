@@ -1,8 +1,7 @@
 import { formatEditable } from '@leathercad/core';
 import { setPageSetup, type DocumentStore } from '@leathercad/document';
 import { PAPER_SIZES, type Orientation, type PaperName, type Project } from '@leathercad/domain';
-import { contentAreaMm, type SheetPlan } from '@leathercad/export';
-import { ChevronDown, File } from 'lucide-react';
+import { contentAreaMm, isScaleCheckOnly, type SheetPlan } from '@leathercad/export';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -10,7 +9,7 @@ import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
 import type { Room } from './panelLayout.js';
-import { describeChoice, describeSheets, describeTaped } from './sheetWords.js';
+import { describeChoice, describeTaped } from './sheetWords.js';
 import { paperOptionsFor, sheetPlanFor } from './sheets.js';
 import { Tooltip } from './Tooltip.js';
 
@@ -95,12 +94,16 @@ export function PaperButton({
 
   const count = plan.sheets.length;
   const orientationWord = t(`sheets.orientation.${orientation}`);
+  const long = t('projectBar.paperLong', { count, paper, orientation: orientationWord });
   const face =
     room === 'cramped'
       ? String(count)
       : room === 'narrow'
         ? t('projectBar.paperShort', { count, paper })
-        : t('projectBar.paperLong', { count, paper, orientation: orientationWord });
+        : long;
+  // The name holds the longest face, so every face shown is in it, as speech
+  // input needs (WCAG 2.5.3); the tooltip, its description, says the rest.
+  const name = isScaleCheckOnly(plan) ? t('sheets.scaleCheckOnly', { sheets: long }) : long;
 
   return (
     <div className="menu-anchor" ref={root}>
@@ -111,15 +114,15 @@ export function PaperButton({
           className="tool quiet paper-button"
           data-testid="paper-button"
           data-sheets={count}
-          aria-label={t('projectBar.paper', { sheets: describeSheets(plan, t) })}
+          aria-label={t('projectBar.paper', { sheets: name })}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? `${ids}popover` : undefined}
           onClick={() => setOpen((was) => !was)}
         >
-          <Icon of={File} />
+          <Icon of="paper" />
           <span className="paper-face">{face}</span>
-          <Icon of={ChevronDown} size={12} />
+          <Icon of="chevron-down" size={12} />
         </button>
       </Tooltip>
       {open && (

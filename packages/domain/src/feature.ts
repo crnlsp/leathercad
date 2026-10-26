@@ -84,6 +84,23 @@ export type Derivation =
     }
   | {
       /**
+       * A row of punched holes along a marking line (4.14): a belt's
+       * adjustment holes, rivets along a strap, lacing, decorative punching.
+       *
+       * Placed as a hole set is — a hole on each end, the rest evenly between,
+       * one on every corner — with that policy fixed rather than offered: it
+       * is what a hole set does by default, and nobody has asked for another.
+       * Each hole is a circle of `radiusMm`, punched like a hardware hole,
+       * which is why the radius is stored and a hole set's iron is not.
+       */
+      readonly type: 'hole-row';
+      /** Nominal, centre to centre. The achieved spacing is derived. */
+      readonly pitchMm: Mm;
+      /** The record holds a radius, as a hardware hole's does; the panel asks for a diameter. */
+      readonly radiusMm: Mm;
+    }
+  | {
+      /**
        * A counterpart that stays matched: the source, reflected and placed.
        *
        * The axis and the glide are the **only** things the counterpart owns —
@@ -310,6 +327,18 @@ export interface StitchHoleSet extends FeatureBase {
   readonly kind: 'stitch-hole-set';
 }
 
+/**
+ * A row of holes punched along a marking line (4.14) — not a stitch line,
+ * whose holes are a `StitchHoleSet`.
+ *
+ * Derived, like a hole set, and never persisted as points: the file holds the
+ * pitch and the diameter, and evaluation places the holes. Each is punched at
+ * its true size and cut like a hardware hole, so the row's role is `hardware`.
+ */
+export interface HoleRow extends FeatureBase {
+  readonly kind: 'hole-row';
+}
+
 /** A printed guide — glue areas, alignment, logo placement. Never cut. */
 export interface MarkingLine extends FeatureBase {
   readonly kind: 'marking-line';
@@ -379,6 +408,7 @@ export type Feature =
   | FoldLine
   | MarkingLine
   | HardwareHole
+  | HoleRow
   | TextLabel
   | Measurement;
 export type FeatureKind = Feature['kind'];
@@ -447,11 +477,22 @@ export function roleOf(feature: Feature): LayerRole {
     case 'marking-line':
       return 'mark';
     case 'hardware-hole':
+    case 'hole-row':
       return 'hardware';
     case 'text-label':
     case 'measurement':
       return 'annotation';
   }
+}
+
+/**
+ * Whether a kind is holes placed along a line, with no drawn form of its own:
+ * a stitch hole set, or a row of holes (4.14). Neither can be frozen into drawn
+ * geometry, its path is only the line it follows, and it wears no link tick —
+ * it is always derived, so one would say nothing.
+ */
+export function isHolesAlongALine(kind: FeatureKind): boolean {
+  return kind === 'stitch-hole-set' || kind === 'hole-row';
 }
 
 /** Every feature in the project, with the part it belongs to. */

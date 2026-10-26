@@ -1,6 +1,5 @@
 import type { Project } from '@leathercad/domain';
 import type { TemplateEntry, TemplateShow, TemplateSort } from '@leathercad/platform';
-import { Check, ChevronDown, Pin, PinOff, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import type { MessageKey } from '../../shared/i18n.js';
@@ -264,7 +263,7 @@ export function TemplateDialog({
         </span>
         <span className="template-text">
           <span className="template-name">
-            {row.entry.pinned && <Icon of={Pin} size={11} />}
+            {row.entry.pinned && <Icon of="pin" size={11} />}
             <Marked text={row.name} query={query} />
           </span>
           <span className="template-meta">
@@ -332,7 +331,7 @@ export function TemplateDialog({
 
         <div className="template-bar">
           <label className="template-search">
-            <Icon of={Search} size={14} />
+            <Icon of="search" size={14} />
             <input
               ref={search}
               id="template-search"
@@ -378,13 +377,13 @@ export function TemplateDialog({
               kind: 'item',
               id: `template-kind-${choice.id === '' ? 'all' : choice.id}`,
               label: choice.label,
-              ...(choice.id === kind ? { icon: Check } : {}),
+              ...(choice.id === kind ? { icon: 'check' as const } : {}),
               onChoose: () => setKind(choice.id),
             }))}
           >
             <span className="template-filter-label">{t('templates.kindLabel')}</span>
             <span className="template-filter-value">{kindName}</span>
-            <Icon of={ChevronDown} size={12} />
+            <Icon of="chevron-down" size={12} />
           </MenuButton>
           <MenuButton
             label={t('templates.sortChosen', { sort: t(SORT_WORDS[sort]) })}
@@ -396,13 +395,13 @@ export function TemplateDialog({
               kind: 'item',
               id: `template-sort-${each}`,
               label: t(SORT_WORDS[each]),
-              ...(each === sort ? { icon: Check } : {}),
+              ...(each === sort ? { icon: 'check' as const } : {}),
               onChoose: () => order(each, show),
             }))}
           >
             <span className="template-filter-label">{t('templates.sortLabel')}</span>
             <span className="template-filter-value">{t(SORT_WORDS[sort])}</span>
-            <Icon of={ChevronDown} size={12} />
+            <Icon of="chevron-down" size={12} />
           </MenuButton>
         </div>
 
@@ -660,7 +659,7 @@ function Detail({
           aria-pressed={row.entry.pinned}
           onClick={() => void actions.pin(id, !row.entry.pinned)}
         >
-          <Icon of={row.entry.pinned ? PinOff : Pin} size={14} />
+          <Icon of={row.entry.pinned ? 'unpin' : 'pin'} size={14} />
           {t(row.entry.pinned ? 'templates.unpin' : 'templates.pin')}
         </button>
         {mine && (
@@ -718,7 +717,7 @@ function Detail({
             data-testid="template-delete"
             onClick={() => onRemove(row)}
           >
-            <Icon of={X} size={14} />
+            <Icon of="close" size={14} />
             {t('templates.delete')}
           </button>
         )}

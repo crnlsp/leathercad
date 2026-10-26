@@ -68,6 +68,8 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   FEATURE_MISSING: interaction('X1'),
   NOT_DERIVED: interaction('X1'),
   NOT_A_DRAWN_PATH: interaction('X1'),
+  NOT_A_SHAPE: interaction('X1'),
+  HOLE_STAYS_ROUND: interaction('X1'),
   POINT_EDIT_DEGENERATE: interaction('X1'),
   ROUNDING_DOES_NOT_FIT: interaction('X1'),
   NOT_A_ROUNDED_CORNER: interaction('X1'),
@@ -100,6 +102,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   TEXT_GLYPH_MISSING: outcome('E2', 'warning'),
 
   CONTOUR_SELF_INTERSECTS: rule('DR3', 'error'),
+  HOLES_OVERLAP: rule('DR3', 'warning'),
   HOLE_SPACING_DEVIATION: rule('DR4', 'warning'),
   HOLE_SPACING_UNEVEN: rule('DR4', 'info'),
   HOLE_COUNT_TOO_LOW: rule('DR4', 'warning'),

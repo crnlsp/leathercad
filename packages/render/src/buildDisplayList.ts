@@ -1,16 +1,18 @@
-import type {
-  Diagnostic,
-  Feature,
-  FeatureId,
-  ResolvedPart,
-  ResolvedProject,
-  Severity,
+import {
+  isHolesAlongALine,
+  type Diagnostic,
+  type Feature,
+  type FeatureId,
+  type ResolvedPart,
+  type ResolvedProject,
+  type Severity,
 } from '@leathercad/domain';
 import {
   MatOps,
   PathOps,
   RectOps,
   SegmentOps,
+  Shapes,
   type Path,
   type Rect,
   type Vec2,
@@ -194,7 +196,15 @@ export function buildDisplayList(
       // per hole is a cloud of blobs — and the holes stay as they are (§8.4).
       if (entry.holes !== undefined) {
         halo(id, entry.path);
-        if (overview) {
+        const { radiusMm } = entry.holes;
+        if (radiusMm !== undefined) {
+          // A row of punched holes (4.14): each a circle at its true size, as
+          // a hardware hole is, at every zoom — a 4 mm punch and a 6 mm one
+          // are not the same hole. The line they sit on draws itself.
+          for (const hole of entry.holes.holes) {
+            items.push(pathItem(entry.role, Shapes.circle(hole.point, radiusMm)));
+          }
+        } else if (overview) {
           // Zoomed out, the holes stop being drawn and the set renders as its
           // stitch line, in stitch blue: still stitching, on the stitch line,
           // only less detailed (§9.3).
@@ -430,5 +440,5 @@ function allowanceSource(feature: Feature): FeatureId | null {
  * by wearing one. A frozen feature is drawn geometry now, and has no link.
  */
 function isLinked(feature: Feature): boolean {
-  return feature.source.kind === 'derived' && feature.kind !== 'stitch-hole-set';
+  return feature.source.kind === 'derived' && !isHolesAlongALine(feature.kind);
 }

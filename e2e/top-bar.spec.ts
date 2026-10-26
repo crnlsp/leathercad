@@ -169,7 +169,7 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
       expect(await shown(window, 'export-pdf')).toBe('Export PDF');
       expect(await shown(window, 'print')).toBe('Print');
       // The switch keeps its icons and the count; the words go at 860 px.
-      expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '5' : 'Sheets5');
+      expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '5' : 'Sheets 5');
     }
     // A long name gives way in its tab, which says it whole when pointed at (8.12).
     const tab = window.getByTestId('tab-strip').getByRole('tab', { selected: true });
@@ -297,7 +297,7 @@ test('the paper button, the Sheets tab and the job totals count the same sheets 
       const button = window.getByTestId('paper-button');
       if (count !== null) await expect(button).toHaveAttribute('data-sheets', count);
       const sheets = (await button.getAttribute('data-sheets')) ?? '';
-      expect(await shown(window, 'view-sheets')).toBe(`Sheets${sheets}`);
+      expect(await shown(window, 'view-sheets')).toBe(`Sheets ${sheets}`);
       await expect(window.getByTestId('job-sheets')).toContainText(`Sheets${sheets} · ${paper}`);
     }
     // The popover says it too, and takes the maker to the sheets.

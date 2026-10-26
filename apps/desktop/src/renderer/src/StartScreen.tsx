@@ -1,5 +1,4 @@
 import type { RecentFile } from '@leathercad/platform';
-import { FilePlus, FolderOpen, LayoutTemplate, Pin, PinOff, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -66,7 +65,7 @@ export function StartScreen({
             data-testid="start-new"
             onClick={onNew}
           >
-            <Icon of={FilePlus} />
+            <Icon of="new-project" />
             {t('menu.new')}
             <KeyCap command="newProject" />
           </button>
@@ -76,7 +75,7 @@ export function StartScreen({
             data-testid="start-template"
             onClick={onNewFromTemplate}
           >
-            <Icon of={LayoutTemplate} />
+            <Icon of="from-template" />
             {t('menu.newFromTemplate')}
           </button>
           <button
@@ -85,7 +84,7 @@ export function StartScreen({
             data-testid="start-open"
             onClick={onOpen}
           >
-            <Icon of={FolderOpen} />
+            <Icon of="open" />
             {t('menu.open')}
             <KeyCap command="openProject" />
           </button>
@@ -113,7 +112,7 @@ export function StartScreen({
                       onClick={() => onOpenRecent(file.path)}
                     >
                       <span className="start-recent-name">
-                        {file.pinned && <Icon of={Pin} size={12} />}
+                        {file.pinned && <Icon of="pin" size={12} />}
                         {name}
                       </span>
                       <span className="start-recent-folder">{folder}</span>
@@ -127,7 +126,7 @@ export function StartScreen({
                         aria-pressed={file.pinned}
                         onClick={() => onPin(file.path, !file.pinned)}
                       >
-                        <Icon of={file.pinned ? PinOff : Pin} size={14} />
+                        <Icon of={file.pinned ? 'unpin' : 'pin'} size={14} />
                       </button>
                     </Tooltip>
                     <Tooltip text={t('start.removeTooltip')}>
@@ -138,7 +137,7 @@ export function StartScreen({
                         aria-label={t('start.remove', { name })}
                         onClick={() => onRemove(file.path)}
                       >
-                        <Icon of={X} size={14} />
+                        <Icon of="close" size={14} />
                       </button>
                     </Tooltip>
                   </li>

@@ -151,7 +151,8 @@ export type HistoryAction =
   | 'add-point'
   | 'remove-point'
   | 'round-corner'
-  | 'sharpen-corner';
+  | 'sharpen-corner'
+  | 'convert-to-path';
 
 /**
  * A step of the undo history, as facts: what was done, and the name or the

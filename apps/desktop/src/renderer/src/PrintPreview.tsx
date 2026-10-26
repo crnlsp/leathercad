@@ -9,7 +9,6 @@ import {
 } from '@leathercad/domain';
 import { exportPdf } from '@leathercad/export';
 import type { PrinterList } from '@leathercad/platform';
-import { Check } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
@@ -361,7 +360,7 @@ export function PrintPreview({
 
             {direct ? (
               <p className="print-status ok" data-testid="print-no-scaling">
-                <Icon of={Check} size={14} />
+                <Icon of="check" size={14} />
                 <span>
                   <b>{t('printPreview.noScaling')}</b> {t('printPreview.noScalingDetail')}
                 </span>

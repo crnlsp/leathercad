@@ -7,20 +7,8 @@ import {
   setPartVisible,
   type DocumentStore,
 } from '@leathercad/document';
-import type { Badges, Feature, Part, PartId, Project } from '@leathercad/domain';
+import type { Badge, Badges, Feature, Part, PartId, Project } from '@leathercad/domain';
 
-import {
-  ChevronDown,
-  ChevronRight,
-  Copy,
-  Ellipsis,
-  Eye,
-  EyeOff,
-  Lock,
-  LockOpen,
-  PrinterX,
-  Trash2,
-} from 'lucide-react';
 import {
   useEffect,
   useId,
@@ -46,7 +34,15 @@ import { Icon } from './icons/Icon.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
 import { MenuButton } from './Menu.js';
 import { PieceThumbnail, pieceName, pressOf } from './PanelFold.js';
-import { featureKey, partKey, revealed, treeMove, treeRows, type TreeRow } from './partsTree.js';
+import {
+  featureKey,
+  partKey,
+  revealed,
+  rowName,
+  treeMove,
+  treeRows,
+  type TreeRow,
+} from './partsTree.js';
 import { resolvedFor } from './sheets.js';
 import { describePrintStatus } from './sheetWords.js';
 import { isTyping } from './shortcuts.js';
@@ -104,7 +100,8 @@ export function PartsList({
   /** Its fold (U.5), at the header's end. */
   toggle?: ReactNode;
 }) {
-  const { t } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
   const keys = useKeysInSentences();
   const tree = useRef<HTMLDivElement>(null);
   // The pieces the maker closed: the view's, never the document's.
@@ -299,7 +296,18 @@ export function PartsList({
                 status={status}
                 isSelected={selectedParts.has(part.id)}
                 badges={badges}
-                treeProps={rowProps(heading, pieceName(part, t))}
+                treeProps={rowProps(
+                  heading,
+                  rowName(
+                    {
+                      name: pieceName(part, t),
+                      problems: badges.parts.get(part.id) ?? null,
+                      holes: null,
+                      empty: part.features.length === 0,
+                    },
+                    i18n,
+                  ),
+                )}
                 renaming={renaming === heading.key}
                 onRename={(name, how) => finishRename(heading, name, how)}
                 onSelect={() => selectRow(heading)}
@@ -310,15 +318,22 @@ export function PartsList({
               />
               {own.slice(1).map((row) => {
                 const feature = part.features.find((entry) => entry.id === row.id)!;
+                // Only what names this feature: a part's own problems count on
+                // the part's row, not on every feature in it.
+                const problems = badges.features.get(feature.id) ?? null;
+                const count = holes.get(feature.id) ?? null;
                 return (
                   <FeatureRow
                     key={row.key}
                     store={store}
                     feature={feature}
-                    holes={holes.get(feature.id) ?? null}
+                    holes={count}
                     isSelected={selected.has(feature.id)}
-                    badges={badges}
-                    treeProps={rowProps(row, feature.name)}
+                    problems={problems}
+                    treeProps={rowProps(
+                      row,
+                      rowName({ name: feature.name, problems, holes: count, empty: false }, i18n),
+                    )}
                     renaming={renaming === row.key}
                     onRename={(name, how) => finishRename(row, name, how)}
                     onSelect={() => selectRow(row)}
@@ -364,9 +379,9 @@ interface TreeItem {
 }
 
 /**
- * What a row says beyond its name, for a screen reader: hidden, locked, where
- * it prints. Tied to the row by `aria-describedby`, since the row's name is
- * its own name alone.
+ * What a row says beyond what it shows, for a screen reader: hidden, locked,
+ * where it prints. Tied to the row by `aria-describedby`, since the row's name
+ * is what it shows (`rowName`).
  */
 function useDescription(parts: readonly (string | null)[]): {
   id: string;
@@ -446,7 +461,7 @@ function PieceRow({
           }}
         >
           {treeProps['aria-expanded'] !== undefined && (
-            <Icon of={treeProps['aria-expanded'] ? ChevronDown : ChevronRight} size={14} />
+            <Icon of={treeProps['aria-expanded'] ? 'chevron-down' : 'chevron-right'} size={14} />
           )}
         </span>
         <PieceThumbnail project={project} part={part} />
@@ -462,7 +477,7 @@ function PieceRow({
         {/*
           Counting everything inside the part, its features included: a
           closed or scrolled-past piece must not be able to hide trouble.
-        */}
+        */}{' '}
         <CountBadge badge={badges.parts.get(part.id) ?? null} />
         <span className="row-end">
           <span className="row-actions">
@@ -471,7 +486,7 @@ function PieceRow({
               on={visible}
               onLabel={t('parts.hidePart')}
               offLabel={t('parts.showPart')}
-              glyph={<Icon of={visible ? Eye : EyeOff} />}
+              glyph={<Icon of={visible ? 'visible' : 'hidden'} />}
               keys="toggleVisible"
               persists={!visible}
               onToggle={() => store.dispatch(setPartVisible(part.id, !visible))}
@@ -481,17 +496,17 @@ function PieceRow({
           {notPrinted !== null && (
             <Tooltip text={notPrinted}>
               <span className="row-mark not-printed" data-testid={`part-not-printed-${part.id}`}>
-                <Icon of={PrinterX} size={14} />
+                <Icon of="not-printed" size={14} />
               </span>
             </Tooltip>
           )}
         </span>
-      </div>
+      </div>{' '}
       {part.features.length === 0 && (
         // A part is removed only on purpose (ADR 0009), so an emptied one
         // stays — named, and with the way to remove it right here.
         <div className="empty-part">
-          <span className="panel-empty">{t('parts.emptyPart')}</span>
+          <span className="panel-empty">{t('parts.emptyPart')}</span>{' '}
           <button
             type="button"
             className="tool"
@@ -543,7 +558,7 @@ function PartMenu({
             kind: 'item',
             id: `duplicate-part-${part.id}`,
             label: t('actions.duplicate'),
-            icon: Copy,
+            icon: 'duplicate',
             note: t('parts.duplicateNote'),
             onChoose: () => onDuplicatePart(part.id),
           },
@@ -553,7 +568,7 @@ function PartMenu({
                   kind: 'item' as const,
                   id: `delete-part-${part.id}`,
                   label: t('actions.deletePart'),
-                  icon: Trash2,
+                  icon: 'delete' as const,
                   danger: true,
                   onChoose: () => onRemovePart(part.id),
                 },
@@ -561,7 +576,7 @@ function PartMenu({
             : []),
         ]}
       >
-        <Icon of={Ellipsis} />
+        <Icon of="more" />
       </MenuButton>
     </span>
   );
@@ -577,7 +592,7 @@ function FeatureRow({
   feature,
   holes,
   isSelected,
-  badges,
+  problems,
   treeProps,
   renaming,
   onRename,
@@ -588,14 +603,14 @@ function FeatureRow({
   feature: Feature;
   holes: number | null;
   isSelected: boolean;
-  badges: Badges;
+  problems: Badge | null;
   treeProps: TreeItem;
   renaming: boolean;
   onRename: (name: string | null, how: 'keyboard' | 'blur') => void;
   onSelect: () => void;
   onContextMenu: OpenMenu;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const description = useDescription([
     feature.visible ? null : t('parts.isHidden'),
     feature.locked ? t('parts.isLocked') : null,
@@ -625,13 +640,12 @@ function FeatureRow({
           <RowName name={feature.name} onDone={onRename} />
         ) : (
           <span className="feature-name">{feature.name}</span>
-        )}
-        {/* Only what names this feature: a part's own problems count on the
-            part's row, not on every feature in it. */}
-        <CountBadge badge={badges.features.get(feature.id) ?? null} />
+        )}{' '}
+        <CountBadge badge={problems} />{' '}
         {holes !== null && (
+          // Formatted as its name says it, so the two read alike: 1,146.
           <span className="row-count" data-testid={`hole-count-${feature.id}`}>
-            {holes}
+            {new Intl.NumberFormat(locale).format(holes)}
           </span>
         )}
         <span className="row-end">
@@ -641,7 +655,7 @@ function FeatureRow({
               on={feature.locked}
               onLabel={t('actions.unlock')}
               offLabel={t('actions.lock')}
-              glyph={<Icon of={feature.locked ? Lock : LockOpen} />}
+              glyph={<Icon of={feature.locked ? 'locked' : 'unlocked'} />}
               persists={feature.locked}
               onToggle={() => store.dispatch(setFeatureLocked([feature.id], !feature.locked))}
             />
@@ -650,7 +664,7 @@ function FeatureRow({
               on={feature.visible}
               onLabel={t('actions.hide')}
               offLabel={t('actions.show')}
-              glyph={<Icon of={feature.visible ? Eye : EyeOff} />}
+              glyph={<Icon of={feature.visible ? 'visible' : 'hidden'} />}
               keys="toggleVisible"
               persists={!feature.visible}
               onToggle={() => store.dispatch(setFeatureVisible([feature.id], !feature.visible))}

@@ -239,7 +239,9 @@
     "partsSelected_one": "part selected",
     "partsSelected_other": "parts selected",
     "checkForUpdates": "Check for updates",
-    "versionNext": "to {{version}}"
+    "versionNext": "to {{version}}",
+    "saved": "Saved {{name}}",
+    "exported": "Exported {{name}}"
   },
   "view": {
     "design": "Design",
@@ -730,6 +732,10 @@
     "notPrinted": "Not printed. {{reason}}",
     "remove": "Delete part",
     "rename": "Name",
+    "rowHoles_one": "{{count}} hole",
+    "rowHoles_other": "{{count}} holes",
+    "rowProblems_one": "{{count}} (problem, worst: {{severity}})",
+    "rowProblems_other": "{{count}} (problems, worst: {{severity}})",
     "showPart": "Show part",
     "title": "Parts"
   },
@@ -737,6 +743,7 @@
     "cut-out": "Cut-out",
     "fold-line": "Fold line",
     "hardware-hole": "Hardware hole",
+    "hole-row": "Row of holes",
     "marking-line": "Marking line",
     "measurement": "Dimension",
     "outline": "Outline",
@@ -747,6 +754,8 @@
   "properties": {
     "addAllowance": "Add seam allowance",
     "addAllowanceHint": "The cut edge, that far outside this seam — and it follows the seam's shape",
+    "addHoleRow": "Add a row of holes",
+    "addHoleRowHint": "Holes punched along this line, a hole on each end and the rest evenly between — for a belt’s adjustment holes, rivets or lacing",
     "addHoles": "Add holes",
     "addHolesHint": "Holes along this line, at the pitch of your iron",
     "addStitchLine": "Add stitch line",
@@ -759,6 +768,12 @@
     },
     "area": "Area",
     "arrange": "Arrange",
+    "convertToPath": "Convert to drawn path",
+    "convertToPathNote": {
+      "circle": "It stops being a circle: its centre and diameter can no longer be typed, but it can be stretched into an oval and its points moved. A stitch line cannot follow an oval yet.",
+      "arc": "It stops being an arc: its radius and sweep can no longer be typed, but it can be stretched unevenly and its points moved.",
+      "rect": "It stops being a rectangle: its width, height and corners can no longer be typed, but it can be sheared and its points moved. A stitch line cannot follow rounded corners stretched unevenly yet."
+    },
     "cut": "Cut",
     "cutSuffix": "off",
     "drawing": "Rectangle being drawn",
@@ -910,6 +925,8 @@
         "allowance-needs-whole-run": "A seam allowance follows the whole stitch line, so the outline it makes is closed.",
         "holes-need-hole-set": "Only a stitch hole set can follow a stitch line at a pitch.",
         "holes-need-stitch-line": "Holes can only follow a stitch line.",
+        "row-needs-hole-row": "Only a row of holes can follow a marking line at a pitch.",
+        "row-needs-marking-line": "A row of holes can only follow a marking line.",
         "inset-needs-outline": "A stitch line can only be inset from an outline or a cut-out.",
         "inset-needs-stitch-line": "Only a stitch line can be inset from an outline.",
         "mirror-keeps-kind": "A counterpart is the same kind of thing as what it mirrors.",
@@ -977,7 +994,15 @@
     },
     "NOT_A_DRAWN_PATH": {
       "title": "No points to edit",
-      "description": "{{featureName}} is not a drawn path, so it has no points of its own. A shape is changed by its measurements, and a derived feature follows what it was made from."
+      "description": "{{featureName}} is not a drawn path, so it has no points of its own. A shape is changed by its measurements, unless it is converted to a drawn path in Properties; a derived feature follows what it was made from."
+    },
+    "NOT_A_SHAPE": {
+      "title": "Already drawn",
+      "description": "{{featureName}} is not a shape, so there is nothing to convert: a drawn path already has points, and a derived feature follows what it was made from."
+    },
+    "HOLE_STAYS_ROUND": {
+      "title": "A punched hole stays round",
+      "description": "{{featureName}} is punched, and a punch is round, so it stays a circle. For an oval opening, draw a cut-out."
     },
     "POINT_EDIT_DEGENERATE": {
       "title": "Too few points",
@@ -1009,11 +1034,11 @@
     },
     "WOULD_BECOME_ELLIPSE": {
       "title": "Would become an ellipse",
-      "description": "A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this editor cannot represent. Scale it evenly instead."
+      "description": "A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this editor cannot represent. Scale it evenly, or convert it to a drawn path in Properties first."
     },
     "WOULD_SHEAR": {
       "title": "Would shear",
-      "description": "A turned rectangle cannot be stretched along one axis — it would shear, and its corners would stop being square. Rotate it back to 0°, or scale it evenly."
+      "description": "A turned rectangle cannot be stretched along one axis — it would shear, and its corners would stop being square. Rotate it back to 0°, scale it evenly, or convert it to a drawn path in Properties first."
     },
     "TEXT_WOULD_DISTORT": {
       "title": "Would distort the letters",
@@ -1100,6 +1125,10 @@
       "description_one": "{{featureName}} crosses itself once, so where to cut is ambiguous. Redraw it so the line never crosses.",
       "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous. Redraw it so the line never crosses."
     },
+    "HOLES_OVERLAP": {
+      "title": "Holes run into each other",
+      "description": "{{featureName}} has holes {{spacing}} apart that are {{diameter}} across, so no leather is left between them and they cut as one slot. Widen the pitch or use a smaller punch."
+    },
     "HOLE_SPACING_DEVIATION": {
       "title": "Spacing differs from the iron",
       "description": "The holes are {{achieved}} apart, but the iron’s pitch is {{pitch}}. Change the pitch or the edge margin to bring them closer."
@@ -1124,12 +1153,12 @@
     },
     "OUTSIDE_PART": {
       "title": "Off the material",
-      "holes": "{{featureName}} has holes off the material — through the outline, or into a cut-out. They cannot be punched.",
+      "holes": "{{featureName}} has holes that leave the material — through the outline, or into a cut-out. They cannot be punched there.",
       "line": "{{featureName}} runs off the material, so part of it cannot be marked."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {
       "title": "Too near the edge",
-      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a stitch needs. Leather tears out between a hole and an edge."
+      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a hole needs. Leather tears out between a hole and an edge."
     },
     "EMPTY_PART": {
       "title": "Empty part",
@@ -1222,6 +1251,7 @@
     "change-hardware-type": "Change hardware type",
     "change-marking-purpose": "Change marking purpose",
     "change-paper": "Change paper",
+    "convert-to-path": "Convert to drawn path",
     "delete": "Delete {{what}}",
     "deleteKeepFrozen": "Delete {{what}}, keep {{frozen}} frozen",
     "deleteWithDependents_one": "Delete {{what}} and {{count}} dependent",

@@ -46,6 +46,7 @@ import {
   CANVAS,
   DEFAULT_RULER_STYLE,
   GROUND,
+  MOTION_TIMING,
   SHEET,
   buildDisplayList,
   clearCanvas,
@@ -558,15 +559,6 @@ export function CanvasHost({
   // Any change to the document or selection means a repaint.
   useEffect(() => store.subscribe(invalidate), [store, invalidate]);
 
-  // Changing view: nothing the tool had under way carries across, and the
-  // view repaints on its own camera.
-  useEffect(() => {
-    managerRef.current?.pointerLeave();
-    hoveredRef.current = null;
-    hoveredPartRef.current = null;
-    invalidate();
-  }, [view, invalidate]);
-
   // The first frame can be painted before the vendored typeface has loaded,
   // which would leave the board's words in a fallback face. Repaint once every
   // weight the canvas sets is here: Regular, and the Medium and SemiBold of the
@@ -771,15 +763,18 @@ export function CanvasHost({
 
       // A tab's first showing (8.12): where the last session left it, an
       // opened project framed whole, a new one at the usual place. Shown
-      // again, it is wherever it was left.
+      // again, it is wherever it was left. An opened project fades in, so the
+      // change of drawing reads as one.
       if (!camerasRef.current.fitted) {
         camerasRef.current.fitted = true;
         const restore = camerasRef.current.restore;
         if (restore !== null) {
           viewportRef.current.centreMm = { x: restore.x, y: restore.y };
           viewportRef.current.zoomToPercent(restore.percent);
+          reveal(canvas);
         } else if (camerasRef.current.frameDrawing) {
           fitDrawing();
+          reveal(canvas);
         } else {
           viewportRef.current.centreMm = { x: 60, y: 40 };
           viewportRef.current.scale = 3 * dpr;
@@ -797,6 +792,18 @@ export function CanvasHost({
     resize();
     return () => observer.disconnect();
   }, [paint, fitDrawing]);
+
+  // Changing view: nothing the tool had under way carries across, and the
+  // view repaints on its own camera at once, as a resize does. The zoom
+  // control says the camera painted last, so waiting for an animation frame —
+  // which a hidden window never runs — left Design saying the Sheets' zoom.
+  useEffect(() => {
+    managerRef.current?.pointerLeave();
+    hoveredRef.current = null;
+    hoveredPartRef.current = null;
+    dirtyRef.current = false;
+    paint();
+  }, [view, paint]);
 
   useEffect(() => {
     onStatus?.({
@@ -1285,4 +1292,12 @@ interface SheetsCache {
 
 function selectedKey(selected: ReadonlySet<string>): string {
   return [...selected].sort().join(' ');
+}
+
+/** Fades the board in over the theme's motion: a project has just replaced the last. */
+function reveal(canvas: HTMLCanvasElement): void {
+  // The one fade a script starts; the stylesheet's reduced-motion rule
+  // cannot reach it, so it asks for itself.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  canvas.animate({ opacity: [0, 1] }, MOTION_TIMING);
 }

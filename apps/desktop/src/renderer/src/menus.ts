@@ -1,7 +1,7 @@
 import type { RecentFile } from '@leathercad/platform';
-import type { LucideIcon } from 'lucide-react';
 
 import type { Translate } from '../../shared/i18n.js';
+import type { IconName } from './icons/names.js';
 import type { CommandId } from './keymap.js';
 
 /**
@@ -20,7 +20,7 @@ export interface MenuItem {
   readonly keys?: CommandId;
   /** A second line, in the dimmer text. */
   readonly note?: string;
-  readonly icon?: LucideIcon;
+  readonly icon?: IconName;
   readonly danger?: boolean;
   /**
    * Why it cannot be chosen now (8.8). The item stays, greyed, and says this

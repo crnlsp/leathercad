@@ -1,7 +1,6 @@
 import type { DocumentStore } from '@leathercad/document';
 import type { Project, SeverityCounts } from '@leathercad/domain';
 import { isScaleCheckOnly } from '@leathercad/export';
-import { Check, ChevronDown, Circle, CircleHelp, Settings } from 'lucide-react';
 import { useState, type RefObject } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -169,7 +168,7 @@ export function ProjectBar({
                 t,
               )}
             >
-              <Icon of={ChevronDown} size={12} />
+              <Icon of="chevron-down" size={12} />
             </MenuButton>
           </div>
           <div className="split primary">
@@ -205,7 +204,7 @@ export function ProjectBar({
                 onClick={(event) => onShowProblems(pressOf(event))}
               >
                 {indicator.state === 'clear' ? (
-                  <Icon of={Check} size={14} />
+                  <Icon of="check" size={14} />
                 ) : (
                   <>
                     <SeverityGlyph severity={indicator.state} />
@@ -270,7 +269,7 @@ function SaveState({ dirty, saved, room }: { dirty: boolean; saved: boolean; roo
     : t('projectBar.saved');
   return (
     <span className={dirty ? 'save-state unsaved' : 'save-state'} data-testid="save-state">
-      <Icon of={dirty ? Circle : Check} size={dirty ? 8 : 12} />
+      <Icon of={dirty ? 'unsaved' : 'check'} size={dirty ? 8 : 12} />
       <span className={room === 'cramped' ? 'visually-hidden' : undefined}>{words}</span>
     </span>
   );
@@ -314,7 +313,7 @@ export function AppControls({
           aria-label={t(updateAvailable ? 'projectBar.settingsUpdate' : 'projectBar.settings')}
           onClick={onSettings}
         >
-          <Icon of={Settings} />
+          <Icon of="settings" />
           {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
         </button>
       </Tooltip>
@@ -328,7 +327,7 @@ export function AppControls({
         triggerRef={helpRef}
         entries={helpMenu({ about: onAbout }, t)}
       >
-        <Icon of={CircleHelp} />
+        <Icon of="help" />
       </MenuButton>
     </>
   );

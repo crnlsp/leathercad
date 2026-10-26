@@ -534,7 +534,9 @@ and their holes share the canvas's blue, so a laser operator separates those two
 - A **stitch hole is a `<circle>`**, stroked and unfilled like the PDF's, at the 1 mm size the scene
   gives a hole marker, in the `stitch-holes` group. (The hole size a laser wants is not the
   template's marker; choosing it is 6.4.)
-- Any path that is one whole turn of an arc is a `<circle>`: a hardware hole is one.
+- Any path that is one whole turn of an arc is a `<circle>`: a hardware hole is one, and so is each
+  hole of a row of holes (4.14), at its true diameter in the `hardware` group — a row is punched,
+  not pricked, so it has no marker size.
 - **Arcs stay arcs** (`A`), and **cubics stay cubics** (`C`): nothing is flattened. An arc is cut
   into pieces of at most a quarter turn. SVG writes an arc by its endpoints and radius, and the
   reader works the centre out from them; for a half turn that is as sensitive as a square root at
@@ -597,7 +599,8 @@ variables added, and a minimal `AC1015` file:
   two have the same start and end, which a reader draws as a whole circle.
 - A **stitch hole is a `CIRCLE`** at the 1 mm size the scene gives it, not a `POINT`: laser software
   ignores points. (The first draft offered either by an option; nothing asks for the option, and
-  6.4 may.) A hardware hole, or any whole turn of an arc, is one too.
+  6.4 may.) A hardware hole, a row's hole at its true diameter on the `hardware` layer (4.14), or any
+  whole turn of an arc, is one too.
 - **Cubics are `POLYLINE`s**: consecutive cubics are one open polyline, and a closed loop of cubics
   alone is one closed polyline, closed by its flag with no repeated vertex. A line beside a curve
   stays a `LINE`.

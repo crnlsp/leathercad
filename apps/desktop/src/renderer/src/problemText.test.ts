@@ -35,6 +35,8 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   FEATURE_MISSING: { featureId: 'f-1' },
   NOT_DERIVED: named,
   NOT_A_DRAWN_PATH: named,
+  NOT_A_SHAPE: named,
+  HOLE_STAYS_ROUND: named,
   POINT_EDIT_DEGENERATE: named,
   ROUNDING_DOES_NOT_FIT: { ...named, radiusMm: 60 },
   NOT_A_ROUNDED_CORNER: named,
@@ -75,6 +77,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
     characters: '漢',
   },
   CONTOUR_SELF_INTERSECTS: { featureId: 'f-1', featureName: 'Outline', crossings: 1 },
+  HOLES_OVERLAP: { ...named, spacingMm: 3.2, diameterMm: 4 },
   HOLE_SPACING_DEVIATION: { ...named, achievedMm: 5, pitchMm: 3.85 },
   HOLE_SPACING_UNEVEN: { ...named, narrowestMm: 3.7, widestMm: 4.1 },
   HOLE_COUNT_TOO_LOW: { ...named, count: 1 },
@@ -108,12 +111,13 @@ describe('the message catalogue, in English', () => {
     [
       problem('WOULD_BECOME_ELLIPSE', { shape: 'circle' }),
       'A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this ' +
-        'editor cannot represent. Scale it evenly instead.',
+        'editor cannot represent. Scale it evenly, or convert it to a drawn path in Properties first.',
     ],
     [
       problem('WOULD_SHEAR', {}),
       'A turned rectangle cannot be stretched along one axis — it would shear, and its corners ' +
-        'would stop being square. Rotate it back to 0°, or scale it evenly.',
+        'would stop being square. Rotate it back to 0°, scale it evenly, or convert it to a drawn path ' +
+        'in Properties first.',
     ],
     [problem('TRANSFORM_FLATTENS', {}), 'That would flatten the shape to nothing.'],
     [

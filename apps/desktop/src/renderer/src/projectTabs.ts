@@ -15,7 +15,6 @@ export interface ProjectFileState {
    * language like everything else.
    */
   readonly error: unknown;
-  readonly savedAt: string | null;
   /**
    * Another program changed the file, or moved or deleted it, since the app
    * last read or wrote it (8.12). Asked about over the board until answered.
@@ -58,7 +57,7 @@ export function newTab(id: string, store: DocumentStore, untitled = 0): ProjectT
     id,
     store,
     untitled,
-    file: { path: null, error: null, savedAt: null },
+    file: { path: null, error: null },
     savedDocument: store.getState().document,
     createdUtc: undefined,
     view: 'design',

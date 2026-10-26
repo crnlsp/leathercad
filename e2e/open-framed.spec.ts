@@ -55,14 +55,24 @@ test('an opened project is framed: Fit then changes nothing', async () => {
 
 test('a project opened from the Sheets view is framed in Design too', async () => {
   const { app, window, before } = await launch();
+  const zoom = window.getByTestId('zoom-control');
   try {
+    // How Design frames the sample when it is opened there.
+    await openSample(window);
+    await expect(zoom).not.toHaveText(before);
+    const framed = await zoomOf(window);
+
+    // True size moves this tab's camera off, so the next is not framed by chance.
+    await window.keyboard.press('Control+0');
+    await expect(window.getByTestId('zoom-level')).toHaveText('100 %');
+
     await window.getByTestId('view-sheets').click();
     await openSample(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
 
+    // Waited for, not read once the zoom has changed: for a moment after the
+    // switch the control can still say the Sheets' zoom, which has changed too.
     await window.getByTestId('view-design').click();
-    await expect(window.getByTestId('zoom-control')).not.toHaveText(before);
-    await expectFitted(window);
+    await expect(zoom).toHaveText(framed);
   } finally {
     await closeApp(app);
   }

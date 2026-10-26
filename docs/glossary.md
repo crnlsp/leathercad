@@ -12,7 +12,8 @@ holes. Its defining property is its **pitch**.
 **Pitch** — The centre-to-centre distance between adjacent teeth on a pricking iron, in mm. Common
 values: 2.7, 3.0, 3.38, 3.85, 4.0, 5.0 mm. Some makers label irons in **SPI** (stitches per inch);
 3.38 mm ≈ 7.5 SPI, 3.85 mm ≈ 6.6 SPI. The app stores pitch in mm. *Do not call this "spacing"
-without qualification* — see below.
+without qualification* — see below. A **row of holes** has a pitch too, in the same sense: the
+nominal centre-to-centre distance asked for, chosen by the maker rather than read off an iron.
 
 **Stitch spacing** — Used in this codebase to mean the *actual achieved* centre-to-centre distance
 after distributing holes along a path, which usually differs slightly from the nominal iron pitch
@@ -58,6 +59,12 @@ zero-radius line.
 **Marking line** — A non-cut, non-stitch guide printed on the template: glue-area boundaries, logo
 placement, alignment references.
 
+**Row of holes** — Holes punched along a marking line at a **pitch**, for a belt's adjustment holes,
+rivets along a strap, lacing or decoration: placed as a stitch hole set's are, and each one a round
+hole of a true diameter, like a hardware hole. Not a stitch hole set, whose holes are on a stitch
+line and pricked by an iron. Its pitch is the maker's, not an iron's; what it achieves is its
+**spacing**.
+
 **Alignment mark** — A mark at the same place on two pieces that are sewn together — at a hole, a
 corner or a point along the seam — so they line up when glued and stitched. Printed on the template
 and transferred to the leather, never cut: a notch in an edge that will be finished is a flaw. About
@@ -86,7 +93,7 @@ allowance" sometimes means the burnishing margin rather than the seam allowance;
 quantity, mirroring, and placement.
 
 **Feature** — Any semantic piece of a part: a cut contour, stitch line, fold line, marking line,
-hardware hole or stitch hole set — or an **annotation**. The discriminated union at the centre of the
+hardware hole, stitch hole set or row of holes — or an **annotation**. The discriminated union at the centre of the
 domain model.
 
 **Annotation** — A feature with no geometry source of its own: a measurement or a text label. It
@@ -110,6 +117,10 @@ resolves ([ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md)).
 resolved shape, instead of deleting it. For a counterpart whose fold is deleted, freezing captures the
 line the fold was on instead, so the counterpart still mirrors its source. Only ever the user's
 explicit choice.
+
+**Convert to drawn path** — Replacing a shape's parameters — a circle's radius, a rectangle's
+width and corners — with the path they drew, keeping the feature and everything that follows it.
+Nothing moves; what can be typed does. The way past a transform a shape refuses (3.12).
 
 **Re-point** — Changing which feature a derived feature follows, keeping the relationship's
 parameters. How an outline is replaced without losing its stitching.

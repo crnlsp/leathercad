@@ -25,7 +25,7 @@ const straightRun = (mm: number) =>
   );
 
 const holesOn = (path: Parameters<typeof distributeHoles>[0], op: HoleOp) =>
-  distributeHoles(path, { type: 'stitch-holes', ...op });
+  distributeHoles(path, op);
 
 const CONTINUOUS: HoleOp = { pitchMm: 3.85, mode: 'fit-whole', corners: 'continuous' };
 const AT_CORNERS: HoleOp = { pitchMm: 3.85, mode: 'fit-whole', corners: 'hole-at-corner' };

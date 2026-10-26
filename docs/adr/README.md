@@ -16,7 +16,7 @@ an amendment in place — 0007, 0010, 0011 and 0013 — so read an ADR to its en
 | [0002](0002-electron-over-tauri.md) | Electron over Tauri |
 | [0003](0003-typescript-geometry-core.md) | TypeScript geometry core, not Rust |
 | [0004](0004-pnpm-workspaces.md) | pnpm workspaces |
-| [0005](0005-typescript-5-9.md) | Pin TypeScript to 5.9.3 |
+| [0005](0005-typescript-5-9.md) | Pin TypeScript to 5.9.3 — superseded by 0022 |
 | [0006](0006-lcp-file-format-dependencies.md) | fflate and zod for the .lcp file format |
 | [0007](0007-pdf-lib-for-export.md) | pdf-lib for PDF export |
 | [0008](0008-no-clipper-binding.md) | No Clipper binding |
@@ -28,7 +28,9 @@ an amendment in place — 0007, 0010, 0011 and 0013 — so read an ADR to its en
 | [0014](0014-electron-builder-and-release-please.md) | electron-builder for packaging, release-please for releases |
 | [0015](0015-local-logs-and-crash-dumps.md) | A local log and local crash dumps, nothing uploaded |
 | [0016](0016-quality-tooling.md) | Quality tooling: knip, the hooks rules, axe, and Stryker |
-| [0017](0017-lucide-for-generic-icons.md) | Lucide for generic icons; LeatherCAD's own marks drawn here |
+| [0017](0017-lucide-for-generic-icons.md) | Lucide for generic icons; LeatherCAD's own marks drawn here — superseded by 0021 |
 | [0018](0018-interface-language.md) | The interface's words: a catalogue per language, and no words below the app |
 | [0019](0019-print-from-the-app.md) | Print from the app: pdf.js for the preview, the CUPS client with scaling off |
 | [0020](0020-update-discovery.md) | The update check: one request to GitHub as the app starts, and nothing installed |
+| [0021](0021-leathercad-draws-its-own-icons.md) | LeatherCAD draws all its own icons: a conventional outline, a leather detail |
+| [0022](0022-typescript-7-beside-typescript-6.md) | Typecheck with TypeScript 7; keep TypeScript 6 for the tools that read its API |

@@ -10,7 +10,7 @@ import {
   saveProject,
 } from '@leathercad/persist';
 import type { PlatformHost, TabCamera, TemplateSave } from '@leathercad/platform';
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
 import { describeProblemWithSubject } from './problemText.js';
@@ -22,6 +22,19 @@ import {
   type ProjectTabs,
 } from './projectTabs.js';
 import { sheetPlanFor } from './sheets.js';
+
+/** A save or an export that reached the disk. A new one for every write. */
+export interface Written {
+  readonly kind: 'save' | 'export';
+  readonly path: string;
+  /** Counts writes, so writing the same file twice is acknowledged twice. */
+  readonly serial: number;
+}
+
+/** The last part of a path, on any platform: Windows' separator is a backslash. */
+export function fileName(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
+}
 
 /**
  * A file error in the interface's words (ADR 0018). A file from a newer
@@ -151,6 +164,8 @@ export function useProjectFile(
   reload: (tab: ProjectTab) => Promise<void>;
   /** A copy of a tab's project in a new tab: unsaved, with no file, as recovered work is. */
   duplicate: (tab: ProjectTab) => void;
+  /** The file last written — saved or exported — in any tab. */
+  written: Written | null;
 } {
   /** What went wrong, said in the tab it went wrong for — or on the start screen, with none. */
   const fail = useCallback(
@@ -164,6 +179,14 @@ export function useProjectFile(
     [onStartError, tabs],
   );
 
+  // The file last written, in whichever tab: said once in the status bar.
+  const [written, setWritten] = useState<Written | null>(null);
+  const writes = useRef(0);
+  const wrote = useCallback((kind: Written['kind'], path: string) => {
+    writes.current += 1;
+    setWritten({ kind, path, serial: writes.current });
+  }, []);
+
   /**
    * A project read from a file or the sample, in a tab of its own: framed
    * whole when shown, or as the last session left it.
@@ -176,7 +199,7 @@ export function useProjectFile(
       restore?: TabRestore,
     ) => {
       const tab = tabFor(document);
-      tab.file = { path, error: null, savedAt: null };
+      tab.file = { path, error: null };
       tab.createdUtc = createdUtc;
       tab.cameras.frameDrawing = true;
       if (restore !== undefined) {
@@ -227,8 +250,9 @@ export function useProjectFile(
         const path = target;
         tabs.update(tab.id, (each) => {
           each.savedDocument = written;
-          each.file = { path, error: null, savedAt: new Date().toLocaleTimeString() };
+          each.file = { path, error: null };
         });
+        wrote('save', path);
         void noteRecent(platform, target);
         return true;
       } catch (error) {
@@ -236,7 +260,7 @@ export function useProjectFile(
         return false;
       }
     },
-    [appVersion, fail, host, t, tabs],
+    [appVersion, fail, host, t, tabs, wrote],
   );
 
   const openPath = useCallback(
@@ -304,6 +328,7 @@ export function useProjectFile(
 
         await platform.writeFile(target, bytes);
         exported(tabs, tab);
+        wrote('export', target);
 
         await platform.openInExternalViewer(target);
 
@@ -314,7 +339,7 @@ export function useProjectFile(
         return null;
       }
     },
-    [appVersion, fail, host, t, tabs],
+    [appVersion, fail, host, t, tabs, wrote],
   );
 
   /**
@@ -345,13 +370,14 @@ export function useProjectFile(
         const { text } = format === 'svg' ? exportSvg(scene) : exportDxf(scene);
         await platform.writeFile(target, new TextEncoder().encode(text));
         exported(tabs, tab);
+        wrote('export', target);
         return exportReportFor(project, format);
       } catch (error) {
         fail(tab, error);
         return null;
       }
     },
-    [fail, host, t, tabs],
+    [fail, host, t, tabs, wrote],
   );
 
   const newProject = useCallback(() => {
@@ -383,7 +409,7 @@ export function useProjectFile(
         tabs.update(tab.id, (each) => {
           each.savedDocument = each.store.getState().document;
           each.createdUtc = loaded.manifest.createdUtc;
-          each.file = { path, error: null, savedAt: null };
+          each.file = { path, error: null };
         });
       } catch (error) {
         fail(tab, error);
@@ -438,7 +464,7 @@ export function useProjectFile(
       try {
         const loaded = loadProject(data);
         const tab = tabFor({ project: loaded.project });
-        tab.file = { path, error: null, savedAt: null };
+        tab.file = { path, error: null };
         tab.createdUtc = loaded.manifest.createdUtc;
         // Unsaved by construction: the work was never written to its file.
         tab.savedDocument = null;
@@ -456,6 +482,7 @@ export function useProjectFile(
   );
 
   return {
+    written,
     newFromTemplate,
     saveAsTemplate,
     restoreKept,
@@ -477,10 +504,10 @@ export interface TabRestore {
   readonly camera: TabCamera | null;
 }
 
-/** An export was written: the tab's earlier error is gone, and the time is said. */
+/** An export was written: the tab's earlier error is gone. */
 function exported(tabs: ProjectTabs, tab: ProjectTab): void {
   tabs.update(tab.id, (each) => {
-    each.file = { ...each.file, error: null, savedAt: new Date().toLocaleTimeString() };
+    each.file = { ...each.file, error: null };
   });
 }
 

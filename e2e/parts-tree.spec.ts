@@ -42,6 +42,9 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await expect(piece(window, 'outer')).toHaveAttribute('aria-level', '1');
     await expect(window.getByTestId('hole-count-outer-holes')).toHaveText('146');
     await expect(piece(window, 'pocket')).toContainText('×2');
+    // Each row is named by all it shows, so speech input reaches it by any of it.
+    await expect(row(window, 'outer-holes')).toHaveAccessibleName('Stitch holes, 146 holes');
+    await expect(piece(window, 'pocket')).toHaveAccessibleName('Card pocket ×2');
     await expect(piece(window, 'outer').locator('svg.thumbnail path')).toHaveAttribute('d', /^M/);
 
     // At rest no row shows its lock and eye; hover shows a row's; keyboard

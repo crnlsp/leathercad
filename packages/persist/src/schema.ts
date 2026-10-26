@@ -117,6 +117,14 @@ const derivation = z.discriminatedUnion('type', [
     endOffsetMm: nonNegativeMm.optional(),
     ironLabel: z.string().optional(),
   }),
+  // Version 11 (4.14): a row of punched holes along a marking line. The pitch
+  // and the radius, never the holes — evaluation places them. Both are checked
+  // for size by evaluation, which names the feature, rather than here.
+  z.looseObject({
+    type: z.literal('hole-row'),
+    pitchMm: nonNegativeMm,
+    radiusMm: nonNegativeMm,
+  }),
   // A counterpart's placement, and the only thing it owns (ADR 0012). The
   // glide is signed — it slides either way along the axis — so it is a plain
   // millimetre rather than a non-negative one.
@@ -212,6 +220,8 @@ const feature = z.discriminatedUnion('kind', [
     kind: z.literal('hardware-hole'),
     hardwareType: z.enum(['rivet', 'snap', 'screw', 'eyelet', 'other']),
   }),
+  // Version 11: a row of holes, always derived from a marking line (4.14).
+  z.looseObject({ ...featureBase, kind: z.literal('hole-row') }),
   // Version 5. The only feature whose source is text, and the only one allowed
   // to be: `source` is overridden here, so a label cannot hold a path and
   // nothing else can hold words.

@@ -1,17 +1,6 @@
 import { MIN_PITCH_MM } from '@leathercad/domain';
 import type { Iron, Preferences, UpdateStatus } from '@leathercad/platform';
 import {
-  ArrowUp,
-  Check,
-  Clock,
-  Ellipsis,
-  Pencil,
-  Plus,
-  Trash2,
-  TriangleAlert,
-  X,
-} from 'lucide-react';
-import {
   useEffect,
   useId,
   useRef,
@@ -155,7 +144,7 @@ export function SettingsDialog(props: Props) {
             data-testid="settings-close"
             onClick={onClose}
           >
-            <Icon of={X} />
+            <Icon of="close" />
           </button>
         </div>
         <div className="settings-body">
@@ -372,7 +361,7 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
                         kind: 'item',
                         id: `rename-iron-${iron.id}`,
                         label: t('settings.tools.rename'),
-                        icon: Pencil,
+                        icon: 'rename',
                         // After the menu has closed and settled focus.
                         onChoose: () => requestAnimationFrame(() => editName(iron.id)),
                       },
@@ -380,14 +369,14 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
                         kind: 'item',
                         id: `delete-iron-${iron.id}`,
                         label: t('settings.tools.delete'),
-                        icon: Trash2,
+                        icon: 'delete',
                         danger: true,
                         note: t('settings.tools.deleteNote'),
                         onChoose: () => onPreferences(withoutIron(preferences, iron.id)),
                       },
                     ]}
                   >
-                    <Icon of={Ellipsis} />
+                    <Icon of="more" />
                   </MenuButton>
                 </td>
               </tr>
@@ -396,7 +385,7 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
         </table>
       )}
       <button type="button" className="tool add-iron" data-testid="add-iron" onClick={add}>
-        <Icon of={Plus} />
+        <Icon of="plus" />
         {t('settings.tools.addIron')}
       </button>
 
@@ -606,7 +595,7 @@ function Updates({ updates, onCheckUpdates }: Props) {
           disabled={checking || wait !== null}
           onClick={check}
         >
-          {checking ? <Spinner /> : wait !== null ? <Icon of={Clock} size={14} /> : null}
+          {checking ? <Spinner /> : wait !== null ? <Icon of="clock" size={14} /> : null}
           {wait !== null ? t('settings.updates.again', { count: wait }) : t('settings.updates.now')}
         </button>
       </div>
@@ -624,11 +613,11 @@ function UpdateCard({ status }: { status: UpdateStatus | null }) {
         {status === null ? (
           <Spinner />
         ) : status.state === 'available' ? (
-          <Icon of={ArrowUp} />
+          <Icon of="update" />
         ) : status.state === 'current' ? (
-          <Icon of={Check} />
+          <Icon of="check" />
         ) : (
-          <Icon of={TriangleAlert} />
+          <Icon of="warning" />
         )}
       </span>
       <div className="setting-text">

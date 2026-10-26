@@ -1,6 +1,6 @@
 # 17. Lucide for generic icons; LeatherCAD's own marks drawn here
 
-**Status:** Accepted
+**Status:** Superseded by [0021](0021-leathercad-draws-its-own-icons.md)
 **Date:** 2026-09-23
 
 ## Context

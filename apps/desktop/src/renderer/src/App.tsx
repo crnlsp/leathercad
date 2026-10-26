@@ -56,6 +56,7 @@ import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
 import {
   fileErrorText,
+  fileName,
   useProjectFile,
   type DrawingFormat,
   type ExportReport,
@@ -95,6 +96,7 @@ import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { VersionButton } from './VersionButton.js';
+import { WrittenNote } from './WrittenNote.js';
 import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
@@ -121,10 +123,6 @@ import { Tooltip } from './Tooltip.js';
 import { useMediaQuery } from './useMediaQuery.js';
 import { usePanelLayout } from './usePanelLayout.js';
 import { ZoomControl, type ZoomCommand } from './ZoomControl.js';
-
-function fileName(path: string): string {
-  return path.split('/').pop() ?? path;
-}
 
 /** What each zoom command asks of the canvas: its key and the zoom control run the same (U.4). */
 const ZOOM: Readonly<Record<ZoomCommand, (canvas: CanvasHandle) => void>> = {
@@ -1756,6 +1754,7 @@ export function App({
                     {bridgeError ?? fileErrorText(tab.file.error, t)}
                   </span>
                 ) : null}
+                {tab.file.error === null && <WrittenNote written={file.written} />}
               </span>
 
               {/* Always all three (R-04): whatever shape a panel is in, its chip

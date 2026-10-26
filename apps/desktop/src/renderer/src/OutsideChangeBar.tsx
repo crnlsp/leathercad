@@ -1,5 +1,4 @@
 import type { OutsideChange } from '@leathercad/platform';
-import { FileWarning } from 'lucide-react';
 
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
@@ -31,7 +30,7 @@ export function OutsideChangeBar({
   const { t } = useI18n();
   return (
     <div className="outside-bar" role="alert" data-testid="outside-bar" data-change={change}>
-      <Icon of={FileWarning} />
+      <Icon of="changed-outside" />
       <span className="outside-words">
         {t(change === 'changed' ? 'outside.changed' : 'outside.gone', { file })}
       </span>

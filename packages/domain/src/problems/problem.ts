@@ -64,6 +64,8 @@ export type DrawnContour = 'outline' | 'seam' | 'cut-out';
 export type CompatibilityRule =
   | 'holes-need-hole-set'
   | 'holes-need-stitch-line'
+  | 'row-needs-hole-row'
+  | 'row-needs-marking-line'
   | 'inset-needs-stitch-line'
   | 'inset-needs-outline'
   | 'allowance-needs-outline'
@@ -170,6 +172,16 @@ export interface ProblemFacts {
    */
   readonly NOT_A_DRAWN_PATH: About;
   /**
+   * X1: only a shape has parameters to give up (3.12). A drawn path already is
+   * one, and a derived feature follows what it was made from.
+   */
+  readonly NOT_A_SHAPE: About;
+  /**
+   * X1: a hardware hole is punched, and a punch is round, so it is never
+   * converted to a drawn path (3.12). An oval hole is a cut-out.
+   */
+  readonly HOLE_STAYS_ROUND: About;
+  /**
    * X1: a point edit that would leave too few points — three for a closed
    * path, two for an open one — or a side of no length (3.9b).
    */
@@ -249,6 +261,11 @@ export interface ProblemFacts {
 
   // ——— Design rules (DR): legal, and probably wrong for leather ———
   readonly CONTOUR_SELF_INTERSECTS: About & { readonly crossings: number };
+  readonly HOLES_OVERLAP: About & {
+    /** The nearest two neighbours, centre to centre. */
+    readonly spacingMm: Mm;
+    readonly diameterMm: Mm;
+  };
   readonly HOLE_SPACING_DEVIATION: About & { readonly achievedMm: Mm; readonly pitchMm: Mm };
   readonly HOLE_SPACING_UNEVEN: About & { readonly narrowestMm: Mm; readonly widestMm: Mm };
   readonly HOLE_COUNT_TOO_LOW: About & { readonly count: number };

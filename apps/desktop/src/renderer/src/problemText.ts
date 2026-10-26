@@ -44,6 +44,8 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
   FEATURE_LOCKED: (f, t) => t('problems.FEATURE_LOCKED.description', f),
   FEATURE_MISSING: (_, t) => t('problems.FEATURE_MISSING.description'),
   NOT_A_DRAWN_PATH: (f, t) => t('problems.NOT_A_DRAWN_PATH.description', f),
+  NOT_A_SHAPE: (f, t) => t('problems.NOT_A_SHAPE.description', f),
+  HOLE_STAYS_ROUND: (f, t) => t('problems.HOLE_STAYS_ROUND.description', f),
   POINT_EDIT_DEGENERATE: (f, t) => t('problems.POINT_EDIT_DEGENERATE.description', f),
   ROUNDING_DOES_NOT_FIT: (f, t) =>
     t('problems.ROUNDING_DOES_NOT_FIT.description', {
@@ -103,6 +105,12 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
     t('problems.CONTOUR_SELF_INTERSECTS.description', {
       featureName: f.featureName,
       count: Math.max(1, f.crossings),
+    }),
+  HOLES_OVERLAP: (f, t) =>
+    t('problems.HOLES_OVERLAP.description', {
+      featureName: f.featureName,
+      spacing: formatMm(f.spacingMm),
+      diameter: formatMm(f.diameterMm),
     }),
   HOLE_SPACING_DEVIATION: (f, t) =>
     t('problems.HOLE_SPACING_DEVIATION.description', {

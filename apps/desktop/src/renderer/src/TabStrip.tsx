@@ -1,4 +1,3 @@
-import { ChevronDown, X } from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
@@ -257,7 +256,7 @@ export function TabStrip({
                   onClick={() => onClose(tab.id)}
                 >
                   <span className="tab-dot" />
-                  <Icon of={X} size={12} />
+                  <Icon of="close" size={12} />
                 </button>
               </Tooltip>
             </div>
@@ -287,7 +286,7 @@ export function TabStrip({
             onChoose: () => onActivate(tab.id),
           }))}
         >
-          <Icon of={ChevronDown} size={14} />
+          <Icon of="chevron-down" size={14} />
         </MenuButton>
       )}
       {add}

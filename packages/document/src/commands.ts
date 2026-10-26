@@ -28,8 +28,10 @@ import {
   evaluate,
   findFeature,
   followRefusal,
+  isHolesAlongALine,
   lockRefusal,
   motionBetween,
+  pathForShape,
   problem,
   transformShape,
   transformTextSource,
@@ -216,6 +218,57 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
     const { features } = pieceScope(document.project, [id]);
     if (transformRefusal(document.project, features, motion) !== null) return document;
     return { project: reshape(transformFeatures(features, motion).apply(document).project) };
+  });
+}
+
+/**
+ * Why `id` cannot be converted to a drawn path, or `null` when it can (3.12).
+ *
+ * Asked by the panel before it offers the button, and by the command before
+ * it acts, so the two cannot disagree (X1).
+ */
+export function convertToPathRefusal(project: Project, id: FeatureId): Problem | null {
+  const found = findFeature(project, id);
+  if (found === null) return problem('FEATURE_MISSING', { featureId: id });
+
+  const locked = lockRefusal(project, [id]);
+  if (locked !== null) return locked;
+
+  const { feature } = found;
+  const about = { featureId: feature.id, featureName: feature.name };
+  if (feature.source.kind !== 'shape') return problem('NOT_A_SHAPE', about);
+  // A punch is round, and the panel edits a hole by its diameter; an oval
+  // opening is a cut-out, drawn as one.
+  if (feature.kind === 'hardware-hole') return problem('HOLE_STAYS_ROUND', about);
+  return null;
+}
+
+/**
+ * Turns a shape into the drawn path it evaluates to (3.12): the explicit
+ * escape hatch from X9, for a circle someone wants squashed or a rectangle
+ * someone wants sheared.
+ *
+ * The path is `pathForShape`'s, so the feature draws exactly what it drew —
+ * the same segments, the same corners and so the same anchors — and
+ * everything that follows it resolves as it did. Only the record changes: the
+ * shape's parameters are gone, and with them the radius, width or corners the
+ * panel let the maker type. From then on it transforms as a drawn path does,
+ * its arcs becoming cubics under an uneven scale (`geometry.md` §4.2 rule 2).
+ *
+ * The id, name, kind and role stay, so nothing following it is detached (X3).
+ */
+export function convertToPath(id: FeatureId): Command {
+  return command({ action: 'convert-to-path' }, (document) => {
+    if (convertToPathRefusal(document.project, id) !== null) return document;
+    return {
+      project: mapFeature(document.project, id, (feature) =>
+        feature.kind !== 'text-label' &&
+        feature.kind !== 'measurement' &&
+        feature.source.kind === 'shape'
+          ? { ...feature, source: { kind: 'path', path: pathForShape(feature.source.shape) } }
+          : feature,
+      ),
+    };
   });
 }
 
@@ -947,6 +1000,26 @@ export function addStitchHoles(
   };
 }
 
+/**
+ * What a new row of holes starts as: five adjustment holes at 25 mm, the case
+ * the 4.7 design left for rows, punched at the 4 mm the Hardware tool starts
+ * with. A row has no setting of its own to start from, and a hole set's iron
+ * would overlap 4 mm holes at 3.85 mm.
+ */
+const NEW_ROW = { pitchMm: 25, radiusMm: 2 } as const;
+
+/** Holes punched along a marking line, evenly spaced at a pitch (4.14). */
+export function addHoleRow(partId: PartId, featureId: FeatureId, sourceId: FeatureId): Command {
+  return addDerived(partId, sourceId, {
+    id: featureId,
+    kind: 'hole-row',
+    name: 'Row of holes',
+    visible: true,
+    locked: false,
+    source: { kind: 'derived', sourceId, op: { type: 'hole-row', ...NEW_ROW } },
+  });
+}
+
 /** Changes what a derived feature does — the inset, the pitch, the run. */
 export function setDerivation(id: FeatureId, op: Derivation): Command {
   return command({ action: 'edit-derivation' }, (document) => ({
@@ -1575,7 +1648,7 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
       freezable:
         withCapturedAxis(project, feature, requestedSet) !== null ||
         (direct &&
-          feature.kind !== 'stitch-hole-set' &&
+          !isHolesAlongALine(feature.kind) &&
           feature.kind !== 'measurement' &&
           resolved.get(id)?.ok === true),
     };
