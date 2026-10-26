@@ -9,6 +9,7 @@ import {
   uniformRadii,
 } from '@leathercad/geometry';
 import { FONT } from '@leathercad/typography';
+import { EPS_ANGLE, EPS_POINT } from '@leathercad/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -94,6 +95,9 @@ const readsAs = (p: Project, id = 'dim-1'): string => {
 };
 
 /** Where the anchors of a resolved feature actually are. */
+const withPrecision2 = (f: Feature): Feature =>
+  ({ ...f, source: { ...f.source, precision: 2 } }) as Feature;
+
 const anchorPoints = (p: Project, id: string) => {
   const entry = entryOf(p, id);
   if (!entry.ok) throw new Error(entry.problem.code);
@@ -386,27 +390,28 @@ describe('a dimension to a rounded rectangle, at any radius (ADR 0010)', () => {
   });
 });
 
-describe('an overall dimension reads the piece’s size (Q15)', () => {
-  /** A corner of what it measures' bounding box on the sheet. */
-  const extent = (x: 'min' | 'max', y: 'min' | 'max', featureId = 'cut-1'): ExtentRef => ({
-    kind: 'extent',
-    featureId,
-    x,
-    y,
-  });
-  /** The overall width, above the piece, or the overall height, left of it. */
-  const overall = (axis: 'width' | 'height', of = 'cut-1', precision: 0 | 1 | 2 = 1): Feature => ({
-    ...base(`overall-${axis}`, 'Dimension'),
+/** A corner of what it measures' bounding box on the sheet. */
+const extent = (x: 'min' | 'max', y: 'min' | 'max', featureId = 'cut-1'): ExtentRef => ({
+  kind: 'extent',
+  featureId,
+  x,
+  y,
+});
+/** The overall width, above the piece, or the overall height, left of it. */
+const overall = (axis: 'width' | 'height', of = 'cut-1', precision: 0 | 1 | 2 = 1): Feature => ({
+  ...base(`overall-${axis}`, 'Dimension'),
+  kind: 'measurement',
+  source: {
     kind: 'measurement',
-    source: {
-      kind: 'measurement',
-      ...(axis === 'width'
-        ? { measure: 'horizontal', a: extent('min', 'max', of), b: extent('max', 'max', of) }
-        : { measure: 'vertical', a: extent('min', 'min', of), b: extent('min', 'max', of) }),
-      offsetMm: 8,
-      precision,
-    },
-  });
+    ...(axis === 'width'
+      ? { measure: 'horizontal', a: extent('min', 'max', of), b: extent('max', 'max', of) }
+      : { measure: 'vertical', a: extent('min', 'min', of), b: extent('min', 'max', of) }),
+    offsetMm: 8,
+    precision,
+  },
+});
+
+describe('an overall dimension reads the piece’s size (Q15)', () => {
   const width = (...features: Feature[]) => readsAs(project(...features), 'overall-width');
   const height = (...features: Feature[]) => readsAs(project(...features), 'overall-height');
 
@@ -552,6 +557,92 @@ describe('an overall dimension reads the piece’s size (Q15)', () => {
     const entry = entryOf(project(overall('width', 'nobody')), 'overall-width');
 
     expect(entry.ok === false && entry.problem.code).toBe('MEASURE_REF_MISSING');
+  });
+});
+
+describe('a rounding near a half turn (Q15)', () => {
+  /**
+   * A hairpin: a straight, a rounding of `sweep` tangent to it, a straight on
+   * from the rounding's end, and back to the start. Anchors: the rounding's
+   * middle, and the two sharp corners.
+   */
+  function hairpin(sweep: number): Feature {
+    const radius = 5;
+    const rounding = arc({ x: 50, y: radius }, radius, -Math.PI / 2, sweep);
+    const end = SegmentOps.end(rounding);
+    const onward = SegmentOps.tangentAt(rounding, 1);
+    const far = { x: end.x + onward.x * 40, y: end.y + onward.y * 40 };
+    return {
+      ...base('cut-1', 'Outline'),
+      kind: 'cut-contour',
+      role: 'outer',
+      source: {
+        kind: 'path',
+        path: closed([
+          line({ x: 0, y: 0 }, { x: 50, y: 0 }),
+          rounding,
+          line(end, far),
+          line(far, { x: 0, y: 0 }),
+        ]),
+      },
+    };
+  }
+  const outline = (f: Feature) => {
+    const entry = entryOf(project(f), 'cut-1');
+    if (!entry.ok) throw new Error(entry.problem.code);
+    return entry.path;
+  };
+  const turns = fc.oneof(
+    fc.constantFrom(Math.PI - 0.5, Math.PI - 1e-3, Math.PI - 1e-6, Math.PI - EPS_ANGLE, Math.PI),
+    fc.double({ min: Math.PI - 0.5, max: Math.PI, noNaN: true }),
+    // Past a half turn: the straights either side would meet behind it.
+    fc.double({ min: Math.PI, max: 1.5 * Math.PI, noNaN: true }),
+  );
+
+  it('measures to the middle of the rounding, a point on the leather, however near a half turn', () => {
+    // Nothing is measured to where the two straights would meet: as the
+    // rounding nears a half turn that point runs off towards infinity, and
+    // past one it is behind the piece. The anchor is on the outline itself.
+    fc.assert(
+      fc.property(turns, (sweep) => {
+        const piece = hairpin(sweep);
+        const box = PathOps.bbox(outline(piece))!;
+        const p = project(piece, withPrecision2(dimension('aligned', 0, 1)));
+        const entry = entryOf(p, 'dim-1');
+        if (!entry.ok) return false;
+        const start = SegmentOps.start(entry.path.segments[0]!);
+        const middle = SegmentOps.pointAt(outline(piece).segments[1]!, 0.5);
+        return (
+          Math.hypot(start.x - middle.x, start.y - middle.y) <= EPS_POINT &&
+          start.x >= box.minX - EPS_POINT &&
+          start.x <= box.maxX + EPS_POINT &&
+          Number.isFinite(Number(readsAs(p)))
+        );
+      }),
+    );
+  });
+
+  it('reads the overall size as the outline’s own box, never past it', () => {
+    fc.assert(
+      fc.property(turns, (sweep) => {
+        const piece = hairpin(sweep);
+        const box = PathOps.bbox(outline(piece))!;
+        const read = (axis: 'width' | 'height') =>
+          Number(readsAs(project(piece, overall(axis, 'cut-1', 2)), `overall-${axis}`));
+        return (
+          Math.abs(read('width') - (box.maxX - box.minX)) <= 0.005 + 1e-9 &&
+          Math.abs(read('height') - (box.maxY - box.minY)) <= 0.005 + 1e-9
+        );
+      }),
+    );
+  });
+
+  it('reads a hairpin a millionth of a radian short of a half turn as 55 long', () => {
+    // 50 of straight and a 5 mm rounding, whose tip is 55 from the start; the
+    // meeting of its straights would be about 10 km away.
+    expect(readsAs(project(hairpin(Math.PI - 1e-6), overall('width')), 'overall-width')).toBe(
+      '55.0',
+    );
   });
 });
 
