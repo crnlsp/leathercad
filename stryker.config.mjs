@@ -16,10 +16,6 @@
  * One package per run, each against its own Vitest config, so the setup file
  * and timeouts are exactly the ones `pnpm test` uses.
  *
- * Vitest 5 needs a patch to the runner until stryker-js#6210 ships: see
- * `patches/` and ADR 0016. Without it every covered mutant is reported as
- * surviving, because the runner's test-name filter matches nothing.
- *
  * `inPlace` rather than Stryker's copied sandbox: pnpm keeps each package's
  * links in that package's own node_modules, and the sandbox links only the
  * root one. The sandbox was not tried. Stryker restores every file when it

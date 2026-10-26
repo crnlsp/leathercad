@@ -38,13 +38,12 @@ scratch page axe uses by default.
 `pnpm test:mutation:domain`. It runs one package at a time, from inside the package, so each uses
 its own Vitest config. There is no break threshold until a first full report shows what to hold.
 
-**Stryker needs a patch on Vitest 5.** In stryker-js#6210, still open, the runner filters tests by
-names joined with a space, and Vitest 5 matches `testNamePattern` against names joined with
-`' > '`. Nothing matches, so every covered mutant is reported as *surviving*. Measured here: 9 % on
-`vec2.ts` without the patch, 84 % with it. `patches/@stryker-mutator__vitest-runner@10.0.0.patch`
-changes the join in the runner's two copies of `collectTestName`. Delete it when the fix is
-released. Stryker also pulls in `qs` 6.15.1, which has three advisories, through
-`typed-rest-client`. It is overridden to 6.16.0 in `pnpm-workspace.yaml`.
+**Stryker needed a patch on Vitest 5, until 10.1.** In stryker-js#6210 the runner filtered tests
+by names joined with a space, and Vitest 5 matches `testNamePattern` against names joined with
+`' > '`. Nothing matched, so every covered mutant was reported as *surviving*. Measured here: 9 % on
+`vec2.ts` without the fix, 84 % with it. A local patch in `patches/` changed the join until 10.1.0
+shipped the fix; it was removed with the upgrade to 10.1.1. Stryker also pulls in `qs` 6.15.1,
+which has three advisories, through `typed-rest-client`. It is overridden to 6.16.0 in `pnpm-workspace.yaml`.
 
 ## Also decided, with no dependency
 
