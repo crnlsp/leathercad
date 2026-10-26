@@ -28,6 +28,8 @@ import type {
   Feature,
   FeatureId,
   FeatureSource,
+  ExtentRef,
+  MeasureRef,
   MeasureSource,
   MirrorAxis,
   ParametricShape,
@@ -625,8 +627,8 @@ function drawMeasurement(
   refA: Referenced,
   refB: Referenced,
 ): { path: Path; text: PlacedText } {
-  const a = anchorPoint(feature, refA, source.a.anchor);
-  const b = anchorPoint(feature, refB, source.b.anchor);
+  const a = refPoint(feature, refA, source.a);
+  const b = refPoint(feature, refB, source.b);
 
   // What the dimension reads between, which for a horizontal or vertical one
   // is the pair projected onto that axis.
@@ -689,6 +691,28 @@ function drawMeasurement(
 
 /** How big a dimension's number is set, in millimetres on the sheet. */
 const MEASUREMENT_TEXT_MM = 3;
+
+/** Where one end of a dimension is, as a point. */
+function refPoint(feature: Feature, ref: Referenced, at: MeasureRef): Vec2 {
+  switch (at.kind) {
+    case 'anchor':
+      return anchorPoint(feature, ref, at.anchor);
+    case 'extent':
+      return extentPoint(feature, ref, at);
+  }
+}
+
+/**
+ * A corner of the box the referenced outline fills (Q15): its exact bounds,
+ * arcs and curves to where they reach rather than their control points, so
+ * an overall dimension reads the leather to cut.
+ */
+function extentPoint(feature: Feature, ref: Referenced, at: ExtentRef): Vec2 {
+  const box = PathOps.bbox(ref.path);
+  // An outline with nothing in it has no size to read: nothing is there.
+  if (box === null) throw new Failure(problem('MEASURE_REF_MISSING', about(feature)));
+  return { x: at.x === 'min' ? box.minX : box.maxX, y: at.y === 'min' ? box.minY : box.maxY };
+}
 
 /**
  * Where an anchor is, as a point.

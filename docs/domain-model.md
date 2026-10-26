@@ -255,7 +255,10 @@ interface MeasureSource {
   precision: 0 | 1 | 2;
 }
 
-type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
+type MeasureRef =
+  | { kind: 'anchor'; featureId: FeatureId; anchor: number }
+  // Version 12 (Q15): a corner of the box the feature's outline fills.
+  | { kind: 'extent'; featureId: FeatureId; x: 'min' | 'max'; y: 'min' | 'max' };
 ```
 
 - **An annotation, and an ordinary feature.** Its references live in its `GeometrySource`, because the
@@ -266,6 +269,19 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
   mirror's fold; this is its second and larger user, and `edgesFrom` carries both.
 - **Every end references an anchor.** No segment indices (S9) and no free points, because a dimension
   that silently goes stale is worse than no dimension.
+- **A piece's overall size is asked for, not inferred** (Q15, 2026-10-26). A dimension between two
+  corners measures between those corners: on a rounded piece a corner is the middle of its rounding,
+  so a 97 × 67 panel rounded at 5 mm reads 94.1 between its top corners, and it keeps reading that
+  whatever else changes — a dimension never silently starts measuring something else. *Add overall
+  size*, on a selected outline, adds its width above it and its height to its left, each between
+  `extent` ends: corners of the box its actual outline fills, read from the outline's exact bounds
+  on every evaluation. That reads 97 × 67, and so does the band a 3.5 mm seam allowance grows round a
+  90 × 60 stitch line. The actual outline rather than where the edges would meet if carried on (the
+  *virtual sharp*): it is defined for every outline — drawn, curved, grown, a strap's round end —
+  it is the leather to cut, and it never runs off the piece, where the meeting point of two edges
+  runs away as a rounding nears a half turn. A turned piece reads the box it takes on the sheet,
+  as a horizontal dimension between its corners does. An extent end follows evaluated bounds, so
+  it is the least durable reference, and only an outline's own button makes one.
 - **The value is generated**, never stored (X6), and shown at `precision`.
 - **Drawn like drafting** (4.10b): arrowheads on its ends and its number breaking its line, on the
   board and on paper. Evaluation lays out the paper's number, centred on the line; the line's
@@ -285,8 +301,7 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
   rounding, which is where a rounded rectangle's corner anchor has always been, and sharpening it
   brings it back to the point.
 
-**Later:** `radial`, and with it `centre` references; `extent` references, which are the least durable
-kind because they follow evaluated bounds rather than a place; angular measurements.
+**Later:** `radial`, and with it `centre` references; angular measurements.
 
 ### 3.8 `TextLabel` — built, 4.11b
 

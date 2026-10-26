@@ -129,6 +129,11 @@ parameters. How an outline is replaced without losing its stitching.
 `(featureId, index)`. Carried through derivations. Never a segment index
 ([ADR 0010](adr/0010-anchors-address-geometry.md)).
 
+**Overall size** — A piece's width and height edge to edge: the box its outline fills on the
+sheet, which is the leather to cut. Dimensioned with *Add overall size* (Q15), between `extent`
+ends. Not the distance between two corners: on a rounded piece a corner is the middle of its
+rounding, so the two differ.
+
 **Flip** — Reflecting selected geometry in place. Leaves no relationship behind. Flipping a piece's
 outline flips the whole piece; its labels move with it and still read forwards.
 

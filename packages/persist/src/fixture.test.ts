@@ -19,6 +19,7 @@ import {
   fixtureProjectV9,
   fixtureProjectV10,
   fixtureProjectV11,
+  fixtureProjectV12,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -33,6 +34,7 @@ const FIXTURE_V8 = resolve(import.meta.dirname, '../../../fixtures/format/v8.lcp
 const FIXTURE_V10 = resolve(import.meta.dirname, '../../../fixtures/format/v10.lcp');
 const FIXTURE_V9 = resolve(import.meta.dirname, '../../../fixtures/format/v9.lcp');
 const FIXTURE_V11 = resolve(import.meta.dirname, '../../../fixtures/format/v11.lcp');
+const FIXTURE_V12 = resolve(import.meta.dirname, '../../../fixtures/format/v12.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -59,9 +61,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V11), { recursive: true });
-      writeFileSync(FIXTURE_V11, saveProject(fixtureProjectV11(), OPTIONS));
-      expect(existsSync(FIXTURE_V11)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V12), { recursive: true });
+      writeFileSync(FIXTURE_V12, saveProject(fixtureProjectV12(), OPTIONS));
+      expect(existsSync(FIXTURE_V12)).toBe(true);
     });
   }
 
@@ -422,7 +424,10 @@ it('keeps the guides and their exact angles in the version 10 fixture', () => {
 });
 
 it('holds a row of holes in the version 11 fixture', () => {
-  expect(readManifest(readFileSync(FIXTURE_V11)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  // v11 stopped being current when overall dimensions arrived (Q15). Never
+  // regenerated: it is the proof a file from before them still opens.
+  expect(readManifest(readFileSync(FIXTURE_V11)).formatVersion).toBe(11);
+  expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(11);
   expect(loadProject(readFileSync(FIXTURE_V11)).project).toEqual(fixtureProjectV11());
 });
 
@@ -447,4 +452,25 @@ it('stores a row of holes as its pitch and radius, never as holes (§3.3)', () =
     visible: true,
   });
   expect(raw).not.toContain('"x":45');
+});
+
+it('holds a piece’s overall size in the version 12 fixture', () => {
+  expect(readManifest(readFileSync(FIXTURE_V12)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  expect(loadProject(readFileSync(FIXTURE_V12)).project).toEqual(fixtureProjectV12());
+});
+
+it('stores an overall dimension as which corners of the box, never its size (§3.3)', () => {
+  const raw = strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE_V12)))['document.json']!);
+  const stored = (JSON.parse(raw) as { parts: { features: { id: string }[] }[] }).parts
+    .flatMap((part) => part.features)
+    .find((feature) => feature.id === 'belt-width');
+
+  expect(stored).toMatchObject({
+    source: {
+      kind: 'measurement',
+      a: { kind: 'extent', featureId: 'belt-cut', x: 'min', y: 'max' },
+      b: { kind: 'extent', featureId: 'belt-cut', x: 'max', y: 'max' },
+    },
+  });
+  expect(raw).not.toContain('140.0');
 });

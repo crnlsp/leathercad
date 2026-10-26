@@ -250,6 +250,17 @@ The v10→v11 migration is an identity: no older project has a row. The version 
 row is cut and printed (§4.5 rule 2): an older build would not know the kind, and refuses the file
 rather than opening it without the holes. `fixtures/format/v11.lcp` holds a belt end with its row.
 
+### 4.1d Version 12 — a piece's overall size
+
+A dimension's end may be `{ "kind": "extent", "featureId": "…", "x": "min" | "max", "y": "min" |
+"max" }`: a corner of the box the named feature's outline fills (Q15,
+[domain-model.md](domain-model.md) §3.7). Which corner is stored; where it is, and so the size, is
+read from the outline on every load (§3.3).
+
+The v11→v12 migration is an identity: every older dimension is between anchors, which are
+unchanged. The version increases because an older build would not know the end and would refuse
+the dimension. `fixtures/format/v12.lcp` adds a belt end's overall width and height to v11's.
+
 ### 4.2 The rules
 
 1. **Version 1 and a working runner ship with the first save implementation**, before any release.

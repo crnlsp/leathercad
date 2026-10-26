@@ -1,4 +1,13 @@
-import { MatOps, PathOps, SegmentOps, polyline, uniformRadii } from '@leathercad/geometry';
+import {
+  MatOps,
+  PathOps,
+  SegmentOps,
+  arc,
+  closed,
+  line,
+  polyline,
+  uniformRadii,
+} from '@leathercad/geometry';
 import { FONT } from '@leathercad/typography';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -7,6 +16,7 @@ import { evaluate } from './evaluate.js';
 import {
   DEFAULT_SETTINGS,
   type Feature,
+  type ExtentRef,
   type MeasureKind,
   type Part,
   type Project,
@@ -373,6 +383,175 @@ describe('a dimension to a rounded rectangle, at any radius (ADR 0010)', () => {
         },
       ),
     );
+  });
+});
+
+describe('an overall dimension reads the piece’s size (Q15)', () => {
+  /** A corner of what it measures' bounding box on the sheet. */
+  const extent = (x: 'min' | 'max', y: 'min' | 'max', featureId = 'cut-1'): ExtentRef => ({
+    kind: 'extent',
+    featureId,
+    x,
+    y,
+  });
+  /** The overall width, above the piece, or the overall height, left of it. */
+  const overall = (axis: 'width' | 'height', of = 'cut-1', precision: 0 | 1 | 2 = 1): Feature => ({
+    ...base(`overall-${axis}`, 'Dimension'),
+    kind: 'measurement',
+    source: {
+      kind: 'measurement',
+      ...(axis === 'width'
+        ? { measure: 'horizontal', a: extent('min', 'max', of), b: extent('max', 'max', of) }
+        : { measure: 'vertical', a: extent('min', 'min', of), b: extent('min', 'max', of) }),
+      offsetMm: 8,
+      precision,
+    },
+  });
+  const width = (...features: Feature[]) => readsAs(project(...features), 'overall-width');
+  const height = (...features: Feature[]) => readsAs(project(...features), 'overall-height');
+
+  /** A 90 × 60 drawn stitch line, and an outline grown `distanceMm` out from it. */
+  const seam: Feature = {
+    ...base('seam-1', 'Stitch line'),
+    kind: 'stitch-line',
+    source: {
+      kind: 'path',
+      path: polyline(
+        [
+          { x: 0, y: 0 },
+          { x: 90, y: 0 },
+          { x: 90, y: 60 },
+          { x: 0, y: 60 },
+        ],
+        true,
+      ),
+    },
+  };
+  const allowance = (distanceMm: number): Feature => ({
+    ...base('cut-1', 'Outline'),
+    kind: 'cut-contour',
+    role: 'outer',
+    source: {
+      kind: 'derived',
+      sourceId: 'seam-1',
+      op: { type: 'offset', distanceMm, side: 'outward', run: { kind: 'whole' } },
+    },
+  });
+
+  it('reads a 97 × 67 panel rounded at 5 mm as 97 × 67', () => {
+    expect(width(panel(97, 67, 5), overall('width'))).toBe('97.0');
+    expect(height(panel(97, 67, 5), overall('height'))).toBe('67.0');
+  });
+
+  it('reads the band a 3.5 mm seam allowance grows round a 90 × 60 stitch line as 97 × 67', () => {
+    // The allowance rounds every corner at its own width; its outline is still
+    // 97 × 67 across, which is the leather to cut.
+    expect(width(seam, allowance(3.5), overall('width'))).toBe('97.0');
+    expect(height(seam, allowance(3.5), overall('height'))).toBe('67.0');
+  });
+
+  it('leaves a dimension between two corners reading what it always did', () => {
+    // The finding was right about the number and wrong about the fix: the
+    // middles of two 5 mm roundings are 94.1 apart, and an existing dimension
+    // between them keeps saying so. The piece's size is asked for, not
+    // inferred.
+    expect(readsAs(project(panel(97, 67, 5), dimension('horizontal', 1, 2)))).toBe('94.1');
+    expect(readsAs(project(seam, allowance(3.5), dimension('horizontal', 1, 2)))).toBe('94.9');
+  });
+
+  it('starts its extension lines at the corners of the piece’s box', () => {
+    const entry = entryOf(project(panel(97, 67, 5), overall('width')), 'overall-width');
+    if (!entry.ok) throw new Error(entry.problem.code);
+    const [from, , to] = entry.path.segments;
+
+    expect(SegmentOps.start(from!)).toEqual({ x: 0, y: 67 });
+    expect(SegmentOps.end(to!)).toEqual({ x: 97, y: 67 });
+  });
+
+  it('reads the outline’s extent on the sheet, whatever its size, rounding and turn', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 10, max: 400, noNaN: true }),
+        fc.double({ min: 10, max: 400, noNaN: true }),
+        fc.oneof(fc.constant(0), fc.constant(0.5), fc.double({ min: 0, max: 0.5, noNaN: true })),
+        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+        (w, h, share, turn) => {
+          const outline: Feature = {
+            ...panel(),
+            source: {
+              kind: 'shape',
+              shape: {
+                type: 'rect',
+                origin: { x: 0, y: 0 },
+                width: w,
+                height: h,
+                radii: uniformRadii(share * Math.min(w, h)),
+                rotation: turn,
+              },
+            },
+          } as Feature;
+          const drawn = entryOf(project(outline), 'cut-1');
+          if (!drawn.ok) return false;
+          const box = PathOps.bbox(drawn.path)!;
+          const read = (axis: 'width' | 'height') =>
+            Number(readsAs(project(outline, overall(axis, 'cut-1', 2)), `overall-${axis}`));
+          return (
+            Math.abs(read('width') - (box.maxX - box.minX)) <= 0.005 + 1e-9 &&
+            Math.abs(read('height') - (box.maxY - box.minY)) <= 0.005 + 1e-9
+          );
+        },
+      ),
+    );
+  });
+
+  it('reads an unturned rounded rectangle as its width and height at any radius', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 10, max: 400, noNaN: true }),
+        fc.double({ min: 10, max: 400, noNaN: true }),
+        fc.oneof(fc.constant(0), fc.constant(0.5), fc.double({ min: 0, max: 0.5, noNaN: true })),
+        (w, h, share) => {
+          const outline = panel(w, h, share * Math.min(w, h));
+          return (
+            Math.abs(Number(width(outline, overall('width', 'cut-1', 2))) - w) <= 0.005 + 1e-9 &&
+            Math.abs(Number(height(outline, overall('height', 'cut-1', 2))) - h) <= 0.005 + 1e-9
+          );
+        },
+      ),
+    );
+  });
+
+  it('follows the piece when it is resized, as every dimension does', () => {
+    expect(width(panel(97, 67, 5), overall('width'))).toBe('97.0');
+    expect(width(panel(120, 67, 5), overall('width'))).toBe('120.0');
+  });
+
+  it('reads a strap with a round end to the tip of the end', () => {
+    // A half-turn end has no corner: the strap is 60 long, to the end of its
+    // rounding.
+    const strap: Feature = {
+      ...base('cut-1', 'Strap'),
+      kind: 'cut-contour',
+      role: 'outer',
+      source: {
+        kind: 'path',
+        path: closed([
+          line({ x: 0, y: 0 }, { x: 50, y: 0 }),
+          arc({ x: 50, y: 10 }, 10, -Math.PI / 2, Math.PI),
+          line({ x: 50, y: 20 }, { x: 0, y: 20 }),
+          line({ x: 0, y: 20 }, { x: 0, y: 0 }),
+        ]),
+      },
+    };
+
+    expect(width(strap, overall('width'))).toBe('60.0');
+    expect(height(strap, overall('height'))).toBe('20.0');
+  });
+
+  it('measures nothing when what it names is not in the drawing', () => {
+    const entry = entryOf(project(overall('width', 'nobody')), 'overall-width');
+
+    expect(entry.ok === false && entry.problem.code).toBe('MEASURE_REF_MISSING');
   });
 });
 

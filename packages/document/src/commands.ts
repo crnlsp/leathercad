@@ -1,6 +1,7 @@
 import { EPS_LENGTH, approxEq, formatEditable, type Mm, type Ulid } from '@leathercad/core';
 import type {
   Derivation,
+  ExtentRef,
   Feature,
   FeatureId,
   FeatureKind,
@@ -1239,6 +1240,28 @@ export function addMeasurement(
       return addFeature(home.part.id, feature).apply(document);
     },
   };
+}
+
+/**
+ * A piece's overall size (Q15): its width above it and its height to its left,
+ * each between corners of the box its outline fills — so a 97 × 67 panel with
+ * rounded corners reads 97 × 67, which no two of its corners are apart. Both
+ * in one undoable step, as the maker asked for them together.
+ */
+export function addOverallSize(
+  featureId: FeatureId,
+  widthId: FeatureId,
+  heightId: FeatureId,
+): Command {
+  const corner = (x: 'min' | 'max', y: 'min' | 'max'): ExtentRef => ({
+    kind: 'extent',
+    featureId,
+    x,
+    y,
+  });
+  const width = addMeasurement(widthId, 'horizontal', corner('min', 'max'), corner('max', 'max'));
+  const height = addMeasurement(heightId, 'vertical', corner('min', 'min'), corner('min', 'max'));
+  return command({ action: 'add-overall-size' }, (document) => height.apply(width.apply(document)));
 }
 
 /** Moves a dimension line off the geometry, or changes what it shows. */

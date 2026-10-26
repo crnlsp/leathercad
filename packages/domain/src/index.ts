@@ -33,6 +33,8 @@ export type {
   MarkingLine,
   Derivation,
   MeasureKind,
+  AnchorRef,
+  ExtentRef,
   MeasureRef,
   MeasureSource,
   Measurement,

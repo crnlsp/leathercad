@@ -662,3 +662,52 @@ export function fixtureProjectV11(): Project {
     ],
   };
 }
+
+/**
+ * Version 12 — a piece's overall size (Q15).
+ *
+ * The belt end's width and height, each between two corners of the box its
+ * outline fills. What the file holds is which corners; the 140 and the 30
+ * are read from the outline on every load.
+ */
+export function fixtureProjectV12(): Project {
+  const previous = fixtureProjectV11();
+  const overall = (
+    id: string,
+    measure: 'horizontal' | 'vertical',
+    a: { x: 'min' | 'max'; y: 'min' | 'max' },
+    b: { x: 'min' | 'max'; y: 'min' | 'max' },
+  ) => ({
+    id,
+    kind: 'measurement' as const,
+    name: 'Dimension',
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'measurement' as const,
+      measure,
+      a: { kind: 'extent' as const, featureId: 'belt-cut', ...a },
+      b: { kind: 'extent' as const, featureId: 'belt-cut', ...b },
+      offsetMm: 8,
+      precision: 1 as const,
+    },
+  });
+
+  return {
+    ...previous,
+    id: 'fixture-v12',
+    name: 'Format baseline v12',
+    parts: previous.parts.map((part) =>
+      part.id !== 'part-belt'
+        ? part
+        : {
+            ...part,
+            features: [
+              ...part.features,
+              overall('belt-width', 'horizontal', { x: 'min', y: 'max' }, { x: 'max', y: 'max' }),
+              overall('belt-height', 'vertical', { x: 'min', y: 'min' }, { x: 'min', y: 'max' }),
+            ],
+          },
+    ),
+  };
+}

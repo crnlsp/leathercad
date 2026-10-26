@@ -186,8 +186,12 @@ export function renumberCorners(
     }
     return next;
   };
-  const renumberRef = (ref: MeasureRef, owner: Feature): MeasureRef =>
-    family.has(ref.featureId) ? { ...ref, anchor: renumber(ref.anchor, owner) } : ref;
+  // An extent is the box the outline fills, which no corner change detaches.
+  const renumberRef = (ref: MeasureRef, owner: Feature): MeasureRef => {
+    if (ref.kind !== 'anchor' || !family.has(ref.featureId)) return ref;
+    const anchor = renumber(ref.anchor, owner);
+    return anchor === ref.anchor ? ref : { ...ref, anchor };
+  };
 
   const parts = project.parts.map((part) => {
     const features = part.features.map((f): Feature => {
@@ -199,7 +203,7 @@ export function renumberCorners(
         const a = renumberRef(source.a, f);
         const b = renumberRef(source.b, f);
         // Unchanged stays the same object: evaluation caches by identity.
-        if (a.anchor === source.a.anchor && b.anchor === source.b.anchor) return f;
+        if (a === source.a && b === source.b) return f;
         return { ...f, source: { ...source, a, b } } as Feature;
       }
       if (

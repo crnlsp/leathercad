@@ -183,7 +183,7 @@ the report's.
 
 | # | What | Severity | Plan |
 |---|---|---|---|
-| ☐ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | Decide what a corner of a rounded outline *means* to a maker before changing it; 4.10b |
+| ✅ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | ✅ Settled (2026-10-26): a corner and the piece's size are two measurements, and a dimension never silently changes which it is. A dimension between corners reads what it always did — between the middles of the roundings, 94.1 on a 97 × 67 panel rounded at 5 mm. *Add overall size*, on a selected outline, dimensions its width and height between corners of the box its actual outline fills, read from the outline's exact bounds: the 97 × 67 panel and the band a 3.5 mm allowance grows round a 90 × 60 stitch line both read 97 × 67. Not the virtual sharp, which no two edges have past a half turn and which runs off the piece near one. Format 12, an `extent` end; identity migration and `fixtures/format/v12.lcp`. With it, a rectangle keeps its four corner anchors at every radius, rounded to a circle too — they were read off its path, which lost them once a rounding took a whole side |
 
 **What the QA pass could not test,** kept here until someone does: physical 1:1 prints on real
 printers and viewers, including *Actual size* and `/PrintScaling /None` (R1); taping a multi-sheet piece physically; real OS
