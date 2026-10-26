@@ -1,8 +1,8 @@
-import { assertFinite, type Mm } from '@leathercad/core';
+import { EPS_POINT, assertFinite, type Mm } from '@leathercad/core';
 
 import { solveCubic } from '../polynomial.js';
 import * as Seg from '../segment/index.js';
-import type { Vec2 } from '../vec2.js';
+import { dist, type Vec2 } from '../vec2.js';
 import type { Path } from './path.js';
 
 export type FillRule = 'nonzero' | 'evenodd';
@@ -27,12 +27,7 @@ export function windingNumber(p: Path, point: Vec2): number {
   return 0;
 }
 
-/**
- * How far a curve crossing must sit from a segment boundary to be trusted.
- *
- * Well below the 1e-4 mm storage quantum, so real geometry never trips it —
- * only exact hits do.
- */
+/** How flat a crossing may be, against the ray, before it reads as a graze. */
 const RAY_AMBIGUITY = 1e-9;
 
 /**
@@ -47,8 +42,14 @@ const RAY_AMBIGUITY = 1e-9;
  * This is not hypothetical. A circle's arc conventionally starts at angle 0,
  * and asking whether its own centre is inside casts a ray straight through
  * that seam — the most ordinary query there is.
+ *
+ * A crossing within EPS_POINT of a segment's end is the seam's to decide, so
+ * the last pair of heights clears that band tenfold, at any radius or speed.
+ * That is why the band is a distance: judged in `t` or in radians, a 1e-6 mm
+ * nudge on a circle over 1000 mm in radius stayed inside it, and the circle's
+ * centre read as outside (Q38).
  */
-const RAY_NUDGES = [0, 1e-9, -1e-9, 1e-6, -1e-6] as const;
+const RAY_NUDGES = [0, EPS_POINT / 100, -EPS_POINT / 100, EPS_POINT * 10, -EPS_POINT * 10] as const;
 
 /** Null when the ray grazes something and the count cannot be trusted. */
 function windingAlongRay(p: Path, point: Vec2): number | null {
@@ -162,7 +163,8 @@ function sweepPosition(s: Seg.ArcSegment, angle: number): 'inside' | 'outside' |
   const sweep = s.sweepAngle;
   const delta = angle - s.startAngle;
 
-  if (Math.abs(delta) < RAY_AMBIGUITY || Math.abs(delta - sweep) < RAY_AMBIGUITY) {
+  // Along the arc, in millimetres, like the nudges that resolve it.
+  if (Math.abs(delta) * s.radius < EPS_POINT || Math.abs(delta - sweep) * s.radius < EPS_POINT) {
     return 'ambiguous';
   }
 
@@ -185,12 +187,13 @@ function cubicCrossings(s: Seg.CubicSegment, point: Vec2): number | null {
   let winding = 0;
   for (const t of solveCubic(a, b, c, d)) {
     // Half-open in t, so a shared endpoint is counted by one segment only.
-    // A root sitting on either boundary is decided by rounding, not geometry.
-    if (Math.abs(t) < RAY_AMBIGUITY || Math.abs(t - 1) < RAY_AMBIGUITY) return null;
+    // A root sitting on either boundary is decided by rounding, not geometry:
+    // judged by where it crosses, in millimetres, like the nudges.
+    const crossing = Seg.CubicOps.pointAt(s, t);
+    if (dist(crossing, s.p0) < EPS_POINT || dist(crossing, s.p3) < EPS_POINT) return null;
     if (t < 0 || t > 1) continue;
 
-    const x = Seg.CubicOps.pointAt(s, t).x;
-    if (x <= point.x) continue;
+    if (crossing.x <= point.x) continue;
 
     const slope = Seg.CubicOps.derivativeAt(s, t).y;
     // A tangent touch does not change the winding, but a near-tangent crossing

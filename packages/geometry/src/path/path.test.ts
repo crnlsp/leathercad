@@ -268,6 +268,43 @@ describe('containsPoint', () => {
     );
   });
 
+  it('agrees with the radius test on a circle drawn in cubics, level with its tangents too (Q38)', () => {
+    // A cubic crossing is trusted only where the curve is not flat against the
+    // ray, judged by dy/dt against EPS_POINT. The rays through the top and
+    // bottom of the circle are the flattest there are.
+    const radius = fc.double({ min: 0.1, max: 2000, noNaN: true });
+    // Clear of the boundary by more than the cubics' own error.
+    const reach = fc.oneof(
+      fc.double({ min: 0, max: 0.99, noNaN: true }),
+      fc.double({ min: 1.01, max: 3, noNaN: true }),
+    );
+    const heading = fc.oneof(
+      fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+      fc.constantFrom(Math.PI / 2, -Math.PI / 2, 0, Math.PI),
+    );
+    fc.assert(
+      fc.property(arbVec2, radius, reach, heading, (centre, r, k, angle) => {
+        const cubics = P.closed(P.toCubics(P.closed([arc(centre, r, 0, Math.PI * 2)])));
+        const p = vec(centre.x + k * r * Math.cos(angle), centre.y + k * r * Math.sin(angle));
+        // Level with the top or bottom, left of the circle, so the ray grazes it.
+        const level = vec(centre.x - (0.5 + k) * r, centre.y + r * Math.sign(Math.sin(angle) || 1));
+        return P.containsPoint(cubics, p) === k < 1 && !P.containsPoint(cubics, level);
+      }),
+    );
+  });
+
+  it('regression: the centre of a circle over a metre across is inside it, drawn as an arc or in cubics (Q38)', () => {
+    // The ray from the centre runs through the seam, and the nudges that move
+    // it off are millimetres — but the seam was judged in t and in radians.
+    // Past a 1000 mm radius a 1e-6 mm nudge moved the crossing by less than
+    // the 1e-9 band, every ray was ambiguous, and the centre fell outside.
+    for (const radius of [1001, 1500, 2000]) {
+      const round = P.closed([arc(vec(0, 0), radius, 0, Math.PI * 2)]);
+      expect(P.containsPoint(round, vec(0, 0))).toBe(true);
+      expect(P.containsPoint(P.closed(P.toCubics(round)), vec(0, 0))).toBe(true);
+    }
+  });
+
   it('is unaffected by the direction the path is wound', () => {
     expect(P.containsPoint(P.reverse(square), vec(5, 5))).toBe(true);
     expect(P.containsPoint(P.reverse(circle), vec(20, 20))).toBe(true);
