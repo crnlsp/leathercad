@@ -24,7 +24,21 @@ export interface ProjectFileState {
    * language like everything else.
    */
   readonly error: unknown;
-  readonly savedAt: string | null;
+  /** The file last written — saved or exported — until the next open or new project. */
+  readonly written: Written | null;
+}
+
+/** A save or an export that reached the disk. A new one for every write. */
+export interface Written {
+  readonly kind: 'save' | 'export';
+  readonly path: string;
+  /** Counts writes, so writing the same file twice is acknowledged twice. */
+  readonly serial: number;
+}
+
+/** The last part of a path, on any platform: Windows' separator is a backslash. */
+export function fileName(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
 }
 
 /**
@@ -151,12 +165,17 @@ export function useProjectFile(
   const [state, setState] = useState<ProjectFileState>({
     path: null,
     error: null,
-    savedAt: null,
+    written: null,
   });
   // The document the app starts with counts as saved: an untouched project has
   // nothing to lose, and a close guard must not ask about a blank page (5.3a).
   const savedDocument = useRef<unknown>(store.getState().document);
   const createdUtc = useRef<string | undefined>(undefined);
+  const writes = useRef(0);
+  const wrote = useCallback((kind: Written['kind'], path: string): Written => {
+    writes.current += 1;
+    return { kind, path, serial: writes.current };
+  }, []);
 
   const markSaved = useCallback(() => {
     savedDocument.current = store.getState().document;
@@ -192,7 +211,7 @@ export function useProjectFile(
 
         await platform.writeFile(target, bytes);
         savedDocument.current = written;
-        setState({ path: target, error: null, savedAt: new Date().toLocaleTimeString() });
+        setState({ path: target, error: null, written: wrote('save', target) });
         void noteRecent(platform, target);
         return true;
       } catch (error) {
@@ -200,7 +219,7 @@ export function useProjectFile(
         return false;
       }
     },
-    [appVersion, host, state.path, store, t],
+    [appVersion, host, state.path, store, t, wrote],
   );
 
   const openPath = useCallback(
@@ -211,7 +230,7 @@ export function useProjectFile(
         store.reset({ project: loaded.project });
         savedDocument.current = store.getState().document;
         createdUtc.current = loaded.manifest.createdUtc;
-        setState({ path: target, error: null, savedAt: null });
+        setState({ path: target, error: null, written: null });
         void noteRecent(platform, target);
         onOpened();
       } catch (error) {
@@ -227,7 +246,7 @@ export function useProjectFile(
       store.reset({ project: loaded.project }, { action: 'open-sample' });
       savedDocument.current = store.getState().document;
       createdUtc.current = undefined;
-      setState({ path: null, error: null, savedAt: null });
+      setState({ path: null, error: null, written: null });
       onOpened();
     } catch (error) {
       setState((previous) => ({ ...previous, error }));
@@ -279,7 +298,7 @@ export function useProjectFile(
         setState((previous) => ({
           ...previous,
           error: null,
-          savedAt: new Date().toLocaleTimeString(),
+          written: wrote('export', target),
         }));
 
         await platform.openInExternalViewer(target);
@@ -291,7 +310,7 @@ export function useProjectFile(
         return null;
       }
     },
-    [appVersion, host, store, t],
+    [appVersion, host, store, t, wrote],
   );
 
   /**
@@ -323,7 +342,7 @@ export function useProjectFile(
         setState((previous) => ({
           ...previous,
           error: null,
-          savedAt: new Date().toLocaleTimeString(),
+          written: wrote('export', target),
         }));
         return exportReportFor(project, format);
       } catch (error) {
@@ -331,14 +350,14 @@ export function useProjectFile(
         return null;
       }
     },
-    [host, store, t],
+    [host, store, t, wrote],
   );
 
   const newProject = useCallback(() => {
     store.reset(blank(), { action: 'new-project' });
     savedDocument.current = store.getState().document;
     createdUtc.current = undefined;
-    setState({ path: null, error: null, savedAt: null });
+    setState({ path: null, error: null, written: null });
   }, [blank, store]);
 
   const adoptRecovered = useCallback(
@@ -348,7 +367,7 @@ export function useProjectFile(
       // unsaved by construction.
       savedDocument.current = null;
       createdUtc.current = undefined;
-      setState({ path: null, error: null, savedAt: null });
+      setState({ path: null, error: null, written: null });
       onOpened();
     },
     [onOpened, store],

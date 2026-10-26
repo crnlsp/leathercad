@@ -1099,6 +1099,33 @@ body {
   color: var(--error);
 }
 
+/* A file just written (WrittenNote): its words light up and settle to the
+   bar's own colour, its check in the accent. Colour only; reduced motion keeps
+   the words and drops the light. */
+.written-note > span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+  animation: acknowledge var(--acknowledge);
+}
+
+.written-note .icon {
+  color: var(--tan);
+}
+
+@keyframes acknowledge {
+  from {
+    color: var(--text);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .written-note > span {
+    animation: none;
+  }
+}
+
 /* The cursor readout is a measurement (UI Foundations §4.2, --t-num-micro). */
 .status-right {
   overflow: hidden;

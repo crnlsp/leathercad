@@ -176,7 +176,9 @@
     "partsSelected_one": "part selected",
     "partsSelected_other": "parts selected",
     "checkForUpdates": "Check for updates",
-    "versionNext": "to {{version}}"
+    "versionNext": "to {{version}}",
+    "saved": "Saved {{name}}",
+    "exported": "Exported {{name}}"
   },
   "view": {
     "design": "Design",
