@@ -31,7 +31,7 @@ export function StartScreen({
   /** What went wrong opening a project from here, in words, or null. */
   error: string | null;
   onNew: () => void;
-  /** *New project from template…* (8.12): the picker. */
+  /** *New project from template* (8.12): the picker. */
   onNewFromTemplate: () => void;
   onOpen: () => void;
   onOpenRecent: (path: string) => void;
@@ -76,7 +76,7 @@ export function StartScreen({
             onClick={onNewFromTemplate}
           >
             <Icon of="from-template" />
-            {t('menu.newFromTemplate')}
+            {t('start.fromTemplate')}
           </button>
           <button
             type="button"
@@ -85,7 +85,7 @@ export function StartScreen({
             onClick={onOpen}
           >
             <Icon of="open" />
-            {t('menu.open')}
+            {t('start.open')}
             <KeyCap command="openProject" />
           </button>
         </div>

@@ -60,7 +60,9 @@
     "followExists": "The project is called “{{name}}” again, but its file keeps the name it has: a file named “{{file}}” is already in its folder."
   },
   "start": {
-    "title": "No project open",
+    "title": "Start new project",
+    "fromTemplate": "New project from template",
+    "open": "Open existing project",
     "lede": "Start a new pattern, open one from disk, or pick up where you left off.",
     "pin": "Pin {{name}}",
     "unpin": "Unpin {{name}}",
