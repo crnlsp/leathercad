@@ -8,7 +8,7 @@ import { Icon } from './icons/Icon.js';
 import { MenuButton } from './Menu.js';
 import type { MenuEntry } from './menus.js';
 import { overallOf, piecesOf, templatePreview } from './templatePreview.js';
-import { BUILT_IN_TEMPLATES, TEMPLATE_CATEGORIES, type TemplateCategory } from './templates.js';
+import { BUILT_IN_TEMPLATES } from './templates.js';
 import { Tooltip } from './Tooltip.js';
 
 /** A template, as the picker shows it: what the main process listed, and the project it holds. */
@@ -54,7 +54,6 @@ const RECENT = 4;
 interface Row extends TemplateChoice {
   readonly name: string;
   readonly note: string;
-  readonly category: TemplateCategory | null;
   readonly words: string;
 }
 
@@ -65,7 +64,7 @@ interface Row extends TemplateChoice {
  * saved, and what can be done to it.
  *
  * Typing goes to the search at once, which reads names, descriptions and
- * tags; *Show* and *Category* narrow the list, *Sort* orders it, and the picker
+ * tags; *Show* narrows the list, *Sort* orders it, and the picker
  * opens again as it was left. With nothing searched and the list by name,
  * the pinned and the recently used come first. A removed template is gone at
  * once and can be brought back for a few seconds, rather than asked about.
@@ -95,7 +94,6 @@ export function TemplateDialog({
   const list = useRef<HTMLDivElement>(null);
   const detail = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<TemplateCategory | null>(null);
   const [removed, setRemoved] = useState<{ id: string; name: string } | null>(null);
   const timer = useRef<number | undefined>(undefined);
   // A removal still waiting goes through when the picker closes.
@@ -127,37 +125,15 @@ export function TemplateDialog({
         const built = BUILT_IN_TEMPLATES.find((each) => `builtin:${each.id}` === choice.entry.id);
         const name = built === undefined ? choice.entry.name : t(built.name);
         const note = built === undefined ? choice.entry.description : t(built.description);
-        const category = built?.category ?? null;
-        const words = [
-          name,
-          note,
-          ...choice.entry.tags,
-          category === null ? '' : t(`templates.category.${category}`),
-        ]
-          .join(' ')
-          .toLowerCase();
-        return { ...choice, name, note, category, words };
+        const words = [name, note, ...choice.entry.tags].join(' ').toLowerCase();
+        return { ...choice, name, note, words };
       });
   }, [templates, removed, t]);
-
-  // Only the categories the tab holds: the maker's own have none, so Mine
-  // offers no filter, and one chosen elsewhere does not narrow it.
-  const offered = useMemo(
-    () =>
-      TEMPLATE_CATEGORIES.filter((each) =>
-        rows.some((row) => (show === 'all' || row.entry.kind === show) && row.category === each),
-      ),
-    [rows, show],
-  );
-  const within = category !== null && offered.includes(category) ? category : null;
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     const kept = rows.filter(
-      (row) =>
-        (show === 'all' || row.entry.kind === show) &&
-        (within === null || row.category === within) &&
-        (q === '' || row.words.includes(q)),
+      (row) => (show === 'all' || row.entry.kind === show) && (q === '' || row.words.includes(q)),
     );
     const by: Record<TemplateSort, (a: Row, b: Row) => number> = {
       name: (a, b) => a.name.localeCompare(b.name),
@@ -170,7 +146,7 @@ export function TemplateDialog({
         a.name.localeCompare(b.name),
     };
     return kept.sort(by[sort]);
-  }, [rows, show, within, query, sort]);
+  }, [rows, show, query, sort]);
 
   // With nothing searched and the list by name: the pinned, then the recently
   // used, then the rest by kind. Otherwise one list, the pinned still first.
@@ -229,8 +205,6 @@ export function TemplateDialog({
 
   const order = (nextSort: TemplateSort, nextShow: TemplateShow): void =>
     onOrder(nextSort, nextShow);
-  const categoryName =
-    within === null ? t('templates.allCategories') : t(`templates.category.${within}`);
 
   const remove = (row: Row): void => {
     // The one before, if any, goes now: one undo at a time.
@@ -297,7 +271,7 @@ export function TemplateDialog({
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           event.stopPropagation();
-          // A menu open over the picker — Category, Sort — has its own keys.
+          // A menu open over the picker — Sort — has its own keys.
           if (event.defaultPrevented) return;
           const typing =
             event.target instanceof HTMLInputElement && event.target !== search.current
@@ -356,26 +330,6 @@ export function TemplateDialog({
               </button>
             ))}
           </div>
-          {offered.length > 0 && (
-            <MenuButton
-              label={t('templates.categoryChosen', { category: categoryName })}
-              tooltip={t('templates.categoryLabel')}
-              testId="template-category"
-              className="tool template-filter"
-              entries={[null, ...offered].map((each): MenuEntry => ({
-                kind: 'item',
-                id: `template-category-${each ?? 'all'}`,
-                label:
-                  each === null ? t('templates.allCategories') : t(`templates.category.${each}`),
-                ...(each === within ? { icon: 'check' as const } : {}),
-                onChoose: () => setCategory(each),
-              }))}
-            >
-              <span className="template-filter-label">{t('templates.categoryLabel')}</span>
-              <span className="template-filter-value">{categoryName}</span>
-              <Icon of="chevron-down" size={12} />
-            </MenuButton>
-          )}
           <MenuButton
             label={t('templates.sortChosen', { sort: t(SORT_WORDS[sort]) })}
             tooltip={t('templates.sortLabel')}
@@ -477,7 +431,7 @@ export function TemplateDialog({
             </span>
           ) : (
             <span className="template-count" aria-live="polite">
-              {show === 'all' && within === null && query.trim() === ''
+              {show === 'all' && query.trim() === ''
                 ? t('templates.countAll', { count: rows.length })
                 : t('templates.count', {
                     shown: ordered.length,

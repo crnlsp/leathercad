@@ -147,8 +147,7 @@ by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-des
   saves any project as one of the maker's, never over another of the same name unless asked.
 
   The picker is a browser: a search over names, descriptions and tags; *Show* (all, built-in,
-  mine), *Category* (the built-in templates' categories, offered only where the tab holds some —
-  tags are found by the search) and *Sort* (name either way, newest,
+  mine) and *Sort* (name either way, newest,
   oldest), the app's own menus, kept between openings; the pinned and the recently used first; the
   chosen template drawn large with its facts. The maker's own are described and tagged — saved when
   asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
