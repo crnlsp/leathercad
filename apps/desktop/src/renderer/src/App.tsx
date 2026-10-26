@@ -49,6 +49,7 @@ import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
 import {
   fileErrorText,
+  fileName,
   useProjectFile,
   type DrawingFormat,
   type ExportReport,
@@ -67,6 +68,7 @@ import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { VersionButton } from './VersionButton.js';
+import { WrittenNote } from './WrittenNote.js';
 import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
@@ -93,10 +95,6 @@ import { Tooltip } from './Tooltip.js';
 import { useMediaQuery } from './useMediaQuery.js';
 import { usePanelLayout } from './usePanelLayout.js';
 import { ZoomControl, type ZoomCommand } from './ZoomControl.js';
-
-function fileName(path: string): string {
-  return path.split('/').pop() ?? path;
-}
 
 /** What each zoom command asks of the canvas: its key and the zoom control run the same (U.4). */
 const ZOOM: Readonly<Record<ZoomCommand, (canvas: CanvasHandle) => void>> = {
@@ -307,7 +305,11 @@ export function App({
 
   const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
   // An opened project is shown whole, not wherever the last one left the camera.
-  const frameDrawing = useCallback(() => canvasRef.current?.fitDrawing(), []);
+  // A project opened: framed, and faded in, so the change of drawing reads as one.
+  const frameDrawing = useCallback(() => {
+    canvasRef.current?.fitDrawing();
+    canvasRef.current?.reveal();
+  }, []);
   const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank, t, frameDrawing);
   const dirty = file.savedDocument.current !== storeState.document;
 
@@ -1116,6 +1118,7 @@ export function App({
                 {bridgeError ?? fileErrorText(file.state.error, t)}
               </span>
             ) : null}
+            {file.state.error === null && <WrittenNote written={file.state.written} />}
           </span>
 
           {/* Always all three (R-04): whatever shape a panel is in, its chip

@@ -44,6 +44,8 @@ test('the print test exports to an SVG that measures true in millimetres', async
     await expect(window.getByTestId('file-error')).toHaveCount(0);
     // Nothing left off, nothing to check: the file is the drawing whole.
     await expect(window.getByTestId('export-notice')).toHaveCount(0);
+    // But the export is acknowledged: nothing else would say it happened.
+    await expect(window.getByTestId('written-note')).toHaveText('Exported print-test.svg');
 
     const { facts, primitives } = readSvg(svg);
     await test.info().attach('facts', {

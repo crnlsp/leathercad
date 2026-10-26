@@ -45,6 +45,7 @@ import {
   CANVAS,
   DEFAULT_RULER_STYLE,
   GROUND,
+  MOTION_TIMING,
   SHEET,
   buildDisplayList,
   clearCanvas,
@@ -115,6 +116,8 @@ export interface CanvasHandle {
   fit(): void;
   /** Frames the pattern on the Design view's camera, whichever view is showing: an opened project. */
   fitDrawing(): void;
+  /** Fades the board in over the theme's motion: a project has just replaced the last. */
+  reveal(): void;
   /**
    * Shift+2 (U.4): frames what is selected on the board, a part picked by its
    * heading included. Nothing on the Sheets view, or with nothing drawn picked.
@@ -425,6 +428,12 @@ export function CanvasHost({
       },
       fit: handleDoubleClick,
       fitDrawing,
+      reveal() {
+        // The one fade a script starts; the stylesheet's reduced-motion rule
+        // cannot reach it, so it asks for itself.
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        canvasRef.current?.animate({ opacity: [0, 1] }, MOTION_TIMING);
+      },
       fitSelection() {
         if (viewRef.current === 'sheets') return;
         const box = selectionBounds();

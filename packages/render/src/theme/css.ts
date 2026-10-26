@@ -4,6 +4,7 @@ import { CANVAS } from './canvas.js';
 import { ACCENT, ACTION, CONFIRM, GROUND, SHELL, STATE } from './palette.js';
 import { ROLE_STYLES } from './roles.js';
 import {
+  ACKNOWLEDGE,
   BAR_PX,
   DENSITY,
   ELEVATION,
@@ -73,6 +74,7 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--elevation-raised'] = ELEVATION.raised;
   variables['--scrim'] = ELEVATION.scrim;
   variables['--motion'] = MOTION;
+  variables['--acknowledge'] = ACKNOWLEDGE;
 
   const rows = DENSITY[density];
   variables['--h-control'] = `${String(rows.control)}px`;
