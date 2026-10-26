@@ -93,6 +93,7 @@ export function TemplateDialog({
   const { t } = i18n;
   const search = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
+  const detail = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<string>('');
   const [removed, setRemoved] = useState<{ id: string; name: string } | null>(null);
@@ -207,6 +208,11 @@ export function TemplateDialog({
   const [picked, setPicked] = useState<string | null>(null);
   const chosen = ordered.find((row) => row.entry.id === picked) ?? ordered[0] ?? null;
   const at = chosen === null ? -1 : ordered.indexOf(chosen);
+  const chosenId = chosen?.entry.id ?? null;
+  // Another template chosen: its preview, not the foot of the last one's details.
+  useEffect(() => {
+    detail.current?.scrollTo({ top: 0 });
+  }, [chosenId]);
   const choose = (index: number): void => {
     const row = ordered[(index + ordered.length) % ordered.length];
     if (row === undefined) return;
@@ -333,19 +339,6 @@ export function TemplateDialog({
         </div>
 
         <div className="template-bar">
-          <label className="template-search">
-            <Icon of="search" size={14} />
-            <input
-              ref={search}
-              id="template-search"
-              type="search"
-              data-testid="template-search"
-              placeholder={t('templates.search')}
-              aria-label={t('templates.searchLabel')}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
           <div
             className="segmented template-show"
             role="group"
@@ -409,44 +402,60 @@ export function TemplateDialog({
         </div>
 
         <div className="template-body">
-          <div
-            ref={list}
-            className="template-lists"
-            role="listbox"
-            tabIndex={0}
-            aria-labelledby="template-dialog-title"
-            aria-activedescendant={chosen === null ? undefined : `template-option-${String(at)}`}
-            data-testid="template-list"
-          >
-            {ordered.length === 0 ? (
-              <div className="template-empty" role="presentation">
-                {query.trim() !== '' ? (
-                  <>
-                    {t('templates.noMatch', { query: query.trim() })}
-                    <button type="button" className="tool" onClick={() => setQuery('')}>
-                      {t('templates.clearSearch')}
-                    </button>
-                  </>
-                ) : (
-                  t('templates.mineEmpty')
-                )}
-              </div>
-            ) : (
-              groups.map((group) => (
-                <div
-                  key={group.id}
-                  role="group"
-                  aria-label={group.label || undefined}
-                  className="template-group"
-                >
-                  {group.label !== '' && <h4 className="template-heading">{group.label}</h4>}
-                  {group.rows.map(option)}
+          {/* The search heads the list it narrows, as wide as it is. */}
+          <div className="template-browse">
+            <label className="template-search">
+              <Icon of="search" size={14} />
+              <input
+                ref={search}
+                id="template-search"
+                type="search"
+                data-testid="template-search"
+                placeholder={t('templates.search')}
+                aria-label={t('templates.searchLabel')}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            <div
+              ref={list}
+              className="template-lists"
+              role="listbox"
+              tabIndex={0}
+              aria-labelledby="template-dialog-title"
+              aria-activedescendant={chosen === null ? undefined : `template-option-${String(at)}`}
+              data-testid="template-list"
+            >
+              {ordered.length === 0 ? (
+                <div className="template-empty" role="presentation">
+                  {query.trim() !== '' ? (
+                    <>
+                      {t('templates.noMatch', { query: query.trim() })}
+                      <button type="button" className="tool" onClick={() => setQuery('')}>
+                        {t('templates.clearSearch')}
+                      </button>
+                    </>
+                  ) : (
+                    t('templates.mineEmpty')
+                  )}
                 </div>
-              ))
-            )}
+              ) : (
+                groups.map((group) => (
+                  <div
+                    key={group.id}
+                    role="group"
+                    aria-label={group.label || undefined}
+                    className="template-group"
+                  >
+                    {group.label !== '' && <h4 className="template-heading">{group.label}</h4>}
+                    {group.rows.map(option)}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="template-detail" data-testid="template-detail">
+          <div ref={detail} className="template-detail" data-testid="template-detail">
             {chosen === null ? (
               <p className="template-note">{t('templates.nothingChosen')}</p>
             ) : (

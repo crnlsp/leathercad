@@ -1409,7 +1409,7 @@
     "searchLabel": "Search templates by name, description or tag",
     "show": {
       "all": "All",
-      "builtin": "Built in",
+      "builtin": "Built-in",
       "mine": "Mine"
     },
     "showLabel": "Show",
@@ -1435,7 +1435,7 @@
     "countAll_other": "{{count}} templates",
     "noMatch": "No template is called or described as “{{query}}”.",
     "clearSearch": "Clear the search",
-    "builtInBadge": "Built in",
+    "builtInBadge": "Built-in",
     "changedOn": "Modified {{date}}",
     "fact": {
       "pieces": "Pieces to cut",
