@@ -54,5 +54,9 @@ export default {
   thresholds: { high: 80, low: 60, break: null },
   concurrency: 4,
   timeoutMS: 30_000,
+  // The unmutated run of geometry took 4 min 11 s on a green weekly run and
+  // more than Stryker's default five on the red one (issue 123): "Initial test
+  // run timed out", before one mutant was tested. A slow runner must not decide that.
+  dryRunTimeoutMinutes: 30,
   tempDirName: '.stryker-tmp',
 };
