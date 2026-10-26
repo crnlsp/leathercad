@@ -105,3 +105,39 @@ for trying, not for publishing.
 Rejected: Wine installed on the host, which every contributor would have to set up and keep at a
 version that works; and a Windows virtual machine in a container (`dockur/windows`), which
 downloads and installs Windows before its first build.
+
+## Amendment — an installer that asks (2026-10-26)
+
+The Windows installer was one-click: it installed for the current user, in
+`%LOCALAPPDATA%\Programs\LeatherCAD`, with both shortcuts and the `.lcp` association, and asked
+nothing. It now asks, as electron-builder's assisted NSIS installer (`oneClick: false`):
+
+- the **licence**, Apache-2.0 from the repository root, to accept before going on — on every run,
+  an update included, since the app has no updater that would skip it;
+- **for whom**: this user, with no administrator, or every user, in `Program Files`, which needs one
+  for every install and update;
+- **where**;
+- a **desktop shortcut**, and whether **`.lcp` projects** open in LeatherCAD — a page of
+  `build/installer.nsh`'s own, since electron-builder offers neither. It makes both on every
+  install and undoes the one declined; the choice is kept in the install's registry key and offered
+  again by the next install;
+- in the uninstaller, whether to **remove the maker's data** in `%APPDATA%\leathercad` — settings,
+  templates, recovery copies, the log — off unless ticked, and never on an update.
+
+The Start menu entry is not optional: the taskbar pin and its *Recent* list are matched to it by the
+AppUserModelID.
+
+One install per account. electron-builder offers *for whom* even with LeatherCAD installed, and
+choosing the other mode leaves two copies, two entries in *Installed apps*, and `.lcp` projects
+opened by whichever registered last. `installer.nsh` skips that page when there is an install, and
+refuses `/allusers` or `/currentuser` naming the other mode. It sees only the account that runs it
+and the machine's install: another account's install for itself is not found, and that account
+keeps its own copy.
+
+A silent install (`/S`) takes every default, as before. Nothing in the app changes: it writes only
+to its userData directory, never beside the executable, so `Program Files` being read-only does not
+touch it.
+
+Rejected: keeping one-click, which gave no choice at all; a choice of language, while the app
+has only English (ADR 0018); and a component page, which NSIS has but electron-builder's assisted
+installer does not use.

@@ -190,10 +190,28 @@ filters, and unverified until its row is in the log. Repeat them on Windows thro
 the default PDF viewer, noting the exact name of the viewer's actual-size setting. Record one row
 per platform in the log.
 
-On Windows, the installer puts the app in `%LOCALAPPDATA%\Programs\LeatherCAD`. Install it over
-1.5.0 or earlier, which lived in `Programs\@leathercaddesktop`: the old directory is gone, the
-Start menu entry starts the new version, and Settings and the Project menu's recent projects are
-as they were.
+On Windows, the installer asks. On a machine without LeatherCAD, run it with every choice left as
+it is: it shows the licence and goes no further until it is accepted, offers *Only for me* and
+*Anyone who uses this computer*, then the folder — `%LOCALAPPDATA%\Programs\LeatherCAD` — then
+a desktop shortcut and opening `.lcp` projects, both ticked, and starts LeatherCAD at the end. No
+administrator prompt appears. Then each of these, uninstalling in between:
+
+- **Every user:** choose *Anyone who uses this computer*. Windows asks for an administrator; the
+  app is in `Program Files\LeatherCAD`, and another account finds it in its Start menu.
+- **A folder of your own:** choose one; the app is in a *LeatherCAD* folder inside it.
+- **No desktop shortcut, no `.lcp`:** untick both. No shortcut is on the desktop, and
+  double-clicking a project does not start LeatherCAD. Run the installer again: the page offers
+  both unticked, and *Install* leaves them so.
+- **One install only:** with LeatherCAD installed for you only, run the installer again: it does
+  not offer *Anyone who uses this computer*. `LeatherCAD-Setup.exe /S /allusers` refuses, with
+  exit code 2, and installs nothing.
+- **Uninstall:** from *Installed apps*. The second page offers to remove settings, templates,
+  recovery copies and the log, unticked. Left so, `%APPDATA%\leathercad` is still there; ticked, it
+  is gone. Projects saved elsewhere are untouched either way.
+
+Install over 1.5.0 or earlier, which lived in `Programs\@leathercaddesktop` and asked nothing: the
+old directory is gone, the Start menu entry starts the new version, and Settings and the Project
+menu's recent projects are as they were.
 
 Still on Windows, pin LeatherCAD to the taskbar from its Start menu entry, close it, start it from
 the pin and open a saved project: the window belongs to the pin — one taskbar button, not a second

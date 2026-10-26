@@ -133,12 +133,23 @@ export default {
       ],
     ],
   },
-  // Windows (8.6a): an NSIS installer, per user, no administrator needed.
-  // Unsigned, by decision (roadmap 8.6, Code signing); electron-builder would
-  // sign if CSC_LINK were ever set, with no change here.
+  // Windows (8.6a): an NSIS installer. Unsigned, by decision (roadmap,
+  // Release engineering: Code signing).
   win: { target: ['nsis'], icon: 'build/icon.ico' },
-  // It installs to %LOCALAPPDATA%\Programs\LeatherCAD (see extraMetadata).
-  nsis: { oneClick: true, perMachine: false, include: 'build/installer.nsh' },
+  // An installer that asks: the licence; for this user, in
+  // %LOCALAPPDATA%\Programs\LeatherCAD (see extraMetadata) with no
+  // administrator, or for every user, in Program Files; where; a desktop
+  // shortcut; and whether .lcp projects open here. build/installer.nsh adds
+  // the last two, keeps one install per account, and lets the uninstaller
+  // remove the maker's data. ADR 0014, amendment of 2026-10-26.
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+    license: '../../LICENSE',
+    runAfterFinish: true,
+    include: 'build/installer.nsh',
+  },
   // macOS (8.6a): one dmg for Apple silicon and Intel. Flipping the fuses
   // rewrites the binary and invalidates Electron's own signature, and an
   // arm64 app with no valid signature will not start at all — so, with no
