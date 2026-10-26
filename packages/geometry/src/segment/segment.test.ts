@@ -1,13 +1,18 @@
+import { EPS_ANGLE, EPS_POINT } from '@leathercad/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  arbAngle,
   arbArcSegment,
   arbCubicSegment,
   arbLineSegment,
   arbNonDegenerateSegment,
+  arbRadius,
   arbRigidTransform,
   arbSegment,
+  arbSweep,
+  arbVec2,
 } from '../../test/arbitraries.js';
 import { IDENTITY, apply, fromScale } from '../mat2x3.js';
 import { EXPORT_TOLERANCE_MM } from '../tolerance.js';
@@ -583,6 +588,41 @@ describe('arc specifics', () => {
         );
       }),
     );
+  });
+
+  it('toCubics starts and ends where the arc does, however small its sweep or radius (Q38)', () => {
+    // A 2000 mm radius over 5e-10 rad is a millionth of a millimetre long:
+    // collapsing it to its start point because the *sweep* was tiny lost its
+    // end by ten times EPS_POINT, and a path stopped closing.
+    const tiny = fc.oneof(
+      fc.double({ min: 1e-12, max: 1e-6, noNaN: true }),
+      fc.constantFrom(0, 1e-9, EPS_ANGLE, 5e-10),
+    );
+    const radius = fc.oneof(arbRadius, tiny, fc.constant(2000));
+    const sweep = fc.oneof(
+      arbSweep,
+      tiny,
+      tiny.map((x) => -x),
+    );
+    fc.assert(
+      fc.property(arbVec2, radius, arbAngle, sweep, (centre, r, start, sw) => {
+        const s = arc(centre, r, start, sw);
+        const cubics = Seg.ArcOps.toCubics(s, EXPORT_TOLERANCE_MM);
+        return (
+          dist(cubics[0]!.p0, Seg.start(s)) <= EPS_POINT &&
+          dist(cubics[cubics.length - 1]!.p3, Seg.end(s)) <= EPS_POINT
+        );
+      }),
+    );
+  });
+
+  it('toCubics treats an arc no longer than EPS_LENGTH as a point, judged by its length (Q38)', () => {
+    // The radius used to be checked against EPS_ANGLE — a length against an
+    // angle — so a 1e-8 mm half circle was subdivided as if it were real.
+    const cubics = Seg.ArcOps.toCubics(arc(vec(3, 4), 1e-8, 0, Math.PI), EXPORT_TOLERANCE_MM);
+    expect(cubics).toHaveLength(1);
+    const [only] = cubics;
+    expect([only!.p1, only!.p2, only!.p3]).toEqual([only!.p0, only!.p0, only!.p0]);
   });
 
   it('subdivides more finely for a larger radius', () => {
