@@ -2,7 +2,8 @@ import type { Feature, Part } from '@leathercad/domain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { revealed, treeMove, treeRows, type TreeRow } from './partsTree.js';
+import { createI18n } from '../../shared/i18n.js';
+import { revealed, rowName, treeMove, treeRows, type TreeRow } from './partsTree.js';
 
 const base = (id: string, name: string) => ({ id, name, visible: true, locked: false });
 
@@ -222,5 +223,31 @@ describe('revealed', () => {
     const closed = new Set(['outer']);
     expect(revealed(PARTS, closed, new Set(['l-cut']))).toBe(closed);
     expect(revealed(PARTS, closed, NONE)).toBe(closed);
+  });
+});
+
+describe('rowName', () => {
+  const i18n = createI18n('en');
+  const face = { name: 'Stitch holes', problems: null, holes: null, empty: false };
+
+  it('is the name alone when the row shows nothing else', () => {
+    expect(rowName(face, i18n)).toBe('Stitch holes');
+  });
+
+  it('says every count the row shows, in its order, each followed by its words', () => {
+    expect(rowName({ ...face, problems: { count: 2, worst: 'error' }, holes: 146 }, i18n)).toBe(
+      'Stitch holes, 2 (problems, worst: error), 146 holes',
+    );
+    expect(rowName({ ...face, holes: 1 }, i18n)).toBe('Stitch holes, 1 hole');
+  });
+
+  it('writes a hole count as the language groups it', () => {
+    expect(rowName({ ...face, holes: 1146 }, i18n)).toBe('Stitch holes, 1,146 holes');
+  });
+
+  it('says an empty piece is empty, and the button it shows', () => {
+    expect(rowName({ ...face, name: 'Strap ×2', empty: true }, i18n)).toBe(
+      'Strap ×2, Empty, Delete part',
+    );
   });
 });

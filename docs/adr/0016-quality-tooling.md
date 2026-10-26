@@ -43,7 +43,8 @@ by names joined with a space, and Vitest 5 matches `testNamePattern` against nam
 `' > '`. Nothing matched, so every covered mutant was reported as *surviving*. Measured here: 9 % on
 `vec2.ts` without the fix, 84 % with it. A local patch in `patches/` changed the join until 10.1.0
 shipped the fix; it was removed with the upgrade to 10.1.1. Stryker also pulls in `qs` 6.15.1,
-which has three advisories, through `typed-rest-client`. It is overridden to 6.16.0 in `pnpm-workspace.yaml`.
+which has three advisories, through `typed-rest-client`. It is overridden to 6.16.0 in
+`pnpm-workspace.yaml`.
 
 ## Also decided, with no dependency
 

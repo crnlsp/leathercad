@@ -25,8 +25,8 @@ are complementary and neither replaces the other.
 
 ## Consequences
 
-- pnpm must be installed. It is not bundled with Node, and Arch's `nodejs-lts-jod` package does not
-  ship corepack. See *Set up* in `CONTRIBUTING.md`.
+- pnpm must be installed. It is not bundled with Node, and Arch's `nodejs-lts-krypton` package does
+  not ship corepack. See *Set up* in `CONTRIBUTING.md`.
 - The lockfile is `pnpm-lock.yaml`; CI uses `pnpm/action-setup`.
 - pnpm gates very recent releases behind a minimum release age; accepted exclusions are recorded
   in `pnpm-workspace.yaml` under `minimumReleaseAgeExclude`.

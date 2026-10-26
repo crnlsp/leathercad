@@ -61,9 +61,10 @@ updates:
         update-types:
           - version-update:semver-major
           - version-update:semver-minor
-      # @types/node describes the Node we actually run — engines says >=22.12
-      # and CI uses 22. A newer major describes APIs that are not there, and
-      # the type errors it produces are real, not spurious.
+      # @types/node describes the Node we actually run — engines says >=24.11
+      # and CI uses 24, the Node inside Electron 45. A newer major describes
+      # APIs that are not there, and the type errors it produces are real, not
+      # spurious.
       - dependency-name: '@types/node'
         update-types:
           - version-update:semver-major
