@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, readdir, stat, unlink } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
 import { writeFileAtomic } from './atomicWrite.js';
@@ -172,7 +172,8 @@ export class Templates {
   async exportTo(id: string, path: string): Promise<void> {
     const from = this.pathOf(id);
     if (from === null) throw new Error('No such template.');
-    await copyFile(from, path);
+    // Over a file the maker chose, which may be one they already had: whole or untouched.
+    await writeFileAtomic(path, await readFile(from));
   }
 
   /** The maker's template's own file, for *Edit template* and *Show in folder*; null otherwise. */

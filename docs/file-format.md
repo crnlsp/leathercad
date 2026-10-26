@@ -497,7 +497,11 @@ size — belongs in preferences.
   `<pid>-<start>.lcp`; such a copy is still found and offered.
 - **How.** Every write goes through a temporary file and a `rename()` over the target. `rename`
   within a filesystem is atomic, so a crash mid-write leaves the previous copy whole. **The same
-  applies to normal saves**: never write in place over the user's project.
+  applies to normal saves**: never write in place over the user's project. The data is flushed
+  (`fsync`) before the rename and the folder after it (not on Windows, which cannot and need not),
+  so a power cut cannot leave the new name on an empty file; a symbolic link is written through to
+  its target, and the file keeps its permission bits (Q35). A save writes the document from before
+  a drag still under way, never the drag's preview (Q36).
 - **On startup.** A copy whose process is no longer running belongs to a session that did not end
   cleanly. Each that loads is offered, newest first, one after another, each into a tab of its
   own.

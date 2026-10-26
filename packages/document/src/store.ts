@@ -168,6 +168,15 @@ export class DocumentStore {
     return this.transaction !== null;
   }
 
+  /**
+   * The document as it stands without a gesture still under way: what a drag
+   * began from, or the present one with none. Whatever is written to disk
+   * takes this, never a preview, which may yet be cancelled (Q36).
+   */
+  get committedDocument(): Document {
+    return (this.transaction?.base ?? this.present).document;
+  }
+
   undo(): void {
     if (this.transaction !== null) {
       this.rollback();

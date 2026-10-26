@@ -544,12 +544,25 @@ still the entry point, areas tested rather than bounds; a stitch line follows a 
 Real, and not fixed in that pass because each needs a decision or a change of its own. None is in a
 release until it is moved into one.
 
-- **Q35 A save is not flushed to disk before it replaces the file.** `writeFileAtomic`
-  (`apps/desktop/src/main/atomicWrite.ts`) renames a temporary file into place without `fsync`ing
-  it or its folder, so a power cut just after a save can leave an empty `.lcp` on some file systems;
-  the rename also replaces a symlink with a plain file and resets the file's permissions.
-- **Q36 Ctrl+S during a drag saves the drag's preview,** not the document before it
+- ✅ **Q35 A save is not flushed to disk before it replaces the file.** `writeFileAtomic`
+  (`apps/desktop/src/main/atomicWrite.ts`) renamed a temporary file into place without `fsync`ing
+  it or its folder, so a power cut just after a save could leave an empty `.lcp` on some file
+  systems; the rename also replaced a symlink with a plain file and reset the file's permissions.
+  **Done (2026-10-26):** the temporary file is flushed before the rename and the folder after it
+  (not on Windows, which cannot open a folder to flush it; a file system that refuses with
+  `EINVAL`/`ENOTSUP` is the only error let go). A symlink is resolved first, so the target is
+  replaced and the link stays, even a link to a file not there yet; the file keeps its permission
+  bits. On any failure the previous file is untouched, the scrap is removed and the error reaches
+  the caller. *Export template to a file* used `copyFile` over the maker's file and now goes through
+  the same write.
+- ✅ **Q36 Ctrl+S during a drag saves the drag's preview,** not the document before it
   (`useProjectFile.ts`); the crash-recovery copy already waits for the gesture to end.
+  **Done (2026-10-26):** `DocumentStore.committedDocument` is the document without a gesture under
+  way — what the drag began from. *Save*, *Save As* (and so the save before closing or switching),
+  *Save as template* and the copy kept when the window closes all write it, and a tab saved
+  mid-drag is saved as of that document, so it is unsaved once the drag commits and clean if it is
+  cancelled. An *Untitled* project being named by its first save still ends the drag, as any
+  command does.
 - **Q37 Cmd+Q, then *Discard*, closes the window but leaves the app running on macOS** — the quit
   was cancelled by the question, and Discard only closes the window. Unverified: no Mac. Check it
   in the same Mac session as release-checklist check 12.

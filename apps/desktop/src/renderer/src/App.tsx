@@ -818,7 +818,7 @@ export function App({
     const kept = new Set<string>();
     for (const each of unsaved) {
       try {
-        const bytes = saveProject(each.store.getState().document.project, {
+        const bytes = saveProject(each.store.committedDocument.project, {
           applicationVersion: version ?? '0.0.0',
           now: () => new Date(),
           ...(each.createdUtc === undefined ? {} : { createdUtc: each.createdUtc }),
