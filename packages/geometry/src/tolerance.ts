@@ -37,6 +37,7 @@ export const SCREEN_TOLERANCE_MM: Mm = 0.05;
  * The θ⁶ term is why subdivision is so effective: halving the step cuts the
  * error by 64.
  */
+// eslint-disable-next-line no-restricted-syntax -- a measured coefficient, not a tolerance
 export const ARC_CUBIC_ERROR_COEFFICIENT = 1.8142e-5;
 
 /**

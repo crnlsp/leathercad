@@ -566,11 +566,21 @@ release until it is moved into one.
 - **Q37 Cmd+Q, then *Discard*, closes the window but leaves the app running on macOS** — the quit
   was cancelled by the question, and Discard only closes the window. Unverified: no Mac. Check it
   in the same Mac session as release-checklist check 12.
-- **Q38 Local epsilons,** which invariant 7 forbids: `glide.ts`, `mat2x3.ts`, `segment/types.ts`,
+- ✅ **Q38 Local epsilons,** which invariant 7 forbids: `glide.ts`, `mat2x3.ts`, `segment/types.ts`,
   `arc.ts` and `flatten.ts`'s step counts, `polynomial.ts`, `export/sheetsDisplay.ts` and
   `persist/schema.ts`; and `arc.ts`'s `toCubics` checks a radius against `EPS_ANGLE`. Each moves
   numbers on the geometry or export path, so they want one change with property tests and a lint
-  rule for `e-N` literals outside `core`.
+  rule for `e-N` literals outside `core`. Fixed (2026-10-26): every tolerance is one from
+  `core/epsilon.ts`, which gains `EPS_RATIO` for dimensionless quantities and the root finders'
+  five; an ESLint rule refuses an `e-N` literal outside `core` and the tests, and the four that
+  are not tolerances say so where they stand. Two bugs of the same kind went with them. `toCubics`
+  judges a degenerate arc by its length, so a long arc with a tiny sweep keeps its end; and
+  point-in-path judged a seam in `t` and radians while its rays move in millimetres, so the centre
+  of any circle over 1000 mm in radius read as outside. Moved: the glide axis snaps within
+  `EPS_ANGLE` of a half turn (was 1e-12), Sheets view joins merge within `EPS_POINT` (was 1e-6), a
+  cubic's ray crossing is near-tangent below `EPS_POINT` (was 1e-9), the path measure's table
+  spacing is floored at `EPS_LENGTH` (was 1e-6), and the scale tool's grab is on the pivot within
+  `EPS_POINT` (was 1e-6). No snapshot or golden file changed.
 - **Q39 A tool under way is not reset when a project opens** — only an open drag is rolled back,
   so a polyline half drawn continues into the new project.
 - **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF

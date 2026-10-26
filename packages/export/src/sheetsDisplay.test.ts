@@ -1,5 +1,6 @@
 import { PathOps, RectOps, polyline, type Path } from '@leathercad/geometry';
 import { CANVAS, GROUND, PAPER_FURNITURE, SHEET } from '@leathercad/render';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_PAGE_SETUP, contentAreaMm, pageSetupOf } from './paper.js';
@@ -74,6 +75,23 @@ describe('tape joins on the design board (7.4b)', () => {
     expect(lines).toHaveLength(new Set(vertical).size + new Set(horizontal).size);
     expect(new Set(vertical).size).toBeGreaterThan(0);
     expect(new Set(horizontal).size).toBeGreaterThan(0);
+  });
+
+  it('draws every join once, whatever the piece measures (Q38)', () => {
+    // Two tiles name each join they share, and both name it with the same
+    // arithmetic; joins closer than EPS_POINT are one join, and real ones are
+    // a sheet apart.
+    const size = fc.double({ min: 1, max: 3000, noNaN: true });
+    fc.assert(
+      fc.property(size, size, (widthMm, heightMm) => {
+        const plan = planSheets(scene([part('panel', widthMm, heightMm)]), DEFAULT_PAGE_SETUP);
+        const vertical = new Set(plan.sheets.flatMap((s) => s.tile?.joinsMm.x ?? []));
+        const horizontal = new Set(plan.sheets.flatMap((s) => s.tile?.joinsMm.y ?? []));
+        const lines = tapeJoins(plan).items.filter((item) => item.kind === 'path');
+        return lines.length === vertical.size + horizontal.size;
+      }),
+      { numRuns: 50 },
+    );
   });
 });
 

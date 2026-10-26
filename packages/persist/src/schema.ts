@@ -1,3 +1,4 @@
+import { EPS_ANGLE } from '@leathercad/core';
 import { z } from 'zod';
 import { ORIENTATIONS, PAPER_NAMES, type Orientation, type PaperName } from '@leathercad/domain';
 
@@ -70,11 +71,12 @@ const segment = z.discriminatedUnion('kind', [
     centre: vec2,
     radius: nonNegativeMm,
     startAngle: z.number().finite(),
+    // arc()'s own bound, so a file holds no arc the geometry would refuse.
     sweepAngle: z
       .number()
       .finite()
-      .min(-Math.PI * 2 - 1e-9)
-      .max(Math.PI * 2 + 1e-9),
+      .min(-Math.PI * 2 - EPS_ANGLE)
+      .max(Math.PI * 2 + EPS_ANGLE),
   }),
   z.looseObject({
     kind: z.literal('cubic'),

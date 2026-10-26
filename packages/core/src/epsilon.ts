@@ -26,6 +26,55 @@ export const EPS_ANGLE = 1e-9;
 export const EPS_AREA = 1e-12;
 
 /**
+ * A dimensionless quantity of order one that is not a parameter `t`: an entry
+ * of a transform's linear part, a determinant, a cosine, or a count before it
+ * is rounded up. A nanometre in a metre; the 1e-4 mm quantum is five orders
+ * coarser.
+ */
+export const EPS_RATIO = 1e-9;
+
+/*
+ * Root finding.
+ *
+ * The polynomial solvers (`geometry/polynomial.ts`) work on coefficients, not
+ * on lengths, and the rounding in what they compute grows with the size of
+ * what it is computed from. So the three `EPS_REL_` values are **relative** —
+ * a fraction of a magnitude the solver names — the one place this module
+ * departs from absolute tolerances. Each was set against a failing case the
+ * solver records beside it; change one only with that case in hand.
+ */
+
+/**
+ * A leading coefficient below this is zero, and the polynomial drops a degree.
+ * Absolute, in the polynomial's own units — a millimetre for a coordinate, a
+ * square millimetre for a cross product, which is why it sits at `EPS_AREA`.
+ */
+export const EPS_COEFFICIENT = 1e-12;
+
+/** Newton is not stepped from a slope below this: the step would throw the root away. */
+export const EPS_NEWTON_SLOPE = 1e-14;
+
+/**
+ * Relative: a quadratic's discriminant this small beside `b²` and `4ac` is
+ * zero, a double root. A difference of two products that kept under two of a
+ * double's sixteen digits holds nothing but rounding.
+ */
+export const EPS_REL_QUADRATIC_DISCRIMINANT = 1e-14;
+
+/**
+ * Relative: the same for a depressed cubic's discriminant, which has been
+ * through a division and two cubes on the way and keeps fewer digits.
+ */
+export const EPS_REL_CUBIC_DISCRIMINANT = 1e-12;
+
+/**
+ * Relative: a candidate is a genuine root when its residual is this small
+ * beside the terms that made it, or its Newton step this small beside the
+ * span the roots can occupy.
+ */
+export const EPS_REL_ROOT = 1e-9;
+
+/**
  * Tolerant equality.
  *
  * NaN is never equal to anything, including itself — propagating it as "equal"

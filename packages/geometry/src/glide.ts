@@ -1,4 +1,4 @@
-import { approxEq, approxZero, type Mm } from '@leathercad/core';
+import { EPS_ANGLE, EPS_RATIO, approxEq, approxZero, type Mm } from '@leathercad/core';
 
 import { compose, fromMirror, fromTranslation, type Mat2x3 } from './mat2x3.js';
 import type { Vec2 } from './vec2.js';
@@ -66,10 +66,10 @@ export function decomposeGlide(m: Mat2x3): Glide | null {
   // An isometry with det = -1. Checked on the matrix rather than assumed:
   // this is the gate that refuses a scaled or sheared counterpart.
   const det = m.a * m.d - m.b * m.c;
-  if (!approxEq(det, -1, 1e-9)) return null;
-  if (!approxEq(m.a * m.a + m.b * m.b, 1, 1e-9)) return null;
-  if (!approxEq(m.c * m.c + m.d * m.d, 1, 1e-9)) return null;
-  if (!approxZero(m.a * m.c + m.b * m.d, 1e-9)) return null;
+  if (!approxEq(det, -1, EPS_RATIO)) return null;
+  if (!approxEq(m.a * m.a + m.b * m.b, 1, EPS_RATIO)) return null;
+  if (!approxEq(m.c * m.c + m.d * m.d, 1, EPS_RATIO)) return null;
+  if (!approxZero(m.a * m.c + m.b * m.d, EPS_RATIO)) return null;
 
   // A line at θ and at θ + π is the same line, and only one of them may be
   // stored. The reflection matrix is identical for both, so the direction is
@@ -79,8 +79,11 @@ export function decomposeGlide(m: Mat2x3): Glide | null {
   angleRad %= Math.PI;
   if (angleRad < 0) angleRad += Math.PI;
   // A hair under a half-turn is a hair over nothing. Without this an angle
-  // that wraps lands exactly on π, which is the one value `[0, π)` excludes.
-  if (approxEq(angleRad, Math.PI, 1e-12)) angleRad = 0;
+  // that wraps lands exactly on π, which is the one value `[0, π)` excludes,
+  // and an axis rounding left a hair under horizontal would be stored half a
+  // turn from its neighbour. Snapping turns the axis by at most EPS_ANGLE,
+  // which moves an image 2000 mm away by 4e-6 mm, far under the quantum.
+  if (approxEq(angleRad, Math.PI, EPS_ANGLE)) angleRad = 0;
 
   const alongX = Math.cos(angleRad);
   const alongY = Math.sin(angleRad);

@@ -1,4 +1,4 @@
-import type { Mm } from '@leathercad/core';
+import { approxEq, type Mm } from '@leathercad/core';
 import {
   MatOps,
   PathOps,
@@ -113,9 +113,10 @@ function label(text: string, at: { x: Mm; y: Mm }, align: 'center' | 'left'): Di
   };
 }
 
+/** Joins closer than EPS_POINT are one join: two tiles name the one they share. */
 function unique(values: readonly Mm[]): Mm[] {
   const sorted = [...values].sort((a, b) => a - b);
-  return sorted.filter((value, i) => i === 0 || Math.abs(value - sorted[i - 1]!) > 1e-6);
+  return sorted.filter((value, i) => i === 0 || !approxEq(value, sorted[i - 1]!));
 }
 
 /** One layer of the Sheets view: drawn clipped to `clipMm` when it has one. */

@@ -12,6 +12,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
+    "@leathercad/core": "workspace:*",
     "@leathercad/domain": "workspace:*",
     "@leathercad/geometry": "workspace:*",
     "fflate": "^0.8.3",
