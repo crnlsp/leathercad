@@ -1,4 +1,4 @@
-import { formatEditable, type Mm, type Ulid } from '@leathercad/core';
+import { EPS_LENGTH, approxEq, formatEditable, type Mm, type Ulid } from '@leathercad/core';
 import type {
   Derivation,
   Feature,
@@ -23,6 +23,8 @@ import type {
 import {
   DEFAULT_SETTINGS,
   additionRefusal,
+  anchorsOf,
+  cornerDistances,
   dependentsOf,
   derivationRefusal,
   evaluate,
@@ -50,6 +52,7 @@ import {
 } from '@leathercad/geometry';
 
 import { command, type Command, type Document, type HistoryLabel } from './document.js';
+import { renumberCorners } from './pathPoints.js';
 
 export function emptyProject(id: Ulid, name = 'Untitled'): Project {
   return { id, name, settings: DEFAULT_SETTINGS, parts: [] };
@@ -228,19 +231,8 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
  * it acts, so the two cannot disagree (X1).
  */
 export function convertToPathRefusal(project: Project, id: FeatureId): Problem | null {
-  const found = findFeature(project, id);
-  if (found === null) return problem('FEATURE_MISSING', { featureId: id });
-
-  const locked = lockRefusal(project, [id]);
-  if (locked !== null) return locked;
-
-  const { feature } = found;
-  const about = { featureId: feature.id, featureName: feature.name };
-  if (feature.source.kind !== 'shape') return problem('NOT_A_SHAPE', about);
-  // A punch is round, and the panel edits a hole by its diameter; an oval
-  // opening is a cut-out, drawn as one.
-  if (feature.kind === 'hardware-hole') return problem('HOLE_STAYS_ROUND', about);
-  return null;
+  const planned = convertPlan(project, id);
+  return 'problem' in planned ? planned.problem : null;
 }
 
 /**
@@ -259,17 +251,54 @@ export function convertToPathRefusal(project: Project, id: FeatureId): Problem |
  */
 export function convertToPath(id: FeatureId): Command {
   return command({ action: 'convert-to-path' }, (document) => {
-    if (convertToPathRefusal(document.project, id) !== null) return document;
-    return {
-      project: mapFeature(document.project, id, (feature) =>
-        feature.kind !== 'text-label' &&
-        feature.kind !== 'measurement' &&
-        feature.source.kind === 'shape'
-          ? { ...feature, source: { kind: 'path', path: pathForShape(feature.source.shape) } }
-          : feature,
-      ),
-    };
+    const planned = convertPlan(document.project, id);
+    return 'problem' in planned ? document : { project: planned.project };
   });
+}
+
+/**
+ * The project with `id` converted, or why it cannot be.
+ *
+ * A rectangle has four corners from its parameters, whatever its radii (ADR
+ * 0010, 2); a drawn path has the corners its path shows. They are the same
+ * places, at the same distances along the same path, until a rounding uses up
+ * a side: a rectangle rounded to a circle or a strap shows none, and one
+ * rounded across a whole side hides the sharp corner after it. Each corner is
+ * then followed to the drawn corner at its own distance — the same point of
+ * the same path, not a search for a neighbour — and what is attached to one
+ * the path does not show refuses the conversion (`CORNER_IN_USE`), as a point
+ * edit that takes a corner away does.
+ */
+function convertPlan(
+  project: Project,
+  id: FeatureId,
+): { readonly project: Project } | { readonly problem: Problem } {
+  const found = findFeature(project, id);
+  if (found === null) return { problem: problem('FEATURE_MISSING', { featureId: id }) };
+
+  const locked = lockRefusal(project, [id]);
+  if (locked !== null) return { problem: locked };
+
+  const { feature } = found;
+  const about = { featureId: feature.id, featureName: feature.name };
+  if (feature.kind === 'text-label' || feature.source.kind !== 'shape') {
+    return { problem: problem('NOT_A_SHAPE', about) };
+  }
+  // A punch is round, and the panel edits a hole by its diameter; an oval
+  // opening is a cut-out, drawn as one.
+  if (feature.kind === 'hardware-hole') return { problem: problem('HOLE_STAYS_ROUND', about) };
+
+  const path = pathForShape(feature.source.shape);
+  const drawn = cornerDistances(path);
+  const corners = anchorsOf(feature.source, path).map((at) => {
+    const k = drawn.findIndex((d) => approxEq(d, at, EPS_LENGTH));
+    return k < 0 ? null : k;
+  });
+  return renumberCorners(
+    project,
+    { ...feature, source: { kind: 'path', path } } as Feature,
+    corners,
+  );
 }
 
 /** The move or turn a new shape for `id` would be, if `id` is a piece's outline. */

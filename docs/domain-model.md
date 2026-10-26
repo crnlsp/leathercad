@@ -505,10 +505,17 @@ cascades. Both change without telling the user; see the ADR.
 
 | Feature | Anchors | Stable under |
 |---|---|---|
-| `rect` shape | Its 4 corners | Width, height, radius, rotation: always 4 |
+| `rect` shape | Its 4 corners: the middle of each rounding, or the point | Width, height, radius, rotation: always 4, rounded to a circle too |
 | Drawn path | Its corners, in order | Moving a point; **not** inserting one. Vertex ids come before slice 3.9 |
 | `circle`, `arc` | None | Everything |
 | Derived | The source's anchors, mapped by the derivation | Whatever the source is stable under |
+
+A rectangle's anchors come from its parameters (ADR 0010, 2), so it has four whatever its radii:
+rounded to half its shorter side, with no straight left between two roundings, each corner is still
+the middle of its rounding. Until 2026-10-26 they were read off the path, which lost them there — a
+square rounded to a circle had none, and a rounding across a whole side hid the sharp corner after
+it and renumbered the rest. A file that resolved before resolves to the same numbers now: where the
+path shows all four corners they are still read off it.
 
 How a derivation maps anchors:
 
@@ -626,6 +633,11 @@ output. Nothing is drawn differently, and nothing is detached (X3):
 - the feature keeps its id, name, kind and role, so every derivation and reference to it stays;
 - the path is the one evaluation already built, so its corners are the same corners — a rectangle's
   four anchors keep their indices (§4.6), and a dimension to one reads the same number;
+- except where a rounding uses up a side: a rectangle rounded to a circle or a strap, or across a
+  whole side, still has four corners (§4.6), but the drawn path has only those its path shows. Each
+  corner is followed to the drawn corner at the same distance along the same path and renumbered,
+  and a run or dimension on one the path does not show refuses the conversion (`CORNER_IN_USE`),
+  as a point edit that takes a corner away does;
 - every dependent resolves exactly as it did, holes and failures alike.
 
 What goes is the parameters: the panel offers points rather than a radius or a width, and the
@@ -636,7 +648,8 @@ circle reports `OFFSET_UNSUPPORTED`, and the note beside the button says so firs
 Offered for `circle`, `arc` and `rect`, whatever the feature. Refused, with the reason under the
 button (`convertToPathRefusal`): a locked feature (S7); a hardware hole (`HOLE_STAYS_ROUND`), because
 a punch is round and the panel sizes it by diameter — an oval opening is a cut-out; and anything
-that is not a shape (`NOT_A_SHAPE`). One undo step (`convert-to-path`) brings the shape back. No
+that is not a shape (`NOT_A_SHAPE`); and a corner in use that the drawn path would not have
+(`CORNER_IN_USE`). One undo step (`convert-to-path`) brings the shape back. No
 format change: a drawn path was already stored, exactly (`file-format.md` §3.2).
 
 Unlike a **freeze** (§4.5), which a delete offers for a derived feature whose source is going, this

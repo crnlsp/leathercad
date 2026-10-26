@@ -340,6 +340,42 @@ describe('the value, whatever the rectangle', () => {
     );
   });
 });
+
+describe('a dimension to a rounded rectangle, at any radius (ADR 0010)', () => {
+  const withPrecision = (f: Feature, precision: 0 | 1 | 2): Feature =>
+    ({ ...f, source: { ...f.source, precision } }) as Feature;
+
+  it('resolves on a square rounded all the way to a circle', () => {
+    // Its corners are the middles of its four roundings: the top two are
+    // 10 / √2 apart, and opposite ones a diameter.
+    const circle = panel(10, 10, 5);
+
+    expect(readsAs(project(circle, dimension('horizontal', 1, 2)))).toBe('7.1');
+    expect(readsAs(project(circle, dimension('aligned', 0, 2)))).toBe('10.0');
+  });
+
+  it('reads between the middles of the roundings, from none up to a full one', () => {
+    // What a corner anchor has always measured to (Q15 keeps it): the width
+    // less 2·r·(1 − 1/√2), as the radius grows to half the shorter side.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 10, max: 400, noNaN: true }),
+        fc.double({ min: 10, max: 400, noNaN: true }),
+        fc.oneof(fc.constant(0), fc.constant(0.5), fc.double({ min: 0, max: 0.5, noNaN: true })),
+        (width, height, share) => {
+          const radius = share * Math.min(width, height);
+          const p = project(
+            panel(width, height, radius),
+            withPrecision(dimension('horizontal', 1, 2), 2),
+          );
+          const expected = width - 2 * radius * (1 - Math.SQRT1_2);
+          return Math.abs(Number(readsAs(p)) - expected) <= 0.005 + 1e-9;
+        },
+      ),
+    );
+  });
+});
+
 describe('the number on paper breaks the dimension line (4.10b)', () => {
   it('sits centred on the line, turned along it, its figures across it', () => {
     const entry = entryOf(project(panel(100, 60), dimension('horizontal', 1, 2)), 'dim-1');
