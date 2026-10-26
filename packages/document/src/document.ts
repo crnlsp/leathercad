@@ -112,6 +112,7 @@ export type HistoryAction =
   | 'add'
   | 'add-label'
   | 'add-dimension'
+  | 'add-overall-size'
   | 'add-seam-allowance'
   | 'delete'
   | 'delete-part'

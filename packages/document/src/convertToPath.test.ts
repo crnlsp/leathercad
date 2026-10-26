@@ -6,7 +6,15 @@ import {
   type Project,
   type ResolvedFeature,
 } from '@leathercad/domain';
-import { EXPORT_TOLERANCE_MM, MatOps, PathOps, SegmentOps, type Vec2 } from '@leathercad/geometry';
+import {
+  EXPORT_TOLERANCE_MM,
+  MatOps,
+  PathOps,
+  SegmentOps,
+  fittedRadii,
+  uniformRadii,
+  type Vec2,
+} from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -109,8 +117,27 @@ const arbArc = fc
   .tuple(arbCentre, arbRadius, arbTurn, arbSweep)
   .map(([centre, radius, start, sweep]): ParametricShape => arcShape(centre, radius, start, sweep));
 
-const arbShape = fc.oneof(arbRect, arbCircle, arbArc);
-const arbClosedShape = fc.oneof(arbRect, arbCircle);
+/**
+ * A rectangle whose roundings leave a straight on every side, so its path
+ * shows all four of its corners. Rounded across a whole side, the drawn path
+ * shows fewer than the rectangle has, and converting follows what it can
+ * (see 'a rectangle rounded across a whole side').
+ */
+const arbRectWithSides = arbRect.filter((shape) => {
+  if (shape.type !== 'rect') return true;
+  const r = fittedRadii(shape.radii, shape.width, shape.height);
+  // Well clear of a straight too short to turn a corner on (EPS_LENGTH).
+  const straight = 1e-6;
+  return (
+    shape.width - r.bottomLeft - r.bottomRight > straight &&
+    shape.width - r.topLeft - r.topRight > straight &&
+    shape.height - r.bottomLeft - r.topLeft > straight &&
+    shape.height - r.bottomRight - r.topRight > straight
+  );
+});
+
+const arbShape = fc.oneof(arbRectWithSides, arbCircle, arbArc);
+const arbClosedShape = fc.oneof(arbRectWithSides, arbCircle);
 
 describe('converting a shape to a drawn path (3.12)', () => {
   it('draws exactly what the shape drew: the same path, the same anchors', () => {
@@ -230,6 +257,67 @@ describe('converting a shape to a drawn path (3.12)', () => {
     store.dispatch(convertToPath('shape-1'));
 
     expect(outcomes(store).get('dim-1')).toEqual(before);
+  });
+
+  describe('a rectangle rounded across a whole side', () => {
+    // Its four corners come from its parameters (ADR 0010, 2); a drawn path
+    // has only the corners its path shows, and a rounding that uses up a side
+    // leaves fewer. Converting follows each corner to the same place, and is
+    // refused rather than letting an attachment lose its corner.
+    const dimension = (a: number, b: number) =>
+      addMeasurement(
+        'dim-1',
+        'aligned',
+        { kind: 'anchor', featureId: 'shape-1', anchor: a },
+        { kind: 'anchor', featureId: 'shape-1', anchor: b },
+      );
+
+    it('is refused while a dimension is on a corner the drawn path would not have', () => {
+      const store = storeWith(rectShape({ x: 0, y: 0 }, 40, 40, 20, 0));
+      store.dispatch(dimension(0, 2));
+      const before = store.getState().document;
+
+      expect(convertToPathRefusal(project(store), 'shape-1')).toMatchObject({
+        code: 'CORNER_IN_USE',
+        facts: { usedByName: 'Dimension' },
+      });
+      store.dispatch(convertToPath('shape-1'));
+      expect(store.getState().document).toBe(before);
+    });
+
+    it('renumbers a dimension on the corners it keeps, which reads the same', () => {
+      // The bottom side is all rounding, so the drawn path does not show the
+      // sharp bottom-right corner: the rectangle's corners 1 and 2, its top
+      // ones, are the drawn path's 0 and 1.
+      const store = storeWith({
+        type: 'rect',
+        origin: { x: 0, y: 0 },
+        width: 60,
+        height: 100,
+        radii: { ...uniformRadii(0), bottomLeft: 60 },
+        rotation: 0,
+      });
+      store.dispatch(dimension(1, 2));
+      const before = outcomes(store).get('dim-1');
+
+      store.dispatch(convertToPath('shape-1'));
+
+      expect(featureOf(store, 'dim-1').source).toMatchObject({
+        a: { anchor: 0 },
+        b: { anchor: 1 },
+      });
+      expect(outcomes(store).get('dim-1')).toEqual(before);
+    });
+
+    it('converts when nothing is attached, to the corners the path shows', () => {
+      const store = storeWith(rectShape({ x: 0, y: 0 }, 40, 40, 20, 0));
+
+      store.dispatch(convertToPath('shape-1'));
+
+      expect(featureOf(store, 'shape-1').source.kind).toBe('path');
+      const entry = evaluate(project(store)).parts[0]!.features[0]!;
+      expect(entry.ok && entry.anchors).toEqual([]);
+    });
   });
 
   it('is one step of undo, named for what it did', () => {

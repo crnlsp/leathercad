@@ -2,6 +2,7 @@ import { formatMm, formatNumber } from '@leathercad/core';
 import {
   type DocumentStore,
   addHoleRow,
+  addOverallSize,
   allowanceRefusal,
   deleteRefusal,
   flipFeatures,
@@ -753,6 +754,21 @@ function DeriveActions({
           }
         >
           {t('properties.addStitchLine')}
+        </ReasonedButton>
+        <ReasonedButton
+          testId="add-overall-size"
+          reason={null}
+          hint={t('properties.addOverallSizeHint')}
+          // Two dimensions in one step (Q15), both selected, as one is after
+          // the Measure tool.
+          onClick={() => {
+            const width = nextId();
+            const height = nextId();
+            store.dispatch(addOverallSize(feature.id, width, height));
+            store.select([width, height]);
+          }}
+        >
+          {t('properties.addOverallSize')}
         </ReasonedButton>
       </div>
     );

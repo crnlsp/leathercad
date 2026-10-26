@@ -545,6 +545,24 @@ describe('DXF export: words are outline polylines (6.5)', () => {
   });
 });
 
+describe('DXF export: a filled shape is its outline (4.10b)', () => {
+  it('writes a dimension’s arrowhead as the three lines round it, on the annotation layer', () => {
+    const head = PathOps.polyline(
+      [
+        { x: 0, y: 0 },
+        { x: 2.5, y: 0.425 },
+        { x: 2.5, y: -0.425 },
+      ],
+      true,
+    );
+    const entities = layerOf(
+      entitiesOf(dxfOf(sceneOf([{ ...itemOf('annotation', head), filled: true }]))),
+      'annotation',
+    );
+    expect(entities.map((entity) => entity.type)).toEqual(['LINE', 'LINE', 'LINE']);
+  });
+});
+
 // ── The same set as the PDF ──────────────────────────────────────────────────
 
 describe('DXF export: exactly what the PDF prints, and what the SVG holds (6.5)', () => {

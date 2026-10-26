@@ -187,9 +187,28 @@ with the packaged app.
   round one reports that it cannot follow it (`OFFSET_UNSUPPORTED`) until 9.19; the note beside the
   button says so before the maker converts. No format change: a drawn path was already stored.
   [Domain model §4.8](domain-model.md#48-converting-a-shape-to-a-drawn-path--built-312).
-- ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
+- ✅ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
+  **Done** (2026-10-26): a dimension ends in a filled arrowhead at each extension line and its line
+  breaks where its number sits, on the board and on paper, so identity item 9 passes. One pure
+  function in `domain`, `draftDimensionLine`, places the arrowheads and the break in millimetres; the
+  display list calls it with the board's constant sizes (10 × 3.5 px, the break the number's halo), and
+  the export scene with true millimetres (2.5 × 0.85 mm, ISO 129-1's three to one, and 1 mm either
+  side of the number), both from `DIMENSION_MARKS` in the theme. When the arrowheads and the number
+  do not both fit between the extension lines, the arrowheads turn outside and point in. The paper's
+  number, laid out by evaluation, now sits centred on its line rather than beside it, as the board's
+  already did. An arrowhead is the first filled shape in an export's pattern: `ExportPath.filled`,
+  filled in the PDF, the SVG and the Sheets view, outlined in a DXF. The resolved path is unchanged —
+  the extension lines and the whole line — so selection, the halo and bounds are as they were.
+  Property tests: each arrowhead's tip on its end, its size and axis; the line on
+  itself, broken exactly for the number, with no other break; inside or outside by the room there
+  is; and a rigid motion moves it all. The print test's rasterised check measures the dimension
+  between its extension lines now, since its line is no longer one stroke. A number with no room
+  between the extension lines goes outside, past the arrowhead at the far end and clear of it,
+  decided from the number's real width and the arrowheads' real length in each medium, never a
+  fixed threshold; the line is then drawn whole. No format change for the drawing itself. [Domain model §3.7](domain-model.md#37-measurement--linear-built-410a),
+  [printing](printing.md).
 - ✅ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
   **Done** (2026-10-25): a selected marking line offers *Add a row of holes* in Properties, and the
   row is a feature of its own, `HoleRow`, derived from that line as a hole set is from its stitch
@@ -240,7 +259,7 @@ the report's.
 
 | # | What | Severity | Plan |
 |---|---|---|---|
-| ☐ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | Decide what a corner of a rounded outline *means* to a maker before changing it; 4.10b |
+| ✅ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | ✅ Settled (2026-10-26): a corner and the piece's size are two measurements, and a dimension never silently changes which it is. A dimension between corners reads what it always did — between the middles of the roundings, 94.1 on a 97 × 67 panel rounded at 5 mm. *Add overall size*, on a selected outline, dimensions its width and height between corners of the box its actual outline fills, read from the outline's exact bounds: the 97 × 67 panel and the band a 3.5 mm allowance grows round a 90 × 60 stitch line both read 97 × 67. Not the virtual sharp, which no two edges have past a half turn and which runs off the piece near one. Format 12, an `extent` end; identity migration and `fixtures/format/v12.lcp`. With it, a rectangle keeps its four corner anchors at every radius, rounded to a circle too — they were read off its path, which lost them once a rounding took a whole side |
 
 **What the QA pass could not test,** kept here until someone does: physical 1:1 prints on real
 printers and viewers, including *Actual size* and `/PrintScaling /None` (R1); taping a multi-sheet piece physically; real OS

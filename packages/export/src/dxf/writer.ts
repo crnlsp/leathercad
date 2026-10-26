@@ -156,7 +156,10 @@ export function exportDxf(scene: ExportScene): DxfExportResult {
   tag(2, 'ENTITIES');
   const entities = new Entities(tag);
   for (const layer of layers) {
-    for (const path of layer.paths) entities.path(layer.role, PathOps.transform(path, move));
+    // A filled shape is its outline: a DXF line has no fill.
+    for (const path of [...layer.paths, ...layer.fills]) {
+      entities.path(layer.role, PathOps.transform(path, move));
+    }
     for (const text of layer.texts) {
       for (const glyph of text.glyphs) {
         const outline = PathOps.flattenPath(PathOps.transform(glyph, move), EXPORT_TOLERANCE_MM);

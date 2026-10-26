@@ -179,6 +179,15 @@ export type Run =
   | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number };
 
 /**
+ * Where one end of a dimension is: a corner of a feature, or a corner of the
+ * box it fills on the sheet.
+ *
+ * A union, so a reference added later — `centre`, for a radius — is a new arm
+ * every reader is made to handle.
+ */
+export type MeasureRef = AnchorRef | ExtentRef;
+
+/**
  * A durable place on the drawing: a feature, and one of its anchors.
  *
  * **Anchors, never points** ([ADR 0010](../../../docs/adr/0010-anchors-address-geometry.md)). A
@@ -186,15 +195,31 @@ export type Run =
  * coordinates the drawing has left behind, and reads as authoritative while
  * being wrong. An anchor is defined by the feature's parameters, so a
  * rectangle has four corners whatever its size, position, rotation or radii.
- *
- * A union of one arm on purpose: `centre` (for a radius) and `extent` join it
- * later without changing anything that reads it.
  */
-export type MeasureRef = {
+export interface AnchorRef {
   readonly kind: 'anchor';
   readonly featureId: FeatureId;
   readonly anchor: number;
-};
+}
+
+/**
+ * A corner of the box a feature's outline fills on the sheet: its least or
+ * greatest x, and its least or greatest y (Q15).
+ *
+ * What a piece's **overall size** is measured between — the 97 × 67 of a
+ * panel with rounded corners, which no two places on its outline are apart.
+ * Read from the actual outline every evaluation, so it is the leather to cut
+ * whatever the outline is: rounded, grown by an allowance, drawn, or turned —
+ * a turned piece reads the box it takes on the sheet. Never a corner the
+ * edges would meet at if carried on: that point runs away as a rounding nears
+ * a half turn, and is not on the leather.
+ */
+export interface ExtentRef {
+  readonly kind: 'extent';
+  readonly featureId: FeatureId;
+  readonly x: 'min' | 'max';
+  readonly y: 'min' | 'max';
+}
 
 /** What a linear dimension reads between its two ends. */
 export type MeasureKind = 'horizontal' | 'vertical' | 'aligned';
