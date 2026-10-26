@@ -221,7 +221,9 @@ in this fixture; exact improvement must be measured. Coordinate with PERF-010.
 
 **Evidence/impact:** The async export function runs a synchronous page loop. Every tile clips
 but emits complete part paths. The 33-page strap blocks the renderer for 2.57–2.61 seconds and
-produces 10.35 MB; cancellation cannot respond during that section.
+produces 10.35 MB; cancellation cannot respond during that section. The `write the PDF`
+benchmark's 1,200 mm strap shows the same per tile: 7 sheets, 254 ms and 744 KB, against
+12.6 ms for a sheet with nothing placed.
 
 - [ ] Reproduce long-task duration and emitted geometry on the long-strap fixture.
 - [ ] Conservatively reject off-tile paths, including stroke/overlap allowances, or evaluate
@@ -537,6 +539,15 @@ these remaining issues.
 - [x] Replace minimum-slowness assertions with meaningful upper budgets/behavior verification.
 - [ ] Coordinate roadmap Q40: measure shipping SVG/DXF writers rather than only render SVG.
 - [ ] Preserve existing baselines; version deliberate replacements with their environment.
+  Done for two: `export/bench/pdf.json` and `display-list.json` were 13–14× and 6–8× under
+  `bench:compare` (2026-10-26) because their workloads had changed since 68c2709, not their code.
+  The 1,200 mm strap did not fit A4 then, so it was reported oversized and the PDF placed nothing;
+  tiling (7.2a) now prints it across 7 sheets, 744 KB — the old furniture-only sheet takes 12.6 ms
+  on today's code, under its 19 ms baseline, and the rest is PERF-002. `git bisect` puts the
+  display list at F.7 (8fd1503, a slit per hole: the 13→87 µs recorded in the roadmap), with U.2's
+  caption on top. Both were re-recorded on the machine that holds the others, Node 22.23.3, at
+  199cb50. The other 13 were kept; all but `diagnose-strap-slots` (1.4–1.6×, not yet examined)
+  compare level.
 - [ ] Reconcile performance claims in architecture/testing docs with actual implementation:
   canvas layers/culling, cache identities, hole primitives and operation process ownership.
 
