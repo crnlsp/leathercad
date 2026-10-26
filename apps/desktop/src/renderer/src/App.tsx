@@ -29,7 +29,6 @@ import {
   type RecentFile,
   type KeptSession,
   type TabCamera,
-  type TemplateSave,
   type UpdateStatus,
 } from '@leathercad/platform';
 import { loadProject, saveProject } from '@leathercad/persist';
@@ -630,12 +629,6 @@ export function App({
       const fresh = await listTemplates();
       setTemplateList((list) => (list === null ? null : fresh));
     };
-    const said = (outcome: TemplateSave): string | null =>
-      outcome.kind === 'saved'
-        ? null
-        : outcome.kind === 'exists'
-          ? t('templates.exists', { name: outcome.name })
-          : t('templates.invalid', { name: '' });
     return {
       use: (id) => {
         setTemplateList(null);
@@ -643,10 +636,16 @@ export function App({
       },
       rename: async (id, name) => {
         const outcome = await host.renameTemplate(id, name);
-        if (outcome.kind === 'saved') await refresh();
-        return outcome.kind === 'invalid'
-          ? t('templates.invalid', { name: name.trim() })
-          : said(outcome);
+        if (outcome.kind === 'saved') {
+          await refresh();
+          return { renamed: `mine:${outcome.name}` };
+        }
+        return {
+          problem:
+            outcome.kind === 'invalid'
+              ? t('templates.invalid', { name: name.trim() })
+              : t('templates.exists', { name: outcome.name }),
+        };
       },
       duplicate: async (id, name) => {
         await host.duplicateTemplate(id, name);

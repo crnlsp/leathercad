@@ -21,8 +21,11 @@ export interface TemplateChoice {
 /** What managing a template asks of the app; each resolves once it is done. */
 export interface TemplateActions {
   readonly use: (id: string) => void;
-  /** Null once renamed, or the words of why not. */
-  readonly rename: (id: string, name: string) => Promise<string | null>;
+  /** The renamed template's id — a name is its id — or the words of why not. */
+  readonly rename: (
+    id: string,
+    name: string,
+  ) => Promise<{ readonly renamed: string } | { readonly problem: string }>;
   readonly duplicate: (id: string, name: string) => Promise<void>;
   readonly describe: (id: string, description: string, tags: readonly string[]) => Promise<void>;
   readonly pin: (id: string, pinned: boolean) => Promise<void>;
@@ -453,6 +456,8 @@ export function TemplateDialog({
                 dates={dates}
                 actions={actions}
                 onRemove={remove}
+                // Renamed, it has a new id: still the one chosen, not the first row.
+                onRenamed={setPicked}
               />
             )}
           </div>
@@ -517,11 +522,13 @@ function Detail({
   dates,
   actions,
   onRemove,
+  onRenamed,
 }: {
   row: Row;
   dates: Intl.DateTimeFormat;
   actions: TemplateActions;
   onRemove: (row: Row) => void;
+  onRenamed: (id: string) => void;
 }) {
   const { t } = useI18n();
   const mine = row.entry.kind === 'mine';
@@ -568,9 +575,12 @@ function Detail({
           className="template-rename"
           onSubmit={(event) => {
             event.preventDefault();
-            void actions.rename(id, name).then((said) => {
-              setProblem(said);
-              if (said === null) setRenaming(false);
+            void actions.rename(id, name).then((outcome) => {
+              if ('problem' in outcome) setProblem(outcome.problem);
+              else {
+                setRenaming(false);
+                onRenamed(outcome.renamed);
+              }
             });
           }}
         >
