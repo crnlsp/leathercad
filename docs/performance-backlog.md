@@ -537,7 +537,13 @@ these remaining issues.
 - [ ] Add production-representative bundled timing where needed; distinguish it from Vitest
   timings and record commit, workload, runtime, hardware and sample method.
 - [x] Replace minimum-slowness assertions with meaningful upper budgets/behavior verification.
-- [ ] Coordinate roadmap Q40: measure shipping SVG/DXF writers rather than only render SVG.
+- [x] Coordinate roadmap Q40: measure shipping SVG/DXF writers rather than only render SVG.
+  `export.bench.ts` reaches `exportSvg` and `exportDxf` through the package's index. Under
+  `bench:compare` (2026-10-26) the shipped SVG writer took 2.11 ms against `svg.json`'s 0.375 ms,
+  which had timed the render backend's `renderToSvgString`: a different function, not a
+  regression. `svg.json` was re-recorded and `dxf.json` added (2.61 ms), on the machine that holds
+  the others, Node 24.22.0, at 80afa43, load about 2. The other three export cases compared level
+  and were kept.
 - [ ] Preserve existing baselines; version deliberate replacements with their environment.
   Done for two: `export/bench/pdf.json` and `display-list.json` were 13–14× and 6–8× under
   `bench:compare` (2026-10-26) because their workloads had changed since 68c2709, not their code.

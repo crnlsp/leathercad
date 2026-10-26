@@ -583,8 +583,12 @@ release until it is moved into one.
   `EPS_POINT` (was 1e-6). No snapshot or golden file changed.
 - **Q39 A tool under way is not reset when a project opens** — only an open drag is rolled back,
   so a polyline half drawn continues into the new project.
-- **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF
-  writers that ship; fixing it moves the committed baseline.
+- ✅ **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF
+  writers that ship; fixing it moves the committed baseline. Fixed (2026-10-26): *write the SVG*
+  and *write the DXF* time `exportSvg` and `exportDxf` on the benchmark strap, through the
+  package's index as the app calls them. The shipped SVG writer takes 2.1 ms where the old case's
+  baseline read 0.37 ms; `bench/svg.json` is re-recorded and `bench/dxf.json` is new, and only
+  compare on the machine that recorded them ([PERF-017](performance-backlog.md#perf-017)).
 
 ### Also later, each already decided in principle
 
