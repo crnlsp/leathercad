@@ -16,9 +16,10 @@ const DESKTOP = resolve(import.meta.dirname, '../..');
 
 interface BuilderConfig {
   appId: string;
+  extraMetadata: { description: string };
   executableName: string;
   directories: { buildResources: string };
-  linux: { icon: string; syncDesktopName: boolean };
+  linux: { icon: string; syncDesktopName: boolean; synopsis: string };
   win: { icon: string };
   mac: { icon: string };
   fileAssociations: { ext: string; mimeType: string; name: string }[];
@@ -54,6 +55,12 @@ describe('desktop integration', () => {
     // button, and the jump list's recent documents belong to neither.
     const { appId } = await config();
     expect(APP_USER_MODEL_ID).toBe(appId);
+  });
+
+  it('describes the Windows installer and its shortcuts as Linux does, not as the workspace package', async () => {
+    // package.json's description reads "Electron shell for LeatherCAD".
+    const { linux, extraMetadata } = await config();
+    expect(extraMetadata.description).toBe(linux.synopsis);
   });
 
   it('has an icon drawn at every size the Linux set names', async () => {

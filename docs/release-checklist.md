@@ -198,6 +198,8 @@ as they were.
 Still on Windows, pin LeatherCAD to the taskbar from its Start menu entry, close it, start it from
 the pin and open a saved project: the window belongs to the pin — one taskbar button, not a second
 one beside it — and right-clicking the pin lists the project under *Recent*.
+The installer's *Properties → Details* and the tooltip of the Start menu entry say *Leathercraft
+patterns that print at exact 1:1 scale*, not *Electron shell for LeatherCAD*.
 
 ### 11. Opening a project from the file manager
 

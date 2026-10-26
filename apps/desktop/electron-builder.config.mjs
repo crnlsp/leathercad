@@ -29,6 +29,9 @@ import { join } from 'node:path';
 /** The .lcp type, as `LCP_MIME` in packages/persist writes it into every file. */
 const LCP_MIME = 'application/vnd.leathercad.project';
 
+/** One line on what the app is: the Linux entry's comment, and Windows' description. */
+const SYNOPSIS = 'Leathercraft patterns that print at exact 1:1 scale';
+
 export default {
   appId: 'io.github.crnlsp.leathercad',
   productName: 'LeatherCAD',
@@ -38,7 +41,10 @@ export default {
   // the product: `@leathercad/desktop` became Programs\@leathercaddesktop.
   // Only the packaged package.json is renamed; the workspace keeps its name.
   // An install left in the old directory moves on update: build/installer.nsh.
-  extraMetadata: { name: 'LeatherCAD' },
+  // The package's description is for developers ("Electron shell for …"); the
+  // NSIS installer writes it as the installer's own file description, the
+  // shortcuts' tooltip and the uninstall entry's comment, so it is the synopsis.
+  extraMetadata: { name: 'LeatherCAD', description: SYNOPSIS },
   directories: { output: 'release', buildResources: 'build' },
   files: ['out/**/*', 'package.json'],
   asar: true,
@@ -82,7 +88,7 @@ export default {
     target: ['AppImage'],
     icon: 'build/icons',
     category: 'Graphics',
-    synopsis: 'Leathercraft patterns that print at exact 1:1 scale',
+    synopsis: SYNOPSIS,
     description:
       'Design leathercraft patterns — parts, stitch lines, holes — that print at exact 1:1 scale.',
     // The desktop entry is named for `desktopName` in package.json, which is
