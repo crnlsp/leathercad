@@ -95,14 +95,13 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
 
     // Before exporting, the paper says what the PDF will be, and what turning
     // the paper would give instead.
-    // Its two tiles and, before them, the map of how they join (7.2).
-    await on('3 × A4 portrait');
-    await expect(paper).toHaveAttribute('data-sheets', '3');
+    await on('2 × A4 portrait');
+    await expect(paper).toHaveAttribute('data-sheets', '2');
     await paper.click();
     await expect(window.getByTestId('paper-summary')).toHaveText(
-      '3 sheets · scale 100 %, locked · Strap taped',
+      '2 sheets · scale 100 %, locked · Strap taped',
     );
-    await expect(window.getByTestId('paper').locator('option:checked')).toHaveText('A4 · 3 sheets');
+    await expect(window.getByTestId('paper').locator('option:checked')).toHaveText('A4 · 2 sheets');
     await window.getByTestId('paper-landscape').hover();
     await expect(window.getByRole('tooltip', { name: '1 sheet of A4, landscape' })).toBeVisible();
     await window.keyboard.press('Escape');
@@ -120,7 +119,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     );
     await expect(window.getByTestId('file-error')).toHaveCount(0);
     expect(pageSize(pdf)).toBe('595.276 x 841.89');
-    expect(pageCount(pdf)).toBe(3);
+    expect(pageCount(pdf)).toBe(2);
     await notice.getByText('Close').click();
     rmSync(pdf);
 
@@ -132,7 +131,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
 
     // …one undoable step…
     await window.getByTestId('undo').click();
-    await on('3 × A4 portrait');
+    await on('2 × A4 portrait');
     await window.getByTestId('redo').click();
     await on('1 × A4 landscape');
 

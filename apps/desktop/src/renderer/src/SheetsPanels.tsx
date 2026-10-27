@@ -198,7 +198,12 @@ export function SheetsParts({
                 <li key={entry.partId} className="sheets-taped-entry">
                   <span className="part-label">{entry.name}</span>
                   <span className="sheets-group-count" data-testid={`sheets-taped-${entry.partId}`}>
-                    {describeSheetNumbers(entry.sheets, i18n)}
+                    {entry.map === null
+                      ? describeSheetNumbers(entry.sheets, i18n)
+                      : t('sheetsView.tapedWithMap', {
+                          sheets: describeSheetNumbers(entry.sheets, i18n),
+                          number: entry.map,
+                        })}
                   </span>
                 </li>
               ))}

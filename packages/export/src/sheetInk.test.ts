@@ -97,8 +97,8 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
       DEFAULT_PAGE_SETUP,
     );
     const layout = verificationLayout(DEFAULT_PAGE_SETUP);
-    const [, identity] = sheetInk(long, 1, NOW).texts;
-    expect(identity!.source).toContain('· Sheet 2 of 3 · ');
+    const [, identity] = sheetInk(long, 0, NOW).texts;
+    expect(identity!.source).toContain('· Sheet 1 of 2 · ');
     expect(identity!.source).toContain('…');
     const glyphs = RectOps.unionAll(identity!.glyphs.map((g) => PathOps.bbox(g)!))!;
     expect(glyphs.minX).toBeGreaterThanOrEqual(layout.lines.x - layout.textMaxWidthMm - 1e-9);
@@ -110,7 +110,7 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
     expect(packed.clipped).toEqual([]);
     expect(packed.clippedTexts).toEqual([]);
 
-    const tiled = sheetInk(plan, 2, NOW);
+    const tiled = sheetInk(plan, 1, NOW);
     const area = contentAreaMm(DEFAULT_PAGE_SETUP);
     expect(tiled.clip).toEqual({
       minX: area.x,
@@ -128,37 +128,43 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
     expect(crosses).toHaveLength(2);
     expect(arrow).toHaveLength(2);
     expect(arrow[0]!.style.grey).toBe(joins[0]!.style.grey);
-    expect(tiled.clippedTexts.map((t) => t.source)).toEqual(['Sheet 4']);
-    expect(sheetInk(plan, 3, NOW).clippedTexts.map((t) => t.source)).toEqual(['Sheet 3']);
+    expect(tiled.clippedTexts.map((t) => t.source)).toEqual(['Sheet 3']);
+    expect(sheetInk(plan, 2, NOW).clippedTexts.map((t) => t.source)).toEqual(['Sheet 2']);
     // Which sheet it joins, and where: the dashed line and its crosses say how.
     expect(tiled.texts.map((t) => t.source)).toEqual([
       'Print at 100 % / Actual size — this box is 100 × 5 mm',
-      'Wallet · Sheet 3 of 4 · strap, joins sheet 4 to the right',
+      'Wallet · Sheet 2 of 3 · strap, joins sheet 3 to the right',
       '2026-09-24 · 1:1 · LeatherCAD',
     ]);
-    expect(sheetInk(plan, 3, NOW).texts[1]!.source).toBe(
-      'Wallet · Sheet 4 of 4 · strap, joins sheet 3 to the left',
+    expect(sheetInk(plan, 2, NOW).texts[1]!.source).toBe(
+      'Wallet · Sheet 3 of 3 · strap, joins sheet 2 to the left',
     );
   });
 
-  it('maps a taped part on its assembly sheet, saying it is not to scale (7.2)', () => {
-    const map = sheetInk(plan, 1, NOW);
+  it('maps a part taped into a grid on its assembly sheet, saying it is not to scale (7.2)', () => {
+    // 400 × 300 on A4 portrait: taped 2 × 3, after its map.
+    const grid = planSheets(scene([part('gusset', 400, 300)]), DEFAULT_PAGE_SETUP);
+    const map = sheetInk(grid, 0, NOW);
     expect(map.clip).toBeNull();
     expect(map.clipped).toEqual([]);
     expect(map.texts.map((t) => t.source)).toEqual([
       'Print at 100 % / Actual size — this box is 100 × 5 mm',
-      'Wallet · Sheet 2 of 4 · strap, assembly map of sheets 3–4',
+      'Wallet · Sheet 1 of 7 · gusset, assembly map of sheets 2–7',
       '2026-09-24 · 1:1 · LeatherCAD',
-      'strap · assembly map of sheets 3–4',
+      'gusset · assembly map of sheets 2–7',
       'Not to scale: a map of how the sheets join. Never cut from it.',
       'Cut each sheet on its dashed line, lay it over the next and match the crosses.',
+      'Sheet 2',
       'Sheet 3',
       'Sheet 4',
+      'Sheet 5',
+      'Sheet 6',
+      'Sheet 7',
     ]);
-    // The gauge and its 19 ticks, a cell for each tile, and the strap's
+    // The gauge and its 19 ticks, a cell for each tile, and the gusset's
     // outline in grey — the one thing on paper drawn smaller than it is.
     const drawn = map.paths.slice(20);
-    expect(drawn.filter((p) => p.style.grey === 0)).toHaveLength(2);
+    expect(drawn.filter((p) => p.style.grey === 0)).toHaveLength(6);
     expect(drawn.filter((p) => p.style.grey > 0)).toHaveLength(1);
   });
 

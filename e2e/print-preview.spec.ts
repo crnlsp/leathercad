@@ -103,15 +103,14 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
     const preview = window.getByTestId('print-preview');
     await expect(preview).toBeVisible();
 
-    // The PDF itself, drawn by pdf.js: four sheets — the strap's assembly map
-    // among them (7.2) — and the first one large.
-    await expect(preview.getByTestId('print-thumb')).toHaveCount(4);
+    // The PDF itself, drawn by pdf.js: three sheets, and the first one large.
+    await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
     await expect
       .poll(() => preview.getByTestId('print-page').locator('canvas').evaluate(inkOn))
       .toBeGreaterThan(1000);
 
     await expect(preview.getByTestId('print-printer')).toHaveValue('LeatherCAD_Test');
-    await expect(preview.getByTestId('print-summary')).toHaveText('4 sheets of A4, portrait');
+    await expect(preview.getByTestId('print-summary')).toHaveText('3 sheets of A4, portrait');
     await expect(preview.getByTestId('print-scale')).toHaveText('100 % — locked');
     await expect(preview.getByTestId('print-no-scaling')).toContainText('No scaling');
     await expect(preview.getByTestId('export-tiled')).toContainText('Strap');
@@ -120,15 +119,14 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
     await expect(preview.locator('.print-options').locator('select, input')).toHaveCount(5);
 
     const submit = preview.getByTestId('print-submit');
-    await expect(submit).toHaveText('Print 4 sheets');
+    await expect(submit).toHaveText('Print 3 sheets');
     await expect(submit).toHaveClass(/primary/);
 
-    // A maker who needs no map leaves it out.
     await preview.getByTestId('print-include').nth(1).uncheck();
-    await expect(submit).toHaveText('Print 3 sheets');
+    await expect(submit).toHaveText('Print 2 sheets');
     await preview.getByLabel('Copies').fill('2');
     await preview.getByLabel('Copies').press('Enter');
-    await expect(submit).toHaveText('Print 3 sheets × 2');
+    await expect(submit).toHaveText('Print 2 sheets × 2');
 
     await submit.click();
     await expect(preview.getByTestId('print-result')).toHaveText(
@@ -144,7 +142,7 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
       '-n',
       '2',
       '-P',
-      '1,3-4',
+      '1,3',
       '-o',
       'media=A4',
       '-o',
@@ -264,6 +262,63 @@ test('with no CUPS to drive, the preview saves the PDF and says how to print it'
     expectAccurate(measurePrintTest(pdf));
     await expect(window.getByTestId('export-tiled')).toContainText('Strap');
     expect(existsSync(cups.job), 'nothing went to lp').toBe(false);
+  } finally {
+    await closeApp(app);
+    rmSync(cups.bin, { recursive: true, force: true });
+  }
+});
+test('a piece taped into a grid prints its map first, and the map is left out with its sheets (7.2)', async () => {
+  const cups = fakeCups(ONE_PRINTER);
+  const app = await launchApp({
+    env: { PATH: `${cups.bin}:${process.env['PATH'] ?? ''}` },
+  });
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+
+    // A gusset, 400 × 300 mm: on A4 portrait, taped across a grid of 2 × 3.
+    await window.getByTestId('tool-rectangle').click();
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.mouse.move(box.x + 150, box.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 330, box.y + 260, { steps: 5 });
+    await window.mouse.up();
+    const field = (label: string) =>
+      window
+        .getByTestId('property-panel')
+        .locator('label', { hasText: new RegExp(`^${label}`) })
+        .locator('input');
+    for (const [label, value] of [
+      ['Width', 400],
+      ['Height', 300],
+    ] as const) {
+      await field(label).fill(String(value));
+      await field(label).press('Enter');
+    }
+    await window.getByTestId('part-name').fill('Gusset');
+    await window.getByTestId('part-name').press('Enter');
+
+    // Its map is sheet 1, and Parts points to it.
+    await window.getByTestId('view-sheets').click();
+    const parts = window.getByTestId('sheets-parts');
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('Assembly map of Gusset');
+    await expect(parts.getByTestId('sheets-taped')).toContainText('Sheets 2–7 · map on sheet 1');
+
+    await window.getByTestId('print').click();
+    const preview = window.getByTestId('print-preview');
+    await expect(preview.getByTestId('print-thumb')).toHaveCount(7);
+    const include = preview.getByTestId('print-include');
+    const submit = preview.getByTestId('print-submit');
+    await expect(submit).toHaveText('Print 7 sheets');
+
+    // Every one of its sheets left out: its map goes with them.
+    for (let i = 1; i <= 6; i++) await include.nth(i).uncheck();
+    await expect(include.nth(0)).not.toBeChecked();
+    // And comes back with the first of them.
+    await include.nth(3).check();
+    await expect(include.nth(0)).toBeChecked();
+    await expect(submit).toHaveText('Print 2 sheets');
   } finally {
     await closeApp(app);
     rmSync(cups.bin, { recursive: true, force: true });

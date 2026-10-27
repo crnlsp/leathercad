@@ -80,8 +80,7 @@ describe('what of each part reaches paper (7.4b)', () => {
     const panel = statuses.get('panel')!;
     expect(panel.sheets).toBe(plan.parts.get('panel'));
     expect(panel.sheets).toMatchObject({ sheets: [1], taped: false });
-    // Sheet 2 is its assembly map (7.2).
-    expect(statuses.get('strap')!.sheets).toMatchObject({ sheets: [3, 4], taped: true });
+    expect(statuses.get('strap')!.sheets).toMatchObject({ sheets: [2, 3], taped: true });
   });
 
   it('says why a part does not print, and agrees with the plan that it does not', () => {

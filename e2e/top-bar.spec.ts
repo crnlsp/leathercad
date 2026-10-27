@@ -139,8 +139,7 @@ const BAR = [
 test('the top bar fits every window, its words shortening with the room (8.7, R-06)', async () => {
   const { app, window } = await launch(fresh());
   try {
-    // On A5 portrait the sample prints on seven sheets — two pieces taped, each
-    // after its assembly map (7.2) — and a changed name adds
+    // On A5 portrait the sample prints on five sheets, and a changed name adds
     // 'Unsaved changes': the widest the bar gets.
     await openSample(window);
     await choosePaper(window, 'A5', 'portrait');
@@ -148,9 +147,9 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
 
     for (const [width, paper, saveWords] of [
-      [1920, '7 × A5 portrait', 'Unsaved changes'],
-      [1024, '7 × A5', 'Unsaved'],
-      [860, '7', ''],
+      [1920, '5 × A5 portrait', 'Unsaved changes'],
+      [1024, '5 × A5', 'Unsaved'],
+      [860, '5', ''],
     ] as const) {
       await resizeWindow(app, window, width, 600);
       const bar = (await window.getByTestId('project-bar').boundingBox())!;
@@ -170,7 +169,7 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
       expect(await shown(window, 'export-pdf')).toBe('Export PDF');
       expect(await shown(window, 'print')).toBe('Print');
       // The switch keeps its icons and the count; the words go at 860 px.
-      expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '7' : 'Sheets 7');
+      expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '5' : 'Sheets 5');
     }
     // A long name gives way in its tab, which says it whole when pointed at (8.12).
     const tab = window.getByTestId('tab-strip').getByRole('tab', { selected: true });
@@ -291,7 +290,7 @@ test('the paper button, the Sheets tab and the job totals count the same sheets 
     await openSample(window);
     for (const [paper, way, count] of [
       ['A4', 'portrait', '2'],
-      ['A5', 'portrait', '7'],
+      ['A5', 'portrait', '5'],
       ['A4', 'landscape', null],
     ] as const) {
       await choosePaper(window, paper, way);

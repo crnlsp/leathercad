@@ -5,8 +5,9 @@ import { pageSetupOf, type PageSetup } from './paper.js';
 import type { ExportPart, ExportScene } from './scene.js';
 
 /**
- * A taped part's assembly sheet (7.2): its tiles drawn small, as a map of
- * which sheet goes where. Never the pattern: nothing on it is to scale.
+ * The assembly sheet of a part taped into a grid (7.2): its tiles drawn
+ * small, as a map of which sheet goes where. Never the pattern: nothing on it
+ * is to scale.
  */
 export interface Assembly {
   readonly part: ExportPart;
@@ -57,8 +58,8 @@ export interface SheetPlan {
   /**
    * The sheets in PDF order: sheet `n` is page `n`. Never empty — a project
    * with nothing to print still exports one sheet carrying the scale check,
-   * so the plan says so too. A taped part's assembly sheet comes just before
-   * its tiles (7.2).
+   * so the plan says so too. A part taped into a grid has an assembly sheet
+   * just before its tiles (7.2).
    */
   readonly sheets: readonly Sheet[];
   /** Keyed by part id. A part absent here does not print. */
@@ -70,13 +71,15 @@ export function planSheets(scene: ExportScene, setup: PageSetup): SheetPlan {
   const pages: readonly Page[] =
     pagination.pages.length > 0 ? pagination.pages : [{ index: 0, placements: [] }];
 
-  // Each taped part's map first, then its tiles, which `paginate` gives in a
-  // run of their own, row by row. Packing does not count the map: a part is
-  // taped or turned exactly as 7.8 decides.
+  // A part taped into a grid gets its map first, then its tiles, which
+  // `paginate` gives in a run of their own, row by row. A strip — one row or
+  // one column — gets none: its edge arrows already say how it joins, and a
+  // map would waste a sheet. Packing does not count the map: a part is taped
+  // or turned exactly as 7.8 decides.
   const sheets: Sheet[] = [];
   for (const page of pages) {
     const tile = page.tile;
-    if (tile?.row === 1 && tile.column === 1) {
+    if (tile?.row === 1 && tile.column === 1 && tile.rows > 1 && tile.columns > 1) {
       const first = sheets.length + 2;
       const tiles = pages
         .flatMap((other) => (other.tile?.part.id === tile.part.id ? [other.tile] : []))

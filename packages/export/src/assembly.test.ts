@@ -1,3 +1,4 @@
+import { EPS_LENGTH } from '@leathercad/core';
 import { DEFAULT_SETTINGS, ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
 import { MatOps, RectOps, type Rect } from '@leathercad/geometry';
 import fc from 'fast-check';
@@ -44,8 +45,6 @@ const mapped = fc
   })
   .filter(({ assembly }) => assembly !== undefined);
 
-const EPS = 1e-6;
-
 describe('the assembly sheet’s map of a taped part (7.2)', () => {
   it('has one cell per tile, named with the sheet the plan prints it on', () => {
     fc.assert(
@@ -86,7 +85,7 @@ describe('the assembly sheet’s map of a taped part (7.2)', () => {
       fc.property(mapped, ({ assembly, regionMm }) => {
         const { cells, placement, scale } = assemblyDiagram(assembly!, regionMm);
         for (const cell of cells)
-          expect(RectOps.containsRect(regionMm, cell.rectMm, EPS)).toBe(true);
+          expect(RectOps.containsRect(regionMm, cell.rectMm, EPS_LENGTH)).toBe(true);
         const all = RectOps.unionAll(cells.map((c) => c.rectMm))!;
         const fill = Math.max(
           RectOps.width(all) / RectOps.width(regionMm),
@@ -100,7 +99,7 @@ describe('the assembly sheet’s map of a taped part (7.2)', () => {
         for (const { tile, sheet } of assembly!.tiles) {
           const cell = cells.find((c) => c.sheet === sheet)!;
           const share = RectOps.transform(cell.rectMm, MatOps.invert(placement));
-          expect(RectOps.containsRect(tile.windowMm, share, EPS)).toBe(true);
+          expect(RectOps.containsRect(tile.windowMm, share, EPS_LENGTH)).toBe(true);
         }
       }),
     );
@@ -116,7 +115,10 @@ describe('the assembly sheet’s map of a taped part (7.2)', () => {
         cells.forEach((a, i) =>
           cells.slice(i + 1).forEach((b) => {
             const overlap = RectOps.intersection(a.rectMm, b.rectMm);
-            expect(overlap === null ? 0 : RectOps.area(overlap)).toBeLessThan(EPS);
+            // Neighbours share an edge, and nothing more.
+            const thinnest =
+              overlap === null ? 0 : Math.min(RectOps.width(overlap), RectOps.height(overlap));
+            expect(thinnest).toBeLessThan(EPS_LENGTH);
           }),
         );
       }),

@@ -51,7 +51,7 @@ const PRINT_TEST: [string, number, number][] = [
 
 describe('the sheet plan, in English', () => {
   it('counts sheets of a paper, as a maker says it', () => {
-    expect(describeSheets(sheetPlanFor(project(PRINT_TEST)), t)).toBe('4 sheets of A4, portrait');
+    expect(describeSheets(sheetPlanFor(project(PRINT_TEST)), t)).toBe('3 sheets of A4, portrait');
     expect(describeSheets(sheetPlanFor(project(PRINT_TEST, { orientation: 'landscape' })), t)).toBe(
       '1 sheet of A4, landscape',
     );
@@ -63,7 +63,7 @@ describe('the sheet plan, in English', () => {
   it('names what is taped, and counts it past two', () => {
     expect(describeTaped(sheetPlanFor(project(PRINT_TEST)), i18n)).toBe('Strap taped');
     expect(describeChoice(sheetPlanFor(project(PRINT_TEST)), i18n)).toBe(
-      '4 sheets of A4, portrait (Strap taped)',
+      '3 sheets of A4, portrait (Strap taped)',
     );
     const long = project([
       ['a', 400, 20],

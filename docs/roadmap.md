@@ -241,21 +241,24 @@ with the packaged app.
   it and naming the sheet beyond — `Sheet 3`, the number the strip's *joins sheet 3 to the right*
   gives. An arrow is the join's grey and solid, so it is never read as a cut line; it stops 2 mm
   short of the join on its own side, so cutting on the line leaves it whole, faces its neighbour's
-  arrow across it, and keeps clear of the registration cross. Each taped part then gets an
-  assembly sheet, just before its tiles: its tiles as a map — each tile's share of the part a cell,
-  the cells meeting at the joins, named with their sheets, over the part's outline in grey — headed
-  *Not to scale: a map of how the sheets join. Never cut from it.* It is the one reduced drawing on
-  paper, and it keeps the rule against scaling to fit: the pattern stays at 1:1 on its tiles, and
-  the map is a picture of the sheets, as printing §7 planned. The map is a sheet of the plan, so
-  the count, Parts and the Sheets view (*Assembly map of Strap*), the Print Preview and the PDF
-  all number it; packing does not count it, so what is turned or taped is as 7.8 decides. Both are
-  drawn by `sheetInk`, so the Sheets view shows what the PDF prints. The print test on A4 portrait
-  is four sheets now, its strap on 3 and 4. Always printed, with no setting: the Print Preview can
-  leave a sheet out. Property tests: arrows on exactly the edges with a neighbour, naming its
-  sheet, one facing pair per join, square to it and short of it, clear of every cross, and inside
-  the clip on every paper; the map has a cell per tile named with the plan's sheet, laid as the
-  sheets lie, without overlap, reduced alike both ways and never mirrored, and its words fit the
-  narrowest sheet. Tape guides are left. Not measured on paper yet.
+  arrow across it, and keeps clear of the registration cross. A part taped into a grid — more than
+  one row and more than one column — then gets an assembly sheet, just before its tiles: its tiles
+  as a map — each tile's share of the part a cell, the cells meeting at the joins, named with their
+  sheets, over the part's outline in grey — headed *Not to scale: a map of how the sheets join.
+  Never cut from it.* A strip gets none: its arrows say it all, and a map would waste a sheet, so
+  the print test still prints three sheets and the sample on A5 portrait five. The map is the one
+  reduced drawing on paper, and it keeps the rule against scaling to fit: the pattern stays at 1:1
+  on its tiles, and the map is a picture of the sheets, as printing §7 planned. It is a sheet of the
+  plan, so the count, Parts (*Sheets 2–7 · map on sheet 1*), the Sheets view (*Assembly map of
+  Gusset*), the Print Preview and the PDF all number it; packing does not count it, so what is
+  turned or taped is as 7.8 decides. It belongs to its part: the Print Preview leaves it out with
+  the last of the part's sheets and puts it back with the first. Arrows and map are drawn by
+  `sheetInk`, so the Sheets view shows what the PDF prints. Property tests: arrows on exactly the
+  edges with a neighbour, naming its sheet, one facing pair per join, square to it and short of it,
+  clear of every cross, and inside the clip on every paper; one map per grid and none for a strip,
+  just before its tiles; the map has a cell per tile named with the plan's sheet, laid as the sheets
+  lie, without overlap, reduced alike both ways and never mirrored, and its words fit the narrowest
+  sheet. Tape guides are left. Not measured on paper yet.
   [Printing §7](printing.md#7-registration-and-assembly-aids).
 - ☐ **7.5 Calibration.** Per-printer correction factors, with a ±2 % guard. The verification
   gauge already shows when a printer is off.

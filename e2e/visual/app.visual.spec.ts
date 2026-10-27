@@ -186,7 +186,7 @@ test('the print test on its sheets (7.4c)', async () => {
 
     await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(
-      '4 sheets of A4, portrait. Strap is taped across sheets 3–4.',
+      '3 sheets of A4, portrait. Strap is taped across sheets 2–3.',
     );
     // The pointer off the canvas: no piece haloed, no sheet named.
     const box = await window.getByTestId('editor-canvas').boundingBox();

@@ -940,16 +940,15 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     const scene = buildExportScene(evaluate(project), project.name);
     const plan = planSheets(scene, pageSetupFor(project.settings));
     const { bytes } = await exportPdf(plan, { now: FIXED_NOW, applicationVersion: 'test' });
-    // Its assembly map, then its two tiles (7.2).
-    expect(plan.sheets).toHaveLength(3);
-    expect(plan.sheets[0]!.assembly).toBeDefined();
-    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(3);
+    const { pagination } = plan;
+    expect(pagination.pages).toHaveLength(2);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);
 
     const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
     /** Black (the strap's edge) and grey (the join line) columns on one row of one sheet. */
     const scan = (pageNumber: number) => {
       const image = render(bytes, pageNumber);
-      const placement = plan.sheets[pageNumber - 1]!.placements[0]!;
+      const placement = pagination.pages[pageNumber - 1]!.placements[0]!;
       // 20 mm up the strap: clear of its name, and of the crosses at the middle.
       const row = Math.round((sheet.heightMm - (placement.offsetMm.y + 20)) * PX_PER_MM);
       const black: number[] = [];
@@ -965,10 +964,10 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
       return { black, grey };
     };
 
-    const first = scan(2);
-    const second = scan(3);
+    const first = scan(1);
+    const second = scan(2);
     const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-    // Sheet 2: the strap's left end, then the join. Sheet 3: the join, then its right end.
+    // Sheet 1: the strap's left end, then the join. Sheet 2: the join, then its right end.
     const leftEnd = Math.min(...first.black);
     const rightEnd = Math.max(...second.black);
     const onFirst = (mean(first.grey) - leftEnd) / PX_PER_MM;
@@ -988,10 +987,10 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
       pageSetupFor(project.settings),
     );
     const { bytes } = await exportPdf(plan, { now: FIXED_NOW, applicationVersion: 'test' });
-    const [label] = sheetInk(plan, 1, FIXED_NOW()).clippedTexts;
-    expect(label!.source).toBe('Sheet 3');
+    const [label] = sheetInk(plan, 0, FIXED_NOW()).clippedTexts;
+    expect(label!.source).toBe('Sheet 2');
     const box = RectOps.unionAll(label!.glyphs.map((g) => PathOps.bbox(g)!))!;
-    const image = render(bytes, 2);
+    const image = render(bytes, 1);
     const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
     let dark = 0;
     for (let y = box.minY; y <= box.maxY; y += 0.1) {
@@ -1004,11 +1003,19 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     expect(dark).toBeGreaterThan(50);
   });
 
-  it('prints the gauge on every tiled sheet, and on its assembly sheet', async () => {
+  it('prints a grid’s assembly sheet first, with its gauge true (7.2)', async () => {
+    // 400 × 300 on A4 portrait: taped 2 × 3, after its map.
+    const project = projectWithRect(400, 300);
+    const bytes = await pdfFor(project);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(7);
+    expectGauge(gaugeOn(render(bytes, 1), pageSetupFor(project.settings)));
+  });
+
+  it('prints the gauge on every tiled sheet', async () => {
     const project = projectWithRect(275, 100);
     const bytes = await pdfFor(project);
     const setup = pageSetupFor(project.settings);
-    for (const pageNumber of [1, 2, 3]) expectGauge(gaugeOn(render(bytes, pageNumber), setup));
+    for (const pageNumber of [1, 2]) expectGauge(gaugeOn(render(bytes, pageNumber), setup));
   });
 
   it('keeps the pattern clear of the verification strip', () => {

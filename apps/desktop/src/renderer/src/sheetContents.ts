@@ -53,6 +53,8 @@ export interface TapedPiece {
   readonly sheets: readonly number[];
   readonly rows: number;
   readonly columns: number;
+  /** The sheet its assembly map prints on (7.2): taped into a grid only. */
+  readonly map: number | null;
 }
 
 /** What the plan tapes, in the order it reports it. */
@@ -63,7 +65,13 @@ export function tapedPieces(plan: SheetPlan): readonly TapedPiece[] {
     sheets: plan.parts.get(entry.part.id)?.sheets ?? [],
     rows: entry.rows,
     columns: entry.columns,
+    map: mapOf(plan, entry.part.id),
   }));
+}
+
+function mapOf(plan: SheetPlan, partId: string): number | null {
+  const sheet = plan.sheets.find((one) => one.assembly?.part.id === partId);
+  return sheet === undefined ? null : sheet.index + 1;
 }
 
 /** Where one piece prints, or null when it does not (hidden, empty, failed). */
