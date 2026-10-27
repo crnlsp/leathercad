@@ -33,11 +33,11 @@ allowBuilds:
 # Versions forced past what a dependency pins, each for a known vulnerability
 # that osv-scanner reports. Remove one when the dependency's own pin moves on.
 overrides:
-  # GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx. Pinned to
-  # exactly 6.15.1 by typed-rest-client, which Stryker uses only to upload to
-  # its dashboard, a reporter this project does not enable. 6.16.0 is the
-  # fixed minor.
-  'typed-rest-client>qs': 6.16.0
+  # GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx,
+  # GHSA-6pq8-jhm2-2vcw. Pinned to exactly 6.15.1 by typed-rest-client, which
+  # Stryker uses only to upload to its dashboard, a reporter this project does
+  # not enable. 6.16.1 fixes all four.
+  'typed-rest-client>qs': 6.16.1
   # GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr. minimatch
   # 10.2.6, the newest 10.x, asks for ^5.0.8 and resolved 5.0.9; 5.0.12 fixes
   # all three. This raises the floor inside the range minimatch already
