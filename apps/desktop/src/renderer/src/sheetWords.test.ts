@@ -51,7 +51,7 @@ const PRINT_TEST: [string, number, number][] = [
 
 describe('the sheet plan, in English', () => {
   it('counts sheets of a paper, as a maker says it', () => {
-    expect(describeSheets(sheetPlanFor(project(PRINT_TEST)), t)).toBe('3 sheets of A4, portrait');
+    expect(describeSheets(sheetPlanFor(project(PRINT_TEST)), t)).toBe('4 sheets of A4, portrait');
     expect(describeSheets(sheetPlanFor(project(PRINT_TEST, { orientation: 'landscape' })), t)).toBe(
       '1 sheet of A4, landscape',
     );
@@ -63,7 +63,7 @@ describe('the sheet plan, in English', () => {
   it('names what is taped, and counts it past two', () => {
     expect(describeTaped(sheetPlanFor(project(PRINT_TEST)), i18n)).toBe('Strap taped');
     expect(describeChoice(sheetPlanFor(project(PRINT_TEST)), i18n)).toBe(
-      '3 sheets of A4, portrait (Strap taped)',
+      '4 sheets of A4, portrait (Strap taped)',
     );
     const long = project([
       ['a', 400, 20],
@@ -157,6 +157,7 @@ describe('the Sheets view in English (U.9)', () => {
     expect(words.turned(['Outer', 'Pocket'])).toBe('Outer and Pocket, turned 90°');
     expect(words.taped('Strap', [2, 3])).toBe('Strap · Sheets 2–3, taped');
     expect(words.taped('Strap', [2])).toBe('Strap · Sheet 2, taped');
+    expect(words.assembly(2, 4, 'Strap')).toBe('Sheet 2 of 4 · Assembly map of Strap');
   });
 
   it('says the numbers alone for a labelled field', () => {

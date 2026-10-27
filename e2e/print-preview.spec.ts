@@ -103,14 +103,15 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
     const preview = window.getByTestId('print-preview');
     await expect(preview).toBeVisible();
 
-    // The PDF itself, drawn by pdf.js: three sheets, and the first one large.
-    await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
+    // The PDF itself, drawn by pdf.js: four sheets — the strap's assembly map
+    // among them (7.2) — and the first one large.
+    await expect(preview.getByTestId('print-thumb')).toHaveCount(4);
     await expect
       .poll(() => preview.getByTestId('print-page').locator('canvas').evaluate(inkOn))
       .toBeGreaterThan(1000);
 
     await expect(preview.getByTestId('print-printer')).toHaveValue('LeatherCAD_Test');
-    await expect(preview.getByTestId('print-summary')).toHaveText('3 sheets of A4, portrait');
+    await expect(preview.getByTestId('print-summary')).toHaveText('4 sheets of A4, portrait');
     await expect(preview.getByTestId('print-scale')).toHaveText('100 % — locked');
     await expect(preview.getByTestId('print-no-scaling')).toContainText('No scaling');
     await expect(preview.getByTestId('export-tiled')).toContainText('Strap');
@@ -119,14 +120,15 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
     await expect(preview.locator('.print-options').locator('select, input')).toHaveCount(5);
 
     const submit = preview.getByTestId('print-submit');
-    await expect(submit).toHaveText('Print 3 sheets');
+    await expect(submit).toHaveText('Print 4 sheets');
     await expect(submit).toHaveClass(/primary/);
 
+    // A maker who needs no map leaves it out.
     await preview.getByTestId('print-include').nth(1).uncheck();
-    await expect(submit).toHaveText('Print 2 sheets');
+    await expect(submit).toHaveText('Print 3 sheets');
     await preview.getByLabel('Copies').fill('2');
     await preview.getByLabel('Copies').press('Enter');
-    await expect(submit).toHaveText('Print 2 sheets × 2');
+    await expect(submit).toHaveText('Print 3 sheets × 2');
 
     await submit.click();
     await expect(preview.getByTestId('print-result')).toHaveText(
@@ -142,7 +144,7 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
       '-n',
       '2',
       '-P',
-      '1,3',
+      '1,3-4',
       '-o',
       'media=A4',
       '-o',

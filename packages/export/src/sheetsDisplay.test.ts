@@ -26,7 +26,8 @@ describe('tape joins on the design board (7.4b)', () => {
     // A 275 mm strap at (40, 300) on the board: A4 portrait tapes it across
     // two sheets with one vertical join.
     const plan = planSheets(scene([part('strap', 275, 20, 40, 300)]), DEFAULT_PAGE_SETUP);
-    const joinX = plan.sheets[0]!.tile!.joinsMm.x;
+    // Sheet 1 is its assembly map; its tiles follow (7.2).
+    const joinX = plan.sheets[1]!.tile!.joinsMm.x;
     expect(joinX).toHaveLength(1);
 
     const lines = tapeJoins(plan).items.filter((item) => item.kind === 'path');
@@ -166,10 +167,11 @@ describe('the Sheets view (7.4c)', () => {
       .flatMap((layer) => layer.list.items)
       .flatMap((item) => (item.kind === 'overlay-text' ? [item.text] : []));
     expect(labels).toEqual([
-      'Sheet 1 of 3',
-      'Sheet 2 of 3',
-      'Sheet 3 of 3',
-      'strap, taped: sheets 2–3',
+      'Sheet 1 of 4',
+      'Sheet 2 of 4',
+      'Sheet 3 of 4',
+      'Sheet 4 of 4',
+      'strap, taped: sheets 3–4',
     ]);
   });
 
@@ -211,15 +213,18 @@ describe('the Sheets view (7.4c)', () => {
         `S${String(n)}/${String(count)}:${String(pieces)}`,
       turned: (names: readonly string[]) => `${names.join('+')} turned`,
       taped: (name: string, sheets: readonly number[]) => `${name} taped ${sheets.join('+')}`,
+      assembly: (n: number, count: number, name: string) =>
+        `S${String(n)}/${String(count)}:map of ${name}`,
     };
     const labels = sheetsView(plan, layout, { now: NOW, words })
       .flatMap((layer) => layer.list.items)
       .flatMap((item) => (item.kind === 'overlay-text' ? [item] : []));
     expect(labels.map((item) => item.text)).toEqual([
-      'S1/3:1',
-      'S2/3:1',
-      'S3/3:1',
-      'strap taped 2+3',
+      'S1/4:1',
+      'S2/4:map of strap',
+      'S3/4:1',
+      'S4/4:1',
+      'strap taped 3+4',
     ]);
     // Readable on the sheets' ground: the board's 12 px voice at 600 (R-01).
     for (const item of labels) {
@@ -244,6 +249,7 @@ describe('the Sheets view (7.4c)', () => {
       sheet: () => '',
       turned: (names: readonly string[]) => `${names.join('+')} turned`,
       taped: () => '',
+      assembly: () => '',
     };
     const layout5 = layoutSheets(a5);
     const caption = (given?: typeof words) =>
@@ -269,7 +275,7 @@ describe('the Sheets view (7.4c)', () => {
     const clipped = layers.filter((layer) => layer.clipMm !== null);
     expect(clipped).toHaveLength(2);
     const area = contentAreaMm(DEFAULT_PAGE_SETUP);
-    const frame = layout.frames[1]!;
+    const frame = layout.frames[2]!;
     expect(clipped[0]!.clipMm).toEqual({
       minX: frame.origin.x + area.x,
       minY: frame.origin.y + area.y,

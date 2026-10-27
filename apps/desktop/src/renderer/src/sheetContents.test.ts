@@ -15,20 +15,24 @@ describe('the Sheets view reads the sheet plan, and nothing else (U.9, 7.4a)', (
     const plan = sheetPlanFor(printTest());
     const sheets = sheetContents(plan);
     expect(sheets.map((sheet) => [sheet.number, sheet.count])).toEqual([
-      [1, 3],
-      [2, 3],
-      [3, 3],
+      [1, 4],
+      [2, 4],
+      [3, 4],
+      [4, 4],
     ]);
     expect(sheets[0]!.pieces.map((piece) => piece.name)).toEqual(['Outer panel', 'Pocket']);
-    // The strap is taped: its two tiles are on sheets 2 and 3.
-    expect(sheets[1]!.pieces.map((piece) => [piece.name, piece.taped])).toEqual([['Strap', true]]);
+    // The strap is taped: its map is sheet 2, placing no piece (7.2), and its
+    // two tiles are on sheets 3 and 4.
+    expect(sheets.map((sheet) => sheet.assemblyOf)).toEqual([null, 'Strap', null, null]);
+    expect(sheets[1]!.pieces).toEqual([]);
     expect(sheets[2]!.pieces.map((piece) => [piece.name, piece.taped])).toEqual([['Strap', true]]);
+    expect(sheets[3]!.pieces.map((piece) => [piece.name, piece.taped])).toEqual([['Strap', true]]);
   });
 
   it('lists what the plan tapes, and where', () => {
     const plan = sheetPlanFor(printTest());
     expect(tapedPieces(plan).map((entry) => [entry.name, entry.sheets])).toEqual([
-      ['Strap', [2, 3]],
+      ['Strap', [3, 4]],
     ]);
   });
 

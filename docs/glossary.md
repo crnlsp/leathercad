@@ -187,8 +187,15 @@ instruction to print at 100 % in it, what the sheet is beside it, and LeatherCAD
 sheets (7.8). Parts says *Sheet 1, turned* on the Sheets view.
 
 **Taped piece** — A part too large for the printable area, printed as tiles across several sheets
-that overlap by 10 mm and are taped together on their join lines. Its sheets are "Sheets 2–3,
-taped".
+that overlap by 10 mm and are taped together on their join lines. Its sheets are "Sheets 3–4,
+taped", after its **assembly sheet**.
+
+**Assembly sheet** — The sheet printed just before a taped piece's tiles: a map of them, not to
+scale, each cell named with its sheet (7.2). The one drawing on paper that is reduced; nothing is
+cut from it.
+
+**Edge arrow** — On a taped piece's sheet, the arrow at a join naming the sheet that joins there
+(7.2).
 
 **Sheet plan** — The derived result of paginating the export scene for the chosen paper: which
 sheets exist and what each carries. Recomputed from the document, never stored. The PDF writes it;

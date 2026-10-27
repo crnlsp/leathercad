@@ -27,6 +27,8 @@ export interface SheetContents {
   readonly number: number;
   readonly count: number;
   readonly pieces: readonly SheetPiece[];
+  /** On a taped piece's assembly sheet (7.2), that piece's name; it places none. */
+  readonly assemblyOf: string | null;
 }
 
 export function sheetContents(plan: SheetPlan): readonly SheetContents[] {
@@ -40,6 +42,7 @@ export function sheetContents(plan: SheetPlan): readonly SheetContents[] {
       turned: placement.turned,
       taped: sheet.tile !== undefined,
     })),
+    assemblyOf: sheet.assembly?.part.name ?? null,
   }));
 }
 

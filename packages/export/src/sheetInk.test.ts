@@ -1,4 +1,4 @@
-import { PathOps, RectOps } from '@leathercad/geometry';
+import { PathOps, RectOps, polyline } from '@leathercad/geometry';
 import { ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -20,7 +20,21 @@ function part(id: string, widthMm: number, heightMm: number): ExportPart {
     name: id,
     quantity: 1,
     boundsMm: RectOps.fromCorners({ x: 0, y: 0 }, { x: widthMm, y: heightMm }),
-    paths: [{ role: 'cut', style: PRINT_STYLES.cut, path: { segments: [], closed: true } }],
+    paths: [
+      {
+        role: 'cut',
+        style: PRINT_STYLES.cut,
+        path: polyline(
+          [
+            { x: 0, y: 0 },
+            { x: widthMm, y: 0 },
+            { x: widthMm, y: heightMm },
+            { x: 0, y: heightMm },
+          ],
+          true,
+        ),
+      },
+    ],
     texts: [],
   };
 }
@@ -48,7 +62,9 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
 
   it('draws the gauge where the layout reserves it, on every sheet', () => {
     const layout = verificationLayout(DEFAULT_PAGE_SETUP);
-    plan.sheets.forEach((_, i) => {
+    plan.sheets.forEach((planned, i) => {
+      // An assembly sheet's map is in its printable area: below, on its own.
+      if (planned.assembly !== undefined) return;
       const { paths, texts } = sheetInk(plan, i, NOW);
       const boxes = paths.map((p) => PathOps.bbox(p.path)!);
       // The gauge is one closed path, exactly 100 × 10 mm.
@@ -81,8 +97,8 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
       DEFAULT_PAGE_SETUP,
     );
     const layout = verificationLayout(DEFAULT_PAGE_SETUP);
-    const [, identity] = sheetInk(long, 0, NOW).texts;
-    expect(identity!.source).toContain('· Sheet 1 of 2 · ');
+    const [, identity] = sheetInk(long, 1, NOW).texts;
+    expect(identity!.source).toContain('· Sheet 2 of 3 · ');
     expect(identity!.source).toContain('…');
     const glyphs = RectOps.unionAll(identity!.glyphs.map((g) => PathOps.bbox(g)!))!;
     expect(glyphs.minX).toBeGreaterThanOrEqual(layout.lines.x - layout.textMaxWidthMm - 1e-9);
@@ -94,7 +110,7 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
     expect(packed.clipped).toEqual([]);
     expect(packed.clippedTexts).toEqual([]);
 
-    const tiled = sheetInk(plan, 1, NOW);
+    const tiled = sheetInk(plan, 2, NOW);
     const area = contentAreaMm(DEFAULT_PAGE_SETUP);
     expect(tiled.clip).toEqual({
       minX: area.x,
@@ -112,16 +128,61 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
     expect(crosses).toHaveLength(2);
     expect(arrow).toHaveLength(2);
     expect(arrow[0]!.style.grey).toBe(joins[0]!.style.grey);
-    expect(tiled.clippedTexts.map((t) => t.source)).toEqual(['Sheet 3']);
-    expect(sheetInk(plan, 2, NOW).clippedTexts.map((t) => t.source)).toEqual(['Sheet 2']);
+    expect(tiled.clippedTexts.map((t) => t.source)).toEqual(['Sheet 4']);
+    expect(sheetInk(plan, 3, NOW).clippedTexts.map((t) => t.source)).toEqual(['Sheet 3']);
     // Which sheet it joins, and where: the dashed line and its crosses say how.
     expect(tiled.texts.map((t) => t.source)).toEqual([
       'Print at 100 % / Actual size — this box is 100 × 5 mm',
-      'Wallet · Sheet 2 of 3 · strap, joins sheet 3 to the right',
+      'Wallet · Sheet 3 of 4 · strap, joins sheet 4 to the right',
       '2026-09-24 · 1:1 · LeatherCAD',
     ]);
-    expect(sheetInk(plan, 2, NOW).texts[1]!.source).toBe(
-      'Wallet · Sheet 3 of 3 · strap, joins sheet 2 to the left',
+    expect(sheetInk(plan, 3, NOW).texts[1]!.source).toBe(
+      'Wallet · Sheet 4 of 4 · strap, joins sheet 3 to the left',
+    );
+  });
+
+  it('maps a taped part on its assembly sheet, saying it is not to scale (7.2)', () => {
+    const map = sheetInk(plan, 1, NOW);
+    expect(map.clip).toBeNull();
+    expect(map.clipped).toEqual([]);
+    expect(map.texts.map((t) => t.source)).toEqual([
+      'Print at 100 % / Actual size — this box is 100 × 5 mm',
+      'Wallet · Sheet 2 of 4 · strap, assembly map of sheets 3–4',
+      '2026-09-24 · 1:1 · LeatherCAD',
+      'strap · assembly map of sheets 3–4',
+      'Not to scale: a map of how the sheets join. Never cut from it.',
+      'Cut each sheet on its dashed line, lay it over the next and match the crosses.',
+      'Sheet 3',
+      'Sheet 4',
+    ]);
+    // The gauge and its 19 ticks, a cell for each tile, and the strap's
+    // outline in grey — the one thing on paper drawn smaller than it is.
+    const drawn = map.paths.slice(20);
+    expect(drawn.filter((p) => p.style.grey === 0)).toHaveLength(2);
+    expect(drawn.filter((p) => p.style.grey > 0)).toHaveLength(1);
+  });
+
+  it('keeps an assembly sheet’s map and words in its printable area, on every paper (7.2)', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...SETUPS),
+        fc.double({ min: 30, max: 1200, noNaN: true }),
+        fc.double({ min: 30, max: 1200, noNaN: true }),
+        (setup, widthMm, heightMm) => {
+          const taped = planSheets(scene([part('p', widthMm, heightMm)]), setup);
+          const area = contentAreaMm(setup);
+          const printable = RectOps.fromOriginSize(area, area.widthMm, area.heightMm);
+          taped.sheets.forEach((sheet, i) => {
+            if (sheet.assembly === undefined) return;
+            const { paths, texts } = sheetInk(taped, i, NOW);
+            const boxes = [
+              ...paths.slice(20).map((p) => PathOps.bbox(p.path)!),
+              ...texts.slice(3).flatMap((t) => t.glyphs.map((g) => PathOps.bbox(g)!)),
+            ];
+            for (const box of boxes) expect(RectOps.containsRect(printable, box)).toBe(true);
+          });
+        },
+      ),
     );
   });
 

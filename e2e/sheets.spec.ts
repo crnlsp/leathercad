@@ -124,15 +124,17 @@ test('Parts groups the pieces by sheet, lists what is taped, and says why a part
     await expect(window.getByTestId('sheets-parts')).toHaveCount(0);
     await window.getByTestId('view-sheets').click();
     const parts = window.getByTestId('sheets-parts');
-    await expect(parts.getByTestId('parts-count')).toHaveText('3 sheets');
-    await expect(parts.getByTestId('sheets-group-1')).toContainText('Sheet 1 of 3');
+    await expect(parts.getByTestId('parts-count')).toHaveText('4 sheets');
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('Sheet 1 of 4');
     await expect(parts.getByTestId('sheets-group-1')).toContainText('2 pieces');
     await expect(parts.getByTestId('sheets-group-1')).toContainText('Outer panel');
     await expect(parts.getByTestId('sheets-group-1')).toContainText('Pocket');
-    await expect(parts.getByTestId('sheets-group-2')).toContainText('Strap');
+    // Sheet 2 maps how the strap's sheets join (7.2); they follow it.
+    await expect(parts.getByTestId('sheets-group-2')).toContainText('Assembly map of Strap');
     await expect(parts.getByTestId('sheets-group-3')).toContainText('Strap');
+    await expect(parts.getByTestId('sheets-group-4')).toContainText('Strap');
     await expect(parts.getByTestId('sheets-taped')).toContainText('Strap');
-    await expect(parts.getByTestId('sheets-taped')).toContainText('Sheets 2–3');
+    await expect(parts.getByTestId('sheets-taped')).toContainText('Sheets 3–4');
 
     // Turned, everything fits whole on one sheet, and nothing is taped.
     await choosePaper(window, 'A4', 'landscape');
@@ -176,14 +178,14 @@ test('the board shows where a taped piece joins, and the joins never reach paper
     await choosePaper(window, 'A4', 'landscape');
     await expect.poll(() => furniturePixels(canvas)).toBe(0);
 
-    // Back on A4 portrait, the PDF has the three sheets the plan promised, all
+    // Back on A4 portrait, the PDF has the four sheets the plan promised, all
     // ink: the board's magenta join is screen furniture and prints as grey.
     await window.getByTestId('undo').click();
     await expect.poll(() => furniturePixels(canvas)).toBeGreaterThan(40);
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
     await expect(window.getByTestId('export-notice')).toBeVisible();
-    expect(pageCount(pdf)).toBe(3);
+    expect(pageCount(pdf)).toBe(4);
     expect(hasColour(pdf)).toBe(false);
   });
 });
@@ -200,7 +202,7 @@ test('the Sheets view shows the plan, and changing the paper changes it (7.4c)',
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
     await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
     await expect(window.getByTestId('sheets-summary')).toHaveText(
-      '3 sheets of A4, portrait. Strap is taped across sheets 2–3.',
+      '4 sheets of A4, portrait. Strap is taped across sheets 3–4.',
     );
     // No tool acts on paper: Draw as and the tool hint make way for the plan,
     // and the rail shows Select.
@@ -214,10 +216,10 @@ test('the Sheets view shows the plan, and changing the paper changes it (7.4c)',
     await expect(window.getByTestId('sheets-summary')).toHaveText('1 sheet of A4, landscape.');
     await expect.poll(() => canvasImage(canvas)).not.toBe(before);
 
-    // One undo step brings the three sheets back.
+    // One undo step brings the four sheets back.
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(
-      '3 sheets of A4, portrait. Strap is taped across sheets 2–3.',
+      '4 sheets of A4, portrait. Strap is taped across sheets 3–4.',
     );
   });
 });
@@ -241,7 +243,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
 
     // Properties: the paper and what it comes to, then the reminder.
     const props = window.getByTestId('sheets-properties');
-    await expect(props.getByTestId('sheets-count')).toContainText('3');
+    await expect(props.getByTestId('sheets-count')).toContainText('4');
     await expect(props.getByTestId('sheets-scale')).toContainText('100 % · locked');
     await expect(props.getByTestId('sheets-measure')).toHaveText(
       'After printing, measure the 100 × 5 mm box at the foot of a sheet.',
@@ -251,7 +253,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     // Pick a piece from its row: the sheet, the placement and the fit.
     await pieceRow(window, 'Pocket').click();
     await expect(props.getByTestId('sheets-piece')).toContainText('Pocket');
-    await expect(props.getByTestId('sheets-piece-sheet')).toHaveText('Sheet1 of 3');
+    await expect(props.getByTestId('sheets-piece-sheet')).toHaveText('Sheet1 of 4');
     await expect(props.getByTestId('sheets-piece-placement')).toHaveText('PlacementAs drawn');
     await expect(props.getByTestId('sheets-piece-fit')).toHaveText('Fits one sheet, no tape');
     await window.getByTestId('view-design').click();
@@ -320,7 +322,7 @@ function readout(window: Page): Locator {
 
 /**
  * Where a sheet is on screen, found the way a maker would: by pointing and
- * reading the status bar's "Sheet 2 of 3".
+ * reading the status bar's "Sheet 3 of 4".
  */
 async function sheetBox(
   window: Page,
@@ -383,17 +385,17 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     const strapRow = pieceRow(window, 'Strap');
 
     // 1. The paper says what it will print, before anything is exported.
-    await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
+    await expect(paper).toHaveAccessibleName('Paper: 4 × A4 portrait');
 
     // 2. The sheets: the same answer, in pictures and in words — and Parts
     //    says where each piece prints, as Design's no longer does (U.8).
     await window.getByTestId('view-sheets').click();
-    await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
-    await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 2–3');
+    await expect(summary).toHaveText('4 sheets of A4, portrait. Strap is taped across sheets 3–4.');
+    await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 3–4');
 
-    // 3. Pointing at the strap on sheet 2: the status bar names the sheet,
-    //    Parts lights the strap's row, and a click selects the strap.
-    const second = await sheetBox(window, 'Sheet 2 of 3');
+    // 3. Pointing at the strap on sheet 3, after its map: the status bar
+    //    names the sheet, Parts lights the strap's row, and a click selects it.
+    const second = await sheetBox(window, 'Sheet 3 of 4');
     const width = second.right - second.left;
     const height = second.bottom - second.top;
     // The strap's tile is centred on the printable area, which on A4 portrait
@@ -405,8 +407,8 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
       found = /hovered/.test((await strapRow.getAttribute('class')) ?? '');
       if (found) target.y += dy;
     }
-    expect(found, 'the strap on sheet 2 lights its Parts row').toBe(true);
-    await expect(readout(window)).toHaveText('Sheet 2 of 3');
+    expect(found, 'the strap on sheet 3 lights its Parts row').toBe(true);
+    await expect(readout(window)).toHaveText('Sheet 3 of 4');
     await window.mouse.click(target.x, target.y);
     // Its outline is selected, as a click on the board would select it, Parts
     // lights its row, and Properties says where it prints (U.9).
@@ -414,7 +416,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await expect(window.getByTestId('selected-count')).toHaveText('1');
     const strapOnPaper = window.getByTestId('sheets-piece');
     await expect(strapOnPaper).toContainText('Strap');
-    await expect(window.getByTestId('sheets-piece-sheet')).toHaveText('Sheets2–3 of 3');
+    await expect(window.getByTestId('sheets-piece-sheet')).toHaveText('Sheets3–4 of 4');
     await expect(window.getByTestId('sheets-piece-placement')).toHaveText('PlacementTaped');
 
     // Dragging it moves nothing, and says why.
@@ -426,7 +428,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     );
     await window.mouse.up();
     await expect(window.getByTestId('sheets-notice')).toHaveCount(0);
-    await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
+    await expect(summary).toHaveText('4 sheets of A4, portrait. Strap is taped across sheets 3–4.');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // The selection is the board's too.
@@ -448,19 +450,19 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await window.mouse.up();
     // A move is an edit: undo has something to undo.
     await expect(window.getByTestId('undo')).toBeEnabled();
-    await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
+    await expect(paper).toHaveAccessibleName('Paper: 4 × A4 portrait');
 
     // 5. Nor does the window's size.
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
     await window.getByTestId('view-sheets').click();
-    await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
-    await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 2–3');
+    await expect(summary).toHaveText('4 sheets of A4, portrait. Strap is taped across sheets 3–4.');
+    await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 3–4');
 
-    // 6. Export: the PDF is the plan that was shown — three A4 portrait sheets.
+    // 6. Export: the PDF is the plan that was shown — four A4 portrait sheets.
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
     await expect(window.getByTestId('export-notice')).toBeVisible();
-    expect(pageCount(pdf)).toBe(3);
+    expect(pageCount(pdf)).toBe(4);
     const info = execFileSync('pdfinfo', [pdf], { encoding: 'utf8' });
     expect(info).toMatch(/Page size:\s+595\.276 x 841\.89 pts/);
     expect(hasColour(pdf)).toBe(false);

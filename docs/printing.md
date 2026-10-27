@@ -3,7 +3,7 @@
 **Package:** `packages/export` (`packages/print` is reserved, not created)
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-10-17
+**Last updated:** 2026-10-27
 
 ---
 
@@ -379,6 +379,29 @@ For tiled output, the difference between a usable pattern and a jigsaw puzzle.
   are true millimetres, from `PAPER_FURNITURE.edgeArrow` in `packages/render/src/theme/`; the
   placement is `edgeArrows`, in `packages/export/src/edgeArrows.ts`. Drawn by `sheetInk`, so the
   PDF, the Print Preview and the Sheets view all show them, inside the tile's clip.
+- **An assembly sheet (7.2)** for each taped part, just before its tiles: a map of which sheet goes
+  where. Headed with the part and its sheets — `Strap · assembly map of sheets 3–4` — and, in so
+  many words, *Not to scale: a map of how the sheets join. Never cut from it.* with the one-line
+  way to join them. Below that, each tile's share of the part — from the join on one side to the
+  join on the other, or to the edge of its window where it has none — is a cell, the cells meeting
+  where the maker cuts, each named with its sheet in its top left corner, over the part's outline
+  in the join's grey. It carries the verification strip like every sheet, its line saying
+  `Strap, assembly map of sheets 3–4`. `assemblyDiagram` (`packages/export/src/assembly.ts`) is
+  the map's maths; `sheetInk` draws it.
+  - **The one reduced drawing on paper, and why that keeps the rule.** The map is drawn smaller by
+    one factor, chosen to fill the printable area below its heading. That is not scaling content to
+    fit a page (§5.3): the pattern itself is always on its tiles at 1:1, and the map is not the
+    pattern but a picture of the sheets — the "thumbnail of the whole pattern with the tile grid
+    over it" this section planned — said in words to be not to scale, drawn in grey and black
+    lines with no stitch line, hole or caption a maker could cut or punch from.
+  - **A sheet of the plan.** The assembly sheet is one of `SheetPlan.sheets` (`Sheet.assembly`),
+    added by `planSheets` around `paginate`'s pages, so the sheet count, Parts, the Sheets view, the
+    Print Preview and the PDF all count it and number it. A part's own sheets (`PartSheets`) are
+    still its tiles. Packing does not count it: a part is turned or taped exactly as §5.5 decides,
+    and the map follows.
+  - **Always printed**, for every taped part, even a 1 × 2 strap whose arrows say as much: there is
+    no setting, by the rule that the Sheets view has no layout controls. The Print Preview can leave
+    any sheet out.
 - **Not yet:** tape guides.
 
 The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
@@ -395,7 +418,8 @@ only when it fits whole neither way (§5.5).
   neighbour's sheet number, as above.*
 - **Assembly sheet** as page 1 when there is more than one tile: a thumbnail of the whole pattern
   with the tile grid drawn over it and each cell labelled. Cheap to produce and it removes almost
-  all of the confusion of tiled printing.
+  all of the confusion of tiled printing. *Built in 7.2, one for each taped part, before its
+  tiles, as above.*
 - **Fold/tape guides**: a 5 mm dotted line at the outer edge of the overlap band marking where to
   apply tape without covering pattern lines.
 
@@ -472,8 +496,8 @@ release, and at the end of every slice that touches export or printing:
 
 1. Open `fixtures/projects/print-test.lcp` — a panel with a 100.0 mm dimension and a stitch line all
    round, a card pocket with a thumb scoop stitched on three sides, and a 275 mm strap tiled over two
-   sheets.
-2. Print it from the app: **Print**, then *Print 3 sheets* in its preview (§13). Where the app
+   sheets after its assembly sheet.
+2. Print it from the app: **Print**, then *Print 4 sheets* in its preview (§13). Where the app
    cannot print (Windows), *Save PDF…* there, and print from the system's PDF viewer at 100 %,
    actual size.
 3. Measure with a **steel rule** (not a tape), and record the readings, following the procedure in

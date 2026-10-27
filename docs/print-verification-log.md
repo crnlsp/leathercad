@@ -46,18 +46,21 @@ default PDF viewer.
 
 1. **Open** `fixtures/projects/print-test.lcp` in the LeatherCAD build under test. Note the version
    in the status bar. The project is on A4 portrait, and the paper button beside *Export PDF* says
-   *3 × A4 portrait* (before 1.5, the paper list said *3 sheets of A4, portrait (Strap taped)*).
+   *4 × A4 portrait* (before 1.6, *3 × A4 portrait*: 7.2 added the strap's assembly sheet; before
+   1.5, the paper list said *3 sheets of A4, portrait (Strap taped)*).
    If the printer holds Letter, choose *Letter* in its popover first — the layout changes, the
    measurements do not.
-2. **Look at the Sheets view** (*Sheets*, or Ctrl+2) and note what it shows: three sheets, the
-   panel and the pocket on sheet 1, the strap across sheets 2 and 3 with a dashed join. Since 7.4c
+2. **Look at the Sheets view** (*Sheets*, or Ctrl+2) and note what it shows: four sheets, the
+   panel and the pocket on sheet 1, the strap's assembly map on sheet 2, and the strap across
+   sheets 3 and 4 with a dashed join and an arrow either side of it naming the other. Since 7.4c
    the Sheets view and the PDF are drawn from one sheet plan; the paper must match it.
-3. **Print** (Ctrl+P). The preview shows the same three sheets, *100 % — locked* and *No scaling*.
-   Choose the printer and *Print 3 sheets*. On Windows the preview's last step is *Save PDF…*:
+3. **Print** (Ctrl+P). The preview shows the same four sheets, *100 % — locked* and *No scaling*.
+   Choose the printer and *Print 4 sheets*. On Windows the preview's last step is *Save PDF…*:
    save it and print it from the system's PDF viewer, at *Actual size* / *100 %* — not *Fit*,
    not *Shrink oversized pages* — and note the viewer and the exact name of the setting chosen.
-4. Three sheets come out, the words at their foot reading *Sheet 1 of 3*, *Sheet 2 of 3* and
-   *Sheet 3 of 3*, each carrying what the Sheets view showed on it.
+4. Four sheets come out, the words at their foot reading *Sheet 1 of 4* to *Sheet 4 of 4*, each
+   carrying what the Sheets view showed on it. Sheet 2 is the map, marked *Not to scale*: nothing
+   on it is measured but its gauge.
 5. **Measure**, each to the nearest half millimetre:
 
    | # | Where | What | Expected |
@@ -68,8 +71,8 @@ default PDF viewer.
    | D | Sheet 1, under the panel | The dimension marked *100.0*, arrowhead tip to arrowhead tip | 100.0 mm |
    | E | Sheet 1, *Outer panel* | Its bottom row of holes, centre of the first to centre of the last: 25 holes, 24 gaps | 93.0 mm |
    | F | Sheet 1, *Outer panel* | The same row, hole 1 to hole 11: 10 gaps | 38.75 mm |
-   | G | Sheets 2 + 3, *Strap* | Cut sheet 2 along its dashed line, lay it on sheet 3 with the crosses and the dashed lines together, tape it; then the strap end to end | 275.0 mm |
-   | H | Sheets 2 + 3, *Strap* | Its width, and whether its edges cross the join without a step | 25.0 mm, no step |
+   | G | Sheets 3 + 4, *Strap* | Cut sheet 3 along its dashed line, lay it on sheet 4 with the crosses and the dashed lines together, tape it; then the strap end to end | 275.0 mm |
+   | H | Sheets 3 + 4, *Strap* | Its width, and whether its edges cross the join without a step | 25.0 mm, no step |
 
    Measure the holes on **the straight bottom run**, as E and F say. The *Spacing* in the property
    panel is the whole hole set's average across its four runs — 3.88 mm on this panel, whose sides
@@ -81,7 +84,9 @@ default PDF viewer.
 
 ## Entries
 
-The *Readings* column is A · B · C · D · E · F · G · H, in millimetres. Since 7.8 the sheets carry
+The *Readings* column is A · B · C · D · E · F · G · H, in millimetres. Since 7.2 the strap's
+sheets are 3 and 4, after its assembly sheet; a row recorded before it read G and H on sheets 2
+and 3. Since 7.8 the sheets carry
 a 100 × 5 mm gauge where they carried a 50 mm square and a 100 mm ruler, and the strap is 275 mm,
 not 250: a row recorded before it read A as the square, across × up, B as the ruler, and G as
 250.0.

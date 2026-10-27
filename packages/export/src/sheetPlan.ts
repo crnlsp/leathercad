@@ -1,8 +1,24 @@
 import { ORIENTATIONS, PAPER_NAMES, type Orientation, type PaperName } from '@leathercad/domain';
 
-import { paginate, type Page, type PaginationResult } from './paginate.js';
+import { paginate, type Page, type PaginationResult, type Tile } from './paginate.js';
 import { pageSetupOf, type PageSetup } from './paper.js';
-import type { ExportScene } from './scene.js';
+import type { ExportPart, ExportScene } from './scene.js';
+
+/**
+ * A taped part's assembly sheet (7.2): its tiles drawn small, as a map of
+ * which sheet goes where. Never the pattern: nothing on it is to scale.
+ */
+export interface Assembly {
+  readonly part: ExportPart;
+  /** Its tiles, row by row, each with the sheet it prints on, numbered from 1. */
+  readonly tiles: ReadonlyArray<{ readonly tile: Tile; readonly sheet: number }>;
+}
+
+/** One sheet of the plan: a page of the pagination, or a taped part's assembly sheet. */
+export interface Sheet extends Page {
+  /** Present on an assembly sheet, which places no part. */
+  readonly assembly?: Assembly;
+}
 
 /**
  * Where one part prints: the sheets it is on, numbered from 1 as the PDF's
@@ -41,17 +57,34 @@ export interface SheetPlan {
   /**
    * The sheets in PDF order: sheet `n` is page `n`. Never empty — a project
    * with nothing to print still exports one sheet carrying the scale check,
-   * so the plan says so too.
+   * so the plan says so too. A taped part's assembly sheet comes just before
+   * its tiles (7.2).
    */
-  readonly sheets: readonly Page[];
+  readonly sheets: readonly Sheet[];
   /** Keyed by part id. A part absent here does not print. */
   readonly parts: ReadonlyMap<string, PartSheets>;
 }
 
 export function planSheets(scene: ExportScene, setup: PageSetup): SheetPlan {
   const pagination = paginate(scene, setup);
-  const sheets: readonly Page[] =
+  const pages: readonly Page[] =
     pagination.pages.length > 0 ? pagination.pages : [{ index: 0, placements: [] }];
+
+  // Each taped part's map first, then its tiles, which `paginate` gives in a
+  // run of their own, row by row. Packing does not count the map: a part is
+  // taped or turned exactly as 7.8 decides.
+  const sheets: Sheet[] = [];
+  for (const page of pages) {
+    const tile = page.tile;
+    if (tile?.row === 1 && tile.column === 1) {
+      const first = sheets.length + 2;
+      const tiles = pages
+        .flatMap((other) => (other.tile?.part.id === tile.part.id ? [other.tile] : []))
+        .map((one, i) => ({ tile: one, sheet: first + i }));
+      sheets.push({ index: sheets.length, placements: [], assembly: { part: tile.part, tiles } });
+    }
+    sheets.push({ ...page, index: sheets.length });
+  }
 
   const parts = new Map<string, PartSheets>();
   for (const sheet of sheets) {

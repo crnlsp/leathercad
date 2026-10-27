@@ -132,9 +132,11 @@ export function SheetsParts({
             >
               <span>{t('status.sheetOf', { number: sheet.number, count: sheet.count })}</span>
               <span className="sheets-group-count">
-                {sheet.pieces.length === 0
-                  ? t('sheetsView.noPieces')
-                  : t('parts.count', { count: sheet.pieces.length })}
+                {sheet.assemblyOf !== null
+                  ? t('sheetsView.assembly', { name: sheet.assemblyOf })
+                  : sheet.pieces.length === 0
+                    ? t('sheetsView.noPieces')
+                    : t('parts.count', { count: sheet.pieces.length })}
               </span>
             </h3>
             <ul className="sheets-pieces">

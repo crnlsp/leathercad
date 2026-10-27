@@ -36,7 +36,7 @@ describe('the one sheet plan the app shows and exports (7.4a)', () => {
       expect(plan.setup).toEqual(option.plan.setup);
     }
     const counts = paperOptionsFor(printTest()).map((o) => o.plan.sheets.length);
-    expect(counts.slice(2, 4)).toEqual([3, 1]); // A4 portrait, A4 landscape
+    expect(counts.slice(2, 4)).toEqual([4, 1]); // A4 portrait, with the strap's map; A4 landscape
   });
 
   it('does not change when a piece is moved on the board', () => {

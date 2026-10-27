@@ -151,8 +151,9 @@ export function inkOn(canvas: HTMLCanvasElement): number {
 }
 
 /**
- * Rasterises and measures an exported print test: on A4 portrait, three
- * sheets; on A4 landscape, one.
+ * Rasterises and measures an exported print test: on A4 portrait, four
+ * sheets — the panel and pocket, the strap's assembly map, and its two
+ * tiles (7.2); on A4 landscape, one.
  *
  * `turned`: the PDF is what Print sends for a landscape sheet (7.6b), each
  * page upright with the sheet turned a quarter on it. Each page is then
@@ -168,10 +169,11 @@ export function measurePrintTest(pdf: string, turned = false): PrintTestMeasurem
   const gauges = images.map(gaugeOn);
 
   // The panel and the pocket share the first sheet. The strap is beside them
-  // on a sheet wide enough for it, or else tiled over the two after it, first
-  // column first.
+  // on a sheet wide enough for it, or else tiled over the last two, first
+  // column first, after its assembly map.
   const panel = panelOn(images[0]!);
-  const strap = pages === 1 ? strapWhole(images[0]!) : strapAcross(images[1]!, images[2]!);
+  const strap =
+    pages === 1 ? strapWhole(images[0]!) : strapAcross(images[pages - 2]!, images[pages - 1]!);
 
   return { pages, gauges, panel, strap };
 }
@@ -183,7 +185,7 @@ export function measurePrintTest(pdf: string, turned = false): PrintTestMeasurem
  * edge: tighter than a steel rule reads, and far tighter than the 3 mm a
  * 97 % "fit to page" would take off a 100 mm line.
  */
-export function expectAccurate(measured: PrintTestMeasurements, sheets = 3): void {
+export function expectAccurate(measured: PrintTestMeasurements, sheets = 4): void {
   const close = (actual: number, expected: number, tolerance: number, what: string) =>
     expect(Math.abs(actual - expected), `${what}: ${actual.toFixed(3)} mm`).toBeLessThan(tolerance);
 
@@ -207,9 +209,9 @@ export function expectAccurate(measured: PrintTestMeasurements, sheets = 3): voi
   close(panel.spacingMm, 3.875, 0.01, 'hole spacing');
   expect(panel.worstGapErrorMm, 'evenness of the gaps').toBeLessThan(0.15);
 
-  // Whole beside the panel on one sheet; taped across sheets 2 and 3 on three.
+  // Whole beside the panel on one sheet; taped across sheets 3 and 4 on four.
   close(strap.lengthMm, 275, 0.3, 'strap, end to end');
-  const first = sheets === 1 ? 1 : 2;
+  const first = sheets === 1 ? 1 : sheets - 1;
   strap.widthMm.forEach((width, i) =>
     close(width, 25, 0.2, `strap width, sheet ${String(i + first)}`),
   );
@@ -217,16 +219,16 @@ export function expectAccurate(measured: PrintTestMeasurements, sheets = 3): voi
   expect(join !== undefined, 'the strap taped').toBe(sheets > 1);
   if (join === undefined) return;
   join.pastJoinMm.forEach((past, i) =>
-    expect(past, `strap past the join, sheet ${String(i + 2)}`).toBeGreaterThan(3),
+    expect(past, `strap past the join, sheet ${String(i + first)}`).toBeGreaterThan(3),
   );
   join.crossOffJoinMm.forEach((off, i) =>
-    expect(off, `cross off its join, sheet ${String(i + 2)}`).toBeLessThan(0.2),
+    expect(off, `cross off its join, sheet ${String(i + first)}`).toBeLessThan(0.2),
   );
   close(
     join.crossAboveEdgeMm[0],
     join.crossAboveEdgeMm[1],
     0.2,
-    'the cross, against the strap, sheet 2 then sheet 3',
+    'the cross, against the strap, sheet 3 then sheet 4',
   );
 }
 

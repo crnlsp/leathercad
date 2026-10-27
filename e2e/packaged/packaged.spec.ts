@@ -291,7 +291,7 @@ test('previews the print test with pdf.js, its worker loaded from inside the arc
   // a real worker so a protocol/CSP regression cannot hide behind that path.
   expect(worker.url()).toMatch(/^app:\/\/leathercad\/assets\/pdf\.worker\..*\.mjs$/);
   const preview = window.getByTestId('print-preview');
-  await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
+  await expect(preview.getByTestId('print-thumb')).toHaveCount(4);
   await expect
     .poll(() => preview.getByTestId('print-page').locator('canvas').evaluate(inkOn))
     .toBeGreaterThan(1000);

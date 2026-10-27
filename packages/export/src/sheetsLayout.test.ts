@@ -82,8 +82,9 @@ describe('where the sheets sit on the Sheets view (7.4c)', () => {
     const layout = layoutSheets(plan);
     const [group] = layout.groups;
     expect(group).toMatchObject({ partId: 'panel', rows: 2, columns: 3 });
-    expect(group!.sheets).toEqual([1, 2, 3, 4, 5, 6]);
-    const frame = (n: number) => layout.frames[n - 1]!;
+    // Sheet 1 is its assembly map, a sheet of its own before the grid (7.2).
+    expect(group!.sheets).toEqual([2, 3, 4, 5, 6, 7]);
+    const frame = (n: number) => layout.frames[n]!;
     // Same row, same height; same column, same x; the second row below the first.
     expect(frame(2).origin.y).toBe(frame(1).origin.y);
     expect(frame(3).origin.y).toBe(frame(1).origin.y);
@@ -136,6 +137,15 @@ describe('what is under the pointer on the Sheets view (7.4d)', () => {
     const plan = planSheets(scene([part('strap', 275, 20)]), DEFAULT_PAGE_SETUP);
     const layout = layoutSheets(plan);
     for (const frame of layout.frames) {
+      if (plan.sheets[frame.index]!.assembly !== undefined) {
+        // Its map is a drawing of it, not the piece: nothing there to point at.
+        const middle = {
+          x: frame.origin.x + frame.widthMm / 2,
+          y: frame.origin.y + frame.heightMm / 2,
+        };
+        expect(pieceAt(plan, layout, middle)).toEqual({ sheet: frame.index, partId: null });
+        continue;
+      }
       const placement = plan.sheets[frame.index]!.placements[0]!;
       const window = plan.sheets[frame.index]!.tile!.windowMm;
       // The middle of what this sheet shows of the strap.

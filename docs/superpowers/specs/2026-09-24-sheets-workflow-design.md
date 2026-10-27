@@ -450,7 +450,7 @@ consumed it. Then **7.7** (the physical measurement) and **8.6** (release).
 | Pieces gliding between Design and Sheets | Shared selection and kept cameras already carry the correspondence. The glide is polish, and it needs a reduced-motion alternative |
 | A complete native menu (Draw, zoom, paper) | Only View › Design and View › Sheets are added. The rest is 1.1 |
 | Merged or custom title bar; Design / Print stages | §4.4 |
-| Printed assembly sheet, edge arrows, overlap setting | 7.2's remainder, 1.1. The Sheets view's grouped grid covers understanding on screen |
+| Printed assembly sheet, edge arrows, overlap setting | 7.2's remainder, 1.1. The Sheets view's grouped grid covers understanding on screen. *The assembly sheet and edge arrows built in 7.2 (1.6); the overlap setting is still deferred* |
 | Printing selected sheets only, custom paper, margins | 6.4's export dialog, 1.1 |
 | Rulers or coordinates in the Sheets view | Positions on a sheet aren't the maker's to edit |
 

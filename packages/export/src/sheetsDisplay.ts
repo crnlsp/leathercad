@@ -148,6 +148,8 @@ export interface SheetsWords {
   readonly turned: (names: readonly string[]) => string;
   /** Below a taped piece's sheets: "Strap, taped: sheets 2–3". */
   readonly taped: (name: string, sheets: readonly number[]) => string;
+  /** Above a taped piece's assembly sheet (7.2): "Sheet 2 of 4 · Assembly map of Strap". */
+  readonly assembly: (number: number, count: number, name: string) => string;
 }
 
 /**
@@ -207,10 +209,13 @@ export function sheetsView(
     );
 
     // Its number, above it: on screen only — the footer prints it.
+    const number = frame.index + 1;
+    const count = plan.sheets.length;
     base.push(
       overlay(
-        words?.sheet(frame.index + 1, plan.sheets.length, sheet.placements.length) ??
-          sheetLabel(frame.index + 1, plan.sheets.length),
+        (sheet.assembly === undefined
+          ? words?.sheet(number, count, sheet.placements.length)
+          : words?.assembly(number, count, sheet.assembly.part.name)) ?? sheetLabel(number, count),
         shift(0, frame.heightMm + 2),
         'left',
         'bottom',

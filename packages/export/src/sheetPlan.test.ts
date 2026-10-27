@@ -61,10 +61,15 @@ function placedFootprint(plan: ReturnType<typeof planSheets>) {
 }
 
 describe('the sheet plan (7.4a)', () => {
-  it('is the pagination: sheet n is page n, and each part knows its sheets', () => {
+  it('is the pagination and an assembly sheet per taped part: sheet n is page n, and each part knows its sheets', () => {
     const plan = planSheets(PRINT_TEST, DEFAULT_PAGE_SETUP);
-    expect(plan.sheets).toBe(plan.pagination.pages);
-    expect(plan.sheets.map((sheet) => sheet.index)).toEqual([0, 1, 2]);
+    expect(plan.sheets.map((sheet) => sheet.index)).toEqual([0, 1, 2, 3]);
+    // The packed sheet, then the strap's map, then its tiles (7.2).
+    expect(plan.sheets[0]).toEqual(plan.pagination.pages[0]);
+    expect(plan.sheets[1]).toMatchObject({ placements: [], assembly: { part: { id: 'Strap' } } });
+    expect(plan.sheets.slice(2).map((sheet) => sheet.tile)).toEqual(
+      plan.pagination.pages.slice(1).map((page) => page.tile),
+    );
 
     expect(plan.parts.get('Outer panel')).toEqual({
       partId: 'Outer panel',
@@ -77,7 +82,7 @@ describe('the sheet plan (7.4a)', () => {
     expect(plan.parts.get('Pocket')?.sheets).toEqual([1]);
     expect(plan.parts.get('Strap')).toEqual({
       partId: 'Strap',
-      sheets: [2, 3],
+      sheets: [3, 4],
       taped: true,
       turned: false,
       rows: 1,
@@ -148,13 +153,55 @@ describe('the sheet plan (7.4a)', () => {
           const parts = sizes.map(({ w, h }, i) => part(`p${String(i)}`, w, h));
           const plan = planSheets(scene(parts), setup);
           expect([...plan.parts.keys()].sort()).toEqual(parts.map((p) => p.id).sort());
-          const used = new Set([...plan.parts.values()].flatMap((entry) => entry.sheets));
+          const used = new Set([
+            ...[...plan.parts.values()].flatMap((entry) => entry.sheets),
+            ...plan.sheets.flatMap((sheet) =>
+              sheet.assembly === undefined ? [] : [sheet.index + 1],
+            ),
+          ]);
           expect([...used].sort((a, b) => a - b)).toEqual(plan.sheets.map((_, i) => i + 1));
           for (const entry of plan.parts.values()) {
             // A taped part's sheets are contiguous, and as many as its grid.
             expect(entry.sheets).toHaveLength(entry.rows * entry.columns);
             expect(entry.sheets.at(-1)! - entry.sheets[0]! + 1).toBe(entry.sheets.length);
             expect(entry.taped).toBe(entry.sheets.length > 1 || entry.rows * entry.columns > 1);
+          }
+        },
+      ),
+    );
+  });
+
+  it('maps each taped part on one sheet just before its tiles, with the sheet each tile prints on (7.2)', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            w: fc.double({ min: 5, max: 900, noNaN: true }),
+            h: fc.double({ min: 5, max: 700, noNaN: true }),
+          }),
+          { minLength: 1, maxLength: 5 },
+        ),
+        fc.constantFrom(...SETUPS),
+        (sizes, setup) => {
+          const plan = planSheets(
+            scene(sizes.map(({ w, h }, i) => part(`p${String(i)}`, w, h))),
+            setup,
+          );
+          const maps = plan.sheets.filter((sheet) => sheet.assembly !== undefined);
+          expect(maps.map((sheet) => sheet.assembly!.part.id)).toEqual(
+            plan.pagination.tiled.map((entry) => entry.part.id),
+          );
+          // One more sheet than the pagination for each taped part, and no more.
+          expect(plan.sheets.length).toBe(
+            Math.max(1, plan.pagination.pages.length) + plan.pagination.tiled.length,
+          );
+          for (const map of maps) {
+            const { part: mapped, tiles } = map.assembly!;
+            expect(map.placements).toEqual([]);
+            expect(map.tile).toBeUndefined();
+            expect(tiles.map((entry) => entry.sheet)).toEqual(plan.parts.get(mapped.id)!.sheets);
+            expect(tiles[0]!.sheet).toBe(map.index + 2);
+            for (const { tile, sheet } of tiles) expect(plan.sheets[sheet - 1]!.tile).toBe(tile);
           }
         },
       ),
@@ -221,13 +268,14 @@ describe('the sheet plan (7.4a)', () => {
     // A5 landscape took five sheets with the 62 mm verification block, the
     // panel taped across two of them; the slimmer strip holds it whole, and
     // the pocket turned beside it saves one more (7.8).
-    expect(counts).toMatchObject({ 'A4 portrait': 3, 'A4 landscape': 1, 'A5 landscape': 3 });
+    // Each with the strap's assembly sheet where it is taped (7.2).
+    expect(counts).toMatchObject({ 'A4 portrait': 4, 'A4 landscape': 1, 'A5 landscape': 4 });
   });
 });
 
 describe('what the plan holds, for the words the app puts it in', () => {
   it('counts sheets of a paper', () => {
-    expect(planSheets(PRINT_TEST, DEFAULT_PAGE_SETUP).sheets).toHaveLength(3);
+    expect(planSheets(PRINT_TEST, DEFAULT_PAGE_SETUP).sheets).toHaveLength(4);
     expect(planSheets(PRINT_TEST, pageSetupOf('A4', 'landscape')).sheets).toHaveLength(1);
   });
 
