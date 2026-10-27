@@ -4,16 +4,10 @@ import { PAPER_FURNITURE } from '@leathercad/render';
 import { outlinesOf, placedText, textWidthMm, type TextPlacement } from '@leathercad/typography';
 
 import { brandMark } from './brandMark.js';
-import type { Tile } from './paginate.js';
-import {
-  contentAreaMm,
-  describeJoins,
-  VERIFICATION_TEXT,
-  verificationLayout,
-  type Neighbours,
-} from './paper.js';
+import { edgeArrows, neighboursOf, type EdgeArrow } from './edgeArrows.js';
+import { contentAreaMm, describeJoins, VERIFICATION_TEXT, verificationLayout } from './paper.js';
 import type { ExportPath, ExportText, PrintStyle } from './scene.js';
-import { sheetLabel, type SheetPlan } from './sheetPlan.js';
+import { describeSheetNumbers, sheetLabel, type SheetPlan } from './sheetPlan.js';
 
 const APP_NAME = 'LeatherCAD';
 
@@ -25,11 +19,13 @@ const JOIN: PrintStyle = {
   grey: PAPER_FURNITURE.join.grey,
 };
 const CROSS: PrintStyle = { widthMm: PAPER_FURNITURE.join.widthMm, dashMm: [], grey: 0 };
+/** An edge arrow: the join's grey, solid, so it is never read as a cut line. */
+const ARROW: PrintStyle = { ...JOIN, dashMm: [] };
 
 /**
  * Everything printed on one sheet that is not a pattern piece (7.4c): the
  * verification strip — the gauge, the instruction, what the sheet is and the mark — and
- * on a tiled sheet its joins and crosses — **the one description of it**, in
+ * on a tiled sheet its joins, crosses and edge arrows — **the one description of it**, in
  * millimetres from the sheet's bottom-left, Y up.
  *
  * The PDF writer prints it and the Sheets view draws it, so what the maker
@@ -40,10 +36,12 @@ export interface SheetInk {
   /** The gauge and its ticks. Drawn with butt caps, as printed. */
   readonly paths: readonly ExportPath[];
   /**
-   * A tiled sheet's joins and registration crosses. Printed inside the clip
-   * to the printable area, like the tile's piece.
+   * A tiled sheet's joins, registration crosses and edge arrows. Printed
+   * inside the clip to the printable area, like the tile's piece.
    */
   readonly clipped: readonly ExportPath[];
+  /** The sheets its edge arrows name, inside the same clip, over the piece. */
+  readonly clippedTexts: readonly ExportText[];
   /** Every string: the instruction, and what the sheet is and where it came from. */
   readonly texts: readonly ExportText[];
   /** LeatherCAD's mark, filled, beside where the sheet came from. */
@@ -121,6 +119,7 @@ export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
 
   // A tiled sheet: where it joins its neighbours.
   const clipped: ExportPath[] = [];
+  const clippedTexts: ExportText[] = [];
   let clip: Rect | null = null;
   if (tile !== undefined) {
     const area = contentAreaMm(setup);
@@ -158,27 +157,56 @@ export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
       clipped.push(ink(polyline([at(c.x - arm, c.y), at(c.x + arm, c.y)]), CROSS));
       clipped.push(ink(polyline([at(c.x, c.y - arm), at(c.x, c.y + arm)]), CROSS));
     }
+
+    // At each shared edge, an arrow at the join naming the sheet beyond (7.2).
+    for (const arrow of edgeArrows(tile, neighboursOf(plan, tile))) {
+      const drawn = arrowInk(arrow, offset);
+      clipped.push(...drawn.paths);
+      clippedTexts.push(drawn.label);
+    }
   }
 
-  return { paths, clipped, texts, mark: brandMark(mark, mark.heightMm), clip };
+  return { paths, clipped, clippedTexts, texts, mark: brandMark(mark, mark.heightMm), clip };
 }
 
-/** The sheets beside a tile, by side, numbered from 1 as printed. */
-function neighboursOf(plan: SheetPlan, tile: Tile): Neighbours {
-  const at = (row: number, column: number): number | undefined => {
-    const index = plan.sheets.findIndex(
-      (other) =>
-        other.tile?.part.id === tile.part.id &&
-        other.tile.row === row &&
-        other.tile.column === column,
-    );
-    return index < 0 ? undefined : index + 1;
+/**
+ * An edge arrow on the sheet: its shaft, an open head at the tip, and the
+ * neighbour's sheet written past its tail, reading across the sheet.
+ */
+function arrowInk(arrow: EdgeArrow, offset: Vec2): { paths: ExportPath[]; label: ExportText } {
+  const { lengthMm, headLengthMm, headHalfWidthMm, labelSizeMm, labelGapMm } =
+    PAPER_FURNITURE.edgeArrow;
+  const at = (p: Vec2): Vec2 => ({ x: p.x + offset.x, y: p.y + offset.y });
+  const { tip, tail } = arrow;
+  const d = { x: (tip.x - tail.x) / lengthMm, y: (tip.y - tail.y) / lengthMm };
+  const back = { x: tip.x - d.x * headLengthMm, y: tip.y - d.y * headLengthMm };
+  const head = [
+    { x: back.x - d.y * headHalfWidthMm, y: back.y + d.x * headHalfWidthMm },
+    tip,
+    { x: back.x + d.y * headHalfWidthMm, y: back.y - d.x * headHalfWidthMm },
+  ];
+  const labels: Record<EdgeArrow['side'], { at: Vec2; placement: TextPlacement }> = {
+    right: {
+      at: { x: tail.x - labelGapMm, y: tail.y },
+      placement: { align: 'right', baseline: 'middle' },
+    },
+    left: {
+      at: { x: tail.x + labelGapMm, y: tail.y },
+      placement: { align: 'left', baseline: 'middle' },
+    },
+    above: {
+      at: { x: tail.x, y: tail.y - labelGapMm },
+      placement: { align: 'centre', baseline: 'top' },
+    },
+    below: {
+      at: { x: tail.x, y: tail.y + labelGapMm },
+      placement: { align: 'centre', baseline: 'bottom' },
+    },
   };
+  const label = labels[arrow.side];
   return {
-    above: at(tile.row - 1, tile.column),
-    left: at(tile.row, tile.column - 1),
-    right: at(tile.row, tile.column + 1),
-    below: at(tile.row + 1, tile.column),
+    paths: [ink(polyline([at(tail), at(tip)]), ARROW), ink(polyline(head.map(at)), ARROW)],
+    label: words(describeSheetNumbers([arrow.sheet]), labelSizeMm, at(label.at), label.placement),
   };
 }
 

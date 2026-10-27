@@ -256,6 +256,7 @@ export function sheetsView(
       base.push(...pieces);
     } else {
       for (const item of ink.clipped) pieces.push(inkPath(item, o));
+      for (const text of ink.clippedTexts) pieces.push(inkText(text, o));
       tiles.push({
         list: { items: pieces },
         clipMm: RectOps.fromCorners(

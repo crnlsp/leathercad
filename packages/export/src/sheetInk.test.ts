@@ -1,7 +1,15 @@
 import { PathOps, RectOps } from '@leathercad/geometry';
+import { ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PAGE_SETUP, contentAreaMm, sheetSizeMm, verificationLayout } from './paper.js';
+import {
+  DEFAULT_PAGE_SETUP,
+  contentAreaMm,
+  pageSetupOf,
+  sheetSizeMm,
+  verificationLayout,
+} from './paper.js';
 import { PRINT_STYLES, type ExportPart, type ExportScene } from './scene.js';
 import { sheetInk } from './sheetInk.js';
 import { planSheets } from './sheetPlan.js';
@@ -18,6 +26,9 @@ function part(id: string, widthMm: number, heightMm: number): ExportPart {
 }
 const scene = (parts: ExportPart[]): ExportScene => ({ projectName: 'Wallet', parts });
 const NOW = new Date('2026-09-24T12:00:00.000Z');
+const SETUPS = PAPER_NAMES.flatMap((paper) =>
+  ORIENTATIONS.map((orientation) => pageSetupOf(paper, orientation)),
+);
 
 describe('what a sheet prints besides its pieces (7.4c)', () => {
   const plan = planSheets(
@@ -81,6 +92,7 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
     const packed = sheetInk(plan, 0, NOW);
     expect(packed.clip).toBeNull();
     expect(packed.clipped).toEqual([]);
+    expect(packed.clippedTexts).toEqual([]);
 
     const tiled = sheetInk(plan, 1, NOW);
     const area = contentAreaMm(DEFAULT_PAGE_SETUP);
@@ -90,12 +102,18 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
       maxX: area.x + area.widthMm,
       maxY: area.y + area.heightMm,
     });
-    // One join line (grey, dashed) and, on it, one cross of two strokes.
+    // One join line (grey, dashed), on it one cross of two black strokes,
+    // and beside it an arrow — a grey shaft and head — naming the next sheet.
     const joins = tiled.clipped.filter((p) => p.style.dashMm.length > 0);
-    const crosses = tiled.clipped.filter((p) => p.style.dashMm.length === 0);
+    const crosses = tiled.clipped.filter((p) => p.style.grey === 0);
+    const arrow = tiled.clipped.filter((p) => p.style.dashMm.length === 0 && p.style.grey > 0);
     expect(joins).toHaveLength(1);
     expect(joins[0]!.style.grey).toBeGreaterThan(0);
     expect(crosses).toHaveLength(2);
+    expect(arrow).toHaveLength(2);
+    expect(arrow[0]!.style.grey).toBe(joins[0]!.style.grey);
+    expect(tiled.clippedTexts.map((t) => t.source)).toEqual(['Sheet 3']);
+    expect(sheetInk(plan, 2, NOW).clippedTexts.map((t) => t.source)).toEqual(['Sheet 2']);
     // Which sheet it joins, and where: the dashed line and its crosses say how.
     expect(tiled.texts.map((t) => t.source)).toEqual([
       'Print at 100 % / Actual size — this box is 100 × 5 mm',
@@ -104,6 +122,28 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
     ]);
     expect(sheetInk(plan, 2, NOW).texts[1]!.source).toBe(
       'Wallet · Sheet 3 of 3 · strap, joins sheet 2 to the left',
+    );
+  });
+
+  it('keeps a taped sheet’s joins, crosses and arrows inside its clip, on every paper (7.2)', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...SETUPS),
+        fc.double({ min: 30, max: 1200, noNaN: true }),
+        fc.double({ min: 30, max: 1200, noNaN: true }),
+        (setup, widthMm, heightMm) => {
+          const taped = planSheets(scene([part('p', widthMm, heightMm)]), setup);
+          taped.sheets.forEach((sheet, i) => {
+            if (sheet.tile === undefined) return;
+            const { clip, clipped, clippedTexts } = sheetInk(taped, i, NOW);
+            const boxes = [
+              ...clipped.map((p) => PathOps.bbox(p.path)!),
+              ...clippedTexts.flatMap((t) => t.glyphs.map((g) => PathOps.bbox(g)!)),
+            ];
+            for (const box of boxes) expect(RectOps.containsRect(clip!, box)).toBe(true);
+          });
+        },
+      ),
     );
   });
 

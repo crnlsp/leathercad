@@ -69,9 +69,9 @@ Two properties this buys, and they are the reason for the shape:
   page count, tile placement, or overlap, because a disagreement would be a bug in one function
   rather than a mismatch between two implementations. Built (7.4a–7.4c) as one derived `SheetPlan`:
   the PDF writes it, and the app's sheet count, Parts labels and **Sheets view** read it. Everything
-  a sheet prints besides its pieces — the verification strip, a tiled sheet's joins, crosses and
-  clip — is one description, `sheetInk`, which the writer prints and the Sheets
-  view draws. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md).
+  a sheet prints besides its pieces — the verification strip, a tiled sheet's joins, crosses, edge
+  arrows and clip — is one description, `sheetInk`, which the writer prints and the Sheets view
+  draws. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md).
 - **All writers consume the same `ExportScene`.** SVG, PDF, and DXF cannot drift apart in what they
   include or where they place it.
 
@@ -369,7 +369,17 @@ For tiled output, the difference between a usable pattern and a jigsaw puzzle.
   to the right`. That is what a maker with sheets spread on a table needs; the dashed line and its
   crosses show how. A printed sentence of instructions on every taped sheet did not earn its room,
   and `R1 C2` was a grid reference nobody holding paper needs.
-- **Not yet (7.2, roadmap 1.6):** edge arrows, the assembly sheet, and tape guides.
+- **Edge arrows (7.2)** at each edge a sheet shares: square to the join, pointing at it, and named
+  in ink with the sheet beyond — `Sheet 3` — the number the strip's `joins sheet 3 to the right`
+  gives, from the same lookup. An arrow is in the join's grey and solid, 8 mm long with an open
+  head, so it is never read as a cut, a stitch or a fold line, and it may cross the pattern as the
+  join and its crosses do. Its tip stops 2 mm short of the join on its own sheet's side, so cutting
+  on the line leaves it whole, and its neighbour's arrow faces it from the other side: one pair per
+  shared edge. It sits 12 mm from the middle of the sheet's span, clear of the cross there. Sizes
+  are true millimetres, from `PAPER_FURNITURE.edgeArrow` in `packages/render/src/theme/`; the
+  placement is `edgeArrows`, in `packages/export/src/edgeArrows.ts`. Drawn by `sheetInk`, so the
+  PDF, the Print Preview and the Sheets view all show them, inside the tile's clip.
+- **Not yet:** tape guides.
 
 The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
 tiled part follows the packed parts on sheets of its own. A tiled part is never turned: it is tiled
@@ -381,7 +391,8 @@ only when it fits whole neither way (§5.5).
   `overlap 10 mm`. The user trims on the line and butts the pages, or leaves the band and laps them.
 - **Tile label** in the top-left margin: `R1C2`, plus `sheet 2 of 6`.
 - **Edge arrows** on each side that has a neighbour, labelled with the neighbour's tile id — so a
-  user with pages spread on a table knows what joins what.
+  user with pages spread on a table knows what joins what. *Built in 7.2, labelled with the
+  neighbour's sheet number, as above.*
 - **Assembly sheet** as page 1 when there is more than one tile: a thumbnail of the whole pattern
   with the tile grid drawn over it and each cell labelled. Cheap to produce and it removes almost
   all of the confusion of tiled printing.
