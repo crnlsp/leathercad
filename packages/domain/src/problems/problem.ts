@@ -333,16 +333,50 @@ export function subjectOf(p: Problem): {
 }
 
 /**
- * The identity of one occurrence: code, subject, and — for a code that can
- * occur twice on one subject — what tells the two apart.
+ * What tells apart two problems of one code on one subject, when a code can
+ * occur twice there — or nothing. Only ids and parameter names: never a
+ * measured value, a count or a name, which change with an edit that leaves the
+ * problem the same one.
  *
- * What `followRefusal` diffs to find a problem a re-point would introduce, what
- * React keys a list by, and what a suppression list would store.
+ * Limit: `ANCHOR_MISSING` is told apart by the anchor's index, a parameter of
+ * the feature, so steady until the user re-points it; a warning accepted on it
+ * then reads as new, which is the safe way to be wrong.
+ */
+function qualifierOf(p: Problem): string | number | undefined {
+  switch (p.code) {
+    case 'DERIVATION_INCOMPATIBLE':
+      return p.facts.rule;
+    case 'PARAMETER_INVALID':
+      return p.facts.parameter;
+    case 'SOURCE_FAILED':
+    case 'WOULD_LOOP':
+      return p.facts.sourceId;
+    case 'MIRROR_FOLD_MISSING':
+      return p.facts.foldId;
+    case 'OUTSIDE_PART':
+      return p.facts.what;
+    case 'ANCHOR_MISSING':
+      return p.facts.anchor;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The identity of one occurrence: code, the id of what it is about, and — for a
+ * code that can occur twice on one subject — what tells the two apart.
+ *
+ * Built from stable ids alone, so it survives any edit that leaves the problem
+ * the same one (moving, resizing, adding something else, renaming) and is never
+ * a position in a list. What `followRefusal` diffs to find a problem a re-point
+ * would introduce, what React keys a list by, and what 9.16's accepted warnings
+ * will store.
  */
 export function problemKey(p: Problem): string {
   const subject = subjectOf(p);
   const base = `${p.code}:${subject.featureId ?? subject.partId ?? ''}`;
-  return p.code === 'DERIVATION_INCOMPATIBLE' ? `${base}:${p.facts.rule}` : base;
+  const qualifier = qualifierOf(p);
+  return qualifier === undefined ? base : `${base}:${qualifier}`;
 }
 
 /**

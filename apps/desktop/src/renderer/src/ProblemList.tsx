@@ -39,7 +39,7 @@ export function ProblemRows({
             : project.parts
                 .flatMap((part) => part.features)
                 .find((feature) => feature.id === diagnostic.featureId);
-        const key = `${problemKey(diagnostic.problem)}:${diagnostic.partId}`;
+        const key = problemKey(diagnostic.problem);
         const body = (
           <>
             <span className={`problem-mark severity-${diagnostic.severity}`} aria-hidden="true" />

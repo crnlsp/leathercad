@@ -881,6 +881,13 @@ function diagnose(project: Project): readonly Diagnostic[];   // the one list (X
 The words for a problem are not the domain's: the app puts a code and its facts into the interface's
 language, from one catalogue (`renderer/src/problemText.ts`, ADR 0018).
 
+**A problem's identity is `problemKey(problem)`** (Q4): the code, the id of the feature or part it is
+about, and, for a code that can occur twice on one subject, an id or parameter name that tells them
+apart (`PARAMETER_INVALID` by parameter, `SOURCE_FAILED` by the source it follows, `OUTSIDE_PART` by
+holes or line, and so on). It holds no coordinate, measured value, name or list position, so it
+survives moving, resizing, renaming and unrelated edits; the panel keys its rows by it and 9.16 will
+store it for an accepted warning. Limit: `ANCHOR_MISSING` is told apart by the anchor's index.
+
 **Refusals are problems too**, with the same codes and catalogue, but they are never diagnostics:
 they are refused at the gesture or by the loader, so they never exist in a document to be listed.
 The audit test (below) holds this table to the registry in both directions, which is why it is a
