@@ -53,7 +53,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 
 | Status | ID | Priority | Severity | Area / task | Confidence | Effort | Risk | Tracking |
 |---|---|---|---|---|---|---|---|---|
-| ☐ | [PERF-001](#perf-001) | P1 | High | Share export geometry across history revisions | Confirmed | Medium | Medium | Unassigned |
+| ✅ | [PERF-001](#perf-001) | P1 | High | Share export geometry across history revisions | Confirmed | Medium | Medium | `perf/001-shared-export-geometry` |
 | ☐ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | Unassigned |
 | ☐ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | Unassigned |
@@ -204,14 +204,45 @@ WeakMap keys, so name edits retain heavyweight values: 24.3 → 818.7 MiB after 
 plateaus near the history limit and clears on New: excessive bounded retention, not an unbounded
 leak. It increases memory pressure during ordinary long sessions.
 
-- [ ] Reproduce 0/50/200/250 metadata-edit checkpoints on the implementation revision.
-- [ ] Share unchanged resolved geometry; separate captions/metadata from heavy paths and bound
+- [x] Reproduce 0/50/200/250 metadata-edit checkpoints on the implementation revision.
+  Reproduced at `664d6e6`, worse than the audit's Electron run: about 6.8 MiB a rename (below).
+- [x] Share unchanged resolved geometry; separate captions/metadata from heavy paths and bound
   plan retention independently of document history. Include cross-part dependency identities.
-- [ ] Verify a substantially lower post-GC plateau, correct captions, full undo/redo and geometry
+  `buildExportScene` keeps a part's *ink* — every path and word but its caption — by its features
+  array, reused only while the path, holes and words each feature resolves to are the same
+  objects, so a stitch line following another part's outline is redrawn when that outline moves.
+  An unchanged part is the same `ExportPart`; pagination turns a part only when placing it so, and
+  each list of paths once. `renderer/src/sheets.ts` keeps what it derives only for the project last
+  asked about, the one on screen, instead of for every project history holds.
+- [x] Verify a substantially lower post-GC plateau, correct captions, full undo/redo and geometry
   invalidation. Record bytes and retained objects before/after; do not reduce history depth.
+  `export/src/scene.test.ts`: a rename shares the paths and prints the new name, undoing it prints
+  the old one, a cross-part outline change redraws the follower, and a property — any run of
+  renames, quantities, resizes, hidden holes and role choices — builds the scene a copy sharing no
+  object builds. `renderer/src/sheets.test.ts`: caption and geometry through undo and redo, and a
+  retention ceiling (16 MiB over 250 renames). `HISTORY_LIMIT` stays 200.
+
+| PERF-001, 40-part bag, renames 0 / 50 / 200 / 250 | Before (`664d6e6`) | After |
+|---|---|---|
+| Heap after full GC, over the first checkpoint | 0 / 350 / 1,366 / 1,374 MiB | 0 / −0.8 / −0.3 / 0.0 MiB |
+| Heap snapshot nodes | 0.45 M / 11.65 M / 43.99 M / 44.26 M | 0.45 M / 0.41 M / 0.42 M / 0.43 M |
+| Plan, print status and evaluation per rename, median of 60 | 11 ms | 1.8 ms |
+| The same after undo / redo, median of 30 | 0.0 / 0.0 ms (kept) | 1.4 / 1.4 ms |
+
+Measured with the retention test's workload in `sheets.test.ts` — the audit's bag, forty
+`strap(200)` parts in eight columns, each rename followed by what the chrome reads of the revision
+(`resolvedFor`, `sheetPlanFor`, `printStatusFor`) — in a Vitest worker on Node 24.22.0, on the
+audit's Ryzen 5 7600X with other builds running beside it. Heap bytes are `heapUsed` after two
+forced collections, identical to 0.1 MiB over three runs; nodes are the V8 heap snapshot's
+`node_count`. The production Electron sequence was not repeated, and other per-project memos —
+`diagnose`, for one — were outside this harness.
 
 **Expected benefit:** Avoid much of the measured roughly 4 MiB of retained growth per name edit
 in this fixture; exact improvement must be measured. Coordinate with PERF-010.
+
+**Result:** removed: the plateau is the first revision's. An undo now derives the earlier plan
+again, about 1.4 ms on this fixture, where it used to be kept. Coordinated with PERF-010: nothing
+here outlives the project on screen, so New releases the previous plan at the first render.
 
 ### PERF-002
 
