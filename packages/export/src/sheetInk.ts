@@ -1,4 +1,4 @@
-import type { Mm } from '@leathercad/core';
+import { NO_CORRECTION, isNoCorrection, type Mm, type ScaleCorrection } from '@leathercad/core';
 import { PathOps, RectOps, polyline, type Path, type Rect, type Vec2 } from '@leathercad/geometry';
 import { PAPER_FURNITURE } from '@leathercad/render';
 import { outlinesOf, placedText, textWidthMm, type TextPlacement } from '@leathercad/typography';
@@ -10,10 +10,10 @@ import { contentAreaMm, describeJoins, VERIFICATION_TEXT, verificationLayout } f
 import type { ExportPath, ExportText, PrintStyle } from './scene.js';
 import { describeSheetNumbers, sheetLabel, type Assembly, type SheetPlan } from './sheetPlan.js';
 
-const APP_NAME = 'LeatherCAD';
+export const APP_NAME = 'LeatherCAD';
 
 /** The gauge's lines: black, 0.2 mm, solid. */
-const BLOCK: PrintStyle = { widthMm: 0.2, dashMm: [], grey: 0 };
+export const BLOCK: PrintStyle = { widthMm: 0.2, dashMm: [], grey: 0 };
 const JOIN: PrintStyle = {
   widthMm: PAPER_FURNITURE.join.widthMm,
   dashMm: PAPER_FURNITURE.join.dashMm,
@@ -75,9 +75,15 @@ export interface SheetInk {
 
 /**
  * The ink of sheet `index` (0-based) of the plan. `now` dates the sheet — the
- * one thing on it that is "as of" when it is drawn.
+ * one thing on it that is "as of" when it is drawn. `correction` is the
+ * printer's (7.5), which only the PDF Print sends is written with.
  */
-export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
+export function sheetInk(
+  plan: SheetPlan,
+  index: number,
+  now: Date,
+  correction: ScaleCorrection = NO_CORRECTION,
+): SheetInk {
   const { setup, scene } = plan;
   const sheet = plan.sheets[index]!;
   const layout = verificationLayout(setup);
@@ -147,7 +153,14 @@ export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
   const { lines, mark } = layout;
   texts.push(words(identity, size, { x: lines.x, y: lines.top }, right));
   const date = now.toISOString().slice(0, 10);
-  texts.push(words(`${date} · 1:1 · ${APP_NAME}`, size, { x: lines.x, y: lines.bottom }, right));
+  texts.push(
+    words(
+      `${date} · ${scaleOf(correction)} · ${APP_NAME}`,
+      size,
+      { x: lines.x, y: lines.bottom },
+      right,
+    ),
+  );
 
   // An assembly sheet: its taped part's tiles as a map (7.2).
   if (assembly !== undefined) {
@@ -206,6 +219,19 @@ export function sheetInk(plan: SheetPlan, index: number, now: Date): SheetInk {
   }
 
   return { paths, clipped, clippedTexts, texts, mark: brandMark(mark, mark.heightMm), clip };
+}
+
+/**
+ * The sheet's scale, as it says beside its date. `1:1` is what the PDF
+ * holds. A corrected sheet does not hold it — its gauge is 100.5 mm in a
+ * viewer when its printer prints 0.5 % short — so it says instead that it
+ * was corrected, and by how much on each axis of the paper, so a sheet
+ * printed from it elsewhere is known for what it is (docs/printing.md §8.2).
+ */
+function scaleOf(correction: ScaleCorrection): string {
+  if (isNoCorrection(correction)) return '1:1';
+  const factor = (value: number): string => value.toFixed(4);
+  return `corrected for its printer: x ${factor(correction.x)}, y ${factor(correction.y)}`;
 }
 
 /** A part's name as the paper gives it, never blank. */
@@ -345,12 +371,17 @@ function fitted(
   return build(current);
 }
 
-function ink(path: Path, style: PrintStyle): ExportPath {
+export function ink(path: Path, style: PrintStyle): ExportPath {
   return { role: 'annotation', path, style };
 }
 
 /** Laid out once, as filled outlines: the same shapes on screen and on paper. */
-function words(content: string, sizeMm: Mm, at: Vec2, placement: TextPlacement = {}): ExportText {
+export function words(
+  content: string,
+  sizeMm: Mm,
+  at: Vec2,
+  placement: TextPlacement = {},
+): ExportText {
   const placed = placedText(content, sizeMm, at, placement);
   return { role: 'annotation', source: content, glyphs: outlinesOf(placed), sizeMm };
 }
