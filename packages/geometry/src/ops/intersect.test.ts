@@ -419,9 +419,14 @@ describe('intersectPaths', () => {
         .tuple(arbNearVec, arbNearVec, arbNearVec, arbNearVec)
         .map(([p0, p1, p2, p3]) => cubic(p0, p1, p2, p3)),
     );
-    /** Not joined up: the broad phase does not care, and a soup crosses more. */
+    /**
+     * Not joined up: the broad phase does not care, and a soup crosses more.
+     * Six segments a side: the reference tests every pair as well, cubic
+     * against cubic, and ten a side took this past CI's time limit under
+     * coverage while finding nothing six do not.
+     */
     const arbSoup = fc
-      .array(fc.oneof({ weight: 3, arbitrary: arbNearSegment }, arbSegment), { maxLength: 10 })
+      .array(fc.oneof({ weight: 3, arbitrary: arbNearSegment }, arbSegment), { maxLength: 6 })
       .map((segments) => unsafePath(segments));
 
     it('finds what testing every pair of overlapping boxes finds, in the same order', () => {
