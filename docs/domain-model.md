@@ -579,8 +579,30 @@ that names it fails with `ANCHOR_MISSING`.
   typing its X, Y or Turn takes the whole piece, hidden features included, and a dragged piece never
   snaps to its own slots. Rotate takes a part picked by its heading as its piece. A typed width or
   corner reshapes the outline alone — a reshape is not a move. One helper, `pieceScope`, answers
-  what every gesture moves. **Scale does not follow it:** what resizing a piece should do to its
-  rivet holes and card slots is a decision still to make (Q31), so Scale acts on what is selected.
+  what every gesture moves.
+- **Scaling follows it too, and keeps what is made to a size** (Q31). Scaling an outline, or a part
+  picked by its heading, scales the whole piece about the outline's centre, hidden features
+  included, refused whole as any gesture is (`scaleRefusal`, lock first). Positions scale; sizes
+  made for something do not. `keepsItsSize` decides, and what it keeps is only moved — its centre
+  taken where the scale sends it, and turned over in place if the scale turns the piece over:
+
+  | Kind | Under a piece's scale | Why |
+  |---|---|---|
+  | Hardware hole | Keeps its diameter | A 4 mm punch makes a 4 mm hole; a drawn or frozen one too |
+  | Text label | Keeps its text size; its box's centre moves | It prints at the size it was set |
+  | Cut-out typed as a shape (rectangle, circle) | Keeps its width, height, corners or radius | Made for something — a card slot for an 86 × 54 card, a hole for a snap's post |
+  | Cut-out drawn as a path | Scales | It has no size of its own to keep; *Convert to path* is how a typed one joins it |
+  | Outline, stitch line drawn by hand, fold line, marking line | Scales | The piece's own drawing |
+  | Stitch line, hole set, allowance (derived) | Re-derive from the scaled outline | The margin and the iron's pitch are parameters no scale touches |
+  | Row of holes | Re-derives along its scaled line, at the same pitch and diameter | Its line is drawing; its holes are a punch and a spacing |
+  | Counterpart | Follows its original, its axis carried by the scale | It owns only its placement |
+  | Dimension | Re-reads its ends | It has no geometry of its own |
+
+  So a round hole stays round under a stretch, and a label is not refused as it would be stretched
+  alone. What stretching still refuses is what the piece's own drawing cannot take: a turned outline
+  would shear (`WOULD_SHEAR`), a round outline would become an ellipse, and turning a piece over by
+  scaling it through itself reads its labels backwards. Anything else selected scales alone, as it
+  always has — a rivet hole picked by itself grows. A typed width stays a reshape of the outline alone.
 - **A gesture part of the selection refuses is refused whole** (Q30), as a lock already was, and
   `transformRefusal` says why, lock first. It used to move what it could: a piece stretched with its
   rivets selected left them behind.
@@ -926,7 +948,6 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `MEASURE_ACROSS_PARTS` | interaction | X3 | Commands; the measure tool |
 | `NO_TARGET_PART` | interaction | X4 | Drawing modes |
 | `TARGET_SPANS_PARTS` | interaction | X4 | Drawing modes |
-| `WHOLE_PART_NOT_SCALED` | interaction | X4 | Scale, with a part picked by its heading (Q29) |
 | `TRANSFORM_FLATTENS` | interaction | X9 | Transform tools |
 | `WOULD_BECOME_ELLIPSE` | interaction | X9 | Transform tools |
 | `WOULD_SHEAR` | interaction | X9 | Transform tools |

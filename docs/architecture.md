@@ -505,9 +505,9 @@ features belong to — and selection only ever chooses *where* something goes, n
 **A picked part is a real selection everywhere** (Q29). It stands for every feature in it
 (`selectedFeatureIds`): the board highlights them, the status bar counts "1 part selected",
 Properties shows the part — its outline's size, its problems, its name and Cut, *Arrange*'s Flip and
-*Delete part* — and the Delete key deletes the part whole. Rotate, Flip and the right-click menu take
-it as the piece; Shift-click and Shift-box add to what it stands for rather than dropping it; Edit
-Points edits its outline. Scale says why it does not resize a whole part (Q31).
+*Delete part* — and the Delete key deletes the part whole. Rotate, Scale, Flip and the right-click
+menu take it as the piece, Scale keeping what in it is made to a size its size (Q31); Shift-click and
+Shift-box add to what it stands for rather than dropping it; Edit Points edits its outline.
 
 The drill-down sketched here originally — click for a part, double-click for its features, again for
 vertices — waits until real documents show that flat feature picking on the canvas is not enough.

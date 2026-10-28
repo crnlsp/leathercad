@@ -131,18 +131,18 @@ describe('a part picked by its heading, with the Select tool (Q29)', () => {
   });
 });
 
-describe('a part picked by its heading, with Scale (Q29)', () => {
-  it('says why it is not scaled, rather than doing nothing without a word', () => {
+describe('a part picked by its heading, with Scale (Q29, Q31)', () => {
+  it('scales the part as its piece, rather than doing nothing', () => {
     const { ctx, store } = harness();
     store.selectParts(['p']);
     const before = store.getState().document;
     const tool = createScaleTool();
 
-    expect(tool.notice?.(ctx)).toEqual({ code: 'WHOLE_PART_NOT_SCALED', facts: {} });
+    expect(tool.notice?.(ctx)).toBeNull();
     tool.onPointerDown?.(ctx, pointer({ x: 100, y: 30 }));
     tool.onPointerMove?.(ctx, pointer({ x: 150, y: 30 }));
     tool.onPointerUp?.(ctx, pointer({ x: 150, y: 30 }));
-    expect(store.getState().document).toBe(before);
+    expect(store.getState().document).not.toBe(before);
   });
 
   it('says nothing about an outline picked on the board, which it resizes', () => {

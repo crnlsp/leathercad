@@ -55,6 +55,7 @@ export {
   eachFeature,
   findFeature,
   isHolesAlongALine,
+  keepsItsSize,
   roleOf,
 } from './feature.js';
 export type { GuideSide } from './guides.js';

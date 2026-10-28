@@ -4,7 +4,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import type { Feature, FeatureKind } from './feature.js';
-import { roleOf } from './feature.js';
+import { keepsItsSize, roleOf } from './feature.js';
 import { isCutting, LAYER_ROLES } from './layerRole.js';
 
 const base = {
@@ -83,6 +83,55 @@ describe('a hardware hole as a circle', () => {
           );
         },
       ),
+    );
+  });
+});
+
+describe('what a piece scaled around it keeps the size of (Q31)', () => {
+  const circle = {
+    kind: 'shape' as const,
+    shape: { type: 'circle' as const, centre: vec(5, 5), radius: 2 },
+  };
+  const derived = {
+    kind: 'derived' as const,
+    sourceId: 'f0' as Feature['id'],
+    op: {
+      type: 'offset' as const,
+      distanceMm: 3,
+      side: 'inward' as const,
+      run: { kind: 'whole' as const },
+    },
+  };
+  const label: Feature = {
+    ...base,
+    kind: 'text-label',
+    source: { kind: 'text', text: 'Left', at: vec(0, 0), sizeMm: 3, rotationRad: 0 },
+  };
+
+  it('keeps a punched hole, a label and a cut-out typed to a size', () => {
+    expect(keepsItsSize({ ...base, kind: 'hardware-hole', hardwareType: 'rivet' })).toBe(true);
+    expect(keepsItsSize(label)).toBe(true);
+    expect(keepsItsSize({ ...base, kind: 'cut-contour', role: 'inner', source: circle })).toBe(
+      true,
+    );
+  });
+
+  it('scales the outline, a drawn cut-out, and every line drawn on the piece', () => {
+    expect(keepsItsSize({ ...base, kind: 'cut-contour', role: 'outer', source: circle })).toBe(
+      false,
+    );
+    expect(keepsItsSize({ ...base, kind: 'cut-contour', role: 'inner' })).toBe(false);
+    for (const feature of ONE_OF_EACH.filter((f) => f.kind !== 'hardware-hole')) {
+      expect(keepsItsSize(feature), feature.kind).toBe(false);
+    }
+  });
+
+  it('leaves what follows another feature to follow it, a counterpart of a rivet included', () => {
+    expect(
+      keepsItsSize({ ...base, kind: 'hardware-hole', hardwareType: 'rivet', source: derived }),
+    ).toBe(false);
+    expect(keepsItsSize({ ...base, kind: 'cut-contour', role: 'inner', source: derived })).toBe(
+      false,
     );
   });
 });

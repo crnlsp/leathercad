@@ -32,6 +32,7 @@ import {
   findFeature,
   followRefusal,
   isHolesAlongALine,
+  keepsItsSize,
   lockRefusal,
   motionBetween,
   pathForShape,
@@ -44,6 +45,7 @@ import {
   PathOps,
   RectOps,
   Shapes,
+  Vec2Ops,
   decomposeGlide,
   glideMatrix,
   type Mat2x3,
@@ -389,6 +391,86 @@ function transformEach(document: Document, moves: Moves): Document {
   // Everything refused is everything unchanged, and a no-op earns no
   // history: "Undo Move" with nothing behind it is worse than no entry.
   return movedAnything(document.project, next.project) ? next : document;
+}
+
+/** A scale about a fixed point, by a factor along each axis: what Scale asks for. */
+interface Scaling {
+  readonly pivot: Vec2;
+  readonly factors: Vec2;
+}
+
+/**
+ * Resizes the selection (Q31).
+ *
+ * A piece's outline, or a part picked by its heading, stands for the whole
+ * piece, as it does for every other gesture (`pieceScope`): hidden features
+ * included, and refused whole if any of it cannot take the scale. Within the
+ * piece, what is made to a size keeps it (`keepsItsSize`) and only where it
+ * sits is scaled — a 4 mm rivet hole in a piece grown half again is still
+ * 4 mm, not 6. Anything else selected scales alone, as it always has.
+ */
+export function scaleFeatures(ids: readonly FeatureId[], scaling: Scaling): Command {
+  return command({ action: 'scale' }, (document) =>
+    transformEach(document, scaleMoves(document.project, ids, scaling)),
+  );
+}
+
+/** Why scaling `ids` would refuse, or `null`: the question Scale asks as it goes (X1). */
+export function scaleRefusal(
+  project: Project,
+  ids: readonly FeatureId[],
+  scaling: Scaling,
+): Problem | null {
+  return movesRefusal(project, scaleMoves(project, ids, scaling));
+}
+
+function scaleMoves(project: Project, ids: readonly FeatureId[], scaling: Scaling): Moves {
+  const { pivot, factors } = scaling;
+  Vec2Ops.assertFiniteVec(pivot, 'scale pivot');
+  Vec2Ops.assertFiniteVec(factors, 'scale factors');
+  const matrix = MatOps.composeAll(
+    MatOps.fromTranslation({ x: -pivot.x, y: -pivot.y }),
+    MatOps.fromScale(factors.x, factors.y),
+    MatOps.fromTranslation(pivot),
+  );
+  const scoped = new Set(pieceScope(project, ids).features);
+
+  const moves = new Map<FeatureId, Mat2x3>();
+  for (const part of project.parts) {
+    const whole = part.features.some((feature) => isOutline(feature) && scoped.has(feature.id));
+    for (const feature of part.features) {
+      if (!scoped.has(feature.id)) continue;
+      const at = whole && keepsItsSize(feature) ? placementOf(project, feature) : null;
+      moves.set(feature.id, at === null ? matrix : keepingSize(matrix, factors, at));
+    }
+  }
+  return moves;
+}
+
+/**
+ * Where a feature made to a size sits: a shape's own centre, or the middle of
+ * what anything else draws — a label's box, a hole frozen into a path. Null
+ * when it draws nothing, and then it simply scales: there is nothing to see.
+ */
+function placementOf(project: Project, feature: Feature): Vec2 | null {
+  if (feature.source.kind !== 'shape') return centreOf(project, [feature.id]);
+  const { shape } = feature.source;
+  return shape.type === 'rect'
+    ? { x: shape.origin.x + shape.width / 2, y: shape.origin.y + shape.height / 2 }
+    : shape.centre;
+}
+
+/**
+ * Taken to where `matrix` sends `at`, the right size: turned over about `at`
+ * if the scale turns the piece over, and never resized. So a round hole stays
+ * round under a stretch, and a label stays a label (Q31).
+ */
+function keepingSize(matrix: Mat2x3, factors: Vec2, at: Vec2): Mat2x3 {
+  return MatOps.composeAll(
+    MatOps.fromTranslation({ x: -at.x, y: -at.y }),
+    MatOps.fromScale(Math.sign(factors.x), Math.sign(factors.y)),
+    MatOps.fromTranslation(MatOps.apply(matrix, at)),
+  );
 }
 
 /**

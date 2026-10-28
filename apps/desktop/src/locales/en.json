@@ -1224,10 +1224,6 @@
       "title": "Empty part",
       "description": "{{partName}} has nothing in it. Draw into it, or delete it from the parts list."
     },
-    "WHOLE_PART_NOT_SCALED": {
-      "title": "A whole part is not scaled",
-      "description": "Scale resizes the shapes you pick, not a whole part: that would resize its rivet holes and labels too. Pick its outline on the board to resize the edge alone."
-    },
     "counts": {
       "error_one": "{{count}} error",
       "error_other": "{{count}} errors",

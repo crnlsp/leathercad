@@ -14,7 +14,7 @@ import {
   type Command,
 } from '@leathercad/document';
 import { evaluate, type Project } from '@leathercad/domain';
-import { PathOps, type Rect, type Vec2 } from '@leathercad/geometry';
+import { PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import type { PointerInput, Tool, ToolContext } from '../tool.js';
@@ -196,19 +196,91 @@ describe('turning a piece by its outline (Q30)', () => {
   });
 });
 
-describe('stretching a piece that part of it refuses (Q30)', () => {
-  it('changes nothing, rather than leaving the rivet and the label behind, and says why', () => {
+describe('scaling a piece by its outline (Q31)', () => {
+  // Pressed 50 right of the outline's centre (50, 30), dragged to 75 right:
+  // half as wide again.
+  const grow = (ctx: ToolContext) =>
+    drag(createScaleTool(), ctx, { x: 100, y: 30 }, { x: 125, y: 30 });
+  /** The outline half as wide again about its centre, x = 50. */
+  const wider = (box: Rect): Rect => ({
+    ...box,
+    minX: 50 + 1.5 * (box.minX - 50),
+    maxX: 50 + 1.5 * (box.maxX - 50),
+  });
+  /** Moved to where the stretch sends its middle, the same size. */
+  const carried = (box: Rect): Rect => {
+    const middle = (box.minX + box.maxX) / 2;
+    return shifted(box, 50 + 1.5 * (middle - 50) - middle, 0);
+  };
+
+  it('grows the piece, and carries its rivet, slot and label at their own sizes', () => {
     const { ctx, store } = harness();
-    store.select(['outline', 'stitch', 'slot', 'rivet', 'label', 'mark']);
+    store.select(['outline']);
+    const before = store.getState().document.project;
+
+    grow(ctx);
+
+    const after = store.getState().document.project;
+    expectBox(boxOf(after, 'outline'), wider(boxOf(before, 'outline')), 'outline');
+    expectBox(boxOf(after, 'mark'), wider(boxOf(before, 'mark')), 'mark');
+    for (const id of ['slot', 'rivet', 'label']) {
+      expectBox(boxOf(after, id), carried(boxOf(before, id)), id);
+    }
+  });
+
+  it('scales a part picked by its heading the same way', () => {
+    const { ctx, store } = harness();
+    store.selectParts(['p']);
     const before = store.getState().document.project;
     const tool = createScaleTool();
 
-    // Pressed 50 right of the centre, dragged to 100 right: twice as wide only.
-    tool.onPointerDown?.(ctx, pointer({ x: 100, y: 30 }));
-    tool.onPointerMove?.(ctx, pointer({ x: 150, y: 30 }));
+    expect(tool.notice?.(ctx)).toBeNull();
+    drag(tool, ctx, { x: 100, y: 30 }, { x: 125, y: 30 });
 
-    expect(tool.notice?.(ctx)).not.toBeNull();
-    tool.onPointerUp?.(ctx, pointer({ x: 150, y: 30 }));
+    const after = store.getState().document.project;
+    expectBox(boxOf(after, 'rivet'), carried(boxOf(before, 'rivet')), 'rivet');
+    expectBox(boxOf(after, 'outline'), wider(boxOf(before, 'outline')), 'outline');
+  });
+
+  it('is one step of undo', () => {
+    const { ctx, store } = harness();
+    store.select(['outline']);
+    const before = store.getState().document;
+
+    grow(ctx);
+    store.undo();
+
+    expect(store.getState().document).toBe(before);
+  });
+
+  it('keeps still, and says why, when anything in the piece is locked', () => {
+    const { ctx, store } = harness();
+    store.dispatch(setFeatureLocked(['rivet'], true));
+    store.select(['outline']);
+    const before = store.getState().document.project;
+    const tool = createScaleTool();
+
+    tool.onPointerDown?.(ctx, pointer({ x: 100, y: 30 }));
+    tool.onPointerMove?.(ctx, pointer({ x: 125, y: 30 }));
+
+    expect(tool.notice?.(ctx)).toMatchObject({
+      code: 'FEATURE_LOCKED',
+      facts: { featureId: 'rivet' },
+    });
+    tool.onPointerUp?.(ctx, pointer({ x: 125, y: 30 }));
     expect(store.getState().document.project).toBe(before);
+  });
+
+  it('still scales a rivet picked on its own, and nothing else', () => {
+    const { ctx, store } = harness();
+    store.select(['rivet']);
+    const before = store.getState().document.project;
+
+    // About the rivet’s centre (85, 45): pressed 2 out along each axis, dragged to 3.
+    drag(createScaleTool(), ctx, { x: 87, y: 47 }, { x: 88, y: 48 });
+
+    const after = store.getState().document.project;
+    expect(RectOps.width(boxOf(after, 'rivet'))).toBeCloseTo(6, 6);
+    expectBox(boxOf(after, 'outline'), boxOf(before, 'outline'), 'outline');
   });
 });

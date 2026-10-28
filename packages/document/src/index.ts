@@ -91,6 +91,8 @@ export {
   setShape,
   shapePart,
   refusedTransforms,
+  scaleFeatures,
+  scaleRefusal,
   transformFeatures,
   transformRefusal,
   translateFeatures,
