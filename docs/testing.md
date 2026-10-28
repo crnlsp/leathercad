@@ -444,6 +444,8 @@ is still open.
 What the Sheets view costs to draw is a controlled-machine trend: `node tools/perf-sheets.mjs time`
 times the drawing callbacks of the real app on the 33-sheet strap, and `pixels` fingerprints the
 canvas at every step of a pan, to show a change moved no pixel. Both need `pnpm build` first.
+`node tools/perf-drag.mjs` likewise times a piece and a guide dragged across a traced outline
+(`fixtures/perf/traced-<n>.lcp`), p50, p95 and long tasks (PERF-004).
 
 ## 10. Test-driven development, concretely
 

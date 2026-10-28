@@ -56,7 +56,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-001](#perf-001) | P1 | High | Share export geometry across history revisions | Confirmed | Medium | Medium | `perf/001-shared-export-geometry` |
 | ◐ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | `perf/002-tiled-pdf`: culling done; blocking remains |
 | ✅ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | `perf/003-sheets-culling` |
-| ☐ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | Unassigned |
+| ✅ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | `perf/004-incremental-snap` |
 | ☐ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | Unassigned |
 | ☐ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | Unassigned |
 | ☐ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | Unassigned |
@@ -396,15 +396,82 @@ independent PR; build on PERF-002 geometry helpers only where appropriate.
 identity invalidates the index during previews. Builds cost 6.42/22.43/88.00 ms for 250/500/1,000
 points. Warm ordinary snap queries were cheap; rebuilding is the main demonstrated problem.
 
-- [ ] Reproduce complex-outline drag/preview behavior, including guides added since the audit.
-- [ ] Add conservative path/segment broad rejection and cache unaffected pair results by path
+- [x] Reproduce complex-outline drag/preview behavior, including guides added since the audit.
+  Reproduced at `b023c29`: the 500-point piece drag at 37–38 / 42 ms p50 / p95, as the audit's
+  36–40 / 40–54, and worse than the audit's build times suggested in Vitest — a full rebuild met
+  every segment of the outline against every segment of the stitch line, recomputing a box per
+  pair, and the hole set's line, which lies on the stitch line, crossed it at every vertex, each
+  crossing checked against all those kept. Dragging a guide rebuilt every feature pair too.
+- [x] Add conservative path/segment broad rejection and cache unaffected pair results by path
   identity; update changed dependencies rather than rebuilding all candidates.
-- [ ] If coalescing preview input, always apply the final input exactly.
-- [ ] Verify snap priorities, deterministic ties, exclusions, pixel-derived pick tolerance,
+  `geometry/src/ops/intersect.ts`: `intersectPaths` computes each segment's box once and sweeps
+  the boxes along x, meeting only pairs that pass the box test it always used (`boxesOverlap`,
+  EPS_POINT), in the order the nested loop visited them; a crossing is checked against those kept
+  in the cells around it. Same pairs, same crossings, same order. `editor/src/snap.ts` keeps each
+  pair's crossings, and each guide's crossings of a path, in a `WeakMap` keyed on the path and
+  guide objects: evaluation keeps an unchanged feature's path the same object, so an edit
+  recomputes the crossings of what it changed — a moved piece, its derived stitch line and holes,
+  a feature following it from another part — and reads the rest. The index is otherwise built as
+  before.
+- [x] If coalescing preview input, always apply the final input exactly. Not coalesced: every
+  move is applied and snapped as before.
+- [x] Verify snap priorities, deterministic ties, exclusions, pixel-derived pick tolerance,
   lines/arcs/curves, guide crossings and cross-part changes; report p50/p95 and long tasks.
+  `snap` itself is unchanged, and so is what it reads: a property in `editor/src/snap.test.ts`
+  builds random projects (lines, arcs, cubics, circles, hidden and locked features, stitch lines
+  inset from another part's contour, guides), applies random moves, visibility, lock and guide
+  edits through the real commands, and after each holds the index — every candidate, in every
+  bucket, in order — equal to one built from a copy sharing no object. In
+  `geometry/src/ops/intersect.test.ts`, properties hold `intersectPaths` equal to the old nested
+  loop over random segment soups, a path against itself included, and never leaving out two
+  segments drawn through one point. The existing snap, guide and tool tests pass unchanged.
+  Guarded without timings, in `pnpm test`: an outline and its stitch line of 1,000 segments each
+  are read 3,000 times, not the nested loop's 1,001,000 (ceiling 20,000), and after a piece is
+  carried or a guide dragged the index holds the very crossing points it computed for what the
+  edit left alone. Both fail on the code before.
+
+| PERF-004, select-tool drag in Electron, p50 / p95 (long tasks) | Before (`b023c29`) | After |
+|---|---|---|
+| 250-point outline, carry the piece | 13.5 / 18.1 ms | 11.0–11.2 / 14.2–14.9 ms |
+| 250-point outline, drag a guide | 9.7 / 10.6 ms | 5.7–5.8 / 6.7–7.7 ms |
+| 500-point outline, carry the piece | 37.0–37.6 / 41.9–42.2 ms | 22.7–25.0 / 29.0–29.7 ms |
+| 500-point outline, drag a guide | 25.1–25.2 / 27.2–29.2 ms | 9.1–9.6 / 10.1–10.9 ms |
+| 1,000-point outline, carry the piece | 120.2 / 127.4 ms (57, 6.6 s) | 64.0–64.7 / 68.1–72.2 ms (54, 3.5 s) |
+| 1,000-point outline, drag a guide | 78.3 / 84.6 ms (60, 4.7 s) | 17.6–18.1 / 19.3–19.8 ms (none) |
+
+| `editor.bench.ts`, one drag move: evaluate and index snaps, mean | Before (`b023c29`) | After |
+|---|---:|---:|
+| Nudge a vertex, 250-point outline | 67.1 ms | 24.0 ms |
+| Nudge a vertex, 500-point outline | 251.4 ms | 81.5 ms |
+| Nudge a vertex, 1,000-point outline | 970.2 ms | 301.1 ms |
+| Carry a tab beside a 1,000-point outline | 701.7 ms | 6.2 ms |
+
+Measured with `node tools/perf-drag.mjs` on the production build in unpackaged Electron 45.0.0
+(`fixtures/perf/traced-<n>.lcp`: `tracedOutline(n)`, 468 holes, a vertical and a diagonal
+guide; 1600 × 1000 window, about 115 % zoom), three runs of 20 moves each, one run before and
+two after, the ranges above; and with `editor.bench.ts` under `pnpm bench:compare`, Vitest 5.0.5
+on Node 24.22.0, against baselines recorded on `b023c29` (re-recorded on the fix afterwards). The
+audit's machine, Linux 7.3.0-4-cachyos, load average about 1–2 from other work. A latency runs
+from the pointer event to the end of the animation callback that painted it: JavaScript, not GPU
+or presentation. The bench runs through Vitest's module runner, slower than a bundle; compare it
+only with itself. Same metric, method and machine before and after; `pnpm bench:compare` left
+the other packages' cases level.
+
+**Not done / not verified.** What a piece drag still costs is evaluation: the domain bench's
+500-point evaluation is 74.5 ms of the 81.5 ms move, the snap index the rest, and the
+1,000-point drag still makes long tasks. That is [PERF-006](#perf-006), not done here. Measured on
+Linux only; snapping is pure, and CI's Windows and macOS unit jobs run the same properties and
+guards. A box test with one EPS_POINT of slack is narrower than `intersectSegments`' own end
+tolerance — fast-check found two segments it calls touching across a gap a hair over EPS_POINT
+whose boxes miss — so `intersectPaths` leaves such a touch out, as it always did; pinned as an
+example, not changed.
 
 **Expected benefit:** Remove repeated whole-document intersection work. PERF-006 can supply an
 exact broad-phase primitive; do not make snapping depend on lossy approximations.
+
+**Result:** a guide drag no longer rebuilds any feature pair, and a piece drag recomputes only its
+own, through a broad phase that tests the pairs the old loop tested. The 1,000-point guide drag
+went from 78 to 18 ms with no long tasks; the piece drag's remaining cost is evaluation.
 
 ### PERF-005
 
@@ -446,6 +513,13 @@ self-intersection/line-intersection work. Complex traces regenerate slowly despi
 
 **Expected benefit:** Fewer unnecessary pair tests; no promise of subquadratic worst-case output.
 Coordinate shared primitives with PERF-004 and preserve the path-identity crossing cache.
+
+PERF-004 left a sweep in `intersect.ts` (`segmentsWithOverlappingBoxes`). It is exact for
+`intersectPaths`, which always had that box test, but not yet for `selfIntersections`, which has
+none: `intersectSegments` reports touches across gaps slightly wider than the box test's one
+EPS_POINT (see `intersect.test.ts`, and arcs' angular tolerance grows with the radius), so a box
+test there would drop them. Widen the slack to what `intersectSegments` accepts, and prove it,
+before reusing it.
 
 ### PERF-007
 
