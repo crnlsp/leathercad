@@ -17,8 +17,8 @@ import {
   SHEET,
   extentOf,
   reachesView,
-  widestPixelsToMm,
   unionExtent,
+  widestPixelsToMm,
   type BoundedItem,
   type DisplayItem,
   type DisplayList,
@@ -36,6 +36,9 @@ import type { SheetsLayout } from './sheetsLayout.js';
 
 /** How far a join line runs past the piece, so its ends are seen. */
 const JOIN_OVERRUN_MM = 6;
+
+/** What a halo reaches past its path, in CSS pixels: half its width, and the antialiased edge. */
+const HALO_EDGE_PX = CANVAS.halo.widthPx / 2 + EDGE_PX;
 
 /** The tiles of each taped part, keyed by part id, in sheet order. */
 function tilesByPart(plan: SheetPlan): Map<string, { bounds: Rect; tiles: Tile[] }> {
@@ -385,7 +388,7 @@ function extentOfPage(
   );
   // A halo, once a piece has one, is a wide stroke round its outline.
   return all !== null && hasPieces
-    ? { ...all, marginPx: Math.max(all.marginPx, CANVAS.halo.widthPx / 2 + EDGE_PX) }
+    ? { ...all, marginPx: Math.max(all.marginPx, HALO_EDGE_PX) }
     : all;
 }
 
@@ -470,9 +473,6 @@ function haloed(page: SheetsPage, emphasis: SheetsEmphasis): SheetsPage {
   halos.set(page, { key, page: made });
   return made;
 }
-
-/** A halo's half width and the antialiased edge past it, in CSS pixels. */
-const HALO_EDGE_PX = CANVAS.halo.widthPx / 2 + EDGE_PX;
 
 /**
  * Whether a path of a piece, moved by `at`, can put ink inside `clip` — true

@@ -441,6 +441,10 @@ workloads and measurements, plus implementation acceptance criteria. Its
 checks from controlled-machine trends. The rest of [PERF-017](performance-backlog.md#perf-017)
 is still open.
 
+What the Sheets view costs to draw is a controlled-machine trend: `node tools/perf-sheets.mjs time`
+times the drawing callbacks of the real app on the 33-sheet strap, and `pixels` fingerprints the
+canvas at every step of a pan, to show a change moved no pixel. Both need `pnpm build` first.
+
 ## 10. Test-driven development, concretely
 
 For `geometry` and `domain`, tests come first. Not as ritual — because in this domain the test *is*
