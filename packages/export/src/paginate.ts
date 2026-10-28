@@ -10,7 +10,7 @@ import {
 } from '@leathercad/geometry';
 
 import { contentAreaMm, paperOptionsFitting, type Orientation, type PageSetup } from './paper.js';
-import type { ExportPart, ExportScene } from './scene.js';
+import type { ExportPart, ExportPath, ExportScene } from './scene.js';
 
 /**
  * Space left between parts on a sheet, so cut lines never touch and each piece
@@ -229,6 +229,7 @@ function layOut(parts: readonly ExportPart[], area: Area, mayTurn: boolean): Lay
  * its bounds and the name set above them, or beside them once turned.
  */
 interface Footprint {
+  /** As drawn, even when `turned`. */
   readonly part: ExportPart;
   readonly turned: boolean;
   readonly room: Rect;
@@ -269,29 +270,60 @@ const QUARTER_TURN: Mat2x3 = { a: 0, b: 1, c: -1, d: 0, e: 0, f: 0 };
 /**
  * Turned a quarter counter-clockwise, words and all: the name, set above the
  * part as drawn, reads upward along its left side — from the sheet's right
- * edge, as drafting reads a turned dimension.
+ * edge, as drafting reads a turned dimension. The footprint holds the part
+ * as drawn; `place` turns it, and only once it is placed turned.
  */
 function turned(part: ExportPart, area: Area): Footprint {
   const b = part.boundsMm;
-  const turn = (path: Path): Path => PathOps.transform(path, QUARTER_TURN);
-  const piece: ExportPart = {
+  // The room as drawn, turned: the name's room on the left, and as long as the
+  // name runs up the side, never more than the printable height.
+  return footprint(part, true, {
+    minX: -b.maxY - LABEL_HEIGHT_MM,
+    minY: b.minX,
+    maxX: -b.minY,
+    maxY: b.minX + packingWidth(part, area.heightMm),
+  });
+}
+
+function turnedPart(part: ExportPart): ExportPart {
+  const b = part.boundsMm;
+  return {
     ...part,
-    paths: part.paths.map((item) => ({ ...item, path: turn(item.path) })),
-    texts: part.texts.map((text) => ({ ...text, glyphs: text.glyphs.map(turn) })),
+    paths: turnedPaths(part.paths),
+    texts: part.texts.map((text) => ({ ...text, glyphs: turnedGlyphs(text.glyphs) })),
     // Its corners turned by the same matrix as its paths, so the two agree.
     boundsMm: RectOps.fromCorners(
       MatOps.apply(QUARTER_TURN, { x: b.minX, y: b.minY }),
       MatOps.apply(QUARTER_TURN, { x: b.maxX, y: b.maxY }),
     ),
   };
-  // The room as drawn, turned: the name's room on the left, and as long as the
-  // name runs up the side, never more than the printable height.
-  return footprint(piece, true, {
-    minX: -b.maxY - LABEL_HEIGHT_MM,
-    minY: b.minX,
-    maxX: -b.minY,
-    maxY: b.minX + packingWidth(part, area.heightMm),
-  });
+}
+
+/**
+ * What has been turned so far, by what it was turned from. A part's paths and
+ * words are the same arrays in every revision that did not redraw them — a
+ * rename, an edit to another part (`buildExportScene`) — so each is turned
+ * once, not once a revision and again for every packing order (PERF-001).
+ */
+const turnedPathLists = new WeakMap<readonly ExportPath[], readonly ExportPath[]>();
+const turnedGlyphLists = new WeakMap<readonly Path[], readonly Path[]>();
+
+function turnedPaths(paths: readonly ExportPath[]): readonly ExportPath[] {
+  let turned = turnedPathLists.get(paths);
+  if (turned === undefined) {
+    turned = paths.map((item) => ({ ...item, path: PathOps.transform(item.path, QUARTER_TURN) }));
+    turnedPathLists.set(paths, turned);
+  }
+  return turned;
+}
+
+function turnedGlyphs(glyphs: readonly Path[]): readonly Path[] {
+  let turned = turnedGlyphLists.get(glyphs);
+  if (turned === undefined) {
+    turned = glyphs.map((glyph) => PathOps.transform(glyph, QUARTER_TURN));
+    turnedGlyphLists.set(glyphs, turned);
+  }
+  return turned;
 }
 
 /** The orders `paginate` tries: tallest, largest, widest, longest side first. */
@@ -352,7 +384,7 @@ function place(sheet: Sheet, way: Footprint, area: Area): boolean {
   if (at === null) return false;
   sheet.free = carve(sheet.free, { minX: at.x, minY: at.y, maxX: at.x + w, maxY: at.y + h });
   sheet.placements.push({
-    part: way.part,
+    part: way.turned ? turnedPart(way.part) : way.part,
     turned: way.turned,
     offsetMm: {
       x: area.x + at.x - way.room.minX,

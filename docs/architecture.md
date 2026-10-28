@@ -558,6 +558,11 @@ Measure before optimising, but the known shapes of the problem:
   immutably with structural sharing, so an unchanged feature is the same object, and a derived one
   is reused only while its source is too (`domain/src/evaluate.ts`). Editing one part does not
   re-evaluate the other thirty-nine.
+- **What is derived for paper is shared, not kept per revision.** The export scene reuses a part's
+  ink — a circle per hole, an outline per glyph — while its features and the geometry they resolve
+  to are the same objects, so a rename redraws one caption (`export/src/scene.ts`). The renderer
+  keeps the sheet plan only for the project on screen (`renderer/src/sheets.ts`): keyed by every
+  project in history, it held 1.3 GiB after two hundred renames (PERF-001).
 - **Stitch holes render as a single batched path** (one `Path2D` of many small circles) rather than
   3 000 individual `arc()` + `fill()` pairs.
 - **Culling**: the content layer skips features whose bounding box does not intersect the viewport.

@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, evaluate, type Project } from '@leathercad/domain';
+import { DEFAULT_SETTINGS, evaluate, type Project, type ResolvedProject } from '@leathercad/domain';
 import { uniformRadii } from '@leathercad/geometry';
 import { buildDisplayList, type Caption } from '@leathercad/render';
 import { test, type Bench } from 'vitest';
@@ -111,8 +111,22 @@ const caption = (): Caption => ({ name: 'Strap', detail: '636 holes · 3.85 mm' 
 test('build the display list', ({ bench }) =>
   measure(bench, 'display-list', () => buildDisplayList(resolved, { caption })));
 
+/**
+ * The same evaluation, as a part edited since: its features a new array. The
+ * scene reuses a part's ink while its features are the same array (PERF-001),
+ * so without this every round after the first would time a lookup, not the
+ * build the baseline recorded.
+ */
+const edited = (): ResolvedProject => ({
+  ...resolved,
+  parts: resolved.parts.map((entry) => ({
+    ...entry,
+    part: { ...entry.part, features: [...entry.part.features] },
+  })),
+});
+
 test('build the export scene', ({ bench }) =>
-  measure(bench, 'export-scene', () => buildExportScene(resolved, project.name)));
+  measure(bench, 'export-scene', () => buildExportScene(edited(), project.name)));
 
 test('write the PDF', ({ bench }) =>
   measure(bench, 'pdf', () =>
