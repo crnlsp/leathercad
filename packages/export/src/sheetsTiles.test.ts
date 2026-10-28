@@ -4,7 +4,6 @@ import {
   RectOps,
   SegmentOps,
   polyline,
-  type Path,
   type Rect,
   type Vec2,
 } from '@leathercad/geometry';
@@ -130,14 +129,41 @@ describe('what a taped sheet leaves out of its piece', () => {
     for (const given of [{}, emphasis]) {
       const layers = sheetsLayers(pages, undefined, given);
       const drawn = layers.filter((layer) => layer.clipMm !== null);
+      // What each path puts past its line: half its stroke, or a halo's half
+      // when it is emphasised; a word's contours are filled and reach no further.
+      const halo = given === emphasis ? CANVAS.halo.widthPx / 2 : 0;
+      const everything = [
+        ...part.paths.map(({ path, role }) => ({
+          path,
+          reachPx: Math.max(ROLE_STYLES[role].widthPx / 2, halo),
+        })),
+        ...part.texts.flatMap((text) => text.glyphs.map((path) => ({ path, reachPx: 0 }))),
+      ];
+      // None of this depends on the view, so it is worked out once per sheet
+      // rather than for every view the property tries: on CI's coverage run,
+      // redoing it took the test past its time limit.
+      const sheets = tiles.map(({ page }, i) => {
+        const layer = drawn[i]!;
+        const at = page.pieces[0]!.at;
+        const kept = drawnKeys(layer);
+        const left = everything
+          .filter(({ path }) => !kept.has(keyOf(moved(PathOps.bbox(path)!, at))))
+          .map(({ path, reachPx }) => ({
+            reachPx,
+            points: path.segments
+              .flatMap((segment) =>
+                Array.from({ length: 5 }, (_, k) => SegmentOps.pointAt(segment, k / 4)),
+              )
+              .map((point) => ({ x: point.x + at.x, y: point.y + at.y })),
+          }));
+        return { clipMm: layer.clipMm!, left };
+      });
       fc.assert(
         fc.property(arbView, (view) => {
           const toScreen = worldToScreen(view);
-          return tiles.every(({ page }, i) => {
-            const layer = drawn[i]!;
-            const at = page.pieces[0]!.at;
+          return sheets.every(({ clipMm, left }) => {
             const clipPx = RectOps.fromPoints(
-              RectOps.corners(layer.clipMm!).map((corner) => MatOps.apply(toScreen, corner)),
+              RectOps.corners(clipMm).map((corner) => MatOps.apply(toScreen, corner)),
             )!;
             const outside = (point: Vec2): number => {
               const p = MatOps.apply(toScreen, point);
@@ -148,30 +174,10 @@ describe('what a taped sheet leaves out of its piece', () => {
                 p.y - clipPx.maxY,
               );
             };
-            const along = (path: Path): Vec2[] =>
-              path.segments
-                .flatMap((segment) =>
-                  Array.from({ length: 5 }, (_, k) => SegmentOps.pointAt(segment, k / 4)),
-                )
-                .map((point) => ({ x: point.x + at.x, y: point.y + at.y }));
-            const kept = drawnKeys(layer);
-            // What each path puts past its line: half its stroke, or a halo's half
-            // when it is emphasised; a word's contours are filled and reach no further.
-            const halo = given === emphasis ? CANVAS.halo.widthPx / 2 : 0;
-            const everything = [
-              ...part.paths.map(({ path, role }) => ({
-                path,
-                reachPx: Math.max(ROLE_STYLES[role].widthPx / 2, halo),
-              })),
-              ...part.texts.flatMap((text) => text.glyphs.map((path) => ({ path, reachPx: 0 }))),
-            ];
-            return everything.every(({ path, reachPx }) => {
-              const box = moved(PathOps.bbox(path)!, at);
-              return (
-                kept.has(keyOf(box)) ||
-                along(path).every((point) => outside(point) > reachPx * view.dpr)
-              );
-            });
+            // Whatever was left out lies wholly past the clip by more than its reach.
+            return left.every(({ points, reachPx }) =>
+              points.every((point) => outside(point) > reachPx * view.dpr),
+            );
           });
         }),
         { numRuns: 100 },
