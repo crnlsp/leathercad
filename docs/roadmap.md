@@ -228,9 +228,6 @@ with the packaged app.
 
 ### Output
 
-- ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
-  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
-  then the preview saves the PDF.
 - ✅ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
   the Print Preview's since 7.6.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than
@@ -340,7 +337,7 @@ under [Later](#performance-and-resource-efficiency), without adding them to this
 | # | What | Plan |
 |---|---|---|
 | ✅ **R6** | The built renderer loads from `app://leathercad`, and `GrantFileProtocolExtraPrivileges` is off | The protocol serves only bundled renderer files, checks decoded paths and real targets, and preserves CSP and sandboxing. Packaged tests cover the origin, denied paths, fonts, PDF preview worker and measured PDF export; a packaged app ignores the development URL override. [ADR 0014](adr/0014-electron-builder-and-release-please.md#r6-amendment--a-bundled-app-origin-2026-10-23) |
-| — **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, as it had moved out of 1.3.5's R1 on 2026-10-09. When a Windows PC or a Mac and a printer are at hand, record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Until then the log says neither platform is verified. Marked ☐ if a release is to wait for it |
+| — **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, as it had moved out of 1.3.5's R1 on 2026-10-09. When a Windows PC or a Mac and a printer are at hand, record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Until then the log says neither platform is verified. Marked as planned if a release is to wait for it |
 | — **R10** | U.7's window edited flag is unverified on macOS, the one platform that shows it: it was checked on Linux, where Electron ignores it, and through the test host and a mock of `setDocumentEdited` | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, since no Mac is at hand. Check 12 of [`release-checklist.md`](release-checklist.md) on a real Mac, with the packaged dmg: an edit sets the window's edited dot, *Save* clears it. Tick this only then, saying the macOS version and the date — never from Linux, the test host or a mock. Check 13, ⌘A outside a field ([#97](https://github.com/crnlsp/leathercad/issues/97)), fits the same session |
 | — | Code signing | **Not done, by decision** (2026-09-24). LeatherCAD is free and open source and signing costs money every year, so installers ship unsigned; [`getting-started.md`](getting-started.md) says how to open them and how to check a download against its build provenance. If it is ever wanted, electron-builder signs when `CSC_LINK` is set |
 
@@ -659,6 +656,10 @@ release until it is moved into one.
 
 ### Also later, each already decided in principle
 
+- **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
+  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
+  then the preview saves the PDF. Moved out of 1.6 on 2026-10-28: no Windows PC and printer were at
+  hand to measure the gauge, and the release does not wait for one.
 - **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched only
   after 9.19.
 - **Pieces gliding** between Design and Sheets.
