@@ -56,28 +56,114 @@ function dispatch(a: Segment, b: Segment): Intersection[] {
   return refined(a, b);
 }
 
-/** Where two paths meet, with segment indices in the parameters' integer parts. */
+/**
+ * Where two paths meet, with segment indices in the parameters' integer parts.
+ *
+ * Only segments whose boxes overlap to EPS_POINT are tested, in the order of
+ * `a`'s segments and then `b`'s, so the first crossing found at a place is
+ * the one kept, as when every pair was visited.
+ */
 export function intersectPaths(a: Path, b: Path): Intersection[] {
   const out: Intersection[] = [];
+  const kept = new Map<string, Vec2[]>();
+  const near = segmentsWithOverlappingBoxes(a.segments, b.segments);
 
   for (let i = 0; i < a.segments.length; i++) {
-    const sa = a.segments[i]!;
-    const ba = bbox(sa);
-
-    for (let j = 0; j < b.segments.length; j++) {
-      const sb = b.segments[j]!;
-      // Cheap rejection first: most segment pairs on two real outlines are
-      // nowhere near each other.
-      if (!boxesOverlap(ba, bbox(sb))) continue;
-
-      for (const hit of intersectSegments(sa, sb)) {
-        push(out, { point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
+    for (const j of near[i]!) {
+      for (const hit of intersectSegments(a.segments[i]!, b.segments[j]!)) {
+        if (keptNear(kept, hit.point)) continue;
+        keep(kept, hit.point);
+        out.push({ point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
       }
     }
   }
 
   return out;
 }
+
+/**
+ * `push`'s rule — a crossing within EPS_POINT of one already kept is the same
+ * crossing — looked up in the cells around the point rather than against every
+ * crossing kept. A path laid over itself, as a hole set lies on its stitch
+ * line, crosses at every vertex, and scanning them all made that quadratic.
+ *
+ * A bucket size, not a tolerance: any cell much wider than EPS_POINT finds the
+ * same neighbours, since two points closer than that are never more than one
+ * cell apart. A NaN coordinate makes a cell no other point is near, as `dist`
+ * makes it near nothing.
+ */
+const KEPT_CELL_MM = 1;
+
+const cellOf = (p: Vec2): [number, number] => [
+  Math.floor(p.x / KEPT_CELL_MM),
+  Math.floor(p.y / KEPT_CELL_MM),
+];
+
+function keptNear(kept: ReadonlyMap<string, readonly Vec2[]>, p: Vec2): boolean {
+  const [cx, cy] = cellOf(p);
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (kept.get(`${cx + dx},${cy + dy}`)?.some((q) => dist(q, p) < EPS_POINT)) return true;
+    }
+  }
+  return false;
+}
+
+function keep(kept: Map<string, Vec2[]>, p: Vec2): void {
+  const key = cellOf(p).join(',');
+  const cell = kept.get(key);
+  if (cell === undefined) kept.set(key, [p]);
+  else cell.push(p);
+}
+
+interface Boxed {
+  readonly box: Rect;
+  readonly index: number;
+  readonly inA: boolean;
+}
+
+/**
+ * For each segment of `a`, the indices of `b`'s whose box overlaps its own by
+ * `boxesOverlap`, ascending: exactly the pairs testing every one would keep
+ * (PERF-004). Sweep and prune along x — boxes in order of their left edge,
+ * each met against those still open — so two real outlines, mostly far apart,
+ * cost about their segment counts rather than their product.
+ */
+function segmentsWithOverlappingBoxes(a: readonly Segment[], b: readonly Segment[]): number[][] {
+  const near: number[][] = a.map(() => []);
+  const boxed: Boxed[] = [
+    ...a.map((s, index) => ({ box: bbox(s), index, inA: true })),
+    ...b.map((s, index) => ({ box: bbox(s), index, inA: false })),
+  ]
+    // A NaN coordinate fails every comparison in `boxesOverlap`, so the box
+    // meets nothing; left in, it would leave the sort's order undefined.
+    .filter(({ box }) => !hasNaN(box))
+    .sort((p, q) => (p.box.minX < q.box.minX ? -1 : p.box.minX > q.box.minX ? 1 : 0));
+
+  let openA: Boxed[] = [];
+  let openB: Boxed[] = [];
+  for (const entry of boxed) {
+    // `boxesOverlap`'s own test along x. Left edges only grow from here, so a
+    // box this one has passed meets nothing still to come.
+    const reaches = (o: Boxed): boolean => entry.box.minX <= o.box.maxX + EPS_POINT;
+    openA = openA.filter(reaches);
+    openB = openB.filter(reaches);
+
+    if (entry.inA) {
+      for (const o of openB) if (boxesOverlap(entry.box, o.box)) near[entry.index]!.push(o.index);
+      openA.push(entry);
+    } else {
+      for (const o of openA) if (boxesOverlap(o.box, entry.box)) near[o.index]!.push(entry.index);
+      openB.push(entry);
+    }
+  }
+
+  for (const indices of near) indices.sort((p, q) => p - q);
+  return near;
+}
+
+const hasNaN = (r: Rect): boolean =>
+  Number.isNaN(r.minX) || Number.isNaN(r.minY) || Number.isNaN(r.maxX) || Number.isNaN(r.maxY);
 
 /**
  * Where a path crosses itself.
