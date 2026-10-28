@@ -120,24 +120,47 @@ export function buildSnapIndex(
 
   for (const guide of resolved.project.guides ?? []) {
     for (const feature of visible) {
-      for (const hit of guideCrossings(guide, feature.path)) {
+      for (const hit of crossings(feature.path, guide, () => guideCrossings(guide, feature.path))) {
         add({ kind: 'intersection', point: hit.point, featureId: feature.id, guideId: guide.id });
       }
     }
   }
 
-  // Crossings between features. Quadratic in the feature count, which is fine
-  // at the scale a pattern reaches and is done once per revision rather than
-  // per pointer move.
+  // Crossings between features. Quadratic in the feature count, but a pair is
+  // computed once for as long as both paths live: a preview re-evaluates only
+  // what it changed, so a drag recomputes the pairs of what moved.
   for (let i = 0; i < visible.length; i++) {
+    const a = visible[i]!;
     for (let j = i + 1; j < visible.length; j++) {
-      for (const hit of intersectPaths(visible[i]!.path, visible[j]!.path)) {
-        add({ kind: 'intersection', point: hit.point, featureId: visible[i]!.id });
+      const b = visible[j]!.path;
+      for (const hit of crossings(a.path, b, () => intersectPaths(a.path, b))) {
+        add({ kind: 'intersection', point: hit.point, featureId: a.id });
       }
     }
   }
 
   return { cellMm, buckets };
+}
+
+/**
+ * Crossings by the immutable objects they come from (PERF-004). Evaluation
+ * keeps an unchanged feature's path the same object from one revision to the
+ * next, and a command leaves an untouched guide as it was, so an edit
+ * recomputes the crossings of what it changed and reads the rest. Weak on
+ * both keys: nothing to invalidate, and nothing kept once a path has gone.
+ */
+const crossingsCache = new WeakMap<Path, WeakMap<Path | Guide, readonly Intersection[]>>();
+
+function crossings(
+  path: Path,
+  other: Path | Guide,
+  compute: () => readonly Intersection[],
+): readonly Intersection[] {
+  let row = crossingsCache.get(path);
+  if (row === undefined) crossingsCache.set(path, (row = new WeakMap()));
+  let hits = row.get(other);
+  if (hits === undefined) row.set(other, (hits = compute()));
+  return hits;
 }
 
 /** Where an infinite guide crosses a path. */

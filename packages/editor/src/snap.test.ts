@@ -1,9 +1,44 @@
-import type { CutContour, Part, Project, ResolvedProject } from '@leathercad/domain';
-import { DEFAULT_SETTINGS } from '@leathercad/domain';
-import { circle, PathOps, polyline, vec, type Path, type Vec2 } from '@leathercad/geometry';
+import {
+  addGuide,
+  deleteGuide,
+  setFeatureLocked,
+  setFeatureVisible,
+  setGuide,
+  translateFeatures,
+  type Command,
+  type Document,
+} from '@leathercad/document';
+import type {
+  CutContour,
+  Feature,
+  GeometrySource,
+  Guide,
+  Part,
+  Project,
+  ResolvedProject,
+} from '@leathercad/domain';
+import { DEFAULT_SETTINGS, evaluate } from '@leathercad/domain';
+import {
+  circle,
+  cubic,
+  line,
+  PathOps,
+  polyline,
+  vec,
+  type Path,
+  type Vec2,
+} from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { buildSnapIndex, snap, snapGlyph, type SnapKind, type SnapOptions } from './snap.js';
+import {
+  buildSnapIndex,
+  snap,
+  snapGlyph,
+  type SnapIndex,
+  type SnapKind,
+  type SnapOptions,
+} from './snap.js';
 
 let counter = 0;
 
@@ -219,6 +254,168 @@ describe('snap', () => {
         expect(snap(index, resolved, at, options())).toEqual(snap(naive, resolved, at, options()));
       }
     }
+  });
+});
+
+describe('buildSnapIndex across edits (PERF-004)', () => {
+  const arbPoint = fc
+    .tuple(fc.integer({ min: 0, max: 60 }), fc.integer({ min: 0, max: 60 }))
+    .map(([x, y]) => vec(x, y));
+
+  /** Lines, arcs and curves, overlapping one another often. */
+  const arbSource = fc.oneof(
+    fc
+      .tuple(fc.array(arbPoint, { minLength: 3, maxLength: 6 }), fc.boolean())
+      .map(([points, closed]): GeometrySource => ({
+        kind: 'path',
+        path: polyline(points, closed),
+      })),
+    fc.tuple(arbPoint, arbPoint, arbPoint, arbPoint).map(([p0, p1, p2, p3]): GeometrySource => ({
+      kind: 'path',
+      path: PathOps.path([cubic(p0, p1, p2, p3), line(p3, p0)], true),
+    })),
+    fc.tuple(arbPoint, fc.integer({ min: 2, max: 30 })).map(([centre, radius]): GeometrySource => ({
+      kind: 'shape',
+      shape: { type: 'circle', centre, radius },
+    })),
+    fc
+      .tuple(arbPoint, fc.integer({ min: 2, max: 30 }), fc.integer({ min: -3, max: 3 }))
+      .map(([centre, radius, quarter]): GeometrySource => ({
+        kind: 'shape',
+        shape: { type: 'arc', centre, radius, startAngle: 0, sweepAngle: (quarter || 1) * 1.2 },
+      })),
+  );
+
+  /**
+   * Parts of a contour or two, some with a stitch line and its holes — the
+   * stitch line now and then inset from another part's contour.
+   */
+  const arbProject = fc
+    .record({
+      parts: fc.array(
+        fc.record({
+          contours: fc.array(
+            fc.record({ source: arbSource, visible: fc.boolean(), locked: fc.boolean() }),
+            { minLength: 1, maxLength: 2 },
+          ),
+          stitchFrom: fc.option(fc.nat(), { nil: undefined }),
+        }),
+        { minLength: 1, maxLength: 3 },
+      ),
+      guides: fc.array(fc.tuple(arbPoint, fc.integer({ min: 0, max: 7 })), { maxLength: 2 }),
+    })
+    .map(({ parts, guides }): Project => {
+      const contourIds = parts.flatMap((p, i) => p.contours.map((_, j) => `c${i}-${j}`));
+      return {
+        id: 'p',
+        name: 'p',
+        settings: DEFAULT_SETTINGS,
+        guides: guides.map(([origin, eighth], k) => ({
+          id: `g${k}`,
+          origin,
+          angleRad: (eighth * Math.PI) / 4,
+        })),
+        parts: parts.map((p, i): Part => {
+          const features: Feature[] = p.contours.map((c, j) => ({
+            id: `c${i}-${j}`,
+            kind: 'cut-contour',
+            role: 'outer',
+            name: 'Contour',
+            visible: c.visible,
+            locked: c.locked,
+            source: c.source,
+          }));
+          if (p.stitchFrom !== undefined) {
+            const from = contourIds[p.stitchFrom % contourIds.length]!;
+            features.push(
+              {
+                id: `s${i}`,
+                kind: 'stitch-line',
+                name: 'Stitch line',
+                visible: true,
+                locked: false,
+                source: {
+                  kind: 'derived',
+                  sourceId: from,
+                  op: { type: 'offset', distanceMm: 2, side: 'inward', run: { kind: 'whole' } },
+                },
+              },
+              {
+                id: `h${i}`,
+                kind: 'stitch-hole-set',
+                name: 'Stitch holes',
+                visible: true,
+                locked: false,
+                source: {
+                  kind: 'derived',
+                  sourceId: `s${i}`,
+                  op: {
+                    type: 'stitch-holes',
+                    pitchMm: 3.85,
+                    mode: 'fit-whole',
+                    corners: 'continuous',
+                  },
+                },
+              },
+            );
+          }
+          return { id: `part${i}`, name: 'Part', quantity: 1, features };
+        }),
+      };
+    });
+
+  /** What a maker does between two revisions, by index into what exists. */
+  const arbEdit = fc.oneof(
+    fc.record({ kind: fc.constant('move'), at: fc.nat(), by: arbPoint }),
+    fc.record({ kind: fc.constant('hide'), at: fc.nat(), on: fc.boolean() }),
+    fc.record({ kind: fc.constant('lock'), at: fc.nat(), on: fc.boolean() }),
+    fc.record({ kind: fc.constant('move-guide'), at: fc.nat(), to: arbPoint }),
+    fc.record({ kind: fc.constant('add-guide'), at: arbPoint, eighth: fc.nat({ max: 7 }) }),
+    fc.record({ kind: fc.constant('delete-guide'), at: fc.nat() }),
+  );
+  type Edit = typeof arbEdit extends fc.Arbitrary<infer E> ? E : never;
+
+  function commandFor(project: Project, edit: Edit, step: number): Command {
+    const ids = project.parts.flatMap((p) => p.features.map((f) => f.id));
+    const guides = project.guides ?? [];
+    const guideAt = (at: number): Guide | undefined => guides[at % Math.max(1, guides.length)];
+    switch (edit.kind) {
+      case 'move':
+        return translateFeatures([ids[edit.at % ids.length]!], vec(edit.by.x - 30, edit.by.y - 30));
+      case 'hide':
+        return setFeatureVisible([ids[edit.at % ids.length]!], edit.on);
+      case 'lock':
+        return setFeatureLocked([ids[edit.at % ids.length]!], edit.on);
+      case 'move-guide': {
+        const guide = guideAt(edit.at);
+        return guide === undefined
+          ? addGuide({ id: `n${step}`, origin: edit.to, angleRad: 0 })
+          : setGuide({ ...guide, origin: edit.to });
+      }
+      case 'add-guide':
+        return addGuide({ id: `n${step}`, origin: edit.at, angleRad: (edit.eighth * Math.PI) / 4 });
+      case 'delete-guide':
+        return deleteGuide(guideAt(edit.at)?.id ?? 'none');
+    }
+  }
+
+  /** A copy sharing no object with what the index has seen, so nothing in it is reused. */
+  const fullRebuild = (resolved: ResolvedProject): SnapIndex =>
+    buildSnapIndex(structuredClone(resolved));
+
+  it('gives the candidates a full rebuild gives, in the same order, after every edit', () => {
+    fc.assert(
+      fc.property(arbProject, fc.array(arbEdit, { minLength: 1, maxLength: 6 }), (start, edits) => {
+        let document: Document = { project: start };
+        for (const [step, edit] of [undefined, ...edits].entries()) {
+          if (edit !== undefined)
+            document = commandFor(document.project, edit, step).apply(document);
+          const resolved = evaluate(document.project);
+
+          expect([...buildSnapIndex(resolved).buckets]).toEqual([...fullRebuild(resolved).buckets]);
+        }
+      }),
+    );
   });
 });
 
