@@ -3308,6 +3308,49 @@ body {
   margin-top: 4px;
 }
 
+/* The export dialog (6.4): an intent and the layers it chooses, side by side
+   where the window has room. Native fieldsets, so a screen reader hears the
+   groups; only their chrome is removed. */
+.export-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.export-dialog fieldset {
+  display: flex;
+  flex: 1 1 180px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.export-dialog legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font: var(--t-strong);
+}
+
+.export-choice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.export-note {
+  display: block;
+  font: var(--t-label);
+}
+
+.export-dialog .export-custom,
+.export-dialog .export-page {
+  color: var(--text);
+  font: var(--t-label);
+}
+
 .panel-note {
   max-width: 44ch;
   margin: 0;

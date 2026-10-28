@@ -692,6 +692,40 @@
       "platform": "LeatherCAD can't print directly on this system yet."
     }
   },
+  "exportDialog": {
+    "custom": "Your own mix of layers",
+    "export": "Export…",
+    "intent": "Export for",
+    "intents": {
+      "laser-cut": {
+        "name": "Laser cut",
+        "note": "Outlines and hardware holes: what a cutter takes off the hide"
+      },
+      "stitch-guide": {
+        "name": "Stitch guide",
+        "note": "Stitch lines and their holes"
+      },
+      "template-print": {
+        "name": "Template print",
+        "note": "Every layer: the whole pattern"
+      }
+    },
+    "intro": "The drawing as arranged on the board, in millimetres. Choose which layers go in the file.",
+    "layers": "Layers",
+    "nothing": "Nothing to export. None of the chosen layers has a line to draw.",
+    "page": "The page will measure {{width}} × {{height}}",
+    "roles": {
+      "annotation": "Dimensions, labels and part names",
+      "cut": "Cut outlines",
+      "fold": "Fold lines",
+      "hardware": "Hardware holes",
+      "mark": "Marking lines",
+      "stitch": "Stitch lines",
+      "stitch-holes": "Stitch holes"
+    },
+    "stitchHolesNote": "Each is a {{size}} circle marking the centre, not a hole sized for the thread",
+    "title": "Export {{format}}"
+  },
   "exportNotice": {
     "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
     "countsFile": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the file.",

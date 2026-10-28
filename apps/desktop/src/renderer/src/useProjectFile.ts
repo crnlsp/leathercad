@@ -1,6 +1,12 @@
 import { setProjectName, type Document } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
-import { exportDxf, exportPdf, exportSvg, type TiledPart } from '@leathercad/export';
+import {
+  exportDxf,
+  exportPdf,
+  exportSvg,
+  type ExportRole,
+  type TiledPart,
+} from '@leathercad/export';
 import {
   CURRENT_FORMAT_VERSION,
   InvalidProjectFileError,
@@ -21,7 +27,7 @@ import {
   type ProjectTab,
   type ProjectTabs,
 } from './projectTabs.js';
-import { sheetPlanFor } from './sheets.js';
+import { drawingSceneFor, sheetPlanFor } from './sheets.js';
 
 /** A save or an export that reached the disk. A new one for every write. */
 export interface Written {
@@ -156,7 +162,10 @@ export function useProjectFile(
    */
   exportPdfFile: (shown?: Uint8Array) => Promise<ExportReport | null>;
   /** The same, for a drawing as an SVG or a DXF (6.2, 6.5): written, not opened. */
-  exportDrawingFile: (format: DrawingFormat) => Promise<ExportReport | null>;
+  exportDrawingFile: (
+    format: DrawingFormat,
+    roles: readonly ExportRole[],
+  ) => Promise<ExportReport | null>;
   /**
    * Reads a tab's file again, as it was last saved (8.12), in the same tab:
    * its history starts again there. The caller asks about unsaved work first.
@@ -349,13 +358,14 @@ export function useProjectFile(
    * true millimetres, for a laser cutter, a plotter, a CNC program or a vector
    * editor.
    *
-   * It is the scene the PDF is written from, so it holds exactly what the PDF
-   * prints. Nothing opens it afterwards — the main process opens only the PDF
+   * It is the scene the PDF is written from, of the layer roles the maker kept
+   * in the export dialog (6.4): with every role, exactly what the PDF prints.
+   * Nothing opens it afterwards — the main process opens only the PDF
    * it has exported, and a cutter's software is the maker's to start — so what
    * the maker is told is what to check, as after a PDF.
    */
   const exportDrawingFile = useCallback(
-    async (format: DrawingFormat): Promise<ExportReport | null> => {
+    async (format: DrawingFormat, roles: readonly ExportRole[]): Promise<ExportReport | null> => {
       const tab = tabs.active;
       if (tab === null) return null;
       try {
@@ -368,7 +378,7 @@ export function useProjectFile(
         });
         if (target === null) return null;
 
-        const scene = sheetPlanFor(project).scene;
+        const scene = drawingSceneFor(project, roles);
         const { text } = format === 'svg' ? exportSvg(scene) : exportDxf(scene);
         await platform.writeFile(target, new TextEncoder().encode(text));
         exported(tabs, tab);

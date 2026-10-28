@@ -393,10 +393,15 @@ and read once at start-up:
   "stitchMarginMm": 3.5,
   "leatherThicknessMm": null,
   "keyBindings": { "save": [{ "code": "F5" }] },
+  "exportRoles": ["cut", "hardware"],
   "recentFiles": ["/home/maker/Patterns/Wallet.lcp"],
   "session": { "projects": ["/home/maker/Patterns/Wallet.lcp"], "active": "/home/maker/Patterns/Wallet.lcp" }
 }
 ```
+
+`exportRoles` is the layer roles an SVG or DXF export last kept (6.4), by the domain's role names;
+`null` is every role, and an empty list is a choice too. The export dialog names the intent from
+them, so no intent is stored. It is the app's, never the project's: a `.lcp` records no export.
 
 Unlike a project, **nothing in it is worth refusing to start over**: a damaged file, a wrong type
 or an unknown field falls back field by field to the defaults, and a newer version's extra fields

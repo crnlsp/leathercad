@@ -231,10 +231,24 @@ with the packaged app.
 - ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
   candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
   then the preview saves the PDF.
-- ☐ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
+- ✅ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
   the Print Preview's since 7.6.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than
   computes.
+  **Done** (2026-10-28): *Export SVG…* and *Export DXF…* open a dialog first. Its intents are rows
+  of one table — *Template print* (every layer), *Laser cut* (`cut` and `hardware`) and *Stitch
+  guide* (`stitch` and `stitch-holes`) — and each chooses layer roles, which the maker can then tick
+  or untick: *Laser cut* with *Stitch holes* is the "if lasered" of the domain model. The filter is
+  in `buildExportScene`, once, so no writer has one; a part's box and caption follow what is left,
+  and a laser cut has no caption. The dialog reports the page the file will have — the box of what
+  the chosen layers draw — and says so, and greys *Export…*, when nothing is left. The choice is an
+  application preference, `exportRoles`, shared by both formats, remembered across restarts and
+  never in the project; the default, every layer, writes the bytes it wrote before. Bounds is the
+  whole drawing as arranged on the board: exporting only some parts, and a paper-fit line, are not
+  offered, and the PDF takes no preset (its scene is the sheet plan's, shared with the Sheets view).
+  Property tests over every set of roles: only those roles, every item of them unchanged, a part's
+  box that of what it holds. The print test exported as a laser cut holds one layer, `cut`, as an
+  SVG and as a DXF. [Printing §10](printing.md#10-svg-export-62).
 - ✅ **7.2 Taped parts, finished.** Edge arrows and a printed assembly sheet. A taped part is never
   turned: since 7.8 a part is taped only when it fits whole neither way.
   **Done** (2026-10-27): every edge a taped sheet shares carries an arrow at its join, pointing at

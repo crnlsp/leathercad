@@ -524,6 +524,13 @@ export interface Preferences {
    * differs is kept, so a new default reaches a command the maker never moved.
    */
   readonly keyBindings: Readonly<Record<string, readonly KeyBinding[]>>;
+  /**
+   * The layer roles the maker last kept in an SVG or DXF export (6.4), by the
+   * domain's role names; `null` until they choose, which is every role. The
+   * dialog names an intent from them (template print, laser cut…), so the
+   * choice is stored once, as the roles it comes to.
+   */
+  readonly exportRoles: readonly string[] | null;
 }
 
 /**
@@ -579,6 +586,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   stitchMarginMm: 3.5,
   leatherThicknessMm: null,
   keyBindings: {},
+  exportRoles: null,
 };
 
 /** What macOS's native menu can ask the renderer to do (8.7). */
