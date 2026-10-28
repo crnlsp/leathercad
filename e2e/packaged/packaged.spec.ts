@@ -276,22 +276,30 @@ test('exports the 7.7 print test at 1:1, measured on the page', async () => {
   }
 });
 
-test('previews the print test with pdf.js, its worker loaded from inside the archive (7.6)', async () => {
-  // The Print Preview draws the PDF in a Web Worker built from a file in
-  // app.asar, under the shipped fuses. Nothing is sent: the test never presses
-  // Print, and on Windows there is nothing to send it to.
+test('previews the print test: the PDF written and drawn by workers loaded from inside the archive (7.6, PERF-002)', async () => {
+  // The Print Preview writes the PDF in one Web Worker and draws it with
+  // pdf.js in another, both built from files in app.asar, under the shipped
+  // fuses. Nothing is sent: the test never presses Print, and on Windows
+  // there is nothing to send it to.
   const window = await app.firstWindow();
   // The export notice the test before left open.
   await window.keyboard.press('Escape');
-  const [worker] = await Promise.all([
-    window.waitForEvent('worker'),
-    window.getByTestId('print').click(),
-  ]);
-  // pdf.js can fall back to running on the page when a worker fails. Assert
-  // a real worker so a protocol/CSP regression cannot hide behind that path.
-  expect(worker.url()).toMatch(/^app:\/\/leathercad\/assets\/pdf\.worker\..*\.mjs$/);
+  const workers: string[] = [];
+  window.on('worker', (worker) => workers.push(worker.url()));
+  await window.getByTestId('print').click();
   const preview = window.getByTestId('print-preview');
   await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
+  // pdf.js can fall back to running on the page when a worker fails, and the
+  // PDF writer has no fallback at all. Assert real workers so a protocol/CSP
+  // regression cannot hide behind that path.
+  await expect
+    .poll(() =>
+      workers.some((url) => /^app:\/\/leathercad\/assets\/pdf\.worker\..*\.mjs$/.test(url)),
+    )
+    .toBe(true);
+  expect(
+    workers.filter((url) => /^app:\/\/leathercad\/assets\/pdfWorker-.*\.js$/.test(url)),
+  ).toHaveLength(1);
   await expect
     .poll(() => preview.getByTestId('print-page').locator('canvas').evaluate(inkOn))
     .toBeGreaterThan(1000);

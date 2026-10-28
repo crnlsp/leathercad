@@ -8,7 +8,6 @@ import {
   type PaperName,
   type Project,
 } from '@leathercad/domain';
-import { exportPdf } from '@leathercad/export';
 import type { PrinterList } from '@leathercad/platform';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -22,6 +21,7 @@ import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { NumberField } from './NumberField.js';
 import { drawPage, openPdf } from './pdfPages.js';
+import { writePdf } from './pdfWriter.js';
 import { getPlatformHost, refusalOf } from './platformBridge.js';
 import { ProblemRows } from './ProblemList.js';
 import { leaveOut } from './printSheets.js';
@@ -29,7 +29,7 @@ import { describeCounts } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
-import { exportReportFor } from './useProjectFile.js';
+import { exportReportFor, fileErrorText } from './useProjectFile.js';
 
 const PAPERS = Object.keys(PAPER_SIZES) as PaperName[];
 const ORIENTATIONS: readonly Orientation[] = ['portrait', 'landscape'];
@@ -142,11 +142,15 @@ export function PrintPreview({
     written.correction.y === correction.y
       ? written
       : null;
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ readonly error: unknown } | null>(null);
   const { x: correctX, y: correctY } = correction;
   useEffect(() => {
     let live = true;
     let opened: PDFDocumentProxy | null = null;
+    // The file is written in a worker, and ended with the effect: a plan or a
+    // correction that changed, or a preview that closed, does not wait for a
+    // file nobody will look at (PERF-002).
+    const writing = new AbortController();
     void (async () => {
       try {
         // The print form: every page upright, as printers take paper, and a
@@ -154,21 +158,21 @@ export function PrintPreview({
         // whole, at 1:1 (7.6b, docs/printing.md §13) — corrected for the
         // printer when it was calibrated (7.5).
         const applied = { x: correctX, y: correctY };
-        const { bytes } = await exportPdf(plan, {
-          applicationVersion: appVersion,
-          now: () => new Date(),
-          upright: true,
-          correction: applied,
-        });
+        const bytes = await writePdf(
+          { plan, applicationVersion: appVersion, upright: true, correction: applied },
+          writing.signal,
+        );
+        if (!live) return;
         opened = await openPdf(bytes);
         if (live) setWritten({ plan, correction: applied, bytes, doc: opened });
         else void opened.loadingTask.destroy();
       } catch (error) {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+        if (live) setFailure({ error });
       }
     })();
     return () => {
       live = false;
+      writing.abort();
       void opened?.loadingTask.destroy();
     };
   }, [plan, appVersion, correctX, correctY]);
@@ -293,7 +297,9 @@ export function PrintPreview({
             {pdf !== null ? (
               <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} turn={turn} />
             ) : (
-              <p className="dialog-note">{failure ?? t('printPreview.loading')}</p>
+              <p className="dialog-note">
+                {failure === null ? t('printPreview.loading') : fileErrorText(failure.error, t)}
+              </p>
             )}
           </div>
 

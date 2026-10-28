@@ -563,6 +563,8 @@
     "newer": "This file was saved by a newer version of LeatherCAD. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "newerNamed": "This file was saved by LeatherCAD {{version}}, a newer version than this one. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "openTitle": "Open project",
+    "pdfFailed": "The PDF couldn’t be written ({{reason}}). Nothing was saved.",
+    "pdfUnavailable": "The PDF couldn’t be written: its background process didn’t start or stopped. Nothing was saved.",
     "dxf": "DXF",
     "pdf": "PDF",
     "project": "LeatherCAD project",
