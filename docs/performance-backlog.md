@@ -55,7 +55,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 |---|---|---|---|---|---|---|---|---|
 | ✅ | [PERF-001](#perf-001) | P1 | High | Share export geometry across history revisions | Confirmed | Medium | Medium | `perf/001-shared-export-geometry` |
 | ◐ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | `perf/002-tiled-pdf`: culling done; blocking remains |
-| ☐ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | Unassigned |
+| ✅ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | `perf/003-sheets-culling` |
 | ☐ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | Unassigned |
 | ☐ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | Unassigned |
 | ☐ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | Unassigned |
@@ -309,11 +309,77 @@ construction (168–329); [`CanvasHost.tsx`](../apps/desktop/src/renderer/src/Ca
 contain repeated transformed geometry; hover/selection invalidates combined layers. Three
 33-page navigation runs reached 63–65 ms p95 drawing callbacks, causing visible stutter.
 
-- [ ] Cull wholly off-screen pages before drawing, with correct decoration bounds.
-- [ ] Cache immutable sheet content separately from selection/hover halos; avoid complete
-  off-tile geometry duplication while preserving exact content.
-- [ ] Measure zoomed-out and close-up pan/hover/selection; compare sheet content with the PDF
-  plan and verify tile boundaries and hit testing.
+- [x] Cull wholly off-screen pages before drawing, with correct decoration bounds.
+  `render/src/extent.ts`: a page's extent is the millimetre box of what it places and, past
+  that, the CSS pixels a stroke, a halo or a screen word can reach (a word, one em a
+  character, however it is aligned); `reachesView` tests it against the camera, touching
+  counting. `sheetsPages` builds each sheet and each taped piece's name as a page,
+  `sheetsLayers(pages, view)` draws the pages the camera reaches, whole, as the view always
+  drew them: the same items in the same order, every paper under every page's ink, taped
+  pieces over (a label can run over another sheet's paper zoomed out, so pages are not drawn
+  one at a time). A taped sheet's extent is its clip. `sheetsCulling.test.ts` and
+  `extent.test.ts` hold it as properties against the screen transform: a page, stroke, halo
+  or word that reaches the canvas by however little is never left out, on a 1x and a 2x display.
+- [x] Cache immutable sheet content separately from selection/hover halos. The pages hold
+  the paper and ink only and are built once for a plan and its words; a halo is put under
+  its piece's ink when the layers are made, for the visible pages only, and kept while it is
+  the same, so a pan with the pointer on a piece builds nothing. Pointing at a piece used to
+  rebuild every page.
+- [x] Avoid complete off-tile geometry duplication while preserving exact content. A taped
+  sheet builds its piece, and the halo round it, from the paths and word contours whose box
+  can reach its clip, grown by what a stroke or halo reaches *at the smallest zoom* (the most
+  millimetres it is ever), via `pathReaches`, the box test `pdf/reach.ts` is built on. It is
+  independent of the camera, so nothing is rebuilt when the camera moves. For the audit's
+  strap that is most of 3,028 holes on each of 32 sheets. `sheetsTiles.test.ts` holds that
+  what it leaves out is out of reach at every zoom from 1 % to 10 000 %, for a stroke and a
+  halo.
+- [x] Measure zoomed-out and close-up pan/hover/selection; compare sheet content with the PDF
+  plan and verify tile boundaries and hit testing. See below. The view is drawn from the plan
+  the PDF is written from, unchanged; hit testing is `pieceAt` on the layout, not on what is
+  drawn, and `e2e/sheets.spec.ts` pans a sheet into view and finds its piece under the pointer.
+
+| PERF-003, 33 A4 sheets, 1600 × 1000 window | Before (`a9a2201`) | After |
+|---|---|---|
+| Hover across the strap, fitted (3 %): drawing callback p50 / p95 | 103 ms / 205-221 ms | 17 ms / 21 ms |
+| Pan, fitted (3 %): p50 / p95 | 99-102 ms / 103-105 ms | 16.5 ms / 17 ms |
+| Hover, about 30 %: p50 / p95 | 96-100 ms / 111-186 ms | 2.4 ms / 2.7 ms |
+| Pan, about 30 %: p50 / p95 | 53-55 ms / 54-57 ms | 2.2 ms / 2.5 ms |
+| Hover, about 114 %: p50 / p95 | 108-112 ms / 185-223 ms | 1.0 ms / 1.1 ms |
+| Pan, about 114 %: p50 / p95 | 54-56 ms / 56-58 ms | 0.8 ms / 0.9 ms |
+| Long tasks (over 50 ms) | one for every painted callback: 12-61 a scenario | none |
+
+Measured with `node tools/perf-sheets.mjs time` on the production build in unpackaged
+Electron (`fixtures/perf/strap-5800.lcp`: `strap(5800)`, 3,028 holes, 33 sheets), three runs
+of each, the ranges above. The audit's machine (Ryzen 5 7600X, Linux 7.3.0-4-cachyos),
+Electron 45.0.0 where the audit's was 44.7.0, so the before column is measured again here, and
+a load average of about 2 from other work on the machine. A
+drawing callback is timed when it painted, so it is the JavaScript that draws, not raster or
+presentation time. Hover is a zigzag over the canvas; pan is 60 pointer steps of the sheets. Before: the
+commit this branch started from, built in a worktree of its own. The audit's 63-65 ms is a
+different run of the same thing. Each step's share, measured while it was built (the hover
+rows are p50 / p95): page culling takes the 30 % and 114 % pans from 54 to 13 and 6 ms, and the
+fitted pan, where every page is in view, not at all; separating the halos takes the hovers
+from 99 / 189 and 114 / 200 ms to 22 / 23 and 9 / 10 ms; leaving out what a clip hides takes
+the fitted pan and hover from 103 to 18 and 19 ms, and the rest to 1-4 ms.
+
+Nothing changed on screen. The Playwright visual suite is unchanged, and
+`node tools/perf-sheets.mjs pixels` (a fingerprint of the canvas at 143 cameras: every step
+of pans along the sheets at three zooms, each with a piece hovered and selected where one
+was under the pointer) gives the same fingerprints before and after: 143 of 143 in one run
+of each, and in two more runs of the branch the first frame, which one run had caught before
+the typeface loaded (the script now waits for it). The same comparison with an earlier
+version of the script, on 635 fingerprints over four projects (this strap, the same with 20
+slots, a 1.6 m strap, the print test) and a smaller window, against a build with the page
+culling and the clip's leaving-out switched off, is the same. Before the last step, which
+leaves out what a clip hides, `sheetsView`'s items were also compared item for item with the
+previous code's, on three scenes, three papers and every selected and hovered combination.
+
+**Not done / not verified.** The fitted view, where all 33 sheets are in view, still takes
+about 17 ms a frame: the 33 verification strips' glyphs, and each sheet's outline and the
+holes near it. Drawing each sheet once to a bitmap would take it lower, but a bitmap is
+camera-dependent and is not exact at every zoom; not tried. GPU raster and presentation,
+other platforms and other displays were not measured, and neither was a 2x display
+(the properties cover it, not a run).
 
 **Expected benefit:** Work follows visible pages/relevant paths. Start with page culling as an
 independent PR; build on PERF-002 geometry helpers only where appropriate.

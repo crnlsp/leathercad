@@ -38,10 +38,20 @@ const RASTER_ALLOWANCE_MM = 10;
  * fill there, whatever the winding rule.
  */
 export function inkReaches(path: Path, offsetMm: Vec2, area: Rect, strokeWidthMm: Mm): boolean {
+  const reach = (strokeWidthMm * MITER_LIMIT) / 2 + EXPORT_TOLERANCE_MM + RASTER_ALLOWANCE_MM;
+  return pathReaches(path, offsetMm, area, reach);
+}
+
+/**
+ * Whether a path, moved by `offsetMm` and grown by `reachMm` on every side, can
+ * touch `area`: the test under `inkReaches`, for a reach that is not a PDF
+ * stroke's. The Sheets view draws a taped sheet's piece under its clip and
+ * leaves out what the clip would hide (PERF-003).
+ */
+export function pathReaches(path: Path, offsetMm: Vec2, area: Rect, reachMm: Mm): boolean {
   const box = boxOf(path);
   if (box === null) return false;
-  const reach = (strokeWidthMm * MITER_LIMIT) / 2 + EXPORT_TOLERANCE_MM + RASTER_ALLOWANCE_MM;
-  return RectOps.intersects(RectOps.expand(RectOps.translate(box, offsetMm), reach), area);
+  return RectOps.intersects(RectOps.expand(RectOps.translate(box, offsetMm), reachMm), area);
 }
 
 /**

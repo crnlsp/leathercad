@@ -144,6 +144,16 @@ export function pixelsToMm(view: ViewportView, pixels: number): Mm {
   return pixels / cssPxPerMm(view);
 }
 
+/**
+ * `pixels` CSS pixels in millimetres at the smallest zoom the camera goes to
+ * (`ZOOM_LIMITS.min`): the most millimetres they can ever be. A reach that
+ * must hold at any zoom, as a stroke's width past a clip does, uses this and
+ * so does not depend on where the camera is.
+ */
+export function widestPixelsToMm(pixels: number): Mm {
+  return pixels / (TRUE_SIZE_CSS_PX_PER_MM * (ZOOM_LIMITS.min / 100));
+}
+
 /** A millimetre distance in CSS pixels on screen. */
 export function mmToPixels(view: ViewportView, mm: Mm): number {
   return mm * cssPxPerMm(view);

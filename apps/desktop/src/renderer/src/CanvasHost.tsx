@@ -10,10 +10,11 @@ import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domai
 import {
   layoutSheets,
   pieceAt,
-  sheetsView,
+  sheetsLayers,
+  sheetsPages,
   tapeJoins,
   type SheetPlan,
-  type SheetsLayer,
+  type SheetsPage,
 } from '@leathercad/export';
 import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
@@ -601,32 +602,24 @@ export function CanvasHost({
         viewport.fitTo(extent, FIT_PADDING_PX * viewport.dpr);
       }
 
-      const selected = selectedParts(document.project, selection);
+      // The paper and its ink change with the plan and the words alone; what is
+      // selected or under the pointer only puts a halo under a piece (PERF-003).
       const cached = sheetsCacheRef.current;
-      const layers =
-        cached !== null &&
-        cached.plan === plan &&
-        cached.i18n === i18nRef.current &&
-        cached.selected === selectedKey(selected) &&
-        cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current)
-          ? cached.layers
-          : sheetsView(plan, layout, {
-              now: new Date(),
-              selected,
-              hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-              words: sheetsWords(i18nRef.current),
-            });
-      sheetsCacheRef.current = {
-        plan,
-        i18n: i18nRef.current,
-        selected: selectedKey(selected),
-        hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-        layers,
-      };
+      const pages =
+        cached !== null && cached.plan === plan && cached.i18n === i18nRef.current
+          ? cached.pages
+          : sheetsPages(plan, layout, { now: new Date(), words: sheetsWords(i18nRef.current) });
+      sheetsCacheRef.current = { plan, i18n: i18nRef.current, pages };
 
       const view = viewport.toView();
       clearCanvas(context, view, SHEET.ground);
-      for (const layer of layers) {
+      // Only the pages the camera can see any of (PERF-003): a long taped piece
+      // is dozens of sheets, and the one on screen is a few.
+      const emphasis = {
+        selected: selectedParts(document.project, selection),
+        hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
+      };
+      for (const layer of sheetsLayers(pages, view, emphasis)) {
         renderDisplayList(
           context,
           layer.list,
@@ -1285,18 +1278,12 @@ function CanvasNotice({
   );
 }
 
-/** What the Sheets view last drew, so panning does not lay the sheets out again. */
+/** What the Sheets view last built, so panning does not lay the sheets out again. */
 interface SheetsCache {
   readonly plan: SheetPlan;
   /** The words the labels were made in: a new language makes new labels. */
   readonly i18n: I18n;
-  readonly selected: string;
-  readonly hovered: string | null;
-  readonly layers: readonly SheetsLayer[];
-}
-
-function selectedKey(selected: ReadonlySet<string>): string {
-  return [...selected].sort().join(' ');
+  readonly pages: readonly SheetsPage[];
 }
 
 /** Fades the board in over the theme's motion: a project has just replaced the last. */

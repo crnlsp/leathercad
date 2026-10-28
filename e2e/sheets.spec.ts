@@ -21,6 +21,9 @@ import { choosePaper, fromProjectMenu } from './projectMenu.js';
  * either way — taped across two more.
  */
 
+/** The ground the sheets lie on, `SHEET.ground` (#d8d3c9). */
+const GROUND = [0xd8, 0xd3, 0xc9];
+
 /** The screen-only furniture colour, `SHEET.furniture` (#c22a8c). */
 const FURNITURE = [0xc2, 0x2a, 0x8c] as const;
 
@@ -464,6 +467,65 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     const info = execFileSync('pdfinfo', [pdf], { encoding: 'utf8' });
     expect(info).toMatch(/Page size:\s+595\.276 x 841\.89 pts/);
     expect(hasColour(pdf)).toBe(false);
+  });
+});
+
+test('a sheet panned into view is drawn, and its piece is found under the pointer (PERF-003)', async () => {
+  await withPrintTest(async ({ window }) => {
+    const canvas = window.getByTestId('editor-canvas');
+    const strapRow = pieceRow(window, 'Strap');
+    await window.getByTestId('view-sheets').click();
+    const box = (await canvas.boundingBox())!;
+    const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+
+    // Close on the first sheet: the others are off the canvas, and are not drawn.
+    const first = await sheetBox(window, 'Sheet 1 of 3');
+    const at = { x: (first.left + first.right) / 2, y: (first.top + first.bottom) / 2 };
+    await window.mouse.move(at.x, at.y);
+    for (let i = 0; i < 5; i++) await window.mouse.wheel(0, -300);
+    await window.mouse.move(centre.x, centre.y);
+    await expect(readout(window)).toHaveText('Sheet 1 of 3');
+
+    // Dragged along to the third. Nothing of it was drawn before it came into
+    // view, so what is drawn and what is picked must agree once it has.
+    for (let i = 0; i < 12 && (await readout(window).textContent()) !== 'Sheet 3 of 3'; i++) {
+      await window.mouse.move(centre.x + 300, centre.y);
+      await window.mouse.down();
+      await window.mouse.move(centre.x - 300, centre.y, { steps: 6 });
+      await window.mouse.up();
+      await window.mouse.move(centre.x, centre.y);
+    }
+    await expect(readout(window)).toHaveText('Sheet 3 of 3');
+    // Paper is drawn where the pointer is: not the dimmed ground between sheets.
+    const under = await canvas.evaluate(
+      (element, [x, y]) => {
+        const c = element as HTMLCanvasElement;
+        const scale = c.width / c.getBoundingClientRect().width;
+        return [...c.getContext('2d')!.getImageData(x! * scale, y! * scale, 1, 1).data];
+      },
+      [box.width / 2, box.height / 2],
+    );
+    expect(under.slice(0, 3)).not.toEqual(GROUND);
+
+    // The strap's tile is on this sheet, about half way down: pointing at it
+    // lights its Parts row, and a click selects it.
+    let found = false;
+    for (let dy = -(box.height / 2) + 20; dy < box.height / 2 - 20 && !found; dy += 6) {
+      await window.mouse.move(centre.x, centre.y + dy);
+      // The move is dispatched, not yet rendered: read the row after the
+      // frames that draw this position, not the last one's.
+      await window.evaluate(
+        () =>
+          new Promise<void>((done) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => done())),
+          ),
+      );
+      found = /hovered/.test((await strapRow.getAttribute('class')) ?? '');
+      if (found) await window.mouse.click(centre.x, centre.y + dy);
+    }
+    expect(found, 'the strap on sheet 3 lights its Parts row').toBe(true);
+    await expect(strapRow).toHaveClass(/selected/);
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
   });
 });
 

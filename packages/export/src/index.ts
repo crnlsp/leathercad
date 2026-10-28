@@ -49,8 +49,8 @@ export { printStatusOf } from './printStatus.js';
 
 // The sheet plan drawn on screen: tape joins on the design board (7.4b), and
 // the Sheets view (7.4c) — drawn from the same `sheetInk` the PDF prints.
-export type { SheetsLayer, SheetsViewOptions, SheetsWords } from './sheetsDisplay.js';
-export { sheetsView, tapeJoins } from './sheetsDisplay.js';
+export type { SheetsLayer, SheetsPage, SheetsViewOptions, SheetsWords } from './sheetsDisplay.js';
+export { sheetsLayers, sheetsPages, sheetsView, tapeJoins } from './sheetsDisplay.js';
 export type { SheetFrame, SheetGroup, SheetsLayout } from './sheetsLayout.js';
 export { layoutSheets, pieceAt, sheetAt } from './sheetsLayout.js';
 
