@@ -54,7 +54,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | Status | ID | Priority | Severity | Area / task | Confidence | Effort | Risk | Tracking |
 |---|---|---|---|---|---|---|---|---|
 | ☐ | [PERF-001](#perf-001) | P1 | High | Share export geometry across history revisions | Confirmed | Medium | Medium | Unassigned |
-| ☐ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | Unassigned |
+| ◐ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | `perf/002-tiled-pdf`: culling done; blocking remains |
 | ☐ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | Unassigned |
 | ☐ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | Unassigned |
@@ -225,12 +225,43 @@ produces 10.35 MB; cancellation cannot respond during that section. The `write t
 benchmark's 1,200 mm strap shows the same per tile: 7 sheets, 254 ms and 744 KB, against
 12.6 ms for a sheet with nothing placed.
 
-- [ ] Reproduce long-task duration and emitted geometry on the long-strap fixture.
-- [ ] Conservatively reject off-tile paths, including stroke/overlap allowances, or evaluate
+- [x] Reproduce long-task duration and emitted geometry on the long-strap fixture.
+  At `664d6e6`: 33 sheets, 3.3–3.4 s with no timer able to run, 10.6 MB, 100,990 strokes (below).
+- [x] Conservatively reject off-tile paths, including stroke/overlap allowances, or evaluate
   reusable PDF Form XObjects. Reduce duplicated work before moving it to another thread.
+  `export/src/pdf/reach.ts`: on a tiled sheet the writer leaves out a path, or a glyph contour,
+  whose box — grown by the widest a stroke reaches at PDF's default miter limit (5 × its width),
+  the arc-to-cubic tolerance and 10 mm more for coarse rasterisers — misses the clip. The clip is
+  the tile's window, overlap included. Each path's box is measured once. Form XObjects were not
+  needed for the pattern and were not tried for the sheet furniture.
 - [ ] Yield/cancel between bounded batches if remaining work still blocks interaction.
-- [ ] Compare exact page geometry, tile joins, boundary strokes, captions, registration marks,
+  **Still blocks**: 0.64 s for the 33 sheets. Profiled, about 60 % of it is pdf-lib's `save()`
+  compressing every content stream in one call before it writes, which yielding between pages
+  cannot split; the page loop is the rest. Not done here. Recommended next: a worker for the
+  whole export, or cancellation with PERF-013, measured in the renderer.
+- [x] Compare exact page geometry, tile joins, boundary strokes, captions, registration marks,
   landscape/upright transforms and 1:1 dimensions; record duration and output size.
+  Every page of six PDFs rendered by poppler at 8, 30, 96 and 254 dpi is byte-identical before
+  and after (the 5.8 m strap; 1.2 m landscape in the print form; 400 × 300 grids with assembly map
+  on A4, and in the print form with a 1.012 × 0.991 correction; 700 × 330 Letter landscape print
+  form; 900 × 500 A3 landscape — each with stitch holes, a slot, a caption and a label across the
+  joins), with the same page count and sizes. The existing PDF tests, poppler measurements
+  included, pass. `reach.test.ts` holds the rule as properties: a path whose ink reaches the
+  sheet — by its line, or only by its stroke — is never left out.
+
+| PERF-002, A4 portrait, Node 24.22.0 Vitest worker | Before (`664d6e6`) | After |
+|---|---|---|
+| 5.8 m strap, 33 sheets: export, median of 5 | 3,325 ms | 638 ms |
+| Longest stretch no timer could run, median of 5 | 3,324 ms | 637 ms |
+| Size | 10.61 MB | 2.16 MB |
+| Strokes / fills / curve segments written | 100,990 / 234 / 467,927 | 4,610 / 197 / 79,821 |
+| 1.2 m strap, 7 sheets: export / size | 230 ms / 764 KB | 129 ms / 425 KB |
+| `write the PDF` bench (1.2 m strap), `bench:compare` mean | 264 ms (baseline 254) | 147 ms |
+
+Measured with the audit's `strap(5800)` and the bench's 1.2 m strap, built from source; the
+longest stretch is the largest gap between `setTimeout(0)` callbacks during the export. Same
+machine as PERF-001, load under 1 for the benchmark. Not measured: the renderer's own long task
+in Electron, and pdf.js's rendering (the comparison used poppler).
 
 **Expected benefit:** Less repeated geometry, shorter blocking and potentially smaller files.
 No speedup target is inferred. PERF-003 may share safe bounds helpers, not viewport-dependent output.

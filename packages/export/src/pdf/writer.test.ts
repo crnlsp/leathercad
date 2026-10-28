@@ -532,6 +532,19 @@ describe('document structure', () => {
     const document = await PDFDocument.load(await pdfFor(many));
     expect(document.getPageCount()).toBeGreaterThan(1);
   });
+
+  it('writes on each sheet of a taped strap the holes that reach it, not the whole strap (PERF-002)', async () => {
+    // 1.2 m of strap on A4 is taped across seven sheets. Each used to carry
+    // every hole of it under its clip; `reach.test.ts` holds which are kept,
+    // and the pixels of every sheet were compared with the old output.
+    const project = projectWithStitching(1200, 40, 3.5, 3.85);
+    const scene = buildExportScene(evaluate(project), project.name);
+    const document = await PDFDocument.load(await pdfFor(project));
+    const strokes = document.getPages().map((page) => contentOf(page).match(/^S$/gm)?.length ?? 0);
+
+    expect(strokes).toHaveLength(7);
+    for (const count of strokes) expect(count).toBeLessThan(scene.parts[0]!.paths.length / 3);
+  });
 });
 
 /** A page's content stream, decompressed, as the text of its operators. */
