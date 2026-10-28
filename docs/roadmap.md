@@ -296,6 +296,35 @@ with the packaged app.
   Not measured on paper yet: no real printer has been calibrated with it.
   [Printing §8.2](printing.md#82-correction--opt-in-per-printer-a-last-resort).
 
+### Performance
+
+The whole [performance backlog](performance-backlog.md), **PERF-001 to PERF-017** from the
+2026-10-25 audit, is in 1.6 by the maintainer's decision (2026-10-28): the release waits for all
+of it. The backlog owns each task's evidence, acceptance and
+[order](performance-backlog.md#recommended-implementation-order); the marks here mirror its
+[register](performance-backlog.md#task-register), and a task's pull request ticks both. How the
+work is done — measured on current `develop`, before and after, a guard against coming back, one
+pull request each, accuracy never traded, every platform retested — is
+[`.claude/rules/performance.md`](../.claude/rules/performance.md).
+
+- ✅ **[PERF-001](performance-backlog.md#perf-001)** Share export geometry across history revisions.
+- ◐ **[PERF-002](performance-backlog.md#perf-002)** Reduce tiled PDF duplication and blocking.
+- ✅ **[PERF-003](performance-backlog.md#perf-003)** Cull Sheets pages and separate interaction decoration.
+- ◐ **[PERF-004](performance-backlog.md#perf-004)** Avoid full snap-index rebuilds during complex edits.
+- ☐ **[PERF-005](performance-backlog.md#perf-005)** Reuse geometry diagnostics for unaffected inputs.
+- ☐ **[PERF-006](performance-backlog.md#perf-006)** Reduce self-intersection candidate pairs.
+- ☐ **[PERF-007](performance-backlog.md#perf-007)** Isolate pointer-driven React updates.
+- ☐ **[PERF-008](performance-backlog.md#perf-008)** Reuse Design content and cull off-screen geometry.
+- ☐ **[PERF-009](performance-backlog.md#perf-009)** Keep persistence work off the interaction path.
+- ☐ **[PERF-010](performance-backlog.md#perf-010)** Release previous-project view/tool caches.
+- ☐ **[PERF-011](performance-backlog.md#perf-011)** Resize backing stores on DPI-only changes.
+- ☐ **[PERF-012](performance-backlog.md#perf-012)** Preflight excessive allocation/work requests.
+- ☐ **[PERF-013](performance-backlog.md#perf-013)** Bound thumbnail work and cancel obsolete PDF loading.
+- ☐ **[PERF-014](performance-backlog.md#perf-014)** Schedule canvas frames only when needed.
+- ☐ **[PERF-015](performance-backlog.md#perf-015)** Avoid repeated deep dependency walks.
+- ☐ **[PERF-016](performance-backlog.md#perf-016)** Prune obsolete collapsed-part IDs.
+- ☐ **[PERF-017](performance-backlog.md#perf-017)** Make benchmarks representative and interpretable.
+
 ### Known issues and findings
 
 Everything found along the way that is not fixed yet, with where it was found. The ones marked
@@ -329,8 +358,8 @@ millions of holes, so a hole-count budget may be wanted one day. Moving the poin
 wallet, hovering or dragging, kept every frame at about 6 ms and no pointer event over 16 ms in the
 built app (2026-10-18), although each move re-renders the whole window. The later
 [performance audit](performance-backlog.md#measurement-record) recorded user-visible problems
-with history retention, complex outlines and tiled output. Its prioritized tasks are tracked
-under [Later](#performance-and-resource-efficiency), without adding them to this release gate.
+with history retention, complex outlines and tiled output. Its tasks are in this release, under
+[Performance](#performance), since 2026-10-28.
 
 ### Release engineering
 
@@ -353,26 +382,6 @@ why this order, and what depends on what are drawn in [`product-roadmap.md`](pro
 The numbers are Phase 9's from the 1.0 record, continued from 9.12 on 2026-10-17. The gaps are items
 that moved: DXF (9.4) into 1.1 as 6.5, Windows and macOS (9.8) into 1.0, and nesting (9.9) to *Not
 planned*.
-
-### Performance and resource efficiency
-
-The [performance backlog](performance-backlog.md) owns the status and acceptance criteria for
-**PERF-001 through PERF-017**, recorded by the 2026-10-25 audit of `5cf7294`. All are initially
-planned and unassigned to a release. Reproduce on the implementation revision: `develop` has
-advanced since those measurements. Promote selected items into a release explicitly, linking
-their stable IDs rather than copying the task lists here.
-
-**Work first:** export geometry retained through history (PERF-001), blocking tiled PDF export
-(PERF-002), slow complex-outline snapping (PERF-004), and many-page Sheets rendering (PERF-003).
-Start with the small benchmark corrections in PERF-017 so before/after evidence is trustworthy.
-The backlog includes [the full priority register](performance-backlog.md#task-register),
-[independent PR order and dependencies](performance-backlog.md#recommended-implementation-order),
-and [verification requirements](performance-backlog.md#verification-and-evidence).
-
-Small follow-ups include clearing previous-project caches, idle frame scheduling and DPI-change
-handling. Coordinate lifecycle work with Q39, persistence with Q35/Q36, and benchmark work with
-Q40. This work preserves millimetre accuracy, exact 1:1 output and document/history correctness;
-no renderer rewrite or unmeasured speedup is implied.
 
 ### Pieces that fit
 
