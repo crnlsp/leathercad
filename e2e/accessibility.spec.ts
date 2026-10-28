@@ -7,6 +7,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { launchApp, scanA11y, expectNoViolations } from './launchApp.js';
+import { openPrintTest } from './printTest.js';
 
 /**
  * An automated accessibility scan of the running window.
@@ -225,6 +226,22 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await expect(window.getByTestId('shortcut-clash')).toBeVisible();
     await scan('Settings › Keyboard shortcuts, a clash');
     await window.getByTestId('clash-cancel').click();
+  } finally {
+    await closeApp(instance);
+  }
+});
+
+test('the top bar’s "Saved" has no accessibility violations with a project open', async () => {
+  // "Saved" shows only once a project has a file; the print test is one.
+  const instance = await launchApp({
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-a11y-')) },
+  });
+  try {
+    const window = await instance.firstWindow();
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await openPrintTest(instance, window, join(tmpdir(), 'leathercad-e2e-a11y.pdf'));
+    await expect(window.getByTestId('save-state')).toContainText('Saved');
+    await expectNoViolations(window, 'the top bar with a saved project open');
   } finally {
     await closeApp(instance);
   }
