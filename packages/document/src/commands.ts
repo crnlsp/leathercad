@@ -338,42 +338,57 @@ export function transformFeatures(
   matrix: Mat2x3,
   label: HistoryLabel = { action: 'transform' },
 ): Command {
-  const targets = new Set(ids);
+  const moves = alike(ids, matrix);
+  return command(label, (document) => transformEach(document, moves));
+}
 
-  return command(label, (document) => {
-    if (targets.size === 0) return document;
-    // A mixed selection is refused whole (S7). Moving the free half would
-    // leave the drawing somewhere the user did not ask for and cannot see at
-    // a glance — worse than not moving at all. The same for anything that
-    // cannot take the transform (Q30): a stretched piece once left its rivet
-    // and its labels where they were, and said so only while the mouse was
-    // down.
-    if (transformRefusal(document.project, targets, matrix) !== null) return document;
+/**
+ * The transform each feature a gesture takes is given. Every gesture gives
+ * all of them one matrix but a piece's scale, which keeps what is made to a
+ * size its size (Q31).
+ */
+type Moves = ReadonlyMap<FeatureId, Mat2x3>;
 
-    const next = {
-      project: {
-        ...document.project,
-        parts: document.project.parts.map((part) => ({
-          ...part,
-          features: part.features.map((feature) =>
-            targets.has(feature.id)
-              ? transformFeature(
-                  feature,
-                  matrix,
-                  feature.kind !== 'text-label' &&
-                    feature.source.kind === 'derived' &&
-                    targets.has(feature.source.sourceId),
-                )
-              : feature,
-          ),
-        })),
-      },
-    };
+/** One matrix for every feature named. */
+function alike(ids: Iterable<FeatureId>, matrix: Mat2x3): Moves {
+  return new Map([...ids].map((id) => [id, matrix] as const));
+}
 
-    // Everything refused is everything unchanged, and a no-op earns no
-    // history: "Undo Move" with nothing behind it is worse than no entry.
-    return movedAnything(document.project, next.project) ? next : document;
-  });
+/** `transformFeatures`, with a matrix of its own for each feature. */
+function transformEach(document: Document, moves: Moves): Document {
+  if (moves.size === 0) return document;
+  // A mixed selection is refused whole (S7). Moving the free half would
+  // leave the drawing somewhere the user did not ask for and cannot see at
+  // a glance — worse than not moving at all. The same for anything that
+  // cannot take the transform (Q30): a stretched piece once left its rivet
+  // and its labels where they were, and said so only while the mouse was
+  // down.
+  if (movesRefusal(document.project, moves) !== null) return document;
+
+  const next = {
+    project: {
+      ...document.project,
+      parts: document.project.parts.map((part) => ({
+        ...part,
+        features: part.features.map((feature) => {
+          const matrix = moves.get(feature.id);
+          return matrix === undefined
+            ? feature
+            : transformFeature(
+                feature,
+                matrix,
+                feature.kind !== 'text-label' &&
+                  feature.source.kind === 'derived' &&
+                  moves.has(feature.source.sourceId),
+              );
+        }),
+      })),
+    },
+  };
+
+  // Everything refused is everything unchanged, and a no-op earns no
+  // history: "Undo Move" with nothing behind it is worse than no entry.
+  return movedAnything(document.project, next.project) ? next : document;
 }
 
 /**
@@ -614,10 +629,12 @@ export function transformRefusal(
   ids: Iterable<FeatureId>,
   matrix: Mat2x3,
 ): Problem | null {
-  const targets = [...new Set(ids)];
-  return (
-    lockRefusal(project, targets) ?? refusedTransforms(project, targets, matrix)[0]?.problem ?? null
-  );
+  return movesRefusal(project, alike(ids, matrix));
+}
+
+/** `transformRefusal`, with a matrix of its own for each feature. */
+function movesRefusal(project: Project, moves: Moves): Problem | null {
+  return lockRefusal(project, [...moves.keys()]) ?? refusedEach(project, moves)[0]?.problem ?? null;
 }
 
 export function refusedTransforms(
@@ -625,7 +642,12 @@ export function refusedTransforms(
   ids: Iterable<FeatureId>,
   matrix: Mat2x3,
 ): RefusedTransform[] {
-  const targets = new Set(ids);
+  return refusedEach(project, alike(ids, matrix));
+}
+
+/** `refusedTransforms`, with a matrix of its own for each feature. */
+function refusedEach(project: Project, moves: Moves): RefusedTransform[] {
+  const targets: ReadonlySet<FeatureId> = new Set(moves.keys());
   const refused: RefusedTransform[] = [];
 
   const byId = new Map(
@@ -634,7 +656,8 @@ export function refusedTransforms(
 
   for (const part of project.parts) {
     for (const feature of part.features) {
-      if (!targets.has(feature.id)) continue;
+      const matrix = moves.get(feature.id);
+      if (matrix === undefined) continue;
 
       if (feature.kind !== 'text-label' && feature.source.kind === 'derived') {
         // A mirror has a placement of its own, so it moves, turns and flips.
@@ -788,9 +811,6 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
       },
     };
   }
-
-  // Only a shape is left: the measurement arm was returned above.
-  if (feature.source.kind !== 'shape') return feature;
 
   // Only a shape is left: the measurement arm returned above.
   if (feature.source.kind !== 'shape') return feature;
