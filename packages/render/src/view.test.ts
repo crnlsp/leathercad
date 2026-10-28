@@ -9,6 +9,7 @@ import {
   cssPxPerMm,
   mmToPixels,
   pixelsToMm,
+  widestPixelsToMm,
   nextZoomStop,
   scaleAtZoomPercent,
   screenToWorld,
@@ -114,6 +115,23 @@ describe('pixel and millimetre conversion', () => {
 
   it('turn a 10 px pick radius into a millimetre tolerance', () => {
     expect(closeTo(pixelsToMm(view, 10), 2.5)).toBe(true);
+  });
+
+  it('are never more millimetres than at the smallest zoom the camera has', () => {
+    // 1 % is the limit: ZOOM_LIMITS, which every camera movement clamps to.
+    fc.assert(
+      fc.property(
+        ratios,
+        fc.double({ min: ZOOM_LIMITS.min, max: ZOOM_LIMITS.max, noNaN: true }),
+        fc.double({ min: 0.1, max: 100, noNaN: true }),
+        (dpr, percent, px) => {
+          const on = { ...view, scale: scaleAtZoomPercent(percent, dpr), dpr };
+          return pixelsToMm(on, px) <= widestPixelsToMm(px) * (1 + 1e-12);
+        },
+      ),
+    );
+    // And exactly at it: 10 px at 1 % is 10 / 0.0378 mm.
+    expect(closeTo(widestPixelsToMm(10), 10 / ((96 / 25.4) * 0.01), 1e-9)).toBe(true);
   });
 
   it('count CSS pixels, so a pick radius covers the same millimetres on any display', () => {

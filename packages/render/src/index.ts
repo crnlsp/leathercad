@@ -32,6 +32,7 @@ export {
   cssPxPerMm,
   mmToPixels,
   pixelsToMm,
+  widestPixelsToMm,
   scaleAtZoomPercent,
   nextZoomStop,
   shownZoomPercent,

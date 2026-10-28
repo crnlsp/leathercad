@@ -17,6 +17,7 @@ import {
   SHEET,
   extentOf,
   reachesView,
+  widestPixelsToMm,
   unionExtent,
   type BoundedItem,
   type DisplayItem,
@@ -28,6 +29,7 @@ import {
 import type { PlacedPart, Tile } from './paginate.js';
 import { contentAreaMm } from './paper.js';
 import type { ExportPath, ExportText } from './scene.js';
+import { pathReaches } from './pdf/reach.js';
 import { sheetInk } from './sheetInk.js';
 import { describeSheetNumbers, sheetLabel, type SheetPlan } from './sheetPlan.js';
 import type { SheetsLayout } from './sheetsLayout.js';
@@ -247,6 +249,14 @@ export function sheetsPages(
     const ink = sheetInk(plan, frame.index, options.now);
     const o = frame.origin;
     const shift = (x: Mm, y: Mm): Vec2 => ({ x: o.x + x, y: o.y + y });
+    // A taped sheet shows its piece through its printable area, as the PDF does.
+    const clipMm =
+      ink.clip === null
+        ? null
+        : RectOps.fromCorners(
+            shift(ink.clip.minX, ink.clip.minY),
+            shift(ink.clip.maxX, ink.clip.maxY),
+          );
 
     // The paper, and what of it is not the pattern's.
     const sheetRect = rect(shift(0, 0), shift(frame.widthMm, frame.heightMm));
@@ -302,7 +312,7 @@ export function sheetsPages(
         paths: placement.part.paths,
         start: placed.length,
       });
-      for (const item of piece(placement, at)) placed.push(item);
+      for (const item of piece(placement, at, clipMm)) placed.push(item);
     }
 
     // Pieces turned to save a sheet, named below it: the printed name runs up the
@@ -320,7 +330,7 @@ export function sheetsPages(
     }
 
     let pieces = found;
-    if (ink.clip === null) {
+    if (clipMm === null) {
       // On a whole sheet the ink follows the page's own items.
       const after = base.length;
       pieces = found.map((one) => ({ ...one, start: after + one.start }));
@@ -328,13 +338,7 @@ export function sheetsPages(
     } else {
       for (const item of ink.clipped) placed.push(inkPath(item, o));
       for (const text of ink.clippedTexts) placed.push(inkText(text, o));
-      tile = {
-        list: { items: placed },
-        clipMm: RectOps.fromCorners(
-          shift(ink.clip.minX, ink.clip.minY),
-          shift(ink.clip.maxX, ink.clip.maxY),
-        ),
-      };
+      tile = { list: { items: placed }, clipMm };
     }
     pages.push({
       extent: extentOfPage(paper, base, tile, pieces.length > 0),
@@ -445,12 +449,14 @@ function haloed(page: SheetsPage, emphasis: SheetsEmphasis): SheetsPage {
   const known = halos.get(page);
   if (known?.key === key) return known.page;
 
+  const clip = page.tile?.clipMm ?? null;
   const cut = <T extends DisplayItem>(items: readonly T[]): (T | BoundedItem)[] => {
     const out: (T | BoundedItem)[] = [];
     let from = 0;
     for (const { one, colour } of marked) {
       for (; from < one.start; from++) out.push(items[from]!);
       for (const { path } of one.paths) {
+        if (!shows(path, one.at, clip, HALO_EDGE_PX)) continue;
         out.push(stroke(moved(path, one.at), colour, CANVAS.halo.widthPx));
       }
     }
@@ -465,11 +471,36 @@ function haloed(page: SheetsPage, emphasis: SheetsEmphasis): SheetsPage {
   return made;
 }
 
-/** A placed piece in ink. */
-function piece(placement: PlacedPart, at: Vec2): BoundedItem[] {
+/** A halo's half width and the antialiased edge past it, in CSS pixels. */
+const HALO_EDGE_PX = CANVAS.halo.widthPx / 2 + EDGE_PX;
+
+/**
+ * Whether a path of a piece, moved by `at`, can put ink inside `clip` — true
+ * for a whole sheet, which has none. The ink of a taped sheet is clipped to its
+ * printable area, so a path that cannot reach it is drawn for nothing, and for
+ * a long strap that is most of its thousands of holes on each of dozens of sheets.
+ *
+ * The path's box is grown by what a stroke of `marginPx` reaches *at the
+ * smallest zoom*, the most millimetres it ever is, so the answer does not
+ * depend on the camera and nothing has to be built again when it moves.
+ */
+function shows(path: Path, at: Vec2, clip: Rect | null, marginPx: number): boolean {
+  return clip === null || pathReaches(path, at, clip, widestPixelsToMm(marginPx));
+}
+
+/** A placed piece in ink: all of it, or what can show through `clip`. */
+function piece(placement: PlacedPart, at: Vec2, clip: Rect | null): BoundedItem[] {
   const items: BoundedItem[] = [];
-  for (const item of placement.part.paths) items.push(inkPath(item, at));
-  for (const text of placement.part.texts) items.push(inkText(text, at));
+  for (const item of placement.part.paths) {
+    const margin = item.filled === true ? EDGE_PX : strokePx(item) / 2 + EDGE_PX;
+    if (shows(item.path, at, clip, margin)) items.push(inkPath(item, at));
+  }
+  for (const text of placement.part.texts) {
+    // A contour clear of the clip adds nothing inside it, whatever the fill
+    // rule, so a word keeps only those that can show.
+    const glyphs = text.glyphs.filter((glyph) => shows(glyph, at, clip, EDGE_PX));
+    if (clip === null || glyphs.length > 0) items.push(inkText(text, at, glyphs));
+  }
   return items;
 }
 
@@ -479,6 +510,11 @@ function inkColour(grey: number): string {
     .toString(16)
     .padStart(2, '0');
   return `#${level}${level}${level}`;
+}
+
+/** Screen-constant, like every stroke on a canvas; the rhythm is true. */
+function strokePx(item: ExportPath): number {
+  return item.role === 'annotation' ? SHEET.hairlinePx : ROLE_STYLES[item.role].widthPx;
 }
 
 function inkPath(item: ExportPath, at: Vec2): BoundedItem {
@@ -496,18 +532,18 @@ function inkPath(item: ExportPath, at: Vec2): BoundedItem {
     path: moved(item.path, at),
     stroke: {
       colour: inkColour(item.style.grey),
-      // Screen-constant, like every stroke on a canvas; the rhythm is true.
-      widthPx: item.role === 'annotation' ? SHEET.hairlinePx : ROLE_STYLES[item.role].widthPx,
+      widthPx: strokePx(item),
       dashMm: item.style.dashMm,
     },
   };
 }
 
-function inkText(text: ExportText, at: Vec2): BoundedItem {
+/** A word as filled glyphs: all of them, or those of them given. */
+function inkText(text: ExportText, at: Vec2, glyphs: readonly Path[] = text.glyphs): BoundedItem {
   return {
     kind: 'fill',
     role: text.role,
-    paths: text.glyphs.map((glyph) => moved(glyph, at)),
+    paths: glyphs.map((glyph) => moved(glyph, at)),
     colour: inkColour(0),
   };
 }
