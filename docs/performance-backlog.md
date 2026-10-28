@@ -1,7 +1,7 @@
 # Performance audit and implementation backlog
 
 **Recorded:** 2026-10-25 · **Audited commit:** [`5cf7294`](https://github.com/crnlsp/leathercad/tree/5cf7294)
-· **Release assignment:** none; candidates under [Roadmap → Later](roadmap.md#performance-and-resource-efficiency).
+· **Release assignment:** 1.6, all of it (2026-10-28), under [Roadmap → Performance](roadmap.md#performance).
 
 This is the durable record of the repository-wide performance audit and the work it recommends.
 It records findings, not completed fixes. Start with the task register, then use each task's
