@@ -17,7 +17,7 @@ describe('benchmark discovery', () => {
   );
 
   it('finds the packages that hold benchmarks', () => {
-    expect(withBenches).toEqual(['domain', 'export', 'geometry', 'persist']);
+    expect(withBenches).toEqual(['domain', 'editor', 'export', 'geometry', 'persist']);
   });
 
   it.each(withBenches)('%s restricts benchmarks to src/', (name) => {
