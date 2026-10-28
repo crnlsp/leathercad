@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
+import { arbCoord } from '../test/arbitraries.js';
 import { rootsInUnitInterval, solveCubic, solveLinear, solveQuadratic } from './polynomial.js';
 
 /**
@@ -192,7 +193,161 @@ describe('solveCubic', () => {
       }),
     );
   });
+
+  it('regression: finds only the tangent touch on a cubic whose t³ term is rounding noise (Q38)', () => {
+    // The bottom cubic of Q38's circle, centre (0, −2000), against the ray
+    // level with its lowest point. It is symmetric about t = 0.5, so its t³
+    // coefficient is zero but for 1.4e-12 of noise from coordinates near 2100
+    // — just past EPS_COEFFICIENT. Cardano, working about a shift near 1.3e13,
+    // answered t = 0.75, where the curve is steep and nowhere near the ray.
+    const roots = rootsInUnitInterval(
+      solveCubic(
+        -1.3642420526593924e-12,
+        51.66734706712032,
+        -51.66734706711895,
+        12.916836766779397,
+      ),
+    );
+    expect(roots.length).toBeGreaterThan(0);
+    for (const t of roots) expect(Math.abs(t - 0.5)).toBeLessThan(1e-6);
+  });
+
+  it('regression: finds two roots close together beside a far one (Q38)', () => {
+    // (t + 0.01)·t·(t − 25976.48): fast-check's counterexample to the property
+    // below. Beside the far root the near two are 4e-7 of the scale apart, so
+    // the discriminant read as a repeated root and both were lost.
+    const far = 25976.48166196564;
+    const roots = solveCubic(1, -(far - 0.01), -0.01 * far, 0);
+    expect(roots).toHaveLength(3);
+    expect(roots[0]).toBeCloseTo(-0.01, 12);
+    expect(roots[1]).toBeCloseTo(0, 12);
+    expect(roots[2]).toBeCloseTo(far, 6);
+  });
+
+  it('regression: finds a root at zero beside a complex pair larger than it', () => {
+    // t·(t² − 2·re·t + re² + im²). Cardano puts the real root a rounding off
+    // zero, where d = 0 made it look like the largest root to divide out —
+    // from the wrong end, which threw the complex pair into real garbage.
+    const [re, im] = [-17.977483840786544, 5.901254438645678];
+    const roots = solveCubic(1, -2 * re, re * re + im * im, 0);
+    expect(roots).toHaveLength(1);
+    expect(Math.abs(roots[0] ?? NaN)).toBeLessThan(1e-12);
+  });
+
+  it('recovers the roots of k·(t − r1)(t − r2)(t − r3) at any scale, one root as far out as you like', () => {
+    // A root out near −b/a is what makes a tiny t³ term hard: Cardano works
+    // about that shift. The far root may be dropped; the near ones may not.
+    const far = fc
+      .tuple(fc.double({ min: 0, max: 14, noNaN: true }), fc.boolean())
+      .map(([exponent, negative]) => (negative ? -1 : 1) * 10 ** exponent);
+    fc.assert(
+      fc.property(
+        fc.double({ min: -1, max: 2, noNaN: true }),
+        fc.double({ min: -1, max: 2, noNaN: true }),
+        far,
+        scale,
+        (r1, r2, r3, k) => {
+          const truth = [r1, r2, r3];
+          // Well-separated only: a near-double root is ill-conditioned.
+          if (truth.some((x, i) => truth.some((y, j) => i < j && Math.abs(x - y) < 0.01))) {
+            return true;
+          }
+          const found = solveCubic(
+            k,
+            -k * (r1 + r2 + r3),
+            k * (r1 * r2 + r1 * r3 + r2 * r3),
+            -k * r1 * r2 * r3,
+          );
+          return agreesOnTheUnitInterval(found, truth);
+        },
+      ),
+    );
+  });
+
+  it('recovers the roots of a quadratic drawn as a cubic far from the origin, whose t³ term is only rounding', () => {
+    // The shape of Q38: control values placed at ±2000 mm and measured from a
+    // ray there, as containsPoint does, so the t³ coefficient that is zero on
+    // paper carries a few ulps of the coordinates.
+    fc.assert(
+      fc.property(
+        fc.double({ min: -0.5, max: 1.5, noNaN: true }),
+        fc.double({ min: -0.5, max: 1.5, noNaN: true }),
+        scale,
+        arbCoord,
+        (r1, r2, k, offset) => {
+          if (Math.abs(r1 - r2) < 0.01) return true;
+          // k·(t − r1)(t − r2) as a Bézier's control values, degree-elevated.
+          const [b, c, d] = [k, -k * (r1 + r2), k * r1 * r2];
+          const ys = [d, d + c / 3, d + (2 * c) / 3 + b / 3, d + c + b];
+          // A t³ term of noise has a root of its own, beyond 1e9 and genuine.
+          const found = solveCubic(...coefficientsAgainstRay(ys, offset)).filter(
+            (t) => Math.abs(t) < 1e6,
+          );
+          return agreesOnTheUnitInterval(found, [r1, r2]);
+        },
+      ),
+    );
+  });
+
+  it('never reads the tangent touch of a near-symmetric curve far from the origin as a crossing elsewhere', () => {
+    // A cubic symmetric about t = 0.5 is a quadratic on paper, touched at
+    // t = 0.5 by the ray level with its extreme. Q38's was symmetric but for
+    // a few ulps between its inner control points, and its end ones may differ
+    // as much. That may split the touch into two roots close by, or remove it
+    // — but a root anywhere else in [0, 1] is a crossing that is not there.
+    const ulps = fc.integer({ min: -4, max: 4 });
+    fc.assert(
+      fc.property(
+        fc.double({ min: -100, max: 100, noNaN: true }),
+        fc.double({ min: -100, max: 100, noNaN: true }),
+        arbCoord,
+        ulps,
+        ulps,
+        (end, inner, offset, innerUlps, endUlps) => {
+          if (Math.abs(end - inner) < 0.01) return true;
+          const ulp = Number.EPSILON * Math.max(1, Math.abs(offset));
+          const extreme = (end + 3 * inner) / 4;
+          const ys = [end, inner, inner + innerUlps * ulp, end + endUlps * ulp].map(
+            (y) => y - extreme,
+          );
+          const found = rootsInUnitInterval(solveCubic(...coefficientsAgainstRay(ys, offset)));
+          return found.every((t) => Math.abs(t - 0.5) < 1e-4);
+        },
+      ),
+    );
+  });
 });
+
+/** ±10⁻² to ±10³: a curve 0.1 mm across up to one a couple of metres across. */
+const scale = fc
+  .tuple(fc.double({ min: -2, max: 3, noNaN: true }), fc.boolean())
+  .map(([exponent, negative]) => (negative ? -1 : 1) * 10 ** exponent);
+
+/**
+ * The cubic `y(t) − ray` for a Bézier whose control values are `ys` above the
+ * ray, with both moved `offset` from the origin first — so the coefficients
+ * carry that coordinate's rounding, exactly as `containsPoint` forms them.
+ */
+function coefficientsAgainstRay(
+  ys: readonly number[],
+  offset: number,
+): [number, number, number, number] {
+  const [y0, y1, y2, y3] = ys.map((y) => y + offset - offset) as [number, number, number, number];
+  return [-y0 + 3 * y1 - 3 * y2 + y3, 3 * y0 - 6 * y1 + 3 * y2, -3 * y0 + 3 * y1, y0];
+}
+
+/**
+ * Every root found is one of `truth`, and every one of `truth` in [0, 1] is
+ * found — the two halves a curve's crossings depend on.
+ */
+function agreesOnTheUnitInterval(found: readonly number[], truth: readonly number[]): boolean {
+  const near = (x: number, y: number): boolean =>
+    Math.abs(x - y) <= 1e-6 * Math.max(1, Math.abs(y));
+  return (
+    found.every((t) => truth.some((r) => near(t, r))) &&
+    truth.every((r) => r < 0 || r > 1 || found.some((t) => near(t, r)))
+  );
+}
 
 describe('rootsInUnitInterval', () => {
   it('keeps only the open interval', () => {

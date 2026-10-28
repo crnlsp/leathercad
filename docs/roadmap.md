@@ -640,7 +640,10 @@ release until it is moved into one.
   cubic's ray crossing is near-tangent below `EPS_POINT` (was 1e-9), the path measure's table
   spacing is floored at `EPS_LENGTH` (was 1e-6), and the scale tool's grab is on the pivot within
   `EPS_POINT` (was 1e-6). No snapshot or golden file changed.
-- ✅ **Q39 A tool under way is not reset when a project opens** — only an open drag is rolled back,
+  Follow-up fixed (2026-10-28): `solveCubic` resolved every root only to the rounding of the
+  largest, so a t³ term of rounding noise on a circle 2 m out turned a tangent touch into a false
+  crossing, and two close roots beside a far one were lost; it now keeps only the largest root and
+  divides it out, finding the rest as a quadratic. A tool under way is not reset when a project opens** — only an open drag is rolled back,
   so a polyline half drawn continues into the new project. Fixed (2026-10-28): opening, a template,
   a recent project and a tab switch already made the board again — `CanvasHost` is keyed by the tab
   — so its tools started idle; the one route that kept them was *Reload from disk*, which replaces
