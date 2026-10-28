@@ -616,6 +616,16 @@ describe('arc specifics', () => {
     );
   });
 
+  it('toCubics keeps the end of an arc a rounding past EPS_LENGTH from its start (Q38)', () => {
+    // fast-check's counterexample: 9.99999999918e-8 mm long, so under
+    // EPS_LENGTH, but cos and sin of π + 1e-6 put the computed end ~2e-17 mm
+    // further than EPS_POINT. Collapsed onto its start, the arc lost its end.
+    const s = arc(vec(0, 0), 0.1, Math.PI, 9.999999999177334e-7);
+    const cubics = Seg.ArcOps.toCubics(s, EXPORT_TOLERANCE_MM);
+    expect(dist(cubics[0]!.p0, Seg.start(s))).toBeLessThanOrEqual(EPS_POINT);
+    expect(dist(cubics[cubics.length - 1]!.p3, Seg.end(s))).toBeLessThanOrEqual(EPS_POINT);
+  });
+
   it('toCubics treats an arc no longer than EPS_LENGTH as a point, judged by its length (Q38)', () => {
     // The radius used to be checked against EPS_ANGLE — a length against an
     // angle — so a 1e-8 mm half circle was subdivided as if it were real.

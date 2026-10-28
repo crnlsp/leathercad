@@ -1,4 +1,11 @@
-import { EPS_ANGLE, EPS_LENGTH, EPS_RATIO, type Mm, type Radians } from '@leathercad/core';
+import {
+  EPS_ANGLE,
+  EPS_LENGTH,
+  EPS_POINT,
+  EPS_RATIO,
+  type Mm,
+  type Radians,
+} from '@leathercad/core';
 
 import {
   apply,
@@ -9,7 +16,7 @@ import {
   type Mat2x3,
 } from '../mat2x3.js';
 import { fromPoints, type Rect } from '../rect.js';
-import { add, angleOf, scale, vec, type Vec2 } from '../vec2.js';
+import { add, angleOf, dist, scale, vec, type Vec2 } from '../vec2.js';
 import { EXPORT_TOLERANCE_MM, maxArcStepForTolerance } from '../tolerance.js';
 import {
   arc,
@@ -146,9 +153,12 @@ export function toCubics(s: ArcSegment, tolerance: Mm = EXPORT_TOLERANCE_MM): Cu
   // Degenerate by its length, which is what EPS_LENGTH bounds. A radius was
   // once checked against EPS_ANGLE, and a tiny sweep alone collapsed a 2000 mm
   // arc 1e-6 mm long onto its start — losing its end by ten EPS_POINTs (Q38).
-  // An arc this short has both ends within EPS_POINT of its start.
-  if (length(s) <= EPS_LENGTH) {
-    const p = pointAt(s, 0);
+  // An arc this short has both ends within EPS_POINT of its start — in exact
+  // arithmetic. At the edge, cos and sin of the end angle can round its end a
+  // few 1e-17 mm past EPS_POINT, so the computed end decides too; an arc that
+  // fails it is subdivided below, whose end is the one `end` computes.
+  const p = pointAt(s, 0);
+  if (length(s) <= EPS_LENGTH && dist(p, pointAt(s, 1)) <= EPS_POINT) {
     return [cubic(p, p, p, p)];
   }
 
