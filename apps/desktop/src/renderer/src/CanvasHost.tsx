@@ -10,10 +10,11 @@ import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domai
 import {
   layoutSheets,
   pieceAt,
-  sheetsView,
+  sheetsLayers,
+  sheetsPages,
   tapeJoins,
   type SheetPlan,
-  type SheetsLayer,
+  type SheetsPage,
 } from '@leathercad/export';
 import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
@@ -603,14 +604,14 @@ export function CanvasHost({
 
       const selected = selectedParts(document.project, selection);
       const cached = sheetsCacheRef.current;
-      const layers =
+      const pages =
         cached !== null &&
         cached.plan === plan &&
         cached.i18n === i18nRef.current &&
         cached.selected === selectedKey(selected) &&
         cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current)
-          ? cached.layers
-          : sheetsView(plan, layout, {
+          ? cached.pages
+          : sheetsPages(plan, layout, {
               now: new Date(),
               selected,
               hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
@@ -621,12 +622,14 @@ export function CanvasHost({
         i18n: i18nRef.current,
         selected: selectedKey(selected),
         hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-        layers,
+        pages,
       };
 
       const view = viewport.toView();
       clearCanvas(context, view, SHEET.ground);
-      for (const layer of layers) {
+      // Only the pages the camera can see any of (PERF-003): a long taped piece
+      // is dozens of sheets, and the one on screen is a few.
+      for (const layer of sheetsLayers(pages, view)) {
         renderDisplayList(
           context,
           layer.list,
@@ -1285,14 +1288,14 @@ function CanvasNotice({
   );
 }
 
-/** What the Sheets view last drew, so panning does not lay the sheets out again. */
+/** What the Sheets view last built, so panning does not lay the sheets out again. */
 interface SheetsCache {
   readonly plan: SheetPlan;
   /** The words the labels were made in: a new language makes new labels. */
   readonly i18n: I18n;
   readonly selected: string;
   readonly hovered: string | null;
-  readonly layers: readonly SheetsLayer[];
+  readonly pages: readonly SheetsPage[];
 }
 
 function selectedKey(selected: ReadonlySet<string>): string {

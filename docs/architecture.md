@@ -218,7 +218,8 @@ and correct.
         ▼
    ExportScene ──▶ planSheets() ──▶ SheetPlan ──┬──▶ PDF writer (with sheetInk)
                                                  ├──▶ sheet count, Parts' "Sheet 2", tape joins
-                                                 └──▶ sheetsView() ──▶ Canvas2D (the Sheets view)
+                                                 └──▶ sheetsPages() ──▶ sheetsLayers(camera) ──▶ Canvas2D
+                                                      (the Sheets view; a page the camera cannot see is not drawn)
 ```
 
 Two properties matter here:

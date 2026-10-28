@@ -10,12 +10,19 @@ import {
 } from '@leathercad/geometry';
 import {
   CANVAS,
+  EDGE_PX,
   GROUND,
   PAPER_FURNITURE,
   ROLE_STYLES,
   SHEET,
+  extentOf,
+  reachesView,
+  unionExtent,
+  type BoundedItem,
   type DisplayItem,
   type DisplayList,
+  type Extent,
+  type ViewportView,
 } from '@leathercad/render';
 
 import type { PlacedPart, Tile } from './paginate.js';
@@ -125,6 +132,24 @@ export interface SheetsLayer {
   readonly clipMm: Rect | null;
 }
 
+/**
+ * One sheet of the Sheets view, or a taped piece's name below its grid, as
+ * drawn: its items in the order the view draws them, and where they can put
+ * ink (PERF-003). A page is the unit the camera leaves out — a page it can see
+ * any of is drawn whole, as it always was.
+ *
+ * `paper` is drawn under every page's `base`, and a taped sheet's `tile`
+ * above it, whichever pages are drawn: the order the view has always had,
+ * because a sheet's label can run over another sheet's paper when zoomed out.
+ */
+export interface SheetsPage {
+  /** Null for a page that draws nothing. */
+  readonly extent: Extent | null;
+  readonly paper: readonly BoundedItem[];
+  readonly base: readonly BoundedItem[];
+  readonly tile: SheetsLayer | null;
+}
+
 export interface SheetsViewOptions {
   /** Dates the footer, as the PDF's is dated when it is written. */
   readonly now: Date;
@@ -173,17 +198,31 @@ export function sheetsView(
   layout: SheetsLayout,
   options: SheetsViewOptions,
 ): readonly SheetsLayer[] {
+  return sheetsLayers(sheetsPages(plan, layout, options));
+}
+
+/**
+ * The pages of the Sheets view, whole and in drawing order, before any camera
+ * has looked at them. What `sheetsView` draws is `sheetsLayers` of this; the
+ * app asks for the layers again for each camera and keeps these.
+ */
+export function sheetsPages(
+  plan: SheetPlan,
+  layout: SheetsLayout,
+  options: SheetsViewOptions,
+): readonly SheetsPage[] {
   const selected = options.selected ?? new Set<string>();
   const hovered = options.hovered ?? null;
   const { words } = options;
   const area = contentAreaMm(plan.setup);
   const m = plan.setup.marginsMm;
 
-  const base: DisplayItem[] = [];
-  const paper: DisplayItem[] = [];
-  const tiles: SheetsLayer[] = [];
+  const pages: SheetsPage[] = [];
 
   for (const frame of layout.frames) {
+    const base: BoundedItem[] = [];
+    const paper: BoundedItem[] = [];
+    let tile: SheetsLayer | null = null;
     const sheet = plan.sheets[frame.index]!;
     const ink = sheetInk(plan, frame.index, options.now);
     const o = frame.origin;
@@ -232,7 +271,7 @@ export function sheetsView(
       colour: inkColour(0),
     });
 
-    const pieces: DisplayItem[] = [];
+    const pieces: BoundedItem[] = [];
     for (const placement of sheet.placements) {
       const at = { x: o.x + placement.offsetMm.x, y: o.y + placement.offsetMm.y };
       const emphasis = selected.has(placement.part.id)
@@ -262,19 +301,20 @@ export function sheetsView(
     } else {
       for (const item of ink.clipped) pieces.push(inkPath(item, o));
       for (const text of ink.clippedTexts) pieces.push(inkText(text, o));
-      tiles.push({
+      tile = {
         list: { items: pieces },
         clipMm: RectOps.fromCorners(
           shift(ink.clip.minX, ink.clip.minY),
           shift(ink.clip.maxX, ink.clip.maxY),
         ),
-      });
+      };
     }
+    pages.push({ extent: extentOfPage(paper, base, tile), paper, base, tile });
   }
 
   // A taped piece's name, below its grid.
   for (const group of layout.groups) {
-    base.push(
+    const base = [
       overlay(
         words?.taped(group.name, group.sheets) ??
           `${group.name}, taped: ${describeSheetNumbers(group.sheets).toLowerCase()}`,
@@ -282,15 +322,60 @@ export function sheetsView(
         'left',
         'top',
       ),
-    );
+    ];
+    pages.push({ extent: extentOf(base), paper: [], base, tile: null });
   }
 
-  return [{ list: { items: [...paper, ...base] }, clipMm: null }, ...tiles];
+  return pages;
+}
+
+/**
+ * Where a sheet can put ink. A taped sheet's piece is clipped, so it reaches
+ * no further than its clip — and need not be measured path by path, which for
+ * a long strap is thousands of holes on each of dozens of sheets.
+ */
+function extentOfPage(
+  paper: readonly BoundedItem[],
+  base: readonly BoundedItem[],
+  tile: SheetsLayer | null,
+): Extent | null {
+  const parts = [extentOf(paper), extentOf(base)];
+  if (tile?.clipMm) parts.push({ boundsMm: tile.clipMm, marginPx: EDGE_PX });
+  return parts.reduce<Extent | null>(
+    (all, part) => (all === null ? part : part === null ? all : unionExtent(all, part)),
+    null,
+  );
+}
+
+/**
+ * The layers that draw `pages` — the ones `view` can see any of, or all of
+ * them without one — as the view has always drawn them: every sheet's paper,
+ * then everything on the sheets and the taped pieces' names, then each taped
+ * sheet's clipped piece. Leaving a page out leaves everything else exactly
+ * where it was drawn.
+ */
+export function sheetsLayers(
+  pages: readonly SheetsPage[],
+  view?: ViewportView,
+): readonly SheetsLayer[] {
+  const seen =
+    view === undefined
+      ? pages
+      : pages.filter((page) => page.extent !== null && reachesView(view, page.extent));
+  return [
+    {
+      list: {
+        items: [...seen.flatMap((page) => page.paper), ...seen.flatMap((page) => page.base)],
+      },
+      clipMm: null,
+    },
+    ...seen.flatMap((page) => (page.tile === null ? [] : [page.tile])),
+  ];
 }
 
 /** A placed piece in ink, over its halo when it is selected or hovered. */
-function piece(placement: PlacedPart, at: Vec2, halo: string | null): DisplayItem[] {
-  const items: DisplayItem[] = [];
+function piece(placement: PlacedPart, at: Vec2, halo: string | null): BoundedItem[] {
+  const items: BoundedItem[] = [];
   if (halo !== null) {
     for (const item of placement.part.paths) {
       items.push(stroke(moved(item.path, at), halo, CANVAS.halo.widthPx));
@@ -309,7 +394,7 @@ function inkColour(grey: number): string {
   return `#${level}${level}${level}`;
 }
 
-function inkPath(item: ExportPath, at: Vec2): DisplayItem {
+function inkPath(item: ExportPath, at: Vec2): BoundedItem {
   if (item.filled === true) {
     return {
       kind: 'fill',
@@ -331,7 +416,7 @@ function inkPath(item: ExportPath, at: Vec2): DisplayItem {
   };
 }
 
-function inkText(text: ExportText, at: Vec2): DisplayItem {
+function inkText(text: ExportText, at: Vec2): BoundedItem {
   return {
     kind: 'fill',
     role: text.role,
@@ -353,7 +438,7 @@ function stroke(
   colour: string,
   widthPx: number,
   dashPx?: readonly number[],
-): DisplayItem {
+): BoundedItem {
   return {
     kind: 'path',
     role: 'construction',
@@ -372,7 +457,7 @@ function overlay(
   at: Vec2,
   align: 'left' | 'center',
   baseline: 'top' | 'bottom',
-): DisplayItem {
+): BoundedItem {
   const { name } = CANVAS.text;
   return {
     kind: 'overlay-text',
