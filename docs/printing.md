@@ -627,7 +627,9 @@ dimension under the panel. Rendered by librsvg at 254 dpi (2026-10-07), the prin
 dialog: the three intents as radio buttons, each with a line saying what it holds; the layers — the
 domain's roles, `construction` aside, which no feature has — as checkboxes, ticked as the intent
 says and adjustable from there (*Laser cut*, then *Stitch holes* is the "plus stitch holes if
-lasered" of the domain model; a mix that is no intent says *Your own mix of layers*); and a line
+lasered" of the domain model, and says under it that each is a 1 mm circle marking the centre —
+`STITCH_HOLE_MARKER_DIAMETER_MM` — not a hole sized for the thread, since a cutter would cut it at
+that size; a mix that is no intent says *Your own mix of layers*); and a line
 that **reports the page** the file will have, from `drawingBoundsOf` — the box of what the chosen
 layers draw, which §10 already defines, so a laser cut's page is the cut outline's box and not the
 captions' — or says there is nothing to export and greys *Export…*. It reports and does not

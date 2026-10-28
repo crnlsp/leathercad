@@ -78,6 +78,8 @@ test('the maker adds a layer to a preset, and the choice is there at the next st
 
     await first.window.getByTestId('export-intent-laser-cut').check();
     // "Plus stitch holes if lasered": the preset is where the maker starts.
+    // A cutter would cut the marks at their size, so the dialog says what it is.
+    await expect(first.window.getByTestId('export-holes-note')).toHaveText(/1 mm/);
     await first.window.getByTestId('export-layer-stitch-holes').check();
     await expect(first.window.getByTestId('export-intent-laser-cut')).not.toBeChecked();
     await expect(first.window.getByTestId('export-custom')).toBeVisible();

@@ -4,6 +4,7 @@ import {
   EXPORT_INTENTS,
   EXPORT_PRESETS,
   EXPORT_ROLES,
+  STITCH_HOLE_MARKER_DIAMETER_MM,
   drawingBoundsOf,
   intentOf,
   type ExportRole,
@@ -101,9 +102,26 @@ export function ExportDialog({
                   type="checkbox"
                   data-testid={`export-layer-${role}`}
                   checked={roles.includes(role)}
+                  aria-describedby={role === 'stitch-holes' ? `${ids}holes` : undefined}
                   onChange={(event) => onRoles(withRole(roles, role, event.target.checked))}
                 />
-                {t(`exportDialog.roles.${role}`)}
+                {role === 'stitch-holes' ? (
+                  <span>
+                    {t(`exportDialog.roles.${role}`)}
+                    {/* A cutter would make them that size: say so before it does. */}
+                    <span
+                      id={`${ids}holes`}
+                      className="dialog-note export-note"
+                      data-testid="export-holes-note"
+                    >
+                      {t('exportDialog.stitchHolesNote', {
+                        size: formatMm(STITCH_HOLE_MARKER_DIAMETER_MM, 0),
+                      })}
+                    </span>
+                  </span>
+                ) : (
+                  t(`exportDialog.roles.${role}`)
+                )}
               </label>
             ))}
           </fieldset>

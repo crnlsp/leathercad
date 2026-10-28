@@ -723,6 +723,7 @@
       "stitch": "Stitch lines",
       "stitch-holes": "Stitch holes"
     },
+    "stitchHolesNote": "Each is a {{size}} circle marking the centre, not a hole sized for the thread",
     "title": "Export {{format}}"
   },
   "exportNotice": {
