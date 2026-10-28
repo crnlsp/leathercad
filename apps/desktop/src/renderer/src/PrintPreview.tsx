@@ -460,7 +460,15 @@ export function PrintPreview({
                 <p className="print-status ok" data-testid="print-no-scaling">
                   <Icon of="check" size={14} />
                   <span>
-                    <b>{t('printPreview.noScaling')}</b> {t('printPreview.noScalingDetail')}
+                    {/* "No scaling" would contradict the corrected line above it. */}
+                    <b>
+                      {t(corrected ? 'printPreview.noScalingCorrected' : 'printPreview.noScaling')}
+                    </b>{' '}
+                    {t(
+                      corrected
+                        ? 'printPreview.noScalingCorrectedDetail'
+                        : 'printPreview.noScalingDetail',
+                    )}
                   </span>
                 </p>
               ) : (

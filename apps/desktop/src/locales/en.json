@@ -669,6 +669,8 @@
     "noPrinters": "No printers are set up on this computer.",
     "noScaling": "No scaling",
     "noScalingDetail": "The sheets go to the printer exactly as shown here, with scaling turned off.",
+    "noScalingCorrected": "100 %, then corrected",
+    "noScalingCorrectedDetail": "The sheets go with the printer's own scaling turned off, scaled only by this printer's correction so that they measure true on it.",
     "orientation": "Orientation",
     "paper": "Paper",
     "paperMissing": "{{printer}} has no {{paper}} paper. Choose another paper or printer.",

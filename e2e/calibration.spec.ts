@@ -98,6 +98,8 @@ test('a printer calibrated in the preview prints corrected, and says so, until t
     await expect(preview.getByTestId('print-corrected')).toHaveText(
       'Corrected for this printer: scaled +0.50% across the paper and -0.12% along it.',
     );
+    // Not "No scaling" over a print that is scaled.
+    await expect(preview.getByTestId('print-no-scaling')).toContainText('100 %, then corrected');
 
     // Stored for this printer, in the configuration directory — not the project.
     expect(JSON.parse(readFileSync(printers, 'utf8'))).toEqual({
@@ -121,6 +123,7 @@ test('a printer calibrated in the preview prints corrected, and says so, until t
     // Removed, it is gone from the file and the preview.
     await preview.getByTestId('print-remove-correction').click();
     await expect(preview.getByTestId('print-corrected')).toHaveCount(0);
+    await expect(preview.getByTestId('print-no-scaling')).toContainText('No scaling');
     expect(JSON.parse(readFileSync(printers, 'utf8'))).toEqual({ version: 1, corrections: {} });
   } finally {
     await closeApp(app);
