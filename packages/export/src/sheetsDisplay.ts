@@ -148,15 +148,33 @@ export interface SheetsPage {
   readonly paper: readonly BoundedItem[];
   readonly base: readonly BoundedItem[];
   readonly tile: SheetsLayer | null;
+  /** The pieces on this page, where their ink starts in `tile`'s items, or in `base`'s when untiled. */
+  readonly pieces: readonly SheetPiece[];
 }
 
-export interface SheetsViewOptions {
+/**
+ * A piece on a page. Its ink is part of the page and never changes; a halo —
+ * the only thing selecting or pointing at it adds — is drawn beneath that ink,
+ * so the page's items are cut at `start` and the halo put there (PERF-003).
+ */
+interface SheetPiece {
+  readonly partId: string;
+  /** Where the piece's own origin is on the view. */
+  readonly at: Vec2;
+  /** What the halo follows. */
+  readonly paths: readonly ExportPath[];
+  readonly start: number;
+}
+
+/** What is emphasised: parts to halo as selected, and a part to halo as under the pointer. */
+export interface SheetsEmphasis {
+  readonly selected?: ReadonlySet<string>;
+  readonly hovered?: string | null;
+}
+
+export interface SheetsContentOptions {
   /** Dates the footer, as the PDF's is dated when it is written. */
   readonly now: Date;
-  /** Parts to halo, as selected. */
-  readonly selected?: ReadonlySet<string>;
-  /** A part to halo, as under the pointer. */
-  readonly hovered?: string | null;
   /**
    * The screen's words for what the view labels (U.9, ADR 0018), which the
    * app supplies: a package below it holds no sentence of the interface's.
@@ -164,6 +182,8 @@ export interface SheetsViewOptions {
    */
   readonly words?: SheetsWords;
 }
+
+export type SheetsViewOptions = SheetsContentOptions & SheetsEmphasis;
 
 /** The interface's words on the Sheets view. */
 export interface SheetsWords {
@@ -198,21 +218,21 @@ export function sheetsView(
   layout: SheetsLayout,
   options: SheetsViewOptions,
 ): readonly SheetsLayer[] {
-  return sheetsLayers(sheetsPages(plan, layout, options));
+  return sheetsLayers(sheetsPages(plan, layout, options), undefined, options);
 }
 
 /**
  * The pages of the Sheets view, whole and in drawing order, before any camera
- * has looked at them. What `sheetsView` draws is `sheetsLayers` of this; the
- * app asks for the layers again for each camera and keeps these.
+ * has looked at them and before anything is emphasised: they are the paper
+ * and its ink, which only the plan, the date and the words change. What
+ * `sheetsView` draws is `sheetsLayers` of this; the app keeps these and asks
+ * for the layers again for each camera and each pointer position.
  */
 export function sheetsPages(
   plan: SheetPlan,
   layout: SheetsLayout,
-  options: SheetsViewOptions,
+  options: SheetsContentOptions,
 ): readonly SheetsPage[] {
-  const selected = options.selected ?? new Set<string>();
-  const hovered = options.hovered ?? null;
   const { words } = options;
   const area = contentAreaMm(plan.setup);
   const m = plan.setup.marginsMm;
@@ -271,15 +291,18 @@ export function sheetsPages(
       colour: inkColour(0),
     });
 
-    const pieces: BoundedItem[] = [];
+    // The pieces' ink, and where each piece's starts: a halo goes there.
+    const placed: BoundedItem[] = [];
+    const found: SheetPiece[] = [];
     for (const placement of sheet.placements) {
       const at = { x: o.x + placement.offsetMm.x, y: o.y + placement.offsetMm.y };
-      const emphasis = selected.has(placement.part.id)
-        ? CANVAS.halo.selected
-        : hovered === placement.part.id
-          ? CANVAS.halo.hover
-          : null;
-      pieces.push(...piece(placement, at, emphasis));
+      found.push({
+        partId: placement.part.id,
+        at,
+        paths: placement.part.paths,
+        start: placed.length,
+      });
+      for (const item of piece(placement, at)) placed.push(item);
     }
 
     // Pieces turned to save a sheet, named below it: the printed name runs up the
@@ -296,20 +319,30 @@ export function sheetsPages(
       );
     }
 
+    let pieces = found;
     if (ink.clip === null) {
-      base.push(...pieces);
+      // On a whole sheet the ink follows the page's own items.
+      const after = base.length;
+      pieces = found.map((one) => ({ ...one, start: after + one.start }));
+      for (const item of placed) base.push(item);
     } else {
-      for (const item of ink.clipped) pieces.push(inkPath(item, o));
-      for (const text of ink.clippedTexts) pieces.push(inkText(text, o));
+      for (const item of ink.clipped) placed.push(inkPath(item, o));
+      for (const text of ink.clippedTexts) placed.push(inkText(text, o));
       tile = {
-        list: { items: pieces },
+        list: { items: placed },
         clipMm: RectOps.fromCorners(
           shift(ink.clip.minX, ink.clip.minY),
           shift(ink.clip.maxX, ink.clip.maxY),
         ),
       };
     }
-    pages.push({ extent: extentOfPage(paper, base, tile), paper, base, tile });
+    pages.push({
+      extent: extentOfPage(paper, base, tile, pieces.length > 0),
+      paper,
+      base,
+      tile,
+      pieces,
+    });
   }
 
   // A taped piece's name, below its grid.
@@ -323,7 +356,7 @@ export function sheetsPages(
         'top',
       ),
     ];
-    pages.push({ extent: extentOf(base), paper: [], base, tile: null });
+    pages.push({ extent: extentOf(base), paper: [], base, tile: null, pieces: [] });
   }
 
   return pages;
@@ -338,13 +371,18 @@ function extentOfPage(
   paper: readonly BoundedItem[],
   base: readonly BoundedItem[],
   tile: SheetsLayer | null,
+  hasPieces: boolean,
 ): Extent | null {
   const parts = [extentOf(paper), extentOf(base)];
   if (tile?.clipMm) parts.push({ boundsMm: tile.clipMm, marginPx: EDGE_PX });
-  return parts.reduce<Extent | null>(
-    (all, part) => (all === null ? part : part === null ? all : unionExtent(all, part)),
+  const all = parts.reduce<Extent | null>(
+    (sum, part) => (sum === null ? part : part === null ? sum : unionExtent(sum, part)),
     null,
   );
+  // A halo, once a piece has one, is a wide stroke round its outline.
+  return all !== null && hasPieces
+    ? { ...all, marginPx: Math.max(all.marginPx, CANVAS.halo.widthPx / 2 + EDGE_PX) }
+    : all;
 }
 
 /**
@@ -353,15 +391,21 @@ function extentOfPage(
  * then everything on the sheets and the taped pieces' names, then each taped
  * sheet's clipped piece. Leaving a page out leaves everything else exactly
  * where it was drawn.
+ *
+ * `emphasis` puts a halo under each piece it names, on the pages drawn: a
+ * page's own ink is the same whatever is under the pointer, so pointing at a
+ * piece builds only the halos that are seen (PERF-003).
  */
 export function sheetsLayers(
   pages: readonly SheetsPage[],
   view?: ViewportView,
+  emphasis: SheetsEmphasis = {},
 ): readonly SheetsLayer[] {
-  const seen =
+  const seen = (
     view === undefined
       ? pages
-      : pages.filter((page) => page.extent !== null && reachesView(view, page.extent));
+      : pages.filter((page) => page.extent !== null && reachesView(view, page.extent))
+  ).map((page) => haloed(page, emphasis));
   return [
     {
       list: {
@@ -373,14 +417,57 @@ export function sheetsLayers(
   ];
 }
 
-/** A placed piece in ink, over its halo when it is selected or hovered. */
-function piece(placement: PlacedPart, at: Vec2, halo: string | null): BoundedItem[] {
-  const items: BoundedItem[] = [];
-  if (halo !== null) {
-    for (const item of placement.part.paths) {
-      items.push(stroke(moved(item.path, at), halo, CANVAS.halo.widthPx));
+/** The halo a piece is given: selected over hovered, as ever. */
+function haloColour(partId: string, { selected, hovered }: SheetsEmphasis): string | null {
+  return selected?.has(partId) === true
+    ? CANVAS.halo.selected
+    : hovered === partId
+      ? CANVAS.halo.hover
+      : null;
+}
+
+/** The last halos built for a page, and for which of its pieces: a pan reuses them. */
+const halos = new WeakMap<SheetsPage, { readonly key: string; readonly page: SheetsPage }>();
+
+/**
+ * The page with a halo under each of its emphasised pieces: the page itself
+ * when none is, and otherwise its items cut at each such piece's `start`, so a
+ * halo lies under the piece's own ink and over what came before it, as it always has.
+ */
+function haloed(page: SheetsPage, emphasis: SheetsEmphasis): SheetsPage {
+  const marked = page.pieces.flatMap((one) => {
+    const colour = haloColour(one.partId, emphasis);
+    return colour === null ? [] : [{ one, colour }];
+  });
+  if (marked.length === 0) return page;
+
+  const key = marked.map(({ one, colour }) => `${String(one.start)}${colour}`).join();
+  const known = halos.get(page);
+  if (known?.key === key) return known.page;
+
+  const cut = <T extends DisplayItem>(items: readonly T[]): (T | BoundedItem)[] => {
+    const out: (T | BoundedItem)[] = [];
+    let from = 0;
+    for (const { one, colour } of marked) {
+      for (; from < one.start; from++) out.push(items[from]!);
+      for (const { path } of one.paths) {
+        out.push(stroke(moved(path, one.at), colour, CANVAS.halo.widthPx));
+      }
     }
-  }
+    for (; from < items.length; from++) out.push(items[from]!);
+    return out;
+  };
+  const made: SheetsPage =
+    page.tile === null
+      ? { ...page, base: cut(page.base) }
+      : { ...page, tile: { ...page.tile, list: { items: cut(page.tile.list.items) } } };
+  halos.set(page, { key, page: made });
+  return made;
+}
+
+/** A placed piece in ink. */
+function piece(placement: PlacedPart, at: Vec2): BoundedItem[] {
+  const items: BoundedItem[] = [];
   for (const item of placement.part.paths) items.push(inkPath(item, at));
   for (const text of placement.part.texts) items.push(inkText(text, at));
   return items;

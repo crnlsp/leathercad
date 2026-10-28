@@ -1,5 +1,5 @@
 import { MatOps, RectOps, SegmentOps, polyline, type Path, type Vec2 } from '@leathercad/geometry';
-import { worldToScreen, type DisplayItem, type ViewportView } from '@leathercad/render';
+import { CANVAS, worldToScreen, type DisplayItem, type ViewportView } from '@leathercad/render';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -43,9 +43,9 @@ const plan = planSheets(
   DEFAULT_PAGE_SETUP,
 );
 const layout = layoutSheets(plan);
-const options = { now: NOW, selected: new Set(['panel-3', 'strap']), hovered: 'panel-7' };
-const pages = sheetsPages(plan, layout, options);
-const everything = sheetsLayers(pages);
+const emphasis = { selected: new Set(['panel-3', 'strap']), hovered: 'panel-7' };
+const pages = sheetsPages(plan, layout, { now: NOW });
+const everything = sheetsLayers(pages, undefined, emphasis);
 
 const arbView: fc.Arbitrary<ViewportView> = fc.record({
   centreMm: fc.record({
@@ -78,15 +78,15 @@ describe('which pages the Sheets view draws', () => {
       heightPx: 4000,
       dpr: 1,
     };
-    expect(sheetsLayers(pages, wide)).toEqual(everything);
-    expect(sheetsView(plan, layout, options)).toEqual(everything);
+    expect(sheetsLayers(pages, wide, emphasis)).toEqual(everything);
+    expect(sheetsView(plan, layout, { now: NOW, ...emphasis })).toEqual(everything);
   });
 
   it('draws what it keeps as it always drew it: the same items, in the same order', () => {
     const order = new Map(itemsOf(everything).map((item, i) => [item, i]));
     fc.assert(
       fc.property(arbView, (view) => {
-        const kept = sheetsLayers(pages, view);
+        const kept = sheetsLayers(pages, view, emphasis);
         // A subsequence, by identity: nothing moved, nothing drawn twice.
         const places = itemsOf(kept).map((item) => order.get(item) ?? -1);
         const inOrder = places.every((at, i) => at >= 0 && (i === 0 || at > places[i - 1]!));
@@ -101,7 +101,7 @@ describe('which pages the Sheets view draws', () => {
   it('keeps every sheet whose paper the camera shows any of, whole — even only its edge', () => {
     fc.assert(
       fc.property(arbView, (view) => {
-        const layers = sheetsLayers(pages, view);
+        const layers = sheetsLayers(pages, view, emphasis);
         const kept = new Set(itemsOf(layers));
         return layout.frames.every((frame) => {
           const page = pages[frame.index]!;
@@ -109,7 +109,7 @@ describe('which pages the Sheets view draws', () => {
           if (!RectOps.intersects(onScreen(view, paper), canvasOf(view), 0)) return true;
           return (
             [...page.paper, ...page.base].every((item) => kept.has(item)) &&
-            (page.tile === null || layers.includes(page.tile))
+            (page.tile === null || layers.some((layer) => layer.clipMm === page.tile?.clipMm))
           );
         });
       }),
@@ -122,7 +122,7 @@ describe('which pages the Sheets view draws', () => {
     const unclipped = itemsOf(everything.slice(0, 1));
     fc.assert(
       fc.property(arbView, (view) => {
-        const kept = new Set(itemsOf(sheetsLayers(pages, view)));
+        const kept = new Set(itemsOf(sheetsLayers(pages, view, emphasis)));
         const canvas = canvasOf(view);
         /** Device pixels from the canvas, by the furthest of x and y. */
         const outside = (at: Vec2): number => {
@@ -177,7 +177,50 @@ describe('which pages the Sheets view draws', () => {
       dpr: 1,
     };
     const away: ViewportView = { ...close, centreMm: { x: 1e6, y: 1e6 } };
-    expect(itemsOf(sheetsLayers(pages, close)).length).toBeLessThan(itemsOf(everything).length / 4);
-    expect(itemsOf(sheetsLayers(pages, away))).toEqual([]);
+    expect(itemsOf(sheetsLayers(pages, close, emphasis)).length).toBeLessThan(
+      itemsOf(everything).length / 4,
+    );
+    expect(itemsOf(sheetsLayers(pages, away, emphasis))).toEqual([]);
+  });
+});
+
+describe('pointing at a piece', () => {
+  const isHalo = (item: DisplayItem): boolean =>
+    item.kind === 'path' &&
+    item.stroke.widthPx === CANVAS.halo.widthPx &&
+    [CANVAS.halo.hover, CANVAS.halo.selected].includes(item.stroke.colour);
+  const plain = sheetsLayers(pages);
+
+  it('adds a halo under the piece and changes nothing else on any page', () => {
+    // panel-3 and panel-7 on a sheet each, and the strap's one outline on each of five.
+    const haloed = itemsOf(everything).filter(isHalo);
+    expect(haloed).toHaveLength(2 + 5);
+    // The pages are the same whatever is pointed at: the rest is theirs, in their order.
+    expect(itemsOf(everything).filter((item) => !isHalo(item))).toEqual(itemsOf(plain));
+    expect(itemsOf(plain).some(isHalo)).toBe(false);
+  });
+
+  it('puts each halo directly under the ink of the piece it is round', () => {
+    const items = itemsOf(everything);
+    items.forEach((item, i) => {
+      if (!isHalo(item)) return;
+      const next = items[i + 1]!;
+      // The piece's own outline, in the print's ink.
+      expect(next.kind === 'path' ? next.role : next.kind).toBe('cut');
+    });
+  });
+
+  it('builds a halo once for as long as it is the same, and leaves the other pages alone', () => {
+    const again = itemsOf(sheetsLayers(pages, undefined, emphasis));
+    const first = itemsOf(everything);
+    expect(again).toHaveLength(first.length);
+    // The same objects, not equal copies: panning with the pointer still builds nothing.
+    again.forEach((item, i) => expect(item).toBe(first[i]));
+
+    // Selecting one panel gives every page but its own the very layers it had.
+    const only = sheetsLayers(pages, undefined, { selected: new Set(['panel-3']) });
+    const tiles = plain.slice(1);
+    expect(only.slice(1)).toHaveLength(tiles.length);
+    only.slice(1).forEach((layer, i) => expect(layer).toBe(tiles[i]));
   });
 });

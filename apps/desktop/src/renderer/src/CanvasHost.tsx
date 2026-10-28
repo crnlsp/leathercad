@@ -602,34 +602,24 @@ export function CanvasHost({
         viewport.fitTo(extent, FIT_PADDING_PX * viewport.dpr);
       }
 
-      const selected = selectedParts(document.project, selection);
+      // The paper and its ink change with the plan and the words alone; what is
+      // selected or under the pointer only puts a halo under a piece (PERF-003).
       const cached = sheetsCacheRef.current;
       const pages =
-        cached !== null &&
-        cached.plan === plan &&
-        cached.i18n === i18nRef.current &&
-        cached.selected === selectedKey(selected) &&
-        cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current)
+        cached !== null && cached.plan === plan && cached.i18n === i18nRef.current
           ? cached.pages
-          : sheetsPages(plan, layout, {
-              now: new Date(),
-              selected,
-              hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-              words: sheetsWords(i18nRef.current),
-            });
-      sheetsCacheRef.current = {
-        plan,
-        i18n: i18nRef.current,
-        selected: selectedKey(selected),
-        hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-        pages,
-      };
+          : sheetsPages(plan, layout, { now: new Date(), words: sheetsWords(i18nRef.current) });
+      sheetsCacheRef.current = { plan, i18n: i18nRef.current, pages };
 
       const view = viewport.toView();
       clearCanvas(context, view, SHEET.ground);
       // Only the pages the camera can see any of (PERF-003): a long taped piece
       // is dozens of sheets, and the one on screen is a few.
-      for (const layer of sheetsLayers(pages, view)) {
+      const emphasis = {
+        selected: selectedParts(document.project, selection),
+        hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
+      };
+      for (const layer of sheetsLayers(pages, view, emphasis)) {
         renderDisplayList(
           context,
           layer.list,
@@ -1293,13 +1283,7 @@ interface SheetsCache {
   readonly plan: SheetPlan;
   /** The words the labels were made in: a new language makes new labels. */
   readonly i18n: I18n;
-  readonly selected: string;
-  readonly hovered: string | null;
   readonly pages: readonly SheetsPage[];
-}
-
-function selectedKey(selected: ReadonlySet<string>): string {
-  return [...selected].sort().join(' ');
 }
 
 /** Fades the board in over the theme's motion: a project has just replaced the last. */
