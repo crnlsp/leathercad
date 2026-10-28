@@ -520,6 +520,46 @@ export function isHolesAlongALine(kind: FeatureKind): boolean {
   return kind === 'stitch-hole-set' || kind === 'hole-row';
 }
 
+/**
+ * Whether a feature is made to a size, which scaling its piece keeps (Q31):
+ * the piece's scale moves where it sits and leaves its size alone.
+ *
+ * - A **hardware hole** is the punch that makes it, and a 4 mm punch makes a
+ *   4 mm hole in any size of piece — drawn by hand or frozen from a
+ *   counterpart included.
+ * - A **label**'s size is the size its words print at.
+ * - A **cut-out typed as a shape** is made for something — a card slot for a
+ *   card, a round hole for a snap's post — and its width or radius is the
+ *   number it was made to. A cut-out **drawn as a path** has no such number,
+ *   so it is drawing and scales with the piece; Convert to path is how a
+ *   typed one joins it.
+ * - A **logo placement** keeps the size of the stamp it marks. Other marking
+ *   purposes scale with the piece's drawing.
+ * - Everything else is the piece's own drawing: the outline, stitch and fold
+ *   lines. What is **derived** follows what it is built from — a
+ *   counterpart its original, stitching its line — and a row of holes or a
+ *   hole set keeps its pitch and its hole size in its own parameters, which
+ *   no scale touches. A dimension is a reading of the places it names.
+ */
+export function keepsItsSize(feature: Feature): boolean {
+  if (feature.source.kind === 'derived') return false;
+  switch (feature.kind) {
+    case 'hardware-hole':
+    case 'text-label':
+      return true;
+    case 'cut-contour':
+      return feature.role === 'inner' && feature.source.kind === 'shape';
+    case 'marking-line':
+      return feature.purpose === 'logo';
+    case 'stitch-line':
+    case 'stitch-hole-set':
+    case 'fold-line':
+    case 'hole-row':
+    case 'measurement':
+      return false;
+  }
+}
+
 /** Every feature in the project, with the part it belongs to. */
 export function* eachFeature(project: Project): Generator<{ part: Part; feature: Feature }> {
   for (const part of project.parts) {

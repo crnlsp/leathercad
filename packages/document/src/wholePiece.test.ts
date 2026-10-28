@@ -1,5 +1,6 @@
+import { QUANTUM_MM } from '@leathercad/core';
 import { evaluate, type FeatureId, type Project } from '@leathercad/domain';
-import { MatOps, PathOps, RectOps, type Rect } from '@leathercad/geometry';
+import { MatOps, PathOps, RectOps, Shapes, type Rect, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -8,6 +9,7 @@ import {
   addCutOut,
   addFoldLine,
   addHardwareHole,
+  addHoleRow,
   addMarkingLine,
   addPart,
   addStitchHoles,
@@ -21,6 +23,8 @@ import {
   pieceScope,
   rectShape,
   rectanglePart,
+  scaleFeatures,
+  scaleRefusal,
   setFeatureLocked,
   setFeatureVisible,
   setShape,
@@ -458,5 +462,347 @@ describe('a piece drawn stitch-first moves by its outline too (Q30)', () => {
       const was = before.get(id)!;
       expectBoxClose(after.get(id), { ...was, minX: was.minX + 25, maxX: was.maxX + 25 }, id);
     }
+  });
+});
+
+describe('scaling a piece by its outline (Q31)', () => {
+  const CENTRE = { x: 50, y: 30 };
+  /** Where a scale by `factors` about the outline's centre sends a point. */
+  const scaled = (factors: Vec2, p: Vec2): Vec2 => ({
+    x: CENTRE.x + factors.x * (p.x - CENTRE.x),
+    y: CENTRE.y + factors.y * (p.y - CENTRE.y),
+  });
+  const scaledBox = (factors: Vec2, box: Rect): Rect => {
+    const a = scaled(factors, { x: box.minX, y: box.minY });
+    const b = scaled(factors, { x: box.maxX, y: box.maxY });
+    return {
+      minX: Math.min(a.x, b.x),
+      maxX: Math.max(a.x, b.x),
+      minY: Math.min(a.y, b.y),
+      maxY: Math.max(a.y, b.y),
+    };
+  };
+  const scale = (document: Document, factors: Vec2, ids: readonly string[] = ['outline']) =>
+    scaleFeatures(ids as FeatureId[], { pivot: CENTRE, factors }).apply(document);
+  /** The piece with a row of 4 mm holes punched along its marking. */
+  const withRow = (document = piece()) => addHoleRow('p', 'row', 'mark').apply(document);
+
+  const withDiagonalMirror = (axis: 'captured' | 'fold', angle = Math.PI / 4): Document => {
+    let document = addFoldLine('p', 'diagonal', {
+      kind: 'path',
+      path: PathOps.polyline([
+        { x: 0, y: 0 },
+        { x: 60 * Math.cos(angle), y: 60 * Math.sin(angle) },
+      ]),
+    }).apply(piece());
+    document = (
+      axis === 'captured'
+        ? mirrorFeatures(['slot'], ['diagonal-copy'], { origin: { x: 0, y: 0 }, angleRad: angle })
+        : mirrorAcrossFold(['slot'], ['diagonal-copy'], 'diagonal')
+    ).apply(document);
+    return document;
+  };
+
+  /** Growing, shrinking or stretching, but never turning it over. */
+  const factors = fc.record({
+    x: fc.double({ min: 0.4, max: 3, noNaN: true }),
+    y: fc.double({ min: 0.4, max: 3, noNaN: true }),
+  });
+  const even = fc.double({ min: 0.4, max: 3, noNaN: true }).map((k) => ({ x: k, y: k }));
+  const anyScale = fc.oneof(factors, even);
+
+  const radiusOf = (document: Document, id: string): number => {
+    const source = featureIn(document, id).source;
+    if (source.kind === 'shape' && source.shape.type === 'circle') return source.shape.radius;
+    if (source.kind === 'derived' && source.op.type === 'hole-row') return source.op.radiusMm;
+    throw new Error(`${id} is not a hole`);
+  };
+  const centreOf = (box: Rect): Vec2 => RectOps.centre(box);
+  const expectNear = (actual: Vec2, expected: Vec2, what: string): void => {
+    expect(actual.x, `${what} x`).toBeCloseTo(expected.x, 9);
+    expect(actual.y, `${what} y`).toBeCloseTo(expected.y, 9);
+  };
+
+  it('keeps a 4 mm rivet hole 4 mm when the piece grows by half again', () => {
+    const next = scale(piece(), { x: 1.5, y: 1.5 });
+
+    expect(radiusOf(next, 'rivet')).toBe(2);
+    expect(RectOps.width(boxes(next.project).get('rivet')!)).toBeCloseTo(4, 9);
+    // And the piece did grow.
+    expect(RectOps.width(boxes(next.project).get('outline')!)).toBeCloseTo(150, 9);
+  });
+
+  it('keeps every hardware hole and every hole in a row its diameter, however it is scaled', () => {
+    fc.assert(
+      fc.property(anyScale, (by) => {
+        const next = scale(withRow(), by);
+
+        expect(radiusOf(next, 'rivet')).toBe(2);
+        expect(radiusOf(next, 'row')).toBe(2);
+      }),
+    );
+  });
+
+  it('puts each thing made to a size where the scale sends its middle', () => {
+    fc.assert(
+      fc.property(anyScale, (by) => {
+        const document = piece();
+        const before = boxes(document.project);
+
+        const after = boxes(scale(document, by).project);
+
+        for (const id of ['rivet', 'slot', 'label', 'edge']) {
+          const was = before.get(id)!;
+          const now = after.get(id)!;
+          expectNear(centreOf(now), scaled(by, centreOf(was)), id);
+          expect(RectOps.width(now), `${id} width`).toBeCloseTo(RectOps.width(was), 9);
+          expect(RectOps.height(now), `${id} height`).toBeCloseTo(RectOps.height(was), 9);
+        }
+      }),
+    );
+  });
+
+  it('scales what is drawn by the factor, and keeps the stitching its margin from the edge', () => {
+    fc.assert(
+      fc.property(anyScale, (by) => {
+        const document = piece();
+        const before = boxes(document.project);
+
+        const after = boxes(scale(document, by).project);
+
+        for (const id of ['outline', 'fold', 'mark']) {
+          expectBoxClose(after.get(id), scaledBox(by, before.get(id)!), id);
+        }
+        const edge = after.get('outline')!;
+        expectBoxClose(
+          after.get('stitch'),
+          { minX: edge.minX + 3, maxX: edge.maxX - 3, minY: edge.minY + 3, maxY: edge.maxY - 3 },
+          'stitch',
+        );
+      }),
+    );
+  });
+
+  it('punches the row along the scaled line, from end to end, at the same pitch', () => {
+    fc.assert(
+      fc.property(anyScale, (by) => {
+        const next = scale(withRow(), by);
+
+        const entry = evaluate(next.project)
+          .parts.flatMap((part) => part.features)
+          .find((candidate) => candidate.feature.id === 'row');
+        if (entry?.ok !== true || entry.holes === undefined) throw new Error('no row');
+        const holes = entry.holes.holes.map((hole) => hole.point);
+        expectNear(holes[0]!, scaled(by, { x: 60, y: 10 }), 'first hole');
+        expectNear(holes.at(-1)!, scaled(by, { x: 90, y: 10 }), 'last hole');
+        const row = featureIn(next, 'row').source;
+        expect(row.kind === 'derived' && row.op.type === 'hole-row' && row.op.pitchMm).toBe(25);
+      }),
+    );
+  });
+
+  it('gives the piece back when scaled by k and then by 1/k', () => {
+    fc.assert(
+      fc.property(anyScale, (by) => {
+        const document = withRow();
+        const there = scale(document, by);
+
+        const back = boxes(scale(there, { x: 1 / by.x, y: 1 / by.y }).project);
+
+        for (const [id, box] of boxes(document.project)) {
+          const now = back.get(id)!;
+          for (const side of ['minX', 'maxX', 'minY', 'maxY'] as const) {
+            expect(Math.abs(now[side] - box[side]), `${id} ${side}`).toBeLessThan(QUANTUM_MM);
+          }
+        }
+      }),
+    );
+  });
+
+  it('refuses the whole scale when anything in the piece is locked, and says which', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...EVERYTHING), anyScale, (locked, by) => {
+        const document = setFeatureLocked([locked], true).apply(piece());
+
+        expect(scaleRefusal(document.project, ['outline'], { pivot: CENTRE, factors: by })).toEqual(
+          { code: 'FEATURE_LOCKED', facts: expect.objectContaining({ featureId: locked }) },
+        );
+        expect(scale(document, by)).toBe(document);
+      }),
+    );
+  });
+
+  it('keeps a card slot 86 × 54 while the piece around it grows', () => {
+    let document = emptyDocument('doc');
+    document = addPart(
+      rectanglePart('w', 'wallet', 'Wallet', rectShape({ x: 0, y: 0 }, 120, 80)),
+    ).apply(document);
+    document = addCutOut('w', 'card', {
+      kind: 'shape',
+      shape: rectShape({ x: 17, y: 13 }, 86, 54),
+    }).apply(document);
+
+    const next = scaleFeatures(['wallet'], {
+      pivot: { x: 60, y: 40 },
+      factors: { x: 1.25, y: 1.25 },
+    }).apply(document);
+
+    const card = featureIn(next, 'card').source;
+    expect(card.kind === 'shape' && card.shape).toMatchObject({
+      type: 'rect',
+      width: 86,
+      height: 54,
+    });
+    expect(RectOps.width(boxes(next.project).get('wallet')!)).toBeCloseTo(150, 9);
+  });
+
+  it('throws on a factor that is not a number, naming it, rather than drawing nothing', () => {
+    expect(() => scale(piece(), { x: Number.NaN, y: 1 })).toThrow(RangeError);
+    expect(() => scale(piece(), { x: 1, y: Number.POSITIVE_INFINITY })).toThrow(/scale factors/);
+  });
+
+  it('refuses to flatten a piece to nothing, its rivet included', () => {
+    const document = piece();
+    const flat = { pivot: CENTRE, factors: { x: 0, y: 1 } };
+
+    expect(scaleRefusal(document.project, ['outline'], flat)?.code).toBe('TRANSFORM_FLATTENS');
+    expect(scale(document, flat.factors)).toBe(document);
+  });
+
+  it('keeps a label its text size', () => {
+    const next = scale(piece(), { x: 2, y: 2 });
+
+    const label = featureIn(next, 'label').source;
+    expect(label.kind === 'text' && label.sizeMm).toBe(3);
+  });
+
+  it('moves a logo placement with its piece without resizing the stamp it marks', () => {
+    fc.assert(
+      fc.property(anyScale, (by) => {
+        const document = addMarkingLine(
+          'p',
+          'logo',
+          {
+            kind: 'path',
+            path: Shapes.rect({ x: 60, y: 20 }, 12, 8),
+          },
+          'logo',
+        ).apply(piece());
+        const before = boxes(document.project).get('logo');
+        const after = boxes(scale(document, by).project).get('logo');
+        if (before === undefined || after === undefined) throw new Error('no logo');
+
+        expectNear(RectOps.centre(after), scaled(by, RectOps.centre(before)), 'logo');
+        expect(RectOps.width(after)).toBeCloseTo(12, 9);
+        expect(RectOps.height(after)).toBeCloseTo(8, 9);
+      }),
+    );
+  });
+
+  it.each(['captured', 'fold'] as const)(
+    'refuses the whole uneven scale when a %s diagonal mirror cannot follow it',
+    (axis) => {
+      const document = withDiagonalMirror(axis);
+      const scaling = { pivot: CENTRE, factors: { x: 2, y: 1 } };
+      expect(scaleRefusal(document.project, ['outline'], scaling)?.code).toBe('MIRROR_WOULD_SCALE');
+      expect(scale(document, scaling.factors)).toBe(document);
+    },
+  );
+
+  it.each(['captured', 'fold'] as const)(
+    'carries a %s mirror of a fixed-size slot to its scaled centre under an even scale',
+    (axis) => {
+      fc.assert(
+        fc.property(even, fc.double({ min: 0.2, max: 1.2, noNaN: true }), (by, angle) => {
+          const document = withDiagonalMirror(axis, angle);
+          const next = scale(document, by);
+          const before = boxes(document.project).get('diagonal-copy');
+          const after = boxes(next.project).get('diagonal-copy');
+          if (before === undefined || after === undefined) throw new Error('no counterpart');
+
+          expect(next).not.toBe(document);
+          expectNear(RectOps.centre(after), scaled(by, RectOps.centre(before)), 'counterpart');
+          expect(RectOps.width(after)).toBeCloseTo(RectOps.width(before), 9);
+          expect(RectOps.height(after)).toBeCloseTo(RectOps.height(before), 9);
+        }),
+      );
+    },
+  );
+
+  it('scales a cut-out drawn by hand with the piece, since nothing gave it a size', () => {
+    const document = addCutOut('p', 'window', {
+      kind: 'path',
+      path: Shapes.rect({ x: 40, y: 20 }, 10, 8),
+    }).apply(piece());
+
+    const after = boxes(scale(document, { x: 2, y: 2 }).project);
+
+    expectBoxClose(after.get('window'), { minX: 30, maxX: 50, minY: 10, maxY: 26 }, 'window');
+  });
+
+  it('stretches a piece with a rivet and labels, the rivet still round', () => {
+    const document = piece();
+    expect(
+      scaleRefusal(document.project, ['outline'], { pivot: CENTRE, factors: { x: 2, y: 1 } }),
+    ).toBeNull();
+
+    const next = scale(document, { x: 2, y: 1 });
+
+    expect(featureIn(next, 'rivet').source).toMatchObject({
+      shape: { type: 'circle', radius: 2, centre: { x: 120, y: 45 } },
+    });
+  });
+
+  it('scales a part picked by its heading exactly as one picked by its outline', () => {
+    const document = withRow();
+    const by = { x: 1.5, y: 0.8 };
+
+    expect(scale(document, by, [...EVERYTHING, 'row'])).toEqual(scale(document, by));
+  });
+
+  it('still scales a rivet or a cut-out picked on its own, as before', () => {
+    const document = piece();
+
+    const next = scaleFeatures(['rivet'] as FeatureId[], {
+      pivot: { x: 85, y: 45 },
+      factors: { x: 1.5, y: 1.5 },
+    }).apply(document);
+
+    expect(radiusOf(next, 'rivet')).toBeCloseTo(3, 9);
+    expect(featureIn(next, 'outline')).toBe(featureIn(document, 'outline'));
+  });
+
+  it('still refuses to stretch a turned piece, which would shear its outline', () => {
+    const turned = transformFeatures(EVERYTHING, MatOps.fromRotationAround(CENTRE, 0.3)).apply(
+      piece(),
+    );
+
+    expect(
+      scaleRefusal(turned.project, ['outline'], { pivot: CENTRE, factors: { x: 2, y: 1 } })?.code,
+    ).toBe('WOULD_SHEAR');
+    expect(scale(turned, { x: 2, y: 1 })).toBe(turned);
+  });
+
+  it('refuses to turn a piece over by scaling it, which would read its labels backwards', () => {
+    const document = piece();
+
+    expect(
+      scaleRefusal(document.project, ['outline'], { pivot: CENTRE, factors: { x: -1.5, y: 1 } })
+        ?.code,
+    ).toBe('TEXT_WOULD_READ_BACKWARDS');
+  });
+
+  it('turns over what keeps its size where it stands, when the piece is turned over by a scale', () => {
+    let document = emptyDocument('doc');
+    document = addPart(
+      rectanglePart('p', 'outline', 'Tab', rectShape({ x: 0, y: 0 }, 100, 60)),
+    ).apply(document);
+    document = addHardwareHole('p', 'rivet', { x: 85, y: 45 }, 2).apply(document);
+
+    const next = scale(document, { x: -1.5, y: 1 });
+
+    expect(featureIn(next, 'rivet').source).toMatchObject({
+      shape: { type: 'circle', radius: 2, centre: { x: -2.5, y: 45 } },
+    });
   });
 });
