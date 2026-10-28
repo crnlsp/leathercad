@@ -58,7 +58,8 @@ export function solveQuadratic(a: number, b: number, c: number): number[] {
  * Depresses to `t³ + p·t + q` and branches on the discriminant: one real root
  * when positive, three when negative (via the trigonometric form, which avoids
  * the complex arithmetic Cardano's formula would otherwise need), and a
- * repeated root when it vanishes.
+ * repeated root when it vanishes. Only the largest root is kept from that;
+ * the others come from the quadratic left when it is divided out.
  */
 export function solveCubic(a: number, b: number, c: number, d: number): number[] {
   if (Math.abs(a) < EPS_COEFFICIENT) return solveQuadratic(b, c, d);
@@ -107,11 +108,44 @@ export function solveCubic(a: number, b: number, c: number, d: number): number[]
     roots.push(2 * single + shift, -single + shift);
   }
 
-  const polished = roots
-    .map((t) => polishCubicRoot(a, b, c, d, t))
-    .filter((t) => isGenuineCubicRoot(a, b, c, d, t));
+  // Cardano resolves every root only to the rounding of the largest, so where
+  // one root dwarfs the others it loses them — the cubic analogue of the
+  // cancellation solveQuadratic avoids. A t³ term of rounding noise put a
+  // root near 3.8e13 and answered t = 0.75 for a tangent touch at 0.5; roots
+  // at 0 and −0.01 beside one at 26000 read as a double root and vanished
+  // (Q38). The largest is the one it gets right: divide it out, and the
+  // quadratic left finds the rest to their own precision.
+  let largest: number | undefined;
+  for (const candidate of roots) {
+    const t = polishCubicRoot(a, b, c, d, candidate);
+    if (!isGenuineCubicRoot(a, b, c, d, t)) continue;
+    if (largest === undefined || Math.abs(t) > Math.abs(largest)) largest = t;
+  }
+  if (largest === undefined) return [];
 
-  return dedupe(polished.sort((x, y) => x - y));
+  const rest = solveQuadratic(...deflate(a, b, c, d, largest));
+  return dedupe([largest, ...rest].sort((x, y) => x - y));
+}
+
+/**
+ * The quadratic left when `t − x` is divided out of the cubic, for a root `x`.
+ *
+ * Synthetic division is stable only when run from the end whose term the
+ * root dominates: from `a` down when x is small beside the other two roots,
+ * from `d` up when it is large. The top-down quotient ends in their product
+ * times `a`, so `|a·x²|` against it says which — even where d is zero and x
+ * only nearly so. The quotient leads with `a` either way, which keeps it
+ * clear of solveQuadratic's degree drop. An inexact x leaves its residual
+ * behind — as a constant from the top, as `(residual/x²)·t²` from the
+ * bottom — no larger where the other roots lie than it was at x.
+ */
+function deflate(a: number, b: number, c: number, d: number, x: number): [number, number, number] {
+  const b1 = b + a * x;
+  const c1 = c + b1 * x;
+  if (Math.abs(a * x * x) <= Math.abs(c1)) return [a, b1, c1];
+
+  const c2 = -d / x;
+  return [a, (c2 - c) / x, c2];
 }
 
 /**
@@ -147,8 +181,8 @@ function rootScaleOf(a: number, b: number, c: number, d: number): number {
  * `q²/4 + p³/27` is the difference of two nearly equal huge numbers and the
  * cancellation destroys its sign, so a cubic with one real root is classified
  * as having a repeated one — and the extra value that branch produces gets
- * polished by Newton into something convincing. Ray casting would count it as
- * a crossing.
+ * polished by Newton into something convincing. Dividing it out would leave a
+ * quadratic with the wrong roots.
  *
  * Two certificates, either of which suffices:
  *

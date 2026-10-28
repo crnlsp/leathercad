@@ -293,6 +293,15 @@ describe('containsPoint', () => {
     );
   });
 
+  it('regression: a circle in cubics 2 m from the origin has its centre inside and a point level with its bottom outside (Q38)', () => {
+    // fast-check's counterexample to the property above.
+    const centre = vec(0, -2000);
+    const r = 96.41258217339005;
+    const cubics = P.closed(P.toCubics(P.closed([arc(centre, r, 0, Math.PI * 2)])));
+    expect(P.containsPoint(cubics, centre)).toBe(true);
+    expect(P.containsPoint(cubics, vec(centre.x - 0.5 * r, centre.y - r))).toBe(false);
+  });
+
   it('regression: the centre of a circle over a metre across is inside it, drawn as an arc or in cubics (Q38)', () => {
     // The ray from the centre runs through the seam, and the nudges that move
     // it off are millimetres — but the seam was judged in t and in radians.
