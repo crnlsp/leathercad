@@ -157,6 +157,7 @@ describe('the Sheets view in English (U.9)', () => {
     expect(words.turned(['Outer', 'Pocket'])).toBe('Outer and Pocket, turned 90°');
     expect(words.taped('Strap', [2, 3])).toBe('Strap · Sheets 2–3, taped');
     expect(words.taped('Strap', [2])).toBe('Strap · Sheet 2, taped');
+    expect(words.assembly(2, 4, 'Strap')).toBe('Sheet 2 of 4 · Assembly map of Strap');
   });
 
   it('says the numbers alone for a labelled field', () => {

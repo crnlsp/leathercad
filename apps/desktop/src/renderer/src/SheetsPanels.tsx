@@ -132,9 +132,11 @@ export function SheetsParts({
             >
               <span>{t('status.sheetOf', { number: sheet.number, count: sheet.count })}</span>
               <span className="sheets-group-count">
-                {sheet.pieces.length === 0
-                  ? t('sheetsView.noPieces')
-                  : t('parts.count', { count: sheet.pieces.length })}
+                {sheet.assemblyOf !== null
+                  ? t('sheetsView.assembly', { name: sheet.assemblyOf })
+                  : sheet.pieces.length === 0
+                    ? t('sheetsView.noPieces')
+                    : t('parts.count', { count: sheet.pieces.length })}
               </span>
             </h3>
             <ul className="sheets-pieces">
@@ -196,7 +198,12 @@ export function SheetsParts({
                 <li key={entry.partId} className="sheets-taped-entry">
                   <span className="part-label">{entry.name}</span>
                   <span className="sheets-group-count" data-testid={`sheets-taped-${entry.partId}`}>
-                    {describeSheetNumbers(entry.sheets, i18n)}
+                    {entry.map === null
+                      ? describeSheetNumbers(entry.sheets, i18n)
+                      : t('sheetsView.tapedWithMap', {
+                          sheets: describeSheetNumbers(entry.sheets, i18n),
+                          number: entry.map,
+                        })}
                   </span>
                 </li>
               ))}

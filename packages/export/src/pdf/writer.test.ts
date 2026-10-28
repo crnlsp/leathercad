@@ -36,6 +36,7 @@ import {
   type PageSetup,
 } from '../paper.js';
 import { PRINT_STYLES, buildExportScene } from '../scene.js';
+import { sheetInk } from '../sheetInk.js';
 import { planSheets } from '../sheetPlan.js';
 
 import { exportPdf } from './writer.js';
@@ -977,6 +978,37 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     // The join is in the overlap: both halves are more than a sheet's worth apart.
     expect(onFirst).toBeGreaterThan(100);
     expect(onSecond).toBeGreaterThan(50);
+  });
+
+  it('prints the edge arrow’s sheet where sheetInk puts it, over the tile (7.2)', async () => {
+    const project = projectWithRect(275, 100);
+    const plan = planSheets(
+      buildExportScene(evaluate(project), project.name),
+      pageSetupFor(project.settings),
+    );
+    const { bytes } = await exportPdf(plan, { now: FIXED_NOW, applicationVersion: 'test' });
+    const [label] = sheetInk(plan, 0, FIXED_NOW()).clippedTexts;
+    expect(label!.source).toBe('Sheet 2');
+    const box = RectOps.unionAll(label!.glyphs.map((g) => PathOps.bbox(g)!))!;
+    const image = render(bytes, 1);
+    const sheet = sheetSizeMm(DEFAULT_PAGE_SETUP);
+    let dark = 0;
+    for (let y = box.minY; y <= box.maxY; y += 0.1) {
+      for (let x = box.minX; x <= box.maxX; x += 0.1) {
+        const px = Math.round(x * PX_PER_MM);
+        const py = Math.round((sheet.heightMm - y) * PX_PER_MM);
+        if (image.pixels[py * image.width + px]! < 128) dark++;
+      }
+    }
+    expect(dark).toBeGreaterThan(50);
+  });
+
+  it('prints a grid’s assembly sheet first, with its gauge true (7.2)', async () => {
+    // 400 × 300 on A4 portrait: taped 2 × 3, after its map.
+    const project = projectWithRect(400, 300);
+    const bytes = await pdfFor(project);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(7);
+    expectGauge(gaugeOn(render(bytes, 1), pageSetupFor(project.settings)));
   });
 
   it('prints the gauge on every tiled sheet', async () => {

@@ -190,6 +190,14 @@ sheets (7.8). Parts says *Sheet 1, turned* on the Sheets view.
 that overlap by 10 mm and are taped together on their join lines. Its sheets are "Sheets 2–3,
 taped".
 
+**Assembly sheet** — The sheet printed just before the tiles of a piece taped into a grid: a map of
+them, not to scale, each cell named with its sheet (7.2). A piece taped in one row or one column
+gets none: its edge arrows say how it joins, and a map would waste a sheet. The one drawing on
+paper that is reduced; nothing is cut from it.
+
+**Edge arrow** — On a taped piece's sheet, the arrow at a join naming the sheet that joins there
+(7.2).
+
 **Sheet plan** — The derived result of paginating the export scene for the chosen paper: which
 sheets exist and what each carries. Recomputed from the document, never stored. The PDF writes it;
 the sheet count, Parts labels and Sheets view read it.

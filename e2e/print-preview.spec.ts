@@ -267,3 +267,60 @@ test('with no CUPS to drive, the preview saves the PDF and says how to print it'
     rmSync(cups.bin, { recursive: true, force: true });
   }
 });
+test('a piece taped into a grid prints its map first, and the map is left out with its sheets (7.2)', async () => {
+  const cups = fakeCups(ONE_PRINTER);
+  const app = await launchApp({
+    env: { PATH: `${cups.bin}:${process.env['PATH'] ?? ''}` },
+  });
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+
+    // A gusset, 400 × 300 mm: on A4 portrait, taped across a grid of 2 × 3.
+    await window.getByTestId('tool-rectangle').click();
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.mouse.move(box.x + 150, box.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 330, box.y + 260, { steps: 5 });
+    await window.mouse.up();
+    const field = (label: string) =>
+      window
+        .getByTestId('property-panel')
+        .locator('label', { hasText: new RegExp(`^${label}`) })
+        .locator('input');
+    for (const [label, value] of [
+      ['Width', 400],
+      ['Height', 300],
+    ] as const) {
+      await field(label).fill(String(value));
+      await field(label).press('Enter');
+    }
+    await window.getByTestId('part-name').fill('Gusset');
+    await window.getByTestId('part-name').press('Enter');
+
+    // Its map is sheet 1, and Parts points to it.
+    await window.getByTestId('view-sheets').click();
+    const parts = window.getByTestId('sheets-parts');
+    await expect(parts.getByTestId('sheets-group-1')).toContainText('Assembly map of Gusset');
+    await expect(parts.getByTestId('sheets-taped')).toContainText('Sheets 2–7 · map on sheet 1');
+
+    await window.getByTestId('print').click();
+    const preview = window.getByTestId('print-preview');
+    await expect(preview.getByTestId('print-thumb')).toHaveCount(7);
+    const include = preview.getByTestId('print-include');
+    const submit = preview.getByTestId('print-submit');
+    await expect(submit).toHaveText('Print 7 sheets');
+
+    // Every one of its sheets left out: its map goes with them.
+    for (let i = 1; i <= 6; i++) await include.nth(i).uncheck();
+    await expect(include.nth(0)).not.toBeChecked();
+    // And comes back with the first of them.
+    await include.nth(3).check();
+    await expect(include.nth(0)).toBeChecked();
+    await expect(submit).toHaveText('Print 2 sheets');
+  } finally {
+    await closeApp(app);
+    rmSync(cups.bin, { recursive: true, force: true });
+  }
+});

@@ -211,6 +211,8 @@ describe('the Sheets view (7.4c)', () => {
         `S${String(n)}/${String(count)}:${String(pieces)}`,
       turned: (names: readonly string[]) => `${names.join('+')} turned`,
       taped: (name: string, sheets: readonly number[]) => `${name} taped ${sheets.join('+')}`,
+      assembly: (n: number, count: number, name: string) =>
+        `S${String(n)}/${String(count)}:map of ${name}`,
     };
     const labels = sheetsView(plan, layout, { now: NOW, words })
       .flatMap((layer) => layer.list.items)
@@ -244,6 +246,7 @@ describe('the Sheets view (7.4c)', () => {
       sheet: () => '',
       turned: (names: readonly string[]) => `${names.join('+')} turned`,
       taped: () => '',
+      assembly: () => '',
     };
     const layout5 = layoutSheets(a5);
     const caption = (given?: typeof words) =>

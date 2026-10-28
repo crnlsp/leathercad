@@ -21,6 +21,7 @@ import { NumberField } from './NumberField.js';
 import { drawPage, openPdf } from './pdfPages.js';
 import { getPlatformHost } from './platformBridge.js';
 import { ProblemRows } from './ProblemList.js';
+import { leaveOut } from './printSheets.js';
 import { describeCounts } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import { describeSheets } from './sheetWords.js';
@@ -231,12 +232,12 @@ export function PrintPreview({
                       data-testid="print-include"
                       aria-label={t('printPreview.include', { number: n })}
                       checked={!omitted.has(n)}
-                      onChange={(event) => {
-                        const next = new Set(omitted);
-                        if (event.target.checked) next.delete(n);
-                        else next.add(n);
-                        setOmitted({ plan, pages: next });
-                      }}
+                      onChange={(event) =>
+                        setOmitted({
+                          plan,
+                          pages: leaveOut(plan, omitted, n, event.target.checked),
+                        })
+                      }
                     />
                   )}
                   {t('sheetNumbers.one', { number: n })}

@@ -3,7 +3,7 @@
 **Package:** `packages/export` (`packages/print` is reserved, not created)
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-10-17
+**Last updated:** 2026-10-27
 
 ---
 
@@ -69,9 +69,9 @@ Two properties this buys, and they are the reason for the shape:
   page count, tile placement, or overlap, because a disagreement would be a bug in one function
   rather than a mismatch between two implementations. Built (7.4a–7.4c) as one derived `SheetPlan`:
   the PDF writes it, and the app's sheet count, Parts labels and **Sheets view** read it. Everything
-  a sheet prints besides its pieces — the verification strip, a tiled sheet's joins, crosses and
-  clip — is one description, `sheetInk`, which the writer prints and the Sheets
-  view draws. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md).
+  a sheet prints besides its pieces — the verification strip, a tiled sheet's joins, crosses, edge
+  arrows and clip — is one description, `sheetInk`, which the writer prints and the Sheets view
+  draws. See [Design and Sheets](superpowers/specs/2026-09-24-sheets-workflow-design.md).
 - **All writers consume the same `ExportScene`.** SVG, PDF, and DXF cannot drift apart in what they
   include or where they place it.
 
@@ -369,7 +369,44 @@ For tiled output, the difference between a usable pattern and a jigsaw puzzle.
   to the right`. That is what a maker with sheets spread on a table needs; the dashed line and its
   crosses show how. A printed sentence of instructions on every taped sheet did not earn its room,
   and `R1 C2` was a grid reference nobody holding paper needs.
-- **Not yet (7.2, roadmap 1.6):** edge arrows, the assembly sheet, and tape guides.
+- **Edge arrows (7.2)** at each edge a sheet shares: square to the join, pointing at it, and named
+  in ink with the sheet beyond — `Sheet 3` — the number the strip's `joins sheet 3 to the right`
+  gives, from the same lookup. An arrow is in the join's grey and solid, 8 mm long with an open
+  head, so it is never read as a cut, a stitch or a fold line, and it may cross the pattern as the
+  join and its crosses do. Its tip stops 2 mm short of the join on its own sheet's side, so cutting
+  on the line leaves it whole, and its neighbour's arrow faces it from the other side: one pair per
+  shared edge. It sits 12 mm from the middle of the sheet's span, clear of the cross there. Sizes
+  are true millimetres, from `PAPER_FURNITURE.edgeArrow` in `packages/render/src/theme/`; the
+  placement is `edgeArrows`, in `packages/export/src/edgeArrows.ts`. Drawn by `sheetInk`, so the
+  PDF, the Print Preview and the Sheets view all show them, inside the tile's clip.
+- **An assembly sheet (7.2)** for each part taped into a grid — more than one row *and* more than
+  one column — just before its tiles: a map of which sheet goes where. A strip, taped along one row
+  or one column, gets none: its edge arrows already say how it joins, and a map would waste a
+  sheet. The print test's 1 × 2 strap is such a strip, so it still prints on three sheets. Headed
+  with the part and its sheets — `Gusset · assembly map of sheets 2–7` — and, in so
+  many words, *Not to scale: a map of how the sheets join. Never cut from it.* with the one-line
+  way to join them. Below that, each tile's share of the part — from the join on one side to the
+  join on the other, or to the edge of its window where it has none — is a cell, the cells meeting
+  where the maker cuts, each named with its sheet in its top left corner, over the part's outline
+  in the join's grey. It carries the verification strip like every sheet, its line saying
+  `Gusset, assembly map of sheets 2–7`. `assemblyDiagram` (`packages/export/src/assembly.ts`) is
+  the map's maths; `sheetInk` draws it.
+  - **The one reduced drawing on paper, and why that keeps the rule.** The map is drawn smaller by
+    one factor, chosen to fill the printable area below its heading. That is not scaling content to
+    fit a page (§5.3): the pattern itself is always on its tiles at 1:1, and the map is not the
+    pattern but a picture of the sheets — the "thumbnail of the whole pattern with the tile grid
+    over it" this section planned — said in words to be not to scale, drawn in grey and black
+    lines with no stitch line, hole or caption a maker could cut or punch from.
+  - **A sheet of the plan.** The assembly sheet is one of `SheetPlan.sheets` (`Sheet.assembly`),
+    added by `planSheets` around `paginate`'s pages, so the sheet count, Parts, the Sheets view, the
+    Print Preview and the PDF all count it and number it. A part's own sheets (`PartSheets`) are
+    still its tiles, and Parts points to the map: `Sheets 2–7 · map on sheet 1`. Packing does not
+    count it: a part is turned or taped exactly as §5.5 decides, and the map follows.
+  - **It belongs to its part.** There is no setting, by the rule that the Sheets view has no layout
+    controls. In the Print Preview the map is left out with the last of its part's sheets and put
+    back with the first of them, and no other part's map moves; it can still be left out on its own
+    (`leaveOut`, `apps/desktop/src/renderer/src/printSheets.ts`).
+- **Not yet:** tape guides.
 
 The grid follows §5.2 (the step is the printable area less the overlap, and the grid is centred). A
 tiled part follows the packed parts on sheets of its own. A tiled part is never turned: it is tiled
@@ -381,10 +418,12 @@ only when it fits whole neither way (§5.5).
   `overlap 10 mm`. The user trims on the line and butts the pages, or leaves the band and laps them.
 - **Tile label** in the top-left margin: `R1C2`, plus `sheet 2 of 6`.
 - **Edge arrows** on each side that has a neighbour, labelled with the neighbour's tile id — so a
-  user with pages spread on a table knows what joins what.
+  user with pages spread on a table knows what joins what. *Built in 7.2, labelled with the
+  neighbour's sheet number, as above.*
 - **Assembly sheet** as page 1 when there is more than one tile: a thumbnail of the whole pattern
   with the tile grid drawn over it and each cell labelled. Cheap to produce and it removes almost
-  all of the confusion of tiled printing.
+  all of the confusion of tiled printing. *Built in 7.2, one for each part taped into a grid,
+  before its tiles, as above.*
 - **Fold/tape guides**: a 5 mm dotted line at the outer edge of the overlap band marking where to
   apply tape without covering pattern lines.
 

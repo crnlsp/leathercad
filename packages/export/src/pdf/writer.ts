@@ -157,6 +157,7 @@ function drawPage(page: PDFPage, layout: Page, ink: SheetInk): void {
 
   if (ink.clip !== null) {
     for (const item of ink.clipped) drawFurniturePath(page, item);
+    for (const text of ink.clippedTexts) drawText(page, text, { x: 0, y: 0 });
     page.pushOperators(popGraphicsState());
   }
 
@@ -218,7 +219,7 @@ function drawPath(page: PDFPage, item: ExportPath, offsetMm: Vec2): void {
 }
 
 /**
- * Page furniture — the ruler, the square, joins and crosses — as it has always
+ * Page furniture — the gauge, joins, crosses and edge arrows — as it has always
  * been printed: square ends, not the pattern's round caps, so a ruler's ends
  * are where its millimetres say.
  */

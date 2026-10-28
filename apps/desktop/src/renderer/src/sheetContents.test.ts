@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { DEFAULT_PAGE_SETUP, planSheets } from '@leathercad/export';
+import { RectOps } from '@leathercad/geometry';
 import { loadProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
@@ -27,9 +29,28 @@ describe('the Sheets view reads the sheet plan, and nothing else (U.9, 7.4a)', (
 
   it('lists what the plan tapes, and where', () => {
     const plan = sheetPlanFor(printTest());
-    expect(tapedPieces(plan).map((entry) => [entry.name, entry.sheets])).toEqual([
-      ['Strap', [2, 3]],
+    expect(tapedPieces(plan).map((entry) => [entry.name, entry.sheets, entry.map])).toEqual([
+      ['Strap', [2, 3], null],
     ]);
+    // A strip has no map: its arrows say how it joins (7.2).
+    expect(sheetContents(plan).map((sheet) => sheet.assemblyOf)).toEqual([null, null, null]);
+  });
+
+  it('points a piece taped into a grid at its map, a sheet that places no piece (7.2)', () => {
+    const gusset = {
+      id: 'gusset',
+      name: 'Gusset',
+      quantity: 1,
+      boundsMm: RectOps.fromCorners({ x: 0, y: 0 }, { x: 400, y: 300 }),
+      paths: [],
+      texts: [],
+    };
+    const plan = planSheets({ projectName: 'Bag', parts: [gusset] }, DEFAULT_PAGE_SETUP);
+    expect(tapedPieces(plan).map((entry) => [entry.sheets, entry.map])).toEqual([
+      [[2, 3, 4, 5, 6, 7], 1],
+    ]);
+    const [map] = sheetContents(plan);
+    expect(map).toMatchObject({ number: 1, pieces: [], assemblyOf: 'Gusset' });
   });
 
   it('says nothing is taped when every piece fits whole', () => {
