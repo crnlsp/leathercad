@@ -686,7 +686,7 @@ role drives three tables.
 | `hardware` | `HardwareHole`, `HoleRow` | circle at true size, orange | `hardware` | yes |
 | `annotation` | `Measurement`, `TextLabel` | grey, thin | `annotation` | no |
 
-Export presets are role sets: **template print** (everything), **laser or CNC cut** (`cut` and
+Export presets are role sets (built, 6.4; [printing §10](printing.md)): **template print** (everything), **laser or CNC cut** (`cut` and
 `hardware`, plus `stitch-holes` if lasered), **stitch guide** (`stitch` and `stitch-holes`).
 
 Users toggle individual features' visibility; they never manage a layer stack.

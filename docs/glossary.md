@@ -165,6 +165,10 @@ shared endpoints, optionally closed. Has no style, no meaning, and no pixels.
 **Display list** — The renderer's flat, style-resolved intermediate form. Produced from a
 `ResolvedDocument`, consumed by the Canvas2D and SVG backends.
 
+**Export preset** — A named intent for an SVG or DXF export — *template print*, *laser cut*,
+*stitch guide* — that chooses a set of layer roles. The maker may then adjust the layers. See
+[printing.md](printing.md) §10.
+
 **Export scene** — The export pipeline's equivalent intermediate: styled geometry in mm, page
 independent. Consumed by the SVG, PDF, and DXF writers, and by the paginator.
 

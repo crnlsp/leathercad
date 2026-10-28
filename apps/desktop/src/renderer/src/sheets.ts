@@ -11,6 +11,7 @@ import {
   planEveryPaper,
   planSheets,
   printStatusOf,
+  type ExportRole,
   type ExportScene,
   type PartPrintStatus,
   type SheetPlan,
@@ -58,6 +59,15 @@ function sceneFor(project: Project): ExportScene {
     scenes.set(project, scene);
   }
   return scene;
+}
+
+/**
+ * The scene a vector file is written from (6.2, 6.5): the board's arrangement of
+ * the layer roles the maker kept (6.4). The PDF never reads it; its scene is
+ * `sheetPlanFor`'s, whole, so the Sheets view and the paper stay one thing.
+ */
+export function drawingSceneFor(project: Project, roles: readonly ExportRole[]): ExportScene {
+  return buildExportScene(resolvedFor(project), project.name, roles);
 }
 
 /**

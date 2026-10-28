@@ -92,3 +92,12 @@ export function mmText(value: Mm): string {
 export function mmFixed(value: Mm): string {
   return quantise(value).toFixed(4);
 }
+
+/**
+ * The page a vector file of this scene would have, in model millimetres, or null
+ * when the scene draws nothing: what the export dialog reports before it writes
+ * anything (6.4).
+ */
+export function drawingBoundsOf(scene: ExportScene): Rect | null {
+  return fileBoundsOf(fileLayersOf(scene));
+}

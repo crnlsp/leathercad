@@ -129,8 +129,16 @@ export interface ExportScene {
  * Failed features are dropped rather than drawn: a template is a cutting
  * instruction, and half of a broken shape is worse than none of it. The
  * problems panel is where a user is told; the paper is not the place.
+ *
+ * `roles` are the layer roles that reach the scene (6.4; `EXPORT_PRESETS`),
+ * every role unless a preset or the maker says otherwise.
  */
-export function buildExportScene(resolved: ResolvedProject, projectName: string): ExportScene {
+export function buildExportScene(
+  resolved: ResolvedProject,
+  projectName: string,
+  roles: readonly LayerRole[] = LAYER_ROLES,
+): ExportScene {
+  const wanted = new Set(roles);
   const parts: ExportPart[] = [];
 
   for (const resolvedPart of resolved.parts) {
@@ -187,14 +195,22 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
     }
 
     // A part with only labels on it has nothing to cut, and a template page
-    // full of captions with no pieces is not a template.
+    // full of captions with no pieces is not a template. Asked of the part as
+    // drawn whole: a laser file leaves a part's stitching out and still has
+    // the part.
     if (paths.length === 0) continue;
+
+    // The roles asked for (6.4) are chosen here, once, for every writer: the
+    // PDF, the SVG and the DXF add no filter of their own. The box and the
+    // caption follow what is left, so a page is the size of what it holds.
+    const kept = paths.filter((item) => wanted.has(item.role));
+    const words = texts.filter((text) => wanted.has(text.role));
 
     // Everything that prints for the part, words included: a dimension's
     // number is set beyond its line, and the paginator must not put the next
     // piece — or this piece's own caption — on top of it.
     const bounds = RectOps.unionAll(
-      [...paths.map((item) => item.path), ...texts.flatMap((text) => text.glyphs)].flatMap(
+      [...kept.map((item) => item.path), ...words.flatMap((text) => text.glyphs)].flatMap(
         (path) => PathOps.bbox(path) ?? [],
       ),
     );
@@ -206,8 +222,8 @@ export function buildExportScene(resolved: ResolvedProject, projectName: string)
       id: resolvedPart.part.id,
       name,
       quantity: resolvedPart.part.quantity,
-      paths,
-      texts: [captionFor(name, bounds), ...texts],
+      paths: kept,
+      texts: wanted.has('annotation') ? [captionFor(name, bounds), ...words] : words,
       boundsMm: bounds,
     });
   }
