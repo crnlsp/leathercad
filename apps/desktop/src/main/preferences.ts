@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { extname, isAbsolute, sep } from 'node:path';
 
 import { quantise } from '@leathercad/core';
+import { LAYER_ROLES } from '@leathercad/domain';
 import {
   DEFAULT_PREFERENCES,
   type Iron,
@@ -161,6 +162,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     leatherThicknessMm: thickness === null ? null : (readLength(thickness) ?? null),
     // Each key the maker changed, kept only if this version can use it (U.12).
     keyBindings: readBindings(record['keyBindings'], IS_MAC),
+    // Absent before 6.4: every layer.
+    exportRoles: readExportRoles(record['exportRoles']) ?? null,
     recentFiles: [...new Set(recent)]
       .filter((path) => !pinned.includes(path))
       .slice(0, RECENT_LIMIT),
@@ -268,6 +271,16 @@ function readIrons(value: unknown): Iron[] | undefined {
   return irons;
 }
 
+/**
+ * The layer roles of an export that are layer roles of the domain, each once and in the
+ * order kept, or `undefined` when it is not a list. A role this version does
+ * not export is let go rather than refusing the rest.
+ */
+function readExportRoles(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return [...new Set(value)].filter((role) => LAYER_ROLES.some((known) => known === role));
+}
+
 /** The default iron: the one named, if the maker still has it, else the first. */
 function defaultAmong(irons: readonly Iron[], id: unknown): string | null {
   return irons.find((iron) => iron.id === id)?.id ?? irons[0]?.id ?? null;
@@ -297,6 +310,11 @@ export function validChanges(changes: unknown): Partial<Preferences> {
   else if (thicknessMm !== undefined) out.leatherThicknessMm = thicknessMm;
   if (record['keyBindings'] !== undefined) {
     out.keyBindings = readBindings(record['keyBindings'], IS_MAC);
+  }
+  if (record['exportRoles'] === null) out.exportRoles = null;
+  else {
+    const roles = readExportRoles(record['exportRoles']);
+    if (roles !== undefined) out.exportRoles = roles;
   }
   return out;
 }

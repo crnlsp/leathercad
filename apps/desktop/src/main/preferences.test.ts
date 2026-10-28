@@ -120,6 +120,39 @@ describe('reading preferences.json', () => {
   });
 });
 
+describe('the layers an export keeps (6.4)', () => {
+  it('is every layer until the maker chooses, in a file written before the dialog too', () => {
+    expect(DEFAULT_PREFERENCES.exportRoles).toBeNull();
+    expect(parsePreferences(null).exportRoles).toBeNull();
+    expect(parsePreferences(JSON.stringify({ selectionBar: false })).exportRoles).toBeNull();
+  });
+
+  it('keeps the names that are layer roles, once each, and drops the rest', () => {
+    const read = (exportRoles: unknown) =>
+      parsePreferences(JSON.stringify({ exportRoles })).exportRoles;
+    expect(read(['cut', 'hardware'])).toEqual(['cut', 'hardware']);
+    expect(read(['hardware', 'cut', 'cut', 'rivets', 7])).toEqual([
+      'hardware',
+      'cut',
+    ]);
+    // Nothing at all is a choice a maker can make, and the dialog says so.
+    expect(read([])).toEqual([]);
+    expect(read('cut')).toBeNull();
+  });
+
+  it('takes the same change from the renderer, by the same rules, and keeps it over a restart', async () => {
+    expect(validChanges({ exportRoles: ['cut', 'x'] })).toEqual({ exportRoles: ['cut'] });
+    expect(validChanges({ exportRoles: null })).toEqual({ exportRoles: null });
+    expect(validChanges({ exportRoles: 'cut' })).toEqual({});
+
+    const store = new PreferencesStore(file);
+    await store.update({ exportRoles: ['cut', 'hardware'] });
+    expect(new PreferencesStore(file).preferences.exportRoles).toEqual(['cut', 'hardware']);
+    await store.update({ exportRoles: null });
+    expect(new PreferencesStore(file).preferences.exportRoles).toBeNull();
+  });
+});
+
 describe('the legend opens with names by default (U.10, R-09)', () => {
   it('starts open on a first launch, and over a damaged file', () => {
     expect(DEFAULT_PREFERENCES.legendOpen).toBe(true);
