@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import { exportDxf } from './dxf/writer.js';
 import { drawingBoundsOf } from './fileScene.js';
-import { EXPORT_INTENTS, EXPORT_PRESETS, EXPORT_ROLES, intentOf } from './presets.js';
+import { EXPORT_INTENTS, EXPORT_PRESETS, EXPORT_ROLES, intentOf, rolesNamed } from './presets.js';
 import { buildExportScene, type ExportScene } from './scene.js';
 import { exportSvg } from './svg/writer.js';
 
@@ -171,6 +171,14 @@ describe('the presets table', () => {
         expect(intentOf(roles)).toBe(matching[0] ?? null);
       }),
     );
+  });
+});
+
+describe('a stored choice of roles', () => {
+  it('is every role when the maker never chose, and otherwise the roles named, in the domain’s order', () => {
+    expect(rolesNamed(null)).toEqual(EXPORT_ROLES);
+    expect(rolesNamed(['hardware', 'cut', 'rivets', 'construction'])).toEqual(['cut', 'hardware']);
+    expect(rolesNamed([])).toEqual([]);
   });
 });
 

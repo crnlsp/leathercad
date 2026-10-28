@@ -31,6 +31,7 @@ import {
   type TabCamera,
   type UpdateStatus,
 } from '@leathercad/platform';
+import { rolesNamed } from '@leathercad/export';
 import { loadProject, saveProject } from '@leathercad/persist';
 import { zoomPercent } from '@leathercad/render';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -51,6 +52,7 @@ import { selectionForRightClick, selectionMenu, type RightClicked } from './cont
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { TextFieldMenu } from './TextFieldMenu.js';
+import { ExportDialog } from './ExportDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
 import {
@@ -984,11 +986,15 @@ export function App({
   }, [file]);
 
   // The same for an SVG or a DXF, from the menu beside Export PDF (6.2, 6.5).
+  // They ask first (6.4), in a dialog: an intent, and the layers it chooses.
+  const [exporting, setExporting] = useState<DrawingFormat | null>(null);
+  const exportRoles = useMemo(() => rolesNamed(preferences.exportRoles), [preferences.exportRoles]);
   const exportDrawing = useCallback(
     async (format: DrawingFormat) => {
-      setExportNotice(await file.exportDrawingFile(format));
+      setExporting(null);
+      setExportNotice(await file.exportDrawingFile(format, exportRoles));
     },
-    [file],
+    [exportRoles, file],
   );
 
   // The Print Preview (7.6), open or not.
@@ -1401,8 +1407,8 @@ export function App({
               updateAvailable={updates.state === 'available'}
               onSave={() => void file.save(tab)}
               onExport={() => void exportPdf()}
-              onExportSvg={() => void exportDrawing('svg')}
-              onExportDxf={() => void exportDrawing('dxf')}
+              onExportSvg={() => setExporting('svg')}
+              onExportDxf={() => setExporting('dxf')}
               onPrint={() => setPrinting(true)}
             />
 
@@ -1987,6 +1993,17 @@ export function App({
               void file.exportPdfFile(bytes).then(setExportNotice);
             }}
             onClose={() => setPrinting(false)}
+          />
+        )}
+
+        {exporting !== null && (
+          <ExportDialog
+            project={storeState.document.project}
+            format={exporting}
+            roles={exportRoles}
+            onRoles={(roles) => changePreferences({ exportRoles: roles })}
+            onExport={() => void exportDrawing(exporting)}
+            onCancel={() => setExporting(null)}
           />
         )}
 

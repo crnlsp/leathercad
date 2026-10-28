@@ -22,8 +22,8 @@ export {
 export type { ExportPart, ExportPath, ExportScene, ExportText, PrintStyle } from './scene.js';
 export { PRINT_STYLES, buildExportScene } from './scene.js';
 // What a file of some roles holds, and what it measures (6.4).
-export type { ExportIntent } from './presets.js';
-export { EXPORT_INTENTS, EXPORT_PRESETS, EXPORT_ROLES, intentOf } from './presets.js';
+export type { ExportIntent, ExportRole } from './presets.js';
+export { EXPORT_INTENTS, EXPORT_PRESETS, EXPORT_ROLES, intentOf, rolesNamed } from './presets.js';
 export { drawingBoundsOf } from './fileScene.js';
 // The one place a part's caption is worded and sized, shared with the canvas.
 export { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from '@leathercad/render';

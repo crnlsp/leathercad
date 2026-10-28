@@ -130,6 +130,18 @@ fails if the two ever differ (F.4).
 ([domain-model.md](domain-model.md) §5) — "template print", "laser cut", "stitch guide". The user
 chooses an intent; the preset chooses the roles.
 
+Built (6.4) for the SVG and the DXF: a preset is a row of `EXPORT_PRESETS`
+(`packages/export/src/presets.ts`), a list of the domain's roles — *template print* every role,
+*laser cut* the cutting roles (`cut`, `hardware`: `isCutting`), *stitch guide* `stitch` and
+`stitch-holes`. **The filter is in the scene**: `buildExportScene(resolved, name, roles)` keeps the
+items and words of those roles, drops a part with nothing of them left, and sets each part's box and
+caption from what remains, so the PDF, the SVG and the DXF cannot disagree about what a preset
+holds and no writer filters. A part's caption is an `annotation` word, so a laser cut has none. The
+default is every role: the scene as it was. The **PDF is not given a preset**: its scene is the
+sheet plan's, which the Sheets view and the Print Preview read too, and a paper that shows
+something other than the PDF's whole pattern would be two answers to "what will be printed". A
+paper stitch guide is a decision for when someone asks.
+
 **A dimension prints as drafting draws it** (4.10b): its extension lines, its line broken where the
 number sits — the number centred on the line, reading along it — and a filled arrowhead on each end,
 its tip on the extension line. The arrowhead is 2.5 × 0.85 mm, ISO 129-1's three to one, and the
@@ -584,7 +596,8 @@ and their holes share the canvas's blue, so a laser operator separates those two
 
 - A **stitch hole is a `<circle>`**, stroked and unfilled like the PDF's, at the 1 mm size the scene
   gives a hole marker, in the `stitch-holes` group. (The hole size a laser wants is not the
-  template's marker; choosing it is 6.4.)
+  template's marker; 6.4 left the size alone: what it added is which layers go in, and a laser
+  that wants the holes at the awl's size is a size nobody has asked for.)
 - Any path that is one whole turn of an arc is a `<circle>`: a hardware hole is one, and so is each
   hole of a row of holes (4.14), at its true diameter in the `hardware` group — a row is punched,
   not pricked, so it has no marker size.
@@ -610,7 +623,38 @@ measures the file: the panel 100.0 mm, its 25 holes 3.875 mm apart, the strap 27
 dimension under the panel. Rendered by librsvg at 254 dpi (2026-10-07), the print test came out
 2750 × 817 px: 275 × 81.6 mm, the right way up, its arcs bulging the right way.
 
-Not yet: presets, choosing layers and the bounds (6.4).
+**The export dialog** (6.4). *Export SVG…* and *Export DXF…* open a dialog before the save
+dialog: the three intents as radio buttons, each with a line saying what it holds; the layers — the
+domain's roles, `construction` aside, which no feature has — as checkboxes, ticked as the intent
+says and adjustable from there (*Laser cut*, then *Stitch holes* is the "plus stitch holes if
+lasered" of the domain model; a mix that is no intent says *Your own mix of layers*); and a line
+that **reports the page** the file will have, from `drawingBoundsOf` — the box of what the chosen
+layers draw, which §10 already defines, so a laser cut's page is the cut outline's box and not the
+captions' — or says there is nothing to export and greys *Export…*. It reports and does not
+compute: the roles are the preset's or the maker's, the scene is the one `exportSvg` and
+`exportDxf` read, and the size is that scene's own. Focus starts on the chosen intent, the
+arrows move through the intents, Tab reaches the layers and then *Export…*, and Esc leaves
+without writing.
+
+**Bounds.** The page is the whole drawing's box, as the maker arranged it on the board, of the
+layers chosen, and the dialog says its size. Exporting only some parts, or a window of the board,
+is not offered: the docs describe a file as the board's arrangement (§10), nothing asks for a
+part's own file, and a part chosen out of an arrangement is a different drawing from the one the
+maker laid out. It is the one place to extend if someone asks, and the scene is where it goes.
+Nor does the dialog say which paper a file would fit: an SVG and a DXF have no paper, and
+`paperOptionsFitting` stays the Paper button's answer for the PDF.
+
+**Remembered.** The roles last kept are an application preference (`exportRoles` in
+`preferences.json`, [file format §6](file-format.md)), shared by both formats, and never in the
+`.lcp`. The dialog names the intent from them, so a mix of the maker's own comes back as it was.
+
+**Tests.** `presets.test.ts` holds the table to the domain's roles and `isCutting`; the
+properties — over every subset of roles, a scene holds only those roles and every item of them
+unchanged, a part's box is the box of what it holds, and a part with none of them is dropped; and
+the documented case, a laser cut with cut and hardware items and no stitch-line or annotation
+item, in the scene and in what the SVG and DXF write. `e2e/export-dialog.spec.ts` exports the
+print test with *Laser cut* as an SVG and as a DXF and reads one layer, `cut`, back; adds a layer
+to a preset and finds it at the next start; and uses the dialog by keyboard, with an axe scan of it.
 
 ## 11. DXF export (6.5)
 
@@ -650,7 +694,7 @@ variables added, and a minimal `AC1015` file:
   two have the same start and end, which a reader draws as a whole circle.
 - A **stitch hole is a `CIRCLE`** at the 1 mm size the scene gives it, not a `POINT`: laser software
   ignores points. (The first draft offered either by an option; nothing asks for the option, and
-  6.4 may.) A hardware hole, a row's hole at its true diameter on the `hardware` layer (4.14), or any
+  6.4 did not add it.) A hardware hole, a row's hole at its true diameter on the `hardware` layer (4.14), or any
   whole turn of an arc, is one too.
 - **Cubics are `POLYLINE`s**: consecutive cubics are one open polyline, and a closed loop of cubics
   alone is one closed polyline, closed by its flag with no repeated vertex. A line beside a curve
@@ -684,7 +728,8 @@ the pieces where the maker put them. It rescales a drawing to its page and close
 chord — it does that to a DXF holding one `ARC` too — so it checks the structure and not the units.
 
 **Not yet:** LightBurn, or a laser, has not opened one: that is the maintainer's check, and the one
-that tests the units. Presets, choosing layers and the bounds are 6.4.
+that tests the units. Presets, layers and the bounds are the SVG's (6.4, §10): the same dialog,
+the same scene, so a DXF of a preset holds the layers an SVG of it does.
 
 ## 12. Other formats
 
@@ -794,7 +839,7 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 | Calibration correction | A 1.005 correction produces geometry 0.5 % larger, and a 1.03 correction is rejected |
 | Export round trip | Random lines, arcs and cubics exported to SVG and DXF and read back by hand are the model's curves, moved (and flipped, for SVG), within 0.5 µm — within 0.0055 mm for a flattened cubic; everything is inside the declared page (`svg/writer.test.ts`, `dxf/writer.test.ts`). The print test exported through the app measures 100.0 mm, 25 holes 3.875 mm apart and 275.0 mm in both files (`e2e/vector-export.spec.ts`) |
 | DXF dialect and units | R12 with `$INSUNITS = 4` and `$MEASUREMENT = 1`; a counter-clockwise arc keeps its angles and a clockwise one is written from its far end; every layer is a role's name; a dash is its true millimetre rhythm; `\r\n` and ASCII only (`dxf/writer.test.ts`) |
-| Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items |
+| Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items, in the scene, the SVG and the DXF (`presets.test.ts`, `e2e/export-dialog.spec.ts`) |
 | The print job | `lp`'s arguments for any paper, copies and sheets ask for `print-scaling=none` and `fit-to-page=false` and nothing else that scales; a printer CUPS does not list, a paper it lists its sizes without, or a job no one could have chosen, never reaches `lp` (`printing.test.ts`) |
 | Preview equals what is sent | Print previews the print test, and what the fake `lp` receives measures true like an exported PDF; where `pdftopdf` is installed, it measures true after that filter too, with the job's options (`e2e/print-preview.spec.ts`) |
 | Landscape, sent upright | Print sends the print test on A4 landscape with the portrait job's options; `lp` receives one upright, unrotated A4 page that, turned back, measures true — gauge, panel, holes, and the strap whole at 275 mm — before and after `pdftopdf` (`e2e/print-preview.spec.ts`) |

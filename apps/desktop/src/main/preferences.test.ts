@@ -131,10 +131,7 @@ describe('the layers an export keeps (6.4)', () => {
     const read = (exportRoles: unknown) =>
       parsePreferences(JSON.stringify({ exportRoles })).exportRoles;
     expect(read(['cut', 'hardware'])).toEqual(['cut', 'hardware']);
-    expect(read(['hardware', 'cut', 'cut', 'rivets', 7])).toEqual([
-      'hardware',
-      'cut',
-    ]);
+    expect(read(['hardware', 'cut', 'cut', 'rivets', 7])).toEqual(['hardware', 'cut']);
     // Nothing at all is a choice a maker can make, and the dialog says so.
     expect(read([])).toEqual([]);
     expect(read('cut')).toBeNull();

@@ -10,8 +10,10 @@ import { LAYER_ROLES, isCutting, type LayerRole } from '@leathercad/domain';
  * The roles a drawing can hold. A construction guide is on screen only (3.10)
  * and no feature has the role, so it is never a layer a maker could choose.
  */
-export const EXPORT_ROLES: readonly LayerRole[] = LAYER_ROLES.filter(
-  (role) => role !== 'construction',
+export type ExportRole = Exclude<LayerRole, 'construction'>;
+
+export const EXPORT_ROLES: readonly ExportRole[] = LAYER_ROLES.filter(
+  (role): role is ExportRole => role !== 'construction',
 );
 
 export const EXPORT_PRESETS = {
@@ -23,7 +25,7 @@ export const EXPORT_PRESETS = {
    */
   'laser-cut': EXPORT_ROLES.filter(isCutting),
   'stitch-guide': ['stitch', 'stitch-holes'],
-} as const satisfies Record<string, readonly LayerRole[]>;
+} as const satisfies Record<string, readonly ExportRole[]>;
 
 export type ExportIntent = keyof typeof EXPORT_PRESETS;
 
@@ -38,8 +40,16 @@ export function intentOf(roles: readonly LayerRole[]): ExportIntent | null {
   const wanted = new Set(roles);
   return (
     EXPORT_INTENTS.find((intent) => {
-      const preset: readonly LayerRole[] = EXPORT_PRESETS[intent];
+      const preset: readonly ExportRole[] = EXPORT_PRESETS[intent];
       return preset.length === wanted.size && preset.every((role) => wanted.has(role));
     }) ?? null
   );
+}
+
+/**
+ * The export roles among these names, in the domain's order: what a stored
+ * choice comes to (`null` is every role), whatever it was written by.
+ */
+export function rolesNamed(names: readonly string[] | null): readonly ExportRole[] {
+  return names === null ? EXPORT_ROLES : EXPORT_ROLES.filter((role) => names.includes(role));
 }
