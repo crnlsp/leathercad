@@ -155,7 +155,7 @@ release. Each milestone's items, needs, *Done when* and *Not in it* are in
 
 | Milestone | For the maker | Main items | Needs first |
 |---|---|---|---|
-| [1.6 — After the refinement](roadmap.md#16--the-next-release) · *in progress* | What 1.x left: update discovery, guides, drafting dimensions, Windows printing, calibration, taped pieces finished; problems keep their identity | 8.9, 3.10, 4.10b, 7.6c, 7.5, 7.2, Q4, Q33 | — |
+| [1.6 — After the refinement](roadmap.md#16--the-next-release) · *in progress* | What 1.x left: update discovery, guides, drafting dimensions, calibration, taped pieces finished; problems keep their identity | 8.9, 3.10, 4.10b, 7.5, 7.2, Q4, Q33 | — |
 | [Pieces that fit](roadmap.md#pieces-that-fit) | Mating seams have the same holes, lined up; a pocket says whether the card goes in; the thread and leather are known before buying | 9.6, 9.12, 9.13, 9.14 | Nothing unbuilt |
 | [Problems that explain themselves](roadmap.md#problems-that-explain-themselves) | Every problem says why it matters; a warning that is meant can be accepted; a safe fix is one click, previewed and undoable | 9.15, Q34, 9.16, 9.17 | Q4; seams for the fix most worth having |
 | [Start from something](roadmap.md#start-from-something) | A new project starts from a worked one; good parts travel between projects | 9.18, 8.8b, 9.7, 9.25 | Built mechanisms (8.3, 4.3b) |

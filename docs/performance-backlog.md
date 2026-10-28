@@ -1,7 +1,7 @@
 # Performance audit and implementation backlog
 
 **Recorded:** 2026-10-25 · **Audited commit:** [`5cf7294`](https://github.com/crnlsp/leathercad/tree/5cf7294)
-· **Release assignment:** none; candidates under [Roadmap → Later](roadmap.md#performance-and-resource-efficiency).
+· **Release assignment:** 1.6, all of it (2026-10-28), under [Roadmap → Performance](roadmap.md#performance).
 
 This is the durable record of the repository-wide performance audit and the work it recommends.
 It records findings, not completed fixes. Start with the task register, then use each task's
@@ -54,7 +54,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | Status | ID | Priority | Severity | Area / task | Confidence | Effort | Risk | Tracking |
 |---|---|---|---|---|---|---|---|---|
 | ✅ | [PERF-001](#perf-001) | P1 | High | Share export geometry across history revisions | Confirmed | Medium | Medium | `perf/001-shared-export-geometry` |
-| ◐ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | `perf/002-tiled-pdf`: culling done; blocking remains |
+| ✅ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | `perf/002-tiled-pdf` (culling), `perf/002b-pdf-worker` (worker) |
 | ✅ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | `perf/003-sheets-culling` |
 | ✅ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | `perf/004-incremental-snap` |
 | ☐ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | Unassigned |
@@ -265,11 +265,16 @@ benchmark's 1,200 mm strap shows the same per tile: 7 sheets, 254 ms and 744 KB,
   the arc-to-cubic tolerance and 10 mm more for coarse rasterisers — misses the clip. The clip is
   the tile's window, overlap included. Each path's box is measured once. Form XObjects were not
   needed for the pattern and were not tried for the sheet furniture.
-- [ ] Yield/cancel between bounded batches if remaining work still blocks interaction.
-  **Still blocks**: 0.64 s for the 33 sheets. Profiled, about 60 % of it is pdf-lib's `save()`
-  compressing every content stream in one call before it writes, which yielding between pages
-  cannot split; the page loop is the rest. Not done here. Recommended next: a worker for the
-  whole export, or cancellation with PERF-013, measured in the renderer.
+- [x] Yield/cancel between bounded batches if remaining work still blocks interaction.
+  Yielding could not split pdf-lib's `save()`, 60 % of the 0.64 s, so the whole write moved to a
+  dedicated renderer Web Worker (`perf/002b-pdf-worker`; `docs/printing.md` §6.2a): the plan crosses
+  by structured clone and the bytes come back transferred. Closing the Print Preview, changing the
+  paper or the printer correction, or asking for another *Export PDF* `terminate()`s the writer
+  mid-write, and a file for an obsolete plan is never shown or written. A worker that cannot start
+  is reported (`file.pdfUnavailable`), writes nothing, and does **not** fall back to the main
+  thread: in a packaged app that would hide a packaging fault R6's test exists to find.
+  The worker loads from `app://leathercad` under the unchanged CSP (`script-src 'self'` covers
+  `worker-src`); there is no packaging change.
 - [x] Compare exact page geometry, tile joins, boundary strokes, captions, registration marks,
   landscape/upright transforms and 1:1 dimensions; record duration and output size.
   Every page of six PDFs rendered by poppler at 8, 30, 96 and 254 dpi is byte-identical before
@@ -291,8 +296,28 @@ benchmark's 1,200 mm strap shows the same per tile: 7 sheets, 254 ms and 744 KB,
 
 Measured with the audit's `strap(5800)` and the bench's 1.2 m strap, built from source; the
 longest stretch is the largest gap between `setTimeout(0)` callbacks during the export. Same
-machine as PERF-001, load under 1 for the benchmark. Not measured: the renderer's own long task
-in Electron, and pdf.js's rendering (the comparison used poppler).
+machine as PERF-001, load under 1 for the benchmark. Not measured there: the renderer's own long
+task in Electron, and pdf.js's rendering (the comparison used poppler); the next table is.
+
+| PERF-002b, 5.8 m strap, 33 A4 sheets, built Electron 45 app, 1600 × 1000 | Main thread (`b023c29`) | Worker |
+|---|---|---|
+| *Export PDF*: largest gap between animation frames, click to file, 3 runs | 564, 510, 516 ms | 6, 17, 6 ms |
+| *Export PDF*: click to file written | 939, 884, 882 ms | 930, 925, 925 ms |
+| Print Preview: largest frame gap, click to first sheet drawn, 3 runs | 516, 497, 491 ms | 6, 6, 6 ms |
+| Print Preview: long tasks (≥ 50 ms) in that time | 517, 504, 497 ms | none |
+| Print Preview: click to first sheet drawn | 616, 599, 594 ms | 805, 801, 799 ms |
+| File | 2,126,044 bytes | 2,126,044 bytes, byte-identical |
+
+Measured with `node tools/perf-pdf.mjs <label>` on the production build in unpackaged Electron
+(`pnpm build` first), the dialogs stubbed, on the machine of the record above; another agent's
+test runs shared it, so read the gaps to the nearest ten milliseconds. The window now paints and
+answers throughout. The worker costs time to the result, not to the window: about 40 ms to start
+and parse its 1.36 MB bundle and to clone the plan in, and the same again for the Print Preview's
+first sheet (+200 ms), which in return can be closed or changed while it is written. Bytes: the
+app's file (worker, Electron 45) for the print test, the 5.8 m strap and the sample wallet each
+equals Node's `exportPdf` of the same project, dated by the file's own creation date, byte for
+byte. `pdfJob.test.ts` holds it per workload: the print test in the print form, the strap, a grid
+with its assembly map, and a printer correction, each from the plan and from its clone.
 
 **Expected benefit:** Less repeated geometry, shorter blocking and potentially smaller files.
 No speedup target is inferred. PERF-003 may share safe bounds helpers, not viewport-dependent output.
@@ -661,6 +686,9 @@ previews plateaued; this is not proof of a permanent worker leak.
   dismissal, obsolete plans and failure.
 - [ ] Exercise rapid open/close, paper changes and injected failures; verify eventual worker
   cleanup and stable post-GC memory over repeated cycles.
+
+PERF-002b already ends the PDF *writer* with the effect and skips opening a file the effect has
+left behind; pdf.js's own loading task and the thumbnails remain here.
 
 **Expected benefit:** Less off-screen work and faster cleanup. Complements PERF-002; lazy
 thumbnails alone do not fix synchronous PDF generation.

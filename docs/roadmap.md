@@ -228,9 +228,6 @@ with the packaged app.
 
 ### Output
 
-- ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
-  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
-  then the preview saves the PDF.
 - ✅ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
   the Print Preview's since 7.6.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than
@@ -299,6 +296,35 @@ with the packaged app.
   Not measured on paper yet: no real printer has been calibrated with it.
   [Printing §8.2](printing.md#82-correction--opt-in-per-printer-a-last-resort).
 
+### Performance
+
+The whole [performance backlog](performance-backlog.md), **PERF-001 to PERF-017** from the
+2026-10-25 audit, is in 1.6 by the maintainer's decision (2026-10-28): the release waits for all
+of it. The backlog owns each task's evidence, acceptance and
+[order](performance-backlog.md#recommended-implementation-order); the marks here mirror its
+[register](performance-backlog.md#task-register), and a task's pull request ticks both. How the
+work is done — measured on current `develop`, before and after, a guard against coming back, one
+pull request each, accuracy never traded, every platform retested — is
+[`.claude/rules/performance.md`](../.claude/rules/performance.md).
+
+- ✅ **[PERF-001](performance-backlog.md#perf-001)** Share export geometry across history revisions.
+- ✅ **[PERF-002](performance-backlog.md#perf-002)** Reduce tiled PDF duplication and blocking.
+- ✅ **[PERF-003](performance-backlog.md#perf-003)** Cull Sheets pages and separate interaction decoration.
+- ◐ **[PERF-004](performance-backlog.md#perf-004)** Avoid full snap-index rebuilds during complex edits.
+- ☐ **[PERF-005](performance-backlog.md#perf-005)** Reuse geometry diagnostics for unaffected inputs.
+- ☐ **[PERF-006](performance-backlog.md#perf-006)** Reduce self-intersection candidate pairs.
+- ☐ **[PERF-007](performance-backlog.md#perf-007)** Isolate pointer-driven React updates.
+- ☐ **[PERF-008](performance-backlog.md#perf-008)** Reuse Design content and cull off-screen geometry.
+- ☐ **[PERF-009](performance-backlog.md#perf-009)** Keep persistence work off the interaction path.
+- ☐ **[PERF-010](performance-backlog.md#perf-010)** Release previous-project view/tool caches.
+- ☐ **[PERF-011](performance-backlog.md#perf-011)** Resize backing stores on DPI-only changes.
+- ☐ **[PERF-012](performance-backlog.md#perf-012)** Preflight excessive allocation/work requests.
+- ☐ **[PERF-013](performance-backlog.md#perf-013)** Bound thumbnail work and cancel obsolete PDF loading.
+- ☐ **[PERF-014](performance-backlog.md#perf-014)** Schedule canvas frames only when needed.
+- ☐ **[PERF-015](performance-backlog.md#perf-015)** Avoid repeated deep dependency walks.
+- ☐ **[PERF-016](performance-backlog.md#perf-016)** Prune obsolete collapsed-part IDs.
+- ☐ **[PERF-017](performance-backlog.md#perf-017)** Make benchmarks representative and interpretable.
+
 ### Known issues and findings
 
 Everything found along the way that is not fixed yet, with where it was found. The ones marked
@@ -332,15 +358,15 @@ millions of holes, so a hole-count budget may be wanted one day. Moving the poin
 wallet, hovering or dragging, kept every frame at about 6 ms and no pointer event over 16 ms in the
 built app (2026-10-18), although each move re-renders the whole window. The later
 [performance audit](performance-backlog.md#measurement-record) recorded user-visible problems
-with history retention, complex outlines and tiled output. Its prioritized tasks are tracked
-under [Later](#performance-and-resource-efficiency), without adding them to this release gate.
+with history retention, complex outlines and tiled output. Its tasks are in this release, under
+[Performance](#performance), since 2026-10-28.
 
 ### Release engineering
 
 | # | What | Plan |
 |---|---|---|
 | ✅ **R6** | The built renderer loads from `app://leathercad`, and `GrantFileProtocolExtraPrivileges` is off | The protocol serves only bundled renderer files, checks decoded paths and real targets, and preserves CSP and sandboxing. Packaged tests cover the origin, denied paths, fonts, PDF preview worker and measured PDF export; a packaged app ignores the development URL override. [ADR 0014](adr/0014-electron-builder-and-release-please.md#r6-amendment--a-bundled-app-origin-2026-10-23) |
-| — **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, as it had moved out of 1.3.5's R1 on 2026-10-09. When a Windows PC or a Mac and a printer are at hand, record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Until then the log says neither platform is verified. Marked ☐ if a release is to wait for it |
+| — **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, as it had moved out of 1.3.5's R1 on 2026-10-09. When a Windows PC or a Mac and a printer are at hand, record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Until then the log says neither platform is verified. Marked as planned if a release is to wait for it |
 | — **R10** | U.7's window edited flag is unverified on macOS, the one platform that shows it: it was checked on Linux, where Electron ignores it, and through the test host and a mock of `setDocumentEdited` | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, since no Mac is at hand. Check 12 of [`release-checklist.md`](release-checklist.md) on a real Mac, with the packaged dmg: an edit sets the window's edited dot, *Save* clears it. Tick this only then, saying the macOS version and the date — never from Linux, the test host or a mock. Check 13, ⌘A outside a field ([#97](https://github.com/crnlsp/leathercad/issues/97)), fits the same session |
 | — | Code signing | **Not done, by decision** (2026-09-24). LeatherCAD is free and open source and signing costs money every year, so installers ship unsigned; [`getting-started.md`](getting-started.md) says how to open them and how to check a download against its build provenance. If it is ever wanted, electron-builder signs when `CSC_LINK` is set |
 
@@ -356,26 +382,6 @@ why this order, and what depends on what are drawn in [`product-roadmap.md`](pro
 The numbers are Phase 9's from the 1.0 record, continued from 9.12 on 2026-10-17. The gaps are items
 that moved: DXF (9.4) into 1.1 as 6.5, Windows and macOS (9.8) into 1.0, and nesting (9.9) to *Not
 planned*.
-
-### Performance and resource efficiency
-
-The [performance backlog](performance-backlog.md) owns the status and acceptance criteria for
-**PERF-001 through PERF-017**, recorded by the 2026-10-25 audit of `5cf7294`. All are initially
-planned and unassigned to a release. Reproduce on the implementation revision: `develop` has
-advanced since those measurements. Promote selected items into a release explicitly, linking
-their stable IDs rather than copying the task lists here.
-
-**Work first:** export geometry retained through history (PERF-001), blocking tiled PDF export
-(PERF-002), slow complex-outline snapping (PERF-004), and many-page Sheets rendering (PERF-003).
-Start with the small benchmark corrections in PERF-017 so before/after evidence is trustworthy.
-The backlog includes [the full priority register](performance-backlog.md#task-register),
-[independent PR order and dependencies](performance-backlog.md#recommended-implementation-order),
-and [verification requirements](performance-backlog.md#verification-and-evidence).
-
-Small follow-ups include clearing previous-project caches, idle frame scheduling and DPI-change
-handling. Coordinate lifecycle work with Q39, persistence with Q35/Q36, and benchmark work with
-Q40. This work preserves millimetre accuracy, exact 1:1 output and document/history correctness;
-no renderer rewrite or unmeasured speedup is implied.
 
 ### Pieces that fit
 
@@ -659,6 +665,10 @@ release until it is moved into one.
 
 ### Also later, each already decided in principle
 
+- **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
+  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
+  then the preview saves the PDF. Moved out of 1.6 on 2026-10-28: no Windows PC and printer were at
+  hand to measure the gauge, and the release does not wait for one.
 - **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched only
   after 9.19.
 - **Pieces gliding** between Design and Sheets.

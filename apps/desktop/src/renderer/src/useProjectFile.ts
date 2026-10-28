@@ -1,12 +1,6 @@
 import { setProjectName, type Document } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
-import {
-  exportDxf,
-  exportPdf,
-  exportSvg,
-  type ExportRole,
-  type TiledPart,
-} from '@leathercad/export';
+import { exportDxf, exportSvg, type ExportRole, type TiledPart } from '@leathercad/export';
 import {
   CURRENT_FORMAT_VERSION,
   InvalidProjectFileError,
@@ -19,6 +13,7 @@ import type { PlatformHost, TabCamera, TemplateSave } from '@leathercad/platform
 import { useCallback, useRef, useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
+import { writePdf, PdfWriterError } from './pdfWriter.js';
 import { describeProblemWithSubject } from './problemText.js';
 import {
   isUnnamed,
@@ -59,6 +54,11 @@ export function fileErrorText(error: unknown, t: Translate): string {
   if (error instanceof InvalidProjectFileError && error.problems.length > 0) {
     const problems = error.problems.map((p) => describeProblemWithSubject(p, t)).join(' ');
     return t('file.invalid', { problems });
+  }
+  if (error instanceof PdfWriterError) {
+    return t(error.kind === 'failed' ? 'file.pdfFailed' : 'file.pdfUnavailable', {
+      reason: error.detail,
+    });
   }
   return error instanceof Error ? error.message : String(error);
 }
@@ -309,6 +309,9 @@ export function useProjectFile(
     if (target !== null) await openPath(target);
   }, [fail, host, openPath, t, tabs]);
 
+  /** The export being written, which the next one ends. */
+  const generating = useRef<AbortController | null>(null);
+
   /**
    * Writes a print-ready PDF and opens it in the system viewer: *Export PDF*,
    * and the Print Preview's *Save PDF…* where LeatherCAD cannot print itself
@@ -333,9 +336,22 @@ export function useProjectFile(
         // the Sheets view all read this same object — so the file is exactly
         // the print they were shown (7.4a).
         const plan = sheetPlanFor(project);
-        const bytes =
-          shown ??
-          (await exportPdf(plan, { applicationVersion: appVersion, now: () => new Date() })).bytes;
+        let bytes = shown;
+        if (bytes === undefined) {
+          // Written in a worker (PERF-002). Asking for another export ends this
+          // one, and its file is neither written nor reported.
+          generating.current?.abort();
+          const run = new AbortController();
+          generating.current = run;
+          try {
+            bytes = await writePdf({ plan, applicationVersion: appVersion }, run.signal);
+          } catch (error) {
+            if (run.signal.aborted) return null;
+            throw error;
+          } finally {
+            if (generating.current === run) generating.current = null;
+          }
+        }
 
         await platform.writeFile(target, bytes);
         exported(tabs, tab);

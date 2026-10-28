@@ -39,6 +39,7 @@ invariant; the rest are defaults, broken with a stated reason.
 | File | Loaded |
 |---|---|
 | `engineering-practices.md` | Every session, beside `CLAUDE.md` |
+| `performance.md` | Every session: how a `PERF-` task is measured, guarded and verified |
 | `pure-layers.md` | Working in `core`, `geometry`, `typography`, `domain` |
 | `document-and-editor.md` | Working in `document`, `editor` |
 | `persist-export-render.md` | Working in `persist`, `export`, `render`, `fixtures/` |

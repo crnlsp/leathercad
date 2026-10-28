@@ -288,6 +288,24 @@ Since 8.11–8.14, on each platform, with the packaged app.
     the icons above its details, and import one; *Edit template* opens it,
     and Save writes the template.
 
+### 16. Performance, on every platform
+
+The performance work (1.6, [`.claude/rules/performance.md`](../.claude/rules/performance.md)) is
+measured on Linux; what can behave differently elsewhere is checked here, with the packaged app on
+Linux, Windows and macOS. Open `fixtures/perf/strap-5800.lcp`, the 5.8 m strap on 33 sheets:
+
+1. **Sheets** pans and zooms without stutter, and pointing at the strap lights it at once.
+2. **Export PDF** keeps the window answering while it writes — a click lands, the spinner turns —
+   and the file has 33 pages, its gauge 100 mm.
+3. **Print Preview** closes at once mid-write, and opening it again on another paper shows only that
+   paper's sheets.
+4. **Rename the strap** twenty times and undo it all: the app's memory, in the system's task
+   manager, settles back near where it started.
+5. **Quit with unsaved work**, then start again: the recovery copy is offered, and the strap comes
+   back whole.
+
+Note each platform's result beside its row in the log, or say which check could not be run there.
+
 ## After it passes
 
 - Record one row per platform in [`print-verification-log.md`](print-verification-log.md), with

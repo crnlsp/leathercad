@@ -366,6 +366,27 @@ exactly what they were.
    of 3", from 7.4a; the word is "sheet" on screen and on paper), `1:1`, the date and the
    application's name. Inside the margins, like everything else printed (7.8, Q17).
 
+### 6.2a Where it is written (PERF-002)
+
+`exportPdf` runs in the app, in a **dedicated Web Worker of the renderer**, never on the main thread
+of the window: pdf-lib compresses every content stream in one synchronous `save()`, which took half
+a second on the 33-sheet strap with no frame painted and no click answered. The renderer's
+`pdfWriter.ts` starts a worker per file (`pdfWorker.ts`, bundled by Vite as the pdf.js worker is,
+and served from `app://leathercad` under the page's CSP unchanged: `script-src 'self'` covers
+`worker-src`), sends it the sheet plan, the options and the moment to date the file with, and gets
+the bytes back transferred, not copied. Cancelling is `terminate()`: closing the Print Preview,
+changing the paper or the printer's correction, or asking for another *Export PDF* ends the worker
+mid-write, and a file for a plan nobody wants is never shown or written. Writing to disk is still
+the main process's `writeFileAtomic`, after the bytes exist, so a failed or cancelled export leaves
+no file.
+
+The worker runs the same `exportPdf`: the plan crosses by structured clone, and a test writes every
+workload from the plan and from its clone and requires the same bytes (`pdfJob.test.ts`). **There is
+no fallback to the main thread.** A worker that cannot start in a packaged app is a packaging fault
+that the packaged smoke test must see, and a silent fallback would hide it; the export reports it
+instead (`file.pdfUnavailable`) and writes nothing. The one-page calibration sheet (7.5) stays on
+the main thread, where it takes a few milliseconds.
+
 ### 6.3 Document-level metadata
 
 Title, author, creator, and creation date. Set the PDF's `/ViewerPreferences` `/PrintScaling
@@ -877,6 +898,7 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 
 | Test | Asserts |
 |---|---|
+| PDF written in a worker | The long strap exports without a frame gap over 200 ms (it was over 500 ms on the main thread); closing the preview or changing the paper mid-write ends the writer before it answers; a writer that cannot start is reported and leaves no file (`e2e/pdf-worker.spec.ts`); the plan cloned to the worker writes the same bytes (`pdfJob.test.ts`) |
 | PDF dimension round trip | Export, rasterise with poppler's `pdftoppm` at 254 dpi, and measure the square, the ruler and the pattern in pixels, within a pixel (0.1 mm) |
 | MediaBox exactness | A4 page MediaBox equals 595.276 × 841.890 pt within 0.001 pt |
 | No scaling transform | The content stream contains no `cm` operator at all in a file, and in the print form exactly one on each landscape sheet, first: `0 1 -1 0 W 0`, determinant 1, unit columns — and before it, only for a calibrated printer, the correction's (`writer.test.ts`) |
