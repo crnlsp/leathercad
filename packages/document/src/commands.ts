@@ -761,7 +761,23 @@ function refusedEach(project: Project, moves: Moves): RefusedTransform[] {
             // go anywhere of its own: the source moves and it re-mirrors, or
             // the fold moves and it follows. Only a counterpart dragged on its
             // own has been asked for something the fold decides.
-            if (targets.has(feature.source.sourceId) || targets.has(foldId)) continue;
+            if (targets.has(feature.source.sourceId) || targets.has(foldId)) {
+              const line =
+                targets.has(feature.source.sourceId) && targets.has(foldId)
+                  ? capturedLineOf(project, foldId)
+                  : null;
+              if (line?.kind === 'line' && carriedMirror(line, 0, matrix) === null) {
+                refused.push({
+                  featureId: feature.id,
+                  problem: problem('MIRROR_WOULD_SCALE', {
+                    featureId: feature.id,
+                    featureName: feature.name,
+                    sourceName: byId.get(feature.source.sourceId)?.name ?? 'its original',
+                  }),
+                });
+              }
+              continue;
+            }
 
             const fold = byId.get(foldId);
             refused.push({
@@ -776,11 +792,16 @@ function refusedEach(project: Project, moves: Moves): RefusedTransform[] {
             continue;
           }
 
-          // Scaled **with its original** is not a refusal: the original takes
-          // the scale and the counterpart follows it, which is what selecting
-          // a whole symmetric panel and resizing it has to do. Only a
-          // counterpart scaled on its own has nowhere to put the change.
-          if (!MatOps.isIsometry(matrix) && !movesWithItsSource(byId, feature, targets)) {
+          // With its original, a counterpart can follow a scale only when
+          // its carried axis is still a reflection-and-slide. An uneven scale
+          // across a diagonal would need a shear; refusing it prevents the
+          // source moving while the axis silently stays behind.
+          const follows = movesWithItsSource(byId, feature, targets);
+          if (
+            follows
+              ? carriedMirror(feature.source.op.axis, feature.source.op.glideMm, matrix) === null
+              : !MatOps.isIsometry(matrix)
+          ) {
             refused.push({
               featureId: feature.id,
               problem: problem('MIRROR_WOULD_SCALE', {
@@ -829,6 +850,35 @@ function refusedEach(project: Project, moves: Moves): RefusedTransform[] {
   return refused;
 }
 
+/**
+ * A captured axis carried with its source. Moving the axis and its glide
+ * gives a candidate reflection; it is valid only if mirroring then moving
+ * equals moving then mirroring. An uneven scale across a diagonal fails
+ * that test: its conjugate is a shear, which a mirror cannot store.
+ *
+ * Checking the two compositions avoids inverting the scale, including a
+ * very small one that is still a valid resize.
+ */
+function carriedMirror(
+  axis: Extract<MirrorAxis, { kind: 'line' }>,
+  glideMm: Mm,
+  matrix: Mat2x3,
+): ReturnType<typeof decomposeGlide> {
+  const along = MatOps.applyDirection(matrix, {
+    x: Math.cos(axis.angleRad),
+    y: Math.sin(axis.angleRad),
+  });
+  const moved = glideMatrix(
+    MatOps.apply(matrix, axis.origin),
+    Math.atan2(along.y, along.x),
+    glideMm * Vec2Ops.len(along),
+  );
+  const current = glideMatrix(axis.origin, axis.angleRad, glideMm);
+  return MatOps.equals(MatOps.compose(current, matrix), MatOps.compose(matrix, moved))
+    ? decomposeGlide(moved)
+    : null;
+}
+
 function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false): Feature {
   // A label transforms through its parameters, exactly as a parametric shape
   // does: it stays a label you can retype, rather than becoming outlines.
@@ -870,11 +920,9 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
     // placed by its fold, and `refusedTransforms` says so instead.
     if (op.axis.kind !== 'line') return feature;
     const current = glideMatrix(op.axis.origin, op.axis.angleRad, op.glideMm);
-    const moved = withSource
-      ? MatOps.composeAll(MatOps.invert(matrix), current, matrix)
-      : MatOps.compose(current, matrix);
-
-    const parts = decomposeGlide(moved);
+    const parts = withSource
+      ? carriedMirror(op.axis, op.glideMm, matrix)
+      : decomposeGlide(MatOps.compose(current, matrix));
     // Not an isometry — a scale or a shear. Left exactly as it was;
     // `refusedTransforms` is how the reason reaches the user.
     if (parts === null) return feature;

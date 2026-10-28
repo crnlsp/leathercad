@@ -487,6 +487,22 @@ describe('scaling a piece by its outline (Q31)', () => {
   /** The piece with a row of 4 mm holes punched along its marking. */
   const withRow = (document = piece()) => addHoleRow('p', 'row', 'mark').apply(document);
 
+  const withDiagonalMirror = (axis: 'captured' | 'fold', angle = Math.PI / 4): Document => {
+    let document = addFoldLine('p', 'diagonal', {
+      kind: 'path',
+      path: PathOps.polyline([
+        { x: 0, y: 0 },
+        { x: 60 * Math.cos(angle), y: 60 * Math.sin(angle) },
+      ]),
+    }).apply(piece());
+    document = (
+      axis === 'captured'
+        ? mirrorFeatures(['slot'], ['diagonal-copy'], { origin: { x: 0, y: 0 }, angleRad: angle })
+        : mirrorAcrossFold(['slot'], ['diagonal-copy'], 'diagonal')
+    ).apply(document);
+    return document;
+  };
+
   /** Growing, shrinking or stretching, but never turning it over. */
   const factors = fc.record({
     x: fc.double({ min: 0.4, max: 3, noNaN: true }),
@@ -659,6 +675,59 @@ describe('scaling a piece by its outline (Q31)', () => {
     const label = featureIn(next, 'label').source;
     expect(label.kind === 'text' && label.sizeMm).toBe(3);
   });
+
+  it('moves a logo placement with its piece without resizing the stamp it marks', () => {
+    fc.assert(
+      fc.property(anyScale, (by) => {
+        const document = addMarkingLine(
+          'p',
+          'logo',
+          {
+            kind: 'path',
+            path: Shapes.rect({ x: 60, y: 20 }, 12, 8),
+          },
+          'logo',
+        ).apply(piece());
+        const before = boxes(document.project).get('logo');
+        const after = boxes(scale(document, by).project).get('logo');
+        if (before === undefined || after === undefined) throw new Error('no logo');
+
+        expectNear(RectOps.centre(after), scaled(by, RectOps.centre(before)), 'logo');
+        expect(RectOps.width(after)).toBeCloseTo(12, 9);
+        expect(RectOps.height(after)).toBeCloseTo(8, 9);
+      }),
+    );
+  });
+
+  it.each(['captured', 'fold'] as const)(
+    'refuses the whole uneven scale when a %s diagonal mirror cannot follow it',
+    (axis) => {
+      const document = withDiagonalMirror(axis);
+      const scaling = { pivot: CENTRE, factors: { x: 2, y: 1 } };
+      expect(scaleRefusal(document.project, ['outline'], scaling)?.code).toBe('MIRROR_WOULD_SCALE');
+      expect(scale(document, scaling.factors)).toBe(document);
+    },
+  );
+
+  it.each(['captured', 'fold'] as const)(
+    'carries a %s mirror of a fixed-size slot to its scaled centre under an even scale',
+    (axis) => {
+      fc.assert(
+        fc.property(even, fc.double({ min: 0.2, max: 1.2, noNaN: true }), (by, angle) => {
+          const document = withDiagonalMirror(axis, angle);
+          const next = scale(document, by);
+          const before = boxes(document.project).get('diagonal-copy');
+          const after = boxes(next.project).get('diagonal-copy');
+          if (before === undefined || after === undefined) throw new Error('no counterpart');
+
+          expect(next).not.toBe(document);
+          expectNear(RectOps.centre(after), scaled(by, RectOps.centre(before)), 'counterpart');
+          expect(RectOps.width(after)).toBeCloseTo(RectOps.width(before), 9);
+          expect(RectOps.height(after)).toBeCloseTo(RectOps.height(before), 9);
+        }),
+      );
+    },
+  );
 
   it('scales a cut-out drawn by hand with the piece, since nothing gave it a size', () => {
     const document = addCutOut('p', 'window', {

@@ -533,8 +533,10 @@ export function isHolesAlongALine(kind: FeatureKind): boolean {
  *   number it was made to. A cut-out **drawn as a path** has no such number,
  *   so it is drawing and scales with the piece; Convert to path is how a
  *   typed one joins it.
- * - Everything else is the piece's own drawing: the outline, stitch, fold and
- *   marking lines. What is **derived** follows what it is built from — a
+ * - A **logo placement** keeps the size of the stamp it marks. Other marking
+ *   purposes scale with the piece's drawing.
+ * - Everything else is the piece's own drawing: the outline, stitch and fold
+ *   lines. What is **derived** follows what it is built from — a
  *   counterpart its original, stitching its line — and a row of holes or a
  *   hole set keeps its pitch and its hole size in its own parameters, which
  *   no scale touches. A dimension is a reading of the places it names.
@@ -547,10 +549,11 @@ export function keepsItsSize(feature: Feature): boolean {
       return true;
     case 'cut-contour':
       return feature.role === 'inner' && feature.source.kind === 'shape';
+    case 'marking-line':
+      return feature.purpose === 'logo';
     case 'stitch-line':
     case 'stitch-hole-set':
     case 'fold-line':
-    case 'marking-line':
     case 'hole-row':
     case 'measurement':
       return false;

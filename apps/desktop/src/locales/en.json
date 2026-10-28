@@ -1037,8 +1037,8 @@
       "description": "A mirror needs one line to fold about, and this fold bends. Draw it as a straight crease, or mirror across a different one."
     },
     "MIRROR_WOULD_SCALE": {
-      "title": "A counterpart cannot be resized",
-      "description": "{{featureName}} is a mirror of {{sourceName}}, so it is the size {{sourceName}} is. Scale {{sourceName}} and this follows."
+      "title": "A counterpart must stay matched",
+      "description": "The requested scale cannot keep {{featureName}} matched to {{sourceName}}. Resize its original, or scale the whole piece evenly."
     },
     "MIRROR_NO_AXIS": {
       "title": "Nothing to mirror across",

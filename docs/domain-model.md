@@ -590,9 +590,10 @@ that names it fails with `ANCHOR_MISSING`.
   |---|---|---|
   | Hardware hole | Keeps its diameter | A 4 mm punch makes a 4 mm hole; a drawn or frozen one too |
   | Text label | Keeps its text size; its box's centre moves | It prints at the size it was set |
+  | Marking with purpose *logo* | Keeps its size; its centre moves | It locates a stamp of a fixed size |
   | Cut-out typed as a shape (rectangle, circle) | Keeps its width, height, corners or radius | Made for something — a card slot for an 86 × 54 card, a hole for a snap's post |
   | Cut-out drawn as a path | Scales | It has no size of its own to keep; *Convert to path* is how a typed one joins it |
-  | Outline, stitch line drawn by hand, fold line, marking line | Scales | The piece's own drawing |
+  | Outline, stitch line drawn by hand, fold line, other marking line | Scales | The piece's own drawing |
   | Stitch line, hole set, allowance (derived) | Re-derive from the scaled outline | The margin and the iron's pitch are parameters no scale touches |
   | Row of holes | Re-derives along its scaled line, at the same pitch and diameter | Its line is drawing; its holes are a punch and a spacing |
   | Counterpart | Follows its original, its axis carried by the scale | It owns only its placement |
@@ -603,6 +604,10 @@ that names it fails with `ANCHOR_MISSING`.
   would shear (`WOULD_SHEAR`), a round outline would become an ellipse, and turning a piece over by
   scaling it through itself reads its labels backwards. Anything else selected scales alone, as it
   always has — a rivet hole picked by itself grows. A typed width stays a reshape of the outline alone.
+  A captured or fold-tracked mirror across a diagonal also refuses a stretch when carrying its axis
+  would need a shear (`MIRROR_WOULD_SCALE`). Scale the whole piece evenly instead. Refusal checks the
+  same carried reflection that the command stores, so the source can never move while its captured
+  axis silently stays behind.
 - **A gesture part of the selection refuses is refused whole** (Q30), as a lock already was, and
   `transformRefusal` says why, lock first. It used to move what it could: a piece stretched with its
   rivets selected left them behind.

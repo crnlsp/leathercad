@@ -134,4 +134,12 @@ describe('what a piece scaled around it keeps the size of (Q31)', () => {
       false,
     );
   });
+
+  it('keeps a logo placement its size, while other marking purposes scale', () => {
+    for (const purpose of ['logo', 'alignment', 'glue-area', 'skive', 'other'] as const) {
+      expect(keepsItsSize({ ...base, kind: 'marking-line', purpose }), purpose).toBe(
+        purpose === 'logo',
+      );
+    }
+  });
 });
