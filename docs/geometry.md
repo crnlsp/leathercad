@@ -513,6 +513,12 @@ Edge cases that need explicit tests: collinear overlapping segments (infinitely 
 — return the overlap endpoints), tangent circles (one intersection, numerically fragile), endpoints
 touching exactly, and near-parallel lines where the determinant approaches zero.
 
+`intersectPaths` tests only the segment pairs whose boxes overlap to `EPS_POINT`, found by sweeping
+the boxes along x, and keeps the first crossing at a place as visiting every pair in order would: the
+same crossings, in the same order. That box test is not as wide as `intersectSegments`' own end
+tolerance, so a touch across a gap a hair over `EPS_POINT` is left out, as it always was; a
+`selfIntersections` broad phase (PERF-006) must not inherit it unexamined.
+
 `intersectSegments(a, b)` and `intersectSegments(b, a)` must agree. Line/line is solved in one
 canonical argument order so they are the same arithmetic, and two collinear segments whose ends are
 less than `EPS_POINT` apart touch at one point — a gap measured in millimetres, never as a parameter,

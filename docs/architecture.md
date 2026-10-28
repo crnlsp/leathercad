@@ -474,7 +474,9 @@ feel deliberate rather than random.
 
 Tolerance is defined in *pixels* (default 10 px) and converted to mm through the viewport, so
 snapping feels the same at every zoom level. Candidates come from a spatial index (a uniform grid
-is sufficient at this scale) rebuilt when the resolved document changes.
+is sufficient at this scale) rebuilt when the resolved document changes. The crossings in it, the
+costly part, are kept by the path and guide objects they come from, so a drag recomputes those of
+what it moved and reads the rest (PERF-004).
 
 The result reports *which* kind of snap fired, so the overlay can draw the matching glyph. That
 feedback is most of what makes CAD snapping feel trustworthy.

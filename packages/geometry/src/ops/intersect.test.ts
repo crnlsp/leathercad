@@ -2,13 +2,19 @@ import { EPS_POINT } from '@leathercad/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { arbRigidTransform } from '../../test/arbitraries.js';
-import { polyline, transform as transformPath } from '../path/index.js';
-import { arc, cubic, line, pointAt } from '../segment/index.js';
+import { arbAngle, arbRigidTransform, arbSegment, arbSweep } from '../../test/arbitraries.js';
+import { polyline, transform as transformPath, unsafePath, type Path } from '../path/index.js';
+import type { Rect } from '../rect.js';
+import { arc, bbox, cubic, line, pointAt } from '../segment/index.js';
 import { circle } from '../shapes.js';
 import { cross, dist, sub, vec } from '../vec2.js';
 
-import { intersectPaths, intersectSegments, selfIntersections } from './intersect.js';
+import {
+  intersectPaths,
+  intersectSegments,
+  selfIntersections,
+  type Intersection,
+} from './intersect.js';
 
 const RUNS = { numRuns: 300 };
 const QUARTER = Math.PI / 2;
@@ -369,6 +375,233 @@ describe('intersectPaths', () => {
     const square = polyline([vec(-20, -20), vec(20, -20), vec(20, 20), vec(-20, 20)], true);
     // Radius 25 pokes through all four sides, twice each.
     expect(intersectPaths(circle(vec(0, 0), 25), square)).toHaveLength(8);
+  });
+
+  describe('broad phase (PERF-004)', () => {
+    /**
+     * What `intersectPaths` did before it had a broad phase, and the
+     * specification it still meets: every pair of segments whose boxes overlap
+     * to EPS_POINT, in the order of the first path's segments and then the
+     * second's, the first crossing at a place kept.
+     */
+    function everyPairOfBoxes(a: Path, b: Path): Intersection[] {
+      const out: Intersection[] = [];
+      const near = (p: Rect, q: Rect): boolean =>
+        p.minX <= q.maxX + EPS_POINT &&
+        q.minX <= p.maxX + EPS_POINT &&
+        p.minY <= q.maxY + EPS_POINT &&
+        q.minY <= p.maxY + EPS_POINT;
+      a.segments.forEach((sa, i) =>
+        b.segments.forEach((sb, j) => {
+          if (!near(bbox(sa), bbox(sb))) return;
+          for (const hit of intersectSegments(sa, sb)) {
+            if (out.some((h) => dist(h.point, hit.point) < EPS_POINT)) continue;
+            out.push({ point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
+          }
+        }),
+      );
+      return out;
+    }
+
+    /** Segments a few millimetres apart, so that boxes overlap often and crossings are many. */
+    const arbNearCoord = fc.oneof(
+      fc.integer({ min: -6, max: 6 }),
+      fc.double({ min: -6, max: 6, noNaN: true }),
+      fc.constantFrom(0, EPS_POINT, -EPS_POINT, 0.99 * EPS_POINT, 3 + EPS_POINT),
+    );
+    const arbNearVec = fc.record({ x: arbNearCoord, y: arbNearCoord });
+    const arbNearSegment = fc.oneof(
+      fc.tuple(arbNearVec, arbNearVec).map(([p, q]) => line(p, q)),
+      fc
+        .tuple(arbNearVec, fc.double({ min: 0.1, max: 6, noNaN: true }), arbAngle, arbSweep)
+        .map(([c, r, start, sweep]) => arc(c, r, start, sweep)),
+      fc
+        .tuple(arbNearVec, arbNearVec, arbNearVec, arbNearVec)
+        .map(([p0, p1, p2, p3]) => cubic(p0, p1, p2, p3)),
+    );
+    /**
+     * Not joined up: the broad phase does not care, and a soup crosses more.
+     * Six segments a side: the reference tests every pair as well, cubic
+     * against cubic, and ten a side took this past CI's time limit under
+     * coverage while finding nothing six do not.
+     */
+    const arbSoup = fc
+      .array(fc.oneof({ weight: 3, arbitrary: arbNearSegment }, arbSegment), { maxLength: 6 })
+      .map((segments) => unsafePath(segments));
+
+    it('finds what testing every pair of overlapping boxes finds, in the same order', () => {
+      fc.assert(
+        fc.property(arbSoup, arbSoup, (a, b) => {
+          expect(intersectPaths(a, b)).toEqual(everyPairOfBoxes(a, b));
+        }),
+        RUNS,
+      );
+    });
+
+    it('agrees with every pair of boxes for a path against itself', () => {
+      // Shorter: a cubic against itself overlaps along its whole flattening,
+      // which is slow, not interesting.
+      const arbShortSoup = fc
+        .array(arbNearSegment, { maxLength: 6 })
+        .map((segments) => unsafePath(segments));
+      fc.assert(
+        fc.property(arbShortSoup, (a) => {
+          expect(intersectPaths(a, a)).toEqual(everyPairOfBoxes(a, a));
+        }),
+        RUNS,
+      );
+    });
+
+    it('never leaves out two segments that pass through one point', () => {
+      // Without a box at all: `sa` is drawn through a point of `sb`, among
+      // segments of every kind, and whatever the two report is kept.
+      fc.assert(
+        fc.property(
+          arbSoup,
+          arbSoup,
+          arbNearSegment,
+          fc.double({ min: 0, max: 1, noNaN: true }),
+          arbAngle,
+          fc.tuple(
+            fc.double({ min: 0.01, max: 8, noNaN: true }),
+            fc.double({ min: 0, max: 8, noNaN: true }),
+          ),
+          (a, b, sb, t, angle, [before, after]) => {
+            const p = pointAt(sb, t);
+            const u = vec(Math.cos(angle), Math.sin(angle));
+            const sa = line(
+              vec(p.x - u.x * before, p.y - u.y * before),
+              vec(p.x + u.x * after, p.y + u.y * after),
+            );
+            const found = intersectPaths(
+              unsafePath([...a.segments, sa]),
+              unsafePath([sb, ...b.segments]),
+            );
+
+            for (const hit of intersectSegments(sa, sb)) {
+              expect(found.some((h) => dist(h.point, hit.point) < EPS_POINT)).toBe(true);
+            }
+          },
+        ),
+        RUNS,
+      );
+    });
+
+    it('leaves out a touch across a gap a hair over EPS_POINT, as it always has', () => {
+      // fast-check found it: `intersectSegments` calls these touching through
+      // its own end tolerance, but their boxes are further apart than the one
+      // EPS_POINT the box test allows. The broad phase keeps that rule rather
+      // than change which crossings snapping offers; widening it is a separate
+      // decision (PERF-004 notes).
+      const a = polyline([vec(7, 5e-324), vec(0, 5e-324)]);
+      const b = polyline([vec(0, -3), vec(0, -EPS_POINT)]);
+
+      expect(intersectSegments(a.segments[0]!, b.segments[0]!)).toHaveLength(1);
+      expect(intersectPaths(a, b)).toEqual([]);
+    });
+
+    it('keeps a touch across a gap just under EPS_POINT', () => {
+      const a = polyline([vec(0, 0), vec(10, 0)]);
+      const b = polyline([vec(10 + 0.5 * EPS_POINT, -5), vec(10 + 0.5 * EPS_POINT, 5)]);
+
+      expect(intersectPaths(a, b)).toHaveLength(1);
+    });
+
+    it('finds nothing across a gap of a millimetre', () => {
+      const a = polyline([vec(0, 0), vec(10, 0)]);
+      const b = polyline([vec(11, -5), vec(11, 5)]);
+
+      expect(intersectPaths(a, b)).toEqual([]);
+    });
+
+    it('pairs segments that start at the same x', () => {
+      // Equal keys in the sweep's sort, both ways round.
+      const a = polyline([vec(0, -5), vec(0, 5), vec(10, 5)]);
+      const b = polyline([vec(0, 0), vec(10, 0), vec(10, 10)]);
+
+      expect(intersectPaths(a, b)).toEqual(everyPairOfBoxes(a, b));
+      expect(intersectPaths(b, a)).toEqual(everyPairOfBoxes(b, a));
+    });
+
+    it('keeps one crossing where two land closer than EPS_POINT, across a whole millimetre', () => {
+      const a = polyline([vec(-5, 0), vec(5, 0)]);
+      const b = unsafePath([
+        line(vec(1 - 0.4 * EPS_POINT, -5), vec(1 - 0.4 * EPS_POINT, 5)),
+        line(vec(1 + 0.4 * EPS_POINT, -5), vec(1 + 0.4 * EPS_POINT, 5)),
+      ]);
+
+      expect(intersectPaths(a, b)).toEqual(everyPairOfBoxes(a, b));
+      expect(intersectPaths(a, b)).toHaveLength(1);
+    });
+
+    it('keeps both crossings exactly EPS_POINT apart', () => {
+      const a = polyline([vec(-5, 0), vec(5, 0)]);
+      const b = unsafePath([
+        line(vec(0, -5), vec(0, 5)),
+        line(vec(EPS_POINT, -5), vec(EPS_POINT, 5)),
+      ]);
+
+      expect(intersectPaths(a, b)).toHaveLength(2);
+    });
+
+    it('finds nothing against an empty path', () => {
+      expect(intersectPaths(unsafePath([]), circle(vec(0, 0), 5))).toEqual([]);
+      expect(intersectPaths(circle(vec(0, 0), 5), unsafePath([]))).toEqual([]);
+    });
+
+    // `line` refuses a coordinate that is not finite, so these are written out:
+    // the sweep's sort must not be thrown by one that got in some other way.
+    it('skips a segment with a NaN coordinate and keeps the rest', () => {
+      const broken = unsafePath([
+        { kind: 'line', a: vec(Number.NaN, 0), b: vec(10, 0) },
+        line(vec(5, -5), vec(5, 5)),
+      ]);
+      const across = polyline([vec(0, 1), vec(10, 1)]);
+
+      expect(intersectPaths(broken, across)).toEqual(everyPairOfBoxes(broken, across));
+      expect(intersectPaths(broken, across)).toHaveLength(1);
+    });
+
+    it('pairs segments that reach to infinity', () => {
+      const wide = unsafePath([
+        { kind: 'line', a: vec(Number.NEGATIVE_INFINITY, 0), b: vec(10, 0) },
+        { kind: 'line', a: vec(Number.NEGATIVE_INFINITY, 1), b: vec(10, 1) },
+      ]);
+      const across = polyline([vec(5, -5), vec(5, 5)]);
+
+      expect(intersectPaths(wide, across)).toEqual(everyPairOfBoxes(wide, across));
+    });
+
+    it('reads each segment a bounded number of times, not once per pair', () => {
+      // A work bound, not a timing: the guard against the nested loop coming
+      // back. Every read of a segment by index is counted. An outline of 1,000
+      // segments and its stitch line 3.5 mm inside, the audit's traced
+      // workload, cost a million reads before; a segment here meets the few
+      // of the other path near it.
+      const ring = (radius: number): Path =>
+        polyline(
+          Array.from({ length: 1000 }, (_, i) => {
+            const angle = (i / 1000) * Math.PI * 2;
+            return vec(300 + radius * Math.cos(angle), 300 + radius * Math.sin(angle));
+          }),
+          true,
+        );
+      let reads = 0;
+      const counted = (p: Path): Path =>
+        unsafePath(
+          new Proxy([...p.segments], {
+            get(target, key, receiver) {
+              if (typeof key === 'string' && /^\d+$/.test(key)) reads++;
+              return Reflect.get(target, key, receiver) as unknown;
+            },
+          }),
+          p.closed,
+        );
+
+      intersectPaths(counted(ring(290)), counted(ring(286.5)));
+
+      expect(reads).toBeLessThan(10 * 2000);
+    });
   });
 });
 
