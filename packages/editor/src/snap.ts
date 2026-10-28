@@ -1,4 +1,4 @@
-import type { FeatureId, ResolvedProject } from '@leathercad/domain';
+import type { FeatureId, Guide, ResolvedProject } from '@leathercad/domain';
 import { guideCrossing, projectToGuide } from '@leathercad/domain';
 import { CANVAS, dotsItem, pathItem, type DisplayItem } from '@leathercad/render';
 import {
@@ -8,6 +8,7 @@ import {
   RectOps,
   dist,
   polyline,
+  type Intersection,
   type Path,
   type Vec2,
 } from '@leathercad/geometry';
@@ -119,19 +120,7 @@ export function buildSnapIndex(
 
   for (const guide of resolved.project.guides ?? []) {
     for (const feature of visible) {
-      const bounds = PathOps.bbox(feature.path);
-      if (bounds === null) continue;
-      const centre = projectToGuide(guide, RectOps.centre(bounds));
-      // A line centred on the nearest point to the box's centre, extending
-      // past its diagonal, includes every possible crossing of that box.
-      const reach = Math.hypot(RectOps.width(bounds), RectOps.height(bounds));
-      const dx = Math.cos(guide.angleRad) * reach;
-      const dy = Math.sin(guide.angleRad) * reach;
-      const line = polyline([
-        { x: centre.x - dx, y: centre.y - dy },
-        { x: centre.x + dx, y: centre.y + dy },
-      ]);
-      for (const hit of intersectPaths(line, feature.path)) {
+      for (const hit of guideCrossings(guide, feature.path)) {
         add({ kind: 'intersection', point: hit.point, featureId: feature.id, guideId: guide.id });
       }
     }
@@ -149,6 +138,23 @@ export function buildSnapIndex(
   }
 
   return { cellMm, buckets };
+}
+
+/** Where an infinite guide crosses a path. */
+function guideCrossings(guide: Guide, path: Path): readonly Intersection[] {
+  const bounds = PathOps.bbox(path);
+  if (bounds === null) return [];
+  const centre = projectToGuide(guide, RectOps.centre(bounds));
+  // A line centred on the nearest point to the box's centre, extending
+  // past its diagonal, includes every possible crossing of that box.
+  const reach = Math.hypot(RectOps.width(bounds), RectOps.height(bounds));
+  const dx = Math.cos(guide.angleRad) * reach;
+  const dy = Math.sin(guide.angleRad) * reach;
+  const line = polyline([
+    { x: centre.x - dx, y: centre.y - dy },
+    { x: centre.x + dx, y: centre.y + dy },
+  ]);
+  return intersectPaths(line, path);
 }
 
 /**
