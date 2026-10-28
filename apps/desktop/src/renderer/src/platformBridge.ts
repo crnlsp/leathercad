@@ -1,3 +1,4 @@
+import type { ScaleCorrection } from '@leathercad/core';
 import type {
   MenuAction,
   FileRename,
@@ -32,6 +33,8 @@ interface PreloadBridge {
   openInExternalViewer(path: string): Promise<void>;
   listPrinters(): Promise<PrinterList>;
   printPdf(data: Uint8Array, job: PrintJob): Promise<string>;
+  getPrinterCorrection(printer: string): Promise<ScaleCorrection>;
+  setPrinterCorrection(printer: string, correction: ScaleCorrection | null): Promise<void>;
   getUserConfigDir(): Promise<string>;
   getAppVersion(): Promise<string>;
   setDocumentEdited(edited: boolean): Promise<void>;
@@ -86,6 +89,15 @@ declare global {
   interface Window {
     platform?: PreloadBridge;
   }
+}
+
+/**
+ * What the main process said when it refused — CUPS's own words, or why a
+ * correction was not stored — without Electron's wrapping of a rejected call.
+ */
+export function refusalOf(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
 }
 
 export function getPlatformHost(): PlatformHost {

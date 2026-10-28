@@ -376,7 +376,7 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
     └── parts/*.lcpart    saved part templates
 ```
 
-Only `preferences.json` exists so far (8.2). It is written by the main process alone, atomically,
+`preferences.json` (8.2) and `printers.json` (7.5) exist so far. The first is written by the main process alone, atomically,
 and read once at start-up:
 
 ```json
@@ -465,6 +465,18 @@ are dropped, the later of two first; the rest is kept. A file written before U.1
 **The interface's language never reaches a project.** A `.lcp` holds no words chosen by it — problem
 sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads
 the same in every language. What the maker typed, names included, is theirs and is kept as typed.
+
+**`printers.json`** (7.5) holds each calibrated printer's scale correction, by its CUPS queue name:
+
+```json
+{ "version": 1, "corrections": { "Brother_HL_L2442DW": { "x": 1.00503, "y": 0.99875 } } }
+```
+
+`x` is across the paper and `y` along it ([printing.md](printing.md) §8.2). Only the main process
+reads or writes it, atomically, and a correction counts as stored once it is on disk. A correction
+scales every sheet sent to its printer, so one that is not two numbers within ±2 % of 1 is dropped
+rather than guessed at, and a damaged file is no correction at all. It describes the maker's
+printer, never their pattern, so nothing of it reaches a `.lcp`.
 
 What the app writes about *itself* is state, not configuration, and goes in
 `$XDG_STATE_HOME/leathercad/` (falling back to `~/.local/state/`), per

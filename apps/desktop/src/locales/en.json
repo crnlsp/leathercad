@@ -692,6 +692,24 @@
       "platform": "LeatherCAD can't print directly on this system yet."
     }
   },
+  "calibration": {
+    "again": "Calibrate again…",
+    "calibrate": "Calibrate this printer…",
+    "corrected": "Corrected for this printer: scaled {{x}} across the paper and {{y}} along it.",
+    "horizontal": "Horizontal line, drawn {{length}} mm",
+    "jobTitle": "LeatherCAD printer calibration",
+    "lead": "Only for a printer whose sheets measure off even when printed at 100 % / Actual size. The correction is for this printer alone, and only when LeatherCAD prints to it.",
+    "measureStep": "Measure each line end to end with a steel rule, and enter what it measures.",
+    "printPage": "Print calibration page",
+    "printStep": "Print the calibration page on {{paper}}: a horizontal line {{x}} mm long and a vertical line {{y}} mm long.",
+    "remove": "Remove correction",
+    "result": "Sheets sent to this printer will be scaled {{x}} across the paper and {{y}} along it.",
+    "save": "Save correction",
+    "saveFailed": "The correction could not be saved: {{reason}}",
+    "title": "Calibrate {{printer}}",
+    "tooFar": "This is almost certainly a print-settings problem, not a printer problem. Check that scaling is set to 100 % / Actual size and try again.",
+    "vertical": "Vertical line, drawn {{length}} mm"
+  },
   "exportNotice": {
     "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
     "countsFile": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the file.",

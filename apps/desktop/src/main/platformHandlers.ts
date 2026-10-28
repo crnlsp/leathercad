@@ -14,6 +14,7 @@ import { OneAtATime } from './oneAtATime.js';
 import type { KeptCopies } from './keptCopies.js';
 import type { Templates } from './templates.js';
 import type { ProjectWatch } from './projectWatch.js';
+import { PrinterCorrections } from './printerCorrections.js';
 import { listPrinters, printPdf, runCommand } from './printing.js';
 import { renameProjectFile } from './renameFile.js';
 import { isProjectPath, readSession, shownPath, type PreferencesStore } from './preferences.js';
@@ -238,6 +239,26 @@ export function registerPlatformHandlers(
       throw error;
     }
   });
+
+  // Calibration (7.5): each printer's scale correction, in the configuration
+  // directory beside the preferences. The renderer names a printer and a
+  // correction; both are checked here.
+  const corrections = new PrinterCorrections(join(app.getPath('userData'), 'printers.json'));
+  ipcMain.handle(IPC.getPrinterCorrection, (_event, printer: unknown) => corrections.of(printer));
+  ipcMain.handle(
+    IPC.setPrinterCorrection,
+    async (_event, printer: unknown, correction: unknown) => {
+      try {
+        await corrections.set(printer, correction);
+        log.info(`printer correction ${correction === null ? 'removed' : 'stored'}`);
+      } catch (error) {
+        log.warn(
+          `printer correction refused: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw error;
+      }
+    },
+  );
 
   ipcMain.handle(IPC.getUserConfigDir, () => join(app.getPath('userData')));
 
