@@ -399,6 +399,82 @@ describe('buildSnapIndex across edits (PERF-004)', () => {
     }
   }
 
+  describe('recomputes only what an edit touched', () => {
+    // A work guard, not a timing: a crossing recomputed is a new point
+    // object, one read back is the very one computed before. Full rebuilds
+    // coming back make every point new.
+    const contour = (id: string, source: GeometrySource): Feature => ({
+      id,
+      kind: 'cut-contour',
+      role: 'outer',
+      name: id,
+      visible: true,
+      locked: false,
+      source,
+    });
+    const start: Project = {
+      id: 'p',
+      name: 'p',
+      settings: DEFAULT_SETTINGS,
+      guides: [{ id: 'g', origin: vec(5, 0), angleRad: Math.PI / 2 }],
+      parts: [
+        {
+          id: 'still',
+          name: 'Still',
+          quantity: 1,
+          features: [
+            contour('square', { kind: 'path', path: square }),
+            contour('bar', { kind: 'path', path: polyline([vec(-5, 7), vec(30, 7)]) }),
+          ],
+        },
+        {
+          id: 'moving',
+          name: 'Moving',
+          quantity: 1,
+          features: [
+            contour('ring', {
+              kind: 'shape',
+              shape: { type: 'circle', centre: vec(40, 10), radius: 8 },
+            }),
+          ],
+        },
+      ],
+    };
+    /** Each crossing's point, by what crossed and where. */
+    const crossingPoints = (index: SnapIndex): Map<string, Vec2> =>
+      new Map(
+        [...index.buckets.values()]
+          .flat()
+          .filter((c) => c.kind === 'intersection')
+          .map((c) => [`${c.featureId}/${c.guideId ?? ''}@${c.point.x},${c.point.y}`, c.point]),
+      );
+    const unchanged = (before: SnapIndex, after: SnapIndex, prefix: string): void => {
+      const now = crossingPoints(after);
+      const kept = [...crossingPoints(before)].filter(([key]) => key.startsWith(prefix));
+      expect(kept.length).toBeGreaterThan(0);
+      for (const [key, point] of kept) expect(now.get(key)).toBe(point);
+    };
+
+    it('carrying one piece keeps the crossings of the pieces it left alone', () => {
+      const before = buildSnapIndex(evaluate(start));
+      const moved = translateFeatures(['ring'], vec(3, 0)).apply({ project: start }).project;
+      const after = buildSnapIndex(evaluate(moved));
+
+      unchanged(before, after, 'square/@');
+      unchanged(before, after, 'square/g@');
+    });
+
+    it('dragging a guide keeps every crossing between features', () => {
+      const before = buildSnapIndex(evaluate(start));
+      const moved = setGuide({ id: 'g', origin: vec(9, 0), angleRad: Math.PI / 2 }).apply({
+        project: start,
+      }).project;
+      const after = buildSnapIndex(evaluate(moved));
+
+      unchanged(before, after, 'square/@');
+    });
+  });
+
   /** A copy sharing no object with what the index has seen, so nothing in it is reused. */
   const fullRebuild = (resolved: ResolvedProject): SnapIndex =>
     buildSnapIndex(structuredClone(resolved));

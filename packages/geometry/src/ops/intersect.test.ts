@@ -566,6 +566,37 @@ describe('intersectPaths', () => {
 
       expect(intersectPaths(wide, across)).toEqual(everyPairOfBoxes(wide, across));
     });
+
+    it('reads each segment a bounded number of times, not once per pair', () => {
+      // A work bound, not a timing: the guard against the nested loop coming
+      // back. Every read of a segment by index is counted. An outline of 1,000
+      // segments and its stitch line 3.5 mm inside, the audit's traced
+      // workload, cost a million reads before; a segment here meets the few
+      // of the other path near it.
+      const ring = (radius: number): Path =>
+        polyline(
+          Array.from({ length: 1000 }, (_, i) => {
+            const angle = (i / 1000) * Math.PI * 2;
+            return vec(300 + radius * Math.cos(angle), 300 + radius * Math.sin(angle));
+          }),
+          true,
+        );
+      let reads = 0;
+      const counted = (p: Path): Path =>
+        unsafePath(
+          new Proxy([...p.segments], {
+            get(target, key, receiver) {
+              if (typeof key === 'string' && /^\d+$/.test(key)) reads++;
+              return Reflect.get(target, key, receiver) as unknown;
+            },
+          }),
+          p.closed,
+        );
+
+      intersectPaths(counted(ring(290)), counted(ring(286.5)));
+
+      expect(reads).toBeLessThan(10 * 2000);
+    });
   });
 });
 
