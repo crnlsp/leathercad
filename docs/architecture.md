@@ -229,6 +229,9 @@ Two properties matter here:
   the print. What a sheet prints besides its pieces is one description, `sheetInk`, drawn by both.
   The plan is derived and never stored, and it depends on neither the window nor where pieces sit
   on the board.
+- **The PDF is written off the window's thread** (PERF-002): a renderer Web Worker runs the same
+  `exportPdf` on a clone of the plan and transfers the bytes back, and ending it cancels the write
+  ([printing.md](printing.md) §6.2a). The file reaches the disk only through the main process.
 - **The SVG backend renders the same `DisplayList` as the screen.** This makes SVG-string snapshots
   a valid proxy for "what does the canvas draw", which is the backbone of the rendering test
   strategy in [testing.md](testing.md) §5.
@@ -342,7 +345,8 @@ The built renderer loads from `app://leathercad/index.html` (R6), a standard, se
 Fetch support and CORS enforcement, without CSP bypass or service workers. Its protocol serves
 only GET/HEAD requests for bundled files under `out/renderer`: decoded paths and real targets
 must stay inside that directory, including when it is in `app.asar`. It never serves user files
-or forwards a network request. The `GrantFileProtocolExtraPrivileges` fuse is disabled. The Vite
+or forwards a network request. Its two workers, pdf.js's and the PDF writer's, load from it under
+`script-src 'self'` (`worker-src` falls back to it); the CSP names no `blob:`. The `GrantFileProtocolExtraPrivileges` fuse is disabled. The Vite
 URL is accepted only in an unpackaged development run; a packaged app always uses the bundled
 origin. See [ADR 0014](adr/0014-electron-builder-and-release-please.md#r6-amendment--a-bundled-app-origin-2026-10-23).
 
