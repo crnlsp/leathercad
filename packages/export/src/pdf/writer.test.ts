@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { NO_CORRECTION, type ScaleCorrection } from '@leathercad/core';
 import {
   DEFAULT_SETTINGS,
   ORIENTATIONS,
@@ -23,6 +24,7 @@ import {
   type PDFPage,
   type PDFRawStream,
 } from 'pdf-lib';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -37,9 +39,10 @@ import {
 } from '../paper.js';
 import { PRINT_STYLES, buildExportScene } from '../scene.js';
 import { sheetInk } from '../sheetInk.js';
+import { calibrationPage } from '../calibrationPage.js';
 import { planSheets } from '../sheetPlan.js';
 
-import { exportPdf } from './writer.js';
+import { exportCalibrationPdf, exportPdf, type PdfExportOptions } from './writer.js';
 
 const FIXED_NOW = (): Date => new Date('2026-09-04T12:00:00.000Z');
 
@@ -135,7 +138,10 @@ function projectWithRect(widthMm: number, heightMm: number, radius = 0): Project
   };
 }
 
-async function pdfFor(project: Project, options: { upright?: boolean } = {}): Promise<Uint8Array> {
+async function pdfFor(
+  project: Project,
+  options: Pick<PdfExportOptions, 'upright' | 'correction'> = {},
+): Promise<Uint8Array> {
   const scene = buildExportScene(evaluate(project), project.name);
   // What the application passes: the plan for the project's own paper.
   const { bytes } = await exportPdf(planSheets(scene, pageSetupFor(project.settings)), {
@@ -620,6 +626,147 @@ describe('the print form: every sheet upright on its paper (7.6b)', () => {
 });
 
 /**
+ * Where a point of the content lands on the paper, in points, through every
+ * `cm` on its page. A later `cm` acts on the content first: the first one on
+ * the page is the last applied.
+ */
+function onPaper(transforms: readonly number[][], x: number, y: number): [number, number] {
+  let point: [number, number] = [x, y];
+  for (const [a, b, c, d, e, f] of [...transforms].reverse()) {
+    const [px, py] = point;
+    point = [a! * px + c! * py + e!, b! * px + d! * py + f!];
+  }
+  return point;
+}
+
+describe('a printer’s correction, on the print form (7.5)', () => {
+  // Calibration (printing.md §8.2): a scale on the PDF's content stream, for
+  // the printer it was measured on. Only Print passes one.
+  const everySheet = PAPER_NAMES.flatMap((paper) =>
+    ORIENTATIONS.map((orientation) => [paper, orientation] as const),
+  );
+  const allowed = fc.double({ min: 0.98, max: 1.02, noNaN: true });
+
+  it.each(everySheet)(
+    'changes nothing at all for no correction, on %s %s, byte for byte',
+    async (paper, orientation) => {
+      const project = on(projectWithRect(275, 100), paper, orientation);
+      for (const upright of [false, true]) {
+        expect(await pdfFor(project, { upright, correction: NO_CORRECTION })).toEqual(
+          await pdfFor(project, { upright }),
+        );
+      }
+    },
+  );
+
+  it('scales a page by exactly the correction, about its middle, before anything is drawn', async () => {
+    const correction = { x: 1.005, y: 0.995 };
+    const document = await PDFDocument.load(
+      await pdfFor(projectWithRect(100, 50), { upright: true, correction }),
+    );
+    for (const page of document.getPages()) {
+      const transforms = transformsOn(page);
+      expect(transforms).toHaveLength(1);
+      const [a, b, c, d, e, f] = transforms[0]!;
+      expect([a, b, c, d]).toEqual([1.005, 0, 0, 0.995]);
+      // The middle of the paper stays where it is, so the margins shrink
+      // evenly on either side — by 0.5 % of half the paper at most.
+      const [mx, my] = onPaper(transforms, page.getWidth() / 2, page.getHeight() / 2);
+      expect(mx).toBeCloseTo(page.getWidth() / 2, 6);
+      expect(my).toBeCloseTo(page.getHeight() / 2, 6);
+      expect(e! / page.getWidth()).toBeCloseTo(-0.0025, 9);
+      expect(f! / page.getHeight()).toBeCloseTo(0.0025, 9);
+      expect(contentOf(page).trimStart()).toMatch(/^1\.005 0 0 0\.995 [-\d.]+ [-\d.]+ cm\b/);
+    }
+  });
+
+  it('makes every length on the paper the drawn length times the paper axis’s correction', async () => {
+    // A landscape sheet lies turned on its paper: the sheet's width runs
+    // along the paper, so the gauge's 100 mm takes the paper's y correction.
+    await fc.assert(
+      fc.asyncProperty(allowed, allowed, fc.constantFrom(...ORIENTATIONS), async (x, y, way) => {
+        const project = on(projectWithRect(100, 50), 'A4', way);
+        const document = await PDFDocument.load(
+          await pdfFor(project, { upright: true, correction: { x, y } }),
+        );
+        const transforms = transformsOn(document.getPages()[0]!);
+        const [x0, y0] = onPaper(transforms, 0, 0);
+        const [x1, y1] = onPaper(transforms, mmToPt(100), 0);
+        const along = way === 'portrait' ? x : y;
+        expect(Math.hypot(x1 - x0, y1 - y0) / mmToPt(100)).toBeCloseTo(along, 9);
+      }),
+      { numRuns: 25 },
+    );
+  });
+
+  it('cancels the printer it was measured on: printed lengths come back as drawn', async () => {
+    // A printer that prints r of every length, measured on the calibration
+    // page and corrected, prints the corrected PDF at the drawn size.
+    const { drawnMm } = calibrationPage(PAPER_SIZES.A4, FIXED_NOW());
+    const ratio = fc.double({ min: 0.985, max: 1.015, noNaN: true });
+    await fc.assert(
+      fc.asyncProperty(ratio, ratio, async (rx, ry) => {
+        const correction = { x: drawnMm.x / (drawnMm.x * rx), y: drawnMm.y / (drawnMm.y * ry) };
+        const document = await PDFDocument.load(
+          await pdfFor(projectWithRect(100, 50), { upright: true, correction }),
+        );
+        const transforms = transformsOn(document.getPages()[0]!);
+        const [x0, y0] = onPaper(transforms, 0, 0);
+        const [x1] = onPaper(transforms, mmToPt(drawnMm.x), 0);
+        const [, y1] = onPaper(transforms, 0, mmToPt(drawnMm.y));
+        expect(((x1 - x0) * rx) / mmToPt(drawnMm.x)).toBeCloseTo(1, 9);
+        expect(((y1 - y0) * ry) / mmToPt(drawnMm.y)).toBeCloseTo(1, 9);
+      }),
+      { numRuns: 25 },
+    );
+  });
+
+  it('refuses a correction beyond ±2 %: 1.03 is a print setting, not a printer', async () => {
+    for (const correction of [
+      { x: 1.03, y: 1 },
+      { x: 1, y: 0.97 },
+      { x: Number.NaN, y: 1 },
+    ] satisfies ScaleCorrection[]) {
+      await expect(pdfFor(projectWithRect(100, 50), { upright: true, correction })).rejects.toThrow(
+        RangeError,
+      );
+    }
+  });
+
+  it('says on every sheet that it was corrected', async () => {
+    const project = projectWithRect(100, 50);
+    const plan = planSheets(
+      buildExportScene(evaluate(project), project.name),
+      pageSetupFor(project.settings),
+    );
+    const corrected = await pdfFor(project, { upright: true, correction: { x: 1.005, y: 1 } });
+    const plain = await pdfFor(project, { upright: true });
+    // The strip's words are filled outlines, so a sheet that says something
+    // else is a different page; sheetInk's own test reads the words.
+    expect(sheetInk(plan, 0, FIXED_NOW(), { x: 1.005, y: 1 }).texts[2]!.source).toContain(
+      'corrected for its printer',
+    );
+    expect(corrected.length).not.toBe(plain.length);
+  });
+});
+
+describe('the calibration page’s PDF (7.5)', () => {
+  it.each(PAPER_NAMES)(
+    'is one upright %s page with no transform at all, whatever the printer',
+    async (paper) => {
+      const { bytes } = await exportCalibrationPdf(PAPER_SIZES[paper], { now: FIXED_NOW });
+      const document = await PDFDocument.load(bytes);
+      expect(document.getPageCount()).toBe(1);
+      const page = document.getPages()[0]!;
+      expect(page.getWidth()).toBeCloseTo(mmToPt(PAPER_SIZES[paper].widthMm), 4);
+      expect(page.getHeight()).toBeCloseTo(mmToPt(PAPER_SIZES[paper].heightMm), 4);
+      expect(page.getRotation().angle).toBe(0);
+      expect(transformsOn(page)).toEqual([]);
+    },
+  );
+});
+
+/**
  * Rasterises the PDF and measures the result in pixels.
  *
  * The strongest check available short of a steel rule: it renders through
@@ -1077,4 +1224,49 @@ describe.skipIf(!HAS_POPPLER)('rendered output', () => {
     expect(corner).toBeGreaterThan(200);
     expect(midEdge).toBeLessThan(128);
   });
+});
+
+describe.skipIf(!HAS_POPPLER)('a printer’s correction, rendered (7.5)', () => {
+  it('prints geometry 0.5 % larger for a 1.005 correction (printing.md §14)', async () => {
+    // Everything above the strip, which the correction moves too.
+    const [, stripTop] = contentRows();
+    const measure = async (options: Pick<PdfExportOptions, 'correction'>) => {
+      const bytes = await pdfFor(projectWithRect(180, 100), { upright: true, ...options });
+      const bounds = darkBounds(render(bytes), 0, stripTop);
+      return {
+        widthMm: (bounds.maxX - bounds.minX) / PX_PER_MM,
+        heightMm: (bounds.maxY - bounds.minY) / PX_PER_MM,
+      };
+    };
+    const plain = await measure({});
+    const corrected = await measure({ correction: { x: 1.005, y: 1.005 } });
+    // 0.5 % of 180 and of 100 mm, within a pixel and the stroke's edge.
+    expect(Math.abs(corrected.widthMm - plain.widthMm - 0.9)).toBeLessThan(0.2);
+    expect(Math.abs(corrected.heightMm - plain.heightMm - 0.5)).toBeLessThan(0.2);
+  });
+
+  it.each(PAPER_NAMES)(
+    'prints the calibration page’s lines on %s as long as it says they are',
+    async (paper) => {
+      const size = PAPER_SIZES[paper];
+      const { bytes } = await exportCalibrationPdf(size, { now: FIXED_NOW });
+      const image = render(bytes);
+      const { drawnMm } = calibrationPage(size, FIXED_NOW());
+      // The horizontal line's row, 20 mm under the top margin, and the
+      // vertical line's column, on the left margin: a band either side of
+      // each, clear of the words, holds the line and its end ticks.
+      const row = Math.round((10 + 20) * PX_PER_MM);
+      const across = darkBounds(image, row - 2, row + 3);
+      const column = Math.round(10 * PX_PER_MM);
+      const down = darkBounds(image, row + 10 * PX_PER_MM, image.height, column - 2, column + 3);
+      // Between the end ticks' outer edges: the length and one 0.2 mm stroke.
+      for (const [inkPx, drawn] of [
+        [across.maxX - across.minX, drawnMm.x],
+        [down.maxY - down.minY, drawnMm.y],
+      ] as const) {
+        expect(inkPx / PX_PER_MM).toBeGreaterThan(drawn - 0.1);
+        expect(inkPx / PX_PER_MM).toBeLessThan(drawn + 0.4);
+      }
+    },
+  );
 });

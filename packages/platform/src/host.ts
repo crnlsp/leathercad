@@ -1,3 +1,5 @@
+import type { ScaleCorrection } from '@leathercad/core';
+
 /** A file-type filter shown in a native open/save dialog. */
 export interface FileFilter {
   /** Human-readable label, e.g. "LeatherCAD project". */
@@ -60,6 +62,21 @@ export interface PlatformHost {
    * rejects with what it said when it refused.
    */
   printPdf(data: Uint8Array, job: PrintJob): Promise<string>;
+
+  /**
+   * The scale correction a printer was calibrated with (7.5), stored in the
+   * app's configuration directory, never in a project. `NO_CORRECTION` for a
+   * printer never calibrated, and when the file is missing or damaged. See
+   * docs/printing.md §8.2.
+   */
+  getPrinterCorrection(printer: string): Promise<ScaleCorrection>;
+
+  /**
+   * Stores a printer's correction, or forgets it with `null`. Rejects a
+   * correction beyond ±2 % on either axis, or a printer name that is none,
+   * and then keeps the correction it had. Resolves once it is on disk.
+   */
+  setPrinterCorrection(printer: string, correction: ScaleCorrection | null): Promise<void>;
 
   /**
    * Directory for application preferences — theme, recent files, printer

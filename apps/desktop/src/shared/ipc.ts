@@ -12,6 +12,8 @@ export const IPC = {
   openInExternalViewer: 'platform:openInExternalViewer',
   listPrinters: 'platform:listPrinters',
   printPdf: 'platform:printPdf',
+  getPrinterCorrection: 'platform:getPrinterCorrection',
+  setPrinterCorrection: 'platform:setPrinterCorrection',
   getUserConfigDir: 'platform:getUserConfigDir',
   getAppVersion: 'platform:getAppVersion',
   setDocumentEdited: 'platform:setDocumentEdited',

@@ -22,7 +22,7 @@ Accuracy budget:
 | Model → export scene | 0 mm | Exact; no transform applied |
 | Curve flattening | ≤ 0.005 mm | Tolerance constant, asserted in tests |
 | mm → PDF points | ≤ 1e-9 mm | Exact rational factor, double precision |
-| PDF → paper | printer-dependent | Verification square + calibration correction |
+| PDF → paper | printer-dependent | Verification gauge + calibration correction (§8) |
 
 The first three are the software's responsibility and are tested automatically. The fourth is the
 printer's, and the job of the software is to make any error *visible* rather than to hide it.
@@ -174,8 +174,9 @@ interface PageSetup {
   overlapMm: number;                      // default 10
   mode: 'tiled' | 'fit-single-page';
   registration: RegistrationOptions;
-  scaleCorrection?: { x: number; y: number };   // see §8
 }
+// A printer's scale correction is not part of the page setup: it belongs to the printer, and
+// only Print applies it, as an option of the PDF writer (§8.2).
 
 function paginate(scene: ExportScene, setup: PageSetup): Page[];
 
@@ -336,6 +337,18 @@ reads the right way when the paper is turned a quarter clockwise. It is the turn
   without (§13).
 - A portrait sheet is the same in both forms, byte for byte.
 
+**And one scale, only when a maker asked for it (7.5): a printer's calibrated correction.** Print to
+a printer that was calibrated (§8.2) puts one more `cm` first on every page, before the turn, so it
+acts on the paper's own axes:
+
+```
+x 0 0 y  W/2·(1 − x)  H/2·(1 − y)  cm     % about the paper's middle; W, H the paper in points
+```
+
+`x` and `y` are within ±2 % of 1, and the writer throws on anything else. Without a correction —
+every file, every print to a printer never calibrated — no such `cm` is written and the bytes are
+exactly what they were.
+
 ### 6.2 Per-page structure
 
 1. MediaBox = exact sheet size in points; in the print form, the paper upright, with a landscape
@@ -486,24 +499,57 @@ Some printers are genuinely, measurably off — laser printers commonly differ b
 percent, and often **differ between the two axes**, because the paper-feed direction and the
 scanning direction have independent error sources.
 
-A calibration wizard:
+**As built in 7.5.** A step of the Print Preview (§13), under the printer chosen there —
+*Calibrate this printer…*, or *Calibrate again…* and *Remove correction* for one already
+calibrated:
 
-1. Prints a test page with a 200 mm horizontal line and a 200 mm vertical line, each with tick
-   marks.
-2. Asks the user to measure both and enter the actual lengths.
-3. Stores `scaleCorrection = { x: 200 / measuredX, y: 200 / measuredY }` per printer in
-   `~/.config/leathercad/printers.json`.
-4. Applies the correction as a scale on the PDF content stream for that printer only.
+1. *Print calibration page* sends one page to that printer, on the project's paper, upright, with
+   the job every print gets: a horizontal line across the paper and a vertical line along it, each
+   ticked every 10 mm, longer every 50 mm and at its ends, and labelled with its length
+   (`calibrationPage` in `packages/export`). Each line is the longest the paper takes inside its
+   10 mm margins in whole centimetres, up to 200 mm: **190 × 200 mm on A4, Letter and Legal**, 200 × 200
+   on A3, 120 × 150 on A5 — 200 mm does not fit across a sheet 210 mm wide. The page is
+   never corrected, so what is measured is the printer's own error, whatever was stored before.
+2. The maker measures both lines end to end with a steel rule and enters the lengths, quantised
+   like every length typed. The step shows what the correction will do — *scaled +0.50 % across
+   the paper and −0.12 % along it* — before it is saved.
+3. `scaleCorrection = { x: drawnX / measuredX, y: drawnY / measuredY }` (`correctionFrom` in
+   `packages/core`), exactly that division, is stored against the printer's CUPS queue name — the
+   name the print job's `-d` takes, `lpstat -e`'s — in `printers.json` in the app's configuration
+   directory, beside `preferences.json` (file-format §6). A reading equal to the drawn length
+   stores nothing.
+4. From then on the Print Preview writes the PDF for that printer with the correction (§6.1): one
+   scale on each page's content stream, on the paper's axes, about its middle. The preview shows
+   those bytes, as it shows every PDF it sends. Print waits for the chosen printer's correction to
+   be known, so a calibrated printer is never sent an uncorrected job.
+
+`x` is across the paper and `y` along it, as it goes through the printer. A landscape sheet lies
+turned on its upright page (§6.1), so its own width takes the paper's `y`.
 
 Guard rails, because this feature can also *cause* the problem it solves:
 
-- Default is always `{ x: 1, y: 1 }`.
-- A correction beyond ±2 % is rejected with: "This is almost certainly a print-settings problem, not
-  a printer problem. Check that scaling is set to 100 % / Actual size and try again."
+- Default is always `{ x: 1, y: 1 }`, and it writes the PDF byte for byte as before.
+- A correction beyond ±2 % on either axis — `CORRECTION_LIMIT`, the edge itself allowed — is refused
+  with: "This is almost certainly a print-settings problem, not a printer problem. Check that
+  scaling is set to 100 % / Actual size and try again." The wizard says it and will not save; the
+  main process refuses one over IPC; `printers.json` drops one on reading; the PDF writer throws on
+  one.
 - The correction is stored against a printer name and **never travels in the `.lcp` file** — it
   describes the user's hardware, not the pattern.
-- Any PDF exported with a correction applied says so in its footer, so a corrected file shared with
-  someone else is identifiable.
+- **Only Print applies it.** *Export PDF* writes a file, which has no printer, and the preview's
+  *Save PDF…* is offered only where the app cannot print — so with no printer chosen, and no
+  correction. The Sheets view draws the sheets uncorrected.
+- A sheet printed with a correction says so where it says `1:1` otherwise:
+  `2026-10-28 · corrected for its printer: x 1.0050, y 0.9988 · LeatherCAD`. It no longer says
+  1:1, because in its own units it is not: its gauge is 100.5 mm in a viewer, and measures 100 mm
+  only from the printer it was corrected for. The gauge's own words stay — on that printer's
+  paper, the box is 100 × 5 mm.
+- A damaged `printers.json` is no correction, never a crash; the store writes atomically, and a
+  correction counts as stored only once it is on disk.
+
+**Not measured on paper yet.** The tests prove the PDF carries exactly the correction and the
+calibration page exactly its lengths; no printer has been calibrated with it and measured
+(`print-verification-log.md`).
 
 ## 9. Physical verification ritual
 
@@ -764,6 +810,7 @@ of what prints:
 | Paper, orientation | The project's own page setup, `setPageSetup`: one undo step, and the PDF is written again |
 | Which sheets | Ticked in the sheet list; sent as `-P`, so CUPS leaves the rest out of the same file |
 | Copies | 1–99, `-n` |
+| Calibration (7.5) | The chosen printer's correction, *Calibrate this printer…* and *Remove correction* (§8.2): measured on paper, never typed as a percentage |
 
 Scale is shown as *100 % — locked*: there is no fit, shrink or percentage anywhere. Every job is:
 
@@ -829,7 +876,7 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 |---|---|
 | PDF dimension round trip | Export, rasterise with poppler's `pdftoppm` at 254 dpi, and measure the square, the ruler and the pattern in pixels, within a pixel (0.1 mm) |
 | MediaBox exactness | A4 page MediaBox equals 595.276 × 841.890 pt within 0.001 pt |
-| No scaling transform | The content stream contains no `cm` operator at all in a file, and in the print form exactly one on each landscape sheet, first: `0 1 -1 0 W 0`, determinant 1, unit columns (`writer.test.ts`) |
+| No scaling transform | The content stream contains no `cm` operator at all in a file, and in the print form exactly one on each landscape sheet, first: `0 1 -1 0 W 0`, determinant 1, unit columns — and before it, only for a calibrated printer, the correction's (`writer.test.ts`) |
 | The print form | Every page of every paper and orientation upright, unrotated and as many as the plan's sheets; a portrait sheet byte for byte the file's; on every paper's landscape sheet, turned back, a 100 mm line and the gauge measure true through poppler (`writer.test.ts`) |
 | Tiling coverage | For a 400 × 300 mm scene on A4, exactly 6 pages; the union of content rects covers the bounds with no gap; every adjacent pair overlaps by exactly 10 mm |
 | Tiling edge cases | Drawing smaller than one page → 1 page; exactly one page wide; overlap ≥ content width rejected; zero-size scene handled |
@@ -838,7 +885,10 @@ Full strategy in [testing.md](testing.md) §6; the obligations specific to this 
 | Y-axis orientation | A point at model y = +10 exports above one at y = 0, in both SVG and PDF |
 | Stroke widths | Exported widths are the specified true millimetres, not screen widths |
 | Preview equals print | `paginate()` output used by the preview is deep-equal to the one used by the PDF writer for the same setup |
-| Calibration correction | A 1.005 correction produces geometry 0.5 % larger, and a 1.03 correction is rejected |
+| Calibration correction | A 1.005 correction produces geometry 0.5 % larger through poppler, and a 1.03 correction is rejected, by `correctionFrom` and by the writer. Properties: the correction is exactly drawn ÷ measured; the ±2 % guard holds at its edge; on paper every length is the drawn one times its paper axis's factor, a landscape sheet's width taking `y`; a printer's ratio times its correction gives the drawn length back; `{1, 1}` writes the same bytes on every paper and orientation, in both forms (`core/calibration.test.ts`, `writer.test.ts`) |
+| The calibration page | On every paper, one horizontal and one vertical line in whole centimetres up to 200 mm, the longest the margins allow, ticked every 10 mm, all its ink inside the margins; printed on one upright page with no `cm`, its lines measure their lengths through poppler (`calibrationPage.test.ts`, `writer.test.ts`) |
+| The strip of a corrected sheet | Says `corrected for its printer: x …, y …` in place of `1:1`, fits beside the gauge on every paper, and is the uncorrected strip for `{1, 1}` (`sheetInk.test.ts`) |
+| Calibrating through the app | The page goes to the fake `lp` alone, uncorrected, with the job's options; a reading 3 % short is refused with §8.2's sentence; a correction is stored in `printers.json` and the next print's gauge measures 100 mm times it; removing it empties the file (`e2e/calibration.spec.ts`). `printers.json` read damaged is no correction, and a failed write keeps the one before (`printerCorrections.test.ts`) |
 | Export round trip | Random lines, arcs and cubics exported to SVG and DXF and read back by hand are the model's curves, moved (and flipped, for SVG), within 0.5 µm — within 0.0055 mm for a flattened cubic; everything is inside the declared page (`svg/writer.test.ts`, `dxf/writer.test.ts`). The print test exported through the app measures 100.0 mm, 25 holes 3.875 mm apart and 275.0 mm in both files (`e2e/vector-export.spec.ts`) |
 | DXF dialect and units | R12 with `$INSUNITS = 4` and `$MEASUREMENT = 1`; a counter-clockwise arc keeps its angles and a clockwise one is written from its far end; every layer is a role's name; a dash is its true millimetre rhythm; `\r\n` and ASCII only (`dxf/writer.test.ts`) |
 | Layer presets | A laser-cut export contains cut and hardware items and no stitch-line or annotation items, in the scene, the SVG and the DXF (`presets.test.ts`, `e2e/export-dialog.spec.ts`) |

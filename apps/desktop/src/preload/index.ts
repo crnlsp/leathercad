@@ -30,6 +30,12 @@ const platformBridge = {
   printPdf: (data: Uint8Array, job: unknown): Promise<string> =>
     ipcRenderer.invoke(IPC.printPdf, data, job),
 
+  getPrinterCorrection: (printer: string): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.getPrinterCorrection, printer),
+
+  setPrinterCorrection: (printer: string, correction: unknown): Promise<void> =>
+    ipcRenderer.invoke(IPC.setPrinterCorrection, printer, correction),
+
   getUserConfigDir: (): Promise<string> => ipcRenderer.invoke(IPC.getUserConfigDir),
 
   getAppVersion: (): Promise<string> => ipcRenderer.invoke(IPC.getAppVersion),

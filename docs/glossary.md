@@ -220,3 +220,7 @@ the leather.
    steel rule.
 2. *Correction*: a stored per-printer scale factor applied to output to compensate for a printer
    that is measurably off. Correction is a last resort; wrong print settings are the usual cause.
+   One factor across the paper (`x`) and one along it (`y`), each the *calibration page*'s drawn
+   line over its measured length, refused beyond ±2 %, and applied only when the app prints to that
+   printer (7.5, [printing.md](printing.md) §8.2). The *calibration page* is the page it is measured
+   from: a ticked horizontal and vertical line, up to 200 mm, printed uncorrected.

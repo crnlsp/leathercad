@@ -274,8 +274,30 @@ with the packaged app.
   lie, without overlap, reduced alike both ways and never mirrored, and its words fit the narrowest
   sheet. Tape guides are left. Not measured on paper yet.
   [Printing §7](printing.md#7-registration-and-assembly-aids).
-- ☐ **7.5 Calibration.** Per-printer correction factors, with a ±2 % guard. The verification
+- ✅ **7.5 Calibration.** Per-printer correction factors, with a ±2 % guard. The verification
   gauge already shows when a printer is off.
+  **Done** (2026-10-28): the Print Preview has *Calibrate this printer…* under the printer chosen
+  there. It prints a calibration page to that printer, uncorrected and with the job every print
+  gets: a horizontal line across the paper and a vertical line along it, ticked every 10 mm, each
+  the longest the margins take in whole centimetres up to 200 mm — 190 × 200 mm on A4, since
+  200 mm does not fit across 210. The maker enters what the lines measure, and the correction —
+  drawn over measured on each axis, exactly — is stored against the printer's CUPS name in
+  `printers.json` in the configuration directory, never in the `.lcp`. A reading more than 2 % off
+  on either axis is refused with printing §8.2's sentence about print settings; the main process,
+  the file's reader and the PDF writer refuse one too. From then on Print writes that printer's PDF
+  with one scale first on each page, on the paper's axes and about its middle, and the preview
+  shows those bytes; Print waits until the printer's correction is known. A corrected sheet says
+  `corrected for its printer: x 1.0050, y 0.9988` where it says `1:1` otherwise, because in its own
+  units it is no longer 1:1. *Export PDF*, the Sheets view and *Save PDF…* — offered only where the
+  app cannot print, so with no printer — never carry one. *Remove correction* goes back to
+  `{1, 1}`, which writes the same bytes as before 7.5. Property tests: the correction is exactly
+  drawn ÷ measured; the guard holds at its edge; every length on paper is the drawn one times its
+  paper axis's factor, a landscape sheet's width taking `y`; a printer's ratio times its correction
+  gives the drawn length back; `{1, 1}` changes no byte on any paper in either form. Through
+  poppler, a 1.005 correction prints 0.5 % larger and the calibration page's lines measure their
+  lengths; an end-to-end test calibrates the fake CUPS printer and measures its next print's gauge.
+  Not measured on paper yet: no real printer has been calibrated with it.
+  [Printing §8.2](printing.md#82-correction--opt-in-per-printer-a-last-resort).
 
 ### Known issues and findings
 

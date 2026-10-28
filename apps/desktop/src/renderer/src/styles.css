@@ -3018,6 +3018,32 @@ body {
   color: var(--warning);
 }
 
+/* Calibration (7.5): the printer's correction under its name, and the step
+   that measures it, in place of the options while it is open. */
+.print-correction,
+.print-calibration {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.print-correction p,
+.print-calibration p,
+.print-calibration h4 {
+  margin: 0;
+}
+
+.print-calibration h4 {
+  font: var(--t-label);
+}
+
+.print-calibration-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-self: flex-end;
+}
+
 .print-actions {
   align-items: center;
   margin: 0;

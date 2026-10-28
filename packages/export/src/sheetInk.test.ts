@@ -1,5 +1,7 @@
+import { NO_CORRECTION } from '@leathercad/core';
 import { PathOps, RectOps, polyline } from '@leathercad/geometry';
 import { ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
+import { missingGlyphs, textWidthMm } from '@leathercad/typography';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -216,5 +218,33 @@ describe('what a sheet prints besides its pieces (7.4c)', () => {
 
   it('is the same ink for the same plan and clock', () => {
     expect(sheetInk(plan, 1, NOW)).toEqual(sheetInk(plan, 1, NOW));
+  });
+});
+
+describe('a sheet printed with a printer’s correction (7.5)', () => {
+  const plan = planSheets(scene([part('panel', 100, 70)]), DEFAULT_PAGE_SETUP);
+  /** The strip's second line: where the sheet came from. */
+  const whereFrom = (texts: readonly { source: string }[]) => texts[2]!.source;
+
+  it('says it was corrected, and by how much, where it says 1:1 otherwise', () => {
+    expect(whereFrom(sheetInk(plan, 0, NOW).texts)).toBe('2026-09-24 · 1:1 · LeatherCAD');
+    expect(whereFrom(sheetInk(plan, 0, NOW, { x: 1.005, y: 0.99764 }).texts)).toBe(
+      '2026-09-24 · corrected for its printer: x 1.0050, y 0.9976 · LeatherCAD',
+    );
+  });
+
+  it('is the uncorrected sheet for no correction', () => {
+    expect(sheetInk(plan, 0, NOW, NO_CORRECTION)).toEqual(sheetInk(plan, 0, NOW));
+  });
+
+  it('fits what it says beside the gauge, on every paper', () => {
+    for (const setup of SETUPS) {
+      const sized = planSheets(scene([part('panel', 100, 70)]), setup);
+      const line = sheetInk(sized, 0, NOW, { x: 0.98, y: 1.02 }).texts[2]!;
+      expect(missingGlyphs(line.source)).toEqual([]);
+      expect(textWidthMm(line.source, line.sizeMm)).toBeLessThanOrEqual(
+        verificationLayout(setup).textMaxWidthMm,
+      );
+    }
   });
 });

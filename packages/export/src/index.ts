@@ -55,7 +55,10 @@ export type { SheetFrame, SheetGroup, SheetsLayout } from './sheetsLayout.js';
 export { layoutSheets, pieceAt, sheetAt } from './sheetsLayout.js';
 
 export type { PdfExportOptions, PdfExportResult } from './pdf/writer.js';
-export { exportPdf, printableAreaMm } from './pdf/writer.js';
+export { exportCalibrationPdf, exportPdf, printableAreaMm } from './pdf/writer.js';
+
+// A printer's calibration (7.5): the page its correction is measured from.
+export { calibrationLengths } from './calibrationPage.js';
 
 // The drawing as a file a cutter, a plotter or a vector editor reads (6.2): the
 // export scene, where the maker put the pieces, in true millimetres.

@@ -1,7 +1,8 @@
 /**
  * @leathercad/core — the bottom layer.
  *
- * Tolerances, quantisation, guards, ids, Result, and how a number is written.
+ * Tolerances, quantisation, guards, ids, Result, how a number is written, and
+ * a printer's scale correction, which the four layers that touch it must agree on.
  * Imports nothing.
  * Everything else in the workspace is built on top of it.
  */
@@ -56,3 +57,12 @@ export { assertFinite, invariant } from './guard.js';
 export { CROCKFORD_ALPHABET, createIdFactory, type IdSource, type Ulid } from './id.js';
 
 export { err, isErr, isOk, ok, unwrap, type Err, type Ok, type Result } from './result.js';
+
+export {
+  CORRECTION_LIMIT,
+  NO_CORRECTION,
+  correctionFrom,
+  isAllowedCorrection,
+  isNoCorrection,
+  type ScaleCorrection,
+} from './calibration.js';
