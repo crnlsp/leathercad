@@ -444,6 +444,22 @@ describe('reset', () => {
     store.reset(emptyDocument('other'));
     expect(store.inTransaction).toBe(false);
   });
+
+  it('tells its reset listeners, and only on a reset (Q39)', () => {
+    // A tool half through a gesture belongs to the document that was replaced.
+    const store = new DocumentStore(docWithRect());
+    let resets = 0;
+    const stop = store.onReset(() => resets++);
+
+    store.dispatch(renameFeature('feat-1', 'A'));
+    expect(resets).toBe(0);
+    store.reset(emptyDocument('other'));
+    expect(resets).toBe(1);
+
+    stop();
+    store.reset(emptyDocument('again'));
+    expect(resets).toBe(1);
+  });
 });
 
 describe('subscribe', () => {

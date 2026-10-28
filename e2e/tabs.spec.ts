@@ -9,7 +9,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { drawAPanel, expectNoViolations, launchApp, openSample, withApp } from './launchApp.js';
@@ -628,4 +628,43 @@ test('a new project from a template, and any project saved as one (8.14)', async
     },
     { env: { XDG_CONFIG_HOME: config } },
   );
+});
+
+/** The work bar offers *Enter finishes* a run only while a shape is under way (U.11). */
+const finishes = (window: Page): Locator =>
+  window.getByTestId('tool-how-to').locator('[data-hint="hints.finishes"]');
+
+/** Two clicks of the Polyline tool: a run under way, with the hint to say so. */
+async function startPolyline(window: Page): Promise<void> {
+  await window.getByTestId('tool-polyline').click();
+  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+  await window.mouse.click(box.x + 200, box.y + 200);
+  await window.mouse.click(box.x + 300, box.y + 230);
+  await window.mouse.move(box.x + 350, box.y + 260);
+  await expect(finishes(window)).toBeVisible();
+}
+
+test('a polyline half drawn is given up when a project opens over its tab (Q39)', async () => {
+  await withApp(async (window) => {
+    await startPolyline(window);
+    await openSample(window);
+    await expect(finishes(window)).toHaveCount(0);
+  });
+});
+
+test('a polyline half drawn is given up when its tab reloads from disk (Q39)', async () => {
+  await withApp(async (window, app) => {
+    const file = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Belt.lcp');
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, file);
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+
+    await startPolyline(window);
+    await window.getByTestId('project-tab').first().click({ button: 'right' });
+    await window.getByTestId('tab-reload').click();
+    await expect(finishes(window)).toHaveCount(0);
+  });
 });

@@ -10,6 +10,7 @@ import { PathOps, vec, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
+import { createPolylineTool } from './tools/polylineTool.js';
 import { ToolManager, type PointerInput, type Tool, type ToolContext } from './tool.js';
 import { Viewport } from './viewport.js';
 
@@ -345,5 +346,29 @@ describe('ToolManager isolating a failing tool (3.11)', () => {
     manager.overlay();
     manager.overlay();
     expect(reports).toHaveLength(2);
+  });
+});
+
+describe('ToolManager cancelling what is under way (Q39)', () => {
+  it('gives up a polyline half drawn, as Escape does, so the next click starts a new one', () => {
+    const { store, viewport } = harness();
+    const polyline = createPolylineTool(() => 'id');
+    const context: ToolContext = {
+      viewport,
+      store,
+      dispatch: (command) => store.dispatch(command),
+      invalidate: () => {},
+    };
+    const tools = new ToolManager(context, polyline, [polyline]);
+    for (const at of [vec(0, 0), vec(10, 0)]) {
+      tools.pointerDown(pointer(at));
+      tools.pointerUp(pointer(at));
+    }
+    expect(tools.underway()).toBe(true);
+
+    tools.cancel();
+
+    expect(tools.underway()).toBe(false);
+    expect(tools.overlay().items).toEqual([]);
   });
 });

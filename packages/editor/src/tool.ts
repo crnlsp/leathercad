@@ -324,6 +324,17 @@ export class ToolManager {
     this.context.invalidate();
   }
 
+  /**
+   * Gives up whatever the active tool has half done, as Escape does, and
+   * stays on that tool: a project was opened under it (Q39). Every tool
+   * returns to idle on deactivating, which is the same thing.
+   */
+  cancel(): void {
+    this.active.onDeactivate?.(this.context);
+    this.caught = null;
+    this.context.invalidate();
+  }
+
   pointerDown(event: PointerInput): void {
     this.active.onPointerDown?.(this.context, this.snapped(event));
   }

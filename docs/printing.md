@@ -356,7 +356,10 @@ exactly what they were.
 2. Translate so the tile's `contentRectMm` origin lands at `originOnPaperMm`.
 3. Clip to the content rect **plus the overlap band**, so overlapping content appears on both
    neighbouring pages, which is what makes taping possible.
-4. Draw the scene items intersecting that rect.
+4. Draw the scene items intersecting that rect. On a tile, a path or glyph contour whose box —
+   grown by its stroke's widest reach and a raster allowance — misses the clip is not written
+   (`export/src/pdf/reach.ts`, PERF-002). The clip hides it anyway: every page renders
+   pixel-for-pixel as it did when each tile carried the whole piece.
 5. Draw registration marks (§7) outside the clip.
 6. Draw the verification strip (§8.1) at the foot of the printable area: the gauge with the
    instruction to print at 100 % in it, and beside it the project name, the sheet label ("Sheet 2

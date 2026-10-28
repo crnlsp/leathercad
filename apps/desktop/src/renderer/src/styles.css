@@ -1475,14 +1475,11 @@ body {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  color: var(--text-mute);
+  /* text-mute is under 4.5 : 1 on the bar; text-dim is AA there (theme.test.ts). */
+  color: var(--text-dim);
   font: var(--t-label);
   font-weight: 400;
   white-space: nowrap;
-}
-
-.save-state.unsaved {
-  color: var(--text-dim);
 }
 
 .save-state.unsaved .icon {

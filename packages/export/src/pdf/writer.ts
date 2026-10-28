@@ -48,6 +48,7 @@ import {
 } from '../paper.js';
 import type { ExportPath, ExportText } from '../scene.js';
 import { APP_NAME, sheetInk, type SheetInk } from '../sheetInk.js';
+import { inkReaches } from './reach.js';
 import type { SheetPlan } from '../sheetPlan.js';
 
 export interface PdfExportOptions {
@@ -206,15 +207,26 @@ function drawPage(page: PDFPage, layout: Page, ink: SheetInk): void {
     );
   }
 
+  // A tile shows a window of its piece, and the rest is clipped away: what the
+  // clip would hide whole is not written at all, rather than written on every
+  // one of the piece's sheets (PERF-002). `inkReaches` keeps anything whose
+  // ink could land inside, a stroke's width and more beyond its line.
+  const onSheet = (path: Path, offsetMm: Vec2, strokeWidthMm: Mm): boolean =>
+    ink.clip === null || inkReaches(path, offsetMm, ink.clip, strokeWidthMm);
+
   for (const placement of layout.placements) {
+    const { offsetMm } = placement;
     for (const item of placement.part.paths) {
-      drawPath(page, item, placement.offsetMm);
+      if (!onSheet(item.path, offsetMm, item.filled === true ? 0 : item.style.widthMm)) continue;
+      drawPath(page, item, offsetMm);
     }
 
     // The caption was laid out with the part, in the part's own coordinates,
-    // so it travels with it to wherever the paginator put the piece.
+    // so it travels with it to wherever the paginator put the piece. A glyph
+    // contour clear of the clip adds nothing to the fill inside it.
     for (const text of placement.part.texts) {
-      drawText(page, text, placement.offsetMm);
+      const glyphs = text.glyphs.filter((glyph) => onSheet(glyph, offsetMm, 0));
+      drawText(page, glyphs.length === text.glyphs.length ? text : { ...text, glyphs }, offsetMm);
     }
   }
 
