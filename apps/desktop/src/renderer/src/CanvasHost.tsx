@@ -559,6 +559,11 @@ export function CanvasHost({
   // Any change to the document or selection means a repaint.
   useEffect(() => store.subscribe(invalidate), [store, invalidate]);
 
+  // A project read into this tab (reload) is a different document: a polyline
+  // half drawn, a rubber band, a first click all belong to the one it replaced
+  // (Q39). Opening and switching tabs make this component again, with new tools.
+  useEffect(() => store.onReset(() => managerRef.current?.cancel()), [store]);
+
   // The first frame can be painted before the vendored typeface has loaded,
   // which would leave the board's words in a fallback face. Repaint once every
   // weight the canvas sets is here: Regular, and the Medium and SemiBold of the

@@ -51,6 +51,7 @@ export class DocumentStore {
   private transaction: { label: HistoryLabel; base: HistoryEntry } | null = null;
 
   private listeners = new Set<() => void>();
+  private resetListeners = new Set<() => void>();
 
   /**
    * How many steps of history to keep.
@@ -79,6 +80,16 @@ export class DocumentStore {
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * Called when `reset` replaces the document — open, reload — and for no
+   * other change, so what is half done against the old one can be dropped
+   * (Q39).
+   */
+  onReset(listener: () => void): () => void {
+    this.resetListeners.add(listener);
+    return () => this.resetListeners.delete(listener);
   }
 
   /**
@@ -212,6 +223,7 @@ export class DocumentStore {
     this.past = [];
     this.future = [];
     this.present = { document, selection: EMPTY_SELECTION, label };
+    for (const listener of this.resetListeners) listener();
     this.emit();
   }
 

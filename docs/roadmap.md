@@ -640,8 +640,13 @@ release until it is moved into one.
   cubic's ray crossing is near-tangent below `EPS_POINT` (was 1e-9), the path measure's table
   spacing is floored at `EPS_LENGTH` (was 1e-6), and the scale tool's grab is on the pivot within
   `EPS_POINT` (was 1e-6). No snapshot or golden file changed.
-- **Q39 A tool under way is not reset when a project opens** — only an open drag is rolled back,
-  so a polyline half drawn continues into the new project.
+- ✅ **Q39 A tool under way is not reset when a project opens** — only an open drag is rolled back,
+  so a polyline half drawn continues into the new project. Fixed (2026-10-28): opening, a template,
+  a recent project and a tab switch already made the board again — `CanvasHost` is keyed by the tab
+  — so its tools started idle; the one route that kept them was *Reload from disk*, which replaces
+  the tab's document in place. `DocumentStore.reset` now tells `onReset` listeners, and the board
+  answers with `ToolManager.cancel()`: the active tool gives up what it had half done, as Escape
+  does, and stays selected. The e2e tests open a project over a half-drawn polyline and reload one.
 - ✅ **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF
   writers that ship; fixing it moves the committed baseline. Fixed (2026-10-26): *write the SVG*
   and *write the DXF* time `exportSvg` and `exportDxf` on the benchmark strap, through the
