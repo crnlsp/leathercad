@@ -448,7 +448,8 @@ function haloed(page: SheetsPage, emphasis: SheetsEmphasis): SheetsPage {
   });
   if (marked.length === 0) return page;
 
-  const key = marked.map(({ one, colour }) => `${String(one.start)}${colour}`).join();
+  // The part too: two pieces share a `start` when the first emits nothing.
+  const key = marked.map(({ one, colour }) => `${one.partId}@${String(one.start)}${colour}`).join();
   const known = halos.get(page);
   if (known?.key === key) return known.page;
 

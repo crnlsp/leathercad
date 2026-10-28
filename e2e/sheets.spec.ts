@@ -512,6 +512,14 @@ test('a sheet panned into view is drawn, and its piece is found under the pointe
     let found = false;
     for (let dy = -(box.height / 2) + 20; dy < box.height / 2 - 20 && !found; dy += 6) {
       await window.mouse.move(centre.x, centre.y + dy);
+      // The move is dispatched, not yet rendered: read the row after the
+      // frames that draw this position, not the last one's.
+      await window.evaluate(
+        () =>
+          new Promise<void>((done) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => done())),
+          ),
+      );
       found = /hovered/.test((await strapRow.getAttribute('class')) ?? '');
       if (found) await window.mouse.click(centre.x, centre.y + dy);
     }
