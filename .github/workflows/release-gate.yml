@@ -4,8 +4,9 @@ name: Release gate
 # everything under "the next release" in docs/roadmap.md, all of it done
 # (CONTRIBUTING.md, "Changelog and releases"). So a pull request into main
 # comes from develop with nothing in that section still marked planned or in
-# progress, or it is release-please's own release pull request. Required by
-# the ruleset on main (roadmap R2, R7).
+# progress, from a hotfix/ branch holding only fix commits, or it is
+# release-please's own release pull request. Required by the ruleset on main
+# (roadmap R2, R7).
 
 on:
   pull_request:
@@ -25,10 +26,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A hotfix's commits are read from base to head.
+          fetch-depth: 0
 
-      - name: From develop, with the next release done
+      - name: From develop with the next release done, or a hotfix
         env:
           # Through the environment, never interpolated into the script.
           HEAD_REF: ${{ github.head_ref }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: tools/release-gate.sh
