@@ -54,13 +54,15 @@ jobs:
       # The community feed fails now and then. On 2026-10-07 it answered 504,
       # choco reported "installed 0/0 packages" and succeeded, and the smoke
       # test failed later, as `pdfinfo` ENOENT. So: three tries, and if poppler
-      # is still missing, fail here, saying so.
+      # is still missing, fail here, saying so. The version is pinned, and
+      # --require-checksums is what OpenSSF Scorecard reads as pinned; this
+      # package carries its zip inside, so there is no download to checksum.
       - name: Install poppler (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
           for attempt in 1 2 3; do
-            choco install poppler --no-progress -y && command -v pdfinfo && exit 0
+            choco install poppler --version 26.9.0 --require-checksums --no-progress -y && command -v pdfinfo && exit 0
             echo "poppler is not installed after attempt $attempt."
             sleep $((attempt * 20))
           done
