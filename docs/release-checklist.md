@@ -20,7 +20,8 @@ unverified for 1.5. First written for 1.0
 
 - **The scope.** Every item under *the next release* in [`roadmap.md`](roadmap.md) is ✅:
   `tools/release-gate.sh` says so, and so does the *Release gate* check on the `develop` → `main`
-  pull request. A release never ships part of its section.
+  pull request. A release never ships part of its section. A hotfix ships none of it: its scope is
+  its own `fix` commits (`CONTRIBUTING.md`, *Changelog and releases*).
 - **The build.** The installer or AppImage from `pnpm package` (or the release workflow) at the
   commit under test. Note the version shown in the status bar.
 - **Tools:**

@@ -68,8 +68,9 @@ never in a package below the app ([ADR 0018](docs/adr/0018-interface-language.md
 ## Branches
 
 - **`main` is production.** What is on it is what is released. Nothing is pushed to it directly;
-  it changes only through a pull request from `develop`, and only for a release. The *Release gate*
-  check refuses a pull request into `main` from any other branch.
+  it changes only through a pull request, and only for a release: from `develop`, or from a
+  `hotfix/` branch for a fix that cannot wait (*Changelog and releases*). The *Release gate* check
+  refuses a pull request into `main` from any other branch.
 - **`develop` is development.** Work lands here, through pull requests from short-lived branches.
 
 Both are protected by a ruleset each: no deletion, no force push, pull requests only, CI required.
@@ -178,8 +179,7 @@ edits it by hand except to correct a mistake in an entry. See
 [`docs/roadmap.md`](docs/roadmap.md) ships together, and nothing ships until all of it is ✅.
 When an item will not make it, move it to the release after, or to *Later*, in a pull request of
 its own — the release waits for the roadmap, and the roadmap changes on purpose, never because a
-release happened. A fix that cannot wait ships the same way: move what is unfinished out, then
-release. The *Release gate* check holds this on every pull request into `main`; run
+release happened. A fix that cannot wait is a hotfix, below. The *Release gate* check holds this on every pull request into `main`; run
 `tools/release-gate.sh` to see what the next release still waits for. It also refuses a section
 whose version has already shipped, since every item in it is done by then: the roadmap moves on
 (step 5) before anything else is released.
@@ -215,6 +215,23 @@ without one.
 - **A released installer is broken.** Edit the previous release on GitHub and tick *Set as the
   latest release*: the README's *Download* link follows it at once. Then release the fix, which
   becomes the latest in its turn.
+
+**A hotfix** is a patch release from `main`, past the roadmap, for a fix that cannot wait for the
+next section. That means it reaches makers — an advisory in code the installer ships (Electron,
+or a dependency of a package the app bundles, like zod in `persist`), the release workflow
+itself, or a bug that loses work. An advisory in a tool only development or packaging runs (`pnpm
+why -r <package>` says which) waits for the next release.
+
+1. Branch from `main`, not `develop`: `git switch -c hotfix/<name> origin/main`. Make the fix,
+   with its test, as `fix` commits — a dependency bump is `fix(deps)`, not Dependabot's
+   `chore(deps)`.
+2. Open a pull request into `main` and merge it with a **merge commit**. The *Release gate* passes
+   a `hotfix/` branch only when every commit on it is a `fix`, with no `!`, `BREAKING CHANGE` or
+   `Release-As`, so release-please proposes the patch (1.5.1 after 1.5.0) and nothing from
+   `develop` rides along. `HEAD_REF=hotfix/<name> tools/release-gate.sh` checks it before you push.
+3. Release it, and bring it back into `develop`, as steps 2–4 above. Where `develop` already has a
+   newer fix of the same lines, keep `develop`'s. Update the roadmap's *Released* line in the same
+   pull request; the next section stays as it is.
 
 ## Working with Claude Code
 

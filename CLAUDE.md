@@ -62,7 +62,8 @@ recorded it.
 Two long-lived branches: **`main` is production** — what is released — and **`develop` is
 development**. Work lands on `develop`; `develop` reaches `main` through a pull request only when
 every item under the roadmap's next release is ✅ — a release is its whole section, and the
-*Release gate* check refuses anything else. Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
+*Release gate* check refuses anything else but a `hotfix/` branch of `fix` commits cut from
+`main`, for a patch that cannot wait (`CONTRIBUTING.md` § Changelog and releases). Never push to `main` directly: `pnpm install` installs a `pre-push` hook that
 refuses it and runs `pnpm check` on every push. Pull requests into `develop` are squash-merged, and
 their title is a Conventional Commit: it becomes the changelog line. See `CONTRIBUTING.md`.
 
