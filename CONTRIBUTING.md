@@ -173,7 +173,7 @@ on your own machine. The rest, and what each one wants:
 | *Tests and coverage*, green locally | Usually poppler: CI runs the print checks that skip without it |
 | *Unit tests on windows-latest* or *macos-latest* | Usually a path or a line ending. Make the test pass on every platform; never skip it on one |
 | *Pixel diffs* | Look at the run's `visual-diffs` artifact. If the change is meant, `pnpm build`, then `pnpm test:visual --update-snapshots`, and look at every image before committing it |
-| *Known vulnerabilities* | osv-scanner names the advisory. Raise the version in `pnpm-workspace.yaml`'s `overrides`, with the advisory and why, and remove the entry when the dependency catches up |
+| *Known vulnerabilities* | osv-scanner names the advisory. Raise the version in `pnpm-workspace.yaml`'s `overrides`, with the advisory and why, and remove the entry when the dependency catches up. Only when no fixed release exists inside the range the dependent asks for, ignore the advisory in `osv-scanner.toml` for at most 14 days, with its reason and an issue that removes it |
 | *Workflow security* | zizmor or actionlint names the line: an action not pinned to a commit, an expression written into a script instead of passed through `env`, a permission wider than the job needs |
 | `pnpm install` holds a version back | pnpm waits before installing very new releases (`minimumReleaseAge`). Wait, or record an exclusion in `pnpm-workspace.yaml` with why ([ADR 0004](docs/adr/0004-pnpm-workspaces.md)) |
 | `pnpm install` asks about a build script | Answer in `pnpm-workspace.yaml`'s `allowBuilds`, with the reason. Allowing one is a security decision |
@@ -200,9 +200,10 @@ whose version has already shipped, since every item in it is done by then: the r
 2. release-please opens or updates a *release* pull request on `main`. Its description is the
    changelog of the next version. Check it names the version the roadmap does — a section with a
    `feat` in it is the next minor — and that no entry appears twice.
-3. Merging it tags the release. The release workflow then builds the AppImage, the Flatpak, the
-   Windows installer and the macOS dmg, attests their provenance, and attaches them with an SBOM,
-   once all of them have built.
+3. Merging it tags the release. The release workflow then smoke-tests and builds the AppImage,
+   the Flatpak, the Windows installer and the macOS dmg — through `installers.yml`, as every pull
+   request does — attests their provenance, and attaches them with an SBOM, once all of them have
+   built.
 4. Bring the release commit back: a pull request from `main` into `develop`, squash-merged like
    every other, titled for the changelog it will never reach — *chore(release): bring 1.3.0 back
    into develop*.
