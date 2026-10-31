@@ -267,3 +267,7 @@ test('a change of view says its own zoom at once, with no animation frame to pai
     await closeApp(app);
   }
 });
+
+test('throwaway: fails on purpose, so shard 3 and Ready to merge go red', () => {
+  expect(1).toBe(2);
+});
