@@ -197,9 +197,10 @@ whose version has already shipped, since every item in it is done by then: the r
    changelog of the next version. Check it names the version the roadmap does — a section with a
    `feat` in it is the next minor — and that no entry appears twice.
 3. Merging it tags the release. The release workflow then smoke-tests and builds the AppImage,
-   the Flatpak, the Windows installer and the macOS dmg — through `installers.yml`, as every pull
-   request does — attests the provenance of each that built, and attaches them with an SBOM. A
-   platform that fails does not hold the others back, except Linux (*If a release goes wrong*).
+   the Flatpak, the `.deb`, the Windows installer and the macOS dmg — through `installers.yml`, as
+   every pull request does — attests the provenance of each that built, and attaches them with an
+   SBOM. A platform that fails does not hold the others back, except Linux (*If a release goes
+   wrong*).
 4. Bring the release commit back: a pull request from `main` into `develop`, squash-merged like
    every other, titled for the changelog it will never reach — *chore(release): bring 1.3.0 back
    into develop*.

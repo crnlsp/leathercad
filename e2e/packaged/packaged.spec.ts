@@ -50,7 +50,13 @@ function packagedExecutable(): string {
   }
 }
 
-const EXECUTABLE = packagedExecutable();
+/**
+ * The binary an installer put in place (B4), when `installers.yml` has
+ * installed the .deb and points the test at `/opt/LeatherCAD/leathercad`.
+ * Unset, the test drives the unpacked app above.
+ */
+const INSTALLED = process.env['LEATHERCAD_PACKAGED_EXECUTABLE'];
+const EXECUTABLE = INSTALLED ?? packagedExecutable();
 const VERSION = (
   JSON.parse(readFileSync(resolve(DESKTOP_DIR, 'package.json'), 'utf8')) as {
     version: string;
@@ -68,6 +74,11 @@ test.beforeAll(async () => {
   app = await electron.launch({
     executablePath: EXECUTABLE,
     args: [],
+    // Playwright starts Electron with --no-sandbox unless told otherwise. The
+    // unpacked app cannot do without it: its chrome-sandbox is not setuid. An
+    // installed one is what a maker double-clicks, so it runs with Chromium's
+    // sandbox, and fails where the installer left that unable to start.
+    chromiumSandbox: INSTALLED !== undefined,
     env: {
       ...process.env,
       XDG_CONFIG_HOME: join(profile, 'config'),

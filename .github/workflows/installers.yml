@@ -3,9 +3,10 @@ name: Installers
 # Every installer LeatherCAD ships, built and smoke-tested the same way for
 # whoever asks: ci.yml on every pull request and push, release.yml from
 # the release tag. On each platform the packaged smoke test runs first, then
-# the installer a user downloads — the AppImage, the Flatpak and an SBOM on
-# Linux (8.5), the NSIS installer on Windows and the universal dmg on macOS
-# (8.6a) — uploaded as `installers-<OS>`, the files a release attaches.
+# the installer a user downloads — the AppImage, the Flatpak, the .deb and an
+# SBOM on Linux (8.5, B4), the NSIS installer on Windows and the universal dmg
+# on macOS (8.6a) — uploaded as `installers-<OS>`, the files a release
+# attaches.
 #
 # The smoke test drives a sibling of the shipped build, not the shipped bytes.
 # `pnpm test:packaged` builds with `pnpm package:e2e`, which is the same
@@ -15,7 +16,8 @@ name: Installers
 # unpacked app (`--dir`) rather than wrapping it in an installer. On macOS that
 # unpacked app is this runner's architecture only (arm64); the dmg is
 # universal, so its Intel half is never launched here. See
-# docs/release-checklist.md, *The build*.
+# docs/release-checklist.md, *The build*. The .deb is smoke-tested one step
+# further, installed: see *Installed smoke test*.
 #
 # Read-only on purpose: this runs every build-time dependency and the Flatpak
 # bundler, and holds nothing it could publish or sign with. Whoever calls it
@@ -115,6 +117,45 @@ jobs:
             pnpm test:packaged
           fi
 
+      # The .deb a maker installs with apt (B4), run as installed. The unpacked
+      # app above never meets apt, the AppArmor profile or the sandbox's
+      # setuid bit, which is where a package fails on a clean Ubuntu. The same
+      # sibling build as above, packed as a .deb: the shipped one has the
+      # inspector fuse off, which Playwright cannot attach through. It is
+      # installed with `apt-get install ./file`, which fetches the dependencies
+      # the control file names, so a library a clean Ubuntu lacks fails here,
+      # and then run from /opt/LeatherCAD with Chromium's sandbox on, which the
+      # spec asks for of an installed binary. The facts first, so a failure
+      # says whether this runner restricts user namespaces and what the
+      # installer did about it.
+      - name: Installed smoke test (.deb)
+        if: runner.os == 'Linux'
+        run: |
+          pnpm --filter @leathercad/desktop package:e2e:deb
+          sudo apt-get install -y ./apps/desktop/release/LeatherCAD-*.deb
+          sysctl kernel.apparmor_restrict_unprivileged_userns || true
+          stat --format '%a %U %n' /opt/LeatherCAD/chrome-sandbox
+          sudo aa-status | grep -i leathercad || echo "No AppArmor profile for leathercad is loaded."
+          LEATHERCAD_PACKAGED_EXECUTABLE=/opt/LeatherCAD/leathercad \
+            xvfb-run -a pnpm exec playwright test --config playwright.packaged.config.ts
+
+      # Uninstalling takes the menu entry, the command and the AppArmor
+      # profile with it. Not after a failed run: the log above is the useful
+      # one.
+      - name: Uninstall (.deb)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get remove -y leathercad
+          left=0
+          for path in /usr/share/applications/leathercad.desktop /usr/share/mime/packages/leathercad.xml \
+            /usr/bin/leathercad /etc/apparmor.d/leathercad /opt/LeatherCAD; do
+            if [ -e "$path" ] || [ -L "$path" ]; then
+              echo "::error title=Uninstall::$path is still there after apt-get remove."
+              left=1
+            fi
+          done
+          exit "$left"
+
       # The smoke test's build shares apps/desktop/release/ with the installer.
       # electron-builder replaces each unpacked app it rebuilds, but not one it
       # does not (macOS's mac-arm64/), so the e2e build goes, all of it, before
@@ -157,6 +198,7 @@ jobs:
           path: |
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.flatpak
+            apps/desktop/release/*.deb
             apps/desktop/release/*.exe
             apps/desktop/release/*.dmg
             apps/desktop/release/*.cdx.json
