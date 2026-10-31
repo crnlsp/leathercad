@@ -33,5 +33,7 @@ export default defineConfig({
   workers: 1,
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] === undefined ? 0 : 1,
-  reporter: process.env['CI'] === undefined ? 'list' : [['list'], ['github']],
+  // On CI each shard also writes a blob, which ci.yml's `e2e-report` merges
+  // into one HTML report.
+  reporter: process.env['CI'] === undefined ? 'list' : [['list'], ['github'], ['blob']],
 });
