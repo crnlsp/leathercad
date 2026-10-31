@@ -665,6 +665,10 @@ release until it is moved into one.
 
 ### Also later, each already decided in principle
 
+- **CI/CD and shipping.** CI regrouped into rings by the question each answers, support levels per
+  operating system, and the channels LeatherCAD ships through (AUR, `.deb`, Microsoft Store). Under
+  way task by task, outside any release, in
+  [the plan](superpowers/plans/2026-10-31-ci-cd-and-shipping.md).
 - **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
   candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
   then the preview saves the PDF. Moved out of 1.6 on 2026-10-28: no Windows PC and printer were at

@@ -242,7 +242,10 @@ jobs:
 
       # Every package in the lockfile against the OSV database. A fix goes in
       # pnpm-workspace.yaml `overrides`, with the advisory and its reason.
+      # Only when no fixed release exists inside the range a dependent asks
+      # for does an advisory go in osv-scanner.toml instead, for at most 14
+      # days, with its reason and an issue that removes it.
       - name: osv-scanner
         uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         with:
-          scan-args: --lockfile=pnpm-lock.yaml
+          scan-args: --config=osv-scanner.toml --lockfile=pnpm-lock.yaml
