@@ -1,0 +1,90 @@
+# Maintainer: crnlsp <96597273+crnlsp@users.noreply.github.com>
+
+pkgname=leathercad-bin
+_name=leathercad
+pkgver=1.5.0
+pkgrel=1
+pkgdesc='Design leathercraft patterns that print at exact 1:1 scale (the release AppImage)'
+arch=('x86_64')
+url='https://github.com/crnlsp/leathercad'
+license=('Apache-2.0')
+# Everything the Electron binary links against that the AppImage does not carry,
+# plus cups (the `lp` and `lpstat` that Print runs) and xdg-utils (opening links).
+depends=(
+  'alsa-lib'
+  'at-spi2-core'
+  'cairo'
+  'cups'
+  'dbus'
+  'expat'
+  'glib2'
+  'gtk3'
+  'hicolor-icon-theme'
+  'libx11'
+  'libxcb'
+  'libxcomposite'
+  'libxdamage'
+  'libxext'
+  'libxfixes'
+  'libxkbcommon'
+  'libxrandr'
+  'mesa'
+  'nspr'
+  'nss'
+  'pango'
+  'systemd-libs'
+  'xdg-utils'
+)
+provides=("$_name=$pkgver")
+conflicts=("$_name")
+# Stripping would touch an Electron binary whose integrity the app checks.
+options=('!strip' '!debug')
+_appimage="LeatherCAD-$pkgver-$CARCH.AppImage"
+# The .lcp type is not taken from the AppImage: its copy has no content sniffing.
+source=("$_appimage::$url/releases/download/leathercad-v$pkgver/$_appimage"
+        "io.github.crnlsp.leathercad-$pkgver.xml::https://raw.githubusercontent.com/crnlsp/leathercad/leathercad-v$pkgver/apps/desktop/build/linux/io.github.crnlsp.leathercad.xml")
+noextract=("$_appimage")
+sha256sums=('c2bd532bb1261da5d0f83cdcfc0b480a022302b9f1a245fd43d275516dd59719'
+            '7e7e21dddf6ae639f46661efdb96f41bbbe022e7472ac340826bd9a438954500')
+
+prepare() {
+  # --appimage-extract needs no FUSE. It writes squashfs-root/ in the current directory.
+  chmod +x "$_appimage"
+  ./"$_appimage" --appimage-extract >/dev/null
+
+  # The AppImage's entry starts the app through AppRun; here it is the installed link.
+  sed -e 's|^Exec=.*|Exec=leathercad %U|' \
+      -e '/^X-AppImage-Version=/d' \
+      squashfs-root/leathercad.desktop >"$_name.desktop"
+}
+
+package() {
+  # The app: Electron and its resources, without what only the AppImage needs
+  # (AppRun, its icon links and desktop entry, and usr/, whose libraries want GTK 2).
+  install -d "$pkgdir/opt/$_name"
+  cp -a --no-preserve=ownership squashfs-root/. "$pkgdir/opt/$_name"
+  rm -rf "$pkgdir/opt/$_name"/{AppRun,.DirIcon,leathercad.desktop,leathercad.png,usr}
+  # The squashfs is mode 700 on its directories; the app has to be readable by everyone.
+  chmod -R u=rwX,go=rX "$pkgdir/opt/$_name"
+
+  install -d "$pkgdir/usr/bin"
+  ln -s "/opt/$_name/$_name" "$pkgdir/usr/bin/$_name"
+
+  install -Dm644 "$_name.desktop" "$pkgdir/usr/share/applications/$_name.desktop"
+
+  local icon size
+  for icon in squashfs-root/usr/share/icons/hicolor/*/apps/$_name.png; do
+    size=${icon#squashfs-root/usr/share/icons/hicolor/}
+    size=${size%%/*}
+    install -Dm644 "$icon" "$pkgdir/usr/share/icons/hicolor/$size/apps/$_name.png"
+  done
+
+  install -Dm644 "io.github.crnlsp.leathercad-$pkgver.xml" \
+    "$pkgdir/usr/share/mime/packages/io.github.crnlsp.leathercad.xml"
+
+  # Electron's and Chromium's licences travel with their binaries.
+  install -d "$pkgdir/usr/share/licenses/$pkgname"
+  ln -s "/opt/$_name/LICENSE.electron.txt" "$pkgdir/usr/share/licenses/$pkgname/LICENSE.electron.txt"
+  ln -s "/opt/$_name/LICENSES.chromium.html" "$pkgdir/usr/share/licenses/$pkgname/LICENSES.chromium.html"
+  ln -s "/opt/$_name/resources/THIRD_PARTY_NOTICES.txt" "$pkgdir/usr/share/licenses/$pkgname/THIRD_PARTY_NOTICES.txt"
+}
