@@ -15,16 +15,24 @@ updates:
     # pnpm's minimumReleaseAge.
     cooldown:
       default-days: 7
+    # Only minor and patch updates are grouped, and
+    # .github/workflows/dependabot-auto-merge.yml merges that group once CI
+    # passes. A major matches no group, so Dependabot opens it as a PR of its
+    # own, outside the branch prefix the workflow trusts: it waits for a human.
+    # (`update-types` here takes bare `minor` and `patch`; `ignore` below
+    # spells the same thing `version-update:semver-major`.)
     groups:
       actions:
         patterns: ['*']
+        update-types: [minor, patch]
     commit-message:
       prefix: chore(ci)
 
-  # Dependabot proposes; the human decides. The repository's own policies still
-  # apply on top — minimumReleaseAge in pnpm-workspace.yaml, and an ADR for any
-  # genuinely new dependency (CLAUDE.md § Conventions). These PRs go through
-  # the same three CI jobs as any other.
+  # Dependabot proposes, and the checks decide for minor and patch updates —
+  # see the github-actions entry above; a major is still the human's call. The
+  # repository's own policies still apply on top — minimumReleaseAge in
+  # pnpm-workspace.yaml, and an ADR for any genuinely new dependency (CLAUDE.md
+  # § Conventions). These PRs go through the same CI jobs as any other.
   - package-ecosystem: npm
     directory: /
     target-branch: develop
@@ -36,6 +44,7 @@ updates:
     groups:
       dependencies:
         patterns: ['*']
+        update-types: [minor, patch]
     commit-message:
       prefix: chore(deps)
     # Two constraints Dependabot cannot infer from package.json. Both were
