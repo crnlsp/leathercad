@@ -377,7 +377,8 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
 ```
 
 `preferences.json` (8.2) and `printers.json` (7.5) exist so far. The first is written by the main process alone, atomically,
-and read once at start-up:
+and read once at start-up. A quit waits for a change still being written — one made as the window
+closes, such as the open tabs — and logs one that fails, the file before it still whole:
 
 ```json
 {
@@ -530,9 +531,10 @@ size — belongs in preferences.
   the tab is closed, and at a clean exit. A renderer crash keeps it through the quit that follows.
   - **The invariant:** saving never leaves a stale copy that a later start would offer as newer
     unsaved work.
-  - This session's writes and clears run in the order they were asked, so a save that lands while a
-    copy is being written clears it once the write is done.
-  - A write that lands after a clean exit removes itself.
+  - This session's writes, clears and take-overs run in the order they were asked, so a save that
+    lands while a copy is being written clears it once the write is done, and *Recover* lets the old
+    copy go only once the tab's own copy is written.
+  - A clean exit waits for all of them, then deletes; a write that lands after it removes itself.
 
 ## 8. Companion formats
 

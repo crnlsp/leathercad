@@ -153,11 +153,16 @@ export function useRecovery({
     const tab = adoptRecovered(offer.project);
     setOffer(null);
     // The tab's own copy first, and only then is the old one let go (at a
-    // clean exit): at every moment there is at least one copy on disk.
-    await writeCopy(tab).catch(() => undefined);
-    await host()
-      .resolveRecovery(offer.id, 'adopt')
-      .catch(() => undefined);
+    // clean exit): at every moment there is at least one copy on disk. Both
+    // asked for at once — the main process takes them in that order — so a
+    // quit straight after recovering finds the old one taken over, not left
+    // for the next start to offer again.
+    await Promise.all([
+      writeCopy(tab).catch(() => undefined),
+      host()
+        .resolveRecovery(offer.id, 'adopt')
+        .catch(() => undefined),
+    ]);
     // A crash with several tabs open left a copy of each: the next.
     await findNext();
   }, [adoptRecovered, findNext, host, offer, writeCopy]);

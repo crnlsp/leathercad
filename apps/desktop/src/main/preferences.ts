@@ -444,6 +444,16 @@ export class PreferencesStore {
     return this.replace({ ...this.stored, recentFiles: [] });
   }
 
+  /**
+   * Resolves once every change asked for so far is on disk, and rejects with
+   * the last write's error if it failed: what a quit waits for, since a
+   * change made as the window closes is awaited by no one and would be cut
+   * off mid-write.
+   */
+  settled(): Promise<void> {
+    return this.writing;
+  }
+
   private replace(next: StoredPreferences): Promise<void> {
     this.stored = next;
     const bytes = new TextEncoder().encode(`${JSON.stringify(next, null, 2)}\n`);
