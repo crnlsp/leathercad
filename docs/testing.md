@@ -392,10 +392,15 @@ installers    installers.yml       # the packaged smoke test and every installer
 is not.
 
 `installers` calls `installers.yml` on Linux, Windows and macOS: `pnpm test:packaged`, the smoke
-test of the packaged binary, then `pnpm package` — the AppImage, the Flatpak and the SBOM on Linux,
+test of the packaged binary, then `pnpm package` — the AppImage, the Flatpak, the `.deb` and the SBOM on Linux,
 the NSIS installer, the universal dmg — uploaded as `installers-<OS>`. The release builds its files
 with the same workflow, from its tag. Until roadmap item R5 this ran only when packaging could have
 changed, because a private repository pays for those minutes.
+
+On Linux the smoke test runs twice: against the unpacked app, and against a sibling `.deb` that
+apt installs (`LEATHERCAD_PACKAGED_EXECUTABLE=/opt/LeatherCAD/leathercad`), with Chromium's sandbox
+on, which Playwright otherwise switches off. A removal then checks that the menu entry, the
+command and the AppArmor profile are gone.
 
 A ninth job, *Ready to merge*, waits for the other eight and passes only when each one passed or
 was skipped; a cancelled run fails it. It is the one check the rulesets require from CI, beside
