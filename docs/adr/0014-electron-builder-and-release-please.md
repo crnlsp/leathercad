@@ -25,7 +25,7 @@ script from `file://`. Every other test was green.
   direct dependency. Off: `RunAsNode`, `NODE_OPTIONS`, the inspector arguments, and loading the app
   from anything but the asar. **R6 now also disables `GrantFileProtocolExtraPrivileges`:** the
   renderer loads from `app://leathercad/index.html`, as described in the amendment below.
-- **A packaged smoke test runs on every pull request** (`pnpm test:packaged`, CI's `package` job).
+- **A packaged smoke test runs on every pull request** (`pnpm test:packaged`, in `installers.yml`).
   It launches the unpacked build, checks it runs from `app.asar` in the vendored typeface, and
   exports a PDF that `pdfinfo` reads as A4. The build it drives differs from the shipped one in a
   single fuse: the inspector arguments stay on, because Playwright attaches through them.

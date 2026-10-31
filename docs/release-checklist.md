@@ -14,6 +14,10 @@ before that 2026-10-18, for check 14, recovery after a renderer dies on macOS; b
 that for check 13, ⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left
 unverified for 1.5. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
+**Last updated:** 2026-10-31, for *The build*: what CI's packaged smoke test does not run. Before
+that 2026-10-18, for check 14, recovery after a renderer dies on macOS; before that for check 13,
+⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left unverified for 1.5. First
+written for 1.0 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
 
@@ -27,6 +31,12 @@ unverified for 1.5. First written for 1.0
   commit under test. Note the version shown in the status bar. On Arch, once `leathercad-bin` is
   on the AUR, test that package instead of the AppImage: the print check then measures the file
   makers install.
+  commit under test. Note the version shown in the status bar. CI's packaged smoke test
+  (`installers.yml`) never ran these bytes: it drives a sibling build of the same commit,
+  `pnpm package:e2e`, whose configuration differs from the shipped one only in the inspector fuse
+  that Playwright attaches through (ADR 0014), and which stays the unpacked app rather than an
+  installer — on macOS, built for Apple silicon only, where the dmg is universal. Installing the
+  file itself, and the dmg on an Intel Mac, are checked here and nowhere else.
 - **Tools:**
   - a steel rule graduated in 0.5 mm — not a tape;
   - a pen, tape, scissors or a knife;
