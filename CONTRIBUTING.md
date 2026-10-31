@@ -195,8 +195,8 @@ whose version has already shipped, since every item in it is done by then: the r
    `feat` in it is the next minor — and that no entry appears twice.
 3. Merging it tags the release. The release workflow then smoke-tests and builds the AppImage,
    the Flatpak, the Windows installer and the macOS dmg — through `installers.yml`, as every pull
-   request does — attests their provenance, and attaches them with an SBOM, once all of them have
-   built.
+   request does — attests the provenance of each that built, and attaches them with an SBOM. A
+   platform that fails does not hold the others back, except Linux (*If a release goes wrong*).
 4. Bring the release commit back: a pull request from `main` into `develop`, squash-merged like
    every other, titled for the changelog it will never reach — *chore(release): bring 1.3.0 back
    into develop*.
@@ -211,11 +211,17 @@ without one.
 
 **If a release goes wrong:**
 
-- **A build fails.** The release stays without downloads: nothing is attached until every platform
-  has built. If the runner was at fault (a download, a timeout), use *Re-run failed jobs* on the
-  release run. It builds that platform again, then attaches all of them. If the code was at fault,
-  fix it on `develop` and release the fix as a patch, and say in the failed release's notes that
-  it has no downloads.
+- **A build fails.** The platform decides what the release does
+  ([`getting-started.md`](docs/getting-started.md#supported-systems) has the levels). The run is red
+  either way, and the release's notes say what happened, with a link to the failed job.
+  - *Windows or macOS:* the release goes out with the files that built, and its notes get a
+    **Missing in this release** line for the platform.
+  - *Linux:* nothing is attached, before anything is attested, and the notes say so.
+
+  If the runner was at fault (a download, a timeout), use *Re-run failed jobs* on the release run.
+  It builds that platform again and runs *Attest and attach* again, which attaches what is new and
+  takes the missing line out of the notes. If the code was at fault, fix it on `develop` and release
+  the fix as a patch; the failed release keeps its line.
 - **A released installer is broken.** Edit the previous release on GitHub and tick *Set as the
   latest release*: the README's *Download* link follows it at once. Then release the fix, which
   becomes the latest in its turn.
