@@ -88,6 +88,16 @@ gh pr create --base develop --fill
 The `pre-push` hook refuses a push to `main` and runs `pnpm check` on every other push.
 `--no-verify` gets past it; please don't.
 
+**Dependabot** opens a pull request a week into `develop` for npm and another for GitHub Actions,
+each holding the minor and patch updates that are at least seven days old. Once every required
+check is green it merges itself
+([`dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml)); if the ruleset asks
+for an approval first, it waits for one. A major update arrives as a pull request of its own and
+waits for you to decide, as do the release-please pull request and every pull request from a
+person. To hold a Dependabot pull request back — before pushing to its branch, say — add the
+`no-auto-merge` label and click *Disable auto-merge*: the workflow asks again after every push, and
+the label is what makes it leave the pull request alone.
+
 ## A change is a vertical slice
 
 Planned work is numbered in [`docs/roadmap.md`](docs/roadmap.md). A slice touches whatever layers it

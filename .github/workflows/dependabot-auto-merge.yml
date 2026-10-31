@@ -1,0 +1,64 @@
+name: Dependabot auto-merge
+
+# Dependabot's weekly minor and patch updates passed the same checks every time
+# and were merged by hand. The 7-day cooldown in .github/dependabot.yml and the
+# required checks are the safety; the click added nothing. This turns on
+# GitHub's auto-merge for those PRs, so each one merges by itself once every
+# required check is green. It does not skip, approve or weaken a check.
+#
+# Majors, the release-please PR and every human's PR are left alone: the job
+# runs only for the two grouped branches below, and dependabot.yml puts nothing
+# but minor and patch updates in those groups.
+
+on:
+  pull_request:
+    # `synchronize` is every push to the branch, Dependabot's own rebases
+    # included. GitHub turns auto-merge off when someone without write access
+    # pushes to the head branch, and its docs do not say whether Dependabot's
+    # push counts; asking again after each push means a rebase cannot leave the
+    # PR sitting unmerged. GitHub's own Dependabot example runs on every
+    # pull_request event for the same reason.
+    types: [opened, reopened, synchronize]
+    branches: [develop]
+
+permissions: {}
+
+jobs:
+  auto-merge:
+    name: Enable auto-merge
+    # The PR's author, not `github.actor`: the actor is whoever triggered this
+    # run (for `reopened`, the person who clicked), so it says nothing about who
+    # wrote the PR. A pull request from a fork has a person as its author and
+    # never gets here.
+    #
+    # The branch prefix is the second lock. Only the two grouped
+    # minor-and-patch PRs are named; a major, or a Dependabot security update,
+    # has another branch name and waits for a human.
+    #
+    # The label is the third: since every push asks again, "Disable auto-merge"
+    # alone would be undone by the next one. A person holding a PR back adds
+    # `no-auto-merge`, and the job leaves it alone (CONTRIBUTING.md, "Branches").
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      (startsWith(github.head_ref, 'dependabot/npm_and_yarn/develop/dependencies-') ||
+       startsWith(github.head_ref, 'dependabot/github_actions/develop/actions-')) &&
+      !contains(github.event.pull_request.labels.*.name, 'no-auto-merge')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Widened for this job alone: auto-merge is a write to the pull request.
+    # Nothing is checked out, so no PR code runs with these permissions.
+    permissions:
+      contents: write # the merge itself, once GitHub performs it for this token
+      pull-requests: write # turning auto-merge on is a change to the pull request
+    steps:
+      # --auto asks GitHub to merge when the required checks pass, rather than
+      # now, so the branch rulesets still decide. --subject keeps the squash
+      # commit's title the PR title, the Conventional Commit release-please
+      # reads (CONTRIBUTING.md, "Commits and pull requests").
+      - name: Enable auto-merge
+        env:
+          # Through the environment, never interpolated into the script.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ github.event.pull_request.title }}
+          URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash --subject "$TITLE" "$URL"
