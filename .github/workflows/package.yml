@@ -1,15 +1,13 @@
 name: Package
 
-# Windows and macOS builds (slice 8.6a): the packaged smoke test on each, then
-# the installer a user would download; and the Flatpak (8.5). Linux's AppImage
-# is packaged by ci.yml.
+# Every installer, smoke-tested and built on Linux, Windows and macOS by
+# installers.yml — the same workflow the release builds with, from its tag.
 #
 # On every pull request and every push to main and develop (roadmap R5). This
 # was written while the repository was private, where a macOS minute costs ten
 # and a Windows minute two, so it ran only when packaging could have changed,
 # and weekly to catch the rest. A public repository's minutes are free, and a
-# change anywhere can break a package, so now every change runs it. The release
-# workflow builds all three platforms again, from the tag.
+# change anywhere can break a package, so now every change runs it.
 
 on:
   pull_request:
@@ -25,116 +23,35 @@ permissions:
   contents: read
 
 jobs:
-  package:
-    name: Package (${{ matrix.os }})
+  # Its checks are named `Installers / Build (<os>)`, as a called workflow's
+  # jobs are. `./`, not the `$/` zizmor asks for, which actionlint cannot
+  # parse yet (rhysd/actionlint#711); for a called workflow the two mean the
+  # same: GitHub reads it from the caller's own commit, not from a checkout.
+  installers:
+    name: Installers
+    uses: ./.github/workflows/installers.yml # zizmor: ignore[self-repository]
+    with:
+      ref: ${{ github.sha }}
+
+  # The develop and main rulesets require the four checks these builds were
+  # called before they moved into installers.yml. Until the rulesets name
+  # their replacement (plan 2026-10-31-ci-cd-and-shipping, Task A2, which
+  # deletes this job), each name is reported here, and passes only when every
+  # build did. `always()`, because a required check that is skipped counts as
+  # passed.
+  required:
+    name: ${{ matrix.check }}
+    needs: installers
+    if: always()
     strategy:
-      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      # The smoke test reads the exported PDF with poppler, independently of
-      # the writer that made it.
-      - name: Install poppler (macOS)
-        if: runner.os == 'macOS'
-        run: brew install poppler
-
-      # The community feed fails now and then. On 2026-10-07 it answered 504,
-      # choco reported "installed 0/0 packages" and succeeded, and the smoke
-      # test failed later, as `pdfinfo` ENOENT. So: three tries, and if poppler
-      # is still missing, fail here, saying so. The version is pinned, and
-      # --require-checksums is what OpenSSF Scorecard reads as pinned; this
-      # package carries its zip inside, so there is no download to checksum.
-      - name: Install poppler (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          for attempt in 1 2 3; do
-            choco install poppler --version 26.9.0 --require-checksums --no-progress -y && command -v pdfinfo && exit 0
-            echo "poppler is not installed after attempt $attempt."
-            sleep $((attempt * 20))
-          done
-          echo "::error title=poppler::Not installed after three attempts. The packaged smoke test needs its pdfinfo."
-          exit 1
-
-      - run: pnpm install --frozen-lockfile
-
-      # The packaged app, driven by Playwright: asar with its integrity check,
-      # the fuses, the ad-hoc signature on macOS.
-      - name: Packaged smoke test
-        run: pnpm test:packaged
-
-      # Then the installer a user would download, with every fuse as shipped.
-      - name: Installer
-        run: pnpm package
-
-      - name: Upload installer
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: installer-${{ runner.os }}
-          path: |
-            apps/desktop/release/*.exe
-            apps/desktop/release/*.dmg
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: packaged-report-${{ runner.os }}
-          path: test-results/
-          retention-days: 7
-          if-no-files-found: ignore
-
-  # The Flatpak (slice 8.5), built from Electron's base app on the Freedesktop
-  # runtime, both installed from Flathub by the bundler. Linux's other build,
-  # the AppImage, is packaged by ci.yml.
-  flatpak:
-    name: Flatpak
+        check: [Package, Package (windows-latest), Package (macos-latest), Flatpak]
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      - name: Install flatpak-builder
-        run: sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder
-
-      # The bundler installs the runtime, the SDK and the base app for this
-      # user, from whichever remote the user has: Flathub.
-      - name: Add Flathub
-        run: flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Flatpak
-        run: pnpm package:flatpak
-
-      - name: Upload Flatpak
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: flatpak
-          path: apps/desktop/release/*.flatpak
-          retention-days: 7
-          if-no-files-found: error
+      - name: Every installer built
+        env:
+          RESULT: ${{ needs.installers.result }}
+        run: |
+          echo "Installers: $RESULT"
+          test "$RESULT" = success

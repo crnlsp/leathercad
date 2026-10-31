@@ -9,10 +9,10 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-18, for check 14, recovery after a renderer dies on macOS; before
-that for check 13, ⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left
-unverified for 1.5. First written for 1.0
-(sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
+**Last updated:** 2026-10-31, for *The build*: what CI's packaged smoke test does not run. Before
+that 2026-10-18, for check 14, recovery after a renderer dies on macOS; before that for check 13,
+⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left unverified for 1.5. First
+written for 1.0 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
 
@@ -23,7 +23,12 @@ unverified for 1.5. First written for 1.0
   pull request. A release never ships part of its section. A hotfix ships none of it: its scope is
   its own `fix` commits (`CONTRIBUTING.md`, *Changelog and releases*).
 - **The build.** The installer or AppImage from `pnpm package` (or the release workflow) at the
-  commit under test. Note the version shown in the status bar.
+  commit under test. Note the version shown in the status bar. CI's packaged smoke test
+  (`installers.yml`) never ran these bytes: it drives a sibling build of the same commit,
+  `pnpm package:e2e`, whose configuration differs from the shipped one only in the inspector fuse
+  that Playwright attaches through (ADR 0014), and which stays the unpacked app rather than an
+  installer — on macOS, built for Apple silicon only, where the dmg is universal. Installing the
+  file itself, and the dmg on an Intel Mac, are checked here and nowhere else.
 - **Tools:**
   - a steel rule graduated in 0.5 mm — not a tape;
   - a pen, tape, scissors or a knife;
