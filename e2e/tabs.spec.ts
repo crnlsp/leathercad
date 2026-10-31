@@ -191,6 +191,7 @@ test('the open tabs come back at the next start, the one in front in front', asy
         );
         await drawAPanel(window, { parts });
         await window.getByTestId('save').click();
+        await expect(window.getByTestId('save-state')).toHaveText('Saved');
         await expect(window.getByTestId('project-name')).toHaveText(name);
         await window.keyboard.press('Control+n');
       }
@@ -237,6 +238,7 @@ test('opening a project that is open already goes to its tab, which bounces', as
     }, file);
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
     await window.keyboard.press('Control+n');
 
     await fromProjectMenu(window, 'open');
@@ -259,13 +261,17 @@ test('renaming a saved project renames its file, never over another', async () =
     );
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     writeFileSync(join(folder, 'Wallet.lcp'), 'another project');
 
     // Taken: nothing is renamed, and the maker is told.
     await renameProject(window, 'Wallet');
     await expect(window.getByTestId('file-notice')).toContainText('Wallet.lcp');
+    // Escape is the dialog's once its Close has focus.
+    await expect(window.getByTestId('file-notice-close')).toBeFocused();
     await window.keyboard.press('Escape');
+    await expect(window.getByTestId('file-notice')).toHaveCount(0);
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     expect(existsSync(join(folder, 'Belt.lcp'))).toBe(true);
     expect(readFileSync(join(folder, 'Wallet.lcp'), 'utf8')).toBe('another project');
@@ -288,6 +294,7 @@ test('a tab’s own menu: reload from disk, duplicate, close others, move to the
     }, file);
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
     const menuOf = async (index: number): Promise<void> => {
@@ -351,14 +358,18 @@ test('undoing a rename gives the file its name back, as the project gets its own
     );
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
     await renameProject(window, 'Watch strap');
-    await expect.poll(() => existsSync(join(folder, 'Watch strap.lcp'))).toBe(true);
+    // The window, not the disk: the new name is linked before the old one
+    // goes, and the project takes the name only once both are done.
+    await expect(window.getByTestId('file-path')).toContainText('Watch strap.lcp');
+    expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(true);
 
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
-    await expect.poll(() => existsSync(join(folder, 'Belt.lcp'))).toBe(true);
-    expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(false);
     await expect(window.getByTestId('file-path')).toContainText('Belt.lcp');
+    expect(existsSync(join(folder, 'Belt.lcp'))).toBe(true);
+    expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(false);
   });
 });
 
@@ -464,6 +475,7 @@ test('Ctrl+Shift+T opens the project last closed again (8.12)', async () => {
     }, file);
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
     await window.keyboard.press('Control+w');
     await expect(window.getByTestId('start-screen')).toBeVisible();
     await window.keyboard.press('Control+Shift+t');
@@ -487,6 +499,7 @@ test('a recent project is pinned to the top of the start screen, or taken off it
         await window.keyboard.press('Control+n');
         await drawAPanel(window, { parts: '1' });
         await window.getByTestId('save').click();
+        await expect(window.getByTestId('save-state')).toHaveText('Saved');
         await expect(window.getByTestId('project-name')).toHaveText(name);
       }
       for (let i = 0; i < 3; i++) await closeActiveTab(window);
@@ -525,6 +538,7 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
       }, file);
       await drawAPanel(window, { parts: '1' });
       await window.getByTestId('save').click();
+      await expect(window.getByTestId('save-state')).toHaveText('Saved');
       // Read once it has moved: straight after the click it still says the old zoom.
       const before = await window.getByTestId('zoom-level').textContent();
       await window.getByTestId('zoom-in').click();

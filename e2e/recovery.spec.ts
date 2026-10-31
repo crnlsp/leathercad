@@ -60,6 +60,9 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
   await first.window.getByTestId('save').click();
   await expect(first.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
   const saved = readFileSync(project);
+  // Saved, so its copy goes; until it has, the copy waited for below could
+  // be this one, of the work before the save.
+  await expect.poll(() => copies(state)).toEqual([]);
 
   // Unsaved work, then a copy of it, then the crash.
   await drawAPanel(first.window, 350);
