@@ -122,3 +122,9 @@ describe('approxLte / approxGte / approxCmp', () => {
     );
   });
 });
+
+describe('throwaway', () => {
+  it('fails on purpose, so Ready to merge must go red', () => {
+    expect(1).toBe(2);
+  });
+});
