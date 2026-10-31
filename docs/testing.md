@@ -359,7 +359,7 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
-Seven jobs, run in parallel on every pull request, so one run reports every failure rather than
+Eight jobs, run in parallel on every pull request, so one run reports every failure rather than
 only the first:
 
 ```
@@ -383,17 +383,24 @@ visual   pnpm test:visual       # pixel diffs in the pinned container
 
 workflows     actionlint, zizmor   # workflow syntax, injection, pinning
 dependencies  osv-scanner          # the lockfile against known vulnerabilities
+
+installers    installers.yml       # the packaged smoke test and every installer,
+                                   # on Linux, Windows and macOS
 ```
 
 `static` also runs `pnpm knip`. Every action is pinned to a commit; zizmor fails the run on one that
 is not.
 
-Beside it, on every pull request and push, `package.yml` calls `installers.yml` on Linux, Windows
-and macOS: `pnpm test:packaged`, the smoke test of the packaged binary, then `pnpm package` — the
-AppImage, the Flatpak and the SBOM on Linux, the NSIS installer, the universal dmg — uploaded as
-`installers-<OS>`. The release builds its files with the same workflow, from its tag. Until roadmap
-item R5 this ran only when packaging could have changed, because a private repository pays for
-those minutes.
+`installers` calls `installers.yml` on Linux, Windows and macOS: `pnpm test:packaged`, the smoke
+test of the packaged binary, then `pnpm package` — the AppImage, the Flatpak and the SBOM on Linux,
+the NSIS installer, the universal dmg — uploaded as `installers-<OS>`. The release builds its files
+with the same workflow, from its tag. Until roadmap item R5 this ran only when packaging could have
+changed, because a private repository pays for those minutes.
+
+A ninth job, *Ready to merge*, waits for the other eight and passes only when each one passed or
+was skipped; a cancelled run fails it. It is the one check the rulesets require from CI, beside
+*Conventional title* on `develop` and *Release gate* on `main`, so a job added to CI goes in its
+`needs` and the rulesets stay as they are.
 
 `pnpm check` runs the `static` and `test` work locally — including `test:coverage`, not plain
 `test` — and is what the pre-push hook invokes, so a green `pnpm check` predicts a green CI for

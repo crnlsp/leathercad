@@ -59,7 +59,7 @@ jobs:
   # installers.yml smoke-tests each platform's build, then makes the files
   # this release attaches, from the tag. A job that calls a workflow takes no
   # timeout of its own; each of its jobs has one. `./` rather than `$/`, as in
-  # package.yml.
+  # ci.yml.
   build:
     name: Build
     needs: release-please
