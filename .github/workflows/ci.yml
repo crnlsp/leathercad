@@ -294,9 +294,18 @@ jobs:
   # `needs` and the rulesets stay as they are. `always()`: without it a failed
   # job would skip this one, and a required check that is skipped counts as
   # passed. With it, a cancelled run turns this red too, never green.
+  # Throwaway: a job skipped by its `if:`, to see what Ready to merge reads.
+  probe:
+    name: Probe (skipped)
+    if: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: echo never runs
+
   ready:
     name: Ready to merge
-    needs: [static, test, cross-platform, e2e, visual, workflows, dependencies, installers]
+    needs: [static, test, cross-platform, e2e, visual, workflows, dependencies, installers, probe]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
