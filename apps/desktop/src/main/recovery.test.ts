@@ -228,6 +228,52 @@ describe('answering the offer', () => {
   });
 });
 
+describe('recovering: the recovered tab’s own copy, then the old one taken over', () => {
+  // The renderer asks for both at once, so a quit just after recovering finds
+  // them both asked; the store keeps them in order.
+  async function crashedCopy(): Promise<string> {
+    const crashed = session(601);
+    await crashed.write(TAB, bytes('before the crash'));
+    crash(601);
+    return (await session(101).findAbandoned())!.id;
+  }
+
+  it('takes the old copy over only once the new one is written: one is on disk at every moment', async () => {
+    const old = await crashedCopy();
+    const me = session(101);
+    const writing = me.write(OTHER_TAB, bytes('recovered'));
+    const adopting = me.adopt(old);
+    me.releaseOnQuit(); // a clean exit before either has landed
+    await Promise.all([writing, adopting]);
+
+    expect(files()).toEqual([`${old}.lcp`]);
+  });
+
+  it('leaves nothing behind at a clean exit that waits for what was asked', async () => {
+    const old = await crashedCopy();
+    const me = session(101);
+    void me.write(OTHER_TAB, bytes('recovered'));
+    void me.adopt(old);
+    void me.clear(OTHER_TAB); // saved at once
+    await me.settled();
+    me.releaseOnQuit();
+
+    expect(files()).toEqual([]);
+  });
+
+  it('offers the old copy to the next window when the one taking it over dies first', async () => {
+    const old = await crashedCopy();
+    const me = session(101);
+    const writing = me.write(OTHER_TAB, bytes('recovered'));
+    const adopting = me.adopt(old);
+    me.rendererGone();
+    await Promise.all([writing, adopting]);
+    me.releaseOnQuit();
+
+    expect(files()).toContain(`${old}.lcp`);
+  });
+});
+
 describe('a clean exit', () => {
   it('removes this session’s copy and the ones it took over, and nobody else’s', async () => {
     const other = session(202);

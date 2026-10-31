@@ -89,8 +89,8 @@ const kept = new KeptCopies(join(app.getPath('userData'), 'unsaved'));
 const grants = new PathGrants();
 
 // preferences.json, beside nothing but the app's other settings
-// (docs/file-format.md §6). Read once, when the app is ready.
-let preferences: PreferencesStore;
+// (docs/file-format.md §6). Read once, at start, so it is there for any quit.
+const preferences = new PreferencesStore(join(app.getPath('userData'), 'preferences.json'));
 
 // The main process's own words — macOS's menu, its dialogs — in the
 // interface's language (ADR 0018), the one the renderer resolves the same way.
@@ -335,8 +335,6 @@ app.whenReady().then(() => {
     createAppProtocolHandler(join(__dirname, '../renderer'), (url) => net.fetch(url)),
   );
 
-  preferences = new PreferencesStore(join(app.getPath('userData'), 'preferences.json'));
-
   // The update check (8.9, ADR 0020): the app's one network request, made
   // only when the maker asks for it, through Chromium's stack so a system
   // proxy applies. The Flatpak never asks — Flathub updates it, and it has no
@@ -400,9 +398,30 @@ app.whenReady().then(() => {
   });
 });
 
-// A clean exit: this session's recovery copy, and any it took over, go. A
-// crash never reaches here, which is exactly why the copy survives one.
-app.on('will-quit', () => recovery.releaseOnQuit());
+// A clean exit. What the window asked for lands first — a preference or the
+// open tabs, kept as it closed; a recovery copy written, cleared or taken
+// over — since the process would otherwise end with it mid-write: the change
+// lost, or a copy left for the next start to offer as unsaved work. Then this
+// session's recovery copy, and any it took over, go. A crash never reaches
+// here, which is exactly why the copy survives one.
+let settled = false;
+app.on('will-quit', (event) => {
+  if (settled) {
+    recovery.releaseOnQuit();
+    return;
+  }
+  event.preventDefault();
+  void Promise.all([
+    // The file before it is still whole: the write is atomic.
+    preferences.settled().catch((error: unknown) => {
+      log.error('preferences not kept as the app quit:', error);
+    }),
+    recovery.settled(),
+  ]).then(() => {
+    settled = true;
+    app.quit();
+  });
+});
 
 app.on('window-all-closed', () => {
   // Linux and Windows quit with the last window; macOS conventionally does not.
