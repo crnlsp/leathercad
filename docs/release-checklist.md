@@ -9,7 +9,8 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-18, for check 14, recovery after a renderer dies on macOS; before
+**Last updated:** 2026-10-31, for the support levels, the hotfix case and the `known-issue` label;
+before that 2026-10-18, for check 14, recovery after a renderer dies on macOS; before
 that for check 13, ⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left
 unverified for 1.5. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
@@ -23,7 +24,9 @@ unverified for 1.5. First written for 1.0
   pull request. A release never ships part of its section. A hotfix ships none of it: its scope is
   its own `fix` commits (`CONTRIBUTING.md`, *Changelog and releases*).
 - **The build.** The installer or AppImage from `pnpm package` (or the release workflow) at the
-  commit under test. Note the version shown in the status bar.
+  commit under test. Note the version shown in the status bar. On Arch, once `leathercad-bin` is
+  on the AUR, test that package instead of the AppImage: the print check then measures the file
+  makers install.
 - **Tools:**
   - a steel rule graduated in 0.5 mm — not a tape;
   - a pen, tape, scissors or a knife;
@@ -60,6 +63,36 @@ Any one of these is a blocker:
 - a label cut short in a narrow window.
 
 Record them anyway.
+
+## What a failure holds, by level
+
+Where a blocker above, or any other confirmed bug, was found decides what it holds back. The
+systems and their versions are in [`getting-started.md`](getting-started.md#supported-systems).
+
+| Level | Systems | A confirmed bug there |
+|---|---|---|
+| **1 · measured** | Arch; Ubuntu LTS | holds the whole release |
+| **2 · tested** | Windows 10 22H2 and 11, x64 | holds the Windows files only: the release goes out without them, and its notes say so and why |
+| **3 · shipped** | other Linux; macOS 12 or newer | goes into the release notes as a known issue. Only a bug in 1:1 scale, or lost work, holds that platform's file |
+
+- **A level-3 item is a check on a system the maintainer cannot run**: a Mac, or a Windows PC with
+  a printer. It is collected from makers, through a print report — an issue with the readings
+  A–H — and recorded in the log and in its roadmap row when one arrives. Not having it never
+  holds a release, and its roadmap row is never a planned item, which would make the release gate
+  wait for it. R8 and R10 are such items.
+- **A hotfix** (a `hotfix/` branch of `fix` commits cut from `main`, see
+  [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)) skips the next release's scope:
+  none of that section's items hold it. It does not skip the levels. Run checks 1 and 3, and the
+  steps that showed the bug, on the packaged build with the fix, on the system the bug was found on.
+  The rest of the list waits for the release that follows.
+
+### The `known-issue` label
+
+An open issue is labelled `known-issue` when it is **confirmed and reproducible**, names the system
+it happens on, and its level (above) does not hold the release. The label stays until the issue
+closes. It is not for a report nobody has reproduced, a feature request, or a blocker on a
+system whose level holds the release: that one is fixed first. The release notes list the open
+ones (`gh issue list --label known-issue`).
 
 ## The checks
 
@@ -213,9 +246,9 @@ flag; not the test host or the end-to-end mock, which replace it.
 3. *Save*: the dot clears.
 
 **R10** left 1.5 unverified on 2026-10-18, by the maintainer's decision: no Mac was at hand. It is
-monitored in [`roadmap.md`](roadmap.md)'s 1.6 *Release engineering*, not a ☐, so the release gate
-does not wait for it. Tick it in the pull request that records a pass on a Mac, with the macOS
-version and the date.
+a level-3 item (see above) in [`roadmap.md`](roadmap.md)'s 1.6 *Release engineering*, not a planned
+one, so the release gate does not wait for it. Tick it in the pull request that records a pass on a
+Mac, with the macOS version and the date.
 
 ### 13. ⌘A outside a text field, on macOS
 
@@ -314,6 +347,6 @@ Note each platform's result beside its row in the log, or say which check could 
 - Merge the release pull request (see
   [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)), and check that the release has
   the AppImage, the Flatpak, the Windows installer, the macOS dmg and the SBOM attached — five
-  files, as `release.yml` attaches them.
+  files, as `release.yml` attaches them, and that the notes list the open `known-issue` issues.
 - The installers are not code-signed, by decision ([`roadmap.md`](roadmap.md), *Release
   engineering*); [`getting-started.md`](getting-started.md) tells makers how to open them.

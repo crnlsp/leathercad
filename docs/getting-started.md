@@ -5,14 +5,28 @@ From installing LeatherCAD to a pattern on paper that measures true: about fifte
 ## 1. Install
 
 Download the installer for your system from the
-[latest release](https://github.com/crnlsp/leathercad/releases/latest).
+[latest release](https://github.com/crnlsp/leathercad/releases/latest). Which systems it is made for,
+and what happens if it breaks on yours, is under [Supported systems](#supported-systems) at the end
+of this section.
 
 | System | File | Then |
 |---|---|---|
-| Linux | the `.AppImage` | Make it executable (`chmod +x`) and run it. It installs nothing; keep it anywhere. |
-| Linux | or the `.flatpak` | `flatpak install --user LeatherCAD-*.flatpak`. It adds LeatherCAD to your applications menu and opens `.lcp` files by double-click. It needs the Flathub remote, which most distributions have. |
+| Linux | the `.AppImage` | Make it executable (`chmod +x`) and run it. It installs nothing; keep it anywhere. It needs FUSE 2 — see below. |
+| Linux | or the `.flatpak` | `flatpak install --user LeatherCAD-*.flatpak`. It adds LeatherCAD to your applications menu and opens `.lcp` files by double-click. It needs the Flathub remote, which most distributions have, and no FUSE. |
 | Windows | the `.exe` | Run it. It installs for your user only, with no administrator prompt. |
 | macOS | the `.dmg` | Open it and drag LeatherCAD to Applications. It runs on Apple silicon and Intel. |
+
+**An AppImage needs FUSE 2.** A fresh Arch or Ubuntu does not have it, and the AppImage stops at once
+with *AppImages require FUSE to run* and a message about `libfuse.so.2`. Install it once:
+
+| System | Command |
+|---|---|
+| Arch | `sudo pacman -S fuse2` |
+| Ubuntu 22.04 | `sudo apt install libfuse2` |
+| Ubuntu 24.04 and newer | `sudo apt install libfuse2t64` |
+
+Or run it without FUSE: `./LeatherCAD-*.AppImage --appimage-extract-and-run` unpacks it to a
+temporary folder first, so it starts a little slower.
 
 LeatherCAD is free and open source, and its installers are not code-signed: signing certificates
 cost money every year. So the first time you open it, Windows and macOS warn about an unknown
@@ -37,6 +51,31 @@ update, and it opens.
 *+*, or on the start screen — and then *Bifold wallet*: the wallet this page draws, with its lining and
 card pocket. It opens untitled, so saving it asks where, and nothing you change reaches the copy inside
 the app.
+
+### Supported systems
+
+A system's **level** says how far LeatherCAD promises to work on it, and so what a bug there does to
+a release.
+
+| Level | Systems | What it promises |
+|---|---|---|
+| **1 · measured** | Arch Linux; Ubuntu LTS (22.04, 24.04 and 26.04 today) | Everything works, including a printed sheet that measures true. A bug found here holds back the whole release. |
+| **2 · tested** | Windows 10 (22H2) and Windows 11, 64-bit | Its installer is built, and the packaged app tested, on every change. A confirmed bug here holds back the Windows files, not the release. |
+| **3 · shipped** | Other Linux distributions; macOS 12 or newer, on Apple silicon and Intel | The files are built and shipped. A bug here is listed as a known issue in the release notes; only a drawing that does not print at 1:1, or lost work, holds back that platform's file. |
+
+The versions:
+
+- **Ubuntu:** the LTS releases still in standard support. One leaves the table with the release
+  after its support ends.
+- **Arch:** current at the time of the release; systems built on Arch, such as CachyOS, count with it.
+- **Windows and macOS:** what Electron, which LeatherCAD is built on, supports. macOS 12 is the
+  oldest since Electron 38. Intel Macs stay while their build works and Apple still patches macOS 26.
+- **Not supported:** Linux on ARM, Windows 7, 8 and 8.1, and any 32-bit system. They may run;
+  nothing is tested or promised there.
+
+If something breaks on your system, [open a bug report](https://github.com/crnlsp/leathercad/issues/new?template=bug_report.yml)
+and say the system. Confirmed bugs that do not hold a release are labelled `known-issue`, and the
+open ones are listed in each release's notes.
 
 ## 2. Draw a part
 
