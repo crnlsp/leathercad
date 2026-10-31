@@ -73,9 +73,11 @@ never in a package below the app ([ADR 0018](docs/adr/0018-interface-language.md
   refuses a pull request into `main` from any other branch.
 - **`develop` is development.** Work lands here, through pull requests from short-lived branches.
 
-Both are protected by a ruleset each: no deletion, no force push, pull requests only, CI required.
-Without one, GitHub's *Automatically delete head branches* deletes `develop` the moment a release
-merges — which is how it was lost twice (roadmap R2).
+Both are protected by a ruleset each: no deletion, no force push, pull requests only, and two
+required checks — CI's *Ready to merge*, which waits for every CI job, and *Conventional title* on
+`develop` or *Release gate* on `main`. Without a ruleset, GitHub's *Automatically delete head
+branches* deletes `develop` the moment a release merges — which is how it was lost twice
+(roadmap R2).
 
 ```bash
 git switch develop && git pull
@@ -174,6 +176,7 @@ on your own machine. The rest, and what each one wants:
 | *Unit tests on windows-latest* or *macos-latest* | Usually a path or a line ending. Make the test pass on every platform; never skip it on one |
 | *Pixel diffs* | Look at the run's `visual-diffs` artifact. If the change is meant, `pnpm build`, then `pnpm test:visual --update-snapshots`, and look at every image before committing it |
 | *Known vulnerabilities* | osv-scanner names the advisory. Raise the version in `pnpm-workspace.yaml`'s `overrides`, with the advisory and why, and remove the entry when the dependency catches up. Only when no fixed release exists inside the range the dependent asks for, ignore the advisory in `osv-scanner.toml` for at most 14 days, with its reason and an issue that removes it |
+| *Ready to merge* | It is red because a job it waits for failed or was cancelled, and its log lists each one's result. Fix that job; a cancelled run needs only *Re-run all jobs* |
 | *Workflow security* | zizmor or actionlint names the line: an action not pinned to a commit, an expression written into a script instead of passed through `env`, a permission wider than the job needs |
 | `pnpm install` holds a version back | pnpm waits before installing very new releases (`minimumReleaseAge`). Wait, or record an exclusion in `pnpm-workspace.yaml` with why ([ADR 0004](docs/adr/0004-pnpm-workspaces.md)) |
 | `pnpm install` asks about a build script | Answer in `pnpm-workspace.yaml`'s `allowBuilds`, with the reason. Allowing one is a security decision |

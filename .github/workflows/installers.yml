@@ -1,7 +1,7 @@
 name: Installers
 
 # Every installer LeatherCAD ships, built and smoke-tested the same way for
-# whoever asks: package.yml on every pull request and push, release.yml from
+# whoever asks: ci.yml on every pull request and push, release.yml from
 # the release tag. On each platform the packaged smoke test runs first, then
 # the installer a user downloads — the AppImage, the Flatpak and an SBOM on
 # Linux (8.5), the NSIS installer on Windows and the universal dmg on macOS

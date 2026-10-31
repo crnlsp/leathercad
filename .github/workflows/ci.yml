@@ -249,3 +249,64 @@ jobs:
         uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         with:
           scan-args: --config=osv-scanner.toml --lockfile=pnpm-lock.yaml
+
+  # Every installer, smoke-tested and built on Linux, Windows and macOS by
+  # installers.yml, the same workflow the release builds with, from its tag.
+  # On every change, not only one to packaging: a change anywhere can break a
+  # package (roadmap R5). Its checks are named `Installers / Build (<os>)`, as
+  # a called workflow's jobs are. A job that calls a workflow takes no timeout
+  # of its own; each of its jobs has one. `./`, not the `$/` zizmor asks for,
+  # which actionlint cannot parse yet (rhysd/actionlint#711); for a called
+  # workflow the two mean the same: GitHub reads it from the caller's own
+  # commit, not from a checkout.
+  installers:
+    name: Installers
+    uses: ./.github/workflows/installers.yml # zizmor: ignore[self-repository]
+    with:
+      ref: ${{ github.sha }}
+
+  # Until the rulesets on develop and main require Ready to merge, they still
+  # require the four checks the installer builds were called before
+  # installers.yml. Each name is reported here, and passes only when every
+  # build did. Once the rulesets change, a pull request of its own deletes
+  # this job (plan 2026-10-31-ci-cd-and-shipping, Task A2). `always()`,
+  # because a required check that is skipped counts as passed.
+  old-checks:
+    name: ${{ matrix.check }}
+    needs: installers
+    if: always()
+    strategy:
+      matrix:
+        check: [Package, Package (windows-latest), Package (macos-latest), Flatpak]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every installer built
+        env:
+          RESULT: ${{ needs.installers.result }}
+        run: |
+          echo "Installers: $RESULT"
+          test "$RESULT" = success
+
+  # The one check the rulesets require from this workflow, beside Conventional
+  # title on develop and Release gate on main. It passes only when every job
+  # it waits for passed or was skipped, so a gate job added later goes in its
+  # `needs` and the rulesets stay as they are. `always()`: without it a failed
+  # job would skip this one, and a required check that is skipped counts as
+  # passed. With it, a cancelled run turns this red too, never green.
+  ready:
+    name: Ready to merge
+    needs: [static, test, cross-platform, e2e, visual, workflows, dependencies, installers]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          if jq -e 'any(.[]; .result != "success" and .result != "skipped")' <<< "$NEEDS" > /dev/null; then
+            echo "::error title=Not ready to merge::A job above failed or was cancelled."
+            exit 1
+          fi
