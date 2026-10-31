@@ -136,9 +136,9 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Find out first:** Playwright with `fullyParallel: false` shards by file; check no spec depends on another file having run (shared fixtures under `e2e/`). Note the current test count.
 
-- [ ] Matrix `shard: [1, 2, 3]`; `pnpm build`, then `xvfb-run -a pnpm exec playwright test --shard="$SHARD/3"` with `SHARD` from `env:`; blob reporter on CI.
-- [ ] A `merge-reports` job builds one HTML report and uploads it on failure.
-- [ ] Add the shards to `ready.needs`.
+- [x] Matrix `shard: [1, 2, 3]`; `pnpm build`, then `xvfb-run -a pnpm exec playwright test --shard="$SHARD/3"` with `SHARD` from `env:`; blob reporter on CI.
+- [x] A `merge-reports` job builds one HTML report and uploads it on failure. It is `e2e-report`, run only when a shard failed, and left out of `ready.needs` because by then *Ready to merge* is red already.
+- [x] Add the shards to `ready.needs`. The matrix job keeps the id `e2e`, which `ready` already needed: one red shard makes `needs.e2e.result` `failure`.
 
 **Done when:** across three PR runs every test runs exactly once (the shard totals add up to the count) and E2E wall time is at most about 4.5 minutes. Sonnet, small.
 
