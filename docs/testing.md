@@ -359,7 +359,7 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
-Eight jobs, run in parallel on every pull request, so one run reports every failure rather than
+Seven jobs, run in parallel on every pull request, so one run reports every failure rather than
 only the first:
 
 ```
@@ -381,9 +381,6 @@ e2e      pnpm test:e2e          # Playwright + Electron, under xvfb, incl. the a
 
 visual   pnpm test:visual       # pixel diffs in the pinned container
 
-package  pnpm test:packaged     # smoke test of the packaged binary
-         pnpm package           # the AppImage, uploaded as an artifact
-
 workflows     actionlint, zizmor   # workflow syntax, injection, pinning
 dependencies  osv-scanner          # the lockfile against known vulnerabilities
 ```
@@ -391,9 +388,12 @@ dependencies  osv-scanner          # the lockfile against known vulnerabilities
 `static` also runs `pnpm knip`. Every action is pinned to a commit; zizmor fails the run on one that
 is not.
 
-Beside it, on every pull request and push, `package.yml` runs the packaged smoke test and builds the
-installer on Windows and macOS, and builds the Flatpak. Until roadmap item R5 it ran only when
-packaging could have changed, because a private repository pays for those minutes.
+Beside it, on every pull request and push, `package.yml` calls `installers.yml` on Linux, Windows
+and macOS: `pnpm test:packaged`, the smoke test of the packaged binary, then `pnpm package` — the
+AppImage, the Flatpak and the SBOM on Linux, the NSIS installer, the universal dmg — uploaded as
+`installers-<OS>`. The release builds its files with the same workflow, from its tag. Until roadmap
+item R5 this ran only when packaging could have changed, because a private repository pays for
+those minutes.
 
 `pnpm check` runs the `static` and `test` work locally — including `test:coverage`, not plain
 `test` — and is what the pre-push hook invokes, so a green `pnpm check` predicts a green CI for
