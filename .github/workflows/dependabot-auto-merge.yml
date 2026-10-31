@@ -12,9 +12,13 @@ name: Dependabot auto-merge
 
 on:
   pull_request:
-    # Once, when the PR appears (or is reopened). A later push does not
-    # re-enable auto-merge that someone switched off.
-    types: [opened, reopened]
+    # `synchronize` is every push to the branch, Dependabot's own rebases
+    # included. GitHub turns auto-merge off when someone without write access
+    # pushes to the head branch, and its docs do not say whether Dependabot's
+    # push counts; asking again after each push means a rebase cannot leave the
+    # PR sitting unmerged. GitHub's own Dependabot example runs on every
+    # pull_request event for the same reason.
+    types: [opened, reopened, synchronize]
     branches: [develop]
 
 permissions: {}
@@ -30,10 +34,15 @@ jobs:
     # The branch prefix is the second lock. Only the two grouped
     # minor-and-patch PRs are named; a major, or a Dependabot security update,
     # has another branch name and waits for a human.
+    #
+    # The label is the third: since every push asks again, "Disable auto-merge"
+    # alone would be undone by the next one. A person holding a PR back adds
+    # `no-auto-merge`, and the job leaves it alone (CONTRIBUTING.md, "Branches").
     if: >-
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       (startsWith(github.head_ref, 'dependabot/npm_and_yarn/develop/dependencies-') ||
-       startsWith(github.head_ref, 'dependabot/github_actions/develop/actions-'))
+       startsWith(github.head_ref, 'dependabot/github_actions/develop/actions-')) &&
+      !contains(github.event.pull_request.labels.*.name, 'no-auto-merge')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # Widened for this job alone: auto-merge is a write to the pull request.

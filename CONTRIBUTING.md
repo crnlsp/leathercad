@@ -94,7 +94,9 @@ check is green it merges itself
 ([`dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml)); if the ruleset asks
 for an approval first, it waits for one. A major update arrives as a pull request of its own and
 waits for you to decide, as do the release-please pull request and every pull request from a
-person. *Disable auto-merge* on a Dependabot pull request keeps it from merging.
+person. To hold a Dependabot pull request back — before pushing to its branch, say — add the
+`no-auto-merge` label and click *Disable auto-merge*: the workflow asks again after every push, and
+the label is what makes it leave the pull request alone.
 
 ## A change is a vertical slice
 
