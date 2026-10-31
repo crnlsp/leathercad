@@ -1,0 +1,22 @@
+# Advisories the Known vulnerabilities job (ci.yml) skips, each for a short,
+# fixed time. An entry is a last resort: a fix goes in pnpm-workspace.yaml
+# `overrides` whenever one exists inside the version range the dependent
+# asks for. An entry here says why none does, expires on its own within 14
+# days, and has an issue that removes it.
+
+# GHSA-g3hv-75wg-m249, minimatch denial of service through globparts
+# amplification, published 2026-10-30. Only minimatch 11.0.1 and later are
+# fixed. The lockfile holds minimatch 3.1.5, 5.1.9, 9.0.9 and 10.2.6, and an
+# override cannot jump them to 11: 3 and 5 export a plain function where 11
+# exports named ones, so ESLint's config-array, glob 7, @electron/asar and
+# dir-compare would break. Every dependent is development or packaging
+# tooling (ESLint, typescript-eslint, Stryker, electron-builder, glob,
+# filelist); nothing in the shipped app imports minimatch, and the app ships
+# no node_modules. The maintainer backported the last minimatch advisory to
+# 3.x, 5.x and 9.x within days (2026-02-25), so this should be short. Remove
+# this entry, and raise the floors in `overrides`, once fixed releases of the
+# majors above exist.
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2026-11-14T00:00:00Z
+reason = "minimatch: no fixed release below 11; development and packaging tooling only; remove when 3.x/5.x/9.x/10.x backports ship"
