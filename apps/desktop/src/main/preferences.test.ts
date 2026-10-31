@@ -391,6 +391,29 @@ describe('keeping preferences', () => {
     writeFileSync(file, '\u0000\u0001garbage');
     expect(new PreferencesStore(file).preferences).toEqual(DEFAULT_PREFERENCES);
   });
+
+  it('has every change asked for on disk once a quit has waited for them', async () => {
+    // Asked for as the window closes, and awaited by no one: still being
+    // written when the quit comes, and cut off unless the quit waits.
+    const store = new PreferencesStore(file);
+    void store.update({ partsFolded: true });
+    void store.keepSession({
+      tabs: [{ path: '/p/belt.lcp', kept: null, view: 'design', camera: null }],
+      active: 0,
+    });
+    await store.settled();
+
+    const next = new PreferencesStore(file);
+    expect(next.preferences.partsFolded).toBe(true);
+    expect(next.session.tabs.map((tab) => tab.path)).toEqual(['/p/belt.lcp']);
+  });
+
+  it('tells a quit that waits when the last change could not be written', async () => {
+    writeFileSync(join(dir, 'blocked'), 'a file where the folder should be');
+    const store = new PreferencesStore(join(dir, 'blocked', 'preferences.json'));
+    store.update({ partsFolded: true }).catch(() => undefined);
+    await expect(store.settled()).rejects.toThrow();
+  });
 });
 
 describe('a recent project as the maker reads it (8.7)', () => {

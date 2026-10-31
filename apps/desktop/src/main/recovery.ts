@@ -162,8 +162,20 @@ export class RecoveryStore {
    */
   async adopt(id: string): Promise<void> {
     this.checkId(id);
-    this.adopted.add(id);
-    await Promise.resolve();
+    // After the writes asked before it — recovering asks for the tab's own
+    // copy and this at once — so one copy of the work is on disk at every
+    // moment. Asked by a window that has died since, it goes where that
+    // window's adoptions went: to the next window.
+    const asker = this.id;
+    return this.inOrder(() => {
+      (this.id === asker ? this.adopted : this.orphaned).add(id);
+      return Promise.resolve();
+    });
+  }
+
+  /** Resolves once every write, clear and adoption asked for so far has run: what a clean exit waits for. */
+  settled(): Promise<void> {
+    return this.queue.then(() => undefined);
   }
 
   /**
@@ -195,7 +207,9 @@ export class RecoveryStore {
 
   /**
    * A clean exit: this session's copy and the ones it took over go. Synchronous,
-   * because the process is on its way out and will not wait for a promise.
+   * because the process is on its way out; the quit waits for `settled` first,
+   * so what the window asked for has landed, and a write asked for after this
+   * is removed as it lands.
    */
   releaseOnQuit(): void {
     this.released = true;
