@@ -265,29 +265,6 @@ jobs:
     with:
       ref: ${{ github.sha }}
 
-  # Until the rulesets on develop and main require Ready to merge, they still
-  # require the four checks the installer builds were called before
-  # installers.yml. Each name is reported here, and passes only when every
-  # build did. Once the rulesets change, a pull request of its own deletes
-  # this job (plan 2026-10-31-ci-cd-and-shipping, Task A2). `always()`,
-  # because a required check that is skipped counts as passed.
-  old-checks:
-    name: ${{ matrix.check }}
-    needs: installers
-    if: always()
-    strategy:
-      matrix:
-        check: [Package, Package (windows-latest), Package (macos-latest), Flatpak]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Every installer built
-        env:
-          RESULT: ${{ needs.installers.result }}
-        run: |
-          echo "Installers: $RESULT"
-          test "$RESULT" = success
-
   # The one check the rulesets require from this workflow, beside Conventional
   # title on develop and Release gate on main. It passes only when every job
   # it waits for passed or was skipped, so a gate job added later goes in its

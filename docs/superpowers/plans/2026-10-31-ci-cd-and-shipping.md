@@ -118,10 +118,11 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Interfaces:** Produces job id `ready`, name `Ready to merge`, `needs:` every gate job, `if: always()`, fails when any `needs.*.result` is `failure` or `cancelled`. Every later gate job is added to its `needs`.
 
-- [ ] Add the installers job (calling A1's workflow) and `ready` to `ci.yml`; delete `package.yml`.
-- [ ] Merge. Then the maintainer replaces both rulesets' required checks: develop `[Ready to merge, Conventional title]`, main `[Ready to merge, Release gate]`, stating `require_extra_approval_for_unattributed_changes` as it is today.
-- [ ] Open a throwaway PR with a failing unit test: `Ready to merge` is red. Close it.
-- [ ] Update `CONTRIBUTING.md`'s list of checks.
+- [x] Add the installers job (calling A1's workflow) and `ready` to `ci.yml`; delete `package.yml`.
+- [x] Merge. Then the maintainer replaces both rulesets' required checks: develop `[Ready to merge, Conventional title]`, main `[Ready to merge, Release gate]`, stating `require_extra_approval_for_unattributed_changes` as it is today. Done after #182, each check pinned to GitHub Actions (`integration_id` 15368).
+- [x] Open a throwaway PR with a failing unit test: `Ready to merge` is red. Close it. #180: a failing unit test and a cancelled run were red, a skipped job passed.
+- [x] Update `CONTRIBUTING.md`'s list of checks.
+- [x] Added in the doing: the rulesets required four names only A1's shim reported, so deleting it before the swap would have left every PR waiting. #182 moved the shim into `ci.yml` as `old-checks`, and a follow-up PR deleted it after the swap.
 
 **Done when:** both rulesets list exactly two checks; a red job makes `Ready to merge` red; a green PR merges. Opus, small.
 
