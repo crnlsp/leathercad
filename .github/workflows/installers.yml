@@ -1,0 +1,177 @@
+name: Installers
+
+# Every installer LeatherCAD ships, built and smoke-tested the same way for
+# whoever asks: package.yml on every pull request and push, release.yml from
+# the release tag. On each platform the packaged smoke test runs first, then
+# the installer a user downloads — the AppImage, the Flatpak and an SBOM on
+# Linux (8.5), the NSIS installer on Windows and the universal dmg on macOS
+# (8.6a) — uploaded as `installers-<OS>`, the files a release attaches.
+#
+# The smoke test drives a sibling of the shipped build, not the shipped bytes.
+# `pnpm test:packaged` builds with `pnpm package:e2e`, which is the same
+# commit, the same `electron-vite build` and the same electron-builder
+# configuration, with two differences: the inspector fuse stays on, because
+# Playwright attaches through it (ADR 0014, R6 amendment), and it stops at the
+# unpacked app (`--dir`) rather than wrapping it in an installer. On macOS that
+# unpacked app is this runner's architecture only (arm64); the dmg is
+# universal, so its Intel half is never launched here. See
+# docs/release-checklist.md, *The build*.
+#
+# Read-only on purpose: this runs every build-time dependency and the Flatpak
+# bundler, and holds nothing it could publish or sign with. Whoever calls it
+# attaches the files, from a job of its own.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit, branch or tag to build.
+        type: string
+        required: true
+      version:
+        description: >-
+          Overrides apps/desktop/package.json's version, which the app reports
+          and the file names carry. For preview and candidate builds; empty
+          keeps the committed one.
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # Before anything is built, so the smoke test checks the version the
+      # installer will carry.
+      - name: Version
+        if: inputs.version != ''
+        working-directory: apps/desktop
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: npm pkg set version="$VERSION"
+
+      # The smoke test reads the exported PDF with poppler, independently of
+      # the writer that made it.
+      - name: Install poppler (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Install poppler (macOS)
+        if: runner.os == 'macOS'
+        run: brew install poppler
+
+      # The community feed fails now and then. On 2026-10-07 it answered 504,
+      # choco reported "installed 0/0 packages" and succeeded, and the smoke
+      # test failed later, as `pdfinfo` ENOENT. So: three tries, and if poppler
+      # is still missing, fail here, saying so. The version is pinned, and
+      # --require-checksums is what OpenSSF Scorecard reads as pinned; this
+      # package carries its zip inside, so there is no download to checksum.
+      - name: Install poppler (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            choco install poppler --version 26.9.0 --require-checksums --no-progress -y && command -v pdfinfo && exit 0
+            echo "poppler is not installed after attempt $attempt."
+            sleep $((attempt * 20))
+          done
+          echo "::error title=poppler::Not installed after three attempts. The packaged smoke test needs its pdfinfo."
+          exit 1
+
+      - run: pnpm install --frozen-lockfile
+
+      # The packaged app, driven by Playwright: asar with its integrity check,
+      # the fuses, resources, the ad-hoc signature on macOS. The E2E suite
+      # drives the development build and cannot see these. Electron needs a
+      # display, which a Linux runner lacks; xvfb is preinstalled there.
+      - name: Packaged smoke test
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a pnpm test:packaged
+          else
+            pnpm test:packaged
+          fi
+
+      # The smoke test's build shares apps/desktop/release/ with the installer.
+      # electron-builder replaces each unpacked app it rebuilds, but not one it
+      # does not (macOS's mac-arm64/), so the e2e build goes, all of it, before
+      # anything that ships is made.
+      - name: Remove the smoke test's build
+        shell: bash
+        run: rm -rf apps/desktop/release
+
+      # Then the installer a user would download, with every fuse as shipped.
+      - name: Installer
+        run: pnpm package
+
+      # The Flatpak beside the AppImage (8.5). Its runtimes come from Flathub,
+      # installed for this user by the bundler. apt's index is fresh from the
+      # poppler step.
+      - name: Flatpak
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get install -y flatpak flatpak-builder &&
+          flatpak remote-add --user --if-not-exists flathub
+          https://dl.flathub.org/repo/flathub.flatpakrepo &&
+          pnpm package:flatpak
+
+      # A build SBOM: everything that went into the installers, build tooling
+      # included. The app ships no node_modules — Vite bundles its runtime
+      # code — so a production-only SBOM would be empty. One is enough: the
+      # dependency tree is the same on every platform.
+      - name: SBOM
+        if: runner.os == 'Linux'
+        run: >-
+          pnpm sbom --sbom-format cyclonedx --sbom-type application
+          --filter @leathercad/desktop --out apps/desktop/release/leathercad.cdx.json
+
+      # Only the top level of release/: the unpacked apps beside the installers
+      # are electron-builder's working copies, and never leave the runner.
+      - name: Keep the installers
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-${{ runner.os }}
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.flatpak
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+          # Installers are compressed already.
+          compression-level: 0
+
+      # A failure in the packaged app that will not reproduce locally is a
+      # dead end without the trace and screenshots.
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packaged-report-${{ runner.os }}
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
