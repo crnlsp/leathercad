@@ -151,13 +151,6 @@ refuses. Scopes are the package or area: `geometry`, `domain`, `export`, `deskto
 A pull request fills in the template: what changes and why, how it was checked, and whether the
 docs moved with it.
 
-[CodeRabbit](https://www.coderabbit.ai/) reviews pull requests into `develop` and `main`, against
-the invariants in [`CLAUDE.md`](CLAUDE.md) and the path instructions in
-[`.coderabbit.yaml`](.coderabbit.yaml). It reviews automatically only once the repository has ten
-stars; until then, ask for a review with a comment of `@coderabbitai review`. It is a second
-reviewer, not a gate: answer each comment — fix it, or say why not — before merging. It is not a
-required check, and it never replaces the tests, running the app, or a physical print.
-
 ## When a check fails
 
 `pnpm check` runs what CI's *Static checks* and *Tests and coverage* run, so most failures reproduce
