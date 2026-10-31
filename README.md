@@ -121,6 +121,10 @@ money every year — so Windows and macOS warn the first time you open it.
 [Getting started](docs/getting-started.md#1-install) says which file to take, how to open it
 anyway, and how to check that a download is the one this repository built.
 
+It is made for Arch Linux and Ubuntu LTS (measured), Windows 10 22H2 and 11 (tested), and other
+Linux and macOS 12 or newer (shipped). The
+[supported systems](docs/getting-started.md#supported-systems) say what each level promises.
+
 ## The 1:1 promise
 
 A line drawn as 100 mm measures 100 mm on paper. Everything in LeatherCAD's design serves that:
