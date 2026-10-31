@@ -297,7 +297,7 @@ jobs:
   # Throwaway: a job skipped by its `if:`, to see what Ready to merge reads.
   probe:
     name: Probe (skipped)
-    if: false
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
