@@ -357,6 +357,9 @@ Note each platform's result beside its row in the log, or say which check could 
 - Merge the release pull request (see
   [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)), and check that the release has
   the AppImage, the Flatpak, the Windows installer, the macOS dmg and the SBOM attached — five
-  files, as `release.yml` attaches them, and that the notes list the open `known-issue` issues.
+  files, as `release.yml` attaches them — or, where a platform failed to build, a *Missing in this
+  release* line in the notes that says which. The notes also list the open `known-issue` issues:
+  the release workflow adds both, between two comment markers, and takes them out and writes them
+  again when a build is re-run.
 - The installers are not code-signed, by decision ([`roadmap.md`](roadmap.md), *Release
   engineering*); [`getting-started.md`](getting-started.md) tells makers how to open them.
