@@ -174,7 +174,7 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 - Modify: `package.json` (`"test:tools": "node --test tools/ci/"`, and `pnpm check` runs it), `.github/workflows/ci.yml`, `.github/workflows/codeql.yml`, `knip.jsonc` if it flags the new files.
 
 **Interfaces:**
-- Produces: `classify(files: { status: string, path: string, previous?: string }[]): Set<'docs' | 'code' | 'packaging' | 'deps' | 'workflows'>`. Rules: `docs` = `docs/**` and `*.md` outside `.claude/` and `apps/`; `workflows` = `.github/**`; `deps` = `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/**`, any `package.json`; `packaging` = `apps/desktop/electron-builder.config.mjs`, `apps/desktop/build/**`, `apps/desktop/src/main/**`, `assets/fonts/**`; anything else = `code`. `previous` (renames) is classified too. An empty list returns `{'code'}`.
+- Produces: `classify(files: { status: string, path: string, previous?: string }[]): Set<'docs' | 'code' | 'packaging' | 'deps' | 'workflows'>`. Rules: `docs` = `docs/**`, `packaging/aur/**` (an AUR recipe nothing in CI builds; found by B3), and `*.md` outside `.claude/` and `apps/`; `workflows` = `.github/**`; `deps` = `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/**`, any `package.json`; `packaging` = `apps/desktop/electron-builder.config.mjs`, `apps/desktop/build/**`, `apps/desktop/src/main/**`, `assets/fonts/**`; anything else = `code`. `previous` (renames) is classified too. An empty list returns `{'code'}`.
 - CLI: `node tools/ci/changes.mjs < files.tsv` prints JSON `{"docs":bool,"code":bool,…}` for `$GITHUB_OUTPUT`.
 - Job `changes` in `ci.yml`: on `pull_request`, lists files with `gh api repos/$REPO/pulls/$PR/files --paginate`; on `push`, outputs every kind true.
 
@@ -307,7 +307,9 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Why:** Ubuntu is level 1; a `.deb` installs like any program and avoids FUSE.
 
-**Find out first:** what electron-builder's `deb` target needs (`maintainer`, `homepage`, dependencies) and how to smoke-test an *installed* `.deb` on a runner: whether `playwright.packaged.config.ts` can be pointed at `/opt/LeatherCAD/leathercad` through an environment variable.
+**Find out first:**
+- What electron-builder's `deb` target needs (`maintainer`, `homepage`, dependencies), and how to smoke-test an *installed* `.deb` on a runner: whether `playwright.packaged.config.ts` can be pointed at `/opt/LeatherCAD/leathercad` through an environment variable.
+- The sandbox (found by B3, untested for lack of an Ubuntu machine). The AppImage's `AppRun` adds `--no-sandbox` only when user namespaces are missing; a `.deb` runs the binary directly. Ubuntu 24.04 and later restrict unprivileged user namespaces through AppArmor, so the app may refuse to start. Check whether electron-builder's `.deb` makes `chrome-sandbox` setuid or ships an AppArmor profile. If neither, choose one with the maintainer: never `--no-sandbox` silently.
 
 **Files:** `apps/desktop/electron-builder.config.mjs` (linux `target: ['AppImage', 'deb']`, `maintainer` noreply), `installers.yml` (upload `*.deb`), `release.yml` (attest and attach `*.deb`), `systems.yml` (install with `sudo apt-get install ./LeatherCAD-*.deb` on the three Ubuntu images, then smoke), `docs/getting-started.md`.
 
@@ -325,6 +327,7 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 - What electron-builder's MSIX/AppX target is called and needs (its docs mark MSIX beta).
 - How to smoke-test on a runner: sign with a self-signed test certificate, `Add-AppxPackage`, then launch through `shell:AppsFolder\<AUMID>`. The `WindowsApps` folder is not readable, so Playwright may not attach. If not, the minimum check is that the app starts and writes its log (ADR 0015) in the package's redirected `LocalAppData`.
 - That preferences and crash-recovery copies survive a restart inside the package (AppData is redirected per package).
+- Whether an AUR install should count as managed too (found by B3). Today 8.9 treats it as unmanaged, so it announces a release before the AUR package has caught up. If yes, the PKGBUILD's launcher needs a marker that `isManagedInstall` reads; decide with the maintainer before widening the signature.
 
 **Files:**
 - `apps/desktop/src/main/updates.ts` + test: export `isManagedInstall(env: Record<string, string | undefined>, windowsStore: boolean): boolean` (true for `FLATPAK_ID` set, or `windowsStore`); `apps/desktop/src/main/index.ts:348` uses it with `process.windowsStore === true`.
