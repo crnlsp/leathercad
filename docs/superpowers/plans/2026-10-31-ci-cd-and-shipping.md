@@ -355,12 +355,12 @@ Not built now; listed so nobody rebuilds the reasoning.
 
 **Why:** it is not used. Deleting its config does not stop it: with no `.coderabbit.yaml` it reviews with defaults until its access to the repository is removed.
 
-**Today:** `.coderabbit.yaml`; `CONTRIBUTING.md` lines 144–148; `docs/claude-code-setup.md` line 53. **In progress on branch `chore/remove-coderabbit`** (commit "chore: remove CodeRabbit reviews": the config and both doc mentions). An earlier draft of it also deleted `ci.yml`'s `cross-platform` job (Windows and macOS unit tests); that part was dropped.
+**Today:** `.coderabbit.yaml`; `CONTRIBUTING.md` lines 144–148; `docs/claude-code-setup.md` line 53. **Done on branch `chore/c1-remove-coderabbit`** (commit "chore: remove CodeRabbit reviews": the config and both doc mentions). An earlier draft of it also deleted `ci.yml`'s `cross-platform` job (Windows and macOS unit tests); that part was dropped.
 
 **Decided 2026-10-31: the Windows and macOS unit tests stay.** Both rulesets require *Unit tests on windows-latest* and *macos-latest*, and the tests caught 9 failures in a month. C1 removes CodeRabbit only.
 
-- [ ] Check the branch leaves `ci.yml`'s `cross-platform` job and its two mentions in `docs/testing.md` exactly as on `develop`.
-- [ ] `git grep -i coderabbit` finds nothing.
+- [x] Check the branch leaves `ci.yml`'s `cross-platform` job and its two mentions in `docs/testing.md` exactly as on `develop`.
+- [x] `git grep -i coderabbit` finds nothing outside this plan.
 - [ ] Maintainer step: GitHub → Settings → Applications → Installed GitHub Apps → CodeRabbit → Configure → remove this repository (or uninstall).
 
 **Done when:** the next PR gets no CodeRabbit comment; nothing in the repository mentions it. PR `chore: remove CodeRabbit reviews`. Sonnet, small; one maintainer step.

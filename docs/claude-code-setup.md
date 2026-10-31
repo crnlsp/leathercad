@@ -50,7 +50,7 @@ invariant; the rest are defaults, broken with a stated reason.
 
 A file with a `paths:` list in its front matter loads only when Claude Code reads a matching file,
 so area rules cost nothing elsewhere. Other agents reach the same files through `AGENTS.md`, which
-only points here; CodeRabbit reads them as code guidelines by default.
+only points here.
 
 ## 3. Project documentation
 
