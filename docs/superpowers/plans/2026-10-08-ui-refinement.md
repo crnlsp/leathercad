@@ -1220,7 +1220,8 @@ the visible rows (unit); E2E for keys and reveal.
   that does not print with a crossed printer in the warning colour, its tooltip the reason
   (*Not printed. It is hidden.*), and says it in the row's description. A printing piece's hidden
   features are told by their own marks.
-- **Pieces start open** and a fold is the session's; a selection on the board opens its piece,
+- **Pieces start open** and a fold is the session's — since PERF-016 its tab's, kept through a
+  tab switch and a visit to Sheets and gone with the tab; a selection on the board opens its piece,
   sets the tree's Tab stop on its row and scrolls it into view (`block: 'nearest'`), focus staying
   on the board. Tabbing into the tree selects nothing: focus lands on the selected row, or the
   first (checked from the rail with nothing selected and with a stitch line selected).
