@@ -5,8 +5,9 @@ name: Weekly
 #
 # A schedule runs this file as it is on main, the default branch, which holds
 # the last release. The code being written is on develop, so a scheduled run
-# checks that out instead, as nightly.yml does. A run started by hand tests the
-# branch it is started on.
+# checks that out instead. (nightly.yml starts itself again on develop, which
+# also makes develop's copy of the file the one that runs.) A run started by
+# hand tests the branch it is started on.
 #
 # Nobody watches a scheduled run, so a failure opens an issue, or adds to the
 # one already open. Before it did, the first two weekly runs failed unseen.
