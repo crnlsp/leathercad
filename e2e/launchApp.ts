@@ -116,7 +116,7 @@ export type LaunchOptions = NonNullable<Parameters<typeof launchApp>[0]>;
  */
 export async function openApp(
   options: LaunchOptions & {
-    /** The window's size, for a test that depends on the room it has. */
+    /** The room inside the window, for a test that depends on it (`resizeWindow`). */
     readonly size?: readonly [number, number];
   } = {},
 ): Promise<{ app: ElectronApplication; window: Page }> {
@@ -138,7 +138,7 @@ export async function openApp(
   if (options.size !== undefined) {
     await app.evaluate(
       ({ BrowserWindow }, [width, height]) =>
-        BrowserWindow.getAllWindows()[0]?.setSize(width, height),
+        BrowserWindow.getAllWindows()[0]?.setContentSize(width, height),
       options.size,
     );
   }

@@ -47,7 +47,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: paths.pdf });
         // Do not launch a real PDF viewer during a test run.
         shell.openPath = async () => '';
-        BrowserWindow.getAllWindows()[0]?.setSize(1600, 1000);
+        BrowserWindow.getAllWindows()[0]?.setContentSize(1600, 1000);
       },
       { project: PRINT_TEST, pdf },
     );
@@ -454,7 +454,9 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
 
     // 5. Nor does the window's size.
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1100, 760),
+    );
     await window.getByTestId('view-sheets').click();
     await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
     await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 2–3');

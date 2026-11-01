@@ -54,7 +54,9 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, file);
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(1280, 840));
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]!.setContentSize(1280, 840),
+    );
 
     const at = await viewOf(window);
     const click = (x: number, y: number) => window.mouse.click(...at(x, y));

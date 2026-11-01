@@ -549,7 +549,7 @@ test('the rail collapses below 1280 px, and the maker can open it (F.2, U.5)', a
     await expect(window.getByTestId('tool-rectangle')).toContainText('Rectangle');
 
     await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(1100, 760);
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1100, 760);
     });
     await expect(rail).toHaveClass(/collapsed/);
     // The shortcut is the face; the name is still what the button is called.
@@ -742,7 +742,7 @@ test('the Draw as row keeps all six marks on screen at 1200 and 1280 px (F.6)', 
   await withApp(async (window, instance) => {
     for (const width of [1280, 1200]) {
       await instance.evaluate(({ BrowserWindow }, w) => {
-        BrowserWindow.getAllWindows()[0]?.setSize(w, 840);
+        BrowserWindow.getAllWindows()[0]?.setContentSize(w, 840);
       }, width);
       await expect.poll(() => window.evaluate(() => window.outerWidth)).toBe(width);
       const row = await window.getByTestId('tool-options').evaluate((el) => ({
@@ -819,7 +819,7 @@ test('the workspace narrows instead of pushing the properties panel off screen',
   // reach is worse than the wrapping header this layout replaced.
   await withApp(async (window, instance) => {
     await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(1024, 813);
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1024, 813);
     });
 
     await expect
@@ -854,7 +854,7 @@ test('the project bar and the work bar each stay one row when the window narrows
     expect(wide).toBeGreaterThan(0);
 
     await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(1024, 813);
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1024, 813);
     });
 
     await expect.poll(headerHeight).toBe(wide);
