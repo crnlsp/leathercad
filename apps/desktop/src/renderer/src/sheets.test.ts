@@ -16,7 +16,15 @@ import { RectOps, uniformRadii } from '@leathercad/geometry';
 import { loadProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
-import { paperOptionsFor, printStatusFor, resolvedFor, sheetPlanFor } from './sheets.js';
+import { createI18n } from '../../shared/i18n.js';
+import {
+  paperOptionsFor,
+  printStatusFor,
+  releaseDerived,
+  resolvedFor,
+  sheetPlanFor,
+  sheetsPagesFor,
+} from './sheets.js';
 
 const FIXTURE = resolve(import.meta.dirname, '../../../../../fixtures/projects/print-test.lcp');
 const printTest = () => loadProject(new Uint8Array(readFileSync(FIXTURE))).project;
@@ -225,6 +233,57 @@ describe('the plan of each revision, kept for the one on screen (PERF-001)', () 
     expect(heapAfterGcMiB() - before).toBeLessThan(16);
   });
 });
+
+describe('the Sheets pages, kept only while their project is on screen (PERF-010)', () => {
+  const i18n = createI18n('en');
+
+  it('are built once for a project and its words, so a pan or a halo builds none', () => {
+    const project = printTest();
+    expect(sheetsPagesFor(project, i18n)).toBe(sheetsPagesFor(project, i18n));
+  });
+
+  it('are built again in the words of another language', () => {
+    const project = printTest();
+    const english = sheetsPagesFor(project, i18n);
+    expect(sheetsPagesFor(project, createI18n('en'))).not.toBe(english);
+  });
+
+  /** A project shown on Sheets, held by nothing but what the view derived from it. */
+  const shownOnSheets = (): { project: WeakRef<Project>; pages: WeakRef<object> } => {
+    const project = printTest();
+    return { project: new WeakRef(project), pages: new WeakRef(sheetsPagesFor(project, i18n)) };
+  };
+
+  it('go, with their project, once another project is asked about', async () => {
+    // As the board on Design asks for the plan after an edit or a reload, and
+    // not for pages: the 5.8 m strap's were 18 MiB, kept until Sheets showed.
+    const { project, pages } = shownOnSheets();
+
+    sheetPlanFor(printTest());
+
+    expect(await collected(pages)).toBe(true);
+    expect(await collected(project)).toBe(true);
+  });
+
+  it('go, with their project, when no project is on screen: the last tab closed', async () => {
+    const { project, pages } = shownOnSheets();
+
+    releaseDerived();
+
+    expect(await collected(pages)).toBe(true);
+    expect(await collected(project)).toBe(true);
+  });
+});
+
+/**
+ * Whether nothing holds `target` any more, after a full collection: in the
+ * next task, since a `WeakRef` keeps its target until its own job ends.
+ */
+async function collected(target: WeakRef<object>): Promise<boolean> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  heapAfterGcMiB();
+  return target.deref() === undefined;
+}
 
 /**
  * Bytes after a full collection, in this worker. `--expose-gc` is set from

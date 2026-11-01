@@ -325,13 +325,16 @@ export class ToolManager {
   }
 
   /**
-   * Gives up whatever the active tool has half done, as Escape does, and
-   * stays on that tool: a project was opened under it (Q39). Every tool
-   * returns to idle on deactivating, which is the same thing.
+   * A project was read in under the board (Q39). The active tool gives up
+   * whatever it had half done, as Escape does, and stays selected: every tool
+   * returns to idle on deactivating, which is the same thing. The snap index
+   * of the project it replaced goes too, rather than holding that project
+   * until the next pointer move (PERF-010).
    */
-  cancel(): void {
+  reset(): void {
     this.active.onDeactivate?.(this.context);
     this.caught = null;
+    this.index = null;
     this.context.invalidate();
   }
 

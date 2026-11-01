@@ -7,15 +7,21 @@ import {
 } from '@leathercad/domain';
 import {
   buildExportScene,
+  layoutSheets,
   pageSetupFor,
   planEveryPaper,
   planSheets,
   printStatusOf,
+  sheetsPages,
   type ExportRole,
   type ExportScene,
   type PartPrintStatus,
   type SheetPlan,
+  type SheetsPage,
 } from '@leathercad/export';
+
+import type { I18n } from '../../shared/i18n.js';
+import { sheetsWords } from './sheetWords.js';
 
 /**
  * The sheet plan for a project, **the one the PDF will write** (7.4a).
@@ -42,9 +48,20 @@ interface Derived {
   statuses?: ReadonlyMap<string, PartPrintStatus>;
   plan?: SheetPlan;
   options?: readonly PaperOption[];
+  /** The Sheets view's pages, and the words they were made in. */
+  pages?: { readonly i18n: I18n; readonly pages: readonly SheetsPage[] };
 }
 
 let latest: Derived | null = null;
+
+/**
+ * Lets go of what was derived for the project last asked about. Asking about
+ * another is what usually does it; this is for when nothing will — the last
+ * tab closed, and the start screen asks about no project (PERF-010).
+ */
+export function releaseDerived(): void {
+  latest = null;
+}
 
 function derivedFor(project: Project): Derived {
   if (latest?.project !== project) latest = { project };
@@ -109,4 +126,24 @@ export function paperOptionsFor(project: Project): readonly PaperOption[] {
     );
   }
   return derived.options;
+}
+
+/**
+ * The Sheets view's pages (PERF-003): the paper and its ink, which only the
+ * plan, the date and the words change, so a pan or a halo builds none. Kept
+ * with the plan, for the project on screen alone, so an edit, a reload or
+ * another tab lets the last project's go — 18 MiB for the 5.8 m strap —
+ * rather than the board holding them until Sheets is shown again (PERF-010).
+ */
+export function sheetsPagesFor(project: Project, i18n: I18n): readonly SheetsPage[] {
+  const derived = derivedFor(project);
+  if (derived.pages?.i18n !== i18n) {
+    const plan = sheetPlanFor(project);
+    const words = sheetsWords(i18n);
+    derived.pages = {
+      i18n,
+      pages: sheetsPages(plan, layoutSheets(plan), { now: new Date(), words }),
+    };
+  }
+  return derived.pages.pages;
 }

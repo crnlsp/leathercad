@@ -62,7 +62,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ☐ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | Unassigned |
-| ☐ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | Unassigned |
+| ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
 | ☐ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | Unassigned |
 | ☐ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | Unassigned |
 | ☐ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | Unassigned |
@@ -620,10 +620,64 @@ roadmap Q35 (durability) and Q36 (saving a live preview) without silently resolv
 again. After New from a large Sheets project, heap was 69.2 MiB; replacing caches reduced it to
 25.3 MiB, with no PDF worker at either checkpoint. This retains the last project, not every one.
 
-- [ ] Clear document-lifetime geometry caches explicitly on New/open/reset.
-- [ ] Repeat actual open/New cycles, inspect retaining paths and verify prompt post-GC release.
-- [ ] Preserve intra-document reuse, intended camera state and tool cancellation; coordinate Q39
-  (unfinished tools on open) so cleanup has one lifecycle boundary.
+- [x] Clear document-lifetime geometry caches explicitly on New/open/reset.
+  Reproduced at `d091cb4`, on today's paths. Since tabs (8.12), *New*, opening and a tab switch
+  make the board again, keyed by its tab, and a project still open in another tab is kept, as it
+  should be. What outlived a project was kept "for the last one", in three places: the board's
+  Sheets pages (`sheetsCacheRef`, 18 MiB for the strap), held after an edit on Design or a
+  *Reload from disk* until Sheets was shown again; the tool manager's snap index, held after a
+  reload until the next snapped pointer move; and `sheets.ts`'s plan, scene and evaluation of
+  the project last asked about, held after the last tab closed until another project opened.
+  The pages now live beside the plan in `sheets.ts` (`sheetsPagesFor`), for the project on
+  screen alone, so the board keeps none and the next paint after an edit or a reload lets them
+  go; `ToolManager.reset()`, Q39's `cancel()` renamed, drops the index with the gesture; and the
+  window lets go of `sheets.ts`'s project (`releaseDerived`) once no tab is left.
+- [x] Repeat actual open/New cycles, inspect retaining paths and verify prompt post-GC release.
+  `node tools/perf-retention.mjs` (below). The retaining paths came from heap snapshots of the
+  production build: the closed project through `sheets.ts`'s `latest`, the reloaded one through
+  the board's ref and, for its document alone, React's fibers (see *Not done*). Guarded without
+  timings, in `pnpm test`, by collecting through `WeakRef`s: `sheets.test.ts` holds that a
+  project's pages, and the project, are collected once another is asked about and once none is
+  on screen; `tool.test.ts` that `reset` lets the replaced project go. Each fails with its fix
+  taken out.
+- [x] Preserve intra-document reuse, intended camera state and tool cancellation; coordinate Q39
+  (unfinished tools on open) so cleanup has one lifecycle boundary. The pages are still built
+  once for a project and its words, and a pan or a halo builds none (`sheets.test.ts`); an edit
+  made new ones before as well, since a new project has a new plan. The cameras are the tab's and
+  untouched. Q39's test passes under the new name. A document replaced in place has one
+  boundary, `DocumentStore.onReset`; everything else goes with the board, or with the project on
+  screen.
+
+| PERF-010, 5.8 m strap, renderer heap after full GC, median of 7 (range) | Before (`d091cb4`) | After |
+|---|---|---|
+| Start screen, before any project | 6.72 MiB (6.70–6.74) | 6.72 MiB (6.70–6.75) |
+| The project open, after Sheets and Design | 30.31 MiB (30.29–30.32) | 30.29 MiB (30.29–30.31) |
+| A panel drawn on Design | 30.61 MiB (30.60–30.62) | 12.51 MiB (12.50–12.52) |
+| *Reload from disk*, on Design | 31.33 MiB (31.32–31.33) | 13.22 MiB (13.21–13.23) |
+| Its tab closed, back on the start screen | 12.51 MiB (12.50–12.52) | 11.43 MiB (11.43–11.44) |
+| The closed project still reachable | 7 of 7 runs | 0 of 7 |
+
+Measured with `node tools/perf-retention.mjs` on the production build in unpackaged Electron
+45.0.0, in the pinned Playwright container (`v1.64.1-noble`) under Xvfb at 1920 × 1080, with the
+window at 1600 × 1000 — on the desktop, a covered window draws nothing and each run stalls for
+minutes. Before: `d091cb4`, built in a worktree of its own; runs interleaved, before and after,
+seven of each, on the audit's machine with other agents' builds beside them, which moves none of
+these figures. A figure is `Runtime.getHeapUsage` after two `HeapProfiler.collectGarbage`; the
+retaining paths were read from heap snapshots of the same builds. The audit's 69.2 → 25.3 MiB
+belongs to the window of one project, before tabs: today *New* opens a tab beside the project,
+which stays open, and kept, in its own.
+
+**Not done / not verified.** Right after a reload, the replaced project's document and evaluation
+(not its pages, its plan or its index) are still held by React: the fibers' previous props and the
+closures of the last render, before and after this change. They went in every run once Sheets and
+Design had been shown again; React's own double buffering, not a cache, so left as it is. The
+4.7 MiB the start screen keeps after the first project is not that project, which is unreachable;
+what it is was not examined. Measured on Linux only: the change is the renderer's JavaScript, with
+no platform path, and CI's Windows and macOS unit jobs run its guards.
+
+**Result:** what a project derives for the screen now goes with it. An edit on Design or a reload
+lets the last revision's Sheets pages go, 18.1 MiB on the strap, and closing the last tab lets the
+project go; the open project keeps what it reuses.
 
 **Expected benefit:** Release the demonstrated roughly 44 MiB of stale state in this scenario.
 

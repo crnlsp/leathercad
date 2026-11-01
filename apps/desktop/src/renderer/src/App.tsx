@@ -84,7 +84,7 @@ import {
   type ProjectTab,
 } from './projectTabs.js';
 import { TabContextMenu, TabStrip } from './TabStrip.js';
-import { printStatusFor } from './sheets.js';
+import { printStatusFor, releaseDerived } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { historyText } from './historyText.js';
@@ -177,6 +177,11 @@ export function App({
   const idle = useMemo(() => tabFor(blank()), [tabFor, blank]);
   const tab = active ?? idle;
   const store = tab.store;
+  // The start screen asks about no project, so nothing would let the last
+  // one's plan and Sheets pages go until another opened (PERF-010).
+  useEffect(() => {
+    if (active === null) releaseDerived();
+  }, [active]);
 
   // Design or Sheets (7.4c), the tab's own. View state, like the tool: never saved.
   const view = tab.view;
