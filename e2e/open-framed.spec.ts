@@ -63,7 +63,7 @@ test('a project opened from the Sheets view is framed in Design too', async () =
     const framed = await zoomOf(window);
 
     // True size moves this tab's camera off, so the next is not framed by chance.
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await expect(window.getByTestId('zoom-level')).toHaveText('100 %');
 
     await window.getByTestId('view-sheets').click();

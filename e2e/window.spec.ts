@@ -102,11 +102,11 @@ test('the zoom keys zoom, and Shift+1 fits the pattern again (8.4b, U.4)', async
     const scale = (): Promise<string> => readoutAt(window, board.x + 60, board.y + 60);
     await window.keyboard.press('Shift+Digit1');
     const fitted = await scale();
-    await window.keyboard.press('Control+Equal');
+    await window.keyboard.press('ControlOrMeta+Equal');
     await expect.poll(scale).not.toBe(fitted);
     await window.keyboard.press('Shift+Digit1');
     await expect.poll(scale).toBe(fitted);
-    await window.keyboard.press('Control+Minus');
+    await window.keyboard.press('ControlOrMeta+Minus');
     await expect.poll(scale).not.toBe(fitted);
   } finally {
     await closeApp(app);

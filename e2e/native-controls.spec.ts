@@ -145,7 +145,7 @@ test('every tab stop rings in the accent, in the window and every dialog, and Ta
     await window.getByTestId('project-name-input').fill('Gusset wallet');
     await window.getByTestId('project-name-input').press('Enter');
     // Opening no longer replaces anything (8.12); closing the tab asks.
-    await window.keyboard.press('Control+w');
+    await window.keyboard.press('ControlOrMeta+w');
     await expect(window.getByTestId('unsaved-dialog')).toBeVisible();
     await expectRings(window, 'Unsaved changes', DIALOG);
   } finally {
@@ -171,7 +171,7 @@ test('closing a dialog gives the keys back to what opened it (U.19)', async () =
     // By its key, from the board: back to the board.
     const board = window.getByTestId('editor-canvas');
     await board.focus();
-    await window.keyboard.press('Control+KeyP');
+    await window.keyboard.press('ControlOrMeta+KeyP');
     await expect(window.getByTestId('print-preview')).toBeVisible();
     await window.keyboard.press('Escape');
     await expect(board).toBeFocused();
@@ -194,7 +194,7 @@ test('switching view from a control the other view does not have leaves the keys
   const { app, window } = await launch();
   try {
     await window.getByTestId('tool-rectangle').focus();
-    await window.keyboard.press('Control+Digit2');
+    await window.keyboard.press('ControlOrMeta+Digit2');
     await expect(window.getByTestId('sheets-summary')).toBeVisible();
     await expect(window.getByTestId('editor-canvas')).toBeFocused();
   } finally {
@@ -307,7 +307,7 @@ test('Ctrl+A selects nothing outside a field, and a field’s text inside one', 
 
     // Outside a field: nothing, and a double-click on a label takes nothing either.
     await window.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    await window.keyboard.press('Control+a');
+    await window.keyboard.press('ControlOrMeta+a');
     expect(await selected()).toBe(0);
     await window.getByTestId('property-panel').getByText('Pieces').dblclick();
     expect(await selected()).toBe(0);
@@ -317,7 +317,7 @@ test('Ctrl+A selects nothing outside a field, and a field’s text inside one', 
       await expect(field).toHaveCSS('user-select', 'text');
       await field.focus();
       await field.press('End');
-      await field.press('Control+a');
+      await field.press('ControlOrMeta+a');
       expect(
         await field.evaluate(
           (input: HTMLInputElement) => input.selectionEnd! - input.selectionStart!,

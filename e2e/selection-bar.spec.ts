@@ -152,7 +152,7 @@ test('a new outline offers its stitch line, then its holes, each one click and o
     // Undo, a step at a time: the pitches, then the holes, then the stitch line.
     const undo = async (): Promise<void> => {
       await window.getByTestId('editor-canvas').focus();
-      await window.keyboard.press('Control+KeyZ');
+      await window.keyboard.press('ControlOrMeta+KeyZ');
     };
     await undo();
     await undo();

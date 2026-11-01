@@ -222,7 +222,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-shortcuts').click();
     await window.getByTestId('change-settings').click();
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('shortcut-clash')).toBeVisible();
     await scan('Settings › Keyboard shortcuts, a clash');
     await window.getByTestId('clash-cancel').click();

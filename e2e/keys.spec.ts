@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { readoutAt } from './cursorReadout.js';
+import { caption } from './keyCaption.js';
 import { withSample } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
@@ -72,7 +73,7 @@ test('a tooltip waits 500 ms for the pointer, comes at once for the keyboard, an
     await window.waitForTimeout(300);
     await expect(tip).toHaveCount(0);
     await expect(tip).toBeVisible();
-    await expect(tip.locator('kbd')).toHaveText('Ctrl+S');
+    await expect(tip.locator('kbd')).toHaveText(caption('Ctrl+S'));
     // Escape dismisses it where it stands, without moving the pointer.
     await window.keyboard.press('Escape');
     await expect(tip).toHaveCount(0);
@@ -96,14 +97,14 @@ test('every key shown is a cap from the keymap: tooltips, the rail, menus, the l
     await expect(window.getByRole('tooltip').locator('kbd')).toHaveText('R');
 
     await window.getByTestId('project-menu').click();
-    await expect(window.getByTestId('new').locator('kbd')).toHaveText('Ctrl+N');
-    await expect(window.getByTestId('save-as').locator('kbd')).toHaveText('Ctrl+Shift+S');
+    await expect(window.getByTestId('new').locator('kbd')).toHaveText(caption('Ctrl+N'));
+    await expect(window.getByTestId('save-as').locator('kbd')).toHaveText(caption('Ctrl+Shift+S'));
     await window.keyboard.press('Escape');
 
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-shortcuts').click();
     const zoomIn = window.locator('.shortcut-row', { hasText: 'Zoom in' });
-    await expect(zoomIn.locator('kbd')).toHaveText(['Ctrl+=']);
+    await expect(zoomIn.locator('kbd')).toHaveText([caption('Ctrl+=')]);
   });
 });
 
@@ -179,11 +180,11 @@ test('a key is shown as the maker’s keyboard prints it (U.3)', async () => {
     await window.getByTestId('settings-tab-shortcuts').click();
     const row = (text: string) => window.locator('.shortcut-row', { hasText: text }).locator('kbd');
     // Zoom as the + and − it prints; its − zooms, so the list is reached by ?.
-    await expect(row('Zoom in')).toHaveText(['Ctrl++']);
-    await expect(row('Zoom out')).toHaveText(['Ctrl+-']);
+    await expect(row('Zoom in')).toHaveText([caption('Ctrl++')]);
+    await expect(row('Zoom out')).toHaveText([caption('Ctrl+-')]);
     await expect(row('Keyboard shortcuts')).toHaveText(['?']);
     // Letters and digits as every keyboard prints them.
-    await expect(row('Undo')).toHaveText(['Ctrl+Z']);
-    await expect(row('Design:')).toHaveText(['Ctrl+1']);
+    await expect(row('Undo')).toHaveText([caption('Ctrl+Z')]);
+    await expect(row('Design:')).toHaveText([caption('Ctrl+1')]);
   });
 });

@@ -368,7 +368,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     const eye = window.getByTestId('feature-visible-outer-outline');
     await window.keyboard.press('Space');
     await expect(eye).toHaveAttribute('aria-pressed', 'false');
-    await window.keyboard.press('Control+z');
+    await window.keyboard.press('ControlOrMeta+z');
     await expect(eye).toHaveAttribute('aria-pressed', 'true');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
 
@@ -381,7 +381,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     await window.keyboard.press('Enter');
     await expect(row(window, 'outer-outline')).toHaveAccessibleName('Edge');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
-    await window.keyboard.press('Control+z');
+    await window.keyboard.press('ControlOrMeta+z');
     await expect(row(window, 'outer-outline')).toHaveAccessibleName('Outline');
     await window.keyboard.press('F2');
     await field.fill('Nothing');
@@ -530,7 +530,7 @@ test('Design says only what does not print; the Sheets view says where each piec
       'Hidden. Not printed. It is hidden.',
     );
 
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(window.getByTestId('sheets-group-1')).toContainText('Outer');
     await expect(window.getByTestId('sheets-not-printed')).toContainText('It is hidden.');
     await expect(window.locator('[data-testid^="part-not-printed-"]')).toHaveCount(0);
@@ -546,7 +546,7 @@ test('the tree has no accessibility violations, its pieces open or closed', asyn
       await window.getByTestId(`part-fold-${id}`).click();
     }
     await scan('every piece closed');
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await scan('on the Sheets view');
   });
 });

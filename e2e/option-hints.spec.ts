@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { caption } from './keyCaption.js';
 import { withSample } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -166,7 +167,7 @@ test('the Sheets view has its hints too, with the keys as caps (U.11)', async ()
     await window.getByTestId('view-sheets').click();
     const bar = window.getByTestId('sheets-hint');
     await expect(bar).toContainText('Click a piece to see where it prints');
-    await expect(bar.locator('kbd').first()).toHaveText('Ctrl+P');
+    await expect(bar.locator('kbd').first()).toHaveText(caption('Ctrl+P'));
     await expect(bar.locator('kbd').last()).toHaveText('?');
   });
 });
