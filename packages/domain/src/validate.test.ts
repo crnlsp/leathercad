@@ -1077,6 +1077,12 @@ describe('validation reused across revisions (PERF-005)', () => {
         (p) =>
           withFeature(p, k, j, (feature) => ({ ...feature, name })),
     ),
+    // Hidden or shown: a new feature object, its geometry as it was.
+    fc.tuple(fc.nat(), fc.nat()).map(
+      ([k, j]): Edit =>
+        (p) =>
+          withFeature(p, k, j, (feature) => ({ ...feature, visible: !feature.visible })),
+    ),
     // A slot moved: a cut-out every hole of its part is measured against.
     fc.tuple(fc.nat(), fc.nat(), arbXY).map(
       ([k, j, centre]): Edit =>
