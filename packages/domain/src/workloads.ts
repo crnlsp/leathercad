@@ -1,4 +1,4 @@
-import { PathOps, uniformRadii } from '@leathercad/geometry';
+import { PathOps, uniformRadii, type Vec2 } from '@leathercad/geometry';
 
 import { DEFAULT_SETTINGS, type Feature, type Part, type Project } from './feature.js';
 
@@ -17,56 +17,7 @@ import { DEFAULT_SETTINGS, type Feature, type Part, type Project } from './featu
  * corner split in front of it are not obviously so.
  */
 export function strap(widthMm: number, cutOuts = 0): Project {
-  const features: Feature[] = [
-    {
-      id: 'cut-1',
-      kind: 'cut-contour',
-      role: 'outer',
-      name: 'Outline',
-      visible: true,
-      locked: false,
-      source: {
-        kind: 'shape',
-        shape: {
-          type: 'rect',
-          origin: { x: 0, y: 0 },
-          width: widthMm,
-          height: 40,
-          radii: uniformRadii(0),
-          rotation: 0,
-        },
-      },
-    },
-    {
-      id: 'stitch-1',
-      kind: 'stitch-line',
-      name: 'Stitch line',
-      visible: true,
-      locked: false,
-      source: {
-        kind: 'derived',
-        sourceId: 'cut-1',
-        op: { type: 'offset', distanceMm: 3.5, side: 'inward', run: { kind: 'whole' } },
-      },
-    },
-    {
-      id: 'holes-1',
-      kind: 'stitch-hole-set',
-      name: 'Stitch holes',
-      visible: true,
-      locked: false,
-      source: {
-        kind: 'derived',
-        sourceId: 'stitch-1',
-        op: {
-          type: 'stitch-holes',
-          pitchMm: 3.85,
-          mode: 'fit-whole',
-          corners: 'hole-at-corner',
-        },
-      },
-    },
-  ];
+  const features = strapFeatures('1', { x: 0, y: 0 }, widthMm);
 
   // Keeper slots down the strap. Each one is another edge every hole has to
   // be measured against, which is the part of validation that grows.
@@ -87,6 +38,78 @@ export function strap(widthMm: number, cutOuts = 0): Project {
 
   const part: Part = { id: 'part-1', name: 'Strap', quantity: 1, features };
   return { id: 'p', name: 'Strap', settings: DEFAULT_SETTINGS, parts: [part] };
+}
+
+/**
+ * The audit's synthetic bag (docs/performance-backlog.md, *Workloads*):
+ * `strap(200)` copied into `parts` independent parts, eight to a row, every id
+ * its own — 118 holes a part. Many small parts, so what grows is per part.
+ */
+export function bag(parts: number): Project {
+  return {
+    id: 'bag',
+    name: 'Bag',
+    settings: DEFAULT_SETTINGS,
+    parts: Array.from({ length: parts }, (_, i): Part => {
+      const origin = { x: (i % 8) * 220, y: Math.floor(i / 8) * 60 };
+      const features = strapFeatures(String(i), origin, 200);
+      return { id: `part-${i}`, name: `Strap ${i}`, quantity: 1, features };
+    }),
+  };
+}
+
+/** A 40 mm wide strap's outline, its stitch line 3.5 mm in and the holes on it. */
+function strapFeatures(suffix: string, origin: Vec2, widthMm: number): Feature[] {
+  return [
+    {
+      id: `cut-${suffix}`,
+      kind: 'cut-contour',
+      role: 'outer',
+      name: 'Outline',
+      visible: true,
+      locked: false,
+      source: {
+        kind: 'shape',
+        shape: {
+          type: 'rect',
+          origin,
+          width: widthMm,
+          height: 40,
+          radii: uniformRadii(0),
+          rotation: 0,
+        },
+      },
+    },
+    {
+      id: `stitch-${suffix}`,
+      kind: 'stitch-line',
+      name: 'Stitch line',
+      visible: true,
+      locked: false,
+      source: {
+        kind: 'derived',
+        sourceId: `cut-${suffix}`,
+        op: { type: 'offset', distanceMm: 3.5, side: 'inward', run: { kind: 'whole' } },
+      },
+    },
+    {
+      id: `holes-${suffix}`,
+      kind: 'stitch-hole-set',
+      name: 'Stitch holes',
+      visible: true,
+      locked: false,
+      source: {
+        kind: 'derived',
+        sourceId: `stitch-${suffix}`,
+        op: {
+          type: 'stitch-holes',
+          pitchMm: 3.85,
+          mode: 'fit-whole',
+          corners: 'hole-at-corner',
+        },
+      },
+    },
+  ];
 }
 
 /**

@@ -30,8 +30,10 @@ run for hours. Electron's advantages map directly onto this project's risks:
 - **One pinned rendering engine.** When the app goes cross-platform, the canvas renders identically
   everywhere because Chromium ships in the bundle. With Tauri, three webview engines is three sets
   of canvas and font-metric differences to validate against a 0.1 mm accuracy bar.
-- **Node in the main process** means PDF generation, ZIP handling, file I/O, and printer submission
-  are ordinary npm packages, not Rust bindings.
+- **JavaScript on both sides** means PDF generation, ZIP handling, file I/O, and printer submission
+  are ordinary npm packages, not Rust bindings. Where each runs: the PDF is written in a renderer
+  Web Worker (§3); saving and opening serialise, zip and check the project on the renderer's own
+  thread (PERF-009); the main process does the file I/O and the printing.
 - **Playwright drives Electron directly**, which is what makes the visual-regression and E2E layers
   in [testing.md](testing.md) cheap.
 
@@ -386,19 +388,20 @@ tiers, zoom bands and the zoom control (U.4) read it, so they switch at the same
 camera, Design's or the Sheets', read as each frame is painted. A distance on screen — a pick
 radius, a drag threshold, a handle — is CSS pixels too.
 
-### 6.2 Three stacked canvases
+### 6.2 One canvas, drawn when dirty
 
-| Layer | Contents | Redraws when |
-|---|---|---|
-| `background` | Paper, page-tiling preview, grid, rulers | Viewport changes |
-| `content` | The resolved document | Document or viewport changes |
-| `overlay` | Selection, handles, snap glyphs, tool preview, rubber band, in-progress measurement | Every frame during interaction |
+The board is one `<canvas>` (`CanvasHost.tsx`). A frame draws everything on it, in order: the
+ground and grid, the guides, the resolved document's display list, the dimension lines, the tape
+joins, the tool's overlay and the rulers. There are no stacked layers: a pointer move that changes
+only the overlay redraws the document too, and the display list is built again for it. Cheap on
+today's projects — about 1 ms a frame for forty parts in the audit — and the open work is
+[PERF-008](performance-backlog.md#perf-008): keep the content between frames, and draw only what
+the camera can see.
 
-This split is what keeps dragging at 60 fps with 3 000 holes on screen: a drag repaints only the
-overlay, which holds a handful of shapes.
-
-All drawing is scheduled through a single `requestAnimationFrame` loop driven by dirty flags.
-Nothing draws synchronously from an event handler. Two things paint at once instead: sizing the
+All drawing is scheduled through a single `requestAnimationFrame` loop and one dirty flag: a frame
+paints only when something marked it dirty, though the loop asks for a frame every time even when
+nothing is ([PERF-014](performance-backlog.md#perf-014)). Nothing draws synchronously from an event
+handler. Two things paint at once instead: sizing the
 canvas, and a change of view (Design or Sheets). A hidden or unshown window runs no animation
 frame, and until one came it would show a blank board, or the other view's zoom.
 
@@ -570,13 +573,23 @@ Measure before optimising, but the known shapes of the problem:
   to are the same objects, so a rename redraws one caption (`export/src/scene.ts`). The renderer
   keeps the sheet plan only for the project on screen (`renderer/src/sheets.ts`): keyed by every
   project in history, it held 1.3 GiB after two hundred renames (PERF-001).
-- **Stitch holes render as a single batched path** (one `Path2D` of many small circles) rather than
-  3 000 individual `arc()` + `fill()` pairs.
-- **Culling**: the content layer skips features whose bounding box does not intersect the viewport.
-- **Offsetting is the expensive operation.** During a live drag of a cut contour, recompute the
-  derived stitch line at a coarser flatten tolerance and refine on commit.
-- A benchmark suite guards against accidental O(n²): a "worst realistic case" fixture (20 parts,
-  3 000 holes) with a committed timing baseline.
+- **Diagnostics are memoised per project object** (`domain/src/diagnose.ts`), and validation's
+  crossings per path. A rename is a new project, so it validates every part again, its geometry
+  unchanged ([PERF-005](performance-backlog.md#perf-005)).
+- **Stitch holes are drawn as one batched stroke**: every slit of a set in one path, stroked once
+  (F.7), rather than 3 000 separate draws; zoomed out, the set is drawn as its stitch line. A row of
+  punched holes is a circle per hole.
+- **Culling**: the Sheets view draws only the pages the camera can see (PERF-003). The Design board
+  draws every feature each frame; culling there is [PERF-008](performance-backlog.md#perf-008).
+- **A preview is exact.** A drag re-evaluates what it changed at full precision; nothing is drawn
+  coarser and refined on commit, which [the performance rules](../.claude/rules/performance.md)
+  forbid. On a traced outline that evaluation, most of it the self-intersection check, is most of a
+  move's cost ([PERF-006](performance-backlog.md#perf-006)).
+- **Benchmarks and ceilings** guard against accidental O(n²): `pnpm bench` times the audit's
+  workloads — a 5.8 m strap of 3,028 holes, the same with 20 slots, traced outlines of 250 to 1,000
+  points — against baselines committed per package, and `perf.test.ts` holds loose ceilings in
+  `pnpm check`. `tools/perf-compute.mjs` times the same computations bundled, as the app runs them,
+  and `tools/perf-*.mjs` the built app ([testing.md](testing.md) §9).
 
 ## 9. Risks this architecture is designed to avoid
 
@@ -627,8 +640,9 @@ document store owns it; tools dispatch commands; components read.
 is miserable. *Mitigation:* `formatVersion: 1` and a working migration runner ship with the very
 first save implementation, before the first release.
 
-**R11 — Redrawing everything every frame.** *Mitigation:* three-layer canvas; only the overlay
-repaints during interaction.
+**R11 — Redrawing everything every frame.** *Mitigation:* a frame is drawn only when something
+changed (§6.2). A drawn frame is still the whole board; keeping its content between frames is
+[PERF-008](performance-backlog.md#perf-008).
 
 **R12 — Non-deterministic tests.** System fonts, `Date.now()` in serialisation, unseeded randomness,
 locale-dependent number formatting. *Mitigation:* vendored fonts, injected clock, seeded generators,

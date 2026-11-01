@@ -22,9 +22,10 @@ document; the store keeps it and its history. See `docs/architecture.md` §4.
 - **Millimetres in, millimetres out.** Pointer input becomes millimetres in `viewport.ts`, once.
   Hit and snap tolerances are screen-constant: a pick radius in pixels, converted to `toleranceMm`
   through the viewport, never a fixed millimetre value that is useless at another zoom.
-- **Keep a frame cheap.** A pointer event marks a layer dirty, and the one `requestAnimationFrame`
-  loop draws it. Nothing draws from an event handler. A drag repaints the overlay; the content
-  layer redraws only when the document or the viewport changes (`docs/architecture.md` §6.2).
+- **Keep a frame cheap.** A pointer event marks the board dirty, and the one
+  `requestAnimationFrame` loop draws it. Nothing draws from an event handler. A drawn frame is the
+  whole board today; keeping its content between frames, so a drag redraws only the overlay, is
+  PERF-008 (`docs/architecture.md` §6.2).
 - **Previews re-evaluate only what changed.** A gesture's `preview` makes a new document, and
   evaluation reuses every feature that is still the same object. So a command replaces only what
   it edits. It never clones or rebuilds the whole document, which would re-evaluate all of it on
