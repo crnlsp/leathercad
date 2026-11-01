@@ -384,7 +384,7 @@ describe('ToolManager when a project is read in under it (Q39, PERF-010)', () =>
 
     manager.reset();
 
-    expect(await collected(replaced)).toBe(true);
+    expect(await collected(replaced), 'the replaced project is still reachable').toBe(true);
   });
 });
 

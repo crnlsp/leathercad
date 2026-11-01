@@ -639,7 +639,11 @@ again. After New from a large Sheets project, heap was 69.2 MiB; replacing cache
   timings, in `pnpm test`, by collecting through `WeakRef`s: `sheets.test.ts` holds that a
   project's pages, and the project, are collected once another is asked about and once none is
   on screen; `tool.test.ts` that `reset` lets the replaced project go. Each fails with its fix
-  taken out.
+  taken out. The board's own keeping only the real app shows, so `e2e/retention.spec.ts` holds
+  it there, in the sharded E2E: on the strap, the post-GC heap after an edit, a reload and its
+  tab closed stays under half the Sheets pages that run measured (about 19.4 MiB) over where it
+  began — 2.4, 3.1 and 4.0 MiB against 9.7. `d091cb4`'s build reads 20.5 and 21.2 for the
+  first two, and the fix without `releaseDerived` 23.1 for the third.
 - [x] Preserve intra-document reuse, intended camera state and tool cancellation; coordinate Q39
   (unfinished tools on open) so cleanup has one lifecycle boundary. The pages are still built
   once for a project and its words, and a pan or a halo builds none (`sheets.test.ts`); an edit

@@ -261,8 +261,8 @@ describe('the Sheets pages, kept only while their project is on screen (PERF-010
 
     sheetPlanFor(printTest());
 
-    expect(await collected(pages)).toBe(true);
-    expect(await collected(project)).toBe(true);
+    expect(await collected(pages), 'its Sheets pages are still reachable').toBe(true);
+    expect(await collected(project), 'the project is still reachable').toBe(true);
   });
 
   it('go, with their project, when no project is on screen: the last tab closed', async () => {
@@ -270,8 +270,8 @@ describe('the Sheets pages, kept only while their project is on screen (PERF-010
 
     releaseDerived();
 
-    expect(await collected(pages)).toBe(true);
-    expect(await collected(project)).toBe(true);
+    expect(await collected(pages), 'its Sheets pages are still reachable').toBe(true);
+    expect(await collected(project), 'the project is still reachable').toBe(true);
   });
 });
 
