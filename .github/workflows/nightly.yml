@@ -326,7 +326,7 @@ jobs:
 
           for os in windows macos; do
             report "E2E ($os-latest)" "nightly-e2e-$os" "Nightly E2E failed on $os-latest" \
-              "The run's \`e2e-report-*\` artifact has the trace and screenshots. Either the test is wrong, the app is, or the behaviour is the platform's own and the test skips it there, saying why."
+              "The run's \`e2e-report-*\` artifact is the Playwright report. Either the test is wrong, the app is, or the behaviour is the platform's own and the test skips it there, saying why."
           done
 
           report 'Known vulnerabilities' nightly-vulnerabilities 'Nightly scan found a known vulnerability' \
