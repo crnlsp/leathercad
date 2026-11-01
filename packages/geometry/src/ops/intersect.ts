@@ -66,7 +66,7 @@ function dispatch(a: Segment, b: Segment): Intersection[] {
 export function intersectPaths(a: Path, b: Path): Intersection[] {
   const out: Intersection[] = [];
   const kept = new Map<string, Vec2[]>();
-  const near = segmentsWithOverlappingBoxes(a.segments, b.segments);
+  const near = overlappingBoxes(a.segments.map(bbox), b.segments.map(bbox));
 
   for (let i = 0; i < a.segments.length; i++) {
     for (const j of near[i]!) {
@@ -123,17 +123,17 @@ interface Boxed {
 }
 
 /**
- * For each segment of `a`, the indices of `b`'s whose box overlaps its own by
- * `boxesOverlap`, ascending: exactly the pairs testing every one would keep
- * (PERF-004). Sweep and prune along x — boxes in order of their left edge,
- * each met against those still open — so two real outlines, mostly far apart,
- * cost about their segment counts rather than their product.
+ * For each box of `a`, the indices of `b`'s that overlap it by `boxesOverlap`,
+ * ascending: exactly the pairs testing every one would keep (PERF-004). Sweep
+ * and prune along x — boxes in order of their left edge, each met against
+ * those still open — so two real outlines, mostly far apart, cost about their
+ * segment counts rather than their product.
  */
-function segmentsWithOverlappingBoxes(a: readonly Segment[], b: readonly Segment[]): number[][] {
+function overlappingBoxes(a: readonly Rect[], b: readonly Rect[]): number[][] {
   const near: number[][] = a.map(() => []);
   const boxed: Boxed[] = [
-    ...a.map((s, index) => ({ box: bbox(s), index, inA: true })),
-    ...b.map((s, index) => ({ box: bbox(s), index, inA: false })),
+    ...a.map((box, index) => ({ box, index, inA: true })),
+    ...b.map((box, index) => ({ box, index, inA: false })),
   ]
     // A NaN coordinate fails every comparison in `boxesOverlap`, so the box
     // meets nothing; left in, it would leave the sort's order undefined.
@@ -171,28 +171,122 @@ const hasNaN = (r: Rect): boolean =>
  * Consecutive segments share a vertex by construction, and a closed path's
  * last and first do too. Reporting those would make every path
  * self-intersecting, so neighbours are skipped.
+ *
+ * A path of `EVERY_PAIR_BELOW` segments or more tests only the pairs that
+ * could touch (PERF-006), in the order every pair was, so the first crossing
+ * found at a place is the one kept, as before; and a crossing is checked
+ * against those kept near it, as in `intersectPaths`, so a path that crosses
+ * itself thousands of times is not quadratic in them.
  */
 export function selfIntersections(p: Path): Intersection[] {
   const out: Intersection[] = [];
+  const kept = new Map<string, Vec2[]>();
   const n = p.segments.length;
 
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      // Neighbours: j always exceeds i, so `j <= i + 1` is "the next segment",
-      // and on a closed path the first and last meet too. Written as
-      // inequalities because the float-equality rule cannot tell an array
-      // index from a millimetre, and it is right to be suspicious by default.
-      const adjacent = j <= i + 1 || (p.closed && i < 1 && j >= n - 1);
-      if (adjacent) continue;
+  const test = (i: number, j: number): void => {
+    // `j <= i + 1` is this segment, a pair met from its other side already,
+    // or the next segment, its neighbour; on a closed path the first and last
+    // are neighbours too. Written as inequalities because the float-equality
+    // rule cannot tell an array index from a millimetre, and it is right to
+    // be suspicious by default.
+    const adjacent = j <= i + 1 || (p.closed && i < 1 && j >= n - 1);
+    if (adjacent) return;
 
-      for (const hit of intersectSegments(p.segments[i]!, p.segments[j]!)) {
-        push(out, { point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
-      }
+    for (const hit of intersectSegments(p.segments[i]!, p.segments[j]!)) {
+      if (keptNear(kept, hit.point)) continue;
+      keep(kept, hit.point);
+      out.push({ point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
     }
+  };
+
+  const near = n < EVERY_PAIR_BELOW ? null : mayTouch(p.segments);
+  for (let i = 0; i < n; i++) {
+    if (near === null) for (let j = i + 1; j < n; j++) test(i, j);
+    else for (const j of near[i]!) test(i, j);
   }
 
   return out;
 }
+
+/**
+ * Below this many segments, testing every pair costs less than growing and
+ * sweeping their boxes: measured, a rectangle's offset took 0.08 µs every pair
+ * and 1.4 µs swept, and the two met near 20 segments. A bag of fifty
+ * rectangles asks a hundred times an edit (PERF-006).
+ */
+export const EVERY_PAIR_BELOW = 20;
+
+/*
+ * How far outside two segments' boxes `intersectSegments` can report a place
+ * they touch (PERF-006). Further apart than that, a pair has no crossing and
+ * need not be tested. Each bound is taken from the tolerance it covers, with
+ * room to spare: a broad phase has to be generous, not tight, since every pair
+ * it lets through is tested exactly as before.
+ *
+ * - REACH_MM: lines touch to EPS_POINT past their ends, and two arcs whose
+ *   crossings are under √EPS_POINT apart are reported at the foot between
+ *   them (`halfChordSq <= EPS_POINT`), which is up to that far off a circle
+ *   that small.
+ * - REACH_PER_MM of a segment's size, its largest coordinate, width, height
+ *   and radius together: rounding. Lines are crossed down to EPS_ANGLE from
+ *   parallel, where the crossing moves by the coordinates' rounding over that
+ *   angle; an arc's sweep is EPS_ANGLE wider on its radius; a line touching a
+ *   circle is solved to √EPS_REL_QUADRATIC_DISCRIMINANT of its distance. The
+ *   largest is Number.EPSILON / EPS_ANGLE, about 2e-7.
+ * - For an arc, REACH_PER_SQ_MM of the path's scale squared, over its radius:
+ *   where it crosses a line or an arc much larger than itself, the crossing is
+ *   solved from squares of those lengths, and lands off the small circle by
+ *   their rounding divided by its radius. An arc of no radius reaches
+ *   everywhere, and its path is tested pair by pair.
+ */
+const REACH_MM = 4 * Math.sqrt(EPS_POINT);
+const REACH_PER_MM = (64 * Number.EPSILON) / EPS_ANGLE;
+const REACH_PER_SQ_MM = 1024 * Number.EPSILON;
+
+/**
+ * For each segment, the indices of those it may touch, ascending, both sides
+ * of each pair and itself: every pair whose boxes, each grown by its reach,
+ * overlap. Null for a path with a coordinate that is not finite — one that
+ * got past the constructors — which has no box to trust: every pair may touch.
+ */
+function mayTouch(segments: readonly Segment[]): number[][] | null {
+  const boxes = segments.map((s) => ({ s, box: bbox(s) }));
+  // The largest coordinate or radius anywhere on the path.
+  let scale = 0;
+  for (const { s, box } of boxes) {
+    scale = Math.max(scale, largestCoordinate(box), s.kind === 'arc' ? s.radius : 0);
+  }
+
+  const grown = boxes.map(({ s, box }) => {
+    const size =
+      largestCoordinate(box) +
+      (box.maxX - box.minX) +
+      (box.maxY - box.minY) +
+      (s.kind === 'arc' ? s.radius : 0);
+    const reach =
+      REACH_MM +
+      REACH_PER_MM * size +
+      (s.kind === 'arc' ? (REACH_PER_SQ_MM * scale * scale) / s.radius : 0);
+    return {
+      minX: box.minX - reach,
+      minY: box.minY - reach,
+      maxX: box.maxX + reach,
+      maxY: box.maxY + reach,
+    };
+  });
+
+  const finite = grown.every(
+    (r) =>
+      Number.isFinite(r.minX) &&
+      Number.isFinite(r.minY) &&
+      Number.isFinite(r.maxX) &&
+      Number.isFinite(r.maxY),
+  );
+  return finite ? overlappingBoxes(grown, grown) : null;
+}
+
+const largestCoordinate = (r: Rect): number =>
+  Math.max(Math.abs(r.minX), Math.abs(r.maxX), Math.abs(r.minY), Math.abs(r.maxY));
 
 /**
  * Line against line, symmetric by construction.

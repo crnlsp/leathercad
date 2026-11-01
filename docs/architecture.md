@@ -585,8 +585,10 @@ Measure before optimising, but the known shapes of the problem:
   draws every feature each frame; culling there is [PERF-008](performance-backlog.md#perf-008).
 - **A preview is exact.** A drag re-evaluates what it changed at full precision; nothing is drawn
   coarser and refined on commit, which [the performance rules](../.claude/rules/performance.md)
-  forbid. On a traced outline that evaluation, most of it the self-intersection check, is most of a
-  move's cost ([PERF-006](performance-backlog.md#perf-006)).
+  forbid. The self-intersection check that offsetting and validation make of every outline tests
+  only the segment pairs whose boxes, grown by the intersection tolerances, can meet
+  ([PERF-006](performance-backlog.md#perf-006)), so a traced outline costs about its segment count
+  rather than its square.
 - **Benchmarks and ceilings** guard against accidental O(n²): `pnpm bench` times the audit's
   workloads — a 5.8 m strap of 3,028 holes, the same with 20 slots, traced outlines of 250 to 1,000
   points — against baselines committed per package, and `perf.test.ts` holds loose ceilings in

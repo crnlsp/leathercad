@@ -29,7 +29,7 @@ invisible and expensive.
 | E2E | Playwright + Electron, with axe scans | ~320, in 48 specs | ~9 min, ~4 in CI's three shards | The app actually runs, workflow by workflow |
 | Packaged smoke | Playwright + the packaged binary | 10 | ~60 s | app origin and denied paths, CSP, asar, fuses, resources |
 | Loader fuzzing | Vitest + fast-check | 6 | < 1 s | A damaged `.lcp` refuses with a reason |
-| Benchmarks | Vitest 5 `bench` fixture | 20 | ~95 s | Accidental O(n²) |
+| Benchmarks | Vitest 5 `bench` fixture | 22 | ~100 s | Accidental O(n²) |
 | Mutation | StrykerJS, weekly | — | hours | Tests that run code without checking it |
 
 `pnpm test` runs everything except the pixel-diff and E2E layers, in under a minute. Those two run
@@ -450,6 +450,7 @@ commit that re-records one changes its row here:
 | `export/pdf`, `export/display-list` | `199cb50`, 2026-10-26 | 22.23.3 | 5.0.4 | Their workloads had changed since `68c2709` (PERF-017) |
 | `export/svg`, `export/dxf` | `80afa43`, 2026-10-26 | 24.22.0 | 5.0.5 | The writers that ship, not the render backend (Q40) |
 | `editor/snap-drag-traced-250`, `editor/snap-drag-traced-500`, `editor/snap-drag-traced-1000`, `editor/snap-drag-beside-traced` | PERF-004's fix, `e845ffa`, 2026-10-28 | 24.22.0 | 5.0.5 | New with PERF-004 |
+| `geometry/self-traced-1000`, `geometry/self-star-1002` | PERF-006's fix, 2026-11-01 | 24.22.1 | 5.0.5 | New with PERF-006 |
 
 `apps/desktop/src/bench-discovery.test.ts` fails if a baseline has no row here, or a row names
 one that is not committed. `domain/diagnose-strap-slots` compares 1.3–1.4× its baseline, and is
@@ -459,7 +460,7 @@ round slot is measured by finding the nearest point on the arc rather than radia
 
 Benchmark discovery is pinned: each package that has benchmarks sets
 `benchmark.include: ['src/**/*.bench.ts']`, because `tsc --build` emits `dist/src/*.bench.js` and
-Vitest's default glob would run every case twice (40, not 20). `bench-discovery.test.ts` asks
+Vitest's default glob would run every case twice (44, not 22). `bench-discovery.test.ts` asks
 Vitest itself, set up as `vitest bench` sets it up, in a process of its own, and fails if the run
 would not be the committed `src/*.bench.ts` files each once, if any bench project's globs would
 take a generated `dist/` copy — asked of the globs, so it holds on a runner with no `dist/` — or if

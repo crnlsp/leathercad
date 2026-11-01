@@ -58,7 +58,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | `perf/003-sheets-culling` |
 | ✅ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | `perf/004-incremental-snap` |
 | ☐ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | Unassigned |
-| ☐ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | Unassigned |
+| ✅ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | `perf/006-self-intersections` |
 | ☐ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | Unassigned |
@@ -531,10 +531,32 @@ authoritative diagnostics list; property tests precede domain changes.
 grew 2.96 → 9.48 → 35.70 ms for 250/500/1,000-point outlines; CPU samples implicated
 self-intersection/line-intersection work. Complex traces regenerate slowly despite modest holes.
 
-- [ ] Add conservative bounding/spatial candidate rejection while keeping exact pair tests.
-- [ ] Differential/property-test against existing results for closure, adjacency, tangencies,
+- [x] Add conservative bounding/spatial candidate rejection while keeping exact pair tests.
+  Reproduced at `cba7996`: `selfIntersections` is 20 of the 1,000-point outline's 21.8 ms of
+  evaluation (the offset's last check), and validation asks it again of the outline.
+  `geometry/src/ops/intersect.ts` grows each segment's box by how far `intersectSegments` can
+  report a touch outside it, sweeps the grown boxes along x with PERF-004's `overlappingBoxes`, and
+  tests the pairs whose boxes meet, in the order every pair was. The reach: `4√EPS_POINT` — two
+  arcs whose crossings are under `√EPS_POINT` apart are reported at the foot between them, which a
+  small enough arc does not reach — plus `64 · Number.EPSILON / EPS_ANGLE` of the segment's size
+  (rounding, for lines crossed down to `EPS_ANGLE` from parallel), plus, for an arc,
+  `1024 · Number.EPSILON` of the path's scale squared over its radius (rounding against a much
+  larger segment). Crossings are kept by cell, as `intersectPaths` keeps them, rather than each
+  checked against all kept. A path with a coordinate that is not finite, or of fewer than 20
+  segments (`EVERY_PAIR_BELOW`), where that is cheaper, tests every pair as before.
+- [x] Differential/property-test against existing results for closure, adjacency, tangencies,
   overlapping segments, tiny edges, arcs/curves and epsilon boundaries.
-- [ ] Report scaling and correctness on both separated and crossing-heavy geometry.
+  `intersect.test.ts` holds the old loop as the specification: equal, crossing for crossing and in
+  order, on 1,000 random pairs made to touch or just miss (gaps on each tolerance, either side;
+  lines a microradian from parallel; circles through a point, tangent or crossing; cubics; up to
+  1e5 mm from the origin), and on open and closed soups of every kind with such a pair among them;
+  and in named cases — the touch across a gap a hair over `EPS_POINT` a plain box test drops, two
+  small arcs touching at a foot neither reaches (which pins `4√EPS_POINT`: with `EPS_POINT` it
+  fails), long near-parallel lines ten metres out, a line touching a tiny arc, three segments
+  through one point, a {50/17} star, degenerate segments and paths, a NaN and an infinity. The
+  tests pad their paths past 20 segments with lines of no length, which touch nothing, so they
+  sweep. Every existing intersection, offset, golden and domain test passes unchanged.
+- [x] Report scaling and correctness on both separated and crossing-heavy geometry. Below.
 
 **Expected benefit:** Fewer unnecessary pair tests; no promise of subquadratic worst-case output.
 Coordinate shared primitives with PERF-004 and preserve the path-identity crossing cache.
@@ -545,6 +567,44 @@ none: `intersectSegments` reports touches across gaps slightly wider than the bo
 EPS_POINT (see `intersect.test.ts`, and arcs' angular tolerance grows with the radius), so a box
 test there would drop them. Widen the slack to what `intersectSegments` accepts, and prove it,
 before reusing it.
+
+| PERF-006, bundled (`tools/perf-compute.mjs`), median ms | Before (`cba7996`) | After |
+|---|---:|---:|
+| Fresh evaluation, 250 / 500 / 1,000-point outline | 2.22 / 7.82 / 29.81 | 0.51 / 0.75 / 1.43 |
+| Fresh diagnosis, 250 / 500 / 1,000-point outline | 8.24 / 23.70 / 75.54 | 4.99 / 9.76 / 18.57 |
+| Wallet, strap, strap + 20 slots, bags of 30 / 40 / 50: every measure | — | level |
+
+| PERF-006, `pnpm bench` (Vitest module runner), mean ms | Before (`cba7996`) | After |
+|---|---:|---:|
+| `self-traced-1000`: a 1,000-segment ring, no crossings | 260 / 271 / 270 | 1.83 / 1.81 / 1.86 |
+| `self-star-1002`: a {1002/7} star, 6,012 crossings | 1,761 / 1,690 / 1,601 | 21.2 / 21.0 / 21.9 |
+| `bench:compare`, one drag move on a 250 / 500 / 1,000-point outline | 23.9 / 76.8 / 288.2 (baselines) | 6.0 / 11.0 / 21.6 |
+| `bench:compare`, offset a 500-point outline | 73.7 (baseline) | 2.4 |
+
+Measured on the audit's Ryzen 5 7600X, Linux 7.3.0-5-cachyos, Node 24.22.1, with two other
+sessions keeping the load at 2–3.5, so before and after were run turn about: five runs each of
+`perf-compute.mjs` (the median of the runs' medians, 20 samples after 3 warm-ups each), and three
+each of the two new benchmarks, the same file in both checkouts. The drag and offset rows compare
+with the baselines PERF-004 and 68c2709 recorded; the other `bench:compare` cases were level or
+faster but `diagnose-strap-slots`, PERF-005's, and the rounded strap's offset, 23 µs against 19
+(1.11× when PERF-017 compared it, before this change; it takes the unchanged every-pair route). Crossing counts were identical before and after. Under a
+rectangle's 4 segments the sweep cost 1.4 µs a call against 0.08 µs for every pair, which put
+the bags 6–10 % behind until paths under 20 segments kept the old loop; at 24 segments the sweep
+is already ahead (7 against 9 µs).
+
+**Guard:** `intersect.test.ts`, *reads each segment a bounded number of times, not once per pair*:
+a 1,000-segment ring's segments are read 997,000 times by the old loop, two for each pair, and
+about 3,000 now; the bound is 10,000, a hundredth of the old count. Fails on `cba7996`'s
+`intersect.ts` (`expected 997000 to be less than 10000`), passes after.
+
+**Result:** a traced outline's evaluation no longer grows with the square of its points — 1.4 ms
+for 1,000 where it was 30 — and a path that crosses itself thousands of times is no longer
+quadratic in its crossings. Diagnosis of the 1,000-point outline is 19 ms, the rest validation's
+hole-to-edge distances, which PERF-005 looks at.
+
+**Not done / not verified.** The drag in the built app (`tools/perf-drag.mjs`) was not measured
+again. Measured on Linux only; geometry is pure, and CI's Windows and macOS jobs run the same
+properties and the guard.
 
 ### PERF-007
 

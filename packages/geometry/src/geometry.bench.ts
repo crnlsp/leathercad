@@ -1,5 +1,6 @@
 import { test, type Bench } from 'vitest';
 
+import { selfIntersections } from './ops/intersect.js';
 import { offsetPath } from './ops/offset.js';
 import { PathMeasure } from './path/measure.js';
 import { polyline } from './path/index.js';
@@ -55,3 +56,26 @@ test('place 3000 points along a 500-point outline', ({ bench }) =>
   measure(bench, 'measure-3000', () => {
     for (let k = 0; k < 3000; k++) measured.pointAtDistance((k / 3000) * length);
   }));
+
+/**
+ * Points round the traced outline's circle, each edge `step` of them on: a
+ * ring at 1, and past that a star that crosses itself `points × (step − 1)`
+ * times. What the offset's last check and validation ask of every outline
+ * (PERF-006), on one that never crosses itself and one that does everywhere.
+ */
+const round = (points: number, step: number) =>
+  polyline(
+    Array.from({ length: points }, (_, i) => {
+      const angle = ((i * step) / points) * Math.PI * 2;
+      return { x: 300 + 290 * Math.cos(angle), y: 300 + 290 * Math.sin(angle) };
+    }),
+    true,
+  );
+const ring = round(1000, 1);
+const star = round(1002, 7);
+
+test('find where a 1000-point traced outline crosses itself', ({ bench }) =>
+  measure(bench, 'self-traced-1000', () => selfIntersections(ring)));
+
+test('find the 6012 crossings of a 1002-point star', ({ bench }) =>
+  measure(bench, 'self-star-1002', () => selfIntersections(star)));

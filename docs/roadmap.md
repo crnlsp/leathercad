@@ -312,7 +312,7 @@ pull request each, accuracy never traded, every platform retested — is
 - ✅ **[PERF-003](performance-backlog.md#perf-003)** Cull Sheets pages and separate interaction decoration.
 - ✅ **[PERF-004](performance-backlog.md#perf-004)** Avoid full snap-index rebuilds during complex edits.
 - ☐ **[PERF-005](performance-backlog.md#perf-005)** Reuse geometry diagnostics for unaffected inputs.
-- ☐ **[PERF-006](performance-backlog.md#perf-006)** Reduce self-intersection candidate pairs.
+- ✅ **[PERF-006](performance-backlog.md#perf-006)** Reduce self-intersection candidate pairs.
 - ☐ **[PERF-007](performance-backlog.md#perf-007)** Isolate pointer-driven React updates.
 - ☐ **[PERF-008](performance-backlog.md#perf-008)** Reuse Design content and cull off-screen geometry.
 - ☐ **[PERF-009](performance-backlog.md#perf-009)** Keep persistence work off the interaction path.
