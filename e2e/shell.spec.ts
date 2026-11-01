@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import { expect, test, type ElectronApplication } from '@playwright/test';
 
@@ -51,7 +51,7 @@ test('puts user config in ~/.config/leathercad, not the npm package name', async
   // ~/.config/@leathercad/desktop. See docs/file-format.md §6.
   const configDir = await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'));
 
-  expect(configDir.endsWith('/leathercad')).toBe(true);
+  expect(basename(configDir)).toBe('leathercad');
 });
 
 test('sizes the canvas backing store to CSS size times device pixel ratio', async () => {
@@ -744,7 +744,7 @@ test('the Draw as row keeps all six marks on screen at 1200 and 1280 px (F.6)', 
       await instance.evaluate(({ BrowserWindow }, w) => {
         BrowserWindow.getAllWindows()[0]?.setContentSize(w, 840);
       }, width);
-      await expect.poll(() => window.evaluate(() => window.outerWidth)).toBe(width);
+      await expect.poll(() => window.evaluate(() => window.innerWidth)).toBe(width);
       const row = await window.getByTestId('tool-options').evaluate((el) => ({
         scroll: el.scrollWidth,
         client: el.clientWidth,
