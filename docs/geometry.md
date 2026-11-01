@@ -516,8 +516,17 @@ touching exactly, and near-parallel lines where the determinant approaches zero.
 `intersectPaths` tests only the segment pairs whose boxes overlap to `EPS_POINT`, found by sweeping
 the boxes along x, and keeps the first crossing at a place as visiting every pair in order would: the
 same crossings, in the same order. That box test is not as wide as `intersectSegments`' own end
-tolerance, so a touch across a gap a hair over `EPS_POINT` is left out, as it always was; a
-`selfIntersections` broad phase (PERF-006) must not inherit it unexamined.
+tolerance, so a touch across a gap a hair over `EPS_POINT` is left out, as it always was.
+
+`selfIntersections` had no box test, so its broad phase (PERF-006) grows each segment's box by how
+far `intersectSegments` can report a touch outside it: `4√EPS_POINT` — two arcs whose crossings are
+under `√EPS_POINT` apart meet at the foot between them, which a small enough arc does not reach —
+plus `64 · Number.EPSILON / EPS_ANGLE` of its size, for the rounding of lines crossed down to
+`EPS_ANGLE` from parallel, plus, for an arc, `1024 · Number.EPSILON` of the path's scale squared
+over its radius. Pairs whose grown boxes miss have no crossing; the rest are tested in the order
+every pair was, and each crossing is checked against those kept near it. So the result is the
+same, crossing for crossing and in the same order, and a traced outline meets each segment with
+the few beside it. A path with a coordinate that is not finite tests every pair, as before.
 
 `intersectSegments(a, b)` and `intersectSegments(b, a)` must agree. Line/line is solved in one
 canonical argument order so they are the same arithmetic, and two collinear segments whose ends are
