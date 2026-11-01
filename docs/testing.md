@@ -459,8 +459,11 @@ round slot is measured by finding the nearest point on the arc rather than radia
 
 Benchmark discovery is pinned: each package that has benchmarks sets
 `benchmark.include: ['src/**/*.bench.ts']`, because `tsc --build` emits `dist/src/*.bench.js` and
-Vitest's default glob would run every case twice (40, not 20).
-`apps/desktop/src/bench-discovery.test.ts` fails if a package drops that line. Vitest warns that the benchmarks "accessed module export getters too many
+Vitest's default glob would run every case twice (40, not 20). `bench-discovery.test.ts` asks
+Vitest itself, set up as `vitest bench` sets it up, in a process of its own, and fails if the run
+would not be the committed `src/*.bench.ts` files each once, if any bench project's globs would
+take a generated `dist/` copy — asked of the globs, so it holds on a runner with no `dist/` — or if
+a package's collected cases are fewer or more than its committed baselines. Vitest warns that the benchmarks "accessed module export getters too many
 times": the benchmarks import source through Vitest's module runner, whose export getters add
 overhead. The committed baselines were recorded the same way, so a comparison is like for like; the
 absolute numbers are not what a bundled production build costs, and the warning is left visible

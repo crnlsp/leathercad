@@ -761,7 +761,12 @@ matching environment/workload provenance. The later regeneration warmup change d
 these remaining issues.
 
 - [x] Restrict benchmark discovery to intended source cases, including when build output exists.
-  Per-package `benchmark.include`, guarded by `apps/desktop/src/bench-discovery.test.ts`: 30 cases back to 15. The
+  Per-package `benchmark.include`: 30 cases back to 15. Guarded by
+  `apps/desktop/src/bench-discovery.test.ts`, which asks Vitest, as `vitest bench` sets it up,
+  what it would run: the committed files each once, no project's globs taking a generated `dist/`
+  copy (asked of the globs, so it fails with no `dist/` built), and as many cases collected in each
+  package as it has baselines. Each fails on a regression made on purpose — the include line
+  dropped, a case deleted, a loop of cases shortened — and passes without it. The
   export-getter warning is Vitest module-runner overhead, not a config fault; left visible and
   documented in `docs/testing.md`.
 - [x] Add production-representative bundled timing where needed; distinguish it from Vitest
