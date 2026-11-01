@@ -10,7 +10,7 @@ import {
 } from '@leathercad/geometry';
 import { missingGlyphs } from '@leathercad/typography';
 
-import type { FeatureId, PartId } from './feature.js';
+import type { Feature, FeatureId, PartId } from './feature.js';
 import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
 import { distanceToEdge, isOnMaterial, materialOf, type Material } from './material.js';
 import { hasOuterContour } from './partStructure.js';
@@ -117,29 +117,16 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
       );
     }
 
-    // DR2: everything in a part lies on its material. Only askable once there
-    // is material to be off.
-    if (material.outer !== null) {
-      for (const entry of features) {
-        if (!entry.ok) continue;
-        for (const { problem: p, points } of offMaterial(entry, material)) {
-          found.push(
-            placed(
-              p,
-              part.id,
-              entry.feature.id,
-              // The holes at fault where a rule knows them, the whole feature
-              // where it does not: "which hole" is the question the maker has
-              // to answer before they can fix anything.
-              points === undefined
-                ? { kind: 'path', path: entry.path }
-                : { kind: 'points', points },
-              p.code === 'OUTSIDE_PART' && p.facts.what === 'line' ? 'warning' : undefined,
-            ),
-          );
-        }
-      }
-    }
+    // Each feature's findings from its geometry, against this material: DR2,
+    // and the rules about its own shape and holes. Kept while their inputs are
+    // the same objects (PERF-005), so a rename or an edit to another part
+    // validates no geometry again.
+    const ofFeatures = features.map((entry) =>
+      entry.ok ? findingsOf(entry, part.id, material) : null,
+    );
+
+    // DR2: everything in a part lies on its material.
+    for (const findings of ofFeatures) if (findings !== null) found.push(...findings.onMaterial);
 
     // A part's name is printed above it on the sheet. A character the vendored
     // typeface has no glyph for prints as a box rather than throwing (ADR
@@ -159,12 +146,12 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
       );
     }
 
-    for (const entry of features) {
-      if (!entry.ok) continue;
+    features.forEach((entry, i) => {
+      if (!entry.ok) return;
       const { feature } = entry;
-      const about = { featureId: feature.id, featureName: feature.name };
 
-      // A label's own words print too, and the same typeface has to carry them.
+      // A label's own words print too, and the same typeface has to carry
+      // them. Asked every time: the problem names the part.
       if (feature.kind === 'text-label') {
         const unprintable = missingGlyphs(feature.source.text);
         if (unprintable.length > 0) {
@@ -173,7 +160,8 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
               problem('TEXT_GLYPH_MISSING', {
                 partId: part.id,
                 partName: part.name,
-                ...about,
+                featureId: feature.id,
+                featureName: feature.name,
                 text: feature.source.text,
                 characters: unprintable.join(' '),
               }),
@@ -185,50 +173,138 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
         }
       }
 
-      if (feature.kind === 'cut-contour') {
-        const crossings = crossingsOf(entry.path);
-        if (crossings.length > 0) {
-          found.push(
-            placed(
-              problem('CONTOUR_SELF_INTERSECTS', { ...about, crossings: crossings.length }),
-              part.id,
-              feature.id,
-              { kind: 'points', points: crossings.map((crossing) => crossing.point) },
-            ),
-          );
-        }
-      }
+      found.push(...ofFeatures[i]!.ownShape);
+    });
+  }
 
-      // A row's holes are circles; a mirrored row's are too, so this asks the
-      // resolved holes rather than the op.
-      if (entry.holes?.radiusMm !== undefined) {
-        const overlap = overlappingHoles(entry.holes, entry.holes.radiusMm, entry.path.closed);
-        if (overlap !== null) {
-          found.push(
-            placed(
-              problem('HOLES_OVERLAP', {
-                ...about,
-                spacingMm: overlap.spacingMm,
-                diameterMm: 2 * entry.holes.radiusMm,
-              }),
-              part.id,
-              feature.id,
-              { kind: 'points', points: overlap.points },
-            ),
-          );
-        }
-      }
+  return found;
+}
 
-      const source = feature.source;
-      if (
-        entry.holes !== undefined &&
-        source.kind === 'derived' &&
-        source.op.type === 'stitch-holes'
-      ) {
-        for (const p of holeProblems(entry.holes, source.op.pitchMm, about)) {
-          found.push(placed(p, part.id, feature.id, { kind: 'path', path: entry.path }));
-        }
-      }
+/**
+ * What validation finds from one feature's geometry: whether it lies on its
+ * part's material (DR2), and the rules about its own shape and holes. Nothing
+ * here reads a name but the feature's own, so a rename changes none of it.
+ */
+interface Findings {
+  readonly onMaterial: readonly Diagnostic[];
+  readonly ownShape: readonly Diagnostic[];
+}
+
+/**
+ * The findings of a feature, and every object they were found from: the
+ * feature, the path and holes it resolved to, its part, and that part's
+ * outline and cut-outs. All of them are immutable, and evaluation keeps an
+ * unchanged feature's geometry the same object between revisions, so findings
+ * found from the same objects are the same findings. Moving an outline gives
+ * its stitch line, its holes and whatever follows it from another part new
+ * paths, and the rest of its part a new material; their findings are found
+ * again, and nothing else's.
+ */
+interface FoundFrom extends Findings {
+  readonly path: Path;
+  readonly holes: StitchHoles | undefined;
+  readonly partId: PartId;
+  readonly outer: Path | null;
+  readonly cutOuts: readonly Path[];
+}
+
+const findingsCache = new WeakMap<Feature, FoundFrom>();
+
+function findingsOf(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  partId: PartId,
+  material: Material,
+): Findings {
+  const cached = findingsCache.get(entry.feature);
+  if (
+    cached !== undefined &&
+    cached.path === entry.path &&
+    cached.holes === entry.holes &&
+    cached.partId === partId &&
+    cached.outer === material.outer &&
+    cached.cutOuts.length === material.holes.length &&
+    cached.cutOuts.every((cutOut, i) => cutOut === material.holes[i])
+  ) {
+    return cached;
+  }
+
+  const found: FoundFrom = {
+    path: entry.path,
+    holes: entry.holes,
+    partId,
+    outer: material.outer,
+    cutOuts: material.holes,
+    onMaterial: material.outer === null ? [] : onMaterial(entry, partId, material),
+    ownShape: ownShape(entry, partId),
+  };
+  findingsCache.set(entry.feature, found);
+  return found;
+}
+
+/** DR2, placed: what is off the leather, or too near its edge. */
+function onMaterial(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  partId: PartId,
+  material: Material,
+): Diagnostic[] {
+  return offMaterial(entry, material).map(({ problem: p, points }) =>
+    placed(
+      p,
+      partId,
+      entry.feature.id,
+      // The holes at fault where a rule knows them, the whole feature where it
+      // does not: "which hole" is the question the maker has to answer before
+      // they can fix anything.
+      points === undefined ? { kind: 'path', path: entry.path } : { kind: 'points', points },
+      p.code === 'OUTSIDE_PART' && p.facts.what === 'line' ? 'warning' : undefined,
+    ),
+  );
+}
+
+/** The rules about a feature's own shape and holes, whatever leather it is on. */
+function ownShape(entry: Extract<ResolvedFeature, { ok: true }>, partId: PartId): Diagnostic[] {
+  const found: Diagnostic[] = [];
+  const { feature } = entry;
+  const about = { featureId: feature.id, featureName: feature.name };
+
+  if (feature.kind === 'cut-contour') {
+    const crossings = crossingsOf(entry.path);
+    if (crossings.length > 0) {
+      found.push(
+        placed(
+          problem('CONTOUR_SELF_INTERSECTS', { ...about, crossings: crossings.length }),
+          partId,
+          feature.id,
+          { kind: 'points', points: crossings.map((crossing) => crossing.point) },
+        ),
+      );
+    }
+  }
+
+  // A row's holes are circles; a mirrored row's are too, so this asks the
+  // resolved holes rather than the op.
+  if (entry.holes?.radiusMm !== undefined) {
+    const overlap = overlappingHoles(entry.holes, entry.holes.radiusMm, entry.path.closed);
+    if (overlap !== null) {
+      found.push(
+        placed(
+          problem('HOLES_OVERLAP', {
+            ...about,
+            spacingMm: overlap.spacingMm,
+            diameterMm: 2 * entry.holes.radiusMm,
+          }),
+          partId,
+          feature.id,
+          { kind: 'points', points: overlap.points },
+        ),
+      );
+    }
+  }
+
+  const source = feature.source;
+  if (entry.holes !== undefined && source.kind === 'derived' && source.op.type === 'stitch-holes') {
+    for (const p of holeProblems(entry.holes, source.op.pitchMm, about)) {
+      found.push(placed(p, partId, feature.id, { kind: 'path', path: entry.path }));
     }
   }
 
