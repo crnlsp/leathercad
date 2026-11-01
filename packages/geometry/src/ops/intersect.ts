@@ -172,37 +172,49 @@ const hasNaN = (r: Rect): boolean =>
  * last and first do too. Reporting those would make every path
  * self-intersecting, so neighbours are skipped.
  *
- * Only pairs that could touch are tested (PERF-006), in the order every pair
- * was, so the first crossing found at a place is the one kept, as before; and
- * a crossing is checked against those kept near it, as in `intersectPaths`,
- * so a path that crosses itself thousands of times is not quadratic in them.
+ * A path of `EVERY_PAIR_BELOW` segments or more tests only the pairs that
+ * could touch (PERF-006), in the order every pair was, so the first crossing
+ * found at a place is the one kept, as before; and a crossing is checked
+ * against those kept near it, as in `intersectPaths`, so a path that crosses
+ * itself thousands of times is not quadratic in them.
  */
 export function selfIntersections(p: Path): Intersection[] {
   const out: Intersection[] = [];
   const kept = new Map<string, Vec2[]>();
   const n = p.segments.length;
-  const near = mayTouch(p.segments);
 
-  for (let i = 0; i < n; i++) {
-    for (const j of near[i]!) {
-      // `near[i]` holds both sides of a pair, and `i` itself: `j <= i + 1` is
-      // this segment, one met from the other side already, or the next, its
-      // neighbour. On a closed path the first and last are neighbours too.
-      // Written as inequalities because the float-equality rule cannot tell
-      // an array index from a millimetre, and it is right to be suspicious.
-      const adjacent = j <= i + 1 || (p.closed && i < 1 && j >= n - 1);
-      if (adjacent) continue;
+  const test = (i: number, j: number): void => {
+    // `j <= i + 1` is this segment, a pair met from its other side already,
+    // or the next segment, its neighbour; on a closed path the first and last
+    // are neighbours too. Written as inequalities because the float-equality
+    // rule cannot tell an array index from a millimetre, and it is right to
+    // be suspicious by default.
+    const adjacent = j <= i + 1 || (p.closed && i < 1 && j >= n - 1);
+    if (adjacent) return;
 
-      for (const hit of intersectSegments(p.segments[i]!, p.segments[j]!)) {
-        if (keptNear(kept, hit.point)) continue;
-        keep(kept, hit.point);
-        out.push({ point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
-      }
+    for (const hit of intersectSegments(p.segments[i]!, p.segments[j]!)) {
+      if (keptNear(kept, hit.point)) continue;
+      keep(kept, hit.point);
+      out.push({ point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
     }
+  };
+
+  const near = n < EVERY_PAIR_BELOW ? null : mayTouch(p.segments);
+  for (let i = 0; i < n; i++) {
+    if (near === null) for (let j = i + 1; j < n; j++) test(i, j);
+    else for (const j of near[i]!) test(i, j);
   }
 
   return out;
 }
+
+/**
+ * Below this many segments, testing every pair costs less than growing and
+ * sweeping their boxes: measured, a rectangle's offset took 0.08 µs every pair
+ * and 1.4 µs swept, and the two met near 20 segments. A bag of fifty
+ * rectangles asks a hundred times an edit (PERF-006).
+ */
+export const EVERY_PAIR_BELOW = 20;
 
 /*
  * How far outside two segments' boxes `intersectSegments` can report a place
@@ -232,12 +244,12 @@ const REACH_PER_MM = (64 * Number.EPSILON) / EPS_ANGLE;
 const REACH_PER_SQ_MM = 1024 * Number.EPSILON;
 
 /**
- * For each segment, the indices of those it may touch, ascending: every pair
- * whose boxes, each grown by its reach, overlap. A path with a coordinate that
- * is not finite — one that got past the constructors — has no box to trust,
- * and each segment may touch any.
+ * For each segment, the indices of those it may touch, ascending, both sides
+ * of each pair and itself: every pair whose boxes, each grown by its reach,
+ * overlap. Null for a path with a coordinate that is not finite — one that
+ * got past the constructors — which has no box to trust: every pair may touch.
  */
-function mayTouch(segments: readonly Segment[]): number[][] {
+function mayTouch(segments: readonly Segment[]): number[][] | null {
   const boxes = segments.map((s) => ({ s, box: bbox(s) }));
   // The largest coordinate or radius anywhere on the path.
   let scale = 0;
@@ -270,9 +282,7 @@ function mayTouch(segments: readonly Segment[]): number[][] {
       Number.isFinite(r.maxX) &&
       Number.isFinite(r.maxY),
   );
-  return finite
-    ? overlappingBoxes(grown, grown)
-    : segments.map((_, i) => segments.map((_, j) => j).filter((j) => j > i));
+  return finite ? overlappingBoxes(grown, grown) : null;
 }
 
 const largestCoordinate = (r: Rect): number =>

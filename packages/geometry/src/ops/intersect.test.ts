@@ -16,6 +16,7 @@ import { circle } from '../shapes.js';
 import { cross, dist, sub, vec, type Vec2 } from '../vec2.js';
 
 import {
+  EVERY_PAIR_BELOW,
   intersectPaths,
   intersectSegments,
   selfIntersections,
@@ -649,8 +650,22 @@ describe('selfIntersections', () => {
       return out;
     }
 
-    /** `a` and `b` with a segment between them: the one pair the path tests. */
-    const apart = (a: Segment, b: Segment): Path => unsafePath([a, line(vec(0, 0), vec(1, 0)), b]);
+    /**
+     * Enough segments of no length, at `at`, that the path is swept rather
+     * than tested pair by pair. A line of no length touches nothing, and these
+     * sit inside a box the path already has, so they change neither what it
+     * crosses nor how far its boxes reach.
+     */
+    const padding = (at: Vec2): Segment[] =>
+      // Written out: `line` refuses the NaN one test pads beside.
+      Array.from({ length: EVERY_PAIR_BELOW }, () => ({ kind: 'line', a: at, b: at }));
+    const padded = (p: Path): Path =>
+      p.segments.length === 0
+        ? p
+        : unsafePath([...p.segments, ...padding(pointAt(p.segments[0]!, 0))], p.closed);
+
+    /** `a` and `b` apart in a path that is swept: the one pair of the two it tests. */
+    const apart = (a: Segment, b: Segment): Path => unsafePath([a, ...padding(pointAt(a, 0)), b]);
 
     /**
      * How far apart two segments are where `intersectSegments` may still call
@@ -774,7 +789,7 @@ describe('selfIntersections', () => {
           fc.boolean(),
         )
         .map(([[a, b], before, between, closed]) =>
-          unsafePath([...before, a, ...between, b], closed),
+          padded(unsafePath([...before, a, ...between, b], closed)),
         );
       fc.assert(
         fc.property(arbSoup, (p) => {
@@ -820,8 +835,9 @@ describe('selfIntersections', () => {
       ];
       for (const segments of [[], [degenerate[0]!], ...degenerate.map((s) => [s, ...degenerate])]) {
         for (const closed of [false, true]) {
-          const p = unsafePath(segments, closed);
-          expect(selfIntersections(p)).toEqual(everyPair(p));
+          for (const p of [unsafePath(segments, closed), padded(unsafePath(segments, closed))]) {
+            expect(selfIntersections(p)).toEqual(everyPair(p));
+          }
         }
       }
     });
@@ -837,9 +853,10 @@ describe('selfIntersections', () => {
         vec(-10, 0),
         vec(10, 0),
       ]);
+      const swept = padded(p);
 
-      expect(selfIntersections(p)).toEqual(everyPair(p));
-      expect(selfIntersections(p).map((h) => h.point)).toEqual([vec(0, 0), vec(10, 0)]);
+      expect(selfIntersections(swept)).toEqual(everyPair(swept));
+      expect(selfIntersections(swept).map((h) => h.point)).toEqual([vec(0, 0), vec(10, 0)]);
     });
 
     it('keeps two small arcs touching at the foot between them, which neither reaches', () => {
@@ -883,6 +900,7 @@ describe('selfIntersections', () => {
       ]);
 
       expect(selfIntersections(wild)).toEqual(everyPair(wild));
+      expect(selfIntersections(padded(wild))).toEqual(everyPair(padded(wild)));
     });
 
     it('reads each segment a bounded number of times, not once per pair', () => {

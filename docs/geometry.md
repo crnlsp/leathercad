@@ -526,7 +526,8 @@ plus `64 · Number.EPSILON / EPS_ANGLE` of its size, for the rounding of lines c
 over its radius. Pairs whose grown boxes miss have no crossing; the rest are tested in the order
 every pair was, and each crossing is checked against those kept near it. So the result is the
 same, crossing for crossing and in the same order, and a traced outline meets each segment with
-the few beside it. A path with a coordinate that is not finite tests every pair, as before.
+the few beside it. A path with a coordinate that is not finite tests every pair, as before, and so
+does one of fewer than `EVERY_PAIR_BELOW` (20) segments, where that is cheaper than the sweep.
 
 `intersectSegments(a, b)` and `intersectSegments(b, a)` must agree. Line/line is solved in one
 canonical argument order so they are the same arithmetic, and two collinear segments whose ends are
