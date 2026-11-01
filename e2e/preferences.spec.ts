@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -311,10 +311,11 @@ test('the interface language follows the system, or keeps the one chosen, at onc
     await choice.selectOption('en');
     await expect(choice).toHaveValue('en');
     await expect(first.window.getByTestId('language-unavailable')).toHaveCount(0);
+    // The file lands in the background, and until it does there is none: a
+    // poll whose read throws ends at once instead of asking again.
+    const stored = join(configHome, 'leathercad', 'preferences.json');
     await expect
-      .poll(() =>
-        JSON.parse(readFileSync(join(configHome, 'leathercad', 'preferences.json'), 'utf8')),
-      )
+      .poll(() => (existsSync(stored) ? JSON.parse(readFileSync(stored, 'utf8')) : {}))
       .toMatchObject({ language: 'en' });
   } finally {
     await closeApp(first.app);
