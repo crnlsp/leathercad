@@ -28,12 +28,25 @@ import { PreferencesStore } from './preferences.js';
 import { ProjectWatch } from './projectWatch.js';
 import { RecoveryStore } from './recovery.js';
 import { UpdateChecker } from './updates.js';
+import { xdgHome } from './xdg.js';
 
 // Electron derives userData from the npm package name, which would give
 // ~/.config/@leathercad/desktop. docs/file-format.md §6 specifies
 // ~/.config/leathercad. Both calls must happen before the app is ready.
+// appData is XDG_CONFIG_HOME on Linux already; xdgHome says why the
+// development build reads it on Windows and macOS too.
 app.setName('LeatherCAD');
-app.setPath('userData', join(app.getPath('appData'), 'leathercad'));
+app.setPath(
+  'userData',
+  join(
+    xdgHome('XDG_CONFIG_HOME', {
+      platform: process.platform,
+      packaged: app.isPackaged,
+      env: process.env,
+    }) ?? app.getPath('appData'),
+    'leathercad',
+  ),
+);
 
 // One LeatherCAD at a time (8.11). A second launch — a `.lcp` double-clicked
 // on Linux or Windows while the app runs, or the Start menu — hands its
