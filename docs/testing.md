@@ -26,7 +26,7 @@ invisible and expensive.
 | Export accuracy | Vitest + poppler (`pdftoppm`, `pdfinfo`) | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
 | Rendering (pixel diff) | Playwright `toHaveScreenshot`, in the pinned container | ~12 | ~60 s | Anti-aliasing, hairlines, grid |
-| E2E | Playwright + Electron, with axe scans | ~260, in 35 specs | ~4 min | The app actually runs, workflow by workflow |
+| E2E | Playwright + Electron, with axe scans | ~320, in 48 specs | ~9 min, ~4 in CI's three shards | The app actually runs, workflow by workflow |
 | Packaged smoke | Playwright + the packaged binary | 10 | ~60 s | app origin and denied paths, CSP, asar, fuses, resources |
 | Loader fuzzing | Vitest + fast-check | 6 | < 1 s | A damaged `.lcp` refuses with a reason |
 | Benchmarks | Vitest 5 `bench` fixture | 15 | ~45 s | Accidental O(n²) |
@@ -376,8 +376,10 @@ test     pnpm test:coverage     # unit, property, golden, export, snapshot,
 cross-platform  pnpm test       # the unit tests on Windows and macOS, where the
                                 # rasterised print checks skip without poppler
 
-e2e      pnpm test:e2e          # Playwright + Electron, under xvfb, incl. the axe scan
-                                # uploads playwright-report/ on failure
+e2e      pnpm build             # Playwright + Electron, under xvfb, incl. the axe scan,
+         playwright test        # in three shards of whole files, one worker each;
+           --shard=N/3          # e2e-report merges the failed shards' blobs into
+                                # one playwright-report/
 
 visual   pnpm test:visual       # pixel diffs in the pinned container
 
