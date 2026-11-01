@@ -1,7 +1,9 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { featureTree, type FeatureNode } from './featureTree.js';
 import type { Feature, Part } from './feature.js';
+import { mirrorChain } from './workloads.js';
 
 const base = (id: string, name: string) => ({ id, name, visible: true, locked: false });
 
@@ -128,5 +130,105 @@ describe('featureTree', () => {
 
   it('has nothing to say about an empty part', () => {
     expect(featureTree(part())).toEqual([]);
+  });
+});
+
+describe('the tree, built in one pass (PERF-015)', () => {
+  /**
+   * What `featureTree` did before, and the specification it still meets: a
+   * feature whose sources, followed within the part, come back to one already
+   * passed — on a cycle, or leading into one — is a root.
+   */
+  function treeByWalking(part: Part): readonly FeatureNode[] {
+    const byId = new Map(part.features.map((feature) => [feature.id, feature]));
+    const parentOf = (feature: Feature): string | null => {
+      if (feature.source.kind !== 'derived') return null;
+      const sourceId = feature.source.sourceId;
+      return sourceId !== feature.id && byId.has(sourceId) ? sourceId : null;
+    };
+    const onCycle = (feature: Feature): boolean => {
+      const seen = new Set([feature.id]);
+      let at = parentOf(feature);
+      while (at !== null) {
+        if (seen.has(at)) return true;
+        seen.add(at);
+        at = parentOf(byId.get(at)!);
+      }
+      return false;
+    };
+    const children = new Map<string, Feature[]>();
+    const roots: Feature[] = [];
+    for (const feature of part.features) {
+      const parent = onCycle(feature) ? null : parentOf(feature);
+      if (parent === null) {
+        roots.push(feature);
+        continue;
+      }
+      children.set(parent, [...(children.get(parent) ?? []), feature]);
+    }
+    const build = (feature: Feature): FeatureNode => ({
+      feature,
+      children: (children.get(feature.id) ?? []).map(build),
+    });
+    return roots.map(build);
+  }
+
+  /** Features following any other, themselves, or one in no part here; drawn ones follow nothing. */
+  const arbPart: fc.Arbitrary<Part> = fc
+    .array(fc.option(fc.nat({ max: 12 }), { nil: null }), { minLength: 1, maxLength: 12 })
+    .map((from) => ({
+      id: 'part-1',
+      name: 'Part',
+      quantity: 1,
+      features: from.map((k, i) =>
+        k === null
+          ? outline(`f${i}`)
+          : stitchLine(`f${i}`, k < from.length ? `f${k}` : `elsewhere-${k}`),
+      ),
+    }));
+
+  it('nests every feature as walking from each one did, cycles and all', () => {
+    fc.assert(
+      fc.property(arbPart, (part) => {
+        expect(featureTree(part)).toEqual(treeByWalking(part));
+      }),
+      { numRuns: 1000 },
+    );
+  });
+
+  it('roots a feature that leads into a cycle, as well as those on it', () => {
+    // f0 follows f1, which follows f2, which follows f1.
+    const part: Part = {
+      id: 'part-1',
+      name: 'Part',
+      quantity: 1,
+      features: [stitchLine('f0', 'f1'), stitchLine('f1', 'f2'), stitchLine('f2', 'f1')],
+    };
+
+    expect(featureTree(part).map((node) => node.feature.id)).toEqual(['f0', 'f1', 'f2']);
+  });
+
+  it('nests a chain of five hundred once, not walking it again from each feature', () => {
+    // A work bound, not a timing: every read of a feature's source counts.
+    // Walking up from each feature to see whether it comes back read them
+    // 253,007 times for the audit's 500-deep mirror chain; the bound, ten
+    // reads a feature, is a fiftieth of that.
+    let reads = 0;
+    const [chain] = mirrorChain(500).parts;
+    const counted: Part = {
+      ...chain!,
+      features: chain!.features.map(
+        (feature) =>
+          new Proxy(feature, {
+            get(target, key, receiver) {
+              if (key === 'source') reads++;
+              return Reflect.get(target, key, receiver) as unknown;
+            },
+          }),
+      ),
+    };
+
+    expect(featureTree(counted)).toHaveLength(1);
+    expect(reads).toBeLessThan(10 * 502);
   });
 });
