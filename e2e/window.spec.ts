@@ -112,3 +112,20 @@ test('the zoom keys zoom, and Shift+1 fits the pattern again (8.4b, U.4)', async
     await closeApp(app);
   }
 });
+
+test('the window opens with 1280 × 840 of room, and never has less than 860 × 600 (UI Foundations §7.2)', async () => {
+  // The room inside the frame, which the layout measures. Linux under Xvfb has
+  // no frame, so only Windows and macOS could tell the two apart: there the
+  // window opened 16 px short of the wide layout, and shrank to 568 px high.
+  const { app, window } = await openApp();
+  try {
+    const room = (): Promise<readonly number[]> => window.evaluate(() => [innerWidth, innerHeight]);
+    expect(await room()).toEqual([1280, 840]);
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]!.setContentSize(400, 300),
+    );
+    await expect.poll(room).toEqual([860, 600]);
+  } finally {
+    await closeApp(app);
+  }
+});

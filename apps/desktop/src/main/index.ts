@@ -191,6 +191,11 @@ function createWindow(): void {
     // px Parts and Properties are overlays, and nothing is removed.
     minWidth: 860,
     minHeight: 600,
+    // All four are the room inside the frame, which the layout measures, not
+    // the window with its frame and title bar around it. Without this, a
+    // Windows window opened 16 px short of the wide layout, at 1264, and
+    // macOS let the room shrink to 568 px high, below the floor (A6).
+    useContentSize: true,
     show: false,
     title: 'LeatherCAD',
     // Linux takes the window's icon from here; Windows and macOS from the
