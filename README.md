@@ -114,9 +114,9 @@ Closing with unsaved changes asks first, and after a crash LeatherCAD offers you
 
 ## Download
 
-The **[latest release](https://github.com/crnlsp/leathercad/releases/latest)** has an AppImage
-and a Flatpak for Linux, an installer for Windows, and a dmg for macOS on Apple silicon and Intel.
-LeatherCAD is free and open source, and its installers are **not code-signed** — signing costs
+The **[latest release](https://github.com/crnlsp/leathercad/releases/latest)** has an AppImage,
+a Flatpak and a `.deb` for Linux, an installer for Windows, and a dmg for macOS on Apple silicon and
+Intel. LeatherCAD is free and open source, and its installers are **not code-signed** — signing costs
 money every year — so Windows and macOS warn the first time you open it.
 [Getting started](docs/getting-started.md#1-install) says which file to take, how to open it
 anyway, and how to check that a download is the one this repository built.

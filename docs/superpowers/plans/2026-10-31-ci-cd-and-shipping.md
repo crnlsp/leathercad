@@ -232,6 +232,7 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 **Files:** create `.github/workflows/systems.yml` (`schedule` weekly, `workflow_dispatch`, `workflow_call` for A9).
 
 - [ ] Matrix of D7's ten images; E2E on `windows-2022`, `windows-2025`, `macos-15`, `macos-26`; packaged smoke on all; skip when develop has not changed since the last green run, except when called by a candidate.
+- [ ] On the Ubuntu images `ubuntu-22.04` and `ubuntu-26.04` (24.04 is B4's, in `installers.yml`): install the `.deb` with `sudo apt-get install ./LeatherCAD-*.deb`, run the packaged smoke test against `/opt/LeatherCAD/leathercad` with `LEATHERCAD_PACKAGED_EXECUTABLE`, then `sudo apt-get remove leathercad` and check the menu entry is gone. `installers.yml`'s *Installed smoke test (.deb)* and *Uninstall (.deb)* steps are the model, and the installed test needs the sibling `.deb` built with `pnpm --filter @leathercad/desktop package:e2e:deb`.
 - [ ] One issue per failing image (label `systems-<image>`).
 
 **Done when:** one manual run is green, or each failing image has an issue saying why. Opus, medium.
@@ -315,6 +316,8 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 **Files:** `apps/desktop/electron-builder.config.mjs` (linux `target: ['AppImage', 'deb']`, `maintainer` noreply), `installers.yml` (upload `*.deb`), `release.yml` (attest and attach `*.deb`), `systems.yml` (install with `sudo apt-get install ./LeatherCAD-*.deb` on the three Ubuntu images, then smoke), `docs/getting-started.md`.
 
 **Done when:** the release workflow (scratch run) attaches an attested `.deb`; it installs and passes the smoke test on 22.04, 24.04 and 26.04; uninstalling removes the menu entry. Sonnet, medium.
+
+**Changed in the doing:** A7 does not exist yet, so B4 is done without `systems.yml`. B4 installs the `.deb` on `ubuntu-latest` (24.04) in `installers.yml`, smoke-tests it and uninstalls it. The installs on 22.04 and 26.04 are A7's: its matrix runs `sudo apt-get install ./LeatherCAD-*.deb`, then the smoke test, on `ubuntu-22.04` and `ubuntu-26.04`, as on the other Ubuntu image. B4 checked on all three in containers that the package's dependencies resolve and the binary starts (without the sandbox, which a container cannot test). What B4 found out is in its pull request.
 
 ### Task B5: Microsoft Store (MSIX)
 

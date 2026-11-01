@@ -4,12 +4,12 @@ name: Release
 # CHANGELOG.md from the conventional commits merged since the last release.
 # Merging that pull request tags the release. The build job then smoke-tests
 # and makes each platform's installer from the tag, through installers.yml —
-# the AppImage and the Flatpak, the Windows NSIS installer and the macOS dmg
-# (8.6a) — and the publish job attests the ones that built and attaches them,
-# with an SBOM, to the release. A platform that did not build does not hold
-# the others back, except Linux, the one every level promises: a release goes
-# out without Windows or macOS and says so in its notes, and without Linux it
-# goes out with no files at all (docs/release-checklist.md, *What a failure
+# the AppImage, the Flatpak and the .deb, the Windows NSIS installer and the
+# macOS dmg (8.6a) — and the publish job attests the ones that built and
+# attaches them, with an SBOM, to the release. A platform that did not build
+# does not hold the others back, except Linux, the one every level promises:
+# a release goes out without Windows or macOS and says so in its notes, and
+# without Linux it goes out with no files at all (docs/release-checklist.md, *What a failure
 # holds, by level*).
 #
 # The build runs every build-time dependency and the Flatpak bundler, so it
@@ -102,11 +102,11 @@ jobs:
           merge-multiple: true
 
       # Which platforms built, and for each that did not, the job that failed.
-      # Linux ships the AppImage and the Flatpak from one job, so it is
-      # missing unless both are here. The platform names are installers.yml's
-      # `runner.os`, and the job names end in its matrix `os`. The notes go to
-      # a file for the steps below; a platform whose job cannot be found links
-      # the run, which lists them all.
+      # Linux ships the AppImage, the Flatpak and the .deb from one job, so it
+      # is missing unless all three are here. The platform names are
+      # installers.yml's `runner.os`, and the job names end in its matrix `os`.
+      # The notes go to a file for the steps below; a platform whose job cannot
+      # be found links the run, which lists them all.
       #
       # `shell: bash` is `pipefail`: without it a failed `gh api` would pass
       # for an empty list. The jobs and the issues are only for the notes, so
@@ -119,7 +119,7 @@ jobs:
         run: |
           missing=()
           has() { compgen -G "release/$1" > /dev/null; }
-          { has '*.AppImage' && has '*.flatpak'; } || missing+=(Linux)
+          { has '*.AppImage' && has '*.flatpak' && has '*.deb'; } || missing+=(Linux)
           has '*.exe' || missing+=(Windows)
           has '*.dmg' || missing+=(macOS)
           echo "missing=${missing[*]}" >> "$GITHUB_OUTPUT"
@@ -149,7 +149,7 @@ jobs:
               echo
               for platform in "${missing[@]}"; do
                 case $platform in
-                  Linux) leg=ubuntu-latest what='The AppImage and the Flatpak' ;;
+                  Linux) leg=ubuntu-latest what='The AppImage, the Flatpak and the .deb' ;;
                   Windows) leg=windows-latest what='The Windows installer' ;;
                   macOS) leg=macos-latest what='The macOS dmg' ;;
                 esac
@@ -192,6 +192,7 @@ jobs:
           subject-path: |
             release/*.AppImage
             release/*.flatpak
+            release/*.deb
             release/*.exe
             release/*.dmg
 

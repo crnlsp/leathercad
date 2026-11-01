@@ -30,13 +30,14 @@ written for 1.0 (sheet plan, Sheets view, project and work bars), and passed for
 - **The build.** The installer or AppImage from `pnpm package` (or the release workflow) at the
   commit under test. Note the version shown in the status bar. On Arch, once `leathercad-bin` is
   on the AUR, test that package instead of the AppImage: the print check then measures the file
-  makers install.
-  commit under test. Note the version shown in the status bar. CI's packaged smoke test
-  (`installers.yml`) never ran these bytes: it drives a sibling build of the same commit,
-  `pnpm package:e2e`, whose configuration differs from the shipped one only in the inspector fuse
-  that Playwright attaches through (ADR 0014), and which stays the unpacked app rather than an
-  installer — on macOS, built for Apple silicon only, where the dmg is universal. Installing the
-  file itself, and the dmg on an Intel Mac, are checked here and nowhere else.
+  makers install. On Ubuntu, install the `.deb` with `sudo apt install ./LeatherCAD-*.deb`.
+  CI's packaged smoke test (`installers.yml`) never ran these bytes: it drives a sibling build of
+  the same commit, `pnpm package:e2e`, whose configuration differs from the shipped one only in
+  the inspector fuse that Playwright attaches through (ADR 0014), and which stays the unpacked app
+  rather than an installer — on macOS, built for Apple silicon only, where the dmg is universal.
+  The `.deb` is tested one step further: a sibling `.deb` is installed with apt on the runner,
+  started with Chromium's sandbox on, and removed again. Installing the file itself, and the dmg
+  on an Intel Mac, are checked here and nowhere else.
 - **Tools:**
   - a steel rule graduated in 0.5 mm — not a tape;
   - a pen, tape, scissors or a knife;
@@ -237,8 +238,8 @@ per platform in the log.
 ### 11. Opening a project from the file manager
 
 Since 8.5. On each platform — the Windows installer, the macOS dmg, and on Linux the `.flatpak`
-installed with `flatpak install --user` — double-click a saved `.lcp`. The app starts with it open,
-and **Save** writes back to it without asking where. With the app already open and unsaved work, a
+installed with `flatpak install --user`, and the `.deb` installed with apt — double-click a saved
+`.lcp`. The app starts with it open, and **Save** writes back to it without asking where. With the app already open and unsaved work, a
 second double-click — of another `.lcp` — opens it in a tab of its own beside the unsaved work, in
 the same window, on every platform: since 8.11 a second launch on Linux and Windows starts no second
 process, and since 8.12 each project has a tab. Double-click the first project again: its tab comes
@@ -356,8 +357,8 @@ Note each platform's result beside its row in the log, or say which check could 
   the readings. A release never claims print accuracy without them.
 - Merge the release pull request (see
   [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)), and check that the release has
-  the AppImage, the Flatpak, the Windows installer, the macOS dmg and the SBOM attached — five
-  files, as `release.yml` attaches them — or, where a platform failed to build, a *Missing in this
+  the AppImage, the Flatpak, the `.deb`, the Windows installer, the macOS dmg and the SBOM
+  attached — six files, as `release.yml` attaches them — or, where a platform failed to build, a *Missing in this
   release* line in the notes that says which. The notes also list the open `known-issue` issues:
   the release workflow adds both, between two comment markers, and takes them out and writes them
   again when a build is re-run.
