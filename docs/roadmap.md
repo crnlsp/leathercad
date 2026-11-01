@@ -323,7 +323,7 @@ pull request each, accuracy never traded, every platform retested — is
 - ☐ **[PERF-014](performance-backlog.md#perf-014)** Schedule canvas frames only when needed.
 - ☐ **[PERF-015](performance-backlog.md#perf-015)** Avoid repeated deep dependency walks.
 - ☐ **[PERF-016](performance-backlog.md#perf-016)** Prune obsolete collapsed-part IDs.
-- ☐ **[PERF-017](performance-backlog.md#perf-017)** Make benchmarks representative and interpretable.
+- ✅ **[PERF-017](performance-backlog.md#perf-017)** Make benchmarks representative and interpretable.
 
 ### Known issues and findings
 

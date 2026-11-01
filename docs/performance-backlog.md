@@ -69,7 +69,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
 | ☐ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | Unassigned |
 | ☐ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | Unassigned |
-| ◐ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | Unassigned |
+| ✅ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | `perf/017-benchmarks` |
 
 ## Recommended implementation order
 
@@ -764,8 +764,15 @@ these remaining issues.
   Per-package `benchmark.include`, guarded by `apps/desktop/src/bench-discovery.test.ts`: 30 cases back to 15. The
   export-getter warning is Vitest module-runner overhead, not a config fault; left visible and
   documented in `docs/testing.md`.
-- [ ] Add production-representative bundled timing where needed; distinguish it from Vitest
+- [x] Add production-representative bundled timing where needed; distinguish it from Vitest
   timings and record commit, workload, runtime, hardware and sample method.
+  `node tools/perf-compute.mjs` bundles the pure layers with the Vite that builds the renderer and
+  runs the bundle in plain Node: the audit's computation table, its workloads (`bag(n)` joins
+  `workloads.ts`) and four measures — fresh evaluation, fresh diagnosis, diagnosis after a
+  rename, the snap index — 3 warm-ups and 20 samples each, inputs built outside the timing. It
+  prints the commit, Node and V8, the processor, the kernel and the load before the table.
+  `--root` measures another checkout with the same bundler, so before and after can be
+  interleaved (`docs/testing.md` §9.1). Today's numbers are below.
 - [x] Replace minimum-slowness assertions with meaningful upper budgets/behavior verification.
 - [x] Coordinate roadmap Q40: measure shipping SVG/DXF writers rather than only render SVG.
   `export.bench.ts` reaches `exportSvg` and `exportDxf` through the package's index. Under
@@ -774,8 +781,10 @@ these remaining issues.
   regression. `svg.json` was re-recorded and `dxf.json` added (2.61 ms), on the machine that holds
   the others, Node 24.22.0, at 80afa43, load about 2. The other three export cases compared level
   and were kept.
-- [ ] Preserve existing baselines; version deliberate replacements with their environment.
-  Done for two: `export/bench/pdf.json` and `display-list.json` were 13–14× and 6–8× under
+- [x] Preserve existing baselines; version deliberate replacements with their environment.
+  `docs/testing.md` §9.1 gives every baseline the commit, Node and Vitest it was recorded with,
+  and why; `bench-discovery.test.ts` fails if a committed baseline has no row or a row names none.
+  None was re-recorded here. Two were before, in #146: `export/bench/pdf.json` and `display-list.json` were 13–14× and 6–8× under
   `bench:compare` (2026-10-26) because their workloads had changed since 68c2709, not their code.
   The 1,200 mm strap did not fit A4 then, so it was reported oversized and the PDF placed nothing;
   tiling (7.2a) now prints it across 7 sheets, 744 KB — the old furniture-only sheet takes 12.6 ms
@@ -784,8 +793,57 @@ these remaining issues.
   caption on top. Both were re-recorded on the machine that holds the others, Node 22.23.3, at
   199cb50. The other 13 were kept; all but `diagnose-strap-slots` (1.4–1.6×, not yet examined)
   compare level.
-- [ ] Reconcile performance claims in architecture/testing docs with actual implementation:
+  **`diagnose-strap-slots` is a regression, and its baseline is kept.** Bisected with
+  `perf-compute.mjs --root` over every commit touching geometry or domain since 68c2709, the
+  strap's diagnosis is 4.1 ms up to `f4edb37` and 6.3–6.8 ms from 3.9c (`2f1132a`) on. 3.9c built
+  `distanceToPath` on its new `closestPointOnPath`, so a hole's distance to an arc is measured to
+  the nearest point found on it — an angle, a parameter and a point — not radially as before; each
+  of 3,028 holes asks it of 20 round slots. Putting the radial answer back for an arc took the
+  diagnosis to 4.4 ms (reverted). Fixing it is [PERF-005](#perf-005)'s, which this cost is the
+  evidence of, and needs its own proof that diagnostics are unchanged.
+  The editor's four cases, code unchanged since `e845ffa` recorded them, compare 1.12–1.22× on
+  2026-11-01: Node is 24.22.1 where it was 24.22.0, the kernel 7.3.0-5 where it was 7.3.0-4, and
+  two other sessions kept the load near 1.5. That is the environment, not the code, so they were
+  kept too — and it is why a baseline is read with its row.
+- [x] Reconcile performance claims in architecture/testing docs with actual implementation:
   canvas layers/culling, cache identities, hole primitives and operation process ownership.
+  `docs/architecture.md`: §6.2's three stacked canvases are one canvas, all of it drawn when the one
+  dirty flag is set, and the loop asks for every frame (PERF-008, PERF-014); §8's culling is the
+  Sheets view's alone; its batched `Path2D` of circles is one stroked path of slits (F.7) and a
+  circle per punched hole; "a coarser flatten tolerance during a drag, refined on commit" was never
+  built, and is forbidden — a preview is exact; diagnostics are memoised per project, not per part
+  (PERF-005); the benchmark fixture "20 parts, 3 000 holes" is the strap, its slots and the traced
+  outlines; and §1 says where PDF writing, serialising, zipping and file I/O run. R11 and
+  `.claude/rules/document-and-editor.md` no longer promise an overlay-only repaint.
+  `docs/testing.md`: 20 benchmarks, not 15, about 95 s, and §9.1 on baselines and bundled timing.
+
+| PERF-017, bundled (`tools/perf-compute.mjs`), median ms | Fresh evaluation | Fresh diagnosis | Diagnosis after a rename | Snap-index build |
+|---|---:|---:|---:|---:|
+| Wallet | 0.34 | 0.48 | 0.35 | 0.28 |
+| Long strap | 0.60 | 1.25 | 0.51 | 0.03 |
+| Strap + 20 slots | 0.57 | 7.47 | 6.75 | 0.31 |
+| 250-point outline | 2.08 | 8.01 | 4.09 | 0.87 |
+| 500-point outline | 7.62 | 22.87 | 8.20 | 1.44 |
+| 1,000-point outline | 29.03 | 73.40 | 16.41 | 2.86 |
+| 30 simple parts | 0.95 | 1.77 | 0.75 | 1.85 |
+| 40 simple parts | 1.12 | 2.14 | 0.99 | 3.08 |
+| 50 simple parts | 1.38 | 2.82 | 1.24 | 5.60 |
+
+The median of three runs' medians, each of 20 samples after 3 warm-ups; a cell's three medians
+were within 5 % of each other above a millisecond, and up to 16 % apart below one. 2026-11-01, `d091cb4` with
+this change, Node 24.22.1 (V8 13.6), Vite 8.3.5, the audit's Ryzen 5 7600X × 12 on Linux
+7.3.0-5-cachyos, load about 1.3 from two other sessions. Beside the audit's
+[table](#selected-results), measured another way at another commit: the same order everywhere.
+*Diagnosis after a rename* is not the audit's *warm-geometry validation* — it is what a rename
+costs, the project's whole diagnosis with every feature's evaluation reused — and the snap index
+now keeps crossings by path (PERF-004), so it is cheaper for traced outlines and dearer for the
+bags, whose holes it indexes one by one. Through `pnpm bench`'s module runner, the 500-point
+outline's diagnosis is 146 ms; bundled, 23 ms.
+
+**Result:** the benchmarks run once each, and each baseline says what it was recorded on. The
+computation table can be measured again as the app runs it, on any checkout, and the docs say
+what the canvas and the caches do today. Examined, `diagnose-strap-slots`' 1.3–1.4× is a
+regression since 3.9c, handed to PERF-005 with its cause.
 
 **Expected benefit:** Trustworthy optimization decisions and no duplicate benchmark execution.
 Do not turn noisy shared-runner timing into strict sub-millisecond CI gates.

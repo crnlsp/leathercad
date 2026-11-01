@@ -29,7 +29,7 @@ invisible and expensive.
 | E2E | Playwright + Electron, with axe scans | ~320, in 48 specs | ~9 min, ~4 in CI's three shards | The app actually runs, workflow by workflow |
 | Packaged smoke | Playwright + the packaged binary | 10 | ~60 s | app origin and denied paths, CSP, asar, fuses, resources |
 | Loader fuzzing | Vitest + fast-check | 6 | < 1 s | A damaged `.lcp` refuses with a reason |
-| Benchmarks | Vitest 5 `bench` fixture | 15 | ~45 s | Accidental O(n²) |
+| Benchmarks | Vitest 5 `bench` fixture | 20 | ~95 s | Accidental O(n²) |
 | Mutation | StrykerJS, weekly | — | hours | Tests that run code without checking it |
 
 `pnpm test` runs everything except the pixel-diff and E2E layers, in under a minute. Those two run
@@ -436,24 +436,52 @@ written: before they did, they tested only what had already shipped. Two consequ
 - **A failure names its commit,** because `develop` moves on: the nightly issue gives the commit and
   the seed, which together reproduce it anywhere.
 
+### 9.1 Benchmarks and timing
+
 `pnpm bench` runs the benchmarks. `pnpm bench:compare` sets each against the baseline committed
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
-machine that recorded it; the committed one is from the maintainer's.
+machine that recorded it; the committed ones are all from the maintainer's, an AMD Ryzen 5 7600X
+on Linux. A baseline is re-recorded when its workload changed, never to hide a regression, and the
+commit that re-records one changes its row here:
+
+| Baselines | Recorded at | Node | Vitest | Why |
+|---|---|---|---|---|
+| `domain/evaluate-strap`, `domain/evaluate-traced`, `domain/diagnose-strap`, `domain/diagnose-strap-slots`, `domain/diagnose-traced`, `geometry/offset-strap`, `geometry/offset-traced`, `geometry/measure-build`, `geometry/measure-3000`, `export/export-scene`, `persist/save`, `persist/open` | `68c2709`, 2026-09-23 | 22 (pinned 22.23.2; the run's own not recorded) | 5.0.0 | The first baselines |
+| `export/pdf`, `export/display-list` | `199cb50`, 2026-10-26 | 22.23.3 | 5.0.4 | Their workloads had changed since `68c2709` (PERF-017) |
+| `export/svg`, `export/dxf` | `80afa43`, 2026-10-26 | 24.22.0 | 5.0.5 | The writers that ship, not the render backend (Q40) |
+| `editor/snap-drag-traced-250`, `editor/snap-drag-traced-500`, `editor/snap-drag-traced-1000`, `editor/snap-drag-beside-traced` | PERF-004's fix, `e845ffa`, 2026-10-28 | 24.22.0 | 5.0.5 | New with PERF-004 |
+
+`apps/desktop/src/bench-discovery.test.ts` fails if a baseline has no row here, or a row names
+one that is not committed. `domain/diagnose-strap-slots` compares 1.3–1.4× its baseline, and is
+kept: that is a regression, not a new workload. Since 3.9c (`2f1132a`) a hole's distance to a
+round slot is measured by finding the nearest point on the arc rather than radially; fixing it is
+[PERF-005](performance-backlog.md#perf-005)'s.
 
 Benchmark discovery is pinned: each package that has benchmarks sets
 `benchmark.include: ['src/**/*.bench.ts']`, because `tsc --build` emits `dist/src/*.bench.js` and
-Vitest's default glob would run every case twice (30, not 15).
+Vitest's default glob would run every case twice (40, not 20).
 `apps/desktop/src/bench-discovery.test.ts` fails if a package drops that line. Vitest warns that the benchmarks "accessed module export getters too many
 times": the benchmarks import source through Vitest's module runner, whose export getters add
 overhead. The committed baselines were recorded the same way, so a comparison is like for like; the
 absolute numbers are not what a bundled production build costs, and the warning is left visible
 rather than suppressed. `perf.test.ts` asserts upper ceilings only, never that something is slow.
 
+The benchmarks run the sources through Vitest's module runner, which the app does not have.
+`node tools/perf-compute.mjs` times the same computations as the app runs them: it bundles the
+sources with the Vite that builds the renderer, runs the bundle in plain Node, and gives the
+median and range of 20 runs, after 3 to warm up, for each of the audit's workloads (the sample
+wallet, the strap, with and without its 20 slots, traced outlines of 250, 500 and 1,000 points,
+bags of 30, 40 and 50 parts) four ways: fresh evaluation, fresh diagnosis, diagnosis after a
+rename, and the snap index. It prints the commit, Node and V8, the processor and the load first,
+since the numbers mean nothing without them. `--root <tree>` measures another checkout with the
+same bundler, so a before and an after can be run turn about, A, B, A, B, on a machine doing
+other work. On 2026-11-01 a bundled fresh diagnosis of the 500-point outline took 23 ms, where the
+benchmark's took about 150 ms.
+
 The [performance backlog](performance-backlog.md) records the 2026-10-25 audit's environment,
 workloads and measurements, plus implementation acceptance criteria. Its
 [verification plan](performance-backlog.md#verification-and-evidence) distinguishes reliable CI
-checks from controlled-machine trends. The rest of [PERF-017](performance-backlog.md#perf-017)
-is still open.
+checks from controlled-machine trends.
 
 What the Sheets view costs to draw is a controlled-machine trend: `node tools/perf-sheets.mjs time`
 times the drawing callbacks of the real app on the 33-sheet strap, and `pixels` fingerprints the
