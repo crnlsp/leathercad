@@ -491,6 +491,14 @@ times the drawing callbacks of the real app on the 33-sheet strap, and `pixels` 
 canvas at every step of a pan, to show a change moved no pixel. Both need `pnpm build` first.
 `node tools/perf-drag.mjs` likewise times a piece and a guide dragged across a traced outline
 (`fixtures/perf/traced-<n>.lcp`), p50, p95 and long tasks (PERF-004).
+`node tools/perf-retention.mjs` reads the renderer's heap after a full collection with the strap
+open, edited, reloaded and closed, and whether the project left behind is still reachable
+(PERF-010); `--app` points it at another checkout's build. Run it under Xvfb, in the Playwright
+container: a window the desktop covers draws nothing, and the run stalls. Heap bytes after a
+collection do not move with load, so this one is a figure, not a trend. What keeps it is
+collecting through `WeakRef`s in `pnpm test` (`sheets.test.ts`, `tool.test.ts`), and
+`e2e/retention.spec.ts`, which reads the same heap over the debugging protocol in the E2E suite
+and bounds it by half of what the run's own Sheets pages measured.
 
 ## 10. Test-driven development, concretely
 

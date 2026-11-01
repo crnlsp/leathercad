@@ -230,7 +230,9 @@ Two properties matter here:
   the PDF writes that plan, and everything the app says about paper reads it — so the preview is
   the print. What a sheet prints besides its pieces is one description, `sheetInk`, drawn by both.
   The plan is derived and never stored, and it depends on neither the window nor where pieces sit
-  on the board.
+  on the board. The renderer keeps it, with the Sheets view's pages, for the project on screen
+  alone (`renderer/src/sheets.ts`; PERF-001, PERF-010): not for every revision history holds, and
+  not for a project replaced or closed.
 - **The PDF is written off the window's thread** (PERF-002): a renderer Web Worker runs the same
   `exportPdf` on a clone of the plan and transfers the bytes back, and ending it cancels the write
   ([printing.md](printing.md) §6.2a). The file reaches the disk only through the main process.

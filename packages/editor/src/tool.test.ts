@@ -8,6 +8,8 @@ import {
 import type { FeatureId } from '@leathercad/domain';
 import { PathOps, vec, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
+import { setFlagsFromString } from 'node:v8';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
 import { createPolylineTool } from './tools/polylineTool.js';
@@ -349,7 +351,7 @@ describe('ToolManager isolating a failing tool (3.11)', () => {
   });
 });
 
-describe('ToolManager cancelling what is under way (Q39)', () => {
+describe('ToolManager when a project is read in under it (Q39, PERF-010)', () => {
   it('gives up a polyline half drawn, as Escape does, so the next click starts a new one', () => {
     const { store, viewport } = harness();
     const polyline = createPolylineTool(() => 'id');
@@ -366,9 +368,34 @@ describe('ToolManager cancelling what is under way (Q39)', () => {
     }
     expect(tools.underway()).toBe(true);
 
-    tools.cancel();
+    tools.reset();
 
     expect(tools.underway()).toBe(false);
     expect(tools.overlay().items).toEqual([]);
   });
+
+  it('lets go of the project it replaced, which its snap index still held', async () => {
+    const { manager, store } = harness();
+    addSquare(store);
+    const replaced = new WeakRef(store.getState().document.project);
+    // Snapping this move builds the index, from the project with the square.
+    manager.pointerMove(pointer(vec(20, 20)));
+    store.reset(emptyDocument('another'));
+
+    manager.reset();
+
+    expect(await collected(replaced), 'the replaced project is still reachable').toBe(true);
+  });
 });
+
+/**
+ * Whether nothing holds `target` any more, after a full collection: in the
+ * next task, since a `WeakRef` keeps its target until its own job ends.
+ * `--expose-gc` is set from inside, so `pnpm test` runs it as it is.
+ */
+async function collected(target: WeakRef<object>): Promise<boolean> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  setFlagsFromString('--expose_gc');
+  (runInNewContext('gc') as () => void)();
+  return target.deref() === undefined;
+}

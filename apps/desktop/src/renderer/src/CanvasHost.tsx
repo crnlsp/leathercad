@@ -7,15 +7,7 @@ import {
   type DocumentStore,
 } from '@leathercad/document';
 import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
-import {
-  layoutSheets,
-  pieceAt,
-  sheetsLayers,
-  sheetsPages,
-  tapeJoins,
-  type SheetPlan,
-  type SheetsPage,
-} from '@leathercad/export';
+import { layoutSheets, pieceAt, sheetsLayers, tapeJoins } from '@leathercad/export';
 import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 import {
@@ -63,12 +55,10 @@ import { flushSync } from 'react-dom';
 
 import { captionOf } from './captionWords.js';
 import { selectedParts } from './sheetContents.js';
-import { sheetsWords } from './sheetWords.js';
-import type { I18n } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
-import { sheetPlanFor } from './sheets.js';
+import { sheetPlanFor, sheetsPagesFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
 import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
 import { isTyping, pressesControl } from './shortcuts.js';
@@ -254,7 +244,6 @@ export function CanvasHost({
   const sheetsViewportRef = useRef<Viewport>(cameras.sheets);
   const viewRef = useRef<CanvasView>(view);
   viewRef.current = view;
-  const sheetsCacheRef = useRef<SheetsCache | null>(null);
   /** The camera for whichever view is showing. */
   const camera = useCallback(
     (): Viewport =>
@@ -561,9 +550,10 @@ export function CanvasHost({
   useEffect(() => store.subscribe(invalidate), [store, invalidate]);
 
   // A project read into this tab (reload) is a different document: a polyline
-  // half drawn, a rubber band, a first click all belong to the one it replaced
-  // (Q39). Opening and switching tabs make this component again, with new tools.
-  useEffect(() => store.onReset(() => managerRef.current?.cancel()), [store]);
+  // half drawn, a rubber band, a first click and the snap index all belong to
+  // the one it replaced (Q39, PERF-010). Opening and switching tabs make this
+  // component again, with new tools.
+  useEffect(() => store.onReset(() => managerRef.current?.reset()), [store]);
 
   // The first frame can be painted before the vendored typeface has loaded,
   // which would leave the board's words in a fallback face. Repaint once every
@@ -604,12 +594,7 @@ export function CanvasHost({
 
       // The paper and its ink change with the plan and the words alone; what is
       // selected or under the pointer only puts a halo under a piece (PERF-003).
-      const cached = sheetsCacheRef.current;
-      const pages =
-        cached !== null && cached.plan === plan && cached.i18n === i18nRef.current
-          ? cached.pages
-          : sheetsPages(plan, layout, { now: new Date(), words: sheetsWords(i18nRef.current) });
-      sheetsCacheRef.current = { plan, i18n: i18nRef.current, pages };
+      const pages = sheetsPagesFor(document.project, i18nRef.current);
 
       const view = viewport.toView();
       clearCanvas(context, view, SHEET.ground);
@@ -1276,14 +1261,6 @@ function CanvasNotice({
       {describeProblem(problem, t)}
     </div>
   );
-}
-
-/** What the Sheets view last built, so panning does not lay the sheets out again. */
-interface SheetsCache {
-  readonly plan: SheetPlan;
-  /** The words the labels were made in: a new language makes new labels. */
-  readonly i18n: I18n;
-  readonly pages: readonly SheetsPage[];
 }
 
 /** Fades the board in over the theme's motion: a project has just replaced the last. */
