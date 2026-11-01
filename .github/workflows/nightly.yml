@@ -183,6 +183,15 @@ jobs:
           echo "::error title=poppler::Not installed after three attempts. The print tests need its pdfinfo."
           exit 1
 
+      # The runner's screen is 1024 x 768, and Windows fits a new window into
+      # it: the app opened in its narrow layout, and every test written for
+      # the 1280 x 840 it opens at on a full-HD screen failed. Linux's Xvfb
+      # fits no window into anything.
+      - name: Full-HD screen (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
+
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm build
