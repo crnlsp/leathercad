@@ -888,7 +888,13 @@ describe('selfIntersections', () => {
     it('reads each segment a bounded number of times, not once per pair', () => {
       // A work bound, not a timing: the guard against testing every pair
       // coming back. An outline of 1,000 segments, the audit's traced workload,
-      // read its segments a million times; each now meets the few near it.
+      // read its segments 997,000 times, two for each pair tested; each now
+      // meets the few near it, about 3,000 reads in all. The bound, ten reads
+      // a segment, is a hundredth of the old count, so testing every pair
+      // fails it however that loop is dressed up, as long as it hands each
+      // pair to `intersectSegments`. It does not see a loop over boxes made
+      // once: that costs no reads, and box tests are a small part of the old
+      // cost.
       const ring = polyline(
         Array.from({ length: 1000 }, (_, i) => {
           const angle = (i / 1000) * Math.PI * 2;
