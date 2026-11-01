@@ -66,7 +66,7 @@ function dispatch(a: Segment, b: Segment): Intersection[] {
 export function intersectPaths(a: Path, b: Path): Intersection[] {
   const out: Intersection[] = [];
   const kept = new Map<string, Vec2[]>();
-  const near = segmentsWithOverlappingBoxes(a.segments, b.segments);
+  const near = overlappingBoxes(a.segments.map(bbox), b.segments.map(bbox));
 
   for (let i = 0; i < a.segments.length; i++) {
     for (const j of near[i]!) {
@@ -123,17 +123,17 @@ interface Boxed {
 }
 
 /**
- * For each segment of `a`, the indices of `b`'s whose box overlaps its own by
- * `boxesOverlap`, ascending: exactly the pairs testing every one would keep
- * (PERF-004). Sweep and prune along x — boxes in order of their left edge,
- * each met against those still open — so two real outlines, mostly far apart,
- * cost about their segment counts rather than their product.
+ * For each box of `a`, the indices of `b`'s that overlap it by `boxesOverlap`,
+ * ascending: exactly the pairs testing every one would keep (PERF-004). Sweep
+ * and prune along x — boxes in order of their left edge, each met against
+ * those still open — so two real outlines, mostly far apart, cost about their
+ * segment counts rather than their product.
  */
-function segmentsWithOverlappingBoxes(a: readonly Segment[], b: readonly Segment[]): number[][] {
+function overlappingBoxes(a: readonly Rect[], b: readonly Rect[]): number[][] {
   const near: number[][] = a.map(() => []);
   const boxed: Boxed[] = [
-    ...a.map((s, index) => ({ box: bbox(s), index, inA: true })),
-    ...b.map((s, index) => ({ box: bbox(s), index, inA: false })),
+    ...a.map((box, index) => ({ box, index, inA: true })),
+    ...b.map((box, index) => ({ box, index, inA: false })),
   ]
     // A NaN coordinate fails every comparison in `boxesOverlap`, so the box
     // meets nothing; left in, it would leave the sort's order undefined.
