@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { freshStateHome, launchApp, openApp, openSample } from './launchApp.js';
+import { freshStateHome, launchApp, openApp, openSample, recoveryCopies } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -213,9 +213,8 @@ test('the recovery dialog rings, and keeps Tab', async () => {
     await window.getByTestId('rename').click();
     await window.getByTestId('project-name-input').fill('Gusset wallet');
     await window.getByTestId('project-name-input').press('Enter');
-    await expect
-      .poll(() => readdirSync(join(state, 'leathercad', 'recovery')).length, { timeout: 10_000 })
-      .toBeGreaterThan(0);
+    // A whole copy: killed while one is still a .tmp, there is nothing to offer.
+    await expect.poll(() => recoveryCopies(state).length, { timeout: 10_000 }).toBeGreaterThan(0);
     await new Promise<void>((done) => {
       first.process().once('exit', () => done());
       first.process().kill('SIGKILL');
