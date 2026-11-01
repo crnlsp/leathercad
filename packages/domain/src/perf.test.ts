@@ -4,7 +4,7 @@ import { diagnose } from './diagnose.js';
 import { evaluate, resolvedFeatures } from './evaluate.js';
 import { validate } from './validate.js';
 import type { Project } from './feature.js';
-import { strap, tracedOutline } from './workloads.js';
+import { bag, strap, tracedOutline } from './workloads.js';
 
 /** Milliseconds for one cold `diagnose` — the memo is per project object. */
 function timeDiagnose(project: Project): number {
@@ -63,6 +63,8 @@ describe('what an edit costs the panel', () => {
     { what: 'the same strap with 20 slots', project: () => strap(5800, 20), ceilingMs: 200 },
     // ~70 ms, over the §7 budget and deliberately not held to it — see above.
     { what: 'a 500-point traced outline', project: () => tracedOutline(500), ceilingMs: 500 },
+    // ~4 ms: forty small parts, 4,720 holes (PERF-017's bag).
+    { what: 'a bag of forty parts', project: () => bag(40), ceilingMs: 200 },
   ])('$what', ({ project, ceilingMs }) => {
     expect(timeDiagnose(project())).toBeLessThan(ceilingMs);
   });
