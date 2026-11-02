@@ -1,6 +1,11 @@
 import { selectedFeatureIds, type Selection } from '@leathercad/document';
 import { diagnose, evaluate, type FeatureId, type Project } from '@leathercad/domain';
-import { buildDisplayList, type DisplayList, type ViewportView } from '@leathercad/render';
+import {
+  buildDisplayList,
+  itemsReachingView,
+  type DisplayList,
+  type ViewportView,
+} from '@leathercad/render';
 
 import type { I18n } from '../../shared/i18n.js';
 import { captionOf } from './captionWords.js';
@@ -17,11 +22,44 @@ export interface DesignInputs {
 }
 
 /**
- * The Design board's pattern: the pieces, their lines, words and markers, as a
- * display list for the frame. One a board, made with it.
+ * The Design board's pattern: the pieces, their lines, words and markers that
+ * can reach the canvas, as a display list for the frame. One a board, made
+ * with it.
+ *
+ * Kept while the frames read the same inputs (PERF-008): a pointer moving
+ * over the board repaints it for the readout's tick and the hover, and only a
+ * new hover is new to the pattern. Anything else — an edit, a selection, the
+ * camera, the language — builds it again, exactly as a first frame would.
  */
 export function designContent(): (inputs: DesignInputs) => DisplayList {
-  return build;
+  let last: { readonly inputs: DesignInputs; readonly drawn: DisplayList } | null = null;
+  return (inputs) => {
+    if (last === null || !sameInputs(last.inputs, inputs)) {
+      last = { inputs, drawn: itemsReachingView(build(inputs), inputs.view) };
+    }
+    return last.drawn;
+  };
+}
+
+/**
+ * The document's values are never changed in place, so the same object is the
+ * same value. The camera is read afresh for every frame, so it is compared by
+ * what it holds — exactly, not within a tolerance: a camera a hair apart can
+ * draw other pixels, and then the pattern is built for it.
+ */
+function sameInputs(a: DesignInputs, b: DesignInputs): boolean {
+  return (
+    a.project === b.project &&
+    a.selection === b.selection &&
+    a.hovered === b.hovered &&
+    a.i18n === b.i18n &&
+    a.view.centreMm.x === b.view.centreMm.x &&
+    a.view.centreMm.y === b.view.centreMm.y &&
+    a.view.scale === b.view.scale &&
+    a.view.widthPx === b.view.widthPx &&
+    a.view.heightPx === b.view.heightPx &&
+    a.view.dpr === b.view.dpr
+  );
 }
 
 function build({ project, selection, hovered, view, i18n }: DesignInputs): DisplayList {

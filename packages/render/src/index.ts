@@ -45,7 +45,7 @@ export {
 } from './view.js';
 
 export type { BoundedItem, Extent } from './extent.js';
-export { EDGE_PX, extentOf, reachesView, unionExtent } from './extent.js';
+export { EDGE_PX, extentOf, itemsReachingView, reachesView, unionExtent } from './extent.js';
 
 export type { DisplayItem, DisplayList, Stroke } from './displayList.js';
 export {
