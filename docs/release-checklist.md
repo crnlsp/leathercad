@@ -254,9 +254,9 @@ flag; not the test host or the end-to-end mock, which replace it.
 3. *Save*: the dot clears.
 
 **R10** left 1.5 unverified on 2026-10-18, by the maintainer's decision: no Mac was at hand. It is
-a level-3 item (see above) in [`roadmap.md`](roadmap.md)'s 1.6 *Release engineering*, not a planned
-one, so the release gate does not wait for it. Tick it in the pull request that records a pass on a
-Mac, with the macOS version and the date.
+a level-3 item (see above) in [`roadmap.md`](roadmap.md)'s *Collected from makers, and decided*,
+not a planned one, so the release gate does not wait for it. Tick it in the pull request that
+records a pass on a Mac, with the macOS version and the date.
 
 ### 13. ⌘A outside a text field, on macOS
 
