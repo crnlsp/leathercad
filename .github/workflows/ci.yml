@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    # main is production; develop is where development lands.
-    branches: [main, develop]
+    # develop is where development lands. main gets only what develop
+    # tested, through a pull request whose run is this one.
+    branches: [develop]
   pull_request:
   workflow_dispatch:
 
@@ -24,6 +25,49 @@ permissions:
 # of pnpm and Node come from package.json's `packageManager` and from
 # .node-version, so CI and a laptop cannot drift apart.
 jobs:
+  # What the pull request changes, and so which jobs below it can break
+  # (tools/ci/changes.mjs, which holds the table and its tests). A path that
+  # is not certainly documentation counts as code. A push or a run started by
+  # hand runs everything.
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tests: ${{ steps.gates.outputs.tests }}
+      installers: ${{ steps.gates.outputs.installers }}
+      scan: ${{ steps.gates.outputs.scan }}
+      lint: ${{ steps.gates.outputs.lint }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      # The API's list names a renamed file's old path too, so moving code
+      # into docs/ still counts as code.
+      - name: The jobs this change runs
+        id: gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+              --jq '.[] | [.status, .filename, .previous_filename // empty] | @tsv' |
+              node tools/ci/changes.mjs | tee -a "$GITHUB_OUTPUT"
+          else
+            printf '%s\n' tests=true installers=true scan=true lint=true 'kinds=everything' |
+              tee -a "$GITHUB_OUTPUT"
+          fi
+
   static:
     name: Static checks
     runs-on: ubuntu-latest
@@ -59,8 +103,15 @@ jobs:
       - name: Dead code
         run: pnpm knip
 
+      # The CI scripts' own tests, among them which jobs each change runs. In
+      # this job because it runs for every change.
+      - name: CI scripts
+        run: pnpm test:tools
+
   test:
     name: Tests and coverage
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -106,6 +157,8 @@ jobs:
   # and a macOS minute cost ten; a public repository's are free (roadmap R5).
   cross-platform:
     name: Unit tests on ${{ matrix.os }}
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -140,6 +193,8 @@ jobs:
   # (e2e/launchApp.ts, playwright.config.ts).
   e2e:
     name: E2E (${{ matrix.shard }}/3)
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -226,6 +281,8 @@ jobs:
 
   visual:
     name: Pixel diffs
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -261,6 +318,8 @@ jobs:
 
   workflows:
     name: Workflow security
+    needs: changes
+    if: needs.changes.outputs.lint == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -283,8 +342,14 @@ jobs:
           version: 1.30.1
           advanced-security: false
 
+  # Only for a change to what the app is built from. An advisory published
+  # against a dependency the pull request did not touch is not the pull
+  # request's to fix: nightly.yml scans develop every night and opens an
+  # issue (.claude/rules/workflows.md).
   dependencies:
     name: Known vulnerabilities
+    needs: changes
+    if: needs.changes.outputs.scan == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -304,8 +369,9 @@ jobs:
 
   # Every installer, smoke-tested and built on Linux, Windows and macOS by
   # installers.yml, the same workflow the release builds with, from its tag.
-  # On every change, not only one to packaging: a change anywhere can break a
-  # package (roadmap R5). Its checks are named `Installers / Build (<os>)`, as
+  # Linux's smoke test for every change that can break the app (roadmap R5);
+  # Windows, macOS and the Flatpak too for one to packaging, dependencies or
+  # workflows, which are what differ between them. Its checks are named `Installers / Build (<os>)`, as
   # a called workflow's jobs are. A job that calls a workflow takes no timeout
   # of its own; each of its jobs has one. `./`, not the `$/` zizmor asks for,
   # which actionlint cannot parse yet (rhysd/actionlint#711); for a called
@@ -313,9 +379,12 @@ jobs:
   # commit, not from a checkout.
   installers:
     name: Installers
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     uses: ./.github/workflows/installers.yml # zizmor: ignore[self-repository]
     with:
       ref: ${{ github.sha }}
+      everywhere: ${{ needs.changes.outputs.installers == 'true' }}
 
   # The one check the rulesets require from this workflow, beside Conventional
   # title on develop and Release gate on main. It passes only when every job
@@ -325,7 +394,7 @@ jobs:
   # passed. With it, a cancelled run turns this red too, never green.
   ready:
     name: Ready to merge
-    needs: [static, test, cross-platform, e2e, visual, workflows, dependencies, installers]
+    needs: [changes, static, test, cross-platform, e2e, visual, workflows, dependencies, installers]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
