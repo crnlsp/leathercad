@@ -32,8 +32,10 @@ run for hours. Electron's advantages map directly onto this project's risks:
   of canvas and font-metric differences to validate against a 0.1 mm accuracy bar.
 - **JavaScript on both sides** means PDF generation, ZIP handling, file I/O, and printer submission
   are ordinary npm packages, not Rust bindings. Where each runs: the PDF is written in a renderer
-  Web Worker (§3); saving and opening serialise, zip and check the project on the renderer's own
-  thread (PERF-009); the main process does the file I/O and the printing.
+  Web Worker (§3); a save, a recovery copy, a kept copy and a template are made into their `.lcp`
+  in another, kept for the window's life and answering in the order asked (PERF-009); opening
+  still unzips, checks and migrates on the renderer's own thread; the main process does the file
+  I/O and the printing.
 - **Playwright drives Electron directly**, which is what makes the visual-regression and E2E layers
   in [testing.md](testing.md) cheap.
 

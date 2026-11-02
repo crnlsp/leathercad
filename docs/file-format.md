@@ -520,6 +520,11 @@ size — belongs in preferences.
   so a power cut cannot leave the new name on an empty file; a symbolic link is written through to
   its target, and the file keeps its permission bits (Q35). A save writes the document from before
   a drag still under way, never the drag's preview (Q36).
+- **Made off the window's thread.** A save's, a copy's or a kept copy's bytes are made in a worker
+  (PERF-009), from the document as it was when the save was asked for, which the worker is sent a
+  copy of. The worker answers in the order it was asked, so writes still reach the main process in
+  that order; a copy whose tab was saved, reloaded or closed while it was made is not written; and a
+  window that cannot start the worker makes the bytes itself, so a save is never lost to it.
 - **On startup.** A copy whose process is no longer running belongs to a session that did not end
   cleanly. Each that loads is offered, newest first, one after another, each into a tab of its
   own.
