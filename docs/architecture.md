@@ -299,7 +299,8 @@ file dirty.
 `DocumentStore` — document, history and selection — with its file's path and the document it was
 last saved as. `ProjectTabs` (`apps/desktop/src/renderer/src/projectTabs.ts`) is the list and which
 tab is active; the chrome shows the active tab's store, and the canvas is made again for each tab,
-taking that tab's cameras. Undo never crosses from one project to another.
+taking that tab's cameras, as Parts is, taking the pieces folded in it (PERF-016). Undo never
+crosses from one project to another.
 
 ## 5. Platform boundary
 

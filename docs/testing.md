@@ -499,7 +499,10 @@ container: a window the desktop covers draws nothing, and the run stalls. Heap b
 collection do not move with load, so this one is a figure, not a trend. What keeps it is
 collecting through `WeakRef`s in `pnpm test` (`sheets.test.ts`, `tool.test.ts`), and
 `e2e/retention.spec.ts`, which reads the same heap over the debugging protocol in the E2E suite
-and bounds it by half of what the run's own Sheets pages measured.
+and bounds it by half of what the run's own Sheets pages measured. `node tools/perf-folds.mjs`
+counts the pieces Parts holds folded as wallets open, fold and close (PERF-016), in the same
+container; `e2e/parts-tree.spec.ts` keeps it, counting the pieces shown folded in a project that
+folded none.
 
 ## 10. Test-driven development, concretely
 

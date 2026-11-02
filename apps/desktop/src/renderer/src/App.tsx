@@ -1551,8 +1551,11 @@ export function App({
                   />
                 ) : (
                   <PartsList
+                    // Made again for each tab, from the folds that tab keeps (PERF-016).
+                    key={tab.id}
                     store={store}
                     project={storeState.document.project}
+                    folds={tab.folds}
                     selected={storeState.selection.features}
                     selectedParts={storeState.selection.parts}
                     badges={badges}

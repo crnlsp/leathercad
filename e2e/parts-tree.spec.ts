@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { openApp, withSample, expectNoViolations } from './launchApp.js';
+import { openApp, openSample, withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -548,5 +548,68 @@ test('the tree has no accessibility violations, its pieces open or closed', asyn
     await scan('every piece closed');
     await window.keyboard.press('Control+2');
     await scan('on the Sheets view');
+  });
+});
+
+/** The pieces the tree shows folded. */
+const folded = (window: Page): Locator =>
+  window.locator('[data-testid^="part-heading-"][aria-expanded="false"]');
+
+test('a fold is its project’s: another with the same pieces opens with none folded, and the folds go with their tab (PERF-016)', async () => {
+  await withSample(async (window) => {
+    const tabs = window.getByTestId('project-tab');
+    for (const id of ['outer', 'lining', 'pocket']) {
+      await window.getByTestId(`part-fold-${id}`).click();
+    }
+    await expect(folded(window)).toHaveCount(3);
+
+    // A second wallet: the template gives it the first one's ids. Nothing was
+    // folded in it, so nothing may show folded; one set of folds for the whole
+    // window, every piece ever folded, showed all three.
+    await openSample(window);
+    await expect(tabs).toHaveCount(2);
+    await expect.soft(folded(window), 'folded in a project that folded none').toHaveCount(0);
+
+    // The first comes back as it was left…
+    await tabs.first().click();
+    await expect(folded(window)).toHaveCount(3);
+
+    // …and once it is closed, nothing it folded is left for the next project.
+    await window.keyboard.press('Control+w');
+    await expect(tabs).toHaveCount(1);
+    await expect.soft(folded(window), 'folded in the tab that stayed').toHaveCount(0);
+    await openSample(window);
+    await expect
+      .soft(folded(window), 'folded in a project opened after they were closed')
+      .toHaveCount(0);
+  });
+});
+
+test('a piece deleted and brought back by undo comes back folded (PERF-016)', async () => {
+  await withSample(async (window) => {
+    await window.getByTestId('part-fold-pocket').click();
+    await expect(piece(window, 'pocket')).toHaveAttribute('aria-expanded', 'false');
+    await piece(window, 'pocket').hover();
+    await window.getByTestId('part-menu-pocket').click();
+    await window.getByTestId('delete-part-pocket').click();
+    await expect(window.getByTestId('part-count')).toHaveText('2');
+    // The tab keeps the fold of a piece the project no longer has: undo can bring it back.
+    await window.keyboard.press('Control+z');
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expect(piece(window, 'pocket')).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+test('a fold outlasts a visit to Sheets (PERF-016)', async () => {
+  await withSample(async (window) => {
+    await window.getByTestId('part-fold-outer').click();
+    await expect(folded(window)).toHaveCount(1);
+    // Sheets has a Parts panel of its own, so the tree is made again on the
+    // way back: a fold held by the tree went with it.
+    await window.getByTestId('view-sheets').click();
+    await expect(window.getByTestId('parts-list')).toHaveCount(0);
+    await window.getByTestId('view-design').click();
+    await expect(piece(window, 'outer')).toHaveAttribute('aria-expanded', 'false');
+    await expect(folded(window)).toHaveCount(1);
   });
 });

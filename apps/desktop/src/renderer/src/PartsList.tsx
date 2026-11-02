@@ -49,6 +49,15 @@ import { isTyping } from './shortcuts.js';
 import { Tooltip } from './Tooltip.js';
 
 /**
+ * The pieces folded in Parts (U.8), kept by the tab like its cameras: a fold
+ * is the session's, and its project's alone. A piece deleted stays here, so
+ * undo brings it back folded; all of it goes when the tab closes (PERF-016).
+ */
+export interface PartsFolds {
+  closed: ReadonlySet<PartId>;
+}
+
+/**
  * Every piece in the project, and what each one is made of (R-07, U.8).
  *
  * Two jobs the canvas cannot do. It shows the **dependency tree** — *Outline ›
@@ -67,6 +76,7 @@ import { Tooltip } from './Tooltip.js';
 export function PartsList({
   store,
   project,
+  folds,
   selected,
   selectedParts,
   badges,
@@ -78,6 +88,8 @@ export function PartsList({
 }: {
   store: DocumentStore;
   project: Project;
+  /** The pieces folded in this project, which its tab keeps. */
+  folds: PartsFolds;
   /**
    * Which parts do not print, from the sheet plan the PDF writes (7.4b). Where
    * each one does is the Sheets view's own panel (U.9). Passed in so this tree,
@@ -104,8 +116,15 @@ export function PartsList({
   const { t } = i18n;
   const keys = useKeysInSentences();
   const tree = useRef<HTMLDivElement>(null);
-  // The pieces the maker closed: the view's, never the document's.
-  const [closed, setClosed] = useState<ReadonlySet<PartId>>(() => new Set());
+  // The pieces the maker closed: the view's, never the document's. The tab
+  // keeps them while the tree is made again — for another tab, or after
+  // Sheets — so they come back with their project and go with it (PERF-016).
+  // Read once: the tree is keyed by its tab, so they never change under it.
+  const foldsRef = useRef(folds);
+  const [closed, setClosed] = useState(() => folds.closed);
+  useEffect(() => {
+    foldsRef.current.closed = closed;
+  }, [closed]);
   // The row Tab comes back to.
   const [active, setActive] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);

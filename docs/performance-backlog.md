@@ -68,7 +68,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ☐ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | Unassigned |
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
 | ☐ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | Unassigned |
-| ☐ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | Unassigned |
+| ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
 | ✅ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | `perf/017-benchmarks` |
 
 ## Recommended implementation order
@@ -859,9 +859,48 @@ artificial stress, not a demonstrated normal bag workflow.
 projects can leave obsolete IDs while the component stays mounted. This is small string
 retention, not the measured large cache growth.
 
-- [ ] Prune against live part IDs or reset at the appropriate document boundary.
-- [ ] Exercise collapse/delete/open cycles and preserve intended expansion behavior on ordinary
-  edits and undo/redo.
+- [x] Prune against live part IDs or reset at the appropriate document boundary.
+  Reproduced at `a806a1b`, and worse than the audit saw: since tabs (8.12) the one `closed` set
+  was the whole window's. Parts is not made again for a tab, so the set outlived every closed
+  tab, and two projects shared it: the template gives every bifold wallet the same part ids, so
+  a second wallet opened with the first one's pieces already folded, and so did the wallet that
+  stayed once the second was closed. Only the start screen, which unmounts Parts, emptied it.
+  The boundary is the tab: it keeps its folds (`ProjectTab.folds`, like its cameras), Parts is
+  keyed by the tab and reads them on mount, and they go with the tab. Pruning to live ids was
+  not taken: it would lose the fold of a piece deleted and brought back by undo.
+- [x] Exercise collapse/delete/open cycles and preserve intended expansion behavior on ordinary
+  edits and undo/redo. `node tools/perf-folds.mjs` (below) runs open, fold, draw, close cycles
+  beside a wallet that stays open. Within a tab the set works as it did: a piece deleted and
+  brought back by undo comes back folded, and a selection on the board still opens its piece
+  (its own test, unchanged). A fold now also survives a visit to Sheets, which has its own Parts
+  panel and so unmounted the tree and lost every fold. Guarded in the sharded E2E by
+  `e2e/parts-tree.spec.ts`'s three PERF-016 tests, which count the pieces the tree shows
+  folded: in a second wallet that folded none, in the tab that stayed and in a wallet opened
+  after the folding tab closed, the count must be 0 where `a806a1b` shows 3; a fold must still
+  show after Sheets, where `a806a1b` shows it open; and the undo above, which passes on both
+  and fails if the set is pruned to the parts the project has.
+
+| PERF-016, five open–fold–close cycles beside a wallet that stays open, 5 runs each | Before (`a806a1b`) | After |
+|---|---|---|
+| Folds Parts holds after each cycle's folding | 4, 5, 6, 7, 8 | 4, 4, 4, 4, 4 |
+| …in the wallet that stayed, its folding tab closed | 4, 5, 6, 7, 8 | 0, 0, 0, 0, 0 |
+| Pieces shown folded there, which folded none | 3 | 0 |
+| A wallet opened after the cycles: folds held, pieces shown folded | 8, 3 | 0, 0 |
+
+Measured with `node tools/perf-folds.mjs` on the production build in unpackaged Electron 45.0.0,
+in the pinned Playwright container (`v1.64.1-noble`) under Xvfb, the window at 1600 × 1000.
+Before: `a806a1b`, built in a worktree of its own. Runs interleaved, before and after, five of
+each; every run of a build gave the same figures, so a median and a range would only repeat them.
+The set is read off React's current fiber tree, from its root down: a DOM node's own fiber can be
+the render before last, whose state is older.
+
+**Not done / not verified.** Within a tab, a piece deleted keeps its id in the set until the tab
+closes, so undo brings it back folded; a *Reload from disk* keeps the set too, which keeps the
+folds of pieces the file still has. Both are bounded by the parts the tab's project has had.
+Measured on Linux only: the change is the renderer's JavaScript, with no platform path.
+
+**Result:** a fold is its project's. A project never shows another's folds, closing a tab lets
+its folds go, and a fold lasts through a tab switch and a visit to Sheets.
 
 **Expected benefit:** Bound this state to relevant parts; may follow PERF-010 lifecycle work.
 
