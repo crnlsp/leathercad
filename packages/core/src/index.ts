@@ -66,3 +66,10 @@ export {
   isNoCorrection,
   type ScaleCorrection,
 } from './calibration.js';
+
+export {
+  RESOURCE_LIMITS,
+  ResourceLimitError,
+  checkResourceLimit,
+  type Resource,
+} from './resources.js';

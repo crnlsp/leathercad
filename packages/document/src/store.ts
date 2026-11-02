@@ -1,3 +1,4 @@
+import { ResourceLimitError } from '@leathercad/core';
 import type { FeatureId, PartId } from '@leathercad/domain';
 
 import {
@@ -28,6 +29,7 @@ export interface StoreState {
    * it (5.3b).
    */
   readonly inTransaction: boolean;
+  readonly resourceLimit: ResourceLimitError | null;
 }
 
 const NEW_DOCUMENT: HistoryLabel = { action: 'new-document' };
@@ -43,6 +45,7 @@ const OPEN: HistoryLabel = { action: 'open' };
  * anywhere.
  */
 export class DocumentStore {
+  private resourceLimit: ResourceLimitError | null = null;
   private past: HistoryEntry[] = [];
   private future: HistoryEntry[] = [];
   private present: HistoryEntry;
@@ -61,7 +64,11 @@ export class DocumentStore {
    */
   static readonly HISTORY_LIMIT = 200;
 
-  constructor(initial: Document) {
+  constructor(
+    initial: Document,
+    private readonly checkDocument: (document: Document) => void = () => undefined,
+  ) {
+    checkDocument(initial);
     this.present = { document: initial, selection: EMPTY_SELECTION, label: NEW_DOCUMENT };
   }
 
@@ -74,6 +81,7 @@ export class DocumentStore {
       undoLabel: this.past.length > 0 ? this.present.label : null,
       redoLabel: this.future[this.future.length - 1]?.label ?? null,
       inTransaction: this.transaction !== null,
+      resourceLimit: this.resourceLimit,
     };
   }
 
@@ -99,7 +107,8 @@ export class DocumentStore {
    */
   dispatch(command: Command): void {
     if (this.transaction !== null) this.rollback();
-    const next = command.apply(this.present.document);
+    const next = this.checkedApply(command, this.present.document);
+    if (next === null) return;
     if (next === this.present.document) return; // A no-op earns no history.
 
     // Read from the document the command was applied to, while it still holds
@@ -137,7 +146,8 @@ export class DocumentStore {
    */
   preview(command: Command): void {
     if (this.transaction === null) return;
-    const next = command.apply(this.transaction.base.document);
+    const next = this.checkedApply(command, this.transaction.base.document);
+    if (next === null) return;
     this.present = { ...this.present, document: next };
     this.emit();
   }
@@ -167,6 +177,7 @@ export class DocumentStore {
 
   /** Abandons a transaction, restoring the state before it began. */
   rollback(): void {
+    this.resourceLimit = null;
     const transaction = this.transaction;
     this.transaction = null;
     if (transaction === null) return;
@@ -189,6 +200,7 @@ export class DocumentStore {
   }
 
   undo(): void {
+    this.resourceLimit = null;
     if (this.transaction !== null) {
       this.rollback();
       return;
@@ -202,6 +214,7 @@ export class DocumentStore {
   }
 
   redo(): void {
+    this.resourceLimit = null;
     if (this.transaction !== null) this.rollback();
     const next = this.future.pop();
     if (next === undefined) return;
@@ -219,6 +232,8 @@ export class DocumentStore {
    * walk from one into the other would be worse than useless.
    */
   reset(document: Document, label: HistoryLabel = OPEN): void {
+    this.checkDocument(document);
+    this.resourceLimit = null;
     this.transaction = null;
     this.past = [];
     this.future = [];
@@ -253,6 +268,23 @@ export class DocumentStore {
 
   selectGuide(id: string): void {
     this.setSelection({ parts: new Set(), features: new Set(), guide: id });
+  }
+
+  /** Validate before committing or notifying subscribers; a refusal earns no history. */
+  private checkedApply(command: Command, base: Document): Document | null {
+    try {
+      const next = command.apply(base);
+      if (next !== base) this.checkDocument(next);
+      const wasLimited = this.resourceLimit !== null;
+      this.resourceLimit = null;
+      if (wasLimited && next === base) this.emit();
+      return next;
+    } catch (error) {
+      if (!(error instanceof ResourceLimitError)) throw error;
+      this.resourceLimit = error;
+      this.emit();
+      return null;
+    }
   }
 
   private emit(): void {

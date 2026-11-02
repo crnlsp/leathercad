@@ -129,7 +129,8 @@
       "sheets_other": "{{count}} sheets",
       "summary": "{{sheets}} · scale 100 %, locked · {{taped}}",
       "nothingTaped": "nothing taped",
-      "seeSheets": "See the sheets"
+      "seeSheets": "See the sheets",
+      "limited": "{{paper}} — too many sheets"
     },
     "paperShort": "{{count}} × {{paper}}",
     "print": "Print",
@@ -569,7 +570,19 @@
     "pdf": "PDF",
     "project": "LeatherCAD project",
     "saveTitle": "Save project",
-    "svg": "SVG"
+    "svg": "SVG",
+    "resourceLimit": "Too many {{resource}} (limit {{limit}}). Your current project is unchanged.",
+    "resources": {
+      "archiveBytes": "bytes in a project archive",
+      "expandedBytes": "expanded bytes in a project archive",
+      "entries": "archive entries",
+      "nodes": "values in a project document",
+      "features": "parts, features and guides",
+      "segments": "path segments",
+      "characters": "text characters",
+      "holes": "holes",
+      "pages": "sheets"
+    }
   },
   "hardware": {
     "eyelet": "Eyelet",

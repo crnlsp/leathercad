@@ -1,3 +1,4 @@
+import { ResourceLimitError } from '@leathercad/core';
 import { ORIENTATIONS, PAPER_NAMES, type Orientation, type PaperName } from '@leathercad/domain';
 
 import { paginate, type Page, type PaginationResult, type Tile } from './paginate.js';
@@ -120,13 +121,18 @@ export function isScaleCheckOnly(plan: SheetPlan): boolean {
  */
 export function planEveryPaper(
   scene: ExportScene,
+  onRefusal?: (error: ResourceLimitError, paper: PaperName, orientation: Orientation) => void,
 ): ReadonlyArray<{ paper: PaperName; orientation: Orientation; plan: SheetPlan }> {
   return PAPER_NAMES.flatMap((paper) =>
-    ORIENTATIONS.map((orientation) => ({
-      paper,
-      orientation,
-      plan: planSheets(scene, pageSetupOf(paper, orientation)),
-    })),
+    ORIENTATIONS.flatMap((orientation) => {
+      try {
+        return [{ paper, orientation, plan: planSheets(scene, pageSetupOf(paper, orientation)) }];
+      } catch (error) {
+        if (!(error instanceof ResourceLimitError) || onRefusal === undefined) throw error;
+        onRefusal(error, paper, orientation);
+        return [];
+      }
+    }),
   );
 }
 

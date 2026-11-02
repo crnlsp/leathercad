@@ -64,7 +64,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ☐ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | Unassigned |
 | ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
 | ☐ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | Unassigned |
-| ☐ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | Unassigned |
+| ✅ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | `perf/012-resource-preflight` |
 | ☐ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | Unassigned |
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
 | ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
@@ -878,13 +878,72 @@ not tested; reverse transitions could retain oversized buffers.
 large allocation. A valid 100,000 × 100,000 mm outline with 0.5 mm pitch loaded and implies about
 800,000 holes. It was deliberately not evaluated or paginated; OOM was not demonstrated.
 
-- [ ] Define justified aggregate work/expanded-byte limits at trust boundaries before allocation.
-- [ ] Provide typed refusals or explicit large-operation handling, never silent omission,
+- [x] Define justified aggregate work/expanded-byte limits at trust boundaries before allocation.
+- [x] Provide typed refusals or explicit large-operation handling, never silent omission,
   simplification or scaled output; evaluate compatibility with existing valid files.
-- [ ] Test oversized valid and compressed inputs without exhausting the test machine; verify
+- [x] Test oversized valid and compressed inputs without exhausting the test machine; verify
   ordinary large projects still work and failure preserves the previous document.
 
 **Expected benefit:** Predictable, recoverable failures instead of resource-exhaustion risk.
+
+**Done (2026-11-02):** `perf/012-resource-preflight`. The limits and rationale,
+including the capacity implications for schema-valid files, are in
+[Resource limits](resource-limits.md). No format change, migration, dependency or snapshot update.
+
+- `core` owns typed `ResourceLimitError` facts and the ceilings: 32 MiB archive/expanded bytes,
+  1,024 archive entries, 500,000 JSON values, 10,000 parts/features/guides, 250,000 stored/resolved
+  path segments, 20,000 characters in names and labels, 250,000 holes and 1,000 sheets including assembly maps.
+- ZIP directory sizes are checked without inflating any entry; required entries are then streamed
+  in bounded chunks and checked against their actual aggregate output. False size headers cannot
+  bypass the ceiling. JSON/project counts are checked before schema/graph preparation.
+- Every corner run is planned before placing holes. Evaluation counts previous sets, mirrors and
+  cache hits too; an excessive request refuses the operation whole. Pagination compares layout
+  candidates, then counts all tiles and assembly maps before making a grid.
+- The desktop admits a new document through its existing sheet-plan derivation before publishing
+  it. A refused command/preview/open/reload keeps existing work and history. Smaller papers that
+  exceed the budget are visible but unavailable. A refused recovery keeps its offer and file;
+  dismissing it keeps the copy through a clean exit, including a refusal while loading it.
+
+**Before/after on current develop (`05c54ee`), Linux, Node 24.22.1:**
+`node --expose-gc tools/perf-resources.mjs --root <tree>` bundles each tree's production functions
+with Vite. Three runs per side, interleaved before/after; three fresh samples per request per run,
+no warmup. The counts/refusals are the primary metric. Times below are informational medians of
+nine samples on a shared machine, not CI timing ceilings or a claim about battery use or OOM.
+
+| Request | Before | After | Median ms, before → after |
+|---|---|---|---|
+| 32 m square, 0.5 mm pitch, holes at corners | 256,000 holes generated | Refused before placing any hole; 256,004 corner candidates | 58.268 → 0.256 |
+| 200 m × 20 mm strip, A4 portrait | 1,112 tile pages allocated | Refused before allocating a tile grid | 1.005 → 0.172 |
+| Small valid archive whose document claims 64 MiB expanded | Size trusted, file accepted | Refused at directory preflight | 0.983 → 0.107 |
+
+The original 100 m × 100 m audit input is covered by deterministic guards without allocating
+its roughly 800,000 holes or huge grid. A bounded 32 MiB+1 expansion with false local/directory
+sizes proves the actual-output guard. A byte-flip fuzzer counterexample (seed 530817745) is kept as
+a named regression; resource refusals are now an explicit allowed fuzzer outcome.
+
+**Accuracy/compatibility:** the harness's SHA-256 results match before and after for all sixteen
+saved `.lcp`, PDF, SVG and DXF outputs: wallet (2 sheets), print test (3), 5.8 m strap (33) and
+500-point trace (13). All format fixtures and unknown-field preservation tests pass. Forty
+500-point traced parts still evaluate whole, with over 18,000 holes. No existing geometry,
+golden, SVG or pixel baseline was rewritten. Schema-valid work beyond a ceiling is explicitly
+refused without altering the file; the limits do not bound total process memory or the OS read
+that supplies the archive byte array.
+
+**Verification:** `pnpm check` passes: 3,765 tests, six performance guards, all static stages,
+98 % lines and 94.01 % branches across the pure layers. The full Electron suite passes 332/332
+in the Playwright 1.64.1 Noble image with Poppler 24.02.0 and Node 24.22.1, under a 2560 × 1440
+Xvfb display with Poppler required. The app was launched and its refusal screenshot inspected.
+
+**Test-environment findings:** a shared-desktop run hit hover/focus failures; the three affected
+unchanged tests passed three repetitions on an isolated display. The bare Playwright image lacked
+Poppler. A virtual screen exactly as wide as the largest test window returned 1919 px when asked
+for 1920; unchanged develop reproduced that, and a larger screen resolves it. One existing hints
+spec could record a smaller, previous hint set after a growing window, before its ResizeObserver
+update reached React. Its five-hint expectation is now awaited before recording the count, in a
+separate test-only commit; the original assertions and timeouts stay.
+
+**Platform limit:** local validation is Linux. CI's Windows/macOS unit and packaged checks must
+pass; manual packaged-app and physical printing checks there remain release-checklist work.
 
 ### PERF-013
 

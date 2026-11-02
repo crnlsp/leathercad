@@ -488,6 +488,12 @@ being followed and hands geometry a signed distance; geometry keeps knowing only
 > on purpose: guessing at the shape 4.9 needs before 4.9 exists is how a wrong abstraction gets
 > frozen in.
 
+Resource limits (PERF-012) are operation refusals, separate from a feature's outcome. Evaluation
+checks stored work and aggregate resolved segments/holes, including cache hits and mirrors. An
+excessive request throws `ResourceLimitError` before its allocation and returns no partial project,
+so an exporter cannot silently omit a refused hole set. No parameter or stored shape is changed.
+See [Resource limits](resource-limits.md).
+
 ### 4.5 Deleting a feature others depend on — built, 4.2b
 
 [ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md). **A delete never changes a feature

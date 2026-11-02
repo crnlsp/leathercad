@@ -1,3 +1,4 @@
+import { ResourceLimitError } from '@leathercad/core';
 import { setProjectName, type Document } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
 import { exportDxf, exportSvg, type ExportRole, type TiledPart } from '@leathercad/export';
@@ -44,6 +45,12 @@ export function fileName(path: string): string {
  * the operating system refusing a write — is said as it was reported.
  */
 export function fileErrorText(error: unknown, t: Translate): string {
+  if (error instanceof ResourceLimitError) {
+    return t('file.resourceLimit', {
+      resource: t(`file.resources.${error.resource}`),
+      limit: error.limit,
+    });
+  }
   if (error instanceof NewerFormatError) {
     return t(error.savedBy === undefined ? 'file.newer' : 'file.newerNamed', {
       version: error.savedBy ?? '',

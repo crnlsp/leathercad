@@ -364,6 +364,12 @@ and everything past the loader assumes a sound graph
 **Principle: recover where recovery is unambiguous; refuse where it is not.** A user's project file
 is hours of their work.
 
+Operational work limits are checked separately from the schemas: ZIP expansion and JSON/project
+counts are bounded before expensive preparation, with a typed `ResourceLimitError` rather than a
+partially opened project. Schema-valid files beyond the capacity limits are refused without
+changing their bytes. The rationale, compatibility implications and recovery behavior are in
+[Resource limits](resource-limits.md).
+
 ## 6. What lives outside the file
 
 Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~/.config/`):

@@ -1,4 +1,6 @@
 import {
+  checkResourceLimit,
+  ResourceLimitError,
   EPS_ANGLE,
   EPS_LENGTH,
   EPS_POINT,
@@ -38,6 +40,7 @@ import type {
   Run,
 } from './feature.js';
 import { roleOf } from './feature.js';
+import { checkProjectSize } from './resourceSize.js';
 import { anchorsOf } from './anchors.js';
 import { mapAnchorsThroughOffset } from './derivedAnchors.js';
 import { keepLargestPiece } from './offsetPieces.js';
@@ -159,15 +162,18 @@ const cache = new WeakMap<Feature, CacheEntry>();
  * node while everything around it still draws. A blank canvas because of one
  * bad number is the wrong failure mode for a drawing tool. Every failure is a
  * typed problem (E1), never a sentence.
+ * An excessive resource request instead refuses the whole operation with
+ * ResourceLimitError; there is no partial project an exporter could omit from.
  */
 export function evaluate(project: Project): ResolvedProject {
+  checkProjectSize(project);
   // A derived feature can follow one in another part — a seam spans two
   // pieces — so the index is built across the whole project, once.
   const byId = new Map<FeatureId, Feature>();
   for (const part of project.parts) {
     for (const feature of part.features) byId.set(feature.id, feature);
   }
-  const scope: Scope = { byId, resolved: new Map() };
+  const scope: Scope = { byId, resolved: new Map(), holes: 0, segments: 0 };
 
   return {
     project,
@@ -190,6 +196,8 @@ export function evaluate(project: Project): ResolvedProject {
  * is the one any other would have made.
  */
 interface Scope {
+  holes: number;
+  segments: number;
   readonly byId: ReadonlyMap<FeatureId, Feature>;
   readonly resolved: Map<Feature, ResolvedFeature>;
 }
@@ -251,13 +259,20 @@ function resolveFeature(feature: Feature, scope: Scope, visiting: Set<FeatureId>
     if (cached !== undefined && cached.from === from && sameRefs(cached.refsFrom, refsFrom)) {
       resolved = hit(feature, cached);
     } else {
-      const built = build(feature, source, referenced);
+      const built = build(feature, source, referenced, scope.holes);
       cache.set(feature, built);
       resolved = hit(feature, built);
     }
   } catch (error) {
     if (error instanceof CycleError) throw error;
     resolved = failed(feature, error);
+  }
+  if (resolved.ok) {
+    // Cache hits and mirrored sets consume the same aggregate budget as new sets.
+    scope.holes += resolved.holes?.count ?? 0;
+    scope.segments += resolved.path.segments.length;
+    checkResourceLimit('holes', scope.holes);
+    checkResourceLimit('segments', scope.segments);
   }
   scope.resolved.set(feature, resolved);
   return resolved;
@@ -285,6 +300,9 @@ function hit(feature: Feature, entry: CacheEntry): ResolvedFeature {
  * a check the domain should be making itself.
  */
 function failed(feature: Feature, error: unknown): ResolvedFeature {
+  // Refuse the operation whole. Turning this into a failed feature would let
+  // a partial pattern reach paper after its holes had been dropped.
+  if (error instanceof ResourceLimitError) throw error;
   if (error instanceof Failure) {
     return error.location === undefined
       ? { ok: false, feature, problem: error.problem }
@@ -482,6 +500,7 @@ function build(
   feature: Feature,
   resolvedSource: Extract<ResolvedFeature, { ok: true }> | undefined,
   referenced: readonly (Referenced | undefined)[],
+  usedHoles: number,
 ): CacheEntry {
   const refsFrom = referenced.map((entry) => entry?.path);
   const invalid = parameterProblem(feature);
@@ -560,6 +579,7 @@ function build(
         // reflection cannot lose one.
         const m = mirrorMatrix(source.op.axis, source.op.glideMm, referenced[0]?.path);
         const holes = resolvedSource!.holes;
+        checkResourceLimit('holes', usedHoles + (holes?.count ?? 0));
 
         return {
           from,
@@ -597,8 +617,8 @@ function build(
           path: sourcePath,
           holes:
             source.op.type === 'stitch-holes'
-              ? distributeHoles(sourcePath, source.op)
-              : rowOfHoles(sourcePath, source.op),
+              ? distributeHoles(sourcePath, source.op, usedHoles)
+              : rowOfHoles(sourcePath, source.op, usedHoles),
           text: undefined,
           anchors: sourceAnchors,
           notes: undefined,

@@ -66,7 +66,7 @@ export type { OffsetOptions, OffsetPiece, OffsetRange } from './ops/offset.js';
 export { offsetPath, offsetPathTraced } from './ops/offset.js';
 
 export type { DistributedPoint, Distribution, DistributeOptions } from './ops/distribute.js';
-export { distributeAlongPath } from './ops/distribute.js';
+export { distributeAlongPath, planDistribution } from './ops/distribute.js';
 
 export {
   ARC_CUBIC_ERROR_COEFFICIENT,

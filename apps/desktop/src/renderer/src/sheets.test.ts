@@ -5,6 +5,9 @@ import { runInNewContext } from 'node:vm';
 
 import {
   DocumentStore,
+  emptyDocument,
+  rectanglePart,
+  rectShape,
   setPageSetup,
   setPartName,
   setShape,
@@ -18,6 +21,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
 import {
+  paperLimitFor,
   paperOptionsFor,
   printStatusFor,
   releaseDerived,
@@ -297,3 +301,23 @@ function heapAfterGcMiB(): number {
   collect();
   return process.memoryUsage().heapUsed / 2 ** 20;
 }
+
+it('keeps a valid A3 project when smaller paper choices exceed the work limit (PERF-012)', () => {
+  const project: Project = {
+    ...emptyDocument('large').project,
+    settings: { ...DEFAULT_SETTINGS, paper: 'A3' },
+    parts: [rectanglePart('part', 'outline', 'Panel', rectShape({ x: 0, y: 0 }, 10000, 5000))],
+  };
+  const chosen = sheetPlanFor(project);
+  const options = paperOptionsFor(project);
+  expect(
+    options.find((option) => option.paper === 'A3' && option.orientation === 'portrait')?.plan,
+  ).toBe(chosen);
+  expect(paperLimitFor(project, 'A5', 'portrait')).toMatchObject({
+    resource: 'pages',
+    limit: 1000,
+  });
+  expect(options.some((option) => option.paper === 'A5' && option.orientation === 'portrait')).toBe(
+    false,
+  );
+});

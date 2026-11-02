@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-10-26
+**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-11-02
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -318,7 +318,7 @@ pull request each, accuracy never traded, every platform retested — is
 - ☐ **[PERF-009](performance-backlog.md#perf-009)** Keep persistence work off the interaction path.
 - ✅ **[PERF-010](performance-backlog.md#perf-010)** Release previous-project view/tool caches.
 - ☐ **[PERF-011](performance-backlog.md#perf-011)** Resize backing stores on DPI-only changes.
-- ☐ **[PERF-012](performance-backlog.md#perf-012)** Preflight excessive allocation/work requests.
+- ✅ **[PERF-012](performance-backlog.md#perf-012)** Preflight excessive allocation/work requests.
 - ☐ **[PERF-013](performance-backlog.md#perf-013)** Bound thumbnail work and cancel obsolete PDF loading.
 - ☐ **[PERF-014](performance-backlog.md#perf-014)** Schedule canvas frames only when needed.
 - ✅ **[PERF-015](performance-backlog.md#perf-015)** Avoid repeated deep dependency walks.

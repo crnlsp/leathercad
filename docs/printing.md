@@ -190,6 +190,10 @@ interface Page {
 }
 ```
 
+Pagination counts the chosen layout's sheets, including assembly maps, before allocating any tile
+grid (PERF-012). A plan beyond the work limit is refused whole, never clipped or scaled; an
+alternate paper beyond it is unavailable in the picker. See [Resource limits](resource-limits.md).
+
 ### 5.1 Paper sizes
 
 Stored in mm; converted to points only in the PDF writer.

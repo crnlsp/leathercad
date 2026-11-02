@@ -1,3 +1,4 @@
+import { ResourceLimitError } from '@leathercad/core';
 import type { Project } from '@leathercad/domain';
 import { loadProject, saveProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
@@ -9,7 +10,7 @@ import { isDirty, type ProjectTab, type ProjectTabs } from './projectTabs.js';
 export interface RecoveryOffer {
   readonly id: string;
   readonly savedAt: string;
-  readonly project: Project;
+  readonly project: Project | null;
 }
 
 /** How many unloadable copies startup will set aside before it stops looking. */
@@ -49,7 +50,13 @@ export function useRecovery({
   appVersion: string;
   /** Opens the recovered project in a tab of its own (8.12), and gives the tab back. */
   adoptRecovered: (project: Project) => ProjectTab;
-}): { offer: RecoveryOffer | null; recover: () => Promise<void>; decline: () => Promise<void> } {
+}): {
+  error: unknown;
+  offer: RecoveryOffer | null;
+  recover: () => Promise<void>;
+  decline: () => Promise<void>;
+} {
+  const [error, setError] = useState<unknown>(null);
   const [offer, setOffer] = useState<RecoveryOffer | null>(null);
   // Each tab's document last written to its copy, so an unchanged project is
   // not written again, and the copies that exist are known.
@@ -71,7 +78,13 @@ export function useRecovery({
           const { project } = loadProject(found.data);
           setOffer({ id: found.id, savedAt: found.savedAt, project });
           return;
-        } catch {
+        } catch (error) {
+          if (error instanceof ResourceLimitError) {
+            // Valid work beyond this build's capacity is not a corrupt file.
+            setError(error);
+            setOffer({ id: found.id, savedAt: found.savedAt, project: null });
+            return;
+          }
           // Incomplete or damaged: set aside, never trusted, never fatal.
           await host().resolveRecovery(found.id, 'corrupt');
         }
@@ -149,8 +162,16 @@ export function useRecovery({
   }, [host, openTabs, revision]);
 
   const recover = useCallback(async () => {
-    if (offer === null) return;
-    const tab = adoptRecovered(offer.project);
+    if (offer === null || offer.project === null) return;
+    let tab: ProjectTab;
+    try {
+      tab = adoptRecovered(offer.project);
+    } catch (error) {
+      // A resource refusal keeps both the offer and its only copy on disk.
+      setError(error);
+      return;
+    }
+    setError(null);
     setOffer(null);
     // The tab's own copy first, and only then is the old one let go (at a
     // clean exit): at every moment there is at least one copy on disk. Both
@@ -169,13 +190,17 @@ export function useRecovery({
 
   const decline = useCallback(async () => {
     if (offer === null) return;
+    setError(null);
     setOffer(null);
+    // Dismissing a refused recovery keeps its file even through a clean exit:
+    // this build has not made a usable replacement copy of it.
+    if (offer.project === null || error instanceof ResourceLimitError) return;
     // Kept on disk until this session exits cleanly — never deleted on the spot.
     await host()
       .resolveRecovery(offer.id, 'adopt')
       .catch(() => undefined);
     await findNext();
-  }, [findNext, host, offer]);
+  }, [error, findNext, host, offer]);
 
-  return { offer, recover, decline };
+  return { error, offer, recover, decline };
 }
