@@ -7,6 +7,66 @@ yet is listed in the open
 [release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
 Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
 
+## [1.6.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.5.0...leathercad-v1.6.0) (2026-11-02)
+
+
+### Features
+
+* **desktop:** a save or an export says it happened, and an opened project fades in ([#141](https://github.com/crnlsp/leathercad/issues/141)) ([1089943](https://github.com/crnlsp/leathercad/commit/108994376bbff94b260436f5895aaf6159ea2ced))
+* **desktop:** LeatherCAD's own icons — a familiar outline with a leatherworker's detail ([#133](https://github.com/crnlsp/leathercad/issues/133)) ([6d21f4e](https://github.com/crnlsp/leathercad/commit/6d21f4ec191176b13bd7b4633e2e9d2a9260017a))
+* **desktop:** place guides and align or distribute pieces (3.10) ([#129](https://github.com/crnlsp/leathercad/issues/129)) ([70c53b0](https://github.com/crnlsp/leathercad/commit/70c53b0981a68a0902102d6ce0ca795b3e9f8913))
+* **desktop:** several projects in one window, each in a tab, and new projects from templates ([#132](https://github.com/crnlsp/leathercad/issues/132)) ([030b815](https://github.com/crnlsp/leathercad/commit/030b8153a5bedd0dc79bd219c1b0503f70364ef8))
+* **desktop:** the app says when a new version is released, and links to it (8.9) ([#124](https://github.com/crnlsp/leathercad/issues/124)) ([25c237e](https://github.com/crnlsp/leathercad/commit/25c237e43e410c394e33750367f59663d3ae4883))
+* dimensions drawn like drafting, and a piece's overall size (4.10b, Q15) ([#147](https://github.com/crnlsp/leathercad/issues/147)) ([731afd7](https://github.com/crnlsp/leathercad/commit/731afd7e9defcfb2fadcf4490aa1d4b88ad22919))
+* **document:** convert a circle, arc or rectangle to a drawn path (3.12) ([#139](https://github.com/crnlsp/leathercad/issues/139)) ([6521654](https://github.com/crnlsp/leathercad/commit/6521654daca751fc8c44e21011440d9e5412fff5))
+* **domain:** a row of holes along any marking line (4.14) ([#138](https://github.com/crnlsp/leathercad/issues/138)) ([8c4bc00](https://github.com/crnlsp/leathercad/commit/8c4bc00c86f0ce916880a789c10a5f27528a88a8))
+* **export:** export a laser cut, a stitch guide or the whole template, choosing its layers (6.4) ([#155](https://github.com/crnlsp/leathercad/issues/155)) ([d86b3b2](https://github.com/crnlsp/leathercad/commit/d86b3b2e64af706454d22657ae06d36b0c7ed1cc))
+* **export:** taped sheets say which sheet joins each edge, and a part taped into a grid prints a map (7.2) ([#154](https://github.com/crnlsp/leathercad/issues/154)) ([c632824](https://github.com/crnlsp/leathercad/commit/c632824a521666d1a9e86122509d0bbaa8ce24e3))
+* **print:** calibrate a printer that prints a little large or small, and print to it corrected (7.5) ([#156](https://github.com/crnlsp/leathercad/issues/156)) ([b03e779](https://github.com/crnlsp/leathercad/commit/b03e77999d1bb46247c62e709523f21d3385117e))
+
+
+### Bug Fixes
+
+* **desktop:** a copy saved before a crash survives reopening the window on macOS ([#116](https://github.com/crnlsp/leathercad/issues/116)) ([c43967a](https://github.com/crnlsp/leathercad/commit/c43967a0b2481f4bb6df026674c21811318d253c))
+* **desktop:** a half-drawn line is given up when its tab reloads from disk (Q39) ([#159](https://github.com/crnlsp/leathercad/issues/159)) ([865e087](https://github.com/crnlsp/leathercad/commit/865e087ece5478b83f7db02f4e4005c92b6c3b61))
+* **desktop:** a Parts tree row is named by all it shows ([#144](https://github.com/crnlsp/leathercad/issues/144)) ([ee7fe7c](https://github.com/crnlsp/leathercad/commit/ee7fe7c5b6024a0117248dcd58d042777035e4a7))
+* **desktop:** a quit no longer loses a preference changed just before it, or leaves a recovered copy behind ([#187](https://github.com/crnlsp/leathercad/issues/187)) ([bb08f12](https://github.com/crnlsp/leathercad/commit/bb08f121bbb45de0b629d0e7fa0d9765bf9c05e7))
+* **desktop:** a save is flushed to disk and never writes a drag's preview (Q35, Q36) ([#149](https://github.com/crnlsp/leathercad/issues/149)) ([c679993](https://github.com/crnlsp/leathercad/commit/c67999342a695881e90a5680ad5f8d1f00cd3648))
+* **desktop:** an opened pattern is framed, the Print dialog says it is finding printers, and the rectangle tool's first click is quiet ([#117](https://github.com/crnlsp/leathercad/issues/117)) ([e4145b9](https://github.com/crnlsp/leathercad/commit/e4145b94d7850ebde849a8c936ab8ed0631430ae))
+* **desktop:** keep canvases sharp when display density changes (PERF-011) ([#212](https://github.com/crnlsp/leathercad/issues/212)) ([ec76d82](https://github.com/crnlsp/leathercad/commit/ec76d82520567e305610d631ab6edb068effe87e))
+* **desktop:** on Windows the window opens with Properties beside the board, and on macOS it no longer shrinks below its layout ([#196](https://github.com/crnlsp/leathercad/issues/196)) ([a122c70](https://github.com/crnlsp/leathercad/commit/a122c7052fda21f21c7e6d9b92600b8d3e328d99))
+* **desktop:** open keyboard context menus on macOS ([#214](https://github.com/crnlsp/leathercad/issues/214)) ([217b2bd](https://github.com/crnlsp/leathercad/commit/217b2bdc35a9dab21eca41dc3e9e80e276beffbf))
+* **desktop:** switching between Design and Sheets shows that view's zoom at once ([#135](https://github.com/crnlsp/leathercad/issues/135)) ([7f6cc6c](https://github.com/crnlsp/leathercad/commit/7f6cc6c7c0bd4873cdb55521bd17ca1652f7cf02))
+* **desktop:** the top bar's Saved is readable, at AA contrast ([#158](https://github.com/crnlsp/leathercad/issues/158)) ([baae09b](https://github.com/crnlsp/leathercad/commit/baae09b2541c72db67459d819d64738d157a3daf))
+* **document:** undo or a command during a drag no longer scatters the piece across history ([#115](https://github.com/crnlsp/leathercad/issues/115)) ([7205ee3](https://github.com/crnlsp/leathercad/commit/7205ee34450defcce1b087e7a6ad223e6d8a784f))
+* **domain:** a hardware hole is checked by its rim, not its centre (Q33) ([#137](https://github.com/crnlsp/leathercad/issues/137)) ([9282467](https://github.com/crnlsp/leathercad/commit/9282467c6bfc0fe9a1e881f87504ffdeb036d9c6))
+* **domain:** two problems of one kind on one feature are told apart (Q4) ([#152](https://github.com/crnlsp/leathercad/issues/152)) ([e8ce73f](https://github.com/crnlsp/leathercad/commit/e8ce73f2ea522ef3191dd0a1e45b7e3046710b6f))
+* **geometry:** a point beside a curve far from the origin is no longer read as inside it (Q38) ([#164](https://github.com/crnlsp/leathercad/issues/164)) ([b023c29](https://github.com/crnlsp/leathercad/commit/b023c29587e1b6496a965e7561d030b44e84268c))
+* **geometry:** a tiny arc keeps its end when rounding puts it just past the tolerance (Q38) ([#157](https://github.com/crnlsp/leathercad/issues/157)) ([664d6e6](https://github.com/crnlsp/leathercad/commit/664d6e67dfed5438640aa6f447f9d637c33091a8))
+* **geometry:** one home for every tolerance, and a lint rule that keeps it there (Q38) ([#150](https://github.com/crnlsp/leathercad/issues/150)) ([d404e75](https://github.com/crnlsp/leathercad/commit/d404e752b97f38b1504e05aea996960245f4d165))
+* refuse oversized project work and preserve edits (PERF-012) ([#200](https://github.com/crnlsp/leathercad/issues/200)) ([7c77698](https://github.com/crnlsp/leathercad/commit/7c7769861ac416daf6c8358fae588d38fb1969e9))
+* scaling a piece keeps its rivet holes, slots and labels their sizes (Q31) ([#162](https://github.com/crnlsp/leathercad/issues/162)) ([3cdad1c](https://github.com/crnlsp/leathercad/commit/3cdad1c607486d6111ad20021c39910b9aa231f2))
+* **test:** give Stryker's unmutated run 30 minutes, not its default five ([#148](https://github.com/crnlsp/leathercad/issues/148)) ([80afa43](https://github.com/crnlsp/leathercad/commit/80afa43327594a7c58bb22aa202f14e47c6ce2b6))
+
+
+### Performance
+
+* **desktop:** a fold in Parts stays with its project, and goes with its tab (PERF-016) ([#193](https://github.com/crnlsp/leathercad/issues/193)) ([5272adc](https://github.com/crnlsp/leathercad/commit/5272adca52af8249762636d5148e6923bf94283e))
+* **desktop:** a long PDF export no longer freezes the window, and can be cancelled (PERF-002) ([#166](https://github.com/crnlsp/leathercad/issues/166)) ([189a331](https://github.com/crnlsp/leathercad/commit/189a331d16afb50d92c17d5cd7829f7ccd82cf9a))
+* **desktop:** a pointer moving over the board renders the readout alone (PERF-007) ([#197](https://github.com/crnlsp/leathercad/issues/197)) ([aac7bed](https://github.com/crnlsp/leathercad/commit/aac7bedb2f0268486a6fb381ad714f2884e5994d))
+* **desktop:** a project replaced, edited or closed no longer leaves its Sheets pages behind (PERF-010) ([#189](https://github.com/crnlsp/leathercad/issues/189)) ([53078f7](https://github.com/crnlsp/leathercad/commit/53078f728491c73b8bc0e7113db5fcabf8801eb4))
+* **desktop:** saving a large project, or writing its recovery copy, no longer stops the window (PERF-009) ([#199](https://github.com/crnlsp/leathercad/issues/199)) ([18801bc](https://github.com/crnlsp/leathercad/commit/18801bcc0273365ea548e1857fd0c08e80ad6240))
+* **desktop:** stop scheduling frames while the board is idle (PERF-014) ([#213](https://github.com/crnlsp/leathercad/issues/213)) ([d38b45f](https://github.com/crnlsp/leathercad/commit/d38b45fe0a3a78312f426c6c071f345783bfa755))
+* **desktop:** the Design board keeps its pattern between hover frames and draws only what reaches the canvas (PERF-008) ([#211](https://github.com/crnlsp/leathercad/issues/211)) ([e050d1e](https://github.com/crnlsp/leathercad/commit/e050d1e07c66a76f6aa5bb676f3e1b235904c5ee))
+* **desktop:** the Sheets view stays smooth on a part taped across many sheets (PERF-003) ([#163](https://github.com/crnlsp/leathercad/issues/163)) ([a871fba](https://github.com/crnlsp/leathercad/commit/a871fba870e0a74b66e55a1175060b1ec6940c08))
+* **domain:** a chain of sources is walked once, not once for each feature down it (PERF-015) ([#198](https://github.com/crnlsp/leathercad/issues/198)) ([05c54ee](https://github.com/crnlsp/leathercad/commit/05c54eead60fb4ebe1941165171d6a52efcc549a))
+* **domain:** a rename, or an edit to another part, validates no geometry again (PERF-005) ([#192](https://github.com/crnlsp/leathercad/issues/192)) ([d4268e1](https://github.com/crnlsp/leathercad/commit/d4268e1d14c7056f55fff2d422a5be3ab13245ac))
+* **editor:** dragging beside a complex outline no longer rebuilds every snap crossing (PERF-004) ([#168](https://github.com/crnlsp/leathercad/issues/168)) ([e845ffa](https://github.com/crnlsp/leathercad/commit/e845ffa447a03817cc2f1711570aa248a7d09fdb))
+* **export:** a long taped part exports five times faster and a fifth the size (PERF-002) ([#161](https://github.com/crnlsp/leathercad/issues/161)) ([4852c71](https://github.com/crnlsp/leathercad/commit/4852c7102308114a7c8919afa8043d46f14e21dd))
+* **geometry:** a traced outline no longer tests every pair of its segments for a crossing (PERF-006) ([#190](https://github.com/crnlsp/leathercad/issues/190)) ([a806a1b](https://github.com/crnlsp/leathercad/commit/a806a1bb801c4319b0a02277b981fd3c38f1713f))
+* **preview:** draw thumbnails near view and end obsolete PDF loads (PERF-013) ([#205](https://github.com/crnlsp/leathercad/issues/205)) ([e9b7145](https://github.com/crnlsp/leathercad/commit/e9b7145a4e715e93bba3c2cc3bfa21546c08f160))
+* renaming a part in a long session no longer grows memory by gigabytes (PERF-001) ([#160](https://github.com/crnlsp/leathercad/issues/160)) ([a9a2201](https://github.com/crnlsp/leathercad/commit/a9a2201e7a0a0c8de2e85059bf035940da0b2e55))
+
 ## [1.5.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.3.5...leathercad-v1.5.0) (2026-10-18)
 
 
