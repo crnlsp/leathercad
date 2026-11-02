@@ -475,7 +475,19 @@ jobs:
   # passed. With it, a cancelled run turns this red too, never green.
   ready:
     name: Ready to merge
-    needs: [changes, guard, static, test, cross-platform, e2e, visual, workflows, dependencies, installers]
+    needs:
+      [
+        changes,
+        guard,
+        static,
+        test,
+        cross-platform,
+        e2e,
+        visual,
+        workflows,
+        dependencies,
+        installers,
+      ]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
