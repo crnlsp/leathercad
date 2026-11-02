@@ -84,8 +84,80 @@ test('a locked piece is still reached by a right-click on the board, to unlock i
   }
 });
 
+test('the menu shortcut opens without Chromium generating a contextmenu event (#194)', async () => {
+  const { app, window } = await openApp();
+  try {
+    await drawAPanel(window, { parts: '1' });
+    const tool = window.getByTestId('tool-select');
+    await tool.focus();
+    // Untrusted key events have no browser default action: this reproduces
+    // the missing native contextmenu event on macOS on every test platform.
+    await tool.evaluate((element) =>
+      element.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          code: 'F10',
+          key: 'F10',
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      ),
+    );
+    await expect(menu(window)).toBeVisible();
+    await expect(window.getByTestId('context-duplicate-part')).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('each menu shortcut opens one menu, without a second browser default (#194)', async () => {
+  const { app, window } = await openApp();
+  try {
+    await drawAPanel(window, { parts: '1' });
+    const count = await window.evaluateHandle(() => {
+      const count = { events: 0 };
+      window.addEventListener(
+        'contextmenu',
+        () => {
+          count.events += 1;
+        },
+        true,
+      );
+      return count;
+    });
+    for (const shortcut of ['Shift+F10', 'ContextMenu']) {
+      await window.getByTestId('tool-select').focus();
+      await count.evaluate((c) => {
+        c.events = 0;
+      });
+      await window.keyboard.press(shortcut);
+      await expect(menu(window)).toBeVisible();
+      expect(await count.evaluate((c) => c.events)).toBe(1);
+      await window.keyboard.press('Escape');
+      await expect(menu(window)).toBeHidden();
+    }
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('a tab opens its own keyboard menu instead of the board menu (#194)', async () => {
+  const { app, window } = await openApp();
+  try {
+    await drawAPanel(window, { parts: '1' });
+    const tab = window.locator('.tab-name[aria-selected="true"]');
+    await tab.focus();
+    await window.keyboard.press('Shift+F10');
+    await expect(window.getByTestId('tab-menu')).toBeVisible();
+    await expect(menu(window)).toHaveCount(0);
+    await window.keyboard.press('Escape');
+    await expect(tab).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('Shift+F10 opens the menu about what is selected on the board, wherever focus is (8.8)', async () => {
-  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { left: 150 });
@@ -147,7 +219,6 @@ test('flipping a piece from its outline takes its rivet to the mirrored place, a
 });
 
 test('the menu opens from the keyboard on a Parts row, and Escape gives focus back (8.8)', async () => {
-  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { left: 150 });

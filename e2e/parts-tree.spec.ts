@@ -452,7 +452,6 @@ test('a rename ends with its row: undone away and redone, the row comes back as 
 });
 
 test('a locked feature is reached from the tree by keyboard, and unlocked from its menu (F.2)', async () => {
-  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
   await withSample(async (window) => {
     await row(window, 'outer-outline').hover();
     await window.getByTestId('feature-locked-outer-outline').click();
