@@ -185,12 +185,19 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 - CLI: `node tools/ci/changes.mjs < files.tsv` prints JSON `{"docs":bool,"code":bool,…}` for `$GITHUB_OUTPUT`.
 - Job `changes` in `ci.yml`: on `pull_request`, lists files with `gh api repos/$REPO/pulls/$PR/files --paginate`; on `push`, outputs every kind true.
 
-- [ ] Write `changes.test.mjs` first: docs-only → `{docs}`; `apps/desktop/src/renderer/x.tsx` → `{code}`; `apps/desktop/src/main/print.ts` → `{packaging}` and code-gated jobs still run (packaging implies code); a rename `src/a.ts` → `docs/a.ts` → includes `code`; `pnpm-lock.yaml` → `{deps}`; `.github/workflows/ci.yml` → `{workflows}`; empty → `{code}`; an unknown top-level file → `{code}`. Run, see it fail, write `changes.mjs`, see it pass.
-- [ ] Gate jobs with `if:` from `needs.changes.outputs`, following this matrix (job → kinds that run it): static → always; tests, E2E shards, pixel diffs, Windows/macOS unit tests, Linux package smoke, CodeQL → code, packaging, deps, workflows; Windows/macOS/Flatpak installers → packaging, deps, workflows; vulnerability scan → deps; actionlint + zizmor → workflows.
-- [ ] Remove `push: main` from `ci.yml` and `codeql.yml`; add `concurrency: cancel-in-progress` to CodeQL.
-- [ ] Prove it with four throwaway PRs (docs, code, lockfile, workflow) and note each one's job list in the PR description.
+- [x] Write `changes.test.mjs` first: docs-only → `{docs}`; `apps/desktop/src/renderer/x.tsx` → `{code}`; `apps/desktop/src/main/print.ts` → `{packaging}` and code-gated jobs still run (packaging implies code); a rename `src/a.ts` → `docs/a.ts` → includes `code`; `pnpm-lock.yaml` → `{deps}`; `.github/workflows/ci.yml` → `{workflows}`; empty → `{code}`; an unknown top-level file → `{code}`. Run, see it fail, write `changes.mjs`, see it pass.
+- [x] Gate jobs with `if:` from `needs.changes.outputs`, following this matrix (job → kinds that run it): static → always; tests, E2E shards, pixel diffs, Windows/macOS unit tests, Linux package smoke, CodeQL → code, packaging, deps, workflows; Windows/macOS/Flatpak installers → packaging, deps, workflows; vulnerability scan → deps; actionlint + zizmor → workflows.
+- [x] Remove `push: main` from `ci.yml` and `codeql.yml`; add `concurrency: cancel-in-progress` to CodeQL.
+- [x] Prove it with four throwaway PRs (docs, code, lockfile, workflow) and note each one's job list in the PR description.
 
 **Done when:** a docs-only PR finishes in about a minute with 4 jobs; a code PR runs the core set; a lockfile PR adds the scan and installers; a workflow PR adds the linters; `Ready to merge` is right in all four. Opus, medium.
+
+**Changed in the doing:**
+- Three paths outside the rules above: `docs/domain-model.md` and `docs/testing.md` are code, because `packages/domain/src/problems/audit.test.ts` and `apps/desktop/src/bench-discovery.test.ts` read them; `osv-scanner.toml` and `.node-version` are deps.
+- CodeQL runs for every kind but `docs` through `paths-ignore`, so a docs-only pull request starts no CodeQL run at all. It is not a required check, so nothing waits for it.
+- A code change runs Linux's leg of the installers (the packaged smoke test) without the Flatpak; Windows, macOS and the Flatpak need packaging, deps or workflows. `installers.yml` takes an `everywhere` input, true by default, so the release still builds everything.
+- The `changes` step runs with `pipefail`, and runs everything when the API's list (at most 3000 files) is shorter than the pull request's file count, so neither a failed call nor a truncated list can skip a job.
+- The four runs are in the pull request that ticked this.
 
 ### Task A8: The verifier guard
 
