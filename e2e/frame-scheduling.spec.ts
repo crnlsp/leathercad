@@ -36,6 +36,9 @@ test('an idle board wakes for tools, pointers, typed drafts, history, camera and
   const { app, window } = await openApp({ size: [1600, 1000] });
   try {
     await window.evaluate(() => document.fonts.ready);
+    // A new project starts with Rectangle. Change away first so the measured
+    // click really activates a different tool, on every platform.
+    await window.getByTestId('tool-select').click();
     const counts = await installFrameCounter(window);
     const repaints = async (action: () => Promise<unknown>) => {
       await nextFrame(window);
