@@ -59,7 +59,7 @@ function extentOfItem(item: DisplayItem): Extent | null {
       return boxed(PathOps.bbox(item.path), EDGE_PX);
     case 'slits':
       // Butt caps: no further than half the width from a slit's line.
-      return boxed(RectOps.fromPoints(item.slits.flat()), item.stroke.widthPx / 2 + EDGE_PX);
+      return boxed(boundsOfSlits(item.slits), item.stroke.widthPx / 2 + EDGE_PX);
     case 'dots':
       return boxed(RectOps.fromPoints(item.points), item.radiusPx + EDGE_PX);
     case 'overlay-text': {
@@ -96,6 +96,22 @@ function boxed(boundsMm: Rect | null, marginPx: number): Extent | null {
 
 function at({ x, y }: Vec2, marginPx: number): Extent {
   return { boundsMm: { minX: x, minY: y, maxX: x, maxY: y }, marginPx };
+}
+
+/**
+ * A loop rather than `RectOps.fromPoints(slits.flat())`: a long strap's set is
+ * 3,000 slits, and a pan asks every frame.
+ */
+function boundsOfSlits(slits: readonly (readonly [Vec2, Vec2])[]): Rect | null {
+  if (slits.length === 0) return null;
+  let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const [a, b] of slits) {
+    minX = Math.min(minX, a.x, b.x);
+    minY = Math.min(minY, a.y, b.y);
+    maxX = Math.max(maxX, a.x, b.x);
+    maxY = Math.max(maxY, a.y, b.y);
+  }
+  return { minX, minY, maxX, maxY };
 }
 
 function boundsOfPaths(paths: readonly Path[]): Rect | null {
@@ -157,10 +173,18 @@ export function reachesView(view: ViewportView, extent: Extent): boolean {
  * item is kept whole, however little of it the canvas shows.
  */
 export function itemsReachingView(list: DisplayList, view: ViewportView): DisplayList {
+  // `reachesView`, with the canvas's box found once for the list.
+  const visible = visibleBoundsMm(view);
   return {
     items: list.items.filter((item) => {
       const extent = extentOfItem(item);
-      return extent !== null && reachesView(view, extent);
+      return (
+        extent !== null &&
+        RectOps.intersects(
+          RectOps.expand(extent.boundsMm, pixelsToMm(view, extent.marginPx)),
+          visible,
+        )
+      );
     }),
   };
 }
