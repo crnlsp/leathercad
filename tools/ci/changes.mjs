@@ -32,8 +32,9 @@ const PACKAGING = [
 ];
 // Documents a test reads, so an edit to one can turn a check red:
 // packages/domain/src/problems/audit.test.ts holds the problem codes to
-// docs/domain-model.md §8.
-const READ_BY_TESTS = new Set(['docs/domain-model.md']);
+// docs/domain-model.md §8, and apps/desktop/src/bench-discovery.test.ts the
+// benchmark baselines to docs/testing.md §9.1.
+const READ_BY_TESTS = new Set(['docs/domain-model.md', 'docs/testing.md']);
 
 /** The kind of change one path is. */
 function kindOf(path) {

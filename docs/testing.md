@@ -366,7 +366,7 @@ counts by its old path too, and a path that is not certainly documentation count
 
 | Kind | Paths |
 |---|---|
-| `docs` | `docs/**` (except `docs/domain-model.md`, which a test reads), `packaging/aur/**`, `*.md` outside `.claude/` and `apps/` |
+| `docs` | `docs/**` (except `docs/domain-model.md` and this file, which tests read), `packaging/aur/**`, `*.md` outside `.claude/` and `apps/` |
 | `workflows` | `.github/**` |
 | `deps` | `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/**`, any `package.json`, `osv-scanner.toml`, `.node-version` |
 | `packaging` | `apps/desktop/electron-builder.config.mjs`, `apps/desktop/build/**`, `apps/desktop/src/main/**`, `assets/fonts/**` |

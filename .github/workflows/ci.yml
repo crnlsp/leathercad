@@ -42,6 +42,7 @@ jobs:
       scan: ${{ steps.gates.outputs.scan }}
       lint: ${{ steps.gates.outputs.lint }}
     steps:
+      # For tools/ci/changes.mjs and .node-version; nothing is installed.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -51,18 +52,26 @@ jobs:
           node-version-file: .node-version
 
       # The API's list names a renamed file's old path too, so moving code
-      # into docs/ still counts as code.
+      # into docs/ still counts as code. It stops at 3000 files; a list
+      # shorter than the pull request's count runs everything, so a file
+      # past the end can never skip a job. `shell: bash` adds pipefail: a
+      # failed call fails this job, and so Ready to merge, instead of
+      # classifying an empty list.
       - name: The jobs this change runs
         id: gates
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
         run: |
           if [ "$EVENT" = pull_request ]; then
             gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
-              --jq '.[] | [.status, .filename, .previous_filename // empty] | @tsv' |
-              node tools/ci/changes.mjs | tee -a "$GITHUB_OUTPUT"
+              --jq '.[] | [.status, .filename, .previous_filename // empty] | @tsv' > "$RUNNER_TEMP/files.tsv"
+          fi
+          if [ "$EVENT" = pull_request ] && [ "$(wc -l < "$RUNNER_TEMP/files.tsv")" -ge "$CHANGED" ]; then
+            node tools/ci/changes.mjs < "$RUNNER_TEMP/files.tsv" | tee -a "$GITHUB_OUTPUT"
           else
             printf '%s\n' tests=true installers=true scan=true lint=true 'kinds=everything' |
               tee -a "$GITHUB_OUTPUT"
@@ -371,8 +380,8 @@ jobs:
   # installers.yml, the same workflow the release builds with, from its tag.
   # Linux's smoke test for every change that can break the app (roadmap R5);
   # Windows, macOS and the Flatpak too for one to packaging, dependencies or
-  # workflows, which are what differ between them. Its checks are named `Installers / Build (<os>)`, as
-  # a called workflow's jobs are. A job that calls a workflow takes no timeout
+  # workflows, which are what differ between them. Its checks are named
+  # `Installers / Build (<os>)`, as a called workflow's jobs are. A job that calls a workflow takes no timeout
   # of its own; each of its jobs has one. `./`, not the `$/` zizmor asks for,
   # which actionlint cannot parse yet (rhysd/actionlint#711); for a called
   # workflow the two mean the same: GitHub reads it from the caller's own

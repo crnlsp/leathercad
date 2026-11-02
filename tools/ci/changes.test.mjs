@@ -55,6 +55,7 @@ describe('the kinds of change a pull request makes', () => {
 
   test('a document a test reads is code', () => {
     assert.deepEqual(kinds('docs/domain-model.md'), ['code']);
+    assert.deepEqual(kinds('docs/testing.md'), ['code']);
   });
 
   test("the scan's exceptions and the pinned Node are deps", () => {
