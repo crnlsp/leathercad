@@ -1,9 +1,11 @@
 import type { Project } from '@leathercad/domain';
-import { loadProject, saveProject } from '@leathercad/persist';
+import { loadProject } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { isDirty, type ProjectTab, type ProjectTabs } from './projectTabs.js';
+import { encodeProject } from './lcpEncoder.js';
+import type { ProjectTab, ProjectTabs } from './projectTabs.js';
+import { RecoveryCopies } from './recoveryCopies.js';
 
 /** A copy a crashed session left, loaded and ready to offer. */
 export interface RecoveryOffer {
@@ -21,7 +23,8 @@ const MAX_CORRUPT = 10;
  * - **Writing.** While a tab has unsaved work, at most once an interval — a
  *   minute — its project is written to that tab's recovery copy: never during
  *   a drag, and not again until it changes. Every tab, not only the one in
- *   front: a crash takes them all. The main process owns the files and writes
+ *   front: a crash takes them all. The copy is made off the window's thread
+ *   (`RecoveryCopies`, PERF-009); the main process owns the files and writes
  *   them atomically.
  * - **Clearing.** When a tab is clean again — saved, reloaded — or closed, its
  *   copy goes: there is nothing of it to recover.
@@ -53,13 +56,7 @@ export function useRecovery({
   const [offer, setOffer] = useState<RecoveryOffer | null>(null);
   // Each tab's document last written to its copy, so an unchanged project is
   // not written again, and the copies that exist are known.
-  const written = useRef(new Map<string, unknown>());
-
-  const copyOf = useCallback(
-    (project: Project) =>
-      saveProject(project, { applicationVersion: appVersion, now: () => new Date() }),
-    [appVersion],
-  );
+  const [copies] = useState(() => new RecoveryCopies(host, encodeProject, () => new Date()));
 
   /** The next copy a crash left, loaded; one that does not load is set aside. */
   const findNext = useCallback(async () => {
@@ -89,27 +86,6 @@ export function useRecovery({
     void findNext();
   }, [findNext]);
 
-  /**
-   * Writes a tab's copy, and remembers the document it holds — before the
-   * write is asked for, not after it lands: a save made while it is in flight
-   * must find it to clear, or the copy outlives the work it was of. The main
-   * process runs the write and the clear in the order asked.
-   */
-  const writeCopy = useCallback(
-    async (tab: ProjectTab) => {
-      const { document } = tab.store.getState();
-      written.current.set(tab.id, document);
-      try {
-        await host().writeRecovery(tab.id, copyOf(document.project));
-      } catch (error) {
-        // Not written: written again at the next interval.
-        if (written.current.get(tab.id) === document) written.current.set(tab.id, null);
-        throw error;
-      }
-    },
-    [copyOf, host],
-  );
-
   // While any tab is dirty: its copy, at most once an interval.
   useEffect(() => {
     let timer: number | undefined;
@@ -121,10 +97,7 @@ export function useRecovery({
           if (cancelled) return;
           timer = window.setInterval(() => {
             for (const tab of tabs.tabs) {
-              const { document, inTransaction } = tab.store.getState();
-              if (!isDirty(tab) || inTransaction) continue;
-              if (written.current.get(tab.id) === document) continue;
-              void writeCopy(tab).catch(() => undefined);
+              if (copies.due(tab)) void copies.write(tab, appVersion).catch(() => undefined);
             }
           }, intervalMs);
         },
@@ -134,19 +107,12 @@ export function useRecovery({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [host, tabs, writeCopy]);
+  }, [appVersion, copies, host, tabs]);
 
   // A tab clean again, or closed: nothing of it to recover.
   useEffect(() => {
-    for (const id of [...written.current.keys()]) {
-      const tab = openTabs.find((each) => each.id === id);
-      if (tab !== undefined && isDirty(tab)) continue;
-      written.current.delete(id);
-      void host()
-        .clearRecovery(id)
-        .catch(() => undefined);
-    }
-  }, [host, openTabs, revision]);
+    copies.clearSettled(openTabs);
+  }, [copies, openTabs, revision]);
 
   const recover = useCallback(async () => {
     if (offer === null) return;
@@ -154,18 +120,19 @@ export function useRecovery({
     setOffer(null);
     // The tab's own copy first, and only then is the old one let go (at a
     // clean exit): at every moment there is at least one copy on disk. Both
-    // asked for at once — the main process takes them in that order — so a
-    // quit straight after recovering finds the old one taken over, not left
-    // for the next start to offer again.
-    await Promise.all([
-      writeCopy(tab).catch(() => undefined),
-      host()
-        .resolveRecovery(offer.id, 'adopt')
-        .catch(() => undefined),
-    ]);
+    // asked for at once, once the copy is made — the main process takes them
+    // in that order — so a quit straight after recovering finds the old one
+    // taken over, not left for the next start to offer again.
+    await copies
+      .write(tab, appVersion, () =>
+        host()
+          .resolveRecovery(offer.id, 'adopt')
+          .catch(() => undefined),
+      )
+      .catch(() => undefined);
     // A crash with several tabs open left a copy of each: the next.
     await findNext();
-  }, [adoptRecovered, findNext, host, offer, writeCopy]);
+  }, [adoptRecovered, appVersion, copies, findNext, host, offer]);
 
   const decline = useCallback(async () => {
     if (offer === null) return;
