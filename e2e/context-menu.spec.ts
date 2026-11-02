@@ -85,6 +85,7 @@ test('a locked piece is still reached by a right-click on the board, to unlock i
 });
 
 test('Shift+F10 opens the menu about what is selected on the board, wherever focus is (8.8)', async () => {
+  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { left: 150 });
@@ -146,6 +147,7 @@ test('flipping a piece from its outline takes its rivet to the mirrored place, a
 });
 
 test('the menu opens from the keyboard on a Parts row, and Escape gives focus back (8.8)', async () => {
+  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { left: 150 });

@@ -159,7 +159,7 @@ test('a clash names the command, and Cancel leaves both while Swap exchanges the
   try {
     await stubSave(app, join(fresh(), 'Swap.lcp'));
     const pane = await openShortcuts(window);
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     const clash = pane.getByTestId('shortcut-clash');
     await expect(clash).toContainText('is already used for “Save”');
     await expect(clash.locator('kbd')).toHaveText(caption('Ctrl+S'));
@@ -170,12 +170,12 @@ test('a clash names the command, and Cancel leaves both while Swap exchanges the
     await expect(keysOf(window, 'save')).toHaveText([caption('Ctrl+S')]);
 
     // Esc on the clash is Cancel, not the dialog's.
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     await window.keyboard.press('Escape');
     await expect(pane.getByTestId('shortcut-clash')).toHaveCount(0);
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
 
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     await pane.getByTestId('clash-swap').click();
     await expect(keysOf(window, 'settings')).toHaveText([caption('Ctrl+S')]);
     await expect(keysOf(window, 'save')).toHaveText([caption('Ctrl+,')]);
@@ -248,7 +248,7 @@ test('Reset puts one command’s keys back, through a swap if it must; Reset all
   const { app, window } = await launch(fresh());
   try {
     const pane = await openShortcuts(window);
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     await pane.getByTestId('clash-swap').click();
     // Settings' own key is Save's now: its reset swaps them back.
     await pane.getByTestId('reset-settings').click();

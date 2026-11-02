@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp, crashApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
+import { caption } from './keyCaption.js';
 import { freshStateHome, launchApp, openApp, openSample, recoveryCopies } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -354,12 +355,15 @@ test('the spellchecker is off, and a fresh profile fetches no dictionary', async
   try {
     const window = await app.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    expect(
-      await app.evaluate(({ session }) => ({
-        enabled: session.defaultSession.isSpellCheckerEnabled(),
-        languages: session.defaultSession.getSpellCheckerLanguages(),
-      })),
-    ).toEqual({ enabled: false, languages: [] });
+    const spelling = await app.evaluate(({ session }) => ({
+      enabled: session.defaultSession.isSpellCheckerEnabled(),
+      languages: session.defaultSession.getSpellCheckerLanguages(),
+    }));
+    expect(spelling.enabled).toBe(false);
+    // The languages Chromium's own spellchecker would fetch a dictionary for.
+    // macOS uses the system's spellchecker instead, which reports the system's
+    // languages and fetches nothing.
+    if (process.platform !== 'darwin') expect(spelling.languages).toEqual([]);
 
     // Typed into a name: what fetched en-US-10-1.bdic from Google before.
     await window.getByTestId('project-menu').click();
@@ -385,11 +389,13 @@ test('a field’s right-click menu cuts, copies, pastes and selects all, in the 
 
     await name.click({ button: 'right' });
     const menu = window.getByTestId('field-menu');
+    const item = (words: string, keys: string): RegExp =>
+      new RegExp(`^${words}\\s*${caption(keys).replaceAll('+', '\\+')}`);
     await expect(menu.getByRole('menuitem')).toHaveText([
-      /^Cut\s*Ctrl\+X/,
-      /^Copy\s*Ctrl\+C/,
-      /^Paste\s*Ctrl\+V/,
-      /^Select all\s*Ctrl\+A/,
+      item('Cut', 'Ctrl+X'),
+      item('Copy', 'Ctrl+C'),
+      item('Paste', 'Ctrl+V'),
+      item('Select all', 'Ctrl+A'),
     ]);
     // The board's menu never opens over a field.
     await expect(window.getByTestId('context-menu')).toHaveCount(0);

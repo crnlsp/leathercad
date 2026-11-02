@@ -16,16 +16,26 @@ import { resizeWindow } from './windowSize.js';
  * `navigator.keyboard.getLayoutMap()`, stubbed here with a German one.
  */
 
-/** A key press as a keyboard of another layout sends it. */
+/**
+ * A key press as a keyboard of another layout sends it. `command` is the
+ * platform's command key: Ctrl, or ⌘ on macOS.
+ */
 async function press(
   window: Page,
-  init: { code: string; key: string; ctrlKey?: boolean; shiftKey?: boolean },
+  {
+    command = false,
+    ...init
+  }: { code: string; key: string; command?: boolean; shiftKey?: boolean },
 ): Promise<void> {
-  await window.evaluate((event) => {
-    document.body.dispatchEvent(
-      new KeyboardEvent('keydown', { ...event, bubbles: true, cancelable: true }),
-    );
-  }, init);
+  const held = process.platform === 'darwin' ? { metaKey: command } : { ctrlKey: command };
+  await window.evaluate(
+    (event) => {
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', { ...event, bubbles: true, cancelable: true }),
+      );
+    },
+    { ...init, ...held },
+  );
 }
 
 test('a tooltip at the window’s right edge is one line, 8 px inside it (R-10, mockup 16)', async () => {
@@ -120,9 +130,9 @@ test('on a German or French keyboard, every window key does what it does on a US
     await expect(window.getByTestId('tool-rectangle')).toHaveClass(/active/);
 
     // Ctrl+2 and Ctrl+1 from the digit keys, whatever they type: & and é in French.
-    await press(window, { code: 'Digit2', key: 'é', ctrlKey: true });
+    await press(window, { code: 'Digit2', key: 'é', command: true });
     await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
-    await press(window, { code: 'Digit1', key: '&', ctrlKey: true });
+    await press(window, { code: 'Digit1', key: '&', command: true });
     await expect(window.getByTestId('view-design')).toHaveAttribute('aria-selected', 'true');
 
     // German QWERTZ: Z is where a US keyboard has Y, and Ctrl+Z still undoes.
@@ -132,7 +142,7 @@ test('on a German or French keyboard, every window key does what it does on a US
     await window.getByTestId('parts-list').getByText('Stitch holes').first().click();
     await window.keyboard.press('Delete');
     await expect(features).not.toHaveText(before ?? '');
-    await press(window, { code: 'KeyY', key: 'z', ctrlKey: true });
+    await press(window, { code: 'KeyY', key: 'z', command: true });
     await expect(features).toHaveText(before ?? '');
 
     // Zoom from the keys printed + and −, as before U.3: German + right of Ü,
@@ -141,13 +151,13 @@ test('on a German or French keyboard, every window key does what it does on a US
     const board = (await window.getByTestId('editor-canvas').boundingBox())!;
     const at = (): Promise<string> => readoutAt(window, board.x + 60, board.y + 60);
     const start = await at();
-    await press(window, { code: 'BracketRight', key: '+', ctrlKey: true });
+    await press(window, { code: 'BracketRight', key: '+', command: true });
     await expect.poll(at).not.toBe(start);
     const zoomedIn = await at();
-    await press(window, { code: 'Digit6', key: '-', ctrlKey: true });
+    await press(window, { code: 'Digit6', key: '-', command: true });
     await expect.poll(at).not.toBe(zoomedIn);
     const zoomedOut = await at();
-    await press(window, { code: 'Slash', key: '-', ctrlKey: true });
+    await press(window, { code: 'Slash', key: '-', command: true });
     await expect.poll(at).not.toBe(zoomedOut);
     await expect(window.getByTestId('settings-pane-shortcuts')).toBeHidden();
 

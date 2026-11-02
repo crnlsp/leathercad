@@ -23,13 +23,26 @@ async function requestClose(app: ElectronApplication): Promise<void> {
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
 }
 
-/** Resolves once the app has quit, however it went. */
+/**
+ * Resolves once the close went through: the app has quit, however it went. On
+ * macOS an app stays running with no window, as the platform's apps do
+ * (`window-all-closed` in the main process), so there the window is gone.
+ */
 async function closed(app: ElectronApplication): Promise<boolean> {
-  const process = app.process();
-  if (process.exitCode !== null) return true;
+  if (process.platform === 'darwin') {
+    return expect
+      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length))
+      .toBe(0)
+      .then(
+        () => true,
+        () => false,
+      );
+  }
+  const launched = app.process();
+  if (launched.exitCode !== null) return true;
   return new Promise((done) => {
     const timer = setTimeout(() => done(false), 10_000);
-    process.once('exit', () => {
+    launched.once('exit', () => {
       clearTimeout(timer);
       done(true);
     });

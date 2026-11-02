@@ -41,7 +41,7 @@ test('Select says what a click, a key and a drag do, and what a selection adds (
     await window.getByTestId('tool-select').click();
     // Nothing selected: the way in, as the mockup draws it, keys as caps.
     await expect(hint(window, 'hints.clickSelects')).toHaveText('Click selects');
-    await expect(hint(window, 'hints.addsOrRemoves').locator('kbd')).toHaveText('Shift');
+    await expect(hint(window, 'hints.addsOrRemoves').locator('kbd')).toHaveText(caption('Shift'));
     await expect(hint(window, 'hints.dragBox')).toHaveText('Drag a box to select');
     await expect(hint(window, 'hints.deletes')).toHaveCount(0);
     await expect(hints(window).last().locator('kbd')).toHaveText('?');
