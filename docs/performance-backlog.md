@@ -67,7 +67,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ☐ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | Unassigned |
 | ☐ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | Unassigned |
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
-| ☐ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | Unassigned |
+| ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
 | ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
 | ✅ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | `perf/017-benchmarks` |
 
@@ -900,11 +900,57 @@ and tree cycle checks repeat walks too. Valid mirror chains at depth 10/100/500 
 0.026/0.582/14.387 ms warm evaluation. Depth 500 graph/tree work was 8.65/6.06 ms. These depths are
 artificial stress, not a demonstrated normal bag workflow.
 
-- [ ] Add per-evaluation resolved-node reuse and shared traversal state where justified.
-- [ ] Property-test branching/shared/cross-part dependencies, cycles and per-feature error
+- [x] Add per-evaluation resolved-node reuse and shared traversal state where justified.
+  Reproduced at `b0ab404` with `mirrorChain(depth)` (`workloads.ts`: a stitch line mirrored, and
+  each mirror mirrored back, depth times): warm evaluation of depth 500, 15.8 ms; the graph check
+  8.3 ms; the parts tree 7.1 ms; each a walk up the chain for each feature down it.
+  `domain/src/evaluate.ts` keeps each feature it has resolved in the evaluation's `Scope` and
+  reads it the next time; a resolution depends on what the feature follows and nothing else —
+  the `visiting` set only decides whether a cycle is thrown, and a thrown cycle is never kept.
+  `domain/src/graph.ts` finds every feature on a cycle at once, `featuresOnCycles`, by Tarjan's
+  strongly connected components through sources, folds and dimensions, with its own stack;
+  `domain/src/featureTree.ts` settles each feature once as reaching a root or not.
+- [x] Property-test branching/shared/cross-part dependencies, cycles and per-feature error
   attribution; compare shallow and deep timings without changing geometry results.
+  `evaluate.test.ts`: over graphs of drawn, offset, mirrored, folded and holed features that
+  follow any feature in any part, before or after them, one that is not there, or themselves,
+  each feature resolves as it does in a copy sharing no object, alone with only what it follows,
+  and with the parts' features reversed. `graph.test.ts`: `featuresOnCycles` equals the old walk
+  from each feature over 1,000 graphs with folds, dimensions, missing targets and self-loops.
+  `featureTree.test.ts`: equal to the old function, kept in the test, over 1,000 parts, and a
+  feature leading into a cycle is still a root. Every existing evaluation, graph, tree and
+  geometry test passes unchanged.
 
 **Expected benefit:** Remove repeated ancestry work; keep below common-workflow fixes in priority.
+
+| PERF-015, bundled (`tools/perf-compute.mjs`), median | Before (`b0ab404`) | After |
+|---|---:|---:|
+| Warm evaluation, chain of 10 / 100 / 500 | 0.01 / 0.64 / 15.85 ms | 0.00 / 0.02 / 0.09 ms |
+| Fresh evaluation, chain of 100 / 500 | 0.77 / 16.54 ms | 0.14 / 0.64 ms |
+| Graph check, chain of 100 / 500 | 0.38 / 8.32 ms | 0.06 / 0.22 ms |
+| Parts tree, chain of 100 / 500 | 0.30 / 7.08 ms | 0.03 / 0.18 ms |
+| 200 samples: graph check, wallet / 40 parts | 1.99 / 24.8 µs | 2.97 / 34.8 µs |
+| 200 samples: parts tree, wallet / 40 parts | 1.76 / 21.4 µs | 2.72 / 25.9 µs |
+| 200 samples: warm evaluation, 40 parts | 23.2 µs | 19.4 µs |
+
+Measured on the audit's Ryzen 5 7600X, Linux 7.3.0-5-cachyos, Node 24.22.1, with the load at 3–8
+from other work, before and after turn about: five runs each of 20 samples after 3 warm-ups, the
+median of their medians, and three runs each of 200 after 20 for the small rows. The same
+`workloads.ts` on both sides. A shallow project pays a few microseconds a check for the
+bookkeeping: the graph check on 40 parts, 10 µs; the parts tree, 4 µs. The wallet's fresh
+evaluation read 146 against 157 µs in one 200-sample run and 151 against 146 in another, run to
+run noise at that load; every other fresh evaluation and diagnosis is level.
+
+**Guards** (`pnpm test`), on the 500-deep chain, every read of a feature's `source` counted,
+bound ten reads a feature, 5,020: a warm evaluation read 630,261 before
+(`evaluate.test.ts`, *walks a chain of five hundred sources once*), `graphProblems` 507,014
+(`graph.test.ts`), `featureTree` 253,007 (`featureTree.test.ts`); all fail on `b0ab404`'s code and
+pass after.
+
+**Result:** walks along a chain of sources are once an evaluation, once a graph check and once a
+tree, at any depth. Not changed: the snap index of the 500-deep chain, about 520 ms, which indexes
+the crossings of 250 identical stitch lines on each side of the axis — an artefact of the stress
+workload, not a walk.
 
 ### PERF-016
 
