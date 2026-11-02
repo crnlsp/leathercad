@@ -349,6 +349,23 @@ worker's construction nor its input clone accounts for the measured delays. Rend
 and task/layout/script metrics are the next measurement; no production fix, relaxed bound,
 platform skip or release-readiness claim follows from this probe.
 
+Follow-up traced runs on the same application code:
+
+| Runner | Three frame gaps (ms) | Result |
+|---|---|---|
+| [macOS 26](https://github.com/crnlsp/leathercad/actions/runs/41488296638) | 35.5, 100.1, 83.5 | 3/3 below the unchanged bound |
+| [macOS 15](https://github.com/crnlsp/leathercad/actions/runs/41490103553) | 35.2, 149.4, 66.4 | 3/3 below the unchanged bound |
+
+Trace setup preceded the frame probe in these runs, so these passes do not resolve the cold
+failure. On macOS 26 the longest renderer-main-thread trace event in each export was 5.6,
+42.5 and 5.9 ms. The GPU thread separately spent 342.4 ms flushing a raster operation in the
+first sample, and 103.1 / 97.2 ms applying Core Animation presentation backpressure in the
+other samples. This locates substantial platform rendering cost without proving the cause
+of the failing samples; the RAF probe also does not directly measure input latency or frame
+presentation. A further probe arms frame recording before tracing can warm the window.
+Both corrected native release tests (real tool activation and platform Save shortcut, #215)
+passed three times on each image without retries.
+
 ### PERF-003
 
 **Cull Sheets pages and separate interaction decoration.** Canvas CPU and allocations.

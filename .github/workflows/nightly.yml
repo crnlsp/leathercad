@@ -1,45 +1,337 @@
-# Investigation branch only: this probe is restored to the original workflow
-# before a fix PR is prepared. It does not replace any production CI gate.
-name: PDF export diagnostic probe
+name: Nightly
+
+# The slow or outside-dependent checks that would make every pull request
+# wait: property tests at a hundred times their usual effort, the E2E suite on
+# Windows and macOS, the known-vulnerability scan, and the benchmark trend.
+# None blocks anything. What fails becomes an issue, one per job, which the
+# first night that passes closes.
+#
+# A schedule runs this file as it is on main, the default branch, which holds
+# the last release. The code being written is on develop, so the scheduled run
+# does one thing: it starts this workflow again on develop (`develop`, below).
+# That run is develop's copy of this file, at develop's commit, so a change
+# here takes effect the night after it merges, and each run's commit is the
+# commit its jobs tested. A run started by hand tests the branch it is started
+# on, and only a run on develop opens or closes issues.
 
 on:
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  profile:
-    name: Cold PDF export profile (macOS)
-    runs-on: macos-latest
-    timeout-minutes: 15
+  # A dispatch is the one event GITHUB_TOKEN may start a workflow run with.
+  develop:
+    name: Start on develop
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
     steps:
-      # Same toolchain and display as the nightly that found #195.
+      - name: Run this workflow on develop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run nightly.yml --ref develop
+
+  # What already passed at this commit, in an earlier run of this workflow.
+  # E2E and the benchmarks run only where it has not: on a night develop did
+  # not move, they would repeat a result already known. The property tests
+  # and the scan always run, because their answer changes without a commit: a
+  # fresh seed, a new advisory. To run E2E again at the same commit, push one.
+  tested:
+    name: Already passed at this commit
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      e2e: ${{ steps.passed.outputs.e2e }}
+      bench: ${{ steps.passed.outputs.bench }}
+    steps:
+      - name: Jobs that passed here before
+        id: passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          passed=$(gh api --paginate \
+            "repos/$GH_REPO/actions/workflows/nightly.yml/runs?head_sha=$GITHUB_SHA&status=completed" \
+            --jq '.workflow_runs[].id' |
+            while read -r run; do
+              gh api --paginate "repos/$GH_REPO/actions/runs/$run/jobs" \
+                --jq '.jobs[] | select(.conclusion == "success") | .name'
+            done)
+          echo "Passed at $GITHUB_SHA before: ${passed:-nothing}"
+          # The platforms E2E runs on, which become its matrix.
+          platforms=()
+          for os in windows-latest macos-latest; do
+            grep -qxF "E2E ($os)" <<< "$passed" || platforms+=("\"$os\"")
+          done
+          echo "e2e=[$(IFS=,; echo "${platforms[*]}")]" >> "$GITHUB_OUTPUT"
+          if grep -qxF 'Benchmark trend' <<< "$passed"; then
+            echo 'bench=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'bench=true' >> "$GITHUB_OUTPUT"
+          fi
+
+  properties:
+    name: Deep property run
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      seed: ${{ steps.seed.outputs.seed }}
+      excerpt: ${{ steps.excerpt.outputs.text }}
+    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: pnpm
-      - run: brew install poppler
-      - run: swift tools/ci/full-hd-display.swift
+
+      - name: Install poppler
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      # Fresh app per sample, no retries, with the original 200 ms assertion.
-      - name: Cold exports and corrected native release tests, with unchanged assertions
+
+      # A fresh seed every night, so the run explores rather than repeats; a
+      # printed one, so whatever it finds reproduces anywhere.
+      - name: Pick a seed
+        id: seed
+        shell: bash
+        run: echo "seed=$(( (RANDOM << 15) | RANDOM ))" >> "$GITHUB_OUTPUT"
+
+      # 10 000 runs for every property that does not set its own count
+      # (docs/testing.md §3.3), and a timeout to match.
+      - name: Property tests at 10 000 runs
+        shell: bash
         env:
-          LEATHERCAD_TRACE_PDF: '1'
-        run: pnpm exec playwright test e2e/pdf-worker.spec.ts e2e/frame-scheduling.spec.ts e2e/lcp-worker.spec.ts --grep 'keeps painting|an idle board wakes|a large project is saved' --repeat-each 3 --retries 0 --reporter=list,html
-      # Keep evidence even for an intermittent pass, not just failed attempts.
-      - name: Upload profile and report
-        if: always()
+          LEATHERCAD_FC_RUNS: '10000'
+          LEATHERCAD_FC_SEED: ${{ steps.seed.outputs.seed }}
+        run: pnpm exec vitest run --testTimeout=1800000 2>&1 | tee property-run.log
+
+      # The lines of the log the issue quotes: what failed, and its
+      # counterexample.
+      - name: Excerpt the failure
+        id: excerpt
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo 'text<<END_OF_EXCERPT'
+            grep -E 'FAIL|Counterexample|Property failed|seed|heap' property-run.log | head -40
+            echo 'END_OF_EXCERPT'
+          } >> "$GITHUB_OUTPUT"
+
+  # The suite a pull request runs on Linux only (ci.yml `e2e`), on the other
+  # two platforms the app ships on: their dialogs, menus, paths, windows and
+  # quitting differ. A test that cannot apply on one skips there, with
+  # `test.skip(process.platform === …, '<reason>')`; never just to get green.
+  e2e:
+    name: E2E (${{ matrix.os }})
+    needs: tested
+    if: needs.tested.outputs.e2e != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.tested.outputs.e2e) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # The print tests read the exported PDF with poppler, independently of
+      # the writer that made it. Installed as installers.yml does, which says
+      # why Windows takes three tries.
+      - name: Install poppler (macOS)
+        if: runner.os == 'macOS'
+        run: brew install poppler
+
+      - name: Install poppler (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            choco install poppler --version 26.9.0 --require-checksums --no-progress -y && command -v pdfinfo && exit 0
+            echo "poppler is not installed after attempt $attempt."
+            sleep $((attempt * 20))
+          done
+          echo "::error title=poppler::Not installed after three attempts. The print tests need its pdfinfo."
+          exit 1
+
+      # Both runners' screens are 1024 x 768, and Windows and macOS fit a
+      # window into its screen: the app opened in its narrow layout, and
+      # every test written for the room it has on a full-HD screen failed.
+      # Linux's Xvfb fits no window into anything.
+      - name: Full-HD screen (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
+
+      - name: Full-HD screen (macOS)
+        if: runner.os == 'macOS'
+        run: swift tools/ci/full-hd-display.swift
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # An HTML report rather than ci.yml's blobs: there is one runner per
+      # platform, so nothing to merge.
+      - name: E2E
+        run: pnpm exec playwright test --reporter=list,github,html
+
+      - name: Upload Playwright report
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: pdf-export-profile-macos
-          path: |
-            test-results/
-            playwright-report/
+          name: e2e-report-${{ runner.os }}
+          path: playwright-report/
           retention-days: 14
           if-no-files-found: ignore
+
+  # Every package in the lockfile against the OSV database, as ci.yml's
+  # `dependencies` job does. An advisory published tonight concerns develop
+  # whether or not a pull request touched the lockfile, so here it is one
+  # issue rather than a red check on every pull request.
+  vulnerabilities:
+    name: Known vulnerabilities
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A fix goes in pnpm-workspace.yaml `overrides`; see ci.yml for when an
+      # advisory goes in osv-scanner.toml instead.
+      - name: osv-scanner
+        uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+        with:
+          scan-args: --config=osv-scanner.toml --lockfile=pnpm-lock.yaml
+
+  bench:
+    name: Benchmark trend
+    needs: tested
+    if: needs.tested.outputs.bench == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Shared runners are noisy neighbours, so these numbers are a trend
+      # across nights, not a verdict on one. Comparison against the committed
+      # baseline belongs on the machine that recorded it (`pnpm bench:compare`).
+      - name: Benchmarks
+        run: pnpm bench:baseline
+
+      - name: Upload results
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-${{ github.run_number }}
+          path: packages/*/bench/*.json
+          retention-days: 90
+
+  # Nobody watches a night's run, so each job's result goes to an issue of its
+  # own: a failure opens it, or comments on the one already open; the first
+  # run that passes closes it. A job that did not run changes nothing. Only on
+  # develop: whoever starts a run on another branch is watching it. A job of
+  # its own, so no job that runs the code holds a token that can write.
+  # always(), as weekly.yml's report: a run that timed out or was cancelled
+  # reports too.
+  report:
+    name: Report to issues
+    needs: [properties, e2e, vulnerabilities]
+    if: ${{ always() && github.ref_name == 'develop' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Open, add to or close each job's issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SEED: ${{ needs.properties.outputs.seed }}
+          EXCERPT: ${{ needs.properties.outputs.excerpt }}
+        run: |
+          jobs=$(gh api --paginate \
+            "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" \
+            --jq '.jobs[] | [.name, (.conclusion // ""), .html_url] | @tsv')
+
+          # report JOB LABEL TITLE ADVICE
+          report() {
+            local job=$1 label=$2 title=$3 advice=$4 conclusion url open
+            conclusion=$(awk -F '\t' -v job="$job" '$1 == job { print $2 }' <<< "$jobs")
+            url=$(awk -F '\t' -v job="$job" '$1 == job { print $3 }' <<< "$jobs")
+            case "$conclusion" in '' | skipped) return ;; esac
+            gh label create "$label" --color B60205 --description "Found by the nightly run: $job" --force
+            open=$(gh issue list --label "$label" --state open --json number --jq '.[0].number // empty')
+            if [ "$conclusion" = success ]; then
+              if [ -n "$open" ]; then gh issue close "$open" --comment "Passed at $GITHUB_SHA: $url"; fi
+            elif [ -n "$open" ]; then
+              gh issue comment "$open" --body "$(printf '%s\n\n%s' "$job: \`$conclusion\` at $GITHUB_SHA: $url" "$advice")"
+            else
+              gh issue create --label "$label" --title "$title" \
+                --body "$(printf '%s\n\n%s' "$job: \`$conclusion\` at $GITHUB_SHA: $url" "$advice")"
+            fi
+          }
+
+          report 'Deep property run' nightly-property "Nightly property run failed (seed $SEED)" "$(printf '%s\n' \
+            'Reproduce with:' \
+            '' \
+            '```bash' \
+            "git switch --detach $GITHUB_SHA" \
+            "LEATHERCAD_FC_RUNS=10000 LEATHERCAD_FC_SEED=$SEED pnpm exec vitest run --testTimeout=1800000" \
+            '```' \
+            '' \
+            'Commit the shrunk counterexample as a named regression test (docs/testing.md §3.3).' \
+            '' \
+            '```' \
+            "$EXCERPT" \
+            '```')"
+
+          for os in windows macos; do
+            report "E2E ($os-latest)" "nightly-e2e-$os" "Nightly E2E failed on $os-latest" \
+              "The run's \`e2e-report-*\` artifact is the Playwright report. Either the test is wrong, the app is, or the behaviour is the platform's own and the test skips it there, saying why."
+          done
+
+          report 'Known vulnerabilities' nightly-vulnerabilities 'Nightly scan found a known vulnerability' \
+            "A fix goes in pnpm-workspace.yaml \`overrides\`, with the advisory and its reason; ci.yml says when one goes in osv-scanner.toml instead."
