@@ -10,12 +10,21 @@ import {
 } from '@leathercad/domain';
 import type { PrinterList } from '@leathercad/platform';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from 'react';
 
 import { offersPaper } from '../../shared/paper.js';
 
 import { describeFactor } from './calibration.js';
 import { CalibrationStep } from './CalibrationStep.js';
+import { observePixelRatio, pixelRatio } from './canvasDensity.js';
 import { ExportFindings } from './ExportNotice.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
@@ -92,6 +101,7 @@ export function PrintPreview({
 }) {
   const i18n = useI18n();
   const { t } = i18n;
+  const dpr = useSyncExternalStore(observePixelRatio, pixelRatio);
   const ids = useId();
   const problems = describeCounts(countBySeverity(diagnostics), i18n);
   const plan = sheetPlanFor(project);
@@ -275,6 +285,7 @@ export function PrintPreview({
                       number={n}
                       widthPx={THUMB_PX}
                       turn={turn}
+                      dpr={dpr}
                       list={listRef}
                     />
                   )}
@@ -302,7 +313,7 @@ export function PrintPreview({
 
           <div className="print-page" data-testid="print-page">
             {pdf !== null ? (
-              <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} turn={turn} />
+              <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} turn={turn} dpr={dpr} />
             ) : (
               <p className="dialog-note">
                 {failure === null ? t('printPreview.loading') : fileErrorText(failure.error, t)}
@@ -559,12 +570,14 @@ function PageCanvas({
   number,
   widthPx,
   turn,
+  dpr,
   list,
 }: {
   pdf: PDFDocumentProxy;
   number: number;
   widthPx: number;
   turn: number;
+  dpr: number;
   list?: RefObject<HTMLElement | null>;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -587,9 +600,9 @@ function PageCanvas({
     const canvas = ref.current;
     if (canvas === null || !near) return;
     const abort = new AbortController();
-    const draw = () => drawPage(pdf, number, canvas, widthPx, abort.signal, turn);
+    const draw = () => drawPage(pdf, number, canvas, widthPx, dpr, abort.signal, turn);
     (list === undefined ? draw() : drawThumbnail(draw)).catch(() => undefined);
     return () => abort.abort();
-  }, [pdf, number, widthPx, turn, near, list]);
+  }, [pdf, number, widthPx, turn, dpr, near, list]);
   return <canvas ref={ref} className="print-canvas" data-page={number} />;
 }

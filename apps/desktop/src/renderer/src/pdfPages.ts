@@ -6,6 +6,8 @@ import {
 } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
+import { resizeBackingStore } from './canvasDensity.js';
+
 /**
  * The Print Preview's view of the PDF (7.6): pdf.js drawing **the file
  * itself**, the bytes that then go to the printer, not a second drawing of the
@@ -72,6 +74,7 @@ export async function drawPage(
   number: number,
   canvas: HTMLCanvasElement,
   widthPx: number,
+  dpr: number,
   signal: AbortSignal,
   turn = 0,
 ): Promise<boolean> {
@@ -81,11 +84,10 @@ export async function drawPage(
   const rotation = (page.rotate + turn) % 360;
   const natural = page.getViewport({ scale: 1, rotation });
   const viewport = page.getViewport({
-    scale: (widthPx / natural.width) * window.devicePixelRatio,
+    scale: (widthPx / natural.width) * dpr,
     rotation,
   });
-  canvas.width = Math.round(viewport.width);
-  canvas.height = Math.round(viewport.height);
+  resizeBackingStore(canvas, Math.round(viewport.width), Math.round(viewport.height));
   canvas.style.aspectRatio = `${String(natural.width)} / ${String(natural.height)}`;
   const task = page.render({ canvas, viewport });
   signal.addEventListener('abort', () => task.cancel());

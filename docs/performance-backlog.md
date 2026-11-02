@@ -63,7 +63,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | `perf/008-design-content` |
 | ✅ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | `perf/009-persistence` |
 | ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
-| ☐ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | Unassigned |
+| ✅ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | [#212](https://github.com/crnlsp/leathercad/pull/212) |
 | ✅ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | `perf/012-resource-preflight` |
 | ✅ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | `perf/013-preview-work` |
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
@@ -968,10 +968,55 @@ project go; the open project keeps what it reuses.
 backing width 640, not 1280. Initial DPR 2 and real resize worked. Physical monitor migration was
 not tested; reverse transitions could retain oversized buffers.
 
-- [ ] Observe resolution changes explicitly and re-arm the observer/listener as needed.
-- [ ] Update backing dimensions only when changed; invalidate preview DPR as well.
-- [ ] Test emulated and physical mixed-DPI transitions, pointer alignment, rulers and zoom;
-  confirm underlying millimetre geometry is unchanged.
+- [x] Observe resolution changes explicitly and re-arm the observer/listener as needed.
+- [x] Update backing dimensions only when changed; invalidate preview DPR as well.
+- [x] Test emulated mixed-DPI transitions, pointer alignment, rulers and zoom; confirm the
+  existing geometry, export and print guards stay unchanged.
+- [ ] Physical mixed-DPI monitor migration, including the reverse transition, on supported
+  platforms. Release verification remains open; emulation is not a physical-display result.
+
+**Implementation and measurement (2026-11-02):** `perf/011-dpi-backing`, stacked on
+`perf/008-design-content` at `a3a03d5` (including starting `develop`, `43515c3`). After PERF-008
+merged as [#211](https://github.com/crnlsp/leathercad/pull/211), the two implementation commits
+were rebased onto its result, `e050d1e`, without changing file content. The retained
+reproduction is [`e2e/dpi.spec.ts`](../e2e/dpi.spec.ts): build, then run
+`pnpm exec playwright test e2e/dpi.spec.ts`. It opens the shipped wallet in the real Electron app,
+keeps the CSS viewport fixed, and changes DPR through 1, 2, 1.25, 2, 1. Print Preview also opens
+initially at DPR 2, then returns to DPR 1. One run of each case on starting `develop` and the
+implementation base failed at backing dimensions; the fixed cases pass. No warmups or timing
+claims: this measures exact backing dimensions and pixel identity, not frame latency.
+
+| Same CSS size; backing width in device pixels | Before (`43515c3`) | After |
+|---|---:|---:|
+| Board, 960 CSS px, DPR 1 → 2 | 960 | 1920 |
+| Main PDF preview, 520 CSS px, DPR 2 → 1 | 1040 | 520 |
+
+The fixed board follows 960 → 1920 → 1200 → 1920 → 960 backing pixels; preview pages and visible
+thumbnails follow 520/96 CSS pixels times DPR, rounded once. The board's CSS box and both cameras'
+zoom stay unchanged. Pointer coordinates stay within one device pixel's combined buffer/event
+rounding at 100%; returning to the same DPR gives identical canvas pixels, including rulers.
+The resolution query is re-armed on every transition and removed on cleanup; one preview-level
+subscription invalidates page renders without rewriting or reopening the PDF. Previous renders
+are aborted through the existing cancellation path, and off-screen thumbnails stay lazy.
+Backing width/height setters run only when that dimension changes. Deterministic listener and
+allocation guards live in [`canvasDensity.test.ts`](../apps/desktop/src/renderer/src/canvasDensity.test.ts)
+and run under `pnpm check`; the integration cases run in CI's E2E suite.
+
+**Validation:** `pnpm check` and the enabled pre-push hook passed: typecheck, lint, formatting,
+layering (592 modules / 2,657 dependencies; no violation), dead code, 28 CI-tool tests,
+3,801 unit/property/export/fixture tests, and all 6 performance ceilings. Pure-layer coverage:
+98.00% lines, 93.91% branches. Build passed; the full real-Electron suite passed 337/337 in
+5.6 minutes, and the pinned visual suite passed 5/5 with zero changed pixels. Architecture review
+found no new package edge, Electron import outside desktop, Clipper binding or documentation
+layer-graph drift. The remaining platform and physical checks are recorded below.
+
+**Environment and limits:** Linux, production renderer build, unpackaged Electron 45.0.0,
+Node 24.22.1, pnpm 12.15.0, Playwright 1.64.1 in the pinned Ubuntu/Poppler container with an
+isolated Xvfb display. CDP changes the browser's DPR and query results but this Chromium build
+does not deliver its resolution-change notification for the override: the test supplies that
+browser-boundary event explicitly. It does not prove native monitor notifications. Physical
+mixed-DPI migration and packaged Windows/macOS display behavior were not run; retain those in
+release verification. No geometry, persistence, export output, golden or pixel baseline changes.
 
 **Expected benefit:** Correct sharpness and backing allocation on display-scale transitions.
 

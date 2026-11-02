@@ -57,6 +57,7 @@ import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { designContent } from './designContent.js';
+import { observePixelRatio, pixelRatio, resizeBackingStore } from './canvasDensity.js';
 import { sheetPlanFor, sheetsPagesFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
 import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
@@ -719,12 +720,11 @@ export function CanvasHost({
     if (container === null || canvas === null) return;
 
     const resize = (): void => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = pixelRatio();
       const { width, height, left, top } = container.getBoundingClientRect();
       if (width === 0 || height === 0) return;
 
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      resizeBackingStore(canvas, Math.round(width * dpr), Math.round(height * dpr));
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
@@ -778,8 +778,12 @@ export function CanvasHost({
 
     const observer = new ResizeObserver(resize);
     observer.observe(container);
+    const stopDensity = observePixelRatio(resize);
     resize();
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      stopDensity();
+    };
   }, [paint, fitDrawing]);
 
   // Changing view: nothing the tool had under way carries across, and the
