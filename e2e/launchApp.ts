@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -17,6 +17,25 @@ const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 /** A new, empty directory for the app to use as its XDG state home. */
 export function freshStateHome(): string {
   return mkdtempSync(join(tmpdir(), 'leathercad-e2e-state-'));
+}
+
+/** Where the app keeps its crash-recovery copies (5.3b) in a state home. */
+export function recoveryDir(state: string): string {
+  return join(state, 'leathercad', 'recovery');
+}
+
+/** What is in the recovery folder, by name: nothing until the app has made it. */
+export function recoveryEntries(state: string): string[] {
+  return existsSync(recoveryDir(state)) ? readdirSync(recoveryDir(state)).sort() : [];
+}
+
+/**
+ * The recovery copies that are whole: not the `.tmp` a copy is written to and
+ * renamed from, which a crash before the rename leaves behind and which the
+ * next start sweeps away rather than offering.
+ */
+export function recoveryCopies(state: string): string[] {
+  return recoveryEntries(state).filter((name) => name.endsWith('.lcp'));
 }
 
 /**
