@@ -60,7 +60,7 @@ test('a large project is saved by the worker, and opens again as it was saved', 
     await countEncoded(window);
     await drawAPanel(window, { parts: '41' });
 
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
 
     await expect.poll(() => statSync(file).size).not.toBe(before);
     expect(await encoded(window)).toBe(1);
