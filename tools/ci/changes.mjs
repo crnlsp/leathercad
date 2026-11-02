@@ -11,7 +11,7 @@
  * that runs too much costs minutes, one that runs too little lets a red
  * develop through.
  */
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 // What the app is built from: the lockfile and what shapes it, the scan's
@@ -92,8 +92,85 @@ export function parse(text) {
     });
 }
 
+// What CI judges a change against (A8): the images and baselines a test is
+// compared with, the configuration that decides what is checked, and the
+// workflows and scripts that run it. Changing one is the known way to turn a
+// check green without fixing what it found, so a reviewer is told.
+const JUDGES = [
+  /^e2e\/visual\/__screenshots__\//,
+  /^packages\/render\/src\/svg\/__snapshots__\//,
+  /^packages\/[^/]+\/bench\/[^/]+\.json$/,
+  /^(packages\/[^/]+\/)?vitest\.config\.ts$/,
+  /^eslint\.config\.js$/,
+  /^\.dependency-cruiser\.cjs$/,
+  /^knip\.jsonc$/,
+  /^stryker\.config\.mjs$/,
+  /^playwright[^/]*\.config\.ts$/,
+  /^tools\/release-gate\.sh$/,
+  // The guard and the gates are judges too: editing them could hide the rest.
+  /^tools\/ci\//,
+  /^\.github\//,
+  /^\.githooks\//,
+  /^\.claude\/rules\//,
+];
+// A shipped migration is immutable (CLAUDE.md invariant 9); a test beside one
+// (`v8_to_v9.test.ts`) is not a migration.
+const MIGRATION = /^packages\/persist\/src\/migrations\/v\d+_to_v\d+\.ts$/;
+
+/**
+ * What a change judges against, and which shipped migrations it touches.
+ * `blocked` lists a migration that is modified, deleted or renamed away; a
+ * new one, a copy and `migrations/index.ts` are not.
+ */
+export function judgeFiles(files) {
+  const judges = [];
+  const blocked = [];
+  for (const { status, path, previous } of files) {
+    const paths = status === 'renamed' && previous !== undefined ? [path, previous] : [path];
+    for (const p of paths) if (JUDGES.some((pattern) => pattern.test(p))) judges.push(p);
+    if (MIGRATION.test(path) && status !== 'added' && status !== 'copied') blocked.push(path);
+    else if (status === 'renamed' && previous !== undefined && MIGRATION.test(previous)) {
+      blocked.push(previous);
+    }
+  }
+  return { judges: [...new Set(judges)], blocked: [...new Set(blocked)] };
+}
+
+/** The job summary: the files listed, and the migrations named as the reason it fails. */
+export function judgeSummary({ judges, blocked }) {
+  const list = (paths) => paths.map((p) => `- \`${p}\``).join('\n');
+  const parts = ['## Files CI judges against'];
+  if (judges.length === 0) parts.push('This pull request changes none.');
+  else {
+    parts.push(
+      'A reviewer should read these: changing what a check compares against can turn it green without fixing what it found.',
+      list(judges),
+    );
+  }
+  if (blocked.length > 0) {
+    parts.push(
+      '## Shipped migrations changed',
+      'A shipped migration is immutable (CLAUDE.md invariant 9): a file saved by an earlier version must still load the way it did. Add a new migration instead.',
+      list(blocked),
+    );
+  }
+  return `${parts.join('\n\n')}\n`;
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  const kinds = classify(parse(readFileSync(0, 'utf8')));
-  for (const [name, value] of Object.entries(gates(kinds))) console.log(`${name}=${value}`);
-  console.log(`kinds=${[...kinds].sort().join(' ')}`);
+  const files = parse(readFileSync(0, 'utf8'));
+  if (process.argv[2] === 'judge') {
+    // `judged=` and `blocked=` to stdout for $GITHUB_OUTPUT, the summary to
+    // $GITHUB_STEP_SUMMARY when it is set.
+    const result = judgeFiles(files);
+    console.log(`judged=${result.judges.length > 0}`);
+    console.log(`blocked=${result.blocked.length > 0}`);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, judgeSummary(result));
+    }
+  } else {
+    const kinds = classify(files);
+    for (const [name, value] of Object.entries(gates(kinds))) console.log(`${name}=${value}`);
+    console.log(`kinds=${[...kinds].sort().join(' ')}`);
+  }
 }
