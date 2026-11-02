@@ -209,11 +209,17 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Interfaces:** Produces `judgeFiles(files): { judges: string[], blocked: string[] }`. `judges` = paths under `e2e/visual/__screenshots__/`, `packages/render/src/svg/__snapshots__/`, `packages/*/bench/*.json`, `vitest.config.ts`, `packages/*/vitest.config.ts`, `eslint.config.js`, `.dependency-cruiser.cjs`, `knip.jsonc`, `stryker.config.mjs`, `playwright*.config.ts`, `tools/release-gate.sh`, `.github/**`, `.githooks/**`, `.claude/rules/**`. `blocked` = a **modified or deleted** `packages/persist/src/migrations/v*_to_v*.ts`; an added one, and `migrations/index.ts`, are not blocked.
 
-- [ ] Tests first: a changed screenshot → judges; a modified `v11_to_v12.ts` → blocked; a new `v12_to_v13.ts` plus `index.ts` → neither blocked; a renamed migration → blocked.
-- [ ] Job `guard`: writes a job summary listing the files; adds the label `judge-changed` (permission `pull-requests: write` on this job only). On a fork the label call is refused: the step says so in the summary and carries on. Fails only when `blocked` is non-empty.
-- [ ] Note in `CONTRIBUTING.md` that the label is expected on Dependabot's weekly `.github/` updates.
+- [x] Tests first: a changed screenshot → judges; a modified `v11_to_v12.ts` → blocked; a new `v12_to_v13.ts` plus `index.ts` → neither blocked; a renamed migration → blocked.
+- [x] Job `guard`: writes a job summary listing the files; adds the label `judge-changed` (permission `pull-requests: write` on this job only). On a fork the label call is refused: the step says so in the summary and carries on. Fails only when `blocked` is non-empty.
+- [x] Note in `CONTRIBUTING.md` that the label is expected on Dependabot's weekly `.github/` updates.
 
 **Done when:** a throwaway PR changing a screenshot gets the label and the summary; one editing `v11_to_v12.ts` is red; a fork-style run without write access stays green apart from a blocked migration. Sonnet, small.
+
+**Changed in the doing:**
+- `tools/ci/` is a judge too: the guard's own script and tests would otherwise be the one file a pull request could edit to silence it. A copied migration is not blocked; a rename counts at both paths. `node tools/ci/changes.mjs judge` prints `judged=` and `blocked=` and appends the summary to `$GITHUB_STEP_SUMMARY`.
+- The job lists the pull request's files itself and fails when the API's list is shorter than the pull request's count: a guard that cannot see everything must not pass.
+- It is `pull_request`, never `pull_request_target`: a fork's or Dependabot's token is read-only, the label call gets a 403, and the step says so in the summary. Adding a label that does not exist creates it, so no setting was needed.
+- The three runs (throwaway pull requests #207–#209, closed) are in the pull request that ticked this.
 
 ### Task A5: The after-merge ring and the Preview
 
