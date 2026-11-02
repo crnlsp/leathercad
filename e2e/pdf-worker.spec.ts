@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { withApp } from './launchApp.js';
 import { inkOn } from './printTest.js';
-import { profilePdfExport } from './pdfExportProfile.js';
+import { profilePdfExport, tracePdfExport } from './pdfExportProfile.js';
 
 /**
  * PERF-002: the PDF is written in a worker, so a long pattern does not freeze
@@ -70,6 +70,8 @@ test('the window keeps painting while the long strap is exported', async () => {
 
         // The longest time between two animation frames from the click to the
         // file: the longest the window could not paint or answer a click.
+        const trace =
+          process.env['LEATHERCAD_TRACE_PDF'] === '1' ? await tracePdfExport(window) : null;
         const measurement = await profilePdfExport(window);
         await window.getByTestId('export-pdf').click();
         await expect.poll(() => existsSync(pdf), { timeout: 30_000 }).toBe(true);
@@ -77,6 +79,13 @@ test('the window keeps painting while the long strap is exported', async () => {
         const profile = await measurement.evaluate((watch) => watch.stop());
         const gap = profile.gap;
         console.log('PDF_EXPORT_PROFILE', JSON.stringify(profile));
+        if (trace !== null) {
+          const traced = await trace.stop();
+          console.log('PDF_EXPORT_METRICS', JSON.stringify(traced.metrics));
+          await test
+            .info()
+            .attach('pdf-export-trace', { body: traced.trace, contentType: 'application/json' });
+        }
         await test.info().attach('pdf-export-profile', {
           body: JSON.stringify(
             { runtime: await app.evaluate(() => process.versions), ...profile },

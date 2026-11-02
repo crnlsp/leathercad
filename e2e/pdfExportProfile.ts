@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 export function profilePdfExport(window: Page) {
   return window.evaluateHandle(() => {
     const started = performance.now();
+    performance.mark('pdf-profile-start');
     const profile = {
       started,
       gap: 0,
@@ -59,6 +60,7 @@ export function profilePdfExport(window: Page) {
         event.target.closest('[data-testid="export-pdf"]') !== null
       ) {
         profile.click = performance.now();
+        performance.mark('pdf-profile-click');
       }
     };
     document.addEventListener('click', onClick, true);
@@ -90,4 +92,48 @@ export function profilePdfExport(window: Page) {
       },
     };
   });
+}
+
+/** Optional diagnostic trace; kept separate so normal E2E runs retain their timing. */
+export async function tracePdfExport(window: Page) {
+  const session = await window.context().newCDPSession(window);
+  await session.send('Performance.enable');
+  const before = await session.send('Performance.getMetrics');
+  await session.send('Tracing.start', {
+    categories: 'devtools.timeline,v8,blink.user_timing,cc,gpu',
+    transferMode: 'ReturnAsStream',
+  });
+  return {
+    stop: async () => {
+      const after = await session.send('Performance.getMetrics');
+      const complete = new Promise<{ stream?: string }>((resolve) =>
+        session.once('Tracing.tracingComplete', resolve),
+      );
+      await session.send('Tracing.end');
+      const { stream } = await complete;
+      if (stream === undefined) throw new Error('Chromium returned no PDF profile trace');
+      let trace = '';
+      for (;;) {
+        const chunk = await session.send('IO.read', { handle: stream });
+        trace += chunk.base64Encoded
+          ? Buffer.from(chunk.data, 'base64').toString('utf8')
+          : chunk.data;
+        if (chunk.eof) break;
+      }
+      await session.send('IO.close', { handle: stream });
+      await session.detach();
+      const metrics = Object.fromEntries(
+        after.metrics.map(({ name, value }) => [
+          name,
+          value - (before.metrics.find((metric) => metric.name === name)?.value ?? 0),
+        ]),
+      );
+      return {
+        metrics,
+        trace: trace
+          .replaceAll(process.cwd(), '<checkout>')
+          .replaceAll('/Users/runner', '<runner>'),
+      };
+    },
+  };
 }
