@@ -9,15 +9,12 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-31, for the support levels, the hotfix case and the `known-issue` label;
-before that 2026-10-18, for check 14, recovery after a renderer dies on macOS; before
-that for check 13, ⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left
-unverified for 1.5. First written for 1.0
+**Last updated:** 2026-11-02, for check 16.7, a display-density change on a real monitor
+(PERF-011). Before that 2026-10-31, for the support levels, the hotfix case, the `known-issue`
+label and *The build*: what CI's packaged smoke test does not run; before that 2026-10-18, for
+check 14, recovery after a renderer dies on macOS; before that for check 13, ⌘A on macOS (U.20),
+the Flatpak among the release's files, and R10 left unverified for 1.5. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
-**Last updated:** 2026-10-31, for *The build*: what CI's packaged smoke test does not run. Before
-that 2026-10-18, for check 14, recovery after a renderer dies on macOS; before that for check 13,
-⌘A on macOS (U.20), the Flatpak among the release's files, and R10 left unverified for 1.5. First
-written for 1.0 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
 
@@ -352,6 +349,11 @@ Linux, Windows and macOS. Open `fixtures/perf/strap-5800.lcp`, the 5.8 m strap o
    Hover, select, zoom and change views: each first input paints without needing another movement.
    Back on Design, type a rectangle's sizes and cancel or finish it; resize the window, hide and
    show it, and switch tabs. The board, chips, rulers and showing view's zoom stay current.
+7. **Another display density ([PERF-011](performance-backlog.md#perf-011))**, where two monitors of
+   different scaling are at hand, or the system's scaling can be changed while the app runs: move
+   the window from one to the other and back, with the Print Preview open on the way. The board,
+   its rulers and the preview's pages stay sharp, neither blurred nor oversized; the drawing and
+   the zoom do not move; a click lands where the pointer is. CI tests this in emulation only.
 
 Note each platform's result beside its row in the log, or say which check could not be run there.
 

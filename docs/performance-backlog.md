@@ -1002,6 +1002,7 @@ not tested; reverse transitions could retain oversized buffers.
   existing geometry, export and print guards stay unchanged.
 - [ ] Physical mixed-DPI monitor migration, including the reverse transition, on supported
   platforms. Release verification remains open; emulation is not a physical-display result.
+  It is check 16.7 of [`release-checklist.md`](release-checklist.md).
 
 **Implementation and measurement (2026-11-02):** `perf/011-dpi-backing`, stacked on
 `perf/008-design-content` at `a3a03d5` (including starting `develop`, `43515c3`). After PERF-008
