@@ -322,6 +322,34 @@ with its assembly map, and a printer correction, each from the plan and from its
 **Expected benefit:** Less repeated geometry, shorter blocking and potentially smaller files.
 No speedup target is inferred. PERF-003 may share safe bounds helpers, not viewport-dependent output.
 
+**macOS, [#195](https://github.com/crnlsp/leathercad/issues/195) (2026-11-02): the export never
+froze the window; the test watched more than the export.** The responsiveness test failed on
+`macos-latest` only, at its unchanged 200 ms bound. Ten cold launches of `develop` at `d38b45f`
+([probe](https://github.com/crnlsp/leathercad/actions/runs/41481746908): `strap-5800.lcp`,
+Electron 45, macOS 26.6.2, full-HD display, 1280 × 840 window, no retries) recorded every frame
+gap with its time. The test armed its watch before Playwright's click and stopped it once the
+export notice was up, though its comment said click to file:
+
+| Ten cold macOS exports, largest gap between animation frames (ms) | Whole watch | Click to the writer's answer | Before the click | After the answer |
+|---|---|---|---|---|
+| Each run | 474.9, 451.0, 296.4, 276.7, 281.4, 334.2, 298.3, 222.5, 243.5, 232.8 | ≤ 50 in nine, 41.4 in one | over 200 in 10/10 | over 200 in 5/10 |
+
+No main-thread long task (≥ 50 ms) in any run; the worker's construction took 0.1–0.7 ms and its
+`postMessage` 3.0–11.7 ms. Traced runs
+([macOS 26](https://github.com/crnlsp/leathercad/actions/runs/41488296638),
+[macOS 15](https://github.com/crnlsp/leathercad/actions/runs/41490103553)) put the rest outside
+the renderer: its main thread's longest event was 5.6–42.5 ms, while the GPU process spent up to
+347 ms in a raster flush and about 100 ms in `CALayerTreeCoordinator::ApplyBackpressure`,
+macOS's presentation, as the notice — a full-window scrim — first appeared. So before the click
+the cold window was waiting for its first frame, and after the answer for the notice to be
+presented: neither is the PDF being written. The test now starts its watch at the click and ends
+it at the writer's answer, with the same bound, and checks that one writer answered once. A main
+thread writing the PDF again starts no writer, so its watch runs on and fails: 547 ms on Linux.
+After: 10/10 under the bound on `macos-latest`
+([probe](https://github.com/crnlsp/leathercad/actions/runs/41523612344), cold launches, no
+retries), and 3/3 on Linux. The slow first present of a full-window dialog on CI's macOS is the
+runner's compositor, not the app's, and is not chased further.
+
 ### PERF-003
 
 **Cull Sheets pages and separate interaction decoration.** Canvas CPU and allocations.
