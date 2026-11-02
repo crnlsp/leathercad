@@ -6,7 +6,7 @@ import {
   selectedFeatureIds,
   type DocumentStore,
 } from '@leathercad/document';
-import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
+import { evaluate, sameProblem, type Problem } from '@leathercad/domain';
 import { layoutSheets, pieceAt, sheetsLayers, tapeJoins } from '@leathercad/export';
 import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
@@ -41,7 +41,6 @@ import {
   GROUND,
   MOTION_TIMING,
   SHEET,
-  buildDisplayList,
   clearCanvas,
   renderDisplayList,
   renderGrid,
@@ -53,11 +52,11 @@ import {
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
-import { captionOf } from './captionWords.js';
 import { selectedParts } from './sheetContents.js';
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
+import { designContent } from './designContent.js';
 import { sheetPlanFor, sheetsPagesFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
 import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
@@ -327,6 +326,8 @@ export function CanvasHost({
    * said. Not state: only a notice shown reads it (PERF-007).
    */
   const [pointerCss] = useState(() => new PointerValue<CssPoint | null>(null));
+  /** The pattern on the Design board, kept between the frames that show it unchanged. */
+  const [content] = useState(designContent);
 
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
@@ -661,23 +662,12 @@ export function CanvasHost({
     );
     renderDisplayList(
       context,
-      buildDisplayList(evaluate(document.project), {
-        // A part picked by its heading shows as picked (Q30): Rotate turns it,
-        // so the board has to say what will turn.
-        selected:
-          selection.parts.size === 0
-            ? selection.features
-            : new Set(selectedFeatureIds(document.project, selection)),
+      content({
+        project: document.project,
+        selection,
         hovered: hoveredRef.current,
-        // The same list the panels read (X7), so a feature that failed is
-        // marked here instead of silently disappearing.
-        diagnostics: diagnose(document.project),
-        // The camera: how much detail the drawing carries at this zoom, the
-        // same on any display (U.1), and where the board's words go — a
-        // caption pins to the top-left once it would run under the ruler (R-01).
         view,
-        // Each piece's caption, in the interface's words (ADR 0018).
-        caption: (part) => captionOf(i18nRef.current, part),
+        i18n: i18nRef.current,
       }),
       view,
     );
@@ -709,7 +699,7 @@ export function CanvasHost({
     setDrawing((current) => (sameDraft(current, sizing) ? current : sizing));
     setUnderway(managerRef.current?.underway() ?? false);
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
-  }, [store, paintSheets, chipRoom]);
+  }, [store, paintSheets, chipRoom, content]);
 
   useEffect(() => {
     const tick = (): void => {

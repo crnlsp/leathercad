@@ -522,7 +522,14 @@ checks from controlled-machine trends.
 What the Sheets view costs to draw is a controlled-machine trend: `node tools/perf-sheets.mjs time`
 times the drawing callbacks of the real app on the 33-sheet strap, and `pixels` fingerprints the
 canvas at every step of a pan, to show a change moved no pixel. Both need `pnpm build` first.
-`node tools/perf-drag.mjs` likewise times a piece and a guide dragged across a traced outline
+`node tools/perf-design.mjs` does the same for the Design board (PERF-008): `time` gives each
+painted frame's script time and its canvas draw calls — `stroke`, `fill`, `fillText`, a count
+whatever the machine — hovering and panning with the project framed and at 100 %, and `pixels`
+fingerprints the board along pans at three zooms, hovering and clicking; `--project` names the
+project, by default the strap, and `fixtures/perf/bag-50.lcp` is the audit's fifty-part bag;
+`--app` points it at another checkout's build. `designContent.test.ts` keeps it in `pnpm test` by
+counts: sixty hover frames build the pattern once, and at 100 % on the bag a frame draws no more
+than eight of the fifty straps' items. `node tools/perf-drag.mjs` likewise times a piece and a guide dragged across a traced outline
 (`fixtures/perf/traced-<n>.lcp`), p50, p95 and long tasks (PERF-004).
 `node tools/perf-save.mjs` times the window's longest stop while the path-heavy project
 (`fixtures/perf/traced-40x500.lcp`) is saved and its recovery copy written, with `--app` for

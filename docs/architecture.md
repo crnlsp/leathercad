@@ -404,10 +404,13 @@ radius, a drag threshold, a handle — is CSS pixels too.
 The board is one `<canvas>` (`CanvasHost.tsx`). A frame draws everything on it, in order: the
 ground and grid, the guides, the resolved document's display list, the dimension lines, the tape
 joins, the tool's overlay and the rulers. There are no stacked layers: a pointer move that changes
-only the overlay redraws the document too, and the display list is built again for it. Cheap on
-today's projects — about 1 ms a frame for forty parts in the audit — and the open work is
-[PERF-008](performance-backlog.md#perf-008): keep the content between frames, and draw only what
-the camera can see.
+only the overlay repaints the document too. It does not build it again: the board keeps the frame's
+display list of the pattern while the project, the selection, the hover, the camera and the words
+are the same (`renderer/src/designContent.ts`), and draws only the items that can put ink on the
+canvas — `itemsReachingView`, from the extent every kind of display item has, which
+`render/src/extent.test.ts` holds to what the canvas backend draws
+([PERF-008](performance-backlog.md#perf-008)). A pan or a zoom builds the list again: a caption
+pins to the canvas's top-left, and the detail follows the zoom.
 
 All drawing is scheduled through a single `requestAnimationFrame` loop and one dirty flag: a frame
 paints only when something marked it dirty, though the loop asks for a frame every time even when
@@ -599,8 +602,9 @@ Measure before optimising, but the known shapes of the problem:
 - **Stitch holes are drawn as one batched stroke**: every slit of a set in one path, stroked once
   (F.7), rather than 3 000 separate draws; zoomed out, the set is drawn as its stitch line. A row of
   punched holes is a circle per hole.
-- **Culling**: the Sheets view draws only the pages the camera can see (PERF-003). The Design board
-  draws every feature each frame; culling there is [PERF-008](performance-backlog.md#perf-008).
+- **Culling**: the Sheets view draws only the pages the camera can see (PERF-003), and the Design
+  board only the display items ([PERF-008](performance-backlog.md#perf-008)). An item is kept whole
+  if any of its ink can reach the canvas, a stroke's width, a halo and a word's reach included.
 - **A preview is exact.** A drag re-evaluates what it changed at full precision; nothing is drawn
   coarser and refined on commit, which [the performance rules](../.claude/rules/performance.md)
   forbid. The self-intersection check that offsetting and validation make of every outline tests
@@ -663,8 +667,9 @@ is miserable. *Mitigation:* `formatVersion: 1` and a working migration runner sh
 first save implementation, before the first release.
 
 **R11 — Redrawing everything every frame.** *Mitigation:* a frame is drawn only when something
-changed (§6.2). A drawn frame is still the whole board; keeping its content between frames is
-[PERF-008](performance-backlog.md#perf-008).
+changed (§6.2). A drawn frame repaints the whole canvas, from the pattern's display list kept
+while nothing it shows changed, cut to what can reach the canvas
+([PERF-008](performance-backlog.md#perf-008)).
 
 **R12 — Non-deterministic tests.** System fonts, `Date.now()` in serialisation, unseeded randomness,
 locale-dependent number formatting. *Mitigation:* vendored fonts, injected clock, seeded generators,

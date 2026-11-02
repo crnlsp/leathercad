@@ -60,7 +60,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | `perf/005-diagnostics` |
 | ✅ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | `perf/006-self-intersections` |
 | ✅ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | `claude/perf-007-pointer` |
-| ☐ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | Unassigned |
+| ✅ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | `perf/008-design-content` |
 | ✅ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | `perf/009-persistence` |
 | ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
 | ☐ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | Unassigned |
@@ -739,11 +739,70 @@ there is no geometry viewport culling. Sixty moves produced sixty full paints, b
 about 0.5 ms on the wallet and 1 ms on 40 simple parts. This is scaling headroom, not a demonstrated
 small-document raster crisis.
 
-- [ ] Separate content-derived data from transient overlay/ruler invalidation.
-- [ ] Add conservative viewport rejection where measurement supports it, including labels,
-  screen-constant strokes and handles.
-- [ ] Compare full/partial views at extreme zoom and boundaries; verify no stale overlay and
-  record work avoided on dense off-screen documents.
+- [x] Separate content-derived data from transient overlay/ruler invalidation.
+  Reproduced at `7c77698` with `node tools/perf-design.mjs`, which counts each painted frame's
+  canvas draw calls (`stroke`, `fill`, `fillText`) beside its script time. Every frame built the
+  pattern's display list again — `evaluate`, the selection, the captions, every slit — and drew
+  all of it, while a hover changes only the rulers' tick and, now and then, the halo. On the
+  audit's fifty-part bag (`fixtures/perf/bag-50.lcp`, `bag(50)` saved) at 121 %, where six of the
+  fifty straps are on the canvas, a hover frame made 595 draw calls. The list now lives in
+  `renderer/src/designContent.ts`, one a board: kept while the frame reads the same project,
+  selection, hover, camera and words — the camera compared exactly, the rest by identity, as the
+  document is never changed in place — and built again, as a first frame would, when any of them
+  changes. A pan or a zoom builds it again: a caption pins to the canvas's top-left, and the
+  detail follows the zoom. The rulers, the overlay, the guides and the chips are drawn as before.
+- [x] Add conservative viewport rejection where measurement supports it, including labels,
+  screen-constant strokes and handles. `itemsReachingView` in `render/src/extent.ts` keeps, in
+  order, the items whose extent reaches the canvas. Every kind of item has one now: PERF-003's
+  path, fill and screen word, and a slit, a dot, a hatch (clipped to its own inside), a document
+  word, a fold tick, a link tick and a marker, each its box and how far its screen-constant
+  size reaches — a stroke's half-width, a halo, a glyph's size, a leader — with a pixel for the
+  antialiased edge. A screen word reaches 1.5 em a character and 3 em more: SemiBold's widest
+  glyph is 1.36 em, and a part's name can be in any script, set in a fallback face. That widens
+  the Sheets view's word too, which only keeps more. `extent.test.ts` holds each kind to what
+  the canvas backend draws, through a canvas that records its calls: for any item, camera and
+  display ratio, everything inked stays inside the item's extent, and an item left out inks
+  nothing on the canvas; shrinking any stroke, dot, tick or marker margin fails it. Handles and
+  the tool's overlay are not culled: they are few, and drawn as before.
+- [x] Compare full/partial views at extreme zoom and boundaries; verify no stale overlay and
+  record work avoided on dense off-screen documents. `perf-design.mjs pixels` fingerprints the
+  canvas at 300 steps — framed, then pans at about 25 %, 100 % and 400 %, with the pointer moved
+  down the middle and a click there every third step. On the bag, the strap, the 500-point trace
+  and the print test, `7c77698` and the change gave the same fingerprint at all 1,200 steps, with
+  268–286 different images in each project. `pnpm test:visual` passes unchanged. Guarded without
+  timings, in `pnpm test`, by `designContent.test.ts`: sixty hover frames build the pattern once
+  (`7c77698`: 60), at 100 % on the bag a frame draws at most eight straps' worth of items
+  (`7c77698`: 401, every one), and whatever changes, the board draws what one made just now does.
+
+| PERF-008, the Design board in the real app, 7 runs each | Before (`7c77698`) | After |
+|---|---|---|
+| Bag of 50, hover at 121 %: draw calls a frame | 595 | 87 |
+| Bag of 50, hover at 121 %: script a frame, p50 / p95 | 1.0 (0.9–1.1) / 1.3 (1.1–1.3) ms | 0.2 (0.2–0.3) / 0.8 (0.7–1.9) ms |
+| Bag of 50, pan at 121 %: draw calls a frame | 595 | 97 |
+| Bag of 50, pan at 121 %: p50 / p95 | 0.9 (0.9–2.0) / 1.0 (1.0–4.3) ms | 0.7 (0.7–0.8) / 0.9 (0.8–1.1) ms |
+| Bag of 50 framed (13 %), hover: p50 / p95 | 0.7 (0.6–0.7) / 0.9 (0.8–1.0) ms | 0.4 (0.4–0.9) / 0.8 (0.7–3.6) ms |
+| Bag of 50 framed (13 %), pan: p50 / p95 | 0.7 (0.6–0.8) / 0.8 (0.7–0.9) ms | 0.7 (0.7–1.6) / 1.0 (0.8–4.5) ms |
+| Strap at 112 %, hover: p50 / p95 (5 runs) | 0.4 (0.3–0.4) / 0.5 (0.5–0.5) ms | 0.3 (0.3–0.3) / 0.4 (0.4–0.4) ms |
+| Strap at 112 %, pan: p50 / p95 (5 runs) | 0.4 (0.3–0.4) / 0.5 (0.4–0.5) ms | 0.5 (0.5–0.5) / 0.7 (0.6–0.7) ms |
+
+Measured with `node tools/perf-design.mjs time` on the production build in unpackaged Electron
+45.0.0, in the pinned Playwright container (`v1.64.1-noble`) under Xvfb, the window at
+1600 × 1000: a 610-move zigzag hover and a 60-step middle-button pan, framed and at about 100 %.
+Before: `7c77698`, built from a copy of its tree. Runs interleaved, before and after; the medians
+of the runs' p50 and p95, with their range. Draw calls were the same in every run of a build.
+`performance.now()` is coarsened to 0.1 ms here, so the times are a trend and the draw calls the
+figure; the audit's machine, two other sessions' load beside it.
+
+**Not done / not verified.** A pan or a zoom still builds the list, and culling it asks every
+item's extent: on the strap at 112 %, where all five items are on the canvas, that is about
+30 µs a frame beside an 80 µs build (bundled, `tools/perf-compute.mjs`'s way), and the pan reads
+0.1 ms slower at the timer's resolution. Keeping the list across a pan would mean taking the
+pinned captions out of it. A slit set is kept or left out whole, so the strap's 3,028 slits are
+traced whenever any is on the canvas; the canvas itself rejects the rest. Measured on Linux only:
+the change is the renderer's JavaScript, with no platform path.
+
+**Result:** a pointer moving over the board builds nothing, and every frame draws only what can
+reach the canvas: on the bag at 121 %, 87 draw calls where there were 595, the same pixels.
 
 **Expected benefit:** Lower hover cost and improved off-screen scaling. Coordinate invalidation
 with PERF-014; do not introduce a renderer rewrite.
