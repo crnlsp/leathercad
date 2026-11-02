@@ -28,10 +28,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       # Fresh app per sample, no retries, with the original 200 ms assertion.
-      - name: Three cold exports, with renderer timelines and unchanged frame limit
+      - name: Cold exports and corrected native release tests, with unchanged assertions
         env:
           LEATHERCAD_TRACE_PDF: '1'
-        run: pnpm exec playwright test e2e/pdf-worker.spec.ts --grep 'keeps painting' --repeat-each 3 --retries 0 --reporter=list,html
+        run: pnpm exec playwright test e2e/pdf-worker.spec.ts e2e/frame-scheduling.spec.ts e2e/lcp-worker.spec.ts --grep 'keeps painting|an idle board wakes|a large project is saved' --repeat-each 3 --retries 0 --reporter=list,html
       # Keep evidence even for an intermittent pass, not just failed attempts.
       - name: Upload profile and report
         if: always()
