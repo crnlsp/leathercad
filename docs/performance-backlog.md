@@ -322,6 +322,32 @@ with its assembly map, and a printer correction, each from the plan and from its
 **Expected benefit:** Less repeated geometry, shorter blocking and potentially smaller files.
 No speedup target is inferred. PERF-003 may share safe bounds helpers, not viewport-dependent output.
 
+**macOS follow-up, #195 (2026-11-02; unresolved).** Ten cold launches of the current
+`develop` application (`d38b45f`), with diagnostic instrumentation at `174b828`, reproduced
+the unchanged 200 ms frame-gap failure in
+[the native probe](https://github.com/crnlsp/leathercad/actions/runs/41481746908).
+The workload is still `fixtures/perf/strap-5800.lcp`, in Electron 45, on `macos-latest`
+with the full-HD display setup and a 1280 × 840 window. Dialogs are answered by the test;
+the real PDF worker and file writer run normally. There are no retries.
+
+| Ten cold macOS exports | Observed |
+|---|---|
+| Largest animation-frame gap, each run (ms) | 474.9, 451.0, 296.4, 276.7, 281.4, 334.2, 298.3, 222.5, 243.5, 232.8 |
+| Runs with a gap over 200 ms **before** the export click | 10/10 |
+| Runs with a gap over 200 ms **after** the worker reply | 5/10 |
+| Main-thread `Worker` construction | 0.1–0.7 ms |
+| Main-thread `postMessage` call, including structured clone | 3.0–11.7 ms |
+| Reported main-thread long tasks (≥ 50 ms) | None in any run |
+| Initial fonts / visibility / focus | Loaded / visible / focused in every run |
+
+The test currently starts recording before Playwright's click and stops after the export
+notice appears, although its comment describes click-to-file time. The pre-click gap therefore
+cannot by itself establish an export freeze. The later gaps still need explaining: absence of
+reported long tasks does not prove that painting or input remains responsive. Neither the
+worker's construction nor its input clone accounts for the measured delays. Renderer timelines
+and task/layout/script metrics are the next measurement; no production fix, relaxed bound,
+platform skip or release-readiness claim follows from this probe.
+
 ### PERF-003
 
 **Cull Sheets pages and separate interaction decoration.** Canvas CPU and allocations.
