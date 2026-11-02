@@ -7,6 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { withApp } from './launchApp.js';
 import { inkOn } from './printTest.js';
+import { profilePdfExport } from './pdfExportProfile.js';
 
 /**
  * PERF-002: the PDF is written in a worker, so a long pattern does not freeze
@@ -69,26 +70,20 @@ test('the window keeps painting while the long strap is exported', async () => {
 
         // The longest time between two animation frames from the click to the
         // file: the longest the window could not paint or answer a click.
-        await window.evaluate(() => {
-          const w = window as unknown as { __gap: number; __watching: boolean };
-          w.__gap = 0;
-          w.__watching = true;
-          let last = performance.now();
-          const frame = (now: number): void => {
-            w.__gap = Math.max(w.__gap, now - last);
-            last = now;
-            if (w.__watching) requestAnimationFrame(frame);
-          };
-          requestAnimationFrame(frame);
-        });
-
+        const measurement = await profilePdfExport(window);
         await window.getByTestId('export-pdf').click();
         await expect.poll(() => existsSync(pdf), { timeout: 30_000 }).toBe(true);
         await expect(window.getByTestId('export-notice')).toBeVisible();
-        const gap = await window.evaluate(() => {
-          const w = window as unknown as { __gap: number; __watching: boolean };
-          w.__watching = false;
-          return w.__gap;
+        const profile = await measurement.evaluate((watch) => watch.stop());
+        const gap = profile.gap;
+        console.log('PDF_EXPORT_PROFILE', JSON.stringify(profile));
+        await test.info().attach('pdf-export-profile', {
+          body: JSON.stringify(
+            { runtime: await app.evaluate(() => process.versions), ...profile },
+            null,
+            2,
+          ),
+          contentType: 'application/json',
         });
 
         // About 510–560 ms before the worker, measured with tools/perf-pdf.mjs;
