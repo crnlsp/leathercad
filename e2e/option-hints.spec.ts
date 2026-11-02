@@ -130,6 +130,9 @@ test('as the bar narrows the lowest-ranked hints go first, whole, and "all keys"
     const counts: number[] = [];
     for (const width of [1920, 1280, 1100, 1024, 900, 860]) {
       await resizeWindow(app, window, width, 700);
+      // A growing slot can contain the old, smaller hint set without clipping.
+      // Wait for the ResizeObserver's React update before recording its count.
+      if (width === 1920) await expect(hints(window)).toHaveCount(5);
       await expectWhole(window);
       const shown = await words(window);
       counts.push(shown.length);
