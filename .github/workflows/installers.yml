@@ -38,6 +38,14 @@ on:
         type: string
         required: false
         default: ''
+      everywhere:
+        description: >-
+          Every platform and the Flatpak, as a release needs. False builds and
+          smoke-tests Linux alone, without the Flatpak: a pull request whose
+          change cannot differ between the platforms (A4).
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -48,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{ fromJSON(inputs.everywhere && '["ubuntu-latest", "windows-latest", "macos-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
@@ -172,7 +180,7 @@ jobs:
       # installed for this user by the bundler. apt's index is fresh from the
       # poppler step.
       - name: Flatpak
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && inputs.everywhere
         run: >-
           sudo apt-get install -y flatpak flatpak-builder &&
           flatpak remote-add --user --if-not-exists flathub

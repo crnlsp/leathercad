@@ -61,11 +61,11 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | `perf/006-self-intersections` |
 | ✅ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | `claude/perf-007-pointer` |
 | ✅ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | `perf/008-design-content` |
-| ☐ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | Unassigned |
+| ✅ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | `perf/009-persistence` |
 | ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
 | ☐ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | Unassigned |
 | ✅ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | `perf/012-resource-preflight` |
-| ☐ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | Unassigned |
+| ✅ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | `perf/013-preview-work` |
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
 | ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
 | ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
@@ -819,14 +819,66 @@ with PERF-014; do not introduce a renderer rewrite.
 renderer. Forty 500-point parts produced 101–136 ms save long tasks; recovery uses the same
 preparation. Bundled load was about 33 ms. Save-on-close shares this critical path.
 
-- [ ] Define captured-snapshot, dirty-state and cancellation semantics before changing execution.
-- [ ] Use an asynchronous persistence boundary for expensive pure work; keep one in-flight
+- [x] Define captured-snapshot, dirty-state and cancellation semantics before changing execution.
+  Reproduced at `a806a1b`: saving the path-heavy project (`fixtures/perf/traced-40x500.lcp`, 470
+  KB) was a 103–128 ms long task every time, and so was each recovery copy; bundled, 117 ms of
+  encoding — 38 ms of stable JSON, 78 ms of deflate. The semantics, unchanged: a save writes the
+  document from before a gesture under way (Q36), a copy the document as it is, each as it was
+  when asked, and the tab is saved as of that document once the write lands (Q16). A save is
+  never cancelled. A recovery copy whose tab is saved, reloaded or closed while it is being made
+  is not written.
+- [x] Use an asynchronous persistence boundary for expensive pure work; keep one in-flight
   recovery and coalesce queued work to the latest required snapshot.
-- [ ] Verify edits during saving, failed writes, recovery, close/open, migrations and deterministic
+  `renderer/src/lcpEncoder.ts`: one worker (`lcpWorker.ts`), kept for the window's life, runs
+  `saveProject` on the structured clone `postMessage` makes as the save is asked, and answers in
+  the order asked, so saves, copies and kept copies reach the main process in that order. A
+  worker that cannot start, stops, or does not answer in 30 s has what was waiting, and what
+  follows, made on the window's thread, in order: a save is never lost to a missing worker.
+  `renderer/src/recoveryCopies.ts`: a tab's copy is made one at a time, and written only if it is
+  still the tab's when it is ready; the next is of the document as it is then. Recovering still
+  asks for the tab's own copy before letting the crashed one go. Saves, recovery copies, kept
+  copies and templates all go this way; opening still unzips and checks on the window's thread
+  (31 ms for this project), and is not changed.
+- [x] Verify edits during saving, failed writes, recovery, close/open, migrations and deterministic
   serialization; preserve parameter-only files and previous-file safety.
+  `lcpJob.test.ts`: the worker's bytes, from a structured clone, are `saveProject`'s for the
+  wallet, the strap, a traced outline and the version 12 format fixture. `recoveryCopies.test.ts`:
+  a copy of the document asked for though it is edited meanwhile; none written for a tab saved
+  or closed while it was made; one at a time; recovering's order; a write that fails is written
+  again. `lcpEncoder.test.ts`: order, the fallbacks and the watchdog. Q36's save test, the
+  recovery, unsaved-changes, tabs and preferences E2E specs pass unchanged. The main process,
+  its atomic writes and `fsync`, and what a file holds are untouched.
 
 **Expected benefit:** Lower renderer blocking; total CPU work may remain similar. Coordinate
 roadmap Q35 (durability) and Q36 (saving a live preview) without silently resolving those policies.
+
+| PERF-009, path-heavy project, built app, 1600 × 1000 | Before (`a806a1b`) | After |
+|---|---|---|
+| Ctrl+S: long tasks, 9 saves | 105–128 ms, every save (median 111) | none |
+| Ctrl+S: largest frame gap | 83–117 ms (median 100) | 17 ms, every save |
+| Ctrl+S: until the file is on disk | 334–359 ms (median 340) | 336–637 ms (median 363) |
+| Recovery copy: long tasks, 9 copies | 107–115 ms, every copy | none |
+| Recovery copy: largest frame gap | 100 ms | 17 ms, every copy |
+
+Measured with `node tools/perf-save.mjs` on the production build in unpackaged Electron, under
+Xvfb in the pinned Playwright container, three runs of three saves and three copies each, before
+and after turn about, on the audit's Ryzen 5 7600X with the load at 2.5–4.7 from other work. A
+save or a copy is timed once the panel drawn before it has settled, so it measures the file. The
+file takes as long to reach the disk, a little longer when the machine is busy: the worker's
+round trip. On the window's thread a save is now the structured clone `postMessage` makes, 11–13
+ms for this project as `structuredClone` measures it, both ways.
+
+**Guards:** `lcpJob.test.ts`, *is made into bytes only by the .lcp job, which the worker runs*:
+the renderer's files that encode a project, by `saveProject(` in their source — `App.tsx`,
+`useProjectFile.ts` and `useRecovery.ts` on `a806a1b`, the job's alone now. And
+`e2e/lcp-worker.spec.ts`, since only the built app shows the worker: a save and a recovery copy
+of the path-heavy project are each answered by the `.lcp` worker, and the saved file opens again
+as saved; on `a806a1b`'s build no worker answers (`Expected: 1, Received: 0`).
+
+**Result:** saving a large project, or writing its recovery copy, no longer stops the window. Not
+done: opening, 31 ms for this project, still runs on the window's thread; it happens once a file,
+and was not on the interaction path the audit measured. Measured on Linux only; CI's Windows and
+macOS jobs run the unit tests, and the packaged app is checked by hand before the release.
 
 ### PERF-010
 
@@ -1017,10 +1069,10 @@ main preview and app canvas. Loading exposes a promise without an immediate canc
 obsolete generation can still proceed into PDF opening. Normal destruction exists, and repeated
 previews plateaued; this is not proof of a permanent worker leak.
 
-- [ ] Render visible/near-visible thumbnails with bounded concurrency.
-- [ ] Retain the loading task immediately, check cancellation between stages and destroy on
+- [x] Render visible/near-visible thumbnails with bounded concurrency.
+- [x] Retain the loading task immediately, check cancellation between stages and destroy on
   dismissal, obsolete plans and failure.
-- [ ] Exercise rapid open/close, paper changes and injected failures; verify eventual worker
+- [x] Exercise rapid open/close, paper changes and injected failures; verify eventual worker
   cleanup and stable post-GC memory over repeated cycles.
 
 PERF-002b already ends the PDF *writer* with the effect and skips opening a file the effect has
@@ -1028,6 +1080,49 @@ left behind; pdf.js's own loading task and the thumbnails remain here.
 
 **Expected benefit:** Less off-screen work and faster cleanup. Complements PERF-002; lazy
 thumbnails alone do not fix synchronous PDF generation.
+
+**Done (2026-11-02):** `perf/013-preview-work`. Reproduced on develop `7c77698`: every open of
+the strap's preview drew all 33 sheets into the list, about 10 of them in its view.
+
+- `PageCanvas` in the list draws once an `IntersectionObserver` on the list (200 px margin) sees
+  it near, at most three at a time (`limitConcurrency` in `pdfPages.ts`); a sheet drawn stays
+  drawn, and a new PDF mounts new canvases, which wait to come near again. The sheet looked at
+  draws at once, as before.
+- `openPdf(bytes, signal)` holds pdf.js's loading task from the call: the signal destroys it at
+  once, mid-read, and a file pdf.js cannot read destroys it too. The preview has one
+  `AbortController` for the effect, ending the writer, the load or the open document, and shows
+  nothing from an effect that has ended. `drawPage` checks the signal before asking for a page.
+- Guards: `pdfPages.test.ts` (pdf.js faked at its boundary) fails on develop's `openPdf`, which
+  never destroys a load it was asked to end or failed to read, and holds the concurrency;
+  `e2e/pdf-worker.spec.ts` counts the sheets drawn after the preview settles, at most 16 — develop
+  drew 33.
+
+**Before/after,** `node tools/perf-pdf.mjs <A|B> --preview` on the production builds of develop
+(A) and this branch (B), Electron 45, unpackaged, five runs a side interleaved A, B, A, B…, three
+opens a run; medians of the fifteen opens, range in brackets. The machine was shared with other
+agents' runs.
+
+| 5.8 m strap, 33 A4 sheets, Print Preview | Before (A) | After (B) |
+|---|---|---|
+| Sheets drawn into the list, 3 s after the click | 33 (33–33) | 10 (10–10) |
+| Main thread busy (TaskDuration), 3 s from the click | 107 ms (96–119) | 81 ms (72–96) |
+| Renderer CPU, workers included, 3 s from the click | 1,250 ms (1,200–1,270) | 1,120 ms (1,090–1,180) |
+| Click to the sheet looked at drawn | 635 ms (626–676) | 633 ms (621–669) |
+| Largest frame gap | 4 ms (4–10) | 4 ms (4–10) |
+| 20 previews closed or re-papered mid-way: pdf.js workers left running | 0 of 10 | 0 of 10 |
+| Post-GC heap at 0/10/20 of those cycles | 11.6 → 12.1 → 12.2 MiB | 11.6 → 12.1 → 12.2–12.3 MiB |
+
+Most of the renderer's CPU is still the PDF writer's (PERF-002), which is unchanged. Develop did
+destroy an obsolete load in the end, once it had finished reading; no worker or heap leak
+reproduced on either side, so the gain there is work not done, not memory.
+
+**Accuracy:** the writer and its bytes are untouched (`pdfJob.test.ts` passes as it was), and
+every sheet pdf.js draws is drawn as before; only *when* a thumbnail is drawn changed. The
+`print-preview` and `pdf-worker` E2E specs pass in the Playwright 1.64 Noble image under
+`xvfb-run -a`, with Poppler installed as CI does.
+
+**Platform limit:** measured and run on Linux only. CI's Windows and macOS unit jobs run the
+`pdfPages.test.ts` guard; the E2E guard runs on Linux per pull request and nightly elsewhere.
 
 ### PERF-014
 

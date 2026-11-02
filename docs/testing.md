@@ -359,8 +359,29 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
-Eight jobs, run in parallel on every pull request, so one run reports every failure rather than
-only the first:
+Jobs run in parallel, so one run reports every failure rather than only the first. A pull request
+runs only the jobs its change can break. The first job, `changes`, sorts the changed files into
+kinds with `tools/ci/changes.mjs`, which holds the table and the tests for it. A renamed file
+counts by its old path too, and a path that is not certainly documentation counts as code:
+
+| Kind | Paths |
+|---|---|
+| `docs` | `docs/**` (except `docs/domain-model.md` and this file, which tests read), `packaging/aur/**`, `*.md` outside `.claude/` and `apps/` |
+| `workflows` | `.github/**` |
+| `deps` | `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/**`, any `package.json`, `osv-scanner.toml`, `.node-version` |
+| `packaging` | `apps/desktop/electron-builder.config.mjs`, `apps/desktop/build/**`, `apps/desktop/src/main/**`, `assets/fonts/**` |
+| `code` | everything else |
+
+| Job | Runs for |
+|---|---|
+| `static` | every change |
+| `test`, `cross-platform`, `e2e`, `visual`, Linux's `installers` leg | `code`, `packaging`, `deps`, `workflows` |
+| Windows's and macOS's `installers` legs, and the Flatpak | `packaging`, `deps`, `workflows` |
+| `dependencies` | `deps`; `nightly.yml` scans `develop` every night |
+| `workflows` | `workflows` |
+
+A push to `develop` runs everything, and nothing runs on a push to `main`, which gets only what
+`develop` tested. CodeQL skips a pull request that changes documentation alone. The jobs:
 
 ```
 static   pnpm typecheck         # tsc --build across the workspace
@@ -390,22 +411,22 @@ installers    installers.yml       # the packaged smoke test and every installer
                                    # on Linux, Windows and macOS
 ```
 
-`static` also runs `pnpm knip`. Every action is pinned to a commit; zizmor fails the run on one that
+`static` also runs `pnpm knip` and `pnpm test:tools`, the tests of the CI scripts in `tools/ci/`. Every action is pinned to a commit; zizmor fails the run on one that
 is not.
 
 `installers` calls `installers.yml` on Linux, Windows and macOS: `pnpm test:packaged`, the smoke
 test of the packaged binary, then `pnpm package` — the AppImage, the Flatpak, the `.deb` and the SBOM on Linux,
 the NSIS installer, the universal dmg — uploaded as `installers-<OS>`. The release builds its files
-with the same workflow, from its tag. Until roadmap item R5 this ran only when packaging could have
-changed, because a private repository pays for those minutes.
+with the same workflow, from its tag. On a pull request whose change cannot differ between the
+platforms, it runs Linux's leg alone, without the Flatpak (its `everywhere` input).
 
 On Linux the smoke test runs twice: against the unpacked app, and against a sibling `.deb` that
 apt installs (`LEATHERCAD_PACKAGED_EXECUTABLE=/opt/LeatherCAD/leathercad`), with Chromium's sandbox
 on, which Playwright otherwise switches off. A removal then checks that the menu entry, the
 command and the AppArmor profile are gone.
 
-A ninth job, *Ready to merge*, waits for the other eight and passes only when each one passed or
-was skipped; a cancelled run fails it. It is the one check the rulesets require from CI, beside
+A last job, *Ready to merge*, waits for every other and passes only when each one passed or was
+skipped, so a job the change did not need passes it; a cancelled run fails it. It is the one check the rulesets require from CI, beside
 *Conventional title* on `develop` and *Release gate* on `main`, so a job added to CI goes in its
 `needs` and the rulesets stay as they are.
 
@@ -510,6 +531,9 @@ project, by default the strap, and `fixtures/perf/bag-50.lcp` is the audit's fif
 counts: sixty hover frames build the pattern once, and at 100 % on the bag a frame draws no more
 than eight of the fifty straps' items. `node tools/perf-drag.mjs` likewise times a piece and a guide dragged across a traced outline
 (`fixtures/perf/traced-<n>.lcp`), p50, p95 and long tasks (PERF-004).
+`node tools/perf-save.mjs` times the window's longest stop while the path-heavy project
+(`fixtures/perf/traced-40x500.lcp`) is saved and its recovery copy written, with `--app` for
+another checkout's build (PERF-009); under Xvfb, in the Playwright container, as the next one.
 `node tools/perf-retention.mjs` reads the renderer's heap after a full collection with the strap
 open, edited, reloaded and closed, and whether the project left behind is still reachable
 (PERF-010); `--app` points it at another checkout's build. Run it under Xvfb, in the Playwright
@@ -527,6 +551,13 @@ each commit to, as React DevTools does, and counts the components that rendered.
 `node tools/perf-pointer.mjs` uses it to count the commits and renders of sixty pointer moves
 over the wallet, with the script time beside them (PERF-007); `e2e/pointer-renders.spec.ts` holds
 them in the E2E suite: no render of App, and one component render a move, the readout.
+
+`node tools/perf-pdf.mjs <label> --preview` opens the Print Preview on the 5.8 m strap three
+times, and reports the main thread's busy time, the renderer's CPU time and how many of the 33
+sheets the list beside the page drew; then twenty previews closed or changed mid-way, with the
+pdf.js workers left running and the post-GC heap (PERF-013). `e2e/pdf-worker.spec.ts` holds the
+count — only the sheets near the list's view are drawn — and `pdfPages.test.ts` the pdf.js loading
+task ended at once when the preview no longer wants it, and a few thumbnails drawn at a time.
 
 ## 10. Test-driven development, concretely
 

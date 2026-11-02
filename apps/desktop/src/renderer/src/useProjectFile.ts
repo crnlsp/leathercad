@@ -8,12 +8,12 @@ import {
   LCP_EXTENSION,
   NewerFormatError,
   loadProject,
-  saveProject,
 } from '@leathercad/persist';
 import type { PlatformHost, TabCamera, TemplateSave } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
+import { encodeProject } from './lcpEncoder.js';
 import { writePdf, PdfWriterError } from './pdfWriter.js';
 import { describeProblemWithSubject } from './problemText.js';
 import {
@@ -257,10 +257,13 @@ export function useProjectFile(
         // during a slow write is not on disk, so it must stay unsaved (Q16).
         // Nor a drag's preview, which the maker may yet cancel: the document
         // from before the gesture (Q36).
+        // Made into bytes off the window's thread (PERF-009), from that
+        // document as it is at this moment.
         const written = tab.store.committedDocument;
-        const bytes = saveProject(written.project, {
+        const bytes = await encodeProject({
+          project: written.project,
           applicationVersion: appVersion,
-          now: () => new Date(),
+          at: new Date().toISOString(),
           ...(tab.createdUtc === undefined ? {} : { createdUtc: tab.createdUtc }),
         });
 
@@ -484,10 +487,11 @@ export function useProjectFile(
   );
 
   const saveAsTemplate = useCallback(
-    (tab: ProjectTab, name: string, replace: boolean): Promise<TemplateSave> => {
-      const bytes = saveProject(tab.store.committedDocument.project, {
+    async (tab: ProjectTab, name: string, replace: boolean): Promise<TemplateSave> => {
+      const bytes = await encodeProject({
+        project: tab.store.committedDocument.project,
         applicationVersion: appVersion,
-        now: () => new Date(),
+        at: new Date().toISOString(),
       });
       return host().saveTemplate(name, bytes, replace);
     },

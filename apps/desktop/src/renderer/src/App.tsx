@@ -33,7 +33,7 @@ import {
 } from '@leathercad/platform';
 import { rolesNamed } from '@leathercad/export';
 import type { Vec2 } from '@leathercad/geometry';
-import { loadProject, saveProject } from '@leathercad/persist';
+import { loadProject } from '@leathercad/persist';
 import { zoomPercent } from '@leathercad/render';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
@@ -46,6 +46,7 @@ import {
 } from '@leathercad/editor';
 
 import { createI18n, resolveLocale, type Translate } from '../../shared/i18n.js';
+import { encodeProject } from './lcpEncoder.js';
 import { AboutDialog } from './AboutDialog.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
@@ -839,9 +840,10 @@ export function App({
     const kept = new Set<string>();
     for (const each of unsaved) {
       try {
-        const bytes = saveProject(each.store.committedDocument.project, {
+        const bytes = await encodeProject({
+          project: each.store.committedDocument.project,
           applicationVersion: version ?? '0.0.0',
-          now: () => new Date(),
+          at: new Date().toISOString(),
           ...(each.createdUtc === undefined ? {} : { createdUtc: each.createdUtc }),
         });
         await host.keepUnsaved(each.id, bytes);

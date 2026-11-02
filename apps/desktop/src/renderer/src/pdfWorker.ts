@@ -9,6 +9,10 @@ import { runPdfJob, type PdfJob, type PdfReply } from './pdfJob.js';
  * glyph outlines (ADR 0011).
  */
 self.addEventListener('message', (event: MessageEvent<PdfJob>) => {
+  // A dedicated worker hears only the page that started it, through the
+  // worker's own port, where a message has no origin or the app's own. One
+  // from anywhere else is not that page's, and is not answered.
+  if (event.origin !== '' && event.origin !== self.location.origin) return;
   void runPdfJob(event.data).then(
     (bytes) => {
       const reply: PdfReply = { ok: true, bytes };

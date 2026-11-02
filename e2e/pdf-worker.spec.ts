@@ -162,6 +162,44 @@ test('changing the paper mid-write ends that writer, and only the new plan is sh
   );
 });
 
+/** How many sheets in the Print Preview's list pdf.js has drawn: a canvas it sized, not a bare 300 × 150. */
+const thumbnailsDrawn = (window: Page) =>
+  window
+    .getByTestId('print-thumb')
+    .evaluateAll(
+      (thumbs) =>
+        thumbs.filter((thumb) => (thumb.querySelector('canvas')?.width ?? 300) !== 300).length,
+    );
+
+test('the sheet list draws only the sheets near its view, and the rest when scrolled to (PERF-013)', async () => {
+  await withApp(
+    async (window) => {
+      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await window.getByTestId('print').click();
+      const preview = window.getByTestId('print-preview');
+      await expect(preview.getByTestId('print-thumb')).toHaveCount(33);
+      await expect
+        .poll(() => preview.getByTestId('print-page').locator('canvas').evaluate(inkOn))
+        .toBeGreaterThan(1000);
+      await expect.poll(() => thumbnailsDrawn(window)).toBeGreaterThan(0);
+
+      // Proving something did not happen: the list drew all 33 within about
+      // a second of the page (tools/perf-pdf.mjs), so wait that long.
+      await window.waitForTimeout(1500);
+      const drawn = await thumbnailsDrawn(window);
+      // A handful fit in the list's view and its margin; it drew all 33.
+      expect(drawn, `${String(drawn)} of 33 sheets drawn`).toBeLessThanOrEqual(16);
+
+      const last = preview.getByTestId('print-thumb').last();
+      await last.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() => last.locator('canvas').evaluate((canvas) => canvas.width))
+        .not.toBe(300);
+    },
+    { args: [STRAP] },
+  );
+});
+
 test('a writer that cannot start is reported, and no file is left behind', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'leathercad-e2e-pdf-worker-'));
   const pdf = join(dir, 'never.pdf');
