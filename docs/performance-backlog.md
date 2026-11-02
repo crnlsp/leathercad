@@ -59,7 +59,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | `perf/004-incremental-snap` |
 | ✅ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | `perf/005-diagnostics` |
 | ✅ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | `perf/006-self-intersections` |
-| ☐ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | Unassigned |
+| ✅ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | `claude/perf-007-pointer` |
 | ☐ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | Unassigned |
 | ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
@@ -677,11 +677,53 @@ tree/hole calculations (137–182).
 samples included substantial React/tree work despite unchanged documents. This wastes CPU; the
 tested wallet remained responsive. Sampling is not an exact React commit-count measurement.
 
-- [ ] Profile cursor-only moves and identify panels with unchanged inputs.
-- [ ] Localize cursor consumers; use narrow subscriptions, stable props and memoized derived
-  panel data where justified. Keep imperative canvas ownership.
-- [ ] Confirm unrelated panels no longer update; verify selection, properties, diagnostics,
-  accessibility announcements and keyboard behavior.
+- [x] Profile cursor-only moves and identify panels with unchanged inputs.
+  Reproduced at `b0ab404` with `node tools/perf-pointer.mjs`, which counts what React renders.
+  Sixty moves of the pointer across the wallet, with the Select tool and one move a frame,
+  rendered App sixty times and 17,880 components, about 298 a move, in 180 commits. The panels,
+  the tool bar and the tabs all rendered with unchanged inputs, just so the status bar's
+  coordinates could change. The chain: `CanvasHost` kept the point under the pointer
+  (`cursorMm`), and the pointer's place over the canvas, in React state; each move rendered the
+  board, and an effect then sent App a new status, which rendered the window. Nothing else on
+  screen changes with a hover: the halo and the rulers' tick are painted from refs.
+- [x] Localize cursor consumers; use narrow subscriptions, stable props and memoized derived
+  panel data where justified. Keep imperative canvas ownership. Both values are now
+  `PointerValue`s (`renderer/src/pointerValue.ts`), a store read through
+  `useSyncExternalStore`. Only what shows them subscribes: the readout (`CursorReadout` in
+  `App.tsx`), and the two notices beside the pointer, mounted only while shown. The status keeps
+  what changes rarely, each set only when it changes. Nothing else renders on a hover, so no
+  panel needed memoising; the canvas is drawn as before.
+- [x] Confirm unrelated panels no longer update; verify selection, properties, diagnostics,
+  accessibility announcements and keyboard behavior. Guarded in the sharded E2E by
+  `e2e/pointer-renders.spec.ts`, which counts renders through `e2e/renderCount.ts`, the hook
+  React reports each commit to, as React DevTools counts them. Over sixty moves, App must not
+  render, and at most sixty components may render in all, one a move: the readout. `b0ab404`
+  renders App 60 times and 17,880 components. The whole E2E suite passes, with its selection,
+  Properties (a drawn shape's sizes still go through the status), problems, keyboard and axe
+  tests, and the readout's tests read it as before.
+
+| PERF-007, sixty pointer moves across the wallet, one a frame, 7 runs each | Before (`b0ab404`) | After |
+|---|---|---|
+| React commits | 180 | 60 |
+| App renders | 60 | 0 |
+| Component renders | 17,880 | 60, the readout |
+| Renderer script time, median (range) | 114.2 ms (112.1–120.7) | 41.4 ms (39.2–44.7) |
+
+Measured with `node tools/perf-pointer.mjs` on the production build in unpackaged Electron 45.0.0,
+in the pinned Playwright container (`v1.64.1-noble`) under Xvfb, the window at 1600 × 1000.
+Before: `b0ab404`, built in a worktree of its own. Runs interleaved, before and after, seven of
+each. The counts were the same in every run of a build. Script time is CDP's `ScriptDuration`
+over a second sweep with nothing counted, on the audit's machine with other agents' builds beside
+it: a trend, not a budget.
+
+**Not done / not verified.** A move that changes the document — a drag, a shape being drawn —
+still renders the window, as the document's change should; a shape being drawn sends its sizes,
+which Properties mirrors. Each move still hit-tests and paints the board whole: that is PERF-008
+and PERF-014. Measured on Linux only: the change is the renderer's JavaScript, with no platform
+path.
+
+**Result:** a pointer moving over the board renders the readout and nothing else. App and the
+panels render when something they show changes.
 
 **Expected benefit:** Less chrome work on frequent pointer input; no invented timing target.
 

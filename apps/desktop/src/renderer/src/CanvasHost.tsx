@@ -65,6 +65,7 @@ import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 import { SelectionBar, type SelectionBarHandle } from './SelectionBar.js';
 import type { MakerTools } from './irons.js';
+import { PointerValue, usePointerValue } from './pointerValue.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -147,8 +148,13 @@ export interface CanvasHandle {
   toggleSelectionBar(): boolean;
 }
 
+/** A point over the canvas in CSS pixels, from its top left: where a notice is said. */
+interface CssPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface CanvasStatus {
-  readonly cursorMm: Vec2 | null;
   /**
    * The showing view's zoom, 100 % being true size (U.4): its own camera's,
    * Design's or the Sheets', sent whenever that camera changes.
@@ -188,6 +194,7 @@ export function CanvasHost({
   onContextMenu,
   nextId,
   onStatus,
+  cursor,
   panelOver = null,
   selectionBar = null,
   cameras,
@@ -215,6 +222,13 @@ export function CanvasHost({
   onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
+  /**
+   * The point under the pointer, in mm, for the status bar's readout: set on
+   * every move, so not in the status, whose every change renders the window
+   * (PERF-007). Snapped where a click would snap; null off the board and on
+   * the Sheets view.
+   */
+  cursor: PointerValue<Vec2 | null>;
   /** A panel open over the board (U.5), by its class: the value chips keep clear of it. */
   panelOver?: string | null;
   /**
@@ -256,7 +270,6 @@ export function CanvasHost({
   const placedRef = useRef<{ left: number; top: number; dpr: number } | null>(null);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
   const rulerGuideRef = useRef<{ id: string; angleRad: number } | null>(null);
-  const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
   /**
    * The same pointer, for the painter: the rulers' cursor tick (§9.2). A ref,
    * because painting reads it and must not wait for React.
@@ -309,8 +322,11 @@ export function CanvasHost({
     onHoverPartRef.current = onHoverPart;
     dirtyRef.current = true;
   }, [hoveredPart, onHoverPart]);
-  /** Where the pointer is over the canvas, in CSS pixels — where a notice is said. */
-  const [pointerCss, setPointerCss] = useState<{ x: number; y: number } | null>(null);
+  /**
+   * Where the pointer is over the canvas, in CSS pixels — where a notice is
+   * said. Not state: only a notice shown reads it (PERF-007).
+   */
+  const [pointerCss] = useState(() => new PointerValue<CssPoint | null>(null));
 
   const invalidate = useCallback(() => {
     dirtyRef.current = true;
@@ -790,14 +806,16 @@ export function CanvasHost({
 
   useEffect(() => {
     onStatus?.({
-      cursorMm,
       zoomPercent: zoom,
       notice,
       sheet: sheetUnder,
       sizing: drawing,
       underway,
     });
-  }, [cursorMm, notice, onStatus, sheetUnder, zoom, drawing, underway]);
+  }, [notice, onStatus, sheetUnder, zoom, drawing, underway]);
+
+  // The readout is the window's: blank once this board goes, for another tab or for none.
+  useEffect(() => () => cursor.set(null), [cursor]);
 
   // Keyboard goes to the document: the board is one Tab stop (U.14), but
   // Escape or Delete should work wherever focus and the pointer happen to be.
@@ -933,10 +951,10 @@ export function CanvasHost({
         y: (event.clientY - rect.top) * viewport.dpr,
       };
       viewport.zoomAt(anchor, Math.exp(-event.deltaY * 0.0015));
-      setCursorMm(viewRef.current === 'sheets' ? null : viewport.toWorld(anchor));
+      cursor.set(viewRef.current === 'sheets' ? null : viewport.toWorld(anchor));
       invalidate();
     },
-    [camera, invalidate],
+    [camera, cursor, invalidate],
   );
 
   const handlePointerDown = useCallback(
@@ -983,7 +1001,7 @@ export function CanvasHost({
 
       const rect = event.currentTarget.getBoundingClientRect();
       const raw = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
-      setPointerCss({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+      pointerCss.set({ x: event.clientX - rect.left, y: event.clientY - rect.top });
       const guide = rulerGuideRef.current;
       if (guide !== null) {
         if (!store.inTransaction) {
@@ -1012,12 +1030,12 @@ export function CanvasHost({
         );
         panningRef.current = { x: event.clientX, y: event.clientY };
         invalidate();
-        setCursorMm(viewRef.current === 'sheets' ? null : raw);
+        cursor.set(viewRef.current === 'sheets' ? null : raw);
         return;
       }
 
       if (viewRef.current === 'sheets') {
-        setCursorMm(null);
+        cursor.set(null);
         const under = pickOnSheets(event);
         // The same sheet is the same state: a pointer move within it re-renders nothing.
         setSheetUnder((was) =>
@@ -1038,7 +1056,7 @@ export function CanvasHost({
       // what a click would commit, or it is telling the user the wrong number
       // at exactly the moment they are relying on it.
       const at = managerRef.current?.snapPoint() ?? raw;
-      setCursorMm(at);
+      cursor.set(at);
       pointerRef.current = at;
 
       // Hover says what a click would pick, so only where a click picks.
@@ -1049,7 +1067,7 @@ export function CanvasHost({
       hoveredRef.current = hovered;
       invalidate();
     },
-    [camera, invalidate, pickOnSheets, rulerGuideAt, store, toInput],
+    [camera, cursor, invalidate, pickOnSheets, pointerCss, rulerGuideAt, store, toInput],
   );
 
   /**
@@ -1158,7 +1176,7 @@ export function CanvasHost({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onPointerLeave={() => {
-          setCursorMm(null);
+          cursor.set(null);
           pointerRef.current = null;
           hoveredRef.current = null;
           if (hoveredPartRef.current !== null) onHoverPartRef.current?.(null);
@@ -1191,18 +1209,9 @@ export function CanvasHost({
         />
       )}
       {children}
-      {sheetsNotice && pointerCss !== null && (
-        <div
-          className="canvas-notice"
-          data-testid="sheets-notice"
-          role="status"
-          style={{ left: pointerCss.x + 16, top: pointerCss.y + 20 }}
-        >
-          {t('sheets.placedForYou')}
-        </div>
-      )}
-      {notice !== null && pointerCss !== null && (
-        <CanvasNotice problem={notice} at={pointerCss} bounds={containerSize} />
+      {sheetsNotice && <SheetsNotice pointer={pointerCss} />}
+      {notice !== null && (
+        <CanvasNotice problem={notice} pointer={pointerCss} bounds={containerSize} />
       )}
     </div>
   );
@@ -1236,14 +1245,16 @@ const NOTICE_HEIGHT_PX = 72;
  */
 function CanvasNotice({
   problem,
-  at,
+  pointer,
   bounds,
 }: {
   problem: Problem;
-  at: { x: number; y: number };
+  pointer: PointerValue<CssPoint | null>;
   bounds: { width: number; height: number };
 }) {
   const { t } = useI18n();
+  const at = usePointerValue(pointer);
+  if (at === null) return null;
   const right = at.x + 16 + NOTICE_WIDTH_PX > bounds.width;
   const below = at.y + 20 + NOTICE_HEIGHT_PX > bounds.height;
   return (
@@ -1259,6 +1270,23 @@ function CanvasNotice({
       }}
     >
       {describeProblem(problem, t)}
+    </div>
+  );
+}
+
+/** A piece dragged on the Sheets view stays where the plan put it, and says so beside the pointer. */
+function SheetsNotice({ pointer }: { pointer: PointerValue<CssPoint | null> }) {
+  const { t } = useI18n();
+  const at = usePointerValue(pointer);
+  if (at === null) return null;
+  return (
+    <div
+      className="canvas-notice"
+      data-testid="sheets-notice"
+      role="status"
+      style={{ left: at.x + 16, top: at.y + 20 }}
+    >
+      {t('sheets.placedForYou')}
     </div>
   );
 }

@@ -505,6 +505,12 @@ counts the pieces Parts holds folded as wallets open, fold and close (PERF-016),
 container; `e2e/parts-tree.spec.ts` keeps it, counting the pieces shown folded in a project that
 folded none.
 
+What React renders is counted, not timed: `e2e/renderCount.ts` installs the hook React reports
+each commit to, as React DevTools does, and counts the components that rendered.
+`node tools/perf-pointer.mjs` uses it to count the commits and renders of sixty pointer moves
+over the wallet, with the script time beside them (PERF-007); `e2e/pointer-renders.spec.ts` holds
+them in the E2E suite: no render of App, and one component render a move, the readout.
+
 ## 10. Test-driven development, concretely
 
 For `geometry` and `domain`, tests come first. Not as ritual — because in this domain the test *is*
