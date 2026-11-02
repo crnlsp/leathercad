@@ -66,7 +66,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | [#212](https://github.com/crnlsp/leathercad/pull/212) |
 | ✅ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | `perf/012-resource-preflight` |
 | ✅ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | `perf/013-preview-work` |
-| ✅ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | `perf/014-demand-frames` |
+| ✅ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | [#213](https://github.com/crnlsp/leathercad/pull/213) |
 | ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
 | ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
 | ✅ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | `perf/017-benchmarks` |
@@ -1226,6 +1226,14 @@ checks both idle views and real paints after tools, pointer moves, typed drafts,
 resize, view, Sheets-row hover and language changes. Existing DPI and typed-size E2E cases pass.
 Geometry, persistence, export/print fixtures and visual baselines are untouched. Packaged
 Windows/macOS behavior remains a manual release check; measurements were taken on Linux only.
+
+**Validation:** `pnpm check` and the enabled pre-push hook passed: typecheck, lint, formatting,
+layering (594 modules / 2,659 dependencies, no violations), dead code, 28 CI-tool tests,
+3,809 unit/property/export/fixture tests and all 6 performance ceilings. Pure-layer coverage:
+98% lines, 93.96% branches. Build passed; the complete Electron E2E suite passed 340/340 in
+5.7 minutes, and pinned visual checks passed 5/5 with zero changed pixels. Architecture review
+found no new package edge, Electron import outside desktop, Clipper binding or layer-graph drift.
+The packaged platform checks remain in [release checklist §16](release-checklist.md#16-performance-on-every-platform).
 
 **Expected benefit:** Eliminate unnecessary idle callback traffic without claiming a battery gain.
 
