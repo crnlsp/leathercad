@@ -163,7 +163,7 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 - A scheduled run is `main`'s, at `main`'s commit, so its `headSha` never named what it tested. The schedule now starts `nightly.yml` again on `develop` (`gh workflow run --ref develop`) and does nothing else. That run is `develop`'s copy of the file at `develop`'s commit. A job `tested` reads the earlier runs at that commit (`?head_sha=`), job by job, and E2E's matrix is the platforms that have not passed there. Nothing of this runs on schedule until the file reaches `main` with 1.6; until then, run *Nightly* by hand on `develop`.
 - One job, `report`, holds `issues: write`, and only on `develop`; the jobs that run code hold none.
 - The first run on Windows and macOS failed about 380 tests on each. The causes, all fixed here: the development build ignored `XDG_CONFIG_HOME` and `XDG_STATE_HOME` off Linux, so every launch shared one profile; the window's 1280 × 840 and 860 × 600 were its outer size, so Windows opened 16 px short of the wide layout (`useContentSize`); both runners' screens are 1024 × 768 (set to 1920 × 1080 first); the tests pressed Ctrl where macOS takes ⌘, and killed a process that on Windows is not the app's.
-- Left with an issue each: #194 (Shift+F10 opens no menu on macOS; three specs skip there), #195 (a 230–320 ms frame gap during the long strap's PDF export on macOS; its spec fails the macOS nightly until fixed).
+- Left with an issue each: #194 (Shift+F10 opens no menu on macOS; four specs skip there), #195 (a 230–320 ms frame gap during the long strap's PDF export on macOS; its spec fails the macOS nightly until fixed).
 
 ### Task A4: A change-aware PR gate
 
