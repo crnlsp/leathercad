@@ -55,12 +55,10 @@ test('DPI-only changes resize both board cameras without moving millimetres or z
     await window.getByTestId('tool-select').click();
     await window.keyboard.press('ControlOrMeta+0');
     await expect(window.getByTestId('zoom-level')).toHaveText('100 %');
-    await test
-      .info()
-      .attach('runtime', {
-        body: JSON.stringify(await app.evaluate(() => process.versions)),
-        contentType: 'application/json',
-      });
+    await test.info().attach('runtime', {
+      body: JSON.stringify(await app.evaluate(() => process.versions)),
+      contentType: 'application/json',
+    });
     const canvas = window.getByTestId('editor-canvas');
     const box = (await canvas.boundingBox())!;
     const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
