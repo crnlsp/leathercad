@@ -1,4 +1,12 @@
-import { approxCmp, approxEq, approxGte, approxLte, formatMm, type Mm } from '@leathercad/core';
+import {
+  checkResourceLimit,
+  approxCmp,
+  approxEq,
+  approxGte,
+  approxLte,
+  formatMm,
+  type Mm,
+} from '@leathercad/core';
 import {
   MatOps,
   PathOps,
@@ -138,6 +146,7 @@ export const FOLD_CLEARANCE_MM = 15;
  * taped across sheets, as drawn.
  */
 export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult {
+  checkResourceLimit('features', scene.parts.length);
   const area = contentAreaMm(setup);
   const asDrawn = layOut(scene.parts, area, false);
   const turning = layOut(scene.parts, area, true);
@@ -147,10 +156,15 @@ export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult
       ? turning
       : asDrawn;
 
+  // Count both tiled pages and assembly maps before allocating any tile grid.
+  // Choose the turning layout first: an expensive as-drawn option may fit whole turned.
+  const maps = chosen.oversized.filter(({ grid }) => grid.rows > 1 && grid.columns > 1).length;
+  checkResourceLimit('pages', chosen.sheets + maps);
   const pages: Page[] = chosen.packed.map((placements, index) => ({ index, placements }));
 
   // Then each part too large for a sheet, on sheets of its own.
-  const tiled = chosen.oversized.map(({ part, tiles }) => {
+  const tiled = chosen.oversized.map(({ part }) => {
+    const tiles = tile(part, area);
     for (const one of tiles) {
       pages.push({
         index: pages.length,
@@ -194,7 +208,7 @@ interface Area {
 /** One way to lay the parts out, and what it costs in sheets. */
 interface Layout {
   readonly packed: PlacedPart[][];
-  readonly oversized: ReadonlyArray<{ readonly part: ExportPart; readonly tiles: Tile[] }>;
+  readonly oversized: ReadonlyArray<{ readonly part: ExportPart; readonly grid: TileGrid }>;
   /** Every sheet, packed and taped. */
   readonly sheets: number;
   readonly taped: number;
@@ -202,13 +216,13 @@ interface Layout {
 
 function layOut(parts: readonly ExportPart[], area: Area, mayTurn: boolean): Layout {
   const ways: Footprint[][] = [];
-  const oversized: Array<{ part: ExportPart; tiles: Tile[] }> = [];
+  const oversized: Array<{ part: ExportPart; grid: TileGrid }> = [];
   for (const part of parts) {
     const options = [asDrawn(part, area), ...(mayTurn ? [turned(part, area)] : [])].filter(
       (option) =>
         approxLte(option.widthMm, area.widthMm) && approxLte(option.heightMm, area.heightMm),
     );
-    if (options.length === 0) oversized.push({ part, tiles: tile(part, area) });
+    if (options.length === 0) oversized.push({ part, grid: tileGrid(part, area) });
     else ways.push(options);
   }
 
@@ -220,7 +234,7 @@ function layOut(parts: readonly ExportPart[], area: Area, mayTurn: boolean): Lay
     );
     if (packed.length === 0 || sheets.length < packed.length) packed = sheets;
   }
-  const taped = oversized.reduce((sum, entry) => sum + entry.tiles.length, 0);
+  const taped = oversized.reduce((sum, entry) => sum + entry.grid.rows * entry.grid.columns, 0);
   return { packed, oversized, sheets: packed.length + taped, taped };
 }
 
@@ -470,7 +484,12 @@ function packingWidth(part: ExportPart, printableWidthMm: Mm): Mm {
  * (docs/printing.md §5.2). Row by row from the top left. A taped part is
  * never turned: it is taped only when it does not fit whole either way.
  */
-function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
+interface TileGrid {
+  readonly columns: number;
+  readonly rows: number;
+}
+
+function tileGrid(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): TileGrid {
   const region = { ...part.boundsMm, maxY: part.boundsMm.maxY + LABEL_HEIGHT_MM };
   const width = RectOps.width(region);
   const height = RectOps.height(region);
@@ -484,6 +503,17 @@ function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
 
   const columns = Math.max(1, Math.ceil((width - TILE_OVERLAP_MM) / stepX));
   const rows = Math.max(1, Math.ceil((height - TILE_OVERLAP_MM) / stepY));
+
+  return { columns, rows };
+}
+
+function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
+  const { columns, rows } = tileGrid(part, area);
+  const region = { ...part.boundsMm, maxY: part.boundsMm.maxY + LABEL_HEIGHT_MM };
+  const width = RectOps.width(region);
+  const height = RectOps.height(region);
+  const stepX = area.widthMm - TILE_OVERLAP_MM;
+  const stepY = area.heightMm - TILE_OVERLAP_MM;
 
   // Centred — the grid's spare falls evenly on every side, not all at one —
   // unless that puts a join on a fold, when the grid slides along its spare.

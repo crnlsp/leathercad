@@ -1,6 +1,12 @@
 import { formatEditable } from '@leathercad/core';
 import { setPageSetup, type DocumentStore } from '@leathercad/document';
-import { PAPER_SIZES, type Orientation, type PaperName, type Project } from '@leathercad/domain';
+import {
+  PAPER_NAMES,
+  PAPER_SIZES,
+  type Orientation,
+  type PaperName,
+  type Project,
+} from '@leathercad/domain';
 import { contentAreaMm, isScaleCheckOnly, type SheetPlan } from '@leathercad/export';
 import { useEffect, useId, useRef, useState } from 'react';
 
@@ -10,7 +16,7 @@ import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
 import type { Room } from './panelLayout.js';
 import { describeChoice, describeTaped } from './sheetWords.js';
-import { paperOptionsFor, sheetPlanFor } from './sheets.js';
+import { paperLimitFor, paperOptionsFor, sheetPlanFor } from './sheets.js';
 import { Tooltip } from './Tooltip.js';
 
 const mm = (value: number): string => formatEditable(value, 1);
@@ -206,16 +212,21 @@ export function PaperFields({
             store.dispatch(setPageSetup(event.target.value as PaperName, orientation))
           }
         >
-          {options
-            .filter((option) => option.orientation === orientation)
-            .map((option) => (
-              <option key={option.paper} value={option.paper}>
-                {t('projectBar.paperPopover.option', {
-                  paper: option.paper,
-                  count: option.plan.sheets.length,
-                })}
+          {PAPER_NAMES.map((name) => {
+            const option = options.find(
+              (each) => each.paper === name && each.orientation === orientation,
+            );
+            return (
+              <option key={name} value={name} disabled={option === undefined}>
+                {option === undefined
+                  ? t('projectBar.paperPopover.limited', { paper: name })
+                  : t('projectBar.paperPopover.option', {
+                      paper: name,
+                      count: option.plan.sheets.length,
+                    })}
               </option>
-            ))}
+            );
+          })}
         </select>
       </label>
       <div className="field" role="group" aria-labelledby={`${ids}orientation`}>
@@ -235,6 +246,7 @@ export function PaperFields({
                   className={orientation === way ? 'segment active' : 'segment'}
                   data-testid={`${testPrefix}paper-${way}`}
                   aria-pressed={orientation === way}
+                  disabled={paperLimitFor(project, paper, way) !== undefined}
                   onClick={() => store.dispatch(setPageSetup(paper, way))}
                 >
                   {t(`printPreview.${way}`)}

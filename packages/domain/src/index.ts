@@ -131,3 +131,5 @@ export { PROBLEM_CODES, problem, problemKey, sameProblem, subjectOf } from './pr
 
 export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
 export { MIN_PITCH_MM, distributeHoles, splitAtCorners } from './stitch.js';
+
+export { checkProjectSize } from './resourceSize.js';

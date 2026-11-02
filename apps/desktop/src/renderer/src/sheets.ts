@@ -1,3 +1,4 @@
+import type { ResourceLimitError } from '@leathercad/core';
 import {
   evaluate,
   type Orientation,
@@ -48,6 +49,7 @@ interface Derived {
   statuses?: ReadonlyMap<string, PartPrintStatus>;
   plan?: SheetPlan;
   options?: readonly PaperOption[];
+  paperLimits?: ReadonlyMap<string, ResourceLimitError>;
   /** The Sheets view's pages, and the words they were made in. */
   pages?: { readonly i18n: I18n; readonly pages: readonly SheetsPage[] };
 }
@@ -119,13 +121,27 @@ export function paperOptionsFor(project: Project): readonly PaperOption[] {
   if (derived.options === undefined) {
     const chosen = sheetPlanFor(project);
     const { paper, orientation } = project.settings;
-    derived.options = planEveryPaper(sceneFor(project)).map((option) =>
+    const limits = new Map<string, ResourceLimitError>();
+    derived.options = planEveryPaper(sceneFor(project), (error, paper, orientation) => {
+      limits.set(`${paper}:${orientation}`, error);
+    }).map((option) =>
       option.paper === paper && option.orientation === orientation
         ? { ...option, plan: chosen }
         : option,
     );
+    derived.paperLimits = limits;
   }
   return derived.options;
+}
+
+/** Why an alternate paper is unavailable, without attempting that allocation again. */
+export function paperLimitFor(
+  project: Project,
+  paper: PaperName,
+  orientation: Orientation,
+): ResourceLimitError | undefined {
+  paperOptionsFor(project);
+  return derivedFor(project).paperLimits?.get(`${paper}:${orientation}`);
 }
 
 /**

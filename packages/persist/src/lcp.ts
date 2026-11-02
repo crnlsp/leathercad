@@ -1,8 +1,15 @@
+import { ResourceLimitError } from '@leathercad/core';
 import type { Project } from '@leathercad/domain';
-import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
+import { zipSync, strToU8, strFromU8 } from 'fflate';
 
-import { graphProblems, partStructureProblems, type Problem } from '@leathercad/domain';
+import {
+  checkProjectSize,
+  graphProblems,
+  partStructureProblems,
+  type Problem,
+} from '@leathercad/domain';
 
+import { checkJsonSize, readArchive } from './archive.js';
 import { CURRENT_FORMAT_VERSION, NewerFormatError, migrate } from './migrations/index.js';
 import { ManifestSchema, ProjectSchema, type Manifest } from './schema.js';
 
@@ -88,8 +95,9 @@ export interface LoadedProject {
 export function loadProject(bytes: Uint8Array): LoadedProject {
   let entries: Record<string, Uint8Array>;
   try {
-    entries = unzipSync(bytes);
+    entries = readArchive(bytes, [MIMETYPE_ENTRY, MANIFEST_ENTRY, DOCUMENT_ENTRY]);
   } catch (error) {
+    if (error instanceof ResourceLimitError) throw error;
     throw new InvalidProjectFileError(
       `Not a readable .lcp archive: ${error instanceof Error ? error.message : String(error)}`,
     );
@@ -104,6 +112,7 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
 
   const manifest = parseEntry(entries, MANIFEST_ENTRY, ManifestSchema, 'manifest');
   const rawDocument = parseJson(entries, DOCUMENT_ENTRY);
+  checkJsonSize(rawDocument);
 
   // Refused here rather than in `migrate`, which sees only the document: the
   // manifest says which version saved the file, and that is the version the
@@ -126,6 +135,7 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
   // (S1–S4). A file can satisfy one and break the other, and everything past
   // this point assumes a sound graph — so a broken one is refused here, naming
   // the feature, rather than found later as a stitch line following nothing.
+  checkProjectSize(result.data as Project);
   const problems = [
     ...graphProblems(result.data as Project),
     // S5 and S6: one outline per part, and outlines that enclose something.
@@ -150,7 +160,7 @@ function named(p: Problem): string {
 
 /** Reads only the manifest — cheap, and enough for a version check. */
 export function readManifest(bytes: Uint8Array): Manifest {
-  const entries = unzipSync(bytes);
+  const entries = readArchive(bytes, [MANIFEST_ENTRY]);
   return parseEntry(entries, MANIFEST_ENTRY, ManifestSchema, 'manifest');
 }
 

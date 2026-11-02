@@ -276,6 +276,12 @@ A pattern document is a few hundred kilobytes; 200 levels of history with struct
 not a memory concern. If it ever becomes one, immer's `produceWithPatches` converts the history to
 patches without changing any calling code.
 
+The desktop gives `DocumentStore` an admission check using its existing sheet-plan derivation
+(PERF-012). Construction, reloads, commands and previews are checked before a new document is
+published. A resource refusal keeps the previous document and history and is exposed as transient
+store state for the interface. Evaluation, distribution and pagination also enforce their budgets
+headlessly; see [Resource limits](resource-limits.md). No export import enters `document`.
+
 **Transactions** handle dragging. A drag produces hundreds of intermediate states; only the final
 one belongs in history:
 

@@ -85,7 +85,7 @@ import {
   type ProjectTab,
 } from './projectTabs.js';
 import { TabContextMenu, TabStrip } from './TabStrip.js';
-import { printStatusFor, releaseDerived } from './sheets.js';
+import { printStatusFor, releaseDerived, sheetPlanFor } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
 import { PointerValue, usePointerValue } from './pointerValue.js';
@@ -169,7 +169,13 @@ export function App({
   const blank = useCallback(() => emptyDocument(nextId(), ''), [nextId]);
   const tabFor = useCallback(
     (opened: Document, untitled = 0): ProjectTab =>
-      newTab(nextId(), new DocumentStore(opened), untitled),
+      newTab(
+        nextId(),
+        new DocumentStore(opened, (document) => {
+          sheetPlanFor(document.project);
+        }),
+        untitled,
+      ),
     [nextId],
   );
   // None at first: the start screen, unless the last session's tabs come back.
@@ -616,7 +622,10 @@ export function App({
       entries.map(async (entry): Promise<TemplateChoice> => {
         try {
           const data = await host.readTemplate(entry.id);
-          return { entry, project: data === null ? null : loadProject(data).project };
+          if (data === null) return { entry, project: null };
+          const { project } = loadProject(data);
+          evaluate(project); // Refuse oversized previews inside the same file boundary.
+          return { entry, project };
         } catch {
           return { entry, project: null };
         }
@@ -1764,7 +1773,11 @@ export function App({
                     </>
                   )}
                 </span>
-                {status?.notice !== null && status?.notice !== undefined ? (
+                {storeState.resourceLimit !== null ? (
+                  <span className="status-error" data-testid="file-error" role="alert">
+                    {fileErrorText(storeState.resourceLimit, t)}
+                  </span>
+                ) : status?.notice !== null && status?.notice !== undefined ? (
                   <span className="status-error" data-testid="tool-notice">
                     {describeProblem(status.notice, t)}
                   </span>
@@ -1773,7 +1786,9 @@ export function App({
                     {bridgeError ?? fileErrorText(tab.file.error, t)}
                   </span>
                 ) : null}
-                {tab.file.error === null && <WrittenNote written={file.written} />}
+                {tab.file.error === null && storeState.resourceLimit === null && (
+                  <WrittenNote written={file.written} />
+                )}
               </span>
 
               {/* Always all three (R-04): whatever shape a panel is in, its chip
@@ -2029,8 +2044,10 @@ export function App({
 
         {recovery.offer !== null && (
           <RecoveryDialog
-            projectName={recovery.offer.project.name}
+            projectName={recovery.offer.project?.name ?? ''}
+            canRecover={recovery.error === null}
             savedAt={recovery.offer.savedAt}
+            error={recovery.error === null ? null : fileErrorText(recovery.error, t)}
             onRecover={() => void recovery.recover()}
             onDecline={() => void recovery.decline()}
           />

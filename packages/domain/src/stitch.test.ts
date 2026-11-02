@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS, ResourceLimitError } from '@leathercad/core';
 import { PathOps, Shapes, offsetPath, uniformRadii } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -202,5 +203,24 @@ describe('the pitch floor, at the one place holes are made (5.6)', () => {
 
   it('generates at the floor', () => {
     expect(holesOn(straightRun(100), { ...CONTINUOUS, pitchMm: MIN_PITCH_MM }).count).toBe(201);
+  });
+});
+
+describe('hole allocation preflight (PERF-012)', () => {
+  it('refuses the audit’s 100 m square before distributing any of its runs', () => {
+    const square = Shapes.roundedRect({ x: 0, y: 0 }, 100_000, 100_000, 0);
+    expect(() => distributeHoles(square, { ...AT_CORNERS, pitchMm: 0.5 })).toThrowError(
+      ResourceLimitError,
+    );
+  });
+
+  it('counts all runs and the holes already made elsewhere in the project', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 100 }), (length) => {
+        expect(() =>
+          distributeHoles(straightRun(length), AT_CORNERS, RESOURCE_LIMITS.holes - 1),
+        ).toThrowError(ResourceLimitError);
+      }),
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { RESOURCE_LIMITS, ResourceLimitError } from '@leathercad/core';
 import { PathOps, uniformRadii } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -5,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { evaluate, evaluationErrors, resolvedFeatures } from './evaluate.js';
 import type { CutContour, Feature, Part, Project } from './feature.js';
 import { DEFAULT_SETTINGS, roleOf } from './feature.js';
-import { mirrorChain } from './workloads.js';
+import { mirrorChain, tracedOutline } from './workloads.js';
 
 function rectFeature(id: string, width: number, height: number, radius = 0): CutContour {
   return {
@@ -381,3 +382,115 @@ function counted(project: Project, reads: { count: number }): Project {
     })),
   };
 }
+
+describe('evaluation work limits (PERF-012)', () => {
+  function holeFeatures(count: number): Feature[] {
+    return [
+      {
+        id: 'line',
+        kind: 'stitch-line',
+        name: 'Line',
+        visible: true,
+        locked: false,
+        source: {
+          kind: 'path',
+          path: PathOps.polyline([
+            { x: 0, y: 0 },
+            { x: 50_000, y: 0 },
+          ]),
+        },
+      },
+      ...Array.from({ length: count }, (_, i): Feature => ({
+        id: `holes-${i}`,
+        kind: 'stitch-hole-set',
+        name: `Holes ${i}`,
+        visible: true,
+        locked: false,
+        source: {
+          kind: 'derived',
+          sourceId: 'line',
+          op: {
+            type: 'stitch-holes',
+            pitchMm: 0.5,
+            mode: 'fit-whole',
+            corners: 'continuous',
+          },
+        },
+      })),
+    ];
+  }
+
+  it('counts cached hole sets too, refusing the whole evaluation rather than dropping holes', () => {
+    const features = holeFeatures(3);
+    // Each fits on its own. The full request does not, even when every entry is cached.
+    for (const hole of features.slice(1)) evaluate(projectWith([features[0]!, hole]));
+    expect(() => evaluate(projectWith(features))).toThrowError(ResourceLimitError);
+  });
+
+  it('refuses excessive stored segments before building anchors or derived paths', () => {
+    const path = PathOps.polyline([
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ]);
+    const feature: Feature = {
+      id: 'many',
+      name: 'Many',
+      kind: 'marking-line',
+      purpose: 'alignment',
+      visible: true,
+      locked: false,
+      source: {
+        kind: 'path',
+        path: {
+          closed: false,
+          segments: Array.from({ length: RESOURCE_LIMITS.segments + 1 }, () => path.segments[0]!),
+        },
+      },
+    };
+    expect(() => evaluate(projectWith([feature]))).toThrowError(ResourceLimitError);
+  });
+});
+
+it('bounds features in aggregate before indexing them (PERF-012)', () => {
+  fc.assert(
+    fc.property(fc.integer({ min: 1, max: 50 }), (extra) => {
+      const feature = rectFeature('f', 50, 40);
+      const project = projectWith(
+        Array.from({ length: RESOURCE_LIMITS.features + extra }, () => feature),
+      );
+      expect(() => evaluate(project)).toThrowError(ResourceLimitError);
+    }),
+  );
+});
+
+it('still evaluates forty 500-point traced parts whole (PERF-012)', () => {
+  const base = tracedOutline(500);
+  const project: Project = {
+    ...base,
+    parts: Array.from({ length: 40 }, (_, i): Part => ({
+      ...base.parts[0]!,
+      id: `part-${i}`,
+      features: base.parts[0]!.features.map((feature): Feature => {
+        const id = `${i}-${feature.id}`;
+        if (feature.kind === 'measurement' || feature.kind === 'text-label')
+          return { ...feature, id };
+        return {
+          ...feature,
+          id,
+          source:
+            feature.source.kind === 'derived'
+              ? { ...feature.source, sourceId: `${i}-${feature.source.sourceId}` }
+              : feature.source,
+        };
+      }),
+    })),
+  };
+  const resolved = evaluate(project);
+  expect(evaluationErrors(resolved)).toEqual([]);
+  const holes = [...resolvedFeatures(resolved)].reduce(
+    (sum, feature) => sum + (feature.holes?.count ?? 0),
+    0,
+  );
+  expect(holes).toBeGreaterThan(18_000);
+  expect(resolved.parts).toHaveLength(40);
+});

@@ -13,19 +13,24 @@ import { useI18n } from './i18n.js';
 export function RecoveryDialog({
   projectName,
   savedAt,
+  error,
+  canRecover = true,
   onRecover,
   onDecline,
 }: {
   projectName: string;
   savedAt: string;
+  error?: string | null;
+  canRecover?: boolean;
   onRecover: () => void;
   onDecline: () => void;
 }) {
   const { t, locale } = useI18n();
   const recoverRef = useRef<HTMLButtonElement>(null);
+  const declineRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    recoverRef.current?.focus();
-  }, []);
+    (canRecover ? recoverRef : declineRef).current?.focus();
+  }, [canRecover]);
 
   const name = projectName.trim() === '' ? t('app.untitled') : projectName.trim();
   // In the interface's language, and the system's regional form of it.
@@ -46,8 +51,19 @@ export function RecoveryDialog({
       >
         <h3 id="recovery-dialog-title">{t('recovery.title')}</h3>
         <p id="recovery-dialog-detail">{t('recovery.detail', { name, when })}</p>
+        {error !== null && error !== undefined && (
+          <p role="alert" className="status-error">
+            {error}
+          </p>
+        )}
         <div className="dialog-actions">
-          <button type="button" className="tool" data-testid="recovery-decline" onClick={onDecline}>
+          <button
+            ref={declineRef}
+            type="button"
+            className="tool"
+            data-testid="recovery-decline"
+            onClick={onDecline}
+          >
             {t('recovery.decline')}
           </button>
           <button
@@ -56,6 +72,7 @@ export function RecoveryDialog({
             className="tool"
             data-testid="recovery-recover"
             onClick={onRecover}
+            disabled={!canRecover}
           >
             {t('recovery.recover')}
           </button>

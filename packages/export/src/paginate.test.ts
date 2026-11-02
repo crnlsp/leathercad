@@ -1,3 +1,4 @@
+import { ResourceLimitError } from '@leathercad/core';
 import { DEFAULT_SETTINGS, ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
 import { PathOps, RectOps } from '@leathercad/geometry';
 import fc from 'fast-check';
@@ -591,4 +592,26 @@ describe('tiling, as a property (7.2a)', () => {
       }),
     );
   });
+});
+
+// A small scene must not become hundreds of thousands of allocated tiles.
+describe('page preflight (PERF-012)', () => {
+  it('refuses the audit’s 100 m square before allocating its tile grid', () => {
+    expect(() =>
+      paginate(scene([part('huge', 100_000, 100_000)]), DEFAULT_PAGE_SETUP),
+    ).toThrowError(ResourceLimitError);
+  });
+});
+
+it('bounds the sum of tiled parts before allocating either grid (PERF-012)', () => {
+  const parts = Array.from({ length: 4 }, (_, i) => part(String(i), 50_000, 20));
+  expect(() => paginate(scene(parts), DEFAULT_PAGE_SETUP)).toThrowError(ResourceLimitError);
+});
+
+it('includes assembly maps in the sheet work limit (PERF-012)', () => {
+  const width = AREA.widthMm + 19 * (AREA.widthMm - TILE_OVERLAP_MM);
+  const height = AREA.heightMm + 24 * (AREA.heightMm - TILE_OVERLAP_MM) - 5;
+  expect(() =>
+    paginate(scene([part('a', width, height), part('b', width, height)]), DEFAULT_PAGE_SETUP),
+  ).toThrowError(ResourceLimitError);
 });
