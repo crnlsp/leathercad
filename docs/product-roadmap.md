@@ -3,7 +3,7 @@
 **What this is:** where LeatherCAD is going, in what order, and what each step depends on — drawn.
 What LeatherCAD is and is not is [`product-spec.md`](product-spec.md); each item's scope, status and
 slices are [`roadmap.md`](roadmap.md). This page owns neither: it owns the direction.
-**Released:** v1.3.5 · **In progress:** 1.5 · **Last updated:** 2026-10-17
+**Released:** v1.5.0 · **In progress:** 1.6 · **Last updated:** 2026-10-18
 
 ---
 
@@ -45,8 +45,8 @@ flowchart LR
 | Status | Means | Written in |
 |---|---|---|
 | **Built** | Released, or merged and checked | [`CHANGELOG.md`](../CHANGELOG.md), [`history/`](history/) |
-| **In progress** | The release being built: 1.5 | [`roadmap.md`](roadmap.md), *the next release* |
-| **Committed** | The release after it: 1.6 | [`roadmap.md`](roadmap.md) |
+| **In progress** | The release being built: 1.6 | [`roadmap.md`](roadmap.md), *the next release* |
+| **Committed** | The release after it, once one is named | [`roadmap.md`](roadmap.md) |
 | **Candidate** | A milestone in *Later*, with a theme and a place in the order. Not a promise: it becomes a release only when it is next | [`roadmap.md`](roadmap.md#later) |
 | **Exploring** | Worth thinking about; neither planned nor rejected | [`roadmap.md`](roadmap.md#exploring--neither-planned-nor-rejected) |
 | **Not planned** | Decided against, with a reason | [`roadmap.md`](roadmap.md#not-planned), [`product-spec.md`](product-spec.md) §2 |
@@ -120,7 +120,7 @@ needs:
 | The maker asks | From the outline alone? | What else it needs | Where |
 |---|---|---|---|
 | Are the stitch holes too close to an edge? | Yes — built (`HOLE_TOO_CLOSE_TO_EDGE`) | — | Built |
-| Does a hardware hole clear the edge, the stitching, a fold? | Yes, measured by the hole's rim — today by its centre | Nothing new | Q33 (1.6), 9.23 |
+| Does a hardware hole clear the edge, the stitching, a fold? | Yes, measured by the hole's rim — the edge built (Q33), the rest not | Nothing new | 9.23 |
 | Do two mating seams have the same holes, lined up? | No: nothing says which edges are sewn together | A seam | 9.6, 9.13 |
 | Will a card go in this pocket? | Partly: the clear size inside the stitching is geometry | What it must hold; ease, which grows with thickness | 9.14, then 9.1 |
 | Will these banknotes go in? | As the card, with the note's size typed | The same | 9.14 |
@@ -134,8 +134,7 @@ needs:
 
 ```mermaid
 flowchart TB
-  r15["1.5 · The window, refined<br/>in progress"]:::progress
-  r16["1.6 · After the refinement<br/>committed"]:::committed
+  r16["1.6 · After the refinement<br/>in progress"]:::progress
   fit["Pieces that fit<br/>seams match, pockets hold"]:::candidate
   explain["Problems that explain themselves<br/>why it matters, a fix to preview"]:::candidate
   start["Start from something<br/>templates, copy and paste, a library"]:::candidate
@@ -143,7 +142,7 @@ flowchart TB
   thick["Leather has thickness<br/>folds, gussets, skiving, grain"]:::candidate
   hw["Hardware that fits<br/>real sizes, clearance, placed from an edge"]:::candidate
   geo["Robust shapes<br/>offsetting, booleans · alongside"]:::candidate
-  r15 --> r16 --> fit --> explain --> start --> bring --> thick --> hw
+  r16 --> fit --> explain --> start --> bring --> thick --> hw
   geo -.-> bring
   classDef progress fill:#f9a825,stroke:#b26a00,color:#1a1a1a
   classDef committed fill:#1565c0,stroke:#0d47a1,color:#ffffff
@@ -156,11 +155,10 @@ release. Each milestone's items, needs, *Done when* and *Not in it* are in
 
 | Milestone | For the maker | Main items | Needs first |
 |---|---|---|---|
-| [1.5 — The window, refined](roadmap.md#15--the-next-release) · *in progress* | The pattern reads at every zoom, the board gets the room, sizes are typed where the eye is | U.1 to U.20 | — |
-| [1.6 — After the refinement](roadmap.md#16--after-the-refinement) · *committed* | What 1.x left: update discovery, guides, drafting dimensions, Windows printing, calibration, taped pieces finished; problems keep their identity | 8.9, 3.10, 4.10b, 7.6c, 7.5, 7.2, Q4, Q33 | 1.5 |
+| [1.6 — After the refinement](roadmap.md#16--the-next-release) · *in progress* | What 1.x left: update discovery, guides, drafting dimensions, calibration, taped pieces finished; problems keep their identity | 8.9, 3.10, 4.10b, 7.5, 7.2, Q4, Q33 | — |
 | [Pieces that fit](roadmap.md#pieces-that-fit) | Mating seams have the same holes, lined up; a pocket says whether the card goes in; the thread and leather are known before buying | 9.6, 9.12, 9.13, 9.14 | Nothing unbuilt |
 | [Problems that explain themselves](roadmap.md#problems-that-explain-themselves) | Every problem says why it matters; a warning that is meant can be accepted; a safe fix is one click, previewed and undoable | 9.15, Q34, 9.16, 9.17 | Q4; seams for the fix most worth having |
-| [Start from something](roadmap.md#start-from-something) | A new project starts from a worked one; good parts travel between projects | 9.18, 8.8b, 9.7 | Built mechanisms (8.3, 4.3b) |
+| [Start from something](roadmap.md#start-from-something) | A new project starts from a worked one; good parts travel between projects | 9.18, 8.8b, 9.7, 9.25 | Built mechanisms (8.3, 4.3b) |
 | [Bring patterns in](roadmap.md#bring-patterns-in) | An Inkscape or Illustrator pattern comes in at the right size; a scan sits under the board at true scale | 9.19, 9.20, 9.2 | 9.19; an ADR for the parser; images in the `.lcp` |
 | [Leather has thickness](roadmap.md#leather-has-thickness) | A fold or a gusset gets the length its leather needs; skiving and grain print | 9.1, 9.21, 9.22 | Seams; where thickness lives |
 | [Hardware that fits](roadmap.md#hardware-that-fits) | Hardware placed at its real size, from an edge, and checked against everything near it | 9.23, 9.3, 9.24 | Q33 |
@@ -180,8 +178,8 @@ Two small maps, because they answer two questions. First: what the checks are bu
 
 ```mermaid
 flowchart LR
-  q4["Q4 · problems keep<br/>their identity · 1.6"]:::committed
-  q33["Q33 · hardware measured<br/>by its rim · 1.6"]:::committed
+  q4["Q4 · problems keep<br/>their identity · 1.6"]:::progress
+  q33["Q33 · hardware measured<br/>by its rim · 1.6"]:::progress
   s96["9.6 Seams"]:::candidate
   t912["9.12 Thread and the<br/>cutting list"]:::candidate
   m913["9.13 Alignment marks"]:::candidate
@@ -203,7 +201,7 @@ flowchart LR
   h93 -.->|"footprints"| h923
   s96 -.-> stack
   h93 -.->|"post length"| stack
-  classDef committed fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  classDef progress fill:#f9a825,stroke:#b26a00,color:#1a1a1a
   classDef candidate fill:#e3f2fd,stroke:#1565c0,color:#0d3c78
   classDef exploring fill:#f5f5f5,stroke:#757575,color:#333333,stroke-dasharray: 5 4
 ```
@@ -212,8 +210,8 @@ flowchart LR
   gusset's length all read a seam; nothing else unlocks as much.
 - **Q4 before acceptance.** A warning the maker accepted has to find its problem again after an
   edit, and problems have no stable identity yet.
-- **Q33 before hardware rules.** Every clearance rule starts from the rim; today's rules read the
-  centre.
+- **Q33 before hardware rules.** Every clearance rule starts from the rim, which the edge rules
+  have read since Q33 (2026-10-25).
 - A dotted line is a refinement, not a block: thread can be estimated before thickness is known, and
   pocket fit works with an ease the maker types.
 

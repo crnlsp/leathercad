@@ -100,7 +100,11 @@ function anchorAt(project: Project, id: FeatureId, k: number): Vec2 | null {
 
 function refs(project: Project, id: FeatureId): readonly [number, number] {
   const feature = findFeature(project, id)!.feature;
-  if (feature.source.kind === 'measurement') {
+  if (
+    feature.source.kind === 'measurement' &&
+    feature.source.a.kind === 'anchor' &&
+    feature.source.b.kind === 'anchor'
+  ) {
     return [feature.source.a.anchor, feature.source.b.anchor];
   }
   if (feature.source.kind === 'derived' && feature.source.op.type === 'offset') {

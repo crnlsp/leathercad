@@ -41,23 +41,31 @@ export function featureTree(part: Part): readonly FeatureNode[] {
     return sourceId !== feature.id && byId.has(sourceId) ? sourceId : null;
   };
 
-  /** Whether following sources from here comes back to where it started. */
-  const onCycle = (feature: Feature): boolean => {
-    const seen = new Set<FeatureId>([feature.id]);
-    let at = parentOf(feature);
-    while (at !== null) {
-      if (seen.has(at)) return true;
-      seen.add(at);
+  // The features whose sources, followed up within the part, come back to one
+  // already passed — on a cycle, or leading into one — found in one pass
+  // (PERF-015): each walk up stops at a feature already settled, and takes its
+  // answer, so every feature is walked once rather than once for each feature
+  // below it.
+  const state = new Map<FeatureId, 'walking' | 'loops' | 'ends'>();
+  const walked: FeatureId[] = [];
+  for (const feature of part.features) {
+    let at: FeatureId | null = feature.id;
+    while (at !== null && !state.has(at)) {
+      walked.push(at);
+      state.set(at, 'walking');
       at = parentOf(byId.get(at)!);
     }
-    return false;
-  };
+    // Back to one walked just now, or up to one that loops: all of them loop.
+    const answer = at === null || state.get(at) === 'ends' ? 'ends' : 'loops';
+    for (const id of walked) state.set(id, answer);
+    walked.length = 0;
+  }
 
   const children = new Map<FeatureId, Feature[]>();
   const roots: Feature[] = [];
 
   for (const feature of part.features) {
-    const parent = onCycle(feature) ? null : parentOf(feature);
+    const parent = state.get(feature.id) === 'loops' ? null : parentOf(feature);
     if (parent === null) {
       roots.push(feature);
       continue;

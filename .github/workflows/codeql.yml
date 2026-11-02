@@ -6,11 +6,20 @@ name: CodeQL
 
 on:
   push:
-    # main is production; develop is where development lands.
-    branches: [main, develop]
+    # develop is where development lands; main gets only what develop tested.
+    branches: [develop]
+  # Analyses TypeScript and JavaScript, so a change to documentation alone has
+  # nothing for it to read. Not a required check, so a run skipped here never
+  # leaves a pull request waiting for it.
   pull_request:
+    paths-ignore: ['docs/**', '**/*.md', 'packaging/aur/**']
   schedule:
     - cron: '41 5 * * 3'
+
+# A newer push makes the older analysis moot.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -29,10 +38,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: javascript-typescript
           build-mode: none
           queries: security-and-quality
 
-      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1

@@ -1,30 +1,41 @@
-import type { Document, DocumentStore } from '@leathercad/document';
+import { ResourceLimitError } from '@leathercad/core';
+import { setProjectName, type Document } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
-import { exportDxf, exportPdf, exportSvg, type TiledPart } from '@leathercad/export';
+import { exportDxf, exportSvg, type ExportRole, type TiledPart } from '@leathercad/export';
 import {
   CURRENT_FORMAT_VERSION,
   InvalidProjectFileError,
   LCP_EXTENSION,
   NewerFormatError,
   loadProject,
-  saveProject,
 } from '@leathercad/persist';
-import type { PlatformHost } from '@leathercad/platform';
+import type { PlatformHost, TabCamera, TemplateSave } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
+import { encodeProject } from './lcpEncoder.js';
+import { writePdf, PdfWriterError } from './pdfWriter.js';
 import { describeProblemWithSubject } from './problemText.js';
-import { sheetPlanFor } from './sheets.js';
+import {
+  isUnnamed,
+  nextUntitled,
+  projectNameOf,
+  type ProjectTab,
+  type ProjectTabs,
+} from './projectTabs.js';
+import { drawingSceneFor, sheetPlanFor } from './sheets.js';
 
-export interface ProjectFileState {
-  readonly path: string | null;
-  /**
-   * What went wrong with the last save, open or export, as it was thrown: put
-   * into words where it is shown (`fileErrorText`), so it follows a change of
-   * language like everything else.
-   */
-  readonly error: unknown;
-  readonly savedAt: string | null;
+/** A save or an export that reached the disk. A new one for every write. */
+export interface Written {
+  readonly kind: 'save' | 'export';
+  readonly path: string;
+  /** Counts writes, so writing the same file twice is acknowledged twice. */
+  readonly serial: number;
+}
+
+/** The last part of a path, on any platform: Windows' separator is a backslash. */
+export function fileName(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
 }
 
 /**
@@ -34,6 +45,12 @@ export interface ProjectFileState {
  * the operating system refusing a write — is said as it was reported.
  */
 export function fileErrorText(error: unknown, t: Translate): string {
+  if (error instanceof ResourceLimitError) {
+    return t('file.resourceLimit', {
+      resource: t(`file.resources.${error.resource}`),
+      limit: error.limit,
+    });
+  }
   if (error instanceof NewerFormatError) {
     return t(error.savedBy === undefined ? 'file.newer' : 'file.newerNamed', {
       version: error.savedBy ?? '',
@@ -44,6 +61,11 @@ export function fileErrorText(error: unknown, t: Translate): string {
   if (error instanceof InvalidProjectFileError && error.problems.length > 0) {
     const problems = error.problems.map((p) => describeProblemWithSubject(p, t)).join(' ');
     return t('file.invalid', { problems });
+  }
+  if (error instanceof PdfWriterError) {
+    return t(error.kind === 'failed' ? 'file.pdfFailed' : 'file.pdfUnavailable', {
+      reason: error.detail,
+    });
   }
   return error instanceof Error ? error.message : String(error);
 }
@@ -96,41 +118,50 @@ export function exportReportFor(
 }
 
 export function useProjectFile(
-  store: DocumentStore,
+  tabs: ProjectTabs,
   host: () => PlatformHost,
   appVersion: string,
+  /**
+   * A tab of its own for a project: its own store and history (8.12); for a
+   * new one, which *Untitled* it is.
+   */
+  tabFor: (document: Document, untitled?: number) => ProjectTab,
   /** A fresh, empty document, for *New*. */
   blank: () => Document,
   /** The interface's words, for the file dialogs. */
   t: Translate,
+  /** What went wrong opening a project with no tab open to say it in (8.12); null once one opens. */
+  onStartError: (error: unknown) => void,
 ): {
-  state: ProjectFileState;
   /** True once the project is written; false when the maker cancelled or the write failed. */
-  save: (forcePrompt?: boolean) => Promise<boolean>;
+  save: (tab: ProjectTab, forcePrompt?: boolean) => Promise<boolean>;
   open: () => Promise<void>;
   /**
-   * Opens a project the main process already granted — a recent project (8.2, 8.7).
-   * The caller asks about unsaved work first, as for `open`.
+   * Opens a project the main process already granted — a launch, a second
+   * launch, a recent project (8.2, 8.7, 8.11) — in a tab of its own, or goes
+   * to the tab that already has it.
    */
-  openPath: (target: string) => Promise<void>;
+  openPath: (target: string, restore?: TabRestore) => Promise<void>;
   /**
-   * Opens the sample project that ships with the app (8.3), **untitled** and
-   * unchanged: *Save* asks where, and closing it untouched asks nothing. The
-   * caller asks about unsaved work first, as for `open`.
+   * Work kept unsaved as the window last closed (8.12), in a tab of its own:
+   * unsaved, with the file it belongs to if it had one.
    */
-  openSample: () => Promise<void>;
-  /** Starts an empty, untitled project. The caller asks about unsaved work first. */
+  restoreKept: (data: Uint8Array, path: string | null, restore: TabRestore) => ProjectTab | null;
+  /** Starts an empty, untitled project in a tab of its own. */
   newProject: () => void;
+  /**
+   * A new project from a template (8.12), in a tab of its own: untitled and
+   * unchanged, so Save asks where and closing it untouched asks nothing, and
+   * a project of its own, with a new id. The template is never written.
+   */
+  newFromTemplate: (id: string) => Promise<void>;
+  /** Saves a tab's project as one of the maker's templates (8.12). */
+  saveAsTemplate: (tab: ProjectTab, name: string, replace: boolean) => Promise<TemplateSave>;
   /**
    * Opens a recovered project **untitled and unsaved** (5.3b): it has no path,
    * so *Save* asks where, and the file it once came from is never written.
    */
-  adoptRecovered: (project: Project) => void;
-  /**
-   * Whether the document differs from what was last saved or opened. By
-   * identity: undoing back to the saved document makes it clean again.
-   */
-  isDirty: () => boolean;
+  adoptRecovered: (project: Project) => ProjectTab;
   /**
    * Exports, then says what the maker should check. Null when they cancelled
    * or it failed — and null too when there is nothing to say, so a clean
@@ -138,34 +169,75 @@ export function useProjectFile(
    */
   exportPdfFile: (shown?: Uint8Array) => Promise<ExportReport | null>;
   /** The same, for a drawing as an SVG or a DXF (6.2, 6.5): written, not opened. */
-  exportDrawingFile: (format: DrawingFormat) => Promise<ExportReport | null>;
-  markSaved: () => void;
-  savedDocument: React.MutableRefObject<unknown>;
+  exportDrawingFile: (
+    format: DrawingFormat,
+    roles: readonly ExportRole[],
+  ) => Promise<ExportReport | null>;
+  /**
+   * Reads a tab's file again, as it was last saved (8.12), in the same tab:
+   * its history starts again there. The caller asks about unsaved work first.
+   */
+  reload: (tab: ProjectTab) => Promise<void>;
+  /** A copy of a tab's project in a new tab: unsaved, with no file, as recovered work is. */
+  duplicate: (tab: ProjectTab) => void;
+  /** The file last written — saved or exported — in any tab. */
+  written: Written | null;
 } {
-  const [state, setState] = useState<ProjectFileState>({
-    path: null,
-    error: null,
-    savedAt: null,
-  });
-  // The document the app starts with counts as saved: an untouched project has
-  // nothing to lose, and a close guard must not ask about a blank page (5.3a).
-  const savedDocument = useRef<unknown>(store.getState().document);
-  const createdUtc = useRef<string | undefined>(undefined);
+  /** What went wrong, said in the tab it went wrong for — or on the start screen, with none. */
+  const fail = useCallback(
+    (tab: ProjectTab | null, error: unknown) => {
+      if (tab === null) onStartError(error);
+      else
+        tabs.update(tab.id, (each) => {
+          each.file = { ...each.file, error };
+        });
+    },
+    [onStartError, tabs],
+  );
 
-  const markSaved = useCallback(() => {
-    savedDocument.current = store.getState().document;
-  }, [store]);
+  // The file last written, in whichever tab: said once in the status bar.
+  const [written, setWritten] = useState<Written | null>(null);
+  const writes = useRef(0);
+  const wrote = useCallback((kind: Written['kind'], path: string) => {
+    writes.current += 1;
+    setWritten({ kind, path, serial: writes.current });
+  }, []);
+
+  /**
+   * A project read from a file or the sample, in a tab of its own: framed
+   * whole when shown, or as the last session left it.
+   */
+  const show = useCallback(
+    (
+      document: Document,
+      path: string | null,
+      createdUtc: string | undefined,
+      restore?: TabRestore,
+    ) => {
+      const tab = tabFor(document);
+      tab.file = { path, error: null };
+      tab.createdUtc = createdUtc;
+      tab.cameras.frameDrawing = true;
+      if (restore !== undefined) {
+        tab.view = restore.view;
+        tab.cameras.restore = restore.camera;
+      }
+      tabs.open(tab);
+      onStartError(null);
+    },
+    [onStartError, tabFor, tabs],
+  );
 
   const save = useCallback(
-    async (forcePrompt = false) => {
+    async (tab: ProjectTab, forcePrompt = false) => {
       try {
         const platform = host();
-        let target = state.path;
+        let target = tab.file.path;
 
         if (target === null || forcePrompt) {
           target = await platform.showSaveDialog({
             title: t('file.saveTitle'),
-            defaultPath: `${store.getState().document.project.name || t('app.untitled')}.${LCP_EXTENSION}`,
+            defaultPath: `${tab.store.getState().document.project.name || t('app.untitled')}.${LCP_EXTENSION}`,
             filters: [{ name: t('file.project'), extensions: [LCP_EXTENSION] }],
           });
           // A cancelled dialog is not an error; it is the user changing their
@@ -174,57 +246,64 @@ export function useProjectFile(
           if (!target.endsWith(`.${LCP_EXTENSION}`)) target = `${target}.${LCP_EXTENSION}`;
         }
 
+        // A project with no name is named after the file it is first saved as
+        // (8.12): its tab, the window's title and the next export say it.
+        if (isUnnamed(tab.store.getState().document.project.name)) {
+          tab.store.dispatch(setProjectName(projectNameOf(target)));
+        }
+
         // The document these bytes are made from is the one marked saved — not
         // whatever the store holds once the write returns. An edit landing
         // during a slow write is not on disk, so it must stay unsaved (Q16).
-        const written = store.getState().document;
-        const bytes = saveProject(written.project, {
+        // Nor a drag's preview, which the maker may yet cancel: the document
+        // from before the gesture (Q36).
+        // Made into bytes off the window's thread (PERF-009), from that
+        // document as it is at this moment.
+        const written = tab.store.committedDocument;
+        const bytes = await encodeProject({
+          project: written.project,
           applicationVersion: appVersion,
-          now: () => new Date(),
-          ...(createdUtc.current === undefined ? {} : { createdUtc: createdUtc.current }),
+          at: new Date().toISOString(),
+          ...(tab.createdUtc === undefined ? {} : { createdUtc: tab.createdUtc }),
         });
 
         await platform.writeFile(target, bytes);
-        savedDocument.current = written;
-        setState({ path: target, error: null, savedAt: new Date().toLocaleTimeString() });
+        const path = target;
+        tabs.update(tab.id, (each) => {
+          each.savedDocument = written;
+          each.file = { path, error: null };
+        });
+        wrote('save', path);
         void noteRecent(platform, target);
         return true;
       } catch (error) {
-        setState((previous) => ({ ...previous, error }));
+        fail(tab, error);
         return false;
       }
     },
-    [appVersion, host, state.path, store, t],
+    [appVersion, fail, host, t, tabs, wrote],
   );
 
   const openPath = useCallback(
-    async (target: string) => {
+    async (target: string, restore?: TabRestore) => {
+      // Open already: its tab, as it is — never a second copy to save over the
+      // first — and the tab bounces, so the maker sees it was open (8.12).
+      const open = tabs.byPath(target);
+      if (open !== undefined) {
+        tabs.nudge(open.id);
+        return;
+      }
       try {
         const platform = host();
         const loaded = loadProject(await platform.readFile(target));
-        store.reset({ project: loaded.project });
-        savedDocument.current = store.getState().document;
-        createdUtc.current = loaded.manifest.createdUtc;
-        setState({ path: target, error: null, savedAt: null });
+        show({ project: loaded.project }, target, loaded.manifest.createdUtc, restore);
         void noteRecent(platform, target);
       } catch (error) {
-        setState((previous) => ({ ...previous, error }));
+        fail(tabs.active, error);
       }
     },
-    [host, store],
+    [fail, host, show, tabs],
   );
-
-  const openSample = useCallback(async () => {
-    try {
-      const loaded = loadProject(await host().readSampleProject());
-      store.reset({ project: loaded.project }, { action: 'open-sample' });
-      savedDocument.current = store.getState().document;
-      createdUtc.current = undefined;
-      setState({ path: null, error: null, savedAt: null });
-    } catch (error) {
-      setState((previous) => ({ ...previous, error }));
-    }
-  }, [host, store]);
 
   const open = useCallback(async () => {
     let target: string | null;
@@ -234,11 +313,14 @@ export function useProjectFile(
         filters: [{ name: t('file.project'), extensions: [LCP_EXTENSION] }],
       });
     } catch (error) {
-      setState((previous) => ({ ...previous, error }));
+      fail(tabs.active, error);
       return;
     }
     if (target !== null) await openPath(target);
-  }, [host, openPath, t]);
+  }, [fail, host, openPath, t, tabs]);
+
+  /** The export being written, which the next one ends. */
+  const generating = useRef<AbortController | null>(null);
 
   /**
    * Writes a print-ready PDF and opens it in the system viewer: *Export PDF*,
@@ -247,9 +329,11 @@ export function useProjectFile(
    */
   const exportPdfFile = useCallback(
     async (shown?: Uint8Array): Promise<ExportReport | null> => {
+      const tab = tabs.active;
+      if (tab === null) return null;
       try {
         const platform = host();
-        const project = store.getState().document.project;
+        const project = tab.store.getState().document.project;
 
         const target = await exportTarget(platform, project, 'pdf', {
           title: t('file.exportTitle'),
@@ -262,28 +346,37 @@ export function useProjectFile(
         // the Sheets view all read this same object — so the file is exactly
         // the print they were shown (7.4a).
         const plan = sheetPlanFor(project);
-        const bytes =
-          shown ??
-          (await exportPdf(plan, { applicationVersion: appVersion, now: () => new Date() })).bytes;
+        let bytes = shown;
+        if (bytes === undefined) {
+          // Written in a worker (PERF-002). Asking for another export ends this
+          // one, and its file is neither written nor reported.
+          generating.current?.abort();
+          const run = new AbortController();
+          generating.current = run;
+          try {
+            bytes = await writePdf({ plan, applicationVersion: appVersion }, run.signal);
+          } catch (error) {
+            if (run.signal.aborted) return null;
+            throw error;
+          } finally {
+            if (generating.current === run) generating.current = null;
+          }
+        }
 
         await platform.writeFile(target, bytes);
-
-        setState((previous) => ({
-          ...previous,
-          error: null,
-          savedAt: new Date().toLocaleTimeString(),
-        }));
+        exported(tabs, tab);
+        wrote('export', target);
 
         await platform.openInExternalViewer(target);
 
         // Reported *after* the file is written: export warns, and never blocks (§5).
         return exportReportFor(project);
       } catch (error) {
-        setState((previous) => ({ ...previous, error }));
+        fail(tab, error);
         return null;
       }
     },
-    [appVersion, host, store, t],
+    [appVersion, fail, host, t, tabs, wrote],
   );
 
   /**
@@ -291,16 +384,19 @@ export function useProjectFile(
    * true millimetres, for a laser cutter, a plotter, a CNC program or a vector
    * editor.
    *
-   * It is the scene the PDF is written from, so it holds exactly what the PDF
-   * prints. Nothing opens it afterwards — the main process opens only the PDF
+   * It is the scene the PDF is written from, of the layer roles the maker kept
+   * in the export dialog (6.4): with every role, exactly what the PDF prints.
+   * Nothing opens it afterwards — the main process opens only the PDF
    * it has exported, and a cutter's software is the maker's to start — so what
    * the maker is told is what to check, as after a PDF.
    */
   const exportDrawingFile = useCallback(
-    async (format: DrawingFormat): Promise<ExportReport | null> => {
+    async (format: DrawingFormat, roles: readonly ExportRole[]): Promise<ExportReport | null> => {
+      const tab = tabs.active;
+      if (tab === null) return null;
       try {
         const platform = host();
-        const project = store.getState().document.project;
+        const project = tab.store.getState().document.project;
         const target = await exportTarget(platform, project, format, {
           title: t(format === 'svg' ? 'file.exportSvgTitle' : 'file.exportDxfTitle'),
           filter: t(format === 'svg' ? 'file.svg' : 'file.dxf'),
@@ -308,59 +404,150 @@ export function useProjectFile(
         });
         if (target === null) return null;
 
-        const scene = sheetPlanFor(project).scene;
+        const scene = drawingSceneFor(project, roles);
         const { text } = format === 'svg' ? exportSvg(scene) : exportDxf(scene);
         await platform.writeFile(target, new TextEncoder().encode(text));
-
-        setState((previous) => ({
-          ...previous,
-          error: null,
-          savedAt: new Date().toLocaleTimeString(),
-        }));
+        exported(tabs, tab);
+        wrote('export', target);
         return exportReportFor(project, format);
       } catch (error) {
-        setState((previous) => ({ ...previous, error }));
+        fail(tab, error);
         return null;
       }
     },
-    [host, store, t],
+    [fail, host, t, tabs, wrote],
   );
 
   const newProject = useCallback(() => {
-    store.reset(blank(), { action: 'new-project' });
-    savedDocument.current = store.getState().document;
-    createdUtc.current = undefined;
-    setState({ path: null, error: null, savedAt: null });
-  }, [blank, store]);
+    tabs.add(tabFor(blank(), nextUntitled(tabs.tabs)));
+    onStartError(null);
+  }, [blank, onStartError, tabFor, tabs]);
 
   const adoptRecovered = useCallback(
     (project: Project) => {
-      store.reset({ project }, { action: 'recover' });
+      const tab = tabFor({ project });
       // Never saved in this session, and never to be saved over its original:
       // unsaved by construction.
-      savedDocument.current = null;
-      createdUtc.current = undefined;
-      setState({ path: null, error: null, savedAt: null });
+      tab.savedDocument = null;
+      tab.cameras.frameDrawing = true;
+      tabs.open(tab);
+      onStartError(null);
+      return tab;
     },
-    [store],
+    [onStartError, tabFor, tabs],
   );
 
-  const isDirty = useCallback(() => savedDocument.current !== store.getState().document, [store]);
+  const reload = useCallback(
+    async (tab: ProjectTab) => {
+      const path = tab.file.path;
+      if (path === null) return;
+      try {
+        const loaded = loadProject(await host().readFile(path));
+        tab.store.reset({ project: loaded.project });
+        tabs.update(tab.id, (each) => {
+          each.savedDocument = each.store.getState().document;
+          each.createdUtc = loaded.manifest.createdUtc;
+          each.file = { path, error: null };
+        });
+      } catch (error) {
+        fail(tab, error);
+      }
+    },
+    [fail, host, tabs],
+  );
+
+  const duplicate = useCallback(
+    (tab: ProjectTab) => {
+      // A project of its own: a new id, from the same place new projects get theirs.
+      const project = { ...tab.store.getState().document.project, id: blank().project.id };
+      const copy = tabFor({ project });
+      copy.savedDocument = null;
+      copy.cameras.frameDrawing = true;
+      tabs.add(copy);
+    },
+    [blank, tabFor, tabs],
+  );
+
+  const newFromTemplate = useCallback(
+    async (id: string) => {
+      try {
+        const data = await host().readTemplate(id);
+        if (data === null) return;
+        const loaded = loadProject(data);
+        show({ project: { ...loaded.project, id: blank().project.id } }, null, undefined);
+        // It leads *Recently used* the next time the picker opens (8.14).
+        void host()
+          .templateUsed(id)
+          .catch(() => undefined);
+      } catch (error) {
+        fail(tabs.active, error);
+      }
+    },
+    [blank, fail, host, show, tabs],
+  );
+
+  const saveAsTemplate = useCallback(
+    async (tab: ProjectTab, name: string, replace: boolean): Promise<TemplateSave> => {
+      const bytes = await encodeProject({
+        project: tab.store.committedDocument.project,
+        applicationVersion: appVersion,
+        at: new Date().toISOString(),
+      });
+      return host().saveTemplate(name, bytes, replace);
+    },
+    [appVersion, host],
+  );
+
+  const restoreKept = useCallback(
+    (data: Uint8Array, path: string | null, restore: TabRestore): ProjectTab | null => {
+      try {
+        const loaded = loadProject(data);
+        const tab = tabFor({ project: loaded.project });
+        tab.file = { path, error: null };
+        tab.createdUtc = loaded.manifest.createdUtc;
+        // Unsaved by construction: the work was never written to its file.
+        tab.savedDocument = null;
+        tab.view = restore.view;
+        tab.cameras.restore = restore.camera;
+        tab.cameras.frameDrawing = true;
+        tabs.open(tab);
+        return tab;
+      } catch {
+        // A copy that does not load is not worth a start that fails over it.
+        return null;
+      }
+    },
+    [tabFor, tabs],
+  );
 
   return {
-    state,
+    written,
+    newFromTemplate,
+    saveAsTemplate,
+    restoreKept,
+    reload,
+    duplicate,
     save,
     open,
     openPath,
-    openSample,
     newProject,
     adoptRecovered,
-    isDirty,
     exportPdfFile,
     exportDrawingFile,
-    markSaved,
-    savedDocument,
   };
+}
+
+/** How the last session left a tab (8.12): its view, and where its board was. */
+export interface TabRestore {
+  readonly view: 'design' | 'sheets';
+  readonly camera: TabCamera | null;
+}
+
+/** An export was written: the tab's earlier error is gone. */
+function exported(tabs: ProjectTabs, tab: ProjectTab): void {
+  tabs.update(tab.id, (each) => {
+    each.file = { ...each.file, error: null };
+  });
 }
 
 /**

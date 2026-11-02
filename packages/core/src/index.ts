@@ -1,7 +1,8 @@
 /**
  * @leathercad/core — the bottom layer.
  *
- * Tolerances, quantisation, guards, ids, Result, and how a number is written.
+ * Tolerances, quantisation, guards, ids, Result, how a number is written, and
+ * a printer's scale correction, which the four layers that touch it must agree on.
  * Imports nothing.
  * Everything else in the workspace is built on top of it.
  */
@@ -22,9 +23,15 @@ export type Radians = number;
 export {
   EPS_ANGLE,
   EPS_AREA,
+  EPS_COEFFICIENT,
   EPS_LENGTH,
+  EPS_NEWTON_SLOPE,
   EPS_PARAM,
   EPS_POINT,
+  EPS_RATIO,
+  EPS_REL_CUBIC_DISCRIMINANT,
+  EPS_REL_QUADRATIC_DISCRIMINANT,
+  EPS_REL_ROOT,
   approxCmp,
   approxEq,
   approxGte,
@@ -49,15 +56,20 @@ export { assertFinite, invariant } from './guard.js';
 
 export { CROCKFORD_ALPHABET, createIdFactory, type IdSource, type Ulid } from './id.js';
 
+export { err, isErr, isOk, ok, unwrap, type Err, type Ok, type Result } from './result.js';
+
 export {
-  err,
-  isErr,
-  isOk,
-  mapOk,
-  ok,
-  unwrap,
-  unwrapOr,
-  type Err,
-  type Ok,
-  type Result,
-} from './result.js';
+  CORRECTION_LIMIT,
+  NO_CORRECTION,
+  correctionFrom,
+  isAllowedCorrection,
+  isNoCorrection,
+  type ScaleCorrection,
+} from './calibration.js';
+
+export {
+  RESOURCE_LIMITS,
+  ResourceLimitError,
+  checkResourceLimit,
+  type Resource,
+} from './resources.js';

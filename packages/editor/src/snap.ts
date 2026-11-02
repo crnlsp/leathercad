@@ -1,11 +1,14 @@
-import type { FeatureId, ResolvedProject } from '@leathercad/domain';
+import type { FeatureId, Guide, ResolvedProject } from '@leathercad/domain';
+import { guideCrossing, projectToGuide } from '@leathercad/domain';
 import { CANVAS, dotsItem, pathItem, type DisplayItem } from '@leathercad/render';
 import {
   intersectPaths,
   PathOps,
   SegmentOps,
+  RectOps,
   dist,
   polyline,
+  type Intersection,
   type Path,
   type Vec2,
 } from '@leathercad/geometry';
@@ -17,13 +20,15 @@ import {
  * beats the edge running through it, because a user aiming at a corner means
  * the corner. See docs/product-spec.md §133.
  */
-export type SnapKind = 'endpoint' | 'midpoint' | 'centre' | 'intersection' | 'on-path' | 'grid';
+export type SnapKind =
+  'endpoint' | 'midpoint' | 'centre' | 'intersection' | 'guide' | 'on-path' | 'grid';
 
 const PRIORITY: readonly SnapKind[] = [
   'endpoint',
   'midpoint',
   'centre',
   'intersection',
+  'guide',
   'on-path',
   'grid',
 ];
@@ -33,6 +38,8 @@ export interface SnapCandidate {
   readonly point: Vec2;
   /** Absent for grid snaps, which belong to no feature. */
   readonly featureId?: FeatureId;
+  /** A guide/feature crossing must exclude either object during its drag. */
+  readonly guideId?: string;
 }
 
 export interface SnapOptions {
@@ -111,18 +118,66 @@ export function buildSnapIndex(
     }
   }
 
-  // Crossings between features. Quadratic in the feature count, which is fine
-  // at the scale a pattern reaches and is done once per revision rather than
-  // per pointer move.
+  for (const guide of resolved.project.guides ?? []) {
+    for (const feature of visible) {
+      for (const hit of crossings(feature.path, guide, () => guideCrossings(guide, feature.path))) {
+        add({ kind: 'intersection', point: hit.point, featureId: feature.id, guideId: guide.id });
+      }
+    }
+  }
+
+  // Crossings between features. Quadratic in the feature count, but a pair is
+  // computed once for as long as both paths live: a preview re-evaluates only
+  // what it changed, so a drag recomputes the pairs of what moved.
   for (let i = 0; i < visible.length; i++) {
+    const a = visible[i]!;
     for (let j = i + 1; j < visible.length; j++) {
-      for (const hit of intersectPaths(visible[i]!.path, visible[j]!.path)) {
-        add({ kind: 'intersection', point: hit.point, featureId: visible[i]!.id });
+      const b = visible[j]!.path;
+      for (const hit of crossings(a.path, b, () => intersectPaths(a.path, b))) {
+        add({ kind: 'intersection', point: hit.point, featureId: a.id });
       }
     }
   }
 
   return { cellMm, buckets };
+}
+
+/**
+ * Crossings by the immutable objects they come from (PERF-004). Evaluation
+ * keeps an unchanged feature's path the same object from one revision to the
+ * next, and a command leaves an untouched guide as it was, so an edit
+ * recomputes the crossings of what it changed and reads the rest. Weak on
+ * both keys: nothing to invalidate, and nothing kept once a path has gone.
+ */
+const crossingsCache = new WeakMap<Path, WeakMap<Path | Guide, readonly Intersection[]>>();
+
+function crossings(
+  path: Path,
+  other: Path | Guide,
+  compute: () => readonly Intersection[],
+): readonly Intersection[] {
+  let row = crossingsCache.get(path);
+  if (row === undefined) crossingsCache.set(path, (row = new WeakMap()));
+  let hits = row.get(other);
+  if (hits === undefined) row.set(other, (hits = compute()));
+  return hits;
+}
+
+/** Where an infinite guide crosses a path. */
+function guideCrossings(guide: Guide, path: Path): readonly Intersection[] {
+  const bounds = PathOps.bbox(path);
+  if (bounds === null) return [];
+  const centre = projectToGuide(guide, RectOps.centre(bounds));
+  // A line centred on the nearest point to the box's centre, extending
+  // past its diagonal, includes every possible crossing of that box.
+  const reach = Math.hypot(RectOps.width(bounds), RectOps.height(bounds));
+  const dx = Math.cos(guide.angleRad) * reach;
+  const dy = Math.sin(guide.angleRad) * reach;
+  const line = polyline([
+    { x: centre.x - dx, y: centre.y - dy },
+    { x: centre.x + dx, y: centre.y + dy },
+  ]);
+  return intersectPaths(line, path);
 }
 
 /**
@@ -144,6 +199,7 @@ export function snap(
   const consider = (candidate: SnapCandidate): void => {
     if (!allows(candidate.kind)) return;
     if (candidate.featureId !== undefined && excluded.has(candidate.featureId)) return;
+    if (candidate.guideId !== undefined && excluded.has(candidate.guideId)) return;
     if (dist(candidate.point, cursorMm) > options.toleranceMm) return;
 
     const best = byKind.get(candidate.kind);
@@ -154,6 +210,16 @@ export function snap(
 
   for (const candidate of nearbyCandidates(index, cursorMm, options.toleranceMm)) {
     consider(candidate);
+  }
+
+  // Guides are infinite; their projections cannot be stored in a point index.
+  const guides = (resolved.project.guides ?? []).filter((guide) => !excluded.has(guide.id));
+  for (const [index, guide] of guides.entries()) {
+    consider({ kind: 'guide', point: projectToGuide(guide, cursorMm) });
+    for (const other of guides.slice(index + 1)) {
+      const crossing = guideCrossing(guide, other);
+      if (crossing !== null) consider({ kind: 'intersection', point: crossing });
+    }
   }
 
   if (allows('on-path')) {
@@ -290,6 +356,7 @@ export function snapGlyph(
     case 'intersection':
       return [shape([at(-1, -1), at(1, 1)], false), shape([at(-1, 1), at(1, -1)], false)];
 
+    case 'guide':
     case 'on-path':
       return [shape([at(0, -1), at(1, 0), at(0, 1), at(-1, 0)], true)];
 

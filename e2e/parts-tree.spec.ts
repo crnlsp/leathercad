@@ -1,8 +1,7 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { openApp, openSample, withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -12,26 +11,6 @@ import { resizeWindow } from './windowSize.js';
  * board opens its piece and scrolls its row into view; and where a piece
  * prints is the Sheets view's to say.
  */
-
-async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp();
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
-
-async function withSample(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const { app, window } = await launch();
-  try {
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 const row = (window: Page, id: string): Locator => window.getByTestId(`feature-row-${id}`);
 const piece = (window: Page, id: string): Locator => window.getByTestId(`part-heading-${id}`);
@@ -63,6 +42,9 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await expect(piece(window, 'outer')).toHaveAttribute('aria-level', '1');
     await expect(window.getByTestId('hole-count-outer-holes')).toHaveText('146');
     await expect(piece(window, 'pocket')).toContainText('×2');
+    // Each row is named by all it shows, so speech input reaches it by any of it.
+    await expect(row(window, 'outer-holes')).toHaveAccessibleName('Stitch holes, 146 holes');
+    await expect(piece(window, 'pocket')).toHaveAccessibleName('Card pocket ×2');
     await expect(piece(window, 'outer').locator('svg.thumbnail path')).toHaveAttribute('d', /^M/);
 
     // At rest no row shows its lock and eye; hover shows a row's; keyboard
@@ -386,7 +368,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     const eye = window.getByTestId('feature-visible-outer-outline');
     await window.keyboard.press('Space');
     await expect(eye).toHaveAttribute('aria-pressed', 'false');
-    await window.keyboard.press('Control+z');
+    await window.keyboard.press('ControlOrMeta+z');
     await expect(eye).toHaveAttribute('aria-pressed', 'true');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
 
@@ -399,7 +381,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     await window.keyboard.press('Enter');
     await expect(row(window, 'outer-outline')).toHaveAccessibleName('Edge');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
-    await window.keyboard.press('Control+z');
+    await window.keyboard.press('ControlOrMeta+z');
     await expect(row(window, 'outer-outline')).toHaveAccessibleName('Outline');
     await window.keyboard.press('F2');
     await field.fill('Nothing');
@@ -431,7 +413,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
 test('a rename ends with its row: undone away and redone, the row comes back as it was', async () => {
   // macOS's Edit menu undoes while the name field has focus (8.7): the row
   // goes without the field ever losing focus, so nothing said it ended.
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   const menu = (action: 'undo' | 'redo') =>
     app.evaluate(({ BrowserWindow }, sent) => {
       BrowserWindow.getAllWindows()[0]?.webContents.send('menu:action', sent);
@@ -493,7 +475,7 @@ test('a locked feature is reached from the tree by keyboard, and unlocked from i
 });
 
 test('a selection on the board opens its piece and scrolls its row into view, leaving focus alone', async () => {
-  const { app, window } = await launch();
+  const { app, window } = await openApp();
   try {
     await resizeWindow(app, window, 1440, 600);
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
@@ -548,7 +530,7 @@ test('Design says only what does not print; the Sheets view says where each piec
       'Hidden. Not printed. It is hidden.',
     );
 
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(window.getByTestId('sheets-group-1')).toContainText('Outer');
     await expect(window.getByTestId('sheets-not-printed')).toContainText('It is hidden.');
     await expect(window.locator('[data-testid^="part-not-printed-"]')).toHaveCount(0);
@@ -557,23 +539,77 @@ test('Design says only what does not print; the Sheets view says where each piec
 
 test('the tree has no accessibility violations, its pieces open or closed', async () => {
   await withSample(async (window) => {
-    const scan = async (what: string): Promise<void> => {
-      const results = await new AxeBuilder({ page: window })
-        .setLegacyMode(true)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-        .analyze();
-      const found = results.violations.map(
-        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
-      );
-      expect(found, what).toEqual([]);
-    };
+    const scan = (what: string): Promise<void> => expectNoViolations(window, what);
     await piece(window, 'outer').focus();
     await scan('every piece open, a row focused');
     for (const id of ['outer', 'lining', 'pocket']) {
       await window.getByTestId(`part-fold-${id}`).click();
     }
     await scan('every piece closed');
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await scan('on the Sheets view');
+  });
+});
+
+/** The pieces the tree shows folded. */
+const folded = (window: Page): Locator =>
+  window.locator('[data-testid^="part-heading-"][aria-expanded="false"]');
+
+test('a fold is its project’s: another with the same pieces opens with none folded, and the folds go with their tab (PERF-016)', async () => {
+  await withSample(async (window) => {
+    const tabs = window.getByTestId('project-tab');
+    for (const id of ['outer', 'lining', 'pocket']) {
+      await window.getByTestId(`part-fold-${id}`).click();
+    }
+    await expect(folded(window)).toHaveCount(3);
+
+    // A second wallet: the template gives it the first one's ids. Nothing was
+    // folded in it, so nothing may show folded; one set of folds for the whole
+    // window, every piece ever folded, showed all three.
+    await openSample(window);
+    await expect(tabs).toHaveCount(2);
+    await expect.soft(folded(window), 'folded in a project that folded none').toHaveCount(0);
+
+    // The first comes back as it was left…
+    await tabs.first().click();
+    await expect(folded(window)).toHaveCount(3);
+
+    // …and once it is closed, nothing it folded is left for the next project.
+    await window.keyboard.press('ControlOrMeta+w');
+    await expect(tabs).toHaveCount(1);
+    await expect.soft(folded(window), 'folded in the tab that stayed').toHaveCount(0);
+    await openSample(window);
+    await expect
+      .soft(folded(window), 'folded in a project opened after they were closed')
+      .toHaveCount(0);
+  });
+});
+
+test('a piece deleted and brought back by undo comes back folded (PERF-016)', async () => {
+  await withSample(async (window) => {
+    await window.getByTestId('part-fold-pocket').click();
+    await expect(piece(window, 'pocket')).toHaveAttribute('aria-expanded', 'false');
+    await piece(window, 'pocket').hover();
+    await window.getByTestId('part-menu-pocket').click();
+    await window.getByTestId('delete-part-pocket').click();
+    await expect(window.getByTestId('part-count')).toHaveText('2');
+    // The tab keeps the fold of a piece the project no longer has: undo can bring it back.
+    await window.keyboard.press('ControlOrMeta+z');
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expect(piece(window, 'pocket')).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+test('a fold outlasts a visit to Sheets (PERF-016)', async () => {
+  await withSample(async (window) => {
+    await window.getByTestId('part-fold-outer').click();
+    await expect(folded(window)).toHaveCount(1);
+    // Sheets has a Parts panel of its own, so the tree is made again on the
+    // way back: a fold held by the tree went with it.
+    await window.getByTestId('view-sheets').click();
+    await expect(window.getByTestId('parts-list')).toHaveCount(0);
+    await window.getByTestId('view-design').click();
+    await expect(piece(window, 'outer')).toHaveAttribute('aria-expanded', 'false');
+    await expect(folded(window)).toHaveCount(1);
   });
 });

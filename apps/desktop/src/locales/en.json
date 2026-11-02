@@ -1,9 +1,75 @@
 {
   "app": {
     "untitled": "Untitled",
+    "untitledNumbered": "Untitled {{number}}",
     "windowTitle": "{{name}} — LeatherCAD",
     "windowTitleUnsaved": "• {{name}} — LeatherCAD",
     "drawing": "Drawing"
+  },
+  "tabs": {
+    "strip": "Projects",
+    "region": "Open projects",
+    "close": "Close {{name}}",
+    "closeTooltip": "Close this project",
+    "unsaved": "{{name}}, unsaved changes",
+    "add": "New tab",
+    "addTooltip": "A new project, or one you have, in a tab of its own",
+    "menu": "Project menu",
+    "menuTooltip": "New, open, save as, rename, and recent projects",
+    "noProject": "No project is open",
+    "alreadyOpen": "{{name}} is open already",
+    "all": "All tabs",
+    "allTooltip": "Every open project, when there are more than the strip shows",
+    "unsavedNote": "Unsaved changes",
+    "dropHere": "Move here"
+  },
+  "tabMenu": {
+    "label": "Menu for {{name}}",
+    "rename": "Rename…",
+    "save": "Save",
+    "saveAs": "Save as…",
+    "reload": "Reload from disk",
+    "reloadNote": "The file as it was last saved",
+    "duplicate": "Duplicate as a new project",
+    "showInFolder": "Show in folder",
+    "copyPath": "Copy path",
+    "trash": "Move file to Trash…",
+    "close": "Close",
+    "closeOthers": "Close other tabs",
+    "noFile": "Not saved to a file yet",
+    "onlyTab": "No other tab is open",
+    "trashTitle": "Move “{{name}}” to the Trash?",
+    "trashBody": "{{file}} goes to the system’s Trash, where it can be restored, and its tab closes.",
+    "trashBodyUnsaved": "{{file}} goes to the system’s Trash, where it can be restored, and its tab closes. Its unsaved changes are lost.",
+    "trashConfirm": "Move to Trash",
+    "trashFailed": "The file could not be moved to the Trash. {{reason}}"
+  },
+  "outside": {
+    "changed": "{{file}} was changed outside LeatherCAD.",
+    "gone": "{{file}} was moved or deleted outside LeatherCAD.",
+    "reload": "Reload",
+    "keep": "Keep mine",
+    "save": "Save it again",
+    "dismiss": "Dismiss"
+  },
+  "rename": {
+    "title": "Not renamed",
+    "exists": "A file named “{{file}}” is already in this project’s folder. Choose another name: the project and its file keep the one they have.",
+    "invalid": "A file cannot be called “{{name}}”: it has a character such as / \\ : * ? \" < > |, or is a name the system keeps. Choose another name.",
+    "failed": "The project’s file could not be renamed, so the project keeps its name. {{reason}}",
+    "followExists": "The project is called “{{name}}” again, but its file keeps the name it has: a file named “{{file}}” is already in its folder."
+  },
+  "start": {
+    "title": "Start new project",
+    "fromTemplate": "New project from template",
+    "open": "Open existing project",
+    "lede": "Start a new pattern, open one from disk, or pick up where you left off.",
+    "pin": "Pin {{name}}",
+    "unpin": "Unpin {{name}}",
+    "pinTooltip": "Keep it at the top of the list",
+    "unpinTooltip": "Let it go back among the recent projects",
+    "remove": "Remove {{name}} from the list",
+    "removeTooltip": "Remove from the list. The file stays where it is"
   },
   "actions": {
     "cancel": "Cancel",
@@ -63,7 +129,8 @@
       "sheets_other": "{{count}} sheets",
       "summary": "{{sheets}} · scale 100 %, locked · {{taped}}",
       "nothingTaped": "nothing taped",
-      "seeSheets": "See the sheets"
+      "seeSheets": "See the sheets",
+      "limited": "{{paper}} — too many sheets"
     },
     "paperShort": "{{count}} × {{paper}}",
     "print": "Print",
@@ -72,14 +139,13 @@
     "problemsNone": "Problems: nothing to fix",
     "problemsNoneTooltip": "Nothing to fix",
     "problemsTooltip": "{{counts}}. Show them in Problems",
-    "projectMenu": "Project menu, {{name}}",
-    "projectMenuTooltip": "{{name}}. New, open, save as, rename, and recent projects",
     "saveTooltip": "Save the project",
     "saved": "Saved",
     "settings": "Settings",
     "settingsTooltip": "Settings",
     "unsaved": "Unsaved changes",
-    "unsavedShort": "Unsaved"
+    "unsavedShort": "Unsaved",
+    "settingsUpdate": "Settings — a new version is available"
   },
   "menu": {
     "about": "About LeatherCAD",
@@ -88,9 +154,8 @@
     "exportNothing": "Nothing to export yet. No part has a line to cut.",
     "exportSvg": "Export SVG…",
     "exportSvgNote": "Millimetres, for laser cutters, plotters and vector editors",
-    "new": "New project",
+    "new": "New project from scratch",
     "open": "Open…",
-    "openSample": "Open sample project",
     "recent": "Recent projects",
     "recentEmpty": "Projects you open or save appear here.",
     "rename": "Rename…",
@@ -98,7 +163,9 @@
     "saveAs": "Save as…",
     "settings": "Settings…",
     "recentGone": "That project is no longer there",
-    "recentGoneDetail": "It was moved, renamed or deleted, so it has been taken off the recent projects."
+    "recentGoneDetail": "It was moved, renamed or deleted, so it has been taken off the recent projects.",
+    "newFromTemplate": "New project from template…",
+    "saveAsTemplate": "Save as template…"
   },
   "macMenu": {
     "edit": "Edit",
@@ -173,7 +240,11 @@
     "selected": "selected",
     "sheetOf": "Sheet {{number}} of {{count}}",
     "partsSelected_one": "part selected",
-    "partsSelected_other": "parts selected"
+    "partsSelected_other": "parts selected",
+    "checkForUpdates": "Check for updates",
+    "versionNext": "to {{version}}",
+    "saved": "Saved {{name}}",
+    "exported": "Exported {{name}}"
   },
   "view": {
     "design": "Design",
@@ -256,6 +327,10 @@
     "text": {
       "howTo": "Click to place a label on the selected part, then type it in the panel",
       "name": "Text"
+    },
+    "guide": {
+      "name": "Guides",
+      "howTo": "Click to place a horizontal guide; hold {{shift}} for a vertical guide. Drag to place one through two points, such as along an edge. Select a guide to edit its position and angle in Properties."
     }
   },
   "toolOptions": {
@@ -305,6 +380,12 @@
     "pan": "Pan",
     "print": "Print",
     "quit": "Quit",
+    "nextTab": "Go to the next project tab",
+    "previousTab": "Go to the previous project tab",
+    "closeTab": "Close the project tab",
+    "moveTabLeft": "Move the project tab left",
+    "moveTabRight": "Move the project tab right",
+    "reopenTab": "Open the project last closed again",
     "redo": "Redo",
     "removePoint": "Remove the point last pressed",
     "rename": "Rename the piece or feature",
@@ -334,7 +415,8 @@
       "general": "General",
       "language": "Language",
       "shortcuts": "Keyboard shortcuts",
-      "tools": "My tools"
+      "tools": "My tools",
+      "updates": "Updates"
     },
     "recent": {
       "clear": "Clear list",
@@ -343,6 +425,10 @@
       "name": "Recent projects",
       "none": "No projects are listed now.",
       "note": "The Project menu lists the projects you opened or saved most recently."
+    },
+    "keepUnsaved": {
+      "name": "Keep unsaved projects when closing",
+      "note": "Close without being asked: projects with unsaved changes open again at the next start, still unsaved."
     },
     "legend": {
       "name": "Name the marks in the canvas legend",
@@ -414,6 +500,14 @@
       "allReset": "Every key is back to its default.",
       "typesOther": "Held that way, the key types “{{typed}}” rather than its letter, so it can't be a shortcut. Press other keys.",
       "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys."
+    },
+    "updates": {
+      "note": "LeatherCAD asks GitHub which version is the latest only when you ask it to, here or by pressing the version in the status bar. Nothing about you or your patterns is sent, and nothing is downloaded or installed.",
+      "now": "Check now",
+      "checking": "Checking…",
+      "again_one": "Check again in {{count}} minute",
+      "again_other": "Check again in {{count}} minutes",
+      "managed": "Flathub keeps this copy of LeatherCAD up to date, so it does not check for itself."
     }
   },
   "about": {
@@ -436,9 +530,14 @@
     "title": "Save changes to “{{name}}”?",
     "consequence": {
       "close": "If you close without saving, your changes are lost.",
-      "new": "Starting a new project replaces this one, and your changes are lost.",
-      "open": "Opening another project replaces this one, and your changes are lost."
+      "reload": "Reloading reads the file as it was last saved, and your changes are lost."
     }
+  },
+  "unsavedProjects": {
+    "title_one": "Save changes to {{count}} project?",
+    "title_other": "Save changes to {{count}} projects?",
+    "consequence": "If you close without saving, their changes are lost.",
+    "saveAll": "Save all"
   },
   "deleteDialog": {
     "deleteAll": "Delete all",
@@ -465,11 +564,25 @@
     "newer": "This file was saved by a newer version of LeatherCAD. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "newerNamed": "This file was saved by LeatherCAD {{version}}, a newer version than this one. Update LeatherCAD to open it. (The file is format {{format}}; this version reads up to format {{current}}.)",
     "openTitle": "Open project",
+    "pdfFailed": "The PDF couldn’t be written ({{reason}}). Nothing was saved.",
+    "pdfUnavailable": "The PDF couldn’t be written: its background process didn’t start or stopped. Nothing was saved.",
     "dxf": "DXF",
     "pdf": "PDF",
     "project": "LeatherCAD project",
     "saveTitle": "Save project",
-    "svg": "SVG"
+    "svg": "SVG",
+    "resourceLimit": "Too many {{resource}} (limit {{limit}}). Your current project is unchanged.",
+    "resources": {
+      "archiveBytes": "bytes in a project archive",
+      "expandedBytes": "expanded bytes in a project archive",
+      "entries": "archive entries",
+      "nodes": "values in a project document",
+      "features": "parts, features and guides",
+      "segments": "path segments",
+      "characters": "text characters",
+      "holes": "holes",
+      "pages": "sheets"
+    }
   },
   "hardware": {
     "eyelet": "Eyelet",
@@ -511,6 +624,7 @@
     "sheetCount_other": "{{count}} sheets",
     "sheetHeading": "{{sheet}} · {{pieces}}",
     "noPieces": "No pieces",
+    "assembly": "Assembly map of {{name}}",
     "pieceTurned": "{{names}}, turned 90°",
     "tapedLabel": "{{name}} · {{sheets}}",
     "turnedMark": "Turned 90°",
@@ -518,6 +632,7 @@
     "turnedLegend": "marks a piece turned to fit its sheet.",
     "tapedHeading": "Taped across sheets",
     "tapedNone": "None. Every piece fits on one sheet.",
+    "tapedWithMap": "{{sheets}} · map on sheet {{number}}",
     "notPrintedHeading": "Not printed",
     "onTheSheets": "on the sheets",
     "scale": "Scale",
@@ -561,6 +676,7 @@
     "actualSize": "Save the PDF, then print it at Actual size (100 %), never Fit or Shrink.",
     "copies": "Copies",
     "failed": "{{printer}} did not take the job: {{reason}}",
+    "findingPrinters": "Looking for printers…",
     "include": "Print sheet {{number}}",
     "landscape": "Landscape",
     "loading": "Preparing the PDF…",
@@ -568,6 +684,8 @@
     "noPrinters": "No printers are set up on this computer.",
     "noScaling": "No scaling",
     "noScalingDetail": "The sheets go to the printer exactly as shown here, with scaling turned off.",
+    "noScalingCorrected": "100 %, then corrected",
+    "noScalingCorrectedDetail": "The sheets go with the printer's own scaling turned off, scaled only by this printer's correction so that they measure true on it.",
     "orientation": "Orientation",
     "paper": "Paper",
     "paperMissing": "{{printer}} has no {{paper}} paper. Choose another paper or printer.",
@@ -590,6 +708,58 @@
       "no-cups": "LeatherCAD can't reach this computer's printing system.",
       "platform": "LeatherCAD can't print directly on this system yet."
     }
+  },
+  "calibration": {
+    "again": "Calibrate again…",
+    "calibrate": "Calibrate this printer…",
+    "corrected": "Corrected for this printer: scaled {{x}} across the paper and {{y}} along it.",
+    "horizontal": "Horizontal line, drawn {{length}} mm",
+    "jobTitle": "LeatherCAD printer calibration",
+    "lead": "Only for a printer whose sheets measure off even when printed at 100 % / Actual size. The correction is for this printer alone, and only when LeatherCAD prints to it.",
+    "measureStep": "Measure each line end to end with a steel rule, and enter what it measures.",
+    "printPage": "Print calibration page",
+    "printStep": "Print the calibration page on {{paper}}: a horizontal line {{x}} mm long and a vertical line {{y}} mm long.",
+    "remove": "Remove correction",
+    "result": "Sheets sent to this printer will be scaled {{x}} across the paper and {{y}} along it.",
+    "save": "Save correction",
+    "saveFailed": "The correction could not be saved: {{reason}}",
+    "title": "Calibrate {{printer}}",
+    "tooFar": "This is almost certainly a print-settings problem, not a printer problem. Check that scaling is set to 100 % / Actual size and try again.",
+    "vertical": "Vertical line, drawn {{length}} mm"
+  },
+  "exportDialog": {
+    "custom": "Your own mix of layers",
+    "export": "Export…",
+    "intent": "Export for",
+    "intents": {
+      "laser-cut": {
+        "name": "Laser cut",
+        "note": "Outlines and hardware holes: what a cutter takes off the hide"
+      },
+      "stitch-guide": {
+        "name": "Stitch guide",
+        "note": "Stitch lines and their holes"
+      },
+      "template-print": {
+        "name": "Template print",
+        "note": "Every layer: the whole pattern"
+      }
+    },
+    "intro": "The drawing as arranged on the board, in millimetres. Choose which layers go in the file.",
+    "layers": "Layers",
+    "nothing": "Nothing to export. None of the chosen layers has a line to draw.",
+    "page": "The page will measure {{width}} × {{height}}",
+    "roles": {
+      "annotation": "Dimensions, labels and part names",
+      "cut": "Cut outlines",
+      "fold": "Fold lines",
+      "hardware": "Hardware holes",
+      "mark": "Marking lines",
+      "stitch": "Stitch lines",
+      "stitch-holes": "Stitch holes"
+    },
+    "stitchHolesNote": "Each is a {{size}} circle marking the centre, not a hole sized for the thread",
+    "title": "Export {{format}}"
   },
   "exportNotice": {
     "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
@@ -635,8 +805,10 @@
     "notPrinted": "Not printed. {{reason}}",
     "remove": "Delete part",
     "rename": "Name",
-    "sample": "Or take a finished one apart: {{link}}.",
-    "sampleLink": "open the sample wallet",
+    "rowHoles_one": "{{count}} hole",
+    "rowHoles_other": "{{count}} holes",
+    "rowProblems_one": "{{count}} (problem, worst: {{severity}})",
+    "rowProblems_other": "{{count}} (problems, worst: {{severity}})",
     "showPart": "Show part",
     "title": "Parts"
   },
@@ -644,6 +816,7 @@
     "cut-out": "Cut-out",
     "fold-line": "Fold line",
     "hardware-hole": "Hardware hole",
+    "hole-row": "Row of holes",
     "marking-line": "Marking line",
     "measurement": "Dimension",
     "outline": "Outline",
@@ -654,8 +827,12 @@
   "properties": {
     "addAllowance": "Add seam allowance",
     "addAllowanceHint": "The cut edge, that far outside this seam — and it follows the seam's shape",
+    "addHoleRow": "Add a row of holes",
+    "addHoleRowHint": "Holes punched along this line, a hole on each end and the rest evenly between — for a belt’s adjustment holes, rivets or lacing",
     "addHoles": "Add holes",
     "addHolesHint": "Holes along this line, at the pitch of your iron",
+    "addOverallSize": "Add overall size",
+    "addOverallSizeHint": "The piece’s width and height, edge to edge — the leather to cut. A dimension between two corners measures between those corners, which on a rounded piece is less",
     "addStitchLine": "Add stitch line",
     "addStitchLineHint": "A stitch line that follows this edge at a fixed margin, and keeps following it",
     "afterOutline": {
@@ -666,6 +843,12 @@
     },
     "area": "Area",
     "arrange": "Arrange",
+    "convertToPath": "Convert to drawn path",
+    "convertToPathNote": {
+      "circle": "It stops being a circle: its centre and diameter can no longer be typed, but it can be stretched into an oval and its points moved. A stitch line cannot follow an oval yet.",
+      "arc": "It stops being an arc: its radius and sweep can no longer be typed, but it can be stretched unevenly and its points moved.",
+      "rect": "It stops being a rectangle: its width, height and corners can no longer be typed, but it can be sheared and its points moved. A stitch line cannot follow rounded corners stretched unevenly yet."
+    },
     "cut": "Cut",
     "cutSuffix": "off",
     "drawing": "Rectangle being drawn",
@@ -817,6 +1000,8 @@
         "allowance-needs-whole-run": "A seam allowance follows the whole stitch line, so the outline it makes is closed.",
         "holes-need-hole-set": "Only a stitch hole set can follow a stitch line at a pitch.",
         "holes-need-stitch-line": "Holes can only follow a stitch line.",
+        "row-needs-hole-row": "Only a row of holes can follow a marking line at a pitch.",
+        "row-needs-marking-line": "A row of holes can only follow a marking line.",
         "inset-needs-outline": "A stitch line can only be inset from an outline or a cut-out.",
         "inset-needs-stitch-line": "Only a stitch line can be inset from an outline.",
         "mirror-keeps-kind": "A counterpart is the same kind of thing as what it mirrors.",
@@ -867,8 +1052,8 @@
       "description": "A mirror needs one line to fold about, and this fold bends. Draw it as a straight crease, or mirror across a different one."
     },
     "MIRROR_WOULD_SCALE": {
-      "title": "A counterpart cannot be resized",
-      "description": "{{featureName}} is a mirror of {{sourceName}}, so it is the size {{sourceName}} is. Scale {{sourceName}} and this follows."
+      "title": "A counterpart must stay matched",
+      "description": "The requested scale cannot keep {{featureName}} matched to {{sourceName}}. Resize its original, or scale the whole piece evenly."
     },
     "MIRROR_NO_AXIS": {
       "title": "Nothing to mirror across",
@@ -884,7 +1069,15 @@
     },
     "NOT_A_DRAWN_PATH": {
       "title": "No points to edit",
-      "description": "{{featureName}} is not a drawn path, so it has no points of its own. A shape is changed by its measurements, and a derived feature follows what it was made from."
+      "description": "{{featureName}} is not a drawn path, so it has no points of its own. A shape is changed by its measurements, unless it is converted to a drawn path in Properties; a derived feature follows what it was made from."
+    },
+    "NOT_A_SHAPE": {
+      "title": "Already drawn",
+      "description": "{{featureName}} is not a shape, so there is nothing to convert: a drawn path already has points, and a derived feature follows what it was made from."
+    },
+    "HOLE_STAYS_ROUND": {
+      "title": "A punched hole stays round",
+      "description": "{{featureName}} is punched, and a punch is round, so it stays a circle. For an oval opening, draw a cut-out."
     },
     "POINT_EDIT_DEGENERATE": {
       "title": "Too few points",
@@ -916,11 +1109,11 @@
     },
     "WOULD_BECOME_ELLIPSE": {
       "title": "Would become an ellipse",
-      "description": "A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this editor cannot represent. Scale it evenly instead."
+      "description": "A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this editor cannot represent. Scale it evenly, or convert it to a drawn path in Properties first."
     },
     "WOULD_SHEAR": {
       "title": "Would shear",
-      "description": "A turned rectangle cannot be stretched along one axis — it would shear, and its corners would stop being square. Rotate it back to 0°, or scale it evenly."
+      "description": "A turned rectangle cannot be stretched along one axis — it would shear, and its corners would stop being square. Rotate it back to 0°, scale it evenly, or convert it to a drawn path in Properties first."
     },
     "TEXT_WOULD_DISTORT": {
       "title": "Would distort the letters",
@@ -1007,6 +1200,10 @@
       "description_one": "{{featureName}} crosses itself once, so where to cut is ambiguous. Redraw it so the line never crosses.",
       "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous. Redraw it so the line never crosses."
     },
+    "HOLES_OVERLAP": {
+      "title": "Holes run into each other",
+      "description": "{{featureName}} has holes {{spacing}} apart that are {{diameter}} across, so no leather is left between them and they cut as one slot. Widen the pitch or use a smaller punch."
+    },
     "HOLE_SPACING_DEVIATION": {
       "title": "Spacing differs from the iron",
       "description": "The holes are {{achieved}} apart, but the iron’s pitch is {{pitch}}. Change the pitch or the edge margin to bring them closer."
@@ -1031,20 +1228,16 @@
     },
     "OUTSIDE_PART": {
       "title": "Off the material",
-      "holes": "{{featureName}} has holes off the material — through the outline, or into a cut-out. They cannot be punched.",
+      "holes": "{{featureName}} has holes that leave the material — through the outline, or into a cut-out. They cannot be punched there.",
       "line": "{{featureName}} runs off the material, so part of it cannot be marked."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {
       "title": "Too near the edge",
-      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a stitch needs. Leather tears out between a hole and an edge."
+      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a hole needs. Leather tears out between a hole and an edge."
     },
     "EMPTY_PART": {
       "title": "Empty part",
       "description": "{{partName}} has nothing in it. Draw into it, or delete it from the parts list."
-    },
-    "WHOLE_PART_NOT_SCALED": {
-      "title": "A whole part is not scaled",
-      "description": "Scale resizes the shapes you pick, not a whole part: that would resize its rivet holes and labels too. Pick its outline on the board to resize the edge alone."
     },
     "counts": {
       "error_one": "{{count}} error",
@@ -1121,6 +1314,7 @@
   "history": {
     "add": "Add {{name}}",
     "add-dimension": "Add dimension",
+    "add-overall-size": "Add overall size",
     "add-label": "Add label",
     "add-point": "Add point",
     "add-seam-allowance": "Add seam allowance",
@@ -1129,6 +1323,7 @@
     "change-hardware-type": "Change hardware type",
     "change-marking-purpose": "Change marking purpose",
     "change-paper": "Change paper",
+    "convert-to-path": "Convert to drawn path",
     "delete": "Delete {{what}}",
     "deleteKeepFrozen": "Delete {{what}}, keep {{frozen}} frozen",
     "deleteWithDependents_one": "Delete {{what}} and {{count}} dependent",
@@ -1179,7 +1374,12 @@
     "transform": "Transform",
     "unlock_one": "Unlock",
     "unlock_other": "Unlock {{count}} features",
-    "delete-part": "Delete part"
+    "delete-part": "Delete part",
+    "add-guide": "Add guide",
+    "edit-guide": "Edit guide",
+    "delete-guide": "Delete guide",
+    "align": "Align selection",
+    "distribute": "Distribute selection"
   },
   "fieldMenu": {
     "label": "Edit",
@@ -1232,6 +1432,156 @@
       "stitchLine": "Stitch line",
       "holes": "Stitch holes",
       "allowance": "Seam allowance"
+    }
+  },
+  "updates": {
+    "current": "You have the latest version.",
+    "available": "LeatherCAD {{version}} is available.",
+    "availableLink": "See what is new, and download it",
+    "failed": "Could not check for a new version. Check your connection, or try again later.",
+    "checkedAt": "Checked at {{time}}",
+    "again_one": "You can check again in {{count}} minute.",
+    "again_other": "You can check again in {{count}} minutes."
+  },
+  "templates": {
+    "title": "New project from template",
+    "mineEmpty": "Save any project as a template, from the Project menu or its tab’s menu, and it is listed here.",
+    "use": "Use template",
+    "remove": "Remove {{name}}",
+    "bifoldWallet": {
+      "name": "Bifold wallet",
+      "description": "An outer and a lining, each folded, and two card pockets"
+    },
+    "cardHolder": {
+      "name": "Card holder",
+      "description": "An outer stitched all round, and a pocket for each face"
+    },
+    "keyFob": {
+      "name": "Key fob",
+      "description": "A strap with round ends, folded through a ring and riveted"
+    },
+    "coaster": {
+      "name": "Coaster",
+      "description": "A 100 mm square with soft corners, stitched all round"
+    },
+    "saveTitle": "Save as template",
+    "saveName": "Template name",
+    "save": "Save template",
+    "replace": "Replace",
+    "exists": "A template named “{{name}}” already exists. Replace it, or choose another name.",
+    "invalid": "A template cannot be called “{{name}}”. Choose another name.",
+    "saved": "Saved as the template “{{name}}”.",
+    "pieces_one": "{{count}} piece to cut",
+    "pieces_other": "{{count}} pieces to cut",
+    "search": "Search templates",
+    "searchLabel": "Search templates by name, description or tag",
+    "show": {
+      "all": "All",
+      "builtin": "Built-in",
+      "mine": "Mine"
+    },
+    "showLabel": "Show",
+    "sortLabel": "Sort",
+    "sort": {
+      "name": "Name (A–Z)",
+      "nameDesc": "Name (Z–A)",
+      "recent": "Recently used",
+      "newest": "Newest first",
+      "oldest": "Oldest first"
+    },
+    "group": {
+      "pinned": "Pinned",
+      "others": "Other templates",
+      "foldPinned": "Fold the pinned templates",
+      "unfoldPinned": "Show the pinned templates"
+    },
+    "count": "{{shown}} of {{total}}",
+    "countAll_one": "{{count}} template",
+    "countAll_other": "{{count}} templates",
+    "noMatch": "No template is called or described as “{{query}}”.",
+    "clearSearch": "Clear the search",
+    "builtInBadge": "Built-in",
+    "changedOn": "Modified {{date}}",
+    "fact": {
+      "pieces": "Pieces to cut",
+      "layout": "Pattern layout",
+      "changed": "Modified"
+    },
+    "overallSize": "{{width}} × {{height}} mm",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "rename": "Rename…",
+    "renameLabel": "Template name",
+    "duplicate": "Duplicate",
+    "duplicateMine": "Duplicate as my template",
+    "edit": "Edit template",
+    "editTooltip": "Open the template itself in a tab: Save writes the template",
+    "export": "Export…",
+    "showInFolder": "Show in folder",
+    "delete": "Delete",
+    "import": "Import template…",
+    "importTooltip": "Add a project file from disk as one of your templates",
+    "builtInLocked": "Built-in templates stay as they ship. Duplicate one to make it yours.",
+    "description": "Description",
+    "descriptionPlaceholder": "What it is for, and what to watch for",
+    "tags": "Tags",
+    "tagsPlaceholder": "Comma-separated, such as belts, brown",
+    "removed": "Removed “{{name}}”.",
+    "undo": "Undo",
+    "copyName": "{{name}} copy",
+    "importTitle": "Import a template",
+    "exportTitle": "Export the template",
+    "nothingChosen": "Choose a template.",
+    "wordsTitle": "Description and tags",
+    "saveWords": "Save",
+    "editDetails": "Edit details…",
+    "actionsFor": "Actions for {{name}}",
+    "sortChosen": "Sort: {{sort}}"
+  },
+  "guides": {
+    "title": "Guides",
+    "help": "Drag a guide from a ruler, or place one on the board: click for a level guide, or drag through two points. Guides are saved and snap targets; they never print. Select a guide to move it, type its position and angle, or add one parallel to it.",
+    "horizontal": "Horizontal guide",
+    "vertical": "Vertical guide",
+    "item": "Guide {{number}}",
+    "x": "Guide x",
+    "y": "Guide y",
+    "angle": "Guide angle",
+    "delete": "Delete guide",
+    "placeHint": "Click places a horizontal guide",
+    "verticalHint": "places a vertical guide",
+    "dragHint": "Drag through two points",
+    "selected": "Guide selected",
+    "parallel": {
+      "title": "Parallel guide",
+      "distance": "Parallel distance",
+      "above": "Add above",
+      "below": "Add below",
+      "left": "Add left",
+      "right": "Add right"
+    }
+  },
+  "arrange": {
+    "title": "Align and distribute",
+    "help": "Arrange the selected bounding boxes. A piece moves whole. Distribution keeps the outer items fixed and makes the gaps equal.",
+    "x": {
+      "min": "Align left",
+      "centre": "Centre horizontally",
+      "max": "Align right",
+      "distribute": "Equal horizontal gaps"
+    },
+    "y": {
+      "min": "Align bottom",
+      "centre": "Centre vertically",
+      "max": "Align top",
+      "distribute": "Equal vertical gaps"
+    },
+    "reason": {
+      "count_one": "Select at least {{count}} independent item.",
+      "count_other": "Select at least {{count}} independent items.",
+      "unresolved": "The selection contains geometry that cannot be resolved.",
+      "linked": "These items follow one another. Arrange independent pieces, or move their source instead.",
+      "order": "These sizes cannot have equal gaps without reordering. Move the outer items farther apart."
     }
   }
 }

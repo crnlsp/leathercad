@@ -2,10 +2,11 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { caption } from './keyCaption.js';
+import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -16,24 +17,7 @@ import { resizeWindow } from './windowSize.js';
 
 const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-bar-'));
 
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
-
-async function drawAPanel(window: Page): Promise<void> {
-  await window.getByTestId('tool-rectangle').click();
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  await window.mouse.move(box.x + 150, box.y + 150);
-  await window.mouse.down();
-  await window.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
-  await window.mouse.up();
-  await expect(window.getByTestId('part-count')).toHaveText('1');
-}
+const launch = (configHome: string) => openApp({ env: { XDG_CONFIG_HOME: configHome } });
 
 test('the Project menu opens by mouse and by keyboard, and gives focus back (8.7)', async () => {
   const { app, window } = await launch(fresh());
@@ -42,6 +26,8 @@ test('the Project menu opens by mouse and by keyboard, and gives focus back (8.7
     await button.focus();
     await window.keyboard.press('Enter');
     await expect(window.getByTestId('new')).toBeFocused();
+    await window.keyboard.press('ArrowDown');
+    await expect(window.getByTestId('new-template')).toBeFocused();
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('open')).toBeFocused();
     await window.keyboard.press('End');
@@ -73,7 +59,7 @@ test('Save as… asks where, and saves there (8.7)', async () => {
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await fromProjectMenu(window, 'save-as');
     await expect(window.getByTestId('file-path')).toContainText('Card holder');
     await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
@@ -136,14 +122,8 @@ const shown = (window: Page, id: string): Promise<string> =>
     return (copy.textContent ?? '').trim();
   });
 
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('help-menu').click();
-  await window.getByTestId('help-open-sample').click();
-  await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
-}
-
+// The Project menu is the tab strip's since 8.12, at its left.
 const BAR = [
-  'project-menu',
   'save-state',
   'save',
   'view-design',
@@ -190,20 +170,15 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
       expect(await shown(window, 'export-pdf')).toBe('Export PDF');
       expect(await shown(window, 'print')).toBe('Print');
       // The switch keeps its icons and the count; the words go at 860 px.
-      expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '5' : 'Sheets5');
-      // A long name gives way, and its tooltip says it whole.
-      const name = window.getByTestId('project-name');
-      expect(
-        await name.evaluate((element) => element.scrollWidth > element.clientWidth),
-        `${String(width)}: the name is cut short`,
-      ).toBe(width !== 1920);
+      expect(await shown(window, 'view-sheets')).toBe(width === 860 ? '5' : 'Sheets 5');
     }
-    await window.getByTestId('project-menu').hover();
-    await expect(
-      window.getByRole('tooltip', {
-        name: /^Bifold wallet, lined, with a card pocket each side\./,
-      }),
-    ).toBeVisible();
+    // A long name gives way in its tab, which says it whole when pointed at (8.12).
+    const tab = window.getByTestId('tab-strip').getByRole('tab', { selected: true });
+    expect(await tab.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    await expect(tab).toHaveAttribute(
+      'title',
+      'Bifold wallet, lined, with a card pocket each side',
+    );
   } finally {
     await closeApp(app);
   }
@@ -224,11 +199,11 @@ test('the save state says saved or not, and Save says when there is nothing to s
     await expect(window.getByRole('tooltip', { name: 'Nothing to save' })).toBeVisible();
     await expect(window.getByRole('tooltip').locator('kbd')).toHaveCount(0);
 
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
     await expect(window.getByTestId('save-state').locator('.icon')).toHaveCount(1);
     await expect(save).not.toHaveAttribute('aria-disabled');
-    await expect(save.locator('kbd')).toHaveText('Ctrl+S');
+    await expect(save.locator('kbd')).toHaveText(caption('Ctrl+S'));
 
     await save.click();
     await expect(window.getByTestId('save-state')).toHaveText('Saved');
@@ -257,7 +232,7 @@ test('Rename… in the Project menu renames the project, as one step, by keyboar
     await expect(window).toHaveTitle('• Card holder — LeatherCAD');
     // The keyboard is given back its place.
     await expect(menu).toBeFocused();
-    await expect(menu).toHaveAccessibleName('Project menu, Card holder');
+    await expect(menu).toHaveAccessibleName('Project menu');
 
     // Escape leaves the name as it was.
     await fromProjectMenu(window, 'rename');
@@ -296,9 +271,9 @@ test('Design | Sheets is a tab list: the arrows, Ctrl+1 and Ctrl+2 switch (R-06)
     await expect(design).toBeFocused();
     await expect(canvas).toHaveAttribute('data-view', 'design');
 
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
-    await window.keyboard.press('Control+1');
+    await window.keyboard.press('ControlOrMeta+1');
     await expect(canvas).toHaveAttribute('data-view', 'design');
 
     // A press with the mouse switches and leaves the keys to the board.
@@ -323,7 +298,7 @@ test('the paper button, the Sheets tab and the job totals count the same sheets 
       const button = window.getByTestId('paper-button');
       if (count !== null) await expect(button).toHaveAttribute('data-sheets', count);
       const sheets = (await button.getAttribute('data-sheets')) ?? '';
-      expect(await shown(window, 'view-sheets')).toBe(`Sheets${sheets}`);
+      expect(await shown(window, 'view-sheets')).toBe(`Sheets ${sheets}`);
       await expect(window.getByTestId('job-sheets')).toContainText(`Sheets${sheets} · ${paper}`);
     }
     // The popover says it too, and takes the maker to the sheets.
@@ -421,7 +396,7 @@ test('F1 opens Help, and the keyboard gets its place back (U.7)', async () => {
     await expect(window.getByRole('tooltip', { name: /Help/ }).locator('kbd')).toHaveText('F1');
     await window.mouse.move(600, 500);
     await window.keyboard.press('F1');
-    await expect(window.getByTestId('help-open-sample')).toBeFocused();
+    await expect(window.getByTestId('help-about')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
     await expect(window.getByTestId('help-menu')).toBeFocused();
@@ -452,7 +427,7 @@ test('the save state and the problems are said politely, once per change (§2)',
     const said = () => window.evaluate(() => (window as unknown as { said: object }).said);
 
     // A drag of a rectangle, many frames long: the save state changes once.
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     // A second edit changes nothing that is said.
     await window.getByTestId('tool-rectangle').click();
@@ -484,7 +459,7 @@ test('the window’s edited flag follows unsaved work (§2)', async () => {
     const edited = () =>
       app.evaluate(() => (globalThis as { edited?: boolean[] }).edited?.at(-1) ?? null);
 
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await expect.poll(edited).toBe(true);
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).toHaveText('Saved');

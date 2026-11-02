@@ -11,7 +11,9 @@ export {
   CANVAS,
   DASH_LEGIBLE_PX,
   DENSITY,
+  DIMENSION_MARKS,
   GROUND,
+  MOTION_TIMING,
   NOMINAL_IRON,
   PAPER_FURNITURE,
   ROLE_STYLES,
@@ -30,6 +32,7 @@ export {
   cssPxPerMm,
   mmToPixels,
   pixelsToMm,
+  widestPixelsToMm,
   scaleAtZoomPercent,
   nextZoomStop,
   shownZoomPercent,
@@ -41,10 +44,12 @@ export {
   zoomPercent,
 } from './view.js';
 
+export type { BoundedItem, Extent } from './extent.js';
+export { EDGE_PX, extentOf, itemsReachingView, reachesView, unionExtent } from './extent.js';
+
 export type { DisplayItem, DisplayList, Stroke } from './displayList.js';
 export {
   ROLE_STROKES,
-  displayListBounds,
   documentTextItem,
   dotsItem,
   markerItem,
@@ -69,6 +74,7 @@ export { DEFAULT_RULER_STYLE, renderGrid, renderRulers } from './canvas2d/grid.j
 
 export type { BuildOptions, Caption } from './buildDisplayList.js';
 export { DIAGNOSTIC_COLOURS, buildDisplayList } from './buildDisplayList.js';
+export { guideDisplayList } from './guides.js';
 
 export type { SvgOptions } from './svg/backend.js';
 export { renderToSvgString } from './svg/backend.js';

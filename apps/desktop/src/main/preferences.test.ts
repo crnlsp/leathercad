@@ -8,7 +8,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   PreferencesStore,
   RECENT_LIMIT,
+  SESSION_LIMIT,
   parsePreferences,
+  readSession,
   shownPath,
   validChanges,
   withRecent,
@@ -100,6 +102,14 @@ describe('reading preferences.json', () => {
     expect(validChanges({ selectionBar: 0 })).toEqual({});
   });
 
+  it('keeps no switch for checking for a new version: only the maker asks (8.9)', () => {
+    expect(DEFAULT_PREFERENCES).not.toHaveProperty('updateCheck');
+    expect(parsePreferences(JSON.stringify({ updateCheck: true }))).not.toHaveProperty(
+      'updateCheck',
+    );
+    expect(validChanges({ updateCheck: true })).toEqual({});
+  });
+
   it('keeps the interface language: following the system, or one the app ships', () => {
     expect(parsePreferences(JSON.stringify({ language: 'en' })).language).toBe('en');
     expect(parsePreferences(JSON.stringify({ language: 'system' })).language).toBe('system');
@@ -107,6 +117,36 @@ describe('reading preferences.json', () => {
     expect(validChanges({ language: 'system' })).toEqual({ language: 'system' });
     expect(validChanges({ language: 'xx' })).toEqual({});
     expect(validChanges({ language: 7 })).toEqual({});
+  });
+});
+
+describe('the layers an export keeps (6.4)', () => {
+  it('is every layer until the maker chooses, in a file written before the dialog too', () => {
+    expect(DEFAULT_PREFERENCES.exportRoles).toBeNull();
+    expect(parsePreferences(null).exportRoles).toBeNull();
+    expect(parsePreferences(JSON.stringify({ selectionBar: false })).exportRoles).toBeNull();
+  });
+
+  it('keeps the names that are layer roles, once each, and drops the rest', () => {
+    const read = (exportRoles: unknown) =>
+      parsePreferences(JSON.stringify({ exportRoles })).exportRoles;
+    expect(read(['cut', 'hardware'])).toEqual(['cut', 'hardware']);
+    expect(read(['hardware', 'cut', 'cut', 'rivets', 7])).toEqual(['hardware', 'cut']);
+    // Nothing at all is a choice a maker can make, and the dialog says so.
+    expect(read([])).toEqual([]);
+    expect(read('cut')).toBeNull();
+  });
+
+  it('takes the same change from the renderer, by the same rules, and keeps it over a restart', async () => {
+    expect(validChanges({ exportRoles: ['cut', 'x'] })).toEqual({ exportRoles: ['cut'] });
+    expect(validChanges({ exportRoles: null })).toEqual({ exportRoles: null });
+    expect(validChanges({ exportRoles: 'cut' })).toEqual({});
+
+    const store = new PreferencesStore(file);
+    await store.update({ exportRoles: ['cut', 'hardware'] });
+    expect(new PreferencesStore(file).preferences.exportRoles).toEqual(['cut', 'hardware']);
+    await store.update({ exportRoles: null });
+    expect(new PreferencesStore(file).preferences.exportRoles).toBeNull();
   });
 });
 
@@ -351,6 +391,29 @@ describe('keeping preferences', () => {
     writeFileSync(file, '\u0000\u0001garbage');
     expect(new PreferencesStore(file).preferences).toEqual(DEFAULT_PREFERENCES);
   });
+
+  it('has every change asked for on disk once a quit has waited for them', async () => {
+    // Asked for as the window closes, and awaited by no one: still being
+    // written when the quit comes, and cut off unless the quit waits.
+    const store = new PreferencesStore(file);
+    void store.update({ partsFolded: true });
+    void store.keepSession({
+      tabs: [{ path: '/p/belt.lcp', kept: null, view: 'design', camera: null }],
+      active: 0,
+    });
+    await store.settled();
+
+    const next = new PreferencesStore(file);
+    expect(next.preferences.partsFolded).toBe(true);
+    expect(next.session.tabs.map((tab) => tab.path)).toEqual(['/p/belt.lcp']);
+  });
+
+  it('tells a quit that waits when the last change could not be written', async () => {
+    writeFileSync(join(dir, 'blocked'), 'a file where the folder should be');
+    const store = new PreferencesStore(join(dir, 'blocked', 'preferences.json'));
+    store.update({ partsFolded: true }).catch(() => undefined);
+    await expect(store.settled()).rejects.toThrow();
+  });
 });
 
 describe('a recent project as the maker reads it (8.7)', () => {
@@ -372,5 +435,129 @@ describe('a recent project as the maker reads it (8.7)', () => {
   it('leaves every path whole when there is no home directory', () => {
     const path = ['', 'home', 'maker', 'Wallet.lcp'].join(sep);
     expect(shownPath(path, '')).toBe(path);
+  });
+});
+
+describe('the open tabs, for the next start (8.12)', () => {
+  const WALLET = '01JB5M00000000000000WALLET';
+  const tab = (path: string | null, kept: string | null = null) => ({
+    path,
+    kept,
+    view: 'design' as const,
+    camera: null,
+  });
+
+  it('has none in a file written before tabs', () => {
+    expect(new PreferencesStore(file).session).toEqual({ tabs: [], active: null });
+  });
+
+  it('keeps project paths and kept copies only, each path once, and an active one among them', () => {
+    expect(
+      readSession({
+        tabs: [
+          tab('/p/wallet.lcp'),
+          tab('relative.lcp'),
+          tab('/p/notes.txt'),
+          tab('/p/wallet.lcp'),
+          tab(null, WALLET),
+          tab(null, '../escape'),
+          7,
+        ],
+        active: 9,
+      }),
+    ).toEqual({ tabs: [tab('/p/wallet.lcp'), tab(null, WALLET)], active: null });
+    expect(readSession({ tabs: 'nope' })).toEqual({ tabs: [], active: null });
+    expect(readSession(null)).toEqual({ tabs: [], active: null });
+    expect(
+      readSession({ tabs: Array.from({ length: 50 }, (_, i) => tab(`/p/${String(i)}.lcp`)) }).tabs,
+    ).toHaveLength(SESSION_LIMIT);
+  });
+
+  it('keeps a view and a camera only when they are ones a maker could have left', () => {
+    const read = readSession({
+      tabs: [
+        { path: '/p/a.lcp', kept: null, view: 'sheets', camera: { x: 12.5, y: -3, percent: 150 } },
+        {
+          path: '/p/b.lcp',
+          kept: null,
+          view: 'upside',
+          camera: { x: Infinity, y: 0, percent: 100 },
+        },
+      ],
+      active: 1,
+    });
+    expect(read.tabs.map((each) => [each.view, each.camera])).toEqual([
+      ['sheets', { x: 12.5, y: -3, percent: 150 }],
+      ['design', null],
+    ]);
+    expect(read.active).toBe(1);
+  });
+
+  it('reads a session written before views and kept work as its tabs', () => {
+    expect(readSession({ projects: ['/p/a.lcp', '/p/b.lcp'], active: '/p/b.lcp' })).toEqual({
+      tabs: [tab('/p/a.lcp'), tab('/p/b.lcp')],
+      active: 1,
+    });
+  });
+
+  it('survives a restart, beside the recent list, and is not a preference', async () => {
+    const first = new PreferencesStore(file);
+    await first.noteRecent('/p/wallet.lcp');
+    await first.keepSession({ tabs: [tab('/p/wallet.lcp'), tab('/p/belt.lcp')], active: 1 });
+
+    const second = new PreferencesStore(file);
+    expect(second.session).toEqual({ tabs: [tab('/p/wallet.lcp'), tab('/p/belt.lcp')], active: 1 });
+    expect(second.recentFiles).toEqual(['/p/wallet.lcp']);
+    expect(second.preferences).not.toHaveProperty('session');
+    await second.update({ legendOpen: false });
+    expect(new PreferencesStore(file).session.tabs).toHaveLength(2);
+  });
+
+  it('writes nothing when the tabs are as they were', async () => {
+    const store = new PreferencesStore(file);
+    await store.keepSession({ tabs: [tab('/p/wallet.lcp')], active: 0 });
+    writeFileSync(file, 'left alone');
+    await store.keepSession({ tabs: [tab('/p/wallet.lcp')], active: 0 });
+    expect(readFileSync(file, 'utf8')).toBe('left alone');
+  });
+});
+
+describe('pinned projects (8.12)', () => {
+  it('stay at the top, kept by Clear list, never pushed off by newer ones', async () => {
+    const store = new PreferencesStore(file);
+    await store.noteRecent('/p/wallet.lcp');
+    await store.pin('/p/wallet.lcp', true);
+    for (let i = 0; i < RECENT_LIMIT + 3; i++) await store.noteRecent(`/p/${String(i)}.lcp`);
+    expect(store.pinnedFiles).toEqual(['/p/wallet.lcp']);
+    expect(store.recentFiles).toHaveLength(RECENT_LIMIT);
+    expect(store.recentFiles).not.toContain('/p/wallet.lcp');
+
+    await store.clearRecent();
+    expect(store.recentFiles).toEqual([]);
+    expect(new PreferencesStore(file).pinnedFiles).toEqual(['/p/wallet.lcp']);
+  });
+
+  it('pins only a project on the list, and an unpinned one goes back first', async () => {
+    const store = new PreferencesStore(file);
+    await store.pin('/p/never-opened.lcp', true);
+    expect(store.pinnedFiles).toEqual([]);
+
+    await store.noteRecent('/p/belt.lcp');
+    await store.noteRecent('/p/wallet.lcp');
+    await store.pin('/p/belt.lcp', true);
+    await store.pin('/p/belt.lcp', false);
+    expect(store.pinnedFiles).toEqual([]);
+    expect(store.recentFiles).toEqual(['/p/belt.lcp', '/p/wallet.lcp']);
+  });
+
+  it('takes one project off the list, pinned or not, and leaves the rest', async () => {
+    const store = new PreferencesStore(file);
+    await store.noteRecent('/p/belt.lcp');
+    await store.noteRecent('/p/wallet.lcp');
+    await store.pin('/p/belt.lcp', true);
+    await store.forgetRecent('/p/belt.lcp');
+    await store.forgetRecent('/p/wallet.lcp');
+    expect(store.pinnedFiles).toEqual([]);
+    expect(store.recentFiles).toEqual([]);
   });
 });

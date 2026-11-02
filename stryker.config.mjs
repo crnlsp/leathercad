@@ -16,10 +16,6 @@
  * One package per run, each against its own Vitest config, so the setup file
  * and timeouts are exactly the ones `pnpm test` uses.
  *
- * Vitest 5 needs a patch to the runner until stryker-js#6210 ships: see
- * `patches/` and ADR 0016. Without it every covered mutant is reported as
- * surviving, because the runner's test-name filter matches nothing.
- *
  * `inPlace` rather than Stryker's copied sandbox: pnpm keeps each package's
  * links in that package's own node_modules, and the sandbox links only the
  * root one. The sandbox was not tried. Stryker restores every file when it
@@ -58,5 +54,9 @@ export default {
   thresholds: { high: 80, low: 60, break: null },
   concurrency: 4,
   timeoutMS: 30_000,
+  // The unmutated run of geometry took 4 min 11 s on a green weekly run and
+  // more than Stryker's default five on the red one (issue 123): "Initial test
+  // run timed out", before one mutant was tested. A slow runner must not decide that.
+  dryRunTimeoutMinutes: 30,
   tempDirName: '.stryker-tmp',
 };

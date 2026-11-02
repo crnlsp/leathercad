@@ -6,7 +6,8 @@ import { useI18n } from '../i18n.js';
 /**
  * Which way the leather bends, and how thick it is where it bends.
  *
- * Thickness is stored and nothing consumes it yet — bend allowance is v1.1.
+ * Thickness is stored and nothing consumes it yet — bend allowance is roadmap
+ * 9.1.
  * It is editable anyway because 4.1 deliberately stored it, and a field that
  * is written but unreachable is how stored-but-unreachable becomes
  * stored-but-wrong.

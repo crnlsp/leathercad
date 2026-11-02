@@ -5,11 +5,12 @@ import {
   selfIntersections,
   type Intersection,
   type Path,
+  Vec2Ops,
   type Vec2,
 } from '@leathercad/geometry';
 import { missingGlyphs } from '@leathercad/typography';
 
-import type { FeatureId, PartId } from './feature.js';
+import type { Feature, FeatureId, PartId } from './feature.js';
 import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
 import { distanceToEdge, isOnMaterial, materialOf, type Material } from './material.js';
 import { hasOuterContour } from './partStructure.js';
@@ -67,6 +68,12 @@ export const MIN_HOLES_IN_A_SET = 2;
  * edge tears out — at the awl, at the needle, or in use. It is a warning
  * rather than a refusal because thin, firm leather and a small iron can carry
  * less, and the maker knows which they have.
+ *
+ * Measured from where the leather is cut: a stitch hole's point, and a
+ * hardware hole's **rim** (Q33). It is the same strip of leather between a cut
+ * and an edge that tears, whatever made the cut, so the one figure serves
+ * both. Hardware that pulls harder may want more; that is a footprint's
+ * question (roadmap 9.23), not this one's.
  */
 export const MIN_HOLE_EDGE_CLEARANCE_MM: Mm = 1.5;
 
@@ -110,29 +117,16 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
       );
     }
 
-    // DR2: everything in a part lies on its material. Only askable once there
-    // is material to be off.
-    if (material.outer !== null) {
-      for (const entry of features) {
-        if (!entry.ok) continue;
-        for (const { problem: p, points } of offMaterial(entry, material)) {
-          found.push(
-            placed(
-              p,
-              part.id,
-              entry.feature.id,
-              // The holes at fault where a rule knows them, the whole feature
-              // where it does not: "which hole" is the question the maker has
-              // to answer before they can fix anything.
-              points === undefined
-                ? { kind: 'path', path: entry.path }
-                : { kind: 'points', points },
-              p.code === 'OUTSIDE_PART' && p.facts.what === 'line' ? 'warning' : undefined,
-            ),
-          );
-        }
-      }
-    }
+    // Each feature's findings from its geometry, against this material: DR2,
+    // and the rules about its own shape and holes. Kept while their inputs are
+    // the same objects (PERF-005), so a rename or an edit to another part
+    // validates no geometry again.
+    const ofFeatures = features.map((entry) =>
+      entry.ok ? findingsOf(entry, part.id, material) : null,
+    );
+
+    // DR2: everything in a part lies on its material.
+    for (const findings of ofFeatures) if (findings !== null) found.push(...findings.onMaterial);
 
     // A part's name is printed above it on the sheet. A character the vendored
     // typeface has no glyph for prints as a box rather than throwing (ADR
@@ -152,12 +146,12 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
       );
     }
 
-    for (const entry of features) {
-      if (!entry.ok) continue;
+    features.forEach((entry, i) => {
+      if (!entry.ok) return;
       const { feature } = entry;
-      const about = { featureId: feature.id, featureName: feature.name };
 
-      // A label's own words print too, and the same typeface has to carry them.
+      // A label's own words print too, and the same typeface has to carry
+      // them. Asked every time: the problem names the part.
       if (feature.kind === 'text-label') {
         const unprintable = missingGlyphs(feature.source.text);
         if (unprintable.length > 0) {
@@ -166,7 +160,8 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
               problem('TEXT_GLYPH_MISSING', {
                 partId: part.id,
                 partName: part.name,
-                ...about,
+                featureId: feature.id,
+                featureName: feature.name,
                 text: feature.source.text,
                 characters: unprintable.join(' '),
               }),
@@ -178,30 +173,138 @@ export function validate(resolved: ResolvedProject): Diagnostic[] {
         }
       }
 
-      if (feature.kind === 'cut-contour') {
-        const crossings = crossingsOf(entry.path);
-        if (crossings.length > 0) {
-          found.push(
-            placed(
-              problem('CONTOUR_SELF_INTERSECTS', { ...about, crossings: crossings.length }),
-              part.id,
-              feature.id,
-              { kind: 'points', points: crossings.map((crossing) => crossing.point) },
-            ),
-          );
-        }
-      }
+      found.push(...ofFeatures[i]!.ownShape);
+    });
+  }
 
-      const source = feature.source;
-      if (
-        entry.holes !== undefined &&
-        source.kind === 'derived' &&
-        source.op.type === 'stitch-holes'
-      ) {
-        for (const p of holeProblems(entry.holes, source.op.pitchMm, about)) {
-          found.push(placed(p, part.id, feature.id, { kind: 'path', path: entry.path }));
-        }
-      }
+  return found;
+}
+
+/**
+ * What validation finds from one feature's geometry: whether it lies on its
+ * part's material (DR2), and the rules about its own shape and holes. Nothing
+ * here reads a name but the feature's own, so a rename changes none of it.
+ */
+interface Findings {
+  readonly onMaterial: readonly Diagnostic[];
+  readonly ownShape: readonly Diagnostic[];
+}
+
+/**
+ * The findings of a feature, and every object they were found from: the
+ * feature, the path and holes it resolved to, its part, and that part's
+ * outline and cut-outs. All of them are immutable, and evaluation keeps an
+ * unchanged feature's geometry the same object between revisions, so findings
+ * found from the same objects are the same findings. Moving an outline gives
+ * its stitch line, its holes and whatever follows it from another part new
+ * paths, and the rest of its part a new material; their findings are found
+ * again, and nothing else's.
+ */
+interface FoundFrom extends Findings {
+  readonly path: Path;
+  readonly holes: StitchHoles | undefined;
+  readonly partId: PartId;
+  readonly outer: Path | null;
+  readonly cutOuts: readonly Path[];
+}
+
+const findingsCache = new WeakMap<Feature, FoundFrom>();
+
+function findingsOf(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  partId: PartId,
+  material: Material,
+): Findings {
+  const cached = findingsCache.get(entry.feature);
+  if (
+    cached !== undefined &&
+    cached.path === entry.path &&
+    cached.holes === entry.holes &&
+    cached.partId === partId &&
+    cached.outer === material.outer &&
+    cached.cutOuts.length === material.holes.length &&
+    cached.cutOuts.every((cutOut, i) => cutOut === material.holes[i])
+  ) {
+    return cached;
+  }
+
+  const found: FoundFrom = {
+    path: entry.path,
+    holes: entry.holes,
+    partId,
+    outer: material.outer,
+    cutOuts: material.holes,
+    onMaterial: material.outer === null ? [] : onMaterial(entry, partId, material),
+    ownShape: ownShape(entry, partId),
+  };
+  findingsCache.set(entry.feature, found);
+  return found;
+}
+
+/** DR2, placed: what is off the leather, or too near its edge. */
+function onMaterial(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  partId: PartId,
+  material: Material,
+): Diagnostic[] {
+  return offMaterial(entry, material).map(({ problem: p, points }) =>
+    placed(
+      p,
+      partId,
+      entry.feature.id,
+      // The holes at fault where a rule knows them, the whole feature where it
+      // does not: "which hole" is the question the maker has to answer before
+      // they can fix anything.
+      points === undefined ? { kind: 'path', path: entry.path } : { kind: 'points', points },
+      p.code === 'OUTSIDE_PART' && p.facts.what === 'line' ? 'warning' : undefined,
+    ),
+  );
+}
+
+/** The rules about a feature's own shape and holes, whatever leather it is on. */
+function ownShape(entry: Extract<ResolvedFeature, { ok: true }>, partId: PartId): Diagnostic[] {
+  const found: Diagnostic[] = [];
+  const { feature } = entry;
+  const about = { featureId: feature.id, featureName: feature.name };
+
+  if (feature.kind === 'cut-contour') {
+    const crossings = crossingsOf(entry.path);
+    if (crossings.length > 0) {
+      found.push(
+        placed(
+          problem('CONTOUR_SELF_INTERSECTS', { ...about, crossings: crossings.length }),
+          partId,
+          feature.id,
+          { kind: 'points', points: crossings.map((crossing) => crossing.point) },
+        ),
+      );
+    }
+  }
+
+  // A row's holes are circles; a mirrored row's are too, so this asks the
+  // resolved holes rather than the op.
+  if (entry.holes?.radiusMm !== undefined) {
+    const overlap = overlappingHoles(entry.holes, entry.holes.radiusMm, entry.path.closed);
+    if (overlap !== null) {
+      found.push(
+        placed(
+          problem('HOLES_OVERLAP', {
+            ...about,
+            spacingMm: overlap.spacingMm,
+            diameterMm: 2 * entry.holes.radiusMm,
+          }),
+          partId,
+          feature.id,
+          { kind: 'points', points: overlap.points },
+        ),
+      );
+    }
+  }
+
+  const source = feature.source;
+  if (entry.holes !== undefined && source.kind === 'derived' && source.op.type === 'stitch-holes') {
+    for (const p of holeProblems(entry.holes, source.op.pitchMm, about)) {
+      found.push(placed(p, partId, feature.id, { kind: 'path', path: entry.path }));
     }
   }
 
@@ -247,6 +350,39 @@ function holeProblems(
 }
 
 /**
+ * The holes of a row that cut into a neighbour, and the nearest spacing; null
+ * when none do.
+ *
+ * Two punches nearer than a diameter leave no leather between them, so the
+ * cut is one slot rather than the holes drawn. A warning, not a refusal: a
+ * slot punched as a run of holes is a real technique. Touching within a
+ * storage quantum counts, since a bridge that thin is no bridge.
+ *
+ * Neighbours only, centre to centre in a straight line, the pair across a
+ * closed line's join included. ponytail: holes that are not neighbours but
+ * meet across a tight bend are not found; an all-pairs check if one is drawn.
+ */
+function overlappingHoles(
+  holes: StitchHoles,
+  radiusMm: Mm,
+  closed: boolean,
+): { spacingMm: Mm; points: readonly Vec2[] } | null {
+  const points = holes.holes.map((hole) => hole.point);
+  const pairs = closed && points.length > 2 ? points.length : points.length - 1;
+  const touching = new Set<number>();
+  let spacingMm = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < pairs; i++) {
+    const j = (i + 1) % points.length;
+    const apartMm = Vec2Ops.dist(points[i]!, points[j]!);
+    if (apartMm - 2 * radiusMm >= QUANTUM_MM) continue;
+    spacingMm = Math.min(spacingMm, apartMm);
+    touching.add(i).add(j);
+  }
+  if (!Number.isFinite(spacingMm)) return null;
+  return { spacingMm, points: [...touching].sort((a, b) => a - b).map((i) => points[i]!) };
+}
+
+/**
  * A material rule, and the geometry that would let the user act on it.
  *
  * `points` are the holes at fault. A set of three thousand holes with one too
@@ -282,25 +418,37 @@ function offMaterial(
     return found;
   }
 
-  const punched = holePoints(entry);
+  const punched = punchesOf(entry);
   if (punched !== null) {
-    const off = punched.filter((point) => !isOnMaterial(material, point));
-    if (off.length > 0) {
-      found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }), points: off });
-      // Where a hole is off the material entirely, how near the edge it sits
-      // is not the thing to say about it.
-      return found;
+    // One pass rather than a filter, a min and a filter: whether a hole is off,
+    // the nearest clearance, and the holes that share it all come out of the
+    // same distance, which is the expensive part for three thousand holes.
+    const off: Vec2[] = [];
+    const tight: Vec2[] = [];
+    let clearanceMm = Number.POSITIVE_INFINITY;
+    for (const { centre, radiusMm } of punched) {
+      if (!isOnMaterial(material, centre)) {
+        off.push(centre);
+        continue;
+      }
+      // A circle whose centre is on the leather stays on it unless an edge
+      // passes nearer the centre than its radius — exact, not sampled. A rim
+      // within a storage quantum of an edge is on it, as for a line (Q2).
+      const rimMm = distanceToEdge(material, centre) - radiusMm;
+      if (rimMm < -QUANTUM_MM) {
+        off.push(centre);
+        continue;
+      }
+      if (rimMm >= MIN_HOLE_EDGE_CLEARANCE_MM) continue;
+      clearanceMm = Math.min(clearanceMm, Math.max(0, rimMm));
+      tight.push(centre);
     }
 
-    // One pass rather than a min and then a filter: the nearest clearance and
-    // the holes that share it come out of the same walk.
-    let clearanceMm = Number.POSITIVE_INFINITY;
-    const tight: Vec2[] = [];
-    for (const point of punched) {
-      const distance = distanceToEdge(material, point);
-      if (distance >= MIN_HOLE_EDGE_CLEARANCE_MM) continue;
-      if (distance < clearanceMm) clearanceMm = distance;
-      tight.push(point);
+    if (off.length > 0) {
+      found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }), points: off });
+      // Where a hole is off the material, how near the edge it sits is not
+      // the thing to say about it.
+      return found;
     }
 
     if (tight.length > 0) {
@@ -334,14 +482,24 @@ function offMaterial(
   return found;
 }
 
+/** A hole the leather is cut by: a circle, or a point where the radius is 0. */
+interface Punch {
+  readonly centre: Vec2;
+  readonly radiusMm: Mm;
+}
+
 /**
  * Where this feature is punched, or null when it punches nothing.
  *
- * A hole set is its holes; a hardware hole is the centre of its circle, which
- * is what the punch is lined up on.
+ * A hole set is its holes, each a point where the iron's tooth goes in. A
+ * hardware hole is its whole circle, because a 6 mm punch centred 2 mm in from
+ * the edge cuts through it (Q33), and so is each hole of a row (4.14).
  */
-function holePoints(entry: Extract<ResolvedFeature, { ok: true }>): readonly Vec2[] | null {
-  if (entry.holes !== undefined) return entry.holes.holes.map((hole) => hole.point);
+function punchesOf(entry: Extract<ResolvedFeature, { ok: true }>): readonly Punch[] | null {
+  if (entry.holes !== undefined) {
+    const radiusMm = entry.holes.radiusMm ?? 0;
+    return entry.holes.holes.map((hole) => ({ centre: hole.point, radiusMm }));
+  }
 
   const source = entry.feature.source;
   if (
@@ -349,7 +507,7 @@ function holePoints(entry: Extract<ResolvedFeature, { ok: true }>): readonly Vec
     source.kind === 'shape' &&
     source.shape.type === 'circle'
   ) {
-    return [source.shape.centre];
+    return [{ centre: source.shape.centre, radiusMm: source.shape.radius }];
   }
   return null;
 }

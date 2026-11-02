@@ -84,6 +84,23 @@ export type Derivation =
     }
   | {
       /**
+       * A row of punched holes along a marking line (4.14): a belt's
+       * adjustment holes, rivets along a strap, lacing, decorative punching.
+       *
+       * Placed as a hole set is — a hole on each end, the rest evenly between,
+       * one on every corner — with that policy fixed rather than offered: it
+       * is what a hole set does by default, and nobody has asked for another.
+       * Each hole is a circle of `radiusMm`, punched like a hardware hole,
+       * which is why the radius is stored and a hole set's iron is not.
+       */
+      readonly type: 'hole-row';
+      /** Nominal, centre to centre. The achieved spacing is derived. */
+      readonly pitchMm: Mm;
+      /** The record holds a radius, as a hardware hole's does; the panel asks for a diameter. */
+      readonly radiusMm: Mm;
+    }
+  | {
+      /**
        * A counterpart that stays matched: the source, reflected and placed.
        *
        * The axis and the glide are the **only** things the counterpart owns —
@@ -162,6 +179,15 @@ export type Run =
   | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number };
 
 /**
+ * Where one end of a dimension is: a corner of a feature, or a corner of the
+ * box it fills on the sheet.
+ *
+ * A union, so a reference added later — `centre`, for a radius — is a new arm
+ * every reader is made to handle.
+ */
+export type MeasureRef = AnchorRef | ExtentRef;
+
+/**
  * A durable place on the drawing: a feature, and one of its anchors.
  *
  * **Anchors, never points** ([ADR 0010](../../../docs/adr/0010-anchors-address-geometry.md)). A
@@ -169,15 +195,31 @@ export type Run =
  * coordinates the drawing has left behind, and reads as authoritative while
  * being wrong. An anchor is defined by the feature's parameters, so a
  * rectangle has four corners whatever its size, position, rotation or radii.
- *
- * A union of one arm on purpose: `centre` (for a radius) and `extent` join it
- * later without changing anything that reads it.
  */
-export type MeasureRef = {
+export interface AnchorRef {
   readonly kind: 'anchor';
   readonly featureId: FeatureId;
   readonly anchor: number;
-};
+}
+
+/**
+ * A corner of the box a feature's outline fills on the sheet: its least or
+ * greatest x, and its least or greatest y (Q15).
+ *
+ * What a piece's **overall size** is measured between — the 97 × 67 of a
+ * panel with rounded corners, which no two places on its outline are apart.
+ * Read from the actual outline every evaluation, so it is the leather to cut
+ * whatever the outline is: rounded, grown by an allowance, drawn, or turned —
+ * a turned piece reads the box it takes on the sheet. Never a corner the
+ * edges would meet at if carried on: that point runs away as a rounding nears
+ * a half turn, and is not on the leather.
+ */
+export interface ExtentRef {
+  readonly kind: 'extent';
+  readonly featureId: FeatureId;
+  readonly x: 'min' | 'max';
+  readonly y: 'min' | 'max';
+}
 
 /** What a linear dimension reads between its two ends. */
 export type MeasureKind = 'horizontal' | 'vertical' | 'aligned';
@@ -310,6 +352,18 @@ export interface StitchHoleSet extends FeatureBase {
   readonly kind: 'stitch-hole-set';
 }
 
+/**
+ * A row of holes punched along a marking line (4.14) — not a stitch line,
+ * whose holes are a `StitchHoleSet`.
+ *
+ * Derived, like a hole set, and never persisted as points: the file holds the
+ * pitch and the diameter, and evaluation places the holes. Each is punched at
+ * its true size and cut like a hardware hole, so the row's role is `hardware`.
+ */
+export interface HoleRow extends FeatureBase {
+  readonly kind: 'hole-row';
+}
+
 /** A printed guide — glue areas, alignment, logo placement. Never cut. */
 export interface MarkingLine extends FeatureBase {
   readonly kind: 'marking-line';
@@ -355,7 +409,7 @@ export interface HardwareHole extends FeatureBase {
   /**
    * What the hole is *for*. Not what size it is — that is the radius, and it
    * stays independent because this application does not know what hole a
-   * given snap needs until the hardware library lands in v1.1.
+   * given snap needs until the hardware library (roadmap 9.3) lands.
    */
   readonly hardwareType: 'rivet' | 'snap' | 'screw' | 'eyelet' | 'other';
 }
@@ -379,6 +433,7 @@ export type Feature =
   | FoldLine
   | MarkingLine
   | HardwareHole
+  | HoleRow
   | TextLabel
   | Measurement;
 export type FeatureKind = Feature['kind'];
@@ -417,11 +472,20 @@ export const DEFAULT_SETTINGS: ProjectSettings = {
   orientation: 'portrait',
 };
 
+/** A non-printing, infinite construction line in world millimetres (3.10). */
+export interface Guide {
+  readonly id: Ulid;
+  readonly origin: Vec2;
+  readonly angleRad: Radians;
+}
+
 export interface Project {
   readonly id: Ulid;
   readonly name: string;
   readonly settings: ProjectSettings;
   readonly parts: readonly Part[];
+  /** Absent in projects made before guides existed. */
+  readonly guides?: readonly Guide[];
 }
 
 /** The layer role a feature kind belongs to. One kind, one role, always. */
@@ -438,6 +502,7 @@ export function roleOf(feature: Feature): LayerRole {
     case 'marking-line':
       return 'mark';
     case 'hardware-hole':
+    case 'hole-row':
       return 'hardware';
     case 'text-label':
     case 'measurement':
@@ -445,8 +510,54 @@ export function roleOf(feature: Feature): LayerRole {
   }
 }
 
-export function isCutContour(feature: Feature): feature is CutContour {
-  return feature.kind === 'cut-contour';
+/**
+ * Whether a kind is holes placed along a line, with no drawn form of its own:
+ * a stitch hole set, or a row of holes (4.14). Neither can be frozen into drawn
+ * geometry, its path is only the line it follows, and it wears no link tick —
+ * it is always derived, so one would say nothing.
+ */
+export function isHolesAlongALine(kind: FeatureKind): boolean {
+  return kind === 'stitch-hole-set' || kind === 'hole-row';
+}
+
+/**
+ * Whether a feature is made to a size, which scaling its piece keeps (Q31):
+ * the piece's scale moves where it sits and leaves its size alone.
+ *
+ * - A **hardware hole** is the punch that makes it, and a 4 mm punch makes a
+ *   4 mm hole in any size of piece — drawn by hand or frozen from a
+ *   counterpart included.
+ * - A **label**'s size is the size its words print at.
+ * - A **cut-out typed as a shape** is made for something — a card slot for a
+ *   card, a round hole for a snap's post — and its width or radius is the
+ *   number it was made to. A cut-out **drawn as a path** has no such number,
+ *   so it is drawing and scales with the piece; Convert to path is how a
+ *   typed one joins it.
+ * - A **logo placement** keeps the size of the stamp it marks. Other marking
+ *   purposes scale with the piece's drawing.
+ * - Everything else is the piece's own drawing: the outline, stitch and fold
+ *   lines. What is **derived** follows what it is built from — a
+ *   counterpart its original, stitching its line — and a row of holes or a
+ *   hole set keeps its pitch and its hole size in its own parameters, which
+ *   no scale touches. A dimension is a reading of the places it names.
+ */
+export function keepsItsSize(feature: Feature): boolean {
+  if (feature.source.kind === 'derived') return false;
+  switch (feature.kind) {
+    case 'hardware-hole':
+    case 'text-label':
+      return true;
+    case 'cut-contour':
+      return feature.role === 'inner' && feature.source.kind === 'shape';
+    case 'marking-line':
+      return feature.purpose === 'logo';
+    case 'stitch-line':
+    case 'stitch-hole-set':
+    case 'fold-line':
+    case 'hole-row':
+    case 'measurement':
+      return false;
+  }
 }
 
 /** Every feature in the project, with the part it belongs to. */
@@ -464,8 +575,4 @@ export function findFeature(
     if (entry.feature.id === id) return entry;
   }
   return null;
-}
-
-export function findPart(project: Project, id: PartId): Part | null {
-  return project.parts.find((p) => p.id === id) ?? null;
 }

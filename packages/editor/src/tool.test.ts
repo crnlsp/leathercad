@@ -8,8 +8,11 @@ import {
 import type { FeatureId } from '@leathercad/domain';
 import { PathOps, vec, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
+import { setFlagsFromString } from 'node:v8';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
+import { createPolylineTool } from './tools/polylineTool.js';
 import { ToolManager, type PointerInput, type Tool, type ToolContext } from './tool.js';
 import { Viewport } from './viewport.js';
 
@@ -130,6 +133,21 @@ describe('ToolManager snapping', () => {
     manager.pointerUp(pointer(vec(19.8, 19.8)));
 
     expect(tool.points).toEqual([vec(0, 0), vec(20, 20)]);
+  });
+
+  it('snaps a gesture the canvas runs itself, with its own exclusions and Ctrl (3.10)', () => {
+    const { manager, tool, store } = harness();
+    addSquare(store);
+
+    expect(manager.snapGesture(pointer(vec(19.5, 0.3)), []).at).toEqual(vec(20, 0));
+    expect(manager.snapPoint()).toEqual(vec(20, 0));
+    expect(manager.snapGesture(pointer(vec(19.5, 0.3), { ctrlKey: true }), []).at).toEqual(
+      vec(19.5, 0.3),
+    );
+    const id = store.getState().document.project.parts[0]!.features[0]!.id;
+    expect(manager.snapGesture(pointer(vec(19.5, 0.3)), [id]).at).toEqual(vec(19.5, 0.3));
+    // The active tool was not handed the gesture.
+    expect(tool.points).toEqual([]);
   });
 
   it('excludes what the active tool says it is moving', () => {
@@ -332,3 +350,52 @@ describe('ToolManager isolating a failing tool (3.11)', () => {
     expect(reports).toHaveLength(2);
   });
 });
+
+describe('ToolManager when a project is read in under it (Q39, PERF-010)', () => {
+  it('gives up a polyline half drawn, as Escape does, so the next click starts a new one', () => {
+    const { store, viewport } = harness();
+    const polyline = createPolylineTool(() => 'id');
+    const context: ToolContext = {
+      viewport,
+      store,
+      dispatch: (command) => store.dispatch(command),
+      invalidate: () => {},
+    };
+    const tools = new ToolManager(context, polyline, [polyline]);
+    for (const at of [vec(0, 0), vec(10, 0)]) {
+      tools.pointerDown(pointer(at));
+      tools.pointerUp(pointer(at));
+    }
+    expect(tools.underway()).toBe(true);
+
+    tools.reset();
+
+    expect(tools.underway()).toBe(false);
+    expect(tools.overlay().items).toEqual([]);
+  });
+
+  it('lets go of the project it replaced, which its snap index still held', async () => {
+    const { manager, store } = harness();
+    addSquare(store);
+    const replaced = new WeakRef(store.getState().document.project);
+    // Snapping this move builds the index, from the project with the square.
+    manager.pointerMove(pointer(vec(20, 20)));
+    store.reset(emptyDocument('another'));
+
+    manager.reset();
+
+    expect(await collected(replaced), 'the replaced project is still reachable').toBe(true);
+  });
+});
+
+/**
+ * Whether nothing holds `target` any more, after a full collection: in the
+ * next task, since a `WeakRef` keeps its target until its own job ends.
+ * `--expose-gc` is set from inside, so `pnpm test` runs it as it is.
+ */
+async function collected(target: WeakRef<object>): Promise<boolean> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  setFlagsFromString('--expose_gc');
+  (runInNewContext('gc') as () => void)();
+  return target.deref() === undefined;
+}

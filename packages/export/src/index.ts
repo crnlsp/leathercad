@@ -20,7 +20,11 @@ export {
 } from './paper.js';
 
 export type { ExportPart, ExportPath, ExportScene, ExportText, PrintStyle } from './scene.js';
-export { PRINT_STYLES, buildExportScene } from './scene.js';
+export { PRINT_STYLES, STITCH_HOLE_MARKER_DIAMETER_MM, buildExportScene } from './scene.js';
+// What a file of some roles holds, and what it measures (6.4).
+export type { ExportIntent, ExportRole } from './presets.js';
+export { EXPORT_INTENTS, EXPORT_PRESETS, EXPORT_ROLES, intentOf, rolesNamed } from './presets.js';
+export { drawingBoundsOf } from './fileScene.js';
 // The one place a part's caption is worded and sized, shared with the canvas.
 export { CAPTION_GAP_MM, CAPTION_SIZE_MM, describePart } from '@leathercad/render';
 
@@ -45,13 +49,16 @@ export { printStatusOf } from './printStatus.js';
 
 // The sheet plan drawn on screen: tape joins on the design board (7.4b), and
 // the Sheets view (7.4c) — drawn from the same `sheetInk` the PDF prints.
-export type { SheetsLayer, SheetsViewOptions, SheetsWords } from './sheetsDisplay.js';
-export { sheetsView, tapeJoins } from './sheetsDisplay.js';
+export type { SheetsLayer, SheetsPage, SheetsViewOptions, SheetsWords } from './sheetsDisplay.js';
+export { sheetsLayers, sheetsPages, sheetsView, tapeJoins } from './sheetsDisplay.js';
 export type { SheetFrame, SheetGroup, SheetsLayout } from './sheetsLayout.js';
 export { layoutSheets, pieceAt, sheetAt } from './sheetsLayout.js';
 
 export type { PdfExportOptions, PdfExportResult } from './pdf/writer.js';
-export { exportPdf, printableAreaMm } from './pdf/writer.js';
+export { exportCalibrationPdf, exportPdf, printableAreaMm } from './pdf/writer.js';
+
+// A printer's calibration (7.5): the page its correction is measured from.
+export { calibrationLengths } from './calibrationPage.js';
 
 // The drawing as a file a cutter, a plotter or a vector editor reads (6.2): the
 // export scene, where the maker put the pieces, in true millimetres.

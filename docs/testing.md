@@ -26,10 +26,10 @@ invisible and expensive.
 | Export accuracy | Vitest + poppler (`pdftoppm`, `pdfinfo`) | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
 | Rendering (pixel diff) | Playwright `toHaveScreenshot`, in the pinned container | ~12 | ~60 s | Anti-aliasing, hairlines, grid |
-| E2E | Playwright + Electron, with an axe scan | ~4 | ~90 s | The app actually runs |
-| Packaged smoke | Playwright + the packaged binary | 4 | ~60 s | asar, fuses, resources |
+| E2E | Playwright + Electron, with axe scans | ~320, in 48 specs | ~9 min, ~4 in CI's three shards | The app actually runs, workflow by workflow |
+| Packaged smoke | Playwright + the packaged binary | 10 | ~60 s | app origin and denied paths, CSP, asar, fuses, resources |
 | Loader fuzzing | Vitest + fast-check | 6 | < 1 s | A damaged `.lcp` refuses with a reason |
-| Benchmarks | Vitest 5 `bench` fixture | 15 | ~45 s | Accidental O(n²) |
+| Benchmarks | Vitest 5 `bench` fixture | 22 | ~100 s | Accidental O(n²) |
 | Mutation | StrykerJS, weekly | — | hours | Tests that run code without checking it |
 
 `pnpm test` runs everything except the pixel-diff and E2E layers, in under a minute. Those two run
@@ -43,21 +43,28 @@ cubic, two almost-parallel lines, an arc sweeping 359.9999°.
 
 ### 3.1 Generators
 
-Build a shared `packages/geometry/test/arbitraries.ts` once and reuse it everywhere:
+The shared generators are in `packages/geometry/test/arbitraries.ts`; reuse them before writing
+another. A generator nothing uses is deleted, not kept for later — `pnpm knip` reports one.
 
 ```ts
-arbFiniteMm          // finite doubles in [-2000, 2000], biased toward small values and exact ints
-arbVec2
-arbLineSegment       // never zero-length
-arbArc               // includes 0°, 180°, 360°, and tiny sweeps
-arbCubic             // includes degenerate: collinear controls, cusps, all-coincident
-arbSimplePolygon     // non-self-intersecting, both windings
-arbConvexPolygon
-arbClosedPath        // mixed segment kinds
-arbOpenPath
-arbRigidTransform    // rotation + translation only
-arbProject           // whole documents, for round-trip and undo properties
+arbCoord                 // what a maker could type: [-2000, 2000] mm, biased to round numbers and 0
+arbVec2, arbNonZeroVec2
+arbAngle
+arbScaleFactor           // keeps a matrix comfortably invertible
+arbRigidTransform        // rotation, translation and mirroring — no scaling
+arbRadius                // positive, not vanishingly small
+arbSweep                 // includes the full turn and both half turns
+arbLineSegment, arbArcSegment, arbCubicSegment, arbSegment
+arbNonDegenerateSegment  // real extent, for properties a degenerate one cannot satisfy
+arbOpenPath, arbClosedPath
+arbPitch                 // the pitches irons come in, plus awkward ones
 ```
+
+There is no shared whole-document generator. The undo properties run a generated sequence of
+commands (`commandArb` in `packages/document/src/store.test.ts`) over a small document; the
+reference graph's properties build projects of their own (`arbProject` in
+`packages/domain/src/graph.test.ts`); and the loader is fuzzed by
+`packages/persist/src/lcp.fuzz.test.ts`.
 
 Bias matters. Uniform random doubles almost never produce the coincident points, right angles, and
 round numbers that real user input is full of, and those are exactly where epsilon bugs live. Mix
@@ -352,8 +359,29 @@ Non-negotiable, because golden tests, snapshots, and byte-stable saves all depen
 
 ## 9. CI
 
-Eight jobs, run in parallel on every pull request, so one run reports every failure rather than
-only the first:
+Jobs run in parallel, so one run reports every failure rather than only the first. A pull request
+runs only the jobs its change can break. The first job, `changes`, sorts the changed files into
+kinds with `tools/ci/changes.mjs`, which holds the table and the tests for it. A renamed file
+counts by its old path too, and a path that is not certainly documentation counts as code:
+
+| Kind | Paths |
+|---|---|
+| `docs` | `docs/**` (except `docs/domain-model.md` and this file, which tests read), `packaging/aur/**`, `*.md` outside `.claude/` and `apps/` |
+| `workflows` | `.github/**` |
+| `deps` | `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/**`, any `package.json`, `osv-scanner.toml`, `.node-version` |
+| `packaging` | `apps/desktop/electron-builder.config.mjs`, `apps/desktop/build/**`, `apps/desktop/src/main/**`, `assets/fonts/**` |
+| `code` | everything else |
+
+| Job | Runs for |
+|---|---|
+| `static` | every change |
+| `test`, `cross-platform`, `e2e`, `visual`, Linux's `installers` leg | `code`, `packaging`, `deps`, `workflows` |
+| Windows's and macOS's `installers` legs, and the Flatpak | `packaging`, `deps`, `workflows` |
+| `dependencies` | `deps`; `nightly.yml` scans `develop` every night |
+| `workflows` | `workflows` |
+
+A push to `develop` runs everything, and nothing runs on a push to `main`, which gets only what
+`develop` tested. CodeQL skips a pull request that changes documentation alone. The jobs:
 
 ```
 static   pnpm typecheck         # tsc --build across the workspace
@@ -369,24 +397,38 @@ test     pnpm test:coverage     # unit, property, golden, export, snapshot,
 cross-platform  pnpm test       # the unit tests on Windows and macOS, where the
                                 # rasterised print checks skip without poppler
 
-e2e      pnpm test:e2e          # Playwright + Electron, under xvfb, incl. the axe scan
-                                # uploads playwright-report/ on failure
+e2e      pnpm build             # Playwright + Electron, under xvfb, incl. the axe scan,
+         playwright test        # in three shards of whole files, one worker each;
+           --shard=N/3          # e2e-report merges the failed shards' blobs into
+                                # one playwright-report/
 
 visual   pnpm test:visual       # pixel diffs in the pinned container
 
-package  pnpm test:packaged     # smoke test of the packaged binary
-         pnpm package           # the AppImage, uploaded as an artifact
-
 workflows     actionlint, zizmor   # workflow syntax, injection, pinning
 dependencies  osv-scanner          # the lockfile against known vulnerabilities
+
+installers    installers.yml       # the packaged smoke test and every installer,
+                                   # on Linux, Windows and macOS
 ```
 
-`static` also runs `pnpm knip`. Every action is pinned to a commit; zizmor fails the run on one that
+`static` also runs `pnpm knip` and `pnpm test:tools`, the tests of the CI scripts in `tools/ci/`. Every action is pinned to a commit; zizmor fails the run on one that
 is not.
 
-Beside it, on every pull request and push, `package.yml` runs the packaged smoke test and builds the
-installer on Windows and macOS, and builds the Flatpak. Until roadmap item R5 it ran only when
-packaging could have changed, because a private repository pays for those minutes.
+`installers` calls `installers.yml` on Linux, Windows and macOS: `pnpm test:packaged`, the smoke
+test of the packaged binary, then `pnpm package` — the AppImage, the Flatpak, the `.deb` and the SBOM on Linux,
+the NSIS installer, the universal dmg — uploaded as `installers-<OS>`. The release builds its files
+with the same workflow, from its tag. On a pull request whose change cannot differ between the
+platforms, it runs Linux's leg alone, without the Flatpak (its `everywhere` input).
+
+On Linux the smoke test runs twice: against the unpacked app, and against a sibling `.deb` that
+apt installs (`LEATHERCAD_PACKAGED_EXECUTABLE=/opt/LeatherCAD/leathercad`), with Chromium's sandbox
+on, which Playwright otherwise switches off. A removal then checks that the menu entry, the
+command and the AppArmor profile are gone.
+
+A last job, *Ready to merge*, waits for every other and passes only when each one passed or was
+skipped, so a job the change did not need passes it; a cancelled run fails it. It is the one check the rulesets require from CI, beside
+*Conventional title* on `develop` and *Release gate* on `main`, so a job added to CI goes in its
+`needs` and the rulesets stay as they are.
 
 `pnpm check` runs the `static` and `test` work locally — including `test:coverage`, not plain
 `test` — and is what the pre-push hook invokes, so a green `pnpm check` predicts a green CI for
@@ -399,25 +441,123 @@ Instrumented and sharing the machine with every other file, it measured 25–35 
 runners, so `test:coverage` excludes it and `test:perf` runs it afterwards, alone, serially and
 without coverage — in CI and in `pnpm check` alike. `pnpm test` still runs it with everything else.
 
-Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
-a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
-testing of `geometry` and `domain`, reporting a failure as an issue too. CodeQL runs on every pull
-request and push, and OpenSSF Scorecard on `main`; both skipped themselves while the repository was
-private.
+Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed; the E2E
+suite on Windows and macOS, which a pull request runs on Linux only; the known-vulnerability scan;
+and the benchmarks, uploaded as a trend. E2E and the benchmarks run only when they have not passed
+at that commit already, so a night `develop` did not move skips them; the property tests and the
+scan always run, because a fresh seed or a new advisory can fail them without a commit. Both E2E
+runners' screens start at 1024 × 768, and Windows and macOS fit a window into its screen, so the
+job sets them to 1920 × 1080 first (`tools/ci/full-hd-display.swift` on macOS). Each job
+reports to an issue of its own (labels `nightly-property`, `nightly-e2e-windows`,
+`nightly-e2e-macos`, `nightly-vulnerabilities`): a failure opens it, or comments on the open one,
+and the first run that passes closes it. Weekly (`weekly.yml`): mutation testing of `geometry` and
+`domain`, reporting a failure as an issue too. CodeQL runs on every pull request and push, and
+OpenSSF Scorecard on `main`; both skipped themselves while the repository was private.
 
 GitHub runs a schedule from the workflow file on the default branch, `main`, which holds the last
-release. So the nightly and weekly jobs check out `develop` themselves, where the code is being
-written: before they did, they tested only what had already shipped. Two consequences:
+release, while the code is being written on `develop`. The two schedules handle that differently:
 
-- **A change to a scheduled workflow takes effect on schedule once it reaches `main`,** with the
-  next release. Until then, run it by hand on `develop` (*Actions* → the workflow → *Run
-  workflow*), which uses `develop`'s copy of the file.
+- **The nightly schedule starts `nightly.yml` again on `develop`** and does nothing else, so the
+  night runs `develop`'s copy of the file at `develop`'s commit, and a change to it takes effect the
+  night after it merges. Only a run on `develop` opens or closes issues; a run started by hand on
+  another branch (*Actions* → *Nightly* → *Run workflow*) is watched by whoever started it.
+- **The weekly job checks out `develop` itself.** A change to `weekly.yml` takes effect on schedule
+  once it reaches `main`, with the next release. Until then, run it by hand on `develop`, which uses
+  `develop`'s copy of the file.
 - **A failure names its commit,** because `develop` moves on: the nightly issue gives the commit and
   the seed, which together reproduce it anywhere.
 
+### 9.1 Benchmarks and timing
+
 `pnpm bench` runs the benchmarks. `pnpm bench:compare` sets each against the baseline committed
 under `packages/*/bench/`, and `pnpm bench:baseline` rewrites it. A baseline compares only on the
-machine that recorded it; the committed one is from the maintainer's.
+machine that recorded it; the committed ones are all from the maintainer's, an AMD Ryzen 5 7600X
+on Linux. A baseline is re-recorded when its workload changed, never to hide a regression, and the
+commit that re-records one changes its row here:
+
+| Baselines | Recorded at | Node | Vitest | Why |
+|---|---|---|---|---|
+| `domain/evaluate-strap`, `domain/evaluate-traced`, `domain/diagnose-strap`, `domain/diagnose-strap-slots`, `domain/diagnose-traced`, `geometry/offset-strap`, `geometry/offset-traced`, `geometry/measure-build`, `geometry/measure-3000`, `export/export-scene`, `persist/save`, `persist/open` | `68c2709`, 2026-09-23 | 22 (pinned 22.23.2; the run's own not recorded) | 5.0.0 | The first baselines |
+| `export/pdf`, `export/display-list` | `199cb50`, 2026-10-26 | 22.23.3 | 5.0.4 | Their workloads had changed since `68c2709` (PERF-017) |
+| `export/svg`, `export/dxf` | `80afa43`, 2026-10-26 | 24.22.0 | 5.0.5 | The writers that ship, not the render backend (Q40) |
+| `editor/snap-drag-traced-250`, `editor/snap-drag-traced-500`, `editor/snap-drag-traced-1000`, `editor/snap-drag-beside-traced` | PERF-004's fix, `e845ffa`, 2026-10-28 | 24.22.0 | 5.0.5 | New with PERF-004 |
+| `geometry/self-traced-1000`, `geometry/self-star-1002` | PERF-006's fix, 2026-11-01 | 24.22.1 | 5.0.5 | New with PERF-006 |
+
+`apps/desktop/src/bench-discovery.test.ts` fails if a baseline has no row here, or a row names
+one that is not committed. `domain/diagnose-strap-slots` compared 1.3–1.4× its baseline, and was
+kept: a regression, not a new workload. Since 3.9c (`2f1132a`) a hole's distance to a round slot
+is found through the nearest point on the arc rather than radially. Since
+[PERF-005](performance-backlog.md#perf-005) a hole is measured only against the edges that can be
+nearest it, and the case compares 0.52×.
+
+Benchmark discovery is pinned: each package that has benchmarks sets
+`benchmark.include: ['src/**/*.bench.ts']`, because `tsc --build` emits `dist/src/*.bench.js` and
+Vitest's default glob would run every case twice (44, not 22). `bench-discovery.test.ts` asks
+Vitest itself, set up as `vitest bench` sets it up, in a process of its own, and fails if the run
+would not be the committed `src/*.bench.ts` files each once, if any bench project's globs would
+take a generated `dist/` copy — asked of the globs, so it holds on a runner with no `dist/` — or if
+a package's collected cases are fewer or more than its committed baselines. Vitest warns that the benchmarks "accessed module export getters too many
+times": the benchmarks import source through Vitest's module runner, whose export getters add
+overhead. The committed baselines were recorded the same way, so a comparison is like for like; the
+absolute numbers are not what a bundled production build costs, and the warning is left visible
+rather than suppressed. `perf.test.ts` asserts upper ceilings only, never that something is slow.
+
+The benchmarks run the sources through Vitest's module runner, which the app does not have.
+`node tools/perf-compute.mjs` times the same computations as the app runs them: it bundles the
+sources with the Vite that builds the renderer, runs the bundle in plain Node, and gives the
+median and range of 20 runs, after 3 to warm up, for each of the audit's workloads (the sample
+wallet, the strap, with and without its 20 slots, traced outlines of 250, 500 and 1,000 points,
+bags of 30, 40 and 50 parts) four ways: fresh evaluation, fresh diagnosis, diagnosis after a
+rename, and the snap index. It prints the commit, Node and V8, the processor and the load first,
+since the numbers mean nothing without them. `--root <tree>` measures another checkout with the
+same bundler, so a before and an after can be run turn about, A, B, A, B, on a machine doing
+other work. On 2026-11-01 a bundled fresh diagnosis of the 500-point outline took 23 ms, where the
+benchmark's took about 150 ms.
+
+The [performance backlog](performance-backlog.md) records the 2026-10-25 audit's environment,
+workloads and measurements, plus implementation acceptance criteria. Its
+[verification plan](performance-backlog.md#verification-and-evidence) distinguishes reliable CI
+checks from controlled-machine trends.
+
+What the Sheets view costs to draw is a controlled-machine trend: `node tools/perf-sheets.mjs time`
+times the drawing callbacks of the real app on the 33-sheet strap, and `pixels` fingerprints the
+canvas at every step of a pan, to show a change moved no pixel. Both need `pnpm build` first.
+`node tools/perf-design.mjs` does the same for the Design board (PERF-008): `time` gives each
+painted frame's script time and its canvas draw calls — `stroke`, `fill`, `fillText`, a count
+whatever the machine — hovering and panning with the project framed and at 100 %, and `pixels`
+fingerprints the board along pans at three zooms, hovering and clicking; `--project` names the
+project, by default the strap, and `fixtures/perf/bag-50.lcp` is the audit's fifty-part bag;
+`--app` points it at another checkout's build. `designContent.test.ts` keeps it in `pnpm test` by
+counts: sixty hover frames build the pattern once, and at 100 % on the bag a frame draws no more
+than eight of the fifty straps' items. `node tools/perf-drag.mjs` likewise times a piece and a guide dragged across a traced outline
+(`fixtures/perf/traced-<n>.lcp`), p50, p95 and long tasks (PERF-004).
+`node tools/perf-save.mjs` times the window's longest stop while the path-heavy project
+(`fixtures/perf/traced-40x500.lcp`) is saved and its recovery copy written, with `--app` for
+another checkout's build (PERF-009); under Xvfb, in the Playwright container, as the next one.
+`node tools/perf-retention.mjs` reads the renderer's heap after a full collection with the strap
+open, edited, reloaded and closed, and whether the project left behind is still reachable
+(PERF-010); `--app` points it at another checkout's build. Run it under Xvfb, in the Playwright
+container: a window the desktop covers draws nothing, and the run stalls. Heap bytes after a
+collection do not move with load, so this one is a figure, not a trend. What keeps it is
+collecting through `WeakRef`s in `pnpm test` (`sheets.test.ts`, `tool.test.ts`), and
+`e2e/retention.spec.ts`, which reads the same heap over the debugging protocol in the E2E suite
+and bounds it by half of what the run's own Sheets pages measured. `node tools/perf-folds.mjs`
+counts the pieces Parts holds folded as wallets open, fold and close (PERF-016), in the same
+container; `e2e/parts-tree.spec.ts` keeps it, counting the pieces shown folded in a project that
+folded none.
+
+What React renders is counted, not timed: `e2e/renderCount.ts` installs the hook React reports
+each commit to, as React DevTools does, and counts the components that rendered.
+`node tools/perf-pointer.mjs` uses it to count the commits and renders of sixty pointer moves
+over the wallet, with the script time beside them (PERF-007); `e2e/pointer-renders.spec.ts` holds
+them in the E2E suite: no render of App, and one component render a move, the readout.
+
+`node tools/perf-pdf.mjs <label> --preview` opens the Print Preview on the 5.8 m strap three
+times, and reports the main thread's busy time, the renderer's CPU time and how many of the 33
+sheets the list beside the page drew; then twenty previews closed or changed mid-way, with the
+pdf.js workers left running and the post-GC heap (PERF-013). `e2e/pdf-worker.spec.ts` holds the
+count — only the sheets near the list's view are drawn — and `pdfPages.test.ts` the pdf.js loading
+task ended at once when the preview no longer wants it, and a few thumbnails drawn at a time.
 
 ## 10. Test-driven development, concretely
 

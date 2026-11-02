@@ -1,6 +1,5 @@
 import { MIN_PITCH_MM } from '@leathercad/domain';
-import type { Iron, Preferences } from '@leathercad/platform';
-import { Ellipsis, Pencil, Plus, Trash2, X } from 'lucide-react';
+import type { Iron, Preferences, UpdateStatus } from '@leathercad/platform';
 import {
   useEffect,
   useId,
@@ -47,8 +46,11 @@ import {
   type Proposal,
 } from './rebind.js';
 import { shortcutGroups } from './shortcuts.js';
+import { Spinner, useChecking } from './Spinner.js';
+import { useMinutesUntilAgain } from './updateWait.js';
 
-export type SettingsSection = 'general' | 'appearance' | 'tools' | 'language' | 'shortcuts';
+export type SettingsSection =
+  'general' | 'appearance' | 'tools' | 'language' | 'shortcuts' | 'updates';
 
 /** Where a translator starts (README § Translations). */
 const TRANSLATE_URL = 'https://github.com/crnlsp/leathercad#translations';
@@ -66,6 +68,10 @@ interface Props {
   onClose: () => void;
   /** Ids for the irons a maker adds (U.13). */
   nextId: () => string;
+  /** What the update check last found (8.9). */
+  updates: UpdateStatus;
+  /** *Check now*: resolves once the answer is in `updates`. */
+  onCheckUpdates: () => Promise<void>;
 }
 
 /**
@@ -91,6 +97,7 @@ const SECTIONS: readonly {
     title: 'settings.section.shortcuts',
     pane: (props) => <Shortcuts {...props} />,
   },
+  { id: 'updates', title: 'settings.section.updates', pane: (props) => <Updates {...props} /> },
 ];
 
 /**
@@ -137,7 +144,7 @@ export function SettingsDialog(props: Props) {
             data-testid="settings-close"
             onClick={onClose}
           >
-            <Icon of={X} />
+            <Icon of="close" />
           </button>
         </div>
         <div className="settings-body">
@@ -189,29 +196,38 @@ export function SettingsDialog(props: Props) {
   );
 }
 
-function General({ recentCount, onClearRecent }: Props) {
+function General({ recentCount, onClearRecent, preferences, onPreferences }: Props) {
   const { t } = useI18n();
   return (
-    <div className="setting">
-      <div className="setting-text">
-        <span className="setting-name">{t('settings.recent.name')}</span>
-        <span className="setting-note">
-          {t('settings.recent.note')}{' '}
-          {recentCount === 0
-            ? t('settings.recent.none')
-            : t('settings.recent.count', { count: recentCount })}
-        </span>
+    <>
+      <Toggle
+        id="keep-unsaved"
+        name={t('settings.keepUnsaved.name')}
+        note={t('settings.keepUnsaved.note')}
+        checked={preferences.keepUnsaved}
+        onChange={(on) => onPreferences({ keepUnsaved: on })}
+      />
+      <div className="setting">
+        <div className="setting-text">
+          <span className="setting-name">{t('settings.recent.name')}</span>
+          <span className="setting-note">
+            {t('settings.recent.note')}{' '}
+            {recentCount === 0
+              ? t('settings.recent.none')
+              : t('settings.recent.count', { count: recentCount })}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="tool"
+          data-testid="clear-recent"
+          disabled={recentCount === 0}
+          onClick={onClearRecent}
+        >
+          {t('settings.recent.clear')}
+        </button>
       </div>
-      <button
-        type="button"
-        className="tool"
-        data-testid="clear-recent"
-        disabled={recentCount === 0}
-        onClick={onClearRecent}
-      >
-        {t('settings.recent.clear')}
-      </button>
-    </div>
+    </>
   );
 }
 
@@ -345,7 +361,7 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
                         kind: 'item',
                         id: `rename-iron-${iron.id}`,
                         label: t('settings.tools.rename'),
-                        icon: Pencil,
+                        icon: 'rename',
                         // After the menu has closed and settled focus.
                         onChoose: () => requestAnimationFrame(() => editName(iron.id)),
                       },
@@ -353,14 +369,14 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
                         kind: 'item',
                         id: `delete-iron-${iron.id}`,
                         label: t('settings.tools.delete'),
-                        icon: Trash2,
+                        icon: 'delete',
                         danger: true,
                         note: t('settings.tools.deleteNote'),
                         onChoose: () => onPreferences(withoutIron(preferences, iron.id)),
                       },
                     ]}
                   >
-                    <Icon of={Ellipsis} />
+                    <Icon of="more" />
                   </MenuButton>
                 </td>
               </tr>
@@ -369,7 +385,7 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
         </table>
       )}
       <button type="button" className="tool add-iron" data-testid="add-iron" onClick={add}>
-        <Icon of={Plus} />
+        <Icon of="plus" />
         {t('settings.tools.addIron')}
       </button>
 
@@ -538,6 +554,95 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
           );
         })}
       </select>
+    </div>
+  );
+}
+
+/**
+ * *Check now* (8.9): the app asks for a new version only when the maker
+ * presses it, or the version in the status bar, never by itself, and not
+ * again for five minutes after an answer — the button says how long is left.
+ * What the check found stands above it, as a card with the status bar's
+ * glyph. It links to the release and installs nothing. The Flatpak has none:
+ * Flathub updates it, and this says so.
+ */
+function Updates({ updates, onCheckUpdates }: Props) {
+  const { t } = useI18n();
+  const [checking, check] = useChecking(onCheckUpdates);
+  const wait = useMinutesUntilAgain(updates);
+  if (updates.state === 'managed') {
+    return (
+      <p className="setting-note" data-testid="updates-managed">
+        {t('settings.updates.managed')}
+      </p>
+    );
+  }
+  return (
+    <>
+      <div aria-live="polite">
+        {checking || updates.state !== 'idle' ? (
+          <UpdateCard status={checking ? null : updates} />
+        ) : null}
+      </div>
+      <div className="setting">
+        <p className="setting-note" data-testid="updates-note">
+          {t('settings.updates.note')}
+        </p>
+        <button
+          type="button"
+          className="tool"
+          data-testid="check-updates"
+          disabled={checking || wait !== null}
+          onClick={check}
+        >
+          {checking ? <Spinner /> : wait !== null ? <Icon of="clock" size={14} /> : null}
+          {wait !== null ? t('settings.updates.again', { count: wait }) : t('settings.updates.now')}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** What the check found, or null while it runs: a glyph in a disc, and what it means. */
+function UpdateCard({ status }: { status: UpdateStatus | null }) {
+  const { t, locale } = useI18n();
+  const state = status?.state ?? 'checking';
+  return (
+    <div className="update-card" data-testid="update-status" data-state={state}>
+      <span className="update-badge">
+        {status === null ? (
+          <Spinner />
+        ) : status.state === 'available' ? (
+          <Icon of="update" />
+        ) : status.state === 'current' ? (
+          <Icon of="check" />
+        ) : (
+          <Icon of="warning" />
+        )}
+      </span>
+      <div className="setting-text">
+        <span className="setting-name">
+          {status === null
+            ? t('settings.updates.checking')
+            : status.state === 'available'
+              ? t('updates.available', { version: status.version })
+              : status.state === 'current'
+                ? t('updates.current')
+                : t('updates.failed')}
+        </span>
+        {status?.state === 'available' ? (
+          // An https link: the window-open handler sends it to the browser.
+          <a href={status.url} target="_blank" rel="noreferrer" data-testid="update-link">
+            {t('updates.availableLink')}
+          </a>
+        ) : status?.state === 'current' ? (
+          <span className="setting-note">
+            {t('updates.checkedAt', {
+              time: new Date(status.checkedAt).toLocaleTimeString(locale, { timeStyle: 'short' }),
+            })}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

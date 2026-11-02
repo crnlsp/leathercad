@@ -54,6 +54,21 @@ describe('the project a launch opens', () => {
       ).toBe('C:\\Users\\m\\Documents\\Wallet.lcp');
     });
 
+    it('is read from a second launch’s line too, Chromium’s switches and all (8.11)', () => {
+      expect(
+        projectPathFromArgs(
+          [
+            'C:\\Program Files\\LeatherCAD\\LeatherCAD.exe',
+            '--allow-file-access-from-files',
+            '--original-process-start-time=13372204800000000',
+            'Wallet.lcp',
+          ],
+          'C:\\Users\\m\\Documents',
+          win32,
+        ),
+      ).toBe('C:\\Users\\m\\Documents\\Wallet.lcp');
+    });
+
     it('resolves a relative name against the directory the launch came from', () => {
       expect(
         projectPathFromArgs(

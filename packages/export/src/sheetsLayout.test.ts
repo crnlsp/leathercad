@@ -82,8 +82,9 @@ describe('where the sheets sit on the Sheets view (7.4c)', () => {
     const layout = layoutSheets(plan);
     const [group] = layout.groups;
     expect(group).toMatchObject({ partId: 'panel', rows: 2, columns: 3 });
-    expect(group!.sheets).toEqual([1, 2, 3, 4, 5, 6]);
-    const frame = (n: number) => layout.frames[n - 1]!;
+    // Sheet 1 is its assembly map, a sheet of its own before the grid (7.2).
+    expect(group!.sheets).toEqual([2, 3, 4, 5, 6, 7]);
+    const frame = (n: number) => layout.frames[n]!;
     // Same row, same height; same column, same x; the second row below the first.
     expect(frame(2).origin.y).toBe(frame(1).origin.y);
     expect(frame(3).origin.y).toBe(frame(1).origin.y);

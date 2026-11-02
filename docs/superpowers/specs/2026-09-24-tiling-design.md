@@ -82,6 +82,7 @@ rows    = max(1, ceil((H − o) / (contentH − o)))
 ## 3. Not in this slice (1.1, roadmap 7.2)
 
 - Edge arrows naming each neighbour, and an assembly sheet with a thumbnail of the whole grid.
+  *Built in 7.2 (1.6): [`printing.md`](../../printing.md) §7.*
 - A print preview (7.4).
 - A setting for the overlap.
 - Rotating parts, which is ruled out until the model knows the grain (7.2's constraint). *Since

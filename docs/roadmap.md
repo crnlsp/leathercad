@@ -1,13 +1,14 @@
 # Roadmap
 
-**Released:** v1.3.5 (2026-10-09) · **Next:** 1.5, then 1.6 · **Last updated:** 2026-10-18
+**Released:** v1.5.0 (2026-10-18) · **Next:** 1.6 · **Last updated:** 2026-11-02
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
 8.6, with what each found — is kept in [`history/roadmap-to-1.0.md`](history/roadmap-to-1.0.md),
 what shipped in 1.1.0 to 1.2.0 in [`history/roadmap-1.1-and-1.2.md`](history/roadmap-1.1-and-1.2.md),
-what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md), and what shipped in
-1.3.5 in [`history/roadmap-1.3.5.md`](history/roadmap-1.3.5.md). Where the work after 1.6 is
+what shipped in 1.3.0 in [`history/roadmap-1.3.md`](history/roadmap-1.3.md), what shipped in
+1.3.5 in [`history/roadmap-1.3.5.md`](history/roadmap-1.3.5.md), and what shipped in 1.5 in
+[`history/roadmap-1.5.md`](history/roadmap-1.5.md). Where the work after 1.6 is
 heading, and why in that order, is drawn in [`product-roadmap.md`](product-roadmap.md): this file
 holds the items themselves, their status and their order.
 
@@ -35,7 +36,8 @@ holds the items themselves, their status and their order.
   nothing in *Later* is a promise. Items 9.12 to 9.24 and the findings Q33 and Q34 were added on
   2026-10-17 by the product roadmap refresh, whose evidence is in
   [its record](superpowers/specs/2026-10-17-product-direction-audit.md).
-- **The UI refinement's slices are `U.1` to `U.20`** (1.5). Each builds requirements of
+- **The UI refinement's slices are `U.1` to `U.20`,** shipped in 1.3.5 and 1.5, and recorded in
+  [`history/roadmap-1.5.md`](history/roadmap-1.5.md). Each builds requirements of
   [its spec](superpowers/specs/2026-10-08-ui-refinement-requirements.md), whose ids are `R-01` to
   `R-16` — not the release-engineering items `R1` to `R7` below. U.20, added later, fixes what
   Chromium left at its defaults and cites no `R-` id. Each slice's whole task is in
@@ -56,456 +58,272 @@ holds the items themselves, their status and their order.
 
 ---
 
-## 1.5 — the next release
+## 1.6 — the next release
 
-**The window, refined.** The UI/UX final audit's requirements, received 2026-10-08: a refinement pass, not a redesign. The
-layout, the look and the words stay, and **printed output does not change**. The theme is *a maker
-gets more done at the bench*: the pattern reads at every zoom, the board gets the room, sizes are
-typed where the eye already is, and the next step is one click away.
-[Requirements](superpowers/specs/2026-10-08-ui-refinement-requirements.md) (R-01 to R-16) and
-[mockups](superpowers/specs/2026-10-08-ui-refinement-mockups/); [the
-plan](superpowers/plans/2026-10-08-ui-refinement.md) holds each slice's whole task, the answers to
-the requirements' open questions, and what reading the code turned up. One pull request per slice,
-in this order: U.1 first, and the plan's §0 says why. U.1 to U.3 shipped in 1.3.5, and 1.5 begins at U.4. R-10 and the keys move up into Phase 1 as
-U.3, because the controls after them show keys; R-15 leads Phase 3, because R-14 and R-16 read it.
-
-### Phase 1 — the canvas, the keys and the frame
-
-- ✅ **U.4 A zoom control, and true size** (R-03). − · % · + · Fit at the canvas's bottom-right;
-  *Fit drawing* `Shift+1`, *Fit selection* `Shift+2`, *True size* `Ctrl+0` — which fits today.
-  ✅ Built as described, on Design and on Sheets. Measured in the app: at *True size* a 100 mm
-  panel is 378 CSS px across on a 1× and a 2× display (377.95 by the arithmetic). `Ctrl+0` means
-  true size now, and fitting moved to `Shift+1`, matched by place, so a German `!` or a French `1`
-  fits. *Fit selection* is refused, with its reason, when nothing selected is drawn, and on Sheets.
-  100 % is the CSS reference pixel, 96 to the inch, one constant a screen calibration would
-  replace. Found on the way, and fixed: the status sent the Design camera's scale even on Sheets,
-  and only when the pointer moved — after `Ctrl+=` it still said 124.5 % for a board at 155.6 %,
-  and on Sheets the board's zoom for paper at 27.6 % — so the zoom is now read off whichever camera
-  is painted; Fit framed hidden features, which it does not draw; choosing from a menu by keyboard
-  dropped focus to the page, and now gives it back to the button; `getting-started.md` said a
-  German keyboard zooms from the key right of 0, which U.3's review had changed; a button of the
-  control pressed with the mouse kept focus, so the Enter that finishes a polyline zoomed again,
-  and now leaves the keys to the board; a window moved to a display of another ratio kept its
-  device pixels per mm, so 100 % read 50 % on a 2× screen, and now keeps its zoom. From review:
-  − and + step along round stops (1 … 25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400 … 10 000 %)
-  instead of ×1.25, so + from any fit reaches 100 %; and the zoom limits, which were device pixels
-  (about 10 600 % at 1×, 5 300 % at 2×), are 1 % and 10 000 % on every display. Printed output
-  did not move: no export test, golden fixture or format fixture changed.
-- ✅ **U.5 Panels fold, and focus mode** (R-04). `[` Parts, `]` Properties, `\` both; 40 px strips;
-  three status-bar chips, always; the widths of the requirements' §5; the maker's choices
-  remembered; nothing unreachable.
-  ✅ Built as described. Measured in the app at 1×, the board is 1280, 800 (1384 in focus mode),
-  640, 720 and 804 px wide at 1920, 1440, 1280, 1024 and 860 — it was 1260, 780, 620, 488 and 808.
-  Each panel's header has its fold, and a folded panel is a 40 px strip: Parts a thumbnail of each
-  piece, which selects it, a locked one too; Properties the mark of what is selected, named in its
-  tooltip. `\` hides both and turns the rail to keys; `\` or Esc brings back exactly what was
-  there. The keys are matched by place, so a German keyboard folds on `ü`, `+` and `#`. Below 1280 px
-  Properties folds by itself and below 900 Parts too; there a panel opens over the board, takes
-  focus, gives it back, and closes on Esc or a press on the board. The status bar always holds
-  *Parts*, *Focus* and *Properties*, the one for a hidden panel in the accent. The maker's folds
-  are kept in `preferences.json` (`partsFolded`, `propertiesFolded`); a narrow window's never are,
-  and focus mode is the session's. The drawing stays where it is through every fold. Thumbnails
-  are `thumbnailPath` in `packages/render`, for U.8. Found on the way: no tool claimed Escape, so
-  one press would have cancelled a drawing and left focus mode — a tool now claims it when it gives
-  something up, and the window takes it only after; the link tick on a derived line chose between
-  a rectangle's equal top and bottom by the last bit of a float, so the same panel drawn 10 px
-  further right wore it on the other side — the first of equal runs keeps it now; the status bar's
-  height was its content's, so the chips made it a pixel taller (and the old narrow-window chips
-  37 px instead of 28) — it is a fixed 28 px from the theme now, as the work bar's 36 is; and the
-  preload declared three of the preferences' fields. Parts at 208 px keeps every row that fitted
-  at 220 on one line. Printed output did not move.
-- ✅ **U.6 Properties: order, weight and job totals** (R-05). A hole set reads iron, result, name,
-  arrange, then Delete alone at its foot; with nothing selected, the pieces to cut, the holes to
-  punch and the sheets to print.
-  ✅ Built as described. Holes, Spacing and Runs at 17/22, then one line: *Spacing matches the
-  pitch* with a check, or *Spacing is stretched 1.8 %* — "matches" when the Spacing readout shows
-  the Pitch field's number, and the warning glyph only when Problems warns about the set too.
-  Every kind follows the same order; Flip and Mirror are icon pairs; Delete sits in a footer with
-  its *Del* cap, in view at 860 × 600, where it sat 188 px below the window's foot. Under the
-  name, "Outer · Cut ×1 › Stitch line › Stitch holes"; the piece's name (*Piece*) and Cut only for
-  the outline or the piece. With nothing selected the sample reads *3 · 4 to cut*, *250 · 146 +
-  52 ×2*, *2 · A4, portrait*, counting what prints. Labels are 68 px and the panel's scrollbar
-  thin, so "A hole on each corner" is no longer clipped, even while the panel scrolls at 264 px.
-  Found on the way: matched to a tenth of a percent, the sample's own outer read *stretched 0.1 %*
-  under a readout of *3.85 mm* (3.8532 mm on a 3.85 iron), where the mockup draws a check — it now
-  matches, as its numbers do; and Lucide 1.x's flip icons are swapped, so the right-click menu's
-  *Flip horizontal* showed a top-to-bottom flip — fixed for the menu, Arrange and the parts list's
-  mirror mark.
-- ✅ **U.7 The top bar in three zones** (R-06). The project and its save state · Design | Sheets ·
-  the paper, then Export PDF and Print as split buttons, Print's second half showing the problems;
-  green leaves the actions; the window's edited flag.
-  ✅ Built as described. The Project menu's button is the project's name, cut short with its
-  tooltip whole, and *Rename…* in it turns the name back into the field it was — as the roadmap's
-  decision asked; a check and *Saved*, or an open dot and *Unsaved changes*, and Save says
-  *Nothing to save* when there is none. Design | Sheets is a tab list in the middle, the Sheets tab
-  carrying the sheet count. The paper is a quiet "2 × A4 portrait" opening the paper, which way up,
-  what it comes to and *See the sheets*. Export PDF and Print are two-tone split buttons, each half
-  its own button; Print is the paper's colour, and its second half says the problems — a check, or
-  the worst severity and how many — and opens the drawer, which says the same from the same
-  count (`countBySeverity`). Print stays enabled, and its preview lists the drawer's problems first.
-  F1 opens Help. At 1024 px the words shorten, at 860 px only the paper's count, the save state's
-  dot and the switch's icons stay. The save state and the problems are said politely, once per
-  change, and not while a drag is under way; the window's edited flag follows unsaved work
-  (checked through the fake and on Linux, where Electron ignores it, not on a Mac). Green left the
-  palette. Found on the way: typing the project's name made every letter an undo step of its own —
-  renaming is one step now; and the export notice counted the severities on its own while the
-  drawer said only a total — one count serves all three now. No key changed meaning; F1 is new. Printed output did not move.
-
-### Phase 2 — panels, lists and small fixes
-
-- ✅ **U.8 The Parts tree** (R-07). Pieces fold; features nest under what they follow; keys for the
-  tree; *Sheet N, turned* leaves Design.
-  ✅ Built as described. Each piece is a row with its fold, its outline in small (U.5's
-  `thumbnailPath`) and its ×N; under it what it is made of, a level deeper for each thing it
-  follows — *Outline › Stitch line › Stitch holes* — joined by elbows, in 28 px rows
-  (`row-height`, the theme's `DENSITY`), a hole set's count at the right. At rest no row shows its
-  lock and eye, though their room is kept at every row's end, so hover or keyboard focus shows
-  them and nothing moves — a hole set's count stays in sight beside them (on review, after #89);
-  a hidden or locked feature keeps its toggle in sight, the mirror mark always shows. A WAI-ARIA tree with one
-  Tab stop: ↑ ↓ move and select, → opens or goes in, ← closes or goes up, Home and End, **Space**
-  hides or shows, **F2** renames in place (one undo step), Shift+F10 the row's menu; the window's
-  keys — Delete, Ctrl+Z, a tool's letter — pass through a focused row. A selection on the board
-  opens its piece and scrolls its row into view without taking focus. *Sheet 1, turned* is the
-  Sheets view's now; in Design a piece that will not print has a mark whose tooltip says why
-  (*Not printed. It is hidden.*). Pieces start open, and a fold lasts the session. Found on the
-  way: a piece's ⋯ menu, once its button showed only on hover, faded out with the row as the
-  pointer left for it — it stays while open; forced colours drew a box round every row; a rename whose row went from under it — undone
-  away from macOS's Edit menu while its field had focus — reopened its field when the row came
-  back, and now ends with the row, keeping nothing half-typed. With the actions' room kept, rows
-  step 12 px a level with 4 px between their parts; at 208 and 224 px the deepest *Stitch holes*
-  and *Cut-out mirrored* wrap between their words, and *Card pocket ×2*'s marks take a line below
-  its name. A selection paints in 4.5 ms with 32 features (3.0 ms
-  before). Printed output did not move.
-- ✅ **U.9 The Sheets view gets its own panels** (R-08). Pieces by sheet, the paper in Properties,
-  the reminder to measure. No Turn: no piece is turned by hand.
-  ✅ Built as described, less Turn and Measure. The rail is Select and the note *Drawing tools are
-  in Design · Ctrl+1* (the key read from the keymap). Parts is the sheets in the PDF's order —
-  *Sheet 1 of 2 · 2 pieces* — with each piece's thumbnail, a *Taped* badge or a turned mark
-  (tooltip *Turned 90°*), then *Not printed* with the reason, then *Taped across sheets*
-  (*None. Every piece fits on one sheet.*). Properties is the paper (the paper button's own
-  fields, so one undo step), the sheet count, *Scale 100 % · locked*, then the picked piece's
-  sheet, placement and fit, then the reminder to measure the 100 × 5 mm box. The options row says
-  *Click a piece to see where it prints · ? all keys*; the sheet summary stays as a polite
-  announcement, out of sight. Every number is read from `sheetPlanFor` through `sheetContents.ts`
-  (`sheetContents`, `tapedPieces`, `placementOf`), never paginated again. On the board a sheet's
-  label is the board's own 12 px voice in `GROUND.label` (4.5:1 on the sheets' ground; the
-  furniture magenta was 3.5:1), in the app's words — *Sheet 1 of 3 · 2 pieces* — and a sheet
-  holding a turned piece names it below, *Pocket, turned 90°*, never over the pattern. Found on the
-  way: the label's halo, first tried, cut the paper's edge at fit zoom, and a caption laid over a
-  turned piece ran far wider than the piece at fit zoom, so neither is drawn. Parts' own print line
-  and its hover plumbing left `PartsList`, which Design alone uses. Printed output did not move: the PDFs of every
-  paper are the plan the panels read.
-- ✅ **U.10 The legend** (R-09). Open with names by default; folds to a chip that is remembered.
-  ✅ Built as described. The legend sits at the canvas's bottom-left — moved from the top-right U.4
-  left it at — and opens with names on any window with room; folded, it is a chip reading *Legend*
-  whose tooltip names the marks, and a window 1024 px wide or narrower, or shorter than 720 px,
-  folds it for the session. That fold never reaches `preferences.json`. `preferences.json` is
-  version 2: version 1 wrote `legendOpen: false` out whenever any preference changed, so a stored
-  `false` could not be told from the old default, and a version 1 file is reset once to the new one.
-  Found on the way: the fold is the window's, so it reads at every size and not only at start-up;
-  the toggle had to follow the legend's shown state rather than the stored preference — opening it
-  by hand in a small window holds it open, and folding it there writes the choice; and the open
-  legend covered the empty bottom-left corner a pixel reference clicked to deselect, so that
-  reference now clicks an empty point below the ruler. Printed output did not move.
-- ✅ **U.11 Options-row hints** (R-11). Short hints with keys as caps, dropping from the right; `?`
-  never drops.
-  ✅ Built as described: the work bar's one sentence is three to five hints per tool and state —
-  Select with nothing picked, with something, with an outline (Enter edits its sizes); every drawing
-  tool idle and between its clicks (Esc cancels; a polyline's Enter, A and Backspace); a tool that
-  needs a selection says to press V first while there is none. Each hint is a key cap read from the
-  keymap and a few words from `en.json` (`hints.*`), with a rank; `fitHints` keeps the highest
-  ranks that fit the room measured, drops the rest whole — never a narrower hint out of turn, never
-  a word cut by the edge — and never drops `? all keys`, which is also how the Sheets view's row
-  reads now (Ctrl+P, Ctrl+E and `?`). The tools' `howTo` lines stay in the rail's tooltips. Found
-  on the way: a tool had no way to say a shape was between its clicks, so `Tool.underway` is new
-  (rectangle, circle, arc, line, polyline, measure), and the Esc a hint offers is the Esc the tool
-  claims. `Shift+2` in `value-chips.spec.ts` sent the key `2`, which a US keyboard never types
-  with Shift, so with a real pointer parked over the board it began a typed rectangle; it presses
-  `Shift+@` now. Not fixed, a decision: on a layout that types digits with Shift (French), Shift+`&`
-  is both *Fit* and a first digit typed into a rectangle's width. Printed output did not move.
-- ✅ **U.12 Change a key in Settings › Keyboard shortcuts** (§2).
-  ✅ Built as described: every row of the list has *Change*, which takes the next keys pressed, and
-  *Reset* once changed, with *Reset all* above; a key another command in the same place has is
-  named, with *Swap* or *Cancel*. A change is heard and shown at once — window, board, tools, Parts,
-  tooltips, menus, the rail, the work bar, sentences, macOS's menu, and the main process's Full
-  screen and Quit — and kept in `preferences.json` as only what differs (`keyBindings`, file-format
-  §6); a damaged entry is dropped, never fatal. Found on the way: a capture by `event.code` would
-  have bound AZERTY's `a` key as Q, so a letter is stored as the letter it types and a press its
-  binding would not match is refused; the board's tools heard their keys by name, outside the
-  keymap, and hear them by meaning now; a key a tool or a Parts row claimed still ran a window
-  command other than a tool's — every command skips it now; the polyline's A and L were one command,
-  now two; and Space on a focused button is the button's. Esc, Enter, a field's own keys and the
-  menu key are fixed; Full screen and Quit need a function key or a modifier, since the main
-  process hears them in fields too. On review: take back and Delete now claim the key they act on,
-  one rule decides whether a key is heard with Shift for dispatch and for clashes alike, a digit, a
-  point or a comma alone is refused (it types a size on the board), Quit is fixed on macOS, and the
-  renderer reads the maker's keys through the same validator as the main process. Printed output
-  did not move.
-- ✅ **U.20 What Chromium still draws itself.** Light scrollbars, radios, checkboxes, a spin button
-  and select lists in a dark window; focus rings in the desktop's colour; Ctrl+A selecting the
-  whole window; a bare notices window; and Electron's spellchecker, which downloads a dictionary
-  that `SECURITY.md` says the app never would. Found 2026-10-15; lands before U.19.
-  ✅ Built as described, said once for the whole shell: `color-scheme: dark`, thin scrollbars with
-  the shell's thumb (`SHELL.scrollbar`, 3:1 on every surface that scrolls), radios and checkboxes
-  in the accent, and the 2 px tan ring on every stop that had none — a `:where()` rule, so any
-  component's own ring wins, and one on the board says `--tan-ink`. A select's open list is the
-  app's own (`appearance: base-select`): `color-scheme` alone made it dark but kept the system's
-  blue on the option at hand. Copies is a `NumberField`. Text is selected only in a field, a
-  problem's words and About's version, and Ctrl+A outside a field selects nothing. A field's
-  right-click menu — Cut, Copy, Paste, Select all, keys from the keymap — is the app's own; the
-  notices are a dialog over About, and *a recent project is gone* the app's own dialog. The
-  spellchecker is off. Found on the way: Tab walked out of every dialog into the window behind it
-  — it goes round inside the dialog on top now; Print's orientation dots had no focus to see at
-  all; with the list the page's own, Escape closing it closed the dialog under it, and a letter
-  typed to find an option chose a tool — an open list keeps its keys; `spellcheck: false` and the
-  session's spellchecker off still fetched `en-US-10-1.bdic` once a field was typed in, until the
-  session was given no language (Chromium still makes an empty `Dictionaries/`); and Settings ›
-  Language failed to render on a system whose language is C — Linux's C.UTF-8, and CI's — because
-  `Intl` refuses `C` as a language: `languageName` now names such a tag by itself. Scrollbars keep
-  Chromium's small arrows, in the thumb's colour: no standard property removes them. Printed
-  output did not move.
-
-### Phase 3 — the craft workflow
-
-- ✅ **U.13 Settings › My tools** (R-15). The maker's irons, a default, and starting values for new
-  pieces.
-  ✅ Built as described, kept in `preferences.json`. A first launch lists the seven irons the Iron
-  menu offered before, so nothing disappears; the maker adds, renames, deletes and picks the
-  default. The Iron menu lists the maker's irons, then — for a hole set made with an iron they do
-  not have, a file from another bench — that iron by its own name, then Custom. A new hole set takes
-  the default iron's pitch and name; a new stitch line and a new seam allowance the margin; a new
-  fold the thickness, which starts **not set** rather than at the mockup's 1.2: it is a
-  measurement of the maker's leather, and thickness compensation (9.1) will read it. Each new
-  thing keeps its own copy, so a project evaluates the same on any machine. Found on the way: the
-  plan said there was no default margin, but every project carries `defaultStitchInsetMm` and
-  `defaultIronPitchMm`, which X8 had the commands read; the app now passes the maker's values, and
-  the project's are the fallback with none (X8 amended in `domain-model.md`).
-- ✅ **U.14 Value chips beside the selected shape** (R-12). Width, height, corner and margin, edited
-  on the drawing.
-  ✅ Built as described. A selected rectangle outline shows its width below on a dimension line,
-  its height at the right, *r 5.0* off its top-right corner and, with one stitch line following
-  it, *margin 3.0* on the leather just inside the stitch line — outside the left edge it had no
-  room at *Fit selection*, where the left ruler takes 34 of the 60 px. A click, or Enter on the
-  board, opens one with the unit and its number selected; it reads `95-2*3.5` and `3.75in`; Enter
-  applies it as one undo step, Tab applies and goes on, Esc puts it back. The chips are not Tab
-  stops at rest: the board is one now, and Enter there opens them. They follow every pan and zoom
-  in the frame the board moves, keep off the outline, the rulers, a panel opened over the board,
-  the legend and the zoom control, and never print — the PDF exported with them showing is the
-  same, pixel for pixel.
-  Found on the way: **nothing refused a corner** — Properties stored 40 on an 80 × 60 rectangle
-  while the board and the PDF drew 30. `roundedRect`'s clamp is `fittedRadii` now, and
-  `cornerRoom` says how much room corners have; a chip and Properties' corner fields refuse a
-  radius that would never be drawn, saying why, and a second Enter takes the largest that fits;
-  a width or height its corners do not fit in is refused the same way (`cornerNeeds`), with the
-  least they do. Files that already hold one open and draw as before. The polyline let the Enter that finished a
-  run go on to the window, where it would also have opened the selected outline's sizes — it
-  claims it now; an arrow key on a field at its limit wrote an undo step that changed nothing; and
-  on review, a chip that Tab opened read the outline a render behind, so `95` Tab `60` put the
-  width back. Printed output did not move.
-- ✅ **U.15 Values in any unit, and sums** (R-12). `95-2*3.5` and `3.75in`, wherever a size is typed.
-  ✅ Built as described, ahead of U.5–U.14: it needs no other slice, and U.14 and U.16 read it.
-  `parseLength` in `core` reads `+ − * /`, parentheses, either minus, a decimal comma, and mm,
-  cm, in and `"` in any case; a unit takes everything multiplied before it, so `1/2in` is half an
-  inch. A sum gives every number a unit or none — `3-1/2"`, American for 3½ inches, is 3 mm less
-  half an inch as a sum, and a guess either way would store a wrong size without a word, so it is
-  refused and the reason says to type `3.5in`. Every millimetre field takes it, the work bar's
-  corner radius included; Enter on text a field cannot read keeps the text, marks the field and
-  says why beneath (in the work bar, hanging below it); Escape or leaving puts the size back, as
-  before. Found on the way: the dimension's *Decimals* field said "mm" after a count.
-- ✅ **U.16 Typing while drawing** (R-13). `105` `Tab` `75` `Tab` `8` `Enter`.
-  Between the first click and the second, the rectangle's live readout is the value chips (U.14's
-  own field, `parseLength`, the same refusals): width, height and corner, with a hint under the
-  shape — Tab next, Enter makes it, Esc cancels, the keys read from the keymap — and Properties
-  mirrors the three. The first digit typed on the board opens the width chip, with the first
-  corner placed or not: before any click the rectangle starts at the pointer (in the board's middle
-  when no pointer has been on it, since U.19), and the sizes run
-  from the corner towards the pointer either way. Enter makes it (one undo step, the new outline
-  selected, its chips at rest), Esc gives it up, a click on the board makes what is typed. A drag
-  still draws as before and is sized afterwards by the U.14 chips; Shift still squares a drag.
-  Found on the way: the tool's Enter went to the window, which would have opened the sizes of
-  whatever outline was selected — the tool claims it now while it has a corner; and a typed
-  corner the pointer then left no room for was made smaller without a word — Enter, a click or a
-  chip's Enter is refused now, saying why in the corner chip, whose second Enter takes what
-  fits. Printed output did not move: a rectangle that is dragged is stored as before, with square
-  corners.
-- ✅ **U.17 The selection bar: stitch summary and next step** (R-14).
-  ✅ Built as described. Under the selected piece — an outline, its stitch line, its hole set, or
-  the piece picked by its heading — a bar says *146 holes · 3.85 mm, pitch 3.85 ✓ · runs 24 · 51 ·
-  24 · 51 · Cut ×1*, from the functions Properties reads, and *Next: Stitch line › Stitch holes ›
-  Seam allowance*: done steps checked, the first left a button that makes it with My tools' margin
-  and default iron, one undo step, and later ones plain. Which is done is read from the derivation
-  graph, so a *Stitch + allowance* piece, whose outline follows its stitch line, has its holes
-  next; the card pocket's hand-drawn stitch line counts. It sits under the piece's dimension lines
-  and chips, its left edge on the piece's, over the piece and its caption where there is no room
-  under, and is left out where there is room for neither — `placeSelectionBar` in `render`,
-  property-tested never to cover the piece, a chip or a control at any zoom. It hides while a
-  drag or a shape is under way, and takes no press but on its button, so the board under it draws
-  as before. F6 goes into it from anywhere and out again (Esc too), a key like any other in
-  Settings › Keyboard shortcuts; Settings › Appearance turns it off (`selectionBar` in
-  `preferences.json`), and then there is no bar and no key. Never printed: it is not on the board.
-  Found on the way: **a set's runs counted its corners unevenly** — the first corner in two runs,
-  the others in one — so the sample's equal short sides read 24 and 23, beside 146 holes the runs
-  added to 147. Each run now counts every hole on it, its corner holes included (24 · 51 · 24 ·
-  51, as a maker counts an edge and as mockup 14's 15 · 24 · 15 already read); the holes did not
-  move. Mockups 02, 05 and 14 offer *Seam allowance* as the outer's and the card pocket's next step,
-  but a piece drawn outline first is refused one (it would be a second outline): the bar shows it
-  done, its margin being the allowance, and offers it only where a seam has no edge yet. On
-  review: a piece made by Mirror read as unstitched, its stitching being derived from the
-  original's — counterparts now count as their originals do; a bar flipped over a piece with a
-  dimension on top ran into its caption — the number's reach is one measure in `render` now; and
-  a stitch line that failed, or a hidden hole set, counted as made — a failed step is said in
-  Problems' words and nothing after it offered, and hidden holes are not counted, as the board's
-  caption does not count them. Printed output did not move.
-- ✅ **U.18 Drawing defaults in Properties** (R-16).
-  ✅ Built as described. While a Draw tool would make a new piece — Rectangle, Circle, Arc, Line
-  or Polyline, drawn as Outline or Stitch + allowance — and nothing is selected, Properties shows
-  *After the outline*: the stitch margin and the default iron, under the rectangle's sizes while
-  one is drawn. They are My tools' own values, not a copy: a change there is a change in Settings,
-  and the reverse, kept in `preferences.json`; *Stitch + allowance* grows its edge by that margin
-  and the selection bar's steps make the stitch line and the holes with them. It shows before the
-  first click, not only between the rectangle's two, because *Stitch + allowance* applies the
-  margin when the shape is made and a polyline has no sizes to show. Found on the way: nothing
-  needed joining — U.13 had already put one source behind both paths. Printed output did not move.
-- ✅ **U.19 The pass, checked as one thing.** Every size, keyboard only, high contrast, 2×; the
-  pixel baselines and the README's pictures retaken.
-  ✅ *Open → draw → stitch → arrange → check sheets → print* walked in the running app at 1920,
-  1440, 1280, 1024 and 860 × 600, a fresh window each: at 1×, at 2× (`devicePixelRatio` read 2),
-  in `forced-colors` and with reduced motion, and by the keys alone. Reduced motion holds: the only
-  motion is colour on `--motion`, which the reduce rule turns off, and nothing animates. Every
-  token pair with a promised ratio has its test now — `text-dim` on the shell surfaces it is used
-  on, body text, a severity's words and text on the accent had none. The axe scans cover a size
-  being typed with *After the outline*, the selection bar with focus in it, a key's clash in
-  Settings, and a lit right-click menu, which no scan saw. UI Foundations' identity test, on a
-  1920 × 1080 window of the sample and a piece drawn as *Stitch + allowance*: **9 of 10**, item 9
-  still partly — a dimension's number breaks its line now, but has no arrowheads (4.10b, 1.6). The
-  flip reason (U.6) is one short line: *Follows Outline: move that instead.* The pixel reference
-  that moved is the stitched panel's, by the legend alone. Printed output did not move: nothing in
-  `export`, `persist` or the pure layers changed, and no golden or `.lcp` fixture.
-  Fixed on the way, each with its test: **the keys alone could not draw** — typing on the board
-  started a rectangle only at a pointer that had been over it; **a size typed by the board's edge
-  went to the wrong chip, or nowhere** — a chip with no place in view was left out of Tab's way
-  while drawing, so `105 Tab 75` could make a 75 mm corner, or a rectangle as tall as the pointer
-  said; **the legend sat on the left ruler**, cutting its numbers to "−1" since U.10; **closing a
-  dialog dropped the focus**, so after Esc out of Print a maker on the keys started again from the
-  top of the window, and so did `Ctrl+2` from a control only Design has; **the right-click menu's Delete read at 4.2 : 1** under the pointer, and the
-  menu sat outside any landmark (U.20 had placed the field menu, not this one); **a piece's row
-  with a Cut count had a blank second line** wherever its whole name did not fit on one, its marks
-  wrapping rather than its name (U.8). Q27 is fixed, and the README's four pictures are retaken.
-
-### Known issues and findings
-
-| # | What | Where it was found | Plan |
-|---|---|---|---|
-| ✅ **Q27** | `pnpm docs:media` failed where `/tmp` is its own filesystem (`renameSync` across devices, `EXDEV`), and never loaded the window while it recorded video — on `develop` as well. So the README's pictures still showed the bar before 8.7, and `print.png` the verification block before 7.8 | 8.7, retaking the README pictures | ✅ U.19: the PDF's page is copied, not renamed. The recording: on the Linux desktop it was found on (a Wayland session), Playwright 1.64 never let Electron 44 load a window it recorded — a bare `BrowserWindow` too, with Electron on X11 or Wayland, with or without the GPU — while under Xvfb in the pinned Playwright container it loads at once. Other desktops are untested. So `pnpm docs:media` runs there now (`tools/media.mjs`), installing poppler, ffmpeg, gifsicle and pngquant for the run. The spec had also gone stale with U.10: the legend, open at the board's foot, took the lining's drag and the pocket's corner; it is folded while drafting. All four pictures retaken and looked at |
-
-### Release engineering
-
-| # | What | Plan |
-|---|---|---|
-| ✅ **R9** | `Ctrl+0` changed meaning in U.4: it fitted the pattern until 1.5 and is *True size* now, with fitting on `Shift+1`. The changelog's line is the pull request's title, which names the new keys but not the change | When 1.5's release pull request opens, put one sentence at the top of its notes, and of the GitHub release's: *`Ctrl+0` now shows true size; fit the pattern with `Shift+1`.* `getting-started.md` already says so. And from U.8: *In Parts, Space on a focused row now hides or shows it (it used to select it, as Enter still does).* ✅ 2026-10-18: both sentences head the notes of 1.5's release pull request from `develop` and of the GitHub release, with the release's known limits — R8 and R10 below among them |
-
-**R8 and R10 moved to 1.6** on 2026-10-18, by the maintainer's decision, as monitored items, which no release waits for: no Mac is at hand to check either on, and the print log has no Windows or macOS row. 1.5 ships without claiming either verified, and its release notes say so. They are in 1.6's *Release engineering*.
-
-### Decisions this release needs
-
-Each has a recommended default in the plan, which its slice takes unless the maintainer decides
-otherwise. A row marked **Decided** is settled by the maintainer; any other is the default its
-slice took, or will take, and is still open.
-
-| Slice | Question | Recommended |
-|---|---|---|
-| Release | release-please names a release with features the next minor, 1.4.0 after 1.3.5, while this section and the docs a maker reads (`getting-started.md`: *Until 1.5*) say 1.5 | **Decided 2026-10-18:** 1.5.0, as 1.3.5 was cut with its own footer (#72). The pull request that closes this section — R9 ticked, R8 and R10 moved to 1.6 unverified (2026-10-18) — ends its squash message with the footer `Release-As: 1.5.0`, as its last line; release-please's release pull request is then checked to say 1.5.0. Released as 1.4.0, this section would still read as unreleased to `tools/release-gate.sh`, and 1.6 would be proposed as 1.5.0 |
-| U.3 | On a French or German keyboard, does a tool key follow its letter or its position? | Its letter: R stays R. Punctuation and digits keep their position, shown as the local character — but zoom's + and −, named by their symbols, follow what the key types (decided on review) |
-| U.4 | The menu says *True size*, but nothing calibrates the screen | **Decided 2026-10-13:** kept. `getting-started.md` says to check the screen with a ruler first; a calibration step stays in *Later* |
-| U.4 | Does `Ctrl+0` centre on the selection? | **Decided 2026-10-13:** no, it zooms about the board's centre. `Shift+2`, then `Ctrl+0`, frames a piece at true size |
-| U.6 | When is the spacing "matched", and when does its line warn? | **Decided 2026-10-13:** matched when Spacing shows as the Pitch, to the two decimals both are shown at (`formatSpacing`); the warning glyph only when Problems warns about that set (a quarter of the pitch, `SPACING_DEVIATION_FRACTION`), so the line and Problems never disagree. A smaller warning would be the domain's to raise, so Problems says it too |
-| U.6 | An outline showed two fields called *Name* | **Decided 2026-10-13:** the piece's is *Piece*, beside *Cut* |
-| U.6 | Flip on a stitch line or hole set is always refused, and its reason takes Arrange's first rows | **Decided 2026-10-13:** stays refused, with its reason; U.19 words the reason shorter |
-| U.6 | A hole set's runs add to 147 beside 146 holes: a corner hole is counted in both its runs | **Decided 2026-10-13:** settled in U.17, before the selection bar shows runs. U.17: only the first corner was counted twice. Each run now counts every hole on it, its corners included, so equal sides read equal (24 · 51 · 24 · 51) and the runs add to the set plus one per shared corner |
-| U.5 | Below 1280 px Properties is a strip: may the maker dock it there anyway, as the rail can be opened while narrow? | **Decided 2026-10-14:** no. `]` opens it over the board, as §5 says, and a press on the board closes it |
-| U.5 | Does a press on the board close a panel open over it even while the maker selects there? | **Decided 2026-10-14:** yes, as R-04 says; the press also selects. At 1024 px, `]` reopens Properties after picking a piece |
-| U.5 | Is focus mode remembered across a restart? | Built as recommended — no, it is the session's, like the view; the folds are remembered. Not yet decided |
-| U.5 | Does Esc clear a selection before it leaves focus mode? | **Decided 2026-10-14:** yes. One press, one thing: Esc clears the selection, and the next one leaves focus mode |
-| U.7 | If the project's name joins the Project menu's button, how is a project renamed? | **Decided 2026-10-14:** *Rename…* in the Project menu turns the name back into its field, and a whole rename is one undo step. F2 stays the Parts tree's (U.8) |
-| U.7 | Print's problems half when the drawer holds only infos (an empty part, uneven runs) | **Decided 2026-10-14:** a fourth state, *to note* — the dot and the infos' count. A check means the drawer is empty |
-| U.7 | What count does Print's problems half show? | **Decided 2026-10-14:** the worst severity's alone, as R-06 draws it. Its tooltip and accessible name give every severity's count, from the one count (`countBySeverity`) the drawer and the export notice read |
-| U.7 | One paper list, as 7.4a had, or paper and orientation apart, as mockup 08 draws them? | **Decided 2026-10-14:** apart. Each paper says its sheet count and each orientation's tooltip what it takes, before it is chosen; the summary keeps the scale and the taping |
-| U.7 | Does *Export PDF*'s main half remember the folder it last saved to? | **Decided 2026-10-14:** no; it does what *Export PDF* did. Remembering the folder would be a feature of its own, scoped separately |
-| U.8 | Do pieces start open or closed, and is a fold remembered? | **Decided 2026-10-14:** pieces start open, and a fold lasts the session. A selection on the board opens its piece and reveals its row |
-| U.8 | Does selection follow focus in the tree? | **Decided 2026-10-14:** yes. ↑ and ↓ select the row they reach, and Delete and Properties act on that selection. Tabbing into the tree changes no selection: focus lands on the selected row, or the first |
-| U.8 | Rename on the right-click menu? | **Decided 2026-10-14:** no. F2 in the tree, heard only there, and the Name field in Properties |
-| U.8 | A hidden piece shows the crossed eye and the crossed printer | **Decided 2026-10-14:** both stay: one says it is hidden, the other what that means for printing. A name that then wraps to two lines is acceptable under the wrap rules (F.6, §7.1) |
-| U.8 | Lock and eye covered the hole count on hover | **Decided 2026-10-14:** the count stays in sight at rest, on hover and on focus. The actions' room is kept at every row's end, so nothing moves; names wrap between words, never truncate |
-| U.9 | Measure on the Sheets view, where no tool acts today? | Left out, and added to *Later* |
-| U.10 | Every saved preferences file says the legend is closed, chosen or not | Built as recommended: preferences version 2 opens it once, since version 1 never recorded a choice. Not yet decided |
-| U.13 | A default leather thickness "used by folds whose own is not set" | Written into each new fold; evaluation never reads a preference (built so in U.13; the default starts not set) |
-| U.14 | When the four corners differ, what does the corner chip show and set? | **Decided 2026-10-15:** it reads *mixed*, and a value typed there sets all four, one undo step; a corner each is Properties' to type |
-| U.14 | Are the chips Tab stops at rest? | **Decided 2026-10-17:** no, as R-12 says. The board is one Tab stop; Enter there opens the first chip in view; while one is open, Tab and Shift+Tab go through the chips, and past either end out of them |
-| U.14 | A width or height that leaves the corners larger than the rectangle draws them | **Decided 2026-10-17:** refused, saying why, and Enter takes the least size the corners fit in — on the board and in Properties alike. A stored radius is always the one drawn |
-| U.14 | Chips near the legend or the zoom control | **Decided 2026-10-17:** kept clear of them, as of the rulers and panels — a chip slides along its line, or is left out; never laid over one |
-| U.16 | Where a typed rectangle goes before any corner is clicked | At the pointer; with no pointer on the board yet, in its middle (U.19) |
-| U.17 | Seam allowance on a piece drawn outline first, which the command refuses (a second outline) | Shown done: the margin between edge and seam is the allowance. The button appears only where a seam has no edge yet; mockups 02, 05 and 14 drew it on the outer |
-| U.17 | Which selection shows the bar | An outline, a stitch line, a hole set, or a piece by its heading — its piece's stitching. Not a fold, cut-out, marking, dimension or two things |
-| U.17 | No room under the piece or over it — the piece framed by `Shift+2`, or zoomed past the board | Left out, as a chip with no place is, and F6 then does nothing. Fitting the selection could keep the bar's room; not done |
-| U.17 | A step that failed (a margin too wide for the piece) or a hidden hole set | Not made: a failure is said in Problems' words, a hidden set as hidden, and no button follows either; Cut ×N stays on line 1 |
-| U.17 | What F6 does away from the board | Goes into the bar from anywhere but a field, and back to the board from inside it |
-| U.11 | The old sentence also said "scroll zooms · middle-drag pans"; the hints have no room for it | Left to `?` all keys, which lists both. Nothing else taught is a gesture the shortcut list does not have: Ctrl, which suspends snapping, is not offered until it is listed there |
-| U.11 | Three to five hints, with or without `? all keys` | With it: a tool's own hints are two to four, so the row is never more than five caps |
-| U.11 | Which hint drops first, when the mockup drops "from the right" | The lowest ranked, as R-11's text says — the keys a maker is least likely to guess stay longest (a polyline's A before its Backspace) |
-| U.11 | On French layouts Shift+`&` is *Fit* and types a `1` into a rectangle's width | Not decided: one press does both today. Letting the window's key win would leave no digit row to type a size with |
-| U.19 | Typing a size with no pointer on the board: U.16 started nothing, so a maker on the keys alone could not draw | In the middle of the board as shown. Every action works from the keyboard (§2); a corner by the pointer stays the rule whenever there is one |
-| U.19 | A typed size's chip with no place in view while drawing — U.14 leaves it out, so `105 Tab 75` put the 75 in the corner, or nowhere | Pinned to the nearest place in view, over a control if it must. Never laid over one (U.14) stays the rule for a selected outline's chips, which are not typed blind |
-| U.19 | Design does not frame a project when it opens: the sample opens at 79 % about the origin, partly off the board below 1440 px | Not changed — the camera has always stayed put, and nothing decides otherwise. Framing on open is a small feature of its own, if wanted |
-| U.19 | The README's `design.png` shows the legend folded to its chip | Open, it covers the pocket's edge over the fitted pattern. Shown folded, as a maker who wants the room has it |
-| U.20 | Electron's spellchecker: keep it, or turn it off? On Linux it downloads an English dictionary whatever the interface language, and the leather words are not in it | **Decided 2026-10-15:** off. A name is a few words, and `SECURITY.md` says the app makes no network connections |
-| U.20 | A right-click menu in a text field | **Decided 2026-10-15:** Cut, Copy, Paste and Select all, in the app's own menu with its words from `en.json`; nothing outside fields |
-| U.20 | Which text can be selected? | **Decided 2026-10-15:** the fields, a problem's words, and About's version — what a maker might paste into a bug report. Nothing else. About shows no log folder to select: its button opens the folder |
-
----
-
-## 1.6 — after the refinement
-
-What 1.3 did not finish and 1.4 does not take moved here on 2026-10-07, when 1.4 was split
+**After the refinement.** What 1.3 did not finish and 1.4 does not take moved here on 2026-10-07, when 1.4 was split
 ([1.3.5's record](history/roadmap-1.3.5.md) says why): word for word, but for 8.9, which now reads the one tag
 form R4 decided. It was 1.5 until 2026-10-08, when the UI refinement took that number, and it
-becomes *the next release* once 1.5 has shipped. The order within each group is the suggested
+became *the next release* when 1.5 shipped, on 2026-10-18, with R8 and R10 from 1.5 as monitored
+items. The order within each group is the suggested
 order of work, and *The window* comes before the other groups.
 
 ### The window
 
 Left from 1.3's *The window*: nothing says a new release exists.
 
-- ☐ **8.9 Update discovery.** The main process asks GitHub for the latest release and compares it
+- ✅ **8.9 Update discovery.** The main process asks GitHub for the latest release and compares it
   with the running version: *Check for updates* in Settings › Updates, the result in About, and a
   quiet mark on Settings when one exists. It links to the release page and installs nothing (see
   *Not planned*). The app's first network request, so `SECURITY.md`'s "no network connections"
   changes with it, in an ADR; the Flatpak skips it, as Flathub updates it. Reads tags in the
   `leathercad-v` form (R4).
+  **Done** (2026-10-20), as [ADR 0020](adr/0020-update-discovery.md): the check runs only when
+  the maker asks for it, never as the app starts, by the maintainer's decision (2026-10-23):
+  *Check now* in Settings › Updates, or the version at the status bar's left, whose tooltip says
+  what it found; a spinner turns while it asks. Answered, the version becomes a chip — a sage tick,
+  or a tan arrow and the new number — and Settings › Updates a card with the same glyph; neither
+  asks again for five minutes, though a failed check may. The Settings button opens on Updates
+  while its mark shows. `SECURITY.md` says why
+  the app makes the request and what it carries. No test asks GitHub: `LEATHERCAD_RELEASES_URL`
+  points the check at a server of the test's own, or at nothing.
+
+Several projects in one window (2026-10-23). On Linux and Windows a second launch — a `.lcp`
+double-clicked while the app runs — started a second process: both wrote `preferences.json`, the
+last one winning, and the same project could be open and saved in both. The maintainer chose one
+instance, with a project per tab like Notepad's, the tabs on a strip of their own above the project
+bar under the system's title bar (variant A; a strip in a frameless title bar stays decided against
+by the [sheets workflow design](superpowers/specs/2026-09-24-sheets-workflow-design.md) §4.4).
+
+- ✅ **8.11 One instance.** A second launch — a `.lcp` double-clicked while the app runs, or the
+  Start menu — hands its command line to the running app and ends, before it writes anything. The
+  window comes forward, restored if minimised, and opens the project the line names in a tab of its
+  own, beside any unsaved work (8.12), as macOS's `open-file` does too; a launch naming no project
+  only brings the window forward. The lock is the
+  configuration directory's, so the end-to-end tests, each with its own, still run side by side.
+  **Done** (2026-10-23).
+- ✅ **8.12 Project tabs.** A tab per project on a strip above the project bar, drawn as drawing
+  sheets: square, the open one outlined and running into the bar below it. A tab says its
+  project's name — its file's for a project with none of its own, *Untitled*, *Untitled 2*… for new
+  ones — with a dot where its close button is while it has unsaved work. Each keeps its own
+  document, history, selection, view, camera and file; the window's title is the active tab's, and
+  macOS's edited dot is lit while any tab has unsaved work.
+
+  The Project menu is an icon at the strip's left, and *+* after the tabs is a menu of a new
+  project, *Open…* and the recent projects. Every way a project opens — New, Open, a recent one, a
+  template, a launch, a second launch, a `.lcp` dropped on the window — opens it in a tab; one
+  already open goes to its tab, which bounces, and an untouched *Untitled* is replaced. *Rename…*
+  turns the active tab's name into a field and renames a saved project's file with it, never over
+  another file, and Undo and Redo of it rename the file back; a project first saved without a name
+  is named after its file. A tab's right-click menu renames, saves, saves as a template, reloads
+  from disk, duplicates, shows in the folder, copies the path, moves the file to the Trash (asked
+  first) and closes it or the others. A file another program changes, moves or deletes is said over
+  the board, with *Reload*, *Keep mine* or *Save it again*.
+
+  Closing a tab with unsaved work asks; closing the last leaves the app open on a start screen —
+  new, from a template, open, and the recent projects, pinned or taken off the list one at a time,
+  with Settings and Help at the strip's end — which is also where the app starts when the last
+  session left no tabs. Closing the window asks about one unsaved project, or once about several:
+  *Save all*, *Don't save*, *Cancel*. The tabs come back at the next start, each on its view, place
+  and zoom (`session` in `preferences.json`); with *Keep unsaved projects when closing* on in
+  Settings › General the window closes without asking, and unsaved projects come back unsaved.
+
+  Ctrl+Page Down and Up go round the tabs, Ctrl+Shift+Page Down and Up move one, Ctrl+W closes one
+  and Ctrl+Shift+T opens the project last closed again, all through the keymap — never the digits,
+  which Design and Sheets have. Tabs drag along the strip, a middle click closes one, the wheel
+  scrolls a strip too full to show them all and *All tabs* lists them. A `tablist` with arrow keys,
+  clean under axe. One file dialog at a time. Save looks the same with nothing to save, and is only
+  inert. **Done** (2026-10-23).
+- ✅ **8.13 A recovery copy per tab.** Each tab with unsaved work keeps its own copy,
+  `<pid>-<start>-<tab>.lcp`, written while it is in front or not; saving, reloading or closing the
+  tab clears it, and a save while a copy is being written clears that one too. After a crash every
+  copy is offered in turn, each into a tab of its own. Copies from 1.5, one per session, are still
+  found. **Done** (2026-10-23).
+- ✅ **8.14 New from a template.** *New project* is two: *from scratch*, still Ctrl+N, and *from
+  template…*. The templates that ship are the sample wallet, a card holder, a key fob and a
+  coaster, each built from the app's own commands and clean; the sample has no other way in since,
+  and *Open sample project* is gone from Help, the empty Parts panel and the start screen. A
+  project from a template opens untitled, unchanged and with an id of its own, so Save asks where
+  and the template is never written. *Save as template…*, in the Project menu and a tab's menu,
+  saves any project as one of the maker's, never over another of the same name unless asked.
+
+  The picker is a browser: a search over names, descriptions and tags; *Show* (all, built-in,
+  mine) and *Sort* (name either way, recently
+  used, newest, oldest — by when last changed), the app's own menus, kept between openings; the
+  pinned first, in a well of their own that folds away (kept between openings), then the rest,
+  both in the order chosen; the
+  chosen template drawn large with its facts, *Edit template* (or, for a built-in one, *Duplicate as
+  my template*) beside its name and the rest as a row of icons under it, held above the scroll;
+  a row pins from the list too. The maker's own are described and tagged through
+  *Edit details…* — read until then, saved when asked, not on leaving a field — pinned, renamed, duplicated, edited as a project whose Save writes
+  the template, exported, shown in the file manager and removed, with *Undo* for a few seconds; a
+  `.lcp` is imported as one (`templates/` beside `preferences.json`). **Done** (2026-10-23).
+
+8.11–8.14 were **done** on 2026-10-23, together, with `pnpm check` and `pnpm test:e2e` green on
+Linux; on Windows and macOS they wait for [`release-checklist.md`](release-checklist.md) §11 and §15
+with the packaged app.
 
 ### Drawing and editing
 
-- ☐ **3.10 Guides, alignment and distribution.**
-- ☐ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
+- ✅ **3.10 Guides, alignment and distribution.** Persisted horizontal, vertical and diagonal
+  guides, placed from the rulers, the Guides tool (a click, or a drag through two points) or
+  Properties, and parallel to another guide at a typed distance; snapping, exact editing,
+  deletion and undo. Multi-selection alignment and equal-gap distribution move whole pieces and explain
+  refusals. Guides stay off paper; format 10 keeps them on reopen.
+  [Design and acceptance criteria](superpowers/specs/2026-10-23-guides-alignment.md).
+- ✅ **3.12 Convert to drawn path.** The explicit escape hatch for a circle someone wants to squash
   or an arc they want to reshape freely, saying plainly that it stops being a circle or an arc.
   Until then, 3.7 refuses those transforms.
-- ☐ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
+  **Done** (2026-10-25): a selected circle, arc or rectangle offers *Convert to drawn path* in
+  Properties, under its fields, with what it costs said beside the button — it stops being a circle,
+  and its centre and diameter can no longer be typed. The path is the one the shape already drew, so
+  nothing on the board or the paper moves: the feature keeps its id, name, kind and role, a
+  rectangle keeps its four corners as anchors, and every stitch line, hole set, row of holes and
+  dimension following it resolves exactly as before. One step of undo brings the shape back. After
+  it, the squash and the shear 3.7 refused go through, and *Edit points* reshapes it; the two
+  refusals now name the way out. A rectangle is offered it too, because a turned one is refused a
+  stretch (`WOULD_SHEAR`) for the same reason a circle is. A hardware hole is not: a punch is round,
+  and an oval opening is a cut-out (`HOLE_STAYS_ROUND`). **A squashed circle is made of cubics** —
+  the rule every drawn path already follows ([geometry](geometry.md) §4.2 rule 2) — so a stitch line
+  round one reports that it cannot follow it (`OFFSET_UNSUPPORTED`) until 9.19; the note beside the
+  button says so before the maker converts. No format change: a drawn path was already stored.
+  [Domain model §4.8](domain-model.md#48-converting-a-shape-to-a-drawn-path--built-312).
+- ✅ **4.10b Dimensions drawn like drafting.** Arrowheads, with the number breaking the line — the
   one item of the visual identity test that only partly passes. It prints, so it is a measurement
   change, not a canvas treatment.
-- ☐ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
+  **Done** (2026-10-26): a dimension ends in a filled arrowhead at each extension line and its line
+  breaks where its number sits, on the board and on paper, so identity item 9 passes. One pure
+  function in `domain`, `draftDimensionLine`, places the arrowheads and the break in millimetres; the
+  display list calls it with the board's constant sizes (10 × 3.5 px, the break the number's halo), and
+  the export scene with true millimetres (2.5 × 0.85 mm, ISO 129-1's three to one, and 1 mm either
+  side of the number), both from `DIMENSION_MARKS` in the theme. When the arrowheads and the number
+  do not both fit between the extension lines, the arrowheads turn outside and point in. The paper's
+  number, laid out by evaluation, now sits centred on its line rather than beside it, as the board's
+  already did. An arrowhead is the first filled shape in an export's pattern: `ExportPath.filled`,
+  filled in the PDF, the SVG and the Sheets view, outlined in a DXF. The resolved path is unchanged —
+  the extension lines and the whole line — so selection, the halo and bounds are as they were.
+  Property tests: each arrowhead's tip on its end, its size and axis; the line on
+  itself, broken exactly for the number, with no other break; inside or outside by the room there
+  is; and a rigid motion moves it all. The print test's rasterised check measures the dimension
+  between its extension lines now, since its line is no longer one stroke. A number with no room
+  between the extension lines goes outside, past the arrowhead at the far end and clear of it,
+  decided from the number's real width and the arrowheads' real length in each medium, never a
+  fixed threshold; the line is then drawn whole. No format change for the drawing itself. [Domain model §3.7](domain-model.md#37-measurement--linear-built-410a),
+  [printing](printing.md).
+- ✅ **4.14 A row of holes along a line** that is not a stitch line (carried forward from Phase 4).
+  **Done** (2026-10-25): a selected marking line offers *Add a row of holes* in Properties, and the
+  row is a feature of its own, `HoleRow`, derived from that line as a hole set is from its stitch
+  line — so it follows the line when it is edited, mirrors with its piece, goes with the line when
+  the line is deleted, and is never stored as holes. Holes are placed as a hole set's defaults place
+  them: one on each end of an open line, the rest evenly between, one on every corner, and a closed
+  line divided with no doubled hole. Each is a round hole at a true diameter, in the `hardware` role:
+  drawn and printed at its size, cut by a laser export, and kept on the leather by its rim (Q33's
+  rule). The spacing rules for stitching do not apply — a row is punched, not sewn. Properties edits
+  the pitch and the diameter and reads the count and the spacing achieved; a new row is 25 mm apart
+  and 4 mm across, the 4.7 design's belt holes and the Hardware tool's first punch. Only a marking
+  line hosts one: a stitch line's holes are a hole set, and holes along an outline or a fold would
+  be cut through it. Holes no more than a diameter apart are warned about (`HOLES_OVERLAP`): they
+  cut as one slot. *Exactly this pitch* and a corner policy are left until someone asks. Format 11
+  holds it.
+  [Domain model §3.6a](domain-model.md#36a-holerow--built-414).
 
 ### Output
 
-- ☐ **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
-  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
-  then the preview saves the PDF.
-- ☐ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
+- ✅ **6.4 The rest of the export dialog.** Presets, layers and bounds. Printing only some sheets is
   the Print Preview's since 7.6.
   `paperOptionsFitting` already answers "what would fit", so the dialog reports rather than
   computes.
-- ☐ **7.2 Taped parts, finished.** Edge arrows and a printed assembly sheet. A taped part is never
+  **Done** (2026-10-28): *Export SVG…* and *Export DXF…* open a dialog first. Its intents are rows
+  of one table — *Template print* (every layer), *Laser cut* (`cut` and `hardware`) and *Stitch
+  guide* (`stitch` and `stitch-holes`) — and each chooses layer roles, which the maker can then tick
+  or untick: *Laser cut* with *Stitch holes* is the "if lasered" of the domain model. The filter is
+  in `buildExportScene`, once, so no writer has one; a part's box and caption follow what is left,
+  and a laser cut has no caption. The dialog reports the page the file will have — the box of what
+  the chosen layers draw — and says so, and greys *Export…*, when nothing is left. The choice is an
+  application preference, `exportRoles`, shared by both formats, remembered across restarts and
+  never in the project; the default, every layer, writes the bytes it wrote before. Bounds is the
+  whole drawing as arranged on the board: exporting only some parts, and a paper-fit line, are not
+  offered, and the PDF takes no preset (its scene is the sheet plan's, shared with the Sheets view).
+  Property tests over every set of roles: only those roles, every item of them unchanged, a part's
+  box that of what it holds. The print test exported as a laser cut holds one layer, `cut`, as an
+  SVG and as a DXF. [Printing §10](printing.md#10-svg-export-62).
+- ✅ **7.2 Taped parts, finished.** Edge arrows and a printed assembly sheet. A taped part is never
   turned: since 7.8 a part is taped only when it fits whole neither way.
-- ☐ **7.5 Calibration.** Per-printer correction factors, with a ±2 % guard. The verification
+  **Done** (2026-10-27): every edge a taped sheet shares carries an arrow at its join, pointing at
+  it and naming the sheet beyond — `Sheet 3`, the number the strip's *joins sheet 3 to the right*
+  gives. An arrow is the join's grey and solid, so it is never read as a cut line; it stops 2 mm
+  short of the join on its own side, so cutting on the line leaves it whole, faces its neighbour's
+  arrow across it, and keeps clear of the registration cross. A part taped into a grid — more than
+  one row and more than one column — then gets an assembly sheet, just before its tiles: its tiles
+  as a map — each tile's share of the part a cell, the cells meeting at the joins, named with their
+  sheets, over the part's outline in grey — headed *Not to scale: a map of how the sheets join.
+  Never cut from it.* A strip gets none: its arrows say it all, and a map would waste a sheet, so
+  the print test still prints three sheets and the sample on A5 portrait five. The map is the one
+  reduced drawing on paper, and it keeps the rule against scaling to fit: the pattern stays at 1:1
+  on its tiles, and the map is a picture of the sheets, as printing §7 planned. It is a sheet of the
+  plan, so the count, Parts (*Sheets 2–7 · map on sheet 1*), the Sheets view (*Assembly map of
+  Gusset*), the Print Preview and the PDF all number it; packing does not count it, so what is
+  turned or taped is as 7.8 decides. It belongs to its part: the Print Preview leaves it out with
+  the last of the part's sheets and puts it back with the first. Arrows and map are drawn by
+  `sheetInk`, so the Sheets view shows what the PDF prints. Property tests: arrows on exactly the
+  edges with a neighbour, naming its sheet, one facing pair per join, square to it and short of it,
+  clear of every cross, and inside the clip on every paper; one map per grid and none for a strip,
+  just before its tiles; the map has a cell per tile named with the plan's sheet, laid as the sheets
+  lie, without overlap, reduced alike both ways and never mirrored, and its words fit the narrowest
+  sheet. Tape guides are left. Not measured on paper yet.
+  [Printing §7](printing.md#7-registration-and-assembly-aids).
+- ✅ **7.5 Calibration.** Per-printer correction factors, with a ±2 % guard. The verification
   gauge already shows when a printer is off.
+  **Done** (2026-10-28): the Print Preview has *Calibrate this printer…* under the printer chosen
+  there. It prints a calibration page to that printer, uncorrected and with the job every print
+  gets: a horizontal line across the paper and a vertical line along it, ticked every 10 mm, each
+  the longest the margins take in whole centimetres up to 200 mm — 190 × 200 mm on A4, since
+  200 mm does not fit across 210. The maker enters what the lines measure, and the correction —
+  drawn over measured on each axis, exactly — is stored against the printer's CUPS name in
+  `printers.json` in the configuration directory, never in the `.lcp`. A reading more than 2 % off
+  on either axis is refused with printing §8.2's sentence about print settings; the main process,
+  the file's reader and the PDF writer refuse one too. From then on Print writes that printer's PDF
+  with one scale first on each page, on the paper's axes and about its middle, and the preview
+  shows those bytes; Print waits until the printer's correction is known. A corrected sheet says
+  `corrected for its printer: x 1.0050, y 0.9988` where it says `1:1` otherwise, because in its own
+  units it is no longer 1:1. *Export PDF*, the Sheets view and *Save PDF…* — offered only where the
+  app cannot print, so with no printer — never carry one. *Remove correction* goes back to
+  `{1, 1}`, which writes the same bytes as before 7.5. Property tests: the correction is exactly
+  drawn ÷ measured; the guard holds at its edge; every length on paper is the drawn one times its
+  paper axis's factor, a landscape sheet's width taking `y`; a printer's ratio times its correction
+  gives the drawn length back; `{1, 1}` changes no byte on any paper in either form. Through
+  poppler, a 1.005 correction prints 0.5 % larger and the calibration page's lines measure their
+  lengths; an end-to-end test calibrates the fake CUPS printer and measures its next print's gauge.
+  Not measured on paper yet: no real printer has been calibrated with it.
+  [Printing §8.2](printing.md#82-correction--opt-in-per-printer-a-last-resort).
+
+### Performance
+
+The whole [performance backlog](performance-backlog.md), **PERF-001 to PERF-017** from the
+2026-10-25 audit, is in 1.6 by the maintainer's decision (2026-10-28): the release waits for all
+of it. The backlog owns each task's evidence, acceptance and
+[order](performance-backlog.md#recommended-implementation-order); the marks here mirror its
+[register](performance-backlog.md#task-register), and a task's pull request ticks both. How the
+work is done — measured on current `develop`, before and after, a guard against coming back, one
+pull request each, accuracy never traded, every platform retested — is
+[`.claude/rules/performance.md`](../.claude/rules/performance.md).
+
+- ✅ **[PERF-001](performance-backlog.md#perf-001)** Share export geometry across history revisions.
+- ✅ **[PERF-002](performance-backlog.md#perf-002)** Reduce tiled PDF duplication and blocking.
+- ✅ **[PERF-003](performance-backlog.md#perf-003)** Cull Sheets pages and separate interaction decoration.
+- ✅ **[PERF-004](performance-backlog.md#perf-004)** Avoid full snap-index rebuilds during complex edits.
+- ✅ **[PERF-005](performance-backlog.md#perf-005)** Reuse geometry diagnostics for unaffected inputs.
+- ✅ **[PERF-006](performance-backlog.md#perf-006)** Reduce self-intersection candidate pairs.
+- ✅ **[PERF-007](performance-backlog.md#perf-007)** Isolate pointer-driven React updates.
+- ✅ **[PERF-008](performance-backlog.md#perf-008)** Reuse Design content and cull off-screen geometry.
+- ✅ **[PERF-009](performance-backlog.md#perf-009)** Keep persistence work off the interaction path.
+- ✅ **[PERF-010](performance-backlog.md#perf-010)** Release previous-project view/tool caches.
+- ✅ **[PERF-011](performance-backlog.md#perf-011)** Resize backing stores on DPI-only changes; emulated transitions guarded, physical mixed-DPI release verification remains open.
+- ✅ **[PERF-012](performance-backlog.md#perf-012)** Preflight excessive allocation/work requests.
+- ✅ **[PERF-013](performance-backlog.md#perf-013)** Bound thumbnail work and cancel obsolete PDF loading.
+- ✅ **[PERF-014](performance-backlog.md#perf-014)** Schedule canvas frames only when needed.
+- ✅ **[PERF-015](performance-backlog.md#perf-015)** Avoid repeated deep dependency walks.
+- ✅ **[PERF-016](performance-backlog.md#perf-016)** Prune obsolete collapsed-part IDs.
+- ✅ **[PERF-017](performance-backlog.md#perf-017)** Make benchmarks representative and interpretable.
 
 ### Known issues and findings
 
@@ -514,9 +332,11 @@ Everything found along the way that is not fixed yet, with where it was found. T
 
 | # | What | Where it was found | Plan |
 |---|---|---|---|
-| ☐ **Q33** | **bug** · A hardware hole is checked by its centre alone. `OUTSIDE_PART` and `HOLE_TOO_CLOSE_TO_EDGE` read a hardware hole's centre (`holePoints` in `validate.ts`) and never its radius, so a 6 mm hole centred 2 mm inside the edge cuts 1 mm through it and nothing is said, and a 4 mm rivet hole whose rim crosses the edge is only *too close* | The product roadmap refresh (2026-10-17), reading the rules for hardware clearance | Measure a hardware hole by its rim: off the leather when its circle leaves it, too close when the rim is nearer an edge than the clearance — and decide whether a stitch hole's 1.5 mm is the right clearance for a rim. A stitch hole stays a point. Property tests over centre and radius. 9.23 builds on it |
-| ☐ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | Give a problem a stable key before anything relies on one — 9.16, accepting a warning, will |
-| ☐ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | Decide which sizes a piece keeps (hardware, labels, card slots) before Scale takes the whole piece |
+| ✅ **[#194](https://github.com/crnlsp/leathercad/issues/194)** | **bug** · Shift+F10 opened no context menu on macOS although the shortcut was advertised | First macOS E2E probe | The app hears the fixed shortcut through the keymap on every platform and dispatches one keyboard `contextmenu` PointerEvent through the existing board, Parts, tab and field handlers. It prevents the browser default to avoid duplicate menus on Linux/Windows; mouse and accessibility events keep their native route. Four macOS skips removed; regressions cover absent browser defaults, tab ownership and one event per key |
+| ✅ **[#195](https://github.com/crnlsp/leathercad/issues/195)** | The PDF responsiveness test failed on macOS: a frame gap over its 200 ms bound while the 5.8 m strap was exported | First macOS E2E probe | ✅ Explained (2026-11-02): the export never froze the window. In ten cold runs every gap over the bound came before the click — the cold window's first frame — or after the writer's answer, as macOS's compositor first presented the notice; from the click to the answer the longest was 50 ms. The test now watches only that, with the same bound, and checks that the worker wrote the file; 10/10 on `macos-latest`. [Performance backlog, PERF-002](performance-backlog.md#perf-002) |
+| ✅ **Q33** | **bug** · A hardware hole is checked by its centre alone. `OUTSIDE_PART` and `HOLE_TOO_CLOSE_TO_EDGE` read a hardware hole's centre (`holePoints` in `validate.ts`) and never its radius, so a 6 mm hole centred 2 mm inside the edge cuts 1 mm through it and nothing is said, and a 4 mm rivet hole whose rim crosses the edge is only *too close* | The product roadmap refresh (2026-10-17), reading the rules for hardware clearance | ✅ Fixed (2026-10-25): a hardware hole is its circle. It is off the material when an edge — the outline's or a cut-out's — passes nearer its centre than its radius, which is exact rather than sampled, and too close when its rim is under 1.5 mm from one. A rim within a storage quantum of an edge is on it, as a line's end is (Q2). The clearance stays the stitch hole's 1.5 mm, measured from the rim: what tears is the same strip of leather between a cut and an edge, whatever made the cut, and hardware that pulls harder is 9.23's footprint question, not a second figure now. A stitch hole stays a point. Property tests over centre and radius: the verdict matches the exact rim clearance on a square panel, a rim leaving a round part is always off, and shrinking a hole never finds a new problem. The two sentences now say *leave the material* and *a hole needs* |
+| ✅ **Q4** | Problems have no stable identity across edits. The panel keys by content today, so nothing breaks yet | UI audit, deferred opportunities | ✅ Fixed (2026-10-27): `problemKey` already existed but named only code and subject, so two problems of one code on one feature (a feature's `PARAMETER_INVALID` for different parameters, `SOURCE_FAILED` for different sources, `OUTSIDE_PART` for holes and for a line) could share a key. It now adds the id or parameter name that tells them apart — never a coordinate, a measured value, a name or a list position — and the Problems panel keys rows by it alone, no longer by the part too, so a feature moved to another part keeps its row. Property tests: unchanged by translating the part and by an unrelated feature appearing, unique within a result, different for a different feature. 9.16 can store it |
+| ✅ **Q31** | What resizing a piece should do. Scale acts on what is selected, so an outline scaled alone leaves its slots where they were, and a whole piece scaled evenly grows its rivet holes and labels with it — a 4 mm rivet hole becomes 6 mm. The stitch margin and the iron's pitch already stay | Q30 | ✅ Fixed (2026-10-28): Scale takes the whole piece, as Move, Rotate and Flip do (`pieceScope`): an outline, or a part picked by its heading, scales all of it about the outline's centre, hidden features included, and a lock or anything that cannot take the scale refuses it whole. Positions scale; what is made to a size keeps it and only moves (`keepsItsSize`): a hardware hole keeps its diameter, a label its text size, a logo placement the size of its stamp, and a cut-out typed as a rectangle or circle — a card slot, a hole for a snap — its width, height and radius. A cut-out drawn as a path is drawing and scales, and *Convert to path* is how a typed one joins it. Rows of holes re-derive along their scaled line at the same pitch and diameter; stitching keeps its margin and pitch as before; a dimension re-reads its ends. So a stretched piece keeps its rivet round instead of refusing, and a turned outline still refuses a stretch (`WOULD_SHEAR`). A diagonal mirror, captured or fold-tracked, refuses an uneven scale its axis cannot follow (`MIRROR_WOULD_SCALE`); an even scale carries its fixed-size slot to the right centre. A rivet or slot picked alone still scales alone, and a typed width is still a reshape of the outline alone. `WHOLE_PART_NOT_SCALED` is gone. Property tests over the scale: every hole's diameter is unchanged, each kept thing's centre goes where the scale sends it, drawn geometry scales by the factor, k then 1/k gives the piece back within the storage quantum, and a lock anywhere refuses the whole scale; an end-to-end test grows a piece by its outline and reads its rivet and slot sizes |
 
 #### Left from the independent QA pass (2026-09-24)
 
@@ -526,7 +346,7 @@ the report's.
 
 | # | What | Severity | Plan |
 |---|---|---|---|
-| ☐ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | Decide what a corner of a rounded outline *means* to a maker before changing it; 4.10b |
+| ✅ **Q15** | (S1) A dimension to a rounded or seam-allowance corner reads less than the piece: a corner anchor on an arc is the arc's middle, and an outward allowance rounds corners the maker never rounded (97 × 67 reads 94.9) | P2 · investigate | ✅ Settled (2026-10-26): a corner and the piece's size are two measurements, and a dimension never silently changes which it is. A dimension between corners reads what it always did — between the middles of the roundings, 94.1 on a 97 × 67 panel rounded at 5 mm. *Add overall size*, on a selected outline, dimensions its width and height between corners of the box its actual outline fills, read from the outline's exact bounds: the 97 × 67 panel and the band a 3.5 mm allowance grows round a 90 × 60 stitch line both read 97 × 67. Not the virtual sharp, which no two edges have past a half turn and which runs off the piece near one. Format 12, an `extent` end; identity migration and `fixtures/format/v12.lcp`. With it, a rectangle keeps its four corner anchors at every radius, rounded to a circle too — they were read off its path, which lost them once a rounding took a whole side |
 
 **What the QA pass could not test,** kept here until someone does: physical 1:1 prints on real
 printers and viewers, including *Actual size* and `/PrintScaling /None` (R1); taping a multi-sheet piece physically; real OS
@@ -536,16 +356,20 @@ process kill; `pnpm test:visual` and `pnpm test:packaged`; HiDPI, Windows and ma
 **Performance, recorded as information, not targets:** building the display list for the
 636-hole benchmark strap takes 87 µs (13 µs before F.7); offsetting a 500-point traced outline
 takes ~74 ms, over the 50 ms budget on its own; and a huge drawing at the smallest pitch makes
-millions of holes, so a hole-count budget may be wanted one day. None is to be optimised until it
-is felt.
+millions of holes, so a hole-count budget may be wanted one day. Moving the pointer over the sample
+wallet, hovering or dragging, kept every frame at about 6 ms and no pointer event over 16 ms in the
+built app (2026-10-18), although each move re-renders the whole window. The later
+[performance audit](performance-backlog.md#measurement-record) recorded user-visible problems
+with history retention, complex outlines and tiled output. Its tasks are in this release, under
+[Performance](#performance), since 2026-10-28.
 
 ### Release engineering
 
 | # | What | Plan |
 |---|---|---|
-| ☐ **R6** | The renderer loads from `file://`, which keeps the `GrantFileProtocolExtraPrivileges` fuse on | Serve it from a custom `app://` protocol, then turn the fuse off (ADR 0014) |
-| — **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, as it had moved out of 1.3.5's R1 on 2026-10-09. When a Windows PC or a Mac and a printer are at hand, record a row through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Until then the log says neither platform is verified. Marked ☐ if a release is to wait for it |
-| — **R10** | U.7's window edited flag is unverified on macOS, the one platform that shows it: it was checked on Linux, where Electron ignores it, and through the test host and a mock of `setDocumentEdited` | **Monitored, by decision** (2026-10-18): moved out of 1.5 unverified, since no Mac is at hand. Check 12 of [`release-checklist.md`](release-checklist.md) on a real Mac, with the packaged dmg: an edit sets the window's edited dot, *Save* clears it. Tick this only then, saying the macOS version and the date — never from Linux, the test host or a mock. Check 13, ⌘A outside a field ([#97](https://github.com/crnlsp/leathercad/issues/97)), fits the same session |
+| ✅ **R6** | The built renderer loads from `app://leathercad`, and `GrantFileProtocolExtraPrivileges` is off | The protocol serves only bundled renderer files, checks decoded paths and real targets, and preserves CSP and sandboxing. Packaged tests cover the origin, denied paths, fonts, PDF preview worker and measured PDF export; a packaged app ignores the development URL override. [ADR 0014](adr/0014-electron-builder-and-release-please.md#r6-amendment--a-bundled-app-origin-2026-10-23) |
+| — **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](print-verification-log.md) | **A level-3 item, collected from makers** (2026-10-31). It was monitored by decision on 2026-10-18: moved out of 1.5 unverified, as it had moved out of 1.3.5's R1 on 2026-10-09. The maintainer measures prints on Arch only, so a row for another platform comes from a maker with that system and a printer, through the print-report form (until the form exists, an issue with the readings A–H): through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Until one arrives the log says neither platform is verified. It never holds a release; to make one wait, the maintainer would have to mark it planned, which is a decision of its own ([`release-checklist.md`](release-checklist.md), *What a failure holds, by level*) |
+| — **R10** | U.7's window edited flag is unverified on macOS, the one platform that shows it: it was checked on Linux, where Electron ignores it, and through the test host and a mock of `setDocumentEdited` | **A level-3 item, collected from makers** (2026-10-31). It was monitored by decision on 2026-10-18: moved out of 1.5 unverified, since no Mac is at hand. A maker with a Mac reports it through the print-report form (until the form exists, an issue): check 12 of [`release-checklist.md`](release-checklist.md) on a real Mac, with the packaged dmg: an edit sets the window's edited dot, *Save* clears it. Tick this only then, saying the macOS version and the date — never from Linux, the test host or a mock. Check 13, ⌘A outside a field ([#97](https://github.com/crnlsp/leathercad/issues/97)), fits the same session |
 | — | Code signing | **Not done, by decision** (2026-09-24). LeatherCAD is free and open source and signing costs money every year, so installers ship unsigned; [`getting-started.md`](getting-started.md) says how to open them and how to check a download against its build provenance. If it is ever wanted, electron-builder signs when `CSC_LINK` is set |
 
 ---
@@ -658,6 +482,11 @@ parts cannot be carried to the next project.
 - **9.7 Templates** — a part saved to a library and inserted again (was 8.1): a copy with its
   derivations re-pointed, never a live link ([domain-model](domain-model.md) §9). Parameterised
   templates moved to *Exploring* on 2026-10-17.
+- **9.25 Search templates by tag** (added 2026-10-26) — the picker finds a tag today only as words
+  in its search, beside the names and descriptions (8.14). Tags become something to search by on
+  their own: the tags in use offered as the maker types, a tag chosen narrowing the list to the
+  templates that carry it. The built-in categories left the picker in 8.14 for the same reason: a
+  tag the maker gave is the filter that means something to them.
 
 **Needs:** the sample's untitled opening (8.3) and duplicate-part re-pointing (4.3b), both built;
 8.8b's domain question answered before 9.7, which inserts a part the same way.
@@ -678,8 +507,8 @@ comes in today except by drawing it again.
 
 - **9.19 Curves that can be stitched** — analytic offsetting refuses cubic segments
   ([geometry](geometry.md) §6.2), so no stitch line can follow a curve that an import or a curve
-  editor brings — or a circle squashed after 3.12, if that makes cubics, which 3.12's slice should
-  weigh. Before 9.11, an offset through arcs fitted to the cubic within the flattening
+  editor brings — or a circle squashed after 3.12, which does make cubics (3.12 kept
+  [geometry](geometry.md) §4.2 rule 2 rather than fit arcs of its own). Before 9.11, an offset through arcs fitted to the cubic within the flattening
   tolerance would build that stitch line instead of refusing it; whether to do that or wait for 9.11
   is the slice's to decide. Pure geometry under [geometry](geometry.md) §12's definition of done, so
   it can start whenever there is room.
@@ -777,8 +606,75 @@ most from.
 still the entry point, areas tested rather than bounds; a stitch line follows a thumb scoop; and
 `area(A ∪ B) + area(A ∩ B) = area(A) + area(B)` holds as a property. **Not in it:** nesting.
 
+### Found by the post-1.5 stabilization (2026-10-19)
+
+Real, and not fixed in that pass because each needs a decision or a change of its own. None is in a
+release until it is moved into one.
+
+- ✅ **Q35 A save is not flushed to disk before it replaces the file.** `writeFileAtomic`
+  (`apps/desktop/src/main/atomicWrite.ts`) renamed a temporary file into place without `fsync`ing
+  it or its folder, so a power cut just after a save could leave an empty `.lcp` on some file
+  systems; the rename also replaced a symlink with a plain file and reset the file's permissions.
+  **Done (2026-10-26):** the temporary file is flushed before the rename and the folder after it
+  (not on Windows, which cannot open a folder to flush it; a file system that refuses with
+  `EINVAL`/`ENOTSUP` is the only error let go). A symlink is resolved first, so the target is
+  replaced and the link stays, even a link to a file not there yet; the file keeps its permission
+  bits. On any failure the previous file is untouched, the scrap is removed and the error reaches
+  the caller. *Export template to a file* used `copyFile` over the maker's file and now goes through
+  the same write.
+- ✅ **Q36 Ctrl+S during a drag saves the drag's preview,** not the document before it
+  (`useProjectFile.ts`); the crash-recovery copy already waits for the gesture to end.
+  **Done (2026-10-26):** `DocumentStore.committedDocument` is the document without a gesture under
+  way — what the drag began from. *Save*, *Save As* (and so the save before closing or switching),
+  *Save as template* and the copy kept when the window closes all write it, and a tab saved
+  mid-drag is saved as of that document, so it is unsaved once the drag commits and clean if it is
+  cancelled. An *Untitled* project being named by its first save still ends the drag, as any
+  command does.
+- **Q37 Cmd+Q, then *Discard*, closes the window but leaves the app running on macOS** — the quit
+  was cancelled by the question, and Discard only closes the window. Unverified: no Mac. Check it
+  in the same Mac session as release-checklist check 12.
+- ✅ **Q38 Local epsilons,** which invariant 7 forbids: `glide.ts`, `mat2x3.ts`, `segment/types.ts`,
+  `arc.ts` and `flatten.ts`'s step counts, `polynomial.ts`, `export/sheetsDisplay.ts` and
+  `persist/schema.ts`; and `arc.ts`'s `toCubics` checks a radius against `EPS_ANGLE`. Each moves
+  numbers on the geometry or export path, so they want one change with property tests and a lint
+  rule for `e-N` literals outside `core`. Fixed (2026-10-26): every tolerance is one from
+  `core/epsilon.ts`, which gains `EPS_RATIO` for dimensionless quantities and the root finders'
+  five; an ESLint rule refuses an `e-N` literal outside `core` and the tests, and the four that
+  are not tolerances say so where they stand. Two bugs of the same kind went with them. `toCubics`
+  judges a degenerate arc by its length, so a long arc with a tiny sweep keeps its end; and
+  point-in-path judged a seam in `t` and radians while its rays move in millimetres, so the centre
+  of any circle over 1000 mm in radius read as outside. Moved: the glide axis snaps within
+  `EPS_ANGLE` of a half turn (was 1e-12), Sheets view joins merge within `EPS_POINT` (was 1e-6), a
+  cubic's ray crossing is near-tangent below `EPS_POINT` (was 1e-9), the path measure's table
+  spacing is floored at `EPS_LENGTH` (was 1e-6), and the scale tool's grab is on the pivot within
+  `EPS_POINT` (was 1e-6). No snapshot or golden file changed.
+  Follow-up fixed (2026-10-28): `solveCubic` resolved every root only to the rounding of the
+  largest, so a t³ term of rounding noise on a circle 2 m out turned a tangent touch into a false
+  crossing, and two close roots beside a far one were lost; it now keeps only the largest root and
+  divides it out, finding the rest as a quadratic. A tool under way is not reset when a project opens** — only an open drag is rolled back,
+  so a polyline half drawn continues into the new project. Fixed (2026-10-28): opening, a template,
+  a recent project and a tab switch already made the board again — `CanvasHost` is keyed by the tab
+  — so its tools started idle; the one route that kept them was *Reload from disk*, which replaces
+  the tab's document in place. `DocumentStore.reset` now tells `onReset` listeners, and the board
+  answers with `ToolManager.cancel()`: the active tool gives up what it had half done, as Escape
+  does, and stays selected. The e2e tests open a project over a half-drawn polyline and reload one.
+- ✅ **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF
+  writers that ship; fixing it moves the committed baseline. Fixed (2026-10-26): *write the SVG*
+  and *write the DXF* time `exportSvg` and `exportDxf` on the benchmark strap, through the
+  package's index as the app calls them. The shipped SVG writer takes 2.1 ms where the old case's
+  baseline read 0.37 ms; `bench/svg.json` is re-recorded and `bench/dxf.json` is new, and only
+  compare on the machine that recorded them ([PERF-017](performance-backlog.md#perf-017)).
+
 ### Also later, each already decided in principle
 
+- **CI/CD and shipping.** CI regrouped into rings by the question each answers, support levels per
+  operating system, and the channels LeatherCAD ships through (AUR, `.deb`, Microsoft Store). Under
+  way task by task, outside any release, in
+  [the plan](superpowers/plans/2026-10-31-ci-cd-and-shipping.md).
+- **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
+  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
+  then the preview saves the PDF. Moved out of 1.6 on 2026-10-28: no Windows PC and printer were at
+  hand to measure the gauge, and the release does not wait for one.
 - **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched only
   after 9.19.
 - **Pieces gliding** between Design and Sheets.

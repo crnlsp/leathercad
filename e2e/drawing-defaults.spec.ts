@@ -2,10 +2,10 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { openApp } from './launchApp.js';
 
 /**
  * U.18, R-16: while a Draw tool would make a new piece, Properties shows
@@ -14,13 +14,8 @@ import { launchApp } from './launchApp.js';
  * *Stitch + allowance* and the selection bar's next steps make things with them.
  */
 
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1440, 900));
-  return { app, window };
-}
+const launch = (configHome: string) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1440, 900] });
 
 const freshConfig = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-defaults-'));
 const section = (window: Page): Locator => window.getByTestId('drawing-defaults');

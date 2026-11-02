@@ -64,6 +64,8 @@ export type DrawnContour = 'outline' | 'seam' | 'cut-out';
 export type CompatibilityRule =
   | 'holes-need-hole-set'
   | 'holes-need-stitch-line'
+  | 'row-needs-hole-row'
+  | 'row-needs-marking-line'
   | 'inset-needs-stitch-line'
   | 'inset-needs-outline'
   | 'allowance-needs-outline'
@@ -170,6 +172,16 @@ export interface ProblemFacts {
    */
   readonly NOT_A_DRAWN_PATH: About;
   /**
+   * X1: only a shape has parameters to give up (3.12). A drawn path already is
+   * one, and a derived feature follows what it was made from.
+   */
+  readonly NOT_A_SHAPE: About;
+  /**
+   * X1: a hardware hole is punched, and a punch is round, so it is never
+   * converted to a drawn path (3.12). An oval hole is a cut-out.
+   */
+  readonly HOLE_STAYS_ROUND: About;
+  /**
    * X1: a point edit that would leave too few points — three for a closed
    * path, two for an open one — or a side of no length (3.9b).
    */
@@ -209,8 +221,6 @@ export interface ProblemFacts {
   /** `what` is the thing being placed, so one code serves every tool. */
   readonly NO_TARGET_PART: { readonly what: PlacedThing };
   readonly TARGET_SPANS_PARTS: { readonly what: PlacedThing };
-  /** Scale with a whole part picked: what resizing a piece means is not settled (Q31). */
-  readonly WHOLE_PART_NOT_SCALED: Record<string, never>;
 
   // ——— Evaluation outcomes (E): a feature that did not resolve ———
   readonly PARAMETER_INVALID: About & {
@@ -249,6 +259,11 @@ export interface ProblemFacts {
 
   // ——— Design rules (DR): legal, and probably wrong for leather ———
   readonly CONTOUR_SELF_INTERSECTS: About & { readonly crossings: number };
+  readonly HOLES_OVERLAP: About & {
+    /** The nearest two neighbours, centre to centre. */
+    readonly spacingMm: Mm;
+    readonly diameterMm: Mm;
+  };
   readonly HOLE_SPACING_DEVIATION: About & { readonly achievedMm: Mm; readonly pitchMm: Mm };
   readonly HOLE_SPACING_UNEVEN: About & { readonly narrowestMm: Mm; readonly widestMm: Mm };
   readonly HOLE_COUNT_TOO_LOW: About & { readonly count: number };
@@ -316,16 +331,50 @@ export function subjectOf(p: Problem): {
 }
 
 /**
- * The identity of one occurrence: code, subject, and — for a code that can
- * occur twice on one subject — what tells the two apart.
+ * What tells apart two problems of one code on one subject, when a code can
+ * occur twice there — or nothing. Only ids and parameter names: never a
+ * measured value, a count or a name, which change with an edit that leaves the
+ * problem the same one.
  *
- * What `followRefusal` diffs to find a problem a re-point would introduce, what
- * React keys a list by, and what a suppression list would store.
+ * Limit: `ANCHOR_MISSING` is told apart by the anchor's index, a parameter of
+ * the feature, so steady until the user re-points it; a warning accepted on it
+ * then reads as new, which is the safe way to be wrong.
+ */
+function qualifierOf(p: Problem): string | number | undefined {
+  switch (p.code) {
+    case 'DERIVATION_INCOMPATIBLE':
+      return p.facts.rule;
+    case 'PARAMETER_INVALID':
+      return p.facts.parameter;
+    case 'SOURCE_FAILED':
+    case 'WOULD_LOOP':
+      return p.facts.sourceId;
+    case 'MIRROR_FOLD_MISSING':
+      return p.facts.foldId;
+    case 'OUTSIDE_PART':
+      return p.facts.what;
+    case 'ANCHOR_MISSING':
+      return p.facts.anchor;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The identity of one occurrence: code, the id of what it is about, and — for a
+ * code that can occur twice on one subject — what tells the two apart.
+ *
+ * Built from stable ids alone, so it survives any edit that leaves the problem
+ * the same one (moving, resizing, adding something else, renaming) and is never
+ * a position in a list. What `followRefusal` diffs to find a problem a re-point
+ * would introduce, what React keys a list by, and what 9.16's accepted warnings
+ * will store.
  */
 export function problemKey(p: Problem): string {
   const subject = subjectOf(p);
   const base = `${p.code}:${subject.featureId ?? subject.partId ?? ''}`;
-  return p.code === 'DERIVATION_INCOMPATIBLE' ? `${base}:${p.facts.rule}` : base;
+  const qualifier = qualifierOf(p);
+  return qualifier === undefined ? base : `${base}:${qualifier}`;
 }
 
 /**

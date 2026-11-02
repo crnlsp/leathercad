@@ -22,9 +22,6 @@ export const arbCoord: fc.Arbitrary<number> = fc.oneof(
   { weight: 1, arbitrary: fc.constantFrom(0, -0, 1, -1, 0.1, -0.1, 100, 105, 3.85, 2000, -2000) },
 );
 
-/** Away from zero, for divisors and radii. */
-export const arbNonZeroCoord: fc.Arbitrary<number> = arbCoord.filter((v) => Math.abs(v) > 1e-3);
-
 export const arbVec2: fc.Arbitrary<Vec2> = fc.record({ x: arbCoord, y: arbCoord });
 
 export const arbNonZeroVec2: fc.Arbitrary<Vec2> = arbVec2.filter(
@@ -48,12 +45,6 @@ export const arbAngle: fc.Arbitrary<number> = fc.oneof(
       Math.PI * 2,
     ),
   },
-);
-
-/** t along a segment. Includes the endpoints, which is where splits go wrong. */
-export const arbParam: fc.Arbitrary<number> = fc.oneof(
-  { weight: 3, arbitrary: fc.double({ min: 0, max: 1, noNaN: true }) },
-  { weight: 1, arbitrary: fc.constantFrom(0, 1, 0.5) },
 );
 
 /** A scale factor that keeps a matrix comfortably invertible. */

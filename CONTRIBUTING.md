@@ -11,7 +11,7 @@ to every change, whoever or whatever writes it.
 
 ## Set up
 
-You need **Node 22** and **pnpm 11**. The exact versions are pinned in `.node-version` and in
+You need **Node 24** and **pnpm 12**. The exact versions are pinned in `.node-version` and in
 `package.json`'s `packageManager`; any installed pnpm switches itself to the pinned one, and CI reads
 the same pins. pnpm is not bundled with Node: run `corepack enable pnpm` where your Node ships
 corepack, as the installers from nodejs.org do, or install it with your package manager
@@ -21,6 +21,10 @@ corepack, as the installers from nodejs.org do, or install it with your package 
 pnpm install        # also installs the pre-push hook
 pnpm dev            # runs the app, with hot reload
 ```
+
+LeatherCAD runs once per configuration directory (8.11): with an installed LeatherCAD open, `pnpm
+dev` hands its command line to that one and ends. Quit it first, or give the development build a
+directory of its own — on Linux, `XDG_CONFIG_HOME=/tmp/lc-dev pnpm dev`.
 
 | Command | What it does |
 |---|---|
@@ -36,8 +40,8 @@ pnpm dev            # runs the app, with hot reload
 The layering in [`docs/architecture.md`](docs/architecture.md) §2 is enforced by `pnpm depcruise`: a
 violation fails the build, deliberately.
 
-Nothing reads a `.env` file, and no part of development needs a secret: the app never goes online,
-and CI's only credential is the token GitHub gives each run. A few variables change how the tests
+Nothing reads a `.env` file, and no part of development needs a secret: the app's one request is
+its update check, which no test sends to GitHub, and CI's only credential is the token GitHub gives each run. A few variables change how the tests
 run:
 
 | Variable | What it does |
@@ -48,6 +52,7 @@ run:
 | `UPDATE_FIXTURES=1` | Rewrites a committed fixture from the code that builds it: the current format version's, the sample project, the print test. Read the diff before committing it |
 | `LEATHERCAD_TEST_TIMEOUT` | Every test's timeout, in milliseconds. Mutation testing sets it ([`docs/testing.md`](docs/testing.md) §3.4) |
 | `LEATHERCAD_RECOVERY_INTERVAL_MS` | How often the app writes a crash-recovery copy. The E2E tests shorten it |
+| `LEATHERCAD_RELEASES_URL` | Where the update check asks for the latest release, in place of GitHub ([ADR 0020](docs/adr/0020-update-discovery.md)). The Playwright configs point it at a port nothing listens on |
 
 The scripts set the rest themselves: `LEATHERCAD_BENCH`, `LEATHERCAD_PACKAGE_FOR_E2E` and
 `LEATHERCAD_IN_CONTAINER`.
@@ -63,13 +68,17 @@ never in a package below the app ([ADR 0018](docs/adr/0018-interface-language.md
 ## Branches
 
 - **`main` is production.** What is on it is what is released. Nothing is pushed to it directly;
-  it changes only through a pull request from `develop`, and only for a release. The *Release gate*
-  check refuses a pull request into `main` from any other branch.
+  it changes only through a pull request, and only for a release: from `develop`, or from a
+  `hotfix/` branch for a fix that cannot wait (*Changelog and releases*). The *Release gate* check
+  refuses a pull request into `main` from any other branch.
 - **`develop` is development.** Work lands here, through pull requests from short-lived branches.
 
-Both are protected by a ruleset each: no deletion, no force push, pull requests only, CI required.
-Without one, GitHub's *Automatically delete head branches* deletes `develop` the moment a release
-merges — which is how it was lost twice (roadmap R2).
+Both are protected by a ruleset each: no deletion, no force push, pull requests only, and two
+required checks — CI's *Ready to merge*, which waits for every CI job the change runs
+([`docs/testing.md`](docs/testing.md) §9), and *Conventional title* on
+`develop` or *Release gate* on `main`. Without a ruleset, GitHub's *Automatically delete head
+branches* deletes `develop` the moment a release merges — which is how it was lost twice
+(roadmap R2).
 
 ```bash
 git switch develop && git pull
@@ -82,12 +91,35 @@ gh pr create --base develop --fill
 The `pre-push` hook refuses a push to `main` and runs `pnpm check` on every other push.
 `--no-verify` gets past it; please don't.
 
+**Dependabot** opens a pull request a week into `develop` for npm and another for GitHub Actions,
+each holding the minor and patch updates that are at least seven days old. Once every required
+check is green it merges itself
+([`dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml)); if the ruleset asks
+for an approval first, it waits for one. A major update arrives as a pull request of its own and
+waits for you to decide, as do the release-please pull request and every pull request from a
+person. To hold a Dependabot pull request back — before pushing to its branch, say — add the
+`no-auto-merge` label and click *Disable auto-merge*: the workflow asks again after every push, and
+the label is what makes it leave the pull request alone.
+
+A pull request that touches what CI judges against — screenshots and snapshots, benchmark
+baselines, the linter, test and layering configuration, workflows, hooks, rules and `tools/ci/` —
+gets the label `judge-changed` and a *Verifier guard* summary listing the files, so editing the
+check instead of fixing what it found never goes unseen. Expect both on Dependabot's weekly
+`.github/` updates; a read-only token (Dependabot's, or a fork's) cannot add the label, and the
+summary says so. Read the files; the label is not a verdict.
+
 ## A change is a vertical slice
 
 Planned work is numbered in [`docs/roadmap.md`](docs/roadmap.md). A slice touches whatever layers it
 needs and ends with the app running, tests green, and something a person can see. No slice leaves
 the app broken, and none is "just the model now, the UI next week". Roughly 200–600 lines of
 production code; bigger is two slices.
+
+**Where does it go?** The packages and what each may import are in
+[`CLAUDE.md` § Layout](CLAUDE.md#layout), and why, in [`docs/architecture.md`](docs/architecture.md)
+§2: millimetre maths in `geometry`, leathercraft rules in `domain`, edits as commands in
+`document`, drawing in `render`, tools in `editor`, files in `persist` and `export`, and the
+window, panels and every word on screen in `apps/desktop`.
 
 1. **Write the acceptance criteria first**, as things a person could check by using the app.
 2. **Tests first** in `packages/geometry` and `packages/domain`, including property tests
@@ -129,13 +161,6 @@ refuses. Scopes are the package or area: `geometry`, `domain`, `export`, `deskto
 A pull request fills in the template: what changes and why, how it was checked, and whether the
 docs moved with it.
 
-[CodeRabbit](https://www.coderabbit.ai/) reviews pull requests into `develop` and `main`, against
-the invariants in [`CLAUDE.md`](CLAUDE.md) and the path instructions in
-[`.coderabbit.yaml`](.coderabbit.yaml). It reviews automatically only once the repository has ten
-stars; until then, ask for a review with a comment of `@coderabbitai review`. It is a second
-reviewer, not a gate: answer each comment — fix it, or say why not — before merging. It is not a
-required check, and it never replaces the tests, running the app, or a physical print.
-
 ## When a check fails
 
 `pnpm check` runs what CI's *Static checks* and *Tests and coverage* run, so most failures reproduce
@@ -151,7 +176,9 @@ on your own machine. The rest, and what each one wants:
 | *Tests and coverage*, green locally | Usually poppler: CI runs the print checks that skip without it |
 | *Unit tests on windows-latest* or *macos-latest* | Usually a path or a line ending. Make the test pass on every platform; never skip it on one |
 | *Pixel diffs* | Look at the run's `visual-diffs` artifact. If the change is meant, `pnpm build`, then `pnpm test:visual --update-snapshots`, and look at every image before committing it |
-| *Known vulnerabilities* | osv-scanner names the advisory. Raise the version in `pnpm-workspace.yaml`'s `overrides`, with the advisory and why, and remove the entry when the dependency catches up |
+| *Known vulnerabilities* | It runs on a pull request that changes the lockfile or what shapes it, and every night on `develop`, where a failure is an issue labelled `nightly-vulnerabilities`. osv-scanner names the advisory. Raise the version in `pnpm-workspace.yaml`'s `overrides`, with the advisory and why, and remove the entry when the dependency catches up. Only when no fixed release exists inside the range the dependent asks for, ignore the advisory in `osv-scanner.toml` for at most 14 days, with its reason and an issue that removes it |
+| *Ready to merge* | It is red because a job it waits for failed or was cancelled, and its log lists each one's result. Fix that job; a cancelled run needs only *Re-run all jobs* |
+| *Verifier guard* | It fails for one reason: the pull request modifies, deletes or renames a shipped migration (`packages/persist/src/migrations/v*_to_v*.ts`). A shipped migration is immutable, so a file an earlier version saved loads as it always did. Put the change in a new migration; adding one is fine |
 | *Workflow security* | zizmor or actionlint names the line: an action not pinned to a commit, an expression written into a script instead of passed through `env`, a permission wider than the job needs |
 | `pnpm install` holds a version back | pnpm waits before installing very new releases (`minimumReleaseAge`). Wait, or record an exclusion in `pnpm-workspace.yaml` with why ([ADR 0004](docs/adr/0004-pnpm-workspaces.md)) |
 | `pnpm install` asks about a build script | Answer in `pnpm-workspace.yaml`'s `allowBuilds`, with the reason. Allowing one is a security decision |
@@ -167,8 +194,7 @@ edits it by hand except to correct a mistake in an entry. See
 [`docs/roadmap.md`](docs/roadmap.md) ships together, and nothing ships until all of it is ✅.
 When an item will not make it, move it to the release after, or to *Later*, in a pull request of
 its own — the release waits for the roadmap, and the roadmap changes on purpose, never because a
-release happened. A fix that cannot wait ships the same way: move what is unfinished out, then
-release. The *Release gate* check holds this on every pull request into `main`; run
+release happened. A fix that cannot wait is a hotfix, below. The *Release gate* check holds this on every pull request into `main`; run
 `tools/release-gate.sh` to see what the next release still waits for. It also refuses a section
 whose version has already shipped, since every item in it is done by then: the roadmap moves on
 (step 5) before anything else is released.
@@ -179,9 +205,11 @@ whose version has already shipped, since every item in it is done by then: the r
 2. release-please opens or updates a *release* pull request on `main`. Its description is the
    changelog of the next version. Check it names the version the roadmap does — a section with a
    `feat` in it is the next minor — and that no entry appears twice.
-3. Merging it tags the release. The release workflow then builds the AppImage, the Flatpak, the
-   Windows installer and the macOS dmg, attests their provenance, and attaches them with an SBOM,
-   once all of them have built.
+3. Merging it tags the release. The release workflow then smoke-tests and builds the AppImage,
+   the Flatpak, the `.deb`, the Windows installer and the macOS dmg — through `installers.yml`, as
+   every pull request does — attests the provenance of each that built, and attaches them with an
+   SBOM. A platform that fails does not hold the others back, except Linux (*If a release goes
+   wrong*).
 4. Bring the release commit back: a pull request from `main` into `develop`, squash-merged like
    every other, titled for the changelog it will never reach — *chore(release): bring 1.3.0 back
    into develop*.
@@ -196,18 +224,42 @@ without one.
 
 **If a release goes wrong:**
 
-- **A build fails.** The release stays without downloads: nothing is attached until every platform
-  has built. If the runner was at fault (a download, a timeout), use *Re-run failed jobs* on the
-  release run. It builds that platform again, then attaches all of them. If the code was at fault,
-  fix it on `develop` and release the fix as a patch, and say in the failed release's notes that
-  it has no downloads.
+- **A build fails.** The platform decides what the release does
+  ([`getting-started.md`](docs/getting-started.md#supported-systems) has the levels). The run is red
+  either way, and the release's notes say what happened, with a link to the failed job.
+  - *Windows or macOS:* the release goes out with the files that built, and its notes get a
+    **Missing in this release** line for the platform.
+  - *Linux:* nothing is attached, before anything is attested, and the notes say so.
+
+  If the runner was at fault (a download, a timeout), use *Re-run failed jobs* on the release run.
+  It builds that platform again and runs *Attest and attach* again, which attaches what is new and
+  takes the missing line out of the notes. If the code was at fault, fix it on `develop` and release
+  the fix as a patch; the failed release keeps its line.
 - **A released installer is broken.** Edit the previous release on GitHub and tick *Set as the
   latest release*: the README's *Download* link follows it at once. Then release the fix, which
   becomes the latest in its turn.
+
+**A hotfix** is a patch release from `main`, past the roadmap, for a fix that cannot wait for the
+next section. That means it reaches makers — an advisory in code the installer ships (Electron,
+or a dependency of a package the app bundles, like zod in `persist`), the release workflow
+itself, or a bug that loses work. An advisory in a tool only development or packaging runs (`pnpm
+why -r <package>` says which) waits for the next release.
+
+1. Branch from `main`, not `develop`: `git switch -c hotfix/<name> origin/main`. Make the fix,
+   with its test, as `fix` commits — a dependency bump is `fix(deps)`, not Dependabot's
+   `chore(deps)`.
+2. Open a pull request into `main` and merge it with a **merge commit**. The *Release gate* passes
+   a `hotfix/` branch only when every commit on it is a `fix`, with no `!`, `BREAKING CHANGE` or
+   `Release-As`, so release-please proposes the patch (1.5.1 after 1.5.0) and nothing from
+   `develop` rides along. `HEAD_REF=hotfix/<name> tools/release-gate.sh` checks it before you push.
+3. Release it, and bring it back into `develop`, as steps 2–4 above. Where `develop` already has a
+   newer fix of the same lines, keep `develop`'s. Update the roadmap's *Released* line in the same
+   pull request; the next section stays as it is.
 
 ## Working with Claude Code
 
 The repository is set up for it: [`CLAUDE.md`](CLAUDE.md) holds the invariants, and
 [`docs/claude-code-setup.md`](docs/claude-code-setup.md) lists the project's skills, commands and
-hooks. One slice per session works best. Start with `/slice <number>`, and let `/geo-check` and
+hooks, and the engineering rules in `.claude/rules/`. Other agents reach the same instructions
+through [`AGENTS.md`](AGENTS.md). One slice per session works best. Start with `/slice <number>`, and let `/geo-check` and
 `/arch-check` run before calling it done.

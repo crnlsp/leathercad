@@ -1,8 +1,6 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { withSample, expectNoViolations } from './launchApp.js';
 
 /**
  * U.15, R-12: a size typed in any unit, or as a sum. Every millimetre field
@@ -10,19 +8,6 @@ import { launchApp } from './launchApp.js';
  * cannot read keeps the text and says why beneath; leaving the field, or
  * Escape, puts the stored size back.
  */
-
-async function withSample(run: (window: Page) => Promise<void>): Promise<void> {
-  const app = await launchApp();
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await run(window);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 async function enter(field: ReturnType<Page['getByLabel']>, text: string): Promise<void> {
   await field.fill(text);
@@ -67,11 +52,7 @@ test('text a size field cannot read stays, and says why, until Escape or leaving
     // The field keeps its own name while it says why.
     await expect(width).toHaveAccessibleName(/^Width/);
 
-    const results = await new AxeBuilder({ page: window })
-      .setLegacyMode(true)
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-      .analyze();
-    expect(results.violations.map((v) => v.id)).toEqual([]);
+    await expectNoViolations(window);
 
     // Typing again clears the reason; a unit it does not know is named.
     await width.fill('3.75 inch');

@@ -56,4 +56,20 @@ export const PAPER_FURNITURE = {
   join: { grey: 0.6, widthMm: 0.2, dashMm: [6, 3] as readonly number[] },
   /** Half a registration cross's arm. */
   crossArmMm: 3,
+  /**
+   * An edge arrow (7.2): square to a join, pointing at it, in the join's grey
+   * so it is never read as a cut line, and named in ink with the sheet that
+   * joins there. Its tip stops `gapMm` short of the join, on its own sheet's
+   * side, so cutting on the line leaves it whole; it sits `alongMm` from the
+   * middle of the sheet's span, clear of the cross there.
+   */
+  edgeArrow: {
+    lengthMm: 8,
+    headLengthMm: 2,
+    headHalfWidthMm: 1,
+    gapMm: 2,
+    alongMm: 12,
+    labelSizeMm: 2.5,
+    labelGapMm: 1,
+  },
 } as const;

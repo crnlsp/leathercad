@@ -7,6 +7,7 @@ import { expect, test, type ElectronApplication, type Locator, type Page } from 
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
+import { caption } from './keyCaption.js';
 import { launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
 import { choosePaper, fromProjectMenu } from './projectMenu.js';
@@ -20,6 +21,9 @@ import { choosePaper, fromProjectMenu } from './projectMenu.js';
  * pack onto one sheet of A4 portrait, and a 275 mm strap — too long for it
  * either way — taped across two more.
  */
+
+/** The ground the sheets lie on, `SHEET.ground` (#d8d3c9). */
+const GROUND = [0xd8, 0xd3, 0xc9];
 
 /** The screen-only furniture colour, `SHEET.furniture` (#c22a8c). */
 const FURNITURE = [0xc2, 0x2a, 0x8c] as const;
@@ -44,7 +48,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: paths.pdf });
         // Do not launch a real PDF viewer during a test run.
         shell.openPath = async () => '';
-        BrowserWindow.getAllWindows()[0]?.setSize(1600, 1000);
+        BrowserWindow.getAllWindows()[0]?.setContentSize(1600, 1000);
       },
       { project: PRINT_TEST, pdf },
     );
@@ -156,9 +160,7 @@ test('Parts groups the pieces by sheet, lists what is taped, and says why a part
     await window.getByTestId('view-design').click();
     const strap = window.getByTestId('parts-list').locator('section', { hasText: 'Strap' });
     await strap.locator('[data-testid^="part-visible-"]').click();
-    await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
-      'Paper: 1 sheet of A4, portrait',
-    );
+    await expect(window.getByTestId('paper-button')).toHaveAccessibleName('Paper: 1 × A4 portrait');
     // Design says only that it does not print, with the reason in its tooltip.
     await expect(strap.locator('[data-testid^="part-not-printed-"]')).toBeVisible();
     await window.getByTestId('view-sheets').click();
@@ -233,7 +235,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(window.getByTestId('tool-select')).toBeVisible();
     await expect(window.getByTestId('tool-measure')).toHaveCount(0);
     await expect(window.getByTestId('rail-note')).toHaveText(
-      'Drawing tools are in Design · Ctrl+1',
+      `Drawing tools are in Design · ${caption('Ctrl+1')}`,
     );
     // The options row says what a click does here, with the key from the keymap.
     const hint = window.getByTestId('sheets-hint');
@@ -267,7 +269,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(props.getByTestId('sheets-count')).toContainText('1');
     await expect(window.getByTestId('sheets-taped-none')).toBeVisible();
     await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
-      'Paper: 1 sheet of A4, landscape',
+      'Paper: 1 × A4 landscape',
     );
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
@@ -282,7 +284,7 @@ test('Design and Sheets each keep their camera, and switching changes nothing (7
     const design = await canvasImage(canvas);
 
     // By shortcut, and back by the switch.
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
     await window.getByTestId('view-design').click();
     await expect(canvas).toHaveAttribute('data-view', 'design');
@@ -292,7 +294,7 @@ test('Design and Sheets each keep their camera, and switching changes nothing (7
     // And by the switch to the sheets.
     await window.getByTestId('view-sheets').click();
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
-    await window.keyboard.press('Control+1');
+    await window.keyboard.press('ControlOrMeta+1');
     await expect(canvas).toHaveAttribute('data-view', 'design');
   });
 });
@@ -385,7 +387,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     const strapRow = pieceRow(window, 'Strap');
 
     // 1. The paper says what it will print, before anything is exported.
-    await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
+    await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
 
     // 2. The sheets: the same answer, in pictures and in words — and Parts
     //    says where each piece prints, as Design's no longer does (U.8).
@@ -450,10 +452,12 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await window.mouse.up();
     // A move is an edit: undo has something to undo.
     await expect(window.getByTestId('undo')).toBeEnabled();
-    await expect(paper).toHaveAccessibleName('Paper: 3 sheets of A4, portrait');
+    await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
 
     // 5. Nor does the window's size.
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1100, 760),
+    );
     await window.getByTestId('view-sheets').click();
     await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
     await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 2–3');
@@ -466,6 +470,65 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     const info = execFileSync('pdfinfo', [pdf], { encoding: 'utf8' });
     expect(info).toMatch(/Page size:\s+595\.276 x 841\.89 pts/);
     expect(hasColour(pdf)).toBe(false);
+  });
+});
+
+test('a sheet panned into view is drawn, and its piece is found under the pointer (PERF-003)', async () => {
+  await withPrintTest(async ({ window }) => {
+    const canvas = window.getByTestId('editor-canvas');
+    const strapRow = pieceRow(window, 'Strap');
+    await window.getByTestId('view-sheets').click();
+    const box = (await canvas.boundingBox())!;
+    const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+
+    // Close on the first sheet: the others are off the canvas, and are not drawn.
+    const first = await sheetBox(window, 'Sheet 1 of 3');
+    const at = { x: (first.left + first.right) / 2, y: (first.top + first.bottom) / 2 };
+    await window.mouse.move(at.x, at.y);
+    for (let i = 0; i < 5; i++) await window.mouse.wheel(0, -300);
+    await window.mouse.move(centre.x, centre.y);
+    await expect(readout(window)).toHaveText('Sheet 1 of 3');
+
+    // Dragged along to the third. Nothing of it was drawn before it came into
+    // view, so what is drawn and what is picked must agree once it has.
+    for (let i = 0; i < 12 && (await readout(window).textContent()) !== 'Sheet 3 of 3'; i++) {
+      await window.mouse.move(centre.x + 300, centre.y);
+      await window.mouse.down();
+      await window.mouse.move(centre.x - 300, centre.y, { steps: 6 });
+      await window.mouse.up();
+      await window.mouse.move(centre.x, centre.y);
+    }
+    await expect(readout(window)).toHaveText('Sheet 3 of 3');
+    // Paper is drawn where the pointer is: not the dimmed ground between sheets.
+    const under = await canvas.evaluate(
+      (element, [x, y]) => {
+        const c = element as HTMLCanvasElement;
+        const scale = c.width / c.getBoundingClientRect().width;
+        return [...c.getContext('2d')!.getImageData(x! * scale, y! * scale, 1, 1).data];
+      },
+      [box.width / 2, box.height / 2],
+    );
+    expect(under.slice(0, 3)).not.toEqual(GROUND);
+
+    // The strap's tile is on this sheet, about half way down: pointing at it
+    // lights its Parts row, and a click selects it.
+    let found = false;
+    for (let dy = -(box.height / 2) + 20; dy < box.height / 2 - 20 && !found; dy += 6) {
+      await window.mouse.move(centre.x, centre.y + dy);
+      // The move is dispatched, not yet rendered: read the row after the
+      // frames that draw this position, not the last one's.
+      await window.evaluate(
+        () =>
+          new Promise<void>((done) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => done())),
+          ),
+      );
+      found = /hovered/.test((await strapRow.getAttribute('class')) ?? '');
+      if (found) await window.mouse.click(centre.x, centre.y + dy);
+    }
+    expect(found, 'the strap on sheet 3 lights its Parts row').toBe(true);
+    await expect(strapRow).toHaveClass(/selected/);
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
   });
 });
 
@@ -499,7 +562,7 @@ test('an empty project is one scale-check sheet, on screen and in the PDF (7.4d)
     await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
-      'Paper: 1 sheet of A4, portrait, scale check only',
+      'Paper: 1 × A4 portrait, scale check only',
     );
     await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(

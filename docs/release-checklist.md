@@ -9,8 +9,11 @@ dialog and the paper — and whether the workflow makes sense to a leatherworker
 gets there. A release of only fixes elsewhere needs checks 1 and 3 on one platform. How a release
 is cut is in [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases).
 
-**Last updated:** 2026-10-18, for check 13, ⌘A on macOS (U.20), the Flatpak among the release's
-files, and R10 left unverified for 1.5. First written for 1.0
+**Last updated:** 2026-11-02, for check 16.7, a display-density change on a real monitor
+(PERF-011). Before that 2026-10-31, for the support levels, the hotfix case, the `known-issue`
+label and *The build*: what CI's packaged smoke test does not run; before that 2026-10-18, for
+check 14, recovery after a renderer dies on macOS; before that for check 13, ⌘A on macOS (U.20),
+the Flatpak among the release's files, and R10 left unverified for 1.5. First written for 1.0
 (sheet plan, Sheets view, project and work bars), and passed for it on 2026-09-24.
 
 ---
@@ -19,9 +22,19 @@ files, and R10 left unverified for 1.5. First written for 1.0
 
 - **The scope.** Every item under *the next release* in [`roadmap.md`](roadmap.md) is ✅:
   `tools/release-gate.sh` says so, and so does the *Release gate* check on the `develop` → `main`
-  pull request. A release never ships part of its section.
+  pull request. A release never ships part of its section. A hotfix ships none of it: its scope is
+  its own `fix` commits (`CONTRIBUTING.md`, *Changelog and releases*).
 - **The build.** The installer or AppImage from `pnpm package` (or the release workflow) at the
-  commit under test. Note the version shown in the status bar.
+  commit under test. Note the version shown in the status bar. On Arch, once `leathercad-bin` is
+  on the AUR, test that package instead of the AppImage: the print check then measures the file
+  makers install. On Ubuntu, install the `.deb` with `sudo apt install ./LeatherCAD-*.deb`.
+  CI's packaged smoke test (`installers.yml`) never ran these bytes: it drives a sibling build of
+  the same commit, `pnpm package:e2e`, whose configuration differs from the shipped one only in
+  the inspector fuse that Playwright attaches through (ADR 0014), and which stays the unpacked app
+  rather than an installer — on macOS, built for Apple silicon only, where the dmg is universal.
+  The `.deb` is tested one step further: a sibling `.deb` is installed with apt on the runner,
+  started with Chromium's sandbox on, and removed again. Installing the file itself, and the dmg
+  on an Intel Mac, are checked here and nowhere else.
 - **Tools:**
   - a steel rule graduated in 0.5 mm — not a tape;
   - a pen, tape, scissors or a knife;
@@ -59,6 +72,36 @@ Any one of these is a blocker:
 
 Record them anyway.
 
+## What a failure holds, by level
+
+Where a blocker above, or any other confirmed bug, was found decides what it holds back. The
+systems and their versions are in [`getting-started.md`](getting-started.md#supported-systems).
+
+| Level | Systems | A confirmed bug there |
+|---|---|---|
+| **1 · measured** | Arch; Ubuntu LTS | holds the whole release |
+| **2 · tested** | Windows 10 22H2 and 11, x64 | holds the Windows files only: the release goes out without them, and its notes say so and why |
+| **3 · shipped** | other Linux; macOS 12 or newer | goes into the release notes as a known issue. Only a bug in 1:1 scale, or lost work, holds that platform's file |
+
+- **A level-3 item is a check on a system the maintainer cannot run**: a Mac, or a Windows PC with
+  a printer. It is collected from makers, through a print report — an issue with the readings
+  A–H — and recorded in the log and in its roadmap row when one arrives. Not having it never
+  holds a release, and its roadmap row is never a planned item, which would make the release gate
+  wait for it. R8 and R10 are such items.
+- **A hotfix** (a `hotfix/` branch of `fix` commits cut from `main`, see
+  [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)) skips the next release's scope:
+  none of that section's items hold it. It does not skip the levels. Run checks 1 and 3, and the
+  steps that showed the bug, on the packaged build with the fix, on the system the bug was found on.
+  The rest of the list waits for the release that follows.
+
+### The `known-issue` label
+
+An open issue is labelled `known-issue` when it is **confirmed and reproducible**, names the system
+it happens on, and its level (above) does not hold the release. The label stays until the issue
+closes. It is not for a report nobody has reproduced, a feature request, or a blocker on a
+system whose level holds the release: that one is fixed first. The release notes list the open
+ones (`gh issue list --label known-issue`).
+
 ## The checks
 
 ### 1. Start-up
@@ -88,7 +131,7 @@ Follow the procedure in [`print-verification-log.md`](print-verification-log.md)
    - gauge **100.0** across;
    - gauge **5.0** up;
    - panel edge **100.0**;
-   - dimension line **100.0**;
+   - the dimension **100.0**, tip to tip;
    - the 25-hole row **93.0**;
    - 10 gaps **38.75**;
    - the taped strap **275.0** end to end;
@@ -192,10 +235,14 @@ per platform in the log.
 ### 11. Opening a project from the file manager
 
 Since 8.5. On each platform — the Windows installer, the macOS dmg, and on Linux the `.flatpak`
-installed with `flatpak install --user` — double-click a saved `.lcp`. The app starts with it open,
-and **Save** writes back to it without asking where. With the app already open and unsaved work, a
-second double-click on macOS asks about the unsaved work first; on Linux and Windows it opens a
-second window. On Linux, the file manager calls the file a *LeatherCAD project*.
+installed with `flatpak install --user`, and the `.deb` installed with apt — double-click a saved
+`.lcp`. The app starts with it open, and **Save** writes back to it without asking where. With the app already open and unsaved work, a
+second double-click — of another `.lcp` — opens it in a tab of its own beside the unsaved work, in
+the same window, on every platform: since 8.11 a second launch on Linux and Windows starts no second
+process, and since 8.12 each project has a tab. Double-click the first project again: its tab comes
+forward, and no second tab opens. Minimise the window and double-click again: it comes back to the front. Start LeatherCAD
+from the Start menu or the launcher while it runs: the window comes forward, and nothing else
+happens. On Linux, the file manager calls the file a *LeatherCAD project*.
 
 ### 12. The window's edited flag, on macOS
 
@@ -207,9 +254,9 @@ flag; not the test host or the end-to-end mock, which replace it.
 3. *Save*: the dot clears.
 
 **R10** left 1.5 unverified on 2026-10-18, by the maintainer's decision: no Mac was at hand. It is
-monitored in [`roadmap.md`](roadmap.md)'s 1.6 *Release engineering*, not a ☐, so the release gate
-does not wait for it. Tick it in the pull request that records a pass on a Mac, with the macOS
-version and the date.
+a level-3 item (see above) in [`roadmap.md`](roadmap.md)'s 1.6 *Release engineering*, not a planned
+one, so the release gate does not wait for it. Tick it in the pull request that records a pass on a
+Mac, with the macOS version and the date.
 
 ### 13. ⌘A outside a text field, on macOS
 
@@ -218,7 +265,7 @@ field, which the end-to-end test checks on Linux; on macOS, ⌘A is also the acc
 menu's *Select All* (`role: 'selectAll'` in `apps/desktop/src/main/menu.ts`), and nobody has seen
 which one wins ([#97](https://github.com/crnlsp/leathercad/issues/97)).
 
-1. Open the sample project, and click the board so that no text field has focus. ⌘A: nothing is
+1. Open the *Bifold wallet* template, and click the board so that no text field has focus. ⌘A: nothing is
    highlighted anywhere in the window, the Problems drawer included.
 2. In the project's name field, and in a size in Properties, ⌘A selects that field's text and
    nothing else.
@@ -228,13 +275,98 @@ which one wins ([#97](https://github.com/crnlsp/leathercad/issues/97)).
 Record the result on #97. A failure is not on the list of blockers above, but say so in the release
 pull request, so the maintainer decides whether it waits.
 
+### 14. Unsaved work after a window's renderer dies, on macOS
+
+Since the post-1.5 stabilization, in the same Mac session as check 12. On macOS a closed window does
+not quit the app, so a new window opens in the same process; it must offer the dead window's work,
+not delete it. `recovery.test.ts` checks the files; nobody has watched it on a Mac.
+
+1. Open the *Bifold wallet* template and make an edit. Wait half a minute, for the recovery copy to be written.
+2. In Activity Monitor, force-quit *LeatherCAD Helper (Renderer)*. The window goes blank.
+3. Close the window, then click LeatherCAD in the Dock: the new window offers the unsaved work.
+   *Recover* brings back the edit.
+
+A failure is lost work, which is a blocker above.
+
+### 15. Project tabs
+
+Since 8.11–8.14, on each platform, with the packaged app.
+
+1. Start the app: the start screen shows, headed *Start new project*, with *New project from
+   scratch*, *New project from template*, *Open existing project* and the recent projects.
+2. Open two saved projects and start a new one: three tabs, the new one *Untitled*. Edit two of
+   them. Ctrl+Page Down and Ctrl+Page Up go round them (⌘ on macOS); each keeps its own drawing,
+   undo, Design or Sheets view and zoom.
+3. Choose *Open…* on a project that is already open: its tab comes forward and bounces, and no
+   second tab opens.
+4. Rename a saved project to the name of another project in its folder: *Not renamed*, and both
+   files are as they were. Rename it to a free name: the tab and the file in the folder both change.
+5. Right-click a saved tab: *Reload from disk* asks about unsaved work first; *Show in folder* opens
+   the file manager on the file; *Move file to Trash…* asks, and the file is in the system's Trash
+   afterwards, from which it can be restored.
+6. With two tabs holding unsaved work, force-quit LeatherCAD (Task Manager, Activity Monitor,
+   `kill -9`). Start it again: both projects are offered, one after the other, each into a tab.
+7. Close the window with unsaved tabs: one question names them all; *Cancel* keeps the window.
+   Save them, close, and start again: the tabs come back, the one in front in front.
+8. On macOS, ⌘W closes the tab, not the window, and the Window menu has no *Close* on ⌘W.
+9. Rename a saved project, then Undo: the project and its file both have the old name again.
+10. Open a saved project, and change its file in another program (copy another `.lcp` over it):
+    a bar over the board says so; *Reload* reads it. Delete the file: the bar says it went;
+    *Save it again* writes it back.
+11. With two projects unsaved, close the window: one question names both; *Cancel* keeps them.
+12. Drag a tab along the strip; drop a `.lcp` from the file manager on the window: it opens in a
+    tab. Close a saved project, then Ctrl+Shift+T: it opens again.
+13. Turn on Settings › General › *Keep unsaved projects when closing*, make an untitled project
+    with a drawing, and close the window: nothing is asked. Start again: it is back, unsaved, and
+    each tab is on its view and zoom.
+14. *New project › from template…*: the card holder opens *Untitled*, unchanged, with no problems;
+    *Save* asks where. *Save as template…* the project under a name already used: it asks before
+    replacing. The maker's template is in the picker, and removing it there takes it off.
+14. *New project from template…*: each template that ships opens, untitled, with nothing to fix in
+    Problems. *Save as template…* on a project of yours: it is listed under *Mine*, and a
+    second save under the same name asks before replacing it. In the picker, search, *Show*
+    and *Sort* narrow and order the list, and open the same way next time; describe and tag one of
+    yours through *Edit details…*; rename, pin, duplicate, export and remove (then *Undo*) it from
+    the icons above its details, and import one; *Edit template* opens it,
+    and Save writes the template.
+
+### 16. Performance, on every platform
+
+The performance work (1.6, [`.claude/rules/performance.md`](../.claude/rules/performance.md)) is
+measured on Linux; what can behave differently elsewhere is checked here, with the packaged app on
+Linux, Windows and macOS. Open `fixtures/perf/strap-5800.lcp`, the 5.8 m strap on 33 sheets:
+
+1. **Sheets** pans and zooms without stutter, and pointing at the strap lights it at once.
+2. **Export PDF** keeps the window answering while it writes — a click lands, the spinner turns —
+   and the file has 33 pages, its gauge 100 mm.
+3. **Print Preview** closes at once mid-write, and opening it again on another paper shows only that
+   paper's sheets.
+4. **Rename the strap** twenty times and undo it all: the app's memory, in the system's task
+   manager, settles back near where it started.
+5. **Quit with unsaved work**, then start again: the recovery copy is offered, and the strap comes
+   back whole.
+6. **Idle board ([PERF-014](performance-backlog.md#perf-014))**: leave Design, then Sheets, at rest.
+   Hover, select, zoom and change views: each first input paints without needing another movement.
+   Back on Design, type a rectangle's sizes and cancel or finish it; resize the window, hide and
+   show it, and switch tabs. The board, chips, rulers and showing view's zoom stay current.
+7. **Another display density ([PERF-011](performance-backlog.md#perf-011))**, where two monitors of
+   different scaling are at hand, or the system's scaling can be changed while the app runs: move
+   the window from one to the other and back, with the Print Preview open on the way. The board,
+   its rulers and the preview's pages stay sharp, neither blurred nor oversized; the drawing and
+   the zoom do not move; a click lands where the pointer is. CI tests this in emulation only.
+
+Note each platform's result beside its row in the log, or say which check could not be run there.
+
 ## After it passes
 
 - Record one row per platform in [`print-verification-log.md`](print-verification-log.md), with
   the readings. A release never claims print accuracy without them.
 - Merge the release pull request (see
   [`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)), and check that the release has
-  the AppImage, the Flatpak, the Windows installer, the macOS dmg and the SBOM attached — five
-  files, as `release.yml` attaches them.
+  the AppImage, the Flatpak, the `.deb`, the Windows installer, the macOS dmg and the SBOM
+  attached — six files, as `release.yml` attaches them — or, where a platform failed to build, a *Missing in this
+  release* line in the notes that says which. The notes also list the open `known-issue` issues:
+  the release workflow adds both, between two comment markers, and takes them out and writes them
+  again when a build is re-run.
 - The installers are not code-signed, by decision ([`roadmap.md`](roadmap.md), *Release
   engineering*); [`getting-started.md`](getting-started.md) tells makers how to open them.

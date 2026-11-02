@@ -2,10 +2,10 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { openApp, openSample } from './launchApp.js';
 
 /**
  * U.13, R-15: Settings › My tools. The maker's irons are what a hole set's
@@ -15,13 +15,8 @@ import { launchApp } from './launchApp.js';
  * keeps its iron's name after the iron is renamed or deleted.
  */
 
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1400, 860));
-  return { app, window };
-}
+const launch = (configHome: string) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1400, 860] });
 
 async function myTools(window: Page): Promise<ReturnType<Page['getByTestId']>> {
   await window.getByTestId('settings').click();
@@ -53,7 +48,7 @@ test('a maker’s own iron becomes the default a new hole set takes, and is kept
     await row.getByRole('radio').check();
     await window.getByTestId('settings-close').click();
 
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await window.getByTestId('feature-row-outer-stitch').click();
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('add-stitch-holes').click();
@@ -79,7 +74,7 @@ test('a hole set keeps its iron’s name after the iron is renamed or deleted (U
   const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-tools-'));
   const { app, window } = await launch(configHome);
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await window.getByTestId('feature-row-outer-stitch').click();
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('add-stitch-holes').click();
@@ -140,7 +135,7 @@ test('a new stitch line, allowance and fold take the maker’s margin and leathe
     await expect(thickness).toHaveValue('1.4');
     await window.getByTestId('settings-close').click();
 
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     const panel = window.getByTestId('property-panel');
     await window.getByTestId('feature-row-outer-outline').click();
     await panel.getByTestId('add-stitch-line').click();

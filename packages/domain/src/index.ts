@@ -27,10 +27,14 @@ export type {
   FeatureKind,
   FoldLine,
   GeometrySource,
+  Guide,
   HardwareHole,
+  HoleRow,
   MarkingLine,
   Derivation,
   MeasureKind,
+  AnchorRef,
+  ExtentRef,
   MeasureRef,
   MeasureSource,
   Measurement,
@@ -50,13 +54,23 @@ export {
   DEFAULT_SETTINGS,
   eachFeature,
   findFeature,
-  findPart,
-  isCutContour,
+  isHolesAlongALine,
+  keepsItsSize,
   roleOf,
 } from './feature.js';
+export type { GuideSide } from './guides.js';
+export {
+  guideCrossing,
+  guideSides,
+  guideThrough,
+  parallelGuide,
+  projectToGuide,
+} from './guides.js';
 
 export type { ResolvedFeature, ResolvedPart, ResolvedProject } from './evaluate.js';
 export { evaluate, evaluationErrors, pathForShape, resolvedFeatures } from './evaluate.js';
+export type { DimensionLineSizes, DraftedDimensionLine } from './dimensionLine.js';
+export { draftDimensionLine } from './dimensionLine.js';
 
 export { motionBetween, transformShape, transformTextSource } from './transformShape.js';
 
@@ -82,7 +96,7 @@ export type { CornerSite } from './anchors.js';
 export { anchorsOf, cornerDistances, cornerSites, cornersThroughEdit } from './anchors.js';
 
 export type { Material } from './material.js';
-export { allOnMaterial, distanceToEdge, isOnMaterial, materialOf } from './material.js';
+export { distanceToEdge, isOnMaterial, materialOf } from './material.js';
 
 export {
   dependentsOf,
@@ -117,3 +131,5 @@ export { PROBLEM_CODES, problem, problemKey, sameProblem, subjectOf } from './pr
 
 export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
 export { MIN_PITCH_MM, distributeHoles, splitAtCorners } from './stitch.js';
+
+export { checkProjectSize } from './resourceSize.js';

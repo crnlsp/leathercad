@@ -1,3 +1,4 @@
+import { ResourceLimitError } from '@leathercad/core';
 import type { FeatureId, PartId } from '@leathercad/domain';
 
 import {
@@ -28,6 +29,7 @@ export interface StoreState {
    * it (5.3b).
    */
   readonly inTransaction: boolean;
+  readonly resourceLimit: ResourceLimitError | null;
 }
 
 const NEW_DOCUMENT: HistoryLabel = { action: 'new-document' };
@@ -43,6 +45,7 @@ const OPEN: HistoryLabel = { action: 'open' };
  * anywhere.
  */
 export class DocumentStore {
+  private resourceLimit: ResourceLimitError | null = null;
   private past: HistoryEntry[] = [];
   private future: HistoryEntry[] = [];
   private present: HistoryEntry;
@@ -51,6 +54,7 @@ export class DocumentStore {
   private transaction: { label: HistoryLabel; base: HistoryEntry } | null = null;
 
   private listeners = new Set<() => void>();
+  private resetListeners = new Set<() => void>();
 
   /**
    * How many steps of history to keep.
@@ -60,7 +64,11 @@ export class DocumentStore {
    */
   static readonly HISTORY_LIMIT = 200;
 
-  constructor(initial: Document) {
+  constructor(
+    initial: Document,
+    private readonly checkDocument: (document: Document) => void = () => undefined,
+  ) {
+    checkDocument(initial);
     this.present = { document: initial, selection: EMPTY_SELECTION, label: NEW_DOCUMENT };
   }
 
@@ -73,6 +81,7 @@ export class DocumentStore {
       undoLabel: this.past.length > 0 ? this.present.label : null,
       redoLabel: this.future[this.future.length - 1]?.label ?? null,
       inTransaction: this.transaction !== null,
+      resourceLimit: this.resourceLimit,
     };
   }
 
@@ -81,9 +90,25 @@ export class DocumentStore {
     return () => this.listeners.delete(listener);
   }
 
-  /** Applies a command and pushes one history entry. */
+  /**
+   * Called when `reset` replaces the document — open, reload — and for no
+   * other change, so what is half done against the old one can be dropped
+   * (Q39).
+   */
+  onReset(listener: () => void): () => void {
+    this.resetListeners.add(listener);
+    return () => this.resetListeners.delete(listener);
+  }
+
+  /**
+   * Applies a command and pushes one history entry. A gesture still under way
+   * is cancelled first, so the command applies to what was there before it and
+   * the half-finished preview never enters history.
+   */
   dispatch(command: Command): void {
-    const next = command.apply(this.present.document);
+    if (this.transaction !== null) this.rollback();
+    const next = this.checkedApply(command, this.present.document);
+    if (next === null) return;
     if (next === this.present.document) return; // A no-op earns no history.
 
     // Read from the document the command was applied to, while it still holds
@@ -113,13 +138,16 @@ export class DocumentStore {
     this.transaction = { label, base: this.present };
   }
 
-  /** Updates the visible document without touching history. */
+  /**
+   * Updates the visible document without touching history. With no
+   * transaction open it does nothing: the gesture was cancelled — by undo,
+   * Escape or a command — and the pointer moving on must not make each move a
+   * step of history, applied onto the last.
+   */
   preview(command: Command): void {
-    if (this.transaction === null) {
-      this.dispatch(command);
-      return;
-    }
-    const next = command.apply(this.transaction.base.document);
+    if (this.transaction === null) return;
+    const next = this.checkedApply(command, this.transaction.base.document);
+    if (next === null) return;
     this.present = { ...this.present, document: next };
     this.emit();
   }
@@ -149,6 +177,7 @@ export class DocumentStore {
 
   /** Abandons a transaction, restoring the state before it began. */
   rollback(): void {
+    this.resourceLimit = null;
     const transaction = this.transaction;
     this.transaction = null;
     if (transaction === null) return;
@@ -161,7 +190,17 @@ export class DocumentStore {
     return this.transaction !== null;
   }
 
+  /**
+   * The document as it stands without a gesture still under way: what a drag
+   * began from, or the present one with none. Whatever is written to disk
+   * takes this, never a preview, which may yet be cancelled (Q36).
+   */
+  get committedDocument(): Document {
+    return (this.transaction?.base ?? this.present).document;
+  }
+
   undo(): void {
+    this.resourceLimit = null;
     if (this.transaction !== null) {
       this.rollback();
       return;
@@ -175,6 +214,8 @@ export class DocumentStore {
   }
 
   redo(): void {
+    this.resourceLimit = null;
+    if (this.transaction !== null) this.rollback();
     const next = this.future.pop();
     if (next === undefined) return;
 
@@ -191,10 +232,13 @@ export class DocumentStore {
    * walk from one into the other would be worse than useless.
    */
   reset(document: Document, label: HistoryLabel = OPEN): void {
+    this.checkDocument(document);
+    this.resourceLimit = null;
     this.transaction = null;
     this.past = [];
     this.future = [];
     this.present = { document, selection: EMPTY_SELECTION, label };
+    for (const listener of this.resetListeners) listener();
     this.emit();
   }
 
@@ -222,6 +266,27 @@ export class DocumentStore {
     this.setSelection(EMPTY_SELECTION);
   }
 
+  selectGuide(id: string): void {
+    this.setSelection({ parts: new Set(), features: new Set(), guide: id });
+  }
+
+  /** Validate before committing or notifying subscribers; a refusal earns no history. */
+  private checkedApply(command: Command, base: Document): Document | null {
+    try {
+      const next = command.apply(base);
+      if (next !== base) this.checkDocument(next);
+      const wasLimited = this.resourceLimit !== null;
+      this.resourceLimit = null;
+      if (wasLimited && next === base) this.emit();
+      return next;
+    } catch (error) {
+      if (!(error instanceof ResourceLimitError)) throw error;
+      this.resourceLimit = error;
+      this.emit();
+      return null;
+    }
+  }
+
   private emit(): void {
     for (const listener of this.listeners) listener();
   }
@@ -238,6 +303,11 @@ export class DocumentStore {
  * how it is shown again.
  */
 function keptSelection(selection: Selection, before: Document, after: Document): Selection {
+  if (selection.guide !== undefined) {
+    return after.project.guides?.some((guide) => guide.id === selection.guide)
+      ? selection
+      : EMPTY_SELECTION;
+  }
   if (selection.parts.size === 0 && selection.features.size === 0) return selection;
 
   const visibleBefore = new Map<FeatureId, boolean>();

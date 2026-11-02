@@ -48,7 +48,10 @@ export function markFor(feature: Feature): Mark | null {
       return feature.direction === 'mountain' ? 'fold-mountain' : 'fold-valley';
     case 'marking-line':
       return 'marking';
+    // A row's holes are drawn as hardware holes are, so the key to the
+    // drawing names them the same (4.14).
     case 'hardware-hole':
+    case 'hole-row':
       return 'hardware-hole';
     case 'measurement':
       return 'measurement';

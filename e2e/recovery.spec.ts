@@ -1,10 +1,16 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
-import { freshStateHome, launchApp } from './launchApp.js';
+import { closeApp, crashApp } from './closeApp.js';
+import {
+  freshStateHome,
+  openApp,
+  recoveryCopies,
+  recoveryDir,
+  recoveryEntries,
+} from './launchApp.js';
 
 /**
  * Slice 5.3b: crash recovery.
@@ -15,29 +21,9 @@ import { freshStateHome, launchApp } from './launchApp.js';
  * ~/.local/state/leathercad.
  */
 
-async function launch(state: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ state, env: { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' } });
-  const window = await app.firstWindow();
-  // See unsaved-changes.spec.ts: a refused unload reports a phantom dialog.
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
-
-const recoveryDir = (state: string): string => join(state, 'leathercad', 'recovery');
-const entries = (state: string): string[] =>
-  existsSync(recoveryDir(state)) ? readdirSync(recoveryDir(state)).sort() : [];
-const copies = (state: string): string[] => entries(state).filter((n) => n.endsWith('.lcp'));
-
-/** A crash: the process is killed outright, so nothing of a clean exit runs. */
-async function crash(app: ElectronApplication): Promise<void> {
-  const process = app.process();
-  await new Promise<void>((done) => {
-    process.once('exit', () => done());
-    process.kill('SIGKILL');
-  });
-}
+// A copy every quarter second, so a test need not wait for one.
+const launch = (state: string) =>
+  openApp({ state, env: { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' } });
 
 async function drawAPanel(window: Page, at: number): Promise<void> {
   await window.getByTestId('tool-rectangle').click();
@@ -66,12 +52,15 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
   await first.window.getByTestId('save').click();
   await expect(first.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
   const saved = readFileSync(project);
+  // Saved, so its copy goes; until it has, the copy waited for below could
+  // be this one, of the work before the save.
+  await expect.poll(() => recoveryCopies(state)).toEqual([]);
 
   // Unsaved work, then a copy of it, then the crash.
   await drawAPanel(first.window, 350);
   await expect(first.window.getByTestId('part-count')).toHaveText('2');
-  await expect.poll(() => copies(state).length).toBe(1);
-  await crash(first.app);
+  await expect.poll(() => recoveryCopies(state).length).toBe(1);
+  await crashApp(first.app);
 
   const second = await launch(state);
   try {
@@ -100,25 +89,25 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     await closeApp(second.app);
   }
   // A clean exit leaves nothing behind.
-  expect(copies(state)).toEqual([]);
+  expect(recoveryCopies(state)).toEqual([]);
 });
 
 test('Not now keeps the copy until the next clean exit', async () => {
   const first = await launch(state);
   await drawAPanel(first.window, 150);
-  await expect.poll(() => copies(state).length).toBe(1);
-  await crash(first.app);
-  const crashed = copies(state);
+  await expect.poll(() => recoveryCopies(state).length).toBe(1);
+  await crashApp(first.app);
+  const crashed = recoveryCopies(state);
 
   const second = await launch(state);
   await second.window.getByTestId('recovery-decline').click();
   await expect(second.window.getByTestId('recovery-dialog')).toHaveCount(0);
   await expect(second.window.getByTestId('part-count')).toHaveText('0');
   // Declining is not deleting.
-  expect(copies(state)).toEqual(crashed);
+  expect(recoveryCopies(state)).toEqual(crashed);
 
   await closeApp(second.app);
-  expect(copies(state)).toEqual([]);
+  expect(recoveryCopies(state)).toEqual([]);
 });
 
 test('a copy is kept only while there is unsaved work', async () => {
@@ -127,13 +116,13 @@ test('a copy is kept only while there is unsaved work', async () => {
   try {
     await expect(window.getByTestId('recovery-dialog')).toHaveCount(0);
     await drawAPanel(window, 150);
-    await expect.poll(() => copies(state).length).toBe(1);
+    await expect.poll(() => recoveryCopies(state).length).toBe(1);
 
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
     await window.getByTestId('save').click();
-    await expect.poll(() => copies(state)).toEqual([]);
+    await expect.poll(() => recoveryCopies(state)).toEqual([]);
   } finally {
     await closeApp(app);
   }
@@ -148,7 +137,7 @@ test('a damaged copy is set aside, and startup carries on', async () => {
 
   const { app, window } = await launch(state);
   try {
-    await expect.poll(() => entries(state)).toEqual(['999999-1.lcp.corrupt']);
+    await expect.poll(() => recoveryEntries(state)).toEqual(['999999-1.lcp.corrupt']);
     await expect(window.getByTestId('recovery-dialog')).toHaveCount(0);
     await drawAPanel(window, 150);
     await expect(window.getByTestId('part-count')).toHaveText('1');
@@ -162,7 +151,7 @@ test('a crashed window keeps its copy through the quit that follows', async () =
   // delete the one copy of the work the renderer took with it.
   const first = await launch(state);
   await drawAPanel(first.window, 150);
-  await expect.poll(() => copies(state).length).toBe(1);
+  await expect.poll(() => recoveryCopies(state).length).toBe(1);
   await first.app.evaluate(({ BrowserWindow }) =>
     BrowserWindow.getAllWindows()[0]?.webContents.forcefullyCrashRenderer(),
   );
@@ -175,7 +164,7 @@ test('a crashed window keeps its copy through the quit that follows', async () =
     )
     .toBe(true);
   await closeApp(first.app);
-  expect(copies(state)).toHaveLength(1);
+  expect(recoveryCopies(state)).toHaveLength(1);
 
   const second = await launch(state);
   try {

@@ -11,6 +11,11 @@ function roomAt(width: number): 'wide' | 'narrow' | 'cramped' {
 /**
  * Resizes the window and waits until the app is laid out for the new size.
  *
+ * The size is the room inside the frame, the page's `innerWidth` and
+ * `innerHeight`: what the layout answers to. Windows and macOS put a frame
+ * and a title bar around it, which Linux under Xvfb has none of, so the
+ * window's own size (`setSize`) left 16 px less room on Windows (A6).
+ *
  * `innerWidth` changes as soon as the window does, but the app learns its
  * room from media queries, which Chromium evaluates only when it next renders
  * — a frame later, longer on a loaded machine. A key pressed in between is
@@ -25,7 +30,7 @@ export async function resizeWindow(
   height: number,
 ): Promise<void> {
   await app.evaluate(
-    ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0]?.setSize(size[0], size[1]),
+    ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0]?.setContentSize(size[0], size[1]),
     [width, height] as const,
   );
   await expect.poll(() => window.evaluate(() => innerWidth)).toBe(width);

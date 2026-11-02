@@ -76,6 +76,12 @@ export function createRotateTool(): Tool {
 
     onPointerMove(ctx, event) {
       if (state.kind !== 'turning') return;
+      // Undo, or a command, cancelled the gesture under the pointer.
+      if (!ctx.store.inTransaction) {
+        state = { kind: 'idle' };
+        ctx.invalidate();
+        return;
+      }
 
       const swept = angleFrom(state.pivot, event.at) - state.from;
       const angle = event.shiftKey ? Math.round(swept / ANGLE_STEP) * ANGLE_STEP : swept;

@@ -3,11 +3,9 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -20,19 +18,6 @@ import { resizeWindow } from './windowSize.js';
  *
  * The sample's outer is 200 × 95 mm with 5 mm corners and a stitch line 3 mm in.
  */
-
-async function withSample(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const app = await launchApp();
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 const chip = (window: Page, name: 'width' | 'height' | 'corner' | 'margin') =>
   window.getByTestId(`value-chip-${name}`);
@@ -163,11 +148,7 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     await expect(note.locator('[data-glyph="warning"]')).toHaveCount(1);
     await expect(field(window, 'corner')).toHaveAccessibleDescription(/half the height/);
 
-    const results = await new AxeBuilder({ page: window })
-      .setLegacyMode(true)
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-      .analyze();
-    expect(results.violations.map((v) => v.id)).toEqual([]);
+    await expectNoViolations(window);
 
     // Enter again takes it.
     await window.keyboard.press('Enter');

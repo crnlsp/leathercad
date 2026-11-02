@@ -1,4 +1,4 @@
-import { EPS_ANGLE, EPS_POINT, approxZero, type Mm } from '@leathercad/core';
+import { EPS_ANGLE, EPS_POINT, EPS_RATIO, approxZero, type Mm } from '@leathercad/core';
 
 import * as Seg from '../segment/index.js';
 import { dist, lerp, vec, type Vec2 } from '../vec2.js';
@@ -48,7 +48,9 @@ export function flattenSegment(s: Seg.Segment, tolerance: Mm = SCREEN_TOLERANCE_
       }
 
       const step = maxAngleStepForSagitta(s.radius, tolerance);
-      const count = Math.max(1, Math.ceil(Math.abs(s.sweepAngle) / step - 1e-9));
+      // The slack keeps a sweep that rounding left a hair over a whole number
+      // of steps from growing a sliver step.
+      const count = Math.max(1, Math.ceil(Math.abs(s.sweepAngle) / step - EPS_RATIO));
 
       const points: Vec2[] = [];
       for (let i = 0; i <= count; i++) {

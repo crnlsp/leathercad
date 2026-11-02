@@ -11,40 +11,55 @@ import tseslint from 'typescript-eslint';
  * See CLAUDE.md § Invariants and docs/claude-code-setup.md §6.
  */
 
-/** Rules applied to the pure layers: packages/core, geometry, domain. */
+/**
+ * A tolerance written as `1e-9` anywhere but `packages/core` is a local
+ * epsilon, which invariant 7 forbids: they disagree with each other, and with
+ * the ones in core, in ways no test sees until a snap or a containment fails.
+ * The few such literals that are not tolerances — a measured coefficient, a
+ * finite-difference step, a bound on input — say so where they stand, in the
+ * disable comment's reason.
+ */
+const NO_LOCAL_EPSILON = {
+  selector: 'Literal[raw=/^[0-9_.]+[eE]-[0-9_]+$/]',
+  message:
+    'A local epsilon. Use one from @leathercad/core, or add one there with what it bounds and why ' +
+    'that value. See CLAUDE.md invariant 7.',
+};
+
+/** Restricted syntax in the pure layers: packages/core, geometry, domain. */
+const PURE_LAYER_SYNTAX = [
+  {
+    // Integer counts are safe to compare exactly, so `.length === 0` and any
+    // modulo result are excluded — flagging them buries the real signal.
+    // Everything else compared against a numeric literal is suspect.
+    selector:
+      'BinaryExpression[operator=/^[!=]==?$/]:not(' +
+      ':has(MemberExpression[property.name="length"])' +
+      '):not(:has(BinaryExpression[operator="%"])) > Literal[raw=/^-?[0-9]/]',
+    message:
+      'No float equality. Use approxEq() and the epsilons from @leathercad/core. ' +
+      'See CLAUDE.md invariant 7.',
+  },
+  {
+    selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
+    message:
+      'Math.random() breaks determinism. Take an entropy source as a parameter. ' +
+      'See docs/testing.md §8.',
+  },
+  {
+    selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    message: 'Date.now() breaks determinism. Take a clock as a parameter. See docs/testing.md §8.',
+  },
+  {
+    selector: 'Identifier[name=/[Pp]x$/]',
+    message:
+      'Pixels do not exist in this layer. Millimetres are the source of truth. ' +
+      'See CLAUDE.md invariant 1.',
+  },
+];
+
+/** Rules applied to the pure layers. */
 const PURE_LAYER_RULES = {
-  'no-restricted-syntax': [
-    'error',
-    {
-      // Integer counts are safe to compare exactly, so `.length === 0` and any
-      // modulo result are excluded — flagging them buries the real signal.
-      // Everything else compared against a numeric literal is suspect.
-      selector:
-        'BinaryExpression[operator=/^[!=]==?$/]:not(' +
-        ':has(MemberExpression[property.name="length"])' +
-        '):not(:has(BinaryExpression[operator="%"])) > Literal[raw=/^-?[0-9]/]',
-      message:
-        'No float equality. Use approxEq() and the epsilons from @leathercad/core. ' +
-        'See CLAUDE.md invariant 7.',
-    },
-    {
-      selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
-      message:
-        'Math.random() breaks determinism. Take an entropy source as a parameter. ' +
-        'See docs/testing.md §8.',
-    },
-    {
-      selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
-      message:
-        'Date.now() breaks determinism. Take a clock as a parameter. See docs/testing.md §8.',
-    },
-    {
-      selector: 'Identifier[name=/[Pp]x$/]',
-      message:
-        'Pixels do not exist in this layer. Millimetres are the source of truth. ' +
-        'See CLAUDE.md invariant 1.',
-    },
-  ],
   'no-restricted-globals': [
     'error',
     ...[
@@ -114,8 +129,24 @@ export default tseslint.config(
   },
 
   {
+    // Everywhere but core, which is where tolerances live.
+    files: ['**/*.{ts,tsx,mts,cts,js,mjs,cjs}'],
+    ignores: ['packages/core/**'],
+    rules: { 'no-restricted-syntax': ['error', NO_LOCAL_EPSILON] },
+  },
+
+  {
     files: ['packages/{core,geometry,domain}/src/**/*.ts'],
-    rules: PURE_LAYER_RULES,
+    rules: {
+      ...PURE_LAYER_RULES,
+      'no-restricted-syntax': ['error', ...PURE_LAYER_SYNTAX, NO_LOCAL_EPSILON],
+    },
+  },
+
+  {
+    // Core is where tolerances live.
+    files: ['packages/core/src/**/*.ts'],
+    rules: { 'no-restricted-syntax': ['error', ...PURE_LAYER_SYNTAX] },
   },
 
   {
@@ -145,6 +176,13 @@ export default tseslint.config(
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
     },
+  },
+
+  {
+    // The end-to-end suite measures what the app wrote, so its slack is a
+    // test's, as above; nothing else is restricted there.
+    files: ['e2e/**/*.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
 
   {

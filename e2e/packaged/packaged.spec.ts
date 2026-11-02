@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
@@ -49,7 +50,13 @@ function packagedExecutable(): string {
   }
 }
 
-const EXECUTABLE = packagedExecutable();
+/**
+ * The binary an installer put in place (B4), when `installers.yml` has
+ * installed the .deb and points the test at `/opt/LeatherCAD/leathercad`.
+ * Unset, the test drives the unpacked app above.
+ */
+const INSTALLED = process.env['LEATHERCAD_PACKAGED_EXECUTABLE'];
+const EXECUTABLE = INSTALLED ?? packagedExecutable();
 const VERSION = (
   JSON.parse(readFileSync(resolve(DESKTOP_DIR, 'package.json'), 'utf8')) as {
     version: string;
@@ -57,24 +64,108 @@ const VERSION = (
 ).version;
 
 let app: ElectronApplication;
+let profile: string | undefined;
 
 test.beforeAll(async () => {
   expect(existsSync(EXECUTABLE), `no packaged app at ${EXECUTABLE} — run pnpm package:e2e`).toBe(
     true,
   );
-  app = await electron.launch({ executablePath: EXECUTABLE, args: [] });
+  profile = mkdtempSync(join(tmpdir(), 'leathercad-packaged-profile-'));
+  app = await electron.launch({
+    executablePath: EXECUTABLE,
+    args: [],
+    // Playwright starts Electron with --no-sandbox unless told otherwise. The
+    // unpacked app cannot do without it: its chrome-sandbox is not setuid. An
+    // installed one is what a maker double-clicks, so it runs with Chromium's
+    // sandbox, and fails where the installer left that unable to start.
+    chromiumSandbox: INSTALLED !== undefined,
+    env: {
+      ...process.env,
+      XDG_CONFIG_HOME: join(profile, 'config'),
+      XDG_STATE_HOME: join(profile, 'state'),
+      // A packaged app must ignore the development server override (R6).
+      ELECTRON_RENDERER_URL: 'http://127.0.0.1:1/',
+    },
+  });
 });
 
 test.afterAll(async () => {
   await closeApp(app);
+  if (profile !== undefined) rmSync(profile, { recursive: true, force: true });
 });
 
 test('starts, and reports the packaged version through the bridge', async () => {
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
+  // On its start screen (8.12), then a project, whose status bar has the version.
+  await expect(window.getByTestId('start-screen')).toBeVisible();
+  await expect(window).toHaveTitle('LeatherCAD');
+  await window.getByTestId('start-new').click();
   await expect(window).toHaveTitle('Untitled — LeatherCAD');
   await expect(window.getByTestId('bridge-error')).toHaveCount(0);
   await expect(window.getByTestId('app-version')).toContainText(VERSION);
+});
+
+test('loads from the app origin with the sandbox and CSP intact (R6)', async () => {
+  const window = await app.firstWindow();
+  expect(window.url()).toBe('app://leathercad/index.html');
+  expect(
+    await window.evaluate(() => ({ origin: location.origin, secure: isSecureContext })),
+  ).toEqual({ origin: 'app://leathercad', secure: true });
+  const preferences = await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0]!.webContents.getLastWebPreferences(),
+  );
+  expect(preferences).toMatchObject({
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+    webSecurity: true,
+  });
+
+  const file = pathToFileURL(
+    join(await app.evaluate(({ app: electronApp }) => electronApp.getAppPath()), 'package.json'),
+  ).href;
+  const result = await window.evaluate(async (url) => {
+    const violation = new Promise<string>((done) => {
+      document.addEventListener(
+        'securitypolicyviolation',
+        (event) => done(event.effectiveDirective),
+        { once: true },
+      );
+    });
+    let blocked = false;
+    try {
+      await fetch(url);
+    } catch {
+      blocked = true;
+    }
+    return { blocked, directive: await violation };
+  }, file);
+  expect(result.blocked).toBe(true);
+  expect(result.directive).toBe('connect-src');
+});
+
+test('serves assets only from the renderer directory in the archive (R6)', async () => {
+  // Main-process requests reach the real handler without the page's CSP
+  // hiding a permissive handler. Unit tests cover further encoded paths and
+  // symlinks; this proves the boundary also holds inside app.asar.
+  const replies = await app.evaluate(async ({ net }) => {
+    const requests = [
+      ['app://leathercad/index.html', 'HEAD'],
+      ['app://elsewhere/index.html', 'GET'],
+      ['app://leathercad/..%2fmain/index.js', 'GET'],
+      ['app://leathercad/assets/missing.js', 'GET'],
+      ['app://leathercad/package.json', 'GET'],
+      ['app://leathercad/index.html', 'POST'],
+    ];
+    return Promise.all(
+      requests.map(async ([url, method]) => {
+        const response = await net.fetch(url!, { method });
+        return { status: response.status, body: await response.text() };
+      }),
+    );
+  });
+  expect(replies).toEqual([200, 403, 403, 404, 404, 405].map((status) => ({ status, body: '' })));
 });
 
 test('has no menu off macOS, and no Reload or developer tools anywhere (8.5a, 8.7)', async () => {
@@ -196,16 +287,30 @@ test('exports the 7.7 print test at 1:1, measured on the page', async () => {
   }
 });
 
-test('previews the print test with pdf.js, its worker loaded from inside the archive (7.6)', async () => {
-  // The Print Preview draws the PDF in a Web Worker built from a file in
-  // app.asar, under the shipped fuses. Nothing is sent: the test never presses
-  // Print, and on Windows there is nothing to send it to.
+test('previews the print test: the PDF written and drawn by workers loaded from inside the archive (7.6, PERF-002)', async () => {
+  // The Print Preview writes the PDF in one Web Worker and draws it with
+  // pdf.js in another, both built from files in app.asar, under the shipped
+  // fuses. Nothing is sent: the test never presses Print, and on Windows
+  // there is nothing to send it to.
   const window = await app.firstWindow();
   // The export notice the test before left open.
   await window.keyboard.press('Escape');
+  const workers: string[] = [];
+  window.on('worker', (worker) => workers.push(worker.url()));
   await window.getByTestId('print').click();
   const preview = window.getByTestId('print-preview');
   await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
+  // pdf.js can fall back to running on the page when a worker fails, and the
+  // PDF writer has no fallback at all. Assert real workers so a protocol/CSP
+  // regression cannot hide behind that path.
+  await expect
+    .poll(() =>
+      workers.some((url) => /^app:\/\/leathercad\/assets\/pdf\.worker\..*\.mjs$/.test(url)),
+    )
+    .toBe(true);
+  expect(
+    workers.filter((url) => /^app:\/\/leathercad\/assets\/pdfWorker-.*\.js$/.test(url)),
+  ).toHaveLength(1);
   await expect
     .poll(() => preview.getByTestId('print-page').locator('canvas').evaluate(inkOn))
     .toBeGreaterThan(1000);

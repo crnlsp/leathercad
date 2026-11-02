@@ -10,7 +10,9 @@ import {
   isEmptySelection,
   selectedFeatureIds,
   planDelete,
+  setProjectName,
   type DeleteResolution,
+  type Document,
 } from '@leathercad/document';
 import {
   badgesOf,
@@ -21,15 +23,19 @@ import {
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
-import { systemIdSource, type Preferences, type RecentFile } from '@leathercad/platform';
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from 'react';
+  systemIdSource,
+  type Preferences,
+  type RecentFile,
+  type KeptSession,
+  type TabCamera,
+  type UpdateStatus,
+} from '@leathercad/platform';
+import { rolesNamed } from '@leathercad/export';
+import type { Vec2 } from '@leathercad/geometry';
+import { loadProject } from '@leathercad/persist';
+import { zoomPercent } from '@leathercad/render';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import {
   DEFAULT_EDIT_POINTS,
@@ -40,25 +46,51 @@ import {
 } from '@leathercad/editor';
 
 import { createI18n, resolveLocale, type Translate } from '../../shared/i18n.js';
+import { encodeProject } from './lcpEncoder.js';
 import { AboutDialog } from './AboutDialog.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
 import { selectionForRightClick, selectionMenu, type RightClicked } from './contextMenu.js';
+import { listenForContextMenuKeys } from './keyboardContextMenu.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { TextFieldMenu } from './TextFieldMenu.js';
+import { ExportDialog } from './ExportDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
 import {
   fileErrorText,
+  fileName,
   useProjectFile,
   type DrawingFormat,
   type ExportReport,
 } from './useProjectFile.js';
-import { ProjectBar, windowTitle } from './ProjectBar.js';
-import { printStatusFor } from './sheets.js';
+import { AppControls, ProjectBar, windowTitle } from './ProjectBar.js';
+import { OutsideChangeBar } from './OutsideChangeBar.js';
+import { UnsavedProjectsDialog } from './UnsavedProjectsDialog.js';
+import { MessageDialog } from './MessageDialog.js';
+import { NewTabMenu, ProjectMenu } from './ProjectMenu.js';
+import {
+  SaveTemplateDialog,
+  TemplateDialog,
+  type TemplateActions,
+  type TemplateChoice,
+} from './TemplateDialog.js';
+import { StartScreen } from './StartScreen.js';
+import {
+  ProjectTabs,
+  isDirty,
+  isUnnamed,
+  newTab,
+  projectNameOf,
+  tabName,
+  type ProjectTab,
+} from './projectTabs.js';
+import { TabContextMenu, TabStrip } from './TabStrip.js';
+import { printStatusFor, releaseDerived, sheetPlanFor } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
+import { PointerValue, usePointerValue } from './pointerValue.js';
 import { historyText } from './historyText.js';
 import { describeProblem } from './problemText.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -68,6 +100,8 @@ import { selectedParts } from './sheetContents.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
+import { VersionButton } from './VersionButton.js';
+import { WrittenNote } from './WrittenNote.js';
 import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
@@ -82,7 +116,6 @@ import {
   PropertiesStrip,
   type Press,
 } from './PanelFold.js';
-import { ROOM_PX, layoutFor, toggleOf, type Panel, type Room } from './panelLayout.js';
 import { readBindings } from './rebind.js';
 import { isTyping, pressesControl } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
@@ -93,11 +126,8 @@ import { chipSubject } from './outlineSizes.js';
 import { ALL_TOOLS, DRAWING_TOOL_IDS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
 import { useMediaQuery } from './useMediaQuery.js';
+import { usePanelLayout } from './usePanelLayout.js';
 import { ZoomControl, type ZoomCommand } from './ZoomControl.js';
-
-function fileName(path: string): string {
-  return path.split('/').pop() ?? path;
-}
 
 /** What each zoom command asks of the canvas: its key and the zoom control run the same (U.4). */
 const ZOOM: Readonly<Record<ZoomCommand, (canvas: CanvasHandle) => void>> = {
@@ -124,39 +154,89 @@ export function App({
   /** The operating system's languages, most preferred first: what *Follow system* follows. */
   systemLanguages: readonly string[];
 }) {
+  useEffect(() => listenForContextMenuKeys(IS_MAC), []);
   const [version, setVersion] = useState<string | null>(null);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
+  // The point under the pointer, which only the readout reads: a move renders
+  // it, not the window (PERF-007).
+  const [cursor] = useState(() => new PointerValue<Vec2 | null>(null));
   const [toolId, setToolId] = useState<string>('rectangle');
-  // Design or Sheets (7.4c). View state, like the tool: never saved.
-  const [view, setView] = useState<CanvasView>('design');
+
+  // The open projects (8.12): one tab each, and the one the window shows.
+  // Every document, its history and its file are a tab's; the window holds
+  // the list, and the chrome below shows the active tab.
+  const nextId = useMemo(() => createIdFactory(systemIdSource), []);
+  // Without a name: shown as *Untitled* in the interface's words, and named
+  // after its file when first saved (8.12).
+  const blank = useCallback(() => emptyDocument(nextId(), ''), [nextId]);
+  const tabFor = useCallback(
+    (opened: Document, untitled = 0): ProjectTab =>
+      newTab(
+        nextId(),
+        new DocumentStore(opened, (document) => {
+          sheetPlanFor(document.project);
+        }),
+        untitled,
+      ),
+    [nextId],
+  );
+  // None at first: the start screen, unless the last session's tabs come back.
+  const tabs = useMemo(() => new ProjectTabs(), []);
+  const { tabs: openTabs, active } = useSyncExternalStore(tabs.subscribe, tabs.getSnapshot);
+  // With every project closed the window shows its start screen (8.12), and
+  // the chrome below is not shown. Its hooks still run, in their order, over
+  // an empty project of their own that is never shown, saved or written to
+  // recovery; the window's keys leave it alone.
+  const idle = useMemo(() => tabFor(blank()), [tabFor, blank]);
+  const tab = active ?? idle;
+  const store = tab.store;
+  // The start screen asks about no project, so nothing would let the last
+  // one's plan and Sheets pages go until another opened (PERF-010).
+  useEffect(() => {
+    if (active === null) releaseDerived();
+  }, [active]);
+
+  // Design or Sheets (7.4c), the tab's own. View state, like the tool: never saved.
+  const view = tab.view;
   /**
    * A part under the pointer — on a sheet, or on its Parts row — so the other
    * side can show it too (7.4d). View state, never saved.
    */
   const [hoveredPart, setHoveredPart] = useState<string | null>(null);
-  const viewRef = useRef<CanvasView>('design');
   /** The tool the board had when the maker went to the sheets, to give back. */
   const designToolRef = useRef<string>('rectangle');
 
-  /**
-   * Going to the sheets leaves the drawing tools behind — nothing is drawn on
-   * paper — and coming back gives the board its tool again.
-   */
+  /** Shows the active tab on Design or Sheets. */
   const showView = useCallback(
     (next: CanvasView) => {
-      if (viewRef.current === next) return;
-      if (next === 'sheets') {
-        designToolRef.current = toolId;
-        setToolId('select');
-      } else {
-        setToolId(designToolRef.current);
-      }
-      viewRef.current = next;
-      setView(next);
+      const shown = tabs.active;
+      if (shown === null || shown.view === next) return;
+      tabs.update(shown.id, (each) => {
+        each.view = next;
+      });
     },
-    [toolId],
+    [tabs],
   );
+
+  /**
+   * Going to the sheets leaves the drawing tools behind — nothing is drawn on
+   * paper — and coming back gives the board its tool again. Whatever changed
+   * the view: the switch, a key, a problem gone to, or another tab (8.12).
+   */
+  const toolsView = useRef<CanvasView>(view);
+  useEffect(() => {
+    if (toolsView.current === view) return;
+    toolsView.current = view;
+    if (view === 'sheets') {
+      setToolId((current) => {
+        designToolRef.current = current;
+        return 'select';
+      });
+    } else {
+      setToolId(designToolRef.current);
+    }
+  }, [view]);
 
   // A view's own controls go with it — Design's tools, its Properties. A
   // maker on the keys whose focus was on one lands on the board, not on
@@ -175,13 +255,17 @@ export function App({
    * Choosing a tool. On the Sheets view, any tool but Select means going back
    * to the board with it: tools act on the design, never on the paper.
    */
-  const chooseTool = useCallback((id: string) => {
-    if (viewRef.current === 'sheets' && id !== 'select') {
-      viewRef.current = 'design';
-      setView('design');
-    }
-    setToolId(id);
-  }, []);
+  const chooseTool = useCallback(
+    (id: string) => {
+      if (tabs.active?.view === 'sheets' && id !== 'select') {
+        // The board takes this tool back when the view changes.
+        designToolRef.current = id;
+        showView('design');
+      }
+      setToolId(id);
+    },
+    [showView, tabs],
+  );
   // What a drawn line becomes, and what the hardware tool punches. Owned
   // here because both outlive the tool they configure: switching to the arc
   // tool and back must not silently put the user back on 'Cut'.
@@ -248,112 +332,19 @@ export function App({
     document.documentElement.lang = i18n.locale;
   }, [i18n]);
 
-  // The frame gives the board its room in §5's order (U.5): below 1280 px
-  // the rail drops its names and Properties folds to a strip; below 900 Parts
-  // leaves its column too. The maker's own folds are remembered, and the
-  // window's never overwrite them. Opening the rail while narrow lasts the
-  // session: it answers the window being small, not a liking.
-  const narrow = useMediaQuery(`(max-width: ${String(ROOM_PX.wide - 1)}px)`);
-  const cramped = useMediaQuery(`(max-width: ${String(ROOM_PX.narrow - 1)}px)`);
-  const room: Room = cramped ? 'cramped' : narrow ? 'narrow' : 'wide';
-  const [railExpandedWhileNarrow, setRailExpandedWhileNarrow] = useState(false);
-  // Focus mode (`\`): both panels hide and the rail shows keys only, until `\`
-  // or Esc. Nothing the maker chose changes, so leaving it restores exactly
-  // what was there. For the session, like the view.
-  const [focus, setFocus] = useState(false);
-  const layout = layoutFor(
+  // The frame's room, the maker's folds, focus mode and a panel opened over
+  // the board (U.5, R-04).
+  const {
     room,
-    {
-      railCollapsed: preferences.toolRailCollapsed,
-      railExpandedWhileNarrow,
-      partsFolded: preferences.partsFolded,
-      propertiesFolded: preferences.propertiesFolded,
-    },
+    layout,
     focus,
-  );
-  const toggleRail = useCallback(() => {
-    if (room !== 'wide') {
-      setRailExpandedWhileNarrow((expanded) => !expanded);
-      return;
-    }
-    changePreferences({ toolRailCollapsed: !preferences.toolRailCollapsed });
-  }, [room, changePreferences, preferences.toolRailCollapsed]);
-
-  // A panel opened over the board — from its strip, its chip or its key —
-  // where it has no column (R-04). It takes focus, and gives it back to what
-  // had it when the keyboard closes it; a press on the board closes it and
-  // leaves focus where the press put it (U.4's rule). One at a time. A change
-  // of room or of focus mode closes it: the panel may have its column now.
-  const [overlay, setOverlay] = useState<{
-    readonly panel: Panel;
-    readonly opener: HTMLElement | null;
-  } | null>(null);
-  const [overlayIn, setOverlayIn] = useState(`${room} ${String(focus)}`);
-  if (overlayIn !== `${room} ${String(focus)}`) {
-    setOverlayIn(`${room} ${String(focus)}`);
-    setOverlay(null);
-  }
-  const open = overlay?.panel ?? null;
-  const closeOverlay = useCallback(
-    (press: Press) => {
-      if (press === 'keyboard') overlay?.opener?.focus();
-      setOverlay(null);
-    },
-    [overlay],
-  );
-  // The panel itself takes focus, not its first button: a button would take
-  // the Enter that finishes a polyline. Tab goes on into it, and out of it.
-  useEffect(() => {
-    if (open !== null) document.querySelector<HTMLElement>(`.panel.${open}`)?.focus();
-  }, [open]);
-
-  // A toggle that folds or unfolds its own panel goes with it: from the
-  // keyboard, focus follows to the panel's toggle in its new shape.
-  const followToggle = useRef<Panel | null>(null);
-  const togglePanel = useCallback(
-    (panel: Panel, press: Press, fromToggle = false) => {
-      if (toggleOf(panel, room, focus) === 'overlay') {
-        if (open === panel) closeOverlay(press);
-        else {
-          const active = document.activeElement;
-          setOverlay({ panel, opener: active instanceof HTMLElement ? active : null });
-        }
-        return;
-      }
-      if (fromToggle && press === 'keyboard') followToggle.current = panel;
-      changePreferences(
-        panel === 'parts'
-          ? { partsFolded: !preferences.partsFolded }
-          : { propertiesFolded: !preferences.propertiesFolded },
-      );
-    },
-    [
-      room,
-      focus,
-      open,
-      closeOverlay,
-      changePreferences,
-      preferences.partsFolded,
-      preferences.propertiesFolded,
-    ],
-  );
-  useEffect(() => {
-    const panel = followToggle.current;
-    followToggle.current = null;
-    if (panel === null) return;
-    [...document.querySelectorAll<HTMLElement>(`[data-panel-toggle="${panel}"]`)]
-      .find((toggle) => toggle.getClientRects().length > 0)
-      ?.focus();
-  }, [layout.parts, layout.properties]);
-  // Esc closes an overlay from inside it before anything behind it hears the
-  // key. A menu open in it, or a field being typed in, keeps Esc for itself.
-  const overlayKeys = (panel: Panel) => (event: ReactKeyboardEvent) => {
-    if (open !== panel || isTyping(event.target)) return;
-    if (!keysOf('cancel').some((binding) => matches(event, binding, IS_MAC))) return;
-    event.stopPropagation();
-    event.preventDefault();
-    closeOverlay('keyboard');
-  };
+    setFocus,
+    toggleRail,
+    open,
+    closeOverlay,
+    togglePanel,
+    overlayKeys,
+  } = usePanelLayout(preferences, changePreferences);
   // The canvas legend opens with names on a window with room for it (U.10,
   // R-09); at 1024 px wide or less, or under 720 px tall, it folds to its chip
   // for the session. That fold answers the window, not a liking, so it never
@@ -391,59 +382,82 @@ export function App({
   }, []);
   const zoomTo = useCallback((percent: number) => canvasRef.current?.zoomTo(percent), []);
 
-  const nextId = useMemo(() => createIdFactory(systemIdSource), []);
-  const store = useMemo(() => new DocumentStore(emptyDocument(nextId(), 'Untitled')), [nextId]);
+  // Mirror the active tab's store into React state so the chrome re-renders.
+  // The canvas does not go through this path — it repaints from its own loop.
+  // Another tab's store is read as the window renders it, React's pattern for
+  // state that follows a prop: no pass showing the last tab's document.
+  const [mirror, setMirror] = useState(() => ({ store, state: store.getState() }));
+  if (mirror.store !== store) setMirror({ store, state: store.getState() });
+  const storeState = mirror.store === store ? mirror.state : store.getState();
+  useEffect(() => store.subscribe(() => setMirror({ store, state: store.getState() })), [store]);
 
-  // Mirror the store into React state so the chrome re-renders. The canvas
-  // does not go through this path — it repaints from its own loop.
-  const [storeState, setStoreState] = useState(() => store.getState());
-  useEffect(() => store.subscribe(() => setStoreState(store.getState())), [store]);
+  // What went wrong opening a project from the start screen, where no tab is
+  // there to say it (8.12).
+  const [startError, setStartError] = useState<unknown>(null);
+  const file = useProjectFile(
+    tabs,
+    getPlatformHost,
+    version ?? '0.0.0',
+    tabFor,
+    blank,
+    t,
+    setStartError,
+  );
+  // Read from the tab, which the store's mirror re-renders for.
+  const dirty = isDirty(tab);
+  const anyDirty = openTabs.some(isDirty);
 
-  const blank = useCallback(() => emptyDocument(nextId(), 'Untitled'), [nextId]);
-  const file = useProjectFile(store, getPlatformHost, version ?? '0.0.0', blank, t);
-  const dirty = file.savedDocument.current !== storeState.document;
-
-  // The window says which project it holds, and whether it has unsaved work
+  // The window says which project it shows, and whether it has unsaved work
   // (F.8): the taskbar and the window switcher read this title.
+  // With none open, the product's name alone.
+  const hasProject = active !== null;
+  const shownName = tabName(tab, t);
   useEffect(() => {
-    document.title = windowTitle(storeState.document.project, dirty, t);
-  }, [storeState.document.project, dirty, t]);
-  // And macOS's dot in the close button (U.7): the window's edited flag.
+    document.title = hasProject ? windowTitle(shownName, dirty, t) : 'LeatherCAD';
+  }, [hasProject, shownName, dirty, t]);
+  // And macOS's dot in the close button (U.7): the window's edited flag, lit
+  // while any of its projects has unsaved work (8.12).
   useEffect(() => {
     void getPlatformHost()
-      .setDocumentEdited(dirty)
+      .setDocumentEdited(anyDirty)
       .catch(() => undefined);
-  }, [dirty]);
+  }, [anyDirty]);
 
   // Crash recovery (5.3b): a copy while there is unsaved work, and an offer of
   // what a crash left behind.
   const recovery = useRecovery({
-    store,
+    tabs,
+    openTabs,
+    revision: storeState.document,
     host: getPlatformHost,
     appVersion: version ?? '0.0.0',
-    isDirty: file.isDirty,
-    dirty,
     adoptRecovered: file.adoptRecovered,
   });
 
-  // Never lose work silently (5.3a): closing the window, opening a project and
-  // starting a new one all ask first when there is unsaved work, with one
-  // question and one answer. Resolves true when the action may go ahead.
+  // Never lose work silently (5.3a): closing a project's tab, or the window,
+  // asks first about each project with unsaved work, with one question and
+  // one answer. Resolves true when the action may go ahead. Opening a project
+  // and starting one replace nothing since 8.12 — each has a tab — so they ask
+  // nothing.
   const [pendingDiscard, setPendingDiscard] = useState<{
     action: DiscardingAction;
+    tab: ProjectTab;
     resolve: (proceed: boolean) => void;
   } | null>(null);
   const discarding = useRef(false);
   const confirmDiscard = useCallback(
-    (action: DiscardingAction): Promise<boolean> => {
-      if (!file.isDirty()) return Promise.resolve(true);
+    (action: DiscardingAction, about: ProjectTab): Promise<boolean> => {
+      if (!isDirty(about)) return Promise.resolve(true);
       // One question at a time: a second close while it is on screen is
       // answered by the first.
       if (discarding.current) return Promise.resolve(false);
       discarding.current = true;
+      // The question is about the project in view.
+      tabs.activate(about.id);
       return new Promise((resolve) =>
         setPendingDiscard({
           action,
+          tab: about,
           resolve: (proceed) => {
             discarding.current = false;
             setPendingDiscard(null);
@@ -452,20 +466,95 @@ export function App({
         }),
       );
     },
-    [file],
+    [tabs],
   );
 
-  const newProject = useCallback(async () => {
-    if (await confirmDiscard('new')) file.newProject();
-  }, [confirmDiscard, file]);
-  const openProject = useCallback(async () => {
-    if (await confirmDiscard('open')) await file.open();
-  }, [confirmDiscard, file]);
+  // The projects closed this session that had a file, the last closed last:
+  // what Ctrl+Shift+T opens again (8.12). An untitled one's work was let go
+  // when it closed, so there is nothing of it to open.
+  const closedFiles = useRef<string[]>([]);
 
-  // Help's *Open sample project* (8.3, 8.7), and the empty Parts panel's offer of it.
-  const openSample = useCallback(async () => {
-    if (await confirmDiscard('open')) await file.openSample();
-  }, [confirmDiscard, file]);
+  /** Closes a project's tab, once its unsaved work is saved or let go. */
+  const closeTab = useCallback(
+    async (id: string) => {
+      const closing = tabs.tabs.find((each) => each.id === id);
+      if (closing === undefined) return;
+      if (!(await confirmDiscard('close', closing))) return;
+      const path = closing.file.path;
+      tabs.close(id);
+      if (path !== null) closedFiles.current = [...closedFiles.current, path].slice(-20);
+    },
+    [confirmDiscard, tabs],
+  );
+
+  /** Ctrl+Shift+T: the project last closed, opened again, unless it is open already. */
+  const reopenTab = useCallback(() => {
+    while (closedFiles.current.length > 0) {
+      const path = closedFiles.current.pop()!;
+      if (tabs.byPath(path) !== undefined) continue;
+      void file.openPath(path);
+      return;
+    }
+  }, [file, tabs]);
+
+  /** Ctrl+Shift+Page Up and Down: the active tab one place along the strip. */
+  const moveActiveTab = useCallback(
+    (step: 1 | -1) => {
+      const shown = tabs.active;
+      if (shown === null) return;
+      tabs.move(shown.id, tabs.tabs.indexOf(shown) + step);
+    },
+    [tabs],
+  );
+
+  /**
+   * Asks about every project with unsaved work, one after another, as the
+   * window closes (8.12). False as soon as one answer is *Cancel*.
+   */
+  const [pendingAll, setPendingAll] = useState<{
+    tabs: readonly ProjectTab[];
+    resolve: (proceed: boolean) => void;
+  } | null>(null);
+  const confirmDiscardAll = useCallback(async (): Promise<boolean> => {
+    const unsaved = tabs.tabs.filter(isDirty);
+    // One unsaved project: its own question, as for its tab.
+    if (unsaved.length <= 1) {
+      for (const each of unsaved) if (!(await confirmDiscard('close', each))) return false;
+      return true;
+    }
+    // Several: one question about them all (8.12), answered once.
+    if (discarding.current) return false;
+    discarding.current = true;
+    const answer = await new Promise<'save' | 'discard' | 'cancel'>((resolve) =>
+      setPendingAll({
+        tabs: unsaved,
+        resolve: (proceed) => resolve(proceed ? 'discard' : 'cancel'),
+      }),
+    ).finally(() => {
+      discarding.current = false;
+    });
+    return answer !== 'cancel';
+  }, [confirmDiscard, tabs]);
+
+  /**
+   * *Save all*: each unsaved project in turn, in front as it is saved — an
+   * untitled one asks where — stopping at the first the maker backs out of,
+   * and then the window stays.
+   */
+  const saveAllThenClose = useCallback(
+    async (unsaved: readonly ProjectTab[]): Promise<boolean> => {
+      for (const each of unsaved) {
+        if (!isDirty(each)) continue;
+        tabs.activate(each.id);
+        if (!(await file.save(each))) return false;
+      }
+      return true;
+    },
+    [file, tabs],
+  );
+
+  const newProject = file.newProject;
+  const openProject = file.open;
 
   // The Project menu's recent projects (8.7), asked for each time it opens,
   // since saving and opening change them.
@@ -477,30 +566,380 @@ export function App({
       .catch(() => undefined);
   }, []);
   const [aboutOpen, setAboutOpen] = useState(false);
+
+  // The Project menu (8.7), at the tab strip's left since 8.12, and *Rename…*,
+  // which turns the active tab's name into a field. One edit, one undo step.
+  const projectMenuRef = useRef<HTMLButtonElement>(null);
+  const [renaming, setRenaming] = useState<Press | null>(null);
+  // Something the maker must read about a project's file (8.12): why a rename
+  // was refused — its new name is taken, or no file can have it — or why a
+  // file could not go to the Trash.
+  const [notice, setNotice] = useState<{ title: string; text: string } | null>(null);
+  const setRenameRefusal = useCallback(
+    (text: string) => setNotice({ title: t('rename.title'), text }),
+    [t],
+  );
+  // The file follows the project's name (8.12): Rename renames both, and so
+  // do Undo and Redo of it, so the two never part. Only a change with a
+  // history behind it — reading the file again starts a history afresh, and a
+  // project opened under another name keeps its file's. A name taken in the
+  // folder leaves the file as it is, and says so.
+  const namesSeen = useRef(new Map<string, string>());
+  useEffect(() => {
+    const named = tabs.active;
+    if (named === null) return;
+    const name = storeState.document.project.name.trim();
+    const last = namesSeen.current.get(named.id);
+    namesSeen.current.set(named.id, name);
+    const path = named.file.path;
+    if (last === undefined || last === name || path === null || isUnnamed(name)) return;
+    if (!storeState.canUndo && !storeState.canRedo) return;
+    if (projectNameOf(path) === name) return;
+    void getPlatformHost()
+      .renameProjectFile(path, name)
+      .then((outcome) => {
+        if (outcome.kind === 'renamed') {
+          tabs.update(named.id, (each) => {
+            each.file = { ...each.file, path: outcome.path };
+          });
+        } else if (outcome.kind === 'exists') {
+          setNotice({
+            title: t('rename.title'),
+            text: t('rename.followExists', { name, file: outcome.file }),
+          });
+        }
+      })
+      .catch(() => undefined);
+  }, [storeState, tabs, t]);
+
+  // The templates (8.12): the picker, open with what the main process listed,
+  // and the tab being saved as one.
+  const [templateList, setTemplateList] = useState<readonly TemplateChoice[] | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState<ProjectTab | null>(null);
+  // Each template read and loaded, so the picker can draw it. One that does
+  // not load is still listed, without its picture.
+  const listTemplates = useCallback(async (): Promise<TemplateChoice[]> => {
+    const host = getPlatformHost();
+    const entries = await host.listTemplates();
+    return Promise.all(
+      entries.map(async (entry): Promise<TemplateChoice> => {
+        try {
+          const data = await host.readTemplate(entry.id);
+          if (data === null) return { entry, project: null };
+          const { project } = loadProject(data);
+          evaluate(project); // Refuse oversized previews inside the same file boundary.
+          return { entry, project };
+        } catch {
+          return { entry, project: null };
+        }
+      }),
+    );
+  }, []);
+  const showTemplates = useCallback(() => {
+    void listTemplates()
+      .then(setTemplateList)
+      .catch(() => undefined);
+  }, [listTemplates]);
+
+  /**
+   * Managing templates from the picker (8.14). Each change is the main
+   * process's to make; the picker then reads the library again, so what it
+   * shows is what is on disk.
+   */
+  const templateActions = useMemo((): TemplateActions => {
+    const host = getPlatformHost();
+    // Read again, but only into a picker still open: a removal can land after it closed.
+    const refresh = async (): Promise<void> => {
+      const fresh = await listTemplates();
+      setTemplateList((list) => (list === null ? null : fresh));
+    };
+    return {
+      use: (id) => {
+        setTemplateList(null);
+        void file.newFromTemplate(id);
+      },
+      rename: async (id, name) => {
+        const outcome = await host.renameTemplate(id, name);
+        if (outcome.kind === 'saved') {
+          await refresh();
+          return { renamed: `mine:${outcome.name}` };
+        }
+        return {
+          problem:
+            outcome.kind === 'invalid'
+              ? t('templates.invalid', { name: name.trim() })
+              : t('templates.exists', { name: outcome.name }),
+        };
+      },
+      duplicate: async (id, name) => {
+        await host.duplicateTemplate(id, name);
+        await refresh();
+      },
+      describe: async (id, description, tags) => {
+        await host.describeTemplate(id, description, tags);
+        await refresh();
+      },
+      pin: async (id, pinned) => {
+        await host.pinTemplate(id, pinned);
+        await refresh();
+      },
+      edit: (id) => {
+        setTemplateList(null);
+        void host
+          .editTemplate(id)
+          .then((path) => (path === null ? undefined : file.openPath(path)))
+          .catch(() => undefined);
+      },
+      exportTo: async (id) => {
+        const entry = templateList?.find((choice) => choice.entry.id === id)?.entry;
+        await host.exportTemplate(id, {
+          title: t('templates.exportTitle'),
+          defaultPath: `${entry?.kind === 'mine' ? entry.name : 'template'}.lcp`,
+          filters: [{ name: t('file.project'), extensions: ['lcp'] }],
+        });
+      },
+      show: (id) => {
+        void host.showTemplate(id).catch(() => undefined);
+      },
+      remove: (id) => {
+        void host
+          .removeTemplate(id)
+          .then(refresh)
+          .catch(() => undefined);
+      },
+      importFile: async () => {
+        await host.importTemplate({
+          title: t('templates.importTitle'),
+          filters: [{ name: t('file.project'), extensions: ['lcp'] }],
+        });
+        await refresh();
+      },
+    };
+  }, [file, listTemplates, t, templateList]);
+
+  // A tab's own menu (8.12), open at a point, and the tab whose file is being
+  // asked about before it goes to the Trash.
+  const [tabMenuAt, setTabMenuAt] = useState<{ id: string; x: number; y: number } | null>(null);
+  const menuTab =
+    tabMenuAt === null ? undefined : openTabs.find((each) => each.id === tabMenuAt.id);
+  const [trashing, setTrashing] = useState<ProjectTab | null>(null);
+
+  const renamed = useCallback(
+    (next: string | null) => {
+      const named = tabs.active;
+      const back = renaming === 'keyboard';
+      setRenaming(null);
+      if (back) requestAnimationFrame(() => projectMenuRef.current?.focus());
+      if (named === null || next === null) return;
+      if (next.trim() === named.store.getState().document.project.name.trim()) return;
+      void (async () => {
+        // A project with a file renames its file too (8.12) — never over
+        // another: then nothing is renamed, and the maker is told why. A
+        // name cleared leaves the file as it is; the tab shows its name.
+        const path = named.file.path;
+        if (path !== null && next.trim() !== '') {
+          try {
+            const outcome = await getPlatformHost().renameProjectFile(path, next);
+            if (outcome.kind === 'exists') {
+              setRenameRefusal(t('rename.exists', { file: outcome.file }));
+              return;
+            }
+            if (outcome.kind === 'invalid') {
+              setRenameRefusal(t('rename.invalid', { name: next.trim() }));
+              return;
+            }
+            tabs.update(named.id, (each) => {
+              each.file = { ...each.file, path: outcome.path };
+            });
+          } catch (error) {
+            setRenameRefusal(t('rename.failed', { reason: fileErrorText(error, t) }));
+            return;
+          }
+        }
+        named.store.dispatch(setProjectName(next.trim()));
+      })();
+    },
+    [renaming, setRenameRefusal, t, tabs],
+  );
   // General says how many are listed, so it asks as Settings opens.
   useEffect(() => {
     if (settings !== null) refreshRecent();
   }, [settings, refreshRecent]);
 
-  // A project double-clicked in the file manager (8.5), asked for once the
-  // app is ready to open it.
-  // `openPath` is stable, and the main process hands the file over once.
+  // The start (8.12): the tabs open when the app last closed, in their order,
+  // the one that was showing in front — then a project double-clicked in the
+  // file manager (8.5), in front of them. Asked for once the app is ready to
+  // open them; the main process hands each over once, so a second run of this
+  // effect (React's development double run) waits on the first.
+  // `openPath` is stable.
   const openPath = file.openPath;
+  const starting = useRef<Promise<void> | null>(null);
+  const [started, setStarted] = useState(false);
   useEffect(() => {
+    starting.current ??= (async () => {
+      const host = getPlatformHost();
+      try {
+        const session = await host.takeSession();
+        // Each tab as it was left: its file, or the work kept for it, on its
+        // view and at its place and zoom; then the one in front, in front.
+        const opened: (string | undefined)[] = [];
+        for (const entry of session.tabs) {
+          const restore = { view: entry.view, camera: entry.camera };
+          if (entry.data !== null) {
+            opened.push(file.restoreKept(entry.data, entry.path, restore)?.id);
+          } else if (entry.path !== null) {
+            await openPath(entry.path, restore);
+            opened.push(tabs.byPath(entry.path)?.id);
+          }
+        }
+        const front = session.active === null ? undefined : opened[session.active];
+        if (front !== undefined) tabs.activate(front);
+      } catch {
+        // A start without its tabs is better than a start that fails over them.
+      }
+      try {
+        const path = await host.takeLaunchFile();
+        if (path !== null) await openPath(path);
+      } catch {
+        // As above: the window opens all the same.
+      }
+    })();
+    void starting.current.then(() => setStarted(true));
+  }, [file, openPath, tabs]);
+
+  /**
+   * The open tabs, as the next start should find them (8.12): each with a
+   * file, its view, and where its board is looking. `kept` names the tabs
+   * whose unsaved work was just written for it, as the window closes.
+   */
+  const sessionOf = useCallback(
+    (kept: ReadonlySet<string> = new Set()): KeptSession => {
+      const listed = tabs.tabs.filter((each) => each.file.path !== null || kept.has(each.id));
+      const shown = tabs.active === null ? -1 : listed.indexOf(tabs.active);
+      return {
+        tabs: listed.map((each) => ({
+          path: each.file.path,
+          kept: kept.has(each.id) ? each.id : null,
+          view: each.view,
+          camera: cameraOf(each),
+        })),
+        active: shown === -1 ? null : shown,
+      };
+    },
+    [tabs],
+  );
+
+  /**
+   * Closing with *Keep unsaved projects* on (8.12): each unsaved tab's work
+   * written to a kept copy, then the session naming them, then the window
+   * goes. A copy that could not be written is asked about after all, as
+   * closing always did: nothing is let go without a word.
+   */
+  const keepUnsaved = preferences.keepUnsaved;
+  const keepUnsavedThenClose = useCallback(async () => {
+    const host = getPlatformHost();
+    const unsaved = tabs.tabs.filter(isDirty);
+    const kept = new Set<string>();
+    for (const each of unsaved) {
+      try {
+        const bytes = await encodeProject({
+          project: each.store.committedDocument.project,
+          applicationVersion: version ?? '0.0.0',
+          at: new Date().toISOString(),
+          ...(each.createdUtc === undefined ? {} : { createdUtc: each.createdUtc }),
+        });
+        await host.keepUnsaved(each.id, bytes);
+        kept.add(each.id);
+      } catch {
+        // Asked about below, as before.
+      }
+    }
+    const left = unsaved.filter((each) => !kept.has(each.id));
+    for (const each of left) if (!(await confirmDiscard('close', each))) return;
+    closing.current = true;
+    await host.keepSession(sessionOf(kept)).catch(() => undefined);
+    window.close();
+  }, [confirmDiscard, sessionOf, tabs, version]);
+
+  // Kept as the tabs change, and every few seconds for the cameras, which
+  // move without telling the window. Not before the start has opened the last
+  // session's tabs, or the empty window would be kept over them.
+  const lastKept = useRef('');
+  const keepSessionNow = useCallback(() => {
+    // Closing with kept work: that session is the one to keep.
+    if (closing.current) return;
+    const session = sessionOf();
+    const text = JSON.stringify(session);
+    if (text === lastKept.current) return;
+    lastKept.current = text;
     void getPlatformHost()
-      .takeLaunchFile()
-      .then((path) => (path === null ? undefined : openPath(path)))
+      .keepSession(session)
       .catch(() => undefined);
+  }, [sessionOf]);
+  useEffect(() => {
+    if (!started) return;
+    keepSessionNow();
+    const timer = window.setInterval(keepSessionNow, 3000);
+    return () => window.clearInterval(timer);
+  }, [started, keepSessionNow, openTabs, active]);
+
+  // A recent project (8.2, 8.7), a second launch's (8.11), macOS's open-file:
+  // the main process chose and granted the path, and it opens in a tab.
+  useEffect(() => getPlatformHost().onOpenFile((path) => void openPath(path)), [openPath]);
+
+  // Projects dropped on the window (8.12), each into a tab, as Open does. Only
+  // files: a tab dragged along the strip is the strip's own.
+  useEffect(() => {
+    const carriesFiles = (event: DragEvent): boolean =>
+      event.dataTransfer?.types.includes('Files') ?? false;
+    const onDragOver = (event: DragEvent): void => {
+      if (!carriesFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer !== null) event.dataTransfer.dropEffect = 'copy';
+    };
+    const onDrop = (event: DragEvent): void => {
+      if (!carriesFiles(event)) return;
+      event.preventDefault();
+      const host = getPlatformHost();
+      const paths = [...(event.dataTransfer?.files ?? [])]
+        .map((each) => host.pathForFile(each))
+        .filter((path) => path.toLowerCase().endsWith('.lcp'));
+      if (paths.length === 0) return;
+      void host
+        .openDropped(paths)
+        .then(async (granted) => {
+          for (const path of granted) await openPath(path);
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
+    };
   }, [openPath]);
 
-  // A recent project (8.2, 8.7): the main process chose and granted the path;
-  // unsaved work is asked about exactly as for Open.
+  // The open projects' files, watched for another program's changes (8.12):
+  // the list follows the tabs, and a change marks its tab, whose bar asks.
+  const watched = JSON.stringify(
+    openTabs.flatMap((each) => (each.file.path === null ? [] : [each.file.path])),
+  );
+  useEffect(() => {
+    void getPlatformHost()
+      .watchProjects(JSON.parse(watched) as string[])
+      .catch(() => undefined);
+  }, [watched]);
   useEffect(
     () =>
-      getPlatformHost().onOpenFile((path) => {
-        void confirmDiscard('open').then((proceed) => (proceed ? file.openPath(path) : undefined));
+      getPlatformHost().onProjectChanged((path, change) => {
+        const changed = tabs.byPath(path);
+        if (changed === undefined) return;
+        tabs.update(changed.id, (each) => {
+          each.file = { ...each.file, outside: change };
+        });
       }),
-    [confirmDiscard, file],
+    [tabs],
   );
 
   // The window's close button, Ctrl+Q and a reload all unload the page. With
@@ -510,10 +949,19 @@ export function App({
   const closing = useRef(false);
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent): void => {
-      if (closing.current || !file.isDirty()) return;
+      if (closing.current) return;
+      // Where every board is looking now, for the next start (8.12).
+      keepSessionNow();
+      if (!tabs.tabs.some(isDirty)) return;
       event.preventDefault();
       event.returnValue = false;
-      void confirmDiscard('close').then((proceed) => {
+      // *Keep unsaved projects* (8.12): nothing is asked; the work goes with
+      // the session, and comes back at the next start, unsaved.
+      if (keepUnsaved) {
+        void keepUnsavedThenClose();
+        return;
+      }
+      void confirmDiscardAll().then((proceed) => {
         if (!proceed) return;
         closing.current = true;
         window.close();
@@ -521,7 +969,26 @@ export function App({
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [confirmDiscard, file]);
+  }, [confirmDiscardAll, keepSessionNow, keepUnsaved, keepUnsavedThenClose, tabs]);
+
+  // Whether a newer release exists (8.9): asked only when the maker presses
+  // *Check now* in Settings or the version in the status bar. The main
+  // process keeps the last answer, so a new window on macOS still shows it.
+  const [updates, setUpdates] = useState<UpdateStatus>({ state: 'idle' });
+  useEffect(() => {
+    void getPlatformHost()
+      .getUpdateStatus()
+      .then(setUpdates)
+      .catch(() => undefined);
+  }, []);
+  const checkUpdates = useCallback(
+    () =>
+      getPlatformHost()
+        .checkForUpdates()
+        .then(setUpdates)
+        .catch(() => setUpdates({ state: 'failed' })),
+    [],
+  );
 
   useEffect(() => {
     void (async () => {
@@ -542,11 +1009,15 @@ export function App({
   }, [file]);
 
   // The same for an SVG or a DXF, from the menu beside Export PDF (6.2, 6.5).
+  // They ask first (6.4), in a dialog: an intent, and the layers it chooses.
+  const [exporting, setExporting] = useState<DrawingFormat | null>(null);
+  const exportRoles = useMemo(() => rolesNamed(preferences.exportRoles), [preferences.exportRoles]);
   const exportDrawing = useCallback(
     async (format: DrawingFormat) => {
-      setExportNotice(await file.exportDrawingFile(format));
+      setExporting(null);
+      setExportNotice(await file.exportDrawingFile(format, exportRoles));
     },
-    [file],
+    [exportRoles, file],
   );
 
   // The Print Preview (7.6), open or not.
@@ -556,12 +1027,19 @@ export function App({
     // Through the keymap (U.3): each key by where it is on the keyboard, a
     // letter by the letter it types.
     const actions: Partial<Record<CommandId, () => void>> = {
-      save: () => void file.save(),
-      saveAs: () => void file.save(true),
+      save: () => (tabs.active === null ? undefined : void file.save(tabs.active)),
+      saveAs: () => (tabs.active === null ? undefined : void file.save(tabs.active, true)),
       openProject: () => void openProject(),
       newProject: () => void newProject(),
       exportPdf: () => void exportPdf(),
       print: () => setPrinting(true),
+      // The project tabs (8.12).
+      nextTab: () => tabs.cycle(1),
+      previousTab: () => tabs.cycle(-1),
+      closeTab: () => (tabs.active === null ? undefined : void closeTab(tabs.active.id)),
+      moveTabLeft: () => moveActiveTab(-1),
+      moveTabRight: () => moveActiveTab(1),
+      reopenTab,
       design: () => showView('design'),
       sheets: () => showView('sheets'),
       // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
@@ -598,6 +1076,8 @@ export function App({
       }
       const command = commandFor(event, IS_MAC);
       if (command === null) return;
+      // On the start screen only the keys that need no project (8.12).
+      if (tabs.active === null && !WITHOUT_PROJECT.has(command)) return;
       // A key something before the window claimed is not also a shortcut: the
       // active tool's (the polyline's A mid-run), a Parts row's, a menu's or a
       // tab list's arrows — whichever command the maker gave that key (U.12).
@@ -617,6 +1097,10 @@ export function App({
     return () => window.removeEventListener('keydown', onKey);
   }, [
     file,
+    tabs,
+    closeTab,
+    moveActiveTab,
+    reopenTab,
     exportPdf,
     newProject,
     openProject,
@@ -626,6 +1110,7 @@ export function App({
     togglePanel,
     open,
     focus,
+    setFocus,
     closeOverlay,
     selectionBarOn,
   ]);
@@ -744,6 +1229,17 @@ export function App({
     [store],
   );
 
+  // What was under way on one tab is not the next one's (8.12): reset as the
+  // window renders the next, like the store's mirror.
+  const [shownTab, setShownTab] = useState(tab);
+  if (shownTab !== tab) {
+    setShownTab(tab);
+    setHoveredPart(null);
+    setContextMenu(null);
+    setPendingDelete(null);
+    setStatus(null);
+  }
+
   // The Menu key and Shift+F10 (8.8). A Parts row answers for itself; from
   // anywhere else — the tool just chosen has focus, and the canvas cannot —
   // the menu is about the selection, opened where it is on the board. A
@@ -830,400 +1326,521 @@ export function App({
 
   return (
     <I18nProvider value={i18n}>
-      <div className="app">
-        <ProjectBar
-          project={storeState.document.project}
-          store={store}
-          dirty={dirty}
-          saved={file.state.path !== null}
-          room={room}
-          view={view}
-          onView={showView}
-          counts={counts}
-          settled={!store.inTransaction}
-          onShowProblems={showProblems}
-          helpRef={helpRef}
-          onNew={() => void newProject()}
-          onOpen={() => void openProject()}
-          onSaveAs={() => void file.save(true)}
-          recent={recent}
-          onProjectMenuOpen={refreshRecent}
-          // The main process checks it is on the list, grants it, and hands it
-          // back through onOpenFile, which asks about unsaved work.
-          onOpenRecent={(path) => getPlatformHost().openRecent(path)}
-          onOpenSample={() => void openSample()}
-          onAbout={() => setAboutOpen(true)}
-          onSettings={() => setSettings('general')}
-          onSave={() => void file.save()}
-          onExport={() => void exportPdf()}
-          onExportSvg={() => void exportDrawing('svg')}
-          onExportDxf={() => void exportDrawing('dxf')}
-          onPrint={() => setPrinting(true)}
+      <div className={hasProject ? 'app' : 'app no-project'}>
+        <TabStrip
+          tabs={openTabs}
+          active={active}
+          menu={
+            <ProjectMenu
+              hasProject={hasProject}
+              recent={recent}
+              triggerRef={projectMenuRef}
+              onMenuOpen={refreshRecent}
+              onNew={newProject}
+              onNewFromTemplate={showTemplates}
+              onOpen={() => void openProject()}
+              onSaveAs={() => (active === null ? undefined : void file.save(active, true))}
+              onSaveAsTemplate={() => setSavingTemplate(active)}
+              onRename={setRenaming}
+              // The main process checks it is on the list, grants it, and
+              // hands it back through onOpenFile, which opens it in a tab.
+              onOpenRecent={(path) => getPlatformHost().openRecent(path)}
+            />
+          }
+          add={
+            <NewTabMenu
+              recent={recent}
+              onMenuOpen={refreshRecent}
+              onNew={newProject}
+              onNewFromTemplate={showTemplates}
+              onOpen={() => void openProject()}
+              onOpenRecent={(path) => getPlatformHost().openRecent(path)}
+            />
+          }
+          nudged={tabs.nudged}
+          renaming={renaming !== null}
+          onRenamed={renamed}
+          onActivate={(id) => tabs.activate(id)}
+          onClose={(id) => void closeTab(id)}
+          onTabMenu={(id, at) => setTabMenuAt({ id, ...at })}
+          onMove={(id, index) => tabs.move(id, index)}
+          // On the start screen there is no project bar: Settings and Help
+          // stand at the strip's end, F1 and the update mark with them.
+          trailing={
+            hasProject ? null : (
+              <AppControls
+                helpRef={helpRef}
+                onAbout={() => setAboutOpen(true)}
+                onSettings={() =>
+                  setSettings(updates.state === 'available' ? 'updates' : 'general')
+                }
+                updateAvailable={updates.state === 'available'}
+              />
+            )
+          }
         />
+        {/* Not before the start has opened the last session's tabs: the start
+            screen would show for a moment before them. */}
+        {active === null ? (
+          !started ? null : (
+            <StartScreen
+              recent={recent}
+              onRefreshRecent={refreshRecent}
+              error={startError === null ? null : fileErrorText(startError, t)}
+              onNew={newProject}
+              onNewFromTemplate={showTemplates}
+              onOpen={() => void openProject()}
+              onOpenRecent={(path) =>
+                void getPlatformHost()
+                  .openRecent(path)
+                  .then(refreshRecent)
+                  .catch(() => undefined)
+              }
+              onPin={(path, pinned) =>
+                void getPlatformHost()
+                  .pinRecent(path, pinned)
+                  .then(refreshRecent)
+                  .catch(() => undefined)
+              }
+              onRemove={(path) =>
+                void getPlatformHost()
+                  .removeRecent(path)
+                  .then(refreshRecent)
+                  .catch(() => undefined)
+              }
+            />
+          )
+        ) : (
+          <>
+            <ProjectBar
+              project={storeState.document.project}
+              store={store}
+              dirty={dirty}
+              saved={tab.file.path !== null}
+              room={room}
+              view={view}
+              onView={showView}
+              counts={counts}
+              settled={!store.inTransaction}
+              onShowProblems={showProblems}
+              helpRef={helpRef}
+              onAbout={() => setAboutOpen(true)}
+              // The mark is news about Updates, so the button opens there while it shows.
+              onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
+              updateAvailable={updates.state === 'available'}
+              onSave={() => void file.save(tab)}
+              onExport={() => void exportPdf()}
+              onExportSvg={() => setExporting('svg')}
+              onExportDxf={() => setExporting('dxf')}
+              onPrint={() => setPrinting(true)}
+            />
 
-        {/* The work bar (F.8): what the maker is doing right now — history, the
+            {/* The work bar (F.8): what the maker is doing right now — history, the
           active tool's options and its hints (U.11). The project and
           its output are the bar above's; nothing here is about files. */}
-        <div
-          className="work-bar"
-          data-testid="work-bar"
-          role="region"
-          aria-label={t('work.region')}
-        >
-          <div className="toolbar history" data-testid="history-group">
-            {/* Names what it will undo. Disabled needs no reason beyond its own
+            <div
+              className="work-bar"
+              data-testid="work-bar"
+              role="region"
+              aria-label={t('work.region')}
+            >
+              <div className="toolbar history" data-testid="history-group">
+                {/* Names what it will undo. Disabled needs no reason beyond its own
               label: there is nothing to undo. */}
-            <Tooltip
-              text={
-                storeState.undoLabel === null
-                  ? null
-                  : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
-              }
-              keys="undo"
-            >
-              <button
-                type="button"
-                className="tool"
-                data-testid="undo"
-                disabled={!storeState.canUndo}
-                onClick={() => store.undo()}
-              >
-                {t('work.undo')}
-              </button>
-            </Tooltip>
-            <Tooltip
-              text={
-                storeState.redoLabel === null
-                  ? null
-                  : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
-              }
-              keys="redo"
-            >
-              <button
-                type="button"
-                className="tool"
-                data-testid="redo"
-                disabled={!storeState.canRedo}
-                onClick={() => store.redo()}
-              >
-                {t('work.redo')}
-              </button>
-            </Tooltip>
-          </div>
-          {view === 'design' ? (
-            <>
-              <ToolOptions
-                toolId={toolId}
-                drawAs={drawAs}
-                onDrawAs={setDrawAs}
-                hardware={hardware}
-                onHardware={setHardware}
-                points={pointOptions}
-                onPoints={setPointOptions}
-              />
-              {/* What the active tool does with a click, a drag and a key, true for that
+                <Tooltip
+                  text={
+                    storeState.undoLabel === null
+                      ? null
+                      : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
+                  }
+                  keys="undo"
+                >
+                  <button
+                    type="button"
+                    className="tool"
+                    data-testid="undo"
+                    disabled={!storeState.canUndo}
+                    onClick={() => store.undo()}
+                  >
+                    {t('work.undo')}
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  text={
+                    storeState.redoLabel === null
+                      ? null
+                      : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
+                  }
+                  keys="redo"
+                >
+                  <button
+                    type="button"
+                    className="tool"
+                    data-testid="redo"
+                    disabled={!storeState.canRedo}
+                    onClick={() => store.redo()}
+                  >
+                    {t('work.redo')}
+                  </button>
+                </Tooltip>
+              </div>
+              {view === 'design' ? (
+                <>
+                  <ToolOptions
+                    toolId={toolId}
+                    drawAs={drawAs}
+                    onDrawAs={setDrawAs}
+                    hardware={hardware}
+                    onHardware={setHardware}
+                    points={pointOptions}
+                    onPoints={setPointOptions}
+                  />
+                  {/* What the active tool does with a click, a drag and a key, true for that
                 tool and no other (F.1), and for the state it is in (U.11). The lowest
                 ranked give way as the bar narrows, whole; "all keys" never does. */}
-              <OptionHints hints={toolHints} testId="tool-how-to" />
-            </>
-          ) : (
-            <>
-              <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
-              {/* The plan in words, for a screen reader: the sheet count, what is taped and
+                  <OptionHints hints={toolHints} testId="tool-how-to" />
+                </>
+              ) : (
+                <>
+                  <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
+                  {/* The plan in words, for a screen reader: the sheet count, what is taped and
                   what is left off now sit in Parts and Properties. */}
-              <SheetsSummary project={storeState.document.project} />
-            </>
-          )}
-        </div>
+                  <SheetsSummary project={storeState.document.project} />
+                </>
+              )}
+            </div>
 
-        <div
-          className={[
-            'workspace',
-            layout.railNames ? '' : 'rail-collapsed',
-            room === 'wide' ? '' : 'narrow',
-            `parts-${layout.parts}`,
-            `properties-${layout.properties}`,
-            open === null ? '' : `${open}-open`,
-          ]
-            .filter((name) => name !== '')
-            .join(' ')}
-          // The room the frame is laid out for. It follows the window a frame
-          // late — media queries are evaluated as the window next renders — so
-          // a test waits for it after resizing before it presses anything.
-          data-room={room}
-        >
-          <ToolPalette
-            activeId={toolId}
-            onSelect={chooseTool}
-            collapsed={!layout.railNames}
-            onToggleCollapsed={focus ? undefined : toggleRail}
-            view={view}
-          />
-          {layout.parts === 'strip' && (
-            <PartsStrip
-              project={storeState.document.project}
-              selected={storeState.selection.features}
-              selectedParts={storeState.selection.parts}
-              onSelectPart={(partId) => store.selectParts([partId])}
-              toggle={
-                <PanelToggle
-                  panel="parts"
-                  shown={open === 'parts'}
-                  onToggle={(press) => togglePanel('parts', press, true)}
-                />
-              }
-            />
-          )}
-          {/* A panel's place in the DOM, docked or not (F.2): no panel is ever
-              removed. Esc pressed inside it, open over the board, closes it. */}
-          <div className="panel-slot" onKeyDown={overlayKeys('parts')}>
-            {view === 'sheets' ? (
-              <SheetsParts
-                store={store}
-                project={storeState.document.project}
-                printStatus={printStatusFor(storeState.document.project)}
-                selected={sheetsSelected}
-                hoveredPart={hoveredPart}
-                onHoverPart={setHoveredPart}
-                toggle={
-                  <PanelToggle
-                    panel="parts"
-                    shown
-                    onToggle={(press) => togglePanel('parts', press, true)}
-                  />
-                }
-              />
-            ) : (
-              <PartsList
-                store={store}
-                project={storeState.document.project}
-                selected={storeState.selection.features}
-                selectedParts={storeState.selection.parts}
-                badges={badges}
-                printStatus={printStatusFor(storeState.document.project)}
-                onRemovePart={requestDeletePart}
-                onDuplicatePart={requestDuplicatePart}
-                onContextMenu={openContextMenu}
-                onOpenSample={() => void openSample()}
-                toggle={
-                  <PanelToggle
-                    panel="parts"
-                    shown
-                    onToggle={(press) => togglePanel('parts', press, true)}
-                  />
-                }
-              />
-            )}
-          </div>
-          {/* The drawing is what the window is for: its main landmark. A press
-              on it closes a panel open over it. */}
-          <main
-            className="canvas-column"
-            aria-label={t('app.drawing')}
-            onPointerDown={open === null ? undefined : () => closeOverlay('pointer')}
-          >
-            <CanvasHost
-              ref={canvasRef}
-              store={store}
-              view={view}
-              hoveredPart={hoveredPart}
-              onHoverPart={setHoveredPart}
-              toolId={toolId}
-              nextId={nextId}
-              onStatus={handleStatus}
-              panelOver={open}
-              selectionBar={selectionBarOn ? tools : null}
-              drawAs={drawAs}
-              makerDefaults={makerDefaults}
-              hardware={hardware}
-              pointOptions={pointOptions}
-              requestDelete={requestDelete}
-              requestDeletePart={requestDeletePart}
-              onContextMenu={openContextMenu}
+            <div
+              className={[
+                'workspace',
+                layout.railNames ? '' : 'rail-collapsed',
+                room === 'wide' ? '' : 'narrow',
+                `parts-${layout.parts}`,
+                `properties-${layout.properties}`,
+                open === null ? '' : `${open}-open`,
+              ]
+                .filter((name) => name !== '')
+                .join(' ')}
+              // The room the frame is laid out for. It follows the window a frame
+              // late — media queries are evaluated as the window next renders — so
+              // a test waits for it after resizing before it presses anything.
+              data-room={room}
             >
-              {/* The legend explains the board's marks; the sheets are ink. */}
-              {view === 'design' && (
-                <CanvasLegend
+              <ToolPalette
+                activeId={toolId}
+                onSelect={chooseTool}
+                collapsed={!layout.railNames}
+                onToggleCollapsed={focus ? undefined : toggleRail}
+                view={view}
+              />
+              {layout.parts === 'strip' && (
+                <PartsStrip
                   project={storeState.document.project}
-                  open={legendOpen}
-                  onToggle={toggleLegend}
+                  selected={storeState.selection.features}
+                  selectedParts={storeState.selection.parts}
+                  onSelectPart={(partId) => store.selectParts([partId])}
+                  toggle={
+                    <PanelToggle
+                      panel="parts"
+                      shown={open === 'parts'}
+                      onToggle={(press) => togglePanel('parts', press, true)}
+                    />
+                  }
                 />
               )}
-              {status !== null && (
-                <ZoomControl
-                  percent={status.zoomPercent}
-                  run={runZoom}
-                  zoomTo={zoomTo}
-                  fitSelectionRefusal={fitSelectionRefusal}
+              {/* A panel's place in the DOM, docked or not (F.2): no panel is ever
+              removed. Esc pressed inside it, open over the board, closes it. */}
+              <div className="panel-slot" onKeyDown={overlayKeys('parts')}>
+                {view === 'sheets' ? (
+                  <SheetsParts
+                    store={store}
+                    project={storeState.document.project}
+                    printStatus={printStatusFor(storeState.document.project)}
+                    selected={sheetsSelected}
+                    hoveredPart={hoveredPart}
+                    onHoverPart={setHoveredPart}
+                    toggle={
+                      <PanelToggle
+                        panel="parts"
+                        shown
+                        onToggle={(press) => togglePanel('parts', press, true)}
+                      />
+                    }
+                  />
+                ) : (
+                  <PartsList
+                    // Made again for each tab, from the folds that tab keeps (PERF-016).
+                    key={tab.id}
+                    store={store}
+                    project={storeState.document.project}
+                    folds={tab.folds}
+                    selected={storeState.selection.features}
+                    selectedParts={storeState.selection.parts}
+                    badges={badges}
+                    printStatus={printStatusFor(storeState.document.project)}
+                    onRemovePart={requestDeletePart}
+                    onDuplicatePart={requestDuplicatePart}
+                    onContextMenu={openContextMenu}
+                    toggle={
+                      <PanelToggle
+                        panel="parts"
+                        shown
+                        onToggle={(press) => togglePanel('parts', press, true)}
+                      />
+                    }
+                  />
+                )}
+              </div>
+              {/* The drawing is what the window is for: its main landmark. A press
+              on it closes a panel open over it. */}
+              <main
+                className="canvas-column"
+                aria-label={t('app.drawing')}
+                onPointerDown={open === null ? undefined : () => closeOverlay('pointer')}
+              >
+                <CanvasHost
+                  // Made again for each tab: its tools and gestures are that
+                  // project's, and its cameras the tab's (8.12).
+                  key={tab.id}
+                  cameras={tab.cameras}
+                  ref={canvasRef}
+                  store={store}
+                  view={view}
+                  hoveredPart={hoveredPart}
+                  onHoverPart={setHoveredPart}
+                  toolId={toolId}
+                  nextId={nextId}
+                  onToolChange={chooseTool}
+                  onStatus={handleStatus}
+                  cursor={cursor}
+                  panelOver={open}
+                  selectionBar={selectionBarOn ? tools : null}
+                  drawAs={drawAs}
+                  makerDefaults={makerDefaults}
+                  hardware={hardware}
+                  pointOptions={pointOptions}
+                  requestDelete={requestDelete}
+                  requestDeletePart={requestDeletePart}
+                  onContextMenu={openContextMenu}
+                >
+                  {/* The legend explains the board's marks; the sheets are ink. */}
+                  {view === 'design' && (
+                    <CanvasLegend
+                      project={storeState.document.project}
+                      open={legendOpen}
+                      onToggle={toggleLegend}
+                    />
+                  )}
+                  {status !== null && (
+                    <ZoomControl
+                      percent={status.zoomPercent}
+                      run={runZoom}
+                      zoomTo={zoomTo}
+                      fitSelectionRefusal={fitSelectionRefusal}
+                    />
+                  )}
+                  {tab.file.outside !== undefined && tab.file.path !== null && (
+                    <OutsideChangeBar
+                      change={tab.file.outside}
+                      file={fileName(tab.file.path)}
+                      onReload={() =>
+                        void confirmDiscard('reload', tab).then((proceed) =>
+                          proceed ? file.reload(tab) : undefined,
+                        )
+                      }
+                      onSave={() => void file.save(tab)}
+                      onKeep={() =>
+                        tabs.update(tab.id, (each) => {
+                          const { outside: _outside, ...rest } = each.file;
+                          each.file = rest;
+                        })
+                      }
+                    />
+                  )}
+                </CanvasHost>
+                <ProblemsPanel
+                  project={storeState.document.project}
+                  diagnostics={diagnostics}
+                  counts={counts}
+                  onGoTo={goToDiagnostic}
+                  open={problemsOpen}
+                  onToggle={() => setProblemsOpen((open) => !open)}
+                />
+              </main>
+              <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
+                {view === 'sheets' ? (
+                  <SheetsProperties
+                    store={store}
+                    project={storeState.document.project}
+                    selected={sheetsSelected}
+                    toggle={
+                      <PanelToggle
+                        panel="properties"
+                        shown
+                        onToggle={(press) => togglePanel('properties', press, true)}
+                      />
+                    }
+                  />
+                ) : (
+                  <PropertyPanel
+                    store={store}
+                    project={storeState.document.project}
+                    selected={storeState.selection.features}
+                    selectedParts={storeState.selection.parts}
+                    diagnostics={diagnostics}
+                    nextId={nextId}
+                    requestDelete={requestDelete}
+                    requestDeletePart={requestDeletePart}
+                    tools={tools}
+                    onTools={changePreferences}
+                    guidesMode={toolId === 'guide'}
+                    drawingPiece={
+                      DRAWING_TOOL_IDS.has(toolId) &&
+                      (drawAs === 'outline' || drawAs === 'stitch-allowance')
+                    }
+                    sizing={status?.sizing ?? null}
+                    toggle={
+                      <PanelToggle
+                        panel="properties"
+                        shown
+                        onToggle={(press) => togglePanel('properties', press, true)}
+                      />
+                    }
+                  />
+                )}
+              </div>
+              {layout.properties === 'strip' && (
+                <PropertiesStrip
+                  project={storeState.document.project}
+                  selected={storeState.selection.features}
+                  selectedParts={storeState.selection.parts}
+                  onOpen={(press) => togglePanel('properties', press)}
+                  toggle={
+                    <PanelToggle
+                      panel="properties"
+                      shown={open === 'properties'}
+                      onToggle={(press) => togglePanel('properties', press, true)}
+                    />
+                  }
                 />
               )}
-            </CanvasHost>
-            <ProblemsPanel
-              project={storeState.document.project}
-              diagnostics={diagnostics}
-              counts={counts}
-              onGoTo={goToDiagnostic}
-              open={problemsOpen}
-              onToggle={() => setProblemsOpen((open) => !open)}
-            />
-          </main>
-          <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
-            {view === 'sheets' ? (
-              <SheetsProperties
-                store={store}
-                project={storeState.document.project}
-                selected={sheetsSelected}
-                toggle={
-                  <PanelToggle
-                    panel="properties"
-                    shown
-                    onToggle={(press) => togglePanel('properties', press, true)}
-                  />
-                }
-              />
-            ) : (
-              <PropertyPanel
-                store={store}
-                project={storeState.document.project}
-                selected={storeState.selection.features}
-                selectedParts={storeState.selection.parts}
-                diagnostics={diagnostics}
-                nextId={nextId}
-                requestDelete={requestDelete}
-                requestDeletePart={requestDeletePart}
-                tools={tools}
-                onTools={changePreferences}
-                drawingPiece={
-                  DRAWING_TOOL_IDS.has(toolId) &&
-                  (drawAs === 'outline' || drawAs === 'stitch-allowance')
-                }
-                sizing={status?.sizing ?? null}
-                toggle={
-                  <PanelToggle
-                    panel="properties"
-                    shown
-                    onToggle={(press) => togglePanel('properties', press, true)}
-                  />
-                }
-              />
-            )}
-          </div>
-          {layout.properties === 'strip' && (
-            <PropertiesStrip
-              project={storeState.document.project}
-              selected={storeState.selection.features}
-              selectedParts={storeState.selection.parts}
-              onOpen={(press) => togglePanel('properties', press)}
-              toggle={
-                <PanelToggle
-                  panel="properties"
-                  shown={open === 'properties'}
-                  onToggle={(press) => togglePanel('properties', press, true)}
-                />
-              }
-            />
-          )}
-        </div>
+            </div>
 
-        <footer className="app-status" data-testid="status-bar">
-          {/*
+            <footer className="app-status" data-testid="status-bar">
+              {/*
           The counts stay put whatever else is being said. A notice used to
           replace them, which was harmless while every notice was a momentary
           refusal — but "select a part first" stands for as long as it is true,
           and hiding how many parts exist while telling the user to pick one is
           the wrong way round.
         */}
-          <span className="status-left">
-            <span data-testid="status-counts">
-              v<span data-testid="app-version">{version ?? '…'}</span>
-              <span className="sep">·</span>
-              <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
-              {t('status.partsCount', { count: storeState.document.project.parts.length })}
-              <span className="sep">·</span>
-              <b data-testid="feature-count">{featureCount}</b>{' '}
-              {t('status.features', { count: featureCount })}
-              <span className="sep">·</span>
-              {/* A part picked by its heading is a selection too (Q29), and says so. */}
-              {storeState.selection.features.size === 0 && storeState.selection.parts.size > 0 ? (
-                <>
-                  <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
-                  {t('status.partsSelected', { count: storeState.selection.parts.size })}
-                </>
-              ) : (
-                <>
-                  <b data-testid="selected-count">{storeState.selection.features.size}</b>{' '}
-                  {t('status.selected')}
-                </>
-              )}
-              {diagnostics.length > 0 && (
-                <>
+              <span className="status-left">
+                <span data-testid="status-counts">
+                  <VersionButton version={version} updates={updates} onCheck={checkUpdates} />
                   <span className="sep">·</span>
-                  <b className="status-error" data-testid="problem-count">
-                    {diagnostics.length}
-                  </b>{' '}
-                  {t('status.problems', { count: diagnostics.length })}
-                </>
-              )}
-              {file.state.path !== null && (
-                <>
+                  <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
+                  {t('status.partsCount', { count: storeState.document.project.parts.length })}
                   <span className="sep">·</span>
-                  <span data-testid="file-path">{fileName(file.state.path)}</span>
-                </>
-              )}
-            </span>
-            {status?.notice !== null && status?.notice !== undefined ? (
-              <span className="status-error" data-testid="tool-notice">
-                {describeProblem(status.notice, t)}
+                  <b data-testid="feature-count">{featureCount}</b>{' '}
+                  {t('status.features', { count: featureCount })}
+                  <span className="sep">·</span>
+                  {/* A part picked by its heading is a selection too (Q29), and says so. */}
+                  {storeState.selection.features.size === 0 &&
+                  storeState.selection.parts.size > 0 ? (
+                    <>
+                      <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
+                      {t('status.partsSelected', { count: storeState.selection.parts.size })}
+                    </>
+                  ) : (
+                    <>
+                      <b data-testid="selected-count">
+                        {storeState.selection.guide === undefined
+                          ? storeState.selection.features.size
+                          : 1}
+                      </b>{' '}
+                      {t('status.selected')}
+                    </>
+                  )}
+                  {diagnostics.length > 0 && (
+                    <>
+                      <span className="sep">·</span>
+                      <b className="status-error" data-testid="problem-count">
+                        {diagnostics.length}
+                      </b>{' '}
+                      {t('status.problems', { count: diagnostics.length })}
+                    </>
+                  )}
+                  {tab.file.path !== null && (
+                    <>
+                      <span className="sep">·</span>
+                      <span data-testid="file-path">{fileName(tab.file.path)}</span>
+                    </>
+                  )}
+                </span>
+                {storeState.resourceLimit !== null ? (
+                  <span className="status-error" data-testid="file-error" role="alert">
+                    {fileErrorText(storeState.resourceLimit, t)}
+                  </span>
+                ) : status?.notice !== null && status?.notice !== undefined ? (
+                  <span className="status-error" data-testid="tool-notice">
+                    {describeProblem(status.notice, t)}
+                  </span>
+                ) : bridgeError !== null || tab.file.error !== null ? (
+                  <span className="status-error" data-testid="file-error">
+                    {bridgeError ?? fileErrorText(tab.file.error, t)}
+                  </span>
+                ) : null}
+                {tab.file.error === null && storeState.resourceLimit === null && (
+                  <WrittenNote written={file.written} />
+                )}
               </span>
-            ) : bridgeError !== null || file.state.error !== null ? (
-              <span className="status-error" data-testid="file-error">
-                {bridgeError ?? fileErrorText(file.state.error, t)}
-              </span>
-            ) : null}
-          </span>
 
-          {/* Always all three (R-04): whatever shape a panel is in, its chip
+              {/* Always all three (R-04): whatever shape a panel is in, its chip
               reaches it, so nothing is ever out of reach. */}
-          <span className="status-panels" role="group" aria-label={t('status.panels')}>
-            <PanelChip
-              testId="toggle-parts"
-              icon={CHIP_ICON.parts}
-              label={t('status.parts')}
-              command="toggleParts"
-              pressed={layout.parts === 'docked' || open === 'parts'}
-              hiding={layout.parts !== 'docked' && open !== 'parts'}
-              onPress={(press) => togglePanel('parts', press)}
-            />
-            <PanelChip
-              testId="toggle-focus"
-              icon={CHIP_ICON.focus}
-              label={t('status.focus')}
-              command="focusMode"
-              pressed={focus}
-              hiding={focus}
-              onPress={() => setFocus((on) => !on)}
-            />
-            <PanelChip
-              testId="toggle-properties"
-              icon={CHIP_ICON.properties}
-              label={t('status.properties')}
-              command="toggleProperties"
-              pressed={layout.properties === 'docked' || open === 'properties'}
-              hiding={layout.properties !== 'docked' && open !== 'properties'}
-              onPress={(press) => togglePanel('properties', press)}
-            />
-          </span>
+              <span className="status-panels" role="group" aria-label={t('status.panels')}>
+                <PanelChip
+                  testId="toggle-parts"
+                  icon={CHIP_ICON.parts}
+                  label={t('status.parts')}
+                  command="toggleParts"
+                  pressed={layout.parts === 'docked' || open === 'parts'}
+                  hiding={layout.parts !== 'docked' && open !== 'parts'}
+                  onPress={(press) => togglePanel('parts', press)}
+                />
+                <PanelChip
+                  testId="toggle-focus"
+                  icon={CHIP_ICON.focus}
+                  label={t('status.focus')}
+                  command="focusMode"
+                  pressed={focus}
+                  hiding={focus}
+                  onPress={() => setFocus((on) => !on)}
+                />
+                <PanelChip
+                  testId="toggle-properties"
+                  icon={CHIP_ICON.properties}
+                  label={t('status.properties')}
+                  command="toggleProperties"
+                  pressed={layout.properties === 'docked' || open === 'properties'}
+                  hiding={layout.properties !== 'docked' && open !== 'properties'}
+                  onPress={(press) => togglePanel('properties', press)}
+                />
+              </span>
 
-          <span className="status-right" data-testid="cursor-readout">
-            {view === 'sheets'
-              ? status?.sheet === null || status?.sheet === undefined
-                ? '—'
-                : t('status.sheetOf', status.sheet)
-              : status === null || status.cursorMm === null
-                ? '— , —'
-                : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
-          </span>
-        </footer>
+              <span className="status-right" data-testid="cursor-readout">
+                {view === 'sheets' ? (
+                  status?.sheet === null || status?.sheet === undefined ? (
+                    '—'
+                  ) : (
+                    t('status.sheetOf', status.sheet)
+                  )
+                ) : (
+                  <CursorReadout cursor={cursor} />
+                )}
+              </span>
+            </footer>
+          </>
+        )}
 
         {/* A menu about nothing is not shown. */}
         {contextMenu !== null && !isEmptySelection(storeState.selection) && (
@@ -1261,10 +1878,137 @@ export function App({
             }
             onClose={() => setSettings(null)}
             nextId={nextId}
+            updates={updates}
+            onCheckUpdates={checkUpdates}
           />
         )}
 
-        {aboutOpen && <AboutDialog version={version} onClose={() => setAboutOpen(false)} />}
+        {aboutOpen && (
+          <AboutDialog version={version} updates={updates} onClose={() => setAboutOpen(false)} />
+        )}
+
+        {templateList !== null && (
+          <TemplateDialog
+            templates={templateList}
+            sort={preferences.templateSort}
+            show={preferences.templateShow}
+            onOrder={(templateSort, templateShow) =>
+              changePreferences({ templateSort, templateShow })
+            }
+            pinnedFolded={preferences.templatePinnedFolded}
+            onFoldPinned={(templatePinnedFolded) => changePreferences({ templatePinnedFolded })}
+            actions={templateActions}
+            onClose={() => setTemplateList(null)}
+          />
+        )}
+
+        {savingTemplate !== null && (
+          <SaveTemplateDialog
+            initialName={tabName(savingTemplate, t)}
+            onSave={async (name, replace) => {
+              const outcome = await file
+                .saveAsTemplate(savingTemplate, name, replace)
+                .catch((error: unknown) => ({ kind: 'failed' as const, error }));
+              if (outcome.kind === 'failed') {
+                return { said: fileErrorText(outcome.error, t), taken: false };
+              }
+              if (outcome.kind === 'saved') {
+                setSavingTemplate(null);
+                return null;
+              }
+              if (outcome.kind === 'exists') {
+                return { said: t('templates.exists', { name: outcome.name }), taken: true };
+              }
+              return { said: t('templates.invalid', { name: name.trim() }), taken: false };
+            }}
+            onClose={() => setSavingTemplate(null)}
+          />
+        )}
+
+        {notice !== null && (
+          <MessageDialog title={notice.title} testId="file-notice" onClose={() => setNotice(null)}>
+            <p>{notice.text}</p>
+          </MessageDialog>
+        )}
+
+        {tabMenuAt !== null && menuTab !== undefined && (
+          <TabContextMenu
+            key={`${tabMenuAt.id}:${String(tabMenuAt.x)},${String(tabMenuAt.y)}`}
+            tab={menuTab}
+            at={tabMenuAt}
+            othersOpen={openTabs.length > 1}
+            actions={{
+              rename: (how) => {
+                tabs.activate(menuTab.id);
+                setRenaming(how ?? 'pointer');
+              },
+              save: () => void file.save(menuTab),
+              saveAs: () => void file.save(menuTab, true),
+              saveAsTemplate: () => setSavingTemplate(menuTab),
+              reload: () =>
+                void confirmDiscard('reload', menuTab).then((proceed) =>
+                  proceed ? file.reload(menuTab) : undefined,
+                ),
+              duplicate: () => file.duplicate(menuTab),
+              showInFolder: () => {
+                if (menuTab.file.path !== null) {
+                  void getPlatformHost()
+                    .showInFolder(menuTab.file.path)
+                    .catch(() => undefined);
+                }
+              },
+              copyPath: () => {
+                if (menuTab.file.path !== null) {
+                  void navigator.clipboard.writeText(menuTab.file.path).catch(() => undefined);
+                }
+              },
+              trash: () => setTrashing(menuTab),
+              close: () => void closeTab(menuTab.id),
+              closeOthers: () =>
+                void (async () => {
+                  for (const other of tabs.tabs.filter((each) => each !== menuTab)) {
+                    // Each asks about its own unsaved work; Cancel keeps it and goes on.
+                    await closeTab(other.id);
+                  }
+                })(),
+            }}
+            onClose={() => setTabMenuAt(null)}
+          />
+        )}
+
+        {trashing !== null && trashing.file.path !== null && (
+          <MessageDialog
+            title={t('tabMenu.trashTitle', { name: tabName(trashing, t) })}
+            testId="trash-dialog"
+            onClose={() => setTrashing(null)}
+            confirm={{
+              label: t('tabMenu.trashConfirm'),
+              danger: true,
+              onConfirm: () => {
+                const doomed = trashing;
+                const path = doomed.file.path;
+                setTrashing(null);
+                if (path === null) return;
+                void getPlatformHost()
+                  .trashProjectFile(path)
+                  // Its file is gone: the tab goes without a question.
+                  .then(() => tabs.close(doomed.id))
+                  .catch((error: unknown) =>
+                    setNotice({
+                      title: t('tabMenu.trashTitle', { name: tabName(doomed, t) }),
+                      text: t('tabMenu.trashFailed', { reason: fileErrorText(error, t) }),
+                    }),
+                  );
+              },
+            }}
+          >
+            <p>
+              {t(isDirty(trashing) ? 'tabMenu.trashBodyUnsaved' : 'tabMenu.trashBody', {
+                file: trashing.file.path,
+              })}
+            </p>
+          </MessageDialog>
+        )}
 
         {printing && (
           <PrintPreview
@@ -1287,26 +2031,60 @@ export function App({
           />
         )}
 
+        {exporting !== null && (
+          <ExportDialog
+            project={storeState.document.project}
+            format={exporting}
+            roles={exportRoles}
+            onRoles={(roles) => changePreferences({ exportRoles: roles })}
+            onExport={() => void exportDrawing(exporting)}
+            onCancel={() => setExporting(null)}
+          />
+        )}
+
         {exportNotice !== null && (
           <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />
         )}
 
         {recovery.offer !== null && (
           <RecoveryDialog
-            projectName={recovery.offer.project.name}
+            projectName={recovery.offer.project?.name ?? ''}
+            canRecover={recovery.error === null}
             savedAt={recovery.offer.savedAt}
+            error={recovery.error === null ? null : fileErrorText(recovery.error, t)}
             onRecover={() => void recovery.recover()}
             onDecline={() => void recovery.decline()}
           />
         )}
 
+        {pendingAll !== null && (
+          <UnsavedProjectsDialog
+            names={pendingAll.tabs.map((each) => tabName(each, t))}
+            onSaveAll={() => {
+              const unsaved = pendingAll.tabs;
+              setPendingAll(null);
+              void saveAllThenClose(unsaved).then((saved) => pendingAll.resolve(saved));
+            }}
+            onDiscard={() => {
+              setPendingAll(null);
+              pendingAll.resolve(true);
+            }}
+            onCancel={() => {
+              setPendingAll(null);
+              pendingAll.resolve(false);
+            }}
+          />
+        )}
+
         {pendingDiscard !== null && (
           <UnsavedChangesDialog
-            projectName={storeState.document.project.name}
+            projectName={tabName(pendingDiscard.tab, t)}
             action={pendingDiscard.action}
             // Saving an untitled project asks where; backing out of that asks
             // nothing further and changes nothing.
-            onSave={() => void file.save().then((saved) => pendingDiscard.resolve(saved))}
+            onSave={() =>
+              void file.save(pendingDiscard.tab).then((saved) => pendingDiscard.resolve(saved))
+            }
             onDiscard={() => pendingDiscard.resolve(true)}
             onCancel={() => pendingDiscard.resolve(false)}
           />
@@ -1324,6 +2102,32 @@ export function App({
     </I18nProvider>
   );
 }
+
+/**
+ * Where a tab's board is looking (8.12), for the next start: its centre in
+ * millimetres and its zoom. A tab never shown keeps what it was restored to.
+ */
+/** Where the pointer is on the board, as the status bar says it: the one thing a move renders. */
+function CursorReadout({ cursor }: { cursor: PointerValue<Vec2 | null> }) {
+  const at = usePointerValue(cursor);
+  return at === null ? '— , —' : `${formatNumber(at.x, 2)} , ${formatMm(at.y)}`;
+}
+
+function cameraOf(tab: ProjectTab): TabCamera | null {
+  const { design, fitted, restore } = tab.cameras;
+  if (!fitted) return restore;
+  return { x: design.centreMm.x, y: design.centreMm.y, percent: zoomPercent(design.toView()) };
+}
+
+/** The window's keys that need no project: the ways in, and the app's own (8.12). */
+const WITHOUT_PROJECT: ReadonlySet<CommandId> = new Set<CommandId>([
+  'newProject',
+  'openProject',
+  'settings',
+  'keyboardShortcuts',
+  'help',
+  'reopenTab',
+]);
 
 interface PendingDelete {
   readonly ids: readonly string[];

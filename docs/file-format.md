@@ -67,7 +67,7 @@ ordering.
 
 ### 3.1 Shape
 
-Format version 9, as the writer emits it (key order shown for reading; the writer sorts keys):
+Format version 10, as the writer emits it (key order shown for reading; the writer sorts keys):
 
 ```jsonc
 {
@@ -75,6 +75,9 @@ Format version 9, as the writer emits it (key order shown for reading; the write
   "name": "Bifold Wallet",
   "settings": { "gridSpacingMm": 1, "defaultStitchInsetMm": 3.5, "defaultIronPitchMm": 3.85,
                 "paper": "A4", "orientation": "portrait" },
+  "guides": [
+    { "id": "01JBQG…", "origin": { "x": 12, "y": 30 }, "angleRad": 0 }
+  ],
   "parts": [
     {
       "id": "01JBQ9…",
@@ -122,8 +125,8 @@ version 4), the `text-label` kind and its `text` source (4.11b, format version 5
 (4.8a, format version 6), the **fold-tracking mirror axis** (4.8b, format version 7 — the first
 migration that rewrites data rather than passing it through), and the `measurement` kind with its
 `measurement` source of two anchor references (4.10a, format version 8). The paper a project prints
-on followed in 5.5, as version 9 (§4.1a). Materials, guides and a per-part placement transform are
-not in the format.
+on followed in 5.5, as version 9 (§4.1a). Construction guides followed in 3.10, as version 10
+(§4.1b). Materials and a per-part placement transform are not in the format.
 
 A **fold-tracked mirror** stores *which fold*, never where that fold happens to be — the first
 **references** edge in the format. Move the fold in a later session and the counterpart moves with
@@ -149,7 +152,7 @@ of its ~120 hole positions. Three parameter blocks regenerate all of it.
 - **Numbers** are written with at most 6 decimal places. Combined with the 1e-4 mm input
   quantisation ([geometry.md](geometry.md) §3.3), this makes saving an unmodified file
   byte-identical and makes `.lcp` diffs readable.
-- **Except a stored path's segments, which are written exactly** (JavaScript's shortest round-trip
+- **Except a stored path's segments and construction guides, which are written exactly** (JavaScript's shortest round-trip
   form, so the same doubles come back).
   - A path, drawn or frozen, is geometry rather than a typed parameter, and it stores an arc as a
     centre, a radius and two angles.
@@ -220,6 +223,43 @@ vocabulary lives in the domain at all: `ProjectSettings` has to name it, and `do
 **Margins and the verification strip are deliberately not stored.** They are constants in
 `packages/export`, they are already correct, and changing them has print-accuracy consequences — a
 setting nobody has asked for is a setting that can be got wrong.
+
+### 4.1b Version 10 — construction guides
+
+The optional project-level `guides` array holds `{ id, origin: { x, y }, angleRad }`. An absent
+array means no guides. Guides are infinite, non-printing construction lines, separate from a
+part's printed marking lines. Coordinates follow the ordinary millimetre range and input
+quantisation; angles are finite radians, counter-clockwise from +X. Guide ids are unique and do
+not collide with feature ids.
+
+The v9→v10 migration is an identity: older projects had no guides, and none are invented on open.
+The version increases because guides change what the board draws (§4.5 rule 2), even though
+export output is unchanged. Guide parameters are written exactly so saving does not tilt a
+vertical guide or change a diagonal snap. The loose schema preserves unknown fields on a guide
+and its origin, and in-place edits preserve them too.
+
+### 4.1c Version 11 — a row of holes
+
+A feature of kind `hole-row`, always `derived` from a marking line with the op
+`{ "type": "hole-row", "pitchMm": 25, "radiusMm": 2 }` (roadmap 4.14,
+[domain-model.md](domain-model.md) §3.6a). The pitch and the radius are stored; the holes are not
+(§3.3), so a row's five holes are placed again on every load. Both numbers are checked for range by
+evaluation, which names the row, rather than by the schema, as a hole set's pitch is.
+
+The v10→v11 migration is an identity: no older project has a row. The version increases because a
+row is cut and printed (§4.5 rule 2): an older build would not know the kind, and refuses the file
+rather than opening it without the holes. `fixtures/format/v11.lcp` holds a belt end with its row.
+
+### 4.1d Version 12 — a piece's overall size
+
+A dimension's end may be `{ "kind": "extent", "featureId": "…", "x": "min" | "max", "y": "min" |
+"max" }`: a corner of the box the named feature's outline fills (Q15,
+[domain-model.md](domain-model.md) §3.7). Which corner is stored; where it is, and so the size, is
+read from the outline on every load (§3.3).
+
+The v11→v12 migration is an identity: every older dimension is between anchors, which are
+unchanged. The version increases because an older build would not know the end and would refuse
+the dimension. `fixtures/format/v12.lcp` adds a belt end's overall width and height to v11's.
 
 ### 4.2 The rules
 
@@ -317,16 +357,18 @@ and everything past the loader assumes a sound graph
 
 - Parse failures produce a **path-qualified message** (`parts[2].features[0].source.distanceMm:
   expected number, got string`), not "invalid file".
-- Referential integrity is checked after schema parsing: every `fromId`, `stitchLineId`,
-  `materialId`, and `ironPresetId` must resolve. A dangling reference becomes a
-  `BROKEN_DERIVATION` diagnostic, not a load failure — the user should get their file back with a
-  problem flagged, not a refusal.
-- Cycle detection runs on load. A cyclic file (only reachable via hand-editing or a bug) loads with
-  the offending edges severed and an error diagnostic.
+- A part's structure is checked the same way (S5, S6): a part with two outlines, or an outline that
+  encloses nothing, refuses the file. Only hand-editing or a bug can make such a file.
 - Numeric sanity: reject `NaN`, `Infinity`, and coordinates outside ±100 000 mm.
 
 **Principle: recover where recovery is unambiguous; refuse where it is not.** A user's project file
 is hours of their work.
+
+Operational work limits are checked separately from the schemas: ZIP expansion and JSON/project
+counts are bounded before expensive preparation, with a typed `ResourceLimitError` rather than a
+partially opened project. Schema-valid files beyond the capacity limits are refused without
+changing their bytes. The rationale, compatibility implications and recovery behavior are in
+[Resource limits](resource-limits.md).
 
 ## 6. What lives outside the file
 
@@ -340,8 +382,9 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
     └── parts/*.lcpart    saved part templates
 ```
 
-Only `preferences.json` exists so far (8.2). It is written by the main process alone, atomically,
-and read once at start-up:
+`preferences.json` (8.2) and `printers.json` (7.5) exist so far. The first is written by the main process alone, atomically,
+and read once at start-up. A quit waits for a change still being written — one made as the window
+closes, such as the open tabs — and logs one that fails, the file before it still whole:
 
 ```json
 {
@@ -357,16 +400,35 @@ and read once at start-up:
   "stitchMarginMm": 3.5,
   "leatherThicknessMm": null,
   "keyBindings": { "save": [{ "code": "F5" }] },
-  "recentFiles": ["/home/maker/Patterns/Wallet.lcp"]
+  "exportRoles": ["cut", "hardware"],
+  "recentFiles": ["/home/maker/Patterns/Wallet.lcp"],
+  "session": { "projects": ["/home/maker/Patterns/Wallet.lcp"], "active": "/home/maker/Patterns/Wallet.lcp" }
 }
 ```
+
+`exportRoles` is the layer roles an SVG or DXF export last kept (6.4), by the domain's role names;
+`null` is every role, and an empty list is a choice too. The export dialog names the intent from
+them, so no intent is stored. It is the app's, never the project's: a `.lcp` records no export.
 
 Unlike a project, **nothing in it is worth refusing to start over**: a damaged file, a wrong type
 or an unknown field falls back field by field to the defaults, and a newer version's extra fields
 are ignored. `recentFiles` holds at most ten absolute `.lcp` paths, most recent first, and only
 paths the maker chose in the app's own dialogs — a recent project is granted because it is on
 this list, so the list is never a way to reach any other file (`PathGrants`, 8.6b). A project that
-has gone is taken off the list when it is chosen. The rail's collapse applies to a wide window
+has gone is taken off the list when it is chosen. `session` is the tabs open when the app last
+closed (8.12), in the strip's order, and the index of the one in front: each a project's `path`, a
+`kept` copy's name, or both, with its `view` and its `camera` (centre in millimetres, zoom in
+percent). A start opens them again, the files still on disk. By the same rule it holds only paths
+chosen in the app's dialogs, at most thirty. A kept copy is unsaved work written as the window
+closed with *Keep unsaved projects* on: an ordinary `.lcp` named for its tab in `unsaved/` beside
+this file, let go at the next start once nothing names it. `pinnedFiles` are the recent projects
+pinned to the top of the list, in the order pinned, kept by *Clear list*. The maker's project
+templates (8.14) are ordinary `.lcp` files in `templates/` beside this file, each named as the
+maker named it; the ones that ship are inside the app. `templates/templates.json` keeps what the
+app knows about each template beyond its file, by its id (`builtin:<id>` or `mine:<name>`): the
+maker's `description` and `tags`, whether it is `pinned`, and `usedAt`, when a project was last made
+from it. A damaged one is read as empty. `templateSort` and `templateShow` here are how the picker
+was last ordered and filtered. The rail's collapse applies to a wide window
 only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`
 and `propertiesFolded` are the panels the maker folded to their strips (U.5), where the window has
 room to dock them: a narrow window folds a panel by itself and never writes either, and focus mode
@@ -416,6 +478,18 @@ are dropped, the later of two first; the rest is kept. A file written before U.1
 sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads
 the same in every language. What the maker typed, names included, is theirs and is kept as typed.
 
+**`printers.json`** (7.5) holds each calibrated printer's scale correction, by its CUPS queue name:
+
+```json
+{ "version": 1, "corrections": { "Brother_HL_L2442DW": { "x": 1.00503, "y": 0.99875 } } }
+```
+
+`x` is across the paper and `y` along it ([printing.md](printing.md) §8.2). Only the main process
+reads or writes it, atomically, and a correction counts as stored once it is on disk. A correction
+scales every sheet sent to its printer, so one that is not two numbers within ±2 % of 1 is dropped
+rather than guessed at, and a damaged file is no correction at all. It describes the maker's
+printer, never their pattern, so nothing of it reaches a `.lcp`.
+
 What the app writes about *itself* is state, not configuration, and goes in
 `$XDG_STATE_HOME/leathercad/` (falling back to `~/.local/state/`), per
 [ADR 0015](adr/0015-local-logs-and-crash-dumps.md):
@@ -438,28 +512,40 @@ size — belongs in preferences.
 
 *As built in 5.3b.* See [the crash-recovery design](superpowers/specs/2026-09-23-crash-recovery-design.md).
 
-- **What and when.** While the project has unsaved changes, it is written as an ordinary `.lcp` at
-  most once a minute. It is never written in the middle of a drag, and never again until it
-  changes.
-- **Where.** `stateDirectory()/recovery/<pid>-<start>.lcp`: one file per session, never beside
-  the project, and never under a project's name. Two running copies of the app never touch each
-  other's file.
+- **What and when.** While a tab's project has unsaved changes, it is written as an ordinary
+  `.lcp` at most once a minute — every such tab, in front or not (8.13). It is never written in the
+  middle of a drag, and never again until it changes.
+- **Where.** `stateDirectory()/recovery/<pid>-<start>-<tab>.lcp`: one file per tab of a session,
+  the tab's ULID naming it, never beside the project, and never under a project's name. Two
+  running copies of the app never touch each other's file. 1.5 wrote one per session,
+  `<pid>-<start>.lcp`; such a copy is still found and offered.
 - **How.** Every write goes through a temporary file and a `rename()` over the target. `rename`
   within a filesystem is atomic, so a crash mid-write leaves the previous copy whole. **The same
-  applies to normal saves**: never write in place over the user's project.
+  applies to normal saves**: never write in place over the user's project. The data is flushed
+  (`fsync`) before the rename and the folder after it (not on Windows, which cannot and need not),
+  so a power cut cannot leave the new name on an empty file; a symbolic link is written through to
+  its target, and the file keeps its permission bits (Q35). A save writes the document from before
+  a drag still under way, never the drag's preview (Q36).
+- **Made off the window's thread.** A save's, a copy's or a kept copy's bytes are made in a worker
+  (PERF-009), from the document as it was when the save was asked for, which the worker is sent a
+  copy of. The worker answers in the order it was asked, so writes still reach the main process in
+  that order; a copy whose tab was saved, reloaded or closed while it was made is not written; and a
+  window that cannot start the worker makes the bytes itself, so a save is never lost to it.
 - **On startup.** A copy whose process is no longer running belongs to a session that did not end
-  cleanly, and the newest one that loads is offered.
+  cleanly. Each that loads is offered, newest first, one after another, each into a tab of its
+  own.
   - *Recover* opens it **untitled and unsaved**, so it can never be saved over the file it came
     from.
   - *Not now* keeps it until the next clean exit.
   - A copy that does not load is renamed `.corrupt` and never offered again.
-- **Cleanup.** The copy is deleted when the project is clean again (saved, new or opened) and at a
-  clean exit. A renderer crash keeps it through the quit that follows.
+- **Cleanup.** A tab's copy is deleted when its project is clean again (saved or reloaded), when
+  the tab is closed, and at a clean exit. A renderer crash keeps it through the quit that follows.
   - **The invariant:** saving never leaves a stale copy that a later start would offer as newer
     unsaved work.
-  - This session's writes and clears run in the order they were asked, so a save that lands while a
-    copy is being written clears it once the write is done.
-  - A write that lands after a clean exit removes itself.
+  - This session's writes, clears and take-overs run in the order they were asked, so a save that
+    lands while a copy is being written clears it once the write is done, and *Recover* lets the old
+    copy go only once the tab's own copy is written.
+  - A clean exit waits for all of them, then deletes; a write that lands after it removes itself.
 
 ## 8. Companion formats
 
@@ -488,5 +574,5 @@ place.
 7. **Unknown-field preservation.** A document with extra properties survives a load/save cycle,
    byte for byte, at any object in it. It also survives the commands that copy the objects they
    edit (`unknownFields.test.ts` in `persist` and `apps/desktop`).
-8. **Referential integrity.** A dangling `fromId` loads with a `BROKEN_DERIVATION` diagnostic rather
-   than throwing.
+8. **Referential integrity.** A dangling reference or a cycle is refused with an
+   `InvalidProjectFileError` naming the feature, never loaded half-broken and never a crash.

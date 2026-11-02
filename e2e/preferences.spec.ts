@@ -1,12 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
-import { fromProjectMenu } from './projectMenu.js';
+import { drawAPanel, openApp } from './launchApp.js';
+import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -15,31 +15,9 @@ import { resizeWindow } from './windowSize.js';
  * next, which is what a restart is.
  */
 
-async function launch(
-  configHome: string,
-  env: Readonly<Record<string, string>> = {},
-): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome, ...env } });
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  // The frame is sized for a wide rail, so its remembered state shows.
-  await app.evaluate(({ BrowserWindow }) => {
-    BrowserWindow.getAllWindows()[0]?.setSize(1400, 860);
-  });
-  return { app, window };
-}
-
-async function drawAPanel(window: Page): Promise<void> {
-  await window.getByTestId('tool-rectangle').click();
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  await window.mouse.move(box.x + 150, box.y + 150);
-  await window.mouse.down();
-  await window.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
-  await window.mouse.up();
-  await expect(window.getByTestId('part-count')).toHaveText('1');
-}
+// The frame is sized for a wide rail, so its remembered state shows.
+const launch = (configHome: string, env: Readonly<Record<string, string>> = {}) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome, ...env }, size: [1400, 860] });
 
 /** The names under the Project menu's *Recent projects* (8.7), as it shows them now. */
 async function recentNames(window: Page): Promise<string[]> {
@@ -154,7 +132,7 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
     await drawAPanel(first.window);
-    await first.window.keyboard.press('Control+s');
+    await first.window.keyboard.press('ControlOrMeta+s');
     await expect(first.window.getByTestId('file-path')).toContainText('Wallet v1.2');
     await expect.poll(() => recentNames(first.window)).toEqual(['Wallet v1.2']);
   } finally {
@@ -163,16 +141,19 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
 
   const second = await launch(configHome);
   try {
-    // Chosen from the menu, not a dialog: the main process grants the path
+    // Its tab came back with the restart (8.12); closed, the project is
+    // chosen from the menu, not a dialog: the main process grants the path
     // because it is on its own list.
-    await expect(second.window.getByTestId('part-count')).toHaveText('0');
+    await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await closeActiveTab(second.window);
+    await expect(second.window.getByTestId('start-screen')).toBeVisible();
     await second.window.getByTestId('project-menu').click();
     await second.window.getByRole('menuitem', { name: /Wallet v1\.2/ }).click();
 
     await expect(second.window.getByTestId('part-count')).toHaveText('1');
     await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
     // Saved back where it came from, without a dialog: the grant covers it.
-    await second.window.keyboard.press('Control+s');
+    await second.window.keyboard.press('ControlOrMeta+s');
     await expect(second.window.getByTestId('file-error')).toHaveCount(0);
   } finally {
     await closeApp(second.app);
@@ -196,12 +177,12 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
     await window.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
 
-    await window.keyboard.press('Control+,');
+    await window.keyboard.press('ControlOrMeta+,');
     await expect(window.getByTestId('settings-pane-general')).toBeVisible();
     await window.getByTestId('settings-close').click();
     await expect(dialog).toHaveCount(0);
 
-    await window.keyboard.press('Control+/');
+    await window.keyboard.press('ControlOrMeta+/');
     await expect(window.getByTestId('settings-pane-shortcuts')).toContainText('Export PDF');
     await expect(window.getByTestId('settings-pane-shortcuts')).toContainText('Rectangle');
     await window.keyboard.press('Escape');
@@ -215,8 +196,8 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
     const name = window.getByTestId('project-name-input');
     await name.fill('Wallet');
     await name.press('Shift+?');
-    await name.press('Control+/');
-    await name.press('Control+,');
+    await name.press('ControlOrMeta+/');
+    await name.press('ControlOrMeta+,');
     await expect(name).toHaveValue('Wallet?');
     await expect(dialog).toHaveCount(0);
   } finally {
@@ -245,7 +226,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
     await first.app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    await first.window.keyboard.press('Control+s');
+    await first.window.keyboard.press('ControlOrMeta+s');
     await expect.poll(() => recentNames(first.window)).toEqual(['Strap']);
   } finally {
     await closeApp(first.app);
@@ -274,7 +255,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
 test('hiding a part lets go of what was selected in it (Q14)', async () => {
   const { window, app } = await launch(mkdtempSync(join(tmpdir(), 'leathercad-e2e-hide-')));
   try {
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await window.getByTestId('tool-select').click();
     await window
       .getByTestId('parts-list')
@@ -330,10 +311,11 @@ test('the interface language follows the system, or keeps the one chosen, at onc
     await choice.selectOption('en');
     await expect(choice).toHaveValue('en');
     await expect(first.window.getByTestId('language-unavailable')).toHaveCount(0);
+    // The file lands in the background, and until it does there is none: a
+    // poll whose read throws ends at once instead of asking again.
+    const stored = join(configHome, 'leathercad', 'preferences.json');
     await expect
-      .poll(() =>
-        JSON.parse(readFileSync(join(configHome, 'leathercad', 'preferences.json'), 'utf8')),
-      )
+      .poll(() => (existsSync(stored) ? JSON.parse(readFileSync(stored, 'utf8')) : {}))
       .toMatchObject({ language: 'en' });
   } finally {
     await closeApp(first.app);

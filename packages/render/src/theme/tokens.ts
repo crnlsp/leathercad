@@ -45,7 +45,20 @@ export const ELEVATION = {
  * bounces is one you stop trusting; one that never acknowledges a press feels
  * broken. `prefers-reduced-motion` turns it off in the stylesheet.
  */
-export const MOTION = '120ms ease-out';
+const MOTION_MS = 120;
+const MOTION_EASING = 'ease-out';
+export const MOTION = `${String(MOTION_MS)}ms ${MOTION_EASING}`;
+
+/** The same, for the one fade a script starts: the board, as a project opens. */
+export const MOTION_TIMING = { duration: MOTION_MS, easing: MOTION_EASING } as const;
+
+/**
+ * How long a finished write's words take to settle from lit to the status
+ * bar's own colour. Longer than MOTION because nothing waits on it: it marks
+ * an operation that is already done, and must last long enough to be noticed
+ * by eyes that were on the board. Colour only, like MOTION.
+ */
+export const ACKNOWLEDGE = '1200ms ease-in';
 
 export type Density = 'comfortable' | 'compact';
 

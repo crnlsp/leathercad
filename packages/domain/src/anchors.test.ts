@@ -1,4 +1,13 @@
-import { PathOps, uniformRadii } from '@leathercad/geometry';
+import { EPS_POINT } from '@leathercad/core';
+import {
+  PathOps,
+  SegmentOps,
+  fittedRadii,
+  uniformRadii,
+  type CornerRadii,
+  type Vec2,
+} from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { anchorsOf, cornerDistances } from './anchors.js';
@@ -107,6 +116,121 @@ describe('anchors', () => {
     const shape = rectShape(8);
     const anchors = anchorsOf({ kind: 'shape', shape }, pathOf(shape));
     for (let i = 1; i < anchors.length; i++) expect(anchors[i]!).toBeGreaterThan(anchors[i - 1]!);
+  });
+});
+
+describe('a rectangle keeps its four corners at any radius (ADR 0010)', () => {
+  /**
+   * Where each corner is, from the parameters alone: the middle of its
+   * rounding, or the point itself when it is sharp. Unturned, at the origin.
+   */
+  function cornerPlaces(width: number, height: number, radii: CornerRadii): Vec2[] {
+    const r = fittedRadii(radii, width, height);
+    const middle = 1 - Math.SQRT1_2;
+    return [
+      { x: width - r.bottomRight * middle, y: r.bottomRight * middle },
+      { x: width - r.topRight * middle, y: height - r.topRight * middle },
+      { x: r.topLeft * middle, y: height - r.topLeft * middle },
+      { x: r.bottomLeft * middle, y: r.bottomLeft * middle },
+    ];
+  }
+
+  function anchorPlaces(width: number, height: number, radii: CornerRadii): Vec2[] {
+    const shape = { ...rectShape(0, width, height), radii };
+    const path = pathOf(shape);
+    const measure = PathOps.measure(path);
+    return anchorsOf({ kind: 'shape', shape }, path).map((at) => {
+      const found = measure.locate(at);
+      return SegmentOps.pointAt(path.segments[found.segmentIndex]!, found.t);
+    });
+  }
+
+  const size = fc.double({ min: 1, max: 400, noNaN: true });
+  /** A corner's radius as a share of the shorter side: none, all of it, or between. */
+  const share = fc.oneof(
+    fc.constant(0),
+    fc.constant(0.5),
+    fc.double({ min: 0, max: 0.5, noNaN: true }),
+    // More than fits, which `roundedRect` shrinks to what does.
+    fc.double({ min: 0.5, max: 2, noNaN: true }),
+  );
+
+  it('names each corner by its place, from no rounding up to a full one', () => {
+    fc.assert(
+      fc.property(size, size, fc.tuple(share, share, share, share), (width, height, shares) => {
+        const shorter = Math.min(width, height);
+        const radii: CornerRadii = {
+          bottomRight: shares[0] * shorter,
+          topRight: shares[1] * shorter,
+          topLeft: shares[2] * shorter,
+          bottomLeft: shares[3] * shorter,
+        };
+        const found = anchorPlaces(width, height, radii);
+        const expected = cornerPlaces(width, height, radii);
+        // The same point, by the model's own measure of one.
+        return (
+          found.length === 4 &&
+          found.every((p, k) => Math.hypot(p.x - expected[k]!.x, p.y - expected[k]!.y) <= EPS_POINT)
+        );
+      }),
+    );
+  });
+
+  it('keeps the corners in order along the outline, so a run between two is contiguous', () => {
+    fc.assert(
+      fc.property(size, size, share, (width, height, s) => {
+        const shape = { ...rectShape(s * Math.min(width, height), width, height) };
+        const anchors = anchorsOf({ kind: 'shape', shape }, pathOf(shape));
+        return anchors.every((at, k) => k === 0 || at > anchors[k - 1]!);
+      }),
+    );
+  });
+
+  it('keeps all four on a square rounded all the way to a circle', () => {
+    // Rounded to half its side, a square has no straight left between its
+    // roundings — and still four corners, each the middle of its rounding.
+    const places = anchorPlaces(10, 10, uniformRadii(5));
+    const middle = 5 * (1 - Math.SQRT1_2);
+
+    expect(places).toHaveLength(4);
+    for (const [k, [x, y]] of [
+      [10 - middle, middle],
+      [10 - middle, 10 - middle],
+      [middle, 10 - middle],
+      [middle, middle],
+    ].entries()) {
+      expect(places[k]!.x).toBeCloseTo(x!, 9);
+      expect(places[k]!.y).toBeCloseTo(y!, 9);
+    }
+  });
+
+  it('keeps all four on a strap rounded to a half circle at each end', () => {
+    expect(anchorPlaces(100, 30, uniformRadii(15))).toHaveLength(4);
+  });
+
+  it('keeps a sharp corner where a rounding beside it took the whole side', () => {
+    // The bottom side is all rounding, so the bottom-right corner is sharp
+    // and joins the rounding straight onto the right side — still corner 0.
+    const radii = { bottomLeft: 60, bottomRight: 0, topRight: 0, topLeft: 0 };
+    const places = anchorPlaces(60, 100, radii);
+    const middle = 60 * (1 - Math.SQRT1_2);
+
+    expect(places.map((p) => [p.x, p.y])).toEqual([
+      [60, 0],
+      [60, 100],
+      [0, 100],
+      [expect.closeTo(middle, 9), expect.closeTo(middle, 9)],
+    ]);
+  });
+
+  it('runs between the same corners when the radius grows to a full rounding', () => {
+    // Right side, top and left side, at 8 mm and with the ends rounded right
+    // round: the run never jumps to a different stretch of the outline.
+    const rounded = runLength(30, 0, 3);
+    const sharp = runLength(0, 0, 3);
+
+    expect(rounded).toBeGreaterThan(0);
+    expect(Math.abs(rounded - sharp)).toBeLessThan(4 * 30);
   });
 });
 

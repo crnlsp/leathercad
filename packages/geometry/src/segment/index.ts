@@ -8,7 +8,7 @@ import * as CubicOps from './cubic.js';
 import * as LineOps from './line.js';
 import type { CubicSegment, Segment } from './types.js';
 
-export type { ArcSegment, CubicSegment, LineSegment, Segment, SegmentKind } from './types.js';
+export type { ArcSegment, CubicSegment, LineSegment, Segment } from './types.js';
 
 export { FULL_TURN, arc, cubic, isArc, isCubic, isLine, line, quadraticToCubic } from './types.js';
 

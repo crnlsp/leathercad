@@ -12,7 +12,8 @@ holes. Its defining property is its **pitch**.
 **Pitch** — The centre-to-centre distance between adjacent teeth on a pricking iron, in mm. Common
 values: 2.7, 3.0, 3.38, 3.85, 4.0, 5.0 mm. Some makers label irons in **SPI** (stitches per inch);
 3.38 mm ≈ 7.5 SPI, 3.85 mm ≈ 6.6 SPI. The app stores pitch in mm. *Do not call this "spacing"
-without qualification* — see below.
+without qualification* — see below. A **row of holes** has a pitch too, in the same sense: the
+nominal centre-to-centre distance asked for, chosen by the maker rather than read off an iron.
 
 **Stitch spacing** — Used in this codebase to mean the *actual achieved* centre-to-centre distance
 after distributing holes along a path, which usually differs slightly from the nominal iron pitch
@@ -58,6 +59,12 @@ zero-radius line.
 **Marking line** — A non-cut, non-stitch guide printed on the template: glue-area boundaries, logo
 placement, alignment references.
 
+**Row of holes** — Holes punched along a marking line at a **pitch**, for a belt's adjustment holes,
+rivets along a strap, lacing or decoration: placed as a stitch hole set's are, and each one a round
+hole of a true diameter, like a hardware hole. Not a stitch hole set, whose holes are on a stitch
+line and pricked by an iron. Its pitch is the maker's, not an iron's; what it achieves is its
+**spacing**.
+
 **Alignment mark** — A mark at the same place on two pieces that are sewn together — at a hole, a
 corner or a point along the seam — so they line up when glued and stitched. Printed on the template
 and transferred to the leather, never cut: a notch in an edge that will be finished is a flaw. About
@@ -86,7 +93,7 @@ allowance" sometimes means the burnishing margin rather than the seam allowance;
 quantity, mirroring, and placement.
 
 **Feature** — Any semantic piece of a part: a cut contour, stitch line, fold line, marking line,
-hardware hole or stitch hole set — or an **annotation**. The discriminated union at the centre of the
+hardware hole, stitch hole set or row of holes — or an **annotation**. The discriminated union at the centre of the
 domain model.
 
 **Annotation** — A feature with no geometry source of its own: a measurement or a text label. It
@@ -111,12 +118,21 @@ resolved shape, instead of deleting it. For a counterpart whose fold is deleted,
 line the fold was on instead, so the counterpart still mirrors its source. Only ever the user's
 explicit choice.
 
+**Convert to drawn path** — Replacing a shape's parameters — a circle's radius, a rectangle's
+width and corners — with the path they drew, keeping the feature and everything that follows it.
+Nothing moves; what can be typed does. The way past a transform a shape refuses (3.12).
+
 **Re-point** — Changing which feature a derived feature follows, keeping the relationship's
 parameters. How an outline is replaced without losing its stitching.
 
 **Anchor** — A durable landmark on a feature, such as a rectangle's corner, addressed as
 `(featureId, index)`. Carried through derivations. Never a segment index
 ([ADR 0010](adr/0010-anchors-address-geometry.md)).
+
+**Overall size** — A piece's width and height edge to edge: the box its outline fills on the
+sheet, which is the leather to cut. Dimensioned with *Add overall size* (Q15), between `extent`
+ends. Not the distance between two corners: on a rounded piece a corner is the middle of its
+rounding, so the two differ.
 
 **Flip** — Reflecting selected geometry in place. Leaves no relationship behind. Flipping a piece's
 outline flips the whole piece; its labels move with it and still read forwards.
@@ -149,6 +165,10 @@ shared endpoints, optionally closed. Has no style, no meaning, and no pixels.
 **Display list** — The renderer's flat, style-resolved intermediate form. Produced from a
 `ResolvedDocument`, consumed by the Canvas2D and SVG backends.
 
+**Export preset** — A named intent for an SVG or DXF export — *template print*, *laser cut*,
+*stitch guide* — that chooses a set of layer roles. The maker may then adjust the layers. See
+[printing.md](printing.md) §10.
+
 **Export scene** — The export pipeline's equivalent intermediate: styled geometry in mm, page
 independent. Consumed by the SVG, PDF, and DXF writers, and by the paginator.
 
@@ -174,6 +194,14 @@ sheets (7.8). Parts says *Sheet 1, turned* on the Sheets view.
 that overlap by 10 mm and are taped together on their join lines. Its sheets are "Sheets 2–3,
 taped".
 
+**Assembly sheet** — The sheet printed just before the tiles of a piece taped into a grid: a map of
+them, not to scale, each cell named with its sheet (7.2). A piece taped in one row or one column
+gets none: its edge arrows say how it joins, and a map would waste a sheet. The one drawing on
+paper that is reduced; nothing is cut from it.
+
+**Edge arrow** — On a taped piece's sheet, the arrow at a join naming the sheet that joins there
+(7.2).
+
 **Sheet plan** — The derived result of paginating the export scene for the chosen paper: which
 sheets exist and what each carries. Recomputed from the document, never stored. The PDF writes it;
 the sheet count, Parts labels and Sheets view read it.
@@ -192,3 +220,7 @@ the leather.
    steel rule.
 2. *Correction*: a stored per-printer scale factor applied to output to compensate for a printer
    that is measurably off. Correction is a last resort; wrong print settings are the usual cause.
+   One factor across the paper (`x`) and one along it (`y`), each the *calibration page*'s drawn
+   line over its measured length, refused beyond ±2 %, and applied only when the app prints to that
+   printer (7.5, [printing.md](printing.md) §8.2). The *calibration page* is the page it is measured
+   from: a ticked horizontal and vertical line, up to 200 mm, printed uncorrected.

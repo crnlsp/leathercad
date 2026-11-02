@@ -1,6 +1,5 @@
 import { ROLE_STYLES, SHELL, GROUND } from '@leathercad/render';
 import type { Feature, LayerRole } from '@leathercad/domain';
-import { Type } from 'lucide-react';
 import { useId, type ReactElement } from 'react';
 
 import { Icon } from './Icon.js';
@@ -261,7 +260,7 @@ export function MarkOf({ feature, size = 16 }: { feature: Feature; size?: number
   if (mark === null) {
     return (
       <span className="feature-mark text-mark" data-mark="text">
-        <Icon of={Type} size={size} />
+        <Icon of="text" size={size} />
       </span>
     );
   }

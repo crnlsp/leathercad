@@ -2,11 +2,12 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
+import { closeApp, crashApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { freshStateHome, launchApp } from './launchApp.js';
+import { caption } from './keyCaption.js';
+import { freshStateHome, launchApp, openApp, openSample, recoveryCopies } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -18,20 +19,8 @@ import { resizeWindow } from './windowSize.js';
 
 const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-u20-'));
 
-async function launch(
-  env: Record<string, string> = {},
-): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: fresh(), ...env } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window };
-}
-
-async function openSample(window: Page): Promise<void> {
-  await window.getByTestId('help-menu').click();
-  await window.getByTestId('help-open-sample').click();
-  await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
-}
+const launch = (env: Record<string, string> = {}) =>
+  openApp({ env: { XDG_CONFIG_HOME: fresh(), ...env } });
 
 interface Stop {
   readonly name: string;
@@ -156,8 +145,8 @@ test('every tab stop rings in the accent, in the window and every dialog, and Ta
     await window.getByTestId('rename').click();
     await window.getByTestId('project-name-input').fill('Gusset wallet');
     await window.getByTestId('project-name-input').press('Enter');
-    await window.getByTestId('help-menu').click();
-    await window.getByTestId('help-open-sample').click();
+    // Opening no longer replaces anything (8.12); closing the tab asks.
+    await window.keyboard.press('ControlOrMeta+w');
     await expect(window.getByTestId('unsaved-dialog')).toBeVisible();
     await expectRings(window, 'Unsaved changes', DIALOG);
   } finally {
@@ -183,7 +172,7 @@ test('closing a dialog gives the keys back to what opened it (U.19)', async () =
     // By its key, from the board: back to the board.
     const board = window.getByTestId('editor-canvas');
     await board.focus();
-    await window.keyboard.press('Control+KeyP');
+    await window.keyboard.press('ControlOrMeta+KeyP');
     await expect(window.getByTestId('print-preview')).toBeVisible();
     await window.keyboard.press('Escape');
     await expect(board).toBeFocused();
@@ -206,7 +195,7 @@ test('switching view from a control the other view does not have leaves the keys
   const { app, window } = await launch();
   try {
     await window.getByTestId('tool-rectangle').focus();
-    await window.keyboard.press('Control+Digit2');
+    await window.keyboard.press('ControlOrMeta+Digit2');
     await expect(window.getByTestId('sheets-summary')).toBeVisible();
     await expect(window.getByTestId('editor-canvas')).toBeFocused();
   } finally {
@@ -225,13 +214,9 @@ test('the recovery dialog rings, and keeps Tab', async () => {
     await window.getByTestId('rename').click();
     await window.getByTestId('project-name-input').fill('Gusset wallet');
     await window.getByTestId('project-name-input').press('Enter');
-    await expect
-      .poll(() => readdirSync(join(state, 'leathercad', 'recovery')).length, { timeout: 10_000 })
-      .toBeGreaterThan(0);
-    await new Promise<void>((done) => {
-      first.process().once('exit', () => done());
-      first.process().kill('SIGKILL');
-    });
+    // A whole copy: killed while one is still a .tmp, there is nothing to offer.
+    await expect.poll(() => recoveryCopies(state).length, { timeout: 10_000 }).toBeGreaterThan(0);
+    await crashApp(first);
   } catch (error) {
     await closeApp(first);
     throw error;
@@ -320,7 +305,7 @@ test('Ctrl+A selects nothing outside a field, and a field’s text inside one', 
 
     // Outside a field: nothing, and a double-click on a label takes nothing either.
     await window.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    await window.keyboard.press('Control+a');
+    await window.keyboard.press('ControlOrMeta+a');
     expect(await selected()).toBe(0);
     await window.getByTestId('property-panel').getByText('Pieces').dblclick();
     expect(await selected()).toBe(0);
@@ -330,7 +315,7 @@ test('Ctrl+A selects nothing outside a field, and a field’s text inside one', 
       await expect(field).toHaveCSS('user-select', 'text');
       await field.focus();
       await field.press('End');
-      await field.press('Control+a');
+      await field.press('ControlOrMeta+a');
       expect(
         await field.evaluate(
           (input: HTMLInputElement) => input.selectionEnd! - input.selectionStart!,
@@ -370,12 +355,15 @@ test('the spellchecker is off, and a fresh profile fetches no dictionary', async
   try {
     const window = await app.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    expect(
-      await app.evaluate(({ session }) => ({
-        enabled: session.defaultSession.isSpellCheckerEnabled(),
-        languages: session.defaultSession.getSpellCheckerLanguages(),
-      })),
-    ).toEqual({ enabled: false, languages: [] });
+    const spelling = await app.evaluate(({ session }) => ({
+      enabled: session.defaultSession.isSpellCheckerEnabled(),
+      languages: session.defaultSession.getSpellCheckerLanguages(),
+    }));
+    expect(spelling.enabled).toBe(false);
+    // The languages Chromium's own spellchecker would fetch a dictionary for.
+    // macOS uses the system's spellchecker instead, which reports the system's
+    // languages and fetches nothing.
+    if (process.platform !== 'darwin') expect(spelling.languages).toEqual([]);
 
     // Typed into a name: what fetched en-US-10-1.bdic from Google before.
     await window.getByTestId('project-menu').click();
@@ -401,11 +389,13 @@ test('a field’s right-click menu cuts, copies, pastes and selects all, in the 
 
     await name.click({ button: 'right' });
     const menu = window.getByTestId('field-menu');
+    const item = (words: string, keys: string): RegExp =>
+      new RegExp(`^${words}\\s*${caption(keys).replaceAll('+', '\\+')}`);
     await expect(menu.getByRole('menuitem')).toHaveText([
-      /^Cut\s*Ctrl\+X/,
-      /^Copy\s*Ctrl\+C/,
-      /^Paste\s*Ctrl\+V/,
-      /^Select all\s*Ctrl\+A/,
+      item('Cut', 'Ctrl+X'),
+      item('Copy', 'Ctrl+C'),
+      item('Paste', 'Ctrl+V'),
+      item('Select all', 'Ctrl+A'),
     ]);
     // The board's menu never opens over a field.
     await expect(window.getByTestId('context-menu')).toHaveCount(0);
@@ -413,12 +403,35 @@ test('a field’s right-click menu cuts, copies, pastes and selects all, in the 
     // Still renaming: opening the menu was not leaving the field.
     await expect(name).toBeFocused();
 
+    await name.press('Enter');
+
+    // Parts' rename: the field's menu, not the piece's.
+    await window.getByTestId('parts-list').getByText('Stitch line').first().click();
+    await window.keyboard.press('F2');
+    await window.getByTestId('row-name-input').click({ button: 'right' });
+    await expect(window.getByTestId('field-menu')).toBeVisible();
+    await expect(window.getByTestId('context-menu')).toHaveCount(0);
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('row-name-input')).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('a field’s menu opens from the keyboard at the caret, and Escape gives the field back', async () => {
+  const { app, window } = await launch();
+  try {
+    await openSample(window);
+    await window.getByTestId('project-menu').click();
+    await window.getByTestId('rename').click();
+    const name = window.getByTestId('project-name-input');
+    await name.click({ button: 'right' });
+    await window.getByTestId('field-menu').getByTestId('field-select-all').click();
     await name.click({ button: 'right' });
     await window.getByTestId('field-menu').getByTestId('field-copy').click();
     await name.press('End');
-    // From the keyboard too, opened at the field, with the caret where it is:
-    // nothing is selected, so Cut and Copy say so, and Paste puts the copy at
-    // the caret.
+    // Opened at the field, with the caret where it is: nothing is selected,
+    // so Cut and Copy say so, and Paste puts the copy at the caret.
     await name.press('Shift+F10');
     await expect(window.getByTestId('field-menu')).toBeVisible();
     await expect(window.getByTestId('field-cut')).toBeFocused();
@@ -434,15 +447,6 @@ test('a field’s right-click menu cuts, copies, pastes and selects all, in the 
     await expect(name).toBeFocused();
     await name.press('Enter');
     await expect(window.getByTestId('project-name')).toHaveText('Bifold walletBifold wallet');
-
-    // Parts' rename: the field's menu, not the piece's.
-    await window.getByTestId('parts-list').getByText('Stitch line').first().click();
-    await window.keyboard.press('F2');
-    await window.getByTestId('row-name-input').click({ button: 'right' });
-    await expect(window.getByTestId('field-menu')).toBeVisible();
-    await expect(window.getByTestId('context-menu')).toHaveCount(0);
-    await window.keyboard.press('Escape');
-    await expect(window.getByTestId('row-name-input')).toBeFocused();
   } finally {
     await closeApp(app);
   }

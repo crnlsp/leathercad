@@ -148,5 +148,10 @@ export function sheetsWords(i18n: I18n): SheetsWords {
         name,
         sheets: t('print.taped', { sheets: describeSheetNumbers(sheets, i18n) }),
       }),
+    assembly: (number, count, name) =>
+      t('sheetsView.sheetHeading', {
+        sheet: t('status.sheetOf', { number, count }),
+        pieces: t('sheetsView.assembly', { name }),
+      }),
   };
 }

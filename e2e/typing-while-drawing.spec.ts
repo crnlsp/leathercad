@@ -1,7 +1,6 @@
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { withApp } from './launchApp.js';
 
 /**
  * U.16, R-13: typing the size while the rectangle is being drawn. `105` Tab
@@ -9,17 +8,6 @@ import { launchApp } from './launchApp.js';
  * step; the shape's numbers are the value chips (U.14), a hint under it says
  * what the keys do, and Properties mirrors Width, Height and Corner.
  */
-
-async function withApp(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const app = await launchApp();
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 const chip = (window: Page, name: 'width' | 'height' | 'corner') =>
   window.getByTestId(`value-chip-${name}`);
@@ -242,7 +230,9 @@ test('a size typed by the board’s edge goes where Tab says, even when its chip
   // left out, so Tab went past it, the 75 went nowhere, and Enter made the
   // rectangle as tall as the pointer said.
   await withApp(async (window, app) => {
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(860, 600));
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.setContentSize(860, 600),
+    );
     await expect.poll(() => window.evaluate(() => innerWidth)).toBe(860);
     const board = window.getByTestId('editor-canvas');
     const box = (await board.boundingBox())!;

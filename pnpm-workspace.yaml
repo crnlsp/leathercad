@@ -14,7 +14,7 @@ allowBuilds:
   # Installs the platform-native esbuild binary used by Vite.
   esbuild: true
 
-  # Declined on purpose. Electron 44's package.json has no scripts field at
+  # Declined on purpose. Electron 45's package.json has no scripts field at
   # all — it ships an `install-electron` bin instead, which the postinstall in
   # apps/desktop/package.json invokes. pnpm still prompts about it, so this
   # records the answer. Setting it true would grant a permission that does
@@ -30,22 +30,14 @@ allowBuilds:
   # Its install script only prepares Windows tooling. See ADR 0014.
   electron-winstaller: false
 
-# pnpm gates very recent releases behind a minimum release age. These were
-# reviewed and accepted; see ADR 0004.
-minimumReleaseAgeExclude:
-  - '@vitest/coverage-v8@5.0.0'
-  - '@vitest/mocker@5.0.0'
-  - '@vitest/spy@5.0.0'
-  - vitest@5.0.0
-
 # Versions forced past what a dependency pins, each for a known vulnerability
 # that osv-scanner reports. Remove one when the dependency's own pin moves on.
 overrides:
-  # GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx. Pinned to
-  # exactly 6.15.1 by typed-rest-client, which Stryker uses only to upload to
-  # its dashboard, a reporter this project does not enable. 6.16.0 is the
-  # fixed minor.
-  'typed-rest-client>qs': 6.16.0
+  # GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx,
+  # GHSA-6pq8-jhm2-2vcw. Pinned to exactly 6.15.1 by typed-rest-client, which
+  # Stryker uses only to upload to its dashboard, a reporter this project does
+  # not enable. 6.16.1 fixes all four.
+  'typed-rest-client>qs': 6.16.1
   # GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr. minimatch
   # 10.2.6, the newest 10.x, asks for ^5.0.8 and resolved 5.0.9; 5.0.12 fixes
   # all three. This raises the floor inside the range minimatch already
@@ -55,9 +47,6 @@ overrides:
   # minimatch lines use brace-expansion 1 and 2, whose fixed releases they
   # already resolve.
   'minimatch@10>brace-expansion': ^5.0.12
-  # GHSA-r4xh-jqrq-34v2. knip asks for smol-toml ^1.x and resolved 1.8.0; 1.9.0
-  # is the fixed release. Development tooling only.
-  'knip>smol-toml': ^1.9.0
   # GHSA-68fv-2mgg-jv7q. postcss (Vite) and magicast (Vitest's coverage)
   # resolved 1.2.1; 1.2.2 is the fixed release. Development tooling only.
   source-map-js: ^1.2.2
@@ -77,10 +66,3 @@ ignoredOptionalDependencies:
   # only in the renderer's own canvas, so the native binary would be downloaded
   # and never run. See ADR 0019.
   - '@napi-rs/canvas'
-
-# Local fixes to third-party code, each temporary and each with its upstream
-# issue. Delete the entry and its file in patches/ when the fix is released.
-patchedDependencies:
-  # stryker-js#6210: on Vitest 5 the runner's test-name filter matches nothing,
-  # so every covered mutant is reported as surviving. Two lines. ADR 0016.
-  '@stryker-mutator/vitest-runner@10.0.0': patches/@stryker-mutator__vitest-runner@10.0.0.patch

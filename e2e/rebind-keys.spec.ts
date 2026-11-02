@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { caption } from './keyCaption.js';
+import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -19,25 +20,8 @@ import { fromProjectMenu } from './projectMenu.js';
 
 const fresh = (): string => mkdtempSync(join(tmpdir(), 'leathercad-e2e-keys-'));
 
-async function launch(configHome: string): Promise<{ app: ElectronApplication; window: Page }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  await app.evaluate(({ BrowserWindow }) => {
-    BrowserWindow.getAllWindows()[0]?.setSize(1400, 900);
-  });
-  return { app, window };
-}
-
-async function drawAPanel(window: Page): Promise<void> {
-  await window.getByTestId('tool-rectangle').click();
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  await window.mouse.move(box.x + 150, box.y + 150);
-  await window.mouse.down();
-  await window.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
-  await window.mouse.up();
-  await expect(window.getByTestId('part-count')).toHaveText('1');
-}
+const launch = (configHome: string) =>
+  openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1400, 900] });
 
 async function openShortcuts(window: Page): Promise<Locator> {
   await window.getByTestId('settings').click();
@@ -89,9 +73,9 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
   const { app, window } = await launch(fresh());
   try {
     await stubSave(app, join(fresh(), 'Card holder.lcp'));
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     await openShortcuts(window);
-    await expect(keysOf(window, 'save')).toHaveText(['Ctrl+S']);
+    await expect(keysOf(window, 'save')).toHaveText([caption('Ctrl+S')]);
     await change(window, 'save', 'F5');
     await expect(keysOf(window, 'save')).toHaveText(['F5']);
     await expect(window.getByTestId('change-save')).toBeFocused();
@@ -111,12 +95,20 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
 
     // The old key does nothing; the new one saves.
     await window.getByTestId('editor-canvas').focus();
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await window.waitForTimeout(300);
     expect(await saveDialogs(app)).toBe(0);
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
     await window.keyboard.press('F5');
     await expect(window.getByTestId('file-path')).toContainText('Card holder');
+    expect(await saveDialogs(app)).toBe(1);
+
+    // Saving a saved project is still acknowledged: the second save asks
+    // nowhere and changes no state, so the note is all that says it happened.
+    await expect(window.getByTestId('written-note')).toContainText('Saved Card holder');
+    await expect(window.getByTestId('written-note')).toHaveCount(0, { timeout: 6000 });
+    await window.keyboard.press('F5');
+    await expect(window.getByTestId('written-note')).toContainText('Saved Card holder');
     expect(await saveDialogs(app)).toBe(1);
   } finally {
     await closeApp(app);
@@ -130,19 +122,19 @@ test('Esc during a change leaves the key and the dialog; Enter and Tab cannot be
     await change(window, 'print', 'Escape');
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
     await expect(window.getByTestId('change-print')).toHaveAttribute('aria-pressed', 'false');
-    await expect(keysOf(window, 'print')).toHaveText(['Ctrl+P']);
+    await expect(keysOf(window, 'print')).toHaveText([caption('Ctrl+P')]);
 
     // Enter keeps its role: said, and still listening.
     await change(window, 'print', 'Enter');
     await expect(pane.getByTestId('shortcut-note')).toContainText('Enter keeps its own role');
     await expect(window.getByTestId('change-print')).toHaveAttribute('aria-pressed', 'true');
-    await window.keyboard.press('Control+Enter');
+    await window.keyboard.press('ControlOrMeta+Enter');
     await expect(window.getByTestId('change-print')).toHaveAttribute('aria-pressed', 'true');
     // Tab goes on, and the listening ends with the focus leaving.
     await window.keyboard.press('Tab');
     await expect(window.getByTestId('change-print')).not.toBeFocused();
     await expect(window.getByTestId('change-print')).toHaveAttribute('aria-pressed', 'false');
-    await expect(keysOf(window, 'print')).toHaveText(['Ctrl+P']);
+    await expect(keysOf(window, 'print')).toHaveText([caption('Ctrl+P')]);
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
 
     // A digit alone types a size on the board: refused, and still listening.
@@ -167,35 +159,35 @@ test('a clash names the command, and Cancel leaves both while Swap exchanges the
   try {
     await stubSave(app, join(fresh(), 'Swap.lcp'));
     const pane = await openShortcuts(window);
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     const clash = pane.getByTestId('shortcut-clash');
     await expect(clash).toContainText('is already used for “Save”');
-    await expect(clash.locator('kbd')).toHaveText('Ctrl+S');
+    await expect(clash.locator('kbd')).toHaveText(caption('Ctrl+S'));
     await expect(clash.getByTestId('clash-swap')).toBeFocused();
     await clash.getByTestId('clash-cancel').click();
     await expect(clash).toHaveCount(0);
-    await expect(keysOf(window, 'settings')).toHaveText(['Ctrl+,']);
-    await expect(keysOf(window, 'save')).toHaveText(['Ctrl+S']);
+    await expect(keysOf(window, 'settings')).toHaveText([caption('Ctrl+,')]);
+    await expect(keysOf(window, 'save')).toHaveText([caption('Ctrl+S')]);
 
     // Esc on the clash is Cancel, not the dialog's.
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     await window.keyboard.press('Escape');
     await expect(pane.getByTestId('shortcut-clash')).toHaveCount(0);
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
 
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     await pane.getByTestId('clash-swap').click();
-    await expect(keysOf(window, 'settings')).toHaveText(['Ctrl+S']);
-    await expect(keysOf(window, 'save')).toHaveText(['Ctrl+,']);
+    await expect(keysOf(window, 'settings')).toHaveText([caption('Ctrl+S')]);
+    await expect(keysOf(window, 'save')).toHaveText([caption('Ctrl+,')]);
     await window.getByTestId('settings-close').click();
 
     // Both keys do the other's work now.
     await window.getByTestId('editor-canvas').focus();
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
     await window.keyboard.press('Escape');
-    await drawAPanel(window);
-    await window.keyboard.press('Control+Comma');
+    await drawAPanel(window, { parts: '1' });
+    await window.keyboard.press('ControlOrMeta+Comma');
     await expect(window.getByTestId('file-path')).toContainText('Swap');
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
   } finally {
@@ -224,7 +216,7 @@ test('Ctrl+Q and F11 can be captured: they clash with Quit and Full screen, and 
   const { app, window } = await launch(fresh());
   try {
     // Unsaved work, so a Ctrl+Q that got through would raise the unsaved dialog.
-    await drawAPanel(window);
+    await drawAPanel(window, { parts: '1' });
     const pane = await openShortcuts(window);
     const isFullScreen = (): Promise<boolean> =>
       app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFullScreen());
@@ -256,15 +248,15 @@ test('Reset puts one command’s keys back, through a swap if it must; Reset all
   const { app, window } = await launch(fresh());
   try {
     const pane = await openShortcuts(window);
-    await change(window, 'settings', 'Control+s');
+    await change(window, 'settings', 'ControlOrMeta+s');
     await pane.getByTestId('clash-swap').click();
     // Settings' own key is Save's now: its reset swaps them back.
     await pane.getByTestId('reset-settings').click();
     await expect(pane.getByTestId('shortcut-clash')).toContainText('“Save”');
-    await expect(pane.getByTestId('shortcut-clash').locator('kbd')).toHaveText('Ctrl+,');
+    await expect(pane.getByTestId('shortcut-clash').locator('kbd')).toHaveText(caption('Ctrl+,'));
     await pane.getByTestId('clash-swap').click();
-    await expect(keysOf(window, 'settings')).toHaveText(['Ctrl+,']);
-    await expect(keysOf(window, 'save')).toHaveText(['Ctrl+S']);
+    await expect(keysOf(window, 'settings')).toHaveText([caption('Ctrl+,')]);
+    await expect(keysOf(window, 'save')).toHaveText([caption('Ctrl+S')]);
     await expect(pane.getByTestId('reset-settings')).toHaveCount(0);
     await expect(pane.getByTestId('shortcuts-reset-all')).toBeDisabled();
 
@@ -343,9 +335,9 @@ test('a damaged list of keys in preferences.json is dropped, and the app starts'
     // The rest of the file was read, and the one usable key kept.
     await expect(window.getByTestId('parts-strip')).toBeVisible();
     const pane = await openShortcuts(window);
-    await expect(keysOf(window, 'save')).toHaveText(['Ctrl+S']);
-    await expect(keysOf(window, 'exportPdf')).toHaveText(['Ctrl+E']);
-    await expect(keysOf(window, 'print')).toHaveText(['Ctrl+P']);
+    await expect(keysOf(window, 'save')).toHaveText([caption('Ctrl+S')]);
+    await expect(keysOf(window, 'exportPdf')).toHaveText([caption('Ctrl+E')]);
+    await expect(keysOf(window, 'print')).toHaveText([caption('Ctrl+P')]);
     await expect(keysOf(window, 'help')).toHaveText(['F9']);
     await expect(pane.getByTestId('reset-help')).toBeVisible();
   } finally {
@@ -356,7 +348,7 @@ test('a damaged list of keys in preferences.json is dropped, and the app starts'
 test('a key moved stays out of fields, and a drawing tool keeps its own', async () => {
   const { app, window } = await launch(fresh());
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
     const pane = await openShortcuts(window);
     // Focus mode takes A from the Arc tool, which gets \ in its place.
@@ -428,7 +420,7 @@ test('the polyline’s arc moved to Q is Q mid-run, and A is the Arc tool again'
 test('Parts’ rename moved to F4 renames a focused row, and nothing on the board', async () => {
   const { app, window } = await launch(fresh());
   try {
-    await window.getByTestId('open-sample').click();
+    await openSample(window);
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
     await openShortcuts(window);
     await change(window, 'rename', 'F4');

@@ -26,8 +26,10 @@ const HANDLE_PX = 8;
 
 /**
  * Where a split would be too close to a segment's end to leave both halves a
- * length: a press there takes the point that is already at that end.
+ * length: a press there takes the point that is already at that end. A band
+ * for the hand, as a fraction of the segment, not a numerical tolerance.
  */
+// eslint-disable-next-line no-restricted-syntax -- a fraction of the segment, not a tolerance
 const END_SLACK = 1e-3;
 
 type State =
@@ -147,6 +149,12 @@ export function createEditPointsTool(
 
     onPointerMove(ctx, event) {
       if (state.kind !== 'dragging') return;
+      // Undo, or a command, cancelled the drag under the pointer.
+      if (!ctx.store.inTransaction) {
+        state = { kind: 'idle', picked: null, refusal: null };
+        ctx.invalidate();
+        return;
+      }
 
       const move: PathPointEdit = {
         kind: 'move',
@@ -165,8 +173,12 @@ export function createEditPointsTool(
 
     onPointerUp(ctx) {
       if (state.kind !== 'dragging') return;
+      // A drag cancelled since it began picks nothing: a point it added is gone.
+      const kept = ctx.store.inTransaction;
       ctx.store.commit();
-      state = { kind: 'idle', picked: state.vertex, refusal: state.refusal };
+      state = kept
+        ? { kind: 'idle', picked: state.vertex, refusal: state.refusal }
+        : { kind: 'idle', picked: null, refusal: null };
       ctx.invalidate();
     },
 

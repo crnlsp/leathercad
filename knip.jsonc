@@ -42,10 +42,4 @@
     // Deliberate: pins where the vendored fonts came from. ADR 0011.
     "@ibm/plex-sans",
   ],
-
-  "ignoreIssues": {
-    // Deliberate: the shared generator catalogue from docs/testing.md §3.1.
-    // Built once and reused, so some generators wait for their first caller.
-    "packages/geometry/test/arbitraries.ts": ["exports"],
-  },
 }

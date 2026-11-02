@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { ResourceLimitError } from '@leathercad/core';
 import { evaluate } from '@leathercad/domain';
 import fc from 'fast-check';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
@@ -19,7 +20,7 @@ import { NewerFormatError } from './migrations/index.js';
  * fixture, so the migration chain is exercised as well as the current schema.
  *
  * The contract being fuzzed is `loadProject`'s own: it **refuses with a
- * reason** — `InvalidProjectFileError` or `NewerFormatError` — or it returns a
+ * reason** — `InvalidProjectFileError`, `NewerFormatError` or `ResourceLimitError` — or it returns a
  * project. A `TypeError` from deep inside a migration is neither. It reaches
  * the user as a crash instead of a sentence.
  *
@@ -89,7 +90,11 @@ function outcome(bytes: Uint8Array): 'loaded' | 'refused' {
     evaluate(project);
     return 'loaded';
   } catch (error) {
-    if (error instanceof InvalidProjectFileError || error instanceof NewerFormatError) {
+    if (
+      error instanceof InvalidProjectFileError ||
+      error instanceof NewerFormatError ||
+      error instanceof ResourceLimitError
+    ) {
       return 'refused';
     }
     throw error;

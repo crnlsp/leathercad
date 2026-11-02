@@ -679,9 +679,10 @@ describe('every command a press is, in some scopes (U.12)', () => {
 
 describe('no sentence in the catalogue names a key (U.3)', () => {
   // Keys come from the keymap, so they follow a rebinding (U.12) and show as
-  // ⌘ on macOS. Named keys — Ctrl, Shift — are the key catalogue's words.
+  // ⌘ on macOS. Named keys — Ctrl, Shift — are the key catalogue's words. A
+  // letter at either end of a range — the sort's "Name (A–Z)" — is not a key.
   const KEY_IN_A_SENTENCE =
-    /(?<![\p{L}\p{N}])[B-Z](?![\p{L}\p{N}])|\b(?:Ctrl|Cmd|Alt|Shift|Del|Esc|Backspace|F\d{1,2})\b|[⌘⇧⌥]|\p{L}\+[\p{L}\p{N}=,\-/]/u;
+    /(?<![\p{L}\p{N}–])[B-Z](?![\p{L}\p{N}–])|\b(?:Ctrl|Cmd|Alt|Shift|Del|Esc|Backspace|F\d{1,2})\b|[⌘⇧⌥]|\p{L}\+[\p{L}\p{N}=,\-/]/u;
 
   it('holds none in en.json outside the names of the keys themselves', () => {
     const naming = Object.entries(flatten(en)).filter(

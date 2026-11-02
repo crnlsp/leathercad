@@ -2,14 +2,22 @@ import { PathOps, uniformRadii } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_SETTINGS, type Feature, type Project, type Run } from './feature.js';
+import {
+  DEFAULT_SETTINGS,
+  type Feature,
+  type MirrorAxis,
+  type Project,
+  type Run,
+} from './feature.js';
 import {
   crossPartRefusal,
   dependentsOf,
   derivationRefusal,
+  featuresOnCycles,
   followRefusal,
   graphProblems,
 } from './graph.js';
+import { mirrorChain } from './workloads.js';
 
 // ——— Builders ————————————————————————————————————————————————————————————
 
@@ -572,3 +580,127 @@ describe('crossPartRefusal (Q11)', () => {
     expect(crossPartRefusal(p, 'part-0', outline('drawn', 'inner'))).toBeNull();
   });
 });
+
+describe('the features on a cycle, found in one pass (PERF-015)', () => {
+  /** What every feature's edges are, as `graph.ts` reads them. */
+  function edgesOf(feature: Feature): string[] {
+    if (feature.source.kind === 'measurement') {
+      return [feature.source.a.featureId, feature.source.b.featureId];
+    }
+    if (feature.source.kind !== 'derived') return [];
+    const op = feature.source.op;
+    return op.type === 'mirror' && op.axis.kind === 'fold'
+      ? [feature.source.sourceId, op.axis.foldId]
+      : [feature.source.sourceId];
+  }
+
+  /** The specification: from each of its edges, whether the walk comes back to it. */
+  function onCycleByWalking(byId: ReadonlyMap<string, Feature>, id: string): boolean {
+    const feature = byId.get(id);
+    if (feature === undefined) return false;
+    return edgesOf(feature).some((start) => {
+      const seen = new Set<string>();
+      const frontier = [start];
+      while (frontier.length > 0) {
+        const at = frontier.pop()!;
+        if (at === id) return true;
+        if (seen.has(at)) continue;
+        seen.add(at);
+        const next = byId.get(at);
+        if (next !== undefined) frontier.push(...edgesOf(next));
+      }
+      return false;
+    });
+  }
+
+  const arbGraph: fc.Arbitrary<Map<string, Feature>> = fc
+    .array(
+      fc.record({
+        kind: fc.constantFrom('drawn', 'derived', 'folded', 'dimension'),
+        a: fc.nat({ max: 12 }),
+        b: fc.nat({ max: 12 }),
+      }),
+      { minLength: 1, maxLength: 10 },
+    )
+    .map((specs) => {
+      const ref = (k: number) => (k < specs.length ? `f${k}` : `missing-${k}`);
+      const features = specs.map(({ kind, a, b }, i): Feature => {
+        const id = `f${i}`;
+        switch (kind) {
+          case 'drawn':
+            return {
+              ...base(id, id),
+              kind: 'stitch-line',
+              source: { kind: 'path', path: square(false) },
+            };
+          case 'derived':
+            return mirrorOf(id, ref(a), { kind: 'line', origin: { x: 0, y: 0 }, angleRad: 0 });
+          case 'folded':
+            return mirrorOf(id, ref(a), { kind: 'fold', foldId: ref(b) });
+          case 'dimension':
+            return {
+              ...base(id, id),
+              kind: 'measurement',
+              source: {
+                kind: 'measurement',
+                measure: 'aligned',
+                a: { kind: 'anchor', featureId: ref(a), anchor: 0 },
+                b: { kind: 'anchor', featureId: ref(b), anchor: 1 },
+                offsetMm: 8,
+                precision: 1,
+              },
+            };
+        }
+      });
+      return new Map(features.map((f) => [f.id, f]));
+    });
+
+  function mirrorOf(id: string, from: string, axis: MirrorAxis): Feature {
+    return {
+      ...base(id, id),
+      kind: 'stitch-line',
+      source: { kind: 'derived', sourceId: from, op: { type: 'mirror', axis, glideMm: 0 } },
+    };
+  }
+
+  it('finds the features walking from each would, through sources, folds and dimensions', () => {
+    fc.assert(
+      fc.property(arbGraph, (byId) => {
+        const expected = [...byId.keys()].filter((id) => onCycleByWalking(byId, id));
+        expect([...featuresOnCycles(byId)].toSorted()).toEqual(expected.toSorted());
+      }),
+      { numRuns: 1000 },
+    );
+  });
+
+  it('checks a chain of five hundred sources once, not once for each feature down it', () => {
+    // A work bound, not a timing, as for evaluation: every read of a feature's
+    // source counts. Walking the chain from each feature to see whether it
+    // comes back read them 507,014 times for the audit's 500-deep mirror chain;
+    // the bound, ten reads a feature, is a hundredth of that.
+    const reads = { count: 0 };
+    const chain = countedSources(mirrorChain(500), reads);
+
+    expect(graphProblems(chain)).toEqual([]);
+    expect(reads.count).toBeLessThan(10 * 502);
+  });
+});
+
+/** The project with each feature counting the reads of its `source`. */
+function countedSources(project: Project, reads: { count: number }): Project {
+  return {
+    ...project,
+    parts: project.parts.map((part) => ({
+      ...part,
+      features: part.features.map(
+        (feature) =>
+          new Proxy(feature, {
+            get(target, key, receiver) {
+              if (key === 'source') reads.count++;
+              return Reflect.get(target, key, receiver) as unknown;
+            },
+          }),
+      ),
+    })),
+  };
+}

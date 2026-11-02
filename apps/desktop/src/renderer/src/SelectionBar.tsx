@@ -1,7 +1,6 @@
 import { drawnBounds, type DocumentStore } from '@leathercad/document';
 import { MIN_HOLES_IN_A_SET, diagnose, evaluate } from '@leathercad/domain';
 import { placeSelectionBar, type CssBox, type ViewportView } from '@leathercad/render';
-import { Check, FoldHorizontal, Plus, UnfoldHorizontal } from 'lucide-react';
 import {
   Fragment,
   memo,
@@ -222,13 +221,13 @@ export const SelectionBar = memo(function SelectionBar({
           <span className="selection-bar-glyph">
             {glyph === 'check' ? (
               <>
-                <Icon of={Check} size={14} />
+                <Icon of="check" size={14} />
                 <span className="visually-hidden">{describeSpacing(check, t)}</span>
               </>
             ) : glyph === 'stretched' ? (
-              <Icon of={UnfoldHorizontal} size={14} />
+              <Icon of="stretched" size={14} />
             ) : glyph === 'squeezed' ? (
-              <Icon of={FoldHorizontal} size={14} />
+              <Icon of="squeezed" size={14} />
             ) : (
               <SeverityGlyph severity={glyph} />
             )}
@@ -301,7 +300,7 @@ export const SelectionBar = memo(function SelectionBar({
                 data-status={step.status}
                 data-done=""
               >
-                <Icon of={Check} size={14} />
+                <Icon of="check" size={14} />
                 <span className="visually-hidden">{t('selectionBar.done')}</span>
                 {t(STEP_WORDS[step.id])}
               </span>
@@ -315,7 +314,7 @@ export const SelectionBar = memo(function SelectionBar({
                 aria-describedby={refusal === null ? undefined : reasonId}
                 onClick={() => make(step.id)}
               >
-                <Icon of={Plus} size={14} />
+                <Icon of="plus" size={14} />
                 {t(STEP_WORDS[step.id])}
               </button>
             ) : (

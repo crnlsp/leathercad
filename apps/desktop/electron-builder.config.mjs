@@ -47,11 +47,9 @@ export default {
     enableEmbeddedAsarIntegrityValidation: true,
     onlyLoadAppFromAsar: true,
     loadBrowserProcessSpecificV8Snapshot: false,
-    // Must stay on while the window loads index.html from file://. With it
-    // off, the packaged window stays blank: the packaged smoke test caught
-    // exactly that. Turning it off means serving the renderer from a custom
-    // protocol (`protocol.handle('app', …)`), a main-process change.
-    grantFileProtocolExtraPrivileges: true,
+    // R6: the renderer and its assets now load from app://leathercad, so
+    // file:// pages need none of Electron's extra privileges (ADR 0014).
+    grantFileProtocolExtraPrivileges: false,
   },
   // The licences, beside app.asar in every install (8.6b): LeatherCAD's own,
   // and the third-party notices the build wrote from what it bundled. The app
@@ -76,7 +74,7 @@ export default {
   // The icon is drawn once, in build/icon.svg, and rendered to each format by
   // `pnpm icons:generate` (slice 8.5a); the files are committed.
   linux: {
-    target: ['AppImage'],
+    target: ['AppImage', 'deb'],
     icon: 'build/icons',
     category: 'Graphics',
     synopsis: 'Leathercraft patterns that print at exact 1:1 scale',
@@ -93,6 +91,37 @@ export default {
       },
     },
   },
+  // The .deb (B4), for Ubuntu and Debian: it installs like any program and
+  // needs no FUSE. Lower case, because dpkg refuses a capital in a package name.
+  //
+  // electron-builder's own after-install script handles the sandbox, so none
+  // is switched off here: it makes chrome-sandbox setuid root where the kernel
+  // has no user namespaces, and on Ubuntu 24.04 and later, where AppArmor
+  // refuses them to an unconfined program, it installs a profile that grants
+  // them to /opt/LeatherCAD/leathercad alone. Its default dependencies are
+  // kept, plus the two Electron links against that a clean Ubuntu does not
+  // bring: ALSA (`libasound2t64` is the 24.04 name of `libasound2`) and
+  // `libgbm1`, which 24.04 happens to pull in and 22.04 does not.
+  deb: {
+    packageName: 'leathercad',
+    maintainer: 'crnlsp <96597273+crnlsp@users.noreply.github.com>',
+    depends: [
+      'libgtk-3-0',
+      'libnotify4',
+      'libnss3',
+      'libxss1',
+      'libxtst6',
+      'xdg-utils',
+      'libatspi2.0-0',
+      'libuuid1',
+      'libsecret-1-0',
+      'libasound2t64 | libasound2',
+      'libgbm1',
+    ],
+    // Print runs `lp` and `lpstat`, and does without them (printing.ts). The
+    // default recommendation is a tray library, which the app has no use for.
+    recommends: ['cups-client'],
+  },
   // The Flatpak (slice 8.5), built by `pnpm package:flatpak` — separately from
   // `pnpm package`, because it needs flatpak-builder and the Flathub runtimes.
   // Electron's own base app, on the current Freedesktop runtime.
@@ -106,8 +135,9 @@ export default {
     // Electron picks between them at start-up — and the GPU for drawing;
     // the home directory, because a pattern is saved wherever the maker keeps
     // it and Open Recent reopens it from there after a restart, which a
-    // portal's per-session grant cannot; nothing else. No network — the app
-    // never goes online — and no audio.
+    // portal's per-session grant cannot; nothing else. No network — the one
+    // request the app makes, its update check, is not the Flatpak's to make:
+    // Flathub updates it (ADR 0020) — and no audio.
     finishArgs: [
       '--socket=wayland',
       '--socket=x11',

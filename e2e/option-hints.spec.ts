@@ -1,7 +1,7 @@
-import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { caption } from './keyCaption.js';
+import { withSample } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -9,19 +9,6 @@ import { resizeWindow } from './windowSize.js';
  * and a few words, per tool and state — the lowest-ranked dropping first as the
  * bar narrows, "? all keys" never, and none cut short by the edge.
  */
-
-async function withSample(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const app = await launchApp();
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
 
 const hints = (window: Page): Locator => window.getByTestId('tool-how-to').locator('.work-hint');
 const words = (window: Page): Promise<string[]> =>
@@ -54,7 +41,7 @@ test('Select says what a click, a key and a drag do, and what a selection adds (
     await window.getByTestId('tool-select').click();
     // Nothing selected: the way in, as the mockup draws it, keys as caps.
     await expect(hint(window, 'hints.clickSelects')).toHaveText('Click selects');
-    await expect(hint(window, 'hints.addsOrRemoves').locator('kbd')).toHaveText('Shift');
+    await expect(hint(window, 'hints.addsOrRemoves').locator('kbd')).toHaveText(caption('Shift'));
     await expect(hint(window, 'hints.dragBox')).toHaveText('Drag a box to select');
     await expect(hint(window, 'hints.deletes')).toHaveCount(0);
     await expect(hints(window).last().locator('kbd')).toHaveText('?');
@@ -143,6 +130,9 @@ test('as the bar narrows the lowest-ranked hints go first, whole, and "all keys"
     const counts: number[] = [];
     for (const width of [1920, 1280, 1100, 1024, 900, 860]) {
       await resizeWindow(app, window, width, 700);
+      // A growing slot can contain the old, smaller hint set without clipping.
+      // Wait for the ResizeObserver's React update before recording its count.
+      if (width === 1920) await expect(hints(window)).toHaveCount(5);
       await expectWhole(window);
       const shown = await words(window);
       counts.push(shown.length);
@@ -180,7 +170,7 @@ test('the Sheets view has its hints too, with the keys as caps (U.11)', async ()
     await window.getByTestId('view-sheets').click();
     const bar = window.getByTestId('sheets-hint');
     await expect(bar).toContainText('Click a piece to see where it prints');
-    await expect(bar.locator('kbd').first()).toHaveText('Ctrl+P');
+    await expect(bar.locator('kbd').first()).toHaveText(caption('Ctrl+P'));
     await expect(bar.locator('kbd').last()).toHaveText('?');
   });
 });

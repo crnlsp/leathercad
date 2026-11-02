@@ -8,7 +8,7 @@
  *
  * These are deliberately **punch sizes and not hardware**. A list naming
  * "line 24 snap" or "#9 rivet" would imply the application knows what hole
- * each needs, and it does not — that is the hardware library, in v1.1. Until
+ * each needs, and it does not — that is the hardware library, roadmap 9.3. Until
  * then the user knows which punch their hardware wants, and this list is just
  * the drawer of punches they already own.
  */

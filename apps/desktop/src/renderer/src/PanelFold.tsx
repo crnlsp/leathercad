@@ -2,13 +2,13 @@ import { isPartVisible } from '@leathercad/document';
 import { materialOf, type Feature, type Part, type Project } from '@leathercad/domain';
 import type { Path } from '@leathercad/geometry';
 import { thumbnailPath } from '@leathercad/render';
-import { Maximize, PanelLeft, PanelRight, type LucideIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 
 import type { MessageKey, Translate } from '../../shared/i18n.js';
 
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import type { IconName } from './icons/names.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
 import { KeyCap } from './keyCaps.js';
 import type { CommandId } from './keymap.js';
@@ -36,19 +36,19 @@ export function pressOf(event: MouseEvent<HTMLElement>): Press {
 }
 
 const TOGGLE: Readonly<
-  Record<Panel, { command: CommandId; show: MessageKey; hide: MessageKey; icon: LucideIcon }>
+  Record<Panel, { command: CommandId; show: MessageKey; hide: MessageKey; icon: IconName }>
 > = {
   parts: {
     command: 'toggleParts',
     show: 'panels.showParts',
     hide: 'panels.hideParts',
-    icon: PanelLeft,
+    icon: 'panel-left',
   },
   properties: {
     command: 'toggleProperties',
     show: 'panels.showProperties',
     hide: 'panels.hideProperties',
-    icon: PanelRight,
+    icon: 'panel-right',
   },
 };
 
@@ -271,7 +271,7 @@ export function PanelChip({
   onPress,
 }: {
   testId: string;
-  icon: LucideIcon;
+  icon: IconName;
   label: string;
   command: CommandId;
   pressed: boolean;
@@ -294,4 +294,8 @@ export function PanelChip({
   );
 }
 
-export const CHIP_ICON = { parts: PanelLeft, focus: Maximize, properties: PanelRight } as const;
+export const CHIP_ICON = {
+  parts: 'panel-left',
+  focus: 'focus',
+  properties: 'panel-right',
+} as const;

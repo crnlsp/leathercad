@@ -39,11 +39,15 @@ test('the print test exports to an SVG that measures true in millimetres', async
     await expect(window.getByTestId('export-svg')).toBeVisible();
     await expect(window.getByTestId('export-svg')).not.toHaveAttribute('aria-disabled', 'true');
     await window.getByTestId('export-svg').click();
+    // The dialog asks first (6.4); its default is every layer, as before it existed.
+    await window.getByTestId('export-go').click();
 
     await expect.poll(() => existsSync(svg), { timeout: 10_000 }).toBe(true);
     await expect(window.getByTestId('file-error')).toHaveCount(0);
     // Nothing left off, nothing to check: the file is the drawing whole.
     await expect(window.getByTestId('export-notice')).toHaveCount(0);
+    // But the export is acknowledged: nothing else would say it happened.
+    await expect(window.getByTestId('written-note')).toHaveText('Exported print-test.svg');
 
     const { facts, primitives } = readSvg(svg);
     await test.info().attach('facts', {
@@ -87,6 +91,7 @@ test('the print test exports to a DXF that measures true in millimetres', async 
     await expect(window.getByTestId('export-dxf')).toBeVisible();
     await expect(window.getByTestId('export-dxf')).not.toHaveAttribute('aria-disabled', 'true');
     await window.getByTestId('export-dxf').click();
+    await window.getByTestId('export-go').click();
 
     await expect.poll(() => existsSync(dxf), { timeout: 10_000 }).toBe(true);
     await expect(window.getByTestId('file-error')).toHaveCount(0);
@@ -172,6 +177,7 @@ for (const format of ['svg', 'dxf'] as const) {
 
       await window.getByTestId('export-more').click();
       await window.getByTestId(`export-${format}`).click();
+      await window.getByTestId('export-go').click();
       await expect.poll(() => existsSync(file), { timeout: 10_000 }).toBe(true);
 
       const notice = window.getByTestId('export-notice');

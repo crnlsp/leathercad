@@ -6,9 +6,10 @@
 # code off the remote.
 #
 # `git push --no-verify` skips both. That is deliberate: on a solo repository
-# the hook exists to stop the accident, not to police the author. GitHub
-# cannot enforce this server-side while the repository is private on a free
-# plan — see docs/superpowers/specs/2026-09-04-ci-gate-and-hardening-design.md.
+# the hook exists to stop the accident, not to police the author. GitHub's
+# rulesets keep pushes off main server-side too (CONTRIBUTING.md, Branches),
+# and CI runs the checks on every pull request; the hook says so before the
+# push travels.
 
 set -e
 
@@ -31,7 +32,7 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
     echo "  own, merged when CI is green; main changes only for a release. See" >&2
     echo "  CONTRIBUTING.md, Branches." >&2
     echo "" >&2
-    echo "    git switch -c slice/<number>-<name> develop" >&2
+    echo "    git switch -c fix/<what-it-fixes> develop" >&2
     echo "    gh pr create --base develop --fill" >&2
     echo "" >&2
     echo "  Override with --no-verify if you mean it." >&2

@@ -1,0 +1,6 @@
+# What `makepkg` leaves when it is run in this folder.
+src/
+pkg/
+*.AppImage
+*.pkg.tar.*
+*.xml

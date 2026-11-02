@@ -9,7 +9,7 @@ import { polyline, uniformRadii } from '@leathercad/geometry';
  * whatever the migration chain grows to, it must still open this file and
  * produce this project.
  *
- * Regenerate with `pnpm --filter @leathercad/persist fixture`. Regenerating
+ * Regenerate with `UPDATE_FIXTURES=1 pnpm test packages/persist`. Regenerating
  * changes what version 1 *means*, so do it only when version 1 genuinely
  * changes — which, once something has shipped, is never (docs/file-format.md
  * §4.2 rule 1).
@@ -572,5 +572,142 @@ export function fixtureProjectV9(): Project {
     id: 'fixture-v9',
     name: 'Format baseline v9',
     settings: { ...previous.settings, paper: 'A4', orientation: 'portrait' },
+  };
+}
+
+/** Version 10 keeps horizontal, vertical and diagonal construction guides. */
+export function fixtureProjectV10(): Project {
+  return {
+    ...fixtureProjectV9(),
+    id: 'fixture-v10',
+    name: 'Format baseline v10',
+    guides: [
+      { id: 'guide-horizontal', origin: { x: 0, y: 15 }, angleRad: 0 },
+      { id: 'guide-vertical', origin: { x: 40, y: 0 }, angleRad: Math.PI / 2 },
+      { id: 'guide-diagonal', origin: { x: 10, y: 20 }, angleRad: Math.PI / 4 },
+    ],
+  };
+}
+
+/**
+ * Version 11 — a row of holes along a marking line (4.14).
+ *
+ * A belt end with its adjustment holes: an outline, a line down its middle,
+ * and the row that follows it. What the file holds is the pitch and the
+ * radius; the five holes are not in it, and evaluation places them.
+ */
+export function fixtureProjectV11(): Project {
+  const previous = fixtureProjectV10();
+  const base = { visible: true, locked: false };
+
+  return {
+    ...previous,
+    id: 'fixture-v11',
+    name: 'Format baseline v11',
+    parts: [
+      ...previous.parts,
+      {
+        id: 'part-belt',
+        name: 'Belt end',
+        quantity: 1,
+        features: [
+          {
+            ...base,
+            id: 'belt-cut',
+            kind: 'cut-contour',
+            role: 'outer',
+            name: 'Outline',
+            source: {
+              kind: 'shape',
+              shape: {
+                type: 'rect',
+                origin: { x: 0, y: 0 },
+                width: 140,
+                height: 30,
+                radii: uniformRadii(0),
+                rotation: 0,
+              },
+            },
+          },
+          {
+            ...base,
+            id: 'belt-line',
+            kind: 'marking-line',
+            purpose: 'alignment',
+            name: 'Alignment',
+            source: {
+              kind: 'path',
+              path: polyline(
+                [
+                  { x: 20, y: 15 },
+                  { x: 120, y: 15 },
+                ],
+                false,
+              ),
+            },
+          },
+          {
+            ...base,
+            id: 'belt-holes',
+            kind: 'hole-row',
+            name: 'Row of holes',
+            source: {
+              kind: 'derived',
+              sourceId: 'belt-line',
+              op: { type: 'hole-row', pitchMm: 25, radiusMm: 2 },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * Version 12 — a piece's overall size (Q15).
+ *
+ * The belt end's width and height, each between two corners of the box its
+ * outline fills. What the file holds is which corners; the 140 and the 30
+ * are read from the outline on every load.
+ */
+export function fixtureProjectV12(): Project {
+  const previous = fixtureProjectV11();
+  const overall = (
+    id: string,
+    measure: 'horizontal' | 'vertical',
+    a: { x: 'min' | 'max'; y: 'min' | 'max' },
+    b: { x: 'min' | 'max'; y: 'min' | 'max' },
+  ) => ({
+    id,
+    kind: 'measurement' as const,
+    name: 'Dimension',
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'measurement' as const,
+      measure,
+      a: { kind: 'extent' as const, featureId: 'belt-cut', ...a },
+      b: { kind: 'extent' as const, featureId: 'belt-cut', ...b },
+      offsetMm: 8,
+      precision: 1 as const,
+    },
+  });
+
+  return {
+    ...previous,
+    id: 'fixture-v12',
+    name: 'Format baseline v12',
+    parts: previous.parts.map((part) =>
+      part.id !== 'part-belt'
+        ? part
+        : {
+            ...part,
+            features: [
+              ...part.features,
+              overall('belt-width', 'horizontal', { x: 'min', y: 'max' }, { x: 'max', y: 'max' }),
+              overall('belt-height', 'vertical', { x: 'min', y: 'min' }, { x: 'min', y: 'max' }),
+            ],
+          },
+    ),
   };
 }

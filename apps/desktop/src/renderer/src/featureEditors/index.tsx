@@ -1,4 +1,6 @@
 import {
+  convertToPath,
+  convertToPathRefusal,
   setDerivation,
   setFoldDirection,
   setFoldThickness,
@@ -10,15 +12,23 @@ import {
   setShape,
 } from '@leathercad/document';
 import type { DocumentStore } from '@leathercad/document';
-import type { Derivation, Feature, Severity, StitchHoles } from '@leathercad/domain';
+import type {
+  Derivation,
+  Feature,
+  ParametricShape,
+  Severity,
+  StitchHoles,
+} from '@leathercad/domain';
 import type { Iron } from '@leathercad/platform';
 import type { JSX } from 'react';
 
 import { useI18n } from '../i18n.js';
 import { useKeysInSentences } from '../keyCaps.js';
+import { ReasonedButton } from '../ReasonedButton.js';
 import { ShapeEditor } from '../shapeEditors/index.js';
 import { FoldLineEditor } from './FoldLineEditor.js';
 import { HardwareHoleEditor } from './HardwareHoleEditor.js';
+import { HoleRowEditor } from './HoleRowEditor.js';
 import { MarkingLineEditor } from './MarkingLineEditor.js';
 import { MeasurementEditor } from './MeasurementEditor.js';
 import { StitchHoleSetEditor } from './StitchHoleSetEditor.js';
@@ -88,6 +98,7 @@ export function FeatureEditor({
           shape={source.shape}
           onChange={(shape) => store.dispatch(setShape(feature.id, shape))}
         />
+        <ConvertToPath store={store} feature={feature} shape={source.shape} />
       </>
     );
   }
@@ -110,6 +121,8 @@ export function FeatureEditor({
             onChange={change}
           />
         );
+      case 'hole-row':
+        return <HoleRowEditor op={source.op} holes={holes} onChange={change} />;
       case 'mirror':
         // Nothing, deliberately. A counterpart's parameters are an axis and a
         // glide, and neither is a number anyone should have to reason about:
@@ -127,6 +140,41 @@ export function FeatureEditor({
     // Said in the maker's words, with the key the rail shows (3.9c): the
     // points are the parameters of a drawn path.
     <p className="panel-empty">{t('editor.drawnByHand', keys)}</p>
+  );
+}
+
+/**
+ * The way out of a shape's parameters (3.12), offered under them because it
+ * is what the maker gives up: said plainly beside the button, not in a
+ * tooltip, since after it the radius or the width can no longer be typed.
+ * One step of undo brings the shape back.
+ */
+function ConvertToPath({
+  store,
+  feature,
+  shape,
+}: {
+  store: DocumentStore;
+  feature: Feature;
+  shape: ParametricShape;
+}) {
+  const { t } = useI18n();
+  const reason = convertToPathRefusal(store.getState().document.project, feature.id);
+  return (
+    <div className="panel-section" data-testid="convert-to-path-section">
+      <ReasonedButton
+        testId="convert-to-path"
+        reason={reason}
+        onClick={() => store.dispatch(convertToPath(feature.id))}
+      >
+        {t('properties.convertToPath')}
+      </ReasonedButton>
+      {reason === null && (
+        <p className="panel-note" data-testid="convert-to-path-note">
+          {t(`properties.convertToPathNote.${shape.type}`)}
+        </p>
+      )}
+    </div>
   );
 }
 

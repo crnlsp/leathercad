@@ -93,7 +93,7 @@ describe('opening a project from the file manager (8.5)', () => {
     expect(xml).toContain(`offset="30" value="mimetype${LCP_MIME}"`);
   });
 
-  it('gives the Flatpak no network: the app never goes online', async () => {
+  it('gives the Flatpak no network: Flathub, not the app, says when it is out of date', async () => {
     const { flatpak } = await config();
     expect(flatpak.finishArgs).not.toContain('--share=network');
     expect(flatpak.finishArgs).toContain('--filesystem=home');

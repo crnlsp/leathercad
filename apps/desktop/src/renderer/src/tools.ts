@@ -8,6 +8,7 @@ export type ToolId =
   | 'hardware'
   | 'text'
   | 'measure'
+  | 'guide'
   | 'points'
   | 'rotate'
   | 'scale';
@@ -70,6 +71,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       // A dimension is placed by naming two corners. It reads the drawing and
       // never changes it, which is why it is not under Modify.
       { id: 'measure', key: 'M' },
+      { id: 'guide', key: 'G' },
     ],
   },
   {
@@ -78,7 +80,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       // Move is not here on purpose. The select tool already moves a selection
       // by dragging it, and a second mode that did the same thing would teach
       // the user that modes are not distinct — the opposite of what this
-      // palette exists to say. Reserved key remaining: G.
+      // palette exists to say.
       //
       // Edit Points changes the shape of one drawn path rather than moving the
       // selection whole (3.9c). N for "node", the drafting name for a point.

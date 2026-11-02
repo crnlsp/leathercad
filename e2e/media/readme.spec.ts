@@ -150,6 +150,8 @@ test('README media', async () => {
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
+    // The app starts on its start screen (8.12); the pictures are of a project.
+    await window.getByTestId('start-new').click();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
     await app.evaluate(({ BrowserWindow }, size) => {
       BrowserWindow.getAllWindows()[0]!.setContentSize(size.width, size.height);

@@ -4,7 +4,7 @@ import {
   problem,
   type FeatureId,
   type MeasureKind,
-  type MeasureRef,
+  type AnchorRef,
   type Problem,
   type ResolvedPart,
   type ResolvedProject,
@@ -15,7 +15,7 @@ import { polyline } from '@leathercad/geometry';
 import { anchorNear, anchorPointOf } from '../anchorPick.js';
 import type { Tool, ToolContext } from '../tool.js';
 
-type State = { readonly kind: 'idle' } | { readonly kind: 'placing'; readonly from: MeasureRef };
+type State = { readonly kind: 'idle' } | { readonly kind: 'placing'; readonly from: AnchorRef };
 
 /**
  * How near a corner a click must land, in pixels.

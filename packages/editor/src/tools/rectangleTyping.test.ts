@@ -40,6 +40,19 @@ const nextId = (): string => `typed-${counter++}`;
 const key = (name: string) => keyInput(name);
 
 describe('rectangle tool, typed sizes', () => {
+  it('draws no outline between the clicks until the second corner is somewhere else', () => {
+    // A 0 × 0 rectangle is no shape: building it threw, and the tool manager
+    // logged an error on every first click.
+    const { ctx } = harness();
+    const tool = createRectangleTool(nextId);
+    click(tool, ctx, { x: 10, y: 20 });
+
+    const paths = () => (tool.buildOverlay?.(ctx).items ?? []).filter((i) => i.kind === 'path');
+    expect(paths()).toHaveLength(0);
+    tool.onPointerMove?.(ctx, pointer({ x: 60, y: 50 }));
+    expect(paths()).toHaveLength(1);
+  });
+
   it('has nothing to size until a corner is placed, or typing starts at the pointer', () => {
     const { ctx } = harness();
     const tool = createRectangleTool(nextId);

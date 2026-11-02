@@ -1,4 +1,12 @@
-import { approxCmp, approxEq, approxGte, approxLte, formatMm, type Mm } from '@leathercad/core';
+import {
+  checkResourceLimit,
+  approxCmp,
+  approxEq,
+  approxGte,
+  approxLte,
+  formatMm,
+  type Mm,
+} from '@leathercad/core';
 import {
   MatOps,
   PathOps,
@@ -10,7 +18,7 @@ import {
 } from '@leathercad/geometry';
 
 import { contentAreaMm, paperOptionsFitting, type Orientation, type PageSetup } from './paper.js';
-import type { ExportPart, ExportScene } from './scene.js';
+import type { ExportPart, ExportPath, ExportScene } from './scene.js';
 
 /**
  * Space left between parts on a sheet, so cut lines never touch and each piece
@@ -138,6 +146,7 @@ export const FOLD_CLEARANCE_MM = 15;
  * taped across sheets, as drawn.
  */
 export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult {
+  checkResourceLimit('features', scene.parts.length);
   const area = contentAreaMm(setup);
   const asDrawn = layOut(scene.parts, area, false);
   const turning = layOut(scene.parts, area, true);
@@ -147,10 +156,15 @@ export function paginate(scene: ExportScene, setup: PageSetup): PaginationResult
       ? turning
       : asDrawn;
 
+  // Count both tiled pages and assembly maps before allocating any tile grid.
+  // Choose the turning layout first: an expensive as-drawn option may fit whole turned.
+  const maps = chosen.oversized.filter(({ grid }) => grid.rows > 1 && grid.columns > 1).length;
+  checkResourceLimit('pages', chosen.sheets + maps);
   const pages: Page[] = chosen.packed.map((placements, index) => ({ index, placements }));
 
   // Then each part too large for a sheet, on sheets of its own.
-  const tiled = chosen.oversized.map(({ part, tiles }) => {
+  const tiled = chosen.oversized.map(({ part }) => {
+    const tiles = tile(part, area);
     for (const one of tiles) {
       pages.push({
         index: pages.length,
@@ -194,7 +208,7 @@ interface Area {
 /** One way to lay the parts out, and what it costs in sheets. */
 interface Layout {
   readonly packed: PlacedPart[][];
-  readonly oversized: ReadonlyArray<{ readonly part: ExportPart; readonly tiles: Tile[] }>;
+  readonly oversized: ReadonlyArray<{ readonly part: ExportPart; readonly grid: TileGrid }>;
   /** Every sheet, packed and taped. */
   readonly sheets: number;
   readonly taped: number;
@@ -202,13 +216,13 @@ interface Layout {
 
 function layOut(parts: readonly ExportPart[], area: Area, mayTurn: boolean): Layout {
   const ways: Footprint[][] = [];
-  const oversized: Array<{ part: ExportPart; tiles: Tile[] }> = [];
+  const oversized: Array<{ part: ExportPart; grid: TileGrid }> = [];
   for (const part of parts) {
     const options = [asDrawn(part, area), ...(mayTurn ? [turned(part, area)] : [])].filter(
       (option) =>
         approxLte(option.widthMm, area.widthMm) && approxLte(option.heightMm, area.heightMm),
     );
-    if (options.length === 0) oversized.push({ part, tiles: tile(part, area) });
+    if (options.length === 0) oversized.push({ part, grid: tileGrid(part, area) });
     else ways.push(options);
   }
 
@@ -220,7 +234,7 @@ function layOut(parts: readonly ExportPart[], area: Area, mayTurn: boolean): Lay
     );
     if (packed.length === 0 || sheets.length < packed.length) packed = sheets;
   }
-  const taped = oversized.reduce((sum, entry) => sum + entry.tiles.length, 0);
+  const taped = oversized.reduce((sum, entry) => sum + entry.grid.rows * entry.grid.columns, 0);
   return { packed, oversized, sheets: packed.length + taped, taped };
 }
 
@@ -229,6 +243,7 @@ function layOut(parts: readonly ExportPart[], area: Area, mayTurn: boolean): Lay
  * its bounds and the name set above them, or beside them once turned.
  */
 interface Footprint {
+  /** As drawn, even when `turned`. */
   readonly part: ExportPart;
   readonly turned: boolean;
   readonly room: Rect;
@@ -269,29 +284,60 @@ const QUARTER_TURN: Mat2x3 = { a: 0, b: 1, c: -1, d: 0, e: 0, f: 0 };
 /**
  * Turned a quarter counter-clockwise, words and all: the name, set above the
  * part as drawn, reads upward along its left side — from the sheet's right
- * edge, as drafting reads a turned dimension.
+ * edge, as drafting reads a turned dimension. The footprint holds the part
+ * as drawn; `place` turns it, and only once it is placed turned.
  */
 function turned(part: ExportPart, area: Area): Footprint {
   const b = part.boundsMm;
-  const turn = (path: Path): Path => PathOps.transform(path, QUARTER_TURN);
-  const piece: ExportPart = {
+  // The room as drawn, turned: the name's room on the left, and as long as the
+  // name runs up the side, never more than the printable height.
+  return footprint(part, true, {
+    minX: -b.maxY - LABEL_HEIGHT_MM,
+    minY: b.minX,
+    maxX: -b.minY,
+    maxY: b.minX + packingWidth(part, area.heightMm),
+  });
+}
+
+function turnedPart(part: ExportPart): ExportPart {
+  const b = part.boundsMm;
+  return {
     ...part,
-    paths: part.paths.map((item) => ({ ...item, path: turn(item.path) })),
-    texts: part.texts.map((text) => ({ ...text, glyphs: text.glyphs.map(turn) })),
+    paths: turnedPaths(part.paths),
+    texts: part.texts.map((text) => ({ ...text, glyphs: turnedGlyphs(text.glyphs) })),
     // Its corners turned by the same matrix as its paths, so the two agree.
     boundsMm: RectOps.fromCorners(
       MatOps.apply(QUARTER_TURN, { x: b.minX, y: b.minY }),
       MatOps.apply(QUARTER_TURN, { x: b.maxX, y: b.maxY }),
     ),
   };
-  // The room as drawn, turned: the name's room on the left, and as long as the
-  // name runs up the side, never more than the printable height.
-  return footprint(piece, true, {
-    minX: -b.maxY - LABEL_HEIGHT_MM,
-    minY: b.minX,
-    maxX: -b.minY,
-    maxY: b.minX + packingWidth(part, area.heightMm),
-  });
+}
+
+/**
+ * What has been turned so far, by what it was turned from. A part's paths and
+ * words are the same arrays in every revision that did not redraw them — a
+ * rename, an edit to another part (`buildExportScene`) — so each is turned
+ * once, not once a revision and again for every packing order (PERF-001).
+ */
+const turnedPathLists = new WeakMap<readonly ExportPath[], readonly ExportPath[]>();
+const turnedGlyphLists = new WeakMap<readonly Path[], readonly Path[]>();
+
+function turnedPaths(paths: readonly ExportPath[]): readonly ExportPath[] {
+  let turned = turnedPathLists.get(paths);
+  if (turned === undefined) {
+    turned = paths.map((item) => ({ ...item, path: PathOps.transform(item.path, QUARTER_TURN) }));
+    turnedPathLists.set(paths, turned);
+  }
+  return turned;
+}
+
+function turnedGlyphs(glyphs: readonly Path[]): readonly Path[] {
+  let turned = turnedGlyphLists.get(glyphs);
+  if (turned === undefined) {
+    turned = glyphs.map((glyph) => PathOps.transform(glyph, QUARTER_TURN));
+    turnedGlyphLists.set(glyphs, turned);
+  }
+  return turned;
 }
 
 /** The orders `paginate` tries: tallest, largest, widest, longest side first. */
@@ -352,7 +398,7 @@ function place(sheet: Sheet, way: Footprint, area: Area): boolean {
   if (at === null) return false;
   sheet.free = carve(sheet.free, { minX: at.x, minY: at.y, maxX: at.x + w, maxY: at.y + h });
   sheet.placements.push({
-    part: way.part,
+    part: way.turned ? turnedPart(way.part) : way.part,
     turned: way.turned,
     offsetMm: {
       x: area.x + at.x - way.room.minX,
@@ -438,7 +484,12 @@ function packingWidth(part: ExportPart, printableWidthMm: Mm): Mm {
  * (docs/printing.md §5.2). Row by row from the top left. A taped part is
  * never turned: it is taped only when it does not fit whole either way.
  */
-function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
+interface TileGrid {
+  readonly columns: number;
+  readonly rows: number;
+}
+
+function tileGrid(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): TileGrid {
   const region = { ...part.boundsMm, maxY: part.boundsMm.maxY + LABEL_HEIGHT_MM };
   const width = RectOps.width(region);
   const height = RectOps.height(region);
@@ -452,6 +503,17 @@ function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
 
   const columns = Math.max(1, Math.ceil((width - TILE_OVERLAP_MM) / stepX));
   const rows = Math.max(1, Math.ceil((height - TILE_OVERLAP_MM) / stepY));
+
+  return { columns, rows };
+}
+
+function tile(part: ExportPart, area: { widthMm: Mm; heightMm: Mm }): Tile[] {
+  const { columns, rows } = tileGrid(part, area);
+  const region = { ...part.boundsMm, maxY: part.boundsMm.maxY + LABEL_HEIGHT_MM };
+  const width = RectOps.width(region);
+  const height = RectOps.height(region);
+  const stepX = area.widthMm - TILE_OVERLAP_MM;
+  const stepY = area.heightMm - TILE_OVERLAP_MM;
 
   // Centred — the grid's spare falls evenly on every side, not all at one —
   // unless that puts a join on a fold, when the grid slides along its spare.

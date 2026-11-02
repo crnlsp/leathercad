@@ -1,12 +1,13 @@
-import { PathOps, uniformRadii, type Vec2 } from '@leathercad/geometry';
+import { PathOps, uniformRadii, type Path, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { diagnose } from './diagnose.js';
 import { evaluate, type ResolvedProject } from './evaluate.js';
-import { DEFAULT_SETTINGS, type Feature, type Project } from './feature.js';
+import { DEFAULT_SETTINGS, type Feature, type Part, type Project } from './feature.js';
+import type { Diagnostic } from './problems/index.js';
 import type { RunReport, StitchHoles } from './stitch.js';
-import { validate } from './validate.js';
+import { MIN_HOLE_EDGE_CLEARANCE_MM, validate } from './validate.js';
 
 // ——— Builders ————————————————————————————————————————————————————————————
 
@@ -597,10 +598,12 @@ describe('the rules about a part and its material', () => {
   });
 
   describe('HOLE_TOO_CLOSE_TO_EDGE', () => {
+    // The rivet's radius is 2 mm, so its rim is 2 mm nearer the edge than its
+    // centre (Q33).
     const rivetAt = (x: number) => rivet({ x, y: 37 });
 
-    it('warns about a rivet under 1.5 mm from the edge, saying how near', () => {
-      const [diagnostic] = validate(evaluate(project([panel(), rivetAt(1)]))).filter(
+    it('warns about a rivet whose rim is under 1.5 mm from the edge, saying how near', () => {
+      const [diagnostic] = validate(evaluate(project([panel(), rivetAt(3)]))).filter(
         (d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
       );
 
@@ -611,16 +614,16 @@ describe('the rules about a part and its material', () => {
       });
     });
 
-    it('does not warn at 1.5 mm exactly, or further in', () => {
-      expect(codes(evaluate(project([panel(), rivetAt(1.5)])))).toEqual([]);
+    it('does not warn with the rim 1.5 mm in exactly, or further', () => {
+      expect(codes(evaluate(project([panel(), rivetAt(3.5)])))).toEqual([]);
       expect(codes(evaluate(project([panel(), rivetAt(8)])))).toEqual([]);
     });
 
     it('measures to a cut-out’s edge as readily as to the outline', () => {
-      // A rivet 1 mm outside the slot: far from the outline, far too near the
-      // hole. Both are edges the leather can tear to.
+      // A rivet whose rim is 1 mm outside the slot: far from the outline, far
+      // too near the hole. Both are edges the leather can tear to.
       const [diagnostic] = validate(
-        evaluate(project([panel(), slot(), rivet({ x: 52 - 21, y: 37 })])),
+        evaluate(project([panel(), slot(), rivet({ x: 52 - 23, y: 37 })])),
       ).filter((d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE');
 
       expect(diagnostic).toBeDefined();
@@ -734,10 +737,10 @@ describe('a hole rule names the holes at fault', () => {
   };
 
   it('points HOLE_TOO_CLOSE_TO_EDGE at the hole, not at the whole feature', () => {
-    const resolved = evaluate(project([panel(105, 75, 0), rivetAt({ x: 1, y: 37 })]));
+    const resolved = evaluate(project([panel(105, 75, 0), rivetAt({ x: 3, y: 37 })]));
 
     expect(codes(resolved)).toContain('HOLE_TOO_CLOSE_TO_EDGE');
-    expect(pointsOf(resolved, 'HOLE_TOO_CLOSE_TO_EDGE')).toEqual([{ x: 1, y: 37 }]);
+    expect(pointsOf(resolved, 'HOLE_TOO_CLOSE_TO_EDGE')).toEqual([{ x: 3, y: 37 }]);
   });
 
   it('points OUTSIDE_PART at the hole that is off the leather', () => {
@@ -767,5 +770,569 @@ describe('a hole rule names the holes at fault', () => {
     expect(named.length).toBeLessThan(total);
     // Each one really is near the slot rather than merely in the set.
     for (const point of named) expect(point.y).toBeGreaterThan(20);
+  });
+});
+
+// ——— A hardware hole is its rim (Q33) ——————————————————————————————————————
+
+describe('a hardware hole is measured by its rim, not its centre (Q33)', () => {
+  const hardware = (centre: Vec2, radius: number): Feature => ({
+    ...base('rivet-1', 'Hole'),
+    kind: 'hardware-hole',
+    hardwareType: 'rivet',
+    source: { kind: 'shape', shape: { type: 'circle', centre, radius } },
+  });
+
+  const roundPart = (radius: number): Feature => ({
+    ...base('cut-1', 'Outline'),
+    kind: 'cut-contour',
+    role: 'outer',
+    source: { kind: 'shape', shape: { type: 'circle', centre: { x: 0, y: 0 }, radius } },
+  });
+
+  const holeCodes = (...features: Feature[]): string[] =>
+    codes(evaluate(project(features))).filter(
+      (code) => code === 'OUTSIDE_PART' || code === 'HOLE_TOO_CLOSE_TO_EDGE',
+    );
+
+  const clearanceOf = (...features: Feature[]): number | undefined => {
+    const found = validate(evaluate(project(features))).find(
+      (d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
+    );
+    return found?.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE'
+      ? found.problem.facts.clearanceMm
+      : undefined;
+  };
+
+  it('reports a 6 mm hole centred 2 mm inside the edge as off the material', () => {
+    // Its rim cuts 1 mm through the edge: the punch takes a bite out of it.
+    const [diagnostic, ...rest] = validate(
+      evaluate(project([panel(105, 75, 0), hardware({ x: 2, y: 37 }, 3)])),
+    );
+
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({
+      problem: { code: 'OUTSIDE_PART', facts: { what: 'holes' } },
+      severity: 'error',
+      location: { kind: 'points', points: [{ x: 2, y: 37 }] },
+    });
+  });
+
+  it('reports a 4 mm rivet hole whose rim crosses the edge as off, not merely too close', () => {
+    expect(holeCodes(panel(105, 75, 0), hardware({ x: 1, y: 37 }, 2))).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('takes a rim that touches the edge as on the leather, with no clearance at all', () => {
+    // Tangent circles, the numerically fragile case: within a storage quantum
+    // of the edge is on it, as for a line (Q2).
+    const outline = panel(105, 75, 0);
+
+    expect(holeCodes(outline, hardware({ x: 2, y: 37 }, 2))).toEqual(['HOLE_TOO_CLOSE_TO_EDGE']);
+    expect(clearanceOf(outline, hardware({ x: 2, y: 37 }, 2))).toBeCloseTo(0, 9);
+    // Never a negative clearance, a fraction of a quantum over the edge.
+    expect(clearanceOf(outline, hardware({ x: 2, y: 37 }, 2.00005))).toBe(0);
+  });
+
+  it('catches a rim crossing a rounded corner that the straight sides would not', () => {
+    // 3 mm from both sides, and 0.93 mm inside the 8 mm corner's arc.
+    expect(holeCodes(panel(105, 75, 8), hardware({ x: 3, y: 3 }, 2))).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('reports a rim that crosses into a cut-out', () => {
+    const slot: Feature = {
+      ...base('hole-1', 'Thumb slot'),
+      kind: 'cut-contour',
+      role: 'inner',
+      source: { kind: 'shape', shape: { type: 'circle', centre: { x: 52, y: 37 }, radius: 20 } },
+    };
+    // Centre 1 mm outside the slot, radius 2.
+    expect(holeCodes(panel(), slot, hardware({ x: 31, y: 37 }, 2))).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('reports a hole wider than the part it is punched in', () => {
+    expect(holeCodes(roundPart(3), hardware({ x: 0, y: 0 }, 5))).toEqual(['OUTSIDE_PART']);
+  });
+
+  // —— Properties ——
+
+  type Verdict = 'fine' | 'too-close' | 'outside';
+  const verdict = (found: string[]): Verdict =>
+    found.includes('OUTSIDE_PART')
+      ? 'outside'
+      : found.includes('HOLE_TOO_CLOSE_TO_EDGE')
+        ? 'too-close'
+        : 'fine';
+  const rank: Record<Verdict, number> = { fine: 0, 'too-close': 1, outside: 2 };
+
+  /** Kept clear of the thresholds, where the answer is decided by the last bit. */
+  const MARGIN = 1e-3;
+
+  it('agrees with the exact rim clearance on a square-cornered panel', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 20, max: 2000, noNaN: true }),
+        fc.double({ min: 20, max: 2000, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0.5, max: 10, noNaN: true }),
+        (width, height, u, v, radius) => {
+          const centre = { x: width * (0.001 + 0.998 * u), y: height * (0.001 + 0.998 * v) };
+          const rimMm = Math.min(centre.x, width - centre.x, centre.y, height - centre.y) - radius;
+          const near = (threshold: number) => Math.abs(rimMm - threshold) < MARGIN;
+          fc.pre(!near(0) && !near(MIN_HOLE_EDGE_CLEARANCE_MM));
+
+          const outline = panel(width, height, 0);
+          const expected: Verdict =
+            rimMm < 0 ? 'outside' : rimMm < MIN_HOLE_EDGE_CLEARANCE_MM ? 'too-close' : 'fine';
+
+          expect(verdict(holeCodes(outline, hardware(centre, radius)))).toBe(expected);
+          if (expected === 'too-close') {
+            expect(clearanceOf(outline, hardware(centre, radius))).toBeCloseTo(rimMm, 6);
+          }
+        },
+      ),
+    );
+  });
+
+  it('always reports a hole whose centre is on a round part and whose rim leaves it', () => {
+    // An arc-bounded edge, where the nearest point is not on a straight side.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 5, max: 500, noNaN: true }),
+        fc.double({ min: 0, max: 0.99, noNaN: true }),
+        fc.double({ min: 0, max: 2 * Math.PI, noNaN: true }),
+        fc.double({ min: MARGIN, max: 20, noNaN: true }),
+        (partRadius, along, angle, overshoot) => {
+          const out = partRadius * along;
+          const centre = { x: out * Math.cos(angle), y: out * Math.sin(angle) };
+          const radius = partRadius - out + overshoot;
+
+          expect(verdict(holeCodes(roundPart(partRadius), hardware(centre, radius)))).toBe(
+            'outside',
+          );
+        },
+      ),
+    );
+  });
+
+  it('never finds a new problem with a hole when its radius shrinks', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0.5, max: 15, noNaN: true }),
+        fc.double({ min: 0.05, max: 1, noNaN: true }),
+        (u, v, radius, shrink) => {
+          const outline = panel(105, 75, 8);
+          const centre = { x: 105 * u, y: 75 * v };
+          const before = verdict(holeCodes(outline, hardware(centre, radius)));
+          const after = verdict(holeCodes(outline, hardware(centre, radius * shrink)));
+
+          expect(rank[after]).toBeLessThanOrEqual(rank[before]);
+        },
+      ),
+    );
+  });
+});
+
+describe('validation reused across revisions (PERF-005)', () => {
+  /** A marking line with nothing to cut it from. */
+  const panelless = (): Feature => ({
+    ...base('mark-1', 'Mark'),
+    kind: 'marking-line',
+    purpose: 'alignment',
+    source: {
+      kind: 'path',
+      path: PathOps.polyline(
+        [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+        ],
+        false,
+      ),
+    },
+  });
+
+  /** A part `k`: an outline, its stitch line and holes, and round slots. */
+  function strapPart(k: number, width: number, slots: readonly Vec2[]): Part {
+    const id = (what: string) => `${what}-${k}`;
+    return {
+      id: id('part'),
+      name: `Strap ${k}`,
+      quantity: 1,
+      features: [
+        {
+          ...base(id('cut'), 'Outline'),
+          kind: 'cut-contour',
+          role: 'outer',
+          source: {
+            kind: 'shape',
+            shape: {
+              type: 'rect',
+              origin: { x: 0, y: k * 60 },
+              width,
+              height: 40,
+              radii: uniformRadii(4),
+              rotation: 0,
+            },
+          },
+        },
+        {
+          ...base(id('stitch'), 'Stitch line'),
+          kind: 'stitch-line',
+          source: {
+            kind: 'derived',
+            sourceId: id('cut'),
+            op: { type: 'offset', distanceMm: 3.5, side: 'inward', run: { kind: 'whole' } },
+          },
+        },
+        {
+          ...base(id('holes'), 'Stitch holes'),
+          kind: 'stitch-hole-set',
+          source: {
+            kind: 'derived',
+            sourceId: id('stitch'),
+            op: { type: 'stitch-holes', pitchMm: 3.85, mode: 'fit-whole', corners: 'continuous' },
+          },
+        },
+        ...slots.map((centre, i): Feature => slotAt(`${id('slot')}-${i}`, centre)),
+      ],
+    };
+  }
+
+  const slotAt = (id: string, centre: Vec2, radius = 4): Feature => ({
+    ...base(id, 'Slot'),
+    kind: 'cut-contour',
+    role: 'inner',
+    source: { kind: 'shape', shape: { type: 'circle', centre, radius } },
+  });
+
+  /**
+   * A stitch line in part 1 that follows part 0's outline, and holes on it:
+   * off part 1's leather, so it has findings that hang on another part.
+   */
+  const following = (): Feature[] => [
+    {
+      ...base('seam-1', 'Seam'),
+      kind: 'stitch-line',
+      source: {
+        kind: 'derived',
+        sourceId: 'cut-0',
+        op: { type: 'offset', distanceMm: 6, side: 'inward', run: { kind: 'whole' } },
+      },
+    },
+    {
+      ...base('seam-holes-1', 'Seam holes'),
+      kind: 'stitch-hole-set',
+      source: {
+        kind: 'derived',
+        sourceId: 'seam-1',
+        op: { type: 'stitch-holes', pitchMm: 5, mode: 'fit-whole', corners: 'continuous' },
+      },
+    },
+  ];
+
+  /** Replaces part `k`'s feature `j` and nothing else, as a command does. */
+  const withFeature = (
+    p: Project,
+    k: number,
+    j: number,
+    f: (feature: Feature) => Feature,
+  ): Project => ({
+    ...p,
+    parts: p.parts.map((part, i) =>
+      i === k % p.parts.length && part.features.length > 0
+        ? {
+            ...part,
+            features: part.features.map((feature, n) =>
+              n === j % part.features.length ? f(feature) : feature,
+            ),
+          }
+        : part,
+    ),
+  });
+  const withPart = (p: Project, k: number, f: (part: Part) => Part): Project => ({
+    ...p,
+    parts: p.parts.map((part, i) => (i === k % p.parts.length ? f(part) : part)),
+  });
+
+  type Edit = (p: Project, history: readonly Project[]) => Project;
+  const arbXY = fc.record({
+    x: fc.double({ min: -20, max: 320, noNaN: true }),
+    y: fc.double({ min: -10, max: 130, noNaN: true }),
+  });
+  const arbEdit: fc.Arbitrary<Edit> = fc.oneof(
+    fc.tuple(fc.nat(), fc.string()).map(
+      ([k, name]): Edit =>
+        (p) =>
+          withPart(p, k, (part) => ({ ...part, name })),
+    ),
+    fc.tuple(fc.nat(), fc.integer({ min: 1, max: 4 })).map(
+      ([k, quantity]): Edit =>
+        (p) =>
+          withPart(p, k, (part) => ({ ...part, quantity })),
+    ),
+    fc.tuple(fc.nat(), fc.nat(), fc.string()).map(
+      ([k, j, name]): Edit =>
+        (p) =>
+          withFeature(p, k, j, (feature) => ({ ...feature, name })),
+    ),
+    // Hidden or shown: a new feature object, its geometry as it was.
+    fc.tuple(fc.nat(), fc.nat()).map(
+      ([k, j]): Edit =>
+        (p) =>
+          withFeature(p, k, j, (feature) => ({ ...feature, visible: !feature.visible })),
+    ),
+    // A slot moved: a cut-out every hole of its part is measured against.
+    fc.tuple(fc.nat(), fc.nat(), arbXY).map(
+      ([k, j, centre]): Edit =>
+        (p) =>
+          withFeature(p, k, j, (feature) =>
+            feature.kind === 'cut-contour' && feature.role === 'inner'
+              ? slotAt(feature.id, centre)
+              : feature,
+          ),
+    ),
+    // The outline resized: its stitch line, its holes, and another part's seam follow.
+    fc.tuple(fc.nat(), fc.double({ min: 60, max: 300, noNaN: true })).map(
+      ([k, width]): Edit =>
+        (p) =>
+          withFeature(p, k, 0, (feature) =>
+            feature.kind === 'cut-contour' &&
+            feature.source.kind === 'shape' &&
+            feature.source.shape.type === 'rect'
+              ? {
+                  ...feature,
+                  source: { ...feature.source, shape: { ...feature.source.shape, width } },
+                }
+              : feature,
+          ),
+    ),
+    // The pitch changed: the same holes feature, new holes.
+    fc.tuple(fc.nat(), fc.double({ min: 2, max: 30, noNaN: true })).map(
+      ([k, pitchMm]): Edit =>
+        (p) =>
+          withFeature(p, k, 2, (feature) =>
+            feature.kind === 'stitch-hole-set' &&
+            feature.source.kind === 'derived' &&
+            feature.source.op.type === 'stitch-holes'
+              ? { ...feature, source: { ...feature.source, op: { ...feature.source.op, pitchMm } } }
+              : feature,
+          ),
+    ),
+    // A slot added, or the last feature taken away.
+    fc.tuple(fc.nat(), arbXY, fc.nat()).map(
+      ([k, centre, n]): Edit =>
+        (p) =>
+          withPart(p, k, (part) => ({
+            ...part,
+            features: [...part.features, slotAt(`added-${n}-${part.features.length}`, centre)],
+          })),
+    ),
+    fc.nat().map(
+      (k): Edit =>
+        (p) =>
+          withPart(p, k, (part) =>
+            part.features.length > 3 ? { ...part, features: part.features.slice(0, -1) } : part,
+          ),
+    ),
+    // A slot carried to another part: the same feature object, in a part with
+    // other leather.
+    fc.tuple(fc.nat(), fc.nat()).map(([k, to]): Edit => (p) => {
+      const from = k % p.parts.length;
+      const target = to % p.parts.length;
+      const slot = p.parts[from]!.features.find(
+        (f) => f.kind === 'cut-contour' && f.role === 'inner',
+      );
+      if (slot === undefined || target === from) return p;
+      return {
+        ...p,
+        parts: p.parts.map((part, i) =>
+          i === from
+            ? { ...part, features: part.features.filter((f) => f !== slot) }
+            : i === target
+              ? { ...part, features: [...part.features, slot] }
+              : part,
+        ),
+      };
+    }),
+    // Undo, or redo: a revision diagnosed before, its own objects.
+    fc.nat().map(
+      (n): Edit =>
+        (p, history) =>
+          history[n % history.length] ?? p,
+    ),
+  );
+
+  const arbProject: fc.Arbitrary<Project> = fc
+    .tuple(
+      fc.array(
+        fc.tuple(fc.double({ min: 60, max: 300, noNaN: true }), fc.array(arbXY, { maxLength: 3 })),
+        {
+          minLength: 1,
+          maxLength: 3,
+        },
+      ),
+      fc.boolean(),
+    )
+    .map(([parts, seam]) => {
+      const built = parts.map(([width, slots], k) => strapPart(k, width, slots));
+      if (seam && built.length > 1) {
+        built[1] = { ...built[1]!, features: [...built[1]!.features, ...following()] };
+      }
+      return { id: 'proj', name: 'Test', settings: DEFAULT_SETTINGS, parts: built };
+    });
+
+  it('finds what a copy sharing no object finds, through any run of edits', () => {
+    fc.assert(
+      fc.property(arbProject, fc.array(arbEdit, { minLength: 1, maxLength: 8 }), (start, edits) => {
+        const history: Project[] = [start];
+        expect(diagnose(start)).toEqual(diagnose(structuredClone(start)));
+        for (const edit of edits) {
+          const next = edit(history.at(-1)!, history);
+          history.push(next);
+          expect(diagnose(next)).toEqual(diagnose(structuredClone(next)));
+        }
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it('keeps every feature’s findings through a rename, and words the part’s own afresh', () => {
+    const before = project([
+      panel(),
+      stitchLine(),
+      holeSet(),
+      drawn(
+        'stitch-line',
+        [
+          { x: -20, y: 10 },
+          { x: 40, y: 10 },
+        ],
+        false,
+      ),
+    ]);
+    const renamed = { ...before, parts: [{ ...before.parts[0]!, name: '\u{1F600}' }] };
+
+    const [a, b] = [diagnose(before), diagnose(renamed)];
+
+    const aboutFeatures = (list: readonly Diagnostic[]) =>
+      list.filter((d) => d.featureId !== undefined);
+    expect(aboutFeatures(b).length).toBeGreaterThan(0);
+    aboutFeatures(b).forEach((d, i) => expect(d).toBe(aboutFeatures(a)[i]));
+    // The new name has a character the typeface cannot print.
+    expect(b.map((d) => d.problem.code)).toContain('TEXT_GLYPH_MISSING');
+    expect(a.map((d) => d.problem.code)).not.toContain('TEXT_GLYPH_MISSING');
+  });
+
+  it('finds a slot off the leather once the outline shrinks away from it', () => {
+    // The slot's own geometry is the same object; only the outline it is
+    // measured against changed.
+    const wide: Project = {
+      id: 'proj',
+      name: 'Test',
+      settings: DEFAULT_SETTINGS,
+      parts: [strapPart(0, 200, [{ x: 150, y: 20 }])],
+    };
+    const narrow = withFeature(wide, 0, 0, (feature) =>
+      feature.kind === 'cut-contour' &&
+      feature.source.kind === 'shape' &&
+      feature.source.shape.type === 'rect'
+        ? {
+            ...feature,
+            source: { ...feature.source, shape: { ...feature.source.shape, width: 100 } },
+          }
+        : feature,
+    );
+    const codesOf = (p: Project) =>
+      diagnose(p)
+        .filter((d) => d.featureId === 'slot-0-0')
+        .map((d) => d.problem.code);
+
+    expect(codesOf(wide)).toEqual([]);
+    expect(codesOf(narrow)).toEqual(['CUT_OUT_OUTSIDE_PART']);
+  });
+
+  it('places a feature carried to another part in that part', () => {
+    const two: Project = {
+      id: 'proj',
+      name: 'Test',
+      settings: DEFAULT_SETTINGS,
+      parts: [strapPart(0, 200, [{ x: 50, y: 20 }]), strapPart(1, 200, [{ x: 150, y: 80 }])],
+    };
+    const slot = two.parts[0]!.features.at(-1)!;
+    const moved: Project = {
+      ...two,
+      parts: [
+        { ...two.parts[0]!, features: two.parts[0]!.features.slice(0, -1) },
+        { ...two.parts[1]!, features: [...two.parts[1]!.features, slot] },
+      ],
+    };
+    diagnose(two);
+
+    expect(diagnose(moved)).toEqual(diagnose(structuredClone(moved)));
+    expect(diagnose(moved).find((d) => d.featureId === slot.id)?.partId).toBe('part-1');
+  });
+
+  it('places a crossed cut-out carried between two parts with no outline in its new part', () => {
+    // Neither part has leather, so the material the cut-out is found against
+    // is the same either side: only the part tells the findings apart.
+    const crossed: Feature = {
+      ...base('cross-1', 'Crossed'),
+      kind: 'cut-contour',
+      role: 'inner',
+      source: { kind: 'path', path: PathOps.polyline(figureOfEight, true) },
+    };
+    const before = project([crossed], [panelless()]);
+    const after = project([panelless()], [crossed]);
+    diagnose(before);
+
+    const placedIn = diagnose(after).find((d) => d.problem.code === 'CONTOUR_SELF_INTERSECTS');
+
+    expect(placedIn?.partId).toBe('part-1');
+  });
+
+  it('measures nothing again for a rename', () => {
+    // A work bound, not a timing: the guard against a metadata edit
+    // validating geometry it did not touch. The audit's 500-point traced
+    // outline, drawn, with its stitch line and 468 holes: every segment read
+    // of the outline counts. Renaming its part used to validate the holes
+    // again, each asked whether it is on the leather and how far it is from
+    // the edge, both against all 500 segments: about 480,000 reads. Nothing
+    // the outline's findings depend on changed, so none is needed; the bound,
+    // 1,000, is under a four-hundredth of that.
+    const reads = { count: 0 };
+    const outline = PathOps.polyline(
+      Array.from({ length: 500 }, (_, i) => {
+        const angle = (i / 500) * Math.PI * 2;
+        return { x: 300 + 290 * Math.cos(angle), y: 300 + 290 * Math.sin(angle) };
+      }),
+      true,
+    );
+    const counted: Path = {
+      closed: true,
+      segments: new Proxy([...outline.segments], {
+        get(target, key, receiver) {
+          if (typeof key === 'string' && /^\d+$/.test(key)) reads.count++;
+          return Reflect.get(target, key, receiver) as unknown;
+        },
+      }),
+    };
+    const before = project([
+      {
+        ...base('cut-1', 'Outline'),
+        kind: 'cut-contour',
+        role: 'outer',
+        source: { kind: 'path', path: counted },
+      },
+      stitchLine(),
+      holeSet(),
+    ]);
+    diagnose(before);
+    reads.count = 0;
+
+    diagnose({ ...before, parts: [{ ...before.parts[0]!, name: 'Renamed' }] });
+
+    expect(reads.count).toBeLessThan(1000);
   });
 });

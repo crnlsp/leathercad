@@ -1,8 +1,7 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { launchApp } from './launchApp.js';
+import { launchApp, openSample, withApp, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -13,34 +12,16 @@ import { resizeWindow } from './windowSize.js';
  * what the job is.
  */
 
-async function withSample(
+const withSample = (
   size: readonly [number, number],
   run: (window: Page, app: ElectronApplication) => Promise<void>,
-): Promise<void> {
-  const app = await launchApp();
-  try {
-    const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+): Promise<void> =>
+  withApp(async (window, app) => {
     // Opened first: below 900 px the empty Parts panel that offers it folds.
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await openSample(window);
     await resizeWindow(app, window, size[0], size[1]);
     await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
-}
-
-async function scan(window: Page, what: string): Promise<void> {
-  const results = await new AxeBuilder({ page: window })
-    .setLegacyMode(true)
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-    .analyze();
-  const found = results.violations.map(
-    (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
-  );
-  expect(found, what).toEqual([]);
-}
+  });
 
 const top = async (window: Page, testId: string): Promise<number> =>
   (await window.getByTestId('property-panel').getByTestId(testId).boundingBox())!.y;
@@ -116,7 +97,7 @@ test('a hole set reads in the order of the work, and says how its spacing came o
     );
 
     await window.getByTestId('feature-row-outer-holes').click();
-    await scan(window, 'a hole set in Properties');
+    await expectNoViolations(window, 'a hole set in Properties');
   });
 });
 
@@ -233,6 +214,6 @@ test('with nothing selected, Properties says what the job is (R-05, §7 question
     await expect(totals.getByTestId('job-pieces')).toHaveText('Pieces3 · 2 to cut');
     await expect(totals.getByTestId('job-holes')).toHaveText('Holes146');
 
-    await scan(window, 'the job, with nothing selected');
+    await expectNoViolations(window, 'the job, with nothing selected');
   });
 });

@@ -1,8 +1,7 @@
 # The window, refined — the plan for 1.5 (U.1 – U.20)
 
-> **For agentic workers:** one slice per session. Start one with `/slice U.n`, or hand it to the
-> `ui-refinement` agent ([`.claude/agents/ui-refinement.md`](../../../.claude/agents/ui-refinement.md)),
-> which follows this document. Cite the requirement ids (`R-01` …) in commits and pull requests.
+> **For agentic workers:** one slice per session. Start one with `/slice U.n`. (The `ui-refinement`
+> agent that followed this document was retired once 1.5 shipped.) Cite the requirement ids (`R-01` …) in commits and pull requests.
 > Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** a maker gets more done at the bench: the pattern reads at every zoom, the board gets the
@@ -17,7 +16,7 @@ vertical slices. A refinement pass, not a redesign.
 [mockups](../specs/2026-10-08-ui-refinement-mockups/). The mockups are not pixel specs: where an
 image and the text disagree, the text wins.
 
-**Roadmap:** [1.5 — the window, refined](../../roadmap.md#15--the-next-release), the next release.
+**Roadmap:** [1.5 — the window, refined](../../history/roadmap-1.5.md), released as 1.5.0 on 2026-10-18.
 
 **Stack:** React in `apps/desktop/src/renderer`; tokens in `packages/render/src/theme/`; the
 canvas2d and svg screen backends in `packages/render`; Playwright for the E2E and pixel tests.
@@ -29,8 +28,9 @@ canvas2d and svg screen backends in `packages/render`; Playwright for the E2E an
 | Order | What | Waits on | Who |
 |---|---|---|---|
 | 1 | ✅ **1.4, released as 1.3.5** on 2026-10-09, with U.1 to U.3: [the record](../../history/roadmap-1.3.5.md) | — | — |
-| 2 | **U.1 Pieces read as pieces** | nothing | the `ui-refinement` agent, from 2026-10-08 |
-| 3 | U.2 → U.19, in this document's order, which puts U.20 in Phase 2 | the slices named under each | one session per slice |
+| 2 | ✅ **U.1 Pieces read as pieces** | nothing | the `ui-refinement` agent, from 2026-10-08 |
+| 3 | ✅ U.2 → U.19, in this document's order, which puts U.20 in Phase 2 | the slices named under each | one session per slice |
+| 4 | ✅ **1.5, released as 1.5.0** on 2026-10-18, with U.4 to U.20: [the record](../../history/roadmap-1.5.md) | — | — |
 
 **Why U.1 comes first:**
 
@@ -1190,7 +1190,11 @@ the visible rows (unit); E2E for keys and reveal.
 - **One flat tree**: `role="tree"` holds every row, `aria-level` says the nesting, and each
   piece's `section` (`part-section-<id>`, `role="none"`) only groups its rows. Nested groups would
   have named each piece by every feature in it. A row is named by its name alone; its state is
-  its description. The Sheets view's print line and an empty piece's *Delete part* are inside the
+  its description. *Since axe-core 4.14, which holds rows to WCAG 2.5.3 (Label in Name), a row is
+  named by all it shows, in its order — `Stitch holes, 2 (problems, worst: error), 146 holes`,
+  an empty piece's *Empty* and *Delete part* too (`rowName` in `partsTree.ts`). Label-in-name
+  matching passes over the parentheses, so the problem count stays beside a hole count shown
+  beside it.* The Sheets view's print line and an empty piece's *Delete part* are inside the
   piece's row, where a tree allows them.
 - **Selection follows focus**: ↑ and ↓ select the row they reach, so Delete acts on the row the
   maker is on; Enter selects, as the row's button did, and lets the key go on. Space, F2 and the
@@ -1216,7 +1220,8 @@ the visible rows (unit); E2E for keys and reveal.
   that does not print with a crossed printer in the warning colour, its tooltip the reason
   (*Not printed. It is hidden.*), and says it in the row's description. A printing piece's hidden
   features are told by their own marks.
-- **Pieces start open** and a fold is the session's; a selection on the board opens its piece,
+- **Pieces start open** and a fold is the session's — since PERF-016 its tab's, kept through a
+  tab switch and a visit to Sheets and gone with the tab; a selection on the board opens its piece,
   sets the tree's Tab stop on its row and scrolls it into view (`block: 'nearest'`), focus staying
   on the board. Tabbing into the tree selects nothing: focus lands on the selected row, or the
   first (checked from the rail with nothing selected and with a stitch line selected).

@@ -1,4 +1,4 @@
-import type { Project } from '@leathercad/domain';
+import { isHolesAlongALine, type Project } from '@leathercad/domain';
 
 import { MARKS, markFor, type Mark } from './icons/markFor.js';
 
@@ -14,8 +14,8 @@ export type LegendKey = Mark | 'linked';
  *
  * The key to *this* drawing, not to every line the product can make: a legend
  * listing a fold on a piece with no fold teaches nothing. A hidden feature is
- * not drawn, so it is not listed. A hole set is always derived and wears no
- * tick, so it never adds the link row on its own.
+ * not drawn, so it is not listed. A hole set or a row of holes is always
+ * derived and wears no tick, so it never adds the link row on its own.
  */
 export function legendEntries(project: Project): readonly LegendKey[] {
   const present = new Set<LegendKey>();
@@ -24,7 +24,7 @@ export function legendEntries(project: Project): readonly LegendKey[] {
       if (!feature.visible) continue;
       const mark = markFor(feature);
       if (mark !== null) present.add(mark);
-      if (feature.source.kind === 'derived' && feature.kind !== 'stitch-hole-set') {
+      if (feature.source.kind === 'derived' && !isHolesAlongALine(feature.kind)) {
         present.add('linked');
       }
     }

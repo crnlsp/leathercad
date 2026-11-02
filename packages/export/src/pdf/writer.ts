@@ -1,4 +1,10 @@
-import type { Mm } from '@leathercad/core';
+import {
+  NO_CORRECTION,
+  isAllowedCorrection,
+  isNoCorrection,
+  type Mm,
+  type ScaleCorrection,
+} from '@leathercad/core';
 import {
   EXPORT_TOLERANCE_MM,
   SegmentOps,
@@ -30,6 +36,7 @@ import {
   type PDFPage,
 } from 'pdf-lib';
 
+import { calibrationPage } from '../calibrationPage.js';
 import type { Page } from '../paginate.js';
 import {
   DEFAULT_PAGE_SETUP,
@@ -37,9 +44,11 @@ import {
   mmToPt,
   sheetSizeMm,
   type PageSetup,
+  type PaperSize,
 } from '../paper.js';
 import type { ExportPath, ExportText } from '../scene.js';
-import { sheetInk, type SheetInk } from '../sheetInk.js';
+import { APP_NAME, sheetInk, type SheetInk } from '../sheetInk.js';
+import { inkReaches } from './reach.js';
 import type { SheetPlan } from '../sheetPlan.js';
 
 export interface PdfExportOptions {
@@ -54,22 +63,31 @@ export interface PdfExportOptions {
    * chosen, the right way up in any viewer. docs/printing.md §6.1 and §13.
    */
   readonly upright?: boolean;
+  /**
+   * The printer's scale correction (7.5), applied to every page on the
+   * paper's own axes — `x` across, `y` along — about the paper's middle.
+   * Only *Print* passes one, in the print form, for the printer it was
+   * measured on; a file has no printer. Each sheet's strip then says it was
+   * corrected, and by how much. Beyond ±2 % it throws: that is a print
+   * setting, not a printer (docs/printing.md §8.2).
+   */
+  readonly correction?: ScaleCorrection;
 }
 
 export interface PdfExportResult {
   readonly bytes: Uint8Array;
 }
 
-const APP_NAME = 'LeatherCAD';
-
 /**
  * Writes a print-ready PDF at exactly 1:1.
  *
  * PDF user space is already 1/72 inch, so geometry goes in at `mm * 72/25.4`
- * and **no scaling transform is ever emitted**. 1:1 is therefore the definition
- * of what was written, not something this code has to achieve. The one
- * transform written at all is the print form's quarter turn (`upright`), and
- * it scales nothing.
+ * and **no scaling transform is emitted** unless a maker measured their
+ * printer and asked for one. 1:1 is therefore the definition of what was
+ * written, not something this code has to achieve. The print form's quarter
+ * turn (`upright`) scales nothing; the one scale ever written is a printer's
+ * calibrated correction (`correction`, 7.5), within ±2 %, and only Print
+ * passes it.
  *
  * PDF is Y-up like the model, so unlike the canvas renderer and the SVG writer
  * there is no axis flip here at all.
@@ -86,17 +104,13 @@ export async function exportPdf(
 ): Promise<PdfExportResult> {
   const { scene, setup } = plan;
   const now = options.now ?? ((): Date => new Date());
-
-  const document = await PDFDocument.create();
-  document.setTitle(scene.projectName);
-  document.setCreator(`${APP_NAME} ${options.applicationVersion ?? ''}`.trim());
-  document.setProducer(APP_NAME);
-  document.setCreationDate(now());
-  document.setModificationDate(now());
-
-  // Honoured by Acrobat and several other viewers, which then default their
-  // print dialog to Actual size rather than Fit to page.
-  document.catalog.getOrCreateViewerPreferences().setPrintScaling(PrintScaling.None);
+  const correction = options.correction ?? NO_CORRECTION;
+  if (!isAllowedCorrection(correction)) {
+    throw new RangeError(
+      `correction must be within ±2 %, received x ${String(correction.x)}, y ${String(correction.y)}`,
+    );
+  }
+  const document = await newDocument(scene.projectName, now, options.applicationVersion);
 
   // No font is embedded, in this or any other export: every string is written
   // as filled glyph outlines (ADR 0011). That is also what fixes export on a
@@ -110,6 +124,17 @@ export async function exportPdf(
   // count the maker was shown is the count written.
   for (const page of plan.sheets) {
     const pdfPage = document.addPage([mmToPt(paper.widthMm), mmToPt(paper.heightMm)]);
+    if (!isNoCorrection(correction)) {
+      // The printer's correction, first on the page so it is the last thing
+      // applied: after the quarter turn, on the axes of the paper the printer
+      // measured. About the paper's middle, so the margins give up at most
+      // 2 % of half the paper on each side rather than all of it on one.
+      const { x, y } = correction;
+      const middle = { x: mmToPt(paper.widthMm / 2), y: mmToPt(paper.heightMm / 2) };
+      pdfPage.pushOperators(
+        concatTransformationMatrix(x, 0, 0, y, middle.x * (1 - x), middle.y * (1 - y)),
+      );
+    }
     if (turned) {
       // A quarter turn counter-clockwise, (x, y) → (−y, x), then across the
       // paper's width: the sheet's foot runs up the paper's right edge, and
@@ -118,10 +143,49 @@ export async function exportPdf(
       // the page, so everything drawn on it turns with it.
       pdfPage.pushOperators(concatTransformationMatrix(0, 1, -1, 0, mmToPt(paper.widthMm), 0));
     }
-    drawPage(pdfPage, page, sheetInk(plan, page.index, now()));
+    drawPage(pdfPage, page, sheetInk(plan, page.index, now(), correction));
   }
 
   return { bytes: await document.save() };
+}
+
+/**
+ * The calibration page (7.5) as the PDF the wizard prints: one upright page
+ * of `paper`, with no correction and no transform — what the maker measures
+ * is the printer's own error.
+ */
+export async function exportCalibrationPdf(
+  paper: PaperSize,
+  options: Pick<PdfExportOptions, 'now' | 'applicationVersion'> = {},
+): Promise<PdfExportResult> {
+  const now = options.now ?? ((): Date => new Date());
+  const document = await newDocument(CALIBRATION_TITLE, now, options.applicationVersion);
+  const page = document.addPage([mmToPt(paper.widthMm), mmToPt(paper.heightMm)]);
+  const { paths, texts } = calibrationPage(paper, now());
+  for (const item of paths) drawFurniturePath(page, item);
+  for (const text of texts) drawText(page, text, { x: 0, y: 0 });
+  return { bytes: await document.save() };
+}
+
+const CALIBRATION_TITLE = 'LeatherCAD printer calibration';
+
+/** A document titled `title`, dated `now`, that asks a viewer not to scale it. */
+async function newDocument(
+  title: string,
+  now: () => Date,
+  applicationVersion: string | undefined,
+): Promise<PDFDocument> {
+  const document = await PDFDocument.create();
+  document.setTitle(title);
+  document.setCreator(`${APP_NAME} ${applicationVersion ?? ''}`.trim());
+  document.setProducer(APP_NAME);
+  document.setCreationDate(now());
+  document.setModificationDate(now());
+
+  // Honoured by Acrobat and several other viewers, which then default their
+  // print dialog to Actual size rather than Fit to page.
+  document.catalog.getOrCreateViewerPreferences().setPrintScaling(PrintScaling.None);
+  return document;
 }
 
 function drawPage(page: PDFPage, layout: Page, ink: SheetInk): void {
@@ -143,20 +207,32 @@ function drawPage(page: PDFPage, layout: Page, ink: SheetInk): void {
     );
   }
 
+  // A tile shows a window of its piece, and the rest is clipped away: what the
+  // clip would hide whole is not written at all, rather than written on every
+  // one of the piece's sheets (PERF-002). `inkReaches` keeps anything whose
+  // ink could land inside, a stroke's width and more beyond its line.
+  const onSheet = (path: Path, offsetMm: Vec2, strokeWidthMm: Mm): boolean =>
+    ink.clip === null || inkReaches(path, offsetMm, ink.clip, strokeWidthMm);
+
   for (const placement of layout.placements) {
+    const { offsetMm } = placement;
     for (const item of placement.part.paths) {
-      drawPath(page, item, placement.offsetMm);
+      if (!onSheet(item.path, offsetMm, item.filled === true ? 0 : item.style.widthMm)) continue;
+      drawPath(page, item, offsetMm);
     }
 
     // The caption was laid out with the part, in the part's own coordinates,
-    // so it travels with it to wherever the paginator put the piece.
+    // so it travels with it to wherever the paginator put the piece. A glyph
+    // contour clear of the clip adds nothing to the fill inside it.
     for (const text of placement.part.texts) {
-      drawText(page, text, placement.offsetMm);
+      const glyphs = text.glyphs.filter((glyph) => onSheet(glyph, offsetMm, 0));
+      drawText(page, glyphs.length === text.glyphs.length ? text : { ...text, glyphs }, offsetMm);
     }
   }
 
   if (ink.clip !== null) {
     for (const item of ink.clipped) drawFurniturePath(page, item);
+    for (const text of ink.clippedTexts) drawText(page, text, { x: 0, y: 0 });
     page.pushOperators(popGraphicsState());
   }
 
@@ -192,6 +268,16 @@ function drawText(page: PDFPage, text: ExportText, offsetMm: Vec2, grey = 0): vo
 
 /** Emits one path in millimetre-derived points. */
 function drawPath(page: PDFPage, item: ExportPath, offsetMm: Vec2): void {
+  if (item.filled === true) {
+    page.pushOperators(
+      pushGraphicsState(),
+      setFillingGrayscaleColor(item.style.grey),
+      ...tracePath(item.path, offsetMm),
+      fill(),
+      popGraphicsState(),
+    );
+    return;
+  }
   const operators = [
     pushGraphicsState(),
     setLineWidth(mmToPt(item.style.widthMm)),
@@ -208,7 +294,7 @@ function drawPath(page: PDFPage, item: ExportPath, offsetMm: Vec2): void {
 }
 
 /**
- * Page furniture — the ruler, the square, joins and crosses — as it has always
+ * Page furniture — the gauge, joins, crosses and edge arrows — as it has always
  * been printed: square ends, not the pattern's round caps, so a ruler's ends
  * are where its millimetres say.
  */

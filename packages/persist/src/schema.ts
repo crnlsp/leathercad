@@ -1,3 +1,4 @@
+import { EPS_ANGLE } from '@leathercad/core';
 import { z } from 'zod';
 import { ORIENTATIONS, PAPER_NAMES, type Orientation, type PaperName } from '@leathercad/domain';
 
@@ -70,11 +71,12 @@ const segment = z.discriminatedUnion('kind', [
     centre: vec2,
     radius: nonNegativeMm,
     startAngle: z.number().finite(),
+    // arc()'s own bound, so a file holds no arc the geometry would refuse.
     sweepAngle: z
       .number()
       .finite()
-      .min(-Math.PI * 2 - 1e-9)
-      .max(Math.PI * 2 + 1e-9),
+      .min(-Math.PI * 2 - EPS_ANGLE)
+      .max(Math.PI * 2 + EPS_ANGLE),
   }),
   z.looseObject({
     kind: z.literal('cubic'),
@@ -117,6 +119,14 @@ const derivation = z.discriminatedUnion('type', [
     endOffsetMm: nonNegativeMm.optional(),
     ironLabel: z.string().optional(),
   }),
+  // Version 11 (4.14): a row of punched holes along a marking line. The pitch
+  // and the radius, never the holes — evaluation places them. Both are checked
+  // for size by evaluation, which names the feature, rather than here.
+  z.looseObject({
+    type: z.literal('hole-row'),
+    pitchMm: nonNegativeMm,
+    radiusMm: nonNegativeMm,
+  }),
   // A counterpart's placement, and the only thing it owns (ADR 0012). The
   // glide is signed — it slides either way along the axis — so it is a plain
   // millimetre rather than a non-negative one.
@@ -147,11 +157,21 @@ const textSource = z.looseObject({
   rotationRad: z.number().finite(),
 });
 
-const measureRef = z.looseObject({
-  kind: z.literal('anchor'),
-  featureId: z.string().min(1),
-  anchor: z.number().int().nonnegative(),
-});
+const measureRef = z.discriminatedUnion('kind', [
+  z.looseObject({
+    kind: z.literal('anchor'),
+    featureId: z.string().min(1),
+    anchor: z.number().int().nonnegative(),
+  }),
+  // Version 12 (Q15): a corner of the box an outline fills, which a piece's
+  // overall size is measured between. Which corner, never where it is.
+  z.looseObject({
+    kind: z.literal('extent'),
+    featureId: z.string().min(1),
+    x: z.enum(['min', 'max']),
+    y: z.enum(['min', 'max']),
+  }),
+]);
 
 /**
  * A dimension's two ends, and how to read between them.
@@ -212,6 +232,8 @@ const feature = z.discriminatedUnion('kind', [
     kind: z.literal('hardware-hole'),
     hardwareType: z.enum(['rivet', 'snap', 'screw', 'eyelet', 'other']),
   }),
+  // Version 11: a row of holes, always derived from a marking line (4.14).
+  z.looseObject({ ...featureBase, kind: z.literal('hole-row') }),
   // Version 5. The only feature whose source is text, and the only one allowed
   // to be: `source` is overridden here, so a label cannot hold a path and
   // nothing else can hold words.
@@ -244,12 +266,34 @@ const settings = z.looseObject({
   orientation: z.enum(ORIENTATIONS as [Orientation, ...Orientation[]]),
 });
 
-export const ProjectSchema = z.looseObject({
-  id: z.string().min(1),
-  name: z.string(),
-  settings,
-  parts: z.array(part),
-});
+export const ProjectSchema = z
+  .looseObject({
+    id: z.string().min(1),
+    name: z.string(),
+    settings,
+    parts: z.array(part),
+    guides: z
+      .array(
+        z.looseObject({
+          id: z.string().min(1),
+          origin: vec2,
+          angleRad: z.number().finite(),
+        }),
+      )
+      .optional(),
+  })
+  .superRefine((project, context) => {
+    const ids = new Set(project.parts.flatMap((piece) => piece.features.map((entry) => entry.id)));
+    for (const [index, guide] of (project.guides ?? []).entries()) {
+      if (ids.has(guide.id))
+        context.addIssue({
+          code: 'custom',
+          path: ['guides', index, 'id'],
+          message: 'duplicate guide id',
+        });
+      ids.add(guide.id);
+    }
+  });
 
 export const ManifestSchema = z.object({
   formatVersion: z.number().int().min(1),
@@ -259,5 +303,4 @@ export const ManifestSchema = z.object({
   modifiedUtc: z.string(),
 });
 
-export type StoredProject = z.infer<typeof ProjectSchema>;
 export type Manifest = z.infer<typeof ManifestSchema>;

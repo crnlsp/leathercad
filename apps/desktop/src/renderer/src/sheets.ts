@@ -1,3 +1,4 @@
+import type { ResourceLimitError } from '@leathercad/core';
 import {
   evaluate,
   type Orientation,
@@ -7,32 +8,67 @@ import {
 } from '@leathercad/domain';
 import {
   buildExportScene,
+  layoutSheets,
   pageSetupFor,
   planEveryPaper,
   planSheets,
   printStatusOf,
+  sheetsPages,
+  type ExportRole,
   type ExportScene,
   type PartPrintStatus,
   type SheetPlan,
+  type SheetsPage,
 } from '@leathercad/export';
+
+import type { I18n } from '../../shared/i18n.js';
+import { sheetsWords } from './sheetWords.js';
 
 /**
  * The sheet plan for a project, **the one the PDF will write** (7.4a).
  *
  * Every surface that says anything about the paper reads it from here, and the
- * export writes the same object: `sheetPlanFor(project)` returns the identical
- * plan for the identical project, so what the maker was shown is what the file
- * contains. There is no other pagination in the renderer, and no approximation.
+ * export writes the same object: while a project is the one on screen,
+ * `sheetPlanFor(project)` returns the identical plan, so what the maker was
+ * shown is what the file contains. There is no other pagination in the
+ * renderer, and no approximation.
  *
- * A project is immutable — every edit makes a new one — so the plan is cached
- * by the project object itself and dropped with it. Nothing here is stored in
- * the document: the plan is derived (invariant 4).
+ * A project is immutable — every edit makes a new one — so what is derived from
+ * it is kept beside it, and only for **the project last asked about**: the one
+ * on screen. Kept for every project in history, two hundred renames held two
+ * hundred plans, 1.3 GiB of them (PERF-001). Undo derives an earlier project's
+ * again: cheaply, because evaluation and the export scene reuse every feature
+ * and part that did not change, and to the same plan, because a plan is a
+ * function of the project alone. Nothing here is stored in the document: it is
+ * derived (invariant 4).
  */
-const resolutions = new WeakMap<Project, ResolvedProject>();
-const scenes = new WeakMap<Project, ExportScene>();
-const statuses = new WeakMap<Project, ReadonlyMap<string, PartPrintStatus>>();
-const plans = new WeakMap<Project, SheetPlan>();
-const options = new WeakMap<Project, readonly PaperOption[]>();
+interface Derived {
+  readonly project: Project;
+  resolved?: ResolvedProject;
+  scene?: ExportScene;
+  statuses?: ReadonlyMap<string, PartPrintStatus>;
+  plan?: SheetPlan;
+  options?: readonly PaperOption[];
+  paperLimits?: ReadonlyMap<string, ResourceLimitError>;
+  /** The Sheets view's pages, and the words they were made in. */
+  pages?: { readonly i18n: I18n; readonly pages: readonly SheetsPage[] };
+}
+
+let latest: Derived | null = null;
+
+/**
+ * Lets go of what was derived for the project last asked about. Asking about
+ * another is what usually does it; this is for when nothing will — the last
+ * tab closed, and the start screen asks about no project (PERF-010).
+ */
+export function releaseDerived(): void {
+  latest = null;
+}
+
+function derivedFor(project: Project): Derived {
+  if (latest?.project !== project) latest = { project };
+  return latest;
+}
 
 export interface PaperOption {
   readonly paper: PaperName;
@@ -42,22 +78,23 @@ export interface PaperOption {
 
 /** The project evaluated once, the evaluation the plan and Properties read. */
 export function resolvedFor(project: Project): ResolvedProject {
-  let resolved = resolutions.get(project);
-  if (resolved === undefined) {
-    resolved = evaluate(project);
-    resolutions.set(project, resolved);
-  }
-  return resolved;
+  const derived = derivedFor(project);
+  return (derived.resolved ??= evaluate(project));
 }
 
 /** The paper-independent export scene, built once per project. */
 function sceneFor(project: Project): ExportScene {
-  let scene = scenes.get(project);
-  if (scene === undefined) {
-    scene = buildExportScene(resolvedFor(project), project.name);
-    scenes.set(project, scene);
-  }
-  return scene;
+  const derived = derivedFor(project);
+  return (derived.scene ??= buildExportScene(resolvedFor(project), project.name));
+}
+
+/**
+ * The scene a vector file is written from (6.2, 6.5): the board's arrangement of
+ * the layer roles the maker kept (6.4). The PDF never reads it; its scene is
+ * `sheetPlanFor`'s, whole, so the Sheets view and the paper stay one thing.
+ */
+export function drawingSceneFor(project: Project, roles: readonly ExportRole[]): ExportScene {
+  return buildExportScene(resolvedFor(project), project.name, roles);
 }
 
 /**
@@ -65,22 +102,14 @@ function sceneFor(project: Project): ExportScene {
  * the PDF writes — and the same evaluation it was built from.
  */
 export function printStatusFor(project: Project): ReadonlyMap<string, PartPrintStatus> {
-  let known = statuses.get(project);
-  if (known === undefined) {
-    known = printStatusOf(resolvedFor(project), sheetPlanFor(project));
-    statuses.set(project, known);
-  }
-  return known;
+  const derived = derivedFor(project);
+  return (derived.statuses ??= printStatusOf(resolvedFor(project), sheetPlanFor(project)));
 }
 
 /** The plan for the project's own paper: what Export PDF writes. */
 export function sheetPlanFor(project: Project): SheetPlan {
-  let plan = plans.get(project);
-  if (plan === undefined) {
-    plan = planSheets(sceneFor(project), pageSetupFor(project.settings));
-    plans.set(project, plan);
-  }
-  return plan;
+  const derived = derivedFor(project);
+  return (derived.plan ??= planSheets(sceneFor(project), pageSetupFor(project.settings)));
 }
 
 /**
@@ -88,16 +117,49 @@ export function sheetPlanFor(project: Project): SheetPlan {
  * chosen paper's entry is `sheetPlanFor`'s plan itself, not a second one.
  */
 export function paperOptionsFor(project: Project): readonly PaperOption[] {
-  let known = options.get(project);
-  if (known === undefined) {
+  const derived = derivedFor(project);
+  if (derived.options === undefined) {
     const chosen = sheetPlanFor(project);
     const { paper, orientation } = project.settings;
-    known = planEveryPaper(sceneFor(project)).map((option) =>
+    const limits = new Map<string, ResourceLimitError>();
+    derived.options = planEveryPaper(sceneFor(project), (error, paper, orientation) => {
+      limits.set(`${paper}:${orientation}`, error);
+    }).map((option) =>
       option.paper === paper && option.orientation === orientation
         ? { ...option, plan: chosen }
         : option,
     );
-    options.set(project, known);
+    derived.paperLimits = limits;
   }
-  return known;
+  return derived.options;
+}
+
+/** Why an alternate paper is unavailable, without attempting that allocation again. */
+export function paperLimitFor(
+  project: Project,
+  paper: PaperName,
+  orientation: Orientation,
+): ResourceLimitError | undefined {
+  paperOptionsFor(project);
+  return derivedFor(project).paperLimits?.get(`${paper}:${orientation}`);
+}
+
+/**
+ * The Sheets view's pages (PERF-003): the paper and its ink, which only the
+ * plan, the date and the words change, so a pan or a halo builds none. Kept
+ * with the plan, for the project on screen alone, so an edit, a reload or
+ * another tab lets the last project's go — 18 MiB for the 5.8 m strap —
+ * rather than the board holding them until Sheets is shown again (PERF-010).
+ */
+export function sheetsPagesFor(project: Project, i18n: I18n): readonly SheetsPage[] {
+  const derived = derivedFor(project);
+  if (derived.pages?.i18n !== i18n) {
+    const plan = sheetPlanFor(project);
+    const words = sheetsWords(i18n);
+    derived.pages = {
+      i18n,
+      pages: sheetsPages(plan, layoutSheets(plan), { now: new Date(), words }),
+    };
+  }
+  return derived.pages.pages;
 }

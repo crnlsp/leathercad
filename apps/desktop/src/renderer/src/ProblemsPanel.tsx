@@ -4,7 +4,6 @@ import { CountBadge } from './CountBadge.js';
 import { useI18n } from './i18n.js';
 import { ProblemRows } from './ProblemList.js';
 import { describeCounts } from './problemsIndicator.js';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Icon } from './icons/Icon.js';
 
 /**
@@ -65,7 +64,7 @@ export function ProblemsPanel({
           {verdict ?? t('problems.panel.none')}
         </span>
         <span className="drawer-chevron" aria-hidden="true">
-          <Icon of={open ? ChevronDown : ChevronUp} />
+          <Icon of={open ? 'chevron-down' : 'chevron-up'} />
         </span>
       </button>
 

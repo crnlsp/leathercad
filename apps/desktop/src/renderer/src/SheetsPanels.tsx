@@ -1,12 +1,12 @@
 import type { DocumentStore } from '@leathercad/document';
 import type { Part, Project } from '@leathercad/domain';
 import type { PartPrintStatus } from '@leathercad/export';
-import { Check, RotateCw, Ruler } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { I18n } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
+import { ToolIcon } from './icons/ToolIcon.js';
 import { PaperFields } from './PaperButton.js';
 import { PieceThumbnail, pieceName } from './PanelFold.js';
 import {
@@ -132,9 +132,11 @@ export function SheetsParts({
             >
               <span>{t('status.sheetOf', { number: sheet.number, count: sheet.count })}</span>
               <span className="sheets-group-count">
-                {sheet.pieces.length === 0
-                  ? t('sheetsView.noPieces')
-                  : t('parts.count', { count: sheet.pieces.length })}
+                {sheet.assemblyOf !== null
+                  ? t('sheetsView.assembly', { name: sheet.assemblyOf })
+                  : sheet.pieces.length === 0
+                    ? t('sheetsView.noPieces')
+                    : t('parts.count', { count: sheet.pieces.length })}
               </span>
             </h3>
             <ul className="sheets-pieces">
@@ -150,7 +152,7 @@ export function SheetsParts({
                         role="img"
                         aria-label={t('sheetsView.turnedMark')}
                       >
-                        <Icon of={RotateCw} size={14} />
+                        <ToolIcon toolId="rotate" size={14} />
                       </span>
                     </Tooltip>
                   ) : piece.taped ? (
@@ -196,7 +198,12 @@ export function SheetsParts({
                 <li key={entry.partId} className="sheets-taped-entry">
                   <span className="part-label">{entry.name}</span>
                   <span className="sheets-group-count" data-testid={`sheets-taped-${entry.partId}`}>
-                    {describeSheetNumbers(entry.sheets, i18n)}
+                    {entry.map === null
+                      ? describeSheetNumbers(entry.sheets, i18n)
+                      : t('sheetsView.tapedWithMap', {
+                          sheets: describeSheetNumbers(entry.sheets, i18n),
+                          number: entry.map,
+                        })}
                   </span>
                 </li>
               ))}
@@ -206,7 +213,7 @@ export function SheetsParts({
 
         {anyTurned && (
           <p className="panel-empty sheets-legend">
-            <Icon of={RotateCw} size={12} /> {t('sheetsView.turnedLegend')}
+            <ToolIcon toolId="rotate" size={12} /> {t('sheetsView.turnedLegend')}
           </p>
         )}
       </div>
@@ -267,7 +274,7 @@ export function SheetsProperties({
       {picked.length === 1 && <PieceOnSheets project={project} part={picked[0]!} i18n={i18n} />}
 
       <p className="panel-note sheets-measure" data-testid="sheets-measure">
-        <Icon of={Ruler} size={14} /> {t('sheetsView.measure')}
+        <Icon of="ruler" size={14} /> {t('sheetsView.measure')}
       </p>
     </aside>
   );
@@ -318,7 +325,7 @@ function PieceOnSheets({ project, part, i18n }: { project: Project; part: Part; 
                 : t('sheetsView.asDrawn')}
           </Fact>
           <p className="sheets-fit" data-testid="sheets-piece-fit">
-            <Icon of={Check} size={14} />{' '}
+            <Icon of="check" size={14} />{' '}
             {placed.taped
               ? describeTapedAcross(part.name, placed.sheets, i18n)
               : t('sheetsView.fitsOne')}

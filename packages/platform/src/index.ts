@@ -13,6 +13,16 @@
  */
 
 export type {
+  TemplateShow,
+  TemplateSort,
+  TemplateEntry,
+  TemplateSave,
+  KeptSession,
+  OpenSessionTab,
+  TabCamera,
+  OutsideChange,
+  FileRename,
+  OpenSession,
   PlatformHost,
   OpenDialogOptions,
   SaveDialogOptions,
@@ -26,7 +36,8 @@ export type {
   RecentFile,
   RecentOutcome,
   RecoveredCopy,
+  UpdateAnswer,
+  UpdateStatus,
 } from './host.js';
 export { DEFAULT_PREFERENCES, STARTER_IRONS } from './host.js';
-export { InMemoryPlatformHost } from './fake.js';
 export { systemIdSource } from './systemIdSource.js';

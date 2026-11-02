@@ -1,4 +1,11 @@
-import { approxZero, assertFinite, EPS_LENGTH, invariant, type Mm } from '@leathercad/core';
+import {
+  checkResourceLimit,
+  approxZero,
+  assertFinite,
+  EPS_LENGTH,
+  invariant,
+  type Mm,
+} from '@leathercad/core';
 
 import type { PathMeasure } from '../path/measure.js';
 import type { Vec2 } from '../vec2.js';
@@ -74,6 +81,33 @@ export interface DistributeOptions {
  * See docs/geometry.md §9.
  */
 export function distributeAlongPath(measure: PathMeasure, opts: DistributeOptions): Distribution {
+  const total = measure.totalLength();
+  const { count, actualPitch } = planDistribution(total, opts);
+  const startOffset = opts.startOffsetMm ?? 0;
+  const closed = opts.closed;
+
+  const points: DistributedPoint[] = [];
+  for (let k = 0; k < count; k++) {
+    // From the index, not by accumulation.
+    const raw = startOffset + k * actualPitch;
+    const distance = closed ? wrap(raw, total) : Math.min(raw, total);
+
+    points.push({
+      distance,
+      point: measure.pointAtDistance(distance),
+      tangent: measure.tangentAtDistance(distance),
+    });
+  }
+
+  return { points, actualPitch };
+}
+
+/** Exact distribution counts, without allocating points. Also used across corner runs. */
+export function planDistribution(
+  total: Mm,
+  opts: DistributeOptions,
+): { readonly count: number; readonly actualPitch: Mm } {
+  assertFinite(total, 'totalLength');
   const { mode, closed } = opts;
   const pitch = assertFinite(opts.pitchMm, 'pitchMm');
   const startOffset = assertFinite(opts.startOffsetMm ?? 0, 'startOffsetMm');
@@ -90,32 +124,17 @@ export function distributeAlongPath(measure: PathMeasure, opts: DistributeOption
     'endOffsetMm has no meaning on a closed path; use startOffsetMm to shift the phase',
   );
 
-  const total = measure.totalLength();
-
   // On a closed path the run is the whole loop and the offset only decides
   // where the first point falls.
   const usable = closed ? total : total - startOffset - endOffset;
 
   if (!(usable > EPS_LENGTH)) {
-    return { points: [], actualPitch: pitch };
+    return { count: 0, actualPitch: pitch };
   }
 
-  const { count, actualPitch } = plan(mode, closed, usable, pitch);
-
-  const points: DistributedPoint[] = [];
-  for (let k = 0; k < count; k++) {
-    // From the index, not by accumulation.
-    const raw = startOffset + k * actualPitch;
-    const distance = closed ? wrap(raw, total) : Math.min(raw, total);
-
-    points.push({
-      distance,
-      point: measure.pointAtDistance(distance),
-      tangent: measure.tangentAtDistance(distance),
-    });
-  }
-
-  return { points, actualPitch };
+  const planned = plan(mode, closed, usable, pitch);
+  checkResourceLimit('holes', planned.count);
+  return planned;
 }
 
 /** How many points to place, and at what spacing. */

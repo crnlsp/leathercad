@@ -22,6 +22,8 @@ export interface Document {
  * target-part rule would have two answers.
  */
 export interface Selection {
+  /** A guide is picked on its own, never as a piece or a feature. */
+  readonly guide?: string;
   readonly parts: ReadonlySet<PartId>;
   readonly features: ReadonlySet<FeatureId>;
 }
@@ -34,14 +36,6 @@ export function selectionOf(ids: Iterable<FeatureId>): Selection {
 
 export function partSelectionOf(ids: Iterable<PartId>): Selection {
   return { parts: new Set(ids), features: new Set() };
-}
-
-export function isSelected(selection: Selection, id: FeatureId): boolean {
-  return selection.features.has(id);
-}
-
-export function isPartSelected(selection: Selection, id: PartId): boolean {
-  return selection.parts.has(id);
 }
 
 /**
@@ -71,15 +65,9 @@ export function drawnBounds(resolved: ResolvedProject, only?: ReadonlySet<Featur
 
 /** Whether anything at all is picked, of either kind. */
 export function isEmptySelection(selection: Selection): boolean {
-  return selection.parts.size === 0 && selection.features.size === 0;
-}
-
-export function toggleSelected(selection: Selection, id: FeatureId): Selection {
-  const next = new Set(selection.features);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  // Picking a feature means the part heading is no longer what is picked.
-  return { parts: new Set(), features: next };
+  return (
+    selection.parts.size === 0 && selection.features.size === 0 && selection.guide === undefined
+  );
 }
 
 /**
@@ -111,6 +99,11 @@ export function command(label: HistoryLabel, apply: (document: Document) => Docu
 
 /** Every kind of step in the undo history. An id: the app has the words for each (ADR 0018). */
 export type HistoryAction =
+  | 'add-guide'
+  | 'edit-guide'
+  | 'delete-guide'
+  | 'align'
+  | 'distribute'
   | 'new-document'
   | 'open'
   | 'open-sample'
@@ -119,6 +112,7 @@ export type HistoryAction =
   | 'add'
   | 'add-label'
   | 'add-dimension'
+  | 'add-overall-size'
   | 'add-seam-allowance'
   | 'delete'
   | 'delete-part'
@@ -158,7 +152,8 @@ export type HistoryAction =
   | 'add-point'
   | 'remove-point'
   | 'round-corner'
-  | 'sharpen-corner';
+  | 'sharpen-corner'
+  | 'convert-to-path';
 
 /**
  * A step of the undo history, as facts: what was done, and the name or the

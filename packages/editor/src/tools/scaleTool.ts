@@ -1,7 +1,7 @@
-import { formatNumber } from '@leathercad/core';
-import { transformFeatures, transformRefusal } from '@leathercad/document';
-import { problem, type Problem } from '@leathercad/domain';
-import { MatOps, type Mat2x3, type Vec2 } from '@leathercad/geometry';
+import { approxZero, formatNumber } from '@leathercad/core';
+import { pieceScope, scaleFeatures, scaleRefusal, selectedFeatureIds } from '@leathercad/document';
+import type { FeatureId, Problem } from '@leathercad/domain';
+import type { Vec2 } from '@leathercad/geometry';
 import { CANVAS, textItem, type DisplayList } from '@leathercad/render';
 
 import type { Tool, ToolContext } from '../tool.js';
@@ -16,18 +16,29 @@ import { selectionPivot } from './selectionPivot.js';
  * survive an uneven scale, so a plain drag on one is refused and Shift is what
  * makes it work; the key that constrains is the key that keeps the shape a
  * shape, which is the rule this slice is teaching.
+ *
+ * A piece's outline, or a part picked by its heading, scales the whole piece
+ * about the outline's centre (Q31), and what is made to a size in it — a
+ * rivet hole, a card slot, a label — keeps its size and only moves.
  */
 type State =
   | { readonly kind: 'idle' }
   | {
       readonly kind: 'scaling';
+      /** What was selected; the command makes each piece in it whole. */
+      readonly scaling: readonly FeatureId[];
       readonly pivot: Vec2;
       readonly from: Vec2;
       readonly factors: Vec2;
       readonly refusal: Problem | null;
     };
 
-/** Below this the shape collapses, and a zero-size part cannot be selected to delete. */
+/**
+ * Below this the shape collapses, and a zero-size part cannot be selected to
+ * delete. A bound on what may be asked for, not a tolerance: a 100 mm piece
+ * scaled by it is one 1e-4 mm quantum.
+ */
+// eslint-disable-next-line no-restricted-syntax -- the smallest factor allowed, not a tolerance
 const MIN_FACTOR = 1e-6;
 
 export function createScaleTool(): Tool {
@@ -48,12 +59,15 @@ export function createScaleTool(): Tool {
       if (event.button !== 0) return;
 
       const { document, selection } = ctx.store.getState();
-      const pivot = selectionPivot(document.project, selection.features);
+      const scaling = selectedFeatureIds(document.project, selection);
+      const { about } = pieceScope(document.project, scaling);
+      const pivot = selectionPivot(document.project, new Set(about));
       if (pivot === null) return;
 
       ctx.store.begin({ action: 'scale' });
       state = {
         kind: 'scaling',
+        scaling,
         pivot,
         from: event.at,
         factors: { x: 1, y: 1 },
@@ -64,20 +78,26 @@ export function createScaleTool(): Tool {
 
     onPointerMove(ctx, event) {
       if (state.kind !== 'scaling') return;
+      // Undo, or a command, cancelled the gesture under the pointer.
+      if (!ctx.store.inTransaction) {
+        state = { kind: 'idle' };
+        ctx.invalidate();
+        return;
+      }
 
       const factors = factorsFor(state.pivot, state.from, event.at, event.shiftKey);
       if (factors === null) return;
 
-      const matrix = scaleAbout(state.pivot, factors);
-      const { document, selection } = ctx.store.getState();
-      // Refused whole (Q30), and said: a stretch the rivet cannot take leaves
-      // the whole piece as it was rather than the rivet behind.
+      const scaling = { pivot: state.pivot, factors };
+      const { document } = ctx.store.getState();
+      // Refused whole (Q30), and said: a scale part of the piece cannot take
+      // leaves the whole piece as it was rather than that part behind.
       state = {
         ...state,
         factors,
-        refusal: transformRefusal(document.project, selection.features, matrix),
+        refusal: scaleRefusal(document.project, state.scaling, scaling),
       };
-      ctx.store.preview(transformFeatures(selection.features, matrix, { action: 'scale' }));
+      ctx.store.preview(scaleFeatures(state.scaling, scaling));
       ctx.invalidate();
     },
 
@@ -114,15 +134,9 @@ export function createScaleTool(): Tool {
     },
 
     // Said during the drag, not after it: the user finds out why the circle is
-    // not moving while they can still do something about it. A part picked by
-    // its heading is said at once (Q29): what resizing a whole piece does to
-    // its rivet holes is not settled (Q31), so it is not guessed at.
-    notice(ctx) {
-      if (state.kind === 'scaling') return state.refusal;
-      const { selection } = ctx.store.getState();
-      return selection.parts.size > 0 && selection.features.size === 0
-        ? problem('WHOLE_PART_NOT_SCALED', {})
-        : null;
+    // not moving while they can still do something about it.
+    notice() {
+      return state.kind === 'scaling' ? state.refusal : null;
     },
 
     onDeactivate(ctx) {
@@ -140,10 +154,11 @@ export function createScaleTool(): Tool {
 function factorsFor(pivot: Vec2, from: Vec2, to: Vec2, uniform: boolean): Vec2 | null {
   const startX = from.x - pivot.x;
   const startY = from.y - pivot.y;
-  if (Math.abs(startX) < MIN_FACTOR && Math.abs(startY) < MIN_FACTOR) return null;
+  // Offsets in millimetres: within EPS_POINT the grab is on the pivot.
+  if (approxZero(startX) && approxZero(startY)) return null;
 
-  const x = Math.abs(startX) < MIN_FACTOR ? 1 : (to.x - pivot.x) / startX;
-  const y = Math.abs(startY) < MIN_FACTOR ? 1 : (to.y - pivot.y) / startY;
+  const x = approxZero(startX) ? 1 : (to.x - pivot.x) / startX;
+  const y = approxZero(startY) ? 1 : (to.y - pivot.y) / startY;
 
   if (Math.abs(x) < MIN_FACTOR || Math.abs(y) < MIN_FACTOR) return null;
   if (!uniform) return { x, y };
@@ -152,12 +167,4 @@ function factorsFor(pivot: Vec2, from: Vec2, to: Vec2, uniform: boolean): Vec2 |
   // actually moved along, so the gesture still feels like a drag.
   const dominant = Math.abs(startX) >= Math.abs(startY) ? x : y;
   return { x: dominant, y: dominant };
-}
-
-function scaleAbout(pivot: Vec2, factors: Vec2): Mat2x3 {
-  return MatOps.composeAll(
-    MatOps.fromTranslation({ x: -pivot.x, y: -pivot.y }),
-    MatOps.fromScale(factors.x, factors.y),
-    MatOps.fromTranslation(pivot),
-  );
 }

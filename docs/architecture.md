@@ -30,8 +30,12 @@ run for hours. Electron's advantages map directly onto this project's risks:
 - **One pinned rendering engine.** When the app goes cross-platform, the canvas renders identically
   everywhere because Chromium ships in the bundle. With Tauri, three webview engines is three sets
   of canvas and font-metric differences to validate against a 0.1 mm accuracy bar.
-- **Node in the main process** means PDF generation, ZIP handling, file I/O, and printer submission
-  are ordinary npm packages, not Rust bindings.
+- **JavaScript on both sides** means PDF generation, ZIP handling, file I/O, and printer submission
+  are ordinary npm packages, not Rust bindings. Where each runs: the PDF is written in a renderer
+  Web Worker (§3); a save, a recovery copy, a kept copy and a template are made into their `.lcp`
+  in another, kept for the window's life and answering in the order asked (PERF-009); opening
+  still unzips, checks and migrates on the renderer's own thread; the main process does the file
+  I/O and the printing.
 - **Playwright drives Electron directly**, which is what makes the visual-regression and E2E layers
   in [testing.md](testing.md) cheap.
 
@@ -125,7 +129,8 @@ Strict, one-directional dependency graph. An arrow means "may import".
                      └──────┬───────┘
                             ▼
                      ┌──────────────┐
-                     │      ui      │  React panels, dialogs, canvas host
+                     │      ui      │  Reserved: the React panels, dialogs and canvas host
+                     │              │  live in apps/desktop/src/renderer
                      └──────┬───────┘
                             ▼
                      ┌──────────────┐
@@ -150,7 +155,7 @@ Strict, one-directional dependency graph. An arrow means "may import".
                                        │
                                 ┌──────┴───────┐
                                 │   platform   │  PlatformHost — the OS boundary (§5).
-                                └──────────────┘  Implemented by apps/desktop, faked in tests.
+                                └──────────────┘  Implemented by apps/desktop.
 
      typography ─depends on─▶ core, geometry   (pure: glyph outlines and layout in mm — built 4.11a)
      domain   ──depends on──▶ typography, to ask whether a string can be printed (DR5)
@@ -174,9 +179,11 @@ an ADR, and the layering rules gain a line for it then.
 
 1. `geometry` may import only `core`. It must not reference the DOM, canvas, pixels, DPI, colour,
    or any file format.
-2. `domain` may import `core` and `geometry`. It must not know about rendering or interaction.
+2. `domain` may import `core`, `geometry` and `typography`. It must not know about rendering or
+   interaction.
 3. `document` may import `core`, `geometry`, `domain`. It must not know about tools or the viewport.
-4. Nothing may import `ui`, `editor`, or `apps/desktop`.
+4. No package below them may import `ui`, `editor` or `apps/desktop`; only those three import one
+   another.
 5. `export` and `print` must not import `editor` or `ui` — so both are runnable headless, from
    tests and from the CLI.
 6. No package may import Electron except `apps/desktop`.
@@ -215,7 +222,8 @@ and correct.
         ▼
    ExportScene ──▶ planSheets() ──▶ SheetPlan ──┬──▶ PDF writer (with sheetInk)
                                                  ├──▶ sheet count, Parts' "Sheet 2", tape joins
-                                                 └──▶ sheetsView() ──▶ Canvas2D (the Sheets view)
+                                                 └──▶ sheetsPages() ──▶ sheetsLayers(camera) ──▶ Canvas2D
+                                                      (the Sheets view; a page the camera cannot see is not drawn)
 ```
 
 Two properties matter here:
@@ -224,7 +232,12 @@ Two properties matter here:
   the PDF writes that plan, and everything the app says about paper reads it — so the preview is
   the print. What a sheet prints besides its pieces is one description, `sheetInk`, drawn by both.
   The plan is derived and never stored, and it depends on neither the window nor where pieces sit
-  on the board.
+  on the board. The renderer keeps it, with the Sheets view's pages, for the project on screen
+  alone (`renderer/src/sheets.ts`; PERF-001, PERF-010): not for every revision history holds, and
+  not for a project replaced or closed.
+- **The PDF is written off the window's thread** (PERF-002): a renderer Web Worker runs the same
+  `exportPdf` on a clone of the plan and transfers the bytes back, and ending it cancels the write
+  ([printing.md](printing.md) §6.2a). The file reaches the disk only through the main process.
 - **The SVG backend renders the same `DisplayList` as the screen.** This makes SVG-string snapshots
   a valid proxy for "what does the canvas draw", which is the backbone of the rendering test
   strategy in [testing.md](testing.md) §5.
@@ -265,6 +278,12 @@ A pattern document is a few hundred kilobytes; 200 levels of history with struct
 not a memory concern. If it ever becomes one, immer's `produceWithPatches` converts the history to
 patches without changing any calling code.
 
+The desktop gives `DocumentStore` an admission check using its existing sheet-plan derivation
+(PERF-012). Construction, reloads, commands and previews are checked before a new document is
+published. A resource refusal keeps the previous document and history and is exposed as transient
+store state for the interface. Evaluation, distribution and pagination also enforce their budgets
+headlessly; see [Resource limits](resource-limits.md). No export import enters `document`.
+
 **Transactions** handle dragging. A drag produces hundreds of intermediate states; only the final
 one belongs in history:
 
@@ -275,10 +294,21 @@ store.commit();      // pushes one entry
 store.rollback();    // on Escape
 ```
 
+Undo, redo or any command during a transaction rolls it back first, and a `preview` with no
+transaction open does nothing — so a drag that undo cancelled stays cancelled while the pointer
+keeps moving, and nothing half-finished ever enters history.
+
 **What is *not* in the undoable document:** active tool, viewport, panel layout, hover state,
 window size. Selection is a borderline case — it is stored *alongside* each history entry so undo
 restores it, but it lives outside the document proper so that selecting something does not mark the
 file dirty.
+
+**One store per open project** (8.12). The window holds a project per tab, and each tab owns its
+`DocumentStore` — document, history and selection — with its file's path and the document it was
+last saved as. `ProjectTabs` (`apps/desktop/src/renderer/src/projectTabs.ts`) is the list and which
+tab is active; the chrome shows the active tab's store, and the canvas is made again for each tab,
+taking that tab's cameras, as Parts is, taking the pieces folded in it (PERF-016). Undo never
+crosses from one project to another.
 
 ## 5. Platform boundary
 
@@ -297,8 +327,8 @@ interface PlatformHost {
 }
 ```
 
-Implemented once in `apps/desktop` over Electron IPC, and once as an in-memory fake in the test
-suite. Everything above `editor` depends on the interface, never on Electron.
+Implemented once, in `apps/desktop` over Electron IPC.
+Everything above `editor` depends on the interface, never on Electron.
 
 `printPdf` takes the bytes the Print Preview drew, not a path, so nothing is written to disk to
 print. The main process checks the job as untrusted: the printer must be one CUPS lists, and the
@@ -308,14 +338,30 @@ shell ([ADR 0019](adr/0019-print-from-the-app.md), [printing.md](printing.md) §
 The main process reads, writes and opens only paths the user chose in one of the app's own dialogs
 during the session — the path returned, or that path with one of the dialog's filter extensions
 appended — and opens only a PDF in the external viewer (`apps/desktop/src/main/pathGrants.ts`). A
-renderer that runs something it should not still cannot reach any other file.
+project the operating system hands over (a launch, a second launch, macOS's `open-file`), one on
+the recent list or the last session's tabs — each chosen in a dialog once — is granted the same
+way. A renderer that runs something it should not still cannot reach any other file, with one
+exception by design: a project dropped on the window (8.12) is granted on the renderer's word for
+its path, since the main process cannot see a drop, so only a `.lcp` that exists is, and each is
+logged.
 
 Electron security posture, non-negotiable: `contextIsolation: true`, `nodeIntegration: false`,
 `sandbox: true`, a preload exposing only the typed `PlatformHost` channel, and a strict CSP with no
-remote content loaded anywhere. The shipped page's `connect-src` is `'self'` alone; only the page the
+remote content loaded anywhere. The renderer makes no network request: the app's one, the update
+check, is the main process's ([ADR 0020](adr/0020-update-discovery.md)), and the renderer hears its
+answer over IPC. The shipped page's `connect-src` is `'self'` alone; only the page the
 dev server serves also allows its HMR socket (`apps/desktop/src/csp/devServerCsp.ts`). No window
 opens a second window or navigates; a request to open a link goes to the system browser only if it
 is `https:` (`apps/desktop/src/main/externalLinks.ts`).
+
+The built renderer loads from `app://leathercad/index.html` (R6), a standard, secure origin with
+Fetch support and CORS enforcement, without CSP bypass or service workers. Its protocol serves
+only GET/HEAD requests for bundled files under `out/renderer`: decoded paths and real targets
+must stay inside that directory, including when it is in `app.asar`. It never serves user files
+or forwards a network request. Its two workers, pdf.js's and the PDF writer's, load from it under
+`script-src 'self'` (`worker-src` falls back to it); the CSP names no `blob:`. The `GrantFileProtocolExtraPrivileges` fuse is disabled. The Vite
+URL is accepted only in an unpackaged development run; a packaged app always uses the bundled
+origin. See [ADR 0014](adr/0014-electron-builder-and-release-please.md#r6-amendment--a-bundled-app-origin-2026-10-23).
 
 ## 6. Canvas and interaction system
 
@@ -353,19 +399,38 @@ tiers, zoom bands and the zoom control (U.4) read it, so they switch at the same
 camera, Design's or the Sheets', read as each frame is painted. A distance on screen — a pick
 radius, a drag threshold, a handle — is CSS pixels too.
 
-### 6.2 Three stacked canvases
+### 6.2 One canvas, drawn when dirty
 
-| Layer | Contents | Redraws when |
-|---|---|---|
-| `background` | Paper, page-tiling preview, grid, rulers | Viewport changes |
-| `content` | The resolved document | Document or viewport changes |
-| `overlay` | Selection, handles, snap glyphs, tool preview, rubber band, in-progress measurement | Every frame during interaction |
+The board is one `<canvas>` (`CanvasHost.tsx`). A frame draws everything on it, in order: the
+ground and grid, the guides, the resolved document's display list, the dimension lines, the tape
+joins, the tool's overlay and the rulers. There are no stacked layers: a pointer move that changes
+only the overlay repaints the document too. It does not build it again: the board keeps the frame's
+display list of the pattern while the project, the selection, the hover, the camera and the words
+are the same (`renderer/src/designContent.ts`), and draws only the items that can put ink on the
+canvas — `itemsReachingView`, from the extent every kind of display item has, which
+`render/src/extent.test.ts` holds to what the canvas backend draws
+([PERF-008](performance-backlog.md#perf-008)). A pan or a zoom builds the list again: a caption
+pins to the canvas's top-left, and the detail follows the zoom.
 
-This split is what keeps dragging at 60 fps with 3 000 holes on screen: a drag repaints only the
-overlay, which holds a handful of shapes.
+A single pending `requestAnimationFrame` callback is the board's dirty state
+(`renderer/src/canvasFrames.ts`). Invalidations coalesce until it runs; once painted, a clean
+board schedules nothing ([PERF-014](performance-backlog.md#perf-014)). The callback releases its
+slot before painting so an invalidation raised during painting survives for the next frame.
+The renderer effect owns the painter and cancels its pending callback on cleanup; a late font
+load cannot restart an unmounted board.
 
-All drawing is scheduled through a single `requestAnimationFrame` loop driven by dirty flags.
-Nothing draws synchronously from an event handler.
+Pointer handlers only invalidate. First sizing and resize (including DPR changes), a change of
+view (Design or Sheets), and opening the chips for a typed size paint synchronously. An unshown
+or occluded window can run no animation frames: waiting left a blank board or the other view's
+zoom, and typing needs the chip placed and focused before the key continues. A synchronous paint
+consumes a pending callback so the same work is not painted again on the next frame.
+
+A pointer move renders nothing of React's but what shows the pointer (PERF-007). The hover halo
+and the rulers' tick are painted from refs. The point under the pointer, and where the pointer is
+over the canvas, are `PointerValue`s (`renderer/src/pointerValue.ts`): the board sets them, and
+only the status bar's readout and a notice beside the pointer subscribe. What the window's status
+carries — the zoom, a tool's notice, the sheet under the pointer, a shape's sizes while it is
+drawn — changes far less often, and is set only when it changes.
 
 DPR handling: back the canvas at `cssSize * dpr`. Every screen-constant size — a stroke, a halo, a
 dash in pixels, a glyph, a label, the grid and the rulers — is in **CSS pixels**, and each screen
@@ -439,7 +504,9 @@ feel deliberate rather than random.
 
 Tolerance is defined in *pixels* (default 10 px) and converted to mm through the viewport, so
 snapping feels the same at every zoom level. Candidates come from a spatial index (a uniform grid
-is sufficient at this scale) rebuilt when the resolved document changes.
+is sufficient at this scale) rebuilt when the resolved document changes. The crossings in it, the
+costly part, are kept by the path and guide objects they come from, so a drag recomputes those of
+what it moved and reads the rest (PERF-004).
 
 The result reports *which* kind of snap fired, so the overlay can draw the matching glyph. That
 feedback is most of what makes CAD snapping feel trustworthy.
@@ -475,23 +542,26 @@ features belong to — and selection only ever chooses *where* something goes, n
 **A picked part is a real selection everywhere** (Q29). It stands for every feature in it
 (`selectedFeatureIds`): the board highlights them, the status bar counts "1 part selected",
 Properties shows the part — its outline's size, its problems, its name and Cut, *Arrange*'s Flip and
-*Delete part* — and the Delete key deletes the part whole. Rotate, Flip and the right-click menu take
-it as the piece; Shift-click and Shift-box add to what it stands for rather than dropping it; Edit
-Points edits its outline. Scale says why it does not resize a whole part (Q31).
+*Delete part* — and the Delete key deletes the part whole. Rotate, Scale, Flip and the right-click
+menu take it as the piece, Scale keeping what in it is made to a size its size (Q31); Shift-click and
+Shift-box add to what it stands for rather than dropping it; Edit Points edits its outline.
 
 The drill-down sketched here originally — click for a part, double-click for its features, again for
 vertices — waits until real documents show that flat feature picking on the canvas is not enough.
 
 ### 6.6 Guides and alignment
 
-*Designed, not built: roadmap 3.10, in 1.6. Guides are not in the file format yet.*
-
 Guides are **document objects** (persisted): an origin point plus an angle, so diagonal guides work,
 not just horizontal and vertical. They are dragged out from the rulers and snapped to like any
-other candidate.
+other candidate. The Guides tool places one with a click, or through two snapped points with a
+drag; Properties adds one by orientation or parallel to the selected guide at a typed distance. Select moves a guide as one
+transaction; Properties edits its position and angle or deletes it. Guides live on the project,
+outside the leather parts, and draw only on the Design board: they do not print or frame exports.
 
 Alignment and distribution operate on selection bounding boxes and are ordinary commands — no
-special machinery.
+special machinery. An outline carries its whole piece. Distribution holds the outer items fixed
+and equalises the edge gaps; locks and independent items linked to one another refuse the action
+whole. The detailed contract is in [3.10's design](superpowers/specs/2026-10-23-guides-alignment.md).
 
 ### 6.7 Grid and rulers
 
@@ -521,15 +591,37 @@ No geometry, domain, document, export, or print-pagination code changes.
 
 Measure before optimising, but the known shapes of the problem:
 
-- **Evaluation is memoised per node**, keyed on the node's parameter hash plus its inputs' resolved
-  hashes. Editing one part does not re-evaluate the other thirty-nine.
-- **Stitch holes render as a single batched path** (one `Path2D` of many small circles) rather than
-  3 000 individual `arc()` + `fill()` pairs.
-- **Culling**: the content layer skips features whose bounding box does not intersect the viewport.
-- **Offsetting is the expensive operation.** During a live drag of a cut contour, recompute the
-  derived stitch line at a coarser flatten tolerance and refine on commit.
-- A benchmark suite guards against accidental O(n²): a "worst realistic case" fixture (20 parts,
-  3 000 holes) with a committed timing baseline.
+- **Evaluation is memoised per feature**, keyed on object identity: the document is updated
+  immutably with structural sharing, so an unchanged feature is the same object, and a derived one
+  is reused only while its source is too (`domain/src/evaluate.ts`). Editing one part does not
+  re-evaluate the other thirty-nine. Within one evaluation each feature is resolved once, however
+  many follow it (PERF-015).
+- **What is derived for paper is shared, not kept per revision.** The export scene reuses a part's
+  ink — a circle per hole, an outline per glyph — while its features and the geometry they resolve
+  to are the same objects, so a rename redraws one caption (`export/src/scene.ts`). The renderer
+  keeps the sheet plan only for the project on screen (`renderer/src/sheets.ts`): keyed by every
+  project in history, it held 1.3 GiB after two hundred renames (PERF-001).
+- **Diagnostics are memoised per project object** (`domain/src/diagnose.ts`), and each feature's
+  findings from its geometry while it, its geometry, its part and the part's outline and
+  cut-outs are the same objects (`domain/src/validate.ts`). A rename is a new project, and
+  validates nothing but the rules that read a name ([PERF-005](performance-backlog.md#perf-005)).
+- **Stitch holes are drawn as one batched stroke**: every slit of a set in one path, stroked once
+  (F.7), rather than 3 000 separate draws; zoomed out, the set is drawn as its stitch line. A row of
+  punched holes is a circle per hole.
+- **Culling**: the Sheets view draws only the pages the camera can see (PERF-003), and the Design
+  board only the display items ([PERF-008](performance-backlog.md#perf-008)). An item is kept whole
+  if any of its ink can reach the canvas, a stroke's width, a halo and a word's reach included.
+- **A preview is exact.** A drag re-evaluates what it changed at full precision; nothing is drawn
+  coarser and refined on commit, which [the performance rules](../.claude/rules/performance.md)
+  forbid. The self-intersection check that offsetting and validation make of every outline tests
+  only the segment pairs whose boxes, grown by the intersection tolerances, can meet
+  ([PERF-006](performance-backlog.md#perf-006)), so a traced outline costs about its segment count
+  rather than its square.
+- **Benchmarks and ceilings** guard against accidental O(n²): `pnpm bench` times the audit's
+  workloads — a 5.8 m strap of 3,028 holes, the same with 20 slots, traced outlines of 250 to 1,000
+  points — against baselines committed per package, and `perf.test.ts` holds loose ceilings in
+  `pnpm check`. `tools/perf-compute.mjs` times the same computations bundled, as the app runs them,
+  and `tools/perf-*.mjs` the built app ([testing.md](testing.md) §9).
 
 ## 9. Risks this architecture is designed to avoid
 
@@ -560,9 +652,11 @@ snapping and boolean failures that are not reproducible. *Mitigation:* one epsil
 [geometry.md](geometry.md) §3.
 
 **R6 — Y-axis ambiguity.** Mixing Y-up and Y-down produces mirrored exports that nobody notices
-until something is cut. *Mitigation:* the model is **Y-up**; the flip happens in exactly two places
-(the Canvas2D backend and the SVG writer) and both have tests asserting that a point at y = +10
-appears *above* one at y = 0.
+until something is cut. *Mitigation:* the model is **Y-up**. The screen flip is defined once, in
+`worldToScreen` (`render/src/view.ts`), and applied by the two screen backends, Canvas2D and SVG;
+`export/svg` has its own, because a file has no viewport; PDF and DXF are Y-up already. The view,
+the SVG export and the DXF have tests asserting that a point at y = +10 appears *above* one at
+y = 0 (CLAUDE.md invariant 2).
 
 **R7 — Printing through the browser.** `window.print()`, CSS `@page`, and "fit to page" silently
 destroy scale. *Mitigation:* generate PDFs from our own vector writer; never call the webview's
@@ -578,8 +672,10 @@ document store owns it; tools dispatch commands; components read.
 is miserable. *Mitigation:* `formatVersion: 1` and a working migration runner ship with the very
 first save implementation, before the first release.
 
-**R11 — Redrawing everything every frame.** *Mitigation:* three-layer canvas; only the overlay
-repaints during interaction.
+**R11 — Redrawing everything every frame.** *Mitigation:* a frame is drawn only when something
+changed (§6.2). A drawn frame repaints the whole canvas, from the pattern's display list kept
+while nothing it shows changed, cut to what can reach the canvas
+([PERF-008](performance-backlog.md#perf-008)).
 
 **R12 — Non-deterministic tests.** System fonts, `Date.now()` in serialisation, unseeded randomness,
 locale-dependent number formatting. *Mitigation:* vendored fonts, injected clock, seeded generators,

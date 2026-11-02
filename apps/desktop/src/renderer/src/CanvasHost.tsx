@@ -1,19 +1,17 @@
 import { approxEq } from '@leathercad/core';
-import { drawnBounds, selectedFeatureIds, type DocumentStore } from '@leathercad/document';
-import { diagnose, evaluate, sameProblem, type Problem } from '@leathercad/domain';
+import type { TabCamera } from '@leathercad/platform';
 import {
-  layoutSheets,
-  pieceAt,
-  sheetsView,
-  tapeJoins,
-  type SheetPlan,
-  type SheetsLayer,
-} from '@leathercad/export';
+  addGuide,
+  drawnBounds,
+  selectedFeatureIds,
+  type DocumentStore,
+} from '@leathercad/document';
+import { evaluate, sameProblem, type Problem } from '@leathercad/domain';
+import { layoutSheets, pieceAt, sheetsLayers, tapeJoins } from '@leathercad/export';
 import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
 import {
   ToolManager,
-  Viewport,
   createArcTool,
   createCircleTool,
   createHardwareTool,
@@ -26,6 +24,7 @@ import {
   createMeasureTool,
   createScaleTool,
   createSelectTool,
+  createGuideTool,
   createTextTool,
   hitTest,
   type DrawMode,
@@ -34,16 +33,18 @@ import {
   type MakerDefaults,
   type PointerInput,
   type SizeDraft,
+  type Viewport,
 } from '@leathercad/editor';
 import {
   CANVAS,
   DEFAULT_RULER_STYLE,
   GROUND,
+  MOTION_TIMING,
   SHEET,
-  buildDisplayList,
   clearCanvas,
   renderDisplayList,
   renderGrid,
+  guideDisplayList,
   renderRulers,
   zoomPercent,
   type CssBox,
@@ -51,20 +52,21 @@ import {
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
-import { captionOf } from './captionWords.js';
 import { selectedParts } from './sheetContents.js';
-import { sheetsWords } from './sheetWords.js';
-import type { I18n } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
-import { sheetPlanFor } from './sheets.js';
+import { designContent } from './designContent.js';
+import { CanvasFrames } from './canvasFrames.js';
+import { observePixelRatio, pixelRatio, resizeBackingStore } from './canvasDensity.js';
+import { sheetPlanFor, sheetsPagesFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
 import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
 import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 import { SelectionBar, type SelectionBarHandle } from './SelectionBar.js';
 import type { MakerTools } from './irons.js';
+import { PointerValue, usePointerValue } from './pointerValue.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -91,6 +93,27 @@ const CLICK_SLOP_PX = 4;
  */
 export type CanvasView = 'design' | 'sheets';
 
+/**
+ * The board's two cameras (7.4c), kept by the tab so a project comes back
+ * exactly where it was left. The canvas is made again for each tab it shows,
+ * and takes these rather than new ones.
+ */
+export interface TabCameras {
+  readonly design: Viewport;
+  readonly sheets: Viewport;
+  /** The design camera has been placed once: a tab shown again is not re-placed. */
+  fitted: boolean;
+  /** Its first placing frames the drawing: an opened project is shown whole. */
+  frameDrawing: boolean;
+  /**
+   * Its first placing puts the board where the last session left it (8.12):
+   * millimetres at the centre, and the zoom. Over `frameDrawing`.
+   */
+  restore: TabCamera | null;
+  /** The sheets' extent the Sheets camera was last fitted to: a new one frames again. */
+  sheetsFramed: string | null;
+}
+
 export interface CanvasHandle {
   /** Frames a millimetre rectangle, leaving the usual margin. */
   frame(bounds: Rect): void;
@@ -106,6 +129,8 @@ export interface CanvasHandle {
    * on the Sheets view, the sheets.
    */
   fit(): void;
+  /** Frames the pattern on the Design view's camera, whichever view is showing: an opened project. */
+  fitDrawing(): void;
   /**
    * Shift+2 (U.4): frames what is selected on the board, a part picked by its
    * heading included. Nothing on the Sheets view, or with nothing drawn picked.
@@ -124,8 +149,13 @@ export interface CanvasHandle {
   toggleSelectionBar(): boolean;
 }
 
+/** A point over the canvas in CSS pixels, from its top left: where a notice is said. */
+interface CssPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface CanvasStatus {
-  readonly cursorMm: Vec2 | null;
   /**
    * The showing view's zoom, 100 % being true size (U.4): its own camera's,
    * Design's or the Sheets', sent whenever that camera changes.
@@ -155,6 +185,7 @@ export function CanvasHost({
   hoveredPart = null,
   onHoverPart,
   toolId,
+  onToolChange,
   drawAs,
   makerDefaults,
   hardware,
@@ -164,8 +195,10 @@ export function CanvasHost({
   onContextMenu,
   nextId,
   onStatus,
+  cursor,
   panelOver = null,
   selectionBar = null,
+  cameras,
   ref,
   children,
 }: {
@@ -176,6 +209,7 @@ export function CanvasHost({
   /** The part under the pointer on the Sheets view, for Parts to highlight. */
   onHoverPart?: (partId: string | null) => void;
   toolId: string;
+  onToolChange: (id: string) => void;
   drawAs: DrawMode;
   /** The maker's margin and leather (U.13): what *Stitch + allowance* and a new fold take. */
   makerDefaults: MakerDefaults;
@@ -189,6 +223,13 @@ export function CanvasHost({
   onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
+  /**
+   * The point under the pointer, in mm, for the status bar's readout: set on
+   * every move, so not in the status, whose every change renders the window
+   * (PERF-007). Snapped where a click would snap; null off the board and on
+   * the Sheets view.
+   */
+  cursor: PointerValue<Vec2 | null>;
   /** A panel open over the board (U.5), by its class: the value chips keep clear of it. */
   panelOver?: string | null;
   /**
@@ -196,37 +237,40 @@ export function CanvasHost({
    * null when Settings › Appearance turns the bar off, which leaves nothing.
    */
   selectionBar?: MakerTools | null;
+  /**
+   * The project's cameras, which its tab keeps (8.12): the canvas is made
+   * again for each tab it shows, and the board comes back where it was left.
+   */
+  cameras: TabCameras;
   ref?: React.Ref<CanvasHandle>;
   /** Drawn over the canvas without taking space from it: the legend (F.7). */
   children?: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const viewportRef = useRef<Viewport>(new Viewport());
+  // The tab's, read once: the canvas is keyed by its tab, so they never change under it.
+  const camerasRef = useRef(cameras);
+  const viewportRef = useRef<Viewport>(cameras.design);
   /**
    * The Sheets view's own camera (7.4c), so going to the sheets and back finds
    * the board exactly where it was left. The tool manager only ever sees the
    * design one.
    */
-  const sheetsViewportRef = useRef<Viewport>(new Viewport());
+  const sheetsViewportRef = useRef<Viewport>(cameras.sheets);
   const viewRef = useRef<CanvasView>(view);
   viewRef.current = view;
-  /** The sheets' extent the Sheets camera was last fitted to: a new one frames again. */
-  const sheetsFramedRef = useRef<string | null>(null);
-  const sheetsCacheRef = useRef<SheetsCache | null>(null);
   /** The camera for whichever view is showing. */
   const camera = useCallback(
     (): Viewport =>
       viewRef.current === 'sheets' ? sheetsViewportRef.current : viewportRef.current,
     [],
   );
-  const dirtyRef = useRef(true);
-  const frameRef = useRef(0);
-  const hasFittedRef = useRef(false);
+  const [frames] = useState(() => new CanvasFrames());
+  const invalidate = useCallback(() => frames.invalidate(), [frames]);
   /** Where the canvas last sat in the window, so a resize can hold the drawing still. */
   const placedRef = useRef<{ left: number; top: number; dpr: number } | null>(null);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
-  const [cursorMm, setCursorMm] = useState<Vec2 | null>(null);
+  const rulerGuideRef = useRef<{ id: string; angleRad: number } | null>(null);
   /**
    * The same pointer, for the painter: the rulers' cursor tick (§9.2). A ref,
    * because painting reads it and must not wait for React.
@@ -254,8 +298,8 @@ export function CanvasHost({
   const i18nRef = useRef(i18n);
   useEffect(() => {
     i18nRef.current = i18n;
-    dirtyRef.current = true;
-  }, [i18n]);
+    invalidate();
+  }, [i18n, invalidate]);
   /** On the Sheets view: the sheet under the pointer, for the status bar. */
   const [sheetUnder, setSheetUnder] = useState<CanvasStatus['sheet']>(null);
   /** Where a press on the Sheets view began, and on which piece. */
@@ -277,14 +321,15 @@ export function CanvasHost({
   useEffect(() => {
     hoveredPartPropRef.current = hoveredPart;
     onHoverPartRef.current = onHoverPart;
-    dirtyRef.current = true;
-  }, [hoveredPart, onHoverPart]);
-  /** Where the pointer is over the canvas, in CSS pixels — where a notice is said. */
-  const [pointerCss, setPointerCss] = useState<{ x: number; y: number } | null>(null);
-
-  const invalidate = useCallback(() => {
-    dirtyRef.current = true;
-  }, []);
+    invalidate();
+  }, [hoveredPart, onHoverPart, invalidate]);
+  /**
+   * Where the pointer is over the canvas, in CSS pixels — where a notice is
+   * said. Not state: only a notice shown reads it (PERF-007).
+   */
+  const [pointerCss] = useState(() => new PointerValue<CssPoint | null>(null));
+  /** The pattern on the Design board, kept between the frames that show it unchanged. */
+  const [content] = useState(designContent);
 
   /** The selected outline's sizes, beside it (U.14): placed as each frame is painted. */
   const chipsRef = useRef<ValueChipsHandle>(null);
@@ -296,11 +341,11 @@ export function CanvasHost({
       read: () => managerRef.current?.sizing() ?? null,
       set: (field, value) => {
         managerRef.current?.setSize(field, value);
-        dirtyRef.current = true;
+        invalidate();
       },
       finish: () => {
         managerRef.current?.finishSizing();
-        dirtyRef.current = true;
+        invalidate();
       },
       cancel: () => {
         managerRef.current?.key({
@@ -309,10 +354,10 @@ export function CanvasHost({
           shiftKey: false,
           ctrlKey: false,
         });
-        dirtyRef.current = true;
+        invalidate();
       },
     }),
-    [],
+    [invalidate],
   );
   /** The keys back to the board, without scrolling the window to it. */
   const toBoard = useCallback(() => canvasRef.current?.focus({ preventScroll: true }), []);
@@ -365,6 +410,15 @@ export function CanvasHost({
     return () => observer.disconnect();
   }, [view, invalidate]);
 
+  const fitDrawing = useCallback(() => {
+    viewportRef.current.fitTo(
+      drawnBounds(evaluate(store.getState().document.project)) ??
+        RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
+      FIT_PADDING_PX * viewportRef.current.dpr,
+    );
+    invalidate();
+  }, [store, invalidate]);
+
   const handleDoubleClick = useCallback(() => {
     if (viewRef.current === 'sheets') {
       const viewport = sheetsViewportRef.current;
@@ -373,13 +427,8 @@ export function CanvasHost({
       invalidate();
       return;
     }
-    viewportRef.current.fitTo(
-      drawnBounds(evaluate(store.getState().document.project)) ??
-        RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
-      FIT_PADDING_PX * viewportRef.current.dpr,
-    );
-    invalidate();
-  }, [store, invalidate]);
+    fitDrawing();
+  }, [store, invalidate, fitDrawing]);
 
   /** What is selected, as the board draws it: a part picked by its heading is all of it (Q29). */
   const selectionBounds = useCallback((): Rect | null => {
@@ -408,6 +457,7 @@ export function CanvasHost({
         invalidate();
       },
       fit: handleDoubleClick,
+      fitDrawing,
       fitSelection() {
         if (viewRef.current === 'sheets') return;
         const box = selectionBounds();
@@ -440,7 +490,7 @@ export function CanvasHost({
         return barRef.current?.toggleFocus() ?? false;
       },
     }),
-    [camera, handleDoubleClick, invalidate, selectionBounds],
+    [camera, handleDoubleClick, fitDrawing, invalidate, selectionBounds],
   );
 
   // Settings the tools read at the moment they act. Refs rather than props
@@ -464,6 +514,7 @@ export function CanvasHost({
   const tools = useMemo(
     () => [
       createSelectTool(),
+      createGuideTool(nextId),
       createRectangleTool(nextId),
       createCircleTool(nextId),
       createArcTool(nextId),
@@ -513,14 +564,11 @@ export function CanvasHost({
   // Any change to the document or selection means a repaint.
   useEffect(() => store.subscribe(invalidate), [store, invalidate]);
 
-  // Changing view: nothing the tool had under way carries across, and the
-  // view repaints on its own camera.
-  useEffect(() => {
-    managerRef.current?.pointerLeave();
-    hoveredRef.current = null;
-    hoveredPartRef.current = null;
-    invalidate();
-  }, [view, invalidate]);
+  // A project read into this tab (reload) is a different document: a polyline
+  // half drawn, a rubber band, a first click and the snap index all belong to
+  // the one it replaced (Q39, PERF-010). Opening and switching tabs make this
+  // component again, with new tools.
+  useEffect(() => store.onReset(() => managerRef.current?.reset()), [store]);
 
   // The first frame can be painted before the vendored typeface has loaded,
   // which would leave the board's words in a fallback face. Repaint once every
@@ -554,37 +602,24 @@ export function CanvasHost({
       // a new paper or a new sheet — otherwise the maker's camera stays.
       const extent = layout.extent;
       const key = [extent.minX, extent.minY, extent.maxX, extent.maxY].join(',');
-      if (sheetsFramedRef.current !== key) {
-        sheetsFramedRef.current = key;
+      if (camerasRef.current.sheetsFramed !== key) {
+        camerasRef.current.sheetsFramed = key;
         viewport.fitTo(extent, FIT_PADDING_PX * viewport.dpr);
       }
 
-      const selected = selectedParts(document.project, selection);
-      const cached = sheetsCacheRef.current;
-      const layers =
-        cached !== null &&
-        cached.plan === plan &&
-        cached.i18n === i18nRef.current &&
-        cached.selected === selectedKey(selected) &&
-        cached.hovered === (hoveredPartRef.current ?? hoveredPartPropRef.current)
-          ? cached.layers
-          : sheetsView(plan, layout, {
-              now: new Date(),
-              selected,
-              hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-              words: sheetsWords(i18nRef.current),
-            });
-      sheetsCacheRef.current = {
-        plan,
-        i18n: i18nRef.current,
-        selected: selectedKey(selected),
-        hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
-        layers,
-      };
+      // The paper and its ink change with the plan and the words alone; what is
+      // selected or under the pointer only puts a halo under a piece (PERF-003).
+      const pages = sheetsPagesFor(document.project, i18nRef.current);
 
       const view = viewport.toView();
       clearCanvas(context, view, SHEET.ground);
-      for (const layer of layers) {
+      // Only the pages the camera can see any of (PERF-003): a long taped piece
+      // is dozens of sheets, and the one on screen is a few.
+      const emphasis = {
+        selected: selectedParts(document.project, selection),
+        hovered: hoveredPartRef.current ?? hoveredPartPropRef.current,
+      };
+      for (const layer of sheetsLayers(pages, view, emphasis)) {
         renderDisplayList(
           context,
           layer.list,
@@ -620,23 +655,17 @@ export function CanvasHost({
     renderGrid(context, view);
     renderDisplayList(
       context,
-      buildDisplayList(evaluate(document.project), {
-        // A part picked by its heading shows as picked (Q30): Rotate turns it,
-        // so the board has to say what will turn.
-        selected:
-          selection.parts.size === 0
-            ? selection.features
-            : new Set(selectedFeatureIds(document.project, selection)),
+      guideDisplayList(document.project.guides ?? [], view, selection.guide),
+      view,
+    );
+    renderDisplayList(
+      context,
+      content({
+        project: document.project,
+        selection,
         hovered: hoveredRef.current,
-        // The same list the panels read (X7), so a feature that failed is
-        // marked here instead of silently disappearing.
-        diagnostics: diagnose(document.project),
-        // The camera: how much detail the drawing carries at this zoom, the
-        // same on any display (U.1), and where the board's words go — a
-        // caption pins to the top-left once it would run under the ruler (R-01).
         view,
-        // Each piece's caption, in the interface's words (ADR 0018).
-        caption: (part) => captionOf(i18nRef.current, part),
+        i18n: i18nRef.current,
       }),
       view,
     );
@@ -668,19 +697,9 @@ export function CanvasHost({
     setDrawing((current) => (sameDraft(current, sizing) ? current : sizing));
     setUnderway(managerRef.current?.underway() ?? false);
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
-  }, [store, paintSheets, chipRoom]);
+  }, [store, paintSheets, chipRoom, content]);
 
-  useEffect(() => {
-    const tick = (): void => {
-      if (dirtyRef.current) {
-        dirtyRef.current = false;
-        paint();
-      }
-      frameRef.current = requestAnimationFrame(tick);
-    };
-    frameRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameRef.current);
-  }, [paint]);
+  useEffect(() => frames.start(paint), [frames, paint]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -688,12 +707,11 @@ export function CanvasHost({
     if (container === null || canvas === null) return;
 
     const resize = (): void => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = pixelRatio();
       const { width, height, left, top } = container.getBoundingClientRect();
       if (width === 0 || height === 0) return;
 
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      resizeBackingStore(canvas, Math.round(width * dpr), Math.round(height * dpr));
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
@@ -719,34 +737,64 @@ export function CanvasHost({
           : { width: clientWidth, height: clientHeight },
       );
 
-      if (!hasFittedRef.current) {
-        hasFittedRef.current = true;
-        viewportRef.current.centreMm = { x: 60, y: 40 };
-        viewportRef.current.scale = 3 * dpr;
+      // A tab's first showing (8.12): where the last session left it, an
+      // opened project framed whole, a new one at the usual place. Shown
+      // again, it is wherever it was left. An opened project fades in, so the
+      // change of drawing reads as one.
+      if (!camerasRef.current.fitted) {
+        camerasRef.current.fitted = true;
+        const restore = camerasRef.current.restore;
+        if (restore !== null) {
+          viewportRef.current.centreMm = { x: restore.x, y: restore.y };
+          viewportRef.current.zoomToPercent(restore.percent);
+          reveal(canvas);
+        } else if (camerasRef.current.frameDrawing) {
+          fitDrawing();
+          reveal(canvas);
+        } else {
+          viewportRef.current.centreMm = { x: 60, y: 40 };
+          viewportRef.current.scale = 3 * dpr;
+        }
       }
 
       // Paint straight away: requestAnimationFrame does not run while a window
       // is unshown or occluded, which would leave the first frame blank.
-      dirtyRef.current = false;
-      paint();
+      frames.paintNow();
     };
 
     const observer = new ResizeObserver(resize);
     observer.observe(container);
+    const stopDensity = observePixelRatio(resize);
     resize();
-    return () => observer.disconnect();
-  }, [paint]);
+    return () => {
+      observer.disconnect();
+      stopDensity();
+    };
+  }, [frames, fitDrawing]);
+
+  // Changing view: nothing the tool had under way carries across, and the
+  // view repaints on its own camera at once, as a resize does. The zoom
+  // control says the camera painted last, so waiting for an animation frame —
+  // which a hidden window never runs — left Design saying the Sheets' zoom.
+  useEffect(() => {
+    managerRef.current?.pointerLeave();
+    hoveredRef.current = null;
+    hoveredPartRef.current = null;
+    frames.paintNow();
+  }, [view, frames]);
 
   useEffect(() => {
     onStatus?.({
-      cursorMm,
       zoomPercent: zoom,
       notice,
       sheet: sheetUnder,
       sizing: drawing,
       underway,
     });
-  }, [cursorMm, notice, onStatus, sheetUnder, zoom, drawing, underway]);
+  }, [notice, onStatus, sheetUnder, zoom, drawing, underway]);
+
+  // The readout is the window's: blank once this board goes, for another tab or for none.
+  useEffect(() => () => cursor.set(null), [cursor]);
 
   // Keyboard goes to the document: the board is one Tab stop (U.14), but
   // Escape or Delete should work wherever focus and the pointer happen to be.
@@ -755,6 +803,12 @@ export function CanvasHost({
       // Never steal keys from a field, a list or anything editable (8.7), nor
       // a focused button's Space (U.12).
       if (isTyping(event.target) || pressesControl(event)) return;
+      if (event.key === 'Escape' && rulerGuideRef.current !== null) {
+        rulerGuideRef.current = null;
+        store.rollback();
+        event.preventDefault();
+        return;
+      }
 
       // Ctrl on Linux and Windows, ⌘ on macOS: the keymap's (U.3).
       const command = commandFor(event, IS_MAC);
@@ -772,7 +826,7 @@ export function CanvasHost({
       ) {
         // The chips exist and are placed before the key goes to one of them.
         flushSync(() => setDrawing(managerRef.current?.sizing() ?? null));
-        paint();
+        frames.paintNow();
         // Not prevented: the key is typed into the chip that has the focus now.
         if (chipsRef.current?.open() === true) return;
       }
@@ -822,7 +876,7 @@ export function CanvasHost({
     // still stops it before either.
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [store, paint]);
+  }, [store, frames]);
 
   const toInput = useCallback((event: React.PointerEvent<HTMLCanvasElement>): PointerInput => {
     const viewport = viewportRef.current;
@@ -840,6 +894,15 @@ export function CanvasHost({
       ctrlKey: event.ctrlKey,
     };
   }, []);
+
+  /** Where a guide dragged from a ruler lies: snapped like a tool's point, never to itself. */
+  const rulerGuideAt = useCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>, id: string): Vec2 => {
+      const input = toInput(event);
+      return managerRef.current?.snapGesture(input, [id]).at ?? input.at;
+    },
+    [toInput],
+  );
 
   /** The sheet and piece under an event on the Sheets view. */
   const pickOnSheets = useCallback(
@@ -867,10 +930,10 @@ export function CanvasHost({
         y: (event.clientY - rect.top) * viewport.dpr,
       };
       viewport.zoomAt(anchor, Math.exp(-event.deltaY * 0.0015));
-      setCursorMm(viewRef.current === 'sheets' ? null : viewport.toWorld(anchor));
+      cursor.set(viewRef.current === 'sheets' ? null : viewport.toWorld(anchor));
       invalidate();
     },
-    [camera, invalidate],
+    [camera, cursor, invalidate],
   );
 
   const handlePointerDown = useCallback(
@@ -891,9 +954,23 @@ export function CanvasHost({
         }
         return;
       }
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const thickness = DEFAULT_RULER_STYLE.thicknessPx;
+      if (event.button === 0 && (x < DEFAULT_RULER_STYLE.leftThicknessPx || y < thickness)) {
+        managerRef.current?.activate('select');
+        onToolChange('select');
+        const guide = { id: nextId(), angleRad: y < thickness ? 0 : Math.PI / 2 };
+        rulerGuideRef.current = guide;
+        store.begin({ action: 'add-guide' });
+        store.preview(addGuide({ ...guide, origin: rulerGuideAt(event, guide.id) }));
+        invalidate();
+        return;
+      }
       managerRef.current?.pointerDown(toInput(event));
     },
-    [pickOnSheets, toInput],
+    [pickOnSheets, toInput, rulerGuideAt, onToolChange, nextId, store, invalidate],
   );
 
   const handlePointerMove = useCallback(
@@ -903,7 +980,17 @@ export function CanvasHost({
 
       const rect = event.currentTarget.getBoundingClientRect();
       const raw = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
-      setPointerCss({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+      pointerCss.set({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+      const guide = rulerGuideRef.current;
+      if (guide !== null) {
+        if (!store.inTransaction) {
+          rulerGuideRef.current = null;
+          return;
+        }
+        store.preview(addGuide({ ...guide, origin: rulerGuideAt(event, guide.id) }));
+        invalidate();
+        return;
+      }
 
       if (panning !== null) {
         const press = pressRef.current;
@@ -922,12 +1009,12 @@ export function CanvasHost({
         );
         panningRef.current = { x: event.clientX, y: event.clientY };
         invalidate();
-        setCursorMm(viewRef.current === 'sheets' ? null : raw);
+        cursor.set(viewRef.current === 'sheets' ? null : raw);
         return;
       }
 
       if (viewRef.current === 'sheets') {
-        setCursorMm(null);
+        cursor.set(null);
         const under = pickOnSheets(event);
         // The same sheet is the same state: a pointer move within it re-renders nothing.
         setSheetUnder((was) =>
@@ -948,7 +1035,7 @@ export function CanvasHost({
       // what a click would commit, or it is telling the user the wrong number
       // at exactly the moment they are relying on it.
       const at = managerRef.current?.snapPoint() ?? raw;
-      setCursorMm(at);
+      cursor.set(at);
       pointerRef.current = at;
 
       // Hover says what a click would pick, so only where a click picks.
@@ -959,7 +1046,7 @@ export function CanvasHost({
       hoveredRef.current = hovered;
       invalidate();
     },
-    [camera, invalidate, pickOnSheets, store, toInput],
+    [camera, cursor, invalidate, pickOnSheets, pointerCss, rulerGuideAt, store, toInput],
   );
 
   /**
@@ -1020,9 +1107,31 @@ export function CanvasHost({
         return;
       }
       if (viewRef.current === 'sheets') return;
+      const guide = rulerGuideRef.current;
+      if (guide !== null) {
+        rulerGuideRef.current = null;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        if (
+          event.type === 'pointercancel' ||
+          x < DEFAULT_RULER_STYLE.leftThicknessPx ||
+          y < DEFAULT_RULER_STYLE.thicknessPx ||
+          x > rect.width ||
+          y > rect.height
+        ) {
+          store.rollback();
+        } else {
+          store.preview(addGuide({ ...guide, origin: rulerGuideAt(event, guide.id) }));
+          store.commit();
+          store.selectGuide(guide.id);
+        }
+        invalidate();
+        return;
+      }
       managerRef.current?.pointerUp(toInput(event));
     },
-    [store, toInput],
+    [store, toInput, rulerGuideAt, invalidate],
   );
 
   // The board's name, for the one Tab stop it is (U.14).
@@ -1046,7 +1155,7 @@ export function CanvasHost({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onPointerLeave={() => {
-          setCursorMm(null);
+          cursor.set(null);
           pointerRef.current = null;
           hoveredRef.current = null;
           if (hoveredPartRef.current !== null) onHoverPartRef.current?.(null);
@@ -1079,18 +1188,9 @@ export function CanvasHost({
         />
       )}
       {children}
-      {sheetsNotice && pointerCss !== null && (
-        <div
-          className="canvas-notice"
-          data-testid="sheets-notice"
-          role="status"
-          style={{ left: pointerCss.x + 16, top: pointerCss.y + 20 }}
-        >
-          {t('sheets.placedForYou')}
-        </div>
-      )}
-      {notice !== null && pointerCss !== null && (
-        <CanvasNotice problem={notice} at={pointerCss} bounds={containerSize} />
+      {sheetsNotice && <SheetsNotice pointer={pointerCss} />}
+      {notice !== null && (
+        <CanvasNotice problem={notice} pointer={pointerCss} bounds={containerSize} />
       )}
     </div>
   );
@@ -1124,14 +1224,16 @@ const NOTICE_HEIGHT_PX = 72;
  */
 function CanvasNotice({
   problem,
-  at,
+  pointer,
   bounds,
 }: {
   problem: Problem;
-  at: { x: number; y: number };
+  pointer: PointerValue<CssPoint | null>;
   bounds: { width: number; height: number };
 }) {
   const { t } = useI18n();
+  const at = usePointerValue(pointer);
+  if (at === null) return null;
   const right = at.x + 16 + NOTICE_WIDTH_PX > bounds.width;
   const below = at.y + 20 + NOTICE_HEIGHT_PX > bounds.height;
   return (
@@ -1151,16 +1253,27 @@ function CanvasNotice({
   );
 }
 
-/** What the Sheets view last drew, so panning does not lay the sheets out again. */
-interface SheetsCache {
-  readonly plan: SheetPlan;
-  /** The words the labels were made in: a new language makes new labels. */
-  readonly i18n: I18n;
-  readonly selected: string;
-  readonly hovered: string | null;
-  readonly layers: readonly SheetsLayer[];
+/** A piece dragged on the Sheets view stays where the plan put it, and says so beside the pointer. */
+function SheetsNotice({ pointer }: { pointer: PointerValue<CssPoint | null> }) {
+  const { t } = useI18n();
+  const at = usePointerValue(pointer);
+  if (at === null) return null;
+  return (
+    <div
+      className="canvas-notice"
+      data-testid="sheets-notice"
+      role="status"
+      style={{ left: at.x + 16, top: at.y + 20 }}
+    >
+      {t('sheets.placedForYou')}
+    </div>
+  );
 }
 
-function selectedKey(selected: ReadonlySet<string>): string {
-  return [...selected].sort().join(' ');
+/** Fades the board in over the theme's motion: a project has just replaced the last. */
+function reveal(canvas: HTMLCanvasElement): void {
+  // The one fade a script starts; the stylesheet's reduced-motion rule
+  // cannot reach it, so it asks for itself.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  canvas.animate({ opacity: [0, 1] }, MOTION_TIMING);
 }

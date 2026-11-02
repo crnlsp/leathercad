@@ -1,4 +1,3 @@
-import AxeBuilder from '@axe-core/playwright';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,7 +6,8 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { launchApp } from './launchApp.js';
+import { launchApp, scanA11y, expectNoViolations } from './launchApp.js';
+import { openPrintTest } from './printTest.js';
 
 /**
  * An automated accessibility scan of the running window.
@@ -50,15 +50,7 @@ test('the main window has no accessibility violations beyond those recorded', as
   // and the panels are on screen to be scanned. See shell.spec.ts.
   await expect(window.getByTestId('app-version')).not.toBeEmpty();
 
-  // Legacy mode runs axe inside the page. The default opens a scratch page to
-  // merge frame results, and Electron cannot create one — nor does it need
-  // to, with a single frame.
-  const results = await new AxeBuilder({ page: window })
-    .setLegacyMode(true)
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-    .analyze();
-
-  const found = results.violations.map((violation) => ({
+  const found = (await scanA11y(window)).map((violation) => ({
     rule: violation.id,
     impact: violation.impact,
     help: violation.help,
@@ -97,17 +89,13 @@ test('the F.2 layout at work has no accessibility violations either', async () =
     await window.getByTestId('problems-toggle').click();
 
     await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(1000, 700);
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1000, 700);
     });
     await expect(window.getByTestId('tool-rail')).toHaveClass(/collapsed/);
     await window.getByTestId('toggle-properties').click();
     await expect(panel).toBeVisible();
 
-    const results = await new AxeBuilder({ page: window })
-      .setLegacyMode(true)
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-      .analyze();
-    const found = results.violations.map((violation) => ({
+    const found = (await scanA11y(window)).map((violation) => ({
       rule: violation.id,
       help: violation.help,
       first: violation.nodes[0]?.target.join(' '),
@@ -132,16 +120,7 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
   try {
     const window = await instance.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
-    const scan = async (what: string): Promise<void> => {
-      const results = await new AxeBuilder({ page: window })
-        .setLegacyMode(true)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-        .analyze();
-      const found = results.violations.map(
-        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
-      );
-      expect(found, what).toEqual([]);
-    };
+    const scan = (what: string): Promise<void> => expectNoViolations(window, what);
 
     await window.getByTestId('project-menu').click();
     await scan('the Project menu, with no recent projects');
@@ -205,18 +184,9 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     const window = await instance.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
     await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(1440, 900);
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1440, 900);
     });
-    const scan = async (what: string): Promise<void> => {
-      const results = await new AxeBuilder({ page: window })
-        .setLegacyMode(true)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-        .analyze();
-      const found = results.violations.map(
-        (violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ') ?? ''}`,
-      );
-      expect(found, what).toEqual([]);
-    };
+    const scan = (what: string): Promise<void> => expectNoViolations(window, what);
 
     // A rectangle typed before any click (U.16), and After the outline (U.18).
     await window.getByTestId('tool-rectangle').click();
@@ -252,10 +222,26 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-shortcuts').click();
     await window.getByTestId('change-settings').click();
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('shortcut-clash')).toBeVisible();
     await scan('Settings › Keyboard shortcuts, a clash');
     await window.getByTestId('clash-cancel').click();
+  } finally {
+    await closeApp(instance);
+  }
+});
+
+test('the top bar’s "Saved" has no accessibility violations with a project open', async () => {
+  // "Saved" shows only once a project has a file; the print test is one.
+  const instance = await launchApp({
+    env: { XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-e2e-a11y-')) },
+  });
+  try {
+    const window = await instance.firstWindow();
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await openPrintTest(instance, window, join(tmpdir(), 'leathercad-e2e-a11y.pdf'));
+    await expect(window.getByTestId('save-state')).toContainText('Saved');
+    await expectNoViolations(window, 'the top bar with a saved project open');
   } finally {
     await closeApp(instance);
   }

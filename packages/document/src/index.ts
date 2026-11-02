@@ -21,12 +21,9 @@ export {
   command,
   drawnBounds,
   isEmptySelection,
-  isPartSelected,
-  isSelected,
   partSelectionOf,
   selectedFeatureIds,
   selectionOf,
-  toggleSelected,
 } from './document.js';
 
 export type { StoreState } from './store.js';
@@ -40,8 +37,10 @@ export {
   addHardwareHole,
   addMarkingLine,
   addMeasurement,
+  addOverallSize,
   addPart,
   allowanceRefusal,
+  addHoleRow,
   addStitchHoles,
   addAllowance,
   addAllowancePart,
@@ -51,6 +50,8 @@ export {
   addTextLabel,
   arcShape,
   circleShape,
+  convertToPath,
+  convertToPathRefusal,
   deleteFeatures,
   deletePart,
   deleteRefusal,
@@ -90,6 +91,8 @@ export {
   setShape,
   shapePart,
   refusedTransforms,
+  scaleFeatures,
+  scaleRefusal,
   transformFeatures,
   transformRefusal,
   translateFeatures,
@@ -97,3 +100,6 @@ export {
 
 export type { PathPointEdit } from './pathPoints.js';
 export { editPathPoint, pathPointRefusal, pointEditingRefusal } from './pathPoints.js';
+export { addGuide, setGuide, deleteGuide } from './guides.js';
+export { arrangeFeatures, arrangementRefusal } from './arrange.js';
+export type { ArrangeAxis, ArrangeMode, ArrangementRefusal } from './arrange.js';

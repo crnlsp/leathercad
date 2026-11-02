@@ -1,6 +1,5 @@
 import type { Project } from '@leathercad/domain';
 import { CANVAS, GROUND, linkTickShape } from '@leathercad/render';
-import { ChevronDown, ChevronUp, List } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { useI18n } from './i18n.js';
@@ -63,9 +62,9 @@ export function CanvasLegend({
           aria-label={t('legend.title')}
           onClick={onToggle}
         >
-          {!open && <Icon of={List} />}
+          {!open && <Icon of="legend" />}
           <span className="canvas-legend-title">{t('legend.title')}</span>
-          <Icon of={open ? ChevronDown : ChevronUp} />
+          <Icon of={open ? 'chevron-down' : 'chevron-up'} />
         </button>
       </Tooltip>
       {open && (

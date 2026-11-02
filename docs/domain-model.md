@@ -5,7 +5,7 @@
 [Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md). Each section
 says which parts are **built** or **later**; a later part names its roadmap item, which is where its
 status lives.
-**Last updated:** 2026-10-17
+**Last updated:** 2026-10-25
 
 ---
 
@@ -32,6 +32,7 @@ Everything below serves those four.
 ```
 Project                                     built
 ├── settings          grid, default stitch margin, default iron pitch
+├── guides[]          origin, angle — non-printing construction lines (3.10)
 └── parts[]
      └── Part         name, quantity         built
           └── features[]
@@ -41,12 +42,12 @@ Project                                     built
                ├── FoldLine                  built
                ├── MarkingLine               built
                ├── HardwareHole              built
+               ├── HoleRow                   built 4.14
                ├── Measurement               designed, 4.10 — an annotation
                └── TextLabel                 designed, 4.11 — an annotation
 ```
 
-**Later:** the leather's thickness beyond a fold's own (roadmap 9.1), grain direction (9.22),
-persisted guides (3.10). **Not planned:** a notes field on a part — a text label prints what a note
+**Later:** the leather's thickness beyond a fold's own (roadmap 9.1), grain direction (9.22). **Not planned:** a notes field on a part — a text label prints what a note
 would say; and iron presets as document data — irons are the maker's, in *My tools*, and a hole set
 stores the pitch (§6.2). **Not planned for Phase 4:** a per-part placement transform. A part is
 placed by its features' own geometry ([ADR 0012](adr/0012-mirror-is-a-derivation.md)).
@@ -188,7 +189,54 @@ separately.
 
 **Later:** `hardwareRefId`, a link into the hardware library (roadmap 9.3), and a placement measured
 from an edge, as a derivation (9.24). The rules that keep a hole on the leather read a hardware
-hole's centre and not its rim, which misses a hole that breaks the edge (Q33).
+hole's rim since Q33. Several holes in a row are not this feature: they are a `HoleRow` (§3.6a).
+
+### 3.6a `HoleRow` — built, 4.14
+
+```ts
+interface HoleRow extends GeometricFeature {
+  kind: 'hole-row';                   // source is always `derived` with a `hole-row` op
+}
+
+{ type: 'hole-row'; pitchMm: Mm; radiusMm: Mm }
+```
+
+Holes punched along a **marking line**: a belt's adjustment holes, rivets along a strap, lacing,
+decorative punching. The canonical hardware task the 4.7 design left out on purpose — five holes at
+25 mm is five clicks and five corrections as single holes — because it is a *set* distributed at a
+pitch, which is what a hole set already is. So it is built the way a hole set is: derived, its holes
+placed by `distributeHoles` and never stored, and gone with its line when the line is deleted (it
+has no drawn form to freeze).
+
+What it decided, and why:
+
+- **It follows a marking line, and nothing else** (§4.2). A stitch line's holes are a hole set; an
+  outline or a fold would put the holes through the edge or the crease. A marking line is what a
+  maker draws to put holes on — straight, bent, an arc, a circle — and it prints, so the row's
+  centre line is on the template.
+- **Placed as a hole set's defaults are, and only so**: `fit-whole` with a hole on every corner. An
+  open line gets a hole on each end and the rest evenly between; a closed one is divided evenly with
+  no doubled hole where it closes. *Exactly this pitch* and the corner policy are not offered: nobody
+  has asked for them, and a maker who wants five holes 25 mm apart draws a 100 mm line.
+- **Each hole is a circle of `radiusMm`**, punched at its true size like a hardware hole, so its role
+  is `hardware`: drawn at true size at every zoom, printed at its diameter rather than as a stitch
+  hole's 1 mm centre mark, and in the cutting export. The record holds a radius and the panel asks
+  for a diameter, as for a hardware hole. The resolved holes carry the radius
+  (`StitchHoles.radiusMm`), so a mirrored row — whose op is its mirror — has it too.
+- **Starts as 25 mm apart, 4 mm across**: the 4.7 design's five adjustment holes at 25 mm, and the
+  Hardware tool's first punch. A hole set's iron would overlap 4 mm holes at 3.85 mm, and a row has
+  no setting of its own; one waits until makers say what they reach for.
+- **On the leather by its rim** (DR2, as Q33 decided for a hardware hole): `OUTSIDE_PART` and
+  `HOLE_TOO_CLOSE_TO_EDGE` read each hole's circle. **DR4 does not apply**: a row is punched, not
+  sewn, so there is no iron to match and no seam to close.
+- The pitch has the hole set's floor, `MIN_PITCH_MM`, for its reason; a radius that is not positive
+  punches nothing and fails with `PARAMETER_INVALID`.
+
+- **Holes that run into each other** (DR3): `HOLES_OVERLAP` warns when neighbouring holes are no
+  more than a diameter apart, centre to centre, so they cut as one slot rather than the holes drawn.
+  A warning and not a refusal, because a slot punched as a run of holes is a real technique. Only
+  neighbours are compared: holes that meet across a tight bend without being neighbours are not
+  found.
 
 ### 3.7 `Measurement` — linear built 4.10a
 
@@ -207,7 +255,10 @@ interface MeasureSource {
   precision: 0 | 1 | 2;
 }
 
-type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
+type MeasureRef =
+  | { kind: 'anchor'; featureId: FeatureId; anchor: number }
+  // Version 12 (Q15): a corner of the box the feature's outline fills.
+  | { kind: 'extent'; featureId: FeatureId; x: 'min' | 'max'; y: 'min' | 'max' };
 ```
 
 - **An annotation, and an ordinary feature.** Its references live in its `GeometrySource`, because the
@@ -218,7 +269,26 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
   mirror's fold; this is its second and larger user, and `edgesFrom` carries both.
 - **Every end references an anchor.** No segment indices (S9) and no free points, because a dimension
   that silently goes stale is worse than no dimension.
+- **A piece's overall size is asked for, not inferred** (Q15, 2026-10-26). A dimension between two
+  corners measures between those corners: on a rounded piece a corner is the middle of its rounding,
+  so a 97 × 67 panel rounded at 5 mm reads 94.1 between its top corners, and it keeps reading that
+  whatever else changes — a dimension never silently starts measuring something else. *Add overall
+  size*, on a selected outline, adds its width above it and its height to its left, each between
+  `extent` ends: corners of the box its actual outline fills, read from the outline's exact bounds
+  on every evaluation. That reads 97 × 67, and so does the band a 3.5 mm seam allowance grows round a
+  90 × 60 stitch line. The actual outline rather than where the edges would meet if carried on (the
+  *virtual sharp*): it is defined for every outline — drawn, curved, grown, a strap's round end —
+  it is the leather to cut, and it never runs off the piece, where the meeting point of two edges
+  runs away as a rounding nears a half turn. A turned piece reads the box it takes on the sheet,
+  as a horizontal dimension between its corners does. An extent end follows evaluated bounds, so
+  it is the least durable reference, and only an outline's own button makes one.
 - **The value is generated**, never stored (X6), and shown at `precision`.
+- **Drawn like drafting** (4.10b): arrowheads on its ends and its number breaking its line, on the
+  board and on paper. Evaluation lays out the paper's number, centred on the line; a number with
+  no room between the extension lines is moved past the far arrowhead, in each medium by its own
+  width there. The line's marks are sized per medium — constant on screen, true millimetres on
+  paper — by `draftDimensionLine`, which the display list and the export scene both call. The
+  resolved `path` is still the extension lines and the whole line, for selection and bounds.
 - A missing anchor fails the measurement (E4). It never attaches to a neighbouring corner.
 - **Never freezable.** Deleting what it measures offers no "keep it": a frozen dimension is a number
   that no longer means anything, which is the stale label this feature exists to replace.
@@ -232,8 +302,7 @@ type MeasureRef = { kind: 'anchor'; featureId: FeatureId; anchor: number };
   rounding, which is where a rounded rectangle's corner anchor has always been, and sharpening it
   brings it back to the point.
 
-**Later:** `radial`, and with it `centre` references; `extent` references, which are the least durable
-kind because they follow evaluated bounds rather than a place; angular measurements.
+**Later:** `radial`, and with it `centre` references; angular measurements.
 
 ### 3.8 `TextLabel` — built, 4.11b
 
@@ -287,6 +356,7 @@ type FeatureSource = GeometrySource | TextSource;
 type Derivation =
   | { type: 'offset'; distanceMm: Mm; side: 'inward' | 'outward'; run: Run }          // built
   | { type: 'stitch-holes'; pitchMm: Mm; mode: …; corners: …; … }                     // built
+  | { type: 'hole-row'; pitchMm: Mm; radiusMm: Mm }                                     // built 4.14
   | { type: 'mirror'; axis: { origin: Vec2; angleRad: Radians }; glideMm: Mm };       // built 4.8a
 
 type Run =
@@ -334,6 +404,7 @@ reason, and the loader refuses files that break them, naming the feature:
 | Stitch line | offset, inward | Cut contour (outer or cut-out) | Whole run or partial run |
 | Outer cut contour | offset, outward | Stitch line | Source closed; whole run only — built 4.9 |
 | Stitch hole set | stitch holes | Stitch line | |
+| Row of holes | hole row | Marking line | — built 4.14 |
 | The same kind | mirror | The same kind | A cut contour keeps its role — built 4.8a |
 
 A representative card-holder panel:
@@ -417,6 +488,12 @@ being followed and hands geometry a signed distance; geometry keeps knowing only
 > on purpose: guessing at the shape 4.9 needs before 4.9 exists is how a wrong abstraction gets
 > frozen in.
 
+Resource limits (PERF-012) are operation refusals, separate from a feature's outcome. Evaluation
+checks stored work and aggregate resolved segments/holes, including cache hits and mirrors. An
+excessive request throws `ResourceLimitError` before its allocation and returns no partial project,
+so an exporter cannot silently omit a refused hole set. No parameter or stored shape is changed.
+See [Resource limits](resource-limits.md).
+
 ### 4.5 Deleting a feature others depend on — built, 4.2b
 
 [ADR 0009](adr/0009-explicit-resolution-when-deleting-a-source.md). **A delete never changes a feature
@@ -430,8 +507,8 @@ the user did not name without first showing them, and never leaves a reference d
     and records `frozenFrom`;
   - **cancel**.
 
-  Dependents with no drawn form — references and stitch hole sets — are listed as deleted either
-  way.
+  Dependents with no drawn form — references, stitch hole sets and rows of holes — are listed as
+  deleted either way.
 - **Re-pointing** keeps a relationship while replacing its source: every derived feature can be
   pointed at another compatible source (*Follows*).
 - **Parts are removed only by deleting the part.** An emptied part stays, and is reported as
@@ -450,16 +527,23 @@ cascades. Both change without telling the user; see the ADR.
 
 | Feature | Anchors | Stable under |
 |---|---|---|
-| `rect` shape | Its 4 corners | Width, height, radius, rotation: always 4 |
+| `rect` shape | Its 4 corners: the middle of each rounding, or the point | Width, height, radius, rotation: always 4, rounded to a circle too |
 | Drawn path | Its corners, in order | Moving a point; **not** inserting one. Vertex ids come before slice 3.9 |
 | `circle`, `arc` | None | Everything |
 | Derived | The source's anchors, mapped by the derivation | Whatever the source is stable under |
+
+A rectangle's anchors come from its parameters (ADR 0010, 2), so it has four whatever its radii:
+rounded to half its shorter side, with no straight left between two roundings, each corner is still
+the middle of its rounding. Until 2026-10-26 they were read off the path, which lost them there — a
+square rounded to a circle had none, and a rounding across a whole side hid the sharp corner after
+it and renumbered the rest. A file that resolved before resolves to the same numbers now: where the
+path shows all four corners they are still read off it.
 
 How a derivation maps anchors:
 
 - an **offset** maps each source corner to the corner it produced;
 - a **mirror** maps each anchor through its transform;
-- a **hole set** exposes its stitch line's anchors.
+- a **hole set** exposes its stitch line's anchors, and a **row of holes** its marking line's.
 
 The mapping comes from the code that built the geometry, never from searching for the nearest point:
 `offsetPathTraced` reports where each input segment and corner ended up, and the domain maps through
@@ -501,8 +585,35 @@ that names it fails with `ANCHOR_MISSING`.
   typing its X, Y or Turn takes the whole piece, hidden features included, and a dragged piece never
   snaps to its own slots. Rotate takes a part picked by its heading as its piece. A typed width or
   corner reshapes the outline alone — a reshape is not a move. One helper, `pieceScope`, answers
-  what every gesture moves. **Scale does not follow it:** what resizing a piece should do to its
-  rivet holes and card slots is a decision still to make (Q31), so Scale acts on what is selected.
+  what every gesture moves.
+- **Scaling follows it too, and keeps what is made to a size** (Q31). Scaling an outline, or a part
+  picked by its heading, scales the whole piece about the outline's centre, hidden features
+  included, refused whole as any gesture is (`scaleRefusal`, lock first). Positions scale; sizes
+  made for something do not. `keepsItsSize` decides, and what it keeps is only moved — its centre
+  taken where the scale sends it, and turned over in place if the scale turns the piece over:
+
+  | Kind | Under a piece's scale | Why |
+  |---|---|---|
+  | Hardware hole | Keeps its diameter | A 4 mm punch makes a 4 mm hole; a drawn or frozen one too |
+  | Text label | Keeps its text size; its box's centre moves | It prints at the size it was set |
+  | Marking with purpose *logo* | Keeps its size; its centre moves | It locates a stamp of a fixed size |
+  | Cut-out typed as a shape (rectangle, circle) | Keeps its width, height, corners or radius | Made for something — a card slot for an 86 × 54 card, a hole for a snap's post |
+  | Cut-out drawn as a path | Scales | It has no size of its own to keep; *Convert to path* is how a typed one joins it |
+  | Outline, stitch line drawn by hand, fold line, other marking line | Scales | The piece's own drawing |
+  | Stitch line, hole set, allowance (derived) | Re-derive from the scaled outline | The margin and the iron's pitch are parameters no scale touches |
+  | Row of holes | Re-derives along its scaled line, at the same pitch and diameter | Its line is drawing; its holes are a punch and a spacing |
+  | Counterpart | Follows its original, its axis carried by the scale | It owns only its placement |
+  | Dimension | Re-reads its ends | It has no geometry of its own |
+
+  So a round hole stays round under a stretch, and a label is not refused as it would be stretched
+  alone. What stretching still refuses is what the piece's own drawing cannot take: a turned outline
+  would shear (`WOULD_SHEAR`), a round outline would become an ellipse, and turning a piece over by
+  scaling it through itself reads its labels backwards. Anything else selected scales alone, as it
+  always has — a rivet hole picked by itself grows. A typed width stays a reshape of the outline alone.
+  A captured or fold-tracked mirror across a diagonal also refuses a stretch when carrying its axis
+  would need a shear (`MIRROR_WOULD_SCALE`). Scale the whole piece evenly instead. Refusal checks the
+  same carried reflection that the command stores, so the source can never move while its captured
+  axis silently stays behind.
 - **A gesture part of the selection refuses is refused whole** (Q30), as a lock already was, and
   `transformRefusal` says why, lock first. It used to move what it could: a piece stretched with its
   rivets selected left them behind.
@@ -561,6 +672,38 @@ that names it fails with `ANCHOR_MISSING`.
   produce a different one — which is why `evaluate` has a second place that produces a `holes` field
   and deliberately so.
 
+### 4.8 Converting a shape to a drawn path — built 3.12
+
+X9 refuses a transform a shape's parameters cannot say — a circle squashed, an arc stretched, a
+turned rectangle sheared. *Convert to drawn path* is the way past it that the maker asks for:
+`convertToPath(id)` replaces a `shape` source with a `path` source holding exactly `pathForShape`'s
+output. Nothing is drawn differently, and nothing is detached (X3):
+
+- the feature keeps its id, name, kind and role, so every derivation and reference to it stays;
+- the path is the one evaluation already built, so its corners are the same corners — a rectangle's
+  four anchors keep their indices (§4.6), and a dimension to one reads the same number;
+- except where a rounding uses up a side: a rectangle rounded to a circle or a strap, or across a
+  whole side, still has four corners (§4.6), but the drawn path has only those its path shows. Each
+  corner is followed to the drawn corner at the same distance along the same path and renumbered,
+  and a run or dimension on one the path does not show refuses the conversion (`CORNER_IN_USE`),
+  as a point edit that takes a corner away does;
+- every dependent resolves exactly as it did, holes and failures alike.
+
+What goes is the parameters: the panel offers points rather than a radius or a width, and the
+feature now transforms as drawn geometry does (`geometry.md` §4.2 rule 2). So a squashed circle is
+made of cubics, and an offset refuses cubics until 9.19 — a stitch line round a converted, squashed
+circle reports `OFFSET_UNSUPPORTED`, and the note beside the button says so first.
+
+Offered for `circle`, `arc` and `rect`, whatever the feature. Refused, with the reason under the
+button (`convertToPathRefusal`): a locked feature (S7); a hardware hole (`HOLE_STAYS_ROUND`), because
+a punch is round and the panel sizes it by diameter — an oval opening is a cut-out; and anything
+that is not a shape (`NOT_A_SHAPE`); and a corner in use that the drawn path would not have
+(`CORNER_IN_USE`). One undo step (`convert-to-path`) brings the shape back. No
+format change: a drawn path was already stored, exactly (`file-format.md` §3.2).
+
+Unlike a **freeze** (§4.5), which a delete offers for a derived feature whose source is going, this
+is asked for, on a root, and the feature keeps everything that follows it.
+
 ## 5. Layer roles — built
 
 Fixed by the domain, not managed by the user. Each feature kind maps to exactly one role, and the
@@ -573,10 +716,10 @@ role drives three tables.
 | `stitch-holes` | `StitchHoleSet` | dots on screen; true-size marks on paper | `stitch-holes` | optional |
 | `fold` | `FoldLine` | dash-dot, green | `fold` | no |
 | `mark` | `MarkingLine` | solid, light grey | `mark` | no |
-| `hardware` | `HardwareHole` | circle at true size, orange | `hardware` | yes |
+| `hardware` | `HardwareHole`, `HoleRow` | circle at true size, orange | `hardware` | yes |
 | `annotation` | `Measurement`, `TextLabel` | grey, thin | `annotation` | no |
 
-Export presets are role sets: **template print** (everything), **laser or CNC cut** (`cut` and
+Export presets are role sets (built, 6.4; [printing §10](printing.md)): **template print** (everything), **laser or CNC cut** (`cut` and
 `hardware`, plus `stitch-holes` if lasered), **stitch guide** (`stitch` and `stitch-holes`).
 
 Users toggle individual features' visibility; they never manage a layer stack.
@@ -711,7 +854,7 @@ rules are exact — a hole is a point, and a point is either on the material or 
 | X6 | Text that restates a model value is generated, never stored | built 4.10a for dimensions |
 | X7 | Every surface that shows a problem reads one diagnostic list | 4.12a |
 | X8 | Defaults come from settings, never from constants in a component: the maker's (My tools, U.13) where the app makes something, the project's when no maker's value is passed | built 4.3a; the maker's in U.13 |
-| X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a |
+| X9 | A transform never silently demotes a shape's representation | built 3.7; explained through the channel 4.12a; the asked-for way past it 3.12 (§4.8) |
 | X10 | A refusal keeps the user's work where it can still be corrected | built 4.3a for drawing |
 
 **S7 — what the lock protects** (built 4.3b). Before it, `locked` was a *pick lock* and nothing
@@ -728,8 +871,9 @@ nudge it, and you still want to hide it to see what is underneath. Lock protects
 view. A locked feature is also still selectable in the parts panel, and its dependents still follow
 it — it simply cannot change itself.
 
-Enforced by refusing inside `mapFeature` **by default**, with an explicit `evenIfLocked` on the two
-commands that may touch one, rather than by a check each command remembers to write. Same reasoning
+Enforced by refusing inside `mapFeature` **by default**, rather than by a check each command
+remembers to write. The two commands that may touch a locked feature — hiding it
+and unlocking it — set its flag without going through `mapFeature` (8.8). Same reasoning
 as 4.3a's draw commit boundary: an invariant every caller has to remember is one that eventually
 gets forgotten.
 
@@ -770,6 +914,13 @@ function diagnose(project: Project): readonly Diagnostic[];   // the one list (X
 The words for a problem are not the domain's: the app puts a code and its facts into the interface's
 language, from one catalogue (`renderer/src/problemText.ts`, ADR 0018).
 
+**A problem's identity is `problemKey(problem)`** (Q4): the code, the id of the feature or part it is
+about, and, for a code that can occur twice on one subject, an id or parameter name that tells them
+apart (`PARAMETER_INVALID` by parameter, `SOURCE_FAILED` by the source it follows, `OUTSIDE_PART` by
+holes or line, and so on). It holds no coordinate, measured value, name or list position, so it
+survives moving, resizing, renaming and unrelated edits; the panel keys its rows by it and 9.16 will
+store it for an accepted warning. Limit: `ANCHOR_MISSING` is told apart by the anchor's index.
+
 **Refusals are problems too**, with the same codes and catalogue, but they are never diagnostics:
 they are refused at the gesture or by the loader, so they never exist in a document to be listed.
 The audit test (below) holds this table to the registry in both directions, which is why it is a
@@ -793,6 +944,8 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `FEATURE_MISSING` | interaction | X1 | Commands |
 | `NOT_DERIVED` | interaction | X1 | Commands |
 | `NOT_A_DRAWN_PATH` | interaction | X1 | Point-editing commands |
+| `NOT_A_SHAPE` | interaction | X1 | *Convert to drawn path* (3.12) |
+| `HOLE_STAYS_ROUND` | interaction | X1 | *Convert to drawn path* (3.12) |
 | `POINT_EDIT_DEGENERATE` | interaction | X1 | Point-editing commands |
 | `ROUNDING_DOES_NOT_FIT` | interaction | X1 | Point-editing commands |
 | `NOT_A_ROUNDED_CORNER` | interaction | X1 | Point-editing commands |
@@ -806,7 +959,6 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `MEASURE_ACROSS_PARTS` | interaction | X3 | Commands; the measure tool |
 | `NO_TARGET_PART` | interaction | X4 | Drawing modes |
 | `TARGET_SPANS_PARTS` | interaction | X4 | Drawing modes |
-| `WHOLE_PART_NOT_SCALED` | interaction | X4 | Scale, with a part picked by its heading (Q29) |
 | `TRANSFORM_FLATTENS` | interaction | X9 | Transform tools |
 | `WOULD_BECOME_ELLIPSE` | interaction | X9 | Transform tools |
 | `WOULD_SHEAR` | interaction | X9 | Transform tools |
@@ -827,9 +979,10 @@ The diagnostics themselves:
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
-| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a |
-| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm) | rule | DR2 | built 4.3a |
+| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33; a row's holes by theirs, 4.14 |
+| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33 |
 | `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | built 4.3a |
+| `HOLES_OVERLAP` | warning (a row's neighbouring holes no more than a diameter apart) | rule | DR3 | built 4.14 |
 | `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | built 4.3a |
 | `HOLE_SPACING_UNEVEN` | info (runs differing by above 5 % of the pitch) | rule | DR4 | built 4.12a |
 | `HOLE_SPACING_DEVIATION` | warning (above 25 % from the iron) | rule | DR4 | built 4.12a |
@@ -879,10 +1032,11 @@ reuse.
 | Concept | Status | Later |
 |---|---|---|
 | `CutContour`, `StitchLine`, `StitchHoleSet`, `FoldLine`, `MarkingLine`, `HardwareHole` | Built | |
+| `HoleRow`, along a marking line | Built 4.14 | |
 | Cut-outs, drawn stitch lines, drawing modes | Built: 4.3a, 4.9 | |
 | `Measurement` (horizontal, vertical, aligned) | Built 4.10a | Radial, angular |
 | `TextLabel`, generated captions | Built: 4.11a, 4.11b | |
-| Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes` | Built | |
+| Sources: `path`, `shape`, `derived` · ops: `offset`, `stitch-holes`, `hole-row` | Built; `hole-row` 4.14 | |
 | Op: `mirror`, by axis and across a fold | Built: 4.8a, 4.8b | Boolean (9.5) |
 | Reference graph, explicit deletion, re-pointing | Built: 4.2b | References with 4.10 |
 | Anchors through derivations | Built: 4.4b | Vertex ids before 3.9 |

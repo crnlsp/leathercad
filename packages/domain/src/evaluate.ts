@@ -1,4 +1,6 @@
 import {
+  checkResourceLimit,
+  ResourceLimitError,
   EPS_ANGLE,
   EPS_LENGTH,
   EPS_POINT,
@@ -21,13 +23,15 @@ import {
   type Path,
   type Vec2,
 } from '@leathercad/geometry';
-import { placedText, type PlacedText } from '@leathercad/typography';
+import { FONT, placedText, type PlacedText } from '@leathercad/typography';
 
 import type {
   Derivation,
   Feature,
   FeatureId,
   FeatureSource,
+  ExtentRef,
+  MeasureRef,
   MeasureSource,
   MirrorAxis,
   ParametricShape,
@@ -36,10 +40,11 @@ import type {
   Run,
 } from './feature.js';
 import { roleOf } from './feature.js';
+import { checkProjectSize } from './resourceSize.js';
 import { anchorsOf } from './anchors.js';
 import { mapAnchorsThroughOffset } from './derivedAnchors.js';
 import { keepLargestPiece } from './offsetPieces.js';
-import { MIN_PITCH_MM, distributeHoles, type StitchHoles } from './stitch.js';
+import { MIN_PITCH_MM, distributeHoles, rowOfHoles, type StitchHoles } from './stitch.js';
 import type { LayerRole } from './layerRole.js';
 import {
   problem,
@@ -59,7 +64,7 @@ export type ResolvedFeature =
        * circles. The holes travel beside it.
        */
       readonly path: Path;
-      /** Present only on a stitch hole set. */
+      /** Present only on a stitch hole set and a row of holes (4.14). */
       readonly holes?: StitchHoles;
       /**
        * Present only on a text label: the words, laid out once in millimetres.
@@ -157,22 +162,44 @@ const cache = new WeakMap<Feature, CacheEntry>();
  * node while everything around it still draws. A blank canvas because of one
  * bad number is the wrong failure mode for a drawing tool. Every failure is a
  * typed problem (E1), never a sentence.
+ * An excessive resource request instead refuses the whole operation with
+ * ResourceLimitError; there is no partial project an exporter could omit from.
  */
 export function evaluate(project: Project): ResolvedProject {
+  checkProjectSize(project);
   // A derived feature can follow one in another part — a seam spans two
   // pieces — so the index is built across the whole project, once.
   const byId = new Map<FeatureId, Feature>();
   for (const part of project.parts) {
     for (const feature of part.features) byId.set(feature.id, feature);
   }
+  const scope: Scope = { byId, resolved: new Map(), holes: 0, segments: 0 };
 
   return {
     project,
     parts: project.parts.map((part) => ({
       part,
-      features: part.features.map((feature) => resolveTop(feature, byId)),
+      features: part.features.map((feature) => resolveTop(feature, scope)),
     })),
   };
+}
+
+/**
+ * One evaluation's view of the project: every feature by id, and each feature
+ * resolved so far in it.
+ *
+ * A feature is resolved once an evaluation, then read, rather than walked
+ * again for every feature further down a chain that follows it (PERF-015). A
+ * resolution depends on the features it follows and nothing else — the
+ * `visiting` set only ever decides whether a cycle is thrown, and a thrown
+ * cycle is never kept — so whichever walk reaches a feature first, its entry
+ * is the one any other would have made.
+ */
+interface Scope {
+  holes: number;
+  segments: number;
+  readonly byId: ReadonlyMap<FeatureId, Feature>;
+  readonly resolved: Map<Feature, ResolvedFeature>;
 }
 
 /**
@@ -203,9 +230,9 @@ class Failure extends Error {
  */
 class CycleError extends Failure {}
 
-function resolveTop(feature: Feature, byId: ReadonlyMap<FeatureId, Feature>): ResolvedFeature {
+function resolveTop(feature: Feature, scope: Scope): ResolvedFeature {
   try {
-    return resolveFeature(feature, byId, new Set());
+    return resolveFeature(feature, scope, new Set());
   } catch (error) {
     // Re-subjected: the cycle was found on some feature further along the
     // loop, but this is the one being reported.
@@ -216,30 +243,39 @@ function resolveTop(feature: Feature, byId: ReadonlyMap<FeatureId, Feature>): Re
   }
 }
 
-function resolveFeature(
-  feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
-  visiting: Set<FeatureId>,
-): ResolvedFeature {
+function resolveFeature(feature: Feature, scope: Scope, visiting: Set<FeatureId>): ResolvedFeature {
+  const known = scope.resolved.get(feature);
+  if (known !== undefined) return known;
+
+  let resolved: ResolvedFeature;
   try {
     // Inside the try: asking for the source can fail, and that failure belongs
     // to this feature, not to whichever feature asked for this one.
-    const source = resolvedSourceOf(feature, byId, visiting);
+    const source = resolvedSourceOf(feature, scope, visiting);
     const from = source?.path;
-    const referenced = referencedOf(feature, byId, visiting);
+    const referenced = referencedOf(feature, scope, visiting);
     const refsFrom = referenced.map((entry) => entry?.path);
     const cached = cache.get(feature);
     if (cached !== undefined && cached.from === from && sameRefs(cached.refsFrom, refsFrom)) {
-      return hit(feature, cached);
+      resolved = hit(feature, cached);
+    } else {
+      const built = build(feature, source, referenced, scope.holes);
+      cache.set(feature, built);
+      resolved = hit(feature, built);
     }
-
-    const built = build(feature, source, referenced);
-    cache.set(feature, built);
-    return hit(feature, built);
   } catch (error) {
     if (error instanceof CycleError) throw error;
-    return failed(feature, error);
+    resolved = failed(feature, error);
   }
+  if (resolved.ok) {
+    // Cache hits and mirrored sets consume the same aggregate budget as new sets.
+    scope.holes += resolved.holes?.count ?? 0;
+    scope.segments += resolved.path.segments.length;
+    checkResourceLimit('holes', scope.holes);
+    checkResourceLimit('segments', scope.segments);
+  }
+  scope.resolved.set(feature, resolved);
+  return resolved;
 }
 
 function hit(feature: Feature, entry: CacheEntry): ResolvedFeature {
@@ -264,6 +300,9 @@ function hit(feature: Feature, entry: CacheEntry): ResolvedFeature {
  * a check the domain should be making itself.
  */
 function failed(feature: Feature, error: unknown): ResolvedFeature {
+  // Refuse the operation whole. Turning this into a failed feature would let
+  // a partial pattern reach paper after its holes had been dropped.
+  if (error instanceof ResourceLimitError) throw error;
   if (error instanceof Failure) {
     return error.location === undefined
       ? { ok: false, feature, problem: error.problem }
@@ -301,7 +340,7 @@ interface Referenced {
 
 function referencedOf(
   feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): readonly (Referenced | undefined)[] {
   if (feature.kind === 'text-label') return [];
@@ -309,12 +348,12 @@ function referencedOf(
   if (feature.source.kind === 'measurement') {
     const { a, b } = feature.source;
     return [
-      referencedOne(feature, a.featureId, byId, visiting),
-      referencedOne(feature, b.featureId, byId, visiting),
+      referencedOne(feature, a.featureId, scope, visiting),
+      referencedOne(feature, b.featureId, scope, visiting),
     ];
   }
 
-  const fold = foldPathOf(feature, byId, visiting);
+  const fold = foldPathOf(feature, scope, visiting);
   return [fold === undefined ? undefined : { path: fold, anchors: [] }];
 }
 
@@ -332,16 +371,16 @@ function sameRefs(a: readonly (Path | undefined)[], b: readonly (Path | undefine
 function referencedOne(
   feature: Feature,
   refId: FeatureId,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): Referenced {
-  const target = byId.get(refId);
+  const target = scope.byId.get(refId);
   if (target === undefined) throw new Failure(problem('MEASURE_REF_MISSING', about(feature)));
 
   if (visiting.has(target.id)) throw new CycleError(problem('CYCLE', about(feature)));
   visiting.add(target.id);
   try {
-    const resolved = resolveFeature(target, byId, visiting);
+    const resolved = resolveFeature(target, scope, visiting);
     if (!resolved.ok) {
       throw new Failure(
         problem('SOURCE_FAILED', {
@@ -357,16 +396,12 @@ function referencedOne(
   }
 }
 
-function foldPathOf(
-  feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
-  visiting: Set<FeatureId>,
-): Path | undefined {
+function foldPathOf(feature: Feature, scope: Scope, visiting: Set<FeatureId>): Path | undefined {
   if (feature.kind === 'text-label' || feature.source.kind !== 'derived') return undefined;
   const op = feature.source.op;
   if (op.type !== 'mirror' || op.axis.kind !== 'fold') return undefined;
 
-  const fold = byId.get(op.axis.foldId);
+  const fold = scope.byId.get(op.axis.foldId);
   if (fold === undefined) {
     throw new Failure(
       problem('MIRROR_FOLD_MISSING', { ...about(feature), foldId: op.axis.foldId }),
@@ -378,7 +413,7 @@ function foldPathOf(
   if (visiting.has(fold.id)) throw new CycleError(problem('CYCLE', about(feature)));
   visiting.add(fold.id);
   try {
-    const resolved = resolveFeature(fold, byId, visiting);
+    const resolved = resolveFeature(fold, scope, visiting);
     if (!resolved.ok) {
       throw new Failure(
         problem('SOURCE_FAILED', {
@@ -454,17 +489,18 @@ function straightLineOf(path: Path): { origin: Vec2; angleRad: number } | null {
  */
 function resolvedSourceOf(
   feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): Extract<ResolvedFeature, { ok: true }> | undefined {
   if (feature.source.kind !== 'derived') return undefined;
-  return followSource(feature, feature.source.sourceId, byId, visiting);
+  return followSource(feature, feature.source.sourceId, scope, visiting);
 }
 
 function build(
   feature: Feature,
   resolvedSource: Extract<ResolvedFeature, { ok: true }> | undefined,
   referenced: readonly (Referenced | undefined)[],
+  usedHoles: number,
 ): CacheEntry {
   const refsFrom = referenced.map((entry) => entry?.path);
   const invalid = parameterProblem(feature);
@@ -543,6 +579,7 @@ function build(
         // reflection cannot lose one.
         const m = mirrorMatrix(source.op.axis, source.op.glideMm, referenced[0]?.path);
         const holes = resolvedSource!.holes;
+        checkResourceLimit('holes', usedHoles + (holes?.count ?? 0));
 
         return {
           from,
@@ -569,7 +606,7 @@ function build(
         };
       }
 
-      if (source.op.type === 'stitch-holes') {
+      if (source.op.type === 'stitch-holes' || source.op.type === 'hole-row') {
         // The holes are the output, but a feature still needs a path — for
         // selection, for a bounding box, for fitting the view. It is the line
         // they were placed along, so it carries that line's anchors unchanged
@@ -578,7 +615,10 @@ function build(
           from,
           refsFrom,
           path: sourcePath,
-          holes: distributeHoles(sourcePath, source.op),
+          holes:
+            source.op.type === 'stitch-holes'
+              ? distributeHoles(sourcePath, source.op, usedHoles)
+              : rowOfHoles(sourcePath, source.op, usedHoles),
           text: undefined,
           anchors: sourceAnchors,
           notes: undefined,
@@ -622,8 +662,8 @@ function drawMeasurement(
   refA: Referenced,
   refB: Referenced,
 ): { path: Path; text: PlacedText } {
-  const a = anchorPoint(feature, refA, source.a.anchor);
-  const b = anchorPoint(feature, refB, source.b.anchor);
+  const a = refPoint(feature, refA, source.a);
+  const b = refPoint(feature, refB, source.b);
 
   // What the dimension reads between, which for a horizontal or vertical one
   // is the pair projected onto that axis.
@@ -663,18 +703,51 @@ function drawMeasurement(
 
   const label = formatNumber(valueMm, source.precision);
   const midpoint = { x: (fromOff.x + toOff.x) / 2, y: (fromOff.y + toOff.y) / 2 };
-  // Set above the dimension line, reading along it, and never upside down —
-  // a number a maker has to tilt their head for is a number they misread.
+  // Reading along the dimension line, and never upside down — a number a maker
+  // has to tilt their head for is a number they misread.
   const along = Math.atan2(unit.y, unit.x);
   const rotationRad = along > Math.PI / 2 || along < -Math.PI / 2 ? along + Math.PI : along;
 
-  const placed = placedText(label, MEASUREMENT_TEXT_MM, midpoint, { rotationRad });
+  // Centred on the line, its figures across it, so the number breaks the line
+  // as drafting sets it (4.10b): the baseline half a capital below the line,
+  // as the board sets its own number.
+  const halfCapital = ((FONT.capHeight / FONT.unitsPerEm) * MEASUREMENT_TEXT_MM) / 2;
+  const baseline = {
+    x: midpoint.x + Math.sin(rotationRad) * halfCapital,
+    y: midpoint.y - Math.cos(rotationRad) * halfCapital,
+  };
+  const placed = placedText(label, MEASUREMENT_TEXT_MM, baseline, {
+    rotationRad,
+    align: 'centre',
+  });
 
   return { path, text: placed };
 }
 
 /** How big a dimension's number is set, in millimetres on the sheet. */
 const MEASUREMENT_TEXT_MM = 3;
+
+/** Where one end of a dimension is, as a point. */
+function refPoint(feature: Feature, ref: Referenced, at: MeasureRef): Vec2 {
+  switch (at.kind) {
+    case 'anchor':
+      return anchorPoint(feature, ref, at.anchor);
+    case 'extent':
+      return extentPoint(feature, ref, at);
+  }
+}
+
+/**
+ * A corner of the box the referenced outline fills (Q15): its exact bounds,
+ * arcs and curves to where they reach rather than their control points, so
+ * an overall dimension reads the leather to cut.
+ */
+function extentPoint(feature: Feature, ref: Referenced, at: ExtentRef): Vec2 {
+  const box = PathOps.bbox(ref.path);
+  // An outline with nothing in it has no size to read: nothing is there.
+  if (box === null) throw new Failure(problem('MEASURE_REF_MISSING', about(feature)));
+  return { x: at.x === 'min' ? box.minX : box.maxX, y: at.y === 'min' ? box.minY : box.maxY };
+}
 
 /**
  * Where an anchor is, as a point.
@@ -715,7 +788,7 @@ function anchorPoint(feature: Feature, ref: Referenced, anchor: number): Vec2 {
 function followSource(
   feature: Feature,
   sourceId: FeatureId,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): Extract<ResolvedFeature, { ok: true }> {
   // The source is already being resolved further up the stack, so following it
@@ -724,13 +797,13 @@ function followSource(
     throw new CycleError(problem('CYCLE', about(feature)));
   }
 
-  const from = byId.get(sourceId);
+  const from = scope.byId.get(sourceId);
   if (from === undefined) throw new Failure(problem('SOURCE_MISSING', about(feature)));
 
   visiting.add(feature.id);
   let resolved: ResolvedFeature;
   try {
-    resolved = resolveFeature(from, byId, visiting);
+    resolved = resolveFeature(from, scope, visiting);
   } finally {
     visiting.delete(feature.id);
   }
@@ -748,8 +821,8 @@ function followSource(
  * Inward is a domain concept; the geometry layer only knows left and right.
  *
  * On a counter-clockwise ring, left of travel is inward — so the sign depends
- * on the winding of the contour being followed, which is what
- * `docs/geometry.md` §6.4 means by the domain normalising it.
+ * on the winding of the contour being followed. The domain reads that winding
+ * rather than normalising it (`docs/geometry.md` §6.4).
  */
 function applyDerivation(
   feature: Feature,
@@ -951,6 +1024,13 @@ function parameterProblem(feature: Feature): Problem | null {
             ['mirror angle', op.axis.angleRad, 'finite'],
           );
         }
+      } else if (op.type === 'hole-row') {
+        // The hole set's floor, for the hole set's reason. A hole with no size
+        // punches nothing.
+        checks.push(
+          ['pitch', op.pitchMm, { atLeast: MIN_PITCH_MM }],
+          ['radius', op.radiusMm, 'positive'],
+        );
       } else {
         // The editor's floor, not merely "more than zero": distribution places
         // `length / pitch` holes, and a file holding 1e-300 ran the process out

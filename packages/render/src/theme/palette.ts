@@ -89,3 +89,10 @@ export const STATE = {
   shell: { error: '#e5675f', warning: '#d9891f', info: '#6f9fd8' },
   ground: { error: '#c0392f', warning: '#b5651a', info: '#3c6fa8' },
 } as const;
+
+/**
+ * The shell's one word for *all is well* (8.9): the version is the latest. A
+ * sage, quiet beside the tan, and only ever beside a tick — never alone, and
+ * never a severity. Shell only: on the ground green is the fold's.
+ */
+export const CONFIRM = { ok: '#7dae8b' } as const;

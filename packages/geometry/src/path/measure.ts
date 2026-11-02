@@ -206,7 +206,9 @@ function stepsFor(s: Seg.Segment, tolerance: Mm): number {
   const length = Seg.length(s);
   if (length <= tolerance) return 1;
 
-  const wanted = Math.ceil(length / Math.max(tolerance * 20, 1e-6));
+  // Floored at EPS_LENGTH, the shortest span that is a length at all: a
+  // vanishing tolerance then asks for the cap below, not for infinitely many.
+  const wanted = Math.ceil(length / Math.max(tolerance * 20, EPS_LENGTH));
   return Math.min(256, Math.max(s.kind === 'arc' ? 4 : 16, wanted));
 }
 

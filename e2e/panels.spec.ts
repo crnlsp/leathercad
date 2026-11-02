@@ -1,4 +1,3 @@
-import AxeBuilder from '@axe-core/playwright';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,7 +6,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { launchApp } from './launchApp.js';
+import { openApp, withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 /**
@@ -20,23 +19,7 @@ import { resizeWindow } from './windowSize.js';
 async function launch(
   configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-panels-')),
 ): Promise<{ app: ElectronApplication; window: Page; configHome: string }> {
-  const app = await launchApp({ env: { XDG_CONFIG_HOME: configHome } });
-  const window = await app.firstWindow();
-  window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
-  await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
-  return { app, window, configHome };
-}
-
-async function withSample(run: (window: Page, app: ElectronApplication) => Promise<void>) {
-  const { app, window } = await launch();
-  try {
-    await window.getByTestId('open-sample').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await run(window, app);
-  } finally {
-    await closeApp(app);
-  }
+  return { ...(await openApp({ env: { XDG_CONFIG_HOME: configHome } })), configHome };
 }
 
 /** Resized, and laid out for the new size before anything is pressed. */
@@ -430,17 +413,7 @@ test('the legend sits on the board, clear of the left ruler’s numbers, open or
 
 test('both strips, an overlay and focus mode have no accessibility violations', async () => {
   await withSample(async (window, app) => {
-    const scan = async (what: string): Promise<void> => {
-      const results = await new AxeBuilder({ page: window })
-        .setLegacyMode(true)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-        .analyze();
-      const found = results.violations.map((violation) => ({
-        rule: violation.id,
-        first: violation.nodes[0]?.target.join(' '),
-      }));
-      expect(found, what).toEqual([]);
-    };
+    const scan = (what: string): Promise<void> => expectNoViolations(window, what);
     await resize(app, window, 1920, 1080);
     await window.getByTestId('part-heading-pocket').click();
     await window.keyboard.press('BracketLeft');

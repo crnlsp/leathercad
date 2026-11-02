@@ -1,6 +1,8 @@
 import { formatMm, formatNumber } from '@leathercad/core';
 import {
   type DocumentStore,
+  addHoleRow,
+  addOverallSize,
   allowanceRefusal,
   deleteRefusal,
   flipFeatures,
@@ -14,13 +16,13 @@ import {
   setSource,
   setPartName,
   setPartQuantity,
+  selectedFeatureIds,
 } from '@leathercad/document';
 import type { Diagnostic, Feature, Part, Project } from '@leathercad/domain';
 import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import type { SizeDraft } from '@leathercad/editor';
 import { PathOps } from '@leathercad/geometry';
-import { followRefusal, type ResolvedFeature } from '@leathercad/domain';
-import { Trash2 } from 'lucide-react';
+import { followRefusal, isHolesAlongALine, type ResolvedFeature } from '@leathercad/domain';
 import type { ReactNode } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -29,6 +31,8 @@ import { KeyCap, useKeysInSentences } from './keyCaps.js';
 import { MARGIN_MIN_MM, MARGIN_STEP_MM, type MakerTools } from './irons.js';
 import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nextSteps.js';
 import { NumberField } from './NumberField.js';
+import { GuidesPanel } from './GuidesPanel.js';
+import { ArrangePanel } from './ArrangePanel.js';
 import { ProblemRows } from './ProblemList.js';
 import { jobTotals, trailOf } from './propertyFacts.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
@@ -56,6 +60,7 @@ export function PropertyPanel({
   tools,
   onTools,
   drawingPiece = false,
+  guidesMode = false,
   sizing = null,
   toggle,
 }: {
@@ -77,6 +82,7 @@ export function PropertyPanel({
   onTools: (changes: Partial<MakerTools>) => void;
   /** A Draw tool is out that makes a new piece: an outline, or a stitch line with its allowance (U.18). */
   drawingPiece?: boolean;
+  guidesMode?: boolean;
   /** The rectangle being drawn, while one is (U.16): its sizes, as the chips on the board show them. */
   sizing?: SizeDraft | null;
   /** Its fold (U.5), at the end of the header's first row. */
@@ -113,12 +119,26 @@ export function PropertyPanel({
           {toggle}
         </header>
         <p className="panel-empty">
-          {selected.size > 1
-            ? t('properties.manySelected', { count: selected.size })
-            : parts.length > 1
-              ? t('properties.manyPartsSelected', { count: parts.length })
-              : t('properties.nothingSelected', keys)}
+          {store.getState().selection.guide !== undefined
+            ? t('guides.selected')
+            : selected.size > 1
+              ? t('properties.manySelected', { count: selected.size })
+              : parts.length > 1
+                ? t('properties.manyPartsSelected', { count: parts.length })
+                : t('properties.nothingSelected', keys)}
         </p>
+        {(selected.size > 1 || parts.length > 1) && (
+          <ArrangePanel
+            store={store}
+            project={project}
+            ids={selectedFeatureIds(project, store.getState().selection)}
+          />
+        )}
+        {selected.size === 0 &&
+          parts.length === 0 &&
+          (guidesMode || (project.guides?.length ?? 0) > 0) && (
+            <GuidesPanel store={store} project={project} nextId={nextId} />
+          )}
         {sizing !== null && selected.size === 0 && (
           <section className="panel-section" data-testid="drawing-sizes">
             <div className="panel-heading">{t('properties.drawing')}</div>
@@ -664,7 +684,7 @@ function DeleteFooter({
         reason={reason}
         onClick={onClick}
       >
-        <Icon of={Trash2} />
+        <Icon of="delete" />
         {children}
         <span className="footer-key" aria-hidden>
           <KeyCap command="delete" />
@@ -698,7 +718,8 @@ function flipButton(
  * Actions, not modes: each one fires once and finishes, so by the tool
  * palette's own rule they belong here in the selection scope rather than in
  * the mode rail. They appear only where they mean something — you cannot put
- * holes on an outline, only on the stitch line that follows it. Between what
+ * holes on an outline, only on the stitch line that follows it, and a row of
+ * punched holes goes on a marking line drawn for it (4.14). Between what
  * the selection is called and arranging it (R-05), in the order the work
  * goes: stitch line, holes, seam allowance (R-14).
  */
@@ -734,6 +755,21 @@ function DeriveActions({
         >
           {t('properties.addStitchLine')}
         </ReasonedButton>
+        <ReasonedButton
+          testId="add-overall-size"
+          reason={null}
+          hint={t('properties.addOverallSizeHint')}
+          // Two dimensions in one step (Q15), both selected, as one is after
+          // the Measure tool.
+          onClick={() => {
+            const width = nextId();
+            const height = nextId();
+            store.dispatch(addOverallSize(feature.id, width, height));
+            store.select([width, height]);
+          }}
+        >
+          {t('properties.addOverallSize')}
+        </ReasonedButton>
       </div>
     );
   }
@@ -760,6 +796,21 @@ function DeriveActions({
           nextId={nextId}
           tools={tools}
         />
+      </div>
+    );
+  }
+
+  if (feature.kind === 'marking-line') {
+    return (
+      <div className="panel-group">
+        <ReasonedButton
+          testId="add-hole-row"
+          reason={null}
+          hint={t('properties.addHoleRowHint')}
+          onClick={() => derive(store, nextId, (id) => addHoleRow(part.id, id, feature.id))}
+        >
+          {t('properties.addHoleRow')}
+        </ReasonedButton>
       </div>
     );
   }
@@ -907,7 +958,7 @@ function Measured({
   if (
     feature.kind === 'text-label' ||
     feature.kind === 'hardware-hole' ||
-    feature.kind === 'stitch-hole-set'
+    isHolesAlongALine(feature.kind)
   ) {
     return null;
   }

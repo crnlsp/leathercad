@@ -87,6 +87,11 @@ export function exportSvg(scene: ExportScene): SvgExportResult {
       if (d !== '') out.push(`<path d="${d}"/>`);
     }
 
+    for (const shape of layer.fills) {
+      const d = pathData(PathOps.transform(shape, flip));
+      if (d !== '') out.push(`<path d="${d}" fill="${colour}" stroke="none"/>`);
+    }
+
     // A string is one path of every contour of its letters, filled with the
     // non-zero rule the typeface's outlines assume, so an "o" has its counter.
     for (const text of layer.texts) {

@@ -1,3 +1,4 @@
+import { NO_CORRECTION, isNoCorrection, type ScaleCorrection } from '@leathercad/core';
 import { setPageSetup, type DocumentStore } from '@leathercad/document';
 import {
   PAPER_SIZES,
@@ -7,26 +8,37 @@ import {
   type PaperName,
   type Project,
 } from '@leathercad/domain';
-import { exportPdf } from '@leathercad/export';
 import type { PrinterList } from '@leathercad/platform';
-import { Check } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from 'react';
 
 import { offersPaper } from '../../shared/paper.js';
 
+import { describeFactor } from './calibration.js';
+import { CalibrationStep } from './CalibrationStep.js';
+import { observePixelRatio, pixelRatio } from './canvasDensity.js';
 import { ExportFindings } from './ExportNotice.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { NumberField } from './NumberField.js';
-import { drawPage, openPdf } from './pdfPages.js';
-import { getPlatformHost } from './platformBridge.js';
+import { drawPage, limitConcurrency, openPdf } from './pdfPages.js';
+import { writePdf } from './pdfWriter.js';
+import { getPlatformHost, refusalOf } from './platformBridge.js';
 import { ProblemRows } from './ProblemList.js';
+import { leaveOut } from './printSheets.js';
 import { describeCounts } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
-import { exportReportFor } from './useProjectFile.js';
+import { exportReportFor, fileErrorText } from './useProjectFile.js';
 
 const PAPERS = Object.keys(PAPER_SIZES) as PaperName[];
 const ORIENTATIONS: readonly Orientation[] = ['portrait', 'landscape'];
@@ -34,6 +46,13 @@ const MAX_COPIES = 99;
 /** How wide the sheets are drawn, in CSS pixels: the list, and the one looked at. */
 const THUMB_PX = 96;
 const PAGE_PX = 520;
+/**
+ * The sheet list draws only the sheets in or near its view (PERF-013), this
+ * far below and above it, and a few at a time: 33 sheets drew 33 pages on
+ * every open, most of them never scrolled to.
+ */
+const NEAR_VIEW = '200px 0px';
+const drawThumbnail = limitConcurrency(3);
 
 type Sending =
   | { readonly kind: 'idle' }
@@ -82,46 +101,12 @@ export function PrintPreview({
 }) {
   const i18n = useI18n();
   const { t } = i18n;
+  const dpr = useSyncExternalStore(observePixelRatio, pixelRatio);
   const ids = useId();
   const problems = describeCounts(countBySeverity(diagnostics), i18n);
   const plan = sheetPlanFor(project);
   const { paper, orientation } = project.settings;
   const report = useMemo(() => exportReportFor(project), [project]);
-
-  // The PDF: written once per plan, previewed, then printed or saved. One
-  // written for another plan — the paper just changed — is not shown.
-  const [written, setWritten] = useState<{
-    plan: typeof plan;
-    bytes: Uint8Array;
-    doc: PDFDocumentProxy;
-  } | null>(null);
-  const pdf = written?.plan === plan ? written : null;
-  const [failure, setFailure] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    let opened: PDFDocumentProxy | null = null;
-    void (async () => {
-      try {
-        // The print form: every page upright, as printers take paper, and a
-        // landscape sheet turned a quarter on it — the one way CUPS prints it
-        // whole, at 1:1 (7.6b, docs/printing.md §13).
-        const { bytes } = await exportPdf(plan, {
-          applicationVersion: appVersion,
-          now: () => new Date(),
-          upright: true,
-        });
-        opened = await openPdf(bytes);
-        if (live) setWritten({ plan, bytes, doc: opened });
-        else void opened.loadingTask.destroy();
-      } catch (error) {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
-      }
-    })();
-    return () => {
-      live = false;
-      void opened?.loadingTask.destroy();
-    };
-  }, [plan, appVersion]);
 
   const [printers, setPrinters] = useState<PrinterList | null>(null);
   const [printerName, setPrinterName] = useState('');
@@ -138,6 +123,79 @@ export function PrintPreview({
   }, []);
   const direct = printers?.available === true && printers.printers.length > 0;
   const printer = direct ? printers.printers.find((p) => p.name === printerName) : undefined;
+
+  // Each printer's correction (7.5), asked for once it is chosen. Print waits
+  // for the answer: a sheet sent uncorrected to a calibrated printer is the
+  // very error calibration is for. A PDF saved instead has no printer, and so
+  // no correction (docs/printing.md §8.2).
+  const [corrections, setCorrections] = useState<ReadonlyMap<string, ScaleCorrection>>(
+    () => new Map(),
+  );
+  useEffect(() => {
+    if (printerName === '' || corrections.has(printerName)) return;
+    const remember = (correction: ScaleCorrection) =>
+      setCorrections((known) => new Map(known).set(printerName, correction));
+    getPlatformHost()
+      .getPrinterCorrection(printerName)
+      .then(remember, () => remember(NO_CORRECTION));
+  }, [printerName, corrections]);
+  const known = direct ? corrections.get(printerName) : NO_CORRECTION;
+  const correction = known ?? NO_CORRECTION;
+  const corrected = known !== undefined && !isNoCorrection(known);
+  const [calibrating, setCalibrating] = useState(false);
+  const [correctionFailed, setCorrectionFailed] = useState<string | null>(null);
+
+  // The PDF: written once per plan and correction, previewed, then printed or
+  // saved. One written for another — the paper just changed — is not shown.
+  const [written, setWritten] = useState<{
+    plan: typeof plan;
+    correction: ScaleCorrection;
+    bytes: Uint8Array;
+    doc: PDFDocumentProxy;
+  } | null>(null);
+  const pdf =
+    written?.plan === plan &&
+    written.correction.x === correction.x &&
+    written.correction.y === correction.y
+      ? written
+      : null;
+  const [failure, setFailure] = useState<{ readonly error: unknown } | null>(null);
+  const { x: correctX, y: correctY } = correction;
+  useEffect(() => {
+    // The file is written in a worker, then opened by pdf.js in another, and
+    // both end with the effect: a plan or a correction that changed, or a
+    // preview that closed, does not wait for a file nobody will look at
+    // (PERF-002), nor for pdf.js to read one (PERF-013).
+    const ended = new AbortController();
+    void (async () => {
+      try {
+        // The print form: every page upright, as printers take paper, and a
+        // landscape sheet turned a quarter on it — the one way CUPS prints it
+        // whole, at 1:1 (7.6b, docs/printing.md §13) — corrected for the
+        // printer when it was calibrated (7.5).
+        const applied = { x: correctX, y: correctY };
+        const bytes = await writePdf(
+          { plan, applicationVersion: appVersion, upright: true, correction: applied },
+          ended.signal,
+        );
+        const doc = await openPdf(bytes, ended.signal);
+        if (!ended.signal.aborted) setWritten({ plan, correction: applied, bytes, doc });
+      } catch (error) {
+        if (!ended.signal.aborted) setFailure({ error });
+      }
+    })();
+    return () => ended.abort();
+  }, [plan, appVersion, correctX, correctY]);
+
+  const removeCorrection = async (): Promise<void> => {
+    try {
+      await getPlatformHost().setPrinterCorrection(printerName, null);
+      setCorrections((all) => new Map(all).set(printerName, NO_CORRECTION));
+      setCorrectionFailed(null);
+    } catch (error) {
+      setCorrectionFailed(refusalOf(error));
+    }
+  };
 
   const total = plan.sheets.length;
   const [looking, setCurrent] = useState(1);
@@ -161,6 +219,7 @@ export function PrintPreview({
   const turn = pdf?.plan.setup.orientation === 'landscape' ? 90 : 0;
 
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLOListElement>(null);
   useEffect(() => {
     cancelRef.current?.focus();
   }, []);
@@ -177,10 +236,7 @@ export function PrintPreview({
       });
       setSending({ kind: 'sent', printer: to, job });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      // What CUPS said, without Electron's wrapping of a rejected IPC call.
-      const reason = message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
-      setSending({ kind: 'failed', printer: to, reason });
+      setSending({ kind: 'failed', printer: to, reason: refusalOf(error) });
     }
   };
 
@@ -188,6 +244,8 @@ export function PrintPreview({
   const canPrint =
     pdf !== null &&
     printer !== undefined &&
+    known !== undefined &&
+    !calibrating &&
     chosen.length > 0 &&
     paperOffered &&
     sending.kind !== 'sending';
@@ -210,7 +268,7 @@ export function PrintPreview({
         </h3>
 
         <div className="print-body">
-          <ol className="print-sheets" aria-label={t('printPreview.sheets')}>
+          <ol ref={listRef} className="print-sheets" aria-label={t('printPreview.sheets')}>
             {pages.map((n) => (
               <li key={n} className={n === current ? 'print-thumb current' : 'print-thumb'}>
                 <button
@@ -222,7 +280,14 @@ export function PrintPreview({
                   onClick={() => setCurrent(n)}
                 >
                   {pdf !== null && (
-                    <PageCanvas pdf={pdf.doc} number={n} widthPx={THUMB_PX} turn={turn} />
+                    <PageCanvas
+                      pdf={pdf.doc}
+                      number={n}
+                      widthPx={THUMB_PX}
+                      turn={turn}
+                      dpr={dpr}
+                      list={listRef}
+                    />
                   )}
                 </button>
                 <label className="print-thumb-label">
@@ -232,12 +297,12 @@ export function PrintPreview({
                       data-testid="print-include"
                       aria-label={t('printPreview.include', { number: n })}
                       checked={!omitted.has(n)}
-                      onChange={(event) => {
-                        const next = new Set(omitted);
-                        if (event.target.checked) next.delete(n);
-                        else next.add(n);
-                        setOmitted({ plan, pages: next });
-                      }}
+                      onChange={(event) =>
+                        setOmitted({
+                          plan,
+                          pages: leaveOut(plan, omitted, n, event.target.checked),
+                        })
+                      }
                     />
                   )}
                   {t('sheetNumbers.one', { number: n })}
@@ -248,138 +313,207 @@ export function PrintPreview({
 
           <div className="print-page" data-testid="print-page">
             {pdf !== null ? (
-              <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} turn={turn} />
+              <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} turn={turn} dpr={dpr} />
             ) : (
-              <p className="dialog-note">{failure ?? t('printPreview.loading')}</p>
+              <p className="dialog-note">
+                {failure === null ? t('printPreview.loading') : fileErrorText(failure.error, t)}
+              </p>
             )}
           </div>
 
-          <div className="print-options">
-            {problems !== null && (
-              <section
-                className="print-problems"
-                aria-labelledby={`${ids}problems`}
-                data-testid="print-problems-list"
-              >
-                <h4 id={`${ids}problems`}>{t('printPreview.problems')}</h4>
-                <p>{t('printPreview.problemsLead', { counts: problems })}</p>
-                <div className="print-problem-rows">
-                  <ProblemRows diagnostics={diagnostics} project={project} onGoTo={onGoTo} />
-                </div>
-              </section>
-            )}
-
-            <div className="field">
-              <label className="field-label" htmlFor={`${ids}printer`}>
-                {t('printPreview.printer')}
-              </label>
-              {direct ? (
-                <select
-                  id={`${ids}printer`}
-                  data-testid="print-printer"
-                  value={printerName}
-                  onChange={(event) => setPrinterName(event.target.value)}
+          {calibrating && printer !== undefined ? (
+            <div className="print-options">
+              <CalibrationStep
+                printer={printer.name}
+                paper={paper}
+                canPrint={paperOffered}
+                appVersion={appVersion}
+                onSaved={(saved) => {
+                  setCorrections((all) => new Map(all).set(printer.name, saved));
+                  setCalibrating(false);
+                }}
+                onCancel={() => setCalibrating(false)}
+              />
+            </div>
+          ) : (
+            <div className="print-options">
+              {problems !== null && (
+                <section
+                  className="print-problems"
+                  aria-labelledby={`${ids}problems`}
+                  data-testid="print-problems-list"
                 >
-                  {printers.printers.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                printers !== null && (
+                  <h4 id={`${ids}problems`}>{t('printPreview.problems')}</h4>
+                  <p>{t('printPreview.problemsLead', { counts: problems })}</p>
+                  <div className="print-problem-rows">
+                    <ProblemRows diagnostics={diagnostics} project={project} onGoTo={onGoTo} />
+                  </div>
+                </section>
+              )}
+
+              <div className="field">
+                <label className="field-label" htmlFor={`${ids}printer`}>
+                  {t('printPreview.printer')}
+                </label>
+                {direct ? (
+                  <select
+                    id={`${ids}printer`}
+                    data-testid="print-printer"
+                    value={printerName}
+                    onChange={(event) => setPrinterName(event.target.value)}
+                  >
+                    {printers.printers.map((p) => (
+                      <option key={p.name} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : printers === null ? (
+                  // Asking CUPS takes a second or two: say so, rather than an
+                  // empty Printer and a Print button disabled for no stated reason.
+                  <p id={`${ids}printer`} data-testid="print-finding-printers">
+                    {t('printPreview.findingPrinters')}
+                  </p>
+                ) : (
                   <p id={`${ids}printer`} data-testid="print-unavailable">
                     {printers.available
                       ? t('printPreview.noPrinters')
                       : t(`printPreview.unavailable.${printers.reason}`)}
                   </p>
+                )}
+              </div>
+
+              {printer !== undefined && known !== undefined && (
+                // Calibration (7.5): the chosen printer's correction, if it
+                // has one, and the way to measure it.
+                <div className="print-correction" data-testid="print-correction">
+                  {corrected && (
+                    <p data-testid="print-corrected">
+                      {t('calibration.corrected', {
+                        x: describeFactor(known.x, i18n.locale),
+                        y: describeFactor(known.y, i18n.locale),
+                      })}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="tool"
+                    data-testid="print-calibrate"
+                    onClick={() => setCalibrating(true)}
+                  >
+                    {corrected ? t('calibration.again') : t('calibration.calibrate')}
+                  </button>
+                  {corrected && (
+                    <button
+                      type="button"
+                      className="tool"
+                      data-testid="print-remove-correction"
+                      onClick={() => void removeCorrection()}
+                    >
+                      {t('calibration.remove')}
+                    </button>
+                  )}
+                  {correctionFailed !== null && (
+                    <p className="print-status warning" role="alert">
+                      <SeverityGlyph severity="warning" />
+                      <span>{t('calibration.saveFailed', { reason: correctionFailed })}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="field">
+                <label className="field-label" htmlFor={`${ids}paper`}>
+                  {t('printPreview.paper')}
+                </label>
+                <select
+                  id={`${ids}paper`}
+                  data-testid="print-paper"
+                  value={paper}
+                  onChange={(event) =>
+                    store.dispatch(setPageSetup(event.target.value as PaperName, orientation))
+                  }
+                >
+                  {PAPERS.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field" role="radiogroup" aria-labelledby={`${ids}orientation`}>
+                <span className="field-label" id={`${ids}orientation`}>
+                  {t('printPreview.orientation')}
+                </span>
+                {ORIENTATIONS.map((way) => (
+                  <label key={way} className="print-choice">
+                    <input
+                      type="radio"
+                      name={`${ids}orientation`}
+                      data-testid={`print-${way}`}
+                      checked={orientation === way}
+                      onChange={() => store.dispatch(setPageSetup(paper, way))}
+                    />
+                    {t(`printPreview.${way}`)}
+                  </label>
+                ))}
+              </div>
+
+              {direct && (
+                // A count, as a dimension's Decimals is: no unit, no sums, and
+                // none of Chromium's spin buttons (U.20). Clamped, not refused.
+                <NumberField
+                  label={t('printPreview.copies')}
+                  value={copies}
+                  min={1}
+                  precision={0}
+                  suffix=""
+                  onCommit={(value) => setCopies(Math.min(MAX_COPIES, Math.round(value)))}
+                />
+              )}
+
+              <dl className="print-facts">
+                <dt>{t('printPreview.sheets')}</dt>
+                <dd data-testid="print-summary">{describeSheets(plan, t)}</dd>
+                <dt>{t('printPreview.scale')}</dt>
+                <dd data-testid="print-scale">{t('printPreview.scaleLocked')}</dd>
+              </dl>
+
+              {direct ? (
+                <p className="print-status ok" data-testid="print-no-scaling">
+                  <Icon of="check" size={14} />
+                  <span>
+                    {/* "No scaling" would contradict the corrected line above it. */}
+                    <b>
+                      {t(corrected ? 'printPreview.noScalingCorrected' : 'printPreview.noScaling')}
+                    </b>{' '}
+                    {t(
+                      corrected
+                        ? 'printPreview.noScalingCorrectedDetail'
+                        : 'printPreview.noScalingDetail',
+                    )}
+                  </span>
+                </p>
+              ) : (
+                printers !== null && (
+                  <p className="print-status warning" data-testid="print-actual-size">
+                    <SeverityGlyph severity="warning" />
+                    <span>{t('printPreview.actualSize')}</span>
+                  </p>
                 )
               )}
-            </div>
-
-            <div className="field">
-              <label className="field-label" htmlFor={`${ids}paper`}>
-                {t('printPreview.paper')}
-              </label>
-              <select
-                id={`${ids}paper`}
-                data-testid="print-paper"
-                value={paper}
-                onChange={(event) =>
-                  store.dispatch(setPageSetup(event.target.value as PaperName, orientation))
-                }
-              >
-                {PAPERS.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="field" role="radiogroup" aria-labelledby={`${ids}orientation`}>
-              <span className="field-label" id={`${ids}orientation`}>
-                {t('printPreview.orientation')}
-              </span>
-              {ORIENTATIONS.map((way) => (
-                <label key={way} className="print-choice">
-                  <input
-                    type="radio"
-                    name={`${ids}orientation`}
-                    data-testid={`print-${way}`}
-                    checked={orientation === way}
-                    onChange={() => store.dispatch(setPageSetup(paper, way))}
-                  />
-                  {t(`printPreview.${way}`)}
-                </label>
-              ))}
-            </div>
-
-            {direct && (
-              // A count, as a dimension's Decimals is: no unit, no sums, and
-              // none of Chromium's spin buttons (U.20). Clamped, not refused.
-              <NumberField
-                label={t('printPreview.copies')}
-                value={copies}
-                min={1}
-                precision={0}
-                suffix=""
-                onCommit={(value) => setCopies(Math.min(MAX_COPIES, Math.round(value)))}
-              />
-            )}
-
-            <dl className="print-facts">
-              <dt>{t('printPreview.sheets')}</dt>
-              <dd data-testid="print-summary">{describeSheets(plan, t)}</dd>
-              <dt>{t('printPreview.scale')}</dt>
-              <dd data-testid="print-scale">{t('printPreview.scaleLocked')}</dd>
-            </dl>
-
-            {direct ? (
-              <p className="print-status ok" data-testid="print-no-scaling">
-                <Icon of={Check} size={14} />
-                <span>
-                  <b>{t('printPreview.noScaling')}</b> {t('printPreview.noScalingDetail')}
-                </span>
-              </p>
-            ) : (
-              printers !== null && (
-                <p className="print-status warning" data-testid="print-actual-size">
+              {direct && !paperOffered && (
+                <p className="print-status warning" role="alert" data-testid="print-paper-missing">
                   <SeverityGlyph severity="warning" />
-                  <span>{t('printPreview.actualSize')}</span>
+                  <span>{t('printPreview.paperMissing', { printer: printerName, paper })}</span>
                 </p>
-              )
-            )}
-            {direct && !paperOffered && (
-              <p className="print-status warning" role="alert" data-testid="print-paper-missing">
-                <SeverityGlyph severity="warning" />
-                <span>{t('printPreview.paperMissing', { printer: printerName, paper })}</span>
-              </p>
-            )}
-            <p className="dialog-note">{t('printPreview.measure')}</p>
+              )}
+              <p className="dialog-note">{t('printPreview.measure')}</p>
 
-            {report !== null && <ExportFindings report={report} withCounts={false} />}
-          </div>
+              {report !== null && <ExportFindings report={report} withCounts={false} />}
+            </div>
+          )}
         </div>
 
         <div className="dialog-actions print-actions">
@@ -428,26 +562,47 @@ export function PrintPreview({
 
 /**
  * One page of the PDF, drawn by pdf.js, its view turned `turn` degrees
- * clockwise; redrawn when the page or the PDF changes.
+ * clockwise; redrawn when the page or the PDF changes. In the sheet `list`, it
+ * is drawn once it comes near the list's view, a few at a time.
  */
 function PageCanvas({
   pdf,
   number,
   widthPx,
   turn,
+  dpr,
+  list,
 }: {
   pdf: PDFDocumentProxy;
   number: number;
   widthPx: number;
   turn: number;
+  dpr: number;
+  list?: RefObject<HTMLElement | null>;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Once near, it stays drawn: scrolling back does not draw it again. A new
+  // PDF mounts a new canvas, which waits to come near again.
+  const [near, setNear] = useState(list === undefined);
   useEffect(() => {
     const canvas = ref.current;
-    if (canvas === null) return;
+    if (near || canvas === null || list === undefined) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) setNear(true);
+      },
+      { root: list.current, rootMargin: NEAR_VIEW },
+    );
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [near, list]);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (canvas === null || !near) return;
     const abort = new AbortController();
-    drawPage(pdf, number, canvas, widthPx, abort.signal, turn).catch(() => undefined);
+    const draw = () => drawPage(pdf, number, canvas, widthPx, dpr, abort.signal, turn);
+    (list === undefined ? draw() : drawThumbnail(draw)).catch(() => undefined);
     return () => abort.abort();
-  }, [pdf, number, widthPx, turn]);
+  }, [pdf, number, widthPx, turn, dpr, near, list]);
   return <canvas ref={ref} className="print-canvas" data-page={number} />;
 }

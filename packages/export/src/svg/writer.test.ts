@@ -328,6 +328,21 @@ describe('SVG export: one group per layer role (6.2)', () => {
     expect(result.text).not.toMatch(/<text|font-family/);
   });
 
+  it('fills a dimension’s arrowheads in the role’s colour, unstroked (4.10b)', () => {
+    const head = PathOps.polyline(
+      [
+        { x: 0, y: 0 },
+        { x: 2.5, y: 0.425 },
+        { x: 2.5, y: -0.425 },
+      ],
+      true,
+    );
+    const file = parseSvg(svgOf(sceneOf([{ ...itemOf('annotation', head), filled: true }])));
+    const [drawnHead] = groupOf(file, 'annotation').elements;
+    expect(drawnHead!.attrs).toMatchObject({ fill: ROLE_STYLES.annotation.colour, stroke: 'none' });
+    expect(drawn(drawnHead!).segments).toHaveLength(3);
+  });
+
   it('leaves a role’s group out when nothing of that role is drawn', () => {
     const only = parseSvg(svgOf(sceneOf([itemOf('cut', Shapes.rect({ x: 0, y: 0 }, 5, 5))])));
     expect(only.groups.map((group) => group.id)).toEqual(['cut']);

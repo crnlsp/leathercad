@@ -1,4 +1,4 @@
-import { assertFinite, type Mm, type Radians } from '@leathercad/core';
+import { EPS_ANGLE, assertFinite, type Mm, type Radians } from '@leathercad/core';
 
 import { add, scale, sub, type Vec2 } from '../vec2.js';
 
@@ -50,8 +50,6 @@ export interface CubicSegment {
 
 export type Segment = LineSegment | ArcSegment | CubicSegment;
 
-export type SegmentKind = Segment['kind'];
-
 /** A whole turn. `|sweepAngle|` never exceeds this. */
 export const FULL_TURN = Math.PI * 2;
 
@@ -78,7 +76,7 @@ export function arc(
   if (radius < 0) {
     throw new RangeError(`arc radius must not be negative, received ${radius}`);
   }
-  if (Math.abs(sweepAngle) > FULL_TURN + 1e-9) {
+  if (Math.abs(sweepAngle) > FULL_TURN + EPS_ANGLE) {
     throw new RangeError(`arc sweepAngle must be within one full turn, received ${sweepAngle}`);
   }
   return { kind: 'arc', centre, radius, startAngle, sweepAngle };

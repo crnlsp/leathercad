@@ -1,5 +1,10 @@
 # Crash recovery (slice 5.3b) — design
 
+> **Successor (8.13, 2026-10-23).** A copy per tab: `<pid>-<start>-<tab>.lcp`, the tab's ULID
+> naming it. Every tab with unsaved work is written, in front or not; closing or saving a tab clears
+> its copy. At startup every copy a crash left is offered, one after another, each into a tab of
+> its own. A copy from 1.5, `<pid>-<start>.lcp`, is still found and offered.
+
 **Date:** 2026-09-23
 **Status:** Built in the slice's pull request.
 **Row:** [the 1.0 boundary](../../roadmap.md), item 2 ·

@@ -44,7 +44,10 @@ precision loss but *inconsistent comparison*.
 
 ### 3.2 Epsilons
 
-One module, `core/epsilon.ts`. Nothing defines its own.
+One module, `core/epsilon.ts`. Nothing defines its own, and an ESLint rule refuses a literal written
+as `1e-9` anywhere outside `packages/core` and the tests. The few that are not tolerances — the arc
+error coefficient, a finite-difference step, the smallest scale factor, a pick band — say so in the
+disable comment where they stand.
 
 ```ts
 export const EPS_POINT  = 1e-7;    // mm — two points are the same point
@@ -52,6 +55,7 @@ export const EPS_PARAM  = 1e-9;    // dimensionless — t along a segment
 export const EPS_ANGLE  = 1e-9;    // radians
 export const EPS_AREA   = 1e-12;   // mm²
 export const EPS_LENGTH = 1e-7;    // mm — a segment shorter than this is degenerate
+export const EPS_RATIO  = 1e-9;    // dimensionless — a matrix entry, a cosine, a count before rounding
 
 export function approxEq(a: number, b: number, eps = EPS_POINT): boolean;
 export function approxZero(a: number, eps = EPS_POINT): boolean;
@@ -59,6 +63,12 @@ export function approxZero(a: number, eps = EPS_POINT): boolean;
 
 `EPS_POINT` at 1e-7 mm (0.1 nanometre) sits far above floating-point noise and far below any
 meaningful leather dimension, which is the property an epsilon needs.
+
+Pick the one whose **unit** fits the quantity, not the one with the right value: a radius checked
+against `EPS_ANGLE`, or a crossing judged in `t` while the ray that resolves it moves in
+millimetres, is how Q38's bugs happened. The polynomial solvers' tolerances live there too
+(`EPS_COEFFICIENT`, `EPS_NEWTON_SLOPE`, and three `EPS_REL_` values), and are the module's only
+relative ones: rounding in a root grows with the coefficients it came from.
 
 **Rule: no `===`, `<`, or `>` on floating-point quantities that could be equal.** Ordering
 comparisons where equality is impossible are fine. An ESLint rule flags float equality in
@@ -276,7 +286,7 @@ rectangle: the least width and height — on each pair of sides, the longer sum 
 sharing one — in which every radius is drawn as asked, so a typed width or height that would
 shrink them is refused too. Both property-tested against `fittedRadii` and `roundedRect`.
 
-### 4.1 Editing a drawn path's points (3.9b)
+### 4.7 Editing a drawn path's points (3.9b)
 
 ```ts
 movePathVertex(p, index, to): PathEdit | null;
@@ -438,7 +448,7 @@ along three sides of a pocket is an open offset, and it is the most common seam 
 It rejects, rather than guesses at:
 
 - **cubics**, which have no exact offset — the offset of a cubic is not a cubic. No drawing tool
-  makes one today, but a curve editor and an SVG import would, and so may a circle squashed after
+  makes one today, but a curve editor and an SVG import would, and so does a circle squashed after
   3.12 converts it to a drawn path. Stitching along one is roadmap 9.19: arcs fitted to the cubic
   within the flattening tolerance, or Tier 2;
 - **overlaps where either side is an arc**, which the line-line intersection this tier uses cannot
@@ -481,9 +491,10 @@ just as they did to a library's:
 ### 6.4 Offset direction
 
 Signed distance is defined relative to path direction: positive is to the **left** of travel.
-"Inward" and "outward" are domain concepts that require knowing the winding of a closed contour, so
-the domain layer normalises contour winding (outer contours counter-clockwise, holes clockwise) and
-converts inward/outward into a sign. Geometry stays direction-based and agnostic.
+"Inward" and "outward" are domain concepts. The domain does **not** normalise winding — reversing a
+path would renumber its anchors — so it resolves them against the part's material and converts
+them into a sign ([domain-model](domain-model.md) §3.1, §4.3). Geometry stays direction-based and
+agnostic.
 
 ## 7. Intersections
 
@@ -501,6 +512,22 @@ polylines, then polish each with Newton iteration on the true parametric forms t
 Edge cases that need explicit tests: collinear overlapping segments (infinitely many intersections
 — return the overlap endpoints), tangent circles (one intersection, numerically fragile), endpoints
 touching exactly, and near-parallel lines where the determinant approaches zero.
+
+`intersectPaths` tests only the segment pairs whose boxes overlap to `EPS_POINT`, found by sweeping
+the boxes along x, and keeps the first crossing at a place as visiting every pair in order would: the
+same crossings, in the same order. That box test is not as wide as `intersectSegments`' own end
+tolerance, so a touch across a gap a hair over `EPS_POINT` is left out, as it always was.
+
+`selfIntersections` had no box test, so its broad phase (PERF-006) grows each segment's box by how
+far `intersectSegments` can report a touch outside it: `4√EPS_POINT` — two arcs whose crossings are
+under `√EPS_POINT` apart meet at the foot between them, which a small enough arc does not reach —
+plus `64 · Number.EPSILON / EPS_ANGLE` of its size, for the rounding of lines crossed down to
+`EPS_ANGLE` from parallel, plus, for an arc, `1024 · Number.EPSILON` of the path's scale squared
+over its radius. Pairs whose grown boxes miss have no crossing; the rest are tested in the order
+every pair was, and each crossing is checked against those kept near it. So the result is the
+same, crossing for crossing and in the same order, and a traced outline meets each segment with
+the few beside it. A path with a coordinate that is not finite tests every pair, as before, and so
+does one of fewer than `EVERY_PAIR_BELOW` (20) segments, where that is cheaper than the sweep.
 
 `intersectSegments(a, b)` and `intersectSegments(b, a)` must agree. Line/line is solved in one
 canonical argument order so they are the same arithmetic, and two collinear segments whose ends are
@@ -593,28 +620,34 @@ packages/geometry/src/
 ├── index.ts                 # public API surface — the only entry point
 ├── vec2.ts
 ├── mat2x3.ts
+├── glide.ts                 # glide reflections: a mirror and a slide along it
 ├── rect.ts                  # axis-aligned bounding boxes
+├── polynomial.ts            # the root finding the curves need
+├── tolerance.ts             # the export and screen tolerances, and arc steps for one
+├── shapes.ts                # Path constructors
 ├── segment/
 │   ├── index.ts             # the union + dispatch
+│   ├── types.ts
 │   ├── line.ts
 │   ├── arc.ts
 │   └── cubic.ts
 ├── path/
+│   ├── index.ts
 │   ├── path.ts              # construction, invariants, validation
-│   ├── measure.ts           # PathMeasure, arc-length
+│   ├── measure.ts           # arc length, points along a path
+│   ├── area.ts              # signed area, winding
 │   ├── flatten.ts
-│   ├── bbox.ts              # exact bounds
-│   ├── winding.ts
 │   └── contains.ts
-├── shapes.ts                # Path constructors
-├── ops/
-│   ├── offset.ts
-│   ├── boolean.ts
-│   ├── intersect.ts
-│   ├── distribute.ts
-│   ├── trim.ts
-│   └── fillet.ts            # corner rounding, post-MVP
+└── ops/
+    ├── offset.ts
+    ├── intersect.ts
+    ├── distribute.ts
+    ├── subPath.ts
+    └── editPath.ts          # a drawn path's points (§4.7)
 ```
+
+Not built yet: booleans (roadmap 9.5) and robust offsetting (9.11), which will settle where trimming
+lives.
 
 Tests are co-located (`vec2.test.ts` beside `vec2.ts`), with golden fixtures under
 `packages/geometry/__golden__/`.

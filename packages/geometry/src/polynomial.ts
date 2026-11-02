@@ -7,19 +7,29 @@
  * Every solver returns roots in ascending order and polishes each one with
  * Newton iterations, because the closed forms lose precision badly near
  * repeated roots — exactly the configurations that tangency produces.
+ *
+ * Their tolerances are relative where rounding grows with the inputs; they
+ * live in core's epsilon module with the rest.
  */
 
-const COEFFICIENT_EPS = 1e-12;
+import {
+  EPS_COEFFICIENT,
+  EPS_NEWTON_SLOPE,
+  EPS_PARAM,
+  EPS_REL_CUBIC_DISCRIMINANT,
+  EPS_REL_QUADRATIC_DISCRIMINANT,
+  EPS_REL_ROOT,
+} from '@leathercad/core';
 
 /** Roots of `a·t + b`. */
 export function solveLinear(a: number, b: number): number[] {
-  if (Math.abs(a) < COEFFICIENT_EPS) return [];
+  if (Math.abs(a) < EPS_COEFFICIENT) return [];
   return [-b / a];
 }
 
 /** Roots of `a·t² + b·t + c`, ascending. */
 export function solveQuadratic(a: number, b: number, c: number): number[] {
-  if (Math.abs(a) < COEFFICIENT_EPS) return solveLinear(b, c);
+  if (Math.abs(a) < EPS_COEFFICIENT) return solveLinear(b, c);
 
   const discriminant = b * b - 4 * a * c;
   if (discriminant < 0) return [];
@@ -30,7 +40,7 @@ export function solveQuadratic(a: number, b: number, c: number): number[] {
   // relatively tiny discriminant as a genuine double root is both more honest
   // and more stable, and tangency is exactly what curve intersection produces.
   const magnitude = Math.max(Math.abs(b * b), Math.abs(4 * a * c));
-  if (discriminant <= magnitude * 1e-14) return [-b / (2 * a)];
+  if (discriminant <= magnitude * EPS_REL_QUADRATIC_DISCRIMINANT) return [-b / (2 * a)];
 
   // The textbook form loses most of its digits when b² ≫ 4ac, because one
   // root comes from subtracting two nearly equal numbers. Computing the
@@ -48,10 +58,11 @@ export function solveQuadratic(a: number, b: number, c: number): number[] {
  * Depresses to `t³ + p·t + q` and branches on the discriminant: one real root
  * when positive, three when negative (via the trigonometric form, which avoids
  * the complex arithmetic Cardano's formula would otherwise need), and a
- * repeated root when it vanishes.
+ * repeated root when it vanishes. Only the largest root is kept from that;
+ * the others come from the quadratic left when it is divided out.
  */
 export function solveCubic(a: number, b: number, c: number, d: number): number[] {
-  if (Math.abs(a) < COEFFICIENT_EPS) return solveQuadratic(b, c, d);
+  if (Math.abs(a) < EPS_COEFFICIENT) return solveQuadratic(b, c, d);
 
   const bn = b / a;
   const cn = c / a;
@@ -75,7 +86,7 @@ export function solveCubic(a: number, b: number, c: number, d: number): number[]
     Math.abs((p * p * p) / 27),
     Number.MIN_VALUE,
   );
-  const threshold = discriminantScale * 1e-12;
+  const threshold = discriminantScale * EPS_REL_CUBIC_DISCRIMINANT;
 
   if (discriminant > threshold) {
     const root = Math.sqrt(discriminant);
@@ -97,11 +108,44 @@ export function solveCubic(a: number, b: number, c: number, d: number): number[]
     roots.push(2 * single + shift, -single + shift);
   }
 
-  const polished = roots
-    .map((t) => polishCubicRoot(a, b, c, d, t))
-    .filter((t) => isGenuineCubicRoot(a, b, c, d, t));
+  // Cardano resolves every root only to the rounding of the largest, so where
+  // one root dwarfs the others it loses them — the cubic analogue of the
+  // cancellation solveQuadratic avoids. A t³ term of rounding noise put a
+  // root near 3.8e13 and answered t = 0.75 for a tangent touch at 0.5; roots
+  // at 0 and −0.01 beside one at 26000 read as a double root and vanished
+  // (Q38). The largest is the one it gets right: divide it out, and the
+  // quadratic left finds the rest to their own precision.
+  let largest: number | undefined;
+  for (const candidate of roots) {
+    const t = polishCubicRoot(a, b, c, d, candidate);
+    if (!isGenuineCubicRoot(a, b, c, d, t)) continue;
+    if (largest === undefined || Math.abs(t) > Math.abs(largest)) largest = t;
+  }
+  if (largest === undefined) return [];
 
-  return dedupe(polished.sort((x, y) => x - y));
+  const rest = solveQuadratic(...deflate(a, b, c, d, largest));
+  return dedupe([largest, ...rest].sort((x, y) => x - y));
+}
+
+/**
+ * The quadratic left when `t − x` is divided out of the cubic, for a root `x`.
+ *
+ * Synthetic division is stable only when run from the end whose term the
+ * root dominates: from `a` down when x is small beside the other two roots,
+ * from `d` up when it is large. The top-down quotient ends in their product
+ * times `a`, so `|a·x²|` against it says which — even where d is zero and x
+ * only nearly so. The quotient leads with `a` either way, which keeps it
+ * clear of solveQuadratic's degree drop. An inexact x leaves its residual
+ * behind — as a constant from the top, as `(residual/x²)·t²` from the
+ * bottom — no larger where the other roots lie than it was at x.
+ */
+function deflate(a: number, b: number, c: number, d: number, x: number): [number, number, number] {
+  const b1 = b + a * x;
+  const c1 = c + b1 * x;
+  if (Math.abs(a * x * x) <= Math.abs(c1)) return [a, b1, c1];
+
+  const c2 = -d / x;
+  return [a, (c2 - c) / x, c2];
 }
 
 /**
@@ -117,7 +161,7 @@ function polishCubicRoot(a: number, b: number, c: number, d: number, t: number):
   for (let i = 0; i < 2; i++) {
     const value = ((a * root + b) * root + c) * root + d;
     const slope = (3 * a * root + 2 * b) * root + c;
-    if (Math.abs(slope) < 1e-14) break;
+    if (Math.abs(slope) < EPS_NEWTON_SLOPE) break;
     const step = value / slope;
     if (!Number.isFinite(step)) break;
     root -= step;
@@ -137,8 +181,8 @@ function rootScaleOf(a: number, b: number, c: number, d: number): number {
  * `q²/4 + p³/27` is the difference of two nearly equal huge numbers and the
  * cancellation destroys its sign, so a cubic with one real root is classified
  * as having a repeated one — and the extra value that branch produces gets
- * polished by Newton into something convincing. Ray casting would count it as
- * a crossing.
+ * polished by Newton into something convincing. Dividing it out would leave a
+ * quadratic with the wrong roots.
  *
  * Two certificates, either of which suffices:
  *
@@ -163,7 +207,7 @@ function isGenuineCubicRoot(a: number, b: number, c: number, d: number, t: numbe
     Math.abs(c * t),
     Math.abs(d),
   );
-  if (residual <= termScale * 1e-9) return true;
+  if (residual <= termScale * EPS_REL_ROOT) return true;
 
   const slope = (3 * a * t + 2 * b) * t + c;
   const step = residual / slope;
@@ -172,14 +216,15 @@ function isGenuineCubicRoot(a: number, b: number, c: number, d: number, t: numbe
   // already had its chance.
   if (!Number.isFinite(step)) return false;
 
-  return Math.abs(step) <= rootScaleOf(a, b, c, d) * 1e-9;
+  return Math.abs(step) <= rootScaleOf(a, b, c, d) * EPS_REL_ROOT;
 }
 
+/** Roots closer than EPS_PARAM are one: every caller solves for a curve's `t`. */
 function dedupe(sorted: number[]): number[] {
   const result: number[] = [];
   for (const value of sorted) {
     const last = result[result.length - 1];
-    if (last === undefined || Math.abs(value - last) > 1e-9) result.push(value);
+    if (last === undefined || Math.abs(value - last) > EPS_PARAM) result.push(value);
   }
   return result;
 }

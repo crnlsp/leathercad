@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    # main is production; develop is where development lands.
-    branches: [main, develop]
+    # develop is where development lands. main gets only what develop
+    # tested, through a pull request whose run is this one.
+    branches: [develop]
   pull_request:
   workflow_dispatch:
 
@@ -24,6 +25,130 @@ permissions:
 # of pnpm and Node come from package.json's `packageManager` and from
 # .node-version, so CI and a laptop cannot drift apart.
 jobs:
+  # What the pull request changes, and so which jobs below it can break
+  # (tools/ci/changes.mjs, which holds the table and its tests). A path that
+  # is not certainly documentation counts as code. A push or a run started by
+  # hand runs everything.
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tests: ${{ steps.gates.outputs.tests }}
+      installers: ${{ steps.gates.outputs.installers }}
+      scan: ${{ steps.gates.outputs.scan }}
+      lint: ${{ steps.gates.outputs.lint }}
+    steps:
+      # For tools/ci/changes.mjs and .node-version; nothing is installed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      # The API's list names a renamed file's old path too, so moving code
+      # into docs/ still counts as code. It stops at 3000 files; a list
+      # shorter than the pull request's count runs everything, so a file
+      # past the end can never skip a job. `shell: bash` adds pipefail: a
+      # failed call fails this job, and so Ready to merge, instead of
+      # classifying an empty list.
+      - name: The jobs this change runs
+        id: gates
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+              --jq '.[] | [.status, .filename, .previous_filename // empty] | @tsv' > "$RUNNER_TEMP/files.tsv"
+          fi
+          if [ "$EVENT" = pull_request ] && [ "$(wc -l < "$RUNNER_TEMP/files.tsv")" -ge "$CHANGED" ]; then
+            node tools/ci/changes.mjs < "$RUNNER_TEMP/files.tsv" | tee -a "$GITHUB_OUTPUT"
+          else
+            printf '%s\n' tests=true installers=true scan=true lint=true 'kinds=everything' |
+              tee -a "$GITHUB_OUTPUT"
+          fi
+
+  # A pull request that touches what CI judges against (screenshots,
+  # baselines, linter and test configuration, workflows, CI's own scripts) is
+  # labelled `judge-changed` and listed in the job summary, so editing the
+  # verifier to turn a check green never passes unnoticed. It fails only for a
+  # modified, deleted or renamed shipped migration (CLAUDE.md invariant 9).
+  # tools/ci/changes.mjs holds the lists and their tests.
+  #
+  # A fork's pull request, and Dependabot's, run with a read-only token however
+  # much a job asks for, and this workflow is `pull_request`, never
+  # `pull_request_target`, so no write token ever meets the fork's code. The
+  # label call is refused there; the step says so in the summary and goes on,
+  # which is why the label is a courtesy and the summary and the red migration
+  # check are the guard.
+  guard:
+    name: Verifier guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Only to add the label; a read-only token is refused, and handled.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      # A list cut short at the API's 3000 files could hide a migration, so a
+      # guard that cannot see everything fails instead of passing. The script
+      # writes the job summary itself, to $GITHUB_STEP_SUMMARY.
+      - name: What this change judges against
+        id: judge
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+            --jq '.[] | [.status, .filename, .previous_filename // empty] | @tsv' > "$RUNNER_TEMP/files.tsv"
+          if [ "$(wc -l < "$RUNNER_TEMP/files.tsv")" -lt "$CHANGED" ]; then
+            echo "::error title=Verifier guard::The API listed fewer files than the pull request changes, so the guard cannot see all of them."
+            exit 1
+          fi
+          node tools/ci/changes.mjs judge < "$RUNNER_TEMP/files.tsv" | tee -a "$GITHUB_OUTPUT"
+
+      # Adding a label that does not exist creates it. A read-only token
+      # (a fork, Dependabot) is refused: say so and carry on.
+      - name: Label judge-changed
+        if: steps.judge.outputs.judged == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f 'labels[]=judge-changed' > /dev/null; then
+            echo "The label \`judge-changed\` is on this pull request." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "The label \`judge-changed\` could not be added (this run's token cannot write, as on a fork's pull request); the files above are the record." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Last, so the label and the summary are there when it fails.
+      - name: A shipped migration is immutable
+        if: steps.judge.outputs.blocked == 'true'
+        run: |
+          echo "::error title=Shipped migration changed::A shipped migration is immutable (CLAUDE.md invariant 9). Add a new one instead; the job summary names the file."
+          exit 1
+
   static:
     name: Static checks
     runs-on: ubuntu-latest
@@ -59,8 +184,15 @@ jobs:
       - name: Dead code
         run: pnpm knip
 
+      # The CI scripts' own tests, among them which jobs each change runs. In
+      # this job because it runs for every change.
+      - name: CI scripts
+        run: pnpm test:tools
+
   test:
     name: Tests and coverage
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -106,6 +238,8 @@ jobs:
   # and a macOS minute cost ten; a public repository's are free (roadmap R5).
   cross-platform:
     name: Unit tests on ${{ matrix.os }}
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -132,10 +266,22 @@ jobs:
       # on Linux, in the job above, where they are required.
       - run: pnpm test
 
+  # E2E alone set the wait for a pull request: 321 tests, one Electron at a
+  # time, 8.7 minutes on 2026-10-31. Three shards on three runners, still one
+  # worker each, because Electron instances contend for the display. With
+  # `fullyParallel: false` Playwright shards whole files, and no spec depends
+  # on another file having run: each launch gets directories of its own
+  # (e2e/launchApp.ts, playwright.config.ts).
   e2e:
-    name: E2E
+    name: E2E (${{ matrix.shard }}/3)
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       LEATHERCAD_REQUIRE_POPPLER: '1'
     steps:
@@ -155,25 +301,69 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm build
+
       # Electron needs a display. xvfb is preinstalled on ubuntu-latest.
       - name: E2E
-        run: xvfb-run -a pnpm test:e2e
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: xvfb-run -a pnpm exec playwright test --shard="$SHARD/3"
 
-      # An Electron failure that will not reproduce locally is a dead end
-      # without the trace and screenshots.
-      - name: Upload Playwright report
+      # This shard's results, for the one report `e2e-report` builds.
+      - name: Upload blob report
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
+          name: e2e-blob-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 1
           if-no-files-found: ignore
+
+  # An Electron failure that will not reproduce locally is a dead end without
+  # the trace and screenshots: one HTML report from every shard that failed.
+  # Not in Ready to merge's `needs`: it runs only when a shard failed, and
+  # then `e2e` has turned Ready to merge red already.
+  e2e-report:
+    name: E2E report
+    needs: e2e
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # Only Playwright's CLI is needed: no Electron binary, no git hook.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: e2e-blob-*
+          path: blob-reports
+          merge-multiple: true
+
+      - name: Merge the shards' reports
+        run: pnpm exec playwright merge-reports --reporter html blob-reports
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   visual:
     name: Pixel diffs
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -207,55 +397,10 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  package:
-    name: Package
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      - name: Install poppler
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
-
-      - run: pnpm install --frozen-lockfile
-
-      # The packaged app, driven by Playwright: asar, fuses, resources. The
-      # E2E suite drives the development build and cannot see these.
-      - name: Packaged smoke test
-        run: xvfb-run -a pnpm test:packaged
-
-      # Then the build a user would download, with every fuse as shipped.
-      - name: AppImage
-        run: pnpm package
-
-      - name: Upload AppImage
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: appimage
-          path: apps/desktop/release/*.AppImage
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: packaged-report
-          path: test-results/
-          retention-days: 7
-          if-no-files-found: ignore
-
   workflows:
     name: Workflow security
+    needs: changes
+    if: needs.changes.outputs.lint == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -273,13 +418,19 @@ jobs:
       # Findings print in the log; uploading them to code scanning needs a
       # public repository. Configured in .github/zizmor.yml.
       - name: zizmor
-        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
         with:
           version: 1.30.1
           advanced-security: false
 
+  # Only for a change to what the app is built from. An advisory published
+  # against a dependency the pull request did not touch is not the pull
+  # request's to fix: nightly.yml scans develop every night and opens an
+  # issue (.claude/rules/workflows.md).
   dependencies:
     name: Known vulnerabilities
+    needs: changes
+    if: needs.changes.outputs.scan == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -289,7 +440,64 @@ jobs:
 
       # Every package in the lockfile against the OSV database. A fix goes in
       # pnpm-workspace.yaml `overrides`, with the advisory and its reason.
+      # Only when no fixed release exists inside the range a dependent asks
+      # for does an advisory go in osv-scanner.toml instead, for at most 14
+      # days, with its reason and an issue that removes it.
       - name: osv-scanner
-        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         with:
-          scan-args: --lockfile=pnpm-lock.yaml
+          scan-args: --config=osv-scanner.toml --lockfile=pnpm-lock.yaml
+
+  # Every installer, smoke-tested and built on Linux, Windows and macOS by
+  # installers.yml, the same workflow the release builds with, from its tag.
+  # Linux's smoke test for every change that can break the app (roadmap R5);
+  # Windows, macOS and the Flatpak too for one to packaging, dependencies or
+  # workflows, which are what differ between them. Its checks are named
+  # `Installers / Build (<os>)`, as a called workflow's jobs are. A job that calls a workflow takes no timeout
+  # of its own; each of its jobs has one. `./`, not the `$/` zizmor asks for,
+  # which actionlint cannot parse yet (rhysd/actionlint#711); for a called
+  # workflow the two mean the same: GitHub reads it from the caller's own
+  # commit, not from a checkout.
+  installers:
+    name: Installers
+    needs: changes
+    if: needs.changes.outputs.tests == 'true'
+    uses: ./.github/workflows/installers.yml # zizmor: ignore[self-repository]
+    with:
+      ref: ${{ github.sha }}
+      everywhere: ${{ needs.changes.outputs.installers == 'true' }}
+
+  # The one check the rulesets require from this workflow, beside Conventional
+  # title on develop and Release gate on main. It passes only when every job
+  # it waits for passed or was skipped, so a gate job added later goes in its
+  # `needs` and the rulesets stay as they are. `always()`: without it a failed
+  # job would skip this one, and a required check that is skipped counts as
+  # passed. With it, a cancelled run turns this red too, never green.
+  ready:
+    name: Ready to merge
+    needs:
+      [
+        changes,
+        guard,
+        static,
+        test,
+        cross-platform,
+        e2e,
+        visual,
+        workflows,
+        dependencies,
+        installers,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          if jq -e 'any(.[]; .result != "success" and .result != "skipped")' <<< "$NEEDS" > /dev/null; then
+            echo "::error title=Not ready to merge::A job above failed or was cancelled."
+            exit 1
+          fi

@@ -1,6 +1,7 @@
-import { formatEditable, type Mm, type Ulid } from '@leathercad/core';
+import { EPS_LENGTH, approxEq, formatEditable, type Mm, type Ulid } from '@leathercad/core';
 import type {
   Derivation,
+  ExtentRef,
   Feature,
   FeatureId,
   FeatureKind,
@@ -23,13 +24,18 @@ import type {
 import {
   DEFAULT_SETTINGS,
   additionRefusal,
+  anchorsOf,
+  cornerDistances,
   dependentsOf,
   derivationRefusal,
   evaluate,
   findFeature,
   followRefusal,
+  isHolesAlongALine,
+  keepsItsSize,
   lockRefusal,
   motionBetween,
+  pathForShape,
   problem,
   transformShape,
   transformTextSource,
@@ -39,6 +45,7 @@ import {
   PathOps,
   RectOps,
   Shapes,
+  Vec2Ops,
   decomposeGlide,
   glideMatrix,
   type Mat2x3,
@@ -48,6 +55,7 @@ import {
 } from '@leathercad/geometry';
 
 import { command, type Command, type Document, type HistoryLabel } from './document.js';
+import { renumberCorners } from './pathPoints.js';
 
 export function emptyProject(id: Ulid, name = 'Untitled'): Project {
   return { id, name, settings: DEFAULT_SETTINGS, parts: [] };
@@ -140,8 +148,8 @@ export function setFeatureVisible(ids: readonly FeatureId[], visible: boolean): 
  * Pins features down, or lets them go (S7) — one, or a whole selection as one
  * step (8.8).
  *
- * The one command that may change a locked feature, because it is the only way
- * back: `hitTest` and `snap` already skip a locked feature, so without this —
+ * One of the two commands that may change a locked feature, with hiding it, and
+ * the only way back: `hitTest` and `snap` already skip a locked feature, so without this —
  * and without the parts panel it is reached from — locking an outline would
  * put it permanently out of reach (defect D8).
  */
@@ -219,6 +227,83 @@ export function setShape(id: FeatureId, shape: ParametricShape): Command {
   });
 }
 
+/**
+ * Why `id` cannot be converted to a drawn path, or `null` when it can (3.12).
+ *
+ * Asked by the panel before it offers the button, and by the command before
+ * it acts, so the two cannot disagree (X1).
+ */
+export function convertToPathRefusal(project: Project, id: FeatureId): Problem | null {
+  const planned = convertPlan(project, id);
+  return 'problem' in planned ? planned.problem : null;
+}
+
+/**
+ * Turns a shape into the drawn path it evaluates to (3.12): the explicit
+ * escape hatch from X9, for a circle someone wants squashed or a rectangle
+ * someone wants sheared.
+ *
+ * The path is `pathForShape`'s, so the feature draws exactly what it drew —
+ * the same segments, the same corners and so the same anchors — and
+ * everything that follows it resolves as it did. Only the record changes: the
+ * shape's parameters are gone, and with them the radius, width or corners the
+ * panel let the maker type. From then on it transforms as a drawn path does,
+ * its arcs becoming cubics under an uneven scale (`geometry.md` §4.2 rule 2).
+ *
+ * The id, name, kind and role stay, so nothing following it is detached (X3).
+ */
+export function convertToPath(id: FeatureId): Command {
+  return command({ action: 'convert-to-path' }, (document) => {
+    const planned = convertPlan(document.project, id);
+    return 'problem' in planned ? document : { project: planned.project };
+  });
+}
+
+/**
+ * The project with `id` converted, or why it cannot be.
+ *
+ * A rectangle has four corners from its parameters, whatever its radii (ADR
+ * 0010, 2); a drawn path has the corners its path shows. They are the same
+ * places, at the same distances along the same path, until a rounding uses up
+ * a side: a rectangle rounded to a circle or a strap shows none, and one
+ * rounded across a whole side hides the sharp corner after it. Each corner is
+ * then followed to the drawn corner at its own distance — the same point of
+ * the same path, not a search for a neighbour — and what is attached to one
+ * the path does not show refuses the conversion (`CORNER_IN_USE`), as a point
+ * edit that takes a corner away does.
+ */
+function convertPlan(
+  project: Project,
+  id: FeatureId,
+): { readonly project: Project } | { readonly problem: Problem } {
+  const found = findFeature(project, id);
+  if (found === null) return { problem: problem('FEATURE_MISSING', { featureId: id }) };
+
+  const locked = lockRefusal(project, [id]);
+  if (locked !== null) return { problem: locked };
+
+  const { feature } = found;
+  const about = { featureId: feature.id, featureName: feature.name };
+  if (feature.kind === 'text-label' || feature.source.kind !== 'shape') {
+    return { problem: problem('NOT_A_SHAPE', about) };
+  }
+  // A punch is round, and the panel edits a hole by its diameter; an oval
+  // opening is a cut-out, drawn as one.
+  if (feature.kind === 'hardware-hole') return { problem: problem('HOLE_STAYS_ROUND', about) };
+
+  const path = pathForShape(feature.source.shape);
+  const drawn = cornerDistances(path);
+  const corners = anchorsOf(feature.source, path).map((at) => {
+    const k = drawn.findIndex((d) => approxEq(d, at, EPS_LENGTH));
+    return k < 0 ? null : k;
+  });
+  return renumberCorners(
+    project,
+    { ...feature, source: { kind: 'path', path } } as Feature,
+    corners,
+  );
+}
+
 /** The move or turn a new shape for `id` would be, if `id` is a piece's outline. */
 function outlineMotion(project: Project, id: FeatureId, shape: ParametricShape): Mat2x3 | null {
   const feature = project.parts.flatMap((part) => part.features).find((f) => f.id === id);
@@ -255,42 +340,137 @@ export function transformFeatures(
   matrix: Mat2x3,
   label: HistoryLabel = { action: 'transform' },
 ): Command {
-  const targets = new Set(ids);
+  const moves = alike(ids, matrix);
+  return command(label, (document) => transformEach(document, moves));
+}
 
-  return command(label, (document) => {
-    if (targets.size === 0) return document;
-    // A mixed selection is refused whole (S7). Moving the free half would
-    // leave the drawing somewhere the user did not ask for and cannot see at
-    // a glance — worse than not moving at all. The same for anything that
-    // cannot take the transform (Q30): a stretched piece once left its rivet
-    // and its labels where they were, and said so only while the mouse was
-    // down.
-    if (transformRefusal(document.project, targets, matrix) !== null) return document;
+/**
+ * The transform each feature a gesture takes is given. Every gesture gives
+ * all of them one matrix but a piece's scale, which keeps what is made to a
+ * size its size (Q31).
+ */
+type Moves = ReadonlyMap<FeatureId, Mat2x3>;
 
-    const next = {
-      project: {
-        ...document.project,
-        parts: document.project.parts.map((part) => ({
-          ...part,
-          features: part.features.map((feature) =>
-            targets.has(feature.id)
-              ? transformFeature(
-                  feature,
-                  matrix,
-                  feature.kind !== 'text-label' &&
-                    feature.source.kind === 'derived' &&
-                    targets.has(feature.source.sourceId),
-                )
-              : feature,
-          ),
-        })),
-      },
-    };
+/** One matrix for every feature named. */
+function alike(ids: Iterable<FeatureId>, matrix: Mat2x3): Moves {
+  return new Map([...ids].map((id) => [id, matrix] as const));
+}
 
-    // Everything refused is everything unchanged, and a no-op earns no
-    // history: "Undo Move" with nothing behind it is worse than no entry.
-    return movedAnything(document.project, next.project) ? next : document;
-  });
+/** `transformFeatures`, with a matrix of its own for each feature. */
+function transformEach(document: Document, moves: Moves): Document {
+  if (moves.size === 0) return document;
+  // A mixed selection is refused whole (S7). Moving the free half would
+  // leave the drawing somewhere the user did not ask for and cannot see at
+  // a glance — worse than not moving at all. The same for anything that
+  // cannot take the transform (Q30): a stretched piece once left its rivet
+  // and its labels where they were, and said so only while the mouse was
+  // down.
+  if (movesRefusal(document.project, moves) !== null) return document;
+
+  const next = {
+    project: {
+      ...document.project,
+      parts: document.project.parts.map((part) => ({
+        ...part,
+        features: part.features.map((feature) => {
+          const matrix = moves.get(feature.id);
+          return matrix === undefined
+            ? feature
+            : transformFeature(
+                feature,
+                matrix,
+                feature.kind !== 'text-label' &&
+                  feature.source.kind === 'derived' &&
+                  moves.has(feature.source.sourceId),
+              );
+        }),
+      })),
+    },
+  };
+
+  // Everything refused is everything unchanged, and a no-op earns no
+  // history: "Undo Move" with nothing behind it is worse than no entry.
+  return movedAnything(document.project, next.project) ? next : document;
+}
+
+/** A scale about a fixed point, by a factor along each axis: what Scale asks for. */
+interface Scaling {
+  readonly pivot: Vec2;
+  readonly factors: Vec2;
+}
+
+/**
+ * Resizes the selection (Q31).
+ *
+ * A piece's outline, or a part picked by its heading, stands for the whole
+ * piece, as it does for every other gesture (`pieceScope`): hidden features
+ * included, and refused whole if any of it cannot take the scale. Within the
+ * piece, what is made to a size keeps it (`keepsItsSize`) and only where it
+ * sits is scaled — a 4 mm rivet hole in a piece grown half again is still
+ * 4 mm, not 6. Anything else selected scales alone, as it always has.
+ */
+export function scaleFeatures(ids: readonly FeatureId[], scaling: Scaling): Command {
+  return command({ action: 'scale' }, (document) =>
+    transformEach(document, scaleMoves(document.project, ids, scaling)),
+  );
+}
+
+/** Why scaling `ids` would refuse, or `null`: the question Scale asks as it goes (X1). */
+export function scaleRefusal(
+  project: Project,
+  ids: readonly FeatureId[],
+  scaling: Scaling,
+): Problem | null {
+  return movesRefusal(project, scaleMoves(project, ids, scaling));
+}
+
+function scaleMoves(project: Project, ids: readonly FeatureId[], scaling: Scaling): Moves {
+  const { pivot, factors } = scaling;
+  Vec2Ops.assertFiniteVec(pivot, 'scale pivot');
+  Vec2Ops.assertFiniteVec(factors, 'scale factors');
+  const matrix = MatOps.composeAll(
+    MatOps.fromTranslation({ x: -pivot.x, y: -pivot.y }),
+    MatOps.fromScale(factors.x, factors.y),
+    MatOps.fromTranslation(pivot),
+  );
+  const scoped = new Set(pieceScope(project, ids).features);
+
+  const moves = new Map<FeatureId, Mat2x3>();
+  for (const part of project.parts) {
+    const whole = part.features.some((feature) => isOutline(feature) && scoped.has(feature.id));
+    for (const feature of part.features) {
+      if (!scoped.has(feature.id)) continue;
+      const at = whole && keepsItsSize(feature) ? placementOf(project, feature) : null;
+      moves.set(feature.id, at === null ? matrix : keepingSize(matrix, factors, at));
+    }
+  }
+  return moves;
+}
+
+/**
+ * Where a feature made to a size sits: a shape's own centre, or the middle of
+ * what anything else draws — a label's box, a hole frozen into a path. Null
+ * when it draws nothing, and then it simply scales: there is nothing to see.
+ */
+function placementOf(project: Project, feature: Feature): Vec2 | null {
+  if (feature.source.kind !== 'shape') return centreOf(project, [feature.id]);
+  const { shape } = feature.source;
+  return shape.type === 'rect'
+    ? { x: shape.origin.x + shape.width / 2, y: shape.origin.y + shape.height / 2 }
+    : shape.centre;
+}
+
+/**
+ * Taken to where `matrix` sends `at`, the right size: turned over about `at`
+ * if the scale turns the piece over, and never resized. So a round hole stays
+ * round under a stretch, and a label stays a label (Q31).
+ */
+function keepingSize(matrix: Mat2x3, factors: Vec2, at: Vec2): Mat2x3 {
+  return MatOps.composeAll(
+    MatOps.fromTranslation({ x: -at.x, y: -at.y }),
+    MatOps.fromScale(Math.sign(factors.x), Math.sign(factors.y)),
+    MatOps.fromTranslation(MatOps.apply(matrix, at)),
+  );
 }
 
 /**
@@ -531,10 +711,12 @@ export function transformRefusal(
   ids: Iterable<FeatureId>,
   matrix: Mat2x3,
 ): Problem | null {
-  const targets = [...new Set(ids)];
-  return (
-    lockRefusal(project, targets) ?? refusedTransforms(project, targets, matrix)[0]?.problem ?? null
-  );
+  return movesRefusal(project, alike(ids, matrix));
+}
+
+/** `transformRefusal`, with a matrix of its own for each feature. */
+function movesRefusal(project: Project, moves: Moves): Problem | null {
+  return lockRefusal(project, [...moves.keys()]) ?? refusedEach(project, moves)[0]?.problem ?? null;
 }
 
 export function refusedTransforms(
@@ -542,7 +724,12 @@ export function refusedTransforms(
   ids: Iterable<FeatureId>,
   matrix: Mat2x3,
 ): RefusedTransform[] {
-  const targets = new Set(ids);
+  return refusedEach(project, alike(ids, matrix));
+}
+
+/** `refusedTransforms`, with a matrix of its own for each feature. */
+function refusedEach(project: Project, moves: Moves): RefusedTransform[] {
+  const targets: ReadonlySet<FeatureId> = new Set(moves.keys());
   const refused: RefusedTransform[] = [];
 
   const byId = new Map(
@@ -551,7 +738,8 @@ export function refusedTransforms(
 
   for (const part of project.parts) {
     for (const feature of part.features) {
-      if (!targets.has(feature.id)) continue;
+      const matrix = moves.get(feature.id);
+      if (matrix === undefined) continue;
 
       if (feature.kind !== 'text-label' && feature.source.kind === 'derived') {
         // A mirror has a placement of its own, so it moves, turns and flips.
@@ -573,7 +761,23 @@ export function refusedTransforms(
             // go anywhere of its own: the source moves and it re-mirrors, or
             // the fold moves and it follows. Only a counterpart dragged on its
             // own has been asked for something the fold decides.
-            if (targets.has(feature.source.sourceId) || targets.has(foldId)) continue;
+            if (targets.has(feature.source.sourceId) || targets.has(foldId)) {
+              const line =
+                targets.has(feature.source.sourceId) && targets.has(foldId)
+                  ? capturedLineOf(project, foldId)
+                  : null;
+              if (line?.kind === 'line' && carriedMirror(line, 0, matrix) === null) {
+                refused.push({
+                  featureId: feature.id,
+                  problem: problem('MIRROR_WOULD_SCALE', {
+                    featureId: feature.id,
+                    featureName: feature.name,
+                    sourceName: byId.get(feature.source.sourceId)?.name ?? 'its original',
+                  }),
+                });
+              }
+              continue;
+            }
 
             const fold = byId.get(foldId);
             refused.push({
@@ -588,11 +792,16 @@ export function refusedTransforms(
             continue;
           }
 
-          // Scaled **with its original** is not a refusal: the original takes
-          // the scale and the counterpart follows it, which is what selecting
-          // a whole symmetric panel and resizing it has to do. Only a
-          // counterpart scaled on its own has nowhere to put the change.
-          if (!MatOps.isIsometry(matrix) && !movesWithItsSource(byId, feature, targets)) {
+          // With its original, a counterpart can follow a scale only when
+          // its carried axis is still a reflection-and-slide. An uneven scale
+          // across a diagonal would need a shear; refusing it prevents the
+          // source moving while the axis silently stays behind.
+          const follows = movesWithItsSource(byId, feature, targets);
+          if (
+            follows
+              ? carriedMirror(feature.source.op.axis, feature.source.op.glideMm, matrix) === null
+              : !MatOps.isIsometry(matrix)
+          ) {
             refused.push({
               featureId: feature.id,
               problem: problem('MIRROR_WOULD_SCALE', {
@@ -641,6 +850,35 @@ export function refusedTransforms(
   return refused;
 }
 
+/**
+ * A captured axis carried with its source. Moving the axis and its glide
+ * gives a candidate reflection; it is valid only if mirroring then moving
+ * equals moving then mirroring. An uneven scale across a diagonal fails
+ * that test: its conjugate is a shear, which a mirror cannot store.
+ *
+ * Checking the two compositions avoids inverting the scale, including a
+ * very small one that is still a valid resize.
+ */
+function carriedMirror(
+  axis: Extract<MirrorAxis, { kind: 'line' }>,
+  glideMm: Mm,
+  matrix: Mat2x3,
+): ReturnType<typeof decomposeGlide> {
+  const along = MatOps.applyDirection(matrix, {
+    x: Math.cos(axis.angleRad),
+    y: Math.sin(axis.angleRad),
+  });
+  const moved = glideMatrix(
+    MatOps.apply(matrix, axis.origin),
+    Math.atan2(along.y, along.x),
+    glideMm * Vec2Ops.len(along),
+  );
+  const current = glideMatrix(axis.origin, axis.angleRad, glideMm);
+  return MatOps.equals(MatOps.compose(current, matrix), MatOps.compose(matrix, moved))
+    ? decomposeGlide(moved)
+    : null;
+}
+
 function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false): Feature {
   // A label transforms through its parameters, exactly as a parametric shape
   // does: it stays a label you can retype, rather than becoming outlines.
@@ -682,11 +920,9 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
     // placed by its fold, and `refusedTransforms` says so instead.
     if (op.axis.kind !== 'line') return feature;
     const current = glideMatrix(op.axis.origin, op.axis.angleRad, op.glideMm);
-    const moved = withSource
-      ? MatOps.composeAll(MatOps.invert(matrix), current, matrix)
-      : MatOps.compose(current, matrix);
-
-    const parts = decomposeGlide(moved);
+    const parts = withSource
+      ? carriedMirror(op.axis, op.glideMm, matrix)
+      : decomposeGlide(MatOps.compose(current, matrix));
     // Not an isometry — a scale or a shear. Left exactly as it was;
     // `refusedTransforms` is how the reason reaches the user.
     if (parts === null) return feature;
@@ -705,9 +941,6 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
       },
     };
   }
-
-  // Only a shape is left: the measurement arm was returned above.
-  if (feature.source.kind !== 'shape') return feature;
 
   // Only a shape is left: the measurement arm returned above.
   if (feature.source.kind !== 'shape') return feature;
@@ -947,6 +1180,26 @@ export function addStitchHoles(
   };
 }
 
+/**
+ * What a new row of holes starts as: five adjustment holes at 25 mm, the case
+ * the 4.7 design left for rows, punched at the 4 mm the Hardware tool starts
+ * with. A row has no setting of its own to start from, and a hole set's iron
+ * would overlap 4 mm holes at 3.85 mm.
+ */
+const NEW_ROW = { pitchMm: 25, radiusMm: 2 } as const;
+
+/** Holes punched along a marking line, evenly spaced at a pitch (4.14). */
+export function addHoleRow(partId: PartId, featureId: FeatureId, sourceId: FeatureId): Command {
+  return addDerived(partId, sourceId, {
+    id: featureId,
+    kind: 'hole-row',
+    name: 'Row of holes',
+    visible: true,
+    locked: false,
+    source: { kind: 'derived', sourceId, op: { type: 'hole-row', ...NEW_ROW } },
+  });
+}
+
 /** Changes what a derived feature does — the inset, the pitch, the run. */
 export function setDerivation(id: FeatureId, op: Derivation): Command {
   return command({ action: 'edit-derivation' }, (document) => ({
@@ -1022,12 +1275,12 @@ function mapPart(project: Project, id: PartId, update: (part: Part) => Part): Pr
 /**
  * Edits one feature, **refusing a locked one** (S7).
  *
- * Refusing by default rather than at each call site is deliberate: a command
- * added later that forgets to think about the lock gets the safe answer, and
- * the two places that genuinely may touch a locked feature — hiding it and
- * unlocking it — say so out loud with `evenIfLocked`. The same reasoning as
- * the draw commit boundary in 4.3a: an invariant every caller has to remember
- * is one that eventually gets forgotten.
+ * Refusing here rather than at each call site is deliberate: a command added
+ * later that forgets to think about the lock gets the safe answer. The two
+ * that genuinely may touch a locked feature — hiding it and unlocking it — set
+ * its flag through `withFlag` instead, never through here. The same reasoning
+ * as the draw commit boundary in 4.3a: an invariant every caller has to
+ * remember is one that eventually gets forgotten.
  *
  * Returns the project unchanged when refused; `lockRefusal` is how the reason
  * reaches the user.
@@ -1036,9 +1289,8 @@ function mapFeature(
   project: Project,
   id: FeatureId,
   update: (feature: Feature) => Feature,
-  options: { readonly evenIfLocked?: boolean } = {},
 ): Project {
-  if (options.evenIfLocked !== true && lockRefusal(project, [id]) !== null) return project;
+  if (lockRefusal(project, [id]) !== null) return project;
 
   // Nothing to edit is not an edit. Without this the project object would be
   // rebuilt anyway and the store, which decides by identity, would push an
@@ -1138,6 +1390,28 @@ export function addMeasurement(
       return addFeature(home.part.id, feature).apply(document);
     },
   };
+}
+
+/**
+ * A piece's overall size (Q15): its width above it and its height to its left,
+ * each between corners of the box its outline fills — so a 97 × 67 panel with
+ * rounded corners reads 97 × 67, which no two of its corners are apart. Both
+ * in one undoable step, as the maker asked for them together.
+ */
+export function addOverallSize(
+  featureId: FeatureId,
+  widthId: FeatureId,
+  heightId: FeatureId,
+): Command {
+  const corner = (x: 'min' | 'max', y: 'min' | 'max'): ExtentRef => ({
+    kind: 'extent',
+    featureId,
+    x,
+    y,
+  });
+  const width = addMeasurement(widthId, 'horizontal', corner('min', 'max'), corner('max', 'max'));
+  const height = addMeasurement(heightId, 'vertical', corner('min', 'min'), corner('min', 'max'));
+  return command({ action: 'add-overall-size' }, (document) => height.apply(width.apply(document)));
 }
 
 /** Moves a dimension line off the geometry, or changes what it shows. */
@@ -1576,7 +1850,7 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
       freezable:
         withCapturedAxis(project, feature, requestedSet) !== null ||
         (direct &&
-          feature.kind !== 'stitch-hole-set' &&
+          !isHolesAlongALine(feature.kind) &&
           feature.kind !== 'measurement' &&
           resolved.get(id)?.ok === true),
     };
