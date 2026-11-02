@@ -24,3 +24,8 @@ follows; the rest is the convention every existing workflow keeps.
   should know what the step protects.
 - **A check that gates `develop` or `main` stays required.** A flaky one is fixed. It is never
   skipped on one platform, marked `continue-on-error`, or given a looser budget to make it pass.
+  Two things are not a weakening, and each says why in its comment:
+  - a job that runs only for the changes that can break it (`tools/ci/changes.mjs`), when every
+    change that can break it still runs it;
+  - a check whose failure does not depend on the pull request, such as a new advisory against a
+    dependency the pull request did not touch, moving to a scheduled run (`nightly.yml`).
