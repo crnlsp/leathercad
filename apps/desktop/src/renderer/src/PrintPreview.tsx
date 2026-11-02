@@ -10,7 +10,7 @@ import {
 } from '@leathercad/domain';
 import type { PrinterList } from '@leathercad/platform';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
 
 import { offersPaper } from '../../shared/paper.js';
 
@@ -20,7 +20,7 @@ import { ExportFindings } from './ExportNotice.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { NumberField } from './NumberField.js';
-import { drawPage, openPdf } from './pdfPages.js';
+import { drawPage, limitConcurrency, openPdf } from './pdfPages.js';
 import { writePdf } from './pdfWriter.js';
 import { getPlatformHost, refusalOf } from './platformBridge.js';
 import { ProblemRows } from './ProblemList.js';
@@ -37,6 +37,13 @@ const MAX_COPIES = 99;
 /** How wide the sheets are drawn, in CSS pixels: the list, and the one looked at. */
 const THUMB_PX = 96;
 const PAGE_PX = 520;
+/**
+ * The sheet list draws only the sheets in or near its view (PERF-013), this
+ * far below and above it, and a few at a time: 33 sheets drew 33 pages on
+ * every open, most of them never scrolled to.
+ */
+const NEAR_VIEW = '200px 0px';
+const drawThumbnail = limitConcurrency(3);
 
 type Sending =
   | { readonly kind: 'idle' }
@@ -145,12 +152,11 @@ export function PrintPreview({
   const [failure, setFailure] = useState<{ readonly error: unknown } | null>(null);
   const { x: correctX, y: correctY } = correction;
   useEffect(() => {
-    let live = true;
-    let opened: PDFDocumentProxy | null = null;
-    // The file is written in a worker, and ended with the effect: a plan or a
-    // correction that changed, or a preview that closed, does not wait for a
-    // file nobody will look at (PERF-002).
-    const writing = new AbortController();
+    // The file is written in a worker, then opened by pdf.js in another, and
+    // both end with the effect: a plan or a correction that changed, or a
+    // preview that closed, does not wait for a file nobody will look at
+    // (PERF-002), nor for pdf.js to read one (PERF-013).
+    const ended = new AbortController();
     void (async () => {
       try {
         // The print form: every page upright, as printers take paper, and a
@@ -160,21 +166,15 @@ export function PrintPreview({
         const applied = { x: correctX, y: correctY };
         const bytes = await writePdf(
           { plan, applicationVersion: appVersion, upright: true, correction: applied },
-          writing.signal,
+          ended.signal,
         );
-        if (!live) return;
-        opened = await openPdf(bytes);
-        if (live) setWritten({ plan, correction: applied, bytes, doc: opened });
-        else void opened.loadingTask.destroy();
+        const doc = await openPdf(bytes, ended.signal);
+        if (!ended.signal.aborted) setWritten({ plan, correction: applied, bytes, doc });
       } catch (error) {
-        if (live) setFailure({ error });
+        if (!ended.signal.aborted) setFailure({ error });
       }
     })();
-    return () => {
-      live = false;
-      writing.abort();
-      void opened?.loadingTask.destroy();
-    };
+    return () => ended.abort();
   }, [plan, appVersion, correctX, correctY]);
 
   const removeCorrection = async (): Promise<void> => {
@@ -209,6 +209,7 @@ export function PrintPreview({
   const turn = pdf?.plan.setup.orientation === 'landscape' ? 90 : 0;
 
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLOListElement>(null);
   useEffect(() => {
     cancelRef.current?.focus();
   }, []);
@@ -257,7 +258,7 @@ export function PrintPreview({
         </h3>
 
         <div className="print-body">
-          <ol className="print-sheets" aria-label={t('printPreview.sheets')}>
+          <ol ref={listRef} className="print-sheets" aria-label={t('printPreview.sheets')}>
             {pages.map((n) => (
               <li key={n} className={n === current ? 'print-thumb current' : 'print-thumb'}>
                 <button
@@ -269,7 +270,13 @@ export function PrintPreview({
                   onClick={() => setCurrent(n)}
                 >
                   {pdf !== null && (
-                    <PageCanvas pdf={pdf.doc} number={n} widthPx={THUMB_PX} turn={turn} />
+                    <PageCanvas
+                      pdf={pdf.doc}
+                      number={n}
+                      widthPx={THUMB_PX}
+                      turn={turn}
+                      list={listRef}
+                    />
                   )}
                 </button>
                 <label className="print-thumb-label">
@@ -544,26 +551,45 @@ export function PrintPreview({
 
 /**
  * One page of the PDF, drawn by pdf.js, its view turned `turn` degrees
- * clockwise; redrawn when the page or the PDF changes.
+ * clockwise; redrawn when the page or the PDF changes. In the sheet `list`, it
+ * is drawn once it comes near the list's view, a few at a time.
  */
 function PageCanvas({
   pdf,
   number,
   widthPx,
   turn,
+  list,
 }: {
   pdf: PDFDocumentProxy;
   number: number;
   widthPx: number;
   turn: number;
+  list?: RefObject<HTMLElement | null>;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Once near, it stays drawn: scrolling back does not draw it again. A new
+  // PDF mounts a new canvas, which waits to come near again.
+  const [near, setNear] = useState(list === undefined);
   useEffect(() => {
     const canvas = ref.current;
-    if (canvas === null) return;
+    if (near || canvas === null || list === undefined) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) setNear(true);
+      },
+      { root: list.current, rootMargin: NEAR_VIEW },
+    );
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [near, list]);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (canvas === null || !near) return;
     const abort = new AbortController();
-    drawPage(pdf, number, canvas, widthPx, abort.signal, turn).catch(() => undefined);
+    const draw = () => drawPage(pdf, number, canvas, widthPx, abort.signal, turn);
+    (list === undefined ? draw() : drawThumbnail(draw)).catch(() => undefined);
     return () => abort.abort();
-  }, [pdf, number, widthPx, turn]);
+  }, [pdf, number, widthPx, turn, near, list]);
   return <canvas ref={ref} className="print-canvas" data-page={number} />;
 }

@@ -65,7 +65,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
 | ☐ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | Unassigned |
 | ✅ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | `perf/012-resource-preflight` |
-| ☐ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | Unassigned |
+| ✅ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | `perf/013-preview-work` |
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
 | ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
 | ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
@@ -1010,10 +1010,10 @@ main preview and app canvas. Loading exposes a promise without an immediate canc
 obsolete generation can still proceed into PDF opening. Normal destruction exists, and repeated
 previews plateaued; this is not proof of a permanent worker leak.
 
-- [ ] Render visible/near-visible thumbnails with bounded concurrency.
-- [ ] Retain the loading task immediately, check cancellation between stages and destroy on
+- [x] Render visible/near-visible thumbnails with bounded concurrency.
+- [x] Retain the loading task immediately, check cancellation between stages and destroy on
   dismissal, obsolete plans and failure.
-- [ ] Exercise rapid open/close, paper changes and injected failures; verify eventual worker
+- [x] Exercise rapid open/close, paper changes and injected failures; verify eventual worker
   cleanup and stable post-GC memory over repeated cycles.
 
 PERF-002b already ends the PDF *writer* with the effect and skips opening a file the effect has
@@ -1021,6 +1021,49 @@ left behind; pdf.js's own loading task and the thumbnails remain here.
 
 **Expected benefit:** Less off-screen work and faster cleanup. Complements PERF-002; lazy
 thumbnails alone do not fix synchronous PDF generation.
+
+**Done (2026-11-02):** `perf/013-preview-work`. Reproduced on develop `7c77698`: every open of
+the strap's preview drew all 33 sheets into the list, about 10 of them in its view.
+
+- `PageCanvas` in the list draws once an `IntersectionObserver` on the list (200 px margin) sees
+  it near, at most three at a time (`limitConcurrency` in `pdfPages.ts`); a sheet drawn stays
+  drawn, and a new PDF mounts new canvases, which wait to come near again. The sheet looked at
+  draws at once, as before.
+- `openPdf(bytes, signal)` holds pdf.js's loading task from the call: the signal destroys it at
+  once, mid-read, and a file pdf.js cannot read destroys it too. The preview has one
+  `AbortController` for the effect, ending the writer, the load or the open document, and shows
+  nothing from an effect that has ended. `drawPage` checks the signal before asking for a page.
+- Guards: `pdfPages.test.ts` (pdf.js faked at its boundary) fails on develop's `openPdf`, which
+  never destroys a load it was asked to end or failed to read, and holds the concurrency;
+  `e2e/pdf-worker.spec.ts` counts the sheets drawn after the preview settles, at most 16 — develop
+  drew 33.
+
+**Before/after,** `node tools/perf-pdf.mjs <A|B> --preview` on the production builds of develop
+(A) and this branch (B), Electron 45, unpackaged, five runs a side interleaved A, B, A, B…, three
+opens a run; medians of the fifteen opens, range in brackets. The machine was shared with other
+agents' runs.
+
+| 5.8 m strap, 33 A4 sheets, Print Preview | Before (A) | After (B) |
+|---|---|---|
+| Sheets drawn into the list, 3 s after the click | 33 (33–33) | 10 (10–10) |
+| Main thread busy (TaskDuration), 3 s from the click | 107 ms (96–119) | 81 ms (72–96) |
+| Renderer CPU, workers included, 3 s from the click | 1,250 ms (1,200–1,270) | 1,120 ms (1,090–1,180) |
+| Click to the sheet looked at drawn | 635 ms (626–676) | 633 ms (621–669) |
+| Largest frame gap | 4 ms (4–10) | 4 ms (4–10) |
+| 20 previews closed or re-papered mid-way: pdf.js workers left running | 0 of 10 | 0 of 10 |
+| Post-GC heap at 0/10/20 of those cycles | 11.6 → 12.1 → 12.2 MiB | 11.6 → 12.1 → 12.2–12.3 MiB |
+
+Most of the renderer's CPU is still the PDF writer's (PERF-002), which is unchanged. Develop did
+destroy an obsolete load in the end, once it had finished reading; no worker or heap leak
+reproduced on either side, so the gain there is work not done, not memory.
+
+**Accuracy:** the writer and its bytes are untouched (`pdfJob.test.ts` passes as it was), and
+every sheet pdf.js draws is drawn as before; only *when* a thumbnail is drawn changed. The
+`print-preview` and `pdf-worker` E2E specs pass in the Playwright 1.64 Noble image under
+`xvfb-run -a`, with Poppler installed as CI does.
+
+**Platform limit:** measured and run on Linux only. CI's Windows and macOS unit jobs run the
+`pdfPages.test.ts` guard; the E2E guard runs on Linux per pull request and nightly elsewhere.
 
 ### PERF-014
 
