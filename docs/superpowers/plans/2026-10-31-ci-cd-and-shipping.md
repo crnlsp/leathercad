@@ -152,12 +152,18 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Find out first:** run `pnpm test:e2e` on `windows-latest` and `macos-latest` from a branch (`workflow_dispatch`). For every failure, decide: the test is wrong, the app is wrong, or it is platform-specific and gets `test.skip(process.platform === …, '<reason>')` the way existing specs do. Never skip one just to get green. App bugs found here are fixed in this PR (or one per bug) with a test.
 
-- [ ] Add `e2e` jobs (matrix `windows-latest`, `macos-latest`) installing poppler as `installers.yml` does.
-- [ ] Add a step that reads the head commit of the job's last green run (`gh run list --workflow nightly.yml --status success --json headSha`) and skips E2E and `bench` when develop has not moved. `properties` and the new scan always run.
-- [ ] Add a `vulnerabilities` job with the same pinned osv-scanner step as `ci.yml`.
-- [ ] Reuse the issue step: one open issue per job label (`nightly-e2e-windows`, `nightly-e2e-macos`, `nightly-vulnerabilities`), commented on when it fails again, closed by the next green run.
+- [x] Add `e2e` jobs (matrix `windows-latest`, `macos-latest`) installing poppler as `installers.yml` does.
+- [x] Add a step that reads the head commit of the job's last green run (`gh run list --workflow nightly.yml --status success --json headSha`) and skips E2E and `bench` when develop has not moved. `properties` and the new scan always run.
+- [x] Add a `vulnerabilities` job with the same pinned osv-scanner step as `ci.yml`.
+- [x] Reuse the issue step: one open issue per job label (`nightly-e2e-windows`, `nightly-e2e-macos`, `nightly-vulnerabilities`), commented on when it fails again, closed by the next green run.
 
 **Done when:** three nights green on both platforms, or each remaining failure has its own issue; an unchanged night skips E2E but runs the scan and the property tests. Opus, medium to large (unknown failures).
+
+**Changed in the doing:**
+- A scheduled run is `main`'s, at `main`'s commit, so its `headSha` never named what it tested. The schedule now starts `nightly.yml` again on `develop` (`gh workflow run --ref develop`) and does nothing else. That run is `develop`'s copy of the file at `develop`'s commit. A job `tested` reads the earlier runs at that commit (`?head_sha=`), job by job, and E2E's matrix is the platforms that have not passed there. Nothing of this runs on schedule until the file reaches `main` with 1.6; until then, run *Nightly* by hand on `develop`.
+- One job, `report`, holds `issues: write`, and only on `develop`; the jobs that run code hold none.
+- The first run on Windows and macOS failed about 380 tests on each. The causes, all fixed here: the development build ignored `XDG_CONFIG_HOME` and `XDG_STATE_HOME` off Linux, so every launch shared one profile; the window's 1280 × 840 and 860 × 600 were its outer size, so Windows opened 16 px short of the wide layout (`useContentSize`); both runners' screens are 1024 × 768 (set to 1920 × 1080 first); the tests pressed Ctrl where macOS takes ⌘, and killed a process that on Windows is not the app's.
+- Left with an issue each: #194 (Shift+F10 opens no menu on macOS; three specs skip there), #195 (a 230–320 ms frame gap during the long strap's PDF export on macOS; its spec fails the macOS nightly until fixed).
 
 ### Task A4: A change-aware PR gate
 

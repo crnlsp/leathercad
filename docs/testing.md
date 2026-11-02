@@ -424,7 +424,9 @@ Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, print
 suite on Windows and macOS, which a pull request runs on Linux only; the known-vulnerability scan;
 and the benchmarks, uploaded as a trend. E2E and the benchmarks run only when they have not passed
 at that commit already, so a night `develop` did not move skips them; the property tests and the
-scan always run, because a fresh seed or a new advisory can fail them without a commit. Each job
+scan always run, because a fresh seed or a new advisory can fail them without a commit. Both E2E
+runners' screens start at 1024 × 768, and Windows and macOS fit a window into its screen, so the
+job sets them to 1920 × 1080 first (`tools/ci/full-hd-display.swift` on macOS). Each job
 reports to an issue of its own (labels `nightly-property`, `nightly-e2e-windows`,
 `nightly-e2e-macos`, `nightly-vulnerabilities`): a failure opens it, or comments on the open one,
 and the first run that passes closes it. Weekly (`weekly.yml`): mutation testing of `geometry` and
