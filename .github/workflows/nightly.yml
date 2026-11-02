@@ -11,7 +11,9 @@ permissions:
 jobs:
   profile:
     name: Cold PDF export profile (macOS)
-    runs-on: macos-latest
+    # The latest arm64 pool is capacity constrained. Also probe the macOS 15
+    # image named in #195's original report; the latest-image run remains queued.
+    runs-on: macos-15
     timeout-minutes: 15
     steps:
       # Same toolchain and display as the nightly that found #195.
