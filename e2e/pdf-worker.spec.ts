@@ -70,9 +70,10 @@ test('the window keeps painting while the long strap is exported', async () => {
 
         // The longest time between two animation frames from the click to the
         // file: the longest the window could not paint or answer a click.
+        const measurement = await profilePdfExport(window);
+        // Arm the frame probe before CDP setup can warm the cold window.
         const trace =
           process.env['LEATHERCAD_TRACE_PDF'] === '1' ? await tracePdfExport(window) : null;
-        const measurement = await profilePdfExport(window);
         await window.getByTestId('export-pdf').click();
         await expect.poll(() => existsSync(pdf), { timeout: 30_000 }).toBe(true);
         await expect(window.getByTestId('export-notice')).toBeVisible();

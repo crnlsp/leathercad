@@ -327,7 +327,8 @@ No speedup target is inferred. PERF-003 may share safe bounds helpers, not viewp
 the unchanged 200 ms frame-gap failure in
 [the native probe](https://github.com/crnlsp/leathercad/actions/runs/41481746908).
 The workload is still `fixtures/perf/strap-5800.lcp`, in Electron 45, on `macos-latest`
-with the full-HD display setup and a 1280 × 840 window. Dialogs are answered by the test;
+(macOS 26.6.2, image `macos-26-arm64/20261026.0455.2`), with the full-HD display setup
+and a 1280 × 840 window. Dialogs are answered by the test;
 the real PDF worker and file writer run normally. There are no retries.
 
 | Ten cold macOS exports | Observed |
