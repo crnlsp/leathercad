@@ -320,7 +320,7 @@ pull request each, accuracy never traded, every platform retested — is
 - ✅ **[PERF-011](performance-backlog.md#perf-011)** Resize backing stores on DPI-only changes; emulated transitions guarded, physical mixed-DPI release verification remains open.
 - ✅ **[PERF-012](performance-backlog.md#perf-012)** Preflight excessive allocation/work requests.
 - ✅ **[PERF-013](performance-backlog.md#perf-013)** Bound thumbnail work and cancel obsolete PDF loading.
-- ☐ **[PERF-014](performance-backlog.md#perf-014)** Schedule canvas frames only when needed.
+- ✅ **[PERF-014](performance-backlog.md#perf-014)** Schedule canvas frames only when needed.
 - ✅ **[PERF-015](performance-backlog.md#perf-015)** Avoid repeated deep dependency walks.
 - ✅ **[PERF-016](performance-backlog.md#perf-016)** Prune obsolete collapsed-part IDs.
 - ✅ **[PERF-017](performance-backlog.md#perf-017)** Make benchmarks representative and interpretable.

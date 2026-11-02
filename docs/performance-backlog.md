@@ -66,7 +66,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | [#212](https://github.com/crnlsp/leathercad/pull/212) |
 | ✅ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | `perf/012-resource-preflight` |
 | ✅ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | `perf/013-preview-work` |
-| ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
+| ✅ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | `perf/014-demand-frames` |
 | ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
 | ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
 | ✅ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | `perf/017-benchmarks` |
@@ -1180,10 +1180,52 @@ every sheet pdf.js draws is drawn as before; only *when* a thumbnail is drawn ch
 1,653 callbacks / 10 idle seconds, zero paints. Measured CPU was small; battery savings were not
 measured.
 
-- [ ] Schedule at most one pending callback from invalidation, stopping when clean.
-- [ ] Preserve immediate first/resize painting and cleanup on unmount.
-- [ ] Verify idle scheduling stops and every store, tool, pointer, view and resize change still
+- [x] Schedule at most one pending callback from invalidation, stopping when clean.
+- [x] Preserve immediate first/resize painting and cleanup on unmount.
+- [x] Verify idle scheduling stops and every store, tool, pointer, view and resize change still
   paints; coordinate PERF-008 rather than maintaining competing dirty mechanisms.
+
+**Implementation and measurement (2026-11-02):** `perf/014-demand-frames`, based on current
+`develop`, `ec76d82`, after PERF-008 and PERF-011. [`CanvasFrames`](../apps/desktop/src/renderer/src/canvasFrames.ts)
+replaces the continuous loop and dirty flag with one pending callback. Invalidation queues it
+only when no callback is pending and the painter's effect is mounted. The slot is released
+before painting, so an invalidation during a paint schedules the next frame. Cleanup cancels
+queued work and ignores late font-loading invalidations; effect reconnection starts with the
+current painter. Synchronous first/resize/DPR/view painting and typed-chip focus remain immediate
+and consume a queued paint. Every former direct dirty-flag write now calls the same invalidator,
+including language, Sheets-row hover and draft-size set/finish/cancel. PERF-008's content cache
+and culling are unchanged.
+
+**Retained reproduction:** build with `pnpm build`, then run
+`node tools/perf-frames.mjs before` / `after`, optionally `--app <checkout>/apps/desktop`.
+It opens `fixtures/perf/strap-5800.lcp` (5.8 m, 3,028 holes, 33 sheets) in the production renderer
+at 1600 × 1000 CSS pixels, waits for fonts and one second of settling per view, then samples
+three ten-second idle intervals on Design and three on Sheets. The counter does not request
+frames during a sample. Linux, Electron 45.0.0 / Chromium 156.0.8078.48 / Electron Node 24.22.0,
+shell Node 24.22.1, pnpm 12.15.0, pinned Playwright 1.64.1/Poppler Ubuntu container, isolated
+2560 × 1440 × 24-bit Xvfb display, DPR 1. Same machine and build settings on both sides.
+
+| Idle callbacks per 10 seconds, three samples | Before (`ec76d82`) | After |
+|---|---|---|
+| Design | 601, 600, 602 | 0, 0, 0 |
+| Sheets | 600, 602, 600 | 0, 0, 0 |
+| Board paints, either view | 0, 0, 0 | 0, 0, 0 |
+
+Canvas PNG fingerprints are identical before and after: Design
+`aafbe3389dfe3dd7389d8bafc9f933b111733ae5b95ac8d1ed56e5eb769c7129`, Sheets
+`4261fccbbc3e0d1be61cce5977d63b24b834ad3fe83ea23325f7cd0fd4db52ce`.
+The new E2E idle guard failed before the fix (15 callbacks / 250 ms, zero paints) and passes
+afterwards. No CPU or battery saving was measured; the result is eliminated callback traffic.
+
+**Guards:** [`canvasFrames.test.ts`](../apps/desktop/src/renderer/src/canvasFrames.test.ts), run by
+`pnpm check`, uses the browser scheduling boundary to assert exact work bounds: one callback per
+burst, no idle scheduling, wake after idle, immediate paint consuming pending work (handle 0
+included), invalidation during asynchronous or synchronous paint, cleanup/late notifications,
+effect reconnection and error propagation. [`frame-scheduling.spec.ts`](../e2e/frame-scheduling.spec.ts)
+checks both idle views and real paints after tools, pointer moves, typed drafts, history, camera,
+resize, view, Sheets-row hover and language changes. Existing DPI and typed-size E2E cases pass.
+Geometry, persistence, export/print fixtures and visual baselines are untouched. Packaged
+Windows/macOS behavior remains a manual release check; measurements were taken on Linux only.
 
 **Expected benefit:** Eliminate unnecessary idle callback traffic without claiming a battery gain.
 

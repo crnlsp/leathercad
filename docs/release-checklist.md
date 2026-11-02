@@ -348,6 +348,10 @@ Linux, Windows and macOS. Open `fixtures/perf/strap-5800.lcp`, the 5.8 m strap o
    manager, settles back near where it started.
 5. **Quit with unsaved work**, then start again: the recovery copy is offered, and the strap comes
    back whole.
+6. **Idle board ([PERF-014](performance-backlog.md#perf-014))**: leave Design, then Sheets, at rest.
+   Hover, select, zoom and change views: each first input paints without needing another movement.
+   Back on Design, type a rectangle's sizes and cancel or finish it; resize the window, hide and
+   show it, and switch tabs. The board, chips, rulers and showing view's zoom stay current.
 
 Note each platform's result beside its row in the log, or say which check could not be run there.
 
