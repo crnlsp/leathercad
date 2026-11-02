@@ -57,7 +57,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-002](#perf-002) | P1 | High | Reduce tiled PDF duplication and blocking | Confirmed | Medium | High | `perf/002-tiled-pdf` (culling), `perf/002b-pdf-worker` (worker) |
 | ✅ | [PERF-003](#perf-003) | P1 | High | Cull Sheets pages and separate interaction decoration | Confirmed | Medium | Medium | `perf/003-sheets-culling` |
 | ✅ | [PERF-004](#perf-004) | P1 | High | Avoid full snap-index rebuilds during complex edits | Confirmed | Medium | High | `perf/004-incremental-snap` |
-| ☐ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | Unassigned |
+| ✅ | [PERF-005](#perf-005) | P2 | Medium | Reuse geometry diagnostics for unaffected inputs | Confirmed | Medium | High | `perf/005-diagnostics` |
 | ✅ | [PERF-006](#perf-006) | P2 | Medium | Reduce self-intersection candidate pairs | Confirmed | Medium | High | `perf/006-self-intersections` |
 | ☐ | [PERF-007](#perf-007) | P2 | Medium | Isolate pointer-driven React updates | Confirmed | Medium | Medium | Unassigned |
 | ☐ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | Unassigned |
@@ -510,14 +510,72 @@ went from 78 to 18 ms with no long tasks; the piece drag's remaining cost is eva
 geometry validation: about 10.52 ms for a 500-point outline, or 7.15 ms for a strap with 20 slots
 versus 0.60 ms without slots. Hole-to-material/edge work multiplies with cut-outs.
 
-- [ ] Separate metadata-sensitive/global rules from geometry-dependent rules.
-- [ ] Cache by resolved material and dependency identities; invalidate affected dependents,
+- [x] Separate metadata-sensitive/global rules from geometry-dependent rules.
+  Reproduced at `a806a1b`: a rename re-validated every part, 7.1 ms for the strap with 20 slots and
+  18 ms for the 1,000-point outline. `domain/src/validate.ts` now finds each feature's
+  geometry rules — DR2, and those about its own shape and holes — apart from the rules that read a
+  name: a part's (`EMPTY_PART`, `PART_HAS_NO_OUTER_CONTOUR`, its name's glyphs) and a label's
+  words, which are asked every time.
+- [x] Cache by resolved material and dependency identities; invalidate affected dependents,
   including cross-part mirrors, rather than simply caching by part ID.
-- [ ] Compare complete diagnostics after metadata/local edits, visibility changes, cut-outs,
+  A feature's findings are kept, by the feature object, with every object they were found from:
+  the path and holes it resolved to, its part, and that part's outline and cut-outs. Evaluation
+  keeps an unchanged feature's geometry the same object between revisions, and all of it is
+  immutable, so the same objects give the same findings. A moved outline gives its stitch line,
+  its holes and whatever follows it from another part new paths, and its part's other features a
+  new material; their findings are found again, and nothing else's. The list and its order are as
+  before. With it, `domain/src/material.ts` stops measuring a hole against an edge whose box is
+  further from it than the nearest edge so far (with `EPS_POINT` to spare for rounding; the first
+  edge is always measured), which is bit for bit the same distance. That fixes
+  `diagnose-strap-slots`, the regression [PERF-017](#perf-017) found: since 3.9c an arc's
+  distance is found through the nearest point on it, and each of 3,028 holes asked it of 20 slots.
+- [x] Compare complete diagnostics after metadata/local edits, visibility changes, cut-outs,
   undo/redo and cross-part changes; prove unrelated geometry checks are reused.
+  `validate.test.ts`, a property: through any run of renames, quantities and visibility, slots
+  moved, added, removed or carried to another part, outlines resized (with a seam in another part
+  following one), pitches changed, and undo or redo to any earlier revision, `diagnose` equals
+  that of a copy sharing no object. Named cases for what it does not reach: a slot an outline
+  shrinks away from, a feature carried to another part, a crossed cut-out carried between two
+  parts with no outline. A rename keeps every feature's diagnostics as the same objects.
+  `material.test.ts`: `distanceToEdge` equals, by `Object.is`, the old loop over every edge, for
+  1,000 materials and points on edges, between them, anywhere. Each identity check the cache makes
+  but one fails a test when removed; the one, of the holes, is implied by the path's.
 
 **Expected benefit:** Avoid unchanged validation work without stale warnings. Preserve one
 authoritative diagnostics list; property tests precede domain changes.
+
+| PERF-005, bundled (`tools/perf-compute.mjs`), median ms | Before (`a806a1b`) | After |
+|---|---:|---:|
+| Diagnosis after a rename: wallet, strap, strap + 20 slots | 0.38 / 0.57 / 7.03 | 0.01 / 0.00 / 0.01 |
+| The same: 250 / 500 / 1,000-point outline | 4.31 / 8.82 / 16.83 | 0.00 / 0.00 / 0.00 |
+| The same: bags of 30 / 40 / 50 parts | 0.78 / 1.02 / 1.35 | 0.07 / 0.07 / 0.09 |
+| Fresh diagnosis, strap + 20 slots | 7.89 (7.70–8.32) | 3.93 (3.69–4.97) |
+| Fresh diagnosis and evaluation, every other workload | — | level |
+| `bench:compare`, `diagnose-strap-slots` (baseline 33.0 ms) | 47.4 / 45.3 | 17.2 / 17.3 |
+
+Measured on the audit's Ryzen 5 7600X, Linux 7.3.0-5-cachyos, Node 24.22.1, with the desktop
+and other sessions keeping the load at 2.3–4, so before and after ran turn about: seven runs each
+of `perf-compute.mjs`, the median of their medians and their range, 20 samples after 3 warm-ups a
+run, and two each of the domain benchmarks. At 20 samples the bags' fresh diagnosis read 6–13 %
+slower; at 200 samples after 20 warm-ups, three runs each, it is level — bag-30 1.822 against
+1.806 ms, bag-50 3.054 against 3.014, the wallet 0.368 against 0.358, the strap 1.157 against
+1.113 — so that was noise. An earlier version did cost the fresh diagnoses 2–5 % at 200 samples,
+from taking each edge's box with two lookups and for the first edge too; it takes one, and none
+for the first.
+
+**Guards** (`pnpm test`): *measures nothing again for a rename* (`validate.test.ts`): renaming the
+part of a drawn 500-point outline with 468 holes read the outline's segments 480,000 times; the
+bound is 1,000, and it reads none. *Keeps every feature's findings through a rename*: the same
+diagnostic objects. *Measures only the cut-outs near a hole* (`material.test.ts`): the strap's
+3,014 holes against its 20 slots read the slots' segments 60,280 times; the bound is a tenth of
+a read a hole, and they are read once each for their boxes. All three fail on `a806a1b`'s
+`validate.ts` and `material.ts` and pass after.
+
+**Result:** a rename, or an edit to another part, validates no geometry: 17 ms for the
+1,000-point outline is none. A strap with cut-outs measures each hole against the edges that can
+be nearest, which undoes 3.9c's regression and halves its fresh diagnosis. Not measured: the
+panels in the built app; validation is pure, and CI's Windows and macOS unit jobs run the
+properties and guards.
 
 ### PERF-006
 
@@ -962,7 +1020,9 @@ these remaining issues.
   the nearest point found on it — an angle, a parameter and a point — not radially as before; each
   of 3,028 holes asks it of 20 round slots. Putting the radial answer back for an arc took the
   diagnosis to 4.4 ms (reverted). Fixing it is [PERF-005](#perf-005)'s, which this cost is the
-  evidence of, and needs its own proof that diagnostics are unchanged.
+  evidence of, and needs its own proof that diagnostics are unchanged. PERF-005 fixed it another
+  way, identical to the bit: a hole is not measured against an edge that cannot be nearest. It
+  compares 0.52× now.
   The editor's four cases, code unchanged since `e845ffa` recorded them, compare 1.12–1.22× on
   2026-11-01: Node is 24.22.1 where it was 24.22.0, the kernel 7.3.0-5 where it was 7.3.0-4, and
   two other sessions kept the load near 1.5. That is the environment, not the code, so they were

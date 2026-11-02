@@ -576,9 +576,10 @@ Measure before optimising, but the known shapes of the problem:
   to are the same objects, so a rename redraws one caption (`export/src/scene.ts`). The renderer
   keeps the sheet plan only for the project on screen (`renderer/src/sheets.ts`): keyed by every
   project in history, it held 1.3 GiB after two hundred renames (PERF-001).
-- **Diagnostics are memoised per project object** (`domain/src/diagnose.ts`), and validation's
-  crossings per path. A rename is a new project, so it validates every part again, its geometry
-  unchanged ([PERF-005](performance-backlog.md#perf-005)).
+- **Diagnostics are memoised per project object** (`domain/src/diagnose.ts`), and each feature's
+  findings from its geometry while it, its geometry, its part and the part's outline and
+  cut-outs are the same objects (`domain/src/validate.ts`). A rename is a new project, and
+  validates nothing but the rules that read a name ([PERF-005](performance-backlog.md#perf-005)).
 - **Stitch holes are drawn as one batched stroke**: every slit of a set in one path, stroked once
   (F.7), rather than 3 000 separate draws; zoomed out, the set is drawn as its stitch line. A row of
   punched holes is a circle per hole.

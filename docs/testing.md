@@ -453,10 +453,11 @@ commit that re-records one changes its row here:
 | `geometry/self-traced-1000`, `geometry/self-star-1002` | PERF-006's fix, 2026-11-01 | 24.22.1 | 5.0.5 | New with PERF-006 |
 
 `apps/desktop/src/bench-discovery.test.ts` fails if a baseline has no row here, or a row names
-one that is not committed. `domain/diagnose-strap-slots` compares 1.3–1.4× its baseline, and is
-kept: that is a regression, not a new workload. Since 3.9c (`2f1132a`) a hole's distance to a
-round slot is measured by finding the nearest point on the arc rather than radially; fixing it is
-[PERF-005](performance-backlog.md#perf-005)'s.
+one that is not committed. `domain/diagnose-strap-slots` compared 1.3–1.4× its baseline, and was
+kept: a regression, not a new workload. Since 3.9c (`2f1132a`) a hole's distance to a round slot
+is found through the nearest point on the arc rather than radially. Since
+[PERF-005](performance-backlog.md#perf-005) a hole is measured only against the edges that can be
+nearest it, and the case compares 0.52×.
 
 Benchmark discovery is pinned: each package that has benchmarks sets
 `benchmark.include: ['src/**/*.bench.ts']`, because `tsc --build` emits `dist/src/*.bench.js` and
