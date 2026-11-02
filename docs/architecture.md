@@ -577,7 +577,8 @@ Measure before optimising, but the known shapes of the problem:
 - **Evaluation is memoised per feature**, keyed on object identity: the document is updated
   immutably with structural sharing, so an unchanged feature is the same object, and a derived one
   is reused only while its source is too (`domain/src/evaluate.ts`). Editing one part does not
-  re-evaluate the other thirty-nine.
+  re-evaluate the other thirty-nine. Within one evaluation each feature is resolved once, however
+  many follow it (PERF-015).
 - **What is derived for paper is shared, not kept per revision.** The export scene reuses a part's
   ink — a circle per hole, an outline per glyph — while its features and the geometry they resolve
   to are the same objects, so a rename redraws one caption (`export/src/scene.ts`). The renderer

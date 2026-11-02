@@ -173,6 +173,7 @@ export function graphProblems(project: Project): Problem[] {
   }
 
   const byId = indexById(project);
+  const looped = featuresOnCycles(byId);
   for (const feature of all) {
     // S2 over a measurement's **references**: a dimension to a feature that is
     // not there measures nothing, and everything past the loader assumes the
@@ -181,7 +182,7 @@ export function graphProblems(project: Project): Problem[] {
       const about = { featureId: feature.id, featureName: feature.name };
       const missing = edgesFrom(feature).find((id) => !byId.has(id));
       if (missing !== undefined) problems.push(problem('MEASURE_REF_MISSING', about));
-      else if (isOnCycle(byId, feature.id)) problems.push(problem('CYCLE', about));
+      else if (looped.has(feature.id)) problems.push(problem('CYCLE', about));
       continue;
     }
 
@@ -204,7 +205,7 @@ export function graphProblems(project: Project): Problem[] {
       continue;
     }
 
-    if (isOnCycle(byId, feature.id)) {
+    if (looped.has(feature.id)) {
       problems.push(problem('CYCLE', about));
       continue;
     }
@@ -361,9 +362,74 @@ function wouldLoop(
   return false;
 }
 
-function isOnCycle(byId: ReadonlyMap<FeatureId, Feature>, id: FeatureId): boolean {
-  const feature = byId.get(id);
-  return feature !== undefined && edgesFrom(feature).some((to) => wouldLoop(byId, id, to));
+/**
+ * Every feature on a cycle of edges, through sources, folds and dimensions
+ * alike: those from which some edge leads back to themselves.
+ *
+ * Found in one pass (PERF-015) rather than by walking from every feature, which
+ * on a chain of sources walked the chain once for each feature down it.
+ * Tarjan's strongly connected components: a feature is on a cycle when its
+ * component holds another feature, or it follows itself. An edge to a feature
+ * that is not there leads nowhere, and a feature with no edges, drawn ones, is
+ * on no cycle and need not be walked. The depth-first walk keeps its own
+ * stack, since a chain can be deeper than the call stack is.
+ */
+export function featuresOnCycles(byId: ReadonlyMap<FeatureId, Feature>): Set<FeatureId> {
+  const order = new Map<FeatureId, number>();
+  const lowest = new Map<FeatureId, number>();
+  const open: FeatureId[] = [];
+  const isOpen = new Set<FeatureId>();
+  const looped = new Set<FeatureId>();
+
+  const walk: { id: FeatureId; edges: FeatureId[]; next: number }[] = [];
+  /** Starts walking from a feature, unless it has no edges and so is on no cycle. */
+  const enter = (id: FeatureId, feature: Feature): void => {
+    const edges = edgesFrom(feature);
+    if (edges.length === 0) return;
+    order.set(id, order.size);
+    lowest.set(id, order.get(id)!);
+    open.push(id);
+    isOpen.add(id);
+    walk.push({ id, edges, next: 0 });
+  };
+
+  for (const [root, rootFeature] of byId) {
+    if (order.has(root)) continue;
+    enter(root, rootFeature);
+
+    while (walk.length > 0) {
+      const at = walk.at(-1)!;
+      if (at.next < at.edges.length) {
+        const to = at.edges[at.next++]!;
+        const target = byId.get(to);
+        if (target === undefined) continue;
+        if (!order.has(to)) enter(to, target);
+        else if (isOpen.has(to)) lowest.set(at.id, Math.min(lowest.get(at.id)!, order.get(to)!));
+        continue;
+      }
+
+      walk.pop();
+      const parent = walk.at(-1);
+      if (parent !== undefined) {
+        lowest.set(parent.id, Math.min(lowest.get(parent.id)!, lowest.get(at.id)!));
+      }
+      if (lowest.get(at.id) !== order.get(at.id)) continue;
+
+      // `at` heads a component: everything still open above it.
+      const component: FeatureId[] = [];
+      let member: FeatureId | undefined;
+      do {
+        member = open.pop()!;
+        isOpen.delete(member);
+        component.push(member);
+      } while (member !== at.id);
+      if (component.length > 1 || at.edges.includes(at.id)) {
+        for (const id of component) looped.add(id);
+      }
+    }
+  }
+
+  return looped;
 }
 
 function allFeatures(project: Project): Feature[] {
