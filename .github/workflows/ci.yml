@@ -98,7 +98,7 @@ jobs:
     permissions:
       contents: read
       # Only to add the label; a read-only token is refused, and handled.
-      pull-requests: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
