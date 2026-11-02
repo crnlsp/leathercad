@@ -5,7 +5,7 @@
 > changed, to reach the files from this folder, and its heading, which said *the next release*. It
 > is not updated any more. It carried the UI refinement's slices U.4 to U.20 (U.1 to U.3 shipped in
 > [1.3.5](roadmap-1.3.5.md)), the finding Q27, and the release engineering R9; R8 and R10 moved to
-> [1.6](../roadmap.md#16--the-next-release) unverified, by decision. The record before it is
+> [1.6](roadmap-1.6.md#16--after-the-refinement) unverified, by decision. The record before it is
 > [`roadmap-1.3.5.md`](roadmap-1.3.5.md).
 
 ## 1.5 — the window, refined

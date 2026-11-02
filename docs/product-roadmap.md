@@ -3,7 +3,7 @@
 **What this is:** where LeatherCAD is going, in what order, and what each step depends on — drawn.
 What LeatherCAD is and is not is [`product-spec.md`](product-spec.md); each item's scope, status and
 slices are [`roadmap.md`](roadmap.md). This page owns neither: it owns the direction.
-**Released:** v1.5.0 · **In progress:** 1.6 · **Last updated:** 2026-10-18
+**Released:** v1.6.0 · **Next:** not named yet · **Last updated:** 2026-11-02
 
 ---
 
@@ -45,7 +45,7 @@ flowchart LR
 | Status | Means | Written in |
 |---|---|---|
 | **Built** | Released, or merged and checked | [`CHANGELOG.md`](../CHANGELOG.md), [`history/`](history/) |
-| **In progress** | The release being built: 1.6 | [`roadmap.md`](roadmap.md), *the next release* |
+| **In progress** | The release being built, once one is named | [`roadmap.md`](roadmap.md), *the next release* |
 | **Committed** | The release after it, once one is named | [`roadmap.md`](roadmap.md) |
 | **Candidate** | A milestone in *Later*, with a theme and a place in the order. Not a promise: it becomes a release only when it is next | [`roadmap.md`](roadmap.md#later) |
 | **Exploring** | Worth thinking about; neither planned nor rejected | [`roadmap.md`](roadmap.md#exploring--neither-planned-nor-rejected) |
@@ -87,12 +87,12 @@ flowchart LR
 | Area | What it gives the maker | The next step |
 |---|---|---|
 | **Start** | A first stitched piece in the first session, without a wizard: the empty panels say what to do, and the sample shows a finished wallet | Worked projects to start from (9.18) |
-| **Draw** | Exact geometry, typed — sizes on the board, sums and units in any field | Guides and drafting dimensions (1.6); curves that can be stitched (9.19) |
+| **Draw** | Exact geometry, typed — sizes on the board, sums and units in any field, guides, and dimensions drawn like drafting | Curves that can be stitched (9.19) |
 | **Construct** | Lines that know what they are: stitching follows its edge, holes follow the iron, a mirror follows its original | Seams between pieces (9.6); thickness, skiving and grain |
 | **Check** | One list of what is wrong, reachable from the board, Print and the export | Problems explained, accepted, fixed; requirements a pocket must meet |
-| **Produce** | A template that measures true, printed from the app or exported | Calibration (1.6); a cutting and stitching list (9.12) |
+| **Produce** | A template that measures true, printed from the app — calibrated to its printer — or exported | A cutting and stitching list (9.12) |
 | **Reuse and bring in** | A file that opens the same on any machine | Copy and paste, a part library, SVG import, tracing |
-| **Underneath all of it** | 1:1 measured on paper (Linux; the other platforms are R8), files that always open, nothing sent anywhere, every word translatable | Update discovery (1.6), the first network request, in an ADR |
+| **Underneath all of it** | 1:1 measured on paper (Linux; the other platforms are R8), files that always open, nothing sent anywhere unless asked, every word translatable | A measured print on Windows and macOS, from makers (R8) |
 
 ## 4. How LeatherCAD learns about leather
 
@@ -134,7 +134,6 @@ needs:
 
 ```mermaid
 flowchart TB
-  r16["1.6 · After the refinement<br/>in progress"]:::progress
   fit["Pieces that fit<br/>seams match, pockets hold"]:::candidate
   explain["Problems that explain themselves<br/>why it matters, a fix to preview"]:::candidate
   start["Start from something<br/>templates, copy and paste, a library"]:::candidate
@@ -142,20 +141,19 @@ flowchart TB
   thick["Leather has thickness<br/>folds, gussets, skiving, grain"]:::candidate
   hw["Hardware that fits<br/>real sizes, clearance, placed from an edge"]:::candidate
   geo["Robust shapes<br/>offsetting, booleans · alongside"]:::candidate
-  r16 --> fit --> explain --> start --> bring --> thick --> hw
+  fit --> explain --> start --> bring --> thick --> hw
   geo -.-> bring
   classDef progress fill:#f9a825,stroke:#b26a00,color:#1a1a1a
   classDef committed fill:#1565c0,stroke:#0d47a1,color:#ffffff
   classDef candidate fill:#e3f2fd,stroke:#1565c0,color:#0d3c78
 ```
 
-No dates and no version numbers beyond 1.6: a candidate gets its number when it becomes the next
-release. Each milestone's items, needs, *Done when* and *Not in it* are in
+No dates and no version numbers: a candidate gets its number when it becomes the next release.
+1.6, the last, is in [its record](history/roadmap-1.6.md). Each milestone's items, needs, *Done when* and *Not in it* are in
 [`roadmap.md`](roadmap.md#later); the table says what each is for.
 
 | Milestone | For the maker | Main items | Needs first |
 |---|---|---|---|
-| [1.6 — After the refinement](roadmap.md#16--the-next-release) · *in progress* | What 1.x left: update discovery, guides, drafting dimensions, calibration, taped pieces finished; problems keep their identity | 8.9, 3.10, 4.10b, 7.5, 7.2, Q4, Q33 | — |
 | [Pieces that fit](roadmap.md#pieces-that-fit) | Mating seams have the same holes, lined up; a pocket says whether the card goes in; the thread and leather are known before buying | 9.6, 9.12, 9.13, 9.14 | Nothing unbuilt |
 | [Problems that explain themselves](roadmap.md#problems-that-explain-themselves) | Every problem says why it matters; a warning that is meant can be accepted; a safe fix is one click, previewed and undoable | 9.15, Q34, 9.16, 9.17 | Q4; seams for the fix most worth having |
 | [Start from something](roadmap.md#start-from-something) | A new project starts from a worked one; good parts travel between projects | 9.18, 8.8b, 9.7, 9.25 | Built mechanisms (8.3, 4.3b) |
@@ -178,8 +176,8 @@ Two small maps, because they answer two questions. First: what the checks are bu
 
 ```mermaid
 flowchart LR
-  q4["Q4 · problems keep<br/>their identity · 1.6"]:::progress
-  q33["Q33 · hardware measured<br/>by its rim · 1.6"]:::progress
+  q4["Q4 · problems keep<br/>their identity · built"]:::built
+  q33["Q33 · hardware measured<br/>by its rim · built"]:::built
   s96["9.6 Seams"]:::candidate
   t912["9.12 Thread and the<br/>cutting list"]:::candidate
   m913["9.13 Alignment marks"]:::candidate
@@ -201,7 +199,7 @@ flowchart LR
   h93 -.->|"footprints"| h923
   s96 -.-> stack
   h93 -.->|"post length"| stack
-  classDef progress fill:#f9a825,stroke:#b26a00,color:#1a1a1a
+  classDef built fill:#2e7d32,stroke:#1b5e20,color:#ffffff
   classDef candidate fill:#e3f2fd,stroke:#1565c0,color:#0d3c78
   classDef exploring fill:#f5f5f5,stroke:#757575,color:#333333,stroke-dasharray: 5 4
 ```
@@ -209,7 +207,7 @@ flowchart LR
 - **Seams are the hinge.** Thread per seam, alignment marks, the fix that matches counts and a
   gusset's length all read a seam; nothing else unlocks as much.
 - **Q4 before acceptance.** A warning the maker accepted has to find its problem again after an
-  edit, and problems have no stable identity yet.
+  edit, which a problem's key does since Q4 (2026-10-27).
 - **Q33 before hardware rules.** Every clearance rule starts from the rim, which the edge rules
   have read since Q33 (2026-10-25).
 - A dotted line is a refinement, not a block: thread can be estimated before thickness is known, and
