@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { readoutAt } from './cursorReadout.js';
+import { caption } from './keyCaption.js';
 import { withSample } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
@@ -15,16 +16,26 @@ import { resizeWindow } from './windowSize.js';
  * `navigator.keyboard.getLayoutMap()`, stubbed here with a German one.
  */
 
-/** A key press as a keyboard of another layout sends it. */
+/**
+ * A key press as a keyboard of another layout sends it. `command` is the
+ * platform's command key: Ctrl, or ⌘ on macOS.
+ */
 async function press(
   window: Page,
-  init: { code: string; key: string; ctrlKey?: boolean; shiftKey?: boolean },
+  {
+    command = false,
+    ...init
+  }: { code: string; key: string; command?: boolean; shiftKey?: boolean },
 ): Promise<void> {
-  await window.evaluate((event) => {
-    document.body.dispatchEvent(
-      new KeyboardEvent('keydown', { ...event, bubbles: true, cancelable: true }),
-    );
-  }, init);
+  const held = process.platform === 'darwin' ? { metaKey: command } : { ctrlKey: command };
+  await window.evaluate(
+    (event) => {
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', { ...event, bubbles: true, cancelable: true }),
+      );
+    },
+    { ...init, ...held },
+  );
 }
 
 test('a tooltip at the window’s right edge is one line, 8 px inside it (R-10, mockup 16)', async () => {
@@ -72,7 +83,7 @@ test('a tooltip waits 500 ms for the pointer, comes at once for the keyboard, an
     await window.waitForTimeout(300);
     await expect(tip).toHaveCount(0);
     await expect(tip).toBeVisible();
-    await expect(tip.locator('kbd')).toHaveText('Ctrl+S');
+    await expect(tip.locator('kbd')).toHaveText(caption('Ctrl+S'));
     // Escape dismisses it where it stands, without moving the pointer.
     await window.keyboard.press('Escape');
     await expect(tip).toHaveCount(0);
@@ -96,14 +107,14 @@ test('every key shown is a cap from the keymap: tooltips, the rail, menus, the l
     await expect(window.getByRole('tooltip').locator('kbd')).toHaveText('R');
 
     await window.getByTestId('project-menu').click();
-    await expect(window.getByTestId('new').locator('kbd')).toHaveText('Ctrl+N');
-    await expect(window.getByTestId('save-as').locator('kbd')).toHaveText('Ctrl+Shift+S');
+    await expect(window.getByTestId('new').locator('kbd')).toHaveText(caption('Ctrl+N'));
+    await expect(window.getByTestId('save-as').locator('kbd')).toHaveText(caption('Ctrl+Shift+S'));
     await window.keyboard.press('Escape');
 
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-shortcuts').click();
     const zoomIn = window.locator('.shortcut-row', { hasText: 'Zoom in' });
-    await expect(zoomIn.locator('kbd')).toHaveText(['Ctrl+=']);
+    await expect(zoomIn.locator('kbd')).toHaveText([caption('Ctrl+=')]);
   });
 });
 
@@ -119,9 +130,9 @@ test('on a German or French keyboard, every window key does what it does on a US
     await expect(window.getByTestId('tool-rectangle')).toHaveClass(/active/);
 
     // Ctrl+2 and Ctrl+1 from the digit keys, whatever they type: & and é in French.
-    await press(window, { code: 'Digit2', key: 'é', ctrlKey: true });
+    await press(window, { code: 'Digit2', key: 'é', command: true });
     await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
-    await press(window, { code: 'Digit1', key: '&', ctrlKey: true });
+    await press(window, { code: 'Digit1', key: '&', command: true });
     await expect(window.getByTestId('view-design')).toHaveAttribute('aria-selected', 'true');
 
     // German QWERTZ: Z is where a US keyboard has Y, and Ctrl+Z still undoes.
@@ -131,7 +142,7 @@ test('on a German or French keyboard, every window key does what it does on a US
     await window.getByTestId('parts-list').getByText('Stitch holes').first().click();
     await window.keyboard.press('Delete');
     await expect(features).not.toHaveText(before ?? '');
-    await press(window, { code: 'KeyY', key: 'z', ctrlKey: true });
+    await press(window, { code: 'KeyY', key: 'z', command: true });
     await expect(features).toHaveText(before ?? '');
 
     // Zoom from the keys printed + and −, as before U.3: German + right of Ü,
@@ -140,13 +151,13 @@ test('on a German or French keyboard, every window key does what it does on a US
     const board = (await window.getByTestId('editor-canvas').boundingBox())!;
     const at = (): Promise<string> => readoutAt(window, board.x + 60, board.y + 60);
     const start = await at();
-    await press(window, { code: 'BracketRight', key: '+', ctrlKey: true });
+    await press(window, { code: 'BracketRight', key: '+', command: true });
     await expect.poll(at).not.toBe(start);
     const zoomedIn = await at();
-    await press(window, { code: 'Digit6', key: '-', ctrlKey: true });
+    await press(window, { code: 'Digit6', key: '-', command: true });
     await expect.poll(at).not.toBe(zoomedIn);
     const zoomedOut = await at();
-    await press(window, { code: 'Slash', key: '-', ctrlKey: true });
+    await press(window, { code: 'Slash', key: '-', command: true });
     await expect.poll(at).not.toBe(zoomedOut);
     await expect(window.getByTestId('settings-pane-shortcuts')).toBeHidden();
 
@@ -179,11 +190,11 @@ test('a key is shown as the maker’s keyboard prints it (U.3)', async () => {
     await window.getByTestId('settings-tab-shortcuts').click();
     const row = (text: string) => window.locator('.shortcut-row', { hasText: text }).locator('kbd');
     // Zoom as the + and − it prints; its − zooms, so the list is reached by ?.
-    await expect(row('Zoom in')).toHaveText(['Ctrl++']);
-    await expect(row('Zoom out')).toHaveText(['Ctrl+-']);
+    await expect(row('Zoom in')).toHaveText([caption('Ctrl++')]);
+    await expect(row('Zoom out')).toHaveText([caption('Ctrl+-')]);
     await expect(row('Keyboard shortcuts')).toHaveText(['?']);
     // Letters and digits as every keyboard prints them.
-    await expect(row('Undo')).toHaveText(['Ctrl+Z']);
-    await expect(row('Design:')).toHaveText(['Ctrl+1']);
+    await expect(row('Undo')).toHaveText([caption('Ctrl+Z')]);
+    await expect(row('Design:')).toHaveText([caption('Ctrl+1')]);
   });
 });

@@ -89,7 +89,7 @@ test('the F.2 layout at work has no accessibility violations either', async () =
     await window.getByTestId('problems-toggle').click();
 
     await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(1000, 700);
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1000, 700);
     });
     await expect(window.getByTestId('tool-rail')).toHaveClass(/collapsed/);
     await window.getByTestId('toggle-properties').click();
@@ -184,7 +184,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     const window = await instance.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
     await instance.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0]?.setSize(1440, 900);
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1440, 900);
     });
     const scan = (what: string): Promise<void> => expectNoViolations(window, what);
 
@@ -222,7 +222,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-shortcuts').click();
     await window.getByTestId('change-settings').click();
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('shortcut-clash')).toBeVisible();
     await scan('Settings › Keyboard shortcuts, a clash');
     await window.getByTestId('clash-cancel').click();

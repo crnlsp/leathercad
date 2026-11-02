@@ -96,11 +96,11 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 **Interfaces:**
 - Produces: `installers.yml`, `workflow_call` inputs `ref` (string, required) and `version` (string, optional: overrides the version baked in, for preview and candidate builds). Matrix `ubuntu-latest`, `windows-latest`, `macos-latest`. Each leg: poppler (and `xvfb-run` on Linux), `pnpm test:packaged`, then `pnpm package` (plus Flatpak and SBOM on Linux). Uploads artifact `installers-<runner.os>` holding exactly the files the release attaches today. `permissions: contents: read`. A2, A5, A7, A9, B2 and B4 call it.
 
-- [ ] Write `installers.yml`, moving the steps (with their comments) from `package.yml` and `release.yml`; keep #170's pinned Windows poppler.
-- [ ] `release.yml` `build` calls it with the tag as `ref`; `publish` downloads `installers-*` as it does now.
-- [ ] `package.yml` calls it on `pull_request`; `ci.yml` `package` keeps only what it does beyond that, or goes.
-- [ ] Push the branch; the Package run is green on all three runners.
-- [ ] Commit, PR `ci: one installer build, smoke-tested, for pull requests and releases`.
+- [x] Write `installers.yml`, moving the steps (with their comments) from `package.yml` and `release.yml`; keep #170's pinned Windows poppler.
+- [x] `release.yml` `build` calls it with the tag as `ref`; `publish` downloads `installers-*` as it does now.
+- [x] `package.yml` calls it on `pull_request`; `ci.yml` `package` keeps only what it does beyond that, or goes.
+- [x] Push the branch; the Package run is green on all three runners.
+- [x] Commit, PR `ci: one installer build, smoke-tested, for pull requests and releases`. Merged in #178.
 
 **Done when:** the PR's Package run passes on Linux, Windows and macOS through `installers.yml`; actionlint and zizmor pass; `release.yml` has no build steps of its own. The first release after this merge is the end-to-end proof. Opus, medium.
 
@@ -152,12 +152,18 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Find out first:** run `pnpm test:e2e` on `windows-latest` and `macos-latest` from a branch (`workflow_dispatch`). For every failure, decide: the test is wrong, the app is wrong, or it is platform-specific and gets `test.skip(process.platform === …, '<reason>')` the way existing specs do. Never skip one just to get green. App bugs found here are fixed in this PR (or one per bug) with a test.
 
-- [ ] Add `e2e` jobs (matrix `windows-latest`, `macos-latest`) installing poppler as `installers.yml` does.
-- [ ] Add a step that reads the head commit of the job's last green run (`gh run list --workflow nightly.yml --status success --json headSha`) and skips E2E and `bench` when develop has not moved. `properties` and the new scan always run.
-- [ ] Add a `vulnerabilities` job with the same pinned osv-scanner step as `ci.yml`.
-- [ ] Reuse the issue step: one open issue per job label (`nightly-e2e-windows`, `nightly-e2e-macos`, `nightly-vulnerabilities`), commented on when it fails again, closed by the next green run.
+- [x] Add `e2e` jobs (matrix `windows-latest`, `macos-latest`) installing poppler as `installers.yml` does.
+- [x] Add a step that reads the head commit of the job's last green run (`gh run list --workflow nightly.yml --status success --json headSha`) and skips E2E and `bench` when develop has not moved. `properties` and the new scan always run.
+- [x] Add a `vulnerabilities` job with the same pinned osv-scanner step as `ci.yml`.
+- [x] Reuse the issue step: one open issue per job label (`nightly-e2e-windows`, `nightly-e2e-macos`, `nightly-vulnerabilities`), commented on when it fails again, closed by the next green run.
 
 **Done when:** three nights green on both platforms, or each remaining failure has its own issue; an unchanged night skips E2E but runs the scan and the property tests. Opus, medium to large (unknown failures).
+
+**Changed in the doing:**
+- A scheduled run is `main`'s, at `main`'s commit, so its `headSha` never named what it tested. The schedule now starts `nightly.yml` again on `develop` (`gh workflow run --ref develop`) and does nothing else. That run is `develop`'s copy of the file at `develop`'s commit. A job `tested` reads the earlier runs at that commit (`?head_sha=`), job by job, and E2E's matrix is the platforms that have not passed there. Nothing of this runs on schedule until the file reaches `main` with 1.6; until then, run *Nightly* by hand on `develop`.
+- One job, `report`, holds `issues: write`, and only on `develop`; the jobs that run code hold none.
+- The first run on Windows and macOS failed about 380 tests on each. The causes, all fixed here: the development build ignored `XDG_CONFIG_HOME` and `XDG_STATE_HOME` off Linux, so every launch shared one profile; the window's 1280 × 840 and 860 × 600 were its outer size, so Windows opened 16 px short of the wide layout (`useContentSize`); both runners' screens are 1024 × 768 (set to 1920 × 1080 first); the tests pressed Ctrl where macOS takes ⌘, and killed a process that on Windows is not the app's.
+- Left with an issue each: #194 (Shift+F10 opens no menu on macOS; four specs skip there), #195 (a 230–320 ms frame gap during the long strap's PDF export on macOS; its spec fails the macOS nightly until fixed).
 
 ### Task A4: A change-aware PR gate
 
@@ -266,13 +272,13 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Files:** `docs/getting-started.md`, `README.md`, `docs/release-checklist.md`, `docs/roadmap.md` (R8, R10 wording only), `.github/ISSUE_TEMPLATE/config.yml` if a known-issue label needs mentioning.
 
-- [ ] A *Supported systems* table (D8, D9), with the level and what it promises.
-- [ ] The FUSE note: the AppImage needs `fuse2` (Arch `sudo pacman -S fuse2`; Ubuntu 22.04 `libfuse2`, 24.04+ `libfuse2t64`), or run it with `--appimage-extract-and-run`.
-- [ ] `release-checklist.md`: the level rules, what a hotfix skips, and that the print check uses the AUR build once B3 lands.
-- [ ] R8 and R10: level-3 items collected through the print-report form. Do not write ☐ or ◐ in them (#165 learned this).
-- [ ] Define the label `known-issue` (in the PR description and in the checklist): B2 lists open ones in each release's notes.
+- [x] A *Supported systems* table (D8, D9), with the level and what it promises.
+- [x] The FUSE note: the AppImage needs `fuse2` (Arch `sudo pacman -S fuse2`; Ubuntu 22.04 `libfuse2`, 24.04+ `libfuse2t64`), or run it with `--appimage-extract-and-run`.
+- [x] `release-checklist.md`: the level rules, what a hotfix skips, and that the print check uses the AUR build once B3 lands.
+- [x] R8 and R10: level-3 items collected through the print-report form. Do not write ☐ or ◐ in them (#165 learned this).
+- [x] Define the label `known-issue` (in the PR description and in the checklist): B2 lists open ones in each release's notes.
 
-**Done when:** a fresh reader can answer "does it run on my system, and what happens if it breaks there?" from `getting-started.md`; `tools/release-gate.sh docs/roadmap.md` still reports the same as before. Sonnet, small.
+**Done when:** a fresh reader can answer "does it run on my system, and what happens if it breaks there?" from `getting-started.md`; `tools/release-gate.sh docs/roadmap.md` still reports the same as before. Sonnet, small. Merged in #173.
 
 ### Task B2: Release by platform
 
@@ -284,10 +290,10 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Files:** `.github/workflows/release.yml`, `CONTRIBUTING.md`.
 
-- [ ] `publish` runs `if: always()` when a release was created; downloads the `installers-*` that exist; **fails without attaching anything when the Linux artifact is missing** (level 1).
-- [ ] Attests and attaches what exists; appends to the release notes a *Missing in this release* line per absent platform with its failed job's link, and *Known issues* listing open `known-issue` issues.
-- [ ] Rewrite *If a release goes wrong* to match.
-- [ ] Verify on a fork or a scratch repository with a deliberately failing Windows leg.
+- [x] `publish` runs `if: always()` when a release was created; downloads the `installers-*` that exist; **fails without attaching anything when the Linux artifact is missing** (level 1).
+- [x] Attests and attaches what exists; appends to the release notes a *Missing in this release* line per absent platform with its failed job's link, and *Known issues* listing open `known-issue` issues.
+- [x] Rewrite *If a release goes wrong* to match.
+- [x] Verify on a fork or a scratch repository with a deliberately failing Windows leg. Merged in #181.
 
 **Done when:** a run with Windows failing publishes Linux and macOS files plus the missing line; a run with Linux failing publishes nothing. Opus, small to medium.
 
@@ -297,9 +303,10 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Files:** create `packaging/aur/PKGBUILD`, `packaging/aur/.SRCINFO`, `packaging/aur/README.md` (how to bump: `updpkgsums`, `makepkg --printsrcinfo > .SRCINFO`, push to `ssh://aur@aur.archlinux.org/leathercad-bin.git`).
 
-- [ ] PKGBUILD: `source` = the release AppImage `LeatherCAD-${pkgver}-x86_64.AppImage`; `prepare` extracts it with `--appimage-extract`; `package` installs to `/opt/leathercad`, a `/usr/bin/leathercad` link, the desktop entry, icons and `apps/desktop/build/linux/io.github.crnlsp.leathercad.xml`; licence Apache-2.0; maintainer line with the noreply address.
-- [ ] `namcap` the PKGBUILD and the built package; fix what it reports, including `depends`.
-- [ ] Maintainer step (not the agent): create the AUR account and push the first version.
+- [x] PKGBUILD: `source` = the release AppImage `LeatherCAD-${pkgver}-x86_64.AppImage`; `prepare` extracts it with `--appimage-extract`; `package` installs to `/opt/leathercad`, a `/usr/bin/leathercad` link, the desktop entry, icons and `apps/desktop/build/linux/io.github.crnlsp.leathercad.xml`; licence Apache-2.0; maintainer line with the noreply address.
+- [x] `namcap` the PKGBUILD and the built package; fix what it reports, including `depends`.
+- [x] The package code merged in #175.
+- [ ] Maintainer step (not the agent): create the AUR account and push the first version. **Postponed until after the 1.6 release** (maintainer's decision, 2026-11-01).
 
 **Done when:** `makepkg -si` on the maintainer's CachyOS installs it; LeatherCAD appears in the menu, opens a `.lcp` by double-click, and prints the test sheet true to size. Sonnet, small; one maintainer step.
 
@@ -317,11 +324,13 @@ Start in parallel: **A1, B1, B3, C1, C2**. Files two lanes share: `CONTRIBUTING.
 
 **Done when:** the release workflow (scratch run) attaches an attested `.deb`; it installs and passes the smoke test on 22.04, 24.04 and 26.04; uninstalling removes the menu entry. Sonnet, medium.
 
-**Changed in the doing:** A7 does not exist yet, so B4 is done without `systems.yml`. B4 installs the `.deb` on `ubuntu-latest` (24.04) in `installers.yml`, smoke-tests it and uninstalls it. The installs on 22.04 and 26.04 are A7's: its matrix runs `sudo apt-get install ./LeatherCAD-*.deb`, then the smoke test, on `ubuntu-22.04` and `ubuntu-26.04`, as on the other Ubuntu image. B4 checked on all three in containers that the package's dependencies resolve and the binary starts (without the sandbox, which a container cannot test). What B4 found out is in its pull request.
+**Changed in the doing:** A7 does not exist yet, so B4 is done without `systems.yml`. B4 installs the `.deb` on `ubuntu-latest` (24.04) in `installers.yml`, smoke-tests it and uninstalls it. The installs on 22.04 and 26.04 are A7's: its matrix runs `sudo apt-get install ./LeatherCAD-*.deb`, then the smoke test, on `ubuntu-22.04` and `ubuntu-26.04`, as on the other Ubuntu image. B4 checked on all three in containers that the package's dependencies resolve and the binary starts (without the sandbox, which a container cannot test). What B4 found out is in its pull request. Merged in #186.
 
 ### Task B5: Microsoft Store (MSIX)
 
 **After:** A1, B2.
+
+**Postponed until after the 1.6 release** (maintainer's decision, 2026-11-01).
 
 **Why:** the Store signs the package for free, updates the app itself, is installable with winget, and is where Windows users look.
 
@@ -359,13 +368,13 @@ Not built now; listed so nobody rebuilds the reasoning.
 
 **Why:** it is not used. Deleting its config does not stop it: with no `.coderabbit.yaml` it reviews with defaults until its access to the repository is removed.
 
-**Today:** `.coderabbit.yaml`; `CONTRIBUTING.md` lines 144–148; `docs/claude-code-setup.md` line 53. **Done on branch `chore/c1-remove-coderabbit`** (commit "chore: remove CodeRabbit reviews": the config and both doc mentions). An earlier draft of it also deleted `ci.yml`'s `cross-platform` job (Windows and macOS unit tests); that part was dropped.
+**Today:** `.coderabbit.yaml`; `CONTRIBUTING.md` lines 144–148; `docs/claude-code-setup.md` line 53. **Merged in #179** ("chore: remove CodeRabbit reviews": the config and both doc mentions). An earlier draft of it also deleted `ci.yml`'s `cross-platform` job (Windows and macOS unit tests); that part was dropped.
 
 **Decided 2026-10-31: the Windows and macOS unit tests stay.** Both rulesets require *Unit tests on windows-latest* and *macos-latest*, and the tests caught 9 failures in a month. C1 removes CodeRabbit only.
 
 - [x] Check the branch leaves `ci.yml`'s `cross-platform` job and its two mentions in `docs/testing.md` exactly as on `develop`.
 - [x] `git grep -i coderabbit` finds nothing outside this plan.
-- [ ] Maintainer step: GitHub → Settings → Applications → Installed GitHub Apps → CodeRabbit → Configure → remove this repository (or uninstall).
+- [x] Maintainer step: GitHub → Settings → Applications → Installed GitHub Apps → CodeRabbit → Configure → remove this repository (or uninstall). Done 2026-11-01.
 
 **Done when:** the next PR gets no CodeRabbit comment; nothing in the repository mentions it. PR `chore: remove CodeRabbit reviews`. Sonnet, small; one maintainer step.
 
@@ -381,9 +390,9 @@ Not built now; listed so nobody rebuilds the reasoning.
 
 **Interfaces:** Produces job `auto-merge`: `on: pull_request` (`opened`, `reopened`), branches `[develop]`; `if: github.event.pull_request.user.login == 'dependabot[bot]' && (startsWith(github.head_ref, 'dependabot/npm_and_yarn/develop/dependencies-') || startsWith(github.head_ref, 'dependabot/github_actions/develop/actions-'))` (the author check, not `github.actor`, which zizmor flags as spoofable); `permissions: contents: write, pull-requests: write`; one step `gh pr merge --auto --squash --subject "$TITLE" "$URL"` with both from `env:`; no checkout; `timeout-minutes: 5`.
 
-- [ ] Both groups get `update-types: [minor, patch]`, so majors arrive as their own PRs, outside the auto-merge prefixes.
-- [ ] Add the workflow; actionlint and zizmor pass.
-- [ ] Next weekly run: the grouped PR shows auto-merge enabled and merges when the gate is green; a major (if one comes) does not.
+- [x] Both groups get `update-types: [minor, patch]`, so majors arrive as their own PRs, outside the auto-merge prefixes.
+- [x] Add the workflow; actionlint and zizmor pass. Merged in #177.
+- [ ] Next weekly run: the grouped PR shows auto-merge enabled and merges when the gate is green; a major (if one comes) does not. No Dependabot PR has arrived since #177 merged (2026-11-01).
 
 **Done when:** a Dependabot grouped minor/patch PR merges with no click (or with one approval click, if the setting above stays); majors, the release-please PR and every human PR are untouched. Sonnet, small.
 

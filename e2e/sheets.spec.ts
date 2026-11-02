@@ -7,6 +7,7 @@ import { expect, test, type ElectronApplication, type Locator, type Page } from 
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
+import { caption } from './keyCaption.js';
 import { launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
 import { choosePaper, fromProjectMenu } from './projectMenu.js';
@@ -47,7 +48,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: paths.pdf });
         // Do not launch a real PDF viewer during a test run.
         shell.openPath = async () => '';
-        BrowserWindow.getAllWindows()[0]?.setSize(1600, 1000);
+        BrowserWindow.getAllWindows()[0]?.setContentSize(1600, 1000);
       },
       { project: PRINT_TEST, pdf },
     );
@@ -234,7 +235,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(window.getByTestId('tool-select')).toBeVisible();
     await expect(window.getByTestId('tool-measure')).toHaveCount(0);
     await expect(window.getByTestId('rail-note')).toHaveText(
-      'Drawing tools are in Design · Ctrl+1',
+      `Drawing tools are in Design · ${caption('Ctrl+1')}`,
     );
     // The options row says what a click does here, with the key from the keymap.
     const hint = window.getByTestId('sheets-hint');
@@ -283,7 +284,7 @@ test('Design and Sheets each keep their camera, and switching changes nothing (7
     const design = await canvasImage(canvas);
 
     // By shortcut, and back by the switch.
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
     await window.getByTestId('view-design').click();
     await expect(canvas).toHaveAttribute('data-view', 'design');
@@ -293,7 +294,7 @@ test('Design and Sheets each keep their camera, and switching changes nothing (7
     // And by the switch to the sheets.
     await window.getByTestId('view-sheets').click();
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
-    await window.keyboard.press('Control+1');
+    await window.keyboard.press('ControlOrMeta+1');
     await expect(canvas).toHaveAttribute('data-view', 'design');
   });
 });
@@ -454,7 +455,9 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     await expect(paper).toHaveAccessibleName('Paper: 3 × A4 portrait');
 
     // 5. Nor does the window's size.
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1100, 760));
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1100, 760),
+    );
     await window.getByTestId('view-sheets').click();
     await expect(summary).toHaveText('3 sheets of A4, portrait. Strap is taped across sheets 2–3.');
     await expect(window.getByTestId('sheets-taped')).toContainText('Sheets 2–3');

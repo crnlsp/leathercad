@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { caption } from './keyCaption.js';
 import { withSample } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -40,7 +41,7 @@ test('Select says what a click, a key and a drag do, and what a selection adds (
     await window.getByTestId('tool-select').click();
     // Nothing selected: the way in, as the mockup draws it, keys as caps.
     await expect(hint(window, 'hints.clickSelects')).toHaveText('Click selects');
-    await expect(hint(window, 'hints.addsOrRemoves').locator('kbd')).toHaveText('Shift');
+    await expect(hint(window, 'hints.addsOrRemoves').locator('kbd')).toHaveText(caption('Shift'));
     await expect(hint(window, 'hints.dragBox')).toHaveText('Drag a box to select');
     await expect(hint(window, 'hints.deletes')).toHaveCount(0);
     await expect(hints(window).last().locator('kbd')).toHaveText('?');
@@ -166,7 +167,7 @@ test('the Sheets view has its hints too, with the keys as caps (U.11)', async ()
     await window.getByTestId('view-sheets').click();
     const bar = window.getByTestId('sheets-hint');
     await expect(bar).toContainText('Click a piece to see where it prints');
-    await expect(bar.locator('kbd').first()).toHaveText('Ctrl+P');
+    await expect(bar.locator('kbd').first()).toHaveText(caption('Ctrl+P'));
     await expect(bar.locator('kbd').last()).toHaveText('?');
   });
 });

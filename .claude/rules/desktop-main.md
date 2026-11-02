@@ -53,7 +53,9 @@ on Linux, Windows and macOS (`docs/architecture.md` §7).
 
 What CI covers:
 - the unit tests and the packaged smoke test on all three;
-- the e2e and pixel suites on Linux only;
+- the e2e suite on Linux on every pull request, and on Windows and macOS nightly, after the
+  merge (`nightly.yml`);
+- the pixel suite on Linux only;
 - nothing that uses a real printer or a real native dialog.
 
 So a pull request that changes this behaviour names each platform it was run on by hand, and lists

@@ -102,12 +102,29 @@ test('the zoom keys zoom, and Shift+1 fits the pattern again (8.4b, U.4)', async
     const scale = (): Promise<string> => readoutAt(window, board.x + 60, board.y + 60);
     await window.keyboard.press('Shift+Digit1');
     const fitted = await scale();
-    await window.keyboard.press('Control+Equal');
+    await window.keyboard.press('ControlOrMeta+Equal');
     await expect.poll(scale).not.toBe(fitted);
     await window.keyboard.press('Shift+Digit1');
     await expect.poll(scale).toBe(fitted);
-    await window.keyboard.press('Control+Minus');
+    await window.keyboard.press('ControlOrMeta+Minus');
     await expect.poll(scale).not.toBe(fitted);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the window opens with 1280 × 840 of room, and never has less than 860 × 600 (UI Foundations §7.2)', async () => {
+  // The room inside the frame, which the layout measures. Linux under Xvfb has
+  // no frame, so only Windows and macOS could tell the two apart: there the
+  // window opened 16 px short of the wide layout, and shrank to 568 px high.
+  const { app, window } = await openApp();
+  try {
+    const room = (): Promise<readonly number[]> => window.evaluate(() => [innerWidth, innerHeight]);
+    expect(await room()).toEqual([1280, 840]);
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]!.setContentSize(400, 300),
+    );
+    await expect.poll(room).toEqual([860, 600]);
   } finally {
     await closeApp(app);
   }

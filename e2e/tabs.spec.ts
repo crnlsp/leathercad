@@ -48,11 +48,11 @@ test('Ctrl+Page Down and Up go round the tabs; the title is the active one’s',
     await openSample(window);
     await expect.poll(() => window.title()).toBe('Bifold wallet — LeatherCAD');
 
-    await window.keyboard.press('Control+PageDown');
+    await window.keyboard.press('ControlOrMeta+PageDown');
     await expect(window.getByTestId('part-count')).toHaveText('1');
     // Unsaved, and the title says so.
     await expect.poll(() => window.title()).toBe('• Untitled — LeatherCAD');
-    await window.keyboard.press('Control+PageUp');
+    await window.keyboard.press('ControlOrMeta+PageUp');
     await expect(window.getByTestId('part-count')).toHaveText('3');
   });
 });
@@ -102,7 +102,7 @@ test('with every project closed the app stays open, on its start screen', async 
     await expect.poll(() => window.title()).toBe('LeatherCAD');
 
     // Keys that need a project do nothing; the Project menu says why.
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await window.getByTestId('project-menu').click();
     await expect(window.getByTestId('save-as')).toHaveAttribute('aria-disabled', 'true');
     await window.keyboard.press('Escape');
@@ -193,7 +193,7 @@ test('the open tabs come back at the next start, the one in front in front', asy
         await window.getByTestId('save').click();
         await expect(window.getByTestId('save-state')).toHaveText('Saved');
         await expect(window.getByTestId('project-name')).toHaveText(name);
-        await window.keyboard.press('Control+n');
+        await window.keyboard.press('ControlOrMeta+n');
       }
       // Wallet in front; the empty Untitled is not kept.
       await tabs(window).first().click();
@@ -239,7 +239,7 @@ test('opening a project that is open already goes to its tab, which bounces', as
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).toHaveText('Saved');
-    await window.keyboard.press('Control+n');
+    await window.keyboard.press('ControlOrMeta+n');
 
     await fromProjectMenu(window, 'open');
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
@@ -428,7 +428,7 @@ test('more tabs than the strip shows: a list of them all (8.12)', async () => {
     async (window) => {
       const all = window.getByTestId('all-tabs');
       await expect(all).toHaveCount(0);
-      for (let i = 0; i < 14; i++) await window.keyboard.press('Control+n');
+      for (let i = 0; i < 14; i++) await window.keyboard.press('ControlOrMeta+n');
       await expect(all).toBeVisible();
       await all.click();
       await window.getByTestId('all-tabs-0').click();
@@ -444,9 +444,9 @@ test('more tabs than the strip shows: a list of them all (8.12)', async () => {
 test('a tab is dragged along the strip, or moved with Ctrl+Shift+Page Up and Down (8.12)', async () => {
   await withApp(async (window) => {
     await renameProject(window, 'Wallet');
-    await window.keyboard.press('Control+n');
+    await window.keyboard.press('ControlOrMeta+n');
     await renameProject(window, 'Belt');
-    await window.keyboard.press('Control+n');
+    await window.keyboard.press('ControlOrMeta+n');
     await renameProject(window, 'Strap');
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
     await expect(tabs).toHaveText(['Wallet', 'Belt', 'Strap']);
@@ -460,9 +460,9 @@ test('a tab is dragged along the strip, or moved with Ctrl+Shift+Page Up and Dow
     await expect(tabs).toHaveText(['Strap', 'Wallet', 'Belt']);
 
     // The keys move the active one, Strap, one place at a time.
-    await window.keyboard.press('Control+Shift+PageDown');
+    await window.keyboard.press('ControlOrMeta+Shift+PageDown');
     await expect(tabs).toHaveText(['Wallet', 'Strap', 'Belt']);
-    await window.keyboard.press('Control+Shift+PageUp');
+    await window.keyboard.press('ControlOrMeta+Shift+PageUp');
     await expect(tabs).toHaveText(['Strap', 'Wallet', 'Belt']);
   });
 });
@@ -476,9 +476,9 @@ test('Ctrl+Shift+T opens the project last closed again (8.12)', async () => {
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).toHaveText('Saved');
-    await window.keyboard.press('Control+w');
+    await window.keyboard.press('ControlOrMeta+w');
     await expect(window.getByTestId('start-screen')).toBeVisible();
-    await window.keyboard.press('Control+Shift+t');
+    await window.keyboard.press('ControlOrMeta+Shift+t');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     await expect(window.getByTestId('part-count')).toHaveText('1');
   });
@@ -496,7 +496,7 @@ test('a recent project is pinned to the top of the start screen, or taken off it
           },
           join(folder, `${name}.lcp`),
         );
-        await window.keyboard.press('Control+n');
+        await window.keyboard.press('ControlOrMeta+n');
         await drawAPanel(window, { parts: '1' });
         await window.getByTestId('save').click();
         await expect(window.getByTestId('save-state')).toHaveText('Saved');
@@ -529,7 +529,7 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
   await withApp(
     async (window, app) => {
       // Settings › General: keep unsaved projects when closing.
-      await window.keyboard.press('Control+Comma');
+      await window.keyboard.press('ControlOrMeta+Comma');
       await window.getByTestId('setting-keep-unsaved').check();
       await window.keyboard.press('Escape');
 
@@ -547,7 +547,7 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
       await window.getByTestId('view-sheets').click();
 
       // An untitled project with work in it: kept, not asked about.
-      await window.keyboard.press('Control+n');
+      await window.keyboard.press('ControlOrMeta+n');
       await drawAPanel(window, { parts: '1' });
       await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
       await expect.poll(() => app.windows().length).toBe(0);

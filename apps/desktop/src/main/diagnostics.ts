@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { app, crashReporter, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
 
+import { xdgHome } from './xdg.js';
+
 /**
  * What the app leaves behind when it fails on someone else's machine: a log
  * and, for a native crash, a minidump. Both stay on the machine. Nothing is
@@ -60,10 +62,17 @@ export function watchWindow(window: BrowserWindow): void {
   window.on('responsive', () => log.info('window responsive again'));
 }
 
-/** Where the log and crash dumps go: XDG state on Linux, userData elsewhere. */
+/**
+ * Where the log, crash dumps and recovery copies go: XDG state on Linux,
+ * userData elsewhere — unless `xdgHome` honours XDG_STATE_HOME there.
+ */
 export function stateDirectory(): string {
+  const xdg = xdgHome('XDG_STATE_HOME', {
+    platform: process.platform,
+    packaged: app.isPackaged,
+    env: process.env,
+  });
+  if (xdg !== undefined) return join(xdg, 'leathercad');
   if (process.platform !== 'linux') return app.getPath('userData');
-  const xdg = process.env['XDG_STATE_HOME'];
-  const base = xdg !== undefined && xdg !== '' ? xdg : join(app.getPath('home'), '.local', 'state');
-  return join(base, 'leathercad');
+  return join(app.getPath('home'), '.local', 'state', 'leathercad');
 }

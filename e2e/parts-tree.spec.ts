@@ -368,7 +368,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     const eye = window.getByTestId('feature-visible-outer-outline');
     await window.keyboard.press('Space');
     await expect(eye).toHaveAttribute('aria-pressed', 'false');
-    await window.keyboard.press('Control+z');
+    await window.keyboard.press('ControlOrMeta+z');
     await expect(eye).toHaveAttribute('aria-pressed', 'true');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
 
@@ -381,7 +381,7 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     await window.keyboard.press('Enter');
     await expect(row(window, 'outer-outline')).toHaveAccessibleName('Edge');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
-    await window.keyboard.press('Control+z');
+    await window.keyboard.press('ControlOrMeta+z');
     await expect(row(window, 'outer-outline')).toHaveAccessibleName('Outline');
     await window.keyboard.press('F2');
     await field.fill('Nothing');
@@ -452,6 +452,7 @@ test('a rename ends with its row: undone away and redone, the row comes back as 
 });
 
 test('a locked feature is reached from the tree by keyboard, and unlocked from its menu (F.2)', async () => {
+  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
   await withSample(async (window) => {
     await row(window, 'outer-outline').hover();
     await window.getByTestId('feature-locked-outer-outline').click();
@@ -530,7 +531,7 @@ test('Design says only what does not print; the Sheets view says where each piec
       'Hidden. Not printed. It is hidden.',
     );
 
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(window.getByTestId('sheets-group-1')).toContainText('Outer');
     await expect(window.getByTestId('sheets-not-printed')).toContainText('It is hidden.');
     await expect(window.locator('[data-testid^="part-not-printed-"]')).toHaveCount(0);
@@ -546,7 +547,7 @@ test('the tree has no accessibility violations, its pieces open or closed', asyn
       await window.getByTestId(`part-fold-${id}`).click();
     }
     await scan('every piece closed');
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await scan('on the Sheets view');
   });
 });
@@ -575,7 +576,7 @@ test('a fold is its project’s: another with the same pieces opens with none fo
     await expect(folded(window)).toHaveCount(3);
 
     // …and once it is closed, nothing it folded is left for the next project.
-    await window.keyboard.press('Control+w');
+    await window.keyboard.press('ControlOrMeta+w');
     await expect(tabs).toHaveCount(1);
     await expect.soft(folded(window), 'folded in the tab that stayed').toHaveCount(0);
     await openSample(window);
@@ -594,7 +595,7 @@ test('a piece deleted and brought back by undo comes back folded (PERF-016)', as
     await window.getByTestId('delete-part-pocket').click();
     await expect(window.getByTestId('part-count')).toHaveText('2');
     // The tab keeps the fold of a piece the project no longer has: undo can bring it back.
-    await window.keyboard.press('Control+z');
+    await window.keyboard.press('ControlOrMeta+z');
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await expect(piece(window, 'pocket')).toHaveAttribute('aria-expanded', 'false');
   });

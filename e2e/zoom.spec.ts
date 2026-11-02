@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
+import { caption } from './keyCaption.js';
 import { openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
@@ -43,10 +44,10 @@ test('the control follows the zoom live, and Ctrl+0 is true size: 100 mm is 377.
     // The keys, with the pointer off the board: nothing else changes the status.
     await window.getByTestId('status-bar').hover();
     const wheeled = await percent(window);
-    await window.keyboard.press('Control+Equal');
+    await window.keyboard.press('ControlOrMeta+Equal');
     await expect.poll(() => percent(window)).toBeGreaterThan(wheeled);
 
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await expect(window.getByTestId('zoom-level')).toHaveText('100 %');
     // The millimetres under two points 378 CSS px apart: 100 mm, to the readout's 0.01.
     const y = board.y + board.height / 2;
@@ -56,13 +57,13 @@ test('the control follows the zoom live, and Ctrl+0 is true size: 100 mm is 377.
     expect(Math.abs(right - left - 378 / TRUE_SIZE)).toBeLessThan(0.02);
 
     // − and + step along round stops (U.4): 75, 67, 50 below true size.
-    await window.keyboard.press('Control+Minus');
+    await window.keyboard.press('ControlOrMeta+Minus');
     await expect(window.getByTestId('zoom-level')).toHaveText('75 %');
     await window.getByTestId('zoom-out').click();
     await expect(window.getByTestId('zoom-level')).toHaveText('67 %');
-    await window.keyboard.press('Control+Equal');
-    await window.keyboard.press('Control+Equal');
-    await window.keyboard.press('Control+Equal');
+    await window.keyboard.press('ControlOrMeta+Equal');
+    await window.keyboard.press('ControlOrMeta+Equal');
+    await window.keyboard.press('ControlOrMeta+Equal');
     await expect(window.getByTestId('zoom-level')).toHaveText('125 %');
   } finally {
     await closeApp(app);
@@ -77,14 +78,14 @@ test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its h
     await window.getByTestId('tool-select').click();
     const level = window.getByTestId('zoom-level');
 
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await expect(level).toHaveText('100 %');
     await window.keyboard.press('Shift+Digit1');
     await expect.poll(() => percent(window)).not.toBe(100);
     const fitted = await percent(window);
     // A German keyboard types ! on Shift+1, a French one 1: the same key, the same fit.
     for (const key of ['!', '1']) {
-      await window.keyboard.press('Control+0');
+      await window.keyboard.press('ControlOrMeta+0');
       await expect(level).toHaveText('100 %');
       await press(window, { code: 'Digit1', key, shiftKey: true });
       await expect.poll(() => percent(window)).toBe(fitted);
@@ -113,7 +114,7 @@ test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its h
     await expect.poll(() => percent(window)).toBe(framed);
 
     // Typed into a field, Shift+1 is a !, not a fit.
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await fromProjectMenu(window, 'rename');
     const name = window.getByTestId('project-name-input');
     await name.press('End');
@@ -135,7 +136,7 @@ test('the zoom menu works by keyboard alone, and gives focus back', async () => 
     await window.keyboard.press('ArrowDown');
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('zoom-true-size')).toBeFocused();
-    await expect(window.getByTestId('zoom-true-size')).toContainText('Ctrl+0');
+    await expect(window.getByTestId('zoom-true-size')).toContainText(caption('Ctrl+0'));
     await window.keyboard.press('Enter');
     await expect(level).toHaveText('100 %');
     await expect(level).toBeFocused();
@@ -172,7 +173,7 @@ test('a press on the control with the pointer leaves the keys to the board', asy
   const { app, window } = await openApp();
   try {
     const level = window.getByTestId('zoom-level');
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await expect(level).toHaveText('100 %');
 
     // Enter finishes a polyline: it must not press − again, nor reopen the menu.
@@ -181,7 +182,7 @@ test('a press on the control with the pointer leaves the keys to the board', asy
     await window.keyboard.press('Enter');
     await window.keyboard.press('Space');
     // A key that does zoom, after them: + from 75 is 100, and from 67 or 50 it is not.
-    await window.keyboard.press('Control+Equal');
+    await window.keyboard.press('ControlOrMeta+Equal');
     await expect(level).toHaveText('100 %');
 
     await level.click();
@@ -201,16 +202,16 @@ test('the same control drives the Sheets view, where Fit selection says why it c
     await openSample(window);
     await expect(window.getByTestId('part-count')).not.toHaveText('0');
     const level = window.getByTestId('zoom-level');
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await expect(level).toHaveText('100 %');
 
     // The Sheets camera's own zoom, not the board's.
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(window.getByTestId('editor-canvas')).toHaveAttribute('data-view', 'sheets');
     await expect.poll(() => percent(window)).not.toBe(100);
     const sheets = await percent(window);
 
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await expect(level).toHaveText('100 %');
     await window.getByTestId('zoom-fit').click();
     await expect.poll(() => percent(window)).toBe(sheets);
@@ -227,7 +228,7 @@ test('the same control drives the Sheets view, where Fit selection says why it c
     await window.keyboard.press('Escape');
 
     // Back on the board, its own zoom, as it was left.
-    await window.keyboard.press('Control+1');
+    await window.keyboard.press('ControlOrMeta+1');
     await expect(level).toHaveText('100 %');
   } finally {
     await closeApp(app);
@@ -238,9 +239,9 @@ test('a change of view says its own zoom at once, with no animation frame to pai
   const { app, window } = await openApp();
   try {
     const level = window.getByTestId('zoom-level');
-    await window.keyboard.press('Control+0');
+    await window.keyboard.press('ControlOrMeta+0');
     await expect(level).toHaveText('100 %');
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect.poll(() => percent(window)).not.toBe(100);
     const sheets = (await level.textContent()) ?? '';
 
@@ -259,9 +260,9 @@ test('a change of view says its own zoom at once, with no animation frame to pai
         }),
     );
 
-    await window.keyboard.press('Control+1');
+    await window.keyboard.press('ControlOrMeta+1');
     await expect(level).toHaveText('100 %');
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(level).toHaveText(sheets);
   } finally {
     await closeApp(app);

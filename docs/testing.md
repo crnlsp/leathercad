@@ -420,19 +420,29 @@ Instrumented and sharing the machine with every other file, it measured 25–35 
 runners, so `test:coverage` excludes it and `test:perf` runs it afterwards, alone, serially and
 without coverage — in CI and in `pnpm check` alike. `pnpm test` still runs it with everything else.
 
-Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed, reporting
-a failure as an issue; and the benchmarks, uploaded as a trend. Weekly (`weekly.yml`): mutation
-testing of `geometry` and `domain`, reporting a failure as an issue too. CodeQL runs on every pull
-request and push, and OpenSSF Scorecard on `main`; both skipped themselves while the repository was
-private.
+Nightly (`nightly.yml`): property tests at `numRuns: 10000` with a random, printed seed; the E2E
+suite on Windows and macOS, which a pull request runs on Linux only; the known-vulnerability scan;
+and the benchmarks, uploaded as a trend. E2E and the benchmarks run only when they have not passed
+at that commit already, so a night `develop` did not move skips them; the property tests and the
+scan always run, because a fresh seed or a new advisory can fail them without a commit. Both E2E
+runners' screens start at 1024 × 768, and Windows and macOS fit a window into its screen, so the
+job sets them to 1920 × 1080 first (`tools/ci/full-hd-display.swift` on macOS). Each job
+reports to an issue of its own (labels `nightly-property`, `nightly-e2e-windows`,
+`nightly-e2e-macos`, `nightly-vulnerabilities`): a failure opens it, or comments on the open one,
+and the first run that passes closes it. Weekly (`weekly.yml`): mutation testing of `geometry` and
+`domain`, reporting a failure as an issue too. CodeQL runs on every pull request and push, and
+OpenSSF Scorecard on `main`; both skipped themselves while the repository was private.
 
 GitHub runs a schedule from the workflow file on the default branch, `main`, which holds the last
-release. So the nightly and weekly jobs check out `develop` themselves, where the code is being
-written: before they did, they tested only what had already shipped. Two consequences:
+release, while the code is being written on `develop`. The two schedules handle that differently:
 
-- **A change to a scheduled workflow takes effect on schedule once it reaches `main`,** with the
-  next release. Until then, run it by hand on `develop` (*Actions* → the workflow → *Run
-  workflow*), which uses `develop`'s copy of the file.
+- **The nightly schedule starts `nightly.yml` again on `develop`** and does nothing else, so the
+  night runs `develop`'s copy of the file at `develop`'s commit, and a change to it takes effect the
+  night after it merges. Only a run on `develop` opens or closes issues; a run started by hand on
+  another branch (*Actions* → *Nightly* → *Run workflow*) is watched by whoever started it.
+- **The weekly job checks out `develop` itself.** A change to `weekly.yml` takes effect on schedule
+  once it reaches `main`, with the next release. Until then, run it by hand on `develop`, which uses
+  `develop`'s copy of the file.
 - **A failure names its commit,** because `develop` moves on: the nightly issue gives the commit and
   the seed, which together reproduce it anywhere.
 

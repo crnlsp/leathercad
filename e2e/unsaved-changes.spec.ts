@@ -23,13 +23,26 @@ async function requestClose(app: ElectronApplication): Promise<void> {
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
 }
 
-/** Resolves once the app has quit, however it went. */
+/**
+ * Resolves once the close went through: the app has quit, however it went. On
+ * macOS an app stays running with no window, as the platform's apps do
+ * (`window-all-closed` in the main process), so there the window is gone.
+ */
 async function closed(app: ElectronApplication): Promise<boolean> {
-  const process = app.process();
-  if (process.exitCode !== null) return true;
+  if (process.platform === 'darwin') {
+    return expect
+      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length))
+      .toBe(0)
+      .then(
+        () => true,
+        () => false,
+      );
+  }
+  const launched = app.process();
+  if (launched.exitCode !== null) return true;
   return new Promise((done) => {
     const timer = setTimeout(() => done(false), 10_000);
-    process.once('exit', () => {
+    launched.once('exit', () => {
       clearTimeout(timer);
       done(true);
     });
@@ -93,7 +106,7 @@ test('New and Open start a tab of their own, and ask nothing (8.12)', async () =
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
 
     // Ctrl+N: a clean, empty project beside the work, which stays in its tab.
-    await window.keyboard.press('Control+n');
+    await window.keyboard.press('ControlOrMeta+n');
     await expect(dialog).toHaveCount(0);
     await expect(tabs).toHaveCount(2);
     await expect(window.getByTestId('part-count')).toHaveText('0');
@@ -127,13 +140,13 @@ test('closing a tab with unsaved work asks, and a cancelled save keeps it (8.12)
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+n');
+    await window.keyboard.press('ControlOrMeta+n');
     const dialog = window.getByTestId('unsaved-dialog');
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
     await expect(tabs).toHaveCount(2);
 
     // An untouched tab closes without a word.
-    await window.keyboard.press('Control+w');
+    await window.keyboard.press('ControlOrMeta+w');
     await expect(dialog).toHaveCount(0);
     await expect(tabs).toHaveCount(1);
     await expect(window.getByTestId('part-count')).toHaveText('1');
@@ -142,7 +155,7 @@ test('closing a tab with unsaved work asks, and a cancelled save keeps it (8.12)
     await app.evaluate(({ dialog: native }) => {
       native.showSaveDialog = async () => ({ canceled: true, filePath: '' });
     });
-    await window.keyboard.press('Control+w');
+    await window.keyboard.press('ControlOrMeta+w');
     await expect(dialog).toContainText('Save changes to “Untitled”?');
     await dialog.getByTestId('unsaved-save').click();
     await expect(dialog).toHaveCount(0);
@@ -154,7 +167,7 @@ test('closing a tab with unsaved work asks, and a cancelled save keeps it (8.12)
     await app.evaluate(({ dialog: native }, path) => {
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
-    await window.keyboard.press('Control+w');
+    await window.keyboard.press('ControlOrMeta+w');
     await dialog.getByTestId('unsaved-save').click();
     await expect(window.getByTestId('start-screen')).toBeVisible();
     await expect(tabs).toHaveCount(0);
@@ -169,7 +182,7 @@ test('closing the window with several unsaved projects asks once, about them all
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+n');
+    await window.keyboard.press('ControlOrMeta+n');
     await drawAPanel(window, { parts: '1' });
     await renameProject(window, 'Second');
     const dialog = window.getByTestId('unsaved-projects-dialog');
