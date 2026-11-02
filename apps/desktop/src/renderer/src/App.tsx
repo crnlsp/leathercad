@@ -51,6 +51,7 @@ import { AboutDialog } from './AboutDialog.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
 import { selectionForRightClick, selectionMenu, type RightClicked } from './contextMenu.js';
+import { listenForContextMenuKeys } from './keyboardContextMenu.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { TextFieldMenu } from './TextFieldMenu.js';
@@ -153,6 +154,7 @@ export function App({
   /** The operating system's languages, most preferred first: what *Follow system* follows. */
   systemLanguages: readonly string[];
 }) {
+  useEffect(() => listenForContextMenuKeys(IS_MAC), []);
   const [version, setVersion] = useState<string | null>(null);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);

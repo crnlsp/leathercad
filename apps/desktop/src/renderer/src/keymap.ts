@@ -110,8 +110,8 @@ export interface Command {
   /** Heard too and never shown: the numeric keypad's twin. */
   readonly aliases?: readonly Binding[];
   /**
-   * Its keys cannot be changed (U.12): heard by Chromium rather than the app —
-   * a field's editing, the menu key — or Esc and Enter, which keep their roles.
+   * Its keys cannot be changed (U.12): a field's browser editing, the menu
+   * shortcut shared across platforms, or Esc and Enter, which keep their roles.
    */
   readonly fixed?: true;
 }
@@ -132,8 +132,8 @@ const modChar = (char: string): Binding => ({ char, mod: true });
  * changed map the one every function here reads.
  *
  * F11 and Ctrl+Q are heard by the main process (`windowKeyFor`), which
- * matches them through this too. Shift+F10 and the Menu key reach the window
- * as a `contextmenu` event, so the browser matches those.
+ * matches them through this too. `keyboardContextMenu` matches Shift+F10 and
+ * the Menu key here and dispatches one `contextmenu` event on every platform.
  */
 export const KEYMAP: readonly Command[] = [
   {

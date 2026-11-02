@@ -419,7 +419,6 @@ test('a field’s right-click menu cuts, copies, pastes and selects all, in the 
 });
 
 test('a field’s menu opens from the keyboard at the caret, and Escape gives the field back', async () => {
-  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
   const { app, window } = await launch();
   try {
     await openSample(window);
