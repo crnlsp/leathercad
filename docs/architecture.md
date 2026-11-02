@@ -412,12 +412,18 @@ canvas — `itemsReachingView`, from the extent every kind of display item has, 
 ([PERF-008](performance-backlog.md#perf-008)). A pan or a zoom builds the list again: a caption
 pins to the canvas's top-left, and the detail follows the zoom.
 
-All drawing is scheduled through a single `requestAnimationFrame` loop and one dirty flag: a frame
-paints only when something marked it dirty, though the loop asks for a frame every time even when
-nothing is ([PERF-014](performance-backlog.md#perf-014)). Nothing draws synchronously from an event
-handler. Two things paint at once instead: sizing the
-canvas, and a change of view (Design or Sheets). A hidden or unshown window runs no animation
-frame, and until one came it would show a blank board, or the other view's zoom.
+A single pending `requestAnimationFrame` callback is the board's dirty state
+(`renderer/src/canvasFrames.ts`). Invalidations coalesce until it runs; once painted, a clean
+board schedules nothing ([PERF-014](performance-backlog.md#perf-014)). The callback releases its
+slot before painting so an invalidation raised during painting survives for the next frame.
+The renderer effect owns the painter and cancels its pending callback on cleanup; a late font
+load cannot restart an unmounted board.
+
+Pointer handlers only invalidate. First sizing and resize (including DPR changes), a change of
+view (Design or Sheets), and opening the chips for a typed size paint synchronously. An unshown
+or occluded window can run no animation frames: waiting left a blank board or the other view's
+zoom, and typing needs the chip placed and focused before the key continues. A synchronous paint
+consumes a pending callback so the same work is not painted again on the next frame.
 
 A pointer move renders nothing of React's but what shows the pointer (PERF-007). The hover halo
 and the rulers' tick are painted from refs. The point under the pointer, and where the pointer is

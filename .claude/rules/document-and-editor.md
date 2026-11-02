@@ -22,8 +22,10 @@ document; the store keeps it and its history. See `docs/architecture.md` §4.
 - **Millimetres in, millimetres out.** Pointer input becomes millimetres in `viewport.ts`, once.
   Hit and snap tolerances are screen-constant: a pick radius in pixels, converted to `toleranceMm`
   through the viewport, never a fixed millimetre value that is useless at another zoom.
-- **Keep a frame cheap.** A pointer event marks the board dirty, and the one
-  `requestAnimationFrame` loop draws it. Nothing draws from an event handler. A drawn frame repaints
+- **Keep a frame cheap.** A pointer event invalidates the board, coalesced into at most one
+  pending `requestAnimationFrame` callback; a clean board schedules nothing (PERF-014). Pointer
+  handlers do not draw. First/resize painting, view changes and typed-chip focus keep their
+  synchronous paint (`docs/architecture.md` §6.2). A drawn frame repaints
   the whole board, from the pattern's display list, which is kept while nothing it shows changed
   and cut to what can reach the canvas (PERF-008, `docs/architecture.md` §6.2).
 - **Previews re-evaluate only what changed.** A gesture's `preview` makes a new document, and

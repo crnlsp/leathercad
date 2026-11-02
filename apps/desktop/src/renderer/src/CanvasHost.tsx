@@ -57,6 +57,7 @@ import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
 import type { RightClicked } from './contextMenu.js';
 import { designContent } from './designContent.js';
+import { CanvasFrames } from './canvasFrames.js';
 import { observePixelRatio, pixelRatio, resizeBackingStore } from './canvasDensity.js';
 import { sheetPlanFor, sheetsPagesFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
@@ -264,8 +265,8 @@ export function CanvasHost({
       viewRef.current === 'sheets' ? sheetsViewportRef.current : viewportRef.current,
     [],
   );
-  const dirtyRef = useRef(true);
-  const frameRef = useRef(0);
+  const [frames] = useState(() => new CanvasFrames());
+  const invalidate = useCallback(() => frames.invalidate(), [frames]);
   /** Where the canvas last sat in the window, so a resize can hold the drawing still. */
   const placedRef = useRef<{ left: number; top: number; dpr: number } | null>(null);
   const panningRef = useRef<{ x: number; y: number } | null>(null);
@@ -297,8 +298,8 @@ export function CanvasHost({
   const i18nRef = useRef(i18n);
   useEffect(() => {
     i18nRef.current = i18n;
-    dirtyRef.current = true;
-  }, [i18n]);
+    invalidate();
+  }, [i18n, invalidate]);
   /** On the Sheets view: the sheet under the pointer, for the status bar. */
   const [sheetUnder, setSheetUnder] = useState<CanvasStatus['sheet']>(null);
   /** Where a press on the Sheets view began, and on which piece. */
@@ -320,8 +321,8 @@ export function CanvasHost({
   useEffect(() => {
     hoveredPartPropRef.current = hoveredPart;
     onHoverPartRef.current = onHoverPart;
-    dirtyRef.current = true;
-  }, [hoveredPart, onHoverPart]);
+    invalidate();
+  }, [hoveredPart, onHoverPart, invalidate]);
   /**
    * Where the pointer is over the canvas, in CSS pixels — where a notice is
    * said. Not state: only a notice shown reads it (PERF-007).
@@ -329,10 +330,6 @@ export function CanvasHost({
   const [pointerCss] = useState(() => new PointerValue<CssPoint | null>(null));
   /** The pattern on the Design board, kept between the frames that show it unchanged. */
   const [content] = useState(designContent);
-
-  const invalidate = useCallback(() => {
-    dirtyRef.current = true;
-  }, []);
 
   /** The selected outline's sizes, beside it (U.14): placed as each frame is painted. */
   const chipsRef = useRef<ValueChipsHandle>(null);
@@ -344,11 +341,11 @@ export function CanvasHost({
       read: () => managerRef.current?.sizing() ?? null,
       set: (field, value) => {
         managerRef.current?.setSize(field, value);
-        dirtyRef.current = true;
+        invalidate();
       },
       finish: () => {
         managerRef.current?.finishSizing();
-        dirtyRef.current = true;
+        invalidate();
       },
       cancel: () => {
         managerRef.current?.key({
@@ -357,10 +354,10 @@ export function CanvasHost({
           shiftKey: false,
           ctrlKey: false,
         });
-        dirtyRef.current = true;
+        invalidate();
       },
     }),
-    [],
+    [invalidate],
   );
   /** The keys back to the board, without scrolling the window to it. */
   const toBoard = useCallback(() => canvasRef.current?.focus({ preventScroll: true }), []);
@@ -702,17 +699,7 @@ export function CanvasHost({
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
   }, [store, paintSheets, chipRoom, content]);
 
-  useEffect(() => {
-    const tick = (): void => {
-      if (dirtyRef.current) {
-        dirtyRef.current = false;
-        paint();
-      }
-      frameRef.current = requestAnimationFrame(tick);
-    };
-    frameRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameRef.current);
-  }, [paint]);
+  useEffect(() => frames.start(paint), [frames, paint]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -772,8 +759,7 @@ export function CanvasHost({
 
       // Paint straight away: requestAnimationFrame does not run while a window
       // is unshown or occluded, which would leave the first frame blank.
-      dirtyRef.current = false;
-      paint();
+      frames.paintNow();
     };
 
     const observer = new ResizeObserver(resize);
@@ -784,7 +770,7 @@ export function CanvasHost({
       observer.disconnect();
       stopDensity();
     };
-  }, [paint, fitDrawing]);
+  }, [frames, fitDrawing]);
 
   // Changing view: nothing the tool had under way carries across, and the
   // view repaints on its own camera at once, as a resize does. The zoom
@@ -794,9 +780,8 @@ export function CanvasHost({
     managerRef.current?.pointerLeave();
     hoveredRef.current = null;
     hoveredPartRef.current = null;
-    dirtyRef.current = false;
-    paint();
-  }, [view, paint]);
+    frames.paintNow();
+  }, [view, frames]);
 
   useEffect(() => {
     onStatus?.({
@@ -841,7 +826,7 @@ export function CanvasHost({
       ) {
         // The chips exist and are placed before the key goes to one of them.
         flushSync(() => setDrawing(managerRef.current?.sizing() ?? null));
-        paint();
+        frames.paintNow();
         // Not prevented: the key is typed into the chip that has the focus now.
         if (chipsRef.current?.open() === true) return;
       }
@@ -891,7 +876,7 @@ export function CanvasHost({
     // still stops it before either.
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [store, paint]);
+  }, [store, frames]);
 
   const toInput = useCallback((event: React.PointerEvent<HTMLCanvasElement>): PointerInput => {
     const viewport = viewportRef.current;
