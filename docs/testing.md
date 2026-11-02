@@ -503,6 +503,9 @@ times the drawing callbacks of the real app on the 33-sheet strap, and `pixels` 
 canvas at every step of a pan, to show a change moved no pixel. Both need `pnpm build` first.
 `node tools/perf-drag.mjs` likewise times a piece and a guide dragged across a traced outline
 (`fixtures/perf/traced-<n>.lcp`), p50, p95 and long tasks (PERF-004).
+`node tools/perf-save.mjs` times the window's longest stop while the path-heavy project
+(`fixtures/perf/traced-40x500.lcp`) is saved and its recovery copy written, with `--app` for
+another checkout's build (PERF-009); under Xvfb, in the Playwright container, as the next one.
 `node tools/perf-retention.mjs` reads the renderer's heap after a full collection with the strap
 open, edited, reloaded and closed, and whether the project left behind is still reachable
 (PERF-010); `--app` points it at another checkout's build. Run it under Xvfb, in the Playwright
