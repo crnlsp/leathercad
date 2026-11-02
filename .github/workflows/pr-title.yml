@@ -33,3 +33,4 @@ jobs:
             echo "::error title=Pull request title::Squash-merging makes the title the changelog line. Write it as '<type>(<scope>): <what changes>', e.g. 'fix(export): a taped strap's halves line up again'. See CONTRIBUTING.md."
             exit 1
           fi
+# throwaway: A4 gate test
