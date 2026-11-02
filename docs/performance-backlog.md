@@ -63,7 +63,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-008](#perf-008) | P2 | Medium | Reuse Design content and cull off-screen geometry | Confirmed | Medium | Medium | `perf/008-design-content` |
 | ✅ | [PERF-009](#perf-009) | P2 | Medium | Keep persistence work off the interaction path | Confirmed | Medium | High | `perf/009-persistence` |
 | ✅ | [PERF-010](#perf-010) | P2 | Medium | Release previous-project view/tool caches | Confirmed | Small | Low | `claude/perf-010-caches-3c2d47` |
-| ✅ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | `perf/011-dpi-backing` |
+| ✅ | [PERF-011](#perf-011) | P2 | Medium | Resize backing stores on DPI-only changes | Confirmed in emulation | Small | Medium | [#212](https://github.com/crnlsp/leathercad/pull/212) |
 | ✅ | [PERF-012](#perf-012) | P2 | Medium | Preflight excessive allocation/work requests | Strong evidence | Medium | Medium | `perf/012-resource-preflight` |
 | ✅ | [PERF-013](#perf-013) | P2 | Medium | Bound thumbnail work and cancel obsolete PDF loading | Strong evidence | Medium | Medium | `perf/013-preview-work` |
 | ☐ | [PERF-014](#perf-014) | P2 | Low | Schedule canvas frames only when needed | Confirmed | Small | Medium | Unassigned |
@@ -976,11 +976,13 @@ not tested; reverse transitions could retain oversized buffers.
   platforms. Release verification remains open; emulation is not a physical-display result.
 
 **Implementation and measurement (2026-11-02):** `perf/011-dpi-backing`, stacked on
-`perf/008-design-content` at `a3a03d5` (including current `develop`, `43515c3`). The retained
+`perf/008-design-content` at `a3a03d5` (including starting `develop`, `43515c3`). After PERF-008
+merged as [#211](https://github.com/crnlsp/leathercad/pull/211), the two implementation commits
+were rebased onto its result, `e050d1e`, without changing file content. The retained
 reproduction is [`e2e/dpi.spec.ts`](../e2e/dpi.spec.ts): build, then run
 `pnpm exec playwright test e2e/dpi.spec.ts`. It opens the shipped wallet in the real Electron app,
 keeps the CSS viewport fixed, and changes DPR through 1, 2, 1.25, 2, 1. Print Preview also opens
-initially at DPR 2, then returns to DPR 1. One run of each case on current `develop` and the
+initially at DPR 2, then returns to DPR 1. One run of each case on starting `develop` and the
 implementation base failed at backing dimensions; the fixed cases pass. No warmups or timing
 claims: this measures exact backing dimensions and pixel identity, not frame latency.
 
@@ -999,6 +1001,14 @@ are aborted through the existing cancellation path, and off-screen thumbnails st
 Backing width/height setters run only when that dimension changes. Deterministic listener and
 allocation guards live in [`canvasDensity.test.ts`](../apps/desktop/src/renderer/src/canvasDensity.test.ts)
 and run under `pnpm check`; the integration cases run in CI's E2E suite.
+
+**Validation:** `pnpm check` and the enabled pre-push hook passed: typecheck, lint, formatting,
+layering (592 modules / 2,657 dependencies; no violation), dead code, 28 CI-tool tests,
+3,801 unit/property/export/fixture tests, and all 6 performance ceilings. Pure-layer coverage:
+98.00% lines, 93.91% branches. Build passed; the full real-Electron suite passed 337/337 in
+5.6 minutes, and the pinned visual suite passed 5/5 with zero changed pixels. Architecture review
+found no new package edge, Electron import outside desktop, Clipper binding or documentation
+layer-graph drift. The remaining platform and physical checks are recorded below.
 
 **Environment and limits:** Linux, production renderer build, unpackaged Electron 45.0.0,
 Node 24.22.1, pnpm 12.15.0, Playwright 1.64.1 in the pinned Ubuntu/Poppler container with an
