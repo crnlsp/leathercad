@@ -224,3 +224,4 @@ the leather.
    line over its measured length, refused beyond ±2 %, and applied only when the app prints to that
    printer (7.5, [printing.md](printing.md) §8.2). The *calibration page* is the page it is measured
    from: a ticked horizontal and vertical line, up to 200 mm, printed uncorrected.
+
