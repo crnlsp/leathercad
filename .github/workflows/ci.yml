@@ -77,6 +77,78 @@ jobs:
               tee -a "$GITHUB_OUTPUT"
           fi
 
+  # A pull request that touches what CI judges against (screenshots,
+  # baselines, linter and test configuration, workflows, CI's own scripts) is
+  # labelled `judge-changed` and listed in the job summary, so editing the
+  # verifier to turn a check green never passes unnoticed. It fails only for a
+  # modified, deleted or renamed shipped migration (CLAUDE.md invariant 9).
+  # tools/ci/changes.mjs holds the lists and their tests.
+  #
+  # A fork's pull request, and Dependabot's, run with a read-only token however
+  # much a job asks for, and this workflow is `pull_request`, never
+  # `pull_request_target`, so no write token ever meets the fork's code. The
+  # label call is refused there; the step says so in the summary and goes on,
+  # which is why the label is a courtesy and the summary and the red migration
+  # check are the guard.
+  guard:
+    name: Verifier guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Only to add the label; a read-only token is refused, and handled.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      # A list cut short at the API's 3000 files could hide a migration, so a
+      # guard that cannot see everything fails instead of passing. The script
+      # writes the job summary itself, to $GITHUB_STEP_SUMMARY.
+      - name: What this change judges against
+        id: judge
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+            --jq '.[] | [.status, .filename, .previous_filename // empty] | @tsv' > "$RUNNER_TEMP/files.tsv"
+          if [ "$(wc -l < "$RUNNER_TEMP/files.tsv")" -lt "$CHANGED" ]; then
+            echo "::error title=Verifier guard::The API listed fewer files than the pull request changes, so the guard cannot see all of them."
+            exit 1
+          fi
+          node tools/ci/changes.mjs judge < "$RUNNER_TEMP/files.tsv" | tee -a "$GITHUB_OUTPUT"
+
+      # Adding a label that does not exist creates it. A read-only token
+      # (a fork, Dependabot) is refused: say so and carry on.
+      - name: Label judge-changed
+        if: steps.judge.outputs.judged == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f 'labels[]=judge-changed' > /dev/null; then
+            echo "The label \`judge-changed\` is on this pull request." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "The label \`judge-changed\` could not be added (this run's token cannot write, as on a fork's pull request); the files above are the record." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Last, so the label and the summary are there when it fails.
+      - name: A shipped migration is immutable
+        if: steps.judge.outputs.blocked == 'true'
+        run: |
+          echo "::error title=Shipped migration changed::A shipped migration is immutable (CLAUDE.md invariant 9). Add a new one instead; the job summary names the file."
+          exit 1
+
   static:
     name: Static checks
     runs-on: ubuntu-latest
@@ -403,7 +475,7 @@ jobs:
   # passed. With it, a cancelled run turns this red too, never green.
   ready:
     name: Ready to merge
-    needs: [changes, static, test, cross-platform, e2e, visual, workflows, dependencies, installers]
+    needs: [changes, guard, static, test, cross-platform, e2e, visual, workflows, dependencies, installers]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

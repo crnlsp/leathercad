@@ -101,6 +101,13 @@ person. To hold a Dependabot pull request back — before pushing to its branch,
 `no-auto-merge` label and click *Disable auto-merge*: the workflow asks again after every push, and
 the label is what makes it leave the pull request alone.
 
+A pull request that touches what CI judges against — screenshots and snapshots, benchmark
+baselines, the linter, test and layering configuration, workflows, hooks, rules and `tools/ci/` —
+gets the label `judge-changed` and a *Verifier guard* summary listing the files, so editing the
+check instead of fixing what it found never goes unseen. Expect both on Dependabot's weekly
+`.github/` updates; a read-only token (Dependabot's, or a fork's) cannot add the label, and the
+summary says so. Read the files; the label is not a verdict.
+
 ## A change is a vertical slice
 
 Planned work is numbered in [`docs/roadmap.md`](docs/roadmap.md). A slice touches whatever layers it
@@ -171,6 +178,7 @@ on your own machine. The rest, and what each one wants:
 | *Pixel diffs* | Look at the run's `visual-diffs` artifact. If the change is meant, `pnpm build`, then `pnpm test:visual --update-snapshots`, and look at every image before committing it |
 | *Known vulnerabilities* | It runs on a pull request that changes the lockfile or what shapes it, and every night on `develop`, where a failure is an issue labelled `nightly-vulnerabilities`. osv-scanner names the advisory. Raise the version in `pnpm-workspace.yaml`'s `overrides`, with the advisory and why, and remove the entry when the dependency catches up. Only when no fixed release exists inside the range the dependent asks for, ignore the advisory in `osv-scanner.toml` for at most 14 days, with its reason and an issue that removes it |
 | *Ready to merge* | It is red because a job it waits for failed or was cancelled, and its log lists each one's result. Fix that job; a cancelled run needs only *Re-run all jobs* |
+| *Verifier guard* | It fails for one reason: the pull request modifies, deletes or renames a shipped migration (`packages/persist/src/migrations/v*_to_v*.ts`). A shipped migration is immutable, so a file an earlier version saved loads as it always did. Put the change in a new migration; adding one is fine |
 | *Workflow security* | zizmor or actionlint names the line: an action not pinned to a commit, an expression written into a script instead of passed through `env`, a permission wider than the job needs |
 | `pnpm install` holds a version back | pnpm waits before installing very new releases (`minimumReleaseAge`). Wait, or record an exclusion in `pnpm-workspace.yaml` with why ([ADR 0004](docs/adr/0004-pnpm-workspaces.md)) |
 | `pnpm install` asks about a build script | Answer in `pnpm-workspace.yaml`'s `allowBuilds`, with the reason. Allowing one is a security decision |
