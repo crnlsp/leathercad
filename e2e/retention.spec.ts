@@ -75,7 +75,7 @@ test('a project’s Sheets pages go with it once it is edited, reloaded or close
 
     // Its tab closed, with its pages built again, nothing of it is kept.
     await visitSheets(window);
-    await window.keyboard.press('Control+w');
+    await window.keyboard.press('ControlOrMeta+w');
     await expect(window.getByTestId('start-screen')).toBeVisible();
     const closed = (await heapMiB(cdp)) - empty;
     expect.soft(closed, 'over the start screen, closed').toBeLessThan(bound);

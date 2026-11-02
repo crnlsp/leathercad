@@ -32,7 +32,8 @@ import {
   type UpdateStatus,
 } from '@leathercad/platform';
 import { rolesNamed } from '@leathercad/export';
-import { loadProject } from '@leathercad/persist';
+import type { Vec2 } from '@leathercad/geometry';
+import { loadProject, saveProject } from '@leathercad/persist';
 import { zoomPercent } from '@leathercad/render';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
@@ -88,6 +89,7 @@ import { TabContextMenu, TabStrip } from './TabStrip.js';
 import { printStatusFor, releaseDerived } from './sheets.js';
 import { SheetsSummary } from './ViewSwitch.js';
 import { PartsList } from './PartsList.js';
+import { PointerValue, usePointerValue } from './pointerValue.js';
 import { historyText } from './historyText.js';
 import { describeProblem } from './problemText.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
@@ -154,6 +156,9 @@ export function App({
   const [version, setVersion] = useState<string | null>(null);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
+  // The point under the pointer, which only the readout reads: a move renders
+  // it, not the window (PERF-007).
+  const [cursor] = useState(() => new PointerValue<Vec2 | null>(null));
   const [toolId, setToolId] = useState<string>('rectangle');
 
   // The open projects (8.12): one tab each, and the one the window shows.
@@ -1596,6 +1601,7 @@ export function App({
                   nextId={nextId}
                   onToolChange={chooseTool}
                   onStatus={handleStatus}
+                  cursor={cursor}
                   panelOver={open}
                   selectionBar={selectionBarOn ? tools : null}
                   drawAs={drawAs}
@@ -1805,13 +1811,15 @@ export function App({
               </span>
 
               <span className="status-right" data-testid="cursor-readout">
-                {view === 'sheets'
-                  ? status?.sheet === null || status?.sheet === undefined
-                    ? '—'
-                    : t('status.sheetOf', status.sheet)
-                  : status === null || status.cursorMm === null
-                    ? '— , —'
-                    : `${formatNumber(status.cursorMm.x, 2)} , ${formatMm(status.cursorMm.y)}`}
+                {view === 'sheets' ? (
+                  status?.sheet === null || status?.sheet === undefined ? (
+                    '—'
+                  ) : (
+                    t('status.sheetOf', status.sheet)
+                  )
+                ) : (
+                  <CursorReadout cursor={cursor} />
+                )}
               </span>
             </footer>
           </>
@@ -2080,6 +2088,12 @@ export function App({
  * Where a tab's board is looking (8.12), for the next start: its centre in
  * millimetres and its zoom. A tab never shown keeps what it was restored to.
  */
+/** Where the pointer is on the board, as the status bar says it: the one thing a move renders. */
+function CursorReadout({ cursor }: { cursor: PointerValue<Vec2 | null> }) {
+  const at = usePointerValue(cursor);
+  return at === null ? '— , —' : `${formatNumber(at.x, 2)} , ${formatMm(at.y)}`;
+}
+
 function cameraOf(tab: ProjectTab): TabCamera | null {
   const { design, fitted, restore } = tab.cameras;
   if (!fitted) return restore;

@@ -11,13 +11,16 @@
  *
  * The workloads are the audit's (docs/performance-backlog.md, *Workloads to reconstruct*), from
  * `packages/domain/src/workloads.ts` and the sample wallet; name some to run only those. Each is
- * measured four ways:
+ * measured seven ways:
  *
  *   evaluate   evaluate a fresh copy: every feature computed
  *   diagnose   diagnose a fresh copy: evaluation and validation, what the panels wait for
  *   rename     diagnose after a part is renamed: evaluation reused, validation repeated — what a
  *              metadata edit costs
  *   snap       build the snap index of a fresh copy, evaluated beforehand
+ *   warm       evaluate after a part is renamed: every feature is the same object (PERF-015)
+ *   graph      check the graph's structure, as the loader and a follow command do
+ *   tree       nest each part's features under what they follow, as the parts panel does
  *
  * Each is 3 warm-up runs, then 20 timed; the copy is built outside the timing. The table gives the
  * median and the range, in milliseconds, and `--json` prints every sample instead. The header
@@ -45,10 +48,10 @@ const only = args.filter((a) => a !== '--json');
 const src = (path) => JSON.stringify(resolve(root, path));
 const entry = `
 import * as workloads from ${src('packages/domain/src/workloads.ts')};
-import { diagnose, evaluate } from ${src('packages/domain/src/index.ts')};
+import { diagnose, evaluate, featureTree, graphProblems } from ${src('packages/domain/src/index.ts')};
 import { buildSnapIndex } from ${src('packages/editor/src/index.ts')};
 import { loadProject } from ${src('packages/persist/src/index.ts')};
-export { buildSnapIndex, diagnose, evaluate, loadProject, workloads };
+export { buildSnapIndex, diagnose, evaluate, featureTree, graphProblems, loadProject, workloads };
 `;
 
 const out = mkdtempSync(join(tmpdir(), 'lc-perf-compute-'));
@@ -71,7 +74,8 @@ writeFileSync(join(out, 'compute.js'), [built].flat()[0].output[0].code);
 const lib = await import(pathToFileURL(join(out, 'compute.js')).href);
 rmSync(out, { recursive: true, force: true });
 
-const { buildSnapIndex, diagnose, evaluate, loadProject, workloads: w } = lib;
+const { buildSnapIndex, diagnose, evaluate, featureTree, graphProblems, loadProject } = lib;
+const w = lib.workloads;
 const WORKLOADS = {
   wallet: () =>
     loadProject(readFileSync(resolve(root, 'fixtures/projects/bifold-wallet.lcp'))).project,
@@ -83,6 +87,9 @@ const WORKLOADS = {
   'bag-30': () => w.bag(30),
   'bag-40': () => w.bag(40),
   'bag-50': () => w.bag(50),
+  'chain-10': () => w.mirrorChain(10),
+  'chain-100': () => w.mirrorChain(100),
+  'chain-500': () => w.mirrorChain(500),
 };
 
 /** A copy of `project` with its first part renamed; every feature is the same object. */
@@ -102,6 +109,14 @@ const MEASURES = {
     return { setup: () => renamed(warm, ++k), run: diagnose };
   },
   snap: (make) => ({ setup: () => evaluate(make()), run: buildSnapIndex }),
+  warm: (make) => {
+    const warm = make();
+    evaluate(warm);
+    let k = 0;
+    return { setup: () => renamed(warm, ++k), run: evaluate };
+  },
+  graph: (make) => ({ setup: make, run: graphProblems }),
+  tree: (make) => ({ setup: make, run: (project) => project.parts.map(featureTree) }),
 };
 
 function time({ setup, run }) {

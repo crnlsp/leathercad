@@ -247,7 +247,7 @@ test('with no CUPS to drive, the preview saves the PDF and says how to print it'
     await window.waitForLoadState('domcontentloaded');
     await openPrintTest(app, window, pdf);
 
-    await window.keyboard.press('Control+p');
+    await window.keyboard.press('ControlOrMeta+p');
     const preview = window.getByTestId('print-preview');
     await expect(preview.getByTestId('print-unavailable')).toHaveText(
       "LeatherCAD can't reach this computer's printing system.",

@@ -164,3 +164,37 @@ export function tracedOutline(points: number): Project {
   const part: Part = { id: 'part-1', name: 'Traced', quantity: 1, features };
   return { id: 'p', name: 'Traced', settings: DEFAULT_SETTINGS, parts: [part] };
 }
+
+/**
+ * A stitch line mirrored across x = 150, and each mirror mirrored back,
+ * `depth` times, each following the one before it. A valid project, and far
+ * deeper than any pattern: the audit's stress for walks along a chain of
+ * sources (PERF-015).
+ */
+export function mirrorChain(depth: number): Project {
+  // The strap's outline and stitch line; its holes are not needed here.
+  const drawn = strapFeatures('1', { x: 0, y: 0 }, 100).slice(0, 2);
+  const mirrors = Array.from({ length: depth }, (_, k): Feature => ({
+    id: `mirror-${k + 1}`,
+    kind: 'stitch-line',
+    name: `Mirror ${k + 1}`,
+    visible: true,
+    locked: false,
+    source: {
+      kind: 'derived',
+      sourceId: k > 0 ? `mirror-${k}` : 'stitch-1',
+      op: {
+        type: 'mirror',
+        axis: { kind: 'line', origin: { x: 150, y: 0 }, angleRad: Math.PI / 2 },
+        glideMm: 0,
+      },
+    },
+  }));
+  const part: Part = {
+    id: 'part-1',
+    name: 'Chain',
+    quantity: 1,
+    features: [...drawn, ...mirrors],
+  };
+  return { id: 'p', name: 'Chain', settings: DEFAULT_SETTINGS, parts: [part] };
+}

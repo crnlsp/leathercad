@@ -410,6 +410,13 @@ handler. Two things paint at once instead: sizing the
 canvas, and a change of view (Design or Sheets). A hidden or unshown window runs no animation
 frame, and until one came it would show a blank board, or the other view's zoom.
 
+A pointer move renders nothing of React's but what shows the pointer (PERF-007). The hover halo
+and the rulers' tick are painted from refs. The point under the pointer, and where the pointer is
+over the canvas, are `PointerValue`s (`renderer/src/pointerValue.ts`): the board sets them, and
+only the status bar's readout and a notice beside the pointer subscribe. What the window's status
+carries — the zoom, a tool's notice, the sheet under the pointer, a shape's sizes while it is
+drawn — changes far less often, and is set only when it changes.
+
 DPR handling: back the canvas at `cssSize * dpr`. Every screen-constant size — a stroke, a halo, a
 dash in pixels, a glyph, a label, the grid and the rulers — is in **CSS pixels**, and each screen
 backend applies `dpr` once: the geometry pass divides widths by the CSS zoom under the world
@@ -572,7 +579,8 @@ Measure before optimising, but the known shapes of the problem:
 - **Evaluation is memoised per feature**, keyed on object identity: the document is updated
   immutably with structural sharing, so an unchanged feature is the same object, and a derived one
   is reused only while its source is too (`domain/src/evaluate.ts`). Editing one part does not
-  re-evaluate the other thirty-nine.
+  re-evaluate the other thirty-nine. Within one evaluation each feature is resolved once, however
+  many follow it (PERF-015).
 - **What is derived for paper is shared, not kept per revision.** The export scene reuses a part's
   ink — a circle per hole, an outline per glyph — while its features and the geometry they resolve
   to are the same objects, so a rename redraws one caption (`export/src/scene.ts`). The renderer

@@ -167,14 +167,31 @@ export function evaluate(project: Project): ResolvedProject {
   for (const part of project.parts) {
     for (const feature of part.features) byId.set(feature.id, feature);
   }
+  const scope: Scope = { byId, resolved: new Map() };
 
   return {
     project,
     parts: project.parts.map((part) => ({
       part,
-      features: part.features.map((feature) => resolveTop(feature, byId)),
+      features: part.features.map((feature) => resolveTop(feature, scope)),
     })),
   };
+}
+
+/**
+ * One evaluation's view of the project: every feature by id, and each feature
+ * resolved so far in it.
+ *
+ * A feature is resolved once an evaluation, then read, rather than walked
+ * again for every feature further down a chain that follows it (PERF-015). A
+ * resolution depends on the features it follows and nothing else — the
+ * `visiting` set only ever decides whether a cycle is thrown, and a thrown
+ * cycle is never kept — so whichever walk reaches a feature first, its entry
+ * is the one any other would have made.
+ */
+interface Scope {
+  readonly byId: ReadonlyMap<FeatureId, Feature>;
+  readonly resolved: Map<Feature, ResolvedFeature>;
 }
 
 /**
@@ -205,9 +222,9 @@ class Failure extends Error {
  */
 class CycleError extends Failure {}
 
-function resolveTop(feature: Feature, byId: ReadonlyMap<FeatureId, Feature>): ResolvedFeature {
+function resolveTop(feature: Feature, scope: Scope): ResolvedFeature {
   try {
-    return resolveFeature(feature, byId, new Set());
+    return resolveFeature(feature, scope, new Set());
   } catch (error) {
     // Re-subjected: the cycle was found on some feature further along the
     // loop, but this is the one being reported.
@@ -218,30 +235,32 @@ function resolveTop(feature: Feature, byId: ReadonlyMap<FeatureId, Feature>): Re
   }
 }
 
-function resolveFeature(
-  feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
-  visiting: Set<FeatureId>,
-): ResolvedFeature {
+function resolveFeature(feature: Feature, scope: Scope, visiting: Set<FeatureId>): ResolvedFeature {
+  const known = scope.resolved.get(feature);
+  if (known !== undefined) return known;
+
+  let resolved: ResolvedFeature;
   try {
     // Inside the try: asking for the source can fail, and that failure belongs
     // to this feature, not to whichever feature asked for this one.
-    const source = resolvedSourceOf(feature, byId, visiting);
+    const source = resolvedSourceOf(feature, scope, visiting);
     const from = source?.path;
-    const referenced = referencedOf(feature, byId, visiting);
+    const referenced = referencedOf(feature, scope, visiting);
     const refsFrom = referenced.map((entry) => entry?.path);
     const cached = cache.get(feature);
     if (cached !== undefined && cached.from === from && sameRefs(cached.refsFrom, refsFrom)) {
-      return hit(feature, cached);
+      resolved = hit(feature, cached);
+    } else {
+      const built = build(feature, source, referenced);
+      cache.set(feature, built);
+      resolved = hit(feature, built);
     }
-
-    const built = build(feature, source, referenced);
-    cache.set(feature, built);
-    return hit(feature, built);
   } catch (error) {
     if (error instanceof CycleError) throw error;
-    return failed(feature, error);
+    resolved = failed(feature, error);
   }
+  scope.resolved.set(feature, resolved);
+  return resolved;
 }
 
 function hit(feature: Feature, entry: CacheEntry): ResolvedFeature {
@@ -303,7 +322,7 @@ interface Referenced {
 
 function referencedOf(
   feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): readonly (Referenced | undefined)[] {
   if (feature.kind === 'text-label') return [];
@@ -311,12 +330,12 @@ function referencedOf(
   if (feature.source.kind === 'measurement') {
     const { a, b } = feature.source;
     return [
-      referencedOne(feature, a.featureId, byId, visiting),
-      referencedOne(feature, b.featureId, byId, visiting),
+      referencedOne(feature, a.featureId, scope, visiting),
+      referencedOne(feature, b.featureId, scope, visiting),
     ];
   }
 
-  const fold = foldPathOf(feature, byId, visiting);
+  const fold = foldPathOf(feature, scope, visiting);
   return [fold === undefined ? undefined : { path: fold, anchors: [] }];
 }
 
@@ -334,16 +353,16 @@ function sameRefs(a: readonly (Path | undefined)[], b: readonly (Path | undefine
 function referencedOne(
   feature: Feature,
   refId: FeatureId,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): Referenced {
-  const target = byId.get(refId);
+  const target = scope.byId.get(refId);
   if (target === undefined) throw new Failure(problem('MEASURE_REF_MISSING', about(feature)));
 
   if (visiting.has(target.id)) throw new CycleError(problem('CYCLE', about(feature)));
   visiting.add(target.id);
   try {
-    const resolved = resolveFeature(target, byId, visiting);
+    const resolved = resolveFeature(target, scope, visiting);
     if (!resolved.ok) {
       throw new Failure(
         problem('SOURCE_FAILED', {
@@ -359,16 +378,12 @@ function referencedOne(
   }
 }
 
-function foldPathOf(
-  feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
-  visiting: Set<FeatureId>,
-): Path | undefined {
+function foldPathOf(feature: Feature, scope: Scope, visiting: Set<FeatureId>): Path | undefined {
   if (feature.kind === 'text-label' || feature.source.kind !== 'derived') return undefined;
   const op = feature.source.op;
   if (op.type !== 'mirror' || op.axis.kind !== 'fold') return undefined;
 
-  const fold = byId.get(op.axis.foldId);
+  const fold = scope.byId.get(op.axis.foldId);
   if (fold === undefined) {
     throw new Failure(
       problem('MIRROR_FOLD_MISSING', { ...about(feature), foldId: op.axis.foldId }),
@@ -380,7 +395,7 @@ function foldPathOf(
   if (visiting.has(fold.id)) throw new CycleError(problem('CYCLE', about(feature)));
   visiting.add(fold.id);
   try {
-    const resolved = resolveFeature(fold, byId, visiting);
+    const resolved = resolveFeature(fold, scope, visiting);
     if (!resolved.ok) {
       throw new Failure(
         problem('SOURCE_FAILED', {
@@ -456,11 +471,11 @@ function straightLineOf(path: Path): { origin: Vec2; angleRad: number } | null {
  */
 function resolvedSourceOf(
   feature: Feature,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): Extract<ResolvedFeature, { ok: true }> | undefined {
   if (feature.source.kind !== 'derived') return undefined;
-  return followSource(feature, feature.source.sourceId, byId, visiting);
+  return followSource(feature, feature.source.sourceId, scope, visiting);
 }
 
 function build(
@@ -753,7 +768,7 @@ function anchorPoint(feature: Feature, ref: Referenced, anchor: number): Vec2 {
 function followSource(
   feature: Feature,
   sourceId: FeatureId,
-  byId: ReadonlyMap<FeatureId, Feature>,
+  scope: Scope,
   visiting: Set<FeatureId>,
 ): Extract<ResolvedFeature, { ok: true }> {
   // The source is already being resolved further up the stack, so following it
@@ -762,13 +777,13 @@ function followSource(
     throw new CycleError(problem('CYCLE', about(feature)));
   }
 
-  const from = byId.get(sourceId);
+  const from = scope.byId.get(sourceId);
   if (from === undefined) throw new Failure(problem('SOURCE_MISSING', about(feature)));
 
   visiting.add(feature.id);
   let resolved: ResolvedFeature;
   try {
-    resolved = resolveFeature(from, byId, visiting);
+    resolved = resolveFeature(from, scope, visiting);
   } finally {
     visiting.delete(feature.id);
   }

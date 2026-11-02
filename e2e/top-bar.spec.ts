@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { caption } from './keyCaption.js';
 import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
@@ -202,7 +203,7 @@ test('the save state says saved or not, and Save says when there is nothing to s
     await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
     await expect(window.getByTestId('save-state').locator('.icon')).toHaveCount(1);
     await expect(save).not.toHaveAttribute('aria-disabled');
-    await expect(save.locator('kbd')).toHaveText('Ctrl+S');
+    await expect(save.locator('kbd')).toHaveText(caption('Ctrl+S'));
 
     await save.click();
     await expect(window.getByTestId('save-state')).toHaveText('Saved');
@@ -270,9 +271,9 @@ test('Design | Sheets is a tab list: the arrows, Ctrl+1 and Ctrl+2 switch (R-06)
     await expect(design).toBeFocused();
     await expect(canvas).toHaveAttribute('data-view', 'design');
 
-    await window.keyboard.press('Control+2');
+    await window.keyboard.press('ControlOrMeta+2');
     await expect(canvas).toHaveAttribute('data-view', 'sheets');
-    await window.keyboard.press('Control+1');
+    await window.keyboard.press('ControlOrMeta+1');
     await expect(canvas).toHaveAttribute('data-view', 'design');
 
     // A press with the mouse switches and leaves the keys to the board.

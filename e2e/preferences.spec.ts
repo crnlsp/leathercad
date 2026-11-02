@@ -132,7 +132,7 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
     await drawAPanel(first.window);
-    await first.window.keyboard.press('Control+s');
+    await first.window.keyboard.press('ControlOrMeta+s');
     await expect(first.window.getByTestId('file-path')).toContainText('Wallet v1.2');
     await expect.poll(() => recentNames(first.window)).toEqual(['Wallet v1.2']);
   } finally {
@@ -153,7 +153,7 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
     await expect(second.window.getByTestId('part-count')).toHaveText('1');
     await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
     // Saved back where it came from, without a dialog: the grant covers it.
-    await second.window.keyboard.press('Control+s');
+    await second.window.keyboard.press('ControlOrMeta+s');
     await expect(second.window.getByTestId('file-error')).toHaveCount(0);
   } finally {
     await closeApp(second.app);
@@ -177,12 +177,12 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
     await window.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
 
-    await window.keyboard.press('Control+,');
+    await window.keyboard.press('ControlOrMeta+,');
     await expect(window.getByTestId('settings-pane-general')).toBeVisible();
     await window.getByTestId('settings-close').click();
     await expect(dialog).toHaveCount(0);
 
-    await window.keyboard.press('Control+/');
+    await window.keyboard.press('ControlOrMeta+/');
     await expect(window.getByTestId('settings-pane-shortcuts')).toContainText('Export PDF');
     await expect(window.getByTestId('settings-pane-shortcuts')).toContainText('Rectangle');
     await window.keyboard.press('Escape');
@@ -196,8 +196,8 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
     const name = window.getByTestId('project-name-input');
     await name.fill('Wallet');
     await name.press('Shift+?');
-    await name.press('Control+/');
-    await name.press('Control+,');
+    await name.press('ControlOrMeta+/');
+    await name.press('ControlOrMeta+,');
     await expect(name).toHaveValue('Wallet?');
     await expect(dialog).toHaveCount(0);
   } finally {
@@ -226,7 +226,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
     await first.app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    await first.window.keyboard.press('Control+s');
+    await first.window.keyboard.press('ControlOrMeta+s');
     await expect.poll(() => recentNames(first.window)).toEqual(['Strap']);
   } finally {
     await closeApp(first.app);

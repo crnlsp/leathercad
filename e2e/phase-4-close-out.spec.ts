@@ -61,7 +61,7 @@ async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [nu
  */
 async function atDefaultSize(instance: ElectronApplication): Promise<void> {
   await instance.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0]!.setSize(1280, 840),
+    BrowserWindow.getAllWindows()[0]!.setContentSize(1280, 840),
   );
 }
 

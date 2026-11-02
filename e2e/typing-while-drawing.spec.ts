@@ -230,7 +230,9 @@ test('a size typed by the board’s edge goes where Tab says, even when its chip
   // left out, so Tab went past it, the 75 went nowhere, and Enter made the
   // rectangle as tall as the pointer said.
   await withApp(async (window, app) => {
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(860, 600));
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.setContentSize(860, 600),
+    );
     await expect.poll(() => window.evaluate(() => innerWidth)).toBe(860);
     const board = window.getByTestId('editor-canvas');
     const box = (await board.boundingBox())!;

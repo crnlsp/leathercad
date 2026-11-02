@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { closeApp } from './closeApp.js';
+import { closeApp, crashApp } from './closeApp.js';
 import {
   freshStateHome,
   openApp,
@@ -24,15 +24,6 @@ import {
 // A copy every quarter second, so a test need not wait for one.
 const launch = (state: string) =>
   openApp({ state, env: { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' } });
-
-/** A crash: the process is killed outright, so nothing of a clean exit runs. */
-async function crash(app: ElectronApplication): Promise<void> {
-  const process = app.process();
-  await new Promise<void>((done) => {
-    process.once('exit', () => done());
-    process.kill('SIGKILL');
-  });
-}
 
 async function drawAPanel(window: Page, at: number): Promise<void> {
   await window.getByTestId('tool-rectangle').click();
@@ -69,7 +60,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
   await drawAPanel(first.window, 350);
   await expect(first.window.getByTestId('part-count')).toHaveText('2');
   await expect.poll(() => recoveryCopies(state).length).toBe(1);
-  await crash(first.app);
+  await crashApp(first.app);
 
   const second = await launch(state);
   try {
@@ -105,7 +96,7 @@ test('Not now keeps the copy until the next clean exit', async () => {
   const first = await launch(state);
   await drawAPanel(first.window, 150);
   await expect.poll(() => recoveryCopies(state).length).toBe(1);
-  await crash(first.app);
+  await crashApp(first.app);
   const crashed = recoveryCopies(state);
 
   const second = await launch(state);
