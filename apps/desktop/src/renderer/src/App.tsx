@@ -33,7 +33,7 @@ import {
 } from '@leathercad/platform';
 import { rolesNamed } from '@leathercad/export';
 import type { Vec2 } from '@leathercad/geometry';
-import { loadProject, saveProject } from '@leathercad/persist';
+import { loadProject } from '@leathercad/persist';
 import { zoomPercent } from '@leathercad/render';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
