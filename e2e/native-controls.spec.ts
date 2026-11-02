@@ -403,12 +403,36 @@ test('a field’s right-click menu cuts, copies, pastes and selects all, in the 
     // Still renaming: opening the menu was not leaving the field.
     await expect(name).toBeFocused();
 
+    await name.press('Enter');
+
+    // Parts' rename: the field's menu, not the piece's.
+    await window.getByTestId('parts-list').getByText('Stitch line').first().click();
+    await window.keyboard.press('F2');
+    await window.getByTestId('row-name-input').click({ button: 'right' });
+    await expect(window.getByTestId('field-menu')).toBeVisible();
+    await expect(window.getByTestId('context-menu')).toHaveCount(0);
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('row-name-input')).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('a field’s menu opens from the keyboard at the caret, and Escape gives the field back', async () => {
+  test.skip(process.platform === 'darwin', 'Shift+F10 raises no contextmenu event on macOS (#194)');
+  const { app, window } = await launch();
+  try {
+    await openSample(window);
+    await window.getByTestId('project-menu').click();
+    await window.getByTestId('rename').click();
+    const name = window.getByTestId('project-name-input');
+    await name.click({ button: 'right' });
+    await window.getByTestId('field-menu').getByTestId('field-select-all').click();
     await name.click({ button: 'right' });
     await window.getByTestId('field-menu').getByTestId('field-copy').click();
     await name.press('End');
-    // From the keyboard too, opened at the field, with the caret where it is:
-    // nothing is selected, so Cut and Copy say so, and Paste puts the copy at
-    // the caret.
+    // Opened at the field, with the caret where it is: nothing is selected,
+    // so Cut and Copy say so, and Paste puts the copy at the caret.
     await name.press('Shift+F10');
     await expect(window.getByTestId('field-menu')).toBeVisible();
     await expect(window.getByTestId('field-cut')).toBeFocused();
@@ -424,15 +448,6 @@ test('a field’s right-click menu cuts, copies, pastes and selects all, in the 
     await expect(name).toBeFocused();
     await name.press('Enter');
     await expect(window.getByTestId('project-name')).toHaveText('Bifold walletBifold wallet');
-
-    // Parts' rename: the field's menu, not the piece's.
-    await window.getByTestId('parts-list').getByText('Stitch line').first().click();
-    await window.keyboard.press('F2');
-    await window.getByTestId('row-name-input').click({ button: 'right' });
-    await expect(window.getByTestId('field-menu')).toBeVisible();
-    await expect(window.getByTestId('context-menu')).toHaveCount(0);
-    await window.keyboard.press('Escape');
-    await expect(window.getByTestId('row-name-input')).toBeFocused();
   } finally {
     await closeApp(app);
   }
