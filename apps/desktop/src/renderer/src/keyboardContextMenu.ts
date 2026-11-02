@@ -7,6 +7,7 @@ import { keysOf, matches } from './keymap.js';
  * Native mouse and accessibility contextmenu events keep their usual route.
  */
 export function listenForContextMenuKeys(isMac: boolean): () => void {
+  let pressed: string | null = null;
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || !keysOf('contextMenu').some((key) => matches(event, key, isMac)))
       return;
@@ -14,6 +15,7 @@ export function listenForContextMenuKeys(isMac: boolean): () => void {
     if (target === null || target.closest('select') !== null) return;
     const box = target.getBoundingClientRect();
     event.preventDefault();
+    pressed = event.code;
     // PointerEvent preserves button -1; Chromium normalises MouseEvent to 0.
     target.dispatchEvent(
       new PointerEvent('contextmenu', {
@@ -26,7 +28,18 @@ export function listenForContextMenuKeys(isMac: boolean): () => void {
       }),
     );
   };
+  const onKeyUp = (event: KeyboardEvent): void => {
+    if (event.code !== pressed) return;
+    // Windows opens the Menu key's native menu on release. Focus and held
+    // modifiers may have changed since keydown, so match the physical key.
+    pressed = null;
+    event.preventDefault();
+  };
   // Capture before a dialog or field can keep keydown from reaching the window.
   window.addEventListener('keydown', onKeyDown, { capture: true });
-  return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  window.addEventListener('keyup', onKeyUp, { capture: true });
+  return () => {
+    window.removeEventListener('keydown', onKeyDown, { capture: true });
+    window.removeEventListener('keyup', onKeyUp, { capture: true });
+  };
 }

@@ -34,8 +34,8 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function key(init: Record<string, unknown> = {}): Event {
-  return Object.assign(new Event('keydown', { cancelable: true }), {
+function key(init: Record<string, unknown> = {}, type = 'keydown'): Event {
+  return Object.assign(new Event(type, { cancelable: true }), {
     code: 'F10',
     key: 'F10',
     shiftKey: true,
@@ -108,5 +108,31 @@ describe('keyboard context menus (#194)', () => {
     window.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
     expect(menu).not.toHaveBeenCalled();
+  });
+
+  it('suppresses the handled key release even when focus or modifiers changed', () => {
+    const menu = vi.fn();
+    focused.addEventListener('contextmenu', menu);
+    listenForContextMenuKeys(false);
+    window.dispatchEvent(key());
+    const release = key({ shiftKey: false }, 'keyup');
+    window.dispatchEvent(release);
+    expect(release.defaultPrevented).toBe(true);
+    expect(menu).toHaveBeenCalledTimes(1);
+    const another = key({ shiftKey: false }, 'keyup');
+    window.dispatchEvent(another);
+    expect(another.defaultPrevented).toBe(false);
+  });
+
+  it('leaves unrelated releases alone and removes release handling on cleanup', () => {
+    const stop = listenForContextMenuKeys(false);
+    window.dispatchEvent(key());
+    const unrelated = key({ code: 'KeyA' }, 'keyup');
+    window.dispatchEvent(unrelated);
+    expect(unrelated.defaultPrevented).toBe(false);
+    stop();
+    const release = key({}, 'keyup');
+    window.dispatchEvent(release);
+    expect(release.defaultPrevented).toBe(false);
   });
 });
