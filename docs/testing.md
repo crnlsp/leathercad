@@ -521,6 +521,13 @@ each commit to, as React DevTools does, and counts the components that rendered.
 over the wallet, with the script time beside them (PERF-007); `e2e/pointer-renders.spec.ts` holds
 them in the E2E suite: no render of App, and one component render a move, the readout.
 
+`node tools/perf-pdf.mjs <label> --preview` opens the Print Preview on the 5.8 m strap three
+times, and reports the main thread's busy time, the renderer's CPU time and how many of the 33
+sheets the list beside the page drew; then twenty previews closed or changed mid-way, with the
+pdf.js workers left running and the post-GC heap (PERF-013). `e2e/pdf-worker.spec.ts` holds the
+count — only the sheets near the list's view are drawn — and `pdfPages.test.ts` the pdf.js loading
+task ended at once when the preview no longer wants it, and a few thumbnails drawn at a time.
+
 ## 10. Test-driven development, concretely
 
 For `geometry` and `domain`, tests come first. Not as ritual — because in this domain the test *is*
