@@ -68,33 +68,42 @@ test('the window keeps painting while the long strap is exported', async () => {
         }, pdf);
 
         // The longest time between two animation frames from the click to the
-        // file: the longest the window could not paint or answer a click.
+        // writer's answer: the longest the window could not paint or answer a
+        // click while the PDF was written. The click starts the watch: before
+        // it, a cold window on macOS takes up to half a second for its first
+        // frame, which is not the export's. The answer ends it: what follows is
+        // the notice, whose first full-window paint macOS's compositor presents
+        // slowly on CI (#195). A main thread writing the PDF again starts no
+        // writer, so its watch runs on through the notice and fails the bound.
+        await watchWriters(window);
         await window.evaluate(() => {
-          const w = window as unknown as { __gap: number; __watching: boolean };
-          w.__gap = 0;
-          w.__watching = true;
-          let last = performance.now();
-          const frame = (now: number): void => {
-            w.__gap = Math.max(w.__gap, now - last);
-            last = now;
-            if (w.__watching) requestAnimationFrame(frame);
+          const w = window as unknown as {
+            __gap: number;
+            __writers: Array<{ replies: number }>;
           };
-          requestAnimationFrame(frame);
+          w.__gap = 0;
+          const watch = (): void => {
+            let last = performance.now();
+            const frame = (now: number): void => {
+              w.__gap = Math.max(w.__gap, now - last);
+              last = now;
+              if (!w.__writers.some((writer) => writer.replies > 0)) requestAnimationFrame(frame);
+            };
+            requestAnimationFrame(frame);
+          };
+          document.addEventListener('click', watch, { capture: true, once: true });
         });
 
         await window.getByTestId('export-pdf').click();
         await expect.poll(() => existsSync(pdf), { timeout: 30_000 }).toBe(true);
         await expect(window.getByTestId('export-notice')).toBeVisible();
-        const gap = await window.evaluate(() => {
-          const w = window as unknown as { __gap: number; __watching: boolean };
-          w.__watching = false;
-          return w.__gap;
-        });
+        const gap = await window.evaluate(() => (window as unknown as { __gap: number }).__gap);
 
         // About 510–560 ms before the worker, measured with tools/perf-pdf.mjs;
         // a few milliseconds with it. The bound leaves room for a loaded runner
         // and still fails if the main thread writes the file again.
         expect(gap, `longest gap between frames: ${gap.toFixed(0)} ms`).toBeLessThan(200);
+        expect(await writers(window)).toEqual([{ ended: true, replies: 1 }]);
         expect(execFileSync('pdfinfo', [pdf], { encoding: 'utf8' })).toMatch(/Pages:\s+33\b/);
       },
       { args: [STRAP] },
