@@ -106,12 +106,12 @@ Steps 3, 4 and 7 are the ones no general-purpose tool does well. They are the pr
 ### Secondary workflows
 
 - Mirror a part to make its left/right counterpart. *(Built: 4.8a, 4.8b.)*
-- Start a project from a worked one rather than a blank page. *(The sample wallet is built, 8.3;
-  templates are roadmap 9.18.)*
+- Start a project from a worked one rather than a blank page. *(Built: the sample, 8.3, and four
+  templates, 8.14.)*
 - Trace an existing pattern from a photo or scan. *(Roadmap 9.2.)*
-- Bring in a pattern already drawn in another program. *(Roadmap 9.20, SVG.)*
+- Bring in a pattern already drawn in another program. *(SVG, roadmap 9.20, in 1.7.)*
 - Drop in a reference outline for a snap, rivet, D-ring, or zipper. *(Roadmap 9.3.)*
-- Reuse a saved part ("my standard card slot") in a new project. *(Roadmap 8.8b, 9.7.)*
+- Reuse a saved part ("my standard card slot") in a new project. *(Roadmap 8.8b, 9.7, in 1.7.)*
 
 ## 4. Design principles
 

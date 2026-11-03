@@ -5,8 +5,8 @@
 > changed, to reach the files from this folder, and its heading, which said *the next release*. It
 > is not updated any more. It carried update discovery (8.9), several projects in one window and
 > templates (8.11–8.14), 3.10, 3.12, 4.10b, 4.14, 6.4, 7.2 and 7.5, the whole performance backlog
-> (PERF-001 to PERF-017), the findings Q4, Q15, Q31 and Q33, the macOS findings #194 and #195, and
-> the release engineering R6. R8 and R10, level-3 items collected from makers, and the decision not
+> (PERF-001 to PERF-017), the findings Q4, Q15, Q31 and Q33 (and Q35, Q36 and Q38 to Q40, added at the end on 2026-11-03),
+> the macOS findings #194 and #195, and the release engineering R6. R8 and R10, level-3 items collected from makers, and the decision not
 > to sign the installers stay in [`docs/roadmap.md`](../roadmap.md#collected-from-makers-and-decided).
 > The record before it is [`roadmap-1.5.md`](roadmap-1.5.md).
 
@@ -323,3 +323,62 @@ with history retention, complex outlines and tiled output. Its tasks are in this
 | — **R8** | R1's other platforms: no platform but Linux has a full A–H row in [`print-verification-log.md`](../print-verification-log.md) | **A level-3 item, collected from makers** (2026-10-31). It was monitored by decision on 2026-10-18: moved out of 1.5 unverified, as it had moved out of 1.3.5's R1 on 2026-10-09. The maintainer measures prints on Arch only, so a row for another platform comes from a maker with that system and a printer, through the print-report form (until the form exists, an issue with the readings A–H): through *Print* on macOS, and on Windows from the default viewer at *Actual size*. Until one arrives the log says neither platform is verified. It never holds a release; to make one wait, the maintainer would have to mark it planned, which is a decision of its own ([`release-checklist.md`](../release-checklist.md), *What a failure holds, by level*) |
 | — **R10** | U.7's window edited flag is unverified on macOS, the one platform that shows it: it was checked on Linux, where Electron ignores it, and through the test host and a mock of `setDocumentEdited` | **A level-3 item, collected from makers** (2026-10-31). It was monitored by decision on 2026-10-18: moved out of 1.5 unverified, since no Mac is at hand. A maker with a Mac reports it through the print-report form (until the form exists, an issue): check 12 of [`release-checklist.md`](../release-checklist.md) on a real Mac, with the packaged dmg: an edit sets the window's edited dot, *Save* clears it. Tick this only then, saying the macOS version and the date — never from Linux, the test host or a mock. Check 13, ⌘A outside a field ([#97](https://github.com/crnlsp/leathercad/issues/97)), fits the same session |
 | — | Code signing | **Not done, by decision** (2026-09-24). LeatherCAD is free and open source and signing costs money every year, so installers ship unsigned; [`getting-started.md`](../getting-started.md) says how to open them and how to check a download against its build provenance. If it is ever wanted, electron-builder signs when `CSC_LINK` is set |
+
+### Found by the post-1.5 stabilization, shipped in 1.6.0
+
+Moved here on 2026-11-03, word for word but for Q39's heading, which had run into Q38's text. These
+were fixed before 1.6.0 and shipped in it (its changelog lists #149, #150, #157, #159 and #164),
+but were left under the roadmap's *Later* when this record was made. Q37 is not fixed and stays in
+the roadmap.
+
+- ✅ **Q35 A save is not flushed to disk before it replaces the file.** `writeFileAtomic`
+  (`apps/desktop/src/main/atomicWrite.ts`) renamed a temporary file into place without `fsync`ing
+  it or its folder, so a power cut just after a save could leave an empty `.lcp` on some file
+  systems; the rename also replaced a symlink with a plain file and reset the file's permissions.
+  **Done (2026-10-26):** the temporary file is flushed before the rename and the folder after it
+  (not on Windows, which cannot open a folder to flush it; a file system that refuses with
+  `EINVAL`/`ENOTSUP` is the only error let go). A symlink is resolved first, so the target is
+  replaced and the link stays, even a link to a file not there yet; the file keeps its permission
+  bits. On any failure the previous file is untouched, the scrap is removed and the error reaches
+  the caller. *Export template to a file* used `copyFile` over the maker's file and now goes through
+  the same write.
+- ✅ **Q36 Ctrl+S during a drag saves the drag's preview,** not the document before it
+  (`useProjectFile.ts`); the crash-recovery copy already waits for the gesture to end.
+  **Done (2026-10-26):** `DocumentStore.committedDocument` is the document without a gesture under
+  way — what the drag began from. *Save*, *Save As* (and so the save before closing or switching),
+  *Save as template* and the copy kept when the window closes all write it, and a tab saved
+  mid-drag is saved as of that document, so it is unsaved once the drag commits and clean if it is
+  cancelled. An *Untitled* project being named by its first save still ends the drag, as any
+  command does.
+- ✅ **Q38 Local epsilons,** which invariant 7 forbids: `glide.ts`, `mat2x3.ts`, `segment/types.ts`,
+  `arc.ts` and `flatten.ts`'s step counts, `polynomial.ts`, `export/sheetsDisplay.ts` and
+  `persist/schema.ts`; and `arc.ts`'s `toCubics` checks a radius against `EPS_ANGLE`. Each moves
+  numbers on the geometry or export path, so they want one change with property tests and a lint
+  rule for `e-N` literals outside `core`. Fixed (2026-10-26): every tolerance is one from
+  `core/epsilon.ts`, which gains `EPS_RATIO` for dimensionless quantities and the root finders'
+  five; an ESLint rule refuses an `e-N` literal outside `core` and the tests, and the four that
+  are not tolerances say so where they stand. Two bugs of the same kind went with them. `toCubics`
+  judges a degenerate arc by its length, so a long arc with a tiny sweep keeps its end; and
+  point-in-path judged a seam in `t` and radians while its rays move in millimetres, so the centre
+  of any circle over 1000 mm in radius read as outside. Moved: the glide axis snaps within
+  `EPS_ANGLE` of a half turn (was 1e-12), Sheets view joins merge within `EPS_POINT` (was 1e-6), a
+  cubic's ray crossing is near-tangent below `EPS_POINT` (was 1e-9), the path measure's table
+  spacing is floored at `EPS_LENGTH` (was 1e-6), and the scale tool's grab is on the pivot within
+  `EPS_POINT` (was 1e-6). No snapshot or golden file changed.
+  Follow-up fixed (2026-10-28): `solveCubic` resolved every root only to the rounding of the
+  largest, so a t³ term of rounding noise on a circle 2 m out turned a tangent touch into a false
+  crossing, and two close roots beside a far one were lost; it now keeps only the largest root and
+  divides it out, finding the rest as a quadratic.
+- ✅ **Q39 A tool under way is not reset when a project opens** — only an open drag is rolled back,
+  so a polyline half drawn continues into the new project. Fixed (2026-10-28): opening, a template,
+  a recent project and a tab switch already made the board again — `CanvasHost` is keyed by the tab
+  — so its tools started idle; the one route that kept them was *Reload from disk*, which replaces
+  the tab's document in place. `DocumentStore.reset` now tells `onReset` listeners, and the board
+  answers with `ToolManager.cancel()`: the active tool gives up what it had half done, as Escape
+  does, and stays selected. The e2e tests open a project over a half-drawn polyline and reload one.
+- ✅ **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF
+  writers that ship; fixing it moves the committed baseline. Fixed (2026-10-26): *write the SVG*
+  and *write the DXF* time `exportSvg` and `exportDxf` on the benchmark strap, through the
+  package's index as the app calls them. The shipped SVG writer takes 2.1 ms where the old case's
+  baseline read 0.37 ms; `bench/svg.json` is re-recorded and `bench/dxf.json` is new, and only
+  compare on the machine that recorded them ([PERF-017](../performance-backlog.md#perf-017)).

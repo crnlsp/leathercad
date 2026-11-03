@@ -3,7 +3,7 @@
 **What this is:** where LeatherCAD is going, in what order, and what each step depends on — drawn.
 What LeatherCAD is and is not is [`product-spec.md`](product-spec.md); each item's scope, status and
 slices are [`roadmap.md`](roadmap.md). This page owns neither: it owns the direction.
-**Released:** v1.6.0 · **Next:** not named yet · **Last updated:** 2026-11-02
+**Released:** v1.6.0 · **Next:** 1.7 — Design & Construct, [its plan](superpowers/plans/2026-11-03-release-1.7.md) · **Last updated:** 2026-11-03
 
 ---
 
@@ -86,12 +86,12 @@ flowchart LR
 
 | Area | What it gives the maker | The next step |
 |---|---|---|
-| **Start** | A first stitched piece in the first session, without a wizard: the empty panels say what to do, and the sample shows a finished wallet | Worked projects to start from (9.18) |
-| **Draw** | Exact geometry, typed — sizes on the board, sums and units in any field, guides, and dimensions drawn like drafting | Curves that can be stitched (9.19) |
-| **Construct** | Lines that know what they are: stitching follows its edge, holes follow the iron, a mirror follows its original | Seams between pieces (9.6); thickness, skiving and grain |
-| **Check** | One list of what is wrong, reachable from the board, Print and the export | Problems explained, accepted, fixed; requirements a pocket must meet |
-| **Produce** | A template that measures true, printed from the app — calibrated to its printer — or exported | A cutting and stitching list (9.12) |
-| **Reuse and bring in** | A file that opens the same on any machine | Copy and paste, a part library, SVG import, tracing |
+| **Start** | A first stitched piece in the first session, without a wizard: four templates to start from (8.14), and the empty panels say what to do | A start screen that opens on the templates (U.23, 1.7) |
+| **Draw** | Exact geometry, typed — sizes on the board, sums and units in any field, guides, and dimensions drawn like drafting | Pieces picked by their body, nudged, typed into place and lined up by smart guides (3.13–3.20, 1.7); curves that can be stitched (9.19, 1.7) |
+| **Construct** | Lines that know what they are: stitching follows its edge, holes follow the iron, a mirror follows its original | Seams between pieces, checked hole by hole (9.6, 1.7); thickness, skiving and grain |
+| **Check** | One list of what is wrong, reachable from the board, Print and the export | Problems explained, accepted, fixed; a pocket that holds its card (9.14–9.17, 1.7) |
+| **Produce** | A template that measures true, printed from the app — calibrated to its printer — or exported | The production summary (9.12) and alignment marks (9.13), 1.7 |
+| **Reuse and bring in** | A file that opens the same on any machine | Copy and paste between projects, a part library and SVG import (1.7); tracing |
 | **Underneath all of it** | 1:1 measured on paper (Linux; the other platforms are R8), files that always open, nothing sent anywhere unless asked, every word translatable | A measured print on Windows and macOS, from makers (R8) |
 
 ## 4. How LeatherCAD learns about leather
@@ -102,14 +102,15 @@ checks possible; help sits on top of all of them.
 ```mermaid
 flowchart BT
   l1["What each line is<br/>edge, stitch line, fold, hole · built"]:::built
-  l2["How pieces go together<br/>seams, alignment marks · 9.6, 9.13"]:::candidate
+  l2["How pieces go together<br/>seams, alignment marks · 9.6, 9.13 · 1.7"]:::progress
   l3["What the leather does<br/>thickness, skiving, grain · 9.1, 9.21, 9.22"]:::candidate
-  l4["What the maker wants<br/>a pocket that holds a card · 9.14"]:::candidate
-  help["Help, on every layer<br/>why it matters, a fix to preview · 9.15 to 9.17"]:::candidate
+  l4["What the maker wants<br/>a pocket that holds a card · 9.14 · 1.7"]:::progress
+  help["Help, on every layer<br/>why it matters, a fix to preview · 9.15 to 9.17 · 1.7"]:::progress
   stack["Pieces placed as stacked<br/>exploring"]:::exploring
   l1 --> l2 --> l3 --> l4 --> help
   l2 -.-> stack
   classDef built fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+  classDef progress fill:#f9a825,stroke:#b26a00,color:#1a1a1a
   classDef candidate fill:#e3f2fd,stroke:#1565c0,color:#0d3c78
   classDef exploring fill:#f5f5f5,stroke:#757575,color:#333333,stroke-dasharray: 5 4
 ```
@@ -134,10 +135,10 @@ needs:
 
 ```mermaid
 flowchart TB
-  fit["Pieces that fit<br/>seams match, pockets hold"]:::candidate
-  explain["Problems that explain themselves<br/>why it matters, a fix to preview"]:::candidate
-  start["Start from something<br/>templates, copy and paste, a library"]:::candidate
-  bring["Bring patterns in<br/>SVG import, tracing"]:::candidate
+  fit["Pieces that fit<br/>seams match, pockets hold · 1.7"]:::progress
+  explain["Problems that explain themselves<br/>why it matters, a fix to preview · 1.7"]:::progress
+  start["Start from something<br/>copy and paste, a library · 1.7"]:::progress
+  bring["Bring patterns in<br/>SVG import 1.7; tracing later"]:::progress
   thick["Leather has thickness<br/>folds, gussets, skiving, grain"]:::candidate
   hw["Hardware that fits<br/>real sizes, clearance, placed from an edge"]:::candidate
   geo["Robust shapes<br/>offsetting, booleans · alongside"]:::candidate
@@ -148,14 +149,16 @@ flowchart TB
   classDef candidate fill:#e3f2fd,stroke:#1565c0,color:#0d3c78
 ```
 
-No dates and no version numbers: a candidate gets its number when it becomes the next release.
-1.6, the last, is in [its record](history/roadmap-1.6.md). Each milestone's items, needs, *Done when* and *Not in it* are in
+No dates: a candidate gets its version when it becomes the next release. **1.7 takes the first four
+milestones, with the precision editing they need** (3.13–3.20, 8.8b), the interface work (U.21–U.26)
+and the installer (R12–R14); its order and slices are [the 1.7 plan](superpowers/plans/2026-11-03-release-1.7.md). 1.6, the last, is in
+[its record](history/roadmap-1.6.md). Each milestone's items, needs, *Done when* and *Not in it* are in
 [`roadmap.md`](roadmap.md#later); the table says what each is for.
 
 | Milestone | For the maker | Main items | Needs first |
 |---|---|---|---|
-| [Pieces that fit](roadmap.md#pieces-that-fit) | Mating seams have the same holes, lined up; a pocket says whether the card goes in; the thread and leather are known before buying | 9.6, 9.12, 9.13, 9.14 | Nothing unbuilt |
-| [Problems that explain themselves](roadmap.md#problems-that-explain-themselves) | Every problem says why it matters; a warning that is meant can be accepted; a safe fix is one click, previewed and undoable | 9.15, Q34, 9.16, 9.17 | Q4; seams for the fix most worth having |
+| [Pieces that fit](roadmap.md#17--the-next-release) · 1.7 | Mating seams have the same holes, lined up; a pocket says whether the card goes in; the thread and leather are known before buying | 9.6, 9.12, 9.13, 9.14 | Nothing unbuilt |
+| [Problems that explain themselves](roadmap.md#17--the-next-release) · 1.7 | Every problem says why it matters; a warning that is meant can be accepted; a safe fix is one click, previewed and undoable | 9.15, Q34, 9.16, 9.17 | Q4; seams for the fix most worth having |
 | [Start from something](roadmap.md#start-from-something) | A new project starts from a worked one; good parts travel between projects | 9.18, 8.8b, 9.7, 9.25 | Built mechanisms (8.3, 4.3b) |
 | [Bring patterns in](roadmap.md#bring-patterns-in) | An Inkscape or Illustrator pattern comes in at the right size; a scan sits under the board at true scale | 9.19, 9.20, 9.2 | 9.19; an ADR for the parser; images in the `.lcp` |
 | [Leather has thickness](roadmap.md#leather-has-thickness) | A fold or a gusset gets the length its leather needs; skiving and grain print | 9.1, 9.21, 9.22 | Seams; where thickness lives |
@@ -178,12 +181,12 @@ Two small maps, because they answer two questions. First: what the checks are bu
 flowchart LR
   q4["Q4 · problems keep<br/>their identity · built"]:::built
   q33["Q33 · hardware measured<br/>by its rim · built"]:::built
-  s96["9.6 Seams"]:::candidate
-  t912["9.12 Thread and the<br/>cutting list"]:::candidate
-  m913["9.13 Alignment marks"]:::candidate
-  p914["9.14 Pocket fit"]:::candidate
-  a916["9.16 Accepting<br/>a warning"]:::candidate
-  f917["9.17 Fixes"]:::candidate
+  s96["9.6 Seams · 1.7"]:::progress
+  t912["9.12 Thread and the<br/>cutting list · 1.7"]:::progress
+  m913["9.13 Alignment marks · 1.7"]:::progress
+  p914["9.14 Pocket fit · 1.7"]:::progress
+  a916["9.16 Accepting<br/>a warning · 1.7"]:::progress
+  f917["9.17 Fixes · 1.7"]:::progress
   w91["9.1 Thickness<br/>and wrap"]:::candidate
   h923["9.23 Hardware<br/>clearance"]:::candidate
   h93["9.3 Hardware library"]:::candidate
@@ -200,6 +203,7 @@ flowchart LR
   s96 -.-> stack
   h93 -.->|"post length"| stack
   classDef built fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+  classDef progress fill:#f9a825,stroke:#b26a00,color:#1a1a1a
   classDef candidate fill:#e3f2fd,stroke:#1565c0,color:#0d3c78
   classDef exploring fill:#f5f5f5,stroke:#757575,color:#333333,stroke-dasharray: 5 4
 ```
@@ -217,18 +221,18 @@ Second: what drawing, importing and reusing are built on.
 
 ```mermaid
 flowchart LR
-  c919["9.19 Curves that<br/>can be stitched"]:::candidate
-  adr["An ADR for<br/>an XML parser"]:::candidate
-  i920["9.20 SVG import"]:::candidate
+  c919["9.19 Curves that<br/>can be stitched · 1.7"]:::progress
+  adr["ADR 0023: the platform<br/>parses SVG · 1.7"]:::progress
+  i920["9.20 SVG import · 1.7"]:::progress
   editor["A curve editor<br/>also later"]:::candidate
   t92["9.2 Tracing — first,<br/>images in the .lcp"]:::candidate
   o911["9.11 Robust offsetting"]:::candidate
   b95["9.5 Booleans"]:::candidate
   sample["The sample, opened<br/>untitled · built"]:::built
-  t918["9.18 Templates"]:::candidate
+  t918["8.14 Templates · built"]:::built
   dup["Duplicate re-points<br/>derivations · built"]:::built
-  p88["8.8b Copy and paste"]:::candidate
-  l97["9.7 Part library"]:::candidate
+  p88["8.8b Copy and paste · 1.7"]:::progress
+  l97["9.7 Part library,<br/>through templates · 1.7"]:::progress
   param["Parameterised<br/>templates"]:::exploring
   g922["9.22 Grain"]:::candidate
   hide["Pieces laid<br/>on a hide"]:::exploring
@@ -243,6 +247,7 @@ flowchart LR
   t92 -.-> hide
   g922 -.-> hide
   classDef built fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+  classDef progress fill:#f9a825,stroke:#b26a00,color:#1a1a1a
   classDef candidate fill:#e3f2fd,stroke:#1565c0,color:#0d3c78
   classDef exploring fill:#f5f5f5,stroke:#757575,color:#333333,stroke-dasharray: 5 4
 ```
@@ -250,8 +255,8 @@ flowchart LR
 - **A curve that cannot be stitched is not much use in a leather pattern.** Analytic offsetting
   refuses cubics ([`geometry.md`](geometry.md) §6.2), and both SVG import and a curve editor bring
   them — so 9.19 comes before either.
-- **A new dependency is a decision.** SVG import needs an XML parser, and every new dependency needs
-  an ADR first.
+- **A new dependency is a decision.** SVG import needed an XML parser; 1.7 uses the platform's own
+  (`DOMParser`, decided 2026-11-03), so no dependency, and ADR 0023 records the trust boundary.
 - **Tracing is a format change.** The `.lcp` reserves `assets/` for images
   ([`file-format.md`](file-format.md) §1), and nothing writes it yet.
 - **Reuse grows from what exists.** The sample already opens untitled, and duplicating a piece
@@ -263,15 +268,19 @@ Each has a recommended answer, which the work takes unless the maintainer decide
 
 | # | Question | Recommended |
 |---|---|---|
-| 1 | The order of the candidate milestones | As drawn: seams and checks before templates, because they catch the mistakes that cost leather. 9.18 needs nothing, and could go first if the first day matters more |
+| 1 | The order of the candidate milestones | **Decided 2026-11-03:** 1.7 takes the first four together, seams on its critical path. 9.18 shipped as 8.14 |
 | 2 | Nesting (9.9) moved to *Not planned* | Confirm. The question makers ask of it, how much leather a project takes, is 9.12's |
 | 3 | The constraint solver (9.10) moved to *Exploring* | Confirm. It was already conditional on evidence |
 | 4 | Q33 added to 1.6 | Confirm. A shipped rule misses a hole that breaks the edge: pattern correctness, the scope rule's own words |
-| 5 | Does a seam change the format version? | Not alone: it changes nothing drawn, cut or printed ([`file-format.md`](file-format.md) §4.5, rule 3). The slice that prints alignment marks bumps it (rule 2) |
-| 6 | Where a requirement attaches, and its ease | To the open stitch line that forms the pocket. The ease is the maker's, not set until they set it, as with thickness (U.13) |
+| 5 | Does a seam change the format version? | Not alone: it changes nothing drawn, cut or printed ([`file-format.md`](file-format.md) §4.5, rule 3), and 1.7 loads and reports a seam whose hole set has gone. The slice that prints alignment marks bumps it (rule 2). **Decided** 2026-11-03 (1.7 plan D2) |
+| 6 | Where a requirement attaches, and its ease | To the open stitch line that forms the pocket. The ease is the maker's, not set until they set it, as with thickness (U.13). Depth is reported, and judged only when the maker asks the pocket to hold it fully (1.7 plan D15) |
 | 7 | Where a fix is proposed | In `document`, as an ordinary command made from a diagnostic. The domain keeps reporting facts, and the app words the offer (ADR 0018) |
 | 8 | The thread formula | From the spacing and the seam's thickness where both are known; otherwise 4× the seam, said to be an estimate |
 | 9 | Where thickness lives | Decided in 9.1's first slice; a fold holds it today |
+| 10 | How a seam's holes are compared | By distance along each line, walked from the first hole of each side, never by count alone; a seam may join part of a run (1.7 plan D1, D3) |
+| 11 | The drift a seam may have | 0.5 mm. **Decided** 2026-11-03 (1.7 plan D4) |
+| 12 | The part library | Templates, not a second store: *Save piece as template* and *Insert piece from…*. **Decided** 2026-11-03 (1.7 plan D5) |
+| 13 | A light window theme | **Open** (2026-11-03): one design today, a dark shell round a light board; whether 1.7 adds a light shell is decided during the release, by how the work is going (1.7 plan D11) |
 
 ## 8. Evidence, and its limits
 

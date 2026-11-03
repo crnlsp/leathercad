@@ -784,6 +784,12 @@ marks at matching holes on both sides (9.13), and a gusset's length along the pa
 seam. **Open:** whether a seam alone keeps the format version — it changes nothing drawn, cut or
 printed (file-format.md §4.5, rule 3) — while the marks, which print, bump it (rule 2).
 
+**1.7's design** replaces the sketch above when 9.6a lands: a seam side owns its *stretch* — a run
+between two anchors, or part of one from an anchor for its partner's length — so `Run` is not
+changed; there is no `alignment` field, since each stretch has a start and a direction; and holes
+are compared by their distance along the line, walked from the first hole of each side, not by
+count alone. [The seams spec](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md).
+
 ## 8. Invariants and diagnostics
 
 [ADR 0013](adr/0013-invariants-are-enforced-rules-are-reported.md). Everything the feature set keeps

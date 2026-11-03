@@ -159,6 +159,7 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | Changing what UI Foundations built, F.0–F.7 | `docs/history/roadmap-to-1.0.md` § *Checkpoint — the UI/UX audit*, and the four specs it links |
 | The paper workflow and the window's bars (F.8, 7.4a–7.4d) | `docs/superpowers/specs/2026-09-24-sheets-workflow-design.md`; Design and Sheets stay separate views |
 | Changing what the UI refinement built, U.1–U.20 (1.5) | `docs/superpowers/plans/2026-10-08-ui-refinement.md` — the slice's section says why it is as it is — and the requirements and mockups it links |
+| 1.7's slices — 3.13–3.20, 8.8b, 9.6, 9.7, 9.12–9.20, Q34, Q41–Q43, U.21–U.26, R11–R18, PERF-018 | `docs/superpowers/plans/2026-11-03-release-1.7.md` and the four specs it links |
 | Tests | `docs/testing.md` |
 | Interface text, languages, Settings → Language | `docs/adr/0018-interface-language.md` |
 | Commits, pull requests, releases | `CONTRIBUTING.md` |
