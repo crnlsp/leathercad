@@ -40,6 +40,6 @@ describe('an undo step, in English', () => {
     expect(historyText({ action: 'add', name: 'Outline' }, t)).toBe('Add Outline');
     expect(historyText({ action: 'duplicate', name: 'Strap' }, t)).toBe('Duplicate Strap');
     expect(historyText({ action: 'follow', name: 'Outline 2' }, t)).toBe('Follow Outline 2');
-    expect(historyText({ action: 'flip-horizontal' }, t)).toBe('Flip horizontal');
+    expect(historyText({ action: 'flip-horizontal' }, t)).toBe('Flip horizontally');
   });
 });

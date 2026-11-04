@@ -288,8 +288,8 @@ describe('the message catalogue, in English', () => {
   it('counts in the plural the language uses', () => {
     const holes = (count: number): string =>
       describeProblem(problem('HOLE_COUNT_TOO_LOW', { ...named, count }), t);
-    expect(holes(0)).toBe('Stitch line has no holes, and a seam needs at least two.');
-    expect(holes(1)).toBe('Stitch line has 1 hole, and a seam needs at least two.');
+    expect(holes(0)).toBe('Stitch line has no holes, and stitching needs at least two.');
+    expect(holes(1)).toBe('Stitch line has 1 hole, and stitching needs at least two.');
     const split = describeProblem(problem('OFFSET_SPLIT', { ...named, droppedPieces: 2 }), t);
     expect(split).toBe(
       'The offset for Stitch line came apart into 3 pieces. Only the largest is drawn; 2 pieces left out.',
