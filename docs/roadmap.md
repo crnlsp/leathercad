@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.6.0 (2026-11-02) · **Next:** not named yet · **Last updated:** 2026-11-02
+**Released:** v1.6.0 (2026-11-02) · **Next:** 1.7 — Design & Construct · **Last updated:** 2026-11-03
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -45,6 +45,11 @@ holds the items themselves, their status and their order.
   [the plan](superpowers/plans/2026-10-08-ui-refinement.md): why it matters to a maker, what the
   code does today, what to find out first, and how to check it is done.
 
+- **1.7's slices** continue the numbers: `3.13` to `3.20` for editing, `U.21` to `U.26` for the
+  interface, `R11` to `R18` for release engineering, `PERF-018`, the findings `Q41` to `Q43`, and the
+  `9.x` items it takes from *Later*. Each slice's whole task — why, what the code does today, what
+  to find out first and how to check it is done — is in [the 1.7 plan](superpowers/plans/2026-11-03-release-1.7.md).
+
 ## Where 1.0 left things
 
 | Milestone | Proves | |
@@ -60,13 +65,98 @@ decided*](#collected-from-makers-and-decided)).
 
 ---
 
-## The next release
+## 1.7 — the next release
 
-**Not named yet.** 1.6.0 shipped on 2026-11-02, and [its record](history/roadmap-1.6.md) holds what
-it carried. The next release is a milestone from [*Later*](#later), named and its items marked in a
-change of its own; it then takes the heading `## <version> — the next release`, which the *Release
-gate* reads. Until then the gate refuses a pull request from `develop` into `main`, and a hotfix
-still goes through ([`CONTRIBUTING.md`](../CONTRIBUTING.md#changelog-and-releases)).
+**Design & Construct** (working title), named on 2026-11-03. A maker places, copies and lines up
+pieces as easily as in a drawing program, at CAD precision; the app checks that the holes of two
+pieces sewn together line up, by position and not only by count, and that a pocket holds its card;
+patterns come in from SVG files and travel between projects; the window feels like one tool; and
+installing, upgrading and printing keep the maker's work and scale. The order, the lanes, the
+decisions and every slice's *Find out first* and *Done when* are in [the 1.7 plan](superpowers/plans/2026-11-03-release-1.7.md); the
+designs are its specs, for [smart guides](superpowers/specs/2026-11-03-smart-guides-design.md),
+[seams and pockets](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md),
+[installing on Windows](superpowers/specs/2026-11-03-windows-installer-and-distribution-design.md)
+and [the UX audit](superpowers/specs/2026-11-03-1.7-ux-audit.md). Each line is one slice and one
+pull request, ticked by the pull request that finishes it.
+
+**P1** items are in the release. A **conditional** item is started only when its condition holds;
+at the release candidate, one whose condition has not held moves to *Later* in a change of its own,
+as any item that will not make it does.
+
+### Stage 1 — Foundation ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-1--foundation))
+
+- ☐ **R11 1.6's printing, measured on paper** — arrowheads, hole rows, taped grids and calibration, exact readings in the log.
+- ☐ **PERF-018 Packaged baselines** — startup, idle, memory and a soak on the packaged app, and 1.7's workloads.
+- ☐ **U.21 The UX baseline** — every screen inspected, keyboard-only and with a screen reader; the [register](superpowers/specs/2026-11-03-1.7-ux-audit.md) complete.
+- ☐ **R13 The Windows installer, installed in CI** — install, upgrade from 1.6.0 and uninstall, with the maker's data checked.
+- ☐ **Q41 An opened project starts with Select** — today a template opens in Rectangle and the first click draws.
+
+### Stage 2 — The core editor ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-2--the-core-editor))
+
+- ☐ **3.20 One snapping model** — one priority table, sources, hysteresis; the base for smart guides.
+- ☐ **3.13 A click on a piece's body selects it** — today only its lines can be clicked.
+- ☐ **U.22 Hover, selected, editing and locked read differently** (P1).
+- ☐ **3.14 Arrow keys nudge, Ctrl+A selects every piece.**
+- ☐ **3.15 Typed position and Move by.**
+- ☐ **3.16 Smart guides while moving** — edges, centres and guides, exact to the storage quantum.
+- ☐ **3.18 Placing inside a piece** — a rivet on a flap's centre, a fold at the middle.
+- ☐ **3.17 Live distances and clearance** — the move in mm, and a hole's rim clearance as the rule measures it.
+- ☐ **3.19 Equal spacing** (P1).
+- ☐ **8.8b Copy and paste whole pieces, across tabs** (was *of features*: whole pieces first).
+- ☐ **8.8b Ctrl+D duplicates.**
+- ☐ **8.8b Step and repeat** (P1).
+- ☐ **8.8b Copy features into another piece** (P1) — frozen when their source stays behind.
+
+### Stage 3 — Leathercraft intelligence ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-3--leathercraft-intelligence))
+
+- ☐ **Q34 Printed text too small to read** — `TEXT_TOO_SMALL_TO_PRINT`, DR5's rule, under 1.5 mm.
+- ☐ **9.15 Every problem explained** — why it matters and what to do, held by an audit test; next and previous problem by key.
+- ☐ **9.6a Seams, modelled** — two runs, or part of one; holes compared by distance along the line.
+- ☐ **9.6b Seams, checked and made** — *Sew together*, count and drift, the selection bar's third line.
+- ☐ **8.14b The built-in templates, checked as leatherwork** — derived stitching, seams that match, a maker's answers.
+- ☐ **9.17 Fixes offered with a problem** (P1) — the length that makes a seam match first.
+- ☐ **9.16 Accepting a warning** (P1).
+- ☐ **9.14a A pocket's clear size** (P1).
+- ☐ **9.14b A pocket that holds what it must** (P1).
+- ☐ **9.12 The production summary** (P1) — pieces, holes, hardware, thread and net leather, estimates labelled.
+- ☐ **9.13 Alignment marks on mating edges** (P1) — prints: format 13, measured on paper.
+- ☐ **Q21 Cut two, one turned over** (P1) — prints: a format version of its own, measured on paper.
+- ☐ **Q43 A laser export names pieces that overlap on the board** (P1).
+
+### Stage 4 — Geometry and interoperability ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-4--geometry-and-interoperability))
+
+- ☐ **9.19 Curves that can be stitched** (P1) — arcs fitted to each cubic, for the offset only.
+- ☐ **ADR 0023 SVG read by the platform's parser** (P1) — no XML dependency; the trust boundary written down.
+- ☐ **9.20a SVG import: units and paths** (P1).
+- ☐ **9.20b SVG import: roles and preview** (P1).
+- ☐ **9.20c SVG import: untrusted files** (P1).
+- ☐ **9.7 The part library, through templates** (P1) — *Save piece as template*, *Insert piece from…*.
+- ☐ **9.11 Robust offsetting, written here** (conditional) — only if a template or a maker's pattern needs stitching across a concave join.
+
+### Stage 5 — The interface and distribution ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-5--the-interface-and-distribution))
+
+- ☐ **U.23 The start screen opens on the templates.**
+- ☐ **U.24a Project tabs, refined.**
+- ☐ **U.24b The template picker and its management, refined.**
+- ☐ **U.24c Guides and Arrange, refined** — a level guide shows only its y; Arrange as icons.
+- ☐ **U.24d Parts, Properties and the selection bar, refined.**
+- ☐ **U.24e Problems, refined.**
+- ☐ **U.24f The export dialogs, refined.**
+- ☐ **U.24g Print Preview, Sheets and calibration, refined.**
+- ☐ **U.24h Save, recovery and notices, refined.**
+- ☐ **U.25 The visual system and accessibility** — states, spacing, focus, contrast, the minimum window, HiDPI.
+- ☐ **U.26 Languages, ready** (P1) — a pseudo-language for overflow; PR #87 reviewed.
+- ☐ **R14 Windows pins, the installer's description, and an icon for `.lcp` files.**
+- ☐ **R12 The assisted Windows installer** — where and for whom, guarded, never removing the maker's data.
+- ☐ **B5 Microsoft Store readiness** (P1) — an MSIX whose templates survive reinstalling; the listing itself is the maintainer's.
+- ☐ **7.6c Printing from Windows** (conditional) — only with a Windows PC and printer to measure the gauge.
+
+### Stage 6 — Qualification ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-6--qualification))
+
+- ☐ **R15 Pixels and axe for every screen 1.7 adds.**
+- ☐ **R16 Manufacturing workflows, end to end** — card holder, bifold, a multi-piece bag, a seam, a reused and an imported piece; E2E and paper.
+- ☐ **R17 Full regression and packaged qualification**, on every platform there is.
+- ☐ **R18 Release documentation** — README media, getting started, keys, formats, known limitations.
 
 ### Collected from makers, and decided
 
@@ -88,166 +178,37 @@ process kill; `pnpm test:visual` and `pnpm test:packaged`; HiDPI, Windows and ma
 
 ## Later
 
-Candidate milestones, each a theme, in the order suggested for the work after 1.6. A milestone
+Candidate milestones, each a theme, in the order suggested for the work after 1.7. A milestone
 becomes a release only when it is next — named, and its items marked, in a change of its own — so
 nothing here is a promise, and the order may change as makers say what they need. Why these themes,
 why this order, and what depends on what are drawn in [`product-roadmap.md`](product-roadmap.md).
 
 The numbers are Phase 9's from the 1.0 record, continued from 9.12 on 2026-10-17. The gaps are items
 that moved: DXF (9.4) into 1.1 as 6.5, Windows and macOS (9.8) into 1.0, and nesting (9.9) to *Not
-planned*.
-
-### Pieces that fit
-
-Two edges sewn together must have the same holes, and a pocket must hold what it is for. Today each
-piece is checked on its own, and only a mirror makes two hole counts equal
-([domain-model](domain-model.md) §7).
-
-- **9.6 Seam pairing and hole-count parity** — catches a genuinely expensive mistake. Two runs of
-  holes — on two pieces, or on one piece folded over — are paired as a seam, and a seam whose counts
-  differ, or whose lengths differ by more than the slice decides is sewable, is a problem naming
-  both (`SEAM_HOLE_COUNT_MISMATCH`). The selection bar's third line, which U.17 leaves room for and
-  builds nothing of (R-14), reads the pair: "Matches Outer, right run 15 = 15".
-- **9.12 Thread, and the cutting and stitching list** — the thread a seam takes, beside its pair in
-  the selection bar (R-14's "Thread ≈ 0.9 m"), and one list for the project: the pieces to cut and
-  how many, the holes and thread per seam, the hardware, and the leather all the pieces take. One
-  home for the thread figure [domain-model](domain-model.md) §6.3 asks for and for
-  [printing](printing.md) §12's hole and thread report. Its formula is this item's to decide: those
-  two say 4–5× and 4× the seam's length, and a seam's thickness changes it.
-- **9.13 Alignment marks on mating edges** — marks at chosen holes along a seam, printed at the
-  matching hole on both pieces, so they line up when glued and stitched. Derived from the seam, so
-  they follow it. Printed, never cut: a notch in an edge that will be burnished is a flaw in the
-  goods. Not the registration crosses that line up paper sheets (7.2a). Today a marking line whose
-  purpose is *Alignment* is drawn by hand.
-- **9.14 A pocket that holds what it must** — the first requirement a maker states. The clear width
-  and depth inside an open stitch line, up to its opening, is geometry the board already has, so it
-  comes first as a reading. Then the maker says what the pocket holds — a card (ID-1, 85.60 × 53.98
-  mm) or a size they type, such as a banknote's — and a pocket too small for it, with the maker's
-  ease, is a problem. Stored as metadata, since it changes nothing drawn, cut or printed
-  ([file-format](file-format.md) §4.5, rule 3). One requirement on one kind of thing, not a
-  requirements engine.
-
-**Needs:** nothing unbuilt — runs, anchors and hole reports exist, and U.17's bar has room. To
-decide: whether a seam alone keeps the format version while printed marks bump it; where a
-requirement attaches; and the ease, which is not set until the maker sets it, as the leather's
-thickness is not (U.13).
-
-**Done when:**
-- two runs paired with different counts make one problem naming both, and equal ones read *Matches*;
-- the list gives thread per seam, and the leather each piece takes;
-- marks print at matching holes on both pieces and measure the same distance along each on paper;
-- a card pocket shows its clear size and, once an ease is set, warns when the card will not go in;
-- property tests: pairing is symmetric, marks land on matching holes, a larger pocket never fits
-  less.
-
-**Not in it:** changing a count to match (9.17 offers that); pieces placed as they are stacked
-(*Exploring*); ease that follows the leather's thickness (9.1); a table of every currency's notes.
-
-### Problems that explain themselves
-
-Every problem is listed, named and shown today (4.12, U.7), but a beginner cannot always act on one,
-and a warning the maker has weighed comes back on every print.
-
-- **9.15 Every problem explained** — beside each problem, why it matters to the leather and what to
-  do about it, in the app's words ([ADR 0018](adr/0018-interface-language.md)). Words only, no rule
-  changes; a code without its explanation fails a test, as the catalogue's audit does today.
-- **Q34 Printed text too small to read** — DR5's rule, `TEXT_TOO_SMALL_TO_PRINT`, was to arrive with
-  document text in 4.11 and never did: a label has had its own height since 4.11b, and nothing
-  checks it (`INVARIANTS_WITHOUT_A_CODE` still says *Planned*). [domain-model](domain-model.md) §8.6
-  gives its threshold, 1.5 mm.
-- **9.16 Accepting a warning** — the maker says a warning is meant, and it stops nagging: still
-  listed, marked accepted, and back as soon as what it is about changes. An error cannot be
-  accepted. Kept in the project as codes and the features they name, never words. Needs Q4 (1.6), so
-  that an acceptance finds its problem again after an edit.
-- **9.17 Fixes offered with a problem** — where one correction is plainly safe, the problem offers
-  it: a stitch margin that clears the edge, the iron that matches the spacing, the spacing that gives
-  a seam equal counts. Pointing at it previews it through the store's preview, which never touches
-  history; choosing it is one undo step; nothing is fixed without the maker choosing. A fix is an
-  ordinary command proposed from the problem, and one that no longer applies is refused, saying why
-  (X1).
-
-**Needs:** Q4 for 9.16; the store's transactions, built, for previews; 9.6 for the fix most worth
-having.
-
-**Done when:**
-- every code the drawer can list has its explanation, and an audit test holds it;
-- an accepted warning survives unrelated edits and a save and reopen, and returns when its cause
-  changes;
-- every fix previews without an undo step, applies as one, and is refused with a reason once it no
-  longer fits.
-
-**Not in it:** fixing anything automatically; fixes for refusals, which are never listed; blocking
-export; suggestions that no rule explains.
+planned*. *Pieces that fit* and *Problems that explain themselves* moved into 1.7 whole on
+2026-11-03, with most of *Start from something* and *Bring patterns in*, 9.11, 7.6c and Q21.
 
 ### Start from something
 
-A new project is blank, and the sample wallet (8.3) is the only worked example. A maker's own good
-parts cannot be carried to the next project.
+Templates to start from shipped in 1.6 (8.14), which retired 9.18. Copy and paste (8.8b) and the
+part library (9.7) are in 1.7. What remains:
 
-- **9.18 New project from a template** — *New project* offers a few worked projects beside the blank
-  one — a card holder, a bifold, a key fob — each opened untitled from the app as the sample is
-  (`readSampleProject`), the sample wallet first among them.
-- **8.8b Copy, Paste and Duplicate of features,** after 8.8. Neither exists, and they carry a
-  domain question: what a pasted stitch line follows when its outline was not copied with it. A
-  command with property tests, not a menu item. A part pastes into another project too, carried as
-  a `.lcpart`-shaped copy ([file-format](file-format.md) §8).
-- **9.7 Templates** — a part saved to a library and inserted again (was 8.1): a copy with its
-  derivations re-pointed, never a live link ([domain-model](domain-model.md) §9). Parameterised
-  templates moved to *Exploring* on 2026-10-17.
 - **9.25 Search templates by tag** (added 2026-10-26) — the picker finds a tag today only as words
   in its search, beside the names and descriptions (8.14). Tags become something to search by on
   their own: the tags in use offered as the maker types, a tag chosen narrowing the list to the
   templates that carry it. The built-in categories left the picker in 8.14 for the same reason: a
   tag the maker gave is the filter that means something to them.
 
-**Needs:** the sample's untitled opening (8.3) and duplicate-part re-pointing (4.3b), both built;
-8.8b's domain question answered before 9.7, which inserts a part the same way.
-
-**Done when:**
-- each template opens untitled, with no problems, and prints;
-- a pasted piece keeps its stitching, re-pointed to the copies, and nothing in it follows a feature
-  it left behind;
-- an inserted part evaluates the same on a machine that has never seen the library.
-
-**Not in it:** parameterised templates; a shared or online library; a template that changes the
-projects already made from it.
-
 ### Bring patterns in
 
-Most makers arrive with patterns already drawn — in Inkscape or Illustrator, or on card. None of it
-comes in today except by drawing it again.
+SVG import and stitching along curves (9.19, 9.20) are in 1.7. What remains:
 
-- **9.19 Curves that can be stitched** — analytic offsetting refuses cubic segments
-  ([geometry](geometry.md) §6.2), so no stitch line can follow a curve that an import or a curve
-  editor brings — or a circle squashed after 3.12, which does make cubics (3.12 kept
-  [geometry](geometry.md) §4.2 rule 2 rather than fit arcs of its own). Before 9.11, an offset through arcs fitted to the cubic within the flattening
-  tolerance would build that stitch line instead of refusing it; whether to do that or wait for 9.11
-  is the slice's to decide. Pure geometry under [geometry](geometry.md) §12's definition of done, so
-  it can start whenever there is room.
-- **9.20 SVG import** — an existing vector pattern, opened as pieces. Its size is read from the
-  file's units, then shown and confirmed before anything is made: px is 96 to the inch by the CSS
-  rule Inkscape follows, but Illustrator writes px at 72, and a file that gives no size is asked
-  about, never guessed. Closed shapes become outlines, and cut-outs by what they lie inside; open
-  ones become markings, unless a layer's name says otherwise; small circles along a path are
-  reported as likely stitch holes rather than made into hardware. Text, images, clipping and effects
-  are listed as left out. The importer is a package beside `export`, with its own Y flip
-  ([architecture](architecture.md) §2), and its XML parser a new dependency, so an ADR comes first.
 - **9.2 Tracing from images** — import a photo or scan, set its scale from a known dimension, trace
   over it. The image is kept in the project's `assets/`, which [file-format](file-format.md) §1
   reserves and nothing writes yet: a format change.
 
-**Needs:** 9.19 before an imported curve can be stitched; the parser's ADR; images in the `.lcp` for
-9.2.
-
-**Done when:**
-- a 100 mm square saved in mm, in pt and in Inkscape's px imports at 100.0 mm, one in Illustrator's
-  px is read at 72 to the inch or asked about, and a file with no size asks;
-- everything left out is listed by kind and count;
-- a stitch line follows an imported curve within the flattening tolerance;
-- a scan scaled from a known length reads that length.
-
-**Not in it:** turning an image into lines by itself; straightening a photo taken at an angle;
-importing PDF or DXF.
+**Needs:** images in the `.lcp`. **Done when:** a scan scaled from a known length reads that length. **Not in it:**
+turning an image into lines by itself; straightening a photo taken at an angle; importing PDF or DXF.
 
 ### Leather has thickness
 
@@ -308,11 +269,8 @@ layers, which needs layers (*Exploring*).
 Alongside the others: pure geometry that nothing here waits on, and that *Bring patterns in* gains
 most from.
 
-- **9.11 Robust offsetting, written here** — the concave outlines analytic offsetting refuses, and
-  stitching *across* a concave join such as a thumb scoop. Two bindings were tried and rejected
-  (ADR 0008); it will be written, not bought.
-- **9.5 Boolean operations** — built together with 9.11, since both have to find and remove the loops
-  an operation creates.
+- **9.5 Boolean operations** — built together with 9.11 (in 1.7, conditional), since both have to
+  find and remove the loops an operation creates.
 
 **Done when:** [geometry](geometry.md) §6.3's rules hold — integers at the quantum, `offsetPath`
 still the entry point, areas tested rather than bounds; a stitch line follows a thumb scoop; and
@@ -323,59 +281,9 @@ still the entry point, areas tested rather than bounds; a stitch line follows a 
 Real, and not fixed in that pass because each needs a decision or a change of its own. None is in a
 release until it is moved into one.
 
-- ✅ **Q35 A save is not flushed to disk before it replaces the file.** `writeFileAtomic`
-  (`apps/desktop/src/main/atomicWrite.ts`) renamed a temporary file into place without `fsync`ing
-  it or its folder, so a power cut just after a save could leave an empty `.lcp` on some file
-  systems; the rename also replaced a symlink with a plain file and reset the file's permissions.
-  **Done (2026-10-26):** the temporary file is flushed before the rename and the folder after it
-  (not on Windows, which cannot open a folder to flush it; a file system that refuses with
-  `EINVAL`/`ENOTSUP` is the only error let go). A symlink is resolved first, so the target is
-  replaced and the link stays, even a link to a file not there yet; the file keeps its permission
-  bits. On any failure the previous file is untouched, the scrap is removed and the error reaches
-  the caller. *Export template to a file* used `copyFile` over the maker's file and now goes through
-  the same write.
-- ✅ **Q36 Ctrl+S during a drag saves the drag's preview,** not the document before it
-  (`useProjectFile.ts`); the crash-recovery copy already waits for the gesture to end.
-  **Done (2026-10-26):** `DocumentStore.committedDocument` is the document without a gesture under
-  way — what the drag began from. *Save*, *Save As* (and so the save before closing or switching),
-  *Save as template* and the copy kept when the window closes all write it, and a tab saved
-  mid-drag is saved as of that document, so it is unsaved once the drag commits and clean if it is
-  cancelled. An *Untitled* project being named by its first save still ends the drag, as any
-  command does.
 - **Q37 Cmd+Q, then *Discard*, closes the window but leaves the app running on macOS** — the quit
   was cancelled by the question, and Discard only closes the window. Unverified: no Mac. Check it
   in the same Mac session as release-checklist check 12.
-- ✅ **Q38 Local epsilons,** which invariant 7 forbids: `glide.ts`, `mat2x3.ts`, `segment/types.ts`,
-  `arc.ts` and `flatten.ts`'s step counts, `polynomial.ts`, `export/sheetsDisplay.ts` and
-  `persist/schema.ts`; and `arc.ts`'s `toCubics` checks a radius against `EPS_ANGLE`. Each moves
-  numbers on the geometry or export path, so they want one change with property tests and a lint
-  rule for `e-N` literals outside `core`. Fixed (2026-10-26): every tolerance is one from
-  `core/epsilon.ts`, which gains `EPS_RATIO` for dimensionless quantities and the root finders'
-  five; an ESLint rule refuses an `e-N` literal outside `core` and the tests, and the four that
-  are not tolerances say so where they stand. Two bugs of the same kind went with them. `toCubics`
-  judges a degenerate arc by its length, so a long arc with a tiny sweep keeps its end; and
-  point-in-path judged a seam in `t` and radians while its rays move in millimetres, so the centre
-  of any circle over 1000 mm in radius read as outside. Moved: the glide axis snaps within
-  `EPS_ANGLE` of a half turn (was 1e-12), Sheets view joins merge within `EPS_POINT` (was 1e-6), a
-  cubic's ray crossing is near-tangent below `EPS_POINT` (was 1e-9), the path measure's table
-  spacing is floored at `EPS_LENGTH` (was 1e-6), and the scale tool's grab is on the pivot within
-  `EPS_POINT` (was 1e-6). No snapshot or golden file changed.
-  Follow-up fixed (2026-10-28): `solveCubic` resolved every root only to the rounding of the
-  largest, so a t³ term of rounding noise on a circle 2 m out turned a tangent touch into a false
-  crossing, and two close roots beside a far one were lost; it now keeps only the largest root and
-  divides it out, finding the rest as a quadratic. A tool under way is not reset when a project opens** — only an open drag is rolled back,
-  so a polyline half drawn continues into the new project. Fixed (2026-10-28): opening, a template,
-  a recent project and a tab switch already made the board again — `CanvasHost` is keyed by the tab
-  — so its tools started idle; the one route that kept them was *Reload from disk*, which replaces
-  the tab's document in place. `DocumentStore.reset` now tells `onReset` listeners, and the board
-  answers with `ToolManager.cancel()`: the active tool gives up what it had half done, as Escape
-  does, and stays selected. The e2e tests open a project over a half-drawn polyline and reload one.
-- ✅ **Q40 `export.bench.ts` times the render package's SVG backend,** not the `exportSvg` and DXF
-  writers that ship; fixing it moves the committed baseline. Fixed (2026-10-26): *write the SVG*
-  and *write the DXF* time `exportSvg` and `exportDxf` on the benchmark strap, through the
-  package's index as the app calls them. The shipped SVG writer takes 2.1 ms where the old case's
-  baseline read 0.37 ms; `bench/svg.json` is re-recorded and `bench/dxf.json` is new, and only
-  compare on the machine that recorded them ([PERF-017](performance-backlog.md#perf-017)).
 
 ### Also later, each already decided in principle
 
@@ -383,10 +291,6 @@ release until it is moved into one.
   operating system, and the channels LeatherCAD ships through (AUR, `.deb`, Microsoft Store). Under
   way task by task, outside any release, in
   [the plan](superpowers/plans/2026-10-31-ci-cd-and-shipping.md).
-- **7.6c Printing from Windows.** A transport that can be told not to scale. SumatraPDF is the
-  candidate (GPL-3.0, beside the app). It needs its own ADR and a gauge measured on paper. Until
-  then the preview saves the PDF. Moved out of 1.6 on 2026-10-28: no Windows PC and printer were at
-  hand to measure the gauge, and the release does not wait for one.
 - **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched only
   after 9.19.
 - **Pieces gliding** between Design and Sheets.
@@ -420,7 +324,6 @@ Recorded from the QA pass (2026-09-24), with no work planned:
 | # | What | Severity | Plan |
 |---|---|---|---|
 | **Q20** | (S6) Hidden parts, label-only parts and parts with a hidden outline are left out of the PDF without a notice | intentional | The Sheets spec's *Not printed* labels |
-| **Q21** | (S7) *Cut 2* on a mirrored pair does not say to flip the template for the second piece | deferred | The Sheets spec §11 |
 | **Q22** | (S8) Saving rounds the mirror-line angle to six decimals, so a reopened document differs in memory by ≤ 0.0003 mm per metre | negligible | Recorded in 4.8a; nothing to do |
 | **Q23** | (S9) Ink reaches up to half a stroke (0.125 mm) past the printable area, because packing uses geometry bounds | negligible | Nothing unless a printer clips it |
 | **Q24** | (S10) Horizontal and vertical dimensions read 0.0 after a 90° rotation; the UI creates only aligned ones | API only | When those kinds reach the UI |
