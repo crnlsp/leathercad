@@ -143,6 +143,14 @@ export function PrintPreview({
   const correction = known ?? NO_CORRECTION;
   const corrected = known !== undefined && !isNoCorrection(known);
   const [calibrating, setCalibrating] = useState(false);
+  const calibrateRef = useRef<HTMLButtonElement>(null);
+  const wasCalibrating = useRef(false);
+  useEffect(() => {
+    // Saving or cancelling unmounts the calibration form. Keep focus in the
+    // preview so its keyboard controls, including Escape, continue to work.
+    if (wasCalibrating.current && !calibrating) calibrateRef.current?.focus();
+    wasCalibrating.current = calibrating;
+  }, [calibrating]);
   const [correctionFailed, setCorrectionFailed] = useState<string | null>(null);
 
   // The PDF: written once per plan and correction, previewed, then printed or
@@ -399,6 +407,7 @@ export function PrintPreview({
                     type="button"
                     className="tool"
                     data-testid="print-calibrate"
+                    ref={calibrateRef}
                     onClick={() => setCalibrating(true)}
                   >
                     {corrected ? t('calibration.again') : t('calibration.calibrate')}

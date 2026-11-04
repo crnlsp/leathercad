@@ -7,6 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import de from '../apps/desktop/src/locales/de.json' with { type: 'json' };
 import en from '../apps/desktop/src/locales/en.json' with { type: 'json' };
+import fr from '../apps/desktop/src/locales/fr.json' with { type: 'json' };
 import pl from '../apps/desktop/src/locales/pl.json' with { type: 'json' };
 import ru from '../apps/desktop/src/locales/ru.json' with { type: 'json' };
 import { closeApp, crashApp } from './closeApp.js';
@@ -21,7 +22,7 @@ import {
 import { closeActiveTab } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
-const CATALOGUES = { en, pl, de, ru };
+const CATALOGUES = { en, pl, de, ru, fr };
 const ENGLISH_SYSTEM = { LANGUAGE: 'en_GB', LC_ALL: 'en_GB.UTF-8', LANG: 'en_GB.UTF-8' };
 
 async function switchLanguage(window: Page, tag: keyof typeof CATALOGUES): Promise<void> {
@@ -84,11 +85,11 @@ async function noHorizontalOverflow(window: Page): Promise<void> {
   }
 }
 
-test('production switches English → Polish → German → Russian → English in the renderer and native dialogs', async () => {
+test('production switches all registered languages and returns to English in the renderer and native dialogs', async () => {
   const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
   try {
     await expect(window.locator('html')).toHaveAttribute('lang', /^en/);
-    for (const tag of ['pl', 'de', 'ru', 'en'] as const) {
+    for (const tag of ['pl', 'de', 'ru', 'fr', 'en'] as const) {
       await switchLanguage(window, tag);
       await expect(window.getByTestId('settings')).toHaveAccessibleName(
         CATALOGUES[tag].projectBar.settings,
@@ -110,14 +111,16 @@ test('production switches English → Polish → German → Russian → English 
     }
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-language').click();
-    await expect(window.getByTestId('setting-language').locator('option')).toHaveCount(5);
+    await expect(window.getByTestId('setting-language').locator('option')).toHaveCount(
+      Object.keys(CATALOGUES).length + 1,
+    );
     await expect(window.getByTestId('setting-language')).not.toContainText('expanded');
   } finally {
     await closeApp(app);
   }
 });
 
-for (const tag of ['pl', 'de', 'ru'] as const) {
+for (const tag of ['pl', 'de', 'ru', 'fr'] as const) {
   test(`${tag} survives a restart and system detection resolves it`, async () => {
     const config = mkdtempSync(join(tmpdir(), 'leathercad-locale-'));
     const first = await openApp({ env: { ...ENGLISH_SYSTEM, XDG_CONFIG_HOME: config } });
@@ -284,7 +287,33 @@ for (const tag of ['pl', 'de', 'ru'] as const) {
         await noHorizontalOverflow(window);
         await expectNoViolations(window, `${tag} print ${width}`);
         await capture(window, `${tag}-print-${width}`);
+        await preview.getByTestId('print-calibrate').click();
+        const calibration = preview.getByTestId('calibration');
+        const across = calibration.getByLabel(
+          words.calibration.horizontal.replace('{{length}}', '190'),
+        );
+        const along = calibration.getByLabel(
+          words.calibration.vertical.replace('{{length}}', '200'),
+        );
+        await across.fill('189,05');
+        await across.press('Enter');
+        await along.fill('200,25');
+        await along.press('Enter');
+        // All four translated locales use a decimal comma in percentage adjustments.
+        await expect(calibration.getByTestId('calibration-result')).toContainText('+0,50');
+        await expect(calibration.getByTestId('calibration-result')).toContainText('-0,12');
+        await noHorizontalOverflow(window);
+        await expectNoViolations(window, `${tag} calibration ${width}`);
+        await capture(window, `${tag}-calibration-${width}`);
+        await calibration.getByTestId('calibration-save').click();
+        await expect(preview.getByTestId('print-corrected')).toContainText('+0,50');
+        await expect(preview.getByTestId('print-corrected')).toContainText('-0,12');
+        await expect(preview.getByTestId('print-calibrate')).toBeFocused();
+        await preview.getByTestId('print-calibrate').click();
         await window.keyboard.press('Escape');
+        await expect(preview.getByTestId('print-calibrate')).toBeFocused();
+        await window.keyboard.press('Escape');
+        await expect(preview).toHaveCount(0);
       }
       // A real edit asks the localized destructive-action question; cancel retains the work.
       await drawAPanel(window);

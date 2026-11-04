@@ -36,6 +36,13 @@ if (review !== undefined) {
     console.log(
       `\n${tag}: ${report.translated}/${report.total} translated; ${report.missing.length} missing (${percentage} %)`,
     );
+    try {
+      console.log(
+        `Plural forms: ${new Intl.PluralRules(tag).resolvedOptions().pluralCategories.join(', ')}`,
+      );
+    } catch {
+      console.log('Plural forms: unavailable (invalid locale tag)');
+    }
     console.log(`Missing: ${report.missing.join(', ') || 'none'}`);
     console.log(`Structural errors: ${report.mistakes.join('; ') || 'none'}`);
   }

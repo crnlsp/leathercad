@@ -15,7 +15,7 @@ pure were quietly one language.
 
 The interface is to be translatable by the people who use it — Polish, German, Spanish and Russian
 are the first asked for — without another rewrite, and without a contributor having to understand the
-code. U.26 registers English, Polish, German and Russian for production.
+code. U.26 registers English, Polish, German, Russian and French for production.
 
 ## Decision
 
@@ -85,19 +85,22 @@ English and never block ordinary pull requests or releases.
 using `shared/catalogue.ts`: valid JSON, known keys and groups, nonempty strings, valid tags,
 matching placeholders and complete CLDR families where a plural is translated. Polish and Russian
 families require `_one`, `_few`, `_many`, `_other`; German and English require `_one`, `_other`.
+French requires `_one`, `_many`, `_other`: zero and fractions below two use `one`, while exact
+integer multiples of one million use `many` with the runtime's standard notation.
 `count` may be implicit in a plural form, as in “one hole”; other placeholders must be retained.
 Missing entire messages are tested as valid. The registry must still name real, valid catalogues.
 
 **Coverage is informational.** `pnpm locales:report` uses the same structural validator, counts a
-plural family once and lists missing message keys and structural errors. Exact English copies are
+plural family once and lists required plural forms, missing message keys and structural errors. English copies are
 reported as untranslated, even for shared words, keycaps, acronyms and placeholder-only labels;
-these conservative figures are not a release gate. `pnpm locales:report --review pl` produces a
+whitespace-only changes, including nonbreaking spaces, do not count as translations.
+These conservative figures are not a release gate. `pnpm locales:report --review pl` produces a
 side-by-side Markdown table for review. See [the translation guide](../localization.md).
 
 **Development overflow preview.** In addition to unregistered files, `pnpm dev` offers
 *English (expanded)* (`en-XA`), with words lengthened by about 40 % and placeholders preserved.
 It is generated from English, is not a supported preference in production and is removed from
-production bundles. Production explicitly imports all four supported catalogues.
+production bundles. Production explicitly imports all registered catalogues.
 
 ## Consequences
 

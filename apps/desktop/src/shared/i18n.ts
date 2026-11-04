@@ -1,5 +1,6 @@
 import de from '../locales/de.json';
 import en from '../locales/en.json';
+import fr from '../locales/fr.json';
 import pl from '../locales/pl.json';
 import ru from '../locales/ru.json';
 
@@ -87,6 +88,7 @@ export const SUPPORTED_LANGUAGES: readonly Language[] = [
   { tag: 'pl', name: 'Polski', messages: pl },
   { tag: 'de', name: 'Deutsch', messages: de },
   { tag: 'ru', name: 'Русский', messages: ru },
+  { tag: 'fr', name: 'Français', messages: fr },
 ];
 
 /**

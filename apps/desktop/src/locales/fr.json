@@ -1,0 +1,1644 @@
+{
+  "app": {
+    "untitled": "Sans titre",
+    "untitledNumbered": "Sans titre {{number}}",
+    "windowTitle": "{{name}} — LeatherCAD",
+    "windowTitleUnsaved": "• {{name}} — LeatherCAD",
+    "drawing": "Dessin"
+  },
+  "tabs": {
+    "strip": "Projets",
+    "region": "Projets ouverts",
+    "close": "Fermer {{name}}",
+    "closeTooltip": "Fermer ce projet",
+    "unsaved": "{{name}}, modifications non enregistrées",
+    "add": "Nouvel onglet",
+    "addTooltip": "Un nouveau projet, ou un projet existant, dans son propre onglet",
+    "menu": "Menu du projet",
+    "menuTooltip": "Nouveau, ouvrir, enregistrer sous, renommer et projets récents",
+    "noProject": "Aucun projet ouvert",
+    "alreadyOpen": "{{name}} est déjà ouvert",
+    "all": "Tous les onglets",
+    "allTooltip": "Tous les projets ouverts, y compris ceux qui ne tiennent pas dans la barre",
+    "unsavedNote": "Modifications non enregistrées",
+    "dropHere": "Déplacer ici"
+  },
+  "tabMenu": {
+    "label": "Menu de {{name}}",
+    "rename": "Renommer…",
+    "save": "Enregistrer",
+    "saveAs": "Enregistrer sous…",
+    "reload": "Recharger depuis le disque",
+    "reloadNote": "Le fichier dans son dernier état enregistré",
+    "duplicate": "Dupliquer dans un nouveau projet",
+    "showInFolder": "Afficher dans le dossier",
+    "copyPath": "Copier le chemin",
+    "trash": "Mettre le fichier à la corbeille…",
+    "close": "Fermer",
+    "closeOthers": "Fermer les autres onglets",
+    "noFile": "Pas encore enregistré dans un fichier",
+    "onlyTab": "Aucun autre onglet ouvert",
+    "trashTitle": "Mettre « {{name}} » à la corbeille ?",
+    "trashBody": "{{file}} est placé dans la corbeille du système, d’où il peut être restauré, et son onglet se ferme.",
+    "trashBodyUnsaved": "{{file}} est placé dans la corbeille du système, d’où il peut être restauré, et son onglet se ferme. Ses modifications non enregistrées sont perdues.",
+    "trashConfirm": "Mettre à la corbeille",
+    "trashFailed": "Impossible de mettre le fichier à la corbeille. {{reason}}"
+  },
+  "outside": {
+    "changed": "{{file}} a été modifié en dehors de LeatherCAD.",
+    "gone": "{{file}} a été déplacé ou supprimé en dehors de LeatherCAD.",
+    "reload": "Recharger",
+    "keep": "Garder ma version",
+    "save": "Enregistrer à nouveau",
+    "dismiss": "Ignorer"
+  },
+  "rename": {
+    "title": "Non renommé",
+    "exists": "Un fichier nommé « {{file}} » existe déjà dans le dossier de ce projet. Choisissez un autre nom : le projet et son fichier conservent leur nom actuel.",
+    "invalid": "« {{name}} » n’est pas un nom de fichier valide : il contient un caractère tel que / \\ : * ? \" < > |, ou il est réservé par le système. Choisissez un autre nom.",
+    "failed": "Impossible de renommer le fichier du projet. Le projet conserve donc son nom. {{reason}}",
+    "followExists": "Le projet s’appelle à nouveau « {{name}} », mais son fichier conserve son nom actuel : un fichier nommé « {{file}} » existe déjà dans son dossier."
+  },
+  "start": {
+    "title": "Créer un projet",
+    "fromTemplate": "Nouveau projet à partir d’un modèle",
+    "open": "Ouvrir un projet existant",
+    "lede": "Créez un patron, ouvrez-en un depuis le disque ou reprenez votre travail.",
+    "pin": "Épingler {{name}}",
+    "unpin": "Désépingler {{name}}",
+    "pinTooltip": "Garder en tête de liste",
+    "unpinTooltip": "Replacer parmi les projets récents",
+    "remove": "Retirer {{name}} de la liste",
+    "removeTooltip": "Retirer de la liste. Le fichier reste à sa place"
+  },
+  "actions": {
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "delete": "Supprimer",
+    "deletePart": "Supprimer la pièce",
+    "duplicate": "Dupliquer",
+    "duplicatePart": "Dupliquer la pièce",
+    "hide": "Masquer",
+    "lock": "Verrouiller",
+    "save": "Enregistrer",
+    "show": "Afficher",
+    "unlock": "Déverrouiller"
+  },
+  "keys": {
+    "Alt": "Alt",
+    "Down": "↓",
+    "End": "Fin",
+    "Home": "Début",
+    "Insert": "Inser",
+    "Left": "←",
+    "PageDown": "Pg. suiv",
+    "PageUp": "Pg. préc",
+    "Right": "→",
+    "Up": "↑",
+    "Backspace": "Retour arrière",
+    "Ctrl": "Ctrl",
+    "Delete": "Suppr",
+    "Enter": "Entrée",
+    "Escape": "Échap",
+    "Menu": "Menu",
+    "Middle-drag": "Glisser avec le bouton central",
+    "Scroll": "Molette",
+    "Shift": "Maj",
+    "Space": "Espace",
+    "Tab": "Tab",
+    "drag": "glisser"
+  },
+  "projectBar": {
+    "application": "Application",
+    "exportMore": "Autres formats d’export",
+    "exportMoreTooltip": "Exporter en SVG ou DXF, en millimètres, pour la découpe laser, la CNC et les éditeurs vectoriels",
+    "exportPdf": "Exporter en PDF",
+    "exportTooltip": "Enregistrer {{sheets}} en PDF prêt à imprimer à l’échelle 1:1. Dans une autre application, choisissez Taille réelle (100 %)",
+    "help": "Aide",
+    "helpTooltip": "Aide",
+    "name": "Nom du projet",
+    "nothingToSave": "Rien à enregistrer",
+    "output": "Sortie",
+    "paper": "Papier : {{sheets}}",
+    "paperLong": "{{count}} × {{paper}} {{orientation}}",
+    "paperPopover": {
+      "orientation": "Orientation",
+      "option_one": "{{paper}} · {{count}} feuille",
+      "option_other": "{{paper}} · {{count}} feuilles",
+      "option_many": "{{paper}} · {{count}} de feuilles",
+      "sheets_one": "{{count}} feuille",
+      "sheets_other": "{{count}} feuilles",
+      "sheets_many": "{{count}} de feuilles",
+      "summary": "{{sheets}} · échelle 100 %, verrouillée · {{taped}}",
+      "nothingTaped": "aucun assemblage",
+      "seeSheets": "Voir les feuilles",
+      "limited": "{{paper}} — trop de feuilles"
+    },
+    "paperShort": "{{count}} × {{paper}}",
+    "print": "Imprimer",
+    "printTooltip": "Afficher l’aperçu de {{sheets}}, puis imprimer à l’échelle 1:1",
+    "problems": "Problèmes : {{counts}}",
+    "problemsNone": "Problèmes : rien à corriger",
+    "problemsNoneTooltip": "Rien à corriger",
+    "problemsTooltip": "{{counts}}. Afficher dans Problèmes",
+    "saveTooltip": "Enregistrer le projet",
+    "saved": "Enregistré",
+    "settings": "Paramètres",
+    "settingsTooltip": "Paramètres",
+    "unsaved": "Modifications non enregistrées",
+    "unsavedShort": "Non enregistré",
+    "settingsUpdate": "Paramètres — une nouvelle version est disponible"
+  },
+  "menu": {
+    "about": "À propos de LeatherCAD",
+    "exportDxf": "Exporter en DXF…",
+    "exportDxfNote": "R12, en millimètres, pour les logiciels laser et CNC",
+    "exportNothing": "Rien à exporter. Aucune pièce n’a de contour de découpe.",
+    "exportSvg": "Exporter en SVG…",
+    "exportSvgNote": "En millimètres, pour les lasers, traceurs et éditeurs vectoriels",
+    "new": "Nouveau projet vide",
+    "open": "Ouvrir…",
+    "recent": "Projets récents",
+    "recentEmpty": "Les projets ouverts ou enregistrés apparaissent ici.",
+    "rename": "Renommer…",
+    "renameNote": "Le nom est aussi celui du fichier et du pied de page du PDF",
+    "saveAs": "Enregistrer sous…",
+    "settings": "Paramètres…",
+    "recentGone": "Ce projet n’est plus disponible",
+    "recentGoneDetail": "Il a été déplacé, renommé ou supprimé et a donc été retiré des projets récents.",
+    "newFromTemplate": "Nouveau projet à partir d’un modèle…",
+    "saveAsTemplate": "Enregistrer comme modèle…"
+  },
+  "macMenu": {
+    "edit": "Édition",
+    "redo": "Rétablir",
+    "undo": "Annuler"
+  },
+  "hints": {
+    "addsOrRemoves": "ajoute ou retire",
+    "allKeys": "tous les raccourcis",
+    "arcNext": "Cliquez sur le point suivant",
+    "arcStart": "Cliquez sur le début de l’arc",
+    "arcsNext": "trace le segment suivant en arc",
+    "backToSelect": "revient à Sélectionner",
+    "cancels": "annule",
+    "circleDrag": "Faites glisser depuis le centre, ou cliquez sur le centre puis le bord",
+    "circleRim": "Cliquez sur le bord",
+    "clickSelects": "Cliquer sélectionne",
+    "deletes": "supprime",
+    "dragBox": "Tracez un cadre de sélection",
+    "dragMoves": "Faire glisser déplace",
+    "editsSizes": "modifie les dimensions",
+    "finishes": "termine",
+    "hardwarePick": "choisit la pièce à percer",
+    "hardwarePunch": "Cliquez pour percer un trou",
+    "holdsProportions": "conserve les proportions",
+    "holdsSteps": "impose des pas de 15°",
+    "keepSquare": "garde la forme carrée",
+    "lineDrag": "Faites glisser d’un bout à l’autre, ou cliquez sur les deux extrémités",
+    "lineEnd": "Cliquez sur l’extrémité",
+    "measureFirst": "Cliquez sur deux coins à coter",
+    "measureSecond": "Cliquez sur le second coin",
+    "pointsAdd": "Appuyez sur un bord pour ajouter un point",
+    "pointsMove": "Faites glisser un point pour le déplacer",
+    "pointsPick": "choisit un tracé dessiné à modifier",
+    "pointsRemove": "supprime le point",
+    "pointsRound": "arrondit le coin",
+    "polylineClose": "Cliquez sur le premier point pour fermer",
+    "polylinePoints": "Cliquez sur chaque point",
+    "rectangleCorner": "Cliquez sur le coin opposé",
+    "rectangleDrag": "Faites glisser, ou cliquez sur deux coins",
+    "rotateDrag": "Faites glisser autour pour tourner",
+    "rotatePick": "choisit ce qui doit tourner",
+    "scaleDrag": "Faites glisser pour redimensionner autour du centre",
+    "scalePick": "choisit ce qui doit être redimensionné",
+    "sheetsClick": "Cliquez sur une pièce pour voir où elle s’imprime",
+    "sheetsExport": "exporte le PDF",
+    "sheetsPrint": "imprime",
+    "takesBack": "retire un point",
+    "textPick": "choisit la pièce à étiqueter",
+    "textPlace": "Cliquez pour placer une étiquette",
+    "textType": "puis saisissez le texte dans Propriétés",
+    "typeSize": "Saisissez une dimension"
+  },
+  "work": {
+    "redo": "Rétablir",
+    "region": "Travail",
+    "undo": "Annuler",
+    "redoTooltip": "Rétablir {{action}}",
+    "undoTooltip": "Annuler {{action}}"
+  },
+  "status": {
+    "features_one": "élément",
+    "features_other": "éléments",
+    "features_many": "d’éléments",
+    "focus": "Focus",
+    "panels": "Panneaux",
+    "parts": "Pièces",
+    "partsCount_one": "pièce",
+    "partsCount_other": "pièces",
+    "partsCount_many": "de pièces",
+    "problems_one": "problème",
+    "problems_other": "problèmes",
+    "problems_many": "de problèmes",
+    "properties": "Propriétés",
+    "selected": "dans la sélection",
+    "sheetOf": "Feuille {{number}} sur {{count}}",
+    "partsSelected_one": "pièce sélectionnée",
+    "partsSelected_other": "pièces sélectionnées",
+    "partsSelected_many": "de pièces sélectionnées",
+    "checkForUpdates": "Rechercher des mises à jour",
+    "versionNext": "vers {{version}}",
+    "saved": "{{name}} enregistré",
+    "exported": "{{name}} exporté"
+  },
+  "view": {
+    "design": "Conception",
+    "designBoard": "Plan de conception",
+    "designTooltip": "Concevoir les pièces",
+    "label": "Vue",
+    "sheets": "Feuilles",
+    "sheetsBoard": "Plan des feuilles",
+    "sheetsNamed_one": "Feuilles, {{count}} feuille",
+    "sheetsNamed_other": "Feuilles, {{count}} feuilles",
+    "sheetsNamed_many": "Feuilles, {{count}} de feuilles",
+    "sheetsTooltip": "Voir les pièces sur les feuilles où elles seront imprimées"
+  },
+  "zoom": {
+    "fit": "Ajuster",
+    "fitDrawing": "Cadrer le dessin",
+    "fitSelection": "Cadrer la sélection",
+    "fitTooltip": "Cadrer le dessin, ou double-cliquer sur une zone vide du plan",
+    "level": "Zoom, {{percent}} %",
+    "levelTooltip": "Cadrer, ou choisir un niveau de zoom",
+    "nothingSelected": "Sélectionnez un élément dessiné sur le plan pour le cadrer",
+    "onDesignOnly": "Uniquement en Conception : les feuilles sont cadrées en entier",
+    "percent": "{{percent}} %",
+    "title": "Zoom",
+    "trueSize": "Taille réelle, {{percent}} %"
+  },
+  "tools": {
+    "collapsedTooltip": "{{name}} — {{howTo}}",
+    "hideNames": "Masquer les noms des outils",
+    "label": "Outils",
+    "showNames": "Afficher les noms des outils",
+    "group": {
+      "draw": "Dessiner",
+      "modify": "Modifier",
+      "place": "Placer"
+    },
+    "arc": {
+      "howTo": "Cliquez sur le début, la fin, puis un point de passage de l’arc",
+      "name": "Arc"
+    },
+    "circle": {
+      "howTo": "Faites glisser depuis le centre, ou cliquez sur le centre puis le bord",
+      "name": "Cercle"
+    },
+    "hardware": {
+      "howTo": "Cliquez pour percer la pièce sélectionnée, au diamètre choisi ci-dessus",
+      "name": "Quincaillerie"
+    },
+    "line": {
+      "howTo": "Faites glisser d’un bout à l’autre, ou cliquez sur les deux extrémités · {{shift}} impose des pas de 15°",
+      "name": "Ligne"
+    },
+    "measure": {
+      "howTo": "Cliquez sur deux coins pour coter leur distance",
+      "name": "Coter"
+    },
+    "points": {
+      "howTo": "Faites glisser un point du tracé dessiné sélectionné pour le déplacer · appuyez sur un bord pour en ajouter un · {{removePoint}} supprime le dernier point appuyé · {{roundCorner}} arrondit ce coin, ou rend un coin arrondi vif",
+      "name": "Modifier les points"
+    },
+    "polyline": {
+      "howTo": "Cliquez sur chaque point · {{arc}} trace le segment suivant en arc : cliquez sur sa fin, puis un point de passage · {{straight}} revient aux segments droits · cliquez sur le premier point pour fermer · {{finish}} termine · {{takeBack}} retire le dernier point",
+      "name": "Polyligne"
+    },
+    "rectangle": {
+      "howTo": "Faites glisser d’un coin à l’autre, ou cliquez sur les deux coins · {{shift}} garde la forme carrée",
+      "name": "Rectangle"
+    },
+    "rotate": {
+      "howTo": "Faites glisser autour de la sélection pour la tourner autour de son centre",
+      "name": "Tourner"
+    },
+    "scale": {
+      "howTo": "Faites glisser pour redimensionner la sélection autour de son centre · {{shift}} conserve les proportions",
+      "name": "Redimensionner"
+    },
+    "select": {
+      "howTo": "Cliquez pour sélectionner · {{shift}}-clic ajoute ou retire · faites glisser dans le vide pour tracer un cadre de sélection · faites glisser la sélection pour la déplacer · {{delete}} supprime",
+      "name": "Sélectionner"
+    },
+    "text": {
+      "howTo": "Cliquez pour placer une étiquette sur la pièce sélectionnée, puis saisissez le texte dans le panneau",
+      "name": "Texte"
+    },
+    "guide": {
+      "name": "Guides",
+      "howTo": "Cliquez pour placer un guide horizontal ; maintenez {{shift}} pour un guide vertical. Faites glisser pour passer par deux points, par exemple le long d’un bord. Sélectionnez un guide pour modifier sa position et son angle dans Propriétés."
+    }
+  },
+  "toolOptions": {
+    "cornerRadius": "Rayon des coins",
+    "drawAs": "Dessiner comme",
+    "for": "Pour",
+    "punch": "Emporte-pièce"
+  },
+  "drawMode": {
+    "cut-out": "Découpe intérieure",
+    "fold": "Pli",
+    "marking": "Marquage",
+    "outline": "Contour extérieur",
+    "stitch": "Ligne de couture",
+    "stitch-allowance": "Ligne de couture + marge"
+  },
+  "shortcuts": {
+    "or": "ou",
+    "group": {
+      "drawing": "Pendant le dessin",
+      "edit": "Édition",
+      "editingPoints": "Pendant la modification des points",
+      "file": "Fichier",
+      "parts": "Dans Pièces",
+      "tools": "Outils",
+      "view": "Vue",
+      "window": "Fenêtre",
+      "field": "Dans un champ de texte"
+    },
+    "arc": "Polyligne : le segment suivant est un arc",
+    "straight": "Polyligne : le segment suivant est droit",
+    "cancel": "Annuler l’action de l’outil, désélectionner ou quitter le mode Focus",
+    "contextMenu": "Ouvrir le menu de la sélection, comme un clic droit",
+    "delete": "Supprimer la sélection (outil Sélectionner)",
+    "design": "Conception : le plan sur lequel vous dessinez",
+    "editSizes": "Saisir les dimensions du contour sélectionné, à côté de lui sur le plan",
+    "exportPdf": "Exporter en PDF",
+    "finishPolyline": "Terminer une polyligne",
+    "fit": "Cadrer le dessin dans la fenêtre",
+    "fitSelection": "Cadrer la sélection dans la fenêtre",
+    "focusMode": "Mode Focus : masque les deux panneaux et n’affiche que les touches dans la barre d’outils",
+    "selectionBar": "Aller à la barre de sélection, ou revenir au plan",
+    "fullScreen": "Plein écran",
+    "keyboardShortcuts": "Raccourcis clavier",
+    "newProject": "Nouveau projet",
+    "openProject": "Ouvrir un projet",
+    "pan": "Déplacer la vue",
+    "print": "Imprimer",
+    "quit": "Quitter",
+    "nextTab": "Aller à l’onglet de projet suivant",
+    "previousTab": "Aller à l’onglet de projet précédent",
+    "closeTab": "Fermer l’onglet du projet",
+    "moveTabLeft": "Déplacer l’onglet du projet vers la gauche",
+    "moveTabRight": "Déplacer l’onglet du projet vers la droite",
+    "reopenTab": "Rouvrir le dernier projet fermé",
+    "redo": "Rétablir",
+    "removePoint": "Supprimer le dernier point appuyé",
+    "rename": "Renommer la pièce ou l’élément",
+    "roundCorner": "Arrondir le dernier coin appuyé au rayon choisi, ou rendre un coin arrondi vif",
+    "save": "Enregistrer",
+    "saveAs": "Enregistrer sous",
+    "settings": "Paramètres",
+    "sheets": "Feuilles : le papier où le patron s’imprime",
+    "square": "Garder un rectangle carré ; imposer des pas de 15° à une ligne",
+    "takeBack": "Retirer le dernier point d’une polyligne ou d’un arc",
+    "toggleParts": "Afficher ou masquer Pièces",
+    "toggleProperties": "Afficher ou masquer Propriétés",
+    "toggleVisible": "Masquer ou afficher la pièce ou l’élément",
+    "trueSize": "Zoomer à taille réelle, 100 %",
+    "undo": "Annuler",
+    "zoom": "Zoomer autour du pointeur",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "help": "Ouvrir le menu Aide"
+  },
+  "settings": {
+    "close": "Fermer les paramètres",
+    "sections": "Sections",
+    "title": "Paramètres",
+    "section": {
+      "appearance": "Apparence",
+      "general": "Général",
+      "language": "Langue",
+      "shortcuts": "Raccourcis clavier",
+      "tools": "Mes outils",
+      "updates": "Mises à jour"
+    },
+    "recent": {
+      "clear": "Vider la liste",
+      "count_one": "{{count}} projet figure dans la liste.",
+      "count_other": "{{count}} projets figurent dans la liste.",
+      "count_many": "{{count}} de projets figurent dans la liste.",
+      "name": "Projets récents",
+      "none": "Aucun projet dans la liste.",
+      "note": "Le menu du projet liste les derniers projets ouverts ou enregistrés."
+    },
+    "keepUnsaved": {
+      "name": "Conserver les projets non enregistrés à la fermeture",
+      "note": "Fermer sans confirmation : les projets modifiés se rouvrent au prochain démarrage, toujours non enregistrés."
+    },
+    "legend": {
+      "name": "Nommer les symboles dans la légende du plan",
+      "note": "Si désactivé, la légende reste réduite jusqu’à son ouverture."
+    },
+    "selectionBar": {
+      "name": "Afficher la barre de sélection sous la pièce sélectionnée",
+      "note": "Le résultat de sa couture et l’étape suivante en un clic. Si désactivé, rien ne s’affiche sous la pièce et le raccourci est sans effet."
+    },
+    "toolNames": {
+      "name": "Afficher les noms dans la barre d’outils",
+      "note": "Si désactivé, chaque outil n’affiche que sa touche. Sous 1280 px de largeur, seules les touches s’affichent dans tous les cas."
+    },
+    "tools": {
+      "actions": "Actions",
+      "addIron": "Ajouter une griffe",
+      "default": "Par défaut",
+      "delete": "Supprimer",
+      "deleteNote": "Les ensembles de trous créés avec cette griffe conservent leur pas",
+      "forNewPieces": "Pour les nouvelles pièces",
+      "intro": "Vos griffes et valeurs initiales. Le menu Griffe d’un ensemble de trous reprend cette liste ; les nouvelles lignes de couture, marges de couture et lignes de pli adoptent ces valeurs et les conservent.",
+      "ironActions": "Actions pour {{name}}",
+      "irons": "Griffes",
+      "makeDefault": "Définir {{name}} par défaut",
+      "name": "Nom",
+      "newIron": "Griffe {{number}}",
+      "noIrons": "Aucune griffe. Les nouveaux ensembles de trous utilisent le pas du projet tant qu’aucune griffe n’est ajoutée.",
+      "pitch": "Pas nominal",
+      "pitchOf": "Pas nominal de {{name}}",
+      "rename": "Renommer",
+      "margin": {
+        "name": "Retrait de couture",
+        "note": "Distance du bord à une nouvelle ligne de couture, et distance vers l’extérieur d’une nouvelle marge de couture."
+      },
+      "thickness": {
+        "name": "Épaisseur du cuir",
+        "note": "Inscrite dans chaque nouveau pli. Laissez vide pour ne pas en définir."
+      }
+    },
+    "language": {
+      "invite": "LeatherCAD est traduit par ses utilisateurs. {{link}}",
+      "inviteLink": "Contribuer à la traduction dans votre langue",
+      "name": "Langue de l’interface",
+      "note": "Les textes des menus, panneaux et messages. Le projet reste identique dans toutes les langues.",
+      "system": "Suivre le système ({{language}})",
+      "unavailable": "La langue du système, {{language}}, n’est pas encore disponible. LeatherCAD utilise donc {{fallback}}.",
+      "option": "{{own}} — {{here}}",
+      "preview": "{{language}} (aperçu, pas encore pris en charge)"
+    },
+    "shortcuts": {
+      "intro": "Pour modifier un raccourci, choisissez Modifier et appuyez sur les nouvelles touches. {{escape}}, {{tab}} et {{enter}} gardent leur rôle, et une touche fixe appartient à un champ de texte ou au système.",
+      "change": "Modifier",
+      "changeLabel": "Modifier les touches de {{command}}",
+      "listening": "Appuyez sur les nouvelles touches · {{escape}} annule",
+      "reset": "Réinitialiser",
+      "resetLabel": "Rétablir les touches par défaut de {{command}}",
+      "resetAll": "Tout réinitialiser",
+      "fixed": "Fixe",
+      "reserved": "{{key}} conserve son rôle. Appuyez sur d’autres touches.",
+      "unusable": "Cette touche, ou un modificateur associé, ne peut pas servir de raccourci. Appuyez sur d’autres touches.",
+      "needsModifier": "{{command}} fonctionne aussi dans les champs de texte : utilisez une touche de fonction ou un raccourci avec modificateur.",
+      "clash": "{{keys}} est déjà utilisé pour « {{command}} ».",
+      "clashFixed": "{{keys}} est déjà utilisé pour « {{command}} » et ne peut pas être échangé.",
+      "swap": "Échanger",
+      "cancel": "Annuler",
+      "changed": "{{command}} a de nouvelles touches.",
+      "wasReset": "{{command}} a retrouvé ses touches par défaut.",
+      "swapped": "{{command}} et {{other}} ont échangé leurs touches.",
+      "allReset": "Toutes les touches ont retrouvé leur valeur par défaut.",
+      "typesOther": "Avec ce modificateur, la touche saisit « {{typed}} » plutôt que sa lettre et ne peut donc pas servir de raccourci. Appuyez sur d’autres touches.",
+      "typesSize": "Les chiffres, points et virgules saisissent les dimensions sur le plan et nécessitent donc un modificateur. Appuyez sur d’autres touches."
+    },
+    "updates": {
+      "note": "LeatherCAD interroge GitHub sur la dernière version uniquement à votre demande, ici ou en cliquant sur la version dans la barre d’état. Aucune information sur vous ou vos patrons n’est envoyée. Rien n’est téléchargé ni installé.",
+      "now": "Vérifier maintenant",
+      "checking": "Vérification…",
+      "again_one": "Réessayer dans {{count}} minute",
+      "again_other": "Réessayer dans {{count}} minutes",
+      "again_many": "Réessayer dans {{count}} de minutes",
+      "managed": "Flathub met cette copie de LeatherCAD à jour ; elle ne recherche donc pas elle-même les mises à jour."
+    }
+  },
+  "about": {
+    "blurb": "Des patrons de maroquinerie imprimés exactement à l’échelle 1:1. Logiciel libre et gratuit sous licence Apache 2.0.",
+    "logFolder": "Afficher le dossier des journaux",
+    "notices": "Mentions des composants tiers",
+    "reporting": "Pour signaler un problème, joignez le journal.",
+    "source": "Code source sur GitHub",
+    "version": "Version {{version}}",
+    "noticesInDevelopment": "Les mentions des composants tiers sont générées par une compilation de production (pnpm build)."
+  },
+  "recovery": {
+    "decline": "Pas maintenant",
+    "detail": "Le travail non enregistré sur « {{name}} » a été sauvegardé automatiquement le {{when}}. Récupérer l’ouvre dans un nouveau projet non enregistré ; le fichier d’origine reste inchangé. Si vous choisissez Pas maintenant, la copie sera supprimée à la fermeture de LeatherCAD.",
+    "recover": "Récupérer",
+    "title": "LeatherCAD ne s’est pas fermé correctement"
+  },
+  "unsaved": {
+    "discard": "Ne pas enregistrer",
+    "title": "Enregistrer les modifications de « {{name}} » ?",
+    "consequence": {
+      "close": "Si vous fermez sans enregistrer, vos modifications seront perdues.",
+      "reload": "Le rechargement lit le dernier état enregistré du fichier. Vos modifications seront perdues."
+    }
+  },
+  "unsavedProjects": {
+    "title_one": "Enregistrer les modifications de {{count}} projet ?",
+    "title_other": "Enregistrer les modifications de {{count}} projets ?",
+    "title_many": "Enregistrer les modifications de {{count}} de projets ?",
+    "consequence": "Si vous fermez sans enregistrer, leurs modifications seront perdues.",
+    "saveAll": "Tout enregistrer"
+  },
+  "deleteDialog": {
+    "deleteAll": "Tout supprimer",
+    "features_one": "{{count}} élément",
+    "features_other": "{{count}} éléments",
+    "features_many": "{{count}} d’éléments",
+    "follow": "Ces éléments dépendent de ce que vous supprimez :",
+    "freeze_one": "En conserver {{count}} figé",
+    "freeze_other": "En conserver {{count}} figés",
+    "freeze_many": "En conserver {{count}} figés",
+    "freezeTooltip": "Les conserver comme géométrie dessinée, à leur position actuelle, sans dépendance",
+    "thisPart": "cette pièce",
+    "title": "Supprimer {{what}} ?",
+    "note": {
+      "direct": "sera supprimé : aucune géométrie à conserver",
+      "freezable": "sera supprimé, ou peut être conservé comme géométrie dessinée",
+      "holes": "sera supprimé : les trous ne peuvent pas exister sans leur ligne",
+      "indirect": "sera supprimé avec sa source, sauf si celle-ci est conservée"
+    }
+  },
+  "file": {
+    "exportDxfTitle": "Exporter en DXF",
+    "exportSvgTitle": "Exporter en SVG",
+    "exportTitle": "Exporter en PDF",
+    "invalid": "Impossible d’ouvrir ce fichier de projet : {{problems}}",
+    "newer": "Ce fichier a été enregistré avec une version plus récente de LeatherCAD. Mettez LeatherCAD à jour pour l’ouvrir. (Format du fichier : {{format}} ; format maximal pris en charge : {{current}}.)",
+    "newerNamed": "Ce fichier a été enregistré avec LeatherCAD {{version}}, une version plus récente. Mettez LeatherCAD à jour pour l’ouvrir. (Format du fichier : {{format}} ; format maximal pris en charge : {{current}}.)",
+    "openTitle": "Ouvrir un projet",
+    "pdfFailed": "Impossible d’écrire le PDF ({{reason}}). Rien n’a été enregistré.",
+    "pdfUnavailable": "Impossible d’écrire le PDF : le processus en arrière-plan n’a pas démarré ou s’est arrêté. Rien n’a été enregistré.",
+    "dxf": "DXF",
+    "pdf": "PDF",
+    "project": "Projet LeatherCAD",
+    "saveTitle": "Enregistrer le projet",
+    "svg": "SVG",
+    "resourceLimit": "Limite dépassée pour « {{resource}} » ({{limit}}). Votre projet actuel reste inchangé.",
+    "resources": {
+      "archiveBytes": "octets dans une archive de projet",
+      "expandedBytes": "octets décompressés dans une archive de projet",
+      "entries": "entrées de l’archive",
+      "nodes": "valeurs dans un document de projet",
+      "features": "pièces, éléments et guides",
+      "segments": "segments de tracé",
+      "characters": "caractères de texte",
+      "holes": "trous",
+      "pages": "feuilles"
+    }
+  },
+  "hardware": {
+    "eyelet": "Œillet",
+    "other": "Autre",
+    "rivet": "Rivet",
+    "screw": "Vis",
+    "snap": "Bouton-pression"
+  },
+  "sheets": {
+    "choiceTaped": "{{sheets}} ({{taped}})",
+    "count_one": "{{count}} feuille {{paper}}, {{orientation}}",
+    "count_other": "{{count}} feuilles {{paper}}, {{orientation}}",
+    "count_many": "{{count}} de feuilles {{paper}}, {{orientation}}",
+    "failedNotPrinted_one": "{{count}} élément en erreur n’est pas imprimé.",
+    "failedNotPrinted_other": "{{count}} éléments en erreur ne sont pas imprimés.",
+    "failedNotPrinted_many": "{{count}} d’éléments en erreur ne sont pas imprimés.",
+    "paper": "Papier",
+    "partNotPrinted": "{{name}} n’est pas imprimée.",
+    "partsNotPrinted_one": "{{count}} pièce n’est pas imprimée.",
+    "partsNotPrinted_other": "{{count}} pièces ne sont pas imprimées.",
+    "partsNotPrinted_many": "{{count}} de pièces ne sont pas imprimées.",
+    "physical": "{{paper}}, {{width}} × {{height}} mm. Zone imprimable par feuille : {{printWidth}} × {{printHeight}} mm ; le reste est réservé aux marges et au contrôle d’échelle. Impression à l’échelle 1:1, sans ajustement.",
+    "scaleCheckOnly": "{{sheets}}, contrôle d’échelle uniquement",
+    "summary": "{{sheets}}.",
+    "taped": "{{names}} assemblées",
+    "tapedPieces_one": "{{count}} pièce assemblée",
+    "tapedPieces_other": "{{count}} pièces assemblées",
+    "tapedPieces_many": "{{count}} de pièces assemblées",
+    "orientation": {
+      "landscape": "paysage",
+      "portrait": "portrait"
+    },
+    "placedForYou": "LeatherCAD place les pièces sur les feuilles. Choisissez un autre papier pour changer la disposition."
+  },
+  "sheetNumbers": {
+    "list": "Feuilles {{numbers}}",
+    "one": "Feuille {{number}}",
+    "range": "Feuilles {{first}}–{{last}}"
+  },
+  "sheetsView": {
+    "drawingTools": "Les outils de dessin sont en Conception · {{design}}",
+    "sheetCount_one": "{{count}} feuille",
+    "sheetCount_other": "{{count}} feuilles",
+    "sheetCount_many": "{{count}} de feuilles",
+    "sheetHeading": "{{sheet}} · {{pieces}}",
+    "noPieces": "Aucune pièce",
+    "assembly": "Plan d’assemblage de {{name}}",
+    "pieceTurned": "{{names}}, rotation de 90°",
+    "tapedLabel": "{{name}} · {{sheets}}",
+    "turnedMark": "Rotation de 90°",
+    "tapedMark": "Assemblage",
+    "turnedLegend": "indique une pièce tournée pour tenir sur sa feuille.",
+    "tapedHeading": "Assemblées sur plusieurs feuilles",
+    "tapedNone": "Aucune. Chaque pièce tient sur une feuille.",
+    "tapedWithMap": "{{sheets}} · plan sur la feuille {{number}}",
+    "notPrintedHeading": "Non imprimées",
+    "onTheSheets": "sur les feuilles",
+    "scale": "Échelle",
+    "scaleLocked": "100 % · verrouillée",
+    "sheet_one": "Feuille",
+    "sheet_other": "Feuilles",
+    "sheet_many": "Feuilles",
+    "sheetsOf": "{{sheets}} sur {{count}}",
+    "range": "{{first}}–{{last}}",
+    "placement": "Placement",
+    "asDrawn": "Comme dessinée",
+    "turned": "Rotation de 90°",
+    "taped": "Assemblage",
+    "fitsOne": "Tient sur une feuille, sans assemblage",
+    "manySelected_one": "{{count}} pièce sélectionnée. Choisissez-en une pour voir où elle s’imprime.",
+    "manySelected_other": "{{count}} pièces sélectionnées. Choisissez-en une pour voir où elle s’imprime.",
+    "manySelected_many": "{{count}} de pièces sélectionnées. Choisissez-en une pour voir où elle s’imprime.",
+    "measure": "Après impression, mesurez le rectangle de 100 × 5 mm en bas d’une feuille."
+  },
+  "tapedAcross": {
+    "list": "{{name}} s’assemble sur les feuilles {{numbers}}.",
+    "one": "{{name}} s’assemble sur la feuille {{number}}.",
+    "range": "{{name}} s’assemble sur les feuilles {{first}}–{{last}}."
+  },
+  "print": {
+    "failed_one": "{{count}} élément en erreur",
+    "failed_other": "{{count}} éléments en erreur",
+    "failed_many": "{{count}} d’éléments en erreur",
+    "hidden_one": "{{count}} élément masqué",
+    "hidden_other": "{{count}} éléments masqués",
+    "hidden_many": "{{count}} d’éléments masqués",
+    "leftOff_one": "{{features}} n’est pas imprimé.",
+    "leftOff_other": "{{features}} ne sont pas imprimés.",
+    "leftOff_many": "{{features}} ne sont pas imprimés.",
+    "notPrinted": "Non imprimé",
+    "taped": "{{sheets}}, assemblage",
+    "turned": "{{sheets}}, rotation",
+    "reason": {
+      "hidden": "Il est masqué.",
+      "nothing-drawn": "Rien n’y est dessiné.",
+      "nothing-to-cut": "Il ne contient que du texte, sans ligne à découper.",
+      "problems": "Les éléments affichés présentent des problèmes."
+    }
+  },
+  "printPreview": {
+    "actualSize": "Enregistrez le PDF, puis imprimez à Taille réelle (100 %), jamais avec Ajuster ou Réduire.",
+    "copies": "Exemplaires",
+    "failed": "{{printer}} n’a pas pu accepter la tâche d’impression : {{reason}}",
+    "findingPrinters": "Recherche des imprimantes…",
+    "include": "Imprimer la feuille {{number}}",
+    "landscape": "Paysage",
+    "loading": "Préparation du PDF…",
+    "measure": "Après impression, mesurez le rectangle de 100 × 5 mm en bas d’une feuille pour vérifier que l’imprimante a respecté l’échelle.",
+    "noPrinters": "Aucune imprimante n’est configurée sur cet ordinateur.",
+    "noScaling": "Sans mise à l’échelle",
+    "noScalingDetail": "Les feuilles sont envoyées exactement comme affichées, sans mise à l’échelle par l’imprimante.",
+    "noScalingCorrected": "100 %, puis correction",
+    "noScalingCorrectedDetail": "La mise à l’échelle de l’imprimante est désactivée. Seule sa correction spécifique est appliquée pour obtenir des dimensions exactes.",
+    "orientation": "Orientation",
+    "paper": "Papier",
+    "paperMissing": "{{printer}} ne dispose pas de papier {{paper}}. Choisissez un autre papier ou une autre imprimante.",
+    "portrait": "Portrait",
+    "printCopies": "{{print}} × {{copies}}",
+    "printSheets_one": "Imprimer {{count}} feuille",
+    "printSheets_other": "Imprimer {{count}} feuilles",
+    "printSheets_many": "Imprimer {{count}} de feuilles",
+    "printer": "Imprimante",
+    "problems": "Problèmes",
+    "problemsLead": "Le patron présente {{counts}}. Tout ce qui a pu être construit figure sur les feuilles.",
+    "savePdf": "Enregistrer le PDF…",
+    "scale": "Échelle",
+    "scaleLocked": "100 % — verrouillée",
+    "sending": "Envoi…",
+    "sent": "Tâche {{job}} envoyée à {{printer}}.",
+    "sheets": "Feuilles",
+    "show": "Afficher la feuille {{number}}",
+    "title": "Imprimer",
+    "unavailable": {
+      "no-cups": "LeatherCAD ne peut pas accéder au système d’impression de cet ordinateur.",
+      "platform": "LeatherCAD ne peut pas encore imprimer directement sur ce système."
+    }
+  },
+  "calibration": {
+    "again": "Étalonner à nouveau…",
+    "calibrate": "Étalonner cette imprimante…",
+    "corrected": "Correction pour cette imprimante : {{x}} en largeur et {{y}} en longueur du papier.",
+    "horizontal": "Ligne horizontale, longueur dessinée {{length}} mm",
+    "jobTitle": "Étalonnage d’imprimante LeatherCAD",
+    "lead": "Uniquement pour une imprimante dont les feuilles sont mal dimensionnées même à 100 % / Taille réelle. La correction ne concerne que cette imprimante, et uniquement les impressions depuis LeatherCAD.",
+    "measureStep": "Mesurez chaque ligne d’une extrémité à l’autre avec un réglet métallique et saisissez sa longueur.",
+    "printPage": "Imprimer la page d’étalonnage",
+    "printStep": "Imprimez la page d’étalonnage sur {{paper}} : une ligne horizontale de {{x}} mm et une verticale de {{y}} mm.",
+    "remove": "Supprimer la correction",
+    "result": "Les feuilles envoyées à cette imprimante seront corrigées de {{x}} en largeur et de {{y}} en longueur du papier.",
+    "save": "Enregistrer la correction",
+    "saveFailed": "Impossible d’enregistrer la correction : {{reason}}",
+    "title": "Étalonner {{printer}}",
+    "tooFar": "Il s’agit très probablement d’un problème de réglage d’impression. Vérifiez que l’échelle est à 100 % / Taille réelle, puis réessayez.",
+    "vertical": "Ligne verticale, longueur dessinée {{length}} mm"
+  },
+  "exportDialog": {
+    "custom": "Combinaison personnalisée de calques",
+    "export": "Exporter…",
+    "intent": "Exporter pour",
+    "intents": {
+      "laser-cut": {
+        "name": "Découpe laser",
+        "note": "Contours et trous de quincaillerie : ce que la machine découpe dans le cuir"
+      },
+      "stitch-guide": {
+        "name": "Guide de couture",
+        "note": "Lignes de couture et leurs trous"
+      },
+      "template-print": {
+        "name": "Impression du patron",
+        "note": "Tous les calques : le patron complet"
+      }
+    },
+    "intro": "Le dessin tel qu’il est disposé sur le plan, en millimètres. Choisissez les calques à inclure dans le fichier.",
+    "layers": "Calques",
+    "nothing": "Rien à exporter. Aucun calque choisi ne contient de ligne à dessiner.",
+    "page": "La page mesurera {{width}} × {{height}}",
+    "roles": {
+      "annotation": "Cotes, étiquettes et noms des pièces",
+      "cut": "Contours de découpe",
+      "fold": "Lignes de pli",
+      "hardware": "Trous de quincaillerie",
+      "mark": "Lignes de marquage",
+      "stitch": "Lignes de couture",
+      "stitch-holes": "Trous de couture"
+    },
+    "stitchHolesNote": "Chaque trou est un cercle de {{size}} repérant son centre, pas un trou dimensionné pour le fil",
+    "title": "Exporter en {{format}}"
+  },
+  "exportNotice": {
+    "counts": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le PDF.",
+    "countsFile": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le fichier.",
+    "inPart": "dans {{part}}",
+    "omitted": "— leur construction a échoué ; ils ne figurent donc pas dans le PDF.",
+    "omittedFile": "— leur construction a échoué ; ils ne figurent donc pas dans le fichier.",
+    "omittedLead_one": "{{count}} élément ne figure pas dans le PDF",
+    "omittedLead_other": "Ces {{count}} éléments ne figurent pas dans le PDF",
+    "omittedLead_many": "Ces {{count}} d’éléments ne figurent pas dans le PDF",
+    "omittedLeadFile_one": "{{count}} élément ne figure pas dans le fichier",
+    "omittedLeadFile_other": "Ces {{count}} éléments ne figurent pas dans le fichier",
+    "omittedLeadFile_many": "Ces {{count}} d’éléments ne figurent pas dans le fichier",
+    "tiled_one": "« {{name}} » mesure {{size}}, plus que {{paper}} {{orientation}} : impression sur {{count}} feuille, {{rows}} × {{columns}}.",
+    "tiled_other": "« {{name}} » mesure {{size}}, plus que {{paper}} {{orientation}} : impression sur {{count}} feuilles, {{rows}} × {{columns}}.",
+    "tiled_many": "« {{name}} » mesure {{size}}, plus que {{paper}} {{orientation}} : impression sur {{count}} de feuilles, {{rows}} × {{columns}}.",
+    "tiledAcross": "à l’échelle 1:1, avec un recouvrement de {{overlap}} mm. Coupez une feuille sur une ligne pointillée, posez-la sur la suivante et alignez les croix.",
+    "tiledFits": "{{printed}} La pièce tient en entier sur {{paper}} {{orientation}}.",
+    "tiledLead_one": "{{count}} pièce est imprimée sur plusieurs feuilles",
+    "tiledLead_other": "Ces {{count}} pièces sont imprimées sur plusieurs feuilles",
+    "tiledLead_many": "Ces {{count}} de pièces sont imprimées sur plusieurs feuilles",
+    "tiledNoPaper": "{{printed}} Aucun papier pris en charge ne peut la contenir en entier.",
+    "titleCheck": "PDF exporté, avec des points à vérifier",
+    "titleCheckFile": "{{format}} exporté, avec des points à vérifier",
+    "titleTiled": "PDF exporté sur plusieurs feuilles"
+  },
+  "panels": {
+    "featureIn": "{{feature}} · {{part}}",
+    "hideParts": "Masquer Pièces",
+    "hideProperties": "Masquer Propriétés",
+    "partsFolded": "Pièces, réduit",
+    "propertiesFolded": "Propriétés, réduit",
+    "showParts": "Afficher Pièces",
+    "showProperties": "Afficher Propriétés"
+  },
+  "parts": {
+    "actions": "Actions pour {{name}}",
+    "count_one": "{{count}} pièce",
+    "count_other": "{{count}} pièces",
+    "count_many": "{{count}} de pièces",
+    "duplicateNote": "Une copie à côté de celle-ci, avec sa propre couture",
+    "empty": "Aucune pièce. Appuyez sur {{rectangle}}, puis faites glisser ou cliquez sur deux coins pour en dessiner une.",
+    "emptyPart": "Vide",
+    "hidePart": "Masquer la pièce",
+    "isHidden": "Masquée",
+    "isLocked": "Verrouillée",
+    "mirrorsMark": "Symétrique de l’élément qui le contient",
+    "notPrinted": "Non imprimée. {{reason}}",
+    "remove": "Supprimer la pièce",
+    "rename": "Nom",
+    "rowHoles_one": "{{count}} trou",
+    "rowHoles_other": "{{count}} trous",
+    "rowHoles_many": "{{count}} de trous",
+    "rowProblems_one": "{{count}} (problème, gravité maximale : {{severity}})",
+    "rowProblems_other": "{{count}} (problèmes, gravité maximale : {{severity}})",
+    "rowProblems_many": "{{count}} (problèmes, gravité maximale : {{severity}})",
+    "showPart": "Afficher la pièce",
+    "title": "Pièces"
+  },
+  "featureKind": {
+    "cut-out": "Découpe intérieure",
+    "fold-line": "Ligne de pli",
+    "hardware-hole": "Trou de quincaillerie",
+    "hole-row": "Rangée de trous",
+    "marking-line": "Ligne de marquage",
+    "measurement": "Cote",
+    "outline": "Contour extérieur",
+    "stitch-hole-set": "Trous de couture",
+    "stitch-line": "Ligne de couture",
+    "text-label": "Étiquette de texte"
+  },
+  "properties": {
+    "addAllowance": "Ajouter une marge de couture",
+    "addAllowanceHint": "Le bord de découpe, à cette distance à l’extérieur de la ligne de couture, dont il suit la forme",
+    "addHoleRow": "Ajouter une rangée de trous",
+    "addHoleRowHint": "Des trous le long de cette ligne, un à chaque extrémité et les autres répartis régulièrement : pour une ceinture, des rivets ou un laçage",
+    "addHoles": "Ajouter des trous",
+    "addHolesHint": "Des trous le long de cette ligne, au pas nominal de votre griffe",
+    "addOverallSize": "Ajouter les dimensions hors tout",
+    "addOverallSizeHint": "La largeur et la hauteur de la pièce, bord à bord : le cuir à découper. Une cote entre deux coins mesure leur distance, plus petite sur une pièce arrondie",
+    "addStitchLine": "Ajouter une ligne de couture",
+    "addStitchLineHint": "Une ligne de couture à distance fixe de ce bord, qu’elle continue de suivre",
+    "afterOutline": {
+      "title": "Après le contour extérieur",
+      "stitchLine": "Ligne de couture",
+      "holes": "Trous",
+      "note": "Valeurs issues de {{tools}} dans Paramètres ; les modifications y sont conservées. Utilisées pour Ligne de couture + marge et les étapes suivantes d’une nouvelle pièce."
+    },
+    "area": "Aire",
+    "arrange": "Disposer",
+    "convertToPath": "Convertir en tracé dessiné",
+    "convertToPathNote": {
+      "circle": "Ce n’est plus un cercle : son centre et son diamètre ne sont plus saisissables, mais il peut devenir ovale et ses points peuvent être déplacés. Une ligne de couture ne peut pas encore suivre un ovale.",
+      "arc": "Ce n’est plus un arc : son rayon et son angle balayé ne sont plus saisissables, mais il peut être déformé et ses points peuvent être déplacés.",
+      "rect": "Ce n’est plus un rectangle : ses dimensions et coins ne sont plus saisissables, mais il peut être cisaillé et ses points déplacés. Une ligne de couture ne peut pas encore suivre des coins arrondis déformés de façon inégale."
+    },
+    "cut": "Découper",
+    "cutSuffix": "fois",
+    "drawing": "Rectangle en cours de dessin",
+    "flipLabel": "Retourner",
+    "foldMirror": "Symétrie par rapport au pli",
+    "foldMirrorLabel": "Par rapport au pli",
+    "foldMirrorHint": "Un symétrique par rapport à {{fold}}, recalculé chaque fois que le pli se déplace",
+    "follows": "Dépend de",
+    "frozenNote": "Figé depuis {{source}} : désormais une géométrie dessinée, sans dépendance.",
+    "itsOriginal": "son original",
+    "length": "Longueur",
+    "locked": "Verrouillé",
+    "lockedNote": "Verrouillé : aucune modification possible ici. Déverrouillez-le dans le panneau Pièces.",
+    "manySelected_one": "{{count}} élément sélectionné. Sélectionnez-en un pour le modifier.",
+    "manySelected_other": "{{count}} éléments sélectionnés. Sélectionnez-en un pour le modifier.",
+    "manySelected_many": "{{count}} d’éléments sélectionnés. Sélectionnez-en un pour le modifier.",
+    "measured": "Mesuré",
+    "measures": "Mesure",
+    "mirrorFoldNote": "Symétrique de {{source}} par rapport à {{fold}}. Il suit tout déplacement du pli et reste symétrique de {{source}} si celui-ci bouge. Il ne peut pas être déplacé seul.",
+    "mirrorLabel": "Symétrie liée",
+    "mirrorLineNote": "Symétrique de {{source}} par rapport à un axe fixé à sa création, qui ne se déplace pas avec {{source}}. Déplacer {{source}} déplace ce symétrique en sens opposé ; le redimensionner modifie l’écart entre les deux. Faites glisser cette pièce pour placer la paire.",
+    "mirrors": "Symétrique de",
+    "name": "Nom",
+    "nothingSelected": "Aucune sélection. Dessinez avec {{rectangle}}, ou choisissez un élément avec {{select}}.",
+    "part": "Pièce",
+    "piece": "Pièce",
+    "perimeter": "Périmètre",
+    "problems_one": "Problème",
+    "problems_other": "Problèmes",
+    "problems_many": "Problèmes",
+    "reads": "Valeur",
+    "title": "Propriétés",
+    "where": "{{part}} · Découper ×{{quantity}}",
+    "flip": {
+      "horizontal": "Retourner ↔",
+      "vertical": "Retourner ↕"
+    },
+    "flipHint": {
+      "horizontal": "Retourner de gauche à droite autour de son centre, sans conserver de lien.",
+      "vertical": "Retourner de haut en bas autour de son centre, sans conserver de lien."
+    },
+    "mirror": {
+      "horizontal": "Symétrie liée ↔",
+      "vertical": "Symétrie liée ↕"
+    },
+    "mirrorHint": {
+      "counterpart": {
+        "horizontal": "Un symétrique lié à droite, par rapport au bord droit actuel de cette pièce. Il suit sa forme ; l’axe reste fixe.",
+        "vertical": "Un symétrique lié en dessous, par rapport au bord inférieur actuel de cette pièce. Il suit sa forme ; l’axe reste fixe."
+      },
+      "piece": {
+        "horizontal": "Une copie symétrique dans une nouvelle pièce à droite, par rapport au bord droit actuel. Elle suit la forme de cette pièce ; l’axe reste fixe.",
+        "vertical": "Une copie symétrique dans une nouvelle pièce en dessous, par rapport au bord inférieur actuel. Elle suit la forme de cette pièce ; l’axe reste fixe."
+      }
+    },
+    "mirrorNote": {
+      "counterpart": "La symétrie crée un élément symétrique lié.",
+      "piece": "La symétrie crée une pièce symétrique liée."
+    },
+    "job": {
+      "holes": "Trous",
+      "paper": "{{paper}}, {{orientation}}",
+      "pieces": "Pièces",
+      "scaleCheckOnly": "{{paper}}, {{orientation}}, contrôle d’échelle uniquement",
+      "sheets": "Feuilles",
+      "timesCut": "{{holes}} ×{{cut}}",
+      "toCut_one": "{{count}} à découper",
+      "toCut_other": "{{count}} à découper",
+      "toCut_many": "{{count}} à découper"
+    },
+    "manyPartsSelected_one": "{{count}} pièce sélectionnée. Sélectionnez-en une pour la modifier.",
+    "manyPartsSelected_other": "{{count}} pièces sélectionnées. Sélectionnez-en une pour la modifier.",
+    "manyPartsSelected_many": "{{count}} de pièces sélectionnées. Sélectionnez-en une pour la modifier."
+  },
+  "legend": {
+    "hide": "Masquer la légende",
+    "title": "Légende",
+    "tooltip": "Légende : {{names}}",
+    "names": {
+      "cut-edge": "Contour extérieur",
+      "cut-out": "Découpe intérieure",
+      "fold-mountain": "Pli montagne",
+      "fold-valley": "Pli vallée",
+      "hardware-hole": "Trou de quincaillerie",
+      "linked": "Dépend d’une autre ligne ou en est le symétrique",
+      "marking": "Ligne de marquage",
+      "measurement": "Cote",
+      "mirror-across-fold": "Symétrie par rapport au pli",
+      "piece": "Pièce",
+      "seam-allowance": "Marge de couture",
+      "stitch-holes": "Trous de couture",
+      "stitch-line": "Ligne de couture"
+    }
+  },
+  "caption": {
+    "cut": "{{name}} ×{{quantity}}",
+    "holes_one": "{{count}} trou · {{pitch}}",
+    "holes_other": "{{count}} trous · {{pitch}}",
+    "holes_many": "{{count}} de trous · {{pitch}}",
+    "unnamed": "Pièce"
+  },
+  "spacing": {
+    "matches": "L’espacement réel correspond au pas nominal",
+    "squeezed": "L’espacement réel est réduit de {{percent}} %",
+    "squeezedUnder": "L’espacement réel est réduit de moins de {{percent}} %",
+    "stretched": "L’espacement réel est augmenté de {{percent}} %",
+    "stretchedUnder": "L’espacement réel est augmenté de moins de {{percent}} %"
+  },
+  "problems": {
+    "withSubject": "{{name}} : {{sentence}}",
+    "badge_one": "{{count}} problème, gravité maximale : {{severity}}",
+    "badge_other": "{{count}} problèmes, gravité maximale : {{severity}}",
+    "badge_many": "{{count}} de problèmes, gravité maximale : {{severity}}",
+    "severity": {
+      "error": "erreur",
+      "info": "information",
+      "warning": "avertissement"
+    },
+    "panel": {
+      "none": "Rien à corriger.",
+      "title": "Problèmes"
+    },
+    "drawing": {
+      "cut-out": "Une découpe intérieure",
+      "outline": "Un contour extérieur",
+      "seam": "Une ligne de couture"
+    },
+    "DUPLICATE_ID": {
+      "title": "Identifiant répété",
+      "description": "Deux éléments partagent l’identifiant {{featureId}}."
+    },
+    "SOURCE_MISSING": {
+      "title": "Source absente",
+      "description": "{{featureName}} dépend d’un élément inexistant."
+    },
+    "FOLLOWS_ITSELF": {
+      "title": "Dépend de lui-même",
+      "description": "{{featureName}} ne peut pas dépendre de lui-même."
+    },
+    "WOULD_LOOP": {
+      "title": "Créerait une boucle",
+      "description": "{{featureName}} finirait par dépendre de lui-même via {{sourceName}}."
+    },
+    "CYCLE": {
+      "title": "Dépend de lui-même",
+      "description": "{{featureName}} dépend d’une chaîne qui revient à lui-même."
+    },
+    "DERIVATION_INCOMPATIBLE": {
+      "title": "Dépendance incompatible",
+      "rule": {
+        "allowance-needs-closed-line": "Une marge de couture nécessite une ligne de couture fermée : le contour extérieur doit délimiter la pièce.",
+        "allowance-needs-outer": "Seul le contour extérieur d’une pièce peut être dérivé de sa ligne de couture, pas une découpe intérieure.",
+        "allowance-needs-outline": "Seul un contour extérieur peut être décalé vers l’extérieur d’une ligne de couture.",
+        "allowance-needs-stitch-line": "Un contour extérieur ne peut être décalé vers l’extérieur qu’à partir d’une ligne de couture.",
+        "allowance-needs-whole-run": "Une marge de couture suit toute la ligne de couture pour produire un contour fermé.",
+        "holes-need-hole-set": "Seul un ensemble de trous de couture peut suivre une ligne de couture avec un pas nominal.",
+        "holes-need-stitch-line": "Les trous de couture ne peuvent suivre qu’une ligne de couture.",
+        "row-needs-hole-row": "Seule une rangée de trous peut suivre une ligne de marquage avec un pas nominal.",
+        "row-needs-marking-line": "Une rangée de trous ne peut suivre qu’une ligne de marquage.",
+        "inset-needs-outline": "Une ligne de couture ne peut être créée en retrait qu’à partir d’un contour extérieur ou d’une découpe intérieure.",
+        "inset-needs-stitch-line": "Seule une ligne de couture peut être créée en retrait d’un contour extérieur.",
+        "mirror-keeps-kind": "Un symétrique est du même type que son original.",
+        "mirror-keeps-role": "Un contour symétrique conserve son rôle : extérieur pour extérieur, intérieur pour intérieur."
+      }
+    },
+    "PART_ALREADY_HAS_OUTER": {
+      "title": "A déjà un contour extérieur",
+      "description": "{{partName}} se découpe déjà selon {{outerName}}. Une pièce correspond à un morceau de cuir et ne possède donc qu’un contour extérieur. Dessinez une découpe intérieure, ou créez une autre pièce."
+    },
+    "CONTOUR_NOT_CLOSED": {
+      "title": "Ne délimite aucune surface",
+      "inner": "{{subject}} a deux extrémités : aucune surface ne peut être évidée dans la pièce. Dessinez plutôt une ligne de marquage.",
+      "innerClosable": "{{subject}} a deux extrémités : aucune surface ne peut être évidée dans la pièce. Fermez la forme, ou dessinez une ligne de marquage.",
+      "outer": "{{subject}} a deux extrémités : aucune surface à découper n’est définie. Dessinez plutôt une ligne de marquage.",
+      "outerClosable": "{{subject}} a deux extrémités : aucune surface à découper n’est définie. Fermez la forme, ou dessinez une ligne de marquage."
+    },
+    "MEASURE_REF_MISSING": {
+      "title": "Ne mesure rien",
+      "description": "{{featureName}} désigne un emplacement qui n’existe plus dans le dessin."
+    },
+    "MEASURE_NEEDS_ANCHOR": {
+      "title": "Aucun point de mesure",
+      "description": "Une cote doit désigner un coin pour conserver le même point de référence quand le dessin change. Choisissez un coin."
+    },
+    "MEASURE_ACROSS_PARTS": {
+      "title": "Une cote mesure une seule pièce",
+      "description": "Ce coin appartient à {{otherPartName}}. Une cote s’imprime avec la pièce qu’elle mesure : ses deux extrémités doivent donc appartenir à cette pièce."
+    },
+    "FOLLOWS_ANOTHER_PART": {
+      "title": "Sur une autre pièce",
+      "description": "{{sourceName}} appartient à {{otherPartName}} : {{featureName}} serait dessiné et imprimé sur la mauvaise pièce. Choisissez une source sur cette pièce."
+    },
+    "MIRROR_FOLD_MISSING": {
+      "title": "Le pli a disparu",
+      "description": "{{featureName}} est symétrique par rapport à un pli qui n’existe plus."
+    },
+    "MIRROR_OUTLINE_ACROSS_FOLD": {
+      "title": "Une pièce a un seul contour extérieur",
+      "description": "La symétrie par rapport à un pli concerne l’intérieur d’une pièce : fentes, couture, quincaillerie. {{partName}} a déjà un contour extérieur ; celui-ci ne peut pas être complété ainsi. Dessinez le contour entier, ou créez une pièce symétrique séparée."
+    },
+    "MIRROR_PLACED_BY_FOLD": {
+      "title": "Placée par son pli",
+      "description": "{{featureName}} est symétrique par rapport à {{foldName}} : sa position dépend du pli. Déplacez {{foldName}} ou {{sourceName}}."
+    },
+    "FOLD_NOT_STRAIGHT": {
+      "title": "Le pli n’est pas droit",
+      "description": "Une symétrie nécessite un axe droit, mais ce pli est courbe. Dessinez un pli droit, ou choisissez-en un autre."
+    },
+    "MIRROR_WOULD_SCALE": {
+      "title": "Le symétrique doit rester identique",
+      "description": "La mise à l’échelle demandée ne permet pas à {{featureName}} de rester identique à {{sourceName}}. Redimensionnez l’original, ou toute la pièce de façon uniforme."
+    },
+    "MIRROR_NO_AXIS": {
+      "title": "Aucun axe de symétrie",
+      "description": "Sélectionnez une forme avec des dimensions. L’axe de symétrie est placé le long de son bord."
+    },
+    "FEATURE_LOCKED": {
+      "title": "Verrouillé",
+      "description": "{{featureName}} est verrouillé et ne peut être modifié ni supprimé. Déverrouillez-le d’abord dans le panneau Pièces."
+    },
+    "FEATURE_MISSING": {
+      "title": "Élément inexistant",
+      "description": "Cet élément n’existe pas."
+    },
+    "NOT_A_DRAWN_PATH": {
+      "title": "Aucun point à modifier",
+      "description": "{{featureName}} n’est pas un tracé dessiné et n’a donc pas ses propres points. Une forme se modifie par ses dimensions, sauf si elle est convertie en tracé dessiné dans Propriétés ; un élément dérivé suit sa source."
+    },
+    "NOT_A_SHAPE": {
+      "title": "Déjà dessiné",
+      "description": "{{featureName}} n’est pas une forme : rien à convertir. Un tracé dessiné a déjà des points, et un élément dérivé suit sa source."
+    },
+    "HOLE_STAYS_ROUND": {
+      "title": "Un trou poinçonné reste rond",
+      "description": "{{featureName}} est réalisé avec un emporte-pièce rond et reste donc circulaire. Pour une ouverture ovale, dessinez une découpe intérieure."
+    },
+    "POINT_EDIT_DEGENERATE": {
+      "title": "Trop peu de points",
+      "description": "{{featureName}} aurait trop peu de points, ou un côté de longueur nulle."
+    },
+    "ROUNDING_DOES_NOT_FIT": {
+      "title": "L’arrondi ne tient pas",
+      "description": "Un arrondi de {{radius}} mm ne tient pas à ce point de {{featureName}} : il faut un coin entre deux côtés droits, chacun assez long pour l’arrondi."
+    },
+    "NOT_A_ROUNDED_CORNER": {
+      "title": "Aucun coin à rendre vif",
+      "description": "Ce point n’est pas un coin arrondi entre deux côtés droits de {{featureName}}. Il ne peut donc pas être rendu vif."
+    },
+    "CORNER_IN_USE": {
+      "title": "Coin utilisé",
+      "description": "{{usedByName}} est attaché à ce coin de {{featureName}}, qui disparaîtrait avec cette modification. Modifiez d’abord {{usedByName}}."
+    },
+    "NOT_DERIVED": {
+      "title": "Aucune dépendance",
+      "description": "{{featureName}} ne dépend de rien : aucune source à changer."
+    },
+    "DERIVED_MOVED_ALONE": {
+      "title": "Se déplace avec sa source",
+      "description": "Dépend de {{rootName}} : déplacez plutôt cet élément."
+    },
+    "TRANSFORM_FLATTENS": {
+      "title": "Aplatirait la forme",
+      "description": "La forme serait aplatie jusqu’à disparaître."
+    },
+    "WOULD_BECOME_ELLIPSE": {
+      "title": "Deviendrait une ellipse",
+      "description": "Un cercle ou un arc deviendrait une ellipse avec une mise à l’échelle non uniforme, ce que cet éditeur ne peut pas représenter. Redimensionnez uniformément, ou convertissez d’abord en tracé dessiné dans Propriétés."
+    },
+    "WOULD_SHEAR": {
+      "title": "Déformerait les angles",
+      "description": "Un rectangle tourné ne peut pas être étiré sur un seul axe : il serait cisaillé et ses angles ne seraient plus droits. Ramenez sa rotation à 0°, redimensionnez uniformément ou convertissez-le d’abord en tracé dessiné dans Propriétés."
+    },
+    "TEXT_WOULD_DISTORT": {
+      "title": "Déformerait les lettres",
+      "description": "Le texte ne peut être redimensionné qu’uniformément : l’étirer sur un seul axe déformerait les lettres. Maintenez {{shift}}, ou saisissez la taille dans le panneau."
+    },
+    "DIMENSION_NOT_MIRRORED": {
+      "title": "Une cote se mesure, sans symétrie",
+      "description": "{{featureName}} mesure le dessin : sa copie symétrique afficherait une valeur qui ne correspond pas au symétrique. Créez les formes symétriques, puis cotez-les."
+    },
+    "TEXT_WOULD_READ_BACKWARDS": {
+      "title": "Le texte serait inversé",
+      "description": "Une étiquette ne peut pas être réfléchie : son texte serait inversé. Retournez les formes sans le texte, ou saisissez-le à l’emplacement voulu."
+    },
+    "NO_TARGET_PART": {
+      "title": "Aucune pièce sélectionnée",
+      "cut-out": "Sélectionnez d’abord une pièce : une découpe intérieure appartient à la pièce sur laquelle elle est dessinée.",
+      "label": "Sélectionnez d’abord une pièce : une étiquette appartient à la pièce sur laquelle elle est placée.",
+      "line": "Sélectionnez d’abord une pièce : un pli ou une ligne de marquage appartient à la pièce sur laquelle il est dessiné."
+    },
+    "TARGET_SPANS_PARTS": {
+      "title": "Sélection sur plusieurs pièces",
+      "description": "Sélectionnez une seule pièce : cet élément appartient à une seule pièce, alors que la sélection en couvre plusieurs."
+    },
+    "PARAMETER_INVALID": {
+      "title": "Nombre inutilisable",
+      "at-least": "{{featureName}} : {{parameter}} est inférieur à {{minimum}}, le minimum utilisable. Saisissez au moins {{minimum}}.",
+      "finite": "{{featureName}} : {{parameter}} n’est pas un nombre utilisable. Saisissez une valeur en millimètres.",
+      "non-negative": "{{featureName}} : {{parameter}} vaut {{value}} et ne doit pas être négatif.",
+      "positive": "{{featureName}} : {{parameter}} vaut {{value}} et doit être strictement positif.",
+      "parameter": {
+        "allowance": "marge de couture",
+        "corner radius": "rayon des coins",
+        "end offset": "retrait final",
+        "glide": "glissement",
+        "height": "hauteur",
+        "inset": "retrait",
+        "mirror angle": "angle de symétrie",
+        "mirror axis": "axe de symétrie",
+        "pitch": "pas nominal",
+        "position": "position",
+        "radius": "rayon",
+        "rotation": "rotation",
+        "start angle": "angle initial",
+        "start offset": "retrait initial",
+        "sweep": "angle balayé",
+        "text size": "taille du texte",
+        "width": "largeur"
+      }
+    },
+    "OFFSET_COLLAPSED": {
+      "title": "Décalage impossible",
+      "inward": "Un retrait de {{distance}} mm dépasse l’espace disponible dans ce bord.",
+      "outward": "Impossible de construire une marge de {{distance}} mm à l’extérieur de cette ligne de couture."
+    },
+    "OFFSET_UNSUPPORTED": {
+      "title": "Courbes non décalables",
+      "description": "Impossible de construire {{featureName}} : sa source comporte des courbes libres, dont le décalage n’est pas encore pris en charge."
+    },
+    "OFFSET_SPLIT": {
+      "title": "Décalage fragmenté",
+      "description_one": "Le décalage de {{featureName}} s’est divisé en {{pieces}} morceaux. Seul le plus grand est dessiné ; {{count}} morceau est omis.",
+      "description_other": "Le décalage de {{featureName}} s’est divisé en {{pieces}} morceaux. Seul le plus grand est dessiné ; {{count}} morceaux sont omis.",
+      "description_many": "Le décalage de {{featureName}} s’est divisé en {{pieces}} morceaux. Seul le plus grand est dessiné ; {{count}} de morceaux sont omis."
+    },
+    "ANCHOR_MISSING": {
+      "title": "Coin introuvable",
+      "description": "Ce parcours désigne le coin {{anchor}}, mais ce contour extérieur en possède {{available}}.",
+      "noCorners": "Ce contour extérieur n’a pas de coins entre lesquels définir un parcours. Il ne peut être suivi qu’en entier."
+    },
+    "SOURCE_FAILED": {
+      "title": "Échec de la source",
+      "description": "Impossible de construire {{sourceName}}, dont dépend cet élément."
+    },
+    "GEOMETRY_FAILED": {
+      "title": "Construction impossible",
+      "description": "Impossible de construire {{featureName}} ({{detail}})."
+    },
+    "TEXT_GLYPH_MISSING": {
+      "title": "Impression impossible",
+      "label": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés. Ressaisissez l’étiquette en caractères latins.",
+      "part": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés. Renommez la pièce en caractères latins."
+    },
+    "CONTOUR_SELF_INTERSECTS": {
+      "title": "Le contour se croise",
+      "description_one": "{{featureName}} se croise {{count}} fois, ce qui rend la découpe ambiguë. Redessinez-le sans croisement.",
+      "description_other": "{{featureName}} se croise {{count}} fois, ce qui rend la découpe ambiguë. Redessinez-le sans croisement.",
+      "description_many": "{{featureName}} se croise {{count}} de fois, ce qui rend la découpe ambiguë. Redessinez-le sans croisement."
+    },
+    "HOLES_OVERLAP": {
+      "title": "Les trous se chevauchent",
+      "description": "{{featureName}} a des trous espacés de {{spacing}}, d’un diamètre de {{diameter}} : il ne reste plus de cuir entre eux et ils forment une fente. Augmentez le pas nominal ou utilisez un emporte-pièce plus petit."
+    },
+    "HOLE_SPACING_DEVIATION": {
+      "title": "Espacement différent de la griffe",
+      "description": "Les trous sont espacés de {{achieved}}, mais le pas nominal de la griffe est de {{pitch}}. Modifiez le pas ou le retrait de couture pour réduire cet écart."
+    },
+    "HOLE_SPACING_UNEVEN": {
+      "title": "Espacement irrégulier",
+      "description": "L’espacement des parcours de {{featureName}} varie de {{narrowest}} à {{widest}} ; la différence sera visible aux coins."
+    },
+    "HOLE_COUNT_TOO_LOW": {
+      "title": "Trop peu de trous",
+      "description_one": "{{featureName}} a {{count}} trou, mais la couture en nécessite au moins deux.",
+      "description_other": "{{featureName}} a {{count}} trous, mais la couture en nécessite au moins deux.",
+      "description_many": "{{featureName}} a {{count}} de trous, mais la couture en nécessite au moins deux.",
+      "none": "{{featureName}} n’a aucun trou, mais la couture en nécessite au moins deux."
+    },
+    "PART_HAS_NO_OUTER_CONTOUR": {
+      "title": "Rien à découper",
+      "description": "{{partName}} contient couture et marquages, mais aucun contour extérieur : aucune pièce de cuir à découper n’est définie. Dessinez un contour extérieur, ou déplacez ces éléments sur une autre pièce."
+    },
+    "CUT_OUT_OUTSIDE_PART": {
+      "title": "Découpe hors de la pièce",
+      "description": "{{featureName}} n’est pas à l’intérieur de son contour extérieur et ne découpe donc rien. Déplacez-le sur la pièce."
+    },
+    "OUTSIDE_PART": {
+      "title": "Hors de la matière",
+      "holes": "{{featureName}} comporte des trous hors de la matière, au-delà du contour extérieur ou dans une découpe intérieure. Ils ne peuvent pas y être percés.",
+      "line": "{{featureName}} sort de la matière : une partie ne peut pas être marquée."
+    },
+    "HOLE_TOO_CLOSE_TO_EDGE": {
+      "title": "Trop près du bord",
+      "description": "{{featureName}} passe à {{clearance}} d’un bord, sous le minimum de {{minimum}} nécessaire à un trou. Le cuir risque de se déchirer entre le trou et le bord."
+    },
+    "EMPTY_PART": {
+      "title": "Pièce vide",
+      "description": "{{partName}} est vide. Dessinez-y des éléments, ou supprimez-la de la liste des pièces."
+    },
+    "counts": {
+      "error_one": "{{count}} erreur",
+      "error_other": "{{count}} erreurs",
+      "error_many": "{{count}} d’erreurs",
+      "warning_one": "{{count}} avertissement",
+      "warning_other": "{{count}} avertissements",
+      "warning_many": "{{count}} d’avertissements",
+      "info_one": "{{count}} point à noter",
+      "info_other": "{{count}} points à noter",
+      "info_many": "{{count}} de points à noter"
+    }
+  },
+  "contextMenu": {
+    "emptyPart": "La pièce est vide",
+    "hideNote": "Également exclu du PDF jusqu’à son réaffichage",
+    "label": "Sélection",
+    "spansParts_one": "La sélection couvre {{count}} pièce ; dupliquez une pièce à la fois",
+    "spansParts_other": "La sélection couvre {{count}} pièces ; dupliquez une pièce à la fois",
+    "spansParts_many": "La sélection couvre {{count}} de pièces ; dupliquez une pièce à la fois",
+    "flip": {
+      "horizontal": "Retourner horizontalement",
+      "vertical": "Retourner verticalement"
+    }
+  },
+  "editor": {
+    "cornerRadii": "Rayons des coins",
+    "corners": "Coins",
+    "custom": "Personnalisé",
+    "decimals": "Décimales",
+    "diameter": "Diamètre",
+    "direction": "Sens",
+    "drawnByHand": "Dessiné à la main : possède des points plutôt que des dimensions. Déplacez, ajoutez ou supprimez-les avec Modifier les points ({{points}}).",
+    "edgeMargin": "Retrait du bord",
+    "fit": "Répartition",
+    "height": "Hauteur",
+    "holeCount": "Trous",
+    "iron": "Griffe",
+    "notSet": "non défini",
+    "offset": "Décalage",
+    "pitch": "Pas nominal",
+    "purpose": "Usage",
+    "radius": "Rayon",
+    "runs": "Parcours",
+    "size": "Taille",
+    "spacing": "Espacement réel",
+    "start": "Début",
+    "sweep": "Angle balayé",
+    "text": "Texte",
+    "thickness": "Épaisseur",
+    "turn": "Rotation",
+    "width": "Largeur",
+    "fold": {
+      "mountain": "Montagne",
+      "valley": "Vallée"
+    },
+    "holes": {
+      "continuous": "Continu",
+      "exact-pitch": "Exactement ce pas",
+      "fit-whole": "Régulier, nombre entier",
+      "hole-at-corner": "Un trou à chaque coin"
+    },
+    "lengthError": {
+      "mixed": "Indiquez l’unité de chaque nombre d’une somme, par exemple 10cm + 5mm. Pour 3½ pouces, saisissez 3.5in",
+      "notALength": "Ce calcul ne donne pas une longueur : une seule unité par nombre, et aucune multiplication ou division d’une longueur par une longueur",
+      "notFinite": "Ce calcul ne donne pas un nombre",
+      "syntax": "Dimension non reconnue. Essayez 95, 95-2*3.5 ou 3.75in",
+      "unit": "« {{unit}} » n’est pas une unité reconnue. Utilisez mm, cm ou in"
+    },
+    "marking": {
+      "alignment": "Repère d’alignement",
+      "glue-area": "Zone de collage",
+      "logo": "Logo",
+      "other": "Autre",
+      "skive": "Parage"
+    }
+  },
+  "history": {
+    "add": "Ajouter {{name}}",
+    "add-dimension": "Ajouter une cote",
+    "add-overall-size": "Ajouter les dimensions hors tout",
+    "add-label": "Ajouter une étiquette",
+    "add-point": "Ajouter un point",
+    "add-seam-allowance": "Ajouter une marge de couture",
+    "change-fold-direction": "Changer le sens du pli",
+    "change-fold-thickness": "Changer l’épaisseur du pli",
+    "change-hardware-type": "Changer le type de quincaillerie",
+    "change-marking-purpose": "Changer l’usage du marquage",
+    "change-paper": "Changer le papier",
+    "convert-to-path": "Convertir en tracé dessiné",
+    "delete": "Supprimer {{what}}",
+    "deleteKeepFrozen": "Supprimer {{what}}, conserver les éléments figés : {{frozen}}",
+    "deleteWithDependents_one": "Supprimer {{what}} et {{count}} élément dépendant",
+    "deleteWithDependents_other": "Supprimer {{what}} et {{count}} éléments dépendants",
+    "deleteWithDependents_many": "Supprimer {{what}} et {{count}} d’éléments dépendants",
+    "deleteWithDependentsKeepFrozen_one": "Supprimer {{what}} et {{count}} élément dépendant, conserver les éléments figés : {{frozen}}",
+    "deleteWithDependentsKeepFrozen_other": "Supprimer {{what}} et {{count}} éléments dépendants, conserver les éléments figés : {{frozen}}",
+    "deleteWithDependentsKeepFrozen_many": "Supprimer {{what}} et {{count}} d’éléments dépendants, conserver les éléments figés : {{frozen}}",
+    "duplicate": "Dupliquer {{name}}",
+    "duplicate-part": "Dupliquer la pièce",
+    "edit-derivation": "Modifier la dérivation",
+    "edit-dimension": "Modifier la cote",
+    "edit-label": "Modifier l’étiquette",
+    "edit-shape": "Modifier la forme",
+    "features_one": "{{count}} élément",
+    "features_other": "{{count}} éléments",
+    "features_many": "{{count}} d’éléments",
+    "flip-horizontal": "Retourner horizontalement",
+    "flip-vertical": "Retourner verticalement",
+    "follow": "Dépendre de {{name}}",
+    "follow-another": "Changer l’élément source",
+    "hide_one": "Masquer l’élément",
+    "hide_other": "Masquer {{count}} éléments",
+    "hide_many": "Masquer {{count}} d’éléments",
+    "hide-part": "Masquer la pièce",
+    "lock_one": "Verrouiller",
+    "lock_other": "Verrouiller {{count}} éléments",
+    "lock_many": "Verrouiller {{count}} d’éléments",
+    "mirror_one": "Créer un symétrique lié",
+    "mirror_other": "Créer les symétriques liés de {{count}} éléments",
+    "mirror_many": "Créer les symétriques liés de {{count}} d’éléments",
+    "mirror-across-fold_one": "Créer un symétrique par rapport au pli",
+    "mirror-across-fold_other": "Créer {{count}} symétriques par rapport au pli",
+    "mirror-across-fold_many": "Créer {{count}} de symétriques par rapport au pli",
+    "move": "Déplacer",
+    "move-point": "Déplacer le point",
+    "new-document": "Nouveau document",
+    "new-project": "Nouveau projet",
+    "open": "Ouvrir",
+    "open-sample": "Ouvrir l’exemple",
+    "recover": "Récupérer",
+    "remove-point": "Supprimer le point",
+    "rename": "Renommer",
+    "rename-part": "Renommer la pièce",
+    "rename-project": "Renommer le projet",
+    "resize-label": "Redimensionner l’étiquette",
+    "rotate": "Tourner",
+    "round-corner": "Arrondir le coin",
+    "scale": "Redimensionner",
+    "set-quantity": "Définir la quantité",
+    "sharpen-corner": "Rendre le coin vif",
+    "show_one": "Afficher l’élément",
+    "show_other": "Afficher {{count}} éléments",
+    "show_many": "Afficher {{count}} d’éléments",
+    "show-part": "Afficher la pièce",
+    "transform": "Transformer",
+    "unlock_one": "Déverrouiller",
+    "unlock_other": "Déverrouiller {{count}} éléments",
+    "unlock_many": "Déverrouiller {{count}} d’éléments",
+    "delete-part": "Supprimer la pièce",
+    "add-guide": "Ajouter un guide",
+    "edit-guide": "Modifier le guide",
+    "delete-guide": "Supprimer le guide",
+    "align": "Aligner la sélection",
+    "distribute": "Répartir la sélection"
+  },
+  "fieldMenu": {
+    "label": "Édition",
+    "cut": "Couper",
+    "copy": "Copier",
+    "paste": "Coller",
+    "selectAll": "Tout sélectionner",
+    "nothingSelected": "Sélectionnez d’abord du texte"
+  },
+  "chips": {
+    "title": "Dimensions du contour extérieur sélectionné",
+    "titleDrawing": "Dimensions du rectangle en cours de dessin",
+    "hint": {
+      "next": "suivant",
+      "make": "crée",
+      "cancel": "annule"
+    },
+    "cornerName": "Rayon des quatre coins",
+    "corner": "r",
+    "margin": "retrait",
+    "mixed": "variés",
+    "tooLarge": {
+      "halfHeight": "Le rayon dépasse la moitié de la hauteur ({{size}}). {{enter}} utilise {{size}}.",
+      "halfWidth": "Le rayon dépasse la moitié de la largeur ({{size}}). {{enter}} utilise {{size}}.",
+      "height": "Le rayon dépasse l’espace disponible sur la hauteur ({{size}}). {{enter}} utilise {{size}}.",
+      "width": "Le rayon dépasse l’espace disponible sur la largeur ({{size}}). {{enter}} utilise {{size}}."
+    },
+    "tooSmall": {
+      "width": "La largeur est insuffisante pour les coins ({{size}}). {{enter}} utilise {{size}}.",
+      "height": "La hauteur est insuffisante pour les coins ({{size}}). {{enter}} utilise {{size}}."
+    }
+  },
+  "selectionBar": {
+    "title": "Couture de {{piece}}",
+    "noStitching": "Pas encore de couture",
+    "noHoles": "Pas encore de trous",
+    "holesHidden": "Les trous sont masqués : ils ne sont ni comptés ni imprimés.",
+    "holes_one": "{{count}} trou",
+    "holes_other": "{{count}} trous",
+    "holes_many": "{{count}} de trous",
+    "spacing": "{{spacing}} mm, pas nominal {{pitch}}",
+    "stretched": "augmenté de {{percent}} %",
+    "stretchedUnder": "augmenté de moins de {{percent}} %",
+    "squeezed": "réduit de {{percent}} %",
+    "squeezedUnder": "réduit de moins de {{percent}} %",
+    "runs": "parcours {{runs}}",
+    "cut": "Découper ×{{quantity}}",
+    "next": "Suivant",
+    "done": "terminé :",
+    "step": {
+      "stitchLine": "Ligne de couture",
+      "holes": "Trous de couture",
+      "allowance": "Marge de couture"
+    }
+  },
+  "updates": {
+    "current": "Vous utilisez la dernière version.",
+    "available": "LeatherCAD {{version}} est disponible.",
+    "availableLink": "Voir les nouveautés et télécharger",
+    "failed": "Impossible de rechercher une nouvelle version. Vérifiez votre connexion ou réessayez plus tard.",
+    "checkedAt": "Vérifié à {{time}}",
+    "again_one": "Vous pourrez réessayer dans {{count}} minute.",
+    "again_other": "Vous pourrez réessayer dans {{count}} minutes.",
+    "again_many": "Vous pourrez réessayer dans {{count}} de minutes."
+  },
+  "templates": {
+    "title": "Nouveau projet à partir d’un modèle",
+    "mineEmpty": "Enregistrez un projet comme modèle depuis le menu du projet ou de son onglet : il apparaîtra ici.",
+    "use": "Utiliser le modèle",
+    "remove": "Retirer {{name}}",
+    "bifoldWallet": {
+      "name": "Portefeuille pliant",
+      "description": "Un extérieur et une doublure pliés, et deux poches à cartes"
+    },
+    "cardHolder": {
+      "name": "Porte-cartes",
+      "description": "Un extérieur cousu sur tout le pourtour et une poche sur chaque face"
+    },
+    "keyFob": {
+      "name": "Porte-clés",
+      "description": "Une lanière aux extrémités arrondies, repliée dans un anneau et rivetée"
+    },
+    "coaster": {
+      "name": "Dessous de verre",
+      "description": "Un carré de 100 mm aux coins arrondis, cousu sur tout le pourtour"
+    },
+    "saveTitle": "Enregistrer comme modèle",
+    "saveName": "Nom du modèle",
+    "save": "Enregistrer le modèle",
+    "replace": "Remplacer",
+    "exists": "Un modèle nommé « {{name}} » existe déjà. Remplacez-le ou choisissez un autre nom.",
+    "invalid": "« {{name}} » n’est pas un nom de modèle valide. Choisissez un autre nom.",
+    "saved": "Enregistré comme modèle « {{name}} ».",
+    "pieces_one": "{{count}} pièce à découper",
+    "pieces_other": "{{count}} pièces à découper",
+    "pieces_many": "{{count}} de pièces à découper",
+    "search": "Rechercher des modèles",
+    "searchLabel": "Rechercher des modèles par nom, description ou étiquette",
+    "show": {
+      "all": "Tous",
+      "builtin": "Intégrés",
+      "mine": "Personnels"
+    },
+    "showLabel": "Afficher",
+    "sortLabel": "Trier",
+    "sort": {
+      "name": "Nom (A–Z)",
+      "nameDesc": "Nom (Z–A)",
+      "recent": "Utilisés récemment",
+      "newest": "Plus récents d’abord",
+      "oldest": "Plus anciens d’abord"
+    },
+    "group": {
+      "pinned": "Épinglés",
+      "others": "Autres modèles",
+      "foldPinned": "Réduire les modèles épinglés",
+      "unfoldPinned": "Afficher les modèles épinglés"
+    },
+    "count": "{{shown}} sur {{total}}",
+    "countAll_one": "{{count}} modèle",
+    "countAll_other": "{{count}} modèles",
+    "countAll_many": "{{count}} de modèles",
+    "noMatch": "Aucun modèle ne porte le nom « {{query}} » ni cette description.",
+    "clearSearch": "Effacer la recherche",
+    "builtInBadge": "Intégré",
+    "changedOn": "Modifié le {{date}}",
+    "fact": {
+      "pieces": "Pièces à découper",
+      "layout": "Disposition du patron",
+      "changed": "Modifié"
+    },
+    "overallSize": "{{width}} × {{height}} mm",
+    "pin": "Épingler",
+    "unpin": "Désépingler",
+    "rename": "Renommer…",
+    "renameLabel": "Nom du modèle",
+    "duplicate": "Dupliquer",
+    "duplicateMine": "Dupliquer comme modèle personnel",
+    "edit": "Modifier le modèle",
+    "editTooltip": "Ouvrir le modèle lui-même dans un onglet : Enregistrer modifie le modèle",
+    "export": "Exporter…",
+    "showInFolder": "Afficher dans le dossier",
+    "delete": "Supprimer",
+    "import": "Importer un modèle…",
+    "importTooltip": "Ajouter un fichier de projet du disque à vos modèles",
+    "builtInLocked": "Les modèles intégrés restent inchangés. Dupliquez-en un pour créer le vôtre.",
+    "description": "Description",
+    "descriptionPlaceholder": "Son usage et les points à surveiller",
+    "tags": "Étiquettes",
+    "tagsPlaceholder": "Séparées par des virgules, par exemple ceintures, marron",
+    "removed": "« {{name}} » retiré.",
+    "undo": "Annuler",
+    "copyName": "Copie de {{name}}",
+    "importTitle": "Importer un modèle",
+    "exportTitle": "Exporter le modèle",
+    "nothingChosen": "Choisissez un modèle.",
+    "wordsTitle": "Description et étiquettes",
+    "saveWords": "Enregistrer",
+    "editDetails": "Modifier les détails…",
+    "actionsFor": "Actions pour {{name}}",
+    "sortChosen": "Trier : {{sort}}"
+  },
+  "guides": {
+    "title": "Guides",
+    "help": "Faites glisser un guide depuis une règle, ou placez-en un sur le plan : cliquez pour un guide horizontal, ou faites glisser entre deux points. Les guides sont enregistrés et servent à l’accrochage ; ils ne s’impriment jamais. Sélectionnez-en un pour le déplacer, saisir sa position et son angle, ou ajouter un parallèle.",
+    "horizontal": "Guide horizontal",
+    "vertical": "Guide vertical",
+    "item": "Guide {{number}}",
+    "x": "Guide x",
+    "y": "Guide y",
+    "angle": "Angle du guide",
+    "delete": "Supprimer le guide",
+    "placeHint": "Cliquer place un guide horizontal",
+    "verticalHint": "place un guide vertical",
+    "dragHint": "Faites glisser entre deux points",
+    "selected": "Guide sélectionné",
+    "parallel": {
+      "title": "Guide parallèle",
+      "distance": "Distance du parallèle",
+      "above": "Ajouter au-dessus",
+      "below": "Ajouter en dessous",
+      "left": "Ajouter à gauche",
+      "right": "Ajouter à droite"
+    }
+  },
+  "arrange": {
+    "title": "Aligner et répartir",
+    "help": "Disposer les boîtes englobantes sélectionnées. Une pièce se déplace en entier. La répartition garde les éléments extrêmes fixes et égalise les espaces.",
+    "x": {
+      "min": "Aligner à gauche",
+      "centre": "Centrer horizontalement",
+      "max": "Aligner à droite",
+      "distribute": "Espaces horizontaux égaux"
+    },
+    "y": {
+      "min": "Aligner en bas",
+      "centre": "Centrer verticalement",
+      "max": "Aligner en haut",
+      "distribute": "Espaces verticaux égaux"
+    },
+    "reason": {
+      "count_one": "Sélectionnez au moins {{count}} élément indépendant.",
+      "count_other": "Sélectionnez au moins {{count}} éléments indépendants.",
+      "count_many": "Sélectionnez au moins {{count}} d’éléments indépendants.",
+      "unresolved": "La sélection contient une géométrie impossible à résoudre.",
+      "linked": "Ces éléments dépendent les uns des autres. Disposez des pièces indépendantes, ou déplacez leur source.",
+      "order": "Ces dimensions ne permettent pas d’égaliser les espaces sans réordonner. Écartez les éléments extrêmes."
+    }
+  }
+}

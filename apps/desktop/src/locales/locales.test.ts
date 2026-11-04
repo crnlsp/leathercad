@@ -113,6 +113,29 @@ describe('non-blocking translation maintenance', () => {
     holes_other: '{{count}} holes',
   });
 
+  it('does not count whitespace-only edits of English as translations', () => {
+    const source = JSON.stringify({ title: 'Version {{version}}' });
+    for (const title of [
+      'Version\u00a0{{version}}',
+      ' Version {{version}} ',
+      'Version\u202f{{version}}',
+    ]) {
+      expect(catalogueCoverage('fr', JSON.stringify({ title }), source)).toEqual({
+        total: 1,
+        translated: 0,
+        missing: ['title'],
+        mistakes: [],
+      });
+    }
+  });
+
+  it('requires the French million form even if singular and ordinary plural are present', () => {
+    const own = JSON.stringify({ holes_one: '{{count}} trou', holes_other: '{{count}} trous' });
+    expect(checkCatalogue('fr', own, english).mistakes).toContain(
+      'holes_many: missing, and fr has this form',
+    );
+  });
+
   it('accepts a missing message and an entirely missing plural family for every supported language', () => {
     for (const { tag } of SUPPORTED_LANGUAGES) {
       if (tag === SOURCE_LOCALE) continue;

@@ -139,7 +139,7 @@ export function checkCatalogue(
   return { mistakes: found, missing: [...source.keys()].filter((key) => !own.has(key)) };
 }
 
-/** Logical-message coverage; exact English copies remain untranslated, including invariant symbols. */
+/** Logical-message coverage; English copies remain untranslated, even with different spacing. */
 export function catalogueCoverage(
   tag: string,
   text: string,
@@ -164,9 +164,11 @@ export function catalogueCoverage(
     const invalid = mistakes.some(
       (mistake) => mistake.startsWith(`${key}:`) || mistake.startsWith(`${key}_`),
     );
+    // French typography uses nonbreaking spaces. Spacing alone is not a translation.
+    const englishWords = new Set([...english.values()].map((value) => value.replace(/\s/gu, '')));
     const copy =
       forms !== undefined &&
-      [...forms.values()].some((value) => [...english.values()].includes(value));
+      [...forms.values()].some((value) => englishWords.has(value.replace(/\s/gu, '')));
     if (forms === undefined || invalid || (tag !== 'en' && copy)) missing.push(key);
   }
   return { total: source.size, translated: source.size - missing.length, missing, mistakes };

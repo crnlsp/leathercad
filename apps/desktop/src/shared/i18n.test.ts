@@ -194,9 +194,9 @@ describe('the languages LeatherCAD supports', () => {
 });
 
 describe('production languages', () => {
-  it('registers all four catalogues independently of their coverage', () => {
-    expect(SUPPORTED_LANGUAGES.map(({ tag }) => tag)).toEqual(['en', 'pl', 'de', 'ru']);
-    for (const tag of ['pl', 'de', 'ru']) {
+  it('registers all five catalogues independently of their coverage', () => {
+    expect(SUPPORTED_LANGUAGES.map(({ tag }) => tag)).toEqual(['en', 'pl', 'de', 'ru', 'fr']);
+    for (const tag of ['pl', 'de', 'ru', 'fr']) {
       expect(isLanguagePreference(tag)).toBe(true);
       expect(resolveLocale('system', [`${tag}-${tag.toUpperCase()}`])).toBe(
         `${tag}-${tag.toUpperCase()}`,
@@ -230,4 +230,33 @@ describe('production languages', () => {
     expect(preview['greeting']).toBe('[Hello~~ {{name}}]');
     expect(preview['holes_one']).toBe('[{{count}} hole~~]');
   });
+
+  it.each([
+    [0, 'trou'],
+    [1, 'trou'],
+    [0.5, 'trou'],
+    [1.5, 'trou'],
+    [2, 'trous'],
+    [21, 'trous'],
+    [1_000_000, 'de trous'],
+    [2_000_000, 'de trous'],
+    [1_000_001, 'trous'],
+    [1_000_000.5, 'trous'],
+  ])('uses the French singular, plural or million form for %s', (count, noun) => {
+    expect(createI18n('fr').t('parts.rowHoles', { count })).toBe(
+      `${new Intl.NumberFormat('fr').format(count)} ${noun}`,
+    );
+  });
+
+  it.each([{}, { holes_one: '{{count}} trou', holes_other: '{{count}} trous' }])(
+    'uses English rules for a missing French family or one missing its million form',
+    (fr) => {
+      const catalogues = { ...CATALOGUES_UNDER_TEST, fr };
+      for (const count of [0, 1, 0.5, 1.5, 2, 21, 1_000_000]) {
+        expect(createI18n('fr', catalogues).t(key('holes'), { count })).toBe(
+          `${new Intl.NumberFormat('fr').format(count)} ${count === 1 ? 'hole' : 'holes'}`,
+        );
+      }
+    },
+  );
 });

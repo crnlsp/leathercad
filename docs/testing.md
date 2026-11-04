@@ -625,14 +625,17 @@ audit. Missing translations pass, including a newly added English message and an
 family. Unknown keys and groups, malformed JSON, non-string values, invalid placeholders and partial
 CLDR families fail. English is checked for its own valid plural definitions.
 
-`pnpm locales:report` reports logical messages, missing keys, exact English copies and structural
+`pnpm locales:report` reports logical messages, missing keys, English copies and structural
 errors without using coverage as a gate. The tests and report share `shared/catalogue.ts`.
 `pnpm locales:report --review pl` prints a side-by-side Markdown review table.
 
-`e2e/localization.spec.ts` drives the production build: all four languages, live renderer and native
+`e2e/localization.spec.ts` drives the production build: every registered language, live renderer and native
 dialog changes, restart persistence, Linux system-language selection, project-data round trips,
 minimum/desktop window sizes, recovery and accessibility. Screenshots are attached to test results.
 Unit tests cover Polish and Russian 0, 1, 2, 5, 11, 21, 22 and fractional counts, including complete,
-missing and incomplete families. In `pnpm dev`, *English (expanded)* is the overflow probe; it is
+missing and incomplete families. French tests also cover zero, fractions below two, exact millions,
+one million plus one, and a fractional million, with whole-English fallback if `_many` is absent.
+The report lists the runtime's required plural categories and ignores whitespace-only English copies.
+In `pnpm dev`, *English (expanded)* is the overflow probe; it is
 not a production language. See [the verification record](localization-verification.md) for actual
 platforms, commands, findings and remaining limits.

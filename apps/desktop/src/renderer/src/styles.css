@@ -3066,6 +3066,19 @@ body {
   font: var(--t-label);
 }
 
+/* These labels include the drawn length: give translations the full pane
+   rather than wrapping them word by word in the properties' label column. */
+.print-calibration > .field {
+  flex-direction: column;
+  gap: var(--space-1);
+  align-self: stretch;
+  align-items: stretch;
+}
+
+.print-calibration > .field > .field-label {
+  flex-basis: auto;
+}
+
 .print-calibration-actions {
   display: flex;
   gap: var(--space-2);
