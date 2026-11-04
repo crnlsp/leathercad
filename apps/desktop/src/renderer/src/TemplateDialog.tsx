@@ -206,33 +206,34 @@ export function TemplateDialog({
     const selected = row === chosen;
     const preview = row.project === null ? null : templatePreview(row.project, 64, 42, 'shape');
     return (
-      <div
-        key={row.entry.id}
-        role="option"
-        id={`template-option-${String(ordered.indexOf(row))}`}
-        aria-selected={selected}
-        tabIndex={-1}
-        className="template-choice"
-        data-template={row.entry.id}
-        data-testid={`template-${row.entry.id}`}
-        onClick={() => setPicked(row.entry.id)}
-        onDoubleClick={() => actions.use(row.entry.id)}
-      >
-        <span className="template-preview small" aria-hidden="true">
-          {preview !== null && <img src={preview} alt="" width={64} height={42} />}
-        </span>
-        <span className="template-text">
-          <span className="template-name">
-            <Marked text={row.name} query={query} />
+      <div key={row.entry.id} className="template-choice" data-selected={selected}>
+        <div
+          role="option"
+          id={`template-option-${String(ordered.indexOf(row))}`}
+          aria-selected={selected}
+          tabIndex={-1}
+          className="template-option"
+          data-template={row.entry.id}
+          data-testid={`template-${row.entry.id}`}
+          onClick={() => setPicked(row.entry.id)}
+          onDoubleClick={() => actions.use(row.entry.id)}
+        >
+          <span className="template-preview small" aria-hidden="true">
+            {preview !== null && <img src={preview} alt="" width={64} height={42} />}
           </span>
-          <span className="template-meta">
-            {row.entry.kind === 'builtin'
-              ? t('templates.builtInBadge')
-              : t('templates.changedOn', {
-                  date: dates.format(row.entry.changed ?? row.entry.created ?? 0),
-                })}
+          <span className="template-text">
+            <span className="template-name">
+              <Marked text={row.name} query={query} />
+            </span>
+            <span className="template-meta">
+              {row.entry.kind === 'builtin'
+                ? t('templates.builtInBadge')
+                : t('templates.changedOn', {
+                    date: dates.format(row.entry.changed ?? row.entry.created ?? 0),
+                  })}
+            </span>
           </span>
-        </span>
+        </div>
         {/* The pointer's shortcut, as on the start screen. The keyboard pins
             from the details' row of actions, so an option holds no control. */}
         <button
@@ -270,10 +271,13 @@ export function TemplateDialog({
             event.target instanceof HTMLInputElement && event.target !== search.current
               ? true
               : event.target instanceof HTMLTextAreaElement;
+          const reading =
+            event.target instanceof Element &&
+            event.target.closest('.template-detail-body') !== null;
           if (event.key === 'Escape') onClose();
           else if (typing) return;
-          else if (event.key === 'ArrowDown') choose(at + 1);
-          else if (event.key === 'ArrowUp') choose(at - 1);
+          else if (event.key === 'ArrowDown' && !reading) choose(at + 1);
+          else if (event.key === 'ArrowUp' && !reading) choose(at - 1);
           else if (
             event.key === 'Enter' &&
             chosen !== null &&
@@ -291,7 +295,7 @@ export function TemplateDialog({
         }}
       >
         <div className="template-head">
-          <h3 id="template-dialog-title">{t('templates.title')}</h3>
+          <h2 id="template-dialog-title">{t('templates.title')}</h2>
           <Tooltip text={t('templates.importTooltip')}>
             <button
               type="button"
@@ -324,7 +328,7 @@ export function TemplateDialog({
             ))}
           </div>
           <MenuButton
-            label={t('templates.sortChosen', { sort: t(SORT_WORDS[sort]) })}
+            label={`${t('templates.sortLabel')} ${t(SORT_WORDS[sort])}`}
             tooltip={t('templates.sortLabel')}
             testId="template-sort"
             className="tool template-filter"
@@ -337,7 +341,7 @@ export function TemplateDialog({
               onChoose: () => order(each, show),
             }))}
           >
-            <span className="template-filter-label">{t('templates.sortLabel')}</span>
+            <span className="template-filter-label">{t('templates.sortLabel')} </span>
             <span className="template-filter-value">{t(SORT_WORDS[sort])}</span>
             <Icon of="chevron-down" size={12} />
           </MenuButton>
@@ -421,9 +425,9 @@ export function TemplateDialog({
                         className="template-group"
                       >
                         {pinned.length > 0 && (
-                          <h4 className="template-heading" aria-hidden="true">
+                          <h3 className="template-heading" aria-hidden="true">
                             {t('templates.group.others')}
-                          </h4>
+                          </h3>
                         )}
                         {others.map(option)}
                       </div>
@@ -700,7 +704,7 @@ function Detail({
         </div>
       </div>
 
-      <div className="template-detail-body">
+      <div className="template-detail-body" role="region" aria-label={row.name} tabIndex={0}>
         <span className="template-preview large" aria-hidden="true">
           {preview !== null && <img src={preview} alt="" width={360} height={200} />}
         </span>
@@ -773,9 +777,9 @@ function Detail({
               }
             }}
           >
-            <h4 id="template-words-title" className="template-heading">
+            <h3 id="template-words-title" className="template-heading">
               {t('templates.wordsTitle')}
-            </h4>
+            </h3>
             <label className="template-field">
               <span className="template-field-label">{t('templates.description')}</span>
               <textarea
@@ -868,7 +872,7 @@ export function SaveTemplateDialog({
           save(false);
         }}
       >
-        <h3 id="save-template-title">{t('templates.saveTitle')}</h3>
+        <h2 id="save-template-title">{t('templates.saveTitle')}</h2>
         <label className="field">
           <span>{t('templates.saveName')}</span>
           <input

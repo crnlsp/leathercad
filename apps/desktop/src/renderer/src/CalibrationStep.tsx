@@ -97,9 +97,9 @@ export function CalibrationStep({
         onCancel();
       }}
     >
-      <h4 id={`${ids}title`} ref={headingRef} tabIndex={-1}>
+      <h3 id={`${ids}title`} ref={headingRef} tabIndex={-1}>
         {t('calibration.title', { printer })}
-      </h4>
+      </h3>
       <p className="dialog-note">{t('calibration.lead')}</p>
 
       <p>{t('calibration.printStep', { paper, x: drawnMm.x, y: drawnMm.y })}</p>

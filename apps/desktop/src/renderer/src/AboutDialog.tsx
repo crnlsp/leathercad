@@ -51,7 +51,7 @@ export function AboutDialog({
           <div className="about-identity">
             <img src={iconUrl} width={64} height={64} alt="" />
             <div>
-              <h3 id="about-dialog-title">LeatherCAD</h3>
+              <h2 id="about-dialog-title">LeatherCAD</h2>
               <p className="selectable" data-testid="about-version">
                 {t('about.version', { version: version ?? '…' })}
               </p>

@@ -52,14 +52,14 @@ export function ExportNotice({ report, onClose }: { report: ExportReport; onClos
           if (event.key === 'Escape') onClose();
         }}
       >
-        <h3 id="export-notice-title">
+        <h2 id="export-notice-title">
           {readiness.omitted.length === 0 &&
           readiness.errors + readiness.warnings + readiness.infos === 0
             ? t('exportNotice.titleTiled')
             : report.format === 'pdf'
               ? t('exportNotice.titleCheck')
               : t('exportNotice.titleCheckFile', { format: report.format.toUpperCase() })}
-        </h3>
+        </h2>
 
         <ExportFindings report={report} />
 

@@ -148,7 +148,7 @@ export interface RowFace {
  * label-in-name matching passes over, so on a row that shows both counts
  * side by side they are side by side in its name too; speech reads them alike.
  */
-export function rowName(face: RowFace, { t, list }: I18n): string {
+export function rowName(face: RowFace, { t }: I18n): string {
   const said = [face.name];
   if (face.problems !== null) {
     said.push(
@@ -160,5 +160,7 @@ export function rowName(face: RowFace, { t, list }: I18n): string {
   }
   if (face.holes !== null) said.push(t('parts.rowHoles', { count: face.holes }));
   if (face.empty) said.push(t('parts.emptyPart'), t('parts.remove'));
-  return list(said, 'unit');
+  // This is the row’s visual sequence, not a natural-language list. Intl adds
+  // conjunctions in some locales, breaking Label in Name for speech input.
+  return said.join(', ');
 }

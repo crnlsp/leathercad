@@ -12,6 +12,8 @@ service or new dependency is needed to contribute.
 
 1. Edit `pl.json`, `de.json` or `ru.json`, preserving nesting and keys. New languages use a BCP 47
    filename. Do not add metadata to a catalogue: every leaf is a UI message.
+   When an English key is removed or renamed, remove obsolete translation keys too; adding a
+   replacement translation remains optional.
 2. Keep `{{placeholders}}`, including their spelling. Translate surrounding words, never IDs,
    diagnostic codes, file extensions, units, keyboard bindings or saved project data. A plural's
    count can be implicit in a phrase such as “one hole”; preserve every other placeholder.

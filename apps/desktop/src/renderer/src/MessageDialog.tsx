@@ -49,7 +49,7 @@ export function MessageDialog({
           if (event.key === 'Escape') onClose();
         }}
       >
-        <h3 id={titleId}>{title}</h3>
+        <h2 id={titleId}>{title}</h2>
         {children}
         <div className="dialog-actions">
           <button

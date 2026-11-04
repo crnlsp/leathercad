@@ -251,3 +251,18 @@ describe('rowName', () => {
     );
   });
 });
+
+describe('translated row names', () => {
+  it.each([
+    ['pl', 'Stitch holes, 146 otworów'],
+    ['de', 'Stitch holes, 146 Löcher'],
+    ['ru', 'Stitch holes, 146 отверстий'],
+  ])('keeps the visible name and count adjacent in %s for speech input', (locale, expected) => {
+    expect(
+      rowName(
+        { name: 'Stitch holes', problems: null, holes: 146, empty: false },
+        createI18n(locale),
+      ),
+    ).toBe(expected);
+  });
+});

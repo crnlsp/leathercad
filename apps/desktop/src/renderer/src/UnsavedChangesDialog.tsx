@@ -49,7 +49,7 @@ export function UnsavedChangesDialog({
           if (event.key === 'Escape') onCancel();
         }}
       >
-        <h3 id="unsaved-dialog-title">{t('unsaved.title', { name })}</h3>
+        <h2 id="unsaved-dialog-title">{t('unsaved.title', { name })}</h2>
         <p id="unsaved-dialog-consequence">{t(`unsaved.consequence.${action}`)}</p>
 
         <div className="dialog-actions">
