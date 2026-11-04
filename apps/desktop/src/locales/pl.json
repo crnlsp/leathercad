@@ -1,0 +1,1701 @@
+{
+  "app": {
+    "untitled": "Bez tytułu",
+    "untitledNumbered": "Bez tytułu {{number}}",
+    "windowTitle": "{{name}} — LeatherCAD",
+    "windowTitleUnsaved": "• {{name}} — LeatherCAD",
+    "drawing": "Rysunek"
+  },
+  "tabs": {
+    "strip": "Projekty",
+    "region": "Otwarte projekty",
+    "close": "Zamknij {{name}}",
+    "closeTooltip": "Zamknij ten projekt",
+    "unsaved": "{{name}}, niezapisane zmiany",
+    "add": "Nowa karta",
+    "addTooltip": "Nowy lub istniejący projekt w osobnej karcie",
+    "menu": "Menu projektu",
+    "menuTooltip": "Nowy, otwórz, zapisz jako, zmień nazwę i ostatnie projekty",
+    "noProject": "Brak otwartego projektu",
+    "alreadyOpen": "Projekt {{name}} jest już otwarty",
+    "all": "Wszystkie karty",
+    "allTooltip": "Wszystkie otwarte projekty, gdy nie mieszczą się na pasku kart",
+    "unsavedNote": "Niezapisane zmiany",
+    "dropHere": "Przenieś tutaj"
+  },
+  "tabMenu": {
+    "label": "Menu projektu {{name}}",
+    "rename": "Zmień nazwę…",
+    "save": "Zapisz",
+    "saveAs": "Zapisz jako…",
+    "reload": "Wczytaj ponownie z dysku",
+    "reloadNote": "Plik w ostatnio zapisanej wersji",
+    "duplicate": "Powiel jako nowy projekt",
+    "showInFolder": "Pokaż w folderze",
+    "copyPath": "Kopiuj ścieżkę",
+    "trash": "Przenieś plik do kosza…",
+    "close": "Zamknij",
+    "closeOthers": "Zamknij pozostałe karty",
+    "noFile": "Nie zapisano jeszcze do pliku",
+    "onlyTab": "Brak innych otwartych kart",
+    "trashTitle": "Przenieść „{{name}}” do kosza?",
+    "trashBody": "Plik {{file}} trafi do systemowego kosza, skąd można go przywrócić. Jego karta zostanie zamknięta.",
+    "trashBodyUnsaved": "Plik {{file}} trafi do systemowego kosza, skąd można go przywrócić. Jego karta zostanie zamknięta, a niezapisane zmiany zostaną utracone.",
+    "trashConfirm": "Przenieś do kosza",
+    "trashFailed": "Nie udało się przenieść pliku do kosza. {{reason}}"
+  },
+  "outside": {
+    "changed": "Plik {{file}} został zmieniony poza LeatherCAD.",
+    "gone": "Plik {{file}} został przeniesiony lub usunięty poza LeatherCAD.",
+    "reload": "Wczytaj ponownie",
+    "keep": "Zachowaj moją wersję",
+    "save": "Zapisz ponownie",
+    "dismiss": "Zamknij powiadomienie"
+  },
+  "rename": {
+    "title": "Nie zmieniono nazwy",
+    "exists": "W folderze projektu jest już plik „{{file}}”. Wybierz inną nazwę. Projekt i jego plik zachowają obecną nazwę.",
+    "invalid": "Plik nie może mieć nazwy „{{name}}”: zawiera ona niedozwolony znak, np. / \\\\ : * ? \" < > |, lub jest zarezerwowana przez system. Wybierz inną nazwę.",
+    "failed": "Nie udało się zmienić nazwy pliku projektu. Projekt zachowa obecną nazwę. {{reason}}",
+    "followExists": "Przywrócono nazwę projektu „{{name}}”, ale jego plik zachowa obecną nazwę: w tym folderze jest już plik „{{file}}”."
+  },
+  "start": {
+    "title": "Nowy projekt",
+    "fromTemplate": "Nowy projekt z szablonu",
+    "open": "Otwórz istniejący projekt",
+    "lede": "Zacznij nowy wykrój, otwórz go z dysku lub wróć do ostatniej pracy.",
+    "pin": "Przypnij {{name}}",
+    "unpin": "Odepnij {{name}}",
+    "pinTooltip": "Zachowaj na początku listy",
+    "unpinTooltip": "Przenieś z powrotem do ostatnich projektów",
+    "remove": "Usuń {{name}} z listy",
+    "removeTooltip": "Usuń z listy. Plik pozostanie na dysku"
+  },
+  "actions": {
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "delete": "Usuń",
+    "deletePart": "Usuń część",
+    "duplicate": "Powiel",
+    "duplicatePart": "Powiel część",
+    "hide": "Ukryj",
+    "lock": "Zablokuj",
+    "save": "Zapisz",
+    "show": "Pokaż",
+    "unlock": "Odblokuj"
+  },
+  "keys": {
+    "Alt": "Alt",
+    "Down": "↓",
+    "End": "End",
+    "Home": "Home",
+    "Insert": "Ins",
+    "Left": "←",
+    "PageDown": "PgDn",
+    "PageUp": "PgUp",
+    "Right": "→",
+    "Up": "↑",
+    "Backspace": "Backspace",
+    "Ctrl": "Ctrl",
+    "Delete": "Del",
+    "Enter": "Enter",
+    "Escape": "Esc",
+    "Menu": "Menu",
+    "Middle-drag": "Przeciągnij środkowym przyciskiem",
+    "Scroll": "Przewijanie",
+    "Shift": "Shift",
+    "Space": "Spacja",
+    "Tab": "Tab",
+    "drag": "przeciągnij"
+  },
+  "projectBar": {
+    "application": "Aplikacja",
+    "exportMore": "Inne formaty eksportu",
+    "exportMoreTooltip": "Eksportuj do SVG lub DXF w milimetrach — do ploterów laserowych, CNC i edytorów grafiki wektorowej",
+    "exportPdf": "Eksportuj PDF",
+    "exportTooltip": "Zapisz {{sheets}} jako gotowy do druku PDF w skali 1:1. W innej aplikacji drukuj w rozmiarze rzeczywistym (100 %)",
+    "help": "Pomoc",
+    "helpTooltip": "Pomoc",
+    "name": "Nazwa projektu",
+    "nothingToSave": "Brak zmian do zapisania",
+    "output": "Wynik",
+    "paper": "Papier: {{sheets}}",
+    "paperLong": "{{count}} × {{paper}} {{orientation}}",
+    "paperPopover": {
+      "orientation": "Orientacja",
+      "option_one": "{{paper}} · {{count}} arkusz",
+      "option_few": "{{paper}} · {{count}} arkusze",
+      "option_many": "{{paper}} · {{count}} arkuszy",
+      "option_other": "{{paper}} · {{count}} arkusza",
+      "sheets_one": "{{count}} arkusz",
+      "sheets_few": "{{count}} arkusze",
+      "sheets_many": "{{count}} arkuszy",
+      "sheets_other": "{{count}} arkusza",
+      "summary": "{{sheets}} · skala 100 %, zablokowana · {{taped}}",
+      "nothingTaped": "bez sklejania",
+      "seeSheets": "Pokaż arkusze",
+      "limited": "{{paper}} — zbyt wiele arkuszy"
+    },
+    "paperShort": "{{count}} × {{paper}}",
+    "print": "Drukuj",
+    "printTooltip": "Podejrzyj {{sheets}}, a następnie wydrukuj w skali 1:1",
+    "problems": "Problemy: {{counts}}",
+    "problemsNone": "Problemy: brak uwag",
+    "problemsNoneTooltip": "Brak uwag",
+    "problemsTooltip": "{{counts}}. Pokaż w panelu Problemy",
+    "saveTooltip": "Zapisz projekt",
+    "saved": "Zapisano",
+    "settings": "Ustawienia",
+    "settingsTooltip": "Ustawienia",
+    "unsaved": "Niezapisane zmiany",
+    "unsavedShort": "Niezapisane",
+    "settingsUpdate": "Ustawienia — dostępna nowa wersja"
+  },
+  "menu": {
+    "about": "O programie LeatherCAD",
+    "exportDxf": "Eksportuj DXF…",
+    "exportDxfNote": "R12, w milimetrach, do oprogramowania laserowego i CNC",
+    "exportNothing": "Nie ma jeszcze czego eksportować. Żadna część nie ma linii cięcia.",
+    "exportSvg": "Eksportuj SVG…",
+    "exportSvgNote": "W milimetrach, do ploterów laserowych, tnących i edytorów wektorowych",
+    "new": "Nowy pusty projekt",
+    "open": "Otwórz…",
+    "recent": "Ostatnie projekty",
+    "recentEmpty": "Tutaj pojawią się otwierane i zapisywane projekty.",
+    "rename": "Zmień nazwę…",
+    "renameNote": "Ta nazwa jest też nazwą pliku i widnieje w stopce PDF",
+    "saveAs": "Zapisz jako…",
+    "settings": "Ustawienia…",
+    "recentGone": "Tego projektu nie ma już w zapisanej lokalizacji",
+    "recentGoneDetail": "Projekt został przeniesiony, przemianowany lub usunięty, więc usunięto go z listy ostatnich projektów.",
+    "newFromTemplate": "Nowy projekt z szablonu…",
+    "saveAsTemplate": "Zapisz jako szablon…"
+  },
+  "macMenu": {
+    "edit": "Edycja",
+    "redo": "Ponów",
+    "undo": "Cofnij"
+  },
+  "hints": {
+    "addsOrRemoves": "dodaje lub usuwa z zaznaczenia",
+    "allKeys": "wszystkie skróty",
+    "arcNext": "Kliknij następny punkt",
+    "arcStart": "Kliknij początek łuku",
+    "arcsNext": "zmienia następny odcinek w łuk",
+    "backToSelect": "wraca do narzędzia Zaznacz",
+    "cancels": "anuluje",
+    "circleDrag": "Przeciągnij od środka lub kliknij środek, a potem obwód",
+    "circleRim": "Kliknij obwód",
+    "clickSelects": "Kliknięcie zaznacza",
+    "deletes": "usuwa",
+    "dragBox": "Przeciągnij ramkę zaznaczenia",
+    "dragMoves": "Przeciągnięcie przesuwa",
+    "editsSizes": "pozwala wpisać wymiary",
+    "finishes": "kończy",
+    "hardwarePick": "wybiera część do dziurkowania",
+    "hardwarePunch": "Kliknij, aby wybić otwór",
+    "holdsProportions": "zachowuje proporcje",
+    "holdsSteps": "ogranicza kąt do wielokrotności 15°",
+    "keepSquare": "zachowuje kwadrat",
+    "lineDrag": "Przeciągnij między końcami lub kliknij oba końce",
+    "lineEnd": "Kliknij koniec",
+    "measureFirst": "Kliknij dwa narożniki, aby zwymiarować odległość",
+    "measureSecond": "Kliknij drugi narożnik",
+    "pointsAdd": "Kliknij krawędź, aby dodać punkt",
+    "pointsMove": "Przeciągnij punkt, aby go przesunąć",
+    "pointsPick": "wybiera narysowaną ścieżkę do edycji",
+    "pointsRemove": "usuwa punkt",
+    "pointsRound": "zaokrągla narożnik",
+    "polylineClose": "Kliknij pierwszy punkt, aby zamknąć",
+    "polylinePoints": "Klikaj kolejne punkty",
+    "rectangleCorner": "Kliknij drugi narożnik",
+    "rectangleDrag": "Przeciągnij lub kliknij dwa narożniki",
+    "rotateDrag": "Przeciągnij wokół zaznaczenia, aby je obrócić",
+    "rotatePick": "wybiera obiekt do obrócenia",
+    "scaleDrag": "Przeciągnij, aby zmienić rozmiar względem środka",
+    "scalePick": "wybiera obiekt do skalowania",
+    "sheetsClick": "Kliknij część, aby zobaczyć jej miejsce na wydruku",
+    "sheetsExport": "eksportuje PDF",
+    "sheetsPrint": "drukuje",
+    "takesBack": "cofa ostatni punkt",
+    "textPick": "wybiera część do opisania",
+    "textPlace": "Kliknij, aby umieścić etykietę",
+    "textType": "następnie wpisz tekst we Właściwościach",
+    "typeSize": "Wpisz wymiar"
+  },
+  "work": {
+    "redo": "Ponów",
+    "region": "Praca",
+    "undo": "Cofnij",
+    "redoTooltip": "Ponów: {{action}}",
+    "undoTooltip": "Cofnij: {{action}}"
+  },
+  "status": {
+    "features_one": "element",
+    "features_few": "elementy",
+    "features_many": "elementów",
+    "features_other": "elementu",
+    "focus": "Skupienie",
+    "panels": "Panele",
+    "parts": "Części",
+    "partsCount_one": "część",
+    "partsCount_few": "części",
+    "partsCount_many": "części",
+    "partsCount_other": "części",
+    "problems_one": "problem",
+    "problems_few": "problemy",
+    "problems_many": "problemów",
+    "problems_other": "problemu",
+    "properties": "Właściwości",
+    "selected": "zaznaczone",
+    "sheetOf": "Arkusz {{number}} z {{count}}",
+    "partsSelected_one": "część zaznaczona",
+    "partsSelected_few": "części zaznaczone",
+    "partsSelected_many": "części zaznaczonych",
+    "partsSelected_other": "części zaznaczonej",
+    "checkForUpdates": "Sprawdź aktualizacje",
+    "versionNext": "do {{version}}",
+    "saved": "Zapisano {{name}}",
+    "exported": "Wyeksportowano {{name}}"
+  },
+  "view": {
+    "design": "Projektowanie",
+    "designBoard": "Obszar projektowania",
+    "designTooltip": "Projektuj części",
+    "label": "Widok",
+    "sheets": "Arkusze",
+    "sheetsBoard": "Widok arkuszy",
+    "sheetsNamed_one": "Arkusze, {{count}} arkusz",
+    "sheetsNamed_few": "Arkusze, {{count}} arkusze",
+    "sheetsNamed_many": "Arkusze, {{count}} arkuszy",
+    "sheetsNamed_other": "Arkusze, {{count}} arkusza",
+    "sheetsTooltip": "Zobacz części na arkuszach tak, jak zostaną wydrukowane"
+  },
+  "zoom": {
+    "fit": "Dopasuj",
+    "fitDrawing": "Dopasuj rysunek",
+    "fitSelection": "Dopasuj zaznaczenie",
+    "fitTooltip": "Dopasuj rysunek lub kliknij dwukrotnie puste miejsce obszaru roboczego",
+    "level": "Powiększenie, {{percent}} %",
+    "levelTooltip": "Dopasuj lub wybierz powiększenie",
+    "nothingSelected": "Zaznacz obiekt na obszarze roboczym, aby go dopasować",
+    "onDesignOnly": "Tylko w Projektowaniu: arkusze są wyświetlane w całości",
+    "percent": "{{percent}} %",
+    "title": "Powiększenie",
+    "trueSize": "Rozmiar rzeczywisty, {{percent}} %"
+  },
+  "tools": {
+    "collapsedTooltip": "{{name}} — {{howTo}}",
+    "hideNames": "Ukryj nazwy narzędzi",
+    "label": "Narzędzia",
+    "showNames": "Pokaż nazwy narzędzi",
+    "group": {
+      "draw": "Rysuj",
+      "modify": "Modyfikuj",
+      "place": "Umieść"
+    },
+    "arc": {
+      "howTo": "Kliknij początek, koniec, a następnie punkt, przez który przechodzi łuk",
+      "name": "Łuk"
+    },
+    "circle": {
+      "howTo": "Przeciągnij od środka lub kliknij środek, a potem obwód",
+      "name": "Okrąg"
+    },
+    "hardware": {
+      "howTo": "Kliknij, aby wybić otwór w zaznaczonej części, w rozmiarze wybranym powyżej",
+      "name": "Okucia"
+    },
+    "line": {
+      "howTo": "Przeciągnij między końcami lub kliknij oba końce · {{shift}} ogranicza kąt do wielokrotności 15°",
+      "name": "Linia"
+    },
+    "measure": {
+      "howTo": "Kliknij dwa narożniki, aby zwymiarować odległość między nimi",
+      "name": "Wymiaruj"
+    },
+    "points": {
+      "howTo": "Przeciągnij punkt zaznaczonej ścieżki, aby go przesunąć · kliknij krawędź, aby dodać punkt · {{removePoint}} usuwa ostatnio kliknięty punkt · {{roundCorner}} zaokrągla ten narożnik lub usuwa jego zaokrąglenie",
+      "name": "Edytuj punkty"
+    },
+    "polyline": {
+      "howTo": "Klikaj kolejne punkty · {{arc}} zmienia następny odcinek w łuk: kliknij jego koniec, potem punkt na łuku · {{straight}} przywraca odcinki proste · kliknij pierwszy punkt, aby zamknąć · {{finish}} kończy · {{takeBack}} usuwa ostatni punkt",
+      "name": "Polilinia"
+    },
+    "rectangle": {
+      "howTo": "Przeciągnij od narożnika do narożnika lub kliknij oba · {{shift}} zachowuje kwadrat",
+      "name": "Prostokąt"
+    },
+    "rotate": {
+      "howTo": "Przeciągnij wokół zaznaczenia, aby obrócić je względem środka",
+      "name": "Obróć"
+    },
+    "scale": {
+      "howTo": "Przeciągnij, aby zmienić rozmiar zaznaczenia względem środka · {{shift}} zachowuje proporcje",
+      "name": "Skaluj"
+    },
+    "select": {
+      "howTo": "Kliknij, aby zaznaczyć · {{shift}} z kliknięciem dodaje lub usuwa z zaznaczenia · przeciągnij po pustym obszarze, aby zaznaczyć ramką · przeciągnij zaznaczenie, aby je przesunąć · {{delete}} usuwa",
+      "name": "Zaznacz"
+    },
+    "text": {
+      "howTo": "Kliknij, aby umieścić etykietę na zaznaczonej części, a potem wpisz jej tekst w panelu",
+      "name": "Tekst"
+    },
+    "guide": {
+      "name": "Prowadnice",
+      "howTo": "Kliknij, aby umieścić poziomą prowadnicę; przytrzymaj {{shift}}, aby umieścić pionową. Przeciągnij przez dwa punkty, np. wzdłuż krawędzi. Zaznacz prowadnicę, aby zmienić jej położenie i kąt we Właściwościach."
+    }
+  },
+  "toolOptions": {
+    "cornerRadius": "Promień narożnika",
+    "drawAs": "Rysuj jako",
+    "for": "Dla",
+    "punch": "Wybijak"
+  },
+  "drawMode": {
+    "cut-out": "Wycięcie",
+    "fold": "Zgięcie",
+    "marking": "Oznaczenie",
+    "outline": "Obrys",
+    "stitch": "Linia szycia",
+    "stitch-allowance": "Linia szycia + zapas"
+  },
+  "shortcuts": {
+    "or": "lub",
+    "group": {
+      "drawing": "Podczas rysowania",
+      "edit": "Edycja",
+      "editingPoints": "Podczas edycji punktów",
+      "file": "Plik",
+      "parts": "W panelu Części",
+      "tools": "Narzędzia",
+      "view": "Widok",
+      "window": "Okno",
+      "field": "W polu tekstowym"
+    },
+    "arc": "Polilinia: następny odcinek jest łukiem",
+    "straight": "Polilinia: następny odcinek jest prosty",
+    "cancel": "Anuluj działanie narzędzia, wyczyść zaznaczenie lub wyjdź z trybu skupienia",
+    "contextMenu": "Otwórz menu zaznaczenia, jak przy kliknięciu prawym przyciskiem",
+    "delete": "Usuń zaznaczenie (narzędzie Zaznacz)",
+    "design": "Projektowanie: obszar, na którym rysujesz",
+    "editSizes": "Wpisz wymiary zaznaczonego obrysu obok niego na obszarze roboczym",
+    "exportPdf": "Eksportuj PDF",
+    "finishPolyline": "Zakończ polilinię",
+    "fit": "Dopasuj rysunek do okna",
+    "fitSelection": "Dopasuj zaznaczenie do okna",
+    "focusMode": "Tryb skupienia: ukryj oba panele i pokaż tylko skróty narzędzi",
+    "selectionBar": "Przejdź do paska zaznaczenia lub wróć do obszaru roboczego",
+    "fullScreen": "Pełny ekran",
+    "keyboardShortcuts": "Skróty klawiszowe",
+    "newProject": "Nowy projekt",
+    "openProject": "Otwórz projekt",
+    "pan": "Przesuń widok",
+    "print": "Drukuj",
+    "quit": "Zakończ",
+    "nextTab": "Przejdź do następnej karty projektu",
+    "previousTab": "Przejdź do poprzedniej karty projektu",
+    "closeTab": "Zamknij kartę projektu",
+    "moveTabLeft": "Przesuń kartę projektu w lewo",
+    "moveTabRight": "Przesuń kartę projektu w prawo",
+    "reopenTab": "Otwórz ponownie ostatnio zamknięty projekt",
+    "redo": "Ponów",
+    "removePoint": "Usuń ostatnio kliknięty punkt",
+    "rename": "Zmień nazwę części lub elementu",
+    "roundCorner": "Zaokrąglij ostatnio kliknięty narożnik do podanego promienia lub usuń jego zaokrąglenie",
+    "save": "Zapisz",
+    "saveAs": "Zapisz jako",
+    "settings": "Ustawienia",
+    "sheets": "Arkusze: papier, na którym drukujesz",
+    "square": "Zachowaj kwadrat; ogranicz kąt linii do wielokrotności 15°",
+    "takeBack": "Usuń ostatni punkt polilinii lub łuku",
+    "toggleParts": "Pokaż lub ukryj Części",
+    "toggleProperties": "Pokaż lub ukryj Właściwości",
+    "toggleVisible": "Ukryj lub pokaż część albo element",
+    "trueSize": "Powiększenie do rozmiaru rzeczywistego, 100 %",
+    "undo": "Cofnij",
+    "zoom": "Powiększaj względem wskaźnika",
+    "zoomIn": "Powiększ",
+    "zoomOut": "Pomniejsz",
+    "help": "Otwórz menu Pomoc"
+  },
+  "settings": {
+    "close": "Zamknij ustawienia",
+    "sections": "Sekcje",
+    "title": "Ustawienia",
+    "section": {
+      "appearance": "Wygląd",
+      "general": "Ogólne",
+      "language": "Język",
+      "shortcuts": "Skróty klawiszowe",
+      "tools": "Moje narzędzia",
+      "updates": "Aktualizacje"
+    },
+    "recent": {
+      "clear": "Wyczyść listę",
+      "count_one": "Na liście jest {{count}} projekt.",
+      "count_few": "Na liście są {{count}} projekty.",
+      "count_many": "Na liście jest {{count}} projektów.",
+      "count_other": "Na liście jest {{count}} projektu.",
+      "name": "Ostatnie projekty",
+      "none": "Lista jest pusta.",
+      "note": "Menu projektu zawiera ostatnio otwierane i zapisywane projekty."
+    },
+    "keepUnsaved": {
+      "name": "Zachowuj niezapisane projekty przy zamykaniu",
+      "note": "Zamykaj bez pytania: projekty z niezapisanymi zmianami otworzą się przy następnym uruchomieniu, nadal niezapisane."
+    },
+    "legend": {
+      "name": "Pokaż nazwy oznaczeń w legendzie",
+      "note": "Gdy wyłączone, legenda pozostaje zwinięta do czasu jej otwarcia."
+    },
+    "selectionBar": {
+      "name": "Pokaż pasek zaznaczenia pod zaznaczoną częścią",
+      "note": "Wynik rozmieszczenia otworów i następny krok jednym kliknięciem. Gdy wyłączone, pasek nie jest wyświetlany, a jego skrót nie działa."
+    },
+    "toolNames": {
+      "name": "Pokaż nazwy narzędzi na pasku",
+      "note": "Gdy wyłączone, każde narzędzie pokazuje tylko skrót. W oknach węższych niż 1280 px zawsze pokazywane są tylko skróty."
+    },
+    "tools": {
+      "actions": "Działania",
+      "addIron": "Dodaj wybijak",
+      "default": "Domyślny",
+      "delete": "Usuń",
+      "deleteNote": "Zestawy otworów wykonane tym wybijakiem zachowają swój rozstaw nominalny",
+      "forNewPieces": "Dla nowych części",
+      "intro": "Twoje wybijaki i wartości początkowe. Menu Wybijak w zestawie otworów zawiera te wybijaki. Nowa linia szycia, zapas na szew lub zgięcie przyjmują te wartości i je zachowują.",
+      "ironActions": "Działania dla {{name}}",
+      "irons": "Wybijaki",
+      "makeDefault": "Ustaw {{name}} jako domyślny",
+      "name": "Nazwa",
+      "newIron": "Wybijak {{number}}",
+      "noIrons": "Brak wybijaków. Nowy zestaw otworów przyjmuje nominalny rozstaw projektu, dopóki nie dodasz wybijaka.",
+      "pitch": "Rozstaw nominalny",
+      "pitchOf": "Rozstaw nominalny: {{name}}",
+      "rename": "Zmień nazwę",
+      "margin": {
+        "name": "Margines szycia",
+        "note": "Odległość nowej linii szycia od krawędzi do wewnątrz oraz nowego zapasu na szew na zewnątrz."
+      },
+      "thickness": {
+        "name": "Grubość skóry",
+        "note": "Zapisywana w każdym nowym zgięciu. Pozostaw puste, aby nie określać grubości."
+      }
+    },
+    "language": {
+      "invite": "LeatherCAD tłumaczą jego użytkownicy. {{link}}",
+      "inviteLink": "Pomóż przetłumaczyć na swój język",
+      "name": "Język interfejsu",
+      "note": "Język menu, paneli i komunikatów. Projekt pozostaje taki sam w każdym języku.",
+      "system": "Zgodnie z systemem ({{language}})",
+      "unavailable": "Język systemu, {{language}}, nie jest jeszcze dostępny. LeatherCAD używa języka: {{fallback}}.",
+      "option": "{{own}} — {{here}}",
+      "preview": "{{language}} (wersja wstępna, jeszcze nieobsługiwana)"
+    },
+    "shortcuts": {
+      "intro": "Aby zmienić skrót, wybierz Zmień i naciśnij nowe klawisze. {{escape}}, {{tab}} i {{enter}} zachowują swoje funkcje. Skróty stałe należą do pól tekstowych lub systemu.",
+      "change": "Zmień",
+      "changeLabel": "Zmień skrót dla {{command}}",
+      "listening": "Naciśnij nowe klawisze · {{escape}} anuluje",
+      "reset": "Przywróć",
+      "resetLabel": "Przywróć domyślny skrót dla {{command}}",
+      "resetAll": "Przywróć wszystkie",
+      "fixed": "Stały",
+      "reserved": "Klawisz {{key}} ma własną funkcję. Wybierz inny.",
+      "unusable": "Ten klawisz lub użyty z nim modyfikator nie może być częścią skrótu. Wybierz inne klawisze.",
+      "needsModifier": "Skrót {{command}} działa też w polach tekstowych. Użyj klawisza funkcyjnego lub kombinacji z modyfikatorem.",
+      "clash": "Skrót {{keys}} jest już przypisany do „{{command}}”.",
+      "clashFixed": "Skrót {{keys}} jest już przypisany do „{{command}}” i nie można go zamienić.",
+      "swap": "Zamień",
+      "cancel": "Anuluj",
+      "changed": "Zmieniono skrót dla {{command}}.",
+      "wasReset": "Przywrócono domyślny skrót dla {{command}}.",
+      "swapped": "Zamieniono skróty dla {{command}} i {{other}}.",
+      "allReset": "Przywrócono wszystkie domyślne skróty.",
+      "typesOther": "Ta kombinacja wpisuje „{{typed}}”, a nie literę, więc nie może być skrótem. Wybierz inne klawisze.",
+      "typesSize": "Cyfry, kropki i przecinki służą do wpisywania wymiarów na obszarze roboczym. Skrót musi używać modyfikatora. Wybierz inne klawisze."
+    },
+    "updates": {
+      "note": "LeatherCAD sprawdza najnowszą wersję na GitHubie tylko na Twoje żądanie — tutaj lub po kliknięciu wersji na pasku stanu. Nie wysyła informacji o Tobie ani Twoich wykrojach. Niczego nie pobiera ani nie instaluje.",
+      "now": "Sprawdź teraz",
+      "checking": "Sprawdzanie…",
+      "again_one": "Sprawdź ponownie za {{count}} minutę",
+      "again_few": "Sprawdź ponownie za {{count}} minuty",
+      "again_many": "Sprawdź ponownie za {{count}} minut",
+      "again_other": "Sprawdź ponownie za {{count}} minuty",
+      "managed": "Tę kopię LeatherCAD aktualizuje Flathub, więc aplikacja nie sprawdza aktualizacji samodzielnie."
+    }
+  },
+  "about": {
+    "blurb": "Wykroje kaletnicze drukowane dokładnie w skali 1:1. Program bezpłatny i otwarty na licencji Apache 2.0.",
+    "logFolder": "Pokaż folder dziennika",
+    "notices": "Informacje o składnikach zewnętrznych",
+    "reporting": "Zgłaszając problem, dołącz dziennik.",
+    "source": "Kod źródłowy na GitHubie",
+    "version": "Wersja {{version}}",
+    "noticesInDevelopment": "Informacje o składnikach zewnętrznych powstają podczas budowania wersji produkcyjnej (pnpm build)."
+  },
+  "recovery": {
+    "decline": "Nie teraz",
+    "detail": "Niezapisana praca nad „{{name}}” została zachowana automatycznie: {{when}}. Odzyskaj otworzy ją jako nowy, niezapisany projekt, bez zmiany pliku źródłowego. Jeśli wybierzesz Nie teraz, kopia zostanie usunięta przy zamykaniu LeatherCAD.",
+    "recover": "Odzyskaj",
+    "title": "LeatherCAD nie został poprawnie zamknięty"
+  },
+  "unsaved": {
+    "discard": "Nie zapisuj",
+    "title": "Zapisać zmiany w „{{name}}”?",
+    "consequence": {
+      "close": "Jeśli zamkniesz bez zapisywania, zmiany zostaną utracone.",
+      "reload": "Ponowne wczytanie przywróci ostatnio zapisany plik. Niezapisane zmiany zostaną utracone."
+    }
+  },
+  "unsavedProjects": {
+    "title_one": "Zapisać zmiany w {{count}} projekcie?",
+    "title_few": "Zapisać zmiany w {{count}} projektach?",
+    "title_many": "Zapisać zmiany w {{count}} projektach?",
+    "title_other": "Zapisać zmiany w {{count}} projektu?",
+    "consequence": "Jeśli zamkniesz bez zapisywania, zmiany w tych projektach zostaną utracone.",
+    "saveAll": "Zapisz wszystkie"
+  },
+  "deleteDialog": {
+    "deleteAll": "Usuń wszystko",
+    "features_one": "{{count}} element",
+    "features_few": "{{count}} elementy",
+    "features_many": "{{count}} elementów",
+    "features_other": "{{count}} elementu",
+    "follow": "Te elementy zależą od usuwanego obiektu:",
+    "freeze_one": "Zachowaj bez powiązań: {{count}}",
+    "freeze_few": "Zachowaj bez powiązań: {{count}}",
+    "freeze_many": "Zachowaj bez powiązań: {{count}}",
+    "freeze_other": "Zachowaj bez powiązań: {{count}}",
+    "freezeTooltip": "Zachowaj jako narysowaną geometrię w obecnym położeniu, bez dalszych powiązań",
+    "thisPart": "tę część",
+    "title": "Usunąć {{what}}?",
+    "note": {
+      "direct": "zostanie usunięty: nie ma geometrii, którą można zachować",
+      "freezable": "zostanie usunięty lub zachowany jako narysowana geometria",
+      "holes": "zostanie usunięty: otwory nie mogą istnieć bez swojej linii",
+      "indirect": "zostanie usunięty razem ze swoim źródłem, chyba że źródło zostanie zachowane"
+    }
+  },
+  "file": {
+    "exportDxfTitle": "Eksportuj DXF",
+    "exportSvgTitle": "Eksportuj SVG",
+    "exportTitle": "Eksportuj PDF",
+    "invalid": "Nie można otworzyć pliku projektu: {{problems}}",
+    "newer": "Plik zapisano w nowszej wersji LeatherCAD. Zaktualizuj program, aby go otworzyć. (Format pliku: {{format}}; ta wersja obsługuje formaty do {{current}}.)",
+    "newerNamed": "Plik zapisano w LeatherCAD {{version}}, czyli w nowszej wersji. Zaktualizuj program, aby go otworzyć. (Format pliku: {{format}}; ta wersja obsługuje formaty do {{current}}.)",
+    "openTitle": "Otwórz projekt",
+    "pdfFailed": "Nie udało się zapisać PDF ({{reason}}). Niczego nie zapisano.",
+    "pdfUnavailable": "Nie udało się zapisać PDF: proces działający w tle nie uruchomił się lub został zatrzymany. Niczego nie zapisano.",
+    "dxf": "DXF",
+    "pdf": "PDF",
+    "project": "Projekt LeatherCAD",
+    "saveTitle": "Zapisz projekt",
+    "svg": "SVG",
+    "resourceLimit": "Przekroczono limit zasobu „{{resource}}” ({{limit}}). Bieżący projekt pozostaje bez zmian.",
+    "resources": {
+      "archiveBytes": "bajty w archiwum projektu",
+      "expandedBytes": "bajty po rozpakowaniu archiwum projektu",
+      "entries": "wpisy w archiwum",
+      "nodes": "wartości w dokumencie projektu",
+      "features": "części, elementy i prowadnice",
+      "segments": "odcinki ścieżek",
+      "characters": "znaki tekstu",
+      "holes": "otwory",
+      "pages": "arkusze"
+    }
+  },
+  "hardware": {
+    "eyelet": "Oczko",
+    "other": "Inne",
+    "rivet": "Nit",
+    "screw": "Śruba",
+    "snap": "Zatrzask"
+  },
+  "sheets": {
+    "choiceTaped": "{{sheets}} ({{taped}})",
+    "count_one": "{{count}} arkusz {{paper}}, {{orientation}}",
+    "count_few": "{{count}} arkusze {{paper}}, {{orientation}}",
+    "count_many": "{{count}} arkuszy {{paper}}, {{orientation}}",
+    "count_other": "{{count}} arkusza {{paper}}, {{orientation}}",
+    "failedNotPrinted_one": "{{count}} element z problemem nie jest drukowany.",
+    "failedNotPrinted_few": "{{count}} elementy z problemami nie są drukowane.",
+    "failedNotPrinted_many": "{{count}} elementów z problemami nie jest drukowanych.",
+    "failedNotPrinted_other": "{{count}} elementu z problemem nie jest drukowane.",
+    "paper": "Papier",
+    "partNotPrinted": "Część {{name}} nie jest drukowana.",
+    "partsNotPrinted_one": "{{count}} część nie jest drukowana.",
+    "partsNotPrinted_few": "{{count}} części nie są drukowane.",
+    "partsNotPrinted_many": "{{count}} części nie jest drukowanych.",
+    "partsNotPrinted_other": "{{count}} części nie jest drukowane.",
+    "physical": "{{paper}}, {{width}} × {{height}} mm. Obszar druku na arkuszu: do {{printWidth}} × {{printHeight}} mm. Resztę zajmują marginesy i wzorzec skali. Wydruk 1:1, bez dopasowania skali.",
+    "scaleCheckOnly": "{{sheets}}, tylko wzorzec skali",
+    "summary": "{{sheets}}.",
+    "taped": "{{names}} do sklejenia",
+    "tapedPieces_one": "{{count}} część do sklejenia",
+    "tapedPieces_few": "{{count}} części do sklejenia",
+    "tapedPieces_many": "{{count}} części do sklejenia",
+    "tapedPieces_other": "{{count}} części do sklejenia",
+    "orientation": {
+      "landscape": "poziomo",
+      "portrait": "pionowo"
+    },
+    "placedForYou": "LeatherCAD sam rozmieszcza części na arkuszach. Wybierz inny papier, aby zmienić układ."
+  },
+  "sheetNumbers": {
+    "list": "Arkusze {{numbers}}",
+    "one": "Arkusz {{number}}",
+    "range": "Arkusze {{first}}–{{last}}"
+  },
+  "sheetsView": {
+    "drawingTools": "Narzędzia rysowania są w Projektowaniu · {{design}}",
+    "sheetCount_one": "{{count}} arkusz",
+    "sheetCount_few": "{{count}} arkusze",
+    "sheetCount_many": "{{count}} arkuszy",
+    "sheetCount_other": "{{count}} arkusza",
+    "sheetHeading": "{{sheet}} · {{pieces}}",
+    "noPieces": "Brak części",
+    "assembly": "Mapa montażu: {{name}}",
+    "pieceTurned": "{{names}}, obrócone o 90°",
+    "tapedLabel": "{{name}} · {{sheets}}",
+    "turnedMark": "Obrót o 90°",
+    "tapedMark": "Do sklejenia",
+    "turnedLegend": "oznacza część obróconą, aby zmieściła się na arkuszu.",
+    "tapedHeading": "Sklejane z kilku arkuszy",
+    "tapedNone": "Brak. Każda część mieści się na jednym arkuszu.",
+    "tapedWithMap": "{{sheets}} · mapa na arkuszu {{number}}",
+    "notPrintedHeading": "Niedrukowane",
+    "onTheSheets": "na arkuszach",
+    "scale": "Skala",
+    "scaleLocked": "100 % · zablokowana",
+    "sheet_one": "Arkusz",
+    "sheet_few": "Arkusze",
+    "sheet_many": "Arkuszy",
+    "sheet_other": "Arkusza",
+    "sheetsOf": "{{sheets}} z {{count}}",
+    "range": "{{first}}–{{last}}",
+    "placement": "Rozmieszczenie",
+    "asDrawn": "Jak na rysunku",
+    "turned": "Obrót o 90°",
+    "taped": "Do sklejenia",
+    "fitsOne": "Na jednym arkuszu, bez sklejania",
+    "manySelected_one": "Zaznaczono {{count}} część. Wybierz jedną, aby zobaczyć jej miejsce na wydruku.",
+    "manySelected_few": "Zaznaczono {{count}} części. Wybierz jedną, aby zobaczyć jej miejsce na wydruku.",
+    "manySelected_many": "Zaznaczono {{count}} części. Wybierz jedną, aby zobaczyć jej miejsce na wydruku.",
+    "manySelected_other": "Zaznaczono {{count}} części. Wybierz jedną, aby zobaczyć jej miejsce na wydruku.",
+    "measure": "Po wydrukowaniu zmierz prostokąt 100 × 5 mm u dołu arkusza."
+  },
+  "tapedAcross": {
+    "list": "Część {{name}} wymaga sklejenia arkuszy {{numbers}}.",
+    "one": "Część {{name}} wymaga sklejenia na arkuszu {{number}}.",
+    "range": "Część {{name}} wymaga sklejenia arkuszy {{first}}–{{last}}."
+  },
+  "print": {
+    "failed_one": "{{count}} element z problemem",
+    "failed_few": "{{count}} elementy z problemami",
+    "failed_many": "{{count}} elementów z problemami",
+    "failed_other": "{{count}} elementu z problemem",
+    "hidden_one": "{{count}} ukryty element",
+    "hidden_few": "{{count}} ukryte elementy",
+    "hidden_many": "{{count}} ukrytych elementów",
+    "hidden_other": "{{count}} ukrytego elementu",
+    "leftOff_one": "Nie drukuje się: {{features}}.",
+    "leftOff_few": "Nie drukuje się: {{features}}.",
+    "leftOff_many": "Nie drukuje się: {{features}}.",
+    "leftOff_other": "Nie drukuje się: {{features}}.",
+    "notPrinted": "Niedrukowane",
+    "taped": "{{sheets}}, do sklejenia",
+    "turned": "{{sheets}}, obrócone",
+    "reason": {
+      "hidden": "Jest ukryty.",
+      "nothing-drawn": "Nic w niej nie narysowano.",
+      "nothing-to-cut": "Zawiera tylko tekst, bez linii cięcia.",
+      "problems": "Widoczna zawartość ma problemy."
+    }
+  },
+  "printPreview": {
+    "actualSize": "Zapisz PDF, a potem drukuj w rozmiarze rzeczywistym (100 %), bez dopasowywania ani zmniejszania.",
+    "copies": "Kopie",
+    "failed": "Drukarka {{printer}} nie mogła przyjąć zadania: {{reason}}",
+    "findingPrinters": "Wyszukiwanie drukarek…",
+    "include": "Drukuj arkusz {{number}}",
+    "landscape": "Pozioma",
+    "loading": "Przygotowywanie PDF…",
+    "measure": "Po wydrukowaniu zmierz prostokąt 100 × 5 mm u dołu arkusza, aby sprawdzić, czy drukarka zachowała skalę.",
+    "noPrinters": "Na tym komputerze nie skonfigurowano drukarek.",
+    "noScaling": "Bez skalowania",
+    "noScalingDetail": "Arkusze trafiają do drukarki dokładnie tak, jak w podglądzie, z wyłączonym skalowaniem.",
+    "noScalingCorrected": "100 %, następnie korekta",
+    "noScalingCorrectedDetail": "Skalowanie drukarki jest wyłączone. Stosowana jest tylko korekta tej drukarki, aby uzyskać dokładne wymiary.",
+    "orientation": "Orientacja",
+    "paper": "Papier",
+    "paperMissing": "Drukarka {{printer}} nie ma papieru {{paper}}. Wybierz inny papier lub drukarkę.",
+    "portrait": "Pionowa",
+    "printCopies": "{{print}} × {{copies}}",
+    "printSheets_one": "Drukuj {{count}} arkusz",
+    "printSheets_few": "Drukuj {{count}} arkusze",
+    "printSheets_many": "Drukuj {{count}} arkuszy",
+    "printSheets_other": "Drukuj {{count}} arkusza",
+    "printer": "Drukarka",
+    "problems": "Problemy",
+    "problemsLead": "Projekt zawiera: {{counts}}. Na arkuszach jest wszystko, co udało się wyznaczyć.",
+    "savePdf": "Zapisz PDF…",
+    "scale": "Skala",
+    "scaleLocked": "100 % — zablokowana",
+    "sending": "Wysyłanie…",
+    "sent": "Wysłano do {{printer}} jako zadanie {{job}}.",
+    "sheets": "Arkusze",
+    "show": "Pokaż arkusz {{number}}",
+    "title": "Drukuj",
+    "unavailable": {
+      "no-cups": "LeatherCAD nie może połączyć się z systemem drukowania tego komputera.",
+      "platform": "LeatherCAD nie obsługuje jeszcze bezpośredniego drukowania w tym systemie."
+    }
+  },
+  "calibration": {
+    "again": "Kalibruj ponownie…",
+    "calibrate": "Kalibruj tę drukarkę…",
+    "corrected": "Korekta dla tej drukarki: skala {{x}} w poprzek papieru i {{y}} wzdłuż niego.",
+    "horizontal": "Linia pozioma, narysowana długość {{length}} mm",
+    "jobTitle": "Kalibracja drukarki LeatherCAD",
+    "lead": "Tylko dla drukarki, której wydruki mają błędne wymiary mimo drukowania w rozmiarze rzeczywistym (100 %). Korekta dotyczy wyłącznie tej drukarki i tylko drukowania z LeatherCAD.",
+    "measureStep": "Zmierz każdą linię od końca do końca stalowym liniałem i wpisz wynik.",
+    "printPage": "Drukuj stronę kalibracyjną",
+    "printStep": "Wydrukuj stronę kalibracyjną na papierze {{paper}}: linia pozioma ma {{x}} mm, a pionowa {{y}} mm.",
+    "remove": "Usuń korektę",
+    "result": "Arkusze wysłane do tej drukarki będą skalowane: {{x}} w poprzek papieru i {{y}} wzdłuż niego.",
+    "save": "Zapisz korektę",
+    "saveFailed": "Nie udało się zapisać korekty: {{reason}}",
+    "title": "Kalibruj {{printer}}",
+    "tooFar": "To najprawdopodobniej problem z ustawieniami druku. Sprawdź, czy wybrano rozmiar rzeczywisty (100 %), i spróbuj ponownie.",
+    "vertical": "Linia pionowa, narysowana długość {{length}} mm"
+  },
+  "exportDialog": {
+    "custom": "Własny wybór warstw",
+    "export": "Eksportuj…",
+    "intent": "Przeznaczenie eksportu",
+    "intents": {
+      "laser-cut": {
+        "name": "Cięcie laserowe",
+        "note": "Obrysy i otwory pod okucia: to, co wycina się ze skóry"
+      },
+      "stitch-guide": {
+        "name": "Wzór szycia",
+        "note": "Linie szycia i ich otwory"
+      },
+      "template-print": {
+        "name": "Wydruk wykroju",
+        "note": "Wszystkie warstwy: cały wykrój"
+      }
+    },
+    "intro": "Rysunek w układzie z obszaru roboczego, w milimetrach. Wybierz warstwy do zapisania w pliku.",
+    "layers": "Warstwy",
+    "nothing": "Brak zawartości do eksportu. Wybrane warstwy nie mają linii do narysowania.",
+    "page": "Strona będzie miała wymiary {{width}} × {{height}}",
+    "roles": {
+      "annotation": "Wymiary, etykiety i nazwy części",
+      "cut": "Obrysy cięcia",
+      "fold": "Linie zgięcia",
+      "hardware": "Otwory pod okucia",
+      "mark": "Linie oznaczeń",
+      "stitch": "Linie szycia",
+      "stitch-holes": "Otwory do szycia"
+    },
+    "stitchHolesNote": "Każdy otwór to okrąg o średnicy {{size}}, oznaczający środek, a nie rzeczywisty rozmiar otworu na nić",
+    "title": "Eksportuj {{format}}"
+  },
+  "exportNotice": {
+    "counts": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. PDF zawiera wszystko, co udało się wyznaczyć.",
+    "countsFile": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. Plik zawiera wszystko, co udało się wyznaczyć.",
+    "inPart": "w części {{part}}",
+    "omitted": "— nie udało się wyznaczyć ich geometrii, więc nie ma ich w PDF.",
+    "omittedFile": "— nie udało się wyznaczyć ich geometrii, więc nie ma ich w pliku.",
+    "omittedLead_one": "Ten element nie jest zawarty w PDF",
+    "omittedLead_few": "Te {{count}} elementy nie są zawarte w PDF",
+    "omittedLead_many": "Tych {{count}} elementów nie ma w PDF",
+    "omittedLead_other": "Pominięto w PDF: {{count}} elementu",
+    "omittedLeadFile_one": "Ten element nie jest zawarty w pliku",
+    "omittedLeadFile_few": "Te {{count}} elementy nie są zawarte w pliku",
+    "omittedLeadFile_many": "Tych {{count}} elementów nie ma w pliku",
+    "omittedLeadFile_other": "Pominięto w pliku: {{count}} elementu",
+    "tiled_one": "„{{name}}” ma wymiary {{size}}, większe niż {{paper}} {{orientation}}: wydruk na {{count}} arkuszu, {{rows}} × {{columns}}.",
+    "tiled_few": "„{{name}}” ma wymiary {{size}}, większe niż {{paper}} {{orientation}}: wydruk na {{count}} arkuszach, {{rows}} × {{columns}}.",
+    "tiled_many": "„{{name}}” ma wymiary {{size}}, większe niż {{paper}} {{orientation}}: wydruk na {{count}} arkuszach, {{rows}} × {{columns}}.",
+    "tiled_other": "„{{name}}” ma wymiary {{size}}, większe niż {{paper}} {{orientation}}: liczba arkuszy {{count}}, {{rows}} × {{columns}}.",
+    "tiledAcross": "w skali 1:1, z zakładką {{overlap}} mm. Przytnij arkusz wzdłuż przerywanej linii, połóż na następnym i zgraj krzyżyki.",
+    "tiledFits": "{{printed}} Mieści się w całości na papierze {{paper}}, {{orientation}}.",
+    "tiledLead_one": "Ta część jest drukowana na kilku arkuszach",
+    "tiledLead_few": "Te {{count}} części są drukowane na kilku arkuszach",
+    "tiledLead_many": "Tych {{count}} części jest drukowanych na kilku arkuszach",
+    "tiledLead_other": "Części drukowane na kilku arkuszach: {{count}}",
+    "tiledNoPaper": "{{printed}} Nie mieści się w całości na żadnym obsługiwanym papierze.",
+    "titleCheck": "PDF wyeksportowany — sprawdź uwagi",
+    "titleCheckFile": "{{format}} wyeksportowany — sprawdź uwagi",
+    "titleTiled": "PDF wyeksportowany na kilka arkuszy"
+  },
+  "panels": {
+    "featureIn": "{{feature}} · {{part}}",
+    "hideParts": "Ukryj Części",
+    "hideProperties": "Ukryj Właściwości",
+    "partsFolded": "Części, zwinięte",
+    "propertiesFolded": "Właściwości, zwinięte",
+    "showParts": "Pokaż Części",
+    "showProperties": "Pokaż Właściwości"
+  },
+  "parts": {
+    "actions": "Działania dla {{name}}",
+    "count_one": "{{count}} część",
+    "count_few": "{{count}} części",
+    "count_many": "{{count}} części",
+    "count_other": "{{count}} części",
+    "duplicateNote": "Kopia obok tej części, z własnymi liniami szycia",
+    "empty": "Brak części. Naciśnij {{rectangle}}, a potem przeciągnij lub kliknij dwa narożniki, aby narysować część.",
+    "emptyPart": "Pusta",
+    "hidePart": "Ukryj część",
+    "isHidden": "Ukryta",
+    "isLocked": "Zablokowana",
+    "mirrorsMark": "Odbicie lustrzane elementu nadrzędnego",
+    "notPrinted": "Nie jest drukowana. {{reason}}",
+    "remove": "Usuń część",
+    "rename": "Nazwa",
+    "rowHoles_one": "{{count}} otwór",
+    "rowHoles_few": "{{count}} otwory",
+    "rowHoles_many": "{{count}} otworów",
+    "rowHoles_other": "{{count}} otworu",
+    "rowProblems_one": "{{count}} (problem, najpoważniejszy: {{severity}})",
+    "rowProblems_few": "{{count}} (problemy, najpoważniejszy: {{severity}})",
+    "rowProblems_many": "{{count}} (problemów, najpoważniejszy: {{severity}})",
+    "rowProblems_other": "{{count}} (problemu, najpoważniejszy: {{severity}})",
+    "showPart": "Pokaż część",
+    "title": "Części"
+  },
+  "featureKind": {
+    "cut-out": "Wycięcie",
+    "fold-line": "Linia zgięcia",
+    "hardware-hole": "Otwór pod okucie",
+    "hole-row": "Rząd otworów",
+    "marking-line": "Linia oznaczenia",
+    "measurement": "Wymiar",
+    "outline": "Obrys",
+    "stitch-hole-set": "Otwory do szycia",
+    "stitch-line": "Linia szycia",
+    "text-label": "Etykieta tekstowa"
+  },
+  "properties": {
+    "addAllowance": "Dodaj zapas na szew",
+    "addAllowanceHint": "Krawędź cięcia w podanej odległości na zewnątrz tej linii szycia, podążająca za jej kształtem",
+    "addHoleRow": "Dodaj rząd otworów",
+    "addHoleRowHint": "Otwory wzdłuż tej linii: na obu końcach, a pozostałe równomiernie pomiędzy — do regulacji paska, nitów lub sznurowania",
+    "addHoles": "Dodaj otwory",
+    "addHolesHint": "Otwory wzdłuż linii w nominalnym rozstawie wybijaka",
+    "addOverallSize": "Dodaj wymiary całkowite",
+    "addOverallSizeHint": "Szerokość i wysokość części od krawędzi do krawędzi — rozmiar skóry do wycięcia. Wymiar między narożnikami mierzy odległość między nimi, która przy zaokrągleniach jest mniejsza",
+    "addStitchLine": "Dodaj linię szycia",
+    "addStitchLineHint": "Linia szycia w stałej odległości od krawędzi, podążająca za jej zmianami",
+    "afterOutline": {
+      "title": "Po narysowaniu obrysu",
+      "stitchLine": "Linia szycia",
+      "holes": "Otwory",
+      "note": "Wartości z {{tools}} w Ustawieniach; zmiany tutaj są tam zachowywane. Używane dla opcji Linia szycia + zapas oraz kolejnych kroków na nowej części."
+    },
+    "area": "Pole powierzchni",
+    "arrange": "Rozmieść",
+    "convertToPath": "Zamień na narysowaną ścieżkę",
+    "convertToPathNote": {
+      "circle": "Przestanie być okręgiem: nie będzie można wpisać środka ani średnicy, ale będzie można rozciągnąć go do owalu i przesuwać punkty. Linia szycia nie może jeszcze podążać za owalem.",
+      "arc": "Przestanie być łukiem: nie będzie można wpisać promienia ani kąta łuku, ale będzie można rozciągać go nierównomiernie i przesuwać punkty.",
+      "rect": "Przestanie być prostokątem: nie będzie można wpisać szerokości, wysokości ani narożników, ale będzie można go pochylać i przesuwać punkty. Linia szycia nie może jeszcze podążać za nierównomiernie rozciągniętymi zaokrągleniami."
+    },
+    "cut": "Wytnij",
+    "cutSuffix": "szt.",
+    "drawing": "Rysowany prostokąt",
+    "flipLabel": "Odwróć",
+    "foldMirror": "Odbij względem zgięcia",
+    "foldMirrorLabel": "Względem zgięcia",
+    "foldMirrorHint": "Powiązane odbicie względem {{fold}}, aktualizowane przy każdym przesunięciu zgięcia",
+    "follows": "Podąża za",
+    "frozenNote": "Odłączono od {{source}}: to teraz narysowana geometria, która już nie podąża za źródłem.",
+    "itsOriginal": "swoim oryginałem",
+    "length": "Długość",
+    "locked": "Zablokowane",
+    "lockedNote": "Zablokowane — niczego nie można zmienić. Odblokuj w panelu Części.",
+    "manySelected_one": "Zaznaczono {{count}} element. Wybierz jeden, aby go edytować.",
+    "manySelected_few": "Zaznaczono {{count}} elementy. Wybierz jeden, aby go edytować.",
+    "manySelected_many": "Zaznaczono {{count}} elementów. Wybierz jeden, aby go edytować.",
+    "manySelected_other": "Zaznaczono {{count}} elementu. Wybierz jeden, aby go edytować.",
+    "measured": "Zmierzono",
+    "measures": "Mierzy",
+    "mirrorFoldNote": "Odbicie {{source}} względem {{fold}}. Podąża za przesunięciem zgięcia i zmianami źródła {{source}}. Nie można go przeciągać osobno.",
+    "mirrorLabel": "Odbicie powiązane",
+    "mirrorLineNote": "Odbija {{source}} względem linii ustalonej przy tworzeniu. Linia nie podąża za {{source}}. Przesunięcie źródła przesuwa odbicie w przeciwną stronę, a zmiana rozmiaru zmienia odstęp. Przeciągnij tę część, aby ustawić parę.",
+    "mirrors": "Odbija",
+    "name": "Nazwa",
+    "nothingSelected": "Nic nie zaznaczono. Rysuj narzędziem {{rectangle}} lub wybierz obiekt narzędziem {{select}}.",
+    "part": "Część",
+    "piece": "Część",
+    "perimeter": "Obwód",
+    "problems_one": "Problem",
+    "problems_few": "Problemy",
+    "problems_many": "Problemów",
+    "problems_other": "Problemu",
+    "reads": "Pokazuje",
+    "title": "Właściwości",
+    "where": "{{part}} · Wytnij ×{{quantity}}",
+    "flip": {
+      "horizontal": "Odwróć ↔",
+      "vertical": "Odwróć ↕"
+    },
+    "flipHint": {
+      "horizontal": "Odwróć lewo–prawo względem środka. Nie tworzy powiązania.",
+      "vertical": "Odwróć góra–dół względem środka. Nie tworzy powiązania."
+    },
+    "mirror": {
+      "horizontal": "Odbicie ↔",
+      "vertical": "Odbicie ↕"
+    },
+    "mirrorHint": {
+      "counterpart": {
+        "horizontal": "Powiązane odbicie po prawej, względem obecnej prawej krawędzi części. Podąża za jej kształtem; linia odbicia pozostaje nieruchoma.",
+        "vertical": "Powiązane odbicie poniżej, względem obecnej dolnej krawędzi części. Podąża za jej kształtem; linia odbicia pozostaje nieruchoma."
+      },
+      "piece": {
+        "horizontal": "Odbita kopia jako nowa część po prawej, względem obecnej prawej krawędzi. Podąża za kształtem tej części; linia odbicia pozostaje nieruchoma.",
+        "vertical": "Odbita kopia jako nowa część poniżej, względem obecnej dolnej krawędzi. Podąża za kształtem tej części; linia odbicia pozostaje nieruchoma."
+      }
+    },
+    "mirrorNote": {
+      "counterpart": "Odbicie tworzy powiązany odpowiednik.",
+      "piece": "Odbicie tworzy powiązaną część."
+    },
+    "job": {
+      "holes": "Otwory",
+      "paper": "{{paper}}, {{orientation}}",
+      "pieces": "Części",
+      "scaleCheckOnly": "{{paper}}, {{orientation}}, tylko wzorzec skali",
+      "sheets": "Arkusze",
+      "timesCut": "{{holes}} ×{{cut}}",
+      "toCut_one": "{{count}} do wycięcia",
+      "toCut_few": "{{count}} do wycięcia",
+      "toCut_many": "{{count}} do wycięcia",
+      "toCut_other": "{{count}} do wycięcia"
+    },
+    "manyPartsSelected_one": "Zaznaczono {{count}} część. Wybierz jedną, aby ją edytować.",
+    "manyPartsSelected_few": "Zaznaczono {{count}} części. Wybierz jedną, aby ją edytować.",
+    "manyPartsSelected_many": "Zaznaczono {{count}} części. Wybierz jedną, aby ją edytować.",
+    "manyPartsSelected_other": "Zaznaczono {{count}} części. Wybierz jedną, aby ją edytować."
+  },
+  "legend": {
+    "hide": "Ukryj legendę",
+    "title": "Legenda",
+    "tooltip": "Legenda: {{names}}",
+    "names": {
+      "cut-edge": "Obrys",
+      "cut-out": "Wycięcie",
+      "fold-mountain": "Zgięcie wypukłe",
+      "fold-valley": "Zgięcie wklęsłe",
+      "hardware-hole": "Otwór pod okucie",
+      "linked": "Podąża za inną linią lub ją odbija",
+      "marking": "Linia oznaczenia",
+      "measurement": "Wymiar",
+      "mirror-across-fold": "Odbicie względem zgięcia",
+      "piece": "Część",
+      "seam-allowance": "Zapas na szew",
+      "stitch-holes": "Otwory do szycia",
+      "stitch-line": "Linia szycia"
+    }
+  },
+  "caption": {
+    "cut": "{{name}} ×{{quantity}}",
+    "holes_one": "{{count}} otwór · {{pitch}}",
+    "holes_few": "{{count}} otwory · {{pitch}}",
+    "holes_many": "{{count}} otworów · {{pitch}}",
+    "holes_other": "{{count}} otworu · {{pitch}}",
+    "unnamed": "Część"
+  },
+  "spacing": {
+    "matches": "Rozstaw rzeczywisty jest zgodny z nominalnym",
+    "squeezed": "Rozstaw zmniejszony o {{percent}} %",
+    "squeezedUnder": "Rozstaw zmniejszony o mniej niż {{percent}} %",
+    "stretched": "Rozstaw zwiększony o {{percent}} %",
+    "stretchedUnder": "Rozstaw zwiększony o mniej niż {{percent}} %"
+  },
+  "problems": {
+    "withSubject": "{{name}}: {{sentence}}",
+    "badge_one": "{{count}} problem, najpoważniejszy: {{severity}}",
+    "badge_few": "{{count}} problemy, najpoważniejszy: {{severity}}",
+    "badge_many": "{{count}} problemów, najpoważniejszy: {{severity}}",
+    "badge_other": "{{count}} problemu, najpoważniejszy: {{severity}}",
+    "severity": {
+      "error": "błąd",
+      "info": "informacja",
+      "warning": "ostrzeżenie"
+    },
+    "panel": {
+      "none": "Brak uwag.",
+      "title": "Problemy"
+    },
+    "drawing": {
+      "cut-out": "Wycięcie",
+      "outline": "Obrys",
+      "seam": "Linia szycia"
+    },
+    "DUPLICATE_ID": {
+      "title": "Powtórzony identyfikator",
+      "description": "Dwa elementy mają ten sam identyfikator {{featureId}}."
+    },
+    "SOURCE_MISSING": {
+      "title": "Brak źródła",
+      "description": "Element {{featureName}} podąża za elementem, który nie istnieje."
+    },
+    "FOLLOWS_ITSELF": {
+      "title": "Zależy od siebie",
+      "description": "Element {{featureName}} nie może podążać za samym sobą."
+    },
+    "WOULD_LOOP": {
+      "title": "Powstałaby pętla zależności",
+      "description": "Element {{featureName}} przez {{sourceName}} zacząłby podążać za samym sobą."
+    },
+    "CYCLE": {
+      "title": "Zależy od siebie",
+      "description": "Element {{featureName}} należy do łańcucha zależności, który wraca do niego samego."
+    },
+    "DERIVATION_INCOMPATIBLE": {
+      "title": "Nie może podążać za tym elementem",
+      "rule": {
+        "allowance-needs-closed-line": "Zapas na szew wymaga zamkniętej linii szycia: obrys musi otaczać część.",
+        "allowance-needs-outer": "Z linii szycia można wyznaczyć tylko zewnętrzny obrys części, nie wycięcie.",
+        "allowance-needs-outline": "Na zewnątrz linii szycia można wyznaczyć tylko obrys.",
+        "allowance-needs-stitch-line": "Obrys można wyznaczyć przez odsunięcie na zewnątrz tylko od linii szycia.",
+        "allowance-needs-whole-run": "Zapas na szew podąża za całą linią szycia, aby powstały obrys był zamknięty.",
+        "holes-need-hole-set": "Tylko zestaw otworów do szycia może podążać za linią szycia w określonym rozstawie nominalnym.",
+        "holes-need-stitch-line": "Otwory do szycia mogą podążać tylko za linią szycia.",
+        "row-needs-hole-row": "Tylko rząd otworów może podążać za linią oznaczenia w określonym rozstawie nominalnym.",
+        "row-needs-marking-line": "Rząd otworów może podążać tylko za linią oznaczenia.",
+        "inset-needs-outline": "Linię szycia można wyznaczyć przez odsunięcie do wewnątrz tylko od obrysu lub wycięcia.",
+        "inset-needs-stitch-line": "Do wewnątrz od obrysu można wyznaczyć tylko linię szycia.",
+        "mirror-keeps-kind": "Powiązane odbicie ma ten sam rodzaj co jego źródło.",
+        "mirror-keeps-role": "Odbity kontur zachowuje rolę: obrys pozostaje obrysem, a wycięcie wycięciem."
+      }
+    },
+    "PART_ALREADY_HAS_OUTER": {
+      "title": "Część ma już obrys",
+      "description": "Część {{partName}} jest już wycinana według {{outerName}}. Część to jeden kawałek skóry, więc ma jeden obrys. Narysuj to jako wycięcie lub utwórz nową część."
+    },
+    "CONTOUR_NOT_CLOSED": {
+      "title": "Kontur nie jest zamknięty",
+      "inner": "{{subject}} ma dwa końce, więc nie wycina niczego z części. Narysuj jako linię oznaczenia.",
+      "innerClosable": "{{subject}} ma dwa końce, więc nie wycina niczego z części. Zamknij kształt lub narysuj jako linię oznaczenia.",
+      "outer": "{{subject}} ma dwa końce, więc nie da się wyciąć części. Narysuj jako linię oznaczenia.",
+      "outerClosable": "{{subject}} ma dwa końce, więc nie da się wyciąć części. Zamknij kształt lub narysuj jako linię oznaczenia."
+    },
+    "MEASURE_REF_MISSING": {
+      "title": "Brak obiektu do zmierzenia",
+      "description": "Element {{featureName}} wskazuje miejsce, którego nie ma już na rysunku."
+    },
+    "MEASURE_NEEDS_ANCHOR": {
+      "title": "Brak punktu odniesienia",
+      "description": "Wymiar musi wskazywać narożnik, aby zachować punkt odniesienia po zmianie rysunku. Wskaż narożnik."
+    },
+    "MEASURE_ACROSS_PARTS": {
+      "title": "Wymiar dotyczy jednej części",
+      "description": "Ten narożnik należy do {{otherPartName}}. Wymiar jest drukowany z mierzoną częścią, więc oba końce muszą należeć do niej."
+    },
+    "FOLLOWS_ANOTHER_PART": {
+      "title": "Na innej części",
+      "description": "Źródło {{sourceName}} należy do {{otherPartName}}, więc {{featureName}} powstałby tam i drukował się z niewłaściwą częścią. Wybierz źródło na tej części."
+    },
+    "MIRROR_FOLD_MISSING": {
+      "title": "Brak zgięcia",
+      "description": "Element {{featureName}} jest odbity względem zgięcia, które już nie istnieje."
+    },
+    "MIRROR_OUTLINE_ACROSS_FOLD": {
+      "title": "Część ma jeden obrys",
+      "description": "Odbicie względem zgięcia służy do elementów wewnątrz części: szczelin, linii szycia i okuć. Część {{partName}} ma już obrys. Narysuj cały obrys lub odbij część, aby utworzyć drugą."
+    },
+    "MIRROR_PLACED_BY_FOLD": {
+      "title": "Położenie zależne od zgięcia",
+      "description": "Element {{featureName}} jest odbity względem {{foldName}}, więc jego położenie wynika ze zgięcia. Przesuń {{foldName}} lub {{sourceName}}."
+    },
+    "FOLD_NOT_STRAIGHT": {
+      "title": "Zgięcie nie jest proste",
+      "description": "Odbicie wymaga jednej prostej osi, a to zgięcie jest zakrzywione. Narysuj proste zgięcie lub odbij względem innego."
+    },
+    "MIRROR_WOULD_SCALE": {
+      "title": "Odbicie musi zachować zgodność",
+      "description": "Żądana skala naruszyłaby zgodność {{featureName}} z {{sourceName}}. Zmień rozmiar oryginału lub skaluj całą część równomiernie."
+    },
+    "MIRROR_NO_AXIS": {
+      "title": "Brak osi odbicia",
+      "description": "Zaznacz kształt o niezerowym rozmiarze. Linia odbicia jest umieszczana wzdłuż jego krawędzi."
+    },
+    "FEATURE_LOCKED": {
+      "title": "Zablokowane",
+      "description": "Element {{featureName}} jest zablokowany i nie można go zmienić ani usunąć. Najpierw odblokuj go w panelu Części."
+    },
+    "FEATURE_MISSING": {
+      "title": "Brak elementu",
+      "description": "Ten element nie istnieje."
+    },
+    "NOT_A_DRAWN_PATH": {
+      "title": "Brak punktów do edycji",
+      "description": "Element {{featureName}} nie jest narysowaną ścieżką i nie ma własnych punktów. Kształt edytuje się wymiarami lub zamienia na ścieżkę we Właściwościach. Element pochodny podąża za źródłem."
+    },
+    "NOT_A_SHAPE": {
+      "title": "To już narysowana ścieżka",
+      "description": "Element {{featureName}} nie jest kształtem do zamiany. Narysowana ścieżka ma już punkty, a element pochodny podąża za źródłem."
+    },
+    "HOLE_STAYS_ROUND": {
+      "title": "Wybijany otwór pozostaje okrągły",
+      "description": "Otwór {{featureName}} jest wybijany okrągłym wybijakiem i musi pozostać okręgiem. Aby uzyskać owalny otwór, narysuj wycięcie."
+    },
+    "POINT_EDIT_DEGENERATE": {
+      "title": "Za mało punktów",
+      "description": "Po tej zmianie element {{featureName}} miałby za mało punktów lub bok o zerowej długości."
+    },
+    "ROUNDING_DOES_NOT_FIT": {
+      "title": "Zaokrąglenie nie mieści się",
+      "description": "Zaokrąglenie {{radius}} mm nie pasuje do tego punktu {{featureName}}. Potrzebny jest narożnik między dwoma prostymi bokami o wystarczającej długości."
+    },
+    "NOT_A_ROUNDED_CORNER": {
+      "title": "Brak zaokrąglenia do usunięcia",
+      "description": "To nie jest zaokrąglony narożnik między prostymi bokami {{featureName}}, więc nie można przywrócić ostrego narożnika."
+    },
+    "CORNER_IN_USE": {
+      "title": "Narożnik jest używany",
+      "description": "Element {{usedByName}} jest powiązany z tym narożnikiem {{featureName}}, a zmiana by go usunęła. Najpierw zmień {{usedByName}}."
+    },
+    "NOT_DERIVED": {
+      "title": "Brak źródła",
+      "description": "Element {{featureName}} za niczym nie podąża, więc nie ma źródła do zmiany."
+    },
+    "DERIVED_MOVED_ALONE": {
+      "title": "Przesuwa się ze źródłem",
+      "description": "Podąża za {{rootName}}: przesuń źródło."
+    },
+    "TRANSFORM_FLATTENS": {
+      "title": "Kształt zostałby spłaszczony",
+      "description": "Ta zmiana spłaszczyłaby kształt do zerowego rozmiaru."
+    },
+    "WOULD_BECOME_ELLIPSE": {
+      "title": "Powstałaby elipsa",
+      "description": "Nierównomierne skalowanie okręgu lub łuku utworzyłoby nieobsługiwaną elipsę. Skaluj równomiernie lub najpierw zamień na narysowaną ścieżkę we Właściwościach."
+    },
+    "WOULD_SHEAR": {
+      "title": "Kształt zostałby pochylony",
+      "description": "Rozciągnięcie obróconego prostokąta w jednej osi pochyliłoby go i zniosło kąty proste. Obróć do 0°, skaluj równomiernie lub najpierw zamień na ścieżkę we Właściwościach."
+    },
+    "TEXT_WOULD_DISTORT": {
+      "title": "Litery zostałyby zniekształcone",
+      "description": "Tekst można skalować tylko równomiernie — rozciąganie w jednej osi zniekształciłoby litery. Przytrzymaj {{shift}} lub ustaw rozmiar w panelu."
+    },
+    "DIMENSION_NOT_MIRRORED": {
+      "title": "Wymiar jest pomiarem, nie odbiciem",
+      "description": "Element {{featureName}} mierzy rysunek, więc jego odbita kopia mogłaby podać wymiar niezgodny z odbiciem. Najpierw odbij kształty, a potem je zwymiaruj."
+    },
+    "TEXT_WOULD_READ_BACKWARDS": {
+      "title": "Tekst byłby odwrócony",
+      "description": "Etykiety nie można odbić lustrzanie, bo tekst byłby odwrócony. Odwróć kształty bez tekstu lub wpisz go ponownie w odpowiednim miejscu."
+    },
+    "NO_TARGET_PART": {
+      "title": "Nie zaznaczono części",
+      "cut-out": "Najpierw zaznacz część — wycięcie należy do części, na której je rysujesz.",
+      "label": "Najpierw zaznacz część — etykieta należy do części, na której ją umieszczasz.",
+      "line": "Najpierw zaznacz część — linia zgięcia lub oznaczenia należy do części, na której ją rysujesz."
+    },
+    "TARGET_SPANS_PARTS": {
+      "title": "Zaznaczenie obejmuje różne części",
+      "description": "Zaznacz jedną część. Ten obiekt należy do jednej części, a zaznaczenie obejmuje ich więcej."
+    },
+    "PARAMETER_INVALID": {
+      "title": "Nieprawidłowa liczba",
+      "at-least": "Parametr {{parameter}} elementu {{featureName}} jest mniejszy niż minimum {{minimum}}. Wpisz co najmniej {{minimum}}.",
+      "finite": "Parametr {{parameter}} elementu {{featureName}} nie jest poprawną liczbą. Wpisz wartość w milimetrach.",
+      "non-negative": "Parametr {{parameter}} elementu {{featureName}} ma wartość {{value}} i nie może być ujemny.",
+      "positive": "Parametr {{parameter}} elementu {{featureName}} ma wartość {{value}} i musi być większy od zera.",
+      "parameter": {
+        "allowance": "zapas",
+        "corner radius": "promień narożnika",
+        "end offset": "odsunięcie od końca",
+        "glide": "przesunięcie wzdłuż osi",
+        "height": "wysokość",
+        "inset": "odsunięcie do wewnątrz",
+        "mirror angle": "kąt odbicia",
+        "mirror axis": "oś odbicia",
+        "pitch": "rozstaw nominalny",
+        "position": "położenie",
+        "radius": "promień",
+        "rotation": "obrót",
+        "start angle": "kąt początkowy",
+        "start offset": "odsunięcie od początku",
+        "sweep": "kąt łuku",
+        "text size": "rozmiar tekstu",
+        "width": "szerokość"
+      }
+    },
+    "OFFSET_COLLAPSED": {
+      "title": "Odsunięcie zanika",
+      "inward": "Margines {{distance}} mm jest zbyt duży dla tej krawędzi.",
+      "outward": "Nie można wyznaczyć zapasu {{distance}} mm na zewnątrz tej linii szycia."
+    },
+    "OFFSET_UNSUPPORTED": {
+      "title": "Nie można odsunąć krzywych",
+      "description": "Nie można wyznaczyć {{featureName}}: źródło zawiera krzywe swobodne, których odsuwanie nie jest jeszcze obsługiwane."
+    },
+    "OFFSET_SPLIT": {
+      "title": "Odsunięcie rozdzieliło kontur",
+      "description_one": "Odsunięcie {{featureName}} rozpadło się na {{pieces}} fragmentów. Rysowany jest tylko największy; pominięto {{count}} fragment.",
+      "description_few": "Odsunięcie {{featureName}} rozpadło się na {{pieces}} fragmentów. Rysowany jest tylko największy; pominięto {{count}} fragmenty.",
+      "description_many": "Odsunięcie {{featureName}} rozpadło się na {{pieces}} fragmentów. Rysowany jest tylko największy; pominięto {{count}} fragmentów.",
+      "description_other": "Odsunięcie {{featureName}} rozpadło się na {{pieces}} fragmentów. Rysowany jest tylko największy; pominięto {{count}} fragmentu."
+    },
+    "ANCHOR_MISSING": {
+      "title": "Nie znaleziono narożnika",
+      "description": "Ten odcinek wskazuje narożnik {{anchor}}, a obrys ma ich {{available}}.",
+      "noCorners": "Obrys nie ma narożników wyznaczających odcinek, więc można podążać tylko za całym obrysem."
+    },
+    "SOURCE_FAILED": {
+      "title": "Nie udało się wyznaczyć źródła",
+      "description": "Nie udało się wyznaczyć źródła {{sourceName}}, za którym podąża ten element."
+    },
+    "GEOMETRY_FAILED": {
+      "title": "Nie udało się wyznaczyć geometrii",
+      "description": "Nie udało się wyznaczyć {{featureName}} ({{detail}})."
+    },
+    "TEXT_GLYPH_MISSING": {
+      "title": "Nie można wydrukować",
+      "label": "Tekst „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem. Wpisz etykietę znakami łacińskimi.",
+      "part": "Nazwa „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem. Zmień nazwę części, używając znaków łacińskich."
+    },
+    "CONTOUR_SELF_INTERSECTS": {
+      "title": "Obrys przecina sam siebie",
+      "description_one": "Obrys {{featureName}} przecina się raz, więc przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć.",
+      "description_few": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć.",
+      "description_many": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć.",
+      "description_other": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć."
+    },
+    "HOLES_OVERLAP": {
+      "title": "Otwory nachodzą na siebie",
+      "description": "Otwory {{featureName}} mają rozstaw {{spacing}} i średnicę {{diameter}}. Nie pozostaje między nimi skóra — utworzą jedną szczelinę. Zwiększ rozstaw nominalny lub użyj mniejszego wybijaka."
+    },
+    "HOLE_SPACING_DEVIATION": {
+      "title": "Rozstaw różni się od wybijaka",
+      "description": "Rozstaw otworów wynosi {{achieved}}, a nominalny rozstaw wybijaka to {{pitch}}. Zmień rozstaw nominalny lub margines od krawędzi, aby zmniejszyć różnicę."
+    },
+    "HOLE_SPACING_UNEVEN": {
+      "title": "Nierówny rozstaw",
+      "description": "Rozstaw na odcinkach {{featureName}} wynosi od {{narrowest}} do {{widest}}, więc na narożnikach różnica będzie widoczna."
+    },
+    "HOLE_COUNT_TOO_LOW": {
+      "title": "Za mało otworów",
+      "description_one": "Element {{featureName}} ma {{count}} otwór, a do szycia potrzeba co najmniej dwóch.",
+      "description_few": "Element {{featureName}} ma {{count}} otwory, a do szycia potrzeba co najmniej dwóch.",
+      "description_many": "Element {{featureName}} ma {{count}} otworów, a do szycia potrzeba co najmniej dwóch.",
+      "description_other": "Element {{featureName}} ma {{count}} otworu, a do szycia potrzeba co najmniej dwóch.",
+      "none": "Element {{featureName}} nie ma otworów, a do szycia potrzeba co najmniej dwóch."
+    },
+    "PART_HAS_NO_OUTER_CONTOUR": {
+      "title": "Brak obrysu do wycięcia",
+      "description": "Część {{partName}} ma linie szycia i oznaczenia, ale nie ma obrysu wyznaczającego skórę do wycięcia. Narysuj obrys lub przenieś elementy do innej części."
+    },
+    "CUT_OUT_OUTSIDE_PART": {
+      "title": "Wycięcie jest poza częścią",
+      "description": "Element {{featureName}} nie znajduje się wewnątrz swojego obrysu, więc niczego nie wycina. Przesuń go na część."
+    },
+    "OUTSIDE_PART": {
+      "title": "Poza materiałem",
+      "holes": "Otwory {{featureName}} wychodzą poza materiał — za obrys lub do wycięcia. Nie można ich tam wybić.",
+      "line": "Element {{featureName}} wychodzi poza materiał, więc część linii nie może zostać naniesiona."
+    },
+    "HOLE_TOO_CLOSE_TO_EDGE": {
+      "title": "Za blisko krawędzi",
+      "description": "Element {{featureName}} znajduje się {{clearance}} od krawędzi, mniej niż wymagane {{minimum}}. Skóra może rozerwać się między otworem a krawędzią."
+    },
+    "EMPTY_PART": {
+      "title": "Pusta część",
+      "description": "Część {{partName}} jest pusta. Narysuj w niej elementy lub usuń ją z listy części."
+    },
+    "counts": {
+      "error_one": "{{count}} błąd",
+      "error_few": "{{count}} błędy",
+      "error_many": "{{count}} błędów",
+      "error_other": "{{count}} błędu",
+      "warning_one": "{{count}} ostrzeżenie",
+      "warning_few": "{{count}} ostrzeżenia",
+      "warning_many": "{{count}} ostrzeżeń",
+      "warning_other": "{{count}} ostrzeżenia",
+      "info_one": "{{count}} informacja",
+      "info_few": "{{count}} informacje",
+      "info_many": "{{count}} informacji",
+      "info_other": "{{count}} informacji"
+    }
+  },
+  "contextMenu": {
+    "emptyPart": "Część jest pusta",
+    "hideNote": "Nie będzie też w PDF, dopóki nie zostanie ponownie pokazana",
+    "label": "Zaznaczenie",
+    "spansParts_one": "Zaznaczenie obejmuje {{count}} część; powielaj po jednej",
+    "spansParts_few": "Zaznaczenie obejmuje {{count}} części; powielaj po jednej",
+    "spansParts_many": "Zaznaczenie obejmuje {{count}} części; powielaj po jednej",
+    "spansParts_other": "Zaznaczenie obejmuje {{count}} części; powielaj po jednej",
+    "flip": {
+      "horizontal": "Odwróć w poziomie",
+      "vertical": "Odwróć w pionie"
+    }
+  },
+  "editor": {
+    "cornerRadii": "Promienie narożników",
+    "corners": "Narożniki",
+    "custom": "Własny",
+    "decimals": "Miejsca dziesiętne",
+    "diameter": "Średnica",
+    "direction": "Kierunek",
+    "drawnByHand": "Narysowano ręcznie, więc edytuje się punkty zamiast wymiarów. Przesuwaj, dodawaj i usuwaj je narzędziem Edytuj punkty ({{points}}).",
+    "edgeMargin": "Margines od krawędzi",
+    "fit": "Dopasuj",
+    "height": "Wysokość",
+    "holeCount": "Otwory",
+    "iron": "Wybijak",
+    "notSet": "nie ustawiono",
+    "offset": "Odsunięcie",
+    "pitch": "Rozstaw nominalny",
+    "purpose": "Przeznaczenie",
+    "radius": "Promień",
+    "runs": "Odcinki",
+    "size": "Rozmiar",
+    "spacing": "Rozstaw rzeczywisty",
+    "start": "Początek",
+    "sweep": "Kąt łuku",
+    "text": "Tekst",
+    "thickness": "Grubość",
+    "turn": "Obrót",
+    "width": "Szerokość",
+    "fold": {
+      "mountain": "Wypukłe",
+      "valley": "Wklęsłe"
+    },
+    "holes": {
+      "continuous": "Ciągły",
+      "exact-pitch": "Dokładny rozstaw nominalny",
+      "fit-whole": "Równomiernie, pełna liczba",
+      "hole-at-corner": "Otwór na każdym narożniku"
+    },
+    "lengthError": {
+      "mixed": "Podaj jednostkę każdej liczby w sumie, np. 10cm + 5mm. Dla 3½ cala wpisz 3.5in",
+      "notALength": "Wynik nie jest długością: jednostkę można nadać liczbie tylko raz, a długości nie mnoży się ani nie dzieli przez długość",
+      "notFinite": "Wyrażenie nie daje skończonej liczby",
+      "syntax": "Nieprawidłowy zapis wymiaru. Spróbuj 95, 95-2*3.5 lub 3.75in",
+      "unit": "Jednostka „{{unit}}” nie jest obsługiwana. Użyj mm, cm lub in"
+    },
+    "marking": {
+      "alignment": "Dopasowanie części",
+      "glue-area": "Obszar klejenia",
+      "logo": "Logo",
+      "other": "Inne",
+      "skive": "Ścienianie skóry"
+    }
+  },
+  "history": {
+    "add": "Dodaj {{name}}",
+    "add-dimension": "Dodaj wymiar",
+    "add-overall-size": "Dodaj wymiary całkowite",
+    "add-label": "Dodaj etykietę",
+    "add-point": "Dodaj punkt",
+    "add-seam-allowance": "Dodaj zapas na szew",
+    "change-fold-direction": "Zmień kierunek zgięcia",
+    "change-fold-thickness": "Zmień grubość zgięcia",
+    "change-hardware-type": "Zmień rodzaj okucia",
+    "change-marking-purpose": "Zmień przeznaczenie oznaczenia",
+    "change-paper": "Zmień papier",
+    "convert-to-path": "Zamień na narysowaną ścieżkę",
+    "delete": "Usuń {{what}}",
+    "deleteKeepFrozen": "Usuń {{what}}, zachowaj {{frozen}} bez powiązań",
+    "deleteWithDependents_one": "Usuń {{what}} i {{count}} element zależny",
+    "deleteWithDependents_few": "Usuń {{what}} i {{count}} elementy zależne",
+    "deleteWithDependents_many": "Usuń {{what}} i {{count}} elementów zależnych",
+    "deleteWithDependents_other": "Usuń {{what}} i {{count}} elementu zależnego",
+    "deleteWithDependentsKeepFrozen_one": "Usuń {{what}} i {{count}} element zależny, zachowaj {{frozen}} bez powiązań",
+    "deleteWithDependentsKeepFrozen_few": "Usuń {{what}} i {{count}} elementy zależne, zachowaj {{frozen}} bez powiązań",
+    "deleteWithDependentsKeepFrozen_many": "Usuń {{what}} i {{count}} elementów zależnych, zachowaj {{frozen}} bez powiązań",
+    "deleteWithDependentsKeepFrozen_other": "Usuń {{what}} i {{count}} elementu zależnego, zachowaj {{frozen}} bez powiązań",
+    "duplicate": "Powiel {{name}}",
+    "duplicate-part": "Powiel część",
+    "edit-derivation": "Edytuj zależność",
+    "edit-dimension": "Edytuj wymiar",
+    "edit-label": "Edytuj etykietę",
+    "edit-shape": "Edytuj kształt",
+    "features_one": "{{count}} element",
+    "features_few": "{{count}} elementy",
+    "features_many": "{{count}} elementów",
+    "features_other": "{{count}} elementu",
+    "flip-horizontal": "Odwróć w poziomie",
+    "flip-vertical": "Odwróć w pionie",
+    "follow": "Podążaj za {{name}}",
+    "follow-another": "Podążaj za innym elementem",
+    "hide_one": "Ukryj element",
+    "hide_few": "Ukryj {{count}} elementy",
+    "hide_many": "Ukryj {{count}} elementów",
+    "hide_other": "Ukryj {{count}} elementu",
+    "hide-part": "Ukryj część",
+    "lock_one": "Zablokuj",
+    "lock_few": "Zablokuj {{count}} elementy",
+    "lock_many": "Zablokuj {{count}} elementów",
+    "lock_other": "Zablokuj {{count}} elementu",
+    "mirror_one": "Utwórz powiązane odbicie",
+    "mirror_few": "Utwórz odbicie {{count}} elementów",
+    "mirror_many": "Utwórz odbicie {{count}} elementów",
+    "mirror_other": "Utwórz odbicie {{count}} elementu",
+    "mirror-across-fold_one": "Odbij względem zgięcia",
+    "mirror-across-fold_few": "Odbij {{count}} elementy względem zgięcia",
+    "mirror-across-fold_many": "Odbij {{count}} elementów względem zgięcia",
+    "mirror-across-fold_other": "Odbij {{count}} elementu względem zgięcia",
+    "move": "Przesuń",
+    "move-point": "Przesuń punkt",
+    "new-document": "Nowy dokument",
+    "new-project": "Nowy projekt",
+    "open": "Otwórz",
+    "open-sample": "Otwórz przykład",
+    "recover": "Odzyskaj",
+    "remove-point": "Usuń punkt",
+    "rename": "Zmień nazwę",
+    "rename-part": "Zmień nazwę części",
+    "rename-project": "Zmień nazwę projektu",
+    "resize-label": "Zmień rozmiar etykiety",
+    "rotate": "Obróć",
+    "round-corner": "Zaokrąglij narożnik",
+    "scale": "Skala",
+    "set-quantity": "Ustaw liczbę sztuk",
+    "sharpen-corner": "Usuń zaokrąglenie narożnika",
+    "show_one": "Pokaż element",
+    "show_few": "Pokaż {{count}} elementy",
+    "show_many": "Pokaż {{count}} elementów",
+    "show_other": "Pokaż {{count}} elementu",
+    "show-part": "Pokaż część",
+    "transform": "Przekształć",
+    "unlock_one": "Odblokuj",
+    "unlock_few": "Odblokuj {{count}} elementy",
+    "unlock_many": "Odblokuj {{count}} elementów",
+    "unlock_other": "Odblokuj {{count}} elementu",
+    "delete-part": "Usuń część",
+    "add-guide": "Dodaj prowadnicę",
+    "edit-guide": "Edytuj prowadnicę",
+    "delete-guide": "Usuń prowadnicę",
+    "align": "Wyrównaj zaznaczenie",
+    "distribute": "Rozmieść zaznaczenie"
+  },
+  "fieldMenu": {
+    "label": "Edycja",
+    "cut": "Wytnij",
+    "copy": "Kopiuj",
+    "paste": "Wklej",
+    "selectAll": "Zaznacz wszystko",
+    "nothingSelected": "Najpierw zaznacz fragment tekstu"
+  },
+  "chips": {
+    "title": "Wymiary zaznaczonego obrysu",
+    "titleDrawing": "Wymiary rysowanego prostokąta",
+    "hint": {
+      "next": "następny",
+      "make": "zatwierdza",
+      "cancel": "anuluje"
+    },
+    "cornerName": "Promień wszystkich czterech narożników",
+    "corner": "r",
+    "margin": "margines",
+    "mixed": "różne",
+    "tooLarge": {
+      "halfHeight": "Promień narożnika przekracza połowę wysokości ({{size}}). {{enter}} przyjmie {{size}}.",
+      "halfWidth": "Promień narożnika przekracza połowę szerokości ({{size}}). {{enter}} przyjmie {{size}}.",
+      "height": "Promień narożnika przekracza miejsce dostępne wzdłuż wysokości ({{size}}). {{enter}} przyjmie {{size}}.",
+      "width": "Promień narożnika przekracza miejsce dostępne wzdłuż szerokości ({{size}}). {{enter}} przyjmie {{size}}."
+    },
+    "tooSmall": {
+      "width": "Szerokość jest mniejsza niż potrzebna dla narożników ({{size}}). {{enter}} przyjmie {{size}}.",
+      "height": "Wysokość jest mniejsza niż potrzebna dla narożników ({{size}}). {{enter}} przyjmie {{size}}."
+    }
+  },
+  "selectionBar": {
+    "title": "Szycie części {{piece}}",
+    "noStitching": "Brak linii szycia",
+    "noHoles": "Brak otworów",
+    "holesHidden": "Otwory są ukryte, więc nie są liczone ani drukowane.",
+    "holes_one": "{{count}} otwór",
+    "holes_few": "{{count}} otwory",
+    "holes_many": "{{count}} otworów",
+    "holes_other": "{{count}} otworu",
+    "spacing": "{{spacing}} mm, nominalnie {{pitch}}",
+    "stretched": "zwiększony o {{percent}} %",
+    "stretchedUnder": "zwiększony o mniej niż {{percent}} %",
+    "squeezed": "zmniejszony o {{percent}} %",
+    "squeezedUnder": "zmniejszony o mniej niż {{percent}} %",
+    "runs": "odcinki {{runs}}",
+    "cut": "Wytnij ×{{quantity}}",
+    "next": "Dalej",
+    "done": "gotowe:",
+    "step": {
+      "stitchLine": "Linia szycia",
+      "holes": "Otwory do szycia",
+      "allowance": "Zapas na szew"
+    }
+  },
+  "updates": {
+    "current": "Masz najnowszą wersję.",
+    "available": "Dostępny jest LeatherCAD {{version}}.",
+    "availableLink": "Zobacz nowości i pobierz",
+    "failed": "Nie udało się sprawdzić aktualizacji. Sprawdź połączenie lub spróbuj później.",
+    "checkedAt": "Sprawdzono: {{time}}",
+    "again_one": "Możesz sprawdzić ponownie za {{count}} minutę.",
+    "again_few": "Możesz sprawdzić ponownie za {{count}} minuty.",
+    "again_many": "Możesz sprawdzić ponownie za {{count}} minut.",
+    "again_other": "Możesz sprawdzić ponownie za {{count}} minuty."
+  },
+  "templates": {
+    "title": "Nowy projekt z szablonu",
+    "mineEmpty": "Zapisz projekt jako szablon z menu projektu lub jego karty, a pojawi się tutaj.",
+    "use": "Użyj szablonu",
+    "remove": "Usuń {{name}}",
+    "bifoldWallet": {
+      "name": "Portfel składany",
+      "description": "Składana część zewnętrzna z podszewką i dwie kieszonki na karty"
+    },
+    "cardHolder": {
+      "name": "Etui na karty",
+      "description": "Część zewnętrzna obszyta dookoła i kieszonka z każdej strony"
+    },
+    "keyFob": {
+      "name": "Brelok",
+      "description": "Pasek o zaokrąglonych końcach, przełożony przez kółko, złożony i znitowany"
+    },
+    "coaster": {
+      "name": "Podkładka",
+      "description": "Kwadrat 100 mm z zaokrąglonymi narożnikami, obszyty dookoła"
+    },
+    "saveTitle": "Zapisz jako szablon",
+    "saveName": "Nazwa szablonu",
+    "save": "Zapisz szablon",
+    "replace": "Zastąp",
+    "exists": "Szablon o nazwie „{{name}}” już istnieje. Zastąp go lub wybierz inną nazwę.",
+    "invalid": "Szablon nie może mieć nazwy „{{name}}”. Wybierz inną.",
+    "saved": "Zapisano jako szablon „{{name}}”.",
+    "pieces_one": "{{count}} część do wycięcia",
+    "pieces_few": "{{count}} części do wycięcia",
+    "pieces_many": "{{count}} części do wycięcia",
+    "pieces_other": "{{count}} części do wycięcia",
+    "search": "Szukaj szablonów",
+    "searchLabel": "Szukaj szablonów według nazwy, opisu lub tagu",
+    "show": {
+      "all": "Wszystkie",
+      "builtin": "Wbudowane",
+      "mine": "Moje"
+    },
+    "showLabel": "Pokaż",
+    "sortLabel": "Sortuj",
+    "sort": {
+      "name": "Nazwa (A–Z)",
+      "nameDesc": "Nazwa (Z–A)",
+      "recent": "Ostatnio używane",
+      "newest": "Od najnowszych",
+      "oldest": "Od najstarszych"
+    },
+    "group": {
+      "pinned": "Przypięte",
+      "others": "Pozostałe szablony",
+      "foldPinned": "Zwiń przypięte szablony",
+      "unfoldPinned": "Pokaż przypięte szablony"
+    },
+    "count": "{{shown}} z {{total}}",
+    "countAll_one": "{{count}} szablon",
+    "countAll_few": "{{count}} szablony",
+    "countAll_many": "{{count}} szablonów",
+    "countAll_other": "{{count}} szablonu",
+    "noMatch": "Brak szablonu o nazwie lub opisie „{{query}}”.",
+    "clearSearch": "Wyczyść wyszukiwanie",
+    "builtInBadge": "Wbudowany",
+    "changedOn": "Zmieniono {{date}}",
+    "fact": {
+      "pieces": "Części do wycięcia",
+      "layout": "Układ wykroju",
+      "changed": "Zmieniono"
+    },
+    "overallSize": "{{width}} × {{height}} mm",
+    "pin": "Przypnij",
+    "unpin": "Odepnij",
+    "rename": "Zmień nazwę…",
+    "renameLabel": "Nazwa szablonu",
+    "duplicate": "Powiel",
+    "duplicateMine": "Powiel jako mój szablon",
+    "edit": "Edytuj szablon",
+    "editTooltip": "Otwórz sam szablon w karcie. Zapisz zmienia plik szablonu",
+    "export": "Eksportuj…",
+    "showInFolder": "Pokaż w folderze",
+    "delete": "Usuń",
+    "import": "Importuj szablon…",
+    "importTooltip": "Dodaj plik projektu z dysku jako własny szablon",
+    "builtInLocked": "Wbudowane szablony pozostają niezmienione. Powiel szablon, aby utworzyć własny.",
+    "description": "Opis",
+    "descriptionPlaceholder": "Do czego służy i na co zwrócić uwagę",
+    "tags": "Tagi",
+    "tagsPlaceholder": "Oddziel przecinkami, np. paski, brązowe",
+    "removed": "Usunięto „{{name}}”.",
+    "undo": "Cofnij",
+    "copyName": "{{name}} — kopia",
+    "importTitle": "Importuj szablon",
+    "exportTitle": "Eksportuj szablon",
+    "nothingChosen": "Wybierz szablon.",
+    "wordsTitle": "Opis i tagi",
+    "saveWords": "Zapisz",
+    "editDetails": "Edytuj szczegóły…",
+    "actionsFor": "Działania dla {{name}}",
+    "sortChosen": "Sortowanie: {{sort}}"
+  },
+  "guides": {
+    "title": "Prowadnice",
+    "help": "Przeciągnij prowadnicę z linijki lub umieść ją na obszarze roboczym: kliknij dla poziomej albo przeciągnij przez dwa punkty. Prowadnice są zapisywane i służą do przyciągania, ale nie są drukowane. Zaznacz prowadnicę, aby ją przesunąć, wpisać położenie i kąt lub dodać równoległą.",
+    "horizontal": "Prowadnica pozioma",
+    "vertical": "Prowadnica pionowa",
+    "item": "Prowadnica {{number}}",
+    "x": "Prowadnica x",
+    "y": "Prowadnica y",
+    "angle": "Kąt prowadnicy",
+    "delete": "Usuń prowadnicę",
+    "placeHint": "Kliknięcie umieszcza prowadnicę poziomą",
+    "verticalHint": "umieszcza prowadnicę pionową",
+    "dragHint": "Przeciągnij przez dwa punkty",
+    "selected": "Prowadnica zaznaczona",
+    "parallel": {
+      "title": "Prowadnica równoległa",
+      "distance": "Odległość równoległa",
+      "above": "Dodaj powyżej",
+      "below": "Dodaj poniżej",
+      "left": "Dodaj po lewej",
+      "right": "Dodaj po prawej"
+    }
+  },
+  "arrange": {
+    "title": "Wyrównaj i rozmieść",
+    "help": "Rozmieść prostokąty ograniczające zaznaczenie. Część przesuwa się w całości. Rozmieszczanie zachowuje skrajne elementy i wyrównuje odstępy.",
+    "x": {
+      "min": "Wyrównaj do lewej",
+      "centre": "Wyśrodkuj w poziomie",
+      "max": "Wyrównaj do prawej",
+      "distribute": "Równe odstępy poziome"
+    },
+    "y": {
+      "min": "Wyrównaj do dołu",
+      "centre": "Wyśrodkuj w pionie",
+      "max": "Wyrównaj do góry",
+      "distribute": "Równe odstępy pionowe"
+    },
+    "reason": {
+      "count_one": "Zaznacz co najmniej {{count}} niezależny obiekt.",
+      "count_few": "Zaznacz co najmniej {{count}} niezależne obiekty.",
+      "count_many": "Zaznacz co najmniej {{count}} niezależnych obiektów.",
+      "count_other": "Zaznacz co najmniej {{count}} niezależnego obiektu.",
+      "unresolved": "Zaznaczenie zawiera geometrię, której nie można wyznaczyć.",
+      "linked": "Te elementy podążają za sobą. Rozmieść niezależne części lub przesuń ich źródło.",
+      "order": "Przy tych rozmiarach równe odstępy wymagają zmiany kolejności. Odsuń skrajne elementy dalej od siebie."
+    }
+  }
+}

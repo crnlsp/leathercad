@@ -40,7 +40,8 @@
     "package": "pnpm --filter @leathercad/desktop package",
     "package:flatpak": "pnpm --filter @leathercad/desktop package:flatpak",
     "docs:media": "pnpm build && node tools/media.mjs",
-    "test:packaged": "pnpm --filter @leathercad/desktop package:e2e && playwright test --config playwright.packaged.config.ts"
+    "test:packaged": "pnpm --filter @leathercad/desktop package:e2e && playwright test --config playwright.packaged.config.ts",
+    "locales:report": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/locales.mjs"
   },
   "packageManager": "pnpm@12.15.0",
   "devDependencies": {

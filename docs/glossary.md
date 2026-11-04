@@ -2,7 +2,8 @@
 
 Craft vocabulary used throughout the code and docs. Use these terms exactly; do not invent
 synonyms. Where a term has a specific meaning in this codebase that differs from casual usage, that
-is called out.
+is called out. Interface translations and distinctions such as pattern/template, pitch/spacing
+and Flip/Mirror are maintained in the [translation style guide](localization.md#canonical-terminology).
 
 ## Leatherwork terms
 

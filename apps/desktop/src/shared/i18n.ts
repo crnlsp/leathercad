@@ -1,4 +1,10 @@
+import de from '../locales/de.json';
 import en from '../locales/en.json';
+import pl from '../locales/pl.json';
+import ru from '../locales/ru.json';
+
+import { flatten, type Catalogue } from './catalogue.js';
+export { flatten, type Catalogue } from './catalogue.js';
 
 /**
  * The interface's words, in the maker's language (ADR 0018).
@@ -44,9 +50,6 @@ export type Params = Readonly<Record<string, string | number>>;
 
 export type Translate = (key: MessageKey, params?: Params) => string;
 
-/** A language's messages, by dotted path. */
-export type Catalogue = Readonly<Record<string, string>>;
-
 /** The interface in one language. */
 export interface I18n {
   /**
@@ -58,16 +61,6 @@ export interface I18n {
   readonly t: Translate;
   /** Items joined as this language joins them: `a, b and c`, or `a, b, c` for a unit list. */
   readonly list: (items: readonly string[], type?: Intl.ListFormatType) => string;
-}
-
-/** A catalogue file's nesting, flattened to dotted paths. */
-export function flatten(tree: unknown, prefix = '', into: Record<string, string> = {}): Catalogue {
-  if (typeof tree !== 'object' || tree === null) return into;
-  for (const [key, value] of Object.entries(tree)) {
-    if (typeof value === 'string') into[`${prefix}${key}`] = value;
-    else flatten(value, `${prefix}${key}.`, into);
-  }
-  return into;
 }
 
 /** A language the maker can choose. */
@@ -86,11 +79,14 @@ export interface Language {
  * The languages LeatherCAD supports (ADR 0018): the only ones a release offers
  * in Settings, follows the system into, or carries. Owned by the project —
  * a translation file alone is not one of them. A language joins when its file
- * has been reviewed and passes `pnpm test locales` with nothing missing: one
+ * is structurally valid and registered explicitly, even when incomplete: one
  * entry here, and its file imported above.
  */
 export const SUPPORTED_LANGUAGES: readonly Language[] = [
   { tag: 'en', name: 'English', messages: en },
+  { tag: 'pl', name: 'Polski', messages: pl },
+  { tag: 'de', name: 'Deutsch', messages: de },
+  { tag: 'ru', name: 'Русский', messages: ru },
 ];
 
 /**
@@ -121,10 +117,42 @@ export function previewsOf(
     }));
 }
 
+/** Development-only overflow probe; placeholders and plural keys stay intact. */
+export function pseudoCatalogue(messages: unknown): Catalogue {
+  return Object.fromEntries(
+    Object.entries(flatten(messages)).map(([key, value]) => [
+      key,
+      '[' +
+        value
+          .split(/(\{\{.*?\}\})/)
+          .map((part) =>
+            part.startsWith('{{')
+              ? part
+              : part.replace(
+                  /[A-Za-z]{3,}/g,
+                  (word) => word + '~'.repeat(Math.ceil(word.length * 0.4)),
+                ),
+          )
+          .join('') +
+        ']',
+    ]),
+  );
+}
+
 /** The languages the maker can choose here: the supported ones, then any previews. */
 export const LANGUAGES: readonly Language[] = [
   ...SUPPORTED_LANGUAGES,
   ...previewsOf(TRANSLATIONS, SUPPORTED_LANGUAGES),
+  ...(import.meta.env.DEV
+    ? [
+        {
+          tag: 'en-XA',
+          name: 'English (expanded)',
+          messages: pseudoCatalogue(en),
+          preview: true as const,
+        },
+      ]
+    : []),
 ];
 
 /** The languages' messages, by tag. */
@@ -186,9 +214,9 @@ function canonical(tag: string): string[] {
  *
  * A message missing from that language's file is the English one — a new
  * string the translators have not reached yet reads in English, never as a
- * key. A plural is the form `Intl.PluralRules` picks for `params.count`, or
- * `_other` if the file lacks that form. A placeholder with nothing to fill it
- * is left as written, so the mistake shows.
+ * key. Plurals use a complete translated family or the whole English family,
+ * with that family’s plural rules. Incomplete families never mix languages.
+ * A placeholder with nothing to fill it is left as written, so the mistake shows.
  */
 export function createI18n(
   locale: string,
@@ -196,18 +224,26 @@ export function createI18n(
 ): I18n {
   const own = catalogues[catalogueFor(locale, catalogues) ?? SOURCE_LOCALE] ?? {};
   const source = catalogues[SOURCE_LOCALE] ?? {};
-  const lookup = (key: string): string | undefined => own[key] ?? source[key];
   const plurals = new Intl.PluralRules(locale);
+  const englishPlurals = new Intl.PluralRules(SOURCE_LOCALE);
+  const categories = plurals.resolvedOptions().pluralCategories;
+  const complete = new Map<string, boolean>();
   const numbers = new Intl.NumberFormat(locale);
 
   const t: Translate = (key, params = {}) => {
     const count = params['count'];
-    const text =
-      (typeof count === 'number'
-        ? (lookup(`${key}_${plurals.select(count)}`) ?? lookup(`${key}_other`))
-        : undefined) ??
-      lookup(key) ??
-      key;
+    let text: string | undefined;
+    if (typeof count === 'number' && source[`${key}_other`] !== undefined) {
+      let translated = complete.get(key);
+      if (translated === undefined) {
+        translated = categories.every((category) => own[`${key}_${category}`] !== undefined);
+        complete.set(key, translated);
+      }
+      const family = translated ? own : source;
+      const rule = translated ? plurals : englishPlurals;
+      text = family[`${key}_${rule.select(count)}`];
+    }
+    text ??= own[key] ?? source[key] ?? key;
     return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (whole, name: string) => {
       const value = params[name];
       if (value === undefined) return whole;

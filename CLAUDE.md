@@ -37,7 +37,8 @@ Violating any of these is a bug, even if tests pass.
 pnpm dev              # run the app (electron-vite, with HMR)
 pnpm check            # typecheck + lint + format:check + depcruise + knip + test:coverage + test:perf — before a slice is done
 pnpm test             # unit + property + export + SVG snapshot + format fixtures
-pnpm test locales     # a translation against English: keys, placeholders, plural forms (ADR 0018)
+pnpm test locales     # structural integrity: keys, placeholders, plural forms (ADR 0018)
+pnpm locales:report   # informational logical-message coverage; missing translations never fail CI
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
@@ -128,7 +129,10 @@ No package below them imports `ui`, `editor` or `apps/desktop`. `export` and `pr
   into a sentence: it is a `{{placeholder}}` or a tooltip's `keys`, read from the keymap
   (`renderer/src/keymap.ts`), so it follows the layout and the platform. A translation file is
   not a supported language: only an entry in `SUPPORTED_LANGUAGES`, added after review, makes it
-  one, and until then only `pnpm dev` shows it, as a preview. See ADR 0018.
+  one, and until then only `pnpm dev` shows it, as a preview. English is the single source of
+  truth: feature PRs need only update English. Registered languages may omit whole messages and
+  fall back to English; coverage never blocks development or releases. Partial plural families and
+  other structural errors still fail. See ADR 0018 and `docs/localization.md`.
 
 ## Terminology
 

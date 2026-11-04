@@ -11,6 +11,7 @@ import {
   isLanguagePreference,
   languageName,
   previewsOf,
+  pseudoCatalogue,
   resolveLocale,
   type MessageKey,
 } from './i18n.js';
@@ -61,9 +62,23 @@ describe('a translation', () => {
     expect(pl.t(key('only'))).toBe('English only');
   });
 
-  it('falls back to the other form when the language lacks the one asked for', () => {
-    const partial = { ...CATALOGUES_UNDER_TEST, pl: flatten({ holes_other: '{{count}} otworu' }) };
-    expect(createI18n('pl', partial).t(key('holes'), { count: 5 })).toBe('5 otworu');
+  it.each(['pl', 'ru'])('falls back to the whole English plural family in %s', (locale) => {
+    const partial = {
+      ...CATALOGUES_UNDER_TEST,
+      [locale]: flatten({ holes_other: '{{count}} otworu' }),
+    };
+    for (const count of [0, 1, 2, 5, 11, 21, 22, 1.5]) {
+      const expected = count === 1 ? 'hole' : 'holes';
+      expect(createI18n(locale, partial).t(key('holes'), { count })).toBe(
+        `${new Intl.NumberFormat(locale).format(count)} ${expected}`,
+      );
+    }
+  });
+
+  it.each(['pl', 'ru'])('uses English plural rules for a missing family in %s', (locale) => {
+    const missing = { ...CATALOGUES_UNDER_TEST, [locale]: {} };
+    expect(createI18n(locale, missing).t(key('holes'), { count: 21 })).toBe('21 holes');
+    expect(createI18n(locale, missing).t(key('holes'), { count: 1 })).toBe('1 hole');
   });
 
   it('leaves a placeholder with nothing to fill it, so the mistake shows', () => {
@@ -153,7 +168,7 @@ describe('the languages LeatherCAD supports', () => {
       '../locales/pl.json': { greeting: 'Cześć' },
       '../locales/pt-BR.json': { greeting: 'Olá' },
     };
-    expect(previewsOf(files, SUPPORTED_LANGUAGES)).toEqual([
+    expect(previewsOf(files, SUPPORTED_LANGUAGES.slice(0, 1))).toEqual([
       { tag: 'pl', name: 'Polski', messages: { greeting: 'Cześć' }, preview: true },
       { tag: 'pt-BR', name: 'Português (Brasil)', messages: { greeting: 'Olá' }, preview: true },
     ]);
@@ -175,5 +190,44 @@ describe('the languages LeatherCAD supports', () => {
     // a system whose language is C — Linux's C.UTF-8, and CI's.
     expect(languageName('C', 'en')).toBe('C');
     expect(languageName('en', 'C')).toBe('en');
+  });
+});
+
+describe('production languages', () => {
+  it('registers all four catalogues independently of their coverage', () => {
+    expect(SUPPORTED_LANGUAGES.map(({ tag }) => tag)).toEqual(['en', 'pl', 'de', 'ru']);
+    for (const tag of ['pl', 'de', 'ru']) {
+      expect(isLanguagePreference(tag)).toBe(true);
+      expect(resolveLocale('system', [`${tag}-${tag.toUpperCase()}`])).toBe(
+        `${tag}-${tag.toUpperCase()}`,
+      );
+    }
+  });
+
+  it.each([
+    [0, 'otworów', 'отверстий'],
+    [1, 'otwór', 'отверстие'],
+    [2, 'otwory', 'отверстия'],
+    [5, 'otworów', 'отверстий'],
+    [11, 'otworów', 'отверстий'],
+    [21, 'otworów', 'отверстие'],
+    [22, 'otwory', 'отверстия'],
+    [1.5, 'otworu', 'отверстия'],
+    [0.5, 'otworu', 'отверстия'],
+    [2.1, 'otworu', 'отверстия'],
+  ])('uses the correct Polish and Russian hole forms for %s', (count, polish, russian) => {
+    for (const [tag, noun] of [
+      ['pl', polish],
+      ['ru', russian],
+    ] as const) {
+      const number = new Intl.NumberFormat(tag).format(count);
+      expect(createI18n(tag).t('parts.rowHoles', { count })).toBe(`${number} ${noun}`);
+    }
+  });
+
+  it('lengthens preview words without damaging placeholders or plural keys', () => {
+    const preview = pseudoCatalogue({ greeting: 'Hello {{name}}', holes_one: '{{count}} hole' });
+    expect(preview['greeting']).toBe('[Hello~~ {{name}}]');
+    expect(preview['holes_one']).toBe('[{{count}} hole~~]');
   });
 });

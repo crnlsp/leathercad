@@ -140,33 +140,35 @@ A line drawn as 100 mm measures 100 mm on paper. Everything in LeatherCAD's desi
 
 ## Translations
 
-LeatherCAD can be translated into any language: a translation is one file, and needs no
-programming.
+LeatherCAD offers **English, Polish, German and Russian** in production builds. Choose a language
+in *Settings › Language*, or follow your system language. Changes apply immediately and are kept
+between launches.
 
-| Language | |
-|---|---|
-| English | ✅ Supported |
+**English is the source of truth.** Feature pull requests only need to update English. Missing
+translations fall back to English; updating the other languages in the same pull request is optional.
+Translation coverage is informational and does not block development or releases.
 
-**Translate LeatherCAD into your language.** Every word the app says is in one file:
+**Help translate or improve the wording:**
 
-1. Copy [`apps/desktop/src/locales/en.json`](apps/desktop/src/locales/en.json) to a file named for
-   your language: `pl.json`, `de.json`, `es.json`, `ru.json`, `pt-BR.json`.
-2. Translate each text after the `:`. Keep the keys before it, and anything in `{{double braces}}`,
-   exactly as they are: the app fills those in with a name or a number. Where English has `_one`
-   and `_other`, give every form your language uses — Polish and Russian also have `_few` and
-   `_many`. The [glossary](docs/glossary.md) explains the leathercraft words.
-3. Run `pnpm test locales` ([setting up](CONTRIBUTING.md#set-up)). It names anything misspelt or in
-   the wrong form, and lists what is still in English.
-4. Try it: run `pnpm dev`, and choose your language in *Settings › Language*, where it is marked
-   *preview*.
-5. Open a pull request. A part-finished translation is welcome too: it can be completed later.
+1. Edit the matching file in [`apps/desktop/src/locales/`](apps/desktop/src/locales/), or copy
+   `en.json` to a new BCP 47 filename such as `es.json` or `pt-BR.json`.
+2. Keep keys and `{{placeholders}}`. Translate a whole plural family with every CLDR form your
+   language uses; leaving the whole family out is allowed. Follow the
+   [translation style guide and terminology table](docs/localization.md).
+3. Run `pnpm test locales` to check structure, then `pnpm locales:report` to see remaining work.
+4. Try the file in `pnpm dev`, then open a pull request into `develop`. New unregistered languages
+   appear as previews in development; registration is an explicit maintainer decision.
 
-A translation becomes a supported language — offered in every release — once it is complete and has
-been reviewed, when the maintainers add it to the list of supported languages. Until then it is
-there to try in `pnpm dev`, and nowhere else.
+Polish is prepared for the maintainer’s personal review; that review has not yet taken place.
+`pnpm locales:report --review pl` lists every string beside its English source.
+German and Russian translations were prepared with AI assistance and would benefit from further
+native-speaker review. Russian incorporates and updates **F1ystar’s contribution in
+[PR #87](https://github.com/crnlsp/leathercad/pull/87)**.
 
-Printed patterns stay in English for now: their lettering is drawn from Latin glyphs, so they read
-the same on every printer.
+Printed pattern captions, generated data names and default filenames remain English. Unnamed tabs
+use a translated placeholder until named. UI localization does not localize PDF pattern content
+or add Cyrillic outlines to printed patterns. See
+[ADR 0018](docs/adr/0018-interface-language.md) and the [verification record](docs/localization-verification.md).
 
 ## Documentation
 
