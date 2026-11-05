@@ -206,7 +206,13 @@ export function TemplateDialog({
     const selected = row === chosen;
     const preview = row.project === null ? null : templatePreview(row.project, 64, 42, 'shape');
     return (
-      <div key={row.entry.id} className="template-choice" data-selected={selected}>
+      <div
+        key={row.entry.id}
+        className="template-choice"
+        data-selected={selected}
+        onClick={() => setPicked(row.entry.id)}
+        onDoubleClick={() => actions.use(row.entry.id)}
+      >
         <div
           role="option"
           id={`template-option-${String(ordered.indexOf(row))}`}
@@ -215,8 +221,6 @@ export function TemplateDialog({
           className="template-option"
           data-template={row.entry.id}
           data-testid={`template-${row.entry.id}`}
-          onClick={() => setPicked(row.entry.id)}
-          onDoubleClick={() => actions.use(row.entry.id)}
         >
           <span className="template-preview small" aria-hidden="true">
             {preview !== null && <img src={preview} alt="" width={64} height={42} />}
@@ -275,9 +279,9 @@ export function TemplateDialog({
             event.target instanceof Element &&
             event.target.closest('.template-detail-body') !== null;
           if (event.key === 'Escape') onClose();
-          else if (typing) return;
-          else if (event.key === 'ArrowDown' && !reading) choose(at + 1);
-          else if (event.key === 'ArrowUp' && !reading) choose(at - 1);
+          else if (typing || reading) return;
+          else if (event.key === 'ArrowDown') choose(at + 1);
+          else if (event.key === 'ArrowUp') choose(at - 1);
           else if (
             event.key === 'Enter' &&
             chosen !== null &&
@@ -328,7 +332,7 @@ export function TemplateDialog({
             ))}
           </div>
           <MenuButton
-            label={`${t('templates.sortLabel')} ${t(SORT_WORDS[sort])}`}
+            label={t('templates.sortChosen', { sort: t(SORT_WORDS[sort]) })}
             tooltip={t('templates.sortLabel')}
             testId="template-sort"
             className="tool template-filter"
@@ -341,8 +345,13 @@ export function TemplateDialog({
               onChoose: () => order(each, show),
             }))}
           >
-            <span className="template-filter-label">{t('templates.sortLabel')} </span>
+            <span className="template-filter-label">
+              {t('templates.sortChosen').split('{{sort}}')[0]}
+            </span>
             <span className="template-filter-value">{t(SORT_WORDS[sort])}</span>
+            <span className="template-filter-label">
+              {t('templates.sortChosen').split('{{sort}}')[1]}
+            </span>
             <Icon of="chevron-down" size={12} />
           </MenuButton>
         </div>
