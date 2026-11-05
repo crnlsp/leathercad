@@ -129,10 +129,10 @@ describe('non-blocking translation maintenance', () => {
     }
   });
 
-  it('requires the French million form even if singular and ordinary plural are present', () => {
+  it.each(['fr', 'es'])('requires the %s million form when a family is translated', (tag) => {
     const own = JSON.stringify({ holes_one: '{{count}} trou', holes_other: '{{count}} trous' });
-    expect(checkCatalogue('fr', own, english).mistakes).toContain(
-      'holes_many: missing, and fr has this form',
+    expect(checkCatalogue(tag, own, english).mistakes).toContain(
+      `holes_many: missing, and ${tag} has this form`,
     );
   });
 

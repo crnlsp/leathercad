@@ -140,7 +140,7 @@ A line drawn as 100 mm measures 100 mm on paper. Everything in LeatherCAD's desi
 
 ## Translations
 
-LeatherCAD offers **English, Polish, German, Russian and French** in production builds. Choose a language
+LeatherCAD offers **English, Polish, German, Russian, French and Spanish** in production builds. Choose a language
 in *Settings › Language*, or follow your system language. Changes apply immediately and are kept
 between launches.
 
@@ -151,7 +151,7 @@ Translation coverage is informational and does not block development or releases
 **Help translate or improve the wording:**
 
 1. Edit the matching file in [`apps/desktop/src/locales/`](apps/desktop/src/locales/), or copy
-   `en.json` to a new BCP 47 filename such as `es.json` or `pt-BR.json`.
+   `en.json` to a new BCP 47 filename such as `pt-BR.json`.
 2. Keep keys and `{{placeholders}}`. Translate a whole plural family with every CLDR form your
    language uses; leaving the whole family out is allowed. Follow the
    [translation style guide and terminology table](docs/localization.md).
@@ -161,7 +161,7 @@ Translation coverage is informational and does not block development or releases
 
 Polish is prepared for the maintainer’s personal review; that review has not yet taken place.
 `pnpm locales:report --review pl` lists every string beside its English source.
-German, Russian and French translations were prepared with AI assistance and would benefit from further
+German, Russian, French and Spanish translations were prepared with AI assistance and would benefit from further
 native-speaker review. Russian incorporates and updates **F1ystar’s contribution in
 [PR #87](https://github.com/crnlsp/leathercad/pull/87)**.
 

@@ -4,6 +4,7 @@ Prepared 2026-11-04 on `develop` at `e51e1c4`, on branch
 `feat/u26-interface-localization`. This is evidence for code review, not a claim of native-speaker
 approval or physical print verification.
 French was added in a follow-up to commit `242aefc` on the same PR, following the same policy.
+Spanish and the template-picker review fixes were added on 2026-11-05 on the same PR.
 
 ## Baseline and English audit
 
@@ -58,9 +59,10 @@ project data.
 
 ## Catalogues and coverage
 
-All four translations contain every current English message. Polish and Russian have 1,325
-leaves each, including four CLDR forms per plural; German has 1,211 leaves and French 1,268.
-Production registers English, Polski, Deutsch, Русский and Français explicitly, independently of coverage.
+All five translations contain every current English message. Polish and Russian have 1,325
+leaves each, including four CLDR forms per plural; German has 1,211 leaves and French and Spanish
+have 1,268 each. Production registers English, Polski, Deutsch, Русский, Français and Español
+explicitly, independently of coverage.
 
 | Locale | Translated | Uncounted / missing | Total logical messages | Coverage |
 |---|---:|---:|---:|---:|
@@ -69,6 +71,7 @@ Production registers English, Polski, Deutsch, Русский and Français expl
 | de | 1,099 | 55 | 1,154 | 95.2 % |
 | ru | 1,114 | 40 | 1,154 | 96.5 % |
 | fr | 1,099 | 55 | 1,154 | 95.2 % |
+| es | 1,117 | 37 | 1,154 | 96.8 % |
 
 The uncounted entries are English matches, ignoring whitespace, including keycaps, PDF/SVG/DXF, symbols,
 placeholder-only layouts, shared German words such as *Name* and *Text*, shared French words such
@@ -95,7 +98,7 @@ pnpm locales:report --review pl > /tmp/leathercad-polish-review.md
 
 ## Independent references and tools actually used
 
-German, Russian and French were prepared with AI assistance and remain open to native-speaker corrections.
+German, Russian, French and Spanish were prepared with AI assistance and remain open to native-speaker corrections.
 Russian reuses compatible translations contributed by **F1ystar** in
 [PR #87](https://github.com/crnlsp/leathercad/pull/87), head
 `27b72f5df653ee9056618b68cac52514f7a80b71`. Its discussion and review findings were read: the
@@ -241,7 +244,7 @@ languages cannot invalidate that regression.
 Windows/macOS, real OS file dialogs, a physical printer, screen-reader usability and native-speaker
 review remain unverified. These are review limitations, not coverage requirements on future PRs.
 
-## Commands and final results
+## Results before the Spanish follow-up
 
 | Command / check | Final result |
 |---|---|
@@ -280,6 +283,63 @@ docker run --rm --init --ipc=host --user 1000:1000 \
 ```
 
 The implementation is ready for code and maintainer review. Polish review and further
-German/Russian/French native-speaker feedback remain welcome; the platform and print limitations above
+German/Russian/French/Spanish native-speaker feedback remain welcome; the platform and print limitations above
 remain explicit. No translation coverage threshold was introduced, and no automatic merge is part
 of this work.
+
+## Spanish and template-picker review follow-up — 2026-11-05
+
+Spanish is registered as **Español (`es`)**, with every current English logical message and
+all 57 plural families: 1,268 leaves. Its CLDR forms are `one`, `many` and `other`.
+Runtime regressions cover 0, 1, 0.5, 1.5, 2, 21, exact millions, a million plus one and a
+fractional million, as well as whole-English fallback for absent families or a missing `_many`.
+The validator also rejects a partial Spanish family. English remains authoritative, coverage
+remains informational and no runtime architecture or dependency changed.
+
+The catalogue was prepared with AI assistance; no native-speaker approval or external
+translation/spelling-service check is claimed for Spanish. Terminology and displayed key labels
+are documented in the translation guide, including nominal pitch versus achieved spacing,
+pattern versus reusable template, and unlinked flipping versus linked mirroring.
+`pnpm locales:report --review es` produces the complete 1,268-row English/Spanish review.
+All 58 distinct alphabetic characters in the catalogue (including keys) were checked with
+fontTools against the vendored Regular, Medium and SemiBold UI fonts; none are missing.
+
+Failing-first Electron regressions reproduced the three review findings:
+
+- Enter in the focusable details region opened a template; Delete removed a user template.
+  Both now leave the selection and picker intact. Escape still closes it, while the list
+  retains Enter, Delete and Undo. The existing details-scroll regressions still cover arrows,
+  End and Home in every translated language.
+- Clicking row padding did not select it. Click and double-click handlers now cover the full
+  highlighted row; the sibling pin button stops both events and leaves selection independent.
+- The German sort name read `Sortieren Name (A–Z)` rather than the existing translated
+  `Sortierung: Name (A–Z)`. Both visible text and accessible name now use `sortChosen` with
+  its sort placeholder, preserving locale punctuation and placeholder order.
+
+All six production languages now exercise every drawing mode at 1199, 1200, 1201 and 1280 px.
+Tests verify selector/button visibility, selection, full button visibility, overflow and axe.
+Spanish start/templates, editor, Settings, export, printing/calibration, unsaved changes and
+recovery also pass at 1440 × 900 and 860 × 600, with persistence, Linux system detection,
+native-dialog titles and unchanged saved project data. Screenshots of Spanish controls on
+both sides of 1200 px, minimum-size templates, Language settings and calibration were inspected.
+The targeted run found no accessibility violations; human screen-reader verification and
+Windows/macOS manual checks remain outside this Linux verification.
+
+| Check | Follow-up result |
+|---|---|
+| `pnpm test locales i18n untranslated` | **89 passed** across 3 files |
+| `pnpm test locales i18n untranslated partsTree` | **108 passed** across 4 files |
+| `pnpm check` | **Passed**: all static checks, 28 tooling tests, 3,876 unit/property tests across 232 files and 6 performance tests |
+| Pure-layer coverage | **98.00 % lines / 94.06 % branches**; no geometry golden changes or fast-check counterexamples |
+| `pnpm build` | **Passed**, all six registered languages included |
+| Targeted Electron scenarios | **37 passed**: 27 multilingual/responsive, 5 accessibility and 5 template-interaction scenarios |
+| Full production Electron E2E suite | **375 passed** in the pinned Playwright/Poppler container, without retries |
+| Final rebuilt Spanish Electron workflows | **5 passed**, after the final four wording adjustments |
+| `pnpm locales:report` | Spanish **1,117 / 1,154 (96.8 %)**; 37 shared English labels/layouts uncounted, no absent messages or structural errors |
+| `pnpm locales:report --review es` | Complete **1,268-row** side-by-side review generated |
+
+No new package edges, persistence changes, geometry changes or visual reference updates were
+introduced. The existing English fallback and non-blocking coverage guarantees remain covered.
+After that full run, four Spanish phrases were adjusted to avoid gender/number agreement with
+dynamic subjects. Production was rebuilt and all five Spanish-focused scenarios passed again;
+no behavior changed.

@@ -1,7 +1,7 @@
 # Translating LeatherCAD
 
 English (`apps/desktop/src/locales/en.json`) is the single source of truth. Feature PRs need only
-update English. Updating Polish, German, Russian or French in the same PR is optional;
+update English. Updating Polish, German, Russian, French or Spanish in the same PR is optional;
 translations can follow separately. Missing translations use English. Coverage is informational and never a
 development or release blocker. Structural integrity is mandatory.
 
@@ -10,7 +10,7 @@ service or new dependency is needed to contribute.
 
 ## Workflow
 
-1. Edit `pl.json`, `de.json`, `ru.json` or `fr.json`, preserving nesting and keys. New languages
+1. Edit `pl.json`, `de.json`, `ru.json`, `fr.json` or `es.json`, preserving nesting and keys. New languages
    use a BCP 47 filename. Do not add metadata to a catalogue: every leaf is a UI message.
    When an English key is removed or renamed, remove obsolete translation keys too; adding a
    replacement translation remains optional.
@@ -21,6 +21,8 @@ service or new dependency is needed to contribute.
    English/German: `_one`, `_other`; Polish/Russian: `_one`, `_few`, `_many`, `_other`.
    French: `_one`, `_many`, `_other`. French `one` includes 0 and fractions below 2;
    `many` includes exact integer multiples of one million, with wording such as “de trous”.
+   Spanish: `_one`, `_many`, `_other`. Spanish `one` is 1; `many` includes exact integer
+   multiples of one million. Zero and fractions use `other`.
    Never assume a language has English's categories. The report prints the runtime's required
    forms; check the actual locale with `new Intl.PluralRules(tag).resolvedOptions().pluralCategories`.
    Missing a whole family is allowed; an incomplete family fails validation. `_other` includes
@@ -70,6 +72,14 @@ Use nonbreaking spaces inside « guillemets » and before `: ; ! ? %`. Keep no
 Displayed special keys use conventional French names such as *Maj*, *Entrée*, *Échap* and *Suppr*;
 their binding identifiers and actual key events stay unchanged.
 
+Spanish uses consistent informal singular instructions and infinitives for actions. Use *patrón*
+for a design and *plantilla* for a reusable project, *línea de puntadas* for a stitch line and
+*costura* for mating runs sewn together. Keep *paso nominal* distinct from *separación real*,
+*Voltear* distinct from linked *Reflejar*, and *hoja* distinct from a PDF *página*. The catalogue
+uses *tenedor de costura* for a pricking iron, shortened to *tenedor* in controls, and *rebajado*
+for skiving. Displayed keys use *Intro*, *Mayús*, *Supr*, *Inicio*, *Fin* and *Retroceso*;
+the binding IDs stay unchanged. Further native-speaker craft terminology review is welcome.
+
 Use `…` on menu commands opening another choice or dialog. Do not add ellipses to tool names or
 navigation labels simply because they change a view. Preserve technical acronyms and units such
 as PDF, SVG, DXF and mm. Keyboard keycaps generally keep the physical key label; translate actions
@@ -81,40 +91,40 @@ term just to shorten a control. Fix the layout if reasonable wording does not fi
 The [glossary](glossary.md) defines the concepts; this table supplies the translation vocabulary.
 Inflections and context may change the form, not the concept.
 
-| English | Polish | German | Russian | French |
-|---|---|---|---|---|
-| Project | Projekt | Projekt | Проект | Projet |
-| Part / physical piece | Część | Teil | Деталь | Pièce |
-| Pattern | Wykrój | Schnittmuster | Выкройка | Patron |
-| Template, reusable starting project | Szablon | Vorlage | Шаблон | Modèle |
-| Feature | Element | Element | Элемент | Élément |
-| Outline, outer cut contour | Obrys | Umriss | Внешний контур | Contour extérieur |
-| Cut-out, inner contour | Wycięcie | Ausschnitt | Вырез | Découpe intérieure |
-| Stitch line | Linia szycia | Nahtlinie | Линия строчки | Ligne de couture |
-| Seam, mating runs sewn together | Szew | Naht | Шов | Couture |
-| Seam allowance | Zapas na szew | Nahtzugabe | Припуск на шов | Marge de couture |
-| Stitch margin | Margines szycia | Nahtabstand zum Rand | Отступ строчки от края | Retrait de couture |
-| Pricking iron | Wybijak | Prickeisen | Строчный пробойник | Griffe à frapper |
-| Pitch, nominal tooth distance | Rozstaw nominalny | Nennabstand | Номинальный шаг | Pas nominal (entraxe) |
-| Spacing, achieved hole distance | Rozstaw rzeczywisty | Istabstand | Фактический шаг | Espacement réel |
-| Stitch hole | Otwór do szycia | Nahtloch | Отверстие под строчку | Trou de couture |
-| Hardware hole | Otwór pod okucie | Beschlagloch | Отверстие под фурнитуру | Trou de quincaillerie |
-| Row of holes, along marking line | Rząd otworów | Lochreihe | Ряд отверстий | Rangée de trous |
-| Fold line | Linia zgięcia | Falzlinie | Линия сгиба | Ligne de pli |
-| Marking line | Linia oznaczenia | Markierungslinie | Линия разметки | Ligne de marquage |
-| Skive, thin the leather | Ścienianie skóry | Schärfen | Спуск кожи | Parage |
-| Construction guide | Prowadnica | Hilfslinie | Направляющая | Guide |
-| Alignment mark, on leather | Znak dopasowania | Ausrichtungsmarkierung | Метка совмещения | Repère d’alignement |
-| Registration mark, paper joining | Znak pasowania | Passermarke | Метка совмещения листов | Repère d’assemblage |
-| Sheet, physical paper | Arkusz | Bogen | Лист | Feuille |
-| Flip, reflect in place, no link | Odwróć | Spiegeln | Отразить | Retourner |
-| Mirror, linked counterpart | Odbicie powiązane | Verknüpft spiegeln | Связанное отражение | Symétrie liée |
-| Duplicate, independent copy | Powiel | Duplizieren | Дублировать | Dupliquer |
-| Copy, clipboard | Kopiuj | Kopieren | Копировать | Copier |
-| Save, editable project | Zapisz | Speichern | Сохранить | Enregistrer |
-| Export, another output format | Eksportuj | Exportieren | Экспортировать | Exporter |
-| Problems, diagnostic list | Problemy | Probleme | Проблемы | Problèmes |
-| Error / warning / information | Błąd / ostrzeżenie / informacja | Fehler / Warnung / Hinweis | Ошибка / предупреждение / примечание | Erreur / avertissement / information |
+| English | Polish | German | Russian | French | Spanish |
+|---|---|---|---|---|---|
+| Project | Projekt | Projekt | Проект | Projet | Proyecto |
+| Part / physical piece | Część | Teil | Деталь | Pièce | Pieza |
+| Pattern | Wykrój | Schnittmuster | Выкройка | Patron | Patrón |
+| Template, reusable starting project | Szablon | Vorlage | Шаблон | Modèle | Plantilla |
+| Feature | Element | Element | Элемент | Élément | Elemento |
+| Outline, outer cut contour | Obrys | Umriss | Внешний контур | Contour extérieur | Contorno |
+| Cut-out, inner contour | Wycięcie | Ausschnitt | Вырез | Découpe intérieure | Vaciado |
+| Stitch line | Linia szycia | Nahtlinie | Линия строчки | Ligne de couture | Línea de puntadas |
+| Seam, mating runs sewn together | Szew | Naht | Шов | Couture | Costura |
+| Seam allowance | Zapas na szew | Nahtzugabe | Припуск на шов | Marge de couture | Margen de costura |
+| Stitch margin | Margines szycia | Nahtabstand zum Rand | Отступ строчки от края | Retrait de couture | Retiro de puntadas |
+| Pricking iron | Wybijak | Prickeisen | Строчный пробойник | Griffe à frapper | Tenedor de costura |
+| Pitch, nominal tooth distance | Rozstaw nominalny | Nennabstand | Номинальный шаг | Pas nominal (entraxe) | Paso nominal |
+| Spacing, achieved hole distance | Rozstaw rzeczywisty | Istabstand | Фактический шаг | Espacement réel | Separación real |
+| Stitch hole | Otwór do szycia | Nahtloch | Отверстие под строчку | Trou de couture | Agujero de puntadas |
+| Hardware hole | Otwór pod okucie | Beschlagloch | Отверстие под фурнитуру | Trou de quincaillerie | Agujero para herraje |
+| Row of holes, along marking line | Rząd otworów | Lochreihe | Ряд отверстий | Rangée de trous | Fila de agujeros |
+| Fold line | Linia zgięcia | Falzlinie | Линия сгиба | Ligne de pli | Línea de pliegue |
+| Marking line | Linia oznaczenia | Markierungslinie | Линия разметки | Ligne de marquage | Línea de marcado |
+| Skive, thin the leather | Ścienianie skóry | Schärfen | Спуск кожи | Parage | Rebajado |
+| Construction guide | Prowadnica | Hilfslinie | Направляющая | Guide | Guía |
+| Alignment mark, on leather | Znak dopasowania | Ausrichtungsmarkierung | Метка совмещения | Repère d’alignement | Marca de alineación |
+| Registration mark, paper joining | Znak pasowania | Passermarke | Метка совмещения листов | Repère d’assemblage | Marca de registro |
+| Sheet, physical paper | Arkusz | Bogen | Лист | Feuille | Hoja |
+| Flip, reflect in place, no link | Odwróć | Spiegeln | Отразить | Retourner | Voltear |
+| Mirror, linked counterpart | Odbicie powiązane | Verknüpft spiegeln | Связанное отражение | Symétrie liée | Reflejar |
+| Duplicate, independent copy | Powiel | Duplizieren | Дублировать | Dupliquer | Duplicar |
+| Copy, clipboard | Kopiuj | Kopieren | Копировать | Copier | Copiar |
+| Save, editable project | Zapisz | Speichern | Сохранить | Enregistrer | Guardar |
+| Export, another output format | Eksportuj | Exportieren | Экспортировать | Exporter | Exportar |
+| Problems, diagnostic list | Problemy | Probleme | Проблемы | Problèmes | Problemas |
+| Error / warning / information | Błąd / ostrzeżenie / informacja | Fehler / Warnung / Hinweis | Ошибка / предупреждение / примечание | Erreur / avertissement / information | Error / advertencia / información |
 
 *Part* and *piece* both refer to a physical leather component; English retains *Parts* as the
 panel/domain name and *piece* in craft instructions. *Pattern* is the design; *template* is a
@@ -125,7 +135,7 @@ is a coordinate; the mathematical term *translate* does not replace either in UI
 
 ## Provenance and review
 
-German, Russian and French were prepared with AI assistance and may benefit from further native-speaker
+German, Russian, French and Spanish were prepared with AI assistance and may benefit from further native-speaker
 review. Russian incorporates F1ystar's work from [PR #87](https://github.com/crnlsp/leathercad/pull/87),
 head `27b72f5df653ee9056618b68cac52514f7a80b71`. Compatible translations were reused; newer
 messages, changed behavior and plural families were reconciled against current English. The

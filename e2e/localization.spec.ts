@@ -7,6 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import de from '../apps/desktop/src/locales/de.json' with { type: 'json' };
 import en from '../apps/desktop/src/locales/en.json' with { type: 'json' };
+import es from '../apps/desktop/src/locales/es.json' with { type: 'json' };
 import fr from '../apps/desktop/src/locales/fr.json' with { type: 'json' };
 import pl from '../apps/desktop/src/locales/pl.json' with { type: 'json' };
 import ru from '../apps/desktop/src/locales/ru.json' with { type: 'json' };
@@ -22,7 +23,7 @@ import {
 import { closeActiveTab } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
-const CATALOGUES = { en, pl, de, ru, fr };
+const CATALOGUES = { en, pl, de, ru, fr, es };
 const ENGLISH_SYSTEM = { LANGUAGE: 'en_GB', LC_ALL: 'en_GB.UTF-8', LANG: 'en_GB.UTF-8' };
 
 async function switchLanguage(window: Page, tag: keyof typeof CATALOGUES): Promise<void> {
@@ -89,7 +90,7 @@ test('production switches all registered languages and returns to English in the
   const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
   try {
     await expect(window.locator('html')).toHaveAttribute('lang', /^en/);
-    for (const tag of ['pl', 'de', 'ru', 'fr', 'en'] as const) {
+    for (const tag of ['pl', 'de', 'ru', 'fr', 'es', 'en'] as const) {
       await switchLanguage(window, tag);
       await expect(window.getByTestId('settings')).toHaveAccessibleName(
         CATALOGUES[tag].projectBar.settings,
@@ -120,7 +121,60 @@ test('production switches all registered languages and returns to English in the
   }
 });
 
-for (const tag of ['pl', 'de', 'ru', 'fr'] as const) {
+for (const tag of ['en', 'pl', 'de', 'ru', 'fr', 'es'] as const) {
+  test(`${tag} drawing controls fit on both sides of the 1200 px breakpoint`, async () => {
+    const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
+    try {
+      await switchLanguage(window, tag);
+      for (const width of [1199, 1200, 1201, 1280]) {
+        await resizeWindow(app, window, width, 840);
+        const modes = window.getByTestId('draw-as-select');
+        const marking = window.getByTestId('draw-as-marking');
+        if (width < 1200) {
+          await expect(modes).toBeVisible();
+          await expect(marking).toBeHidden();
+          for (const mode of [
+            'outline',
+            'stitch-allowance',
+            'cut-out',
+            'stitch',
+            'fold',
+            'marking',
+          ]) {
+            await modes.selectOption(mode);
+            await expect(modes).toHaveValue(mode);
+          }
+        } else {
+          await expect(modes).toBeHidden();
+          for (const mode of [
+            'outline',
+            'stitch-allowance',
+            'cut-out',
+            'stitch',
+            'fold',
+            'marking',
+          ]) {
+            const chip = window.getByTestId(`draw-as-${mode}`);
+            await expect(chip).toBeInViewport({ ratio: 1 });
+            await chip.click();
+            await expect(chip).toHaveAttribute('aria-pressed', 'true');
+          }
+        }
+        const overflow = await window
+          .getByTestId('tool-options')
+          .evaluate((element) => element.scrollWidth > element.clientWidth);
+        expect(overflow, `${tag} drawing controls at ${width} px`).toBe(false);
+        await noHorizontalOverflow(window);
+        await expectNoViolations(window, `${tag} drawing controls at ${width} px`);
+        await capture(window, `${tag}-drawing-controls-${width}`);
+      }
+    } finally {
+      await closeApp(app);
+    }
+  });
+}
+
+for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
   test(`${tag} survives a restart and system detection resolves it`, async () => {
     const config = mkdtempSync(join(tmpdir(), 'leathercad-locale-'));
     const first = await openApp({ env: { ...ENGLISH_SYSTEM, XDG_CONFIG_HOME: config } });
@@ -195,6 +249,12 @@ for (const tag of ['pl', 'de', 'ru', 'fr'] as const) {
         await window.getByTestId('start-template').click();
         await expect(window.getByTestId('template-builtin:bifold-wallet')).toContainText(
           words.templates.bifoldWallet.name,
+        );
+        await expect(window.getByTestId('template-sort')).toHaveAccessibleName(
+          words.templates.sortChosen.replace('{{sort}}', words.templates.sort.name),
+        );
+        await expect(window.getByTestId('template-sort')).toHaveText(
+          words.templates.sortChosen.replace('{{sort}}', words.templates.sort.name),
         );
         await noHorizontalOverflow(window);
         await expectNoViolations(window, `${tag} templates ${width}`);
@@ -299,7 +359,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr'] as const) {
         await across.press('Enter');
         await along.fill('200,25');
         await along.press('Enter');
-        // All four translated locales use a decimal comma in percentage adjustments.
+        // All translated locales use a decimal comma in percentage adjustments.
         await expect(calibration.getByTestId('calibration-result')).toContainText('+0,50');
         await expect(calibration.getByTestId('calibration-result')).toContainText('-0,12');
         await noHorizontalOverflow(window);

@@ -15,7 +15,7 @@ pure were quietly one language.
 
 The interface is to be translatable by the people who use it — Polish, German, Spanish and Russian
 are the first asked for — without another rewrite, and without a contributor having to understand the
-code. U.26 registers English, Polish, German, Russian and French for production.
+code. U.26 registers English, Polish, German, Russian, French and Spanish for production.
 
 ## Decision
 
@@ -87,6 +87,8 @@ matching placeholders and complete CLDR families where a plural is translated. P
 families require `_one`, `_few`, `_many`, `_other`; German and English require `_one`, `_other`.
 French requires `_one`, `_many`, `_other`: zero and fractions below two use `one`, while exact
 integer multiples of one million use `many` with the runtime's standard notation.
+Spanish also requires `_one`, `_many`, `_other`, with `one` only for 1 and `many` for exact
+integer multiples of one million; zero and other fractions use `other`.
 `count` may be implicit in a plural form, as in “one hole”; other placeholders must be retained.
 Missing entire messages are tested as valid. The registry must still name real, valid catalogues.
 

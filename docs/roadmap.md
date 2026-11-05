@@ -145,7 +145,7 @@ as any item that will not make it does.
 - ☐ **U.24g Print Preview, Sheets and calibration, refined.**
 - ☐ **U.24h Save, recovery and notices, refined.**
 - ☐ **U.25 The visual system and accessibility** — states, spacing, focus, contrast, the minimum window, HiDPI.
-- ✅ **U.26 Languages, ready** (P1) — production Polish/German/Russian/French, English fallback and non-blocking coverage; PR #87 reconciled and credited. [Verification and review limits](localization-verification.md).
+- ✅ **U.26 Languages, ready** (P1) — production Polish/German/Russian/French/Spanish, English fallback and non-blocking coverage; PR #87 reconciled and credited. [Verification and review limits](localization-verification.md).
 - ☐ **R14 Windows pins, the installer's description, and an icon for `.lcp` files.**
 - ☐ **R12 The assisted Windows installer** — where and for whom, guarded, never removing the maker's data.
 - ☐ **B5 Microsoft Store readiness** (P1) — an MSIX whose templates survive reinstalling; the listing itself is the maintainer's.

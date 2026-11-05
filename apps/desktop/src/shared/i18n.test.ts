@@ -194,15 +194,36 @@ describe('the languages LeatherCAD supports', () => {
 });
 
 describe('production languages', () => {
-  it('registers all five catalogues independently of their coverage', () => {
-    expect(SUPPORTED_LANGUAGES.map(({ tag }) => tag)).toEqual(['en', 'pl', 'de', 'ru', 'fr']);
-    for (const tag of ['pl', 'de', 'ru', 'fr']) {
+  it('registers all six catalogues independently of their coverage', () => {
+    expect(SUPPORTED_LANGUAGES.map(({ tag }) => tag)).toEqual(['en', 'pl', 'de', 'ru', 'fr', 'es']);
+    for (const tag of ['pl', 'de', 'ru', 'fr', 'es']) {
       expect(isLanguagePreference(tag)).toBe(true);
       expect(resolveLocale('system', [`${tag}-${tag.toUpperCase()}`])).toBe(
         `${tag}-${tag.toUpperCase()}`,
       );
     }
   });
+
+  it.each([0, 1, 0.5, 1.5, 2, 21, 1_000_000, 2_000_000, 1_000_001, 1_000_000.5])(
+    'uses the Spanish hole form for %s',
+    (count) => {
+      expect(createI18n('es').t('parts.rowHoles', { count })).toBe(
+        `${new Intl.NumberFormat('es').format(count)} ${count === 1 ? 'agujero' : 'agujeros'}`,
+      );
+    },
+  );
+
+  it.each([{}, { holes_one: '{{count}} agujero', holes_other: '{{count}} agujeros' }])(
+    'uses whole English families for missing Spanish plurals, including the million form',
+    (es) => {
+      for (const count of [0, 1, 0.5, 1.5, 2, 21, 1_000_000]) {
+        const catalogues = { ...CATALOGUES_UNDER_TEST, es };
+        expect(createI18n('es', catalogues).t(key('holes'), { count })).toBe(
+          `${new Intl.NumberFormat('es').format(count)} ${count === 1 ? 'hole' : 'holes'}`,
+        );
+      }
+    },
+  );
 
   it.each([
     [0, 'otworów', 'отверстий'],
