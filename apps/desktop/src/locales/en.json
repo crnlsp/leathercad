@@ -1195,6 +1195,10 @@
       "label": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box. Retype the label using Latin characters.",
       "part": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box. Rename the part using Latin characters."
     },
+    "TEXT_TOO_SMALL_TO_PRINT": {
+      "title": "Text too small to print",
+      "description": "{{featureName}}'s capital letters print {{height}} high, below the {{minimum}} recommended for reading on paper. Increase Size in Properties."
+    },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Outline crosses itself",
       "description_one": "{{featureName}} crosses itself once, so where to cut is ambiguous. Redraw it so the line never crosses.",

@@ -1,4 +1,4 @@
-import { EPS_LENGTH, QUANTUM_MM, type Mm } from '@leathercad/core';
+import { EPS_LENGTH, QUANTUM_MM, approxGte, type Mm } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
@@ -8,7 +8,7 @@ import {
   Vec2Ops,
   type Vec2,
 } from '@leathercad/geometry';
-import { missingGlyphs } from '@leathercad/typography';
+import { FONT, missingGlyphs } from '@leathercad/typography';
 
 import type { Feature, FeatureId, PartId } from './feature.js';
 import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
@@ -76,6 +76,9 @@ export const MIN_HOLES_IN_A_SET = 2;
  * question (roadmap 9.23), not this one's.
  */
 export const MIN_HOLE_EDGE_CLEARANCE_MM: Mm = 1.5;
+
+/** DR5: the printed height of a capital, rather than the font's nominal em size. */
+const MIN_TEXT_CAP_HEIGHT_MM: Mm = 1.5;
 
 /**
  * How many points along a line are asked whether they are on the material.
@@ -266,6 +269,24 @@ function ownShape(entry: Extract<ResolvedFeature, { ok: true }>, partId: PartId)
   const found: Diagnostic[] = [];
   const { feature } = entry;
   const about = { featureId: feature.id, featureName: feature.name };
+
+  if (feature.kind === 'text-label') {
+    const capHeightMm = (feature.source.sizeMm * FONT.capHeight) / FONT.unitsPerEm;
+    if (!approxGte(capHeightMm, MIN_TEXT_CAP_HEIGHT_MM, EPS_LENGTH)) {
+      found.push(
+        placed(
+          problem('TEXT_TOO_SMALL_TO_PRINT', {
+            ...about,
+            capHeightMm,
+            minimumMm: MIN_TEXT_CAP_HEIGHT_MM,
+          }),
+          partId,
+          feature.id,
+          { kind: 'path', path: entry.path },
+        ),
+      );
+    }
+  }
 
   if (feature.kind === 'cut-contour') {
     const crossings = crossingsOf(entry.path);

@@ -100,6 +100,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   // Nothing throws and nothing is dropped: the box is drawn and this says so.
   TEXT_GLYPH_MISSING: outcome('E2', 'warning'),
 
+  TEXT_TOO_SMALL_TO_PRINT: rule('DR5', 'warning'),
   CONTOUR_SELF_INTERSECTS: rule('DR3', 'error'),
   HOLES_OVERLAP: rule('DR3', 'warning'),
   HOLE_SPACING_DEVIATION: rule('DR4', 'warning'),
@@ -149,11 +150,6 @@ export const INVARIANTS_WITHOUT_A_CODE: readonly UncodedInvariant[] = [
     invariant: 'S10',
     because:
       'The zod schema refuses a non-positive quantity, pitch or text size before the domain sees the file, and commands quantise and guard what they store.',
-  },
-  {
-    invariant: 'DR5',
-    because:
-      'Planned: TEXT_TOO_SMALL_TO_PRINT arrives with document text in 4.11. Until text can be placed at a chosen height there is nothing to measure.',
   },
   {
     invariant: 'X2',

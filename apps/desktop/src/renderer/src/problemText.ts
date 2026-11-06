@@ -100,6 +100,14 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
       characters: f.characters,
     }),
 
+  TEXT_TOO_SMALL_TO_PRINT: (f, t) =>
+    t('problems.TEXT_TOO_SMALL_TO_PRINT.description', {
+      featureName: f.featureName,
+      // A warning just below the limit must not round up to the limit it names.
+      height: formatMm(f.capHeightMm, 4),
+      minimum: formatMm(f.minimumMm),
+    }),
+
   CONTOUR_SELF_INTERSECTS: (f, t) =>
     t('problems.CONTOUR_SELF_INTERSECTS.description', {
       featureName: f.featureName,

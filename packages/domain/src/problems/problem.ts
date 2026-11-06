@@ -258,6 +258,11 @@ export interface ProblemFacts {
   };
 
   // ——— Design rules (DR): legal, and probably wrong for leather ———
+  readonly TEXT_TOO_SMALL_TO_PRINT: About & {
+    /** The vendored font's capital height at this label's em size, in millimetres. */
+    readonly capHeightMm: Mm;
+    readonly minimumMm: Mm;
+  };
   readonly CONTOUR_SELF_INTERSECTS: About & { readonly crossings: number };
   readonly HOLES_OVERLAP: About & {
     /** The nearest two neighbours, centre to centre. */

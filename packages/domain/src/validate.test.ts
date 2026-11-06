@@ -1,4 +1,6 @@
+import { QUANTUM_MM } from '@leathercad/core';
 import { PathOps, uniformRadii, type Path, type Vec2 } from '@leathercad/geometry';
+import { FONT } from '@leathercad/typography';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -399,6 +401,92 @@ describe('TEXT_GLYPH_MISSING', () => {
     };
     expect(codes(evaluate(project([panel(), label])))).toEqual([]);
   });
+});
+
+describe('printed text legibility (DR5, Q34)', () => {
+  const label = (sizeMm: number, text = 'Hi', rotationRad = 0): Feature => ({
+    ...base('label-1', 'Label'),
+    kind: 'text-label',
+    source: { kind: 'text', text, at: { x: 20, y: 20 }, sizeMm, rotationRad },
+  });
+  const warnings = (feature: Feature) =>
+    diagnose(project([panel(), feature])).filter(
+      (d) => d.problem.code === 'TEXT_TOO_SMALL_TO_PRINT',
+    );
+  const sizeForCapHeight = (height: number) => (height * FONT.unitsPerEm) / FONT.capHeight;
+
+  it('warns exactly below 1.5 mm cap height, whatever the letters or turn', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(fc.constantFrom(14_999, 15_000, 15_001), fc.integer({ min: 1, max: 50_000 })),
+        fc.constantFrom('Hi', 'gjyp', 'AG'),
+        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+        (ticks, text, rotation) => {
+          const found = warnings(label(sizeForCapHeight(ticks * QUANTUM_MM), text, rotation));
+          expect(found).toHaveLength(ticks < 15_000 ? 1 : 0);
+        },
+      ),
+    );
+  });
+
+  it.each([14_999, 15_000, 15_001])('handles the cap-height threshold at %i quanta', (ticks) => {
+    expect(warnings(label(sizeForCapHeight(ticks * QUANTUM_MM)))).toHaveLength(
+      ticks < 15_000 ? 1 : 0,
+    );
+  });
+
+  it('judges printed capitals rather than the nominal em size (1.5 mm is still too small)', () => {
+    expect(warnings(label(1.5))).toHaveLength(1);
+    expect(warnings(label(2.15))).toEqual([]);
+  });
+
+  it.each([21_488, 21_489, 21_490, 21_491])(
+    'judges a stored em size of %i quanta by its capital height',
+    (ticks) => {
+      // These are the stored sizes on either side of a 1.5 mm printed capital
+      // in the vendored face, rather than unquantised inverse font metrics.
+      expect(warnings(label(ticks * QUANTUM_MM))).toHaveLength(ticks < 21_490 ? 1 : 0);
+    },
+  );
+
+  it('warns for Hi at one quantum of cap height with no rotation (Q34 counterexample)', () => {
+    expect(warnings(label(sizeForCapHeight(QUANTUM_MM), 'Hi', 0))).toHaveLength(1);
+  });
+
+  it('locates even a minimum-size label and reports its cap height and the readable minimum', () => {
+    const resolved = evaluate(project([panel(), label(QUANTUM_MM)]));
+    const found = validate(resolved).filter((d) => d.problem.code === 'TEXT_TOO_SMALL_TO_PRINT');
+    const entry = resolved.parts[0]?.features.find((f) => f.feature.id === 'label-1');
+    if (entry?.ok !== true) throw new Error('The label did not resolve');
+
+    expect(found).toEqual([
+      {
+        problem: {
+          code: 'TEXT_TOO_SMALL_TO_PRINT',
+          facts: {
+            featureId: 'label-1',
+            featureName: 'Label',
+            capHeightMm: (QUANTUM_MM * FONT.capHeight) / FONT.unitsPerEm,
+            minimumMm: 1.5,
+          },
+        },
+        severity: 'warning',
+        partId: 'part-0',
+        featureId: 'label-1',
+        related: [],
+        location: { kind: 'path', path: entry.path },
+      },
+    ]);
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    'leaves an invalid size %s to evaluation',
+    (size) => {
+      const found = diagnose(project([panel(), label(size)]));
+      expect(found.some((d) => d.problem.code === 'PARAMETER_INVALID')).toBe(true);
+      expect(found.some((d) => d.problem.code === 'TEXT_TOO_SMALL_TO_PRINT')).toBe(false);
+    },
+  );
 });
 
 // ——— Part rules (DR1, DR2) ————————————————————————————————————————————————
