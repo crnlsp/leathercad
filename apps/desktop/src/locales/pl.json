@@ -1017,10 +1017,10 @@
   },
   "spacing": {
     "matches": "Rozstaw rzeczywisty jest zgodny z nominalnym",
-    "squeezed": "Rozstaw zmniejszony o {{percent}} %",
-    "squeezedUnder": "Rozstaw zmniejszony o mniej niż {{percent}} %",
-    "stretched": "Rozstaw zwiększony o {{percent}} %",
-    "stretchedUnder": "Rozstaw zwiększony o mniej niż {{percent}} %"
+    "squeezed": "Rozstaw rzeczywisty zmniejszony o {{percent}} %",
+    "squeezedUnder": "Rozstaw rzeczywisty zmniejszony o mniej niż {{percent}} %",
+    "stretched": "Rozstaw rzeczywisty zwiększony o {{percent}} %",
+    "stretchedUnder": "Rozstaw rzeczywisty zwiększony o mniej niż {{percent}} %"
   },
   "problems": {
     "withSubject": "{{name}}: {{sentence}}",
@@ -1278,15 +1278,15 @@
     },
     "HOLES_OVERLAP": {
       "title": "Otwory nachodzą na siebie",
-      "description": "Otwory {{featureName}} mają rozstaw {{spacing}} i średnicę {{diameter}}. Nie pozostaje między nimi skóra — utworzą jedną szczelinę. Zwiększ rozstaw nominalny lub użyj mniejszego wybijaka."
+      "description": "Otwory {{featureName}} mają rzeczywisty rozstaw {{spacing}} i średnicę {{diameter}}. Nie pozostaje między nimi skóra — utworzą jedną szczelinę. Zwiększ rozstaw nominalny lub użyj mniejszego wybijaka."
     },
     "HOLE_SPACING_DEVIATION": {
-      "title": "Rozstaw różni się od wybijaka",
-      "description": "Rozstaw otworów wynosi {{achieved}}, a nominalny rozstaw wybijaka to {{pitch}}. Zmień rozstaw nominalny lub margines od krawędzi, aby zmniejszyć różnicę."
+      "title": "Rozstaw rzeczywisty różni się od nominalnego",
+      "description": "Rzeczywisty rozstaw otworów wynosi {{achieved}}, a nominalny rozstaw wybijaka to {{pitch}}. Zmień rozstaw nominalny lub margines od krawędzi, aby zmniejszyć różnicę."
     },
     "HOLE_SPACING_UNEVEN": {
-      "title": "Nierówny rozstaw",
-      "description": "Rozstaw na odcinkach {{featureName}} wynosi od {{narrowest}} do {{widest}}, więc na narożnikach różnica będzie widoczna."
+      "title": "Nierówny rozstaw rzeczywisty",
+      "description": "Rzeczywisty rozstaw na odcinkach {{featureName}} wynosi od {{narrowest}} do {{widest}}, więc na narożnikach różnica będzie widoczna."
     },
     "HOLE_COUNT_TOO_LOW": {
       "title": "Za mało otworów",

@@ -173,7 +173,7 @@ They change displayed labels only; key codes, saved bindings and shortcut behavi
 
 | High-risk family | Reviewed result |
 |---|---|
-| Pitch and spacing | Nominal and achieved measurements remain distinct in Polish/German/Russian/French editor fields, hints and deviation warnings. |
+| Pitch and spacing | Nominal and achieved measurements remain distinct in editor fields, hints, deviation warnings and the stitching status lines. The status lines and spacing problem titles were first written with a bare *rozstaw / Abstand / шаг*; the review follow-up below aligned them with the canonical table. |
 | Seam versus stitch line | A single path uses *linia szycia / Nahtlinie / линия строчки / ligne de couture*; allowance remains *zapas na szew / Nahtzugabe / припуск на шов / marge de couture*. |
 | Mirror and Flip | Linked counterparts have distinct labels/help. Russian legacy short labels were made explicit where both operations appear together. |
 | Delete, trash and recovery | Permanent loss of unsaved changes, recoverable file trash, removing a recent entry, and recovery-copy expiry remain distinct. Negations and cancellation actions were retained. |
@@ -343,3 +343,13 @@ introduced. The existing English fallback and non-blocking coverage guarantees r
 After that full run, four Spanish phrases were adjusted to avoid gender/number agreement with
 dynamic subjects. Production was rebuilt and all five Spanish-focused scenarios passed again;
 no behavior changed.
+
+## Review follow-up — 2026-11-06
+
+| Finding | Fix |
+|---|---|
+| Polish, German and Russian showed `\\` in the invalid-filename message, where English, French and Spanish show `\` | Corrected; `checkCatalogue` now fails a message whose backslash count differs from English |
+| A placeholder written `{{ sort }}` passed the check, though the template picker and Settings split messages on the exact `{{sort}}`, `{{link}}` and `{{keys}}` | `checkCatalogue` now reports spacing inside braces as a malformed placeholder |
+| Stitching status lines and the spacing problem titles used a bare *rozstaw / Abstand / шаг*, which in Russian reads as the pitch being squeezed | Aligned with the canonical *rozstaw rzeczywisty / Istabstand / фактический шаг*; pitch hints in Russian now say *номинальный шаг* |
+
+Coverage figures are unchanged: these were corrections, not new translations.

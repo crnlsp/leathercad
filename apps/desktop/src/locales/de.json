@@ -947,10 +947,10 @@
   },
   "spacing": {
     "matches": "Istabstand entspricht dem Nennabstand",
-    "squeezed": "Abstand um {{percent}} % verringert",
-    "squeezedUnder": "Abstand um weniger als {{percent}} % verringert",
-    "stretched": "Abstand um {{percent}} % vergrößert",
-    "stretchedUnder": "Abstand um weniger als {{percent}} % vergrößert"
+    "squeezed": "Istabstand um {{percent}} % verringert",
+    "squeezedUnder": "Istabstand um weniger als {{percent}} % verringert",
+    "stretched": "Istabstand um {{percent}} % vergrößert",
+    "stretchedUnder": "Istabstand um weniger als {{percent}} % vergrößert"
   },
   "problems": {
     "withSubject": "{{name}}: {{sentence}}",
@@ -1205,11 +1205,11 @@
       "description": "Die Löcher von {{featureName}} liegen {{spacing}} auseinander und sind {{diameter}} breit. Dazwischen bleibt kein Leder; sie werden zu einem Schlitz. Nennabstand vergrößern oder ein kleineres Locheisen verwenden."
     },
     "HOLE_SPACING_DEVIATION": {
-      "title": "Abstand weicht vom Prickeisen ab",
-      "description": "Der Lochabstand beträgt {{achieved}}, der Nennabstand des Prickeisens aber {{pitch}}. Nennabstand oder Randabstand ändern, um die Abweichung zu verringern."
+      "title": "Istabstand weicht vom Nennabstand ab",
+      "description": "Der Istabstand beträgt {{achieved}}, der Nennabstand des Prickeisens aber {{pitch}}. Nennabstand oder Randabstand ändern, um die Abweichung zu verringern."
     },
     "HOLE_SPACING_UNEVEN": {
-      "title": "Ungleichmäßiger Abstand",
+      "title": "Ungleichmäßiger Istabstand",
       "description": "Die Abstände in den Abschnitten von {{featureName}} reichen von {{narrowest}} bis {{widest}}. Der Unterschied wird an den Ecken sichtbar."
     },
     "HOLE_COUNT_TOO_LOW": {
