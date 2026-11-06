@@ -394,6 +394,13 @@ export function App({
   // What went wrong opening a project from the start screen, where no tab is
   // there to say it (8.12).
   const [startError, setStartError] = useState<unknown>(null);
+  const initialiseTool = useCallback((opened: ProjectTab) => {
+    const initial = opened.untitled > 0 ? 'rectangle' : 'select';
+    // A tab restored on Sheets must bring Select back to Design too, rather
+    // than the drawing tool the window last used (Q41).
+    designToolRef.current = initial;
+    setToolId(opened.view === 'sheets' ? 'select' : initial);
+  }, []);
   const file = useProjectFile(
     tabs,
     getPlatformHost,
@@ -402,6 +409,7 @@ export function App({
     blank,
     t,
     setStartError,
+    initialiseTool,
   );
   // Read from the tab, which the store's mirror re-renders for.
   const dirty = isDirty(tab);

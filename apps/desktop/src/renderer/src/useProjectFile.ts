@@ -136,6 +136,8 @@ export function useProjectFile(
   t: Translate,
   /** What went wrong opening a project with no tab open to say it in (8.12); null once one opens. */
   onStartError: (error: unknown) => void,
+  /** Initialise the window's tool for a newly created tab, never for a tab switch (Q41). */
+  onNewTab: (tab: ProjectTab) => void,
 ): {
   /** True once the project is written; false when the maker cancelled or the write failed. */
   save: (tab: ProjectTab, forcePrompt?: boolean) => Promise<boolean>;
@@ -227,9 +229,10 @@ export function useProjectFile(
         tab.cameras.restore = restore.camera;
       }
       tabs.open(tab);
+      onNewTab(tab);
       onStartError(null);
     },
-    [onStartError, tabFor, tabs],
+    [onNewTab, onStartError, tabFor, tabs],
   );
 
   const save = useCallback(
@@ -423,9 +426,11 @@ export function useProjectFile(
   );
 
   const newProject = useCallback(() => {
-    tabs.add(tabFor(blank(), nextUntitled(tabs.tabs)));
+    const tab = tabFor(blank(), nextUntitled(tabs.tabs));
+    tabs.add(tab);
+    onNewTab(tab);
     onStartError(null);
-  }, [blank, onStartError, tabFor, tabs]);
+  }, [blank, onNewTab, onStartError, tabFor, tabs]);
 
   const adoptRecovered = useCallback(
     (project: Project) => {
@@ -435,10 +440,11 @@ export function useProjectFile(
       tab.savedDocument = null;
       tab.cameras.frameDrawing = true;
       tabs.open(tab);
+      onNewTab(tab);
       onStartError(null);
       return tab;
     },
-    [onStartError, tabFor, tabs],
+    [onNewTab, onStartError, tabFor, tabs],
   );
 
   const reload = useCallback(
@@ -468,8 +474,9 @@ export function useProjectFile(
       copy.savedDocument = null;
       copy.cameras.frameDrawing = true;
       tabs.add(copy);
+      onNewTab(copy);
     },
-    [blank, tabFor, tabs],
+    [blank, onNewTab, tabFor, tabs],
   );
 
   const newFromTemplate = useCallback(
@@ -515,13 +522,14 @@ export function useProjectFile(
         tab.cameras.restore = restore.camera;
         tab.cameras.frameDrawing = true;
         tabs.open(tab);
+        onNewTab(tab);
         return tab;
       } catch {
         // A copy that does not load is not worth a start that fails over it.
         return null;
       }
     },
-    [tabFor, tabs],
+    [onNewTab, tabFor, tabs],
   );
 
   return {

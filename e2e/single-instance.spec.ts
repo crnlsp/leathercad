@@ -83,6 +83,7 @@ test('a second launch opens its project in the running window, and ends', async 
 
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await expect(window.getByTestId('file-path')).toContainText('Wallet from Files');
+    await expect(window.getByTestId('tool-select')).toHaveClass(/\bactive\b/);
     expect(app.windows()).toHaveLength(1);
   } finally {
     await closeApp(app);
@@ -99,6 +100,7 @@ test('a second launch opens beside unsaved work, in a tab of its own (8.12)', as
     // Nothing asked, nothing replaced: the drawing keeps its tab.
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
+    await expect(window.getByTestId('tool-select')).toHaveClass(/\bactive\b/);
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
     await expect(tabs).toHaveCount(2);
     await tabs.first().click();

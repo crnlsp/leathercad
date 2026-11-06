@@ -294,6 +294,8 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
       await expect(window.getByTestId('save-state')).toContainText(words.projectBar.saved);
       expect(loadProject(readFileSync(project)).project).toEqual(loadProject(original).project);
 
+      // Open starts in Select (Q41); inspect drawing controls with a drawing tool.
+      await window.getByTestId('tool-rectangle').click();
       for (const [width, height] of [
         [1440, 900],
         [860, 600],

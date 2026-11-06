@@ -68,6 +68,7 @@ describe('saving while a gesture is under way', () => {
         () => emptyDocument('blank'),
         ((key: string) => key) as Translate,
         () => undefined,
+        () => undefined,
       );
       return null;
     }
