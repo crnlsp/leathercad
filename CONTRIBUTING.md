@@ -58,7 +58,7 @@ The scripts set the rest themselves: `LEATHERCAD_BENCH`, `LEATHERCAD_PACKAGE_FOR
 `LEATHERCAD_IN_CONTAINER`.
 
 **Translating?** You need none of the rest of this page beyond setting up: the
-[README's Translations section](README.md#translations) is the whole path, and
+[translation guide](docs/localization.md) is the whole path, and
 `pnpm test locales` checks your file’s structural integrity; `pnpm locales:report` reports coverage.
 A translation is offered in the app only once a maintainer
 has reviewed it and added it to `SUPPORTED_LANGUAGES`; until then `pnpm dev` shows it as a
