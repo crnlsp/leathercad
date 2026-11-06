@@ -136,7 +136,7 @@ export function SettingsDialog(props: Props) {
       >
         {/* A div, not a header: a header here would be a second banner. */}
         <div className="settings-header">
-          <h3 id="settings-dialog-title">{t('settings.title')}</h3>
+          <h2 id="settings-dialog-title">{t('settings.title')}</h2>
           <button
             type="button"
             className="tool quiet icon-only"
@@ -187,7 +187,7 @@ export function SettingsDialog(props: Props) {
             tabIndex={0}
             data-testid={`settings-pane-${current.id}`}
           >
-            <h4>{t(current.title)}</h4>
+            <h3>{t(current.title)}</h3>
             {current.pane(props)}
           </div>
         </div>
@@ -299,7 +299,7 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
   return (
     <>
       <p className="setting-note">{t('settings.tools.intro')}</p>
-      <h5 className="settings-subhead">{t('settings.tools.irons')}</h5>
+      <h4 className="settings-subhead">{t('settings.tools.irons')}</h4>
       {irons.length === 0 ? (
         <p className="setting-note" data-testid="no-irons">
           {t('settings.tools.noIrons')}
@@ -389,7 +389,7 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
         {t('settings.tools.addIron')}
       </button>
 
-      <h5 className="settings-subhead">{t('settings.tools.forNewPieces')}</h5>
+      <h4 className="settings-subhead">{t('settings.tools.forNewPieces')}</h4>
       <div className="setting">
         <div className="setting-text">
           <span className="setting-name">{t('settings.tools.margin.name')}</span>
@@ -829,7 +829,7 @@ function Shortcuts({ preferences, onPreferences }: Props) {
       <div className="shortcuts-groups">
         {shortcutGroups(keymap).map((group) => (
           <section key={group.id} aria-label={t(`shortcuts.group.${group.id}`)}>
-            <h5>{t(`shortcuts.group.${group.id}`)}</h5>
+            <h4>{t(`shortcuts.group.${group.id}`)}</h4>
             <div className="shortcut-list">
               {group.shortcuts.map((shortcut) => {
                 const { id } = shortcut;

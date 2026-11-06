@@ -1,0 +1,1644 @@
+{
+  "app": {
+    "untitled": "Sin título",
+    "untitledNumbered": "Sin título {{number}}",
+    "windowTitle": "{{name}} — LeatherCAD",
+    "windowTitleUnsaved": "• {{name}} — LeatherCAD",
+    "drawing": "Dibujo"
+  },
+  "tabs": {
+    "strip": "Proyectos",
+    "region": "Proyectos abiertos",
+    "close": "Cerrar {{name}}",
+    "closeTooltip": "Cerrar este proyecto",
+    "unsaved": "{{name}}, cambios sin guardar",
+    "add": "Nueva pestaña",
+    "addTooltip": "Un proyecto nuevo o existente en su propia pestaña",
+    "menu": "Menú del proyecto",
+    "menuTooltip": "Crear, abrir, guardar como, cambiar de nombre y proyectos recientes",
+    "noProject": "No hay ningún proyecto abierto",
+    "alreadyOpen": "{{name}} ya está abierto",
+    "all": "Todas las pestañas",
+    "allTooltip": "Todos los proyectos abiertos cuando no caben en la barra",
+    "unsavedNote": "Cambios sin guardar",
+    "dropHere": "Mover aquí"
+  },
+  "tabMenu": {
+    "label": "Menú de {{name}}",
+    "rename": "Cambiar nombre…",
+    "save": "Guardar",
+    "saveAs": "Guardar como…",
+    "reload": "Volver a cargar desde el disco",
+    "reloadNote": "El archivo tal como se guardó por última vez",
+    "duplicate": "Duplicar como proyecto nuevo",
+    "showInFolder": "Mostrar en carpeta",
+    "copyPath": "Copiar ruta",
+    "trash": "Mover archivo a la papelera…",
+    "close": "Cerrar",
+    "closeOthers": "Cerrar las demás pestañas",
+    "noFile": "Aún no se ha guardado en un archivo",
+    "onlyTab": "No hay más pestañas abiertas",
+    "trashTitle": "¿Mover «{{name}}» a la papelera?",
+    "trashBody": "{{file}} se moverá a la papelera del sistema, desde donde se puede restaurar, y su pestaña se cerrará.",
+    "trashBodyUnsaved": "{{file}} se moverá a la papelera del sistema, desde donde se puede restaurar, y su pestaña se cerrará. Se perderán los cambios sin guardar.",
+    "trashConfirm": "Mover a la papelera",
+    "trashFailed": "No se pudo mover el archivo a la papelera. {{reason}}"
+  },
+  "outside": {
+    "changed": "{{file}} se ha modificado fuera de LeatherCAD.",
+    "gone": "{{file}} se ha movido o eliminado fuera de LeatherCAD.",
+    "reload": "Volver a cargar",
+    "keep": "Conservar mi versión",
+    "save": "Guardar de nuevo",
+    "dismiss": "Descartar aviso"
+  },
+  "rename": {
+    "title": "No se ha cambiado el nombre",
+    "exists": "Ya hay un archivo llamado «{{file}}» en la carpeta del proyecto. Elige otro nombre: el proyecto y su archivo conservarán el que tienen.",
+    "invalid": "Un archivo no puede llamarse «{{name}}»: contiene un carácter como / \\ : * ? \" < > |, o es un nombre reservado por el sistema. Elige otro nombre.",
+    "failed": "No se pudo cambiar el nombre del archivo del proyecto, por lo que el proyecto conserva su nombre. {{reason}}",
+    "followExists": "El proyecto vuelve a llamarse «{{name}}», pero su archivo conserva el nombre actual: ya hay un archivo llamado «{{file}}» en su carpeta."
+  },
+  "start": {
+    "title": "Crear proyecto",
+    "fromTemplate": "Nuevo proyecto desde plantilla",
+    "open": "Abrir proyecto existente",
+    "lede": "Crea un patrón, abre uno del disco o retoma el trabajo donde lo dejaste.",
+    "pin": "Fijar {{name}}",
+    "unpin": "Desfijar {{name}}",
+    "pinTooltip": "Mantener al principio de la lista",
+    "unpinTooltip": "Devolver a los proyectos recientes",
+    "remove": "Quitar {{name}} de la lista",
+    "removeTooltip": "Quitar de la lista. El archivo permanece donde está"
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "deletePart": "Eliminar pieza",
+    "duplicate": "Duplicar",
+    "duplicatePart": "Duplicar pieza",
+    "hide": "Ocultar",
+    "lock": "Bloquear",
+    "save": "Guardar",
+    "show": "Mostrar",
+    "unlock": "Desbloquear"
+  },
+  "keys": {
+    "Alt": "Alt",
+    "Down": "↓",
+    "End": "Fin",
+    "Home": "Inicio",
+    "Insert": "Ins",
+    "Left": "←",
+    "PageDown": "Av Pág",
+    "PageUp": "Re Pág",
+    "Right": "→",
+    "Up": "↑",
+    "Backspace": "Retroceso",
+    "Ctrl": "Ctrl",
+    "Delete": "Supr",
+    "Enter": "Intro",
+    "Escape": "Esc",
+    "Menu": "Menú",
+    "Middle-drag": "Arrastrar con el botón central",
+    "Scroll": "Rueda",
+    "Shift": "Mayús",
+    "Space": "Espacio",
+    "Tab": "Tab",
+    "drag": "arrastrar"
+  },
+  "projectBar": {
+    "application": "Aplicación",
+    "exportMore": "Más opciones de exportación",
+    "exportMoreTooltip": "Exportar como SVG o DXF, en milímetros, para cortadoras láser, CNC y editores vectoriales",
+    "exportPdf": "Exportar PDF",
+    "exportTooltip": "Guardar {{sheets}} como PDF listo para imprimir a escala 1:1. Para imprimirlo desde otra aplicación, elige Tamaño real (100 %)",
+    "help": "Ayuda",
+    "helpTooltip": "Ayuda",
+    "name": "Nombre del proyecto",
+    "nothingToSave": "Nada que guardar",
+    "output": "Salida",
+    "paper": "Papel: {{sheets}}",
+    "paperLong": "{{count}} × {{paper}} {{orientation}}",
+    "paperPopover": {
+      "orientation": "Orientación",
+      "option_one": "{{paper}} · {{count}} hoja",
+      "option_other": "{{paper}} · {{count}} hojas",
+      "option_many": "{{paper}} · {{count}} hojas",
+      "sheets_one": "{{count}} hoja",
+      "sheets_other": "{{count}} hojas",
+      "sheets_many": "{{count}} hojas",
+      "summary": "{{sheets}} · escala 100 %, bloqueada · {{taped}}",
+      "nothingTaped": "ninguna hoja unida",
+      "seeSheets": "Ver las hojas",
+      "limited": "{{paper}} — demasiadas hojas"
+    },
+    "paperShort": "{{count}} × {{paper}}",
+    "print": "Imprimir",
+    "printTooltip": "Ver {{sheets}} e imprimir a escala 1:1",
+    "problems": "Problemas: {{counts}}",
+    "problemsNone": "Problemas: nada que corregir",
+    "problemsNoneTooltip": "Nada que corregir",
+    "problemsTooltip": "{{counts}}. Ver en Problemas",
+    "saveTooltip": "Guardar el proyecto",
+    "saved": "Guardado",
+    "settings": "Ajustes",
+    "settingsTooltip": "Ajustes",
+    "unsaved": "Cambios sin guardar",
+    "unsavedShort": "Sin guardar",
+    "settingsUpdate": "Ajustes — hay una nueva versión disponible"
+  },
+  "menu": {
+    "about": "Acerca de LeatherCAD",
+    "exportDxf": "Exportar DXF…",
+    "exportDxfNote": "R12, en milímetros, para programas láser y CNC",
+    "exportNothing": "Aún no hay nada que exportar. Ninguna pieza tiene líneas de corte.",
+    "exportSvg": "Exportar SVG…",
+    "exportSvgNote": "Milímetros, para cortadoras láser, trazadores y editores vectoriales",
+    "new": "Nuevo proyecto desde cero",
+    "open": "Abrir…",
+    "recent": "Proyectos recientes",
+    "recentEmpty": "Aquí aparecen los proyectos que abres o guardas.",
+    "rename": "Cambiar nombre…",
+    "renameNote": "El nombre del archivo y del pie de página del PDF",
+    "saveAs": "Guardar como…",
+    "settings": "Ajustes…",
+    "recentGone": "Ese proyecto ya no está disponible",
+    "recentGoneDetail": "Se ha movido, renombrado o eliminado, por lo que se ha quitado de los proyectos recientes.",
+    "newFromTemplate": "Nuevo proyecto desde plantilla…",
+    "saveAsTemplate": "Guardar como plantilla…"
+  },
+  "macMenu": {
+    "edit": "Editar",
+    "redo": "Rehacer",
+    "undo": "Deshacer"
+  },
+  "hints": {
+    "addsOrRemoves": "añade o quita",
+    "allKeys": "todas las teclas",
+    "arcNext": "Haz clic en el siguiente punto",
+    "arcStart": "Haz clic en el inicio del arco",
+    "arcsNext": "curva el siguiente segmento",
+    "backToSelect": "volver a Seleccionar",
+    "cancels": "cancela",
+    "circleDrag": "Arrastra desde el centro o haz clic en él y luego en el borde",
+    "circleRim": "Haz clic en el borde",
+    "clickSelects": "Clic selecciona",
+    "deletes": "elimina",
+    "dragBox": "Arrastra un recuadro para seleccionar",
+    "dragMoves": "Arrastrar mueve",
+    "editsSizes": "edita las medidas",
+    "finishes": "termina",
+    "hardwarePick": "elige la pieza que se va a perforar",
+    "hardwarePunch": "Haz clic para perforar",
+    "holdsProportions": "mantiene las proporciones",
+    "holdsSteps": "mantiene incrementos de 15°",
+    "keepSquare": "mantiene la forma cuadrada",
+    "lineDrag": "Arrastra de extremo a extremo o haz clic en ambos extremos",
+    "lineEnd": "Haz clic en el extremo",
+    "measureFirst": "Haz clic en dos esquinas para acotarlas",
+    "measureSecond": "Haz clic en la segunda esquina",
+    "pointsAdd": "Pulsa un borde para añadir un punto",
+    "pointsMove": "Arrastra un punto para moverlo",
+    "pointsPick": "elige un trazado para editarlo",
+    "pointsRemove": "quita el punto",
+    "pointsRound": "redondea la esquina",
+    "polylineClose": "Haz clic en el primero para cerrar",
+    "polylinePoints": "Haz clic en cada punto",
+    "rectangleCorner": "Haz clic en la otra esquina",
+    "rectangleDrag": "Arrastra o haz clic en dos esquinas",
+    "rotateDrag": "Arrastra alrededor para girar",
+    "rotatePick": "elige qué girar",
+    "scaleDrag": "Arrastra para cambiar el tamaño desde el centro",
+    "scalePick": "elige qué redimensionar",
+    "sheetsClick": "Haz clic en una pieza para ver dónde se imprime",
+    "sheetsExport": "exporta el PDF",
+    "sheetsPrint": "imprime",
+    "takesBack": "retira un punto",
+    "textPick": "elige la pieza que se va a etiquetar",
+    "textPlace": "Haz clic para colocar una etiqueta",
+    "textType": "escríbela en Propiedades",
+    "typeSize": "Escribe una medida"
+  },
+  "work": {
+    "redo": "Rehacer",
+    "region": "Trabajo",
+    "undo": "Deshacer",
+    "redoTooltip": "Rehacer {{action}}",
+    "undoTooltip": "Deshacer {{action}}"
+  },
+  "status": {
+    "features_one": "elemento",
+    "features_other": "elementos",
+    "features_many": "elementos",
+    "focus": "Concentración",
+    "panels": "Paneles",
+    "parts": "Piezas",
+    "partsCount_one": "pieza",
+    "partsCount_other": "piezas",
+    "partsCount_many": "piezas",
+    "problems_one": "problema",
+    "problems_other": "problemas",
+    "problems_many": "problemas",
+    "properties": "Propiedades",
+    "selected": "en la selección",
+    "sheetOf": "Hoja {{number}} de {{count}}",
+    "partsSelected_one": "pieza seleccionada",
+    "partsSelected_other": "piezas seleccionadas",
+    "partsSelected_many": "piezas seleccionadas",
+    "checkForUpdates": "Buscar actualizaciones",
+    "versionNext": "a {{version}}",
+    "saved": "{{name}} guardado",
+    "exported": "{{name}} exportado"
+  },
+  "view": {
+    "design": "Diseño",
+    "designBoard": "Tablero de diseño",
+    "designTooltip": "Diseñar las piezas",
+    "label": "Vista",
+    "sheets": "Hojas",
+    "sheetsBoard": "Tablero de hojas",
+    "sheetsNamed_one": "Hojas, {{count}} hoja",
+    "sheetsNamed_other": "Hojas, {{count}} hojas",
+    "sheetsNamed_many": "Hojas, {{count}} hojas",
+    "sheetsTooltip": "Ver las piezas en las hojas donde se imprimirán"
+  },
+  "zoom": {
+    "fit": "Ajustar",
+    "fitDrawing": "Ajustar dibujo",
+    "fitSelection": "Ajustar selección",
+    "fitTooltip": "Ajustar el dibujo, o haz doble clic en una zona vacía del tablero",
+    "level": "Zoom, {{percent}} %",
+    "levelTooltip": "Ajustar o elegir un nivel de zoom",
+    "nothingSelected": "Selecciona algo dibujado en el tablero para ajustarlo",
+    "onDesignOnly": "Solo en Diseño: las hojas se muestran completas",
+    "percent": "{{percent}} %",
+    "title": "Zoom",
+    "trueSize": "Tamaño real, {{percent}} %"
+  },
+  "tools": {
+    "collapsedTooltip": "{{name}} — {{howTo}}",
+    "hideNames": "Ocultar nombres de herramientas",
+    "label": "Herramientas",
+    "showNames": "Mostrar nombres de herramientas",
+    "group": {
+      "draw": "Dibujar",
+      "modify": "Modificar",
+      "place": "Colocar"
+    },
+    "arc": {
+      "howTo": "Haz clic en el inicio, el final y un punto por el que pase el arco",
+      "name": "Arco"
+    },
+    "circle": {
+      "howTo": "Arrastra desde el centro o haz clic en el centro y luego en el borde",
+      "name": "Círculo"
+    },
+    "hardware": {
+      "howTo": "Haz clic para perforar la pieza seleccionada con el tamaño elegido arriba",
+      "name": "Herrajes"
+    },
+    "line": {
+      "howTo": "Arrastra de extremo a extremo o haz clic en ambos extremos · {{shift}} mantiene incrementos de 15°",
+      "name": "Línea"
+    },
+    "measure": {
+      "howTo": "Haz clic en dos esquinas para acotar la distancia entre ellas",
+      "name": "Medir"
+    },
+    "points": {
+      "howTo": "Arrastra un punto del trazado seleccionado para moverlo · pulsa un borde para añadir uno · {{removePoint}} quita el último punto pulsado · {{roundCorner}} redondea esa esquina o devuelve una redondeada a su forma original",
+      "name": "Editar puntos"
+    },
+    "polyline": {
+      "howTo": "Haz clic en cada punto · {{arc}} curva el siguiente segmento: haz clic en su final y luego en un punto del arco · {{straight}} vuelve a recta · haz clic en el primero para cerrar · {{finish}} termina · {{takeBack}} quita el último punto",
+      "name": "Polilínea"
+    },
+    "rectangle": {
+      "howTo": "Arrastra de esquina a esquina o haz clic en ambas · {{shift}} mantiene la forma cuadrada",
+      "name": "Rectángulo"
+    },
+    "rotate": {
+      "howTo": "Arrastra alrededor de la selección para girarla sobre su centro",
+      "name": "Girar"
+    },
+    "scale": {
+      "howTo": "Arrastra para redimensionar la selección desde su centro · {{shift}} mantiene las proporciones",
+      "name": "Escalar"
+    },
+    "select": {
+      "howTo": "Haz clic para seleccionar · {{shift}}-clic añade o quita · arrastra en una zona vacía para seleccionar con un recuadro · arrastra una selección para moverla · {{delete}} elimina",
+      "name": "Seleccionar"
+    },
+    "text": {
+      "howTo": "Haz clic para colocar una etiqueta en la pieza seleccionada y escríbela en el panel",
+      "name": "Texto"
+    },
+    "guide": {
+      "name": "Guías",
+      "howTo": "Haz clic para colocar una guía horizontal; mantén {{shift}} para una vertical. Arrastra para colocarla entre dos puntos, por ejemplo a lo largo de un borde. Selecciona una guía para editar su posición y ángulo en Propiedades."
+    }
+  },
+  "toolOptions": {
+    "cornerRadius": "Radio de esquina",
+    "drawAs": "Dibujar como",
+    "for": "Para",
+    "punch": "Perforar"
+  },
+  "drawMode": {
+    "cut-out": "Vaciado",
+    "fold": "Pliegue",
+    "marking": "Marca",
+    "outline": "Contorno",
+    "stitch": "Línea de puntadas",
+    "stitch-allowance": "Puntadas + margen"
+  },
+  "shortcuts": {
+    "or": "o",
+    "group": {
+      "drawing": "Al dibujar",
+      "edit": "Edición",
+      "editingPoints": "Al editar puntos",
+      "file": "Archivo",
+      "parts": "En Piezas",
+      "tools": "Herramientas",
+      "view": "Vista",
+      "window": "Ventana",
+      "field": "En un campo de texto"
+    },
+    "arc": "Polilínea: el siguiente segmento es un arco",
+    "straight": "Polilínea: el siguiente segmento es recto",
+    "cancel": "Cancelar la operación de la herramienta, quitar la selección o salir del modo de concentración",
+    "contextMenu": "Abrir el menú de la selección, como con el botón derecho",
+    "delete": "Eliminar lo seleccionado (herramienta Seleccionar)",
+    "design": "Diseño: el tablero donde dibujas",
+    "editSizes": "Escribir las medidas del contorno seleccionado junto a él en el tablero",
+    "exportPdf": "Exportar PDF",
+    "finishPolyline": "Terminar una polilínea",
+    "fit": "Ajustar el dibujo a la ventana",
+    "fitSelection": "Ajustar la selección a la ventana",
+    "focusMode": "Modo de concentración: oculta ambos paneles y muestra solo teclas en la barra",
+    "selectionBar": "Ir a la barra de selección o volver al tablero",
+    "fullScreen": "Pantalla completa",
+    "keyboardShortcuts": "Atajos de teclado",
+    "newProject": "Nuevo proyecto",
+    "openProject": "Abrir un proyecto",
+    "pan": "Desplazar vista",
+    "print": "Imprimir",
+    "quit": "Salir",
+    "nextTab": "Ir a la siguiente pestaña de proyecto",
+    "previousTab": "Ir a la pestaña de proyecto anterior",
+    "closeTab": "Cerrar la pestaña del proyecto",
+    "moveTabLeft": "Mover la pestaña del proyecto a la izquierda",
+    "moveTabRight": "Mover la pestaña del proyecto a la derecha",
+    "reopenTab": "Volver a abrir el último proyecto cerrado",
+    "redo": "Rehacer",
+    "removePoint": "Quitar el último punto pulsado",
+    "rename": "Cambiar el nombre de la pieza o elemento",
+    "roundCorner": "Redondear la última esquina pulsada con el radio de esquina, o devolver una redondeada a su forma original",
+    "save": "Guardar",
+    "saveAs": "Guardar como",
+    "settings": "Ajustes",
+    "sheets": "Hojas: el papel donde se imprime",
+    "square": "Mantener un rectángulo cuadrado; limitar una línea a incrementos de 15°",
+    "takeBack": "Quitar el último punto de una polilínea o arco",
+    "toggleParts": "Mostrar u ocultar Piezas",
+    "toggleProperties": "Mostrar u ocultar Propiedades",
+    "toggleVisible": "Ocultar o mostrar la pieza o elemento",
+    "trueSize": "Zoom a tamaño real, 100 %",
+    "undo": "Deshacer",
+    "zoom": "Ampliar alrededor del puntero",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "help": "Abrir el menú Ayuda"
+  },
+  "settings": {
+    "close": "Cerrar ajustes",
+    "sections": "Secciones",
+    "title": "Ajustes",
+    "section": {
+      "appearance": "Apariencia",
+      "general": "General",
+      "language": "Idioma",
+      "shortcuts": "Atajos de teclado",
+      "tools": "Mis herramientas",
+      "updates": "Actualizaciones"
+    },
+    "recent": {
+      "clear": "Vaciar lista",
+      "count_one": "Ahora hay {{count}} proyecto en la lista.",
+      "count_other": "Ahora hay {{count}} proyectos en la lista.",
+      "count_many": "Ahora hay {{count}} proyectos en la lista.",
+      "name": "Proyectos recientes",
+      "none": "No hay proyectos en la lista.",
+      "note": "El menú Proyecto muestra los proyectos que has abierto o guardado recientemente."
+    },
+    "keepUnsaved": {
+      "name": "Conservar los proyectos sin guardar al cerrar",
+      "note": "Cerrar sin preguntar: los proyectos con cambios sin guardar se volverán a abrir al iniciar, aún sin guardar."
+    },
+    "legend": {
+      "name": "Mostrar los nombres de las marcas en la leyenda",
+      "note": "Al desactivarlo, la leyenda se contrae en un botón hasta que la abras."
+    },
+    "selectionBar": {
+      "name": "Mostrar la barra de selección bajo la pieza seleccionada",
+      "note": "El resultado de las puntadas y el siguiente paso con un clic. Al desactivarlo, no aparece nada bajo la pieza y su tecla no hace nada."
+    },
+    "toolNames": {
+      "name": "Mostrar nombres en la barra de herramientas",
+      "note": "Al desactivarlo, cada herramienta muestra solo su tecla. En ventanas de menos de 1280 px, la barra siempre muestra solo teclas."
+    },
+    "tools": {
+      "actions": "Acciones",
+      "addIron": "Añadir tenedor",
+      "default": "Predeterminado",
+      "delete": "Eliminar",
+      "deleteNote": "Los conjuntos de agujeros hechos con él conservan su paso",
+      "forNewPieces": "Para piezas nuevas",
+      "intro": "Tus tenedores y valores iniciales. El menú Tenedor de un conjunto de agujeros muestra estos tenedores; cada nueva línea de puntadas, margen de costura o pliegue toma estos valores y los conserva.",
+      "ironActions": "Acciones de {{name}}",
+      "irons": "Tenedores",
+      "makeDefault": "Usar {{name}} por defecto",
+      "name": "Nombre",
+      "newIron": "Tenedor {{number}}",
+      "noIrons": "Aún no hay tenedores. Cada nuevo conjunto de agujeros usa el paso del proyecto hasta que añadas uno.",
+      "pitch": "Paso nominal",
+      "pitchOf": "Paso nominal de {{name}}",
+      "rename": "Cambiar nombre",
+      "margin": {
+        "name": "Retiro de puntadas",
+        "note": "Distancia desde el borde hacia dentro para una nueva línea de puntadas y hacia fuera para un nuevo margen de costura."
+      },
+      "thickness": {
+        "name": "Grosor del cuero",
+        "note": "Se guarda en cada pliegue nuevo. Déjalo vacío para no registrar ninguno."
+      }
+    },
+    "language": {
+      "invite": "Las personas que usan LeatherCAD lo traducen. {{link}}",
+      "inviteLink": "Ayuda a traducirlo a tu idioma",
+      "name": "Idioma de la interfaz",
+      "note": "El texto de los menús, paneles y mensajes. Un proyecto es el mismo en todos los idiomas.",
+      "system": "Seguir al sistema ({{language}})",
+      "unavailable": "El idioma del sistema, {{language}}, aún no está disponible; LeatherCAD se muestra en {{fallback}}.",
+      "option": "{{own}} — {{here}}",
+      "preview": "{{language}} (vista previa, aún sin soporte)"
+    },
+    "shortcuts": {
+      "intro": "Para cambiar una tecla, elige Cambiar y pulsa las nuevas teclas. {{escape}}, {{tab}} e {{enter}} conservan sus funciones; las teclas fijas pertenecen a un campo de texto o al sistema.",
+      "change": "Cambiar",
+      "changeLabel": "Cambiar las teclas de {{command}}",
+      "listening": "Pulsa las nuevas teclas · {{escape}} cancela",
+      "reset": "Restablecer",
+      "resetLabel": "Restablecer las teclas predeterminadas de {{command}}",
+      "resetAll": "Restablecer todo",
+      "fixed": "Fijo",
+      "reserved": "{{key}} conserva su función. Pulsa otras teclas.",
+      "unusable": "Esa tecla o un modificador pulsado con ella no puede formar parte de un atajo. Pulsa otras teclas.",
+      "needsModifier": "{{command}} también funciona en campos de texto: asígnale una tecla de función o una combinación con un modificador.",
+      "clash": "{{keys}} ya se usa para «{{command}}».",
+      "clashFixed": "{{keys}} ya se usa para «{{command}}» y no se puede intercambiar.",
+      "swap": "Intercambiar",
+      "cancel": "Cancelar",
+      "changed": "{{command}} tiene nuevas teclas.",
+      "wasReset": "{{command}} vuelve a tener sus teclas predeterminadas.",
+      "swapped": "{{command}} y {{other}} han intercambiado sus teclas.",
+      "allReset": "Todas las teclas vuelven a sus valores predeterminados.",
+      "typesOther": "Con esa combinación, la tecla escribe «{{typed}}» en lugar de su letra, por lo que no puede ser un atajo. Pulsa otras teclas.",
+      "typesSize": "Los números, puntos y comas escriben medidas en el tablero, por lo que necesitan un modificador. Pulsa otras teclas."
+    },
+    "updates": {
+      "note": "LeatherCAD solo consulta en GitHub la última versión cuando lo pides aquí o al pulsar la versión en la barra de estado. No se envía información sobre ti ni tus patrones, y no se descarga ni instala nada.",
+      "now": "Buscar ahora",
+      "checking": "Buscando…",
+      "again_one": "Volver a buscar en {{count}} minuto",
+      "again_other": "Volver a buscar en {{count}} minutos",
+      "again_many": "Volver a buscar en {{count}} minutos",
+      "managed": "Flathub mantiene actualizada esta copia de LeatherCAD, por lo que no busca actualizaciones por su cuenta."
+    }
+  },
+  "about": {
+    "blurb": "Patrones de marroquinería que se imprimen a escala 1:1 exacta. Software libre y de código abierto bajo la licencia Apache 2.0.",
+    "logFolder": "Mostrar carpeta de registros",
+    "notices": "Avisos de terceros",
+    "reporting": "Para informar de un problema, adjunta el registro.",
+    "source": "Código fuente en GitHub",
+    "version": "Versión {{version}}",
+    "noticesInDevelopment": "Los avisos de terceros se generan al compilar para producción (pnpm build)."
+  },
+  "recovery": {
+    "decline": "Ahora no",
+    "detail": "El trabajo sin guardar de «{{name}}» se guardó automáticamente a las {{when}}. Recuperar lo abre como un proyecto nuevo sin guardar; el archivo original no se modifica. Si eliges Ahora no, la copia se elimina al salir de LeatherCAD.",
+    "recover": "Recuperar",
+    "title": "LeatherCAD no se cerró correctamente"
+  },
+  "unsaved": {
+    "discard": "No guardar",
+    "title": "¿Guardar los cambios de «{{name}}»?",
+    "consequence": {
+      "close": "Si cierras sin guardar, se perderán los cambios.",
+      "reload": "Al volver a cargar se lee el archivo tal como se guardó por última vez y se pierden los cambios."
+    }
+  },
+  "unsavedProjects": {
+    "title_one": "¿Guardar los cambios de {{count}} proyecto?",
+    "title_other": "¿Guardar los cambios de {{count}} proyectos?",
+    "title_many": "¿Guardar los cambios de {{count}} proyectos?",
+    "consequence": "Si cierras sin guardar, se perderán sus cambios.",
+    "saveAll": "Guardar todo"
+  },
+  "deleteDialog": {
+    "deleteAll": "Eliminar todo",
+    "features_one": "{{count}} elemento",
+    "features_other": "{{count}} elementos",
+    "features_many": "{{count}} elementos",
+    "follow": "Estos elementos dependen de lo que vas a eliminar:",
+    "freeze_one": "Conservar {{count}} congelado",
+    "freeze_other": "Conservar {{count}} congelados",
+    "freeze_many": "Conservar {{count}} congelados",
+    "freezeTooltip": "Conservarlos como geometría dibujada en su posición actual, sin depender de nada",
+    "thisPart": "esta pieza",
+    "title": "¿Eliminar {{what}}?",
+    "note": {
+      "direct": "se eliminará: no tiene geometría que conservar",
+      "freezable": "se eliminará o se puede conservar como geometría dibujada",
+      "holes": "se eliminará: los agujeros no pueden existir sin su línea",
+      "indirect": "se eliminará con su origen, salvo que este se conserve"
+    }
+  },
+  "file": {
+    "exportDxfTitle": "Exportar DXF",
+    "exportSvgTitle": "Exportar SVG",
+    "exportTitle": "Exportar PDF",
+    "invalid": "No se puede abrir este archivo de proyecto: {{problems}}",
+    "newer": "Este archivo se guardó con una versión más reciente de LeatherCAD. Actualiza LeatherCAD para abrirlo. (El formato del archivo es {{format}}; esta versión lee hasta el formato {{current}}.)",
+    "newerNamed": "Este archivo se guardó con LeatherCAD {{version}}, una versión más reciente que esta. Actualiza LeatherCAD para abrirlo. (El formato del archivo es {{format}}; esta versión lee hasta el formato {{current}}.)",
+    "openTitle": "Abrir proyecto",
+    "pdfFailed": "No se pudo escribir el PDF ({{reason}}). No se guardó nada.",
+    "pdfUnavailable": "No se pudo escribir el PDF: su proceso en segundo plano no se inició o se detuvo. No se guardó nada.",
+    "dxf": "DXF",
+    "pdf": "PDF",
+    "project": "Proyecto de LeatherCAD",
+    "saveTitle": "Guardar proyecto",
+    "svg": "SVG",
+    "resourceLimit": "Cantidad excesiva de {{resource}} (límite {{limit}}). El proyecto actual no se ha modificado.",
+    "resources": {
+      "archiveBytes": "bytes en un archivo de proyecto",
+      "expandedBytes": "bytes descomprimidos en un archivo de proyecto",
+      "entries": "elementos del archivo comprimido",
+      "nodes": "valores en el documento del proyecto",
+      "features": "piezas, elementos y guías",
+      "segments": "segmentos del trazado",
+      "characters": "caracteres de texto",
+      "holes": "agujeros",
+      "pages": "hojas"
+    }
+  },
+  "hardware": {
+    "eyelet": "Ojal",
+    "other": "Otro",
+    "rivet": "Remache",
+    "screw": "Tornillo",
+    "snap": "Broche"
+  },
+  "sheets": {
+    "choiceTaped": "{{sheets}} ({{taped}})",
+    "count_one": "{{count}} hoja de {{paper}}, {{orientation}}",
+    "count_other": "{{count}} hojas de {{paper}}, {{orientation}}",
+    "count_many": "{{count}} hojas de {{paper}}, {{orientation}}",
+    "failedNotPrinted_one": "No se imprime {{count}} elemento con problemas.",
+    "failedNotPrinted_other": "No se imprimen {{count}} elementos con problemas.",
+    "failedNotPrinted_many": "No se imprimen {{count}} elementos con problemas.",
+    "paper": "Papel",
+    "partNotPrinted": "{{name}} no se imprime.",
+    "partsNotPrinted_one": "No se imprime {{count}} pieza.",
+    "partsNotPrinted_other": "No se imprimen {{count}} piezas.",
+    "partsNotPrinted_many": "No se imprimen {{count}} piezas.",
+    "physical": "{{paper}}, {{width}} × {{height}} mm. Se imprime hasta {{printWidth}} × {{printHeight}} mm por hoja: el resto son márgenes y la comprobación de escala. Impresión a escala 1:1, sin ajustar al papel.",
+    "scaleCheckOnly": "{{sheets}}, solo comprobación de escala",
+    "summary": "{{sheets}}.",
+    "taped": "{{names}}: unión con cinta",
+    "tapedPieces_one": "{{count}} pieza unida con cinta",
+    "tapedPieces_other": "{{count}} piezas unidas con cinta",
+    "tapedPieces_many": "{{count}} piezas unidas con cinta",
+    "orientation": {
+      "landscape": "horizontal",
+      "portrait": "vertical"
+    },
+    "placedForYou": "LeatherCAD coloca las piezas en las hojas. Elige otro papel para cambiar la distribución."
+  },
+  "sheetNumbers": {
+    "list": "Hojas {{numbers}}",
+    "one": "Hoja {{number}}",
+    "range": "Hojas {{first}}–{{last}}"
+  },
+  "sheetsView": {
+    "drawingTools": "Las herramientas de dibujo están en Diseño · {{design}}",
+    "sheetCount_one": "{{count}} hoja",
+    "sheetCount_other": "{{count}} hojas",
+    "sheetCount_many": "{{count}} hojas",
+    "sheetHeading": "{{sheet}} · {{pieces}}",
+    "noPieces": "Sin piezas",
+    "assembly": "Mapa de montaje de {{name}}",
+    "pieceTurned": "{{names}}, giro de 90°",
+    "tapedLabel": "{{name}} · {{sheets}}",
+    "turnedMark": "Girada 90°",
+    "tapedMark": "Unida con cinta",
+    "turnedLegend": "indica una pieza girada para caber en su hoja.",
+    "tapedHeading": "Unidas entre hojas",
+    "tapedNone": "Ninguna. Todas las piezas caben en una hoja.",
+    "tapedWithMap": "{{sheets}} · mapa en la hoja {{number}}",
+    "notPrintedHeading": "Sin imprimir",
+    "onTheSheets": "en las hojas",
+    "scale": "Escala",
+    "scaleLocked": "100 % · bloqueada",
+    "sheet_one": "Hoja",
+    "sheet_other": "Hojas",
+    "sheet_many": "Hojas",
+    "sheetsOf": "{{sheets}} de {{count}}",
+    "range": "{{first}}–{{last}}",
+    "placement": "Colocación",
+    "asDrawn": "Como se dibujó",
+    "turned": "Girada 90°",
+    "taped": "Unida con cinta",
+    "fitsOne": "Cabe en una hoja, sin cinta",
+    "manySelected_one": "{{count}} pieza seleccionada. Elige una para ver dónde se imprime.",
+    "manySelected_other": "{{count}} piezas seleccionadas. Elige una para ver dónde se imprime.",
+    "manySelected_many": "{{count}} piezas seleccionadas. Elige una para ver dónde se imprime.",
+    "measure": "Después de imprimir, mide el recuadro de 100 × 5 mm al pie de una hoja."
+  },
+  "tapedAcross": {
+    "list": "{{name}} se une con cinta entre las hojas {{numbers}}.",
+    "one": "{{name}} se une con cinta en la hoja {{number}}.",
+    "range": "{{name}} se une con cinta entre las hojas {{first}}–{{last}}."
+  },
+  "print": {
+    "failed_one": "{{count}} elemento con problemas",
+    "failed_other": "{{count}} elementos con problemas",
+    "failed_many": "{{count}} elementos con problemas",
+    "hidden_one": "{{count}} elemento oculto",
+    "hidden_other": "{{count}} elementos ocultos",
+    "hidden_many": "{{count}} elementos ocultos",
+    "leftOff_one": "{{features}} no se imprime.",
+    "leftOff_other": "{{features}} no se imprimen.",
+    "leftOff_many": "{{features}} no se imprimen.",
+    "notPrinted": "Sin imprimir",
+    "taped": "{{sheets}}, unidas con cinta",
+    "turned": "{{sheets}}, giradas",
+    "reason": {
+      "hidden": "Está oculto.",
+      "nothing-drawn": "No hay nada dibujado.",
+      "nothing-to-cut": "Solo tiene texto, sin líneas de corte.",
+      "problems": "Lo que se muestra tiene problemas."
+    }
+  },
+  "printPreview": {
+    "actualSize": "Guarda el PDF e imprímelo a Tamaño real (100 %), nunca con Ajustar o Reducir.",
+    "copies": "Copias",
+    "failed": "{{printer}} no pudo aceptar el trabajo de impresión: {{reason}}",
+    "findingPrinters": "Buscando impresoras…",
+    "include": "Imprimir hoja {{number}}",
+    "landscape": "Horizontal",
+    "loading": "Preparando el PDF…",
+    "measure": "Después de imprimir, mide el recuadro de 100 × 5 mm al pie de una hoja: así compruebas que la impresora ha respetado la escala.",
+    "noPrinters": "No hay impresoras configuradas en este equipo.",
+    "noScaling": "Sin cambio de escala",
+    "noScalingDetail": "Las hojas se envían a la impresora tal como se muestran, sin cambios de escala.",
+    "noScalingCorrected": "100 %, con corrección",
+    "noScalingCorrectedDetail": "Las hojas se envían sin el cambio de escala de la impresora, aplicando solo su corrección para que las medidas sean exactas.",
+    "orientation": "Orientación",
+    "paper": "Papel",
+    "paperMissing": "{{printer}} no tiene papel {{paper}}. Elige otro papel o impresora.",
+    "portrait": "Vertical",
+    "printCopies": "{{print}} × {{copies}}",
+    "printSheets_one": "Imprimir {{count}} hoja",
+    "printSheets_other": "Imprimir {{count}} hojas",
+    "printSheets_many": "Imprimir {{count}} hojas",
+    "printer": "Impresora",
+    "problems": "Problemas",
+    "problemsLead": "El diseño tiene {{counts}}. Todo lo que se pudo generar está en las hojas.",
+    "savePdf": "Guardar PDF…",
+    "scale": "Escala",
+    "scaleLocked": "100 % — bloqueada",
+    "sending": "Enviando…",
+    "sent": "Enviado a {{printer}} como trabajo {{job}}.",
+    "sheets": "Hojas",
+    "show": "Mostrar hoja {{number}}",
+    "title": "Imprimir",
+    "unavailable": {
+      "no-cups": "LeatherCAD no puede acceder al sistema de impresión de este equipo.",
+      "platform": "LeatherCAD aún no puede imprimir directamente en este sistema."
+    }
+  },
+  "calibration": {
+    "again": "Volver a calibrar…",
+    "calibrate": "Calibrar esta impresora…",
+    "corrected": "Corrección para esta impresora: escala {{x}} a lo ancho del papel y {{y}} a lo largo.",
+    "horizontal": "Línea horizontal, dibujada de {{length}} mm",
+    "jobTitle": "Calibración de impresora de LeatherCAD",
+    "lead": "Solo para impresoras cuyas hojas no miden correctamente incluso al imprimir al 100 % / Tamaño real. La corrección es exclusiva de esta impresora y solo se aplica al imprimir desde LeatherCAD.",
+    "measureStep": "Mide cada línea de extremo a extremo con una regla de acero e introduce la medida.",
+    "printPage": "Imprimir página de calibración",
+    "printStep": "Imprime la página de calibración en {{paper}}: una línea horizontal de {{x}} mm y otra vertical de {{y}} mm.",
+    "remove": "Quitar corrección",
+    "result": "Las hojas enviadas a esta impresora se escalarán {{x}} a lo ancho del papel y {{y}} a lo largo.",
+    "save": "Guardar corrección",
+    "saveFailed": "No se pudo guardar la corrección: {{reason}}",
+    "title": "Calibrar {{printer}}",
+    "tooFar": "Casi con certeza se trata de un problema de ajustes de impresión. Comprueba que la escala sea 100 % / Tamaño real y vuelve a intentarlo.",
+    "vertical": "Línea vertical, dibujada de {{length}} mm"
+  },
+  "exportDialog": {
+    "custom": "Combinación de capas personalizada",
+    "export": "Exportar…",
+    "intent": "Exportar para",
+    "intents": {
+      "laser-cut": {
+        "name": "Corte láser",
+        "note": "Contornos y agujeros para herrajes: lo que se corta del cuero"
+      },
+      "stitch-guide": {
+        "name": "Guía de puntadas",
+        "note": "Líneas de puntadas y sus agujeros"
+      },
+      "template-print": {
+        "name": "Impresión del patrón",
+        "note": "Todas las capas: el patrón completo"
+      }
+    },
+    "intro": "El dibujo tal como está en el tablero, en milímetros. Elige qué capas incluir en el archivo.",
+    "layers": "Capas",
+    "nothing": "Nada que exportar. Ninguna capa elegida tiene líneas que dibujar.",
+    "page": "La página medirá {{width}} × {{height}}",
+    "roles": {
+      "annotation": "Cotas, etiquetas y nombres de piezas",
+      "cut": "Contornos de corte",
+      "fold": "Líneas de pliegue",
+      "hardware": "Agujeros para herrajes",
+      "mark": "Líneas de marcado",
+      "stitch": "Líneas de puntadas",
+      "stitch-holes": "Agujeros de puntadas"
+    },
+    "stitchHolesNote": "Cada círculo de {{size}} indica el centro; no es un agujero dimensionado para el hilo",
+    "title": "Exportar {{format}}"
+  },
+  "exportNotice": {
+    "counts": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el PDF.",
+    "countsFile": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el archivo.",
+    "inPart": "en {{part}}",
+    "omitted": "— no se pudieron generar, por lo que faltan en el PDF.",
+    "omittedFile": "— no se pudieron generar, por lo que faltan en el archivo.",
+    "omittedLead_one": "Este elemento no está en el PDF",
+    "omittedLead_other": "Estos {{count}} elementos no están en el PDF",
+    "omittedLead_many": "Estos {{count}} elementos no están en el PDF",
+    "omittedLeadFile_one": "Este elemento no está en el archivo",
+    "omittedLeadFile_other": "Estos {{count}} elementos no están en el archivo",
+    "omittedLeadFile_many": "Estos {{count}} elementos no están en el archivo",
+    "tiled_one": "«{{name}}» mide {{size}}, más que {{paper}} {{orientation}}: se imprime en {{count}} hoja, {{rows}} × {{columns}}.",
+    "tiled_other": "«{{name}}» mide {{size}}, más que {{paper}} {{orientation}}: se imprime en {{count}} hojas, {{rows}} × {{columns}}.",
+    "tiled_many": "«{{name}}» mide {{size}}, más que {{paper}} {{orientation}}: se imprime en {{count}} hojas, {{rows}} × {{columns}}.",
+    "tiledAcross": "a escala 1:1, con un solapamiento de {{overlap}} mm. Corta una hoja por la línea discontinua, colócala sobre la siguiente y alinea las cruces.",
+    "tiledFits": "{{printed}} Cabe entera en {{paper}} {{orientation}}.",
+    "tiledLead_one": "Esta pieza se imprime en varias hojas",
+    "tiledLead_other": "Estas {{count}} piezas se imprimen en varias hojas",
+    "tiledLead_many": "Estas {{count}} piezas se imprimen en varias hojas",
+    "tiledNoPaper": "{{printed}} Ningún papel admitido puede contenerla entera.",
+    "titleCheck": "PDF exportado, con algo que revisar",
+    "titleCheckFile": "{{format}} exportado, con algo que revisar",
+    "titleTiled": "PDF exportado en varias hojas"
+  },
+  "panels": {
+    "featureIn": "{{feature}} · {{part}}",
+    "hideParts": "Ocultar Piezas",
+    "hideProperties": "Ocultar Propiedades",
+    "partsFolded": "Piezas, contraído",
+    "propertiesFolded": "Propiedades, contraído",
+    "showParts": "Mostrar Piezas",
+    "showProperties": "Mostrar Propiedades"
+  },
+  "parts": {
+    "actions": "Acciones de {{name}}",
+    "count_one": "{{count}} pieza",
+    "count_other": "{{count}} piezas",
+    "count_many": "{{count}} piezas",
+    "duplicateNote": "Una copia al lado, con sus propias puntadas",
+    "empty": "Aún no hay piezas. Pulsa {{rectangle}} y arrastra o haz clic en dos esquinas para dibujar una.",
+    "emptyPart": "Vacía",
+    "hidePart": "Ocultar pieza",
+    "isHidden": "Oculto",
+    "isLocked": "Bloqueado",
+    "mirrorsMark": "Refleja el elemento bajo el que aparece",
+    "notPrinted": "Sin imprimir. {{reason}}",
+    "remove": "Eliminar pieza",
+    "rename": "Nombre",
+    "rowHoles_one": "{{count}} agujero",
+    "rowHoles_other": "{{count}} agujeros",
+    "rowHoles_many": "{{count}} agujeros",
+    "rowProblems_one": "{{count}} (problema, más grave: {{severity}})",
+    "rowProblems_other": "{{count}} (problemas, más grave: {{severity}})",
+    "rowProblems_many": "{{count}} (problemas, más grave: {{severity}})",
+    "showPart": "Mostrar pieza",
+    "title": "Piezas"
+  },
+  "featureKind": {
+    "cut-out": "Vaciado",
+    "fold-line": "Línea de pliegue",
+    "hardware-hole": "Agujero para herraje",
+    "hole-row": "Fila de agujeros",
+    "marking-line": "Línea de marcado",
+    "measurement": "Cota",
+    "outline": "Contorno",
+    "stitch-hole-set": "Agujeros de puntadas",
+    "stitch-line": "Línea de puntadas",
+    "text-label": "Etiqueta de texto"
+  },
+  "properties": {
+    "addAllowance": "Añadir margen de costura",
+    "addAllowanceHint": "El borde de corte a esa distancia por fuera de esta línea de puntadas, siguiendo su forma",
+    "addHoleRow": "Añadir fila de agujeros",
+    "addHoleRowHint": "Agujeros a lo largo de esta línea, uno en cada extremo y el resto repartido uniformemente: para ajustes de cinturón, remaches o cordones",
+    "addHoles": "Añadir agujeros",
+    "addHolesHint": "Agujeros a lo largo de esta línea con el paso nominal de tu tenedor",
+    "addOverallSize": "Añadir tamaño total",
+    "addOverallSizeHint": "Anchura y altura de la pieza de borde a borde: el cuero que hay que cortar. Una cota entre dos esquinas mide entre ellas, lo que en una pieza redondeada es menos",
+    "addStitchLine": "Añadir línea de puntadas",
+    "addStitchLineHint": "Una línea de puntadas que sigue este borde a una distancia fija y continúa siguiéndolo",
+    "afterOutline": {
+      "title": "Después del contorno",
+      "stitchLine": "Línea de puntadas",
+      "holes": "Agujeros",
+      "note": "De {{tools}} en Ajustes; los cambios aquí se guardan allí. Se usa para Puntadas + margen y los siguientes pasos de una pieza nueva."
+    },
+    "area": "Área",
+    "arrange": "Organizar",
+    "convertToPath": "Convertir en trazado dibujado",
+    "convertToPathNote": {
+      "circle": "Deja de ser un círculo: ya no se pueden introducir su centro y diámetro, pero se puede estirar hasta formar un óvalo y mover sus puntos. Una línea de puntadas aún no puede seguir un óvalo.",
+      "arc": "Deja de ser un arco: ya no se pueden introducir su radio y ángulo de barrido, pero se puede estirar de forma desigual y mover sus puntos.",
+      "rect": "Deja de ser un rectángulo: ya no se pueden introducir su anchura, altura y esquinas, pero se puede sesgar y mover sus puntos. Una línea de puntadas aún no puede seguir esquinas redondeadas estiradas de forma desigual."
+    },
+    "cut": "Cortar",
+    "cutSuffix": "unidades",
+    "drawing": "Rectángulo en curso",
+    "flipLabel": "Voltear",
+    "foldMirror": "Reflejar respecto al pliegue",
+    "foldMirrorLabel": "Respecto al pliegue",
+    "foldMirrorHint": "Una contraparte al otro lado de {{fold}}, que se vuelve a reflejar al mover ese pliegue",
+    "follows": "Depende de",
+    "frozenNote": "Congelado desde {{source}}: ahora es geometría dibujada, sin depender de su origen.",
+    "itsOriginal": "su original",
+    "length": "Longitud",
+    "locked": "Bloqueado",
+    "lockedNote": "Está bloqueado, por lo que no se puede modificar aquí. Desbloquéalo en el panel Piezas.",
+    "manySelected_one": "{{count}} elemento seleccionado. Selecciona uno para editarlo.",
+    "manySelected_other": "{{count}} elementos seleccionados. Selecciona uno para editarlo.",
+    "manySelected_many": "{{count}} elementos seleccionados. Selecciona uno para editarlo.",
+    "measured": "Medido",
+    "measures": "Mide",
+    "mirrorFoldNote": "Refleja {{source}} respecto a {{fold}}. Si mueves el pliegue, lo sigue; si mueves {{source}}, mantiene su reflejo. No se puede arrastrar de forma independiente.",
+    "mirrorLabel": "Reflejar",
+    "mirrorLineNote": "Refleja {{source}} respecto a una línea fijada al crearlo; no sigue su desplazamiento. Al mover {{source}}, este se mueve en sentido contrario; al redimensionarlo, cambia la distancia entre ambos. Arrastra esta pieza para colocar el par.",
+    "mirrors": "Refleja",
+    "name": "Nombre",
+    "nothingSelected": "Nada seleccionado. Dibuja con {{rectangle}} o elige algo con {{select}}.",
+    "part": "Pieza",
+    "piece": "Pieza",
+    "perimeter": "Perímetro",
+    "problems_one": "Problema",
+    "problems_other": "Problemas",
+    "problems_many": "Problemas",
+    "reads": "Indica",
+    "title": "Propiedades",
+    "where": "{{part}} · Cortar ×{{quantity}}",
+    "flip": {
+      "horizontal": "Voltear ↔",
+      "vertical": "Voltear ↕"
+    },
+    "flipHint": {
+      "horizontal": "Darle la vuelta de izquierda a derecha sobre su centro. No queda ningún vínculo.",
+      "vertical": "Darle la vuelta de arriba abajo sobre su centro. No queda ningún vínculo."
+    },
+    "mirror": {
+      "horizontal": "Reflejar ↔",
+      "vertical": "Reflejar ↕"
+    },
+    "mirrorHint": {
+      "counterpart": {
+        "horizontal": "Una contraparte vinculada a la derecha, reflejada respecto al borde derecho actual de esta pieza. Sigue su forma; el eje de simetría permanece fijo.",
+        "vertical": "Una contraparte vinculada debajo, reflejada respecto al borde inferior actual de esta pieza. Sigue su forma; el eje de simetría permanece fijo."
+      },
+      "piece": {
+        "horizontal": "Una copia reflejada como pieza nueva a la derecha, respecto al borde derecho actual de esta pieza. Sigue su forma; el eje de simetría permanece fijo.",
+        "vertical": "Una copia reflejada como pieza nueva debajo, respecto al borde inferior actual de esta pieza. Sigue su forma; el eje de simetría permanece fijo."
+      }
+    },
+    "mirrorNote": {
+      "counterpart": "Reflejar crea una contraparte vinculada.",
+      "piece": "Reflejar crea una pieza contraparte."
+    },
+    "job": {
+      "holes": "Agujeros",
+      "paper": "{{paper}}, {{orientation}}",
+      "pieces": "Piezas",
+      "scaleCheckOnly": "{{paper}}, {{orientation}}, solo comprobación de escala",
+      "sheets": "Hojas",
+      "timesCut": "{{holes}} ×{{cut}}",
+      "toCut_one": "{{count}} para cortar",
+      "toCut_other": "{{count}} para cortar",
+      "toCut_many": "{{count}} para cortar"
+    },
+    "manyPartsSelected_one": "{{count}} pieza seleccionada. Selecciona una para editarla.",
+    "manyPartsSelected_other": "{{count}} piezas seleccionadas. Selecciona una para editarla.",
+    "manyPartsSelected_many": "{{count}} piezas seleccionadas. Selecciona una para editarla."
+  },
+  "legend": {
+    "hide": "Ocultar la leyenda",
+    "title": "Leyenda",
+    "tooltip": "Leyenda: {{names}}",
+    "names": {
+      "cut-edge": "Contorno",
+      "cut-out": "Vaciado",
+      "fold-mountain": "Pliegue de montaña",
+      "fold-valley": "Pliegue de valle",
+      "hardware-hole": "Agujero para herraje",
+      "linked": "Depende de otra línea o la refleja",
+      "marking": "Línea de marcado",
+      "measurement": "Cota",
+      "mirror-across-fold": "Reflejo respecto al pliegue",
+      "piece": "Pieza",
+      "seam-allowance": "Margen de costura",
+      "stitch-holes": "Agujeros de puntadas",
+      "stitch-line": "Línea de puntadas"
+    }
+  },
+  "caption": {
+    "cut": "{{name}} ×{{quantity}}",
+    "holes_one": "{{count}} agujero · {{pitch}}",
+    "holes_other": "{{count}} agujeros · {{pitch}}",
+    "holes_many": "{{count}} agujeros · {{pitch}}",
+    "unnamed": "Pieza"
+  },
+  "spacing": {
+    "matches": "La separación coincide con el paso nominal",
+    "squeezed": "La separación se comprime un {{percent}} %",
+    "squeezedUnder": "La separación se comprime menos del {{percent}} %",
+    "stretched": "La separación se amplía un {{percent}} %",
+    "stretchedUnder": "La separación se amplía menos del {{percent}} %"
+  },
+  "problems": {
+    "withSubject": "{{name}}: {{sentence}}",
+    "badge_one": "{{count}} problema, más grave: {{severity}}",
+    "badge_other": "{{count}} problemas, más grave: {{severity}}",
+    "badge_many": "{{count}} problemas, más grave: {{severity}}",
+    "severity": {
+      "error": "error",
+      "info": "información",
+      "warning": "advertencia"
+    },
+    "panel": {
+      "none": "Nada que corregir.",
+      "title": "Problemas"
+    },
+    "drawing": {
+      "cut-out": "Un vaciado",
+      "outline": "Un contorno",
+      "seam": "Una línea de puntadas"
+    },
+    "DUPLICATE_ID": {
+      "title": "Identificador repetido",
+      "description": "Dos elementos comparten el identificador {{featureId}}."
+    },
+    "SOURCE_MISSING": {
+      "title": "Sin origen",
+      "description": "{{featureName}} depende de un elemento que no existe."
+    },
+    "FOLLOWS_ITSELF": {
+      "title": "Depende de sí mismo",
+      "description": "{{featureName}} no puede depender de sí mismo."
+    },
+    "WOULD_LOOP": {
+      "title": "Crearía un ciclo",
+      "description": "{{featureName}} acabaría dependiendo de sí mismo a través de {{sourceName}}."
+    },
+    "CYCLE": {
+      "title": "Depende de sí mismo",
+      "description": "{{featureName}} sigue una cadena que vuelve a él mismo."
+    },
+    "DERIVATION_INCOMPATIBLE": {
+      "title": "No puede depender de eso",
+      "rule": {
+        "allowance-needs-closed-line": "Un margen de costura necesita una línea de puntadas cerrada: el contorno debe encerrar la pieza.",
+        "allowance-needs-outer": "Solo el contorno exterior de una pieza puede derivarse de su línea de puntadas, no un vaciado.",
+        "allowance-needs-outline": "Solo un contorno puede desplazarse hacia fuera desde una línea de puntadas.",
+        "allowance-needs-stitch-line": "Un contorno solo puede desplazarse hacia fuera desde una línea de puntadas.",
+        "allowance-needs-whole-run": "Un margen de costura sigue toda la línea de puntadas para crear un contorno cerrado.",
+        "holes-need-hole-set": "Solo un conjunto de agujeros de puntadas puede seguir una línea de puntadas con un paso nominal.",
+        "holes-need-stitch-line": "Los agujeros solo pueden seguir una línea de puntadas.",
+        "row-needs-hole-row": "Solo una fila de agujeros puede seguir una línea de marcado con un paso nominal.",
+        "row-needs-marking-line": "Una fila de agujeros solo puede seguir una línea de marcado.",
+        "inset-needs-outline": "Una línea de puntadas solo puede trazarse hacia dentro desde un contorno o vaciado.",
+        "inset-needs-stitch-line": "Solo una línea de puntadas puede trazarse hacia dentro desde un contorno.",
+        "mirror-keeps-kind": "Una contraparte tiene el mismo tipo que lo que refleja.",
+        "mirror-keeps-role": "Un contorno de corte reflejado conserva su función: un contorno refleja un contorno y un vaciado refleja un vaciado."
+      }
+    },
+    "PART_ALREADY_HAS_OUTER": {
+      "title": "Ya tiene un contorno",
+      "description": "{{partName}} ya se corta por {{outerName}}. Una pieza es un solo trozo de cuero y tiene un único contorno: dibuja esto como vaciado o crea otra pieza."
+    },
+    "CONTOUR_NOT_CLOSED": {
+      "title": "No encierra nada",
+      "inner": "{{subject}} tiene dos extremos, por lo que no hay nada que vaciar de la pieza. Dibújalo como línea de marcado.",
+      "innerClosable": "{{subject}} tiene dos extremos, por lo que no hay nada que vaciar de la pieza. Cierra la forma o dibújalo como línea de marcado.",
+      "outer": "{{subject}} tiene dos extremos, por lo que no hay nada que cortar. Dibújalo como línea de marcado.",
+      "outerClosable": "{{subject}} tiene dos extremos, por lo que no hay nada que cortar. Cierra la forma o dibújalo como línea de marcado."
+    },
+    "MEASURE_REF_MISSING": {
+      "title": "No mide nada",
+      "description": "{{featureName}} indica un lugar que ya no está en el dibujo."
+    },
+    "MEASURE_NEEDS_ANCHOR": {
+      "title": "Sin punto de referencia",
+      "description": "Una cota debe indicar una esquina para seguir refiriéndose al mismo lugar cuando cambie el dibujo. Señala una."
+    },
+    "MEASURE_ACROSS_PARTS": {
+      "title": "Una cota mide una pieza",
+      "description": "Esa esquina está en {{otherPartName}}. Una cota se imprime con la pieza que mide, por lo que ambos extremos deben pertenecer a ella."
+    },
+    "FOLLOWS_ANOTHER_PART": {
+      "title": "En otra pieza",
+      "description": "{{sourceName}} está en {{otherPartName}}, por lo que {{featureName}} se dibujaría allí y se imprimiría con la pieza equivocada. Elige un origen en esta pieza."
+    },
+    "MIRROR_FOLD_MISSING": {
+      "title": "El pliegue ya no existe",
+      "description": "{{featureName}} se refleja respecto a un pliegue que ya no existe."
+    },
+    "MIRROR_OUTLINE_ACROSS_FOLD": {
+      "title": "Una pieza tiene un borde",
+      "description": "Reflejar respecto a un pliegue sirve para lo que hay dentro de una pieza: ranuras, puntadas y herrajes. {{partName}} ya tiene un contorno y una pieza de cuero tiene un solo borde, por lo que no se puede completar así. Dibuja el contorno entero o refleja la pieza para crear otra."
+    },
+    "MIRROR_PLACED_BY_FOLD": {
+      "title": "Colocado por su pliegue",
+      "description": "{{featureName}} se refleja respecto a {{foldName}}, que determina su posición. Mueve {{foldName}} o {{sourceName}}."
+    },
+    "FOLD_NOT_STRAIGHT": {
+      "title": "El pliegue no es recto",
+      "description": "Un reflejo necesita una línea recta como eje y este pliegue se curva. Dibújalo recto o usa otro pliegue."
+    },
+    "MIRROR_WOULD_SCALE": {
+      "title": "La contraparte debe coincidir",
+      "description": "La escala solicitada no puede mantener {{featureName}} acorde con {{sourceName}}. Redimensiona su original o escala toda la pieza uniformemente."
+    },
+    "MIRROR_NO_AXIS": {
+      "title": "Sin eje para reflejar",
+      "description": "Selecciona una forma con tamaño. El eje de simetría se coloca a lo largo de su borde."
+    },
+    "FEATURE_LOCKED": {
+      "title": "Bloqueado",
+      "description": "{{featureName}} está bloqueado y no se puede modificar ni eliminar. Desbloquéalo antes en el panel Piezas."
+    },
+    "FEATURE_MISSING": {
+      "title": "El elemento no existe",
+      "description": "Ese elemento no existe."
+    },
+    "NOT_A_DRAWN_PATH": {
+      "title": "Sin puntos que editar",
+      "description": "{{featureName}} no es un trazado dibujado y no tiene puntos propios. Una forma se modifica mediante sus medidas, salvo que se convierta en trazado dibujado en Propiedades; un elemento derivado sigue a su origen."
+    },
+    "NOT_A_SHAPE": {
+      "title": "Ya es un trazado",
+      "description": "{{featureName}} no es una forma y no hay nada que convertir: un trazado dibujado ya tiene puntos y un elemento derivado sigue a su origen."
+    },
+    "HOLE_STAYS_ROUND": {
+      "title": "Un agujero perforado sigue siendo redondo",
+      "description": "{{featureName}} se perfora con un sacabocados redondo, por lo que permanece circular. Para una abertura ovalada, dibuja un vaciado."
+    },
+    "POINT_EDIT_DEGENERATE": {
+      "title": "Muy pocos puntos",
+      "description": "Eso dejaría {{featureName}} con muy pocos puntos o con un lado sin longitud."
+    },
+    "ROUNDING_DOES_NOT_FIT": {
+      "title": "El redondeo no cabe",
+      "description": "Un redondeo de {{radius}} mm no cabe en ese punto de {{featureName}}: debe ser una esquina entre dos lados rectos, ambos más largos que el espacio que ocupa."
+    },
+    "NOT_A_ROUNDED_CORNER": {
+      "title": "No hay esquina que restaurar",
+      "description": "No es una esquina redondeada entre dos lados rectos de {{featureName}}, por lo que no puede volver a una esquina recta."
+    },
+    "CORNER_IN_USE": {
+      "title": "Esquina en uso",
+      "description": "{{usedByName}} está unido a esa esquina de {{featureName}} y esta edición la quitaría. Cambia primero {{usedByName}}."
+    },
+    "NOT_DERIVED": {
+      "title": "Sin origen",
+      "description": "{{featureName}} no depende de nada, por lo que no tiene un origen que cambiar."
+    },
+    "DERIVED_MOVED_ALONE": {
+      "title": "Se mueve con su origen",
+      "description": "Depende de {{rootName}}: mueve ese elemento."
+    },
+    "TRANSFORM_FLATTENS": {
+      "title": "Aplanaría la forma",
+      "description": "Eso reduciría la forma a una dimensión nula."
+    },
+    "WOULD_BECOME_ELLIPSE": {
+      "title": "Se convertiría en elipse",
+      "description": "Un círculo o arco no puede escalarse de forma desigual: se convertiría en una elipse, que este editor no puede representar. Escálalo uniformemente o conviértelo antes en trazado dibujado en Propiedades."
+    },
+    "WOULD_SHEAR": {
+      "title": "Sesgaría la forma",
+      "description": "Un rectángulo girado no puede estirarse en un solo eje: se sesgaría y sus esquinas dejarían de ser rectas. Gíralo a 0°, escálalo uniformemente o conviértelo antes en trazado dibujado en Propiedades."
+    },
+    "TEXT_WOULD_DISTORT": {
+      "title": "Deformaría las letras",
+      "description": "El texto solo puede escalarse uniformemente: estirarlo en un eje deformaría las letras. Mantén {{shift}} o define el tamaño en el panel."
+    },
+    "DIMENSION_NOT_MIRRORED": {
+      "title": "Las cotas se miden, no se reflejan",
+      "description": "{{featureName}} mide el dibujo, por lo que una copia reflejada indicaría un número ajeno a la contraparte. Refleja las formas y después mide la contraparte."
+    },
+    "TEXT_WOULD_READ_BACKWARDS": {
+      "title": "El texto quedaría al revés",
+      "description": "Una etiqueta no puede reflejarse: se leería al revés. Voltea las formas dejando el texto o vuelve a escribirlo donde lo necesites."
+    },
+    "NO_TARGET_PART": {
+      "title": "Ninguna pieza seleccionada",
+      "cut-out": "Selecciona primero una pieza: un vaciado pertenece a la pieza donde se dibuja.",
+      "label": "Selecciona primero una pieza: una etiqueta pertenece a la pieza donde se dibuja.",
+      "line": "Selecciona primero una pieza: una línea de pliegue o marcado pertenece a la pieza donde se dibuja."
+    },
+    "TARGET_SPANS_PARTS": {
+      "title": "La selección abarca varias piezas",
+      "description": "Selecciona una pieza: esto pertenece a una sola pieza y la selección abarca varias."
+    },
+    "PARAMETER_INVALID": {
+      "title": "Número no válido",
+      "at-least": "El valor de {{parameter}} de {{featureName}} es menor que {{minimum}}, el mínimo permitido. Introduce al menos {{minimum}}.",
+      "finite": "El valor de {{parameter}} de {{featureName}} no es un número válido. Introduce un valor en milímetros.",
+      "non-negative": "El valor de {{parameter}} de {{featureName}} es {{value}} y no puede ser negativo.",
+      "positive": "El valor de {{parameter}} de {{featureName}} es {{value}} y debe ser mayor que cero.",
+      "parameter": {
+        "allowance": "margen de costura",
+        "corner radius": "radio de esquina",
+        "end offset": "retiro final",
+        "glide": "deslizamiento",
+        "height": "altura",
+        "inset": "retiro interior",
+        "mirror angle": "ángulo de simetría",
+        "mirror axis": "eje de simetría",
+        "pitch": "paso nominal",
+        "position": "posición",
+        "radius": "radio",
+        "rotation": "rotación",
+        "start angle": "ángulo inicial",
+        "start offset": "retiro inicial",
+        "sweep": "ángulo de barrido",
+        "text size": "tamaño del texto",
+        "width": "anchura"
+      }
+    },
+    "OFFSET_COLLAPSED": {
+      "title": "El desplazamiento colapsa",
+      "inward": "Un margen de {{distance}} mm desde el borde supera el espacio disponible.",
+      "outward": "No se puede generar un margen de {{distance}} mm por fuera de esta línea de puntadas."
+    },
+    "OFFSET_UNSUPPORTED": {
+      "title": "No se pueden desplazar curvas",
+      "description": "No se puede generar {{featureName}}: su origen tiene curvas libres que un desplazamiento aún no puede seguir."
+    },
+    "OFFSET_SPLIT": {
+      "title": "El desplazamiento se ha dividido",
+      "description_one": "El desplazamiento de {{featureName}} se dividió en {{pieces}} fragmentos. Solo se dibuja el mayor; se omite {{count}} fragmento.",
+      "description_other": "El desplazamiento de {{featureName}} se dividió en {{pieces}} fragmentos. Solo se dibuja el mayor; se omiten {{count}} fragmentos.",
+      "description_many": "El desplazamiento de {{featureName}} se dividió en {{pieces}} fragmentos. Solo se dibuja el mayor; se omiten {{count}} fragmentos."
+    },
+    "ANCHOR_MISSING": {
+      "title": "Esquina no encontrada",
+      "description": "Ese tramo indica la esquina {{anchor}} y este contorno tiene {{available}}.",
+      "noCorners": "Este contorno no tiene esquinas entre las que trazar un tramo, por lo que solo puede seguirse completo."
+    },
+    "SOURCE_FAILED": {
+      "title": "Su origen ha fallado",
+      "description": "No se pudo generar {{sourceName}}, del que depende."
+    },
+    "GEOMETRY_FAILED": {
+      "title": "No se pudo generar",
+      "description": "No se pudo generar {{featureName}} ({{detail}})."
+    },
+    "TEXT_GLYPH_MISSING": {
+      "title": "No se puede imprimir",
+      "label": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros. Vuelve a escribir la etiqueta con caracteres latinos.",
+      "part": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros. Cambia el nombre de la pieza usando caracteres latinos."
+    },
+    "CONTOUR_SELF_INTERSECTS": {
+      "title": "El contorno se cruza consigo mismo",
+      "description_one": "{{featureName}} se cruza una vez consigo mismo y no queda claro dónde cortar. Vuelve a dibujarlo sin cruces.",
+      "description_other": "{{featureName}} se cruza {{count}} veces consigo mismo y no queda claro dónde cortar. Vuelve a dibujarlo sin cruces.",
+      "description_many": "{{featureName}} se cruza {{count}} veces consigo mismo y no queda claro dónde cortar. Vuelve a dibujarlo sin cruces."
+    },
+    "HOLES_OVERLAP": {
+      "title": "Los agujeros se solapan",
+      "description": "{{featureName}} tiene agujeros separados {{spacing}} con un diámetro de {{diameter}}; no queda cuero entre ellos y forman una sola ranura. Aumenta el paso nominal o usa un sacabocados menor."
+    },
+    "HOLE_SPACING_DEVIATION": {
+      "title": "La separación difiere del tenedor",
+      "description": "Los agujeros están separados {{achieved}}, pero el paso nominal del tenedor es {{pitch}}. Cambia el paso o el margen del borde para aproximarlos."
+    },
+    "HOLE_SPACING_UNEVEN": {
+      "title": "Separación desigual",
+      "description": "Los tramos de {{featureName}} tienen separaciones entre {{narrowest}} y {{widest}}, por lo que la diferencia se verá en las esquinas."
+    },
+    "HOLE_COUNT_TOO_LOW": {
+      "title": "Muy pocos agujeros",
+      "description_one": "{{featureName}} tiene {{count}} agujero y las puntadas necesitan al menos dos.",
+      "description_other": "{{featureName}} tiene {{count}} agujeros y las puntadas necesitan al menos dos.",
+      "description_many": "{{featureName}} tiene {{count}} agujeros y las puntadas necesitan al menos dos.",
+      "none": "{{featureName}} no tiene agujeros y las puntadas necesitan al menos dos."
+    },
+    "PART_HAS_NO_OUTER_CONTOUR": {
+      "title": "Nada que cortar",
+      "description": "{{partName}} tiene puntadas y marcas pero no contorno, por lo que no hay una pieza de cuero que cortar. Dibuja un contorno o mueve estos elementos a otra pieza."
+    },
+    "CUT_OUT_OUTSIDE_PART": {
+      "title": "Vaciado fuera de la pieza",
+      "description": "{{featureName}} no está dentro de su contorno y no corta nada. Muévelo dentro de la pieza."
+    },
+    "OUTSIDE_PART": {
+      "title": "Fuera del material",
+      "holes": "{{featureName}} tiene agujeros fuera del material, más allá del contorno o dentro de un vaciado. No se pueden perforar ahí.",
+      "line": "{{featureName}} sale del material, por lo que una parte no se puede marcar."
+    },
+    "HOLE_TOO_CLOSE_TO_EDGE": {
+      "title": "Demasiado cerca del borde",
+      "description": "{{featureName}} se acerca a {{clearance}} de un borde, por debajo de los {{minimum}} que necesita un agujero. El cuero puede desgarrarse entre el agujero y el borde."
+    },
+    "EMPTY_PART": {
+      "title": "Pieza vacía",
+      "description": "{{partName}} no contiene nada. Dibuja en ella o elimínala de la lista de piezas."
+    },
+    "counts": {
+      "error_one": "{{count}} error",
+      "error_other": "{{count}} errores",
+      "error_many": "{{count}} errores",
+      "warning_one": "{{count}} advertencia",
+      "warning_other": "{{count}} advertencias",
+      "warning_many": "{{count}} advertencias",
+      "info_one": "{{count}} observación",
+      "info_other": "{{count}} observaciones",
+      "info_many": "{{count}} observaciones"
+    }
+  },
+  "contextMenu": {
+    "emptyPart": "La pieza está vacía",
+    "hideNote": "También se omite del PDF hasta que se vuelva a mostrar",
+    "label": "Selección",
+    "spansParts_one": "La selección está en {{count}} pieza; duplica una cada vez",
+    "spansParts_other": "La selección está en {{count}} piezas; duplica una cada vez",
+    "spansParts_many": "La selección está en {{count}} piezas; duplica una cada vez",
+    "flip": {
+      "horizontal": "Voltear horizontalmente",
+      "vertical": "Voltear verticalmente"
+    }
+  },
+  "editor": {
+    "cornerRadii": "Radios de esquina",
+    "corners": "Esquinas",
+    "custom": "Personalizado",
+    "decimals": "Decimales",
+    "diameter": "Diámetro",
+    "direction": "Dirección",
+    "drawnByHand": "Dibujado a mano: tiene puntos en lugar de medidas. Muévelos, añádelos o quítalos con Editar puntos ({{points}}).",
+    "edgeMargin": "Margen del borde",
+    "fit": "Distribución",
+    "height": "Altura",
+    "holeCount": "Agujeros",
+    "iron": "Tenedor",
+    "notSet": "sin definir",
+    "offset": "Desplazamiento",
+    "pitch": "Paso nominal",
+    "purpose": "Uso",
+    "radius": "Radio",
+    "runs": "Tramos",
+    "size": "Tamaño",
+    "spacing": "Separación real",
+    "start": "Inicio",
+    "sweep": "Barrido",
+    "text": "Texto",
+    "thickness": "Grosor",
+    "turn": "Giro",
+    "width": "Anchura",
+    "fold": {
+      "mountain": "Montaña",
+      "valley": "Valle"
+    },
+    "holes": {
+      "continuous": "Continuo",
+      "exact-pitch": "Paso nominal exacto",
+      "fit-whole": "Uniforme, número entero",
+      "hole-at-corner": "Un agujero en cada esquina"
+    },
+    "lengthError": {
+      "mixed": "Indica la unidad de cada número de una suma, como 10cm + 5mm. Para 3½ pulgadas, escribe 3.5in",
+      "notALength": "Eso no da una longitud: cada número solo lleva una unidad y una longitud no se multiplica ni divide por otra longitud",
+      "notFinite": "Eso no da un número",
+      "syntax": "No se reconoce esa medida. Prueba 95, 95-2*3.5 o 3.75in",
+      "unit": "«{{unit}}» no es una unidad válida aquí. Usa mm, cm o in"
+    },
+    "marking": {
+      "alignment": "Alineación",
+      "glue-area": "Zona de encolado",
+      "logo": "Logotipo",
+      "other": "Otro",
+      "skive": "Rebajado"
+    }
+  },
+  "history": {
+    "add": "Añadir {{name}}",
+    "add-dimension": "Añadir cota",
+    "add-overall-size": "Añadir tamaño total",
+    "add-label": "Añadir etiqueta",
+    "add-point": "Añadir punto",
+    "add-seam-allowance": "Añadir margen de costura",
+    "change-fold-direction": "Cambiar dirección del pliegue",
+    "change-fold-thickness": "Cambiar grosor del pliegue",
+    "change-hardware-type": "Cambiar tipo de herraje",
+    "change-marking-purpose": "Cambiar uso de la marca",
+    "change-paper": "Cambiar papel",
+    "convert-to-path": "Convertir en trazado dibujado",
+    "delete": "Eliminar {{what}}",
+    "deleteKeepFrozen": "Eliminar {{what}}, conservar {{frozen}} congelados",
+    "deleteWithDependents_one": "Eliminar {{what}} y {{count}} dependiente",
+    "deleteWithDependents_other": "Eliminar {{what}} y {{count}} dependientes",
+    "deleteWithDependents_many": "Eliminar {{what}} y {{count}} dependientes",
+    "deleteWithDependentsKeepFrozen_one": "Eliminar {{what}} y {{count}} dependiente, conservar {{frozen}} congelados",
+    "deleteWithDependentsKeepFrozen_other": "Eliminar {{what}} y {{count}} dependientes, conservar {{frozen}} congelados",
+    "deleteWithDependentsKeepFrozen_many": "Eliminar {{what}} y {{count}} dependientes, conservar {{frozen}} congelados",
+    "duplicate": "Duplicar {{name}}",
+    "duplicate-part": "Duplicar pieza",
+    "edit-derivation": "Editar derivación",
+    "edit-dimension": "Editar cota",
+    "edit-label": "Editar etiqueta",
+    "edit-shape": "Editar forma",
+    "features_one": "{{count}} elemento",
+    "features_other": "{{count}} elementos",
+    "features_many": "{{count}} elementos",
+    "flip-horizontal": "Voltear horizontalmente",
+    "flip-vertical": "Voltear verticalmente",
+    "follow": "Seguir {{name}}",
+    "follow-another": "Seguir otro elemento",
+    "hide_one": "Ocultar elemento",
+    "hide_other": "Ocultar {{count}} elementos",
+    "hide_many": "Ocultar {{count}} elementos",
+    "hide-part": "Ocultar pieza",
+    "lock_one": "Bloquear",
+    "lock_other": "Bloquear {{count}} elementos",
+    "lock_many": "Bloquear {{count}} elementos",
+    "mirror_one": "Reflejar",
+    "mirror_other": "Reflejar {{count}} elementos",
+    "mirror_many": "Reflejar {{count}} elementos",
+    "mirror-across-fold_one": "Reflejar respecto al pliegue",
+    "mirror-across-fold_other": "Reflejar {{count}} respecto al pliegue",
+    "mirror-across-fold_many": "Reflejar {{count}} respecto al pliegue",
+    "move": "Mover",
+    "move-point": "Mover punto",
+    "new-document": "Nuevo documento",
+    "new-project": "Nuevo proyecto",
+    "open": "Abrir",
+    "open-sample": "Abrir ejemplo",
+    "recover": "Recuperar",
+    "remove-point": "Quitar punto",
+    "rename": "Cambiar nombre",
+    "rename-part": "Cambiar nombre de pieza",
+    "rename-project": "Cambiar nombre de proyecto",
+    "resize-label": "Redimensionar etiqueta",
+    "rotate": "Girar",
+    "round-corner": "Redondear esquina",
+    "scale": "Escalar",
+    "set-quantity": "Definir cantidad",
+    "sharpen-corner": "Restaurar esquina recta",
+    "show_one": "Mostrar elemento",
+    "show_other": "Mostrar {{count}} elementos",
+    "show_many": "Mostrar {{count}} elementos",
+    "show-part": "Mostrar pieza",
+    "transform": "Transformar",
+    "unlock_one": "Desbloquear",
+    "unlock_other": "Desbloquear {{count}} elementos",
+    "unlock_many": "Desbloquear {{count}} elementos",
+    "delete-part": "Eliminar pieza",
+    "add-guide": "Añadir guía",
+    "edit-guide": "Editar guía",
+    "delete-guide": "Eliminar guía",
+    "align": "Alinear selección",
+    "distribute": "Distribuir selección"
+  },
+  "fieldMenu": {
+    "label": "Editar",
+    "cut": "Cortar",
+    "copy": "Copiar",
+    "paste": "Pegar",
+    "selectAll": "Seleccionar todo",
+    "nothingSelected": "Selecciona antes una parte del texto"
+  },
+  "chips": {
+    "title": "Medidas del contorno seleccionado",
+    "titleDrawing": "Medidas del rectángulo en curso",
+    "hint": {
+      "next": "siguiente",
+      "make": "lo crea",
+      "cancel": "cancela"
+    },
+    "cornerName": "Radio de esquina, las cuatro esquinas",
+    "corner": "r",
+    "margin": "margen",
+    "mixed": "mixto",
+    "tooLarge": {
+      "halfHeight": "El radio de esquina supera la mitad de la altura ({{size}}). {{enter}} usa {{size}}.",
+      "halfWidth": "El radio de esquina supera la mitad de la anchura ({{size}}). {{enter}} usa {{size}}.",
+      "height": "El radio de esquina supera el espacio disponible en la altura ({{size}}). {{enter}} usa {{size}}.",
+      "width": "El radio de esquina supera el espacio disponible en la anchura ({{size}}). {{enter}} usa {{size}}."
+    },
+    "tooSmall": {
+      "width": "La anchura es menor de lo que necesitan sus esquinas ({{size}}). {{enter}} usa {{size}}.",
+      "height": "La altura es menor de lo que necesitan sus esquinas ({{size}}). {{enter}} usa {{size}}."
+    }
+  },
+  "selectionBar": {
+    "title": "Puntadas de {{piece}}",
+    "noStitching": "Aún sin puntadas",
+    "noHoles": "Aún sin agujeros",
+    "holesHidden": "Los agujeros están ocultos, por lo que no se cuentan ni se imprimen.",
+    "holes_one": "{{count}} agujero",
+    "holes_other": "{{count}} agujeros",
+    "holes_many": "{{count}} agujeros",
+    "spacing": "{{spacing}} mm, paso nominal {{pitch}}",
+    "stretched": "ampliada un {{percent}} %",
+    "stretchedUnder": "ampliada menos del {{percent}} %",
+    "squeezed": "comprimida un {{percent}} %",
+    "squeezedUnder": "comprimida menos del {{percent}} %",
+    "runs": "tramos {{runs}}",
+    "cut": "Cortar ×{{quantity}}",
+    "next": "Siguiente",
+    "done": "hecho:",
+    "step": {
+      "stitchLine": "Línea de puntadas",
+      "holes": "Agujeros de puntadas",
+      "allowance": "Margen de costura"
+    }
+  },
+  "updates": {
+    "current": "Tienes la última versión.",
+    "available": "LeatherCAD {{version}} está disponible.",
+    "availableLink": "Ver las novedades y descargar",
+    "failed": "No se pudo buscar una nueva versión. Comprueba tu conexión o inténtalo más tarde.",
+    "checkedAt": "Comprobado a las {{time}}",
+    "again_one": "Puedes volver a buscar en {{count}} minuto.",
+    "again_other": "Puedes volver a buscar en {{count}} minutos.",
+    "again_many": "Puedes volver a buscar en {{count}} minutos."
+  },
+  "templates": {
+    "title": "Nuevo proyecto desde plantilla",
+    "mineEmpty": "Guarda cualquier proyecto como plantilla desde el menú Proyecto o el de su pestaña y aparecerá aquí.",
+    "use": "Usar plantilla",
+    "remove": "Quitar {{name}}",
+    "bifoldWallet": {
+      "name": "Cartera plegable",
+      "description": "Un exterior y un forro plegados, con dos bolsillos para tarjetas"
+    },
+    "cardHolder": {
+      "name": "Tarjetero",
+      "description": "Un exterior con puntadas alrededor y un bolsillo en cada cara"
+    },
+    "keyFob": {
+      "name": "Llavero",
+      "description": "Una tira de extremos redondeados, plegada sobre una anilla y remachada"
+    },
+    "coaster": {
+      "name": "Posavasos",
+      "description": "Un cuadrado de 100 mm con esquinas suaves y puntadas alrededor"
+    },
+    "saveTitle": "Guardar como plantilla",
+    "saveName": "Nombre de la plantilla",
+    "save": "Guardar plantilla",
+    "replace": "Reemplazar",
+    "exists": "Ya existe una plantilla llamada «{{name}}». Reemplázala o elige otro nombre.",
+    "invalid": "Una plantilla no puede llamarse «{{name}}». Elige otro nombre.",
+    "saved": "Guardado como plantilla «{{name}}».",
+    "pieces_one": "{{count}} pieza para cortar",
+    "pieces_other": "{{count}} piezas para cortar",
+    "pieces_many": "{{count}} piezas para cortar",
+    "search": "Buscar plantillas",
+    "searchLabel": "Buscar plantillas por nombre, descripción o etiqueta",
+    "show": {
+      "all": "Todas",
+      "builtin": "Incluidas",
+      "mine": "Mías"
+    },
+    "showLabel": "Mostrar",
+    "sortLabel": "Ordenar",
+    "sort": {
+      "name": "Nombre (A–Z)",
+      "nameDesc": "Nombre (Z–A)",
+      "recent": "Uso reciente",
+      "newest": "Más recientes primero",
+      "oldest": "Más antiguas primero"
+    },
+    "group": {
+      "pinned": "Fijadas",
+      "others": "Otras plantillas",
+      "foldPinned": "Contraer las plantillas fijadas",
+      "unfoldPinned": "Mostrar las plantillas fijadas"
+    },
+    "count": "{{shown}} de {{total}}",
+    "countAll_one": "{{count}} plantilla",
+    "countAll_other": "{{count}} plantillas",
+    "countAll_many": "{{count}} plantillas",
+    "noMatch": "Ninguna plantilla tiene «{{query}}» en su nombre o descripción.",
+    "clearSearch": "Borrar la búsqueda",
+    "builtInBadge": "Incluida",
+    "changedOn": "Modificada el {{date}}",
+    "fact": {
+      "pieces": "Piezas para cortar",
+      "layout": "Distribución del patrón",
+      "changed": "Modificada"
+    },
+    "overallSize": "{{width}} × {{height}} mm",
+    "pin": "Fijar",
+    "unpin": "Desfijar",
+    "rename": "Cambiar nombre…",
+    "renameLabel": "Nombre de la plantilla",
+    "duplicate": "Duplicar",
+    "duplicateMine": "Duplicar como plantilla propia",
+    "edit": "Editar plantilla",
+    "editTooltip": "Abrir la propia plantilla en una pestaña: Guardar escribe en la plantilla",
+    "export": "Exportar…",
+    "showInFolder": "Mostrar en carpeta",
+    "delete": "Eliminar",
+    "import": "Importar plantilla…",
+    "importTooltip": "Añadir un archivo de proyecto del disco a tus plantillas",
+    "builtInLocked": "Las plantillas incluidas se conservan tal como se distribuyen. Duplica una para hacerla tuya.",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Para qué sirve y qué hay que tener en cuenta",
+    "tags": "Etiquetas",
+    "tagsPlaceholder": "Separadas por comas, como cinturones, marrón",
+    "removed": "Se ha quitado «{{name}}».",
+    "undo": "Deshacer",
+    "copyName": "Copia de {{name}}",
+    "importTitle": "Importar una plantilla",
+    "exportTitle": "Exportar la plantilla",
+    "nothingChosen": "Elige una plantilla.",
+    "wordsTitle": "Descripción y etiquetas",
+    "saveWords": "Guardar",
+    "editDetails": "Editar detalles…",
+    "actionsFor": "Acciones de {{name}}",
+    "sortChosen": "Ordenar: {{sort}}"
+  },
+  "guides": {
+    "title": "Guías",
+    "help": "Arrastra una guía desde una regla o colócala en el tablero: haz clic para una guía horizontal o arrastra entre dos puntos. Las guías se guardan y permiten el ajuste, pero nunca se imprimen. Selecciona una para moverla, introducir su posición y ángulo o añadir otra paralela.",
+    "horizontal": "Guía horizontal",
+    "vertical": "Guía vertical",
+    "item": "Guía {{number}}",
+    "x": "Coordenada x de la guía",
+    "y": "Coordenada y de la guía",
+    "angle": "Ángulo de la guía",
+    "delete": "Eliminar guía",
+    "placeHint": "Clic coloca una guía horizontal",
+    "verticalHint": "coloca una guía vertical",
+    "dragHint": "Arrastra entre dos puntos",
+    "selected": "Guía seleccionada",
+    "parallel": {
+      "title": "Guía paralela",
+      "distance": "Distancia paralela",
+      "above": "Añadir arriba",
+      "below": "Añadir abajo",
+      "left": "Añadir a la izquierda",
+      "right": "Añadir a la derecha"
+    }
+  },
+  "arrange": {
+    "title": "Alinear y distribuir",
+    "help": "Organiza los recuadros de la selección. Las piezas se mueven enteras. La distribución mantiene fijos los elementos exteriores e iguala los huecos.",
+    "x": {
+      "min": "Alinear a la izquierda",
+      "centre": "Centrar horizontalmente",
+      "max": "Alinear a la derecha",
+      "distribute": "Huecos horizontales iguales"
+    },
+    "y": {
+      "min": "Alinear abajo",
+      "centre": "Centrar verticalmente",
+      "max": "Alinear arriba",
+      "distribute": "Huecos verticales iguales"
+    },
+    "reason": {
+      "count_one": "Selecciona al menos {{count}} elemento independiente.",
+      "count_other": "Selecciona al menos {{count}} elementos independientes.",
+      "count_many": "Selecciona al menos {{count}} elementos independientes.",
+      "unresolved": "La selección contiene geometría que no se puede resolver.",
+      "linked": "Estos elementos dependen unos de otros. Organiza piezas independientes o mueve su origen.",
+      "order": "Estos tamaños no permiten huecos iguales sin reordenar. Separa más los elementos exteriores."
+    }
+  }
+}

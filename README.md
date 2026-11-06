@@ -140,33 +140,51 @@ A line drawn as 100 mm measures 100 mm on paper. Everything in LeatherCAD's desi
 
 ## Translations
 
-LeatherCAD can be translated into any language: a translation is one file, and needs no
-programming.
+Choose a language in *Settings › Language*, or follow your system language. Changes apply
+immediately and are kept between launches.
 
-| Language | |
-|---|---|
-| English | ✅ Supported |
+| | Language | How it was translated | Native-speaker review | Coverage |
+|---|---|---|---|---:|
+| 🇬🇧 | English | Source language (British spelling) | — | 100 % |
+| 🇵🇱 | Polski | AI-assisted, checked with Hunspell | Pending: the maintainer’s own | 96.2 % |
+| 🇩🇪 | Deutsch | AI-assisted, checked with Hunspell | **Wanted** | 95.2 % |
+| 🇷🇺 | Русский | Based on **F1ystar’s contribution in [PR #87](https://github.com/crnlsp/leathercad/pull/87)**, updated with AI assistance, checked with Hunspell | **Wanted** | 96.5 % |
+| 🇫🇷 | Français | AI-assisted, checked with Hunspell | **Wanted** | 95.2 % |
+| 🇪🇸 | Español | AI-assisted | **Wanted** | 96.8 % |
 
-**Translate LeatherCAD into your language.** Every word the app says is in one file:
+Coverage counts translated messages. What remains is mostly words that are the same in English,
+such as *PDF*, key names and *Name*. A missing message shows in English. The flags mark the
+variant each catalogue is written in, not who it is for.
 
-1. Copy [`apps/desktop/src/locales/en.json`](apps/desktop/src/locales/en.json) to a file named for
-   your language: `pl.json`, `de.json`, `es.json`, `ru.json`, `pt-BR.json`.
-2. Translate each text after the `:`. Keep the keys before it, and anything in `{{double braces}}`,
-   exactly as they are: the app fills those in with a name or a number. Where English has `_one`
-   and `_other`, give every form your language uses — Polish and Russian also have `_few` and
-   `_many`. The [glossary](docs/glossary.md) explains the leathercraft words.
-3. Run `pnpm test locales` ([setting up](CONTRIBUTING.md#set-up)). It names anything misspelt or in
-   the wrong form, and lists what is still in English.
-4. Try it: run `pnpm dev`, and choose your language in *Settings › Language*, where it is marked
-   *preview*.
-5. Open a pull request. A part-finished translation is welcome too: it can be completed later.
+> **Native speakers: your corrections are very welcome.** Every translation except English was
+> prepared without a native-speaker review. Leathercraft has its own vocabulary: a pricking iron,
+> skiving, the difference between pitch and spacing. A maker who uses these words every day will
+> spot what a dictionary misses. Even a single fixed string is worth a pull request. An issue
+> that says *“this reads wrong”* helps too.
 
-A translation becomes a supported language — offered in every release — once it is complete and has
-been reviewed, when the maintainers add it to the list of supported languages. Until then it is
-there to try in `pnpm dev`, and nowhere else.
+**English is the source of truth.** Feature pull requests only need to update English. Missing
+translations fall back to English; updating the other languages in the same pull request is optional.
+Translation coverage is informational and does not block development or releases.
 
-Printed patterns stay in English for now: their lettering is drawn from Latin glyphs, so they read
-the same on every printer.
+**Help translate or improve the wording:**
+
+1. Edit the matching file in [`apps/desktop/src/locales/`](apps/desktop/src/locales/), or copy
+   `en.json` to a new BCP 47 filename such as `pt-BR.json`.
+2. Keep keys and `{{placeholders}}`. Translate a whole plural family with every CLDR form your
+   language uses; leaving the whole family out is allowed. Follow the
+   [translation style guide and terminology table](docs/localization.md).
+3. Run `pnpm test locales` to check structure, then `pnpm locales:report` to see remaining work.
+4. Try the file in `pnpm dev`, then open a pull request into `develop`. New unregistered languages
+   appear as previews in development; registration is an explicit maintainer decision.
+
+To review a language, `pnpm locales:report --review de` lists every string beside its English
+source, and the [terminology table](docs/localization.md#canonical-terminology) gives the agreed
+craft words.
+
+Printed pattern captions, generated data names and default filenames remain English. Unnamed tabs
+use a translated placeholder until named. UI localization does not localize PDF pattern content
+or add Cyrillic outlines to printed patterns. See
+[ADR 0018](docs/adr/0018-interface-language.md) and the [verification record](docs/localization-verification.md).
 
 ## Documentation
 

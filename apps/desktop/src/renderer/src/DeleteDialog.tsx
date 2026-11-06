@@ -50,7 +50,7 @@ export function DeleteDialog({
           if (event.key === 'Escape') onCancel();
         }}
       >
-        <h3 id="delete-dialog-title">{t('deleteDialog.title', { what })}</h3>
+        <h2 id="delete-dialog-title">{t('deleteDialog.title', { what })}</h2>
         <p>{t('deleteDialog.follow')}</p>
 
         {groupByPart(plan.dependents).map((group) => (

@@ -86,7 +86,24 @@ export function ToolOptions({
       return <div className="tool-options" data-testid="tool-options" />;
     }
     return (
-      <div className="tool-options" data-testid="tool-options">
+      <div className="tool-options drawing-options" data-testid="tool-options">
+        <label className="draw-as-select">
+          <span className="field-label">{t('toolOptions.drawAs')}</span>
+          <select
+            data-testid="draw-as-select"
+            value={drawAs}
+            onChange={(event) => {
+              const choice = DRAW_MODES.find((choice) => choice.id === event.target.value);
+              if (choice !== undefined) onDrawAs(choice.id);
+            }}
+          >
+            {DRAW_MODES.map((choice) => (
+              <option key={choice.id} value={choice.id}>
+                {t(`drawMode.${choice.id}`)}
+              </option>
+            ))}
+          </select>
+        </label>
         <span className="draw-as-label">{t('toolOptions.drawAs')}</span>
         {DRAW_MODES.map((choice) => (
           <button

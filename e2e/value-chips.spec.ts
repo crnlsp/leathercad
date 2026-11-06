@@ -144,7 +144,7 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     await expect(field(window, 'corner')).toBeFocused();
     await expect(field(window, 'corner')).toHaveAttribute('aria-invalid', 'true');
     const note = window.getByTestId('value-chip-note');
-    await expect(note).toHaveText('Corner is larger than half the height (30.0). Enter uses 30.0.');
+    await expect(note).toHaveText('Corner radius exceeds half the height (30.0). Enter uses 30.0.');
     await expect(note.locator('[data-glyph="warning"]')).toHaveCount(1);
     await expect(field(window, 'corner')).toHaveAccessibleDescription(/half the height/);
 
@@ -302,7 +302,7 @@ test('Properties refuses a corner larger than fits, the same way (U.14)', async 
     await expect(topLeft).toBeFocused();
     await expect(topLeft).toHaveAttribute('aria-invalid', 'true');
     await expect(topLeft).toHaveAccessibleDescription(
-      /Corner is larger than the height leaves it \(90\.0\)\. Enter uses 90\.0\.$/,
+      /Corner radius exceeds the space available along the height \(90\.0\)\. Enter uses 90\.0\.$/,
     );
     await topLeft.press('Enter');
     await expect(topLeft).toHaveValue('90');

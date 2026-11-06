@@ -261,7 +261,7 @@
     "fit": "Fit",
     "fitDrawing": "Fit drawing",
     "fitSelection": "Fit selection",
-    "fitTooltip": "Fit the drawing, or double-click empty board",
+    "fitTooltip": "Fit the drawing, or double-click an empty area of the board",
     "level": "Zoom, {{percent}} %",
     "levelTooltip": "Fit, or zoom to a size",
     "nothingSelected": "Select something drawn on the board to fit it",
@@ -344,8 +344,8 @@
     "fold": "Fold",
     "marking": "Marking",
     "outline": "Outline",
-    "stitch": "Stitch",
-    "stitch-allowance": "Stitch + allowance"
+    "stitch": "Stitch line",
+    "stitch-allowance": "Stitch line + allowance"
   },
   "shortcuts": {
     "or": "or",
@@ -440,7 +440,7 @@
     },
     "toolNames": {
       "name": "Show tool names in the rail",
-      "note": "Off, each tool shows only its key. In windows narrower than 1200 px, the rail shows only keys regardless."
+      "note": "When off, each tool shows only its key. In windows narrower than 1280 px, the rail shows only keys regardless."
     },
     "tools": {
       "actions": "Actions",
@@ -675,7 +675,7 @@
   "printPreview": {
     "actualSize": "Save the PDF, then print it at Actual size (100 %), never Fit or Shrink.",
     "copies": "Copies",
-    "failed": "{{printer}} did not take the job: {{reason}}",
+    "failed": "{{printer}} could not accept the print job: {{reason}}",
     "findingPrinters": "Looking for printers…",
     "include": "Print sheet {{number}}",
     "landscape": "Landscape",
@@ -826,7 +826,7 @@
   },
   "properties": {
     "addAllowance": "Add seam allowance",
-    "addAllowanceHint": "The cut edge, that far outside this seam — and it follows the seam's shape",
+    "addAllowanceHint": "The cut edge, that far outside this stitch line — and it follows the stitch line’s shape",
     "addHoleRow": "Add a row of holes",
     "addHoleRowHint": "Holes punched along this line, a hole on each end and the rest evenly between — for a belt’s adjustment holes, rivets or lacing",
     "addHoles": "Add holes",
@@ -839,7 +839,7 @@
       "title": "After the outline",
       "stitchLine": "Stitch line",
       "holes": "Holes",
-      "note": "From {{tools}} in Settings, and a change here is kept there. Used when you pick Stitch + allowance, or the next steps on the new piece."
+      "note": "From {{tools}} in Settings; changes here are kept there. Used for Stitch line + allowance and the next steps on a new piece."
     },
     "area": "Area",
     "arrange": "Arrange",
@@ -968,7 +968,7 @@
     "drawing": {
       "cut-out": "A cut-out",
       "outline": "An outline",
-      "seam": "A seam"
+      "seam": "A stitch line"
     },
     "DUPLICATE_ID": {
       "title": "Repeated id",
@@ -1214,9 +1214,9 @@
     },
     "HOLE_COUNT_TOO_LOW": {
       "title": "Too few holes",
-      "description_one": "{{featureName}} has {{count}} hole, and a seam needs at least two.",
-      "description_other": "{{featureName}} has {{count}} holes, and a seam needs at least two.",
-      "none": "{{featureName}} has no holes, and a seam needs at least two."
+      "description_one": "{{featureName}} has {{count}} hole, and stitching needs at least two.",
+      "description_other": "{{featureName}} has {{count}} holes, and stitching needs at least two.",
+      "none": "{{featureName}} has no holes, and stitching needs at least two."
     },
     "PART_HAS_NO_OUTER_CONTOUR": {
       "title": "Nothing to cut",
@@ -1255,8 +1255,8 @@
     "spansParts_one": "The selection is in {{count}} part; duplicate one at a time",
     "spansParts_other": "The selection is in {{count}} parts; duplicate one at a time",
     "flip": {
-      "horizontal": "Flip horizontal",
-      "vertical": "Flip vertical"
+      "horizontal": "Flip horizontally",
+      "vertical": "Flip vertically"
     }
   },
   "editor": {
@@ -1338,8 +1338,8 @@
     "edit-shape": "Edit shape",
     "features_one": "{{count}} feature",
     "features_other": "{{count}} features",
-    "flip-horizontal": "Flip horizontal",
-    "flip-vertical": "Flip vertical",
+    "flip-horizontal": "Flip horizontally",
+    "flip-vertical": "Flip vertically",
     "follow": "Follow {{name}}",
     "follow-another": "Follow another feature",
     "hide_one": "Hide feature",
@@ -1402,10 +1402,10 @@
     "margin": "margin",
     "mixed": "mixed",
     "tooLarge": {
-      "halfHeight": "Corner is larger than half the height ({{size}}). {{enter}} uses {{size}}.",
-      "halfWidth": "Corner is larger than half the width ({{size}}). {{enter}} uses {{size}}.",
-      "height": "Corner is larger than the height leaves it ({{size}}). {{enter}} uses {{size}}.",
-      "width": "Corner is larger than the width leaves it ({{size}}). {{enter}} uses {{size}}."
+      "halfHeight": "Corner radius exceeds half the height ({{size}}). {{enter}} uses {{size}}.",
+      "halfWidth": "Corner radius exceeds half the width ({{size}}). {{enter}} uses {{size}}.",
+      "height": "Corner radius exceeds the space available along the height ({{size}}). {{enter}} uses {{size}}.",
+      "width": "Corner radius exceeds the space available along the width ({{size}}). {{enter}} uses {{size}}."
     },
     "tooSmall": {
       "width": "Width is less than its corners need ({{size}}). {{enter}} uses {{size}}.",

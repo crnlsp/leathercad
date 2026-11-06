@@ -281,10 +281,11 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
 
 test('the interface language follows the system, or keeps the one chosen, at once and after a restart (ADR 0018)', async () => {
   const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-language-'));
-  // A French system, on Linux: a language LeatherCAD does not ship yet.
-  const french = { LANGUAGE: 'fr_FR', LC_ALL: 'fr_FR.UTF-8', LANG: 'fr_FR.UTF-8' };
+  // qaa is reserved for local use. A real language joining the registry must
+  // not turn this unsupported-language fallback scenario into a supported one.
+  const unavailable = { LANGUAGE: 'qaa', LC_ALL: 'qaa.UTF-8', LANG: 'qaa.UTF-8' };
 
-  const first = await launch(configHome, french);
+  const first = await launch(configHome, unavailable);
   try {
     const system = await first.app.evaluate(({ app }) => app.getPreferredSystemLanguages());
     await first.window.getByTestId('settings').click();
@@ -297,9 +298,9 @@ test('the interface language follows the system, or keeps the one chosen, at onc
     // Linux takes the system's languages from the environment; Windows and
     // macOS from their settings, which a test does not change.
     if (process.platform === 'linux') {
-      expect(system[0]).toBe('fr-FR');
+      expect(system[0]).toBe('qaa');
       await expect(first.window.getByTestId('language-unavailable')).toHaveText(
-        'Your system’s language, French, is not available yet, so LeatherCAD is in English.',
+        'Your system’s language, qaa, is not available yet, so LeatherCAD is in English.',
       );
     }
     await expect(first.window.locator('html')).toHaveAttribute('lang', /^en/);
@@ -321,7 +322,7 @@ test('the interface language follows the system, or keeps the one chosen, at onc
     await closeApp(first.app);
   }
 
-  const second = await launch(configHome, french);
+  const second = await launch(configHome, unavailable);
   try {
     await second.window.getByTestId('settings').click();
     await second.window.getByTestId('settings-tab-language').click();

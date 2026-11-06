@@ -617,3 +617,30 @@ files' `\n` line endings on a Windows checkout, so every platform compares the s
 What they do not cover: the domain's corner policy. `hole-at-corner`, the default, splits a stitch
 line at its sharp corners and distributes each run on its own; on a line with no sharp corners it
 is the single run these goldens record. Its own tests are in `packages/domain/src/stitch.test.ts`.
+
+## 12. Interface localization (U.26)
+
+`pnpm test locales i18n untranslated` validates every catalogue, the typed-key runtime and JSX text
+audit. Missing translations pass, including a newly added English message and an absent plural
+family. Unknown keys and groups, malformed JSON, non-string values, invalid placeholders and partial
+CLDR families fail. English is checked for its own valid plural definitions.
+
+`pnpm locales:report` reports logical messages, missing keys, English copies and structural
+errors without using coverage as a gate. The tests and report share `shared/catalogue.ts`.
+`pnpm locales:report --review pl` prints a side-by-side Markdown review table.
+
+`e2e/localization.spec.ts` drives the production build: every registered language, live renderer and native
+dialog changes, restart persistence, Linux system-language selection, project-data round trips,
+minimum/desktop window sizes, recovery and accessibility. Screenshots are attached to test results.
+Unit tests cover Polish and Russian 0, 1, 2, 5, 11, 21, 22 and fractional counts, including complete,
+missing and incomplete families. French tests also cover zero, fractions below two, exact millions,
+one million plus one, and a fractional million, with whole-English fallback if `_many` is absent.
+Spanish tests cover those counts too, with singular only for 1, and require the `_many` form.
+The template-picker regressions exercise Enter/Delete in the focusable details region, Escape,
+list shortcuts, row padding selection/double-click and independent pin buttons. Localization
+scenarios check translated sort punctuation and all drawing modes at 1199, 1200, 1201 and
+1280 px in every production language, including axe scans.
+The report lists the runtime's required plural categories and ignores whitespace-only English copies.
+In `pnpm dev`, *English (expanded)* is the overflow probe; it is
+not a production language. See [the verification record](localization-verification.md) for actual
+platforms, commands, findings and remaining limits.

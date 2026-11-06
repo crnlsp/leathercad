@@ -12,7 +12,7 @@ import {
 import type { PlatformHost, TabCamera, TemplateSave } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
 
-import type { Translate } from '../../shared/i18n.js';
+import { SOURCE_LOCALE, createI18n, type Translate } from '../../shared/i18n.js';
 import { encodeProject } from './lcpEncoder.js';
 import { writePdf, PdfWriterError } from './pdfWriter.js';
 import { describeProblemWithSubject } from './problemText.js';
@@ -24,6 +24,10 @@ import {
   type ProjectTabs,
 } from './projectTabs.js';
 import { drawingSceneFor, sheetPlanFor } from './sheets.js';
+
+// The unnamed tab’s placeholder is translated. A filename becomes persisted
+// project data, so its default stays English (ADR 0018).
+const UNNAMED_FILE = createI18n(SOURCE_LOCALE).t('app.untitled');
 
 /** A save or an export that reached the disk. A new one for every write. */
 export interface Written {
@@ -237,7 +241,7 @@ export function useProjectFile(
         if (target === null || forcePrompt) {
           target = await platform.showSaveDialog({
             title: t('file.saveTitle'),
-            defaultPath: `${tab.store.getState().document.project.name || t('app.untitled')}.${LCP_EXTENSION}`,
+            defaultPath: `${tab.store.getState().document.project.name || UNNAMED_FILE}.${LCP_EXTENSION}`,
             filters: [{ name: t('file.project'), extensions: [LCP_EXTENSION] }],
           });
           // A cancelled dialog is not an error; it is the user changing their

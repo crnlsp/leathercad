@@ -143,6 +143,14 @@ export function PrintPreview({
   const correction = known ?? NO_CORRECTION;
   const corrected = known !== undefined && !isNoCorrection(known);
   const [calibrating, setCalibrating] = useState(false);
+  const calibrateRef = useRef<HTMLButtonElement>(null);
+  const wasCalibrating = useRef(false);
+  useEffect(() => {
+    // Saving or cancelling unmounts the calibration form. Keep focus in the
+    // preview so its keyboard controls, including Escape, continue to work.
+    if (wasCalibrating.current && !calibrating) calibrateRef.current?.focus();
+    wasCalibrating.current = calibrating;
+  }, [calibrating]);
   const [correctionFailed, setCorrectionFailed] = useState<string | null>(null);
 
   // The PDF: written once per plan and correction, previewed, then printed or
@@ -263,9 +271,9 @@ export function PrintPreview({
           if (event.key === 'Escape') onClose();
         }}
       >
-        <h3 id={`${ids}title`} className="print-header">
+        <h2 id={`${ids}title`} className="print-header">
           {t('printPreview.title')}
-        </h3>
+        </h2>
 
         <div className="print-body">
           <ol ref={listRef} className="print-sheets" aria-label={t('printPreview.sheets')}>
@@ -343,7 +351,7 @@ export function PrintPreview({
                   aria-labelledby={`${ids}problems`}
                   data-testid="print-problems-list"
                 >
-                  <h4 id={`${ids}problems`}>{t('printPreview.problems')}</h4>
+                  <h3 id={`${ids}problems`}>{t('printPreview.problems')}</h3>
                   <p>{t('printPreview.problemsLead', { counts: problems })}</p>
                   <div className="print-problem-rows">
                     <ProblemRows diagnostics={diagnostics} project={project} onGoTo={onGoTo} />
@@ -399,6 +407,7 @@ export function PrintPreview({
                     type="button"
                     className="tool"
                     data-testid="print-calibrate"
+                    ref={calibrateRef}
                     onClick={() => setCalibrating(true)}
                   >
                     {corrected ? t('calibration.again') : t('calibration.calibrate')}

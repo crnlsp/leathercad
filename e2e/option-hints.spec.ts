@@ -91,7 +91,9 @@ test('every tool has its hints, and a tool that needs a selection says how to ge
 });
 
 test('a shape under way offers Esc, and the keys of that run (U.11)', async () => {
-  await withSample(async (window) => {
+  await withSample(async (window, app) => {
+    // This test checks every hint in a run; compact-width fitting is tested below.
+    await resizeWindow(app, window, 1920, 1080);
     const board = (await window.getByTestId('editor-canvas').boundingBox())!;
     const at = { x: board.x + board.width * 0.3, y: board.y + board.height * 0.6 };
 
@@ -127,37 +129,29 @@ test('as the bar narrows the lowest-ranked hints go first, whole, and "all keys"
   await withSample(async (window, app) => {
     // The rectangle's options take most of the bar: the hints are what is left.
     await window.getByTestId('tool-rectangle').click();
-    const counts: number[] = [];
-    for (const width of [1920, 1280, 1100, 1024, 900, 860]) {
-      await resizeWindow(app, window, width, 700);
-      // A growing slot can contain the old, smaller hint set without clipping.
-      // Wait for the ResizeObserver's React update before recording its count.
-      if (width === 1920) await expect(hints(window)).toHaveCount(5);
-      await expectWhole(window);
-      const shown = await words(window);
-      counts.push(shown.length);
-      expect(shown.at(-1), `${String(width)} px`).toBe('? all keys');
-    }
-    // Never more hints in less room, and at the minimum window only "all keys" is left.
-    expect(counts).toEqual([...counts].sort((a, b) => b - a));
-    expect(counts[0]).toBe(5);
-    expect(counts.at(-1)).toBe(1);
-
-    // Which go first is the rank's, not the width's: at 1100 the first rank-ordered ones stay.
-    await resizeWindow(app, window, 1100, 700);
-    const kept = await hints(window).evaluateAll((items) =>
-      items.map((item) => item.getAttribute('data-hint')),
-    );
     const order = [
       'hints.rectangleDrag',
       'hints.keepSquare',
       'hints.typeSize',
       'hints.backToSelect',
     ];
-    const droppedAt = order.findIndex((key) => !kept.includes(key));
-    if (droppedAt >= 0) {
-      for (const later of order.slice(droppedAt)) expect(kept).not.toContain(later);
+    for (const width of [1920, 1280, 1100, 1024, 900, 860]) {
+      await resizeWindow(app, window, width, 700);
+      if (width === 1920) await expect(hints(window)).toHaveCount(5);
+      await expectWhole(window);
+      const shown = await words(window);
+      expect(shown.at(-1), `${String(width)} px`).toBe('? all keys');
+      // The compact mode selector frees room below 1200 px, so hint counts can
+      // increase at that breakpoint. Priority and whole hints must still hold.
+      const kept = await hints(window).evaluateAll((items) =>
+        items.map((item) => item.getAttribute('data-hint')),
+      );
+      const droppedAt = order.findIndex((key) => !kept.includes(key));
+      if (droppedAt >= 0) {
+        for (const later of order.slice(droppedAt)) expect(kept).not.toContain(later);
+      }
     }
+    await expect(window.getByTestId('draw-as-select')).toBeVisible();
 
     // Wider again, they come back.
     await resizeWindow(app, window, 1920, 1080);

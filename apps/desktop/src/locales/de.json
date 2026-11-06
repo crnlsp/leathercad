@@ -1,0 +1,1587 @@
+{
+  "app": {
+    "untitled": "Unbenannt",
+    "untitledNumbered": "Unbenannt {{number}}",
+    "windowTitle": "{{name}} — LeatherCAD",
+    "windowTitleUnsaved": "• {{name}} — LeatherCAD",
+    "drawing": "Zeichnung"
+  },
+  "tabs": {
+    "strip": "Projekte",
+    "region": "Geöffnete Projekte",
+    "close": "{{name}} schließen",
+    "closeTooltip": "Dieses Projekt schließen",
+    "unsaved": "{{name}}, ungespeicherte Änderungen",
+    "add": "Neuer Tab",
+    "addTooltip": "Ein neues oder vorhandenes Projekt in einem eigenen Tab",
+    "menu": "Projektmenü",
+    "menuTooltip": "Neu, Öffnen, Speichern unter, Umbenennen und zuletzt verwendete Projekte",
+    "noProject": "Kein Projekt geöffnet",
+    "alreadyOpen": "{{name}} ist bereits geöffnet",
+    "all": "Alle Tabs",
+    "allTooltip": "Alle geöffneten Projekte, wenn sie nicht in die Tableiste passen",
+    "unsavedNote": "Ungespeicherte Änderungen",
+    "dropHere": "Hierher verschieben"
+  },
+  "tabMenu": {
+    "label": "Menü für {{name}}",
+    "rename": "Umbenennen…",
+    "save": "Speichern",
+    "saveAs": "Speichern unter…",
+    "reload": "Von Datenträger neu laden",
+    "reloadNote": "Die zuletzt gespeicherte Version der Datei",
+    "duplicate": "Als neues Projekt duplizieren",
+    "showInFolder": "Im Ordner anzeigen",
+    "copyPath": "Pfad kopieren",
+    "trash": "Datei in den Papierkorb verschieben…",
+    "close": "Schließen",
+    "closeOthers": "Andere Tabs schließen",
+    "noFile": "Noch nicht als Datei gespeichert",
+    "onlyTab": "Keine anderen Tabs geöffnet",
+    "trashTitle": "„{{name}}“ in den Papierkorb verschieben?",
+    "trashBody": "{{file}} wird in den Papierkorb des Systems verschoben und kann dort wiederhergestellt werden. Der Tab wird geschlossen.",
+    "trashBodyUnsaved": "{{file}} wird in den Papierkorb des Systems verschoben und kann dort wiederhergestellt werden. Der Tab wird geschlossen. Ungespeicherte Änderungen gehen verloren.",
+    "trashConfirm": "In den Papierkorb verschieben",
+    "trashFailed": "Die Datei konnte nicht in den Papierkorb verschoben werden. {{reason}}"
+  },
+  "outside": {
+    "changed": "{{file}} wurde außerhalb von LeatherCAD geändert.",
+    "gone": "{{file}} wurde außerhalb von LeatherCAD verschoben oder gelöscht.",
+    "reload": "Neu laden",
+    "keep": "Meine Version behalten",
+    "save": "Erneut speichern",
+    "dismiss": "Ausblenden"
+  },
+  "rename": {
+    "title": "Nicht umbenannt",
+    "exists": "Im Projektordner gibt es bereits eine Datei namens „{{file}}“. Wählen Sie einen anderen Namen. Projekt und Datei behalten ihren bisherigen Namen.",
+    "invalid": "„{{name}}“ ist kein gültiger Dateiname: Er enthält ein Zeichen wie / \\ : * ? \" < > | oder ist vom System reserviert. Wählen Sie einen anderen Namen.",
+    "failed": "Die Projektdatei konnte nicht umbenannt werden. Das Projekt behält seinen Namen. {{reason}}",
+    "followExists": "Das Projekt heißt wieder „{{name}}“, aber die Datei behält ihren Namen: Im Ordner gibt es bereits eine Datei namens „{{file}}“."
+  },
+  "start": {
+    "title": "Neues Projekt starten",
+    "fromTemplate": "Neues Projekt aus Vorlage",
+    "open": "Vorhandenes Projekt öffnen",
+    "lede": "Einen neuen Schnitt entwerfen, einen vorhandenen öffnen oder die letzte Arbeit fortsetzen.",
+    "pin": "{{name}} anheften",
+    "unpin": "{{name}} lösen",
+    "pinTooltip": "Oben in der Liste behalten",
+    "unpinTooltip": "Wieder unter den zuletzt verwendeten Projekten einordnen",
+    "remove": "{{name}} aus der Liste entfernen",
+    "removeTooltip": "Aus der Liste entfernen. Die Datei bleibt erhalten"
+  },
+  "actions": {
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "delete": "Löschen",
+    "deletePart": "Teil löschen",
+    "duplicate": "Duplizieren",
+    "duplicatePart": "Teil duplizieren",
+    "hide": "Ausblenden",
+    "lock": "Sperren",
+    "save": "Speichern",
+    "show": "Einblenden",
+    "unlock": "Entsperren"
+  },
+  "keys": {
+    "Alt": "Alt",
+    "Down": "↓",
+    "End": "End",
+    "Home": "Home",
+    "Insert": "Ins",
+    "Left": "←",
+    "PageDown": "PgDn",
+    "PageUp": "PgUp",
+    "Right": "→",
+    "Up": "↑",
+    "Backspace": "Backspace",
+    "Ctrl": "Ctrl",
+    "Delete": "Del",
+    "Enter": "Enter",
+    "Escape": "Esc",
+    "Menu": "Menu",
+    "Middle-drag": "Mit mittlerer Maustaste ziehen",
+    "Scroll": "Scrollen",
+    "Shift": "Shift",
+    "Space": "Leertaste",
+    "Tab": "Tab",
+    "drag": "ziehen"
+  },
+  "projectBar": {
+    "application": "Anwendung",
+    "exportMore": "Weitere Exportformate",
+    "exportMoreTooltip": "Als SVG oder DXF in Millimetern exportieren, für Laserschneider, CNC und Vektorgrafikprogramme",
+    "exportPdf": "PDF exportieren",
+    "exportTooltip": "{{sheets}} als druckfertige PDF im Maßstab 1:1 speichern. In anderen Programmen „Tatsächliche Größe“ (100 %) wählen",
+    "help": "Hilfe",
+    "helpTooltip": "Hilfe",
+    "name": "Projektname",
+    "nothingToSave": "Nichts zu speichern",
+    "output": "Ausgabe",
+    "paper": "Papier: {{sheets}}",
+    "paperLong": "{{count}} × {{paper}} {{orientation}}",
+    "paperPopover": {
+      "orientation": "Ausrichtung",
+      "option_one": "{{paper}} · {{count}} Bogen",
+      "option_other": "{{paper}} · {{count}} Bögen",
+      "sheets_one": "{{count}} Bogen",
+      "sheets_other": "{{count}} Bögen",
+      "summary": "{{sheets}} · Maßstab 100 %, gesperrt · {{taped}}",
+      "nothingTaped": "kein Zusammenkleben nötig",
+      "seeSheets": "Bögen ansehen",
+      "limited": "{{paper}} — zu viele Bögen"
+    },
+    "paperShort": "{{count}} × {{paper}}",
+    "print": "Drucken",
+    "printTooltip": "{{sheets}} in der Vorschau ansehen und im Maßstab 1:1 drucken",
+    "problems": "Probleme: {{counts}}",
+    "problemsNone": "Probleme: nichts zu beheben",
+    "problemsNoneTooltip": "Nichts zu beheben",
+    "problemsTooltip": "{{counts}}. Im Bereich Probleme anzeigen",
+    "saveTooltip": "Projekt speichern",
+    "saved": "Gespeichert",
+    "settings": "Einstellungen",
+    "settingsTooltip": "Einstellungen",
+    "unsaved": "Ungespeicherte Änderungen",
+    "unsavedShort": "Ungespeichert",
+    "settingsUpdate": "Einstellungen — neue Version verfügbar"
+  },
+  "menu": {
+    "about": "Über LeatherCAD",
+    "exportDxf": "DXF exportieren…",
+    "exportDxfNote": "R12, in Millimetern, für Laser- und CNC-Software",
+    "exportNothing": "Noch nichts zu exportieren. Kein Teil hat eine Schnittlinie.",
+    "exportSvg": "SVG exportieren…",
+    "exportSvgNote": "In Millimetern, für Laserschneider, Plotter und Vektorgrafikprogramme",
+    "new": "Neues leeres Projekt",
+    "open": "Öffnen…",
+    "recent": "Zuletzt verwendete Projekte",
+    "recentEmpty": "Hier erscheinen geöffnete und gespeicherte Projekte.",
+    "rename": "Umbenennen…",
+    "renameNote": "Der Name gilt auch für die Datei und die PDF-Fußzeile",
+    "saveAs": "Speichern unter…",
+    "settings": "Einstellungen…",
+    "recentGone": "Dieses Projekt ist nicht mehr vorhanden",
+    "recentGoneDetail": "Das Projekt wurde verschoben, umbenannt oder gelöscht und deshalb aus der Liste der zuletzt verwendeten Projekte entfernt.",
+    "newFromTemplate": "Neues Projekt aus Vorlage…",
+    "saveAsTemplate": "Als Vorlage speichern…"
+  },
+  "macMenu": {
+    "edit": "Bearbeiten",
+    "redo": "Wiederholen",
+    "undo": "Rückgängig"
+  },
+  "hints": {
+    "addsOrRemoves": "fügt zur Auswahl hinzu oder entfernt daraus",
+    "allKeys": "alle Tastenkürzel",
+    "arcNext": "Nächsten Punkt anklicken",
+    "arcStart": "Anfang des Bogens anklicken",
+    "arcsNext": "macht das nächste Segment zum Bogen",
+    "backToSelect": "zurück zu Auswählen",
+    "cancels": "bricht ab",
+    "circleDrag": "Vom Mittelpunkt aus ziehen oder Mittelpunkt und dann Rand anklicken",
+    "circleRim": "Rand anklicken",
+    "clickSelects": "Klicken wählt aus",
+    "deletes": "löscht",
+    "dragBox": "Auswahlrahmen aufziehen",
+    "dragMoves": "Ziehen verschiebt",
+    "editsSizes": "bearbeitet die Maße",
+    "finishes": "beendet",
+    "hardwarePick": "wählt das zu lochende Teil",
+    "hardwarePunch": "Klicken, um ein Loch zu stanzen",
+    "holdsProportions": "behält die Proportionen bei",
+    "holdsSteps": "rastet in 15°-Schritten ein",
+    "keepSquare": "behält die quadratische Form bei",
+    "lineDrag": "Von Ende zu Ende ziehen oder beide Enden anklicken",
+    "lineEnd": "Endpunkt anklicken",
+    "measureFirst": "Zwei Ecken anklicken, um ihren Abstand zu bemaßen",
+    "measureSecond": "Zweite Ecke anklicken",
+    "pointsAdd": "Kante anklicken, um einen Punkt hinzuzufügen",
+    "pointsMove": "Punkt ziehen, um ihn zu verschieben",
+    "pointsPick": "wählt einen gezeichneten Pfad zum Bearbeiten",
+    "pointsRemove": "entfernt den Punkt",
+    "pointsRound": "rundet die Ecke ab",
+    "polylineClose": "Ersten Punkt anklicken, um zu schließen",
+    "polylinePoints": "Punkte nacheinander anklicken",
+    "rectangleCorner": "Gegenüberliegende Ecke anklicken",
+    "rectangleDrag": "Ziehen oder zwei Ecken anklicken",
+    "rotateDrag": "Zum Drehen um die Auswahl ziehen",
+    "rotatePick": "wählt das zu drehende Objekt",
+    "scaleDrag": "Ziehen, um die Größe um den Mittelpunkt zu ändern",
+    "scalePick": "wählt das zu skalierende Objekt",
+    "sheetsClick": "Teil anklicken, um seine Druckposition zu sehen",
+    "sheetsExport": "exportiert die PDF",
+    "sheetsPrint": "druckt",
+    "takesBack": "nimmt den letzten Punkt zurück",
+    "textPick": "wählt das zu beschriftende Teil",
+    "textPlace": "Klicken, um eine Beschriftung zu platzieren",
+    "textType": "Text anschließend unter Eigenschaften eingeben",
+    "typeSize": "Maß eingeben"
+  },
+  "work": {
+    "redo": "Wiederholen",
+    "region": "Arbeitsbereich",
+    "undo": "Rückgängig",
+    "redoTooltip": "Wiederholen: {{action}}",
+    "undoTooltip": "Rückgängig: {{action}}"
+  },
+  "status": {
+    "features_one": "Element",
+    "features_other": "Elemente",
+    "focus": "Fokus",
+    "panels": "Bereiche",
+    "parts": "Teile",
+    "partsCount_one": "Teil",
+    "partsCount_other": "Teile",
+    "problems_one": "Problem",
+    "problems_other": "Probleme",
+    "properties": "Eigenschaften",
+    "selected": "ausgewählt",
+    "sheetOf": "Bogen {{number}} von {{count}}",
+    "partsSelected_one": "Teil ausgewählt",
+    "partsSelected_other": "Teile ausgewählt",
+    "checkForUpdates": "Nach Updates suchen",
+    "versionNext": "auf {{version}}",
+    "saved": "{{name}} gespeichert",
+    "exported": "{{name}} exportiert"
+  },
+  "view": {
+    "design": "Entwurf",
+    "designBoard": "Entwurfsfläche",
+    "designTooltip": "Teile entwerfen",
+    "label": "Ansicht",
+    "sheets": "Bögen",
+    "sheetsBoard": "Bogenansicht",
+    "sheetsNamed_one": "Bögen, {{count}} Bogen",
+    "sheetsNamed_other": "Bögen, {{count}} Bögen",
+    "sheetsTooltip": "Teile so auf den Bögen ansehen, wie sie gedruckt werden"
+  },
+  "zoom": {
+    "fit": "Einpassen",
+    "fitDrawing": "Zeichnung einpassen",
+    "fitSelection": "Auswahl einpassen",
+    "fitTooltip": "Zeichnung einpassen oder doppelt auf eine leere Stelle der Zeichenfläche klicken",
+    "level": "Zoom, {{percent}} %",
+    "levelTooltip": "Einpassen oder Zoomstufe wählen",
+    "nothingSelected": "Zum Einpassen ein gezeichnetes Objekt auswählen",
+    "onDesignOnly": "Nur im Entwurf: Bögen werden vollständig eingepasst",
+    "percent": "{{percent}} %",
+    "title": "Zoom",
+    "trueSize": "Tatsächliche Größe, {{percent}} %"
+  },
+  "tools": {
+    "collapsedTooltip": "{{name}} — {{howTo}}",
+    "hideNames": "Werkzeugnamen ausblenden",
+    "label": "Werkzeuge",
+    "showNames": "Werkzeugnamen anzeigen",
+    "group": {
+      "draw": "Zeichnen",
+      "modify": "Ändern",
+      "place": "Platzieren"
+    },
+    "arc": {
+      "howTo": "Anfang, Ende und dann einen Punkt auf dem Bogen anklicken",
+      "name": "Bogen"
+    },
+    "circle": {
+      "howTo": "Vom Mittelpunkt aus ziehen oder Mittelpunkt und dann Rand anklicken",
+      "name": "Kreis"
+    },
+    "hardware": {
+      "howTo": "Klicken, um ein Loch der oben gewählten Größe in das ausgewählte Teil zu stanzen",
+      "name": "Beschläge"
+    },
+    "line": {
+      "howTo": "Von Ende zu Ende ziehen oder beide Enden anklicken · {{shift}} rastet in 15°-Schritten ein",
+      "name": "Linie"
+    },
+    "measure": {
+      "howTo": "Zwei Ecken anklicken, um den Abstand dazwischen zu bemaßen",
+      "name": "Bemaßen"
+    },
+    "points": {
+      "howTo": "Punkt des ausgewählten gezeichneten Pfads ziehen · Kante anklicken, um einen Punkt hinzuzufügen · {{removePoint}} entfernt den zuletzt angeklickten Punkt · {{roundCorner}} rundet die Ecke ab oder entfernt ihre Rundung",
+      "name": "Punkte bearbeiten"
+    },
+    "polyline": {
+      "howTo": "Punkte nacheinander anklicken · {{arc}} macht das nächste Segment zum Bogen: Ende und dann einen Punkt darauf anklicken · {{straight}} setzt mit Geraden fort · erster Punkt schließt · {{finish}} beendet · {{takeBack}} entfernt den letzten Punkt",
+      "name": "Polylinie"
+    },
+    "rectangle": {
+      "howTo": "Von Ecke zu Ecke ziehen oder beide Ecken anklicken · {{shift}} hält die Form quadratisch",
+      "name": "Rechteck"
+    },
+    "rotate": {
+      "howTo": "Um die Auswahl ziehen, um sie um ihren Mittelpunkt zu drehen",
+      "name": "Drehen"
+    },
+    "scale": {
+      "howTo": "Ziehen, um die Auswahl um ihren Mittelpunkt zu skalieren · {{shift}} behält die Proportionen bei",
+      "name": "Skalieren"
+    },
+    "select": {
+      "howTo": "Klicken zum Auswählen · {{shift}}-Klick fügt hinzu oder entfernt · auf leerer Fläche einen Auswahlrahmen ziehen · Auswahl ziehen zum Verschieben · {{delete}} löscht",
+      "name": "Auswählen"
+    },
+    "text": {
+      "howTo": "Klicken, um eine Beschriftung auf dem ausgewählten Teil zu platzieren, dann den Text im Bereich eingeben",
+      "name": "Text"
+    },
+    "guide": {
+      "name": "Hilfslinien",
+      "howTo": "Klicken für eine waagerechte Hilfslinie; {{shift}} gedrückt halten für eine senkrechte. Durch zwei Punkte ziehen, etwa entlang einer Kante. Hilfslinie auswählen, um Position und Winkel unter Eigenschaften zu bearbeiten."
+    }
+  },
+  "toolOptions": {
+    "cornerRadius": "Eckenradius",
+    "drawAs": "Zeichnen als",
+    "for": "Für",
+    "punch": "Locheisen"
+  },
+  "drawMode": {
+    "cut-out": "Ausschnitt",
+    "fold": "Falz",
+    "marking": "Markierung",
+    "outline": "Umriss",
+    "stitch": "Nahtlinie",
+    "stitch-allowance": "Nahtlinie + Zugabe"
+  },
+  "shortcuts": {
+    "or": "oder",
+    "group": {
+      "drawing": "Beim Zeichnen",
+      "edit": "Bearbeiten",
+      "editingPoints": "Beim Bearbeiten von Punkten",
+      "file": "Datei",
+      "parts": "Im Bereich Teile",
+      "tools": "Werkzeuge",
+      "view": "Ansicht",
+      "window": "Fenster",
+      "field": "In einem Textfeld"
+    },
+    "arc": "Polylinie: Nächstes Segment ist ein Bogen",
+    "straight": "Polylinie: Nächstes Segment ist gerade",
+    "cancel": "Werkzeugaktion abbrechen, Auswahl aufheben oder Fokusmodus verlassen",
+    "contextMenu": "Menü der Auswahl wie mit einem Rechtsklick öffnen",
+    "delete": "Auswahl löschen (Werkzeug Auswählen)",
+    "design": "Entwurf: die Zeichenfläche",
+    "editSizes": "Maße des ausgewählten Umrisses direkt daneben eingeben",
+    "exportPdf": "PDF exportieren",
+    "finishPolyline": "Polylinie beenden",
+    "fit": "Zeichnung ins Fenster einpassen",
+    "fitSelection": "Auswahl ins Fenster einpassen",
+    "focusMode": "Fokusmodus: Beide Bereiche ausblenden, Werkzeugleiste nur mit Tasten anzeigen",
+    "selectionBar": "Zur Auswahlleiste oder zurück zur Zeichenfläche wechseln",
+    "fullScreen": "Vollbild",
+    "keyboardShortcuts": "Tastenkürzel",
+    "newProject": "Neues Projekt",
+    "openProject": "Projekt öffnen",
+    "pan": "Ansicht verschieben",
+    "print": "Drucken",
+    "quit": "Beenden",
+    "nextTab": "Zum nächsten Projekttab wechseln",
+    "previousTab": "Zum vorherigen Projekttab wechseln",
+    "closeTab": "Projekttab schließen",
+    "moveTabLeft": "Projekttab nach links verschieben",
+    "moveTabRight": "Projekttab nach rechts verschieben",
+    "reopenTab": "Zuletzt geschlossenes Projekt wieder öffnen",
+    "redo": "Wiederholen",
+    "removePoint": "Zuletzt angeklickten Punkt entfernen",
+    "rename": "Teil oder Element umbenennen",
+    "roundCorner": "Zuletzt angeklickte Ecke mit dem Eckenradius abrunden oder vorhandene Rundung entfernen",
+    "save": "Speichern",
+    "saveAs": "Speichern unter",
+    "settings": "Einstellungen",
+    "sheets": "Bögen: das Papier für den Druck",
+    "square": "Rechteck quadratisch halten; Linie in 15°-Schritten ausrichten",
+    "takeBack": "Letzten Punkt einer Polylinie oder eines Bogens entfernen",
+    "toggleParts": "Teile ein- oder ausblenden",
+    "toggleProperties": "Eigenschaften ein- oder ausblenden",
+    "toggleVisible": "Teil oder Element aus- oder einblenden",
+    "trueSize": "Auf tatsächliche Größe zoomen, 100 %",
+    "undo": "Rückgängig",
+    "zoom": "Um den Mauszeiger zoomen",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "help": "Hilfemenü öffnen"
+  },
+  "settings": {
+    "close": "Einstellungen schließen",
+    "sections": "Abschnitte",
+    "title": "Einstellungen",
+    "section": {
+      "appearance": "Darstellung",
+      "general": "Allgemein",
+      "language": "Sprache",
+      "shortcuts": "Tastenkürzel",
+      "tools": "Meine Werkzeuge",
+      "updates": "Updates"
+    },
+    "recent": {
+      "clear": "Liste leeren",
+      "count_one": "{{count}} Projekt ist aufgelistet.",
+      "count_other": "{{count}} Projekte sind aufgelistet.",
+      "name": "Zuletzt verwendete Projekte",
+      "none": "Die Liste ist leer.",
+      "note": "Das Projektmenü zeigt die zuletzt geöffneten oder gespeicherten Projekte."
+    },
+    "keepUnsaved": {
+      "name": "Ungespeicherte Projekte beim Schließen behalten",
+      "note": "Ohne Nachfrage schließen: Projekte mit ungespeicherten Änderungen werden beim nächsten Start erneut geöffnet und bleiben ungespeichert."
+    },
+    "legend": {
+      "name": "Markierungen in der Legende benennen",
+      "note": "Wenn ausgeschaltet, bleibt die Legende bis zum Öffnen eingeklappt."
+    },
+    "selectionBar": {
+      "name": "Auswahlleiste unter dem ausgewählten Teil anzeigen",
+      "note": "Zeigt das Ergebnis der Nahtlochverteilung und den nächsten Schritt per Klick. Wenn ausgeschaltet, erscheint keine Leiste unter dem Teil und ihr Tastenkürzel hat keine Wirkung."
+    },
+    "toolNames": {
+      "name": "Werkzeugnamen in der Werkzeugleiste anzeigen",
+      "note": "Wenn ausgeschaltet, zeigt jedes Werkzeug nur seine Taste. In Fenstern unter 1280 px Breite werden immer nur Tasten angezeigt."
+    },
+    "tools": {
+      "actions": "Aktionen",
+      "addIron": "Prickeisen hinzufügen",
+      "default": "Standard",
+      "delete": "Löschen",
+      "deleteNote": "Mit diesem Eisen erstellte Lochreihen behalten ihren Nennabstand",
+      "forNewPieces": "Für neue Teile",
+      "intro": "Ihre Prickeisen und Ausgangswerte. Das Menü Prickeisen einer Nahtlochreihe führt diese Eisen auf. Neue Nahtlinien, Nahtzugaben und Falze übernehmen diese Werte und behalten sie.",
+      "ironActions": "Aktionen für {{name}}",
+      "irons": "Prickeisen",
+      "makeDefault": "{{name}} als Standard festlegen",
+      "name": "Name",
+      "newIron": "Prickeisen {{number}}",
+      "noIrons": "Noch keine Prickeisen. Neue Nahtlochreihen verwenden den Nennabstand des Projekts, bis Sie ein Eisen hinzufügen.",
+      "pitch": "Nennabstand",
+      "pitchOf": "Nennabstand von {{name}}",
+      "rename": "Umbenennen",
+      "margin": {
+        "name": "Nahtabstand zum Rand",
+        "note": "Abstand einer neuen Nahtlinie nach innen vom Rand und einer neuen Nahtzugabe nach außen."
+      },
+      "thickness": {
+        "name": "Lederstärke",
+        "note": "Wird in jedem neuen Falz gespeichert. Leer lassen, um keine Stärke anzugeben."
+      }
+    },
+    "language": {
+      "invite": "LeatherCAD wird von seinen Nutzern übersetzt. {{link}}",
+      "inviteLink": "Bei der Übersetzung in Ihre Sprache helfen",
+      "name": "Anzeigesprache",
+      "note": "Die Sprache der Menüs, Bereiche und Meldungen. Das Projekt bleibt in jeder Sprache gleich.",
+      "system": "Systemsprache ({{language}})",
+      "unavailable": "Ihre Systemsprache {{language}} ist noch nicht verfügbar. LeatherCAD verwendet {{fallback}}.",
+      "option": "{{own}} — {{here}}",
+      "preview": "{{language}} (Vorschau, noch nicht unterstützt)"
+    },
+    "shortcuts": {
+      "intro": "Zum Ändern eines Tastenkürzels Ändern wählen und die neuen Tasten drücken. {{escape}}, {{tab}} und {{enter}} behalten ihre Funktion. Feste Tasten gehören zum Textfeld oder System.",
+      "change": "Ändern",
+      "changeLabel": "Tastenkürzel für {{command}} ändern",
+      "listening": "Neue Tasten drücken · {{escape}} bricht ab",
+      "reset": "Zurücksetzen",
+      "resetLabel": "Standardtasten für {{command}} wiederherstellen",
+      "resetAll": "Alle zurücksetzen",
+      "fixed": "Fest",
+      "reserved": "{{key}} hat eine feste Funktion. Andere Tasten drücken.",
+      "unusable": "Diese Taste oder die gehaltene Zusatztaste kann nicht Teil eines Tastenkürzels sein. Andere Tasten drücken.",
+      "needsModifier": "{{command}} funktioniert auch in Textfeldern: Eine Funktionstaste oder eine Kombination mit Zusatztaste verwenden.",
+      "clash": "{{keys}} wird bereits für „{{command}}“ verwendet.",
+      "clashFixed": "{{keys}} wird bereits für „{{command}}“ verwendet und kann nicht getauscht werden.",
+      "swap": "Tauschen",
+      "cancel": "Abbrechen",
+      "changed": "{{command}} hat ein neues Tastenkürzel.",
+      "wasReset": "{{command}} hat wieder das Standardtastenkürzel.",
+      "swapped": "{{command}} und {{other}} haben ihre Tastenkürzel getauscht.",
+      "allReset": "Alle Tastenkürzel wurden zurückgesetzt.",
+      "typesOther": "Diese Kombination schreibt „{{typed}}“ statt des Buchstabens und kann kein Tastenkürzel sein. Andere Tasten drücken.",
+      "typesSize": "Ziffern, Punkte und Kommas geben Maße auf der Zeichenfläche ein. Dafür ist eine Zusatztaste nötig. Andere Tasten drücken."
+    },
+    "updates": {
+      "note": "LeatherCAD fragt nur auf Ihren Wunsch bei GitHub nach der neuesten Version, hier oder über die Versionsnummer in der Statusleiste. Es werden keine Informationen über Sie oder Ihre Schnittmuster gesendet und nichts heruntergeladen oder installiert.",
+      "now": "Jetzt prüfen",
+      "checking": "Wird geprüft…",
+      "again_one": "In {{count}} Minute erneut prüfen",
+      "again_other": "In {{count}} Minuten erneut prüfen",
+      "managed": "Flathub hält diese Ausgabe von LeatherCAD aktuell. Sie sucht daher nicht selbst nach Updates."
+    }
+  },
+  "about": {
+    "blurb": "Lederschnittmuster, die exakt im Maßstab 1:1 drucken. Kostenlos und quelloffen unter der Apache-Lizenz 2.0.",
+    "logFolder": "Protokollordner anzeigen",
+    "notices": "Hinweise zu Drittanbietern",
+    "reporting": "Bei einer Problemmeldung das Protokoll beifügen.",
+    "source": "Quellcode auf GitHub",
+    "version": "Version {{version}}",
+    "noticesInDevelopment": "Hinweise zu Drittanbietern werden beim Produktionsbuild erstellt (pnpm build)."
+  },
+  "recovery": {
+    "decline": "Nicht jetzt",
+    "detail": "Ungespeicherte Arbeit an „{{name}}“ wurde um {{when}} automatisch gesichert. Wiederherstellen öffnet sie als neues, ungespeichertes Projekt; die ursprüngliche Datei bleibt unverändert. Bei Nicht jetzt wird die Sicherung beim Beenden von LeatherCAD gelöscht.",
+    "recover": "Wiederherstellen",
+    "title": "LeatherCAD wurde nicht ordnungsgemäß beendet"
+  },
+  "unsaved": {
+    "discard": "Nicht speichern",
+    "title": "Änderungen an „{{name}}“ speichern?",
+    "consequence": {
+      "close": "Beim Schließen ohne Speichern gehen Ihre Änderungen verloren.",
+      "reload": "Neu laden stellt die zuletzt gespeicherte Datei wieder her. Ungespeicherte Änderungen gehen verloren."
+    }
+  },
+  "unsavedProjects": {
+    "title_one": "Änderungen an {{count}} Projekt speichern?",
+    "title_other": "Änderungen an {{count}} Projekten speichern?",
+    "consequence": "Beim Schließen ohne Speichern gehen die Änderungen dieser Projekte verloren.",
+    "saveAll": "Alle speichern"
+  },
+  "deleteDialog": {
+    "deleteAll": "Alles löschen",
+    "features_one": "{{count}} Element",
+    "features_other": "{{count}} Elemente",
+    "follow": "Diese Elemente folgen dem Objekt, das Sie löschen:",
+    "freeze_one": "{{count}} ohne Verknüpfung behalten",
+    "freeze_other": "{{count}} ohne Verknüpfung behalten",
+    "freezeTooltip": "Als gezeichnete Geometrie an der jetzigen Position behalten, ohne Abhängigkeiten",
+    "thisPart": "dieses Teil",
+    "title": "{{what}} löschen?",
+    "note": {
+      "direct": "wird gelöscht: keine Geometrie zum Behalten",
+      "freezable": "wird gelöscht oder kann als gezeichnete Geometrie behalten werden",
+      "holes": "wird gelöscht: Löcher benötigen ihre Linie",
+      "indirect": "wird zusammen mit seiner Quelle gelöscht, sofern diese nicht behalten wird"
+    }
+  },
+  "file": {
+    "exportDxfTitle": "DXF exportieren",
+    "exportSvgTitle": "SVG exportieren",
+    "exportTitle": "PDF exportieren",
+    "invalid": "Diese Projektdatei kann nicht geöffnet werden: {{problems}}",
+    "newer": "Diese Datei wurde mit einer neueren Version von LeatherCAD gespeichert. Aktualisieren Sie LeatherCAD, um sie zu öffnen. (Dateiformat: {{format}}; diese Version liest bis Format {{current}}.)",
+    "newerNamed": "Diese Datei wurde mit LeatherCAD {{version}} gespeichert, einer neueren Version. Aktualisieren Sie LeatherCAD, um sie zu öffnen. (Dateiformat: {{format}}; diese Version liest bis Format {{current}}.)",
+    "openTitle": "Projekt öffnen",
+    "pdfFailed": "Die PDF konnte nicht geschrieben werden ({{reason}}). Es wurde nichts gespeichert.",
+    "pdfUnavailable": "Die PDF konnte nicht geschrieben werden: Der Hintergrundprozess ist nicht gestartet oder wurde beendet. Es wurde nichts gespeichert.",
+    "dxf": "DXF",
+    "pdf": "PDF",
+    "project": "LeatherCAD-Projekt",
+    "saveTitle": "Projekt speichern",
+    "svg": "SVG",
+    "resourceLimit": "Grenze für „{{resource}}“ überschritten ({{limit}}). Ihr aktuelles Projekt bleibt unverändert.",
+    "resources": {
+      "archiveBytes": "Bytes im Projektarchiv",
+      "expandedBytes": "entpackte Bytes im Projektarchiv",
+      "entries": "Archiveinträge",
+      "nodes": "Werte im Projektdokument",
+      "features": "Teile, Elemente und Hilfslinien",
+      "segments": "Pfadsegmente",
+      "characters": "Textzeichen",
+      "holes": "Löcher",
+      "pages": "Bögen"
+    }
+  },
+  "hardware": {
+    "eyelet": "Öse",
+    "other": "Sonstiges",
+    "rivet": "Niete",
+    "screw": "Schraube",
+    "snap": "Druckknopf"
+  },
+  "sheets": {
+    "choiceTaped": "{{sheets}} ({{taped}})",
+    "count_one": "{{count}} Bogen {{paper}}, {{orientation}}",
+    "count_other": "{{count}} Bögen {{paper}}, {{orientation}}",
+    "failedNotPrinted_one": "{{count}} Element mit einem Problem wird nicht gedruckt.",
+    "failedNotPrinted_other": "{{count}} Elemente mit Problemen werden nicht gedruckt.",
+    "paper": "Papier",
+    "partNotPrinted": "{{name}} wird nicht gedruckt.",
+    "partsNotPrinted_one": "{{count}} Teil wird nicht gedruckt.",
+    "partsNotPrinted_other": "{{count}} Teile werden nicht gedruckt.",
+    "physical": "{{paper}}, {{width}} × {{height}} mm. Druckfläche je Bogen bis {{printWidth}} × {{printHeight}} mm; der Rest entfällt auf Ränder und Maßstabskontrolle. Druck im Maßstab 1:1, ohne Anpassung.",
+    "scaleCheckOnly": "{{sheets}}, nur Maßstabskontrolle",
+    "summary": "{{sheets}}.",
+    "taped": "{{names}} zusammenzukleben",
+    "tapedPieces_one": "{{count}} Teil zum Zusammenkleben",
+    "tapedPieces_other": "{{count}} Teile zum Zusammenkleben",
+    "orientation": {
+      "landscape": "Querformat",
+      "portrait": "Hochformat"
+    },
+    "placedForYou": "LeatherCAD platziert die Teile automatisch auf den Bögen. Für eine andere Anordnung ein anderes Papier wählen."
+  },
+  "sheetNumbers": {
+    "list": "Bögen {{numbers}}",
+    "one": "Bogen {{number}}",
+    "range": "Bögen {{first}}–{{last}}"
+  },
+  "sheetsView": {
+    "drawingTools": "Zeichenwerkzeuge finden Sie im Entwurf · {{design}}",
+    "sheetCount_one": "{{count}} Bogen",
+    "sheetCount_other": "{{count}} Bögen",
+    "sheetHeading": "{{sheet}} · {{pieces}}",
+    "noPieces": "Keine Teile",
+    "assembly": "Übersichtsplan für {{name}}",
+    "pieceTurned": "{{names}}, um 90° gedreht",
+    "tapedLabel": "{{name}} · {{sheets}}",
+    "turnedMark": "Um 90° gedreht",
+    "tapedMark": "Zusammenzukleben",
+    "turnedLegend": "kennzeichnet ein gedrehtes Teil, das so auf den Bogen passt.",
+    "tapedHeading": "Über mehrere Bögen zusammenzukleben",
+    "tapedNone": "Keine. Jedes Teil passt auf einen Bogen.",
+    "tapedWithMap": "{{sheets}} · Übersicht auf Bogen {{number}}",
+    "notPrintedHeading": "Nicht gedruckt",
+    "onTheSheets": "auf den Bögen",
+    "scale": "Maßstab",
+    "scaleLocked": "100 % · gesperrt",
+    "sheet_one": "Bogen",
+    "sheet_other": "Bögen",
+    "sheetsOf": "{{sheets}} von {{count}}",
+    "range": "{{first}}–{{last}}",
+    "placement": "Platzierung",
+    "asDrawn": "Wie gezeichnet",
+    "turned": "Um 90° gedreht",
+    "taped": "Zusammenzukleben",
+    "fitsOne": "Passt auf einen Bogen, ohne Kleben",
+    "manySelected_one": "{{count}} Teil ausgewählt. Eines auswählen, um seine Druckposition zu sehen.",
+    "manySelected_other": "{{count}} Teile ausgewählt. Eines auswählen, um seine Druckposition zu sehen.",
+    "measure": "Nach dem Drucken das Rechteck von 100 × 5 mm am unteren Bogenrand nachmessen."
+  },
+  "tapedAcross": {
+    "list": "{{name}} wird aus den Bögen {{numbers}} zusammengeklebt.",
+    "one": "{{name}} wird auf Bogen {{number}} zusammengeklebt.",
+    "range": "{{name}} wird aus den Bögen {{first}}–{{last}} zusammengeklebt."
+  },
+  "print": {
+    "failed_one": "{{count}} Element mit einem Problem",
+    "failed_other": "{{count}} Elemente mit Problemen",
+    "hidden_one": "{{count}} ausgeblendetes Element",
+    "hidden_other": "{{count}} ausgeblendete Elemente",
+    "leftOff_one": "Wird nicht gedruckt: {{features}}.",
+    "leftOff_other": "Werden nicht gedruckt: {{features}}.",
+    "notPrinted": "Nicht gedruckt",
+    "taped": "{{sheets}}, zusammenzukleben",
+    "turned": "{{sheets}}, gedreht",
+    "reason": {
+      "hidden": "Es ist ausgeblendet.",
+      "nothing-drawn": "Darin ist nichts gezeichnet.",
+      "nothing-to-cut": "Es enthält nur Text, keine Schnittlinien.",
+      "problems": "Die angezeigten Elemente haben Probleme."
+    }
+  },
+  "printPreview": {
+    "actualSize": "PDF speichern und mit „Tatsächliche Größe“ (100 %) drucken, niemals mit „Anpassen“ oder „Verkleinern“.",
+    "copies": "Exemplare",
+    "failed": "{{printer}} konnte den Druckauftrag nicht annehmen: {{reason}}",
+    "findingPrinters": "Drucker werden gesucht…",
+    "include": "Bogen {{number}} drucken",
+    "landscape": "Querformat",
+    "loading": "PDF wird vorbereitet…",
+    "measure": "Nach dem Drucken das Rechteck von 100 × 5 mm am unteren Bogenrand nachmessen. So prüfen Sie, ob der Drucker den Maßstab eingehalten hat.",
+    "noPrinters": "Auf diesem Computer sind keine Drucker eingerichtet.",
+    "noScaling": "Keine Skalierung",
+    "noScalingDetail": "Die Bögen werden genau wie hier gezeigt mit ausgeschalteter Skalierung an den Drucker gesendet.",
+    "noScalingCorrected": "100 %, dann korrigiert",
+    "noScalingCorrectedDetail": "Die Skalierung des Druckers bleibt ausgeschaltet. Nur die Korrektur dieses Druckers wird angewendet, damit die Maße stimmen.",
+    "orientation": "Ausrichtung",
+    "paper": "Papier",
+    "paperMissing": "{{printer}} hat kein Papier im Format {{paper}}. Anderes Papier oder einen anderen Drucker wählen.",
+    "portrait": "Hochformat",
+    "printCopies": "{{print}} × {{copies}}",
+    "printSheets_one": "{{count}} Bogen drucken",
+    "printSheets_other": "{{count}} Bögen drucken",
+    "printer": "Drucker",
+    "problems": "Probleme",
+    "problemsLead": "Der Entwurf hat {{counts}}. Alles, dessen Geometrie berechnet werden konnte, ist auf den Bögen enthalten.",
+    "savePdf": "PDF speichern…",
+    "scale": "Maßstab",
+    "scaleLocked": "100 % — gesperrt",
+    "sending": "Wird gesendet…",
+    "sent": "Als Auftrag {{job}} an {{printer}} gesendet.",
+    "sheets": "Bögen",
+    "show": "Bogen {{number}} anzeigen",
+    "title": "Drucken",
+    "unavailable": {
+      "no-cups": "LeatherCAD kann das Drucksystem dieses Computers nicht erreichen.",
+      "platform": "LeatherCAD kann auf diesem System noch nicht direkt drucken."
+    }
+  },
+  "calibration": {
+    "again": "Erneut kalibrieren…",
+    "calibrate": "Diesen Drucker kalibrieren…",
+    "corrected": "Für diesen Drucker korrigiert: Skalierung {{x}} quer und {{y}} längs zum Papier.",
+    "horizontal": "Waagerechte Linie, gezeichnete Länge {{length}} mm",
+    "jobTitle": "LeatherCAD-Druckerkalibrierung",
+    "lead": "Nur für Drucker, deren Ausdrucke trotz 100 % / tatsächlicher Größe falsche Maße haben. Die Korrektur gilt nur für diesen Drucker und nur beim Drucken aus LeatherCAD.",
+    "measureStep": "Jede Linie mit einem Stahlmaßstab von Ende zu Ende messen und das Ergebnis eingeben.",
+    "printPage": "Kalibrierseite drucken",
+    "printStep": "Kalibrierseite auf {{paper}} drucken: eine waagerechte Linie mit {{x}} mm und eine senkrechte mit {{y}} mm.",
+    "remove": "Korrektur entfernen",
+    "result": "An diesen Drucker gesendete Bögen werden quer zum Papier mit {{x}} und längs mit {{y}} skaliert.",
+    "save": "Korrektur speichern",
+    "saveFailed": "Die Korrektur konnte nicht gespeichert werden: {{reason}}",
+    "title": "{{printer}} kalibrieren",
+    "tooFar": "Wahrscheinlich liegt es an den Druckeinstellungen. Prüfen Sie, ob 100 % / tatsächliche Größe eingestellt ist, und versuchen Sie es erneut.",
+    "vertical": "Senkrechte Linie, gezeichnete Länge {{length}} mm"
+  },
+  "exportDialog": {
+    "custom": "Eigene Ebenenauswahl",
+    "export": "Exportieren…",
+    "intent": "Exportieren für",
+    "intents": {
+      "laser-cut": {
+        "name": "Laserschnitt",
+        "note": "Umrisse und Beschlaglöcher: was aus dem Leder geschnitten wird"
+      },
+      "stitch-guide": {
+        "name": "Nahtschablone",
+        "note": "Nahtlinien und ihre Löcher"
+      },
+      "template-print": {
+        "name": "Schnittmuster drucken",
+        "note": "Alle Ebenen: das gesamte Schnittmuster"
+      }
+    },
+    "intro": "Die Zeichnung wie auf der Zeichenfläche angeordnet, in Millimetern. Wählen Sie die Ebenen für die Datei.",
+    "layers": "Ebenen",
+    "nothing": "Nichts zu exportieren. Keine der gewählten Ebenen enthält eine Linie.",
+    "page": "Die Seite wird {{width}} × {{height}} groß",
+    "roles": {
+      "annotation": "Maße, Beschriftungen und Teilnamen",
+      "cut": "Schnittumrisse",
+      "fold": "Falzlinien",
+      "hardware": "Beschlaglöcher",
+      "mark": "Markierungslinien",
+      "stitch": "Nahtlinien",
+      "stitch-holes": "Nahtlöcher"
+    },
+    "stitchHolesNote": "Jedes Loch wird als Kreis mit {{size}} Durchmesser für den Mittelpunkt dargestellt, nicht in der tatsächlichen Größe für den Faden",
+    "title": "{{format}} exportieren"
+  },
+  "exportNotice": {
+    "counts": "Der Entwurf hat {{counts}}. Sie sind im Bereich Probleme aufgelistet. Alles, dessen Geometrie berechnet werden konnte, ist in der PDF enthalten.",
+    "countsFile": "Der Entwurf hat {{counts}}. Sie sind im Bereich Probleme aufgelistet. Alles, dessen Geometrie berechnet werden konnte, ist in der Datei enthalten.",
+    "inPart": "in Teil {{part}}",
+    "omitted": "— ihre Geometrie konnte nicht berechnet werden; sie fehlen deshalb in der PDF.",
+    "omittedFile": "— ihre Geometrie konnte nicht berechnet werden; sie fehlen deshalb in der Datei.",
+    "omittedLead_one": "Dieses Element fehlt in der PDF",
+    "omittedLead_other": "Diese {{count}} Elemente fehlen in der PDF",
+    "omittedLeadFile_one": "Dieses Element fehlt in der Datei",
+    "omittedLeadFile_other": "Diese {{count}} Elemente fehlen in der Datei",
+    "tiled_one": "„{{name}}“ ist {{size}} groß, größer als {{paper}} im {{orientation}}: Druck auf {{count}} Bogen, {{rows}} × {{columns}}.",
+    "tiled_other": "„{{name}}“ ist {{size}} groß, größer als {{paper}} im {{orientation}}: Druck auf {{count}} Bögen, {{rows}} × {{columns}}.",
+    "tiledAcross": "im Maßstab 1:1 mit {{overlap}} mm Überlappung. Einen Bogen an der gestrichelten Linie schneiden, über den nächsten legen und die Kreuze zur Deckung bringen.",
+    "tiledFits": "{{printed}} Passt vollständig auf {{paper}} im {{orientation}}.",
+    "tiledLead_one": "Dieses Teil wird über mehrere Bögen gedruckt",
+    "tiledLead_other": "Diese {{count}} Teile werden über mehrere Bögen gedruckt",
+    "tiledNoPaper": "{{printed}} Passt auf kein unterstütztes Papierformat vollständig.",
+    "titleCheck": "PDF exportiert — bitte Hinweise prüfen",
+    "titleCheckFile": "{{format}} exportiert — bitte Hinweise prüfen",
+    "titleTiled": "PDF über mehrere Bögen exportiert"
+  },
+  "panels": {
+    "featureIn": "{{feature}} · {{part}}",
+    "hideParts": "Teile ausblenden",
+    "hideProperties": "Eigenschaften ausblenden",
+    "partsFolded": "Teile, eingeklappt",
+    "propertiesFolded": "Eigenschaften, eingeklappt",
+    "showParts": "Teile einblenden",
+    "showProperties": "Eigenschaften einblenden"
+  },
+  "parts": {
+    "actions": "Aktionen für {{name}}",
+    "count_one": "{{count}} Teil",
+    "count_other": "{{count}} Teile",
+    "duplicateNote": "Eine Kopie daneben mit eigenen Nahtlinien",
+    "empty": "Noch keine Teile. {{rectangle}} drücken, dann ziehen oder zwei Ecken anklicken, um eines zu zeichnen.",
+    "emptyPart": "Leer",
+    "hidePart": "Teil ausblenden",
+    "isHidden": "Ausgeblendet",
+    "isLocked": "Gesperrt",
+    "mirrorsMark": "Spiegelt das übergeordnete Element",
+    "notPrinted": "Wird nicht gedruckt. {{reason}}",
+    "remove": "Teil löschen",
+    "rename": "Name",
+    "rowHoles_one": "{{count}} Loch",
+    "rowHoles_other": "{{count}} Löcher",
+    "rowProblems_one": "{{count}} (Problem, höchste Stufe: {{severity}})",
+    "rowProblems_other": "{{count}} (Probleme, höchste Stufe: {{severity}})",
+    "showPart": "Teil einblenden",
+    "title": "Teile"
+  },
+  "featureKind": {
+    "cut-out": "Ausschnitt",
+    "fold-line": "Falzlinie",
+    "hardware-hole": "Beschlagloch",
+    "hole-row": "Lochreihe",
+    "marking-line": "Markierungslinie",
+    "measurement": "Bemaßung",
+    "outline": "Umriss",
+    "stitch-hole-set": "Nahtlöcher",
+    "stitch-line": "Nahtlinie",
+    "text-label": "Textbeschriftung"
+  },
+  "properties": {
+    "addAllowance": "Nahtzugabe hinzufügen",
+    "addAllowanceHint": "Die Schnittkante in diesem Abstand außerhalb der Nahtlinie; sie folgt deren Form",
+    "addHoleRow": "Lochreihe hinzufügen",
+    "addHoleRowHint": "Löcher entlang dieser Linie, eines an jedem Ende und die übrigen gleichmäßig dazwischen — für Gürtellöcher, Nieten oder Schnürungen",
+    "addHoles": "Löcher hinzufügen",
+    "addHolesHint": "Löcher entlang dieser Linie mit dem Nennabstand Ihres Prickeisens",
+    "addOverallSize": "Gesamtmaße hinzufügen",
+    "addOverallSizeHint": "Breite und Höhe des Teils von Rand zu Rand — das auszuschneidende Leder. Eine Bemaßung zwischen Ecken misst deren Abstand, der bei abgerundeten Teilen kleiner ist",
+    "addStitchLine": "Nahtlinie hinzufügen",
+    "addStitchLineHint": "Eine Nahtlinie in festem Abstand zur Kante, die deren Änderungen folgt",
+    "afterOutline": {
+      "title": "Nach dem Umriss",
+      "stitchLine": "Nahtlinie",
+      "holes": "Löcher",
+      "note": "Werte aus {{tools}} in den Einstellungen; Änderungen hier werden dort gespeichert. Verwendet für Nahtlinie + Zugabe und die nächsten Schritte an einem neuen Teil."
+    },
+    "area": "Fläche",
+    "arrange": "Anordnen",
+    "convertToPath": "In gezeichneten Pfad umwandeln",
+    "convertToPathNote": {
+      "circle": "Der Kreis wird zum Pfad: Mittelpunkt und Durchmesser sind nicht mehr direkt editierbar, dafür lassen sich Punkte verschieben und die Form zum Oval dehnen. Eine Nahtlinie kann einem Oval noch nicht folgen.",
+      "arc": "Der Bogen wird zum Pfad: Radius und Bogenwinkel sind nicht mehr direkt editierbar, dafür lässt sich die Form ungleichmäßig dehnen und an Punkten bearbeiten.",
+      "rect": "Das Rechteck wird zum Pfad: Breite, Höhe und Ecken sind nicht mehr direkt editierbar, dafür lässt sich die Form scheren und an Punkten bearbeiten. Eine Nahtlinie kann ungleichmäßig gedehnten Rundungen noch nicht folgen."
+    },
+    "cut": "Zuschnitt",
+    "cutSuffix": "Stk.",
+    "drawing": "Rechteck wird gezeichnet",
+    "flipLabel": "Spiegeln",
+    "foldMirror": "Am Falz spiegeln",
+    "foldMirrorLabel": "Am Falz",
+    "foldMirrorHint": "Ein Gegenstück an {{fold}}, das bei jeder Verschiebung des Falzes neu gespiegelt wird",
+    "follows": "Folgt",
+    "frozenNote": "Von {{source}} gelöst: jetzt gezeichnete Geometrie ohne Abhängigkeit zur Quelle.",
+    "itsOriginal": "seinem Original",
+    "length": "Länge",
+    "locked": "Gesperrt",
+    "lockedNote": "Gesperrt, daher sind hier keine Änderungen möglich. Im Bereich Teile entsperren.",
+    "manySelected_one": "{{count}} Element ausgewählt. Eines zum Bearbeiten auswählen.",
+    "manySelected_other": "{{count}} Elemente ausgewählt. Eines zum Bearbeiten auswählen.",
+    "measured": "Gemessen",
+    "measures": "Misst",
+    "mirrorFoldNote": "Spiegelt {{source}} an {{fold}}. Es folgt dem Falz und bleibt bei Änderungen an {{source}} dessen Spiegelbild. Es kann nicht allein verschoben werden.",
+    "mirrorLabel": "Verknüpft spiegeln",
+    "mirrorLineNote": "Spiegelt {{source}} an einer beim Erstellen festgelegten Linie, die {{source}} nicht folgt. Wird {{source}} verschoben, bewegt sich das Gegenstück entgegengesetzt; Größenänderungen ändern den Abstand. Dieses Teil ziehen, um das Paar zu platzieren.",
+    "mirrors": "Spiegelt",
+    "name": "Name",
+    "nothingSelected": "Nichts ausgewählt. Mit {{rectangle}} zeichnen oder mit {{select}} ein Objekt auswählen.",
+    "part": "Teil",
+    "piece": "Teil",
+    "perimeter": "Umfang",
+    "problems_one": "Problem",
+    "problems_other": "Probleme",
+    "reads": "Zeigt",
+    "title": "Eigenschaften",
+    "where": "{{part}} · Zuschnitt ×{{quantity}}",
+    "flip": {
+      "horizontal": "Spiegeln ↔",
+      "vertical": "Spiegeln ↕"
+    },
+    "flipHint": {
+      "horizontal": "Links und rechts um den Mittelpunkt vertauschen. Es bleibt keine Verknüpfung.",
+      "vertical": "Oben und unten um den Mittelpunkt vertauschen. Es bleibt keine Verknüpfung."
+    },
+    "mirror": {
+      "horizontal": "Verknüpft ↔",
+      "vertical": "Verknüpft ↕"
+    },
+    "mirrorHint": {
+      "counterpart": {
+        "horizontal": "Ein verknüpftes Gegenstück rechts, an der jetzigen rechten Kante gespiegelt. Es folgt der Form; die Spiegelachse bleibt fest.",
+        "vertical": "Ein verknüpftes Gegenstück darunter, an der jetzigen unteren Kante gespiegelt. Es folgt der Form; die Spiegelachse bleibt fest."
+      },
+      "piece": {
+        "horizontal": "Eine gespiegelte Kopie als neues Teil rechts, an der jetzigen rechten Kante gespiegelt. Sie folgt der Form dieses Teils; die Spiegelachse bleibt fest.",
+        "vertical": "Eine gespiegelte Kopie als neues Teil darunter, an der jetzigen unteren Kante gespiegelt. Sie folgt der Form dieses Teils; die Spiegelachse bleibt fest."
+      }
+    },
+    "mirrorNote": {
+      "counterpart": "Verknüpft spiegeln erzeugt ein abhängiges Gegenstück.",
+      "piece": "Verknüpft spiegeln erzeugt ein abhängiges Gegenstück als Teil."
+    },
+    "job": {
+      "holes": "Löcher",
+      "paper": "{{paper}}, {{orientation}}",
+      "pieces": "Teile",
+      "scaleCheckOnly": "{{paper}}, {{orientation}}, nur Maßstabskontrolle",
+      "sheets": "Bögen",
+      "timesCut": "{{holes}} ×{{cut}}",
+      "toCut_one": "{{count}} zuzuschneiden",
+      "toCut_other": "{{count}} zuzuschneiden"
+    },
+    "manyPartsSelected_one": "{{count}} Teil ausgewählt. Eines zum Bearbeiten auswählen.",
+    "manyPartsSelected_other": "{{count}} Teile ausgewählt. Eines zum Bearbeiten auswählen."
+  },
+  "legend": {
+    "hide": "Legende ausblenden",
+    "title": "Legende",
+    "tooltip": "Legende: {{names}}",
+    "names": {
+      "cut-edge": "Umriss",
+      "cut-out": "Ausschnitt",
+      "fold-mountain": "Bergfalz",
+      "fold-valley": "Talfalz",
+      "hardware-hole": "Beschlagloch",
+      "linked": "Folgt oder spiegelt eine andere Linie",
+      "marking": "Markierungslinie",
+      "measurement": "Bemaßung",
+      "mirror-across-fold": "Spiegelung am Falz",
+      "piece": "Teil",
+      "seam-allowance": "Nahtzugabe",
+      "stitch-holes": "Nahtlöcher",
+      "stitch-line": "Nahtlinie"
+    }
+  },
+  "caption": {
+    "cut": "{{name}} ×{{quantity}}",
+    "holes_one": "{{count}} Loch · {{pitch}}",
+    "holes_other": "{{count}} Löcher · {{pitch}}",
+    "unnamed": "Teil"
+  },
+  "spacing": {
+    "matches": "Istabstand entspricht dem Nennabstand",
+    "squeezed": "Istabstand um {{percent}} % verringert",
+    "squeezedUnder": "Istabstand um weniger als {{percent}} % verringert",
+    "stretched": "Istabstand um {{percent}} % vergrößert",
+    "stretchedUnder": "Istabstand um weniger als {{percent}} % vergrößert"
+  },
+  "problems": {
+    "withSubject": "{{name}}: {{sentence}}",
+    "badge_one": "{{count}} Problem, höchste Stufe: {{severity}}",
+    "badge_other": "{{count}} Probleme, höchste Stufe: {{severity}}",
+    "severity": {
+      "error": "Fehler",
+      "info": "Hinweis",
+      "warning": "Warnung"
+    },
+    "panel": {
+      "none": "Nichts zu beheben.",
+      "title": "Probleme"
+    },
+    "drawing": {
+      "cut-out": "Ein Ausschnitt",
+      "outline": "Ein Umriss",
+      "seam": "Eine Nahtlinie"
+    },
+    "DUPLICATE_ID": {
+      "title": "Doppelte Kennung",
+      "description": "Zwei Elemente haben dieselbe Kennung {{featureId}}."
+    },
+    "SOURCE_MISSING": {
+      "title": "Quelle fehlt",
+      "description": "{{featureName}} folgt einem Element, das nicht existiert."
+    },
+    "FOLLOWS_ITSELF": {
+      "title": "Folgt sich selbst",
+      "description": "{{featureName}} kann sich nicht selbst folgen."
+    },
+    "WOULD_LOOP": {
+      "title": "Würde eine Schleife erzeugen",
+      "description": "{{featureName}} würde über {{sourceName}} sich selbst folgen."
+    },
+    "CYCLE": {
+      "title": "Folgt sich selbst",
+      "description": "{{featureName}} folgt einer Kette, die zu ihm selbst zurückführt."
+    },
+    "DERIVATION_INCOMPATIBLE": {
+      "title": "Kann diesem Element nicht folgen",
+      "rule": {
+        "allowance-needs-closed-line": "Eine Nahtzugabe benötigt eine geschlossene Nahtlinie: Der Umriss muss das Teil umschließen.",
+        "allowance-needs-outer": "Aus einer Nahtlinie kann nur der äußere Umriss eines Teils abgeleitet werden, kein Ausschnitt.",
+        "allowance-needs-outline": "Nur ein Umriss kann nach außen aus einer Nahtlinie abgeleitet werden.",
+        "allowance-needs-stitch-line": "Ein Umriss kann nur aus einer Nahtlinie nach außen versetzt werden.",
+        "allowance-needs-whole-run": "Eine Nahtzugabe folgt der gesamten Nahtlinie, damit der entstehende Umriss geschlossen ist.",
+        "holes-need-hole-set": "Nur eine Nahtlochreihe kann einer Nahtlinie mit einem Nennabstand folgen.",
+        "holes-need-stitch-line": "Nahtlöcher können nur einer Nahtlinie folgen.",
+        "row-needs-hole-row": "Nur eine Lochreihe kann einer Markierungslinie mit einem Nennabstand folgen.",
+        "row-needs-marking-line": "Eine Lochreihe kann nur einer Markierungslinie folgen.",
+        "inset-needs-outline": "Eine Nahtlinie kann nur von einem Umriss oder Ausschnitt nach innen versetzt werden.",
+        "inset-needs-stitch-line": "Nur eine Nahtlinie kann nach innen aus einem Umriss abgeleitet werden.",
+        "mirror-keeps-kind": "Ein Gegenstück hat denselben Typ wie sein Original.",
+        "mirror-keeps-role": "Eine gespiegelte Schnittkontur behält ihre Rolle: Umriss bleibt Umriss, Ausschnitt bleibt Ausschnitt."
+      }
+    },
+    "PART_ALREADY_HAS_OUTER": {
+      "title": "Hat bereits einen Umriss",
+      "description": "{{partName}} wird bereits nach {{outerName}} zugeschnitten. Ein Teil ist ein Stück Leder und hat einen Umriss. Zeichnen Sie dies als Ausschnitt oder beginnen Sie ein neues Teil."
+    },
+    "CONTOUR_NOT_CLOSED": {
+      "title": "Umschließt keine Fläche",
+      "inner": "{{subject}} hat zwei offene Enden und schneidet daher nichts aus dem Teil aus. Als Markierungslinie zeichnen.",
+      "innerClosable": "{{subject}} hat zwei offene Enden und schneidet daher nichts aus dem Teil aus. Form schließen oder als Markierungslinie zeichnen.",
+      "outer": "{{subject}} hat zwei offene Enden und kann daher nicht ausgeschnitten werden. Als Markierungslinie zeichnen.",
+      "outerClosable": "{{subject}} hat zwei offene Enden und kann daher nicht ausgeschnitten werden. Form schließen oder als Markierungslinie zeichnen."
+    },
+    "MEASURE_REF_MISSING": {
+      "title": "Misst nichts",
+      "description": "{{featureName}} verweist auf eine Stelle, die nicht mehr in der Zeichnung vorhanden ist."
+    },
+    "MEASURE_NEEDS_ANCHOR": {
+      "title": "Kein Bezugspunkt zum Messen",
+      "description": "Eine Bemaßung muss auf eine Ecke verweisen, damit der Bezug bei Änderungen erhalten bleibt. Wählen Sie eine Ecke."
+    },
+    "MEASURE_ACROSS_PARTS": {
+      "title": "Eine Bemaßung misst ein Teil",
+      "description": "Diese Ecke liegt auf {{otherPartName}}. Eine Bemaßung wird mit dem gemessenen Teil gedruckt; beide Enden müssen auf diesem Teil liegen."
+    },
+    "FOLLOWS_ANOTHER_PART": {
+      "title": "Auf einem anderen Teil",
+      "description": "{{sourceName}} liegt auf {{otherPartName}}. {{featureName}} würde dort gezeichnet und mit dem falschen Teil gedruckt. Eine Quelle auf diesem Teil wählen."
+    },
+    "MIRROR_FOLD_MISSING": {
+      "title": "Falz fehlt",
+      "description": "{{featureName}} ist an einem Falz gespiegelt, der nicht mehr existiert."
+    },
+    "MIRROR_OUTLINE_ACROSS_FOLD": {
+      "title": "Ein Teil hat einen Umriss",
+      "description": "Spiegeln am Falz ist für Elemente innerhalb eines Teils gedacht: Schlitze, Nahtlinien und Beschläge. {{partName}} hat bereits einen Umriss. Zeichnen Sie den gesamten Umriss oder spiegeln Sie das Teil als zweites Teil."
+    },
+    "MIRROR_PLACED_BY_FOLD": {
+      "title": "Durch den Falz platziert",
+      "description": "{{featureName}} ist an {{foldName}} gespiegelt und wird durch diesen Falz platziert. {{foldName}} oder {{sourceName}} verschieben."
+    },
+    "FOLD_NOT_STRAIGHT": {
+      "title": "Der Falz ist nicht gerade",
+      "description": "Eine Spiegelung benötigt eine gerade Achse; dieser Falz ist geknickt. Einen geraden Falz zeichnen oder an einem anderen spiegeln."
+    },
+    "MIRROR_WOULD_SCALE": {
+      "title": "Gegenstück muss übereinstimmen",
+      "description": "Die gewünschte Skalierung würde {{featureName}} von {{sourceName}} abweichen lassen. Original ändern oder das ganze Teil gleichmäßig skalieren."
+    },
+    "MIRROR_NO_AXIS": {
+      "title": "Keine Spiegelachse",
+      "description": "Eine Form mit Ausdehnung auswählen. Die Spiegelachse wird entlang ihrer Kante platziert."
+    },
+    "FEATURE_LOCKED": {
+      "title": "Gesperrt",
+      "description": "{{featureName}} ist gesperrt und kann nicht geändert oder gelöscht werden. Zuerst im Bereich Teile entsperren."
+    },
+    "FEATURE_MISSING": {
+      "title": "Element fehlt",
+      "description": "Dieses Element existiert nicht."
+    },
+    "NOT_A_DRAWN_PATH": {
+      "title": "Keine Punkte zum Bearbeiten",
+      "description": "{{featureName}} ist kein gezeichneter Pfad und hat keine eigenen Punkte. Eine Form wird über ihre Maße geändert oder unter Eigenschaften in einen Pfad umgewandelt. Ein abgeleitetes Element folgt seiner Quelle."
+    },
+    "NOT_A_SHAPE": {
+      "title": "Bereits gezeichnet",
+      "description": "{{featureName}} ist keine umwandelbare Form. Ein gezeichneter Pfad hat bereits Punkte; ein abgeleitetes Element folgt seiner Quelle."
+    },
+    "HOLE_STAYS_ROUND": {
+      "title": "Ein gestanztes Loch bleibt rund",
+      "description": "{{featureName}} wird mit einem runden Locheisen gestanzt und bleibt ein Kreis. Für eine ovale Öffnung einen Ausschnitt zeichnen."
+    },
+    "POINT_EDIT_DEGENERATE": {
+      "title": "Zu wenige Punkte",
+      "description": "{{featureName}} hätte danach zu wenige Punkte oder eine Seite ohne Länge."
+    },
+    "ROUNDING_DOES_NOT_FIT": {
+      "title": "Rundung passt nicht",
+      "description": "Eine Rundung von {{radius}} mm passt nicht an diesen Punkt von {{featureName}}. Nötig ist eine Ecke zwischen zwei geraden Seiten mit genügend Länge."
+    },
+    "NOT_A_ROUNDED_CORNER": {
+      "title": "Keine Rundung zum Entfernen",
+      "description": "Dies ist keine abgerundete Ecke zwischen zwei geraden Seiten von {{featureName}}. Es gibt keine Rundung zum Entfernen."
+    },
+    "CORNER_IN_USE": {
+      "title": "Ecke wird verwendet",
+      "description": "{{usedByName}} ist mit dieser Ecke von {{featureName}} verbunden; die Änderung würde sie entfernen. Zuerst {{usedByName}} ändern."
+    },
+    "NOT_DERIVED": {
+      "title": "Quelle fehlt",
+      "description": "{{featureName}} folgt keiner Quelle; es gibt keine Quelle zum Ändern."
+    },
+    "DERIVED_MOVED_ALONE": {
+      "title": "Bewegt sich mit seiner Quelle",
+      "description": "Folgt {{rootName}}: Verschieben Sie stattdessen die Quelle."
+    },
+    "TRANSFORM_FLATTENS": {
+      "title": "Würde die Form abflachen",
+      "description": "Die Form würde auf null abgeflacht."
+    },
+    "WOULD_BECOME_ELLIPSE": {
+      "title": "Würde zur Ellipse",
+      "description": "Ungleichmäßiges Skalieren eines Kreises oder Bogens würde eine nicht unterstützte Ellipse erzeugen. Gleichmäßig skalieren oder zuerst unter Eigenschaften in einen gezeichneten Pfad umwandeln."
+    },
+    "WOULD_SHEAR": {
+      "title": "Würde scheren",
+      "description": "Ein gedrehtes Rechteck würde beim Dehnen entlang einer Achse geschert und seine rechten Winkel verlieren. Auf 0° zurückdrehen, gleichmäßig skalieren oder zuerst unter Eigenschaften in einen Pfad umwandeln."
+    },
+    "TEXT_WOULD_DISTORT": {
+      "title": "Würde Buchstaben verzerren",
+      "description": "Text lässt sich nur gleichmäßig skalieren. Dehnen entlang einer Achse würde die Buchstaben verzerren. {{shift}} halten oder die Größe im Bereich einstellen."
+    },
+    "DIMENSION_NOT_MIRRORED": {
+      "title": "Bemaßung wird gemessen, nicht gespiegelt",
+      "description": "{{featureName}} misst die Zeichnung. Eine gespiegelte Kopie könnte einen falschen Wert zeigen. Zuerst die Formen spiegeln, dann das Gegenstück bemaßen."
+    },
+    "TEXT_WOULD_READ_BACKWARDS": {
+      "title": "Wäre spiegelverkehrt",
+      "description": "Eine Beschriftung kann nicht gespiegelt werden, da sie spiegelverkehrt wäre. Formen ohne Text spiegeln oder den Text an der gewünschten Stelle neu eingeben."
+    },
+    "NO_TARGET_PART": {
+      "title": "Kein Teil ausgewählt",
+      "cut-out": "Zuerst ein Teil auswählen. Ein Ausschnitt gehört zu dem Teil, auf dem er gezeichnet wird.",
+      "label": "Zuerst ein Teil auswählen. Eine Beschriftung gehört zu dem Teil, auf dem sie platziert wird.",
+      "line": "Zuerst ein Teil auswählen. Eine Falz- oder Markierungslinie gehört zu dem Teil, auf dem sie gezeichnet wird."
+    },
+    "TARGET_SPANS_PARTS": {
+      "title": "Auswahl umfasst mehrere Teile",
+      "description": "Ein Teil auswählen. Dieses Objekt gehört zu einem Teil, die Auswahl umfasst jedoch mehrere."
+    },
+    "PARAMETER_INVALID": {
+      "title": "Ungültige Zahl",
+      "at-least": "{{parameter}} von {{featureName}} liegt unter dem Mindestwert {{minimum}}. Mindestens {{minimum}} eingeben.",
+      "finite": "{{parameter}} von {{featureName}} ist keine gültige Zahl. Einen Wert in Millimetern eingeben.",
+      "non-negative": "{{parameter}} von {{featureName}} ist {{value}} und darf nicht negativ sein.",
+      "positive": "{{parameter}} von {{featureName}} ist {{value}} und muss größer als null sein.",
+      "parameter": {
+        "allowance": "Zugabe",
+        "corner radius": "Eckenradius",
+        "end offset": "Endversatz",
+        "glide": "Gleitversatz",
+        "height": "Höhe",
+        "inset": "Innenversatz",
+        "mirror angle": "Spiegelwinkel",
+        "mirror axis": "Spiegelachse",
+        "pitch": "Nennabstand",
+        "position": "Position",
+        "radius": "Radius",
+        "rotation": "Drehung",
+        "start angle": "Startwinkel",
+        "start offset": "Startversatz",
+        "sweep": "Bogenwinkel",
+        "text size": "Textgröße",
+        "width": "Breite"
+      }
+    },
+    "OFFSET_COLLAPSED": {
+      "title": "Versatz zusammengefallen",
+      "inward": "Ein Randabstand von {{distance}} mm ist für diese Kante zu groß.",
+      "outward": "Eine Zugabe von {{distance}} mm kann außerhalb dieser Nahtlinie nicht berechnet werden."
+    },
+    "OFFSET_UNSUPPORTED": {
+      "title": "Kurven können nicht versetzt werden",
+      "description": "{{featureName}} kann nicht berechnet werden: Die Quelle enthält Freiformkurven, deren Versatz noch nicht unterstützt wird."
+    },
+    "OFFSET_SPLIT": {
+      "title": "Versatz aufgeteilt",
+      "description_one": "Der Versatz für {{featureName}} zerfiel in {{pieces}} Stücke. Nur das größte wird gezeichnet; {{count}} Stück fehlt.",
+      "description_other": "Der Versatz für {{featureName}} zerfiel in {{pieces}} Stücke. Nur das größte wird gezeichnet; {{count}} Stücke fehlen."
+    },
+    "ANCHOR_MISSING": {
+      "title": "Ecke nicht gefunden",
+      "description": "Dieser Abschnitt verweist auf Ecke {{anchor}}, aber der Umriss hat nur {{available}}.",
+      "noCorners": "Dieser Umriss hat keine Ecken für einen Abschnitt. Es kann nur dem gesamten Umriss gefolgt werden."
+    },
+    "SOURCE_FAILED": {
+      "title": "Quelle konnte nicht berechnet werden",
+      "description": "Die Quelle {{sourceName}}, der dieses Element folgt, konnte nicht berechnet werden."
+    },
+    "GEOMETRY_FAILED": {
+      "title": "Geometrie konnte nicht berechnet werden",
+      "description": "{{featureName}} konnte nicht berechnet werden ({{detail}})."
+    },
+    "TEXT_GLYPH_MISSING": {
+      "title": "Kann nicht gedruckt werden",
+      "label": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen. Die Beschriftung mit lateinischen Zeichen neu eingeben.",
+      "part": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen. Das Teil mit lateinischen Zeichen umbenennen."
+    },
+    "CONTOUR_SELF_INTERSECTS": {
+      "title": "Umriss schneidet sich selbst",
+      "description_one": "{{featureName}} schneidet sich einmal selbst; die Schnittführung ist unklar. Ohne Überschneidungen neu zeichnen.",
+      "description_other": "{{featureName}} schneidet sich {{count}} Mal selbst; die Schnittführung ist unklar. Ohne Überschneidungen neu zeichnen."
+    },
+    "HOLES_OVERLAP": {
+      "title": "Löcher überlappen sich",
+      "description": "Die Löcher von {{featureName}} liegen {{spacing}} auseinander und sind {{diameter}} breit. Dazwischen bleibt kein Leder; sie werden zu einem Schlitz. Nennabstand vergrößern oder ein kleineres Locheisen verwenden."
+    },
+    "HOLE_SPACING_DEVIATION": {
+      "title": "Istabstand weicht vom Nennabstand ab",
+      "description": "Der Istabstand beträgt {{achieved}}, der Nennabstand des Prickeisens aber {{pitch}}. Nennabstand oder Randabstand ändern, um die Abweichung zu verringern."
+    },
+    "HOLE_SPACING_UNEVEN": {
+      "title": "Ungleichmäßiger Istabstand",
+      "description": "Die Abstände in den Abschnitten von {{featureName}} reichen von {{narrowest}} bis {{widest}}. Der Unterschied wird an den Ecken sichtbar."
+    },
+    "HOLE_COUNT_TOO_LOW": {
+      "title": "Zu wenige Löcher",
+      "description_one": "{{featureName}} hat {{count}} Loch; zum Nähen sind mindestens zwei nötig.",
+      "description_other": "{{featureName}} hat {{count}} Löcher; zum Nähen sind mindestens zwei nötig.",
+      "none": "{{featureName}} hat keine Löcher; zum Nähen sind mindestens zwei nötig."
+    },
+    "PART_HAS_NO_OUTER_CONTOUR": {
+      "title": "Nichts zum Ausschneiden",
+      "description": "{{partName}} enthält Nahtlinien und Markierungen, aber keinen Umriss für den Lederzuschnitt. Einen Umriss zeichnen oder diese Elemente auf ein anderes Teil verschieben."
+    },
+    "CUT_OUT_OUTSIDE_PART": {
+      "title": "Ausschnitt liegt außerhalb des Teils",
+      "description": "{{featureName}} liegt nicht innerhalb seines Umrisses und schneidet daher nichts aus. Auf das Teil verschieben."
+    },
+    "OUTSIDE_PART": {
+      "title": "Außerhalb des Materials",
+      "holes": "Löcher von {{featureName}} liegen außerhalb des Materials, jenseits des Umrisses oder in einem Ausschnitt. Dort können sie nicht gestanzt werden.",
+      "line": "{{featureName}} verläuft außerhalb des Materials. Ein Teil der Linie kann dort nicht markiert werden."
+    },
+    "HOLE_TOO_CLOSE_TO_EDGE": {
+      "title": "Zu nah am Rand",
+      "description": "{{featureName}} liegt nur {{clearance}} vom Rand entfernt, weniger als die nötigen {{minimum}}. Das Leder kann zwischen Loch und Rand ausreißen."
+    },
+    "EMPTY_PART": {
+      "title": "Leeres Teil",
+      "description": "{{partName}} ist leer. Darin zeichnen oder es aus der Teileliste löschen."
+    },
+    "counts": {
+      "error_one": "{{count}} Fehler",
+      "error_other": "{{count}} Fehler",
+      "warning_one": "{{count}} Warnung",
+      "warning_other": "{{count}} Warnungen",
+      "info_one": "{{count}} Hinweis",
+      "info_other": "{{count}} Hinweise"
+    }
+  },
+  "contextMenu": {
+    "emptyPart": "Das Teil ist leer",
+    "hideNote": "Fehlt auch in der PDF, bis es wieder eingeblendet wird",
+    "label": "Auswahl",
+    "spansParts_one": "Die Auswahl umfasst {{count}} Teil; einzeln duplizieren",
+    "spansParts_other": "Die Auswahl umfasst {{count}} Teile; einzeln duplizieren",
+    "flip": {
+      "horizontal": "Horizontal spiegeln",
+      "vertical": "Vertikal spiegeln"
+    }
+  },
+  "editor": {
+    "cornerRadii": "Eckenradien",
+    "corners": "Ecken",
+    "custom": "Benutzerdefiniert",
+    "decimals": "Dezimalstellen",
+    "diameter": "Durchmesser",
+    "direction": "Richtung",
+    "drawnByHand": "Von Hand gezeichnet, daher durch Punkte statt Maße bestimmt. Mit Punkte bearbeiten ({{points}}) verschieben, hinzufügen oder entfernen.",
+    "edgeMargin": "Randabstand",
+    "fit": "Einpassen",
+    "height": "Höhe",
+    "holeCount": "Löcher",
+    "iron": "Prickeisen",
+    "notSet": "nicht festgelegt",
+    "offset": "Versatz",
+    "pitch": "Nennabstand",
+    "purpose": "Zweck",
+    "radius": "Radius",
+    "runs": "Abschnitte",
+    "size": "Größe",
+    "spacing": "Istabstand",
+    "start": "Anfang",
+    "sweep": "Bogenwinkel",
+    "text": "Text",
+    "thickness": "Stärke",
+    "turn": "Drehung",
+    "width": "Breite",
+    "fold": {
+      "mountain": "Bergfalz",
+      "valley": "Talfalz"
+    },
+    "holes": {
+      "continuous": "Fortlaufend",
+      "exact-pitch": "Exakter Nennabstand",
+      "fit-whole": "Gleichmäßig, ganze Anzahl",
+      "hole-at-corner": "Ein Loch an jeder Ecke"
+    },
+    "lengthError": {
+      "mixed": "Jede Zahl in einer Summe braucht ihre Einheit, z. B. 10cm + 5mm. Für 3½ Zoll 3.5in eingeben",
+      "notALength": "Das ergibt keine Länge: Eine Zahl erhält nur einmal eine Einheit. Längen dürfen nicht mit Längen multipliziert oder durch sie geteilt werden",
+      "notFinite": "Das ergibt keine endliche Zahl",
+      "syntax": "Dieses Maß kann nicht gelesen werden. Versuchen Sie 95, 95-2*3.5 oder 3.75in",
+      "unit": "„{{unit}}“ ist keine unterstützte Einheit. mm, cm oder in verwenden"
+    },
+    "marking": {
+      "alignment": "Ausrichtung",
+      "glue-area": "Klebefläche",
+      "logo": "Logo",
+      "other": "Sonstiges",
+      "skive": "Schärfen"
+    }
+  },
+  "history": {
+    "add": "{{name}} hinzufügen",
+    "add-dimension": "Bemaßung hinzufügen",
+    "add-overall-size": "Gesamtmaße hinzufügen",
+    "add-label": "Beschriftung hinzufügen",
+    "add-point": "Punkt hinzufügen",
+    "add-seam-allowance": "Nahtzugabe hinzufügen",
+    "change-fold-direction": "Falzrichtung ändern",
+    "change-fold-thickness": "Falzstärke ändern",
+    "change-hardware-type": "Beschlagtyp ändern",
+    "change-marking-purpose": "Markierungszweck ändern",
+    "change-paper": "Papier ändern",
+    "convert-to-path": "In gezeichneten Pfad umwandeln",
+    "delete": "{{what}} löschen",
+    "deleteKeepFrozen": "{{what}} löschen, {{frozen}} ohne Verknüpfung behalten",
+    "deleteWithDependents_one": "{{what}} und {{count}} abhängiges Element löschen",
+    "deleteWithDependents_other": "{{what}} und {{count}} abhängige Elemente löschen",
+    "deleteWithDependentsKeepFrozen_one": "{{what}} und {{count}} abhängiges Element löschen, {{frozen}} ohne Verknüpfung behalten",
+    "deleteWithDependentsKeepFrozen_other": "{{what}} und {{count}} abhängige Elemente löschen, {{frozen}} ohne Verknüpfung behalten",
+    "duplicate": "{{name}} duplizieren",
+    "duplicate-part": "Teil duplizieren",
+    "edit-derivation": "Ableitung bearbeiten",
+    "edit-dimension": "Bemaßung bearbeiten",
+    "edit-label": "Beschriftung bearbeiten",
+    "edit-shape": "Form bearbeiten",
+    "features_one": "{{count}} Element",
+    "features_other": "{{count}} Elemente",
+    "flip-horizontal": "Horizontal spiegeln",
+    "flip-vertical": "Vertikal spiegeln",
+    "follow": "{{name}} folgen",
+    "follow-another": "Einem anderen Element folgen",
+    "hide_one": "Element ausblenden",
+    "hide_other": "{{count}} Elemente ausblenden",
+    "hide-part": "Teil ausblenden",
+    "lock_one": "Sperren",
+    "lock_other": "{{count}} Elemente sperren",
+    "mirror_one": "Verknüpft spiegeln",
+    "mirror_other": "{{count}} Elemente verknüpft spiegeln",
+    "mirror-across-fold_one": "Am Falz spiegeln",
+    "mirror-across-fold_other": "{{count}} am Falz spiegeln",
+    "move": "Verschieben",
+    "move-point": "Punkt verschieben",
+    "new-document": "Neues Dokument",
+    "new-project": "Neues Projekt",
+    "open": "Öffnen",
+    "open-sample": "Beispiel öffnen",
+    "recover": "Wiederherstellen",
+    "remove-point": "Punkt entfernen",
+    "rename": "Umbenennen",
+    "rename-part": "Teil umbenennen",
+    "rename-project": "Projekt umbenennen",
+    "resize-label": "Beschriftungsgröße ändern",
+    "rotate": "Drehen",
+    "round-corner": "Ecke abrunden",
+    "scale": "Maßstab",
+    "set-quantity": "Stückzahl festlegen",
+    "sharpen-corner": "Eckenrundung entfernen",
+    "show_one": "Element einblenden",
+    "show_other": "{{count}} Elemente einblenden",
+    "show-part": "Teil einblenden",
+    "transform": "Transformieren",
+    "unlock_one": "Entsperren",
+    "unlock_other": "{{count}} Elemente entsperren",
+    "delete-part": "Teil löschen",
+    "add-guide": "Hilfslinie hinzufügen",
+    "edit-guide": "Hilfslinie bearbeiten",
+    "delete-guide": "Hilfslinie löschen",
+    "align": "Auswahl ausrichten",
+    "distribute": "Auswahl verteilen"
+  },
+  "fieldMenu": {
+    "label": "Bearbeiten",
+    "cut": "Zuschnitt",
+    "copy": "Kopieren",
+    "paste": "Einfügen",
+    "selectAll": "Alles auswählen",
+    "nothingSelected": "Zuerst Text auswählen"
+  },
+  "chips": {
+    "title": "Maße des ausgewählten Umrisses",
+    "titleDrawing": "Maße des gezeichneten Rechtecks",
+    "hint": {
+      "next": "weiter",
+      "make": "übernimmt",
+      "cancel": "bricht ab"
+    },
+    "cornerName": "Eckenradius, alle vier Ecken",
+    "corner": "r",
+    "margin": "Randabstand",
+    "mixed": "gemischt",
+    "tooLarge": {
+      "halfHeight": "Der Eckenradius überschreitet die halbe Höhe ({{size}}). {{enter}} übernimmt {{size}}.",
+      "halfWidth": "Der Eckenradius überschreitet die halbe Breite ({{size}}). {{enter}} übernimmt {{size}}.",
+      "height": "Der Eckenradius überschreitet den verfügbaren Platz entlang der Höhe ({{size}}). {{enter}} übernimmt {{size}}.",
+      "width": "Der Eckenradius überschreitet den verfügbaren Platz entlang der Breite ({{size}}). {{enter}} übernimmt {{size}}."
+    },
+    "tooSmall": {
+      "width": "Die Breite reicht für die Ecken nicht aus ({{size}}). {{enter}} übernimmt {{size}}.",
+      "height": "Die Höhe reicht für die Ecken nicht aus ({{size}}). {{enter}} übernimmt {{size}}."
+    }
+  },
+  "selectionBar": {
+    "title": "Naht von {{piece}}",
+    "noStitching": "Noch keine Nahtlinien",
+    "noHoles": "Noch keine Löcher",
+    "holesHidden": "Die Löcher sind ausgeblendet und werden weder gezählt noch gedruckt.",
+    "holes_one": "{{count}} Loch",
+    "holes_other": "{{count}} Löcher",
+    "spacing": "{{spacing}} mm, Nennabstand {{pitch}}",
+    "stretched": "um {{percent}} % vergrößert",
+    "stretchedUnder": "um weniger als {{percent}} % vergrößert",
+    "squeezed": "um {{percent}} % verringert",
+    "squeezedUnder": "um weniger als {{percent}} % verringert",
+    "runs": "Abschnitte {{runs}}",
+    "cut": "Zuschnitt ×{{quantity}}",
+    "next": "Weiter",
+    "done": "erledigt:",
+    "step": {
+      "stitchLine": "Nahtlinie",
+      "holes": "Nahtlöcher",
+      "allowance": "Nahtzugabe"
+    }
+  },
+  "updates": {
+    "current": "Sie haben die neueste Version.",
+    "available": "LeatherCAD {{version}} ist verfügbar.",
+    "availableLink": "Neuerungen ansehen und herunterladen",
+    "failed": "Es konnte nicht nach einer neuen Version gesucht werden. Verbindung prüfen oder später erneut versuchen.",
+    "checkedAt": "Geprüft um {{time}}",
+    "again_one": "Sie können in {{count}} Minute erneut prüfen.",
+    "again_other": "Sie können in {{count}} Minuten erneut prüfen."
+  },
+  "templates": {
+    "title": "Neues Projekt aus Vorlage",
+    "mineEmpty": "Ein Projekt über das Projekt- oder Tabmenü als Vorlage speichern; es erscheint dann hier.",
+    "use": "Vorlage verwenden",
+    "remove": "{{name}} entfernen",
+    "bifoldWallet": {
+      "name": "Faltgeldbörse",
+      "description": "Gefaltetes Außenteil mit Futter und zwei Kartenfächern"
+    },
+    "cardHolder": {
+      "name": "Kartenetui",
+      "description": "Rundum vernähtes Außenteil mit je einem Fach auf beiden Seiten"
+    },
+    "keyFob": {
+      "name": "Schlüsselanhänger",
+      "description": "Riemen mit runden Enden, durch einen Ring gefaltet und vernietet"
+    },
+    "coaster": {
+      "name": "Untersetzer",
+      "description": "Quadrat mit 100 mm Kantenlänge, abgerundeten Ecken und umlaufender Naht"
+    },
+    "saveTitle": "Als Vorlage speichern",
+    "saveName": "Vorlagenname",
+    "save": "Vorlage speichern",
+    "replace": "Ersetzen",
+    "exists": "Eine Vorlage namens „{{name}}“ existiert bereits. Ersetzen oder einen anderen Namen wählen.",
+    "invalid": "„{{name}}“ ist kein gültiger Vorlagenname. Einen anderen Namen wählen.",
+    "saved": "Als Vorlage „{{name}}“ gespeichert.",
+    "pieces_one": "{{count}} Teil zuzuschneiden",
+    "pieces_other": "{{count}} Teile zuzuschneiden",
+    "search": "Vorlagen suchen",
+    "searchLabel": "Vorlagen nach Name, Beschreibung oder Schlagwort suchen",
+    "show": {
+      "all": "Alle",
+      "builtin": "Mitgeliefert",
+      "mine": "Eigene"
+    },
+    "showLabel": "Anzeigen",
+    "sortLabel": "Sortieren",
+    "sort": {
+      "name": "Name (A–Z)",
+      "nameDesc": "Name (Z–A)",
+      "recent": "Zuletzt verwendet",
+      "newest": "Neueste zuerst",
+      "oldest": "Älteste zuerst"
+    },
+    "group": {
+      "pinned": "Angeheftet",
+      "others": "Andere Vorlagen",
+      "foldPinned": "Angeheftete Vorlagen einklappen",
+      "unfoldPinned": "Angeheftete Vorlagen anzeigen"
+    },
+    "count": "{{shown}} von {{total}}",
+    "countAll_one": "{{count}} Vorlage",
+    "countAll_other": "{{count}} Vorlagen",
+    "noMatch": "Keine Vorlage mit „{{query}}“ im Namen oder in der Beschreibung.",
+    "clearSearch": "Suche leeren",
+    "builtInBadge": "Mitgeliefert",
+    "changedOn": "Geändert am {{date}}",
+    "fact": {
+      "pieces": "Teile zum Zuschneiden",
+      "layout": "Schnittmusteranordnung",
+      "changed": "Geändert"
+    },
+    "overallSize": "{{width}} × {{height}} mm",
+    "pin": "Anheften",
+    "unpin": "Lösen",
+    "rename": "Umbenennen…",
+    "renameLabel": "Vorlagenname",
+    "duplicate": "Duplizieren",
+    "duplicateMine": "Als eigene Vorlage duplizieren",
+    "edit": "Vorlage bearbeiten",
+    "editTooltip": "Vorlage selbst in einem Tab öffnen. Speichern überschreibt die Vorlage",
+    "export": "Exportieren…",
+    "showInFolder": "Im Ordner anzeigen",
+    "delete": "Löschen",
+    "import": "Vorlage importieren…",
+    "importTooltip": "Eine Projektdatei vom Datenträger als eigene Vorlage hinzufügen",
+    "builtInLocked": "Mitgelieferte Vorlagen bleiben unverändert. Für eine eigene Version duplizieren.",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Verwendungszweck und Hinweise",
+    "tags": "Schlagwörter",
+    "tagsPlaceholder": "Durch Kommas getrennt, z. B. Gürtel, braun",
+    "removed": "„{{name}}“ entfernt.",
+    "undo": "Rückgängig",
+    "copyName": "{{name}} Kopie",
+    "importTitle": "Vorlage importieren",
+    "exportTitle": "Vorlage exportieren",
+    "nothingChosen": "Eine Vorlage wählen.",
+    "wordsTitle": "Beschreibung und Schlagwörter",
+    "saveWords": "Speichern",
+    "editDetails": "Details bearbeiten…",
+    "actionsFor": "Aktionen für {{name}}",
+    "sortChosen": "Sortierung: {{sort}}"
+  },
+  "guides": {
+    "title": "Hilfslinien",
+    "help": "Hilfslinie aus einem Lineal ziehen oder auf der Zeichenfläche platzieren: klicken für waagerecht, durch zwei Punkte ziehen für einen beliebigen Winkel. Hilfslinien werden gespeichert und dienen als Fangziele, werden aber nie gedruckt. Auswählen, um sie zu verschieben, Position und Winkel einzugeben oder eine parallele hinzuzufügen.",
+    "horizontal": "Waagerechte Hilfslinie",
+    "vertical": "Senkrechte Hilfslinie",
+    "item": "Hilfslinie {{number}}",
+    "x": "Hilfslinie x",
+    "y": "Hilfslinie y",
+    "angle": "Hilfslinienwinkel",
+    "delete": "Hilfslinie löschen",
+    "placeHint": "Klicken platziert eine waagerechte Hilfslinie",
+    "verticalHint": "platziert eine senkrechte Hilfslinie",
+    "dragHint": "Durch zwei Punkte ziehen",
+    "selected": "Hilfslinie ausgewählt",
+    "parallel": {
+      "title": "Parallele Hilfslinie",
+      "distance": "Parallelabstand",
+      "above": "Oberhalb hinzufügen",
+      "below": "Unterhalb hinzufügen",
+      "left": "Links hinzufügen",
+      "right": "Rechts hinzufügen"
+    }
+  },
+  "arrange": {
+    "title": "Ausrichten und verteilen",
+    "help": "Die Begrenzungsrahmen der Auswahl anordnen. Teile werden als Ganzes bewegt. Verteilen lässt die äußeren Objekte an ihrer Position und gleicht die Lücken an.",
+    "x": {
+      "min": "Links ausrichten",
+      "centre": "Horizontal zentrieren",
+      "max": "Rechts ausrichten",
+      "distribute": "Gleiche horizontale Lücken"
+    },
+    "y": {
+      "min": "Unten ausrichten",
+      "centre": "Vertikal zentrieren",
+      "max": "Oben ausrichten",
+      "distribute": "Gleiche vertikale Lücken"
+    },
+    "reason": {
+      "count_one": "Mindestens {{count}} unabhängiges Objekt auswählen.",
+      "count_other": "Mindestens {{count}} unabhängige Objekte auswählen.",
+      "unresolved": "Die Auswahl enthält Geometrie, die nicht berechnet werden kann.",
+      "linked": "Diese Elemente folgen einander. Unabhängige Teile anordnen oder ihre Quelle verschieben.",
+      "order": "Bei diesen Größen sind gleiche Lücken ohne Umordnen nicht möglich. Äußere Objekte weiter auseinander schieben."
+    }
+  }
+}

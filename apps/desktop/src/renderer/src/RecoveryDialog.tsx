@@ -49,7 +49,7 @@ export function RecoveryDialog({
           if (event.key === 'Escape') onDecline();
         }}
       >
-        <h3 id="recovery-dialog-title">{t('recovery.title')}</h3>
+        <h2 id="recovery-dialog-title">{t('recovery.title')}</h2>
         <p id="recovery-dialog-detail">{t('recovery.detail', { name, when })}</p>
         {error !== null && error !== undefined && (
           <p role="alert" className="status-error">

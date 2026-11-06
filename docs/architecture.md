@@ -82,7 +82,10 @@ conformance suite for the replacement.
   `apps/desktop/src/shared/i18n.ts`, on `Intl`, shared by the renderer (`useI18n()`) and the main
   process (macOS's menu, its dialogs). Keys are typed from `en.json`. The languages offered are
   `SUPPORTED_LANGUAGES`, a registry the project owns, not the files: a file with no entry is a
-  translation in progress, shown only by `pnpm dev`. Nothing below `apps/desktop`
+  translation in progress, shown only by `pnpm dev`. English is authoritative: other catalogues
+  may omit messages, falling back to English with English plural rules for the whole family.
+  Structural validation blocks errors; informational coverage never requires feature PRs to update
+  translations. Nothing below `apps/desktop`
   has words for the interface: a problem is a code and facts, an undo step a `HistoryLabel`, a
   part's print status a `PartPrintStatus`, and the app words each one. The paper's words — the PDF
   footer, part captions — are the export's, and stay English while the vendored glyphs are Latin.

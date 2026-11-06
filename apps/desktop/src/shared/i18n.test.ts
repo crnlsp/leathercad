@@ -11,6 +11,7 @@ import {
   isLanguagePreference,
   languageName,
   previewsOf,
+  pseudoCatalogue,
   resolveLocale,
   type MessageKey,
 } from './i18n.js';
@@ -35,6 +36,10 @@ const CATALOGUES_UNDER_TEST = {
 // The test catalogues' keys are not the app's: typed through a cast, once.
 const key = (name: string): MessageKey => name as MessageKey;
 
+/** A count as a message shows it: whole numbers grouped as `tag` does, fractions with the house point. */
+const shown = (tag: string, count: number): string =>
+  Number.isInteger(count) ? new Intl.NumberFormat(tag).format(count) : String(count);
+
 describe('a translation', () => {
   const pl = createI18n('pl-PL', CATALOGUES_UNDER_TEST);
 
@@ -47,23 +52,44 @@ describe('a translation', () => {
     expect(pl.t(key('holes'), { count: 3 })).toBe('3 otwory');
     expect(pl.t(key('holes'), { count: 5 })).toBe('5 otworów');
     expect(pl.t(key('holes'), { count: 22 })).toBe('22 otwory');
-    expect(pl.t(key('holes'), { count: 1.5 })).toBe('1,5 otworu');
+    expect(pl.t(key('holes'), { count: 1.5 })).toBe('1.5 otworu');
   });
 
-  it('writes a number as the language writes it', () => {
+  it('groups a whole number as the language does', () => {
     expect(createI18n('en', CATALOGUES_UNDER_TEST).t(key('holes'), { count: 1234 })).toBe(
       '1,234 holes',
     );
     expect(pl.t(key('holes'), { count: 1234 })).toBe('1234 otwory');
   });
 
+  it('writes a fraction in the house format, as the millimetre readouts beside it are (ADR 0018)', () => {
+    const de = createI18n('de', { en: flatten({ by: 'by {{percent}} %' }) });
+    expect(de.t(key('by'), { percent: 1.8 })).toBe('by 1.8 %');
+    expect(de.t(key('by'), { percent: -0.25 })).toBe('by −0.25 %');
+    expect(de.t(key('by'), { percent: 0.1 + 0.2 })).toBe('by 0.3 %');
+  });
+
   it('falls back to English, key by key, for what the language lacks', () => {
     expect(pl.t(key('only'))).toBe('English only');
   });
 
-  it('falls back to the other form when the language lacks the one asked for', () => {
-    const partial = { ...CATALOGUES_UNDER_TEST, pl: flatten({ holes_other: '{{count}} otworu' }) };
-    expect(createI18n('pl', partial).t(key('holes'), { count: 5 })).toBe('5 otworu');
+  it.each(['pl', 'ru'])('falls back to the whole English plural family in %s', (locale) => {
+    const partial = {
+      ...CATALOGUES_UNDER_TEST,
+      [locale]: flatten({ holes_other: '{{count}} otworu' }),
+    };
+    for (const count of [0, 1, 2, 5, 11, 21, 22, 1.5]) {
+      const expected = count === 1 ? 'hole' : 'holes';
+      expect(createI18n(locale, partial).t(key('holes'), { count })).toBe(
+        `${shown(locale, count)} ${expected}`,
+      );
+    }
+  });
+
+  it.each(['pl', 'ru'])('uses English plural rules for a missing family in %s', (locale) => {
+    const missing = { ...CATALOGUES_UNDER_TEST, [locale]: {} };
+    expect(createI18n(locale, missing).t(key('holes'), { count: 21 })).toBe('21 holes');
+    expect(createI18n(locale, missing).t(key('holes'), { count: 1 })).toBe('1 hole');
   });
 
   it('leaves a placeholder with nothing to fill it, so the mistake shows', () => {
@@ -153,7 +179,7 @@ describe('the languages LeatherCAD supports', () => {
       '../locales/pl.json': { greeting: 'Cześć' },
       '../locales/pt-BR.json': { greeting: 'Olá' },
     };
-    expect(previewsOf(files, SUPPORTED_LANGUAGES)).toEqual([
+    expect(previewsOf(files, SUPPORTED_LANGUAGES.slice(0, 1))).toEqual([
       { tag: 'pl', name: 'Polski', messages: { greeting: 'Cześć' }, preview: true },
       { tag: 'pt-BR', name: 'Português (Brasil)', messages: { greeting: 'Olá' }, preview: true },
     ]);
@@ -176,4 +202,91 @@ describe('the languages LeatherCAD supports', () => {
     expect(languageName('C', 'en')).toBe('C');
     expect(languageName('en', 'C')).toBe('en');
   });
+});
+
+describe('production languages', () => {
+  it('registers all six catalogues independently of their coverage', () => {
+    expect(SUPPORTED_LANGUAGES.map(({ tag }) => tag)).toEqual(['en', 'pl', 'de', 'ru', 'fr', 'es']);
+    for (const tag of ['pl', 'de', 'ru', 'fr', 'es']) {
+      expect(isLanguagePreference(tag)).toBe(true);
+      expect(resolveLocale('system', [`${tag}-${tag.toUpperCase()}`])).toBe(
+        `${tag}-${tag.toUpperCase()}`,
+      );
+    }
+  });
+
+  it.each([0, 1, 0.5, 1.5, 2, 21, 1_000_000, 2_000_000, 1_000_001, 1_000_000.5])(
+    'uses the Spanish hole form for %s',
+    (count) => {
+      expect(createI18n('es').t('parts.rowHoles', { count })).toBe(
+        `${shown('es', count)} ${count === 1 ? 'agujero' : 'agujeros'}`,
+      );
+    },
+  );
+
+  it.each([{}, { holes_one: '{{count}} agujero', holes_other: '{{count}} agujeros' }])(
+    'uses whole English families for missing Spanish plurals, including the million form',
+    (es) => {
+      for (const count of [0, 1, 0.5, 1.5, 2, 21, 1_000_000]) {
+        const catalogues = { ...CATALOGUES_UNDER_TEST, es };
+        expect(createI18n('es', catalogues).t(key('holes'), { count })).toBe(
+          `${shown('es', count)} ${count === 1 ? 'hole' : 'holes'}`,
+        );
+      }
+    },
+  );
+
+  it.each([
+    [0, 'otworów', 'отверстий'],
+    [1, 'otwór', 'отверстие'],
+    [2, 'otwory', 'отверстия'],
+    [5, 'otworów', 'отверстий'],
+    [11, 'otworów', 'отверстий'],
+    [21, 'otworów', 'отверстие'],
+    [22, 'otwory', 'отверстия'],
+    [1.5, 'otworu', 'отверстия'],
+    [0.5, 'otworu', 'отверстия'],
+    [2.1, 'otworu', 'отверстия'],
+  ])('uses the correct Polish and Russian hole forms for %s', (count, polish, russian) => {
+    for (const [tag, noun] of [
+      ['pl', polish],
+      ['ru', russian],
+    ] as const) {
+      const number = shown(tag, count);
+      expect(createI18n(tag).t('parts.rowHoles', { count })).toBe(`${number} ${noun}`);
+    }
+  });
+
+  it('lengthens preview words without damaging placeholders or plural keys', () => {
+    const preview = pseudoCatalogue({ greeting: 'Hello {{name}}', holes_one: '{{count}} hole' });
+    expect(preview['greeting']).toBe('[Hello~~ {{name}}]');
+    expect(preview['holes_one']).toBe('[{{count}} hole~~]');
+  });
+
+  it.each([
+    [0, 'trou'],
+    [1, 'trou'],
+    [0.5, 'trou'],
+    [1.5, 'trou'],
+    [2, 'trous'],
+    [21, 'trous'],
+    [1_000_000, 'de trous'],
+    [2_000_000, 'de trous'],
+    [1_000_001, 'trous'],
+    [1_000_000.5, 'trous'],
+  ])('uses the French singular, plural or million form for %s', (count, noun) => {
+    expect(createI18n('fr').t('parts.rowHoles', { count })).toBe(`${shown('fr', count)} ${noun}`);
+  });
+
+  it.each([{}, { holes_one: '{{count}} trou', holes_other: '{{count}} trous' }])(
+    'uses English rules for a missing French family or one missing its million form',
+    (fr) => {
+      const catalogues = { ...CATALOGUES_UNDER_TEST, fr };
+      for (const count of [0, 1, 0.5, 1.5, 2, 21, 1_000_000]) {
+        expect(createI18n('fr', catalogues).t(key('holes'), { count })).toBe(
+          `${shown('fr', count)} ${count === 1 ? 'hole' : 'holes'}`,
+        );
+      }
+    },
+  );
 });

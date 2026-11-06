@@ -41,7 +41,7 @@ export function UnsavedProjectsDialog({
           if (event.key === 'Escape') onCancel();
         }}
       >
-        <h3 id="unsaved-projects-title">{t('unsavedProjects.title', { count: names.length })}</h3>
+        <h2 id="unsaved-projects-title">{t('unsavedProjects.title', { count: names.length })}</h2>
         <ul className="unsaved-projects" data-testid="unsaved-projects">
           {names.map((name, index) => (
             <li key={`${String(index)}:${name}`}>{name}</li>

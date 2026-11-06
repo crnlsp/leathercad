@@ -3,26 +3,10 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { SOURCE_LOCALE, SUPPORTED_LANGUAGES, flatten, type Catalogue } from '../shared/i18n.js';
+import { catalogueCoverage, checkCatalogue } from '../shared/catalogue.js';
+import { SOURCE_LOCALE, SUPPORTED_LANGUAGES } from '../shared/i18n.js';
 
-/**
- * The check a translation has to pass (ADR 0018): `pnpm test locales`.
- *
- * Every file here is held to the English one, which is the source. What this
- * finds is named with its key. In every file, a mistake fails:
- *
- * - a key English lacks: misspelt, or one English no longer has;
- * - a placeholder English does not have, or one it has that is missing, so a
- *   name or a number would not be shown;
- * - a plural without every form the language has, or with one it has not;
- * - a value that is not words.
- *
- * A key the file lacks — it would show in English — fails for a language
- * LeatherCAD supports, which must be complete. For a translation not
- * supported yet it is the work still to do, and listed rather than failed, so
- * a translation can be contributed, and kept up with English, a part at a
- * time.
- */
+/** Every catalogue must be structurally sound; coverage is informational (ADR 0018). */
 
 const HERE = import.meta.dirname;
 
@@ -34,109 +18,6 @@ const FILES = readdirSync(HERE)
     text: readFileSync(join(HERE, name), 'utf8'),
   }));
 
-const PLURAL = /^(.*)_(zero|one|two|few|many|other)$/;
-const PLACEHOLDER = /\{\{\s*(\w+)\s*\}\}/g;
-
-function placeholders(text: string): Set<string> {
-  return new Set([...text.matchAll(PLACEHOLDER)].map((match) => match[1]!));
-}
-
-/** A catalogue's keys, a plural as its key without the form, with the forms it has. */
-function messages(catalogue: Catalogue): Map<string, Map<string, string>> {
-  const found = new Map<string, Map<string, string>>();
-  for (const [path, text] of Object.entries(catalogue)) {
-    const plural = PLURAL.exec(path);
-    const key = plural === null ? path : plural[1]!;
-    const forms = found.get(key) ?? new Map<string, string>();
-    forms.set(plural === null ? '' : plural[2]!, text);
-    found.set(key, forms);
-  }
-  return found;
-}
-
-/** Every value in a parsed file that is neither words nor a group of them. */
-function notWords(tree: unknown, prefix = ''): string[] {
-  if (typeof tree !== 'object' || tree === null || Array.isArray(tree))
-    return [prefix.slice(0, -1)];
-  return Object.entries(tree).flatMap(([key, value]) =>
-    typeof value === 'string'
-      ? value.trim() === ''
-        ? [`${prefix}${key}`]
-        : []
-      : notWords(value, `${prefix}${key}.`),
-  );
-}
-
-/** A tag written as BCP 47 writes it, naming a language `Intl` knows. */
-function isLanguageTag(tag: string): boolean {
-  try {
-    const names = new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' });
-    return Intl.getCanonicalLocales(tag)[0] === tag && names.of(tag) !== undefined;
-  } catch {
-    return false;
-  }
-}
-
-/** One language's file against English: its mistakes, and the keys it has not translated yet. */
-function checkCatalogue(
-  tag: string,
-  text: string,
-  sourceText: string,
-): { mistakes: string[]; missing: string[] } {
-  const wrong = (mistake: string) => ({ mistakes: [mistake], missing: [] });
-  let tree: unknown;
-  try {
-    tree = JSON.parse(text);
-  } catch (error) {
-    return wrong(`is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  const found: string[] = notWords(tree).map((path) => `${path || 'the file'}: is not words`);
-
-  if (!isLanguageTag(tag)) {
-    return wrong(`${tag}.json is not named by a language tag, such as pl or pt-BR`);
-  }
-  const categories = new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
-
-  const source = messages(flatten(JSON.parse(sourceText)));
-  const own = messages(flatten(tree));
-
-  for (const [key, forms] of own) {
-    const english = source.get(key);
-    if (english === undefined) {
-      found.push(`${key}: English has no such key`);
-      continue;
-    }
-    const isPlural = !english.has('');
-    const allowed = new Set([...english.values()].flatMap((form) => [...placeholders(form)]));
-    // A plural's count may be left out of a form — "one hole" — but a name may not.
-    const required = new Set([...allowed].filter((name) => !isPlural || name !== 'count'));
-
-    if (isPlural) {
-      for (const category of categories) {
-        if (!forms.has(category))
-          found.push(`${key}_${category}: missing, and ${tag} has this form`);
-      }
-    }
-    for (const [form, value] of forms) {
-      const where = form === '' ? key : `${key}_${form}`;
-      if (isPlural !== (form !== '')) {
-        found.push(
-          `${where}: ${isPlural ? 'English has this as a plural' : 'English has no plural here'}`,
-        );
-        continue;
-      }
-      if (isPlural && !categories.includes(form))
-        found.push(`${where}: ${tag} has no ${form} form`);
-      const used = placeholders(value);
-      for (const name of used)
-        if (!allowed.has(name)) found.push(`${where}: English has no {{${name}}}`);
-      for (const name of required)
-        if (!used.has(name)) found.push(`${where}: {{${name}}} is missing`);
-    }
-  }
-  return { mistakes: found, missing: [...source.keys()].filter((key) => !own.has(key)) };
-}
-
 const english = FILES.find((file) => file.tag === SOURCE_LOCALE)!.text;
 const supported = new Set(SUPPORTED_LANGUAGES.map((language) => language.tag));
 
@@ -144,19 +25,7 @@ describe('every translation', () => {
   it.each(FILES.map((file) => [file.tag, file.text] as const))(
     '%s has nothing English does not, and says it as English does',
     (tag, text) => {
-      const { mistakes, missing } = checkCatalogue(tag, text, english);
-      expect(mistakes).toEqual([]);
-      if (supported.has(tag)) {
-        // Supported: complete, or it does not ship.
-        expect(missing.map((key) => `${key}: missing`)).toEqual([]);
-      } else if (missing.length > 0) {
-        // Straight to stderr: the test runner keeps a passing test's console to
-        // itself, and this list is the translator's to-do.
-        process.stderr.write(
-          `${tag}.json is not supported yet, and ${String(missing.length)} keys are still in ` +
-            `English:\n  ${missing.join('\n  ')}\n`,
-        );
-      }
+      expect(checkCatalogue(tag, text, english).mistakes).toEqual([]);
     },
   );
 
@@ -235,4 +104,136 @@ describe('the check itself', () => {
       'pt_BR.json is not named by a language tag, such as pl or pt-BR',
     ]);
   });
+});
+
+describe('non-blocking translation maintenance', () => {
+  const english = JSON.stringify({
+    title: 'Title',
+    holes_one: '{{count}} hole',
+    holes_other: '{{count}} holes',
+  });
+
+  it('does not count whitespace-only edits of English as translations', () => {
+    const source = JSON.stringify({ title: 'Version {{version}}' });
+    for (const title of [
+      'Version\u00a0{{version}}',
+      ' Version {{version}} ',
+      'Version\u202f{{version}}',
+    ]) {
+      expect(catalogueCoverage('fr', JSON.stringify({ title }), source)).toEqual({
+        total: 1,
+        translated: 0,
+        missing: ['title'],
+        mistakes: [],
+      });
+    }
+  });
+
+  it.each(['fr', 'es'])('requires the %s million form when a family is translated', (tag) => {
+    const own = JSON.stringify({ holes_one: '{{count}} trou', holes_other: '{{count}} trous' });
+    expect(checkCatalogue(tag, own, english).mistakes).toContain(
+      `holes_many: missing, and ${tag} has this form`,
+    );
+  });
+
+  it('accepts a missing message and an entirely missing plural family for every supported language', () => {
+    for (const { tag } of SUPPORTED_LANGUAGES) {
+      if (tag === SOURCE_LOCALE) continue;
+      expect(checkCatalogue(tag, '{}', english)).toEqual({
+        mistakes: [],
+        missing: ['title', 'holes'],
+      });
+    }
+  });
+
+  it('lets an English-only feature add messages without updating registered translations', () => {
+    const source = JSON.stringify({ title: 'Title', newFeature: { label: 'New label' } });
+    expect(checkCatalogue('pl', '{"title":"Tytuł"}', source)).toEqual({
+      mistakes: [],
+      missing: ['newFeature.label'],
+    });
+  });
+
+  it('counts logical messages and English copies as untranslated', () => {
+    const own = JSON.stringify({
+      title: 'Title',
+      holes_one: '{{count}} Loch',
+      holes_other: '{{count}} Löcher',
+    });
+    expect(catalogueCoverage('de', own, english)).toEqual({
+      total: 2,
+      translated: 1,
+      missing: ['title'],
+      mistakes: [],
+    });
+  });
+
+  it('does not count a malformed partial plural family as translated', () => {
+    const report = catalogueCoverage('ru', '{"holes_one":"{{count}} отверстие"}', english);
+    expect(report.translated).toBe(0);
+    expect(report.missing).toEqual(['title', 'holes']);
+    expect(report.mistakes).toContain('holes_few: missing, and ru has this form');
+  });
+
+  it('reports invalid JSON without making coverage reporting throw', () => {
+    const report = catalogueCoverage('de', '{', english);
+    expect(report.translated).toBe(0);
+    expect(report.mistakes[0]).toMatch(/^is not valid JSON/);
+  });
+
+  it('rejects arrays, nulls, unknown groups and malformed placeholders', () => {
+    for (const tree of [
+      [],
+      null,
+      { title: [] },
+      { title: null },
+      { title: false },
+      { typo: {} },
+      { title: '{{name}' },
+    ]) {
+      expect(checkCatalogue('pl', JSON.stringify(tree), english).mistakes.length).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+});
+
+it('does not count a plural family with one English copy as fully translated', () => {
+  const source = JSON.stringify({ holes_one: '{{count}} hole', holes_other: '{{count}} holes' });
+  const own = JSON.stringify({ holes_one: '{{count}} hole', holes_other: '{{count}} Löcher' });
+  expect(catalogueCoverage('de', own, source).missing).toEqual(['holes']);
+});
+
+it('rejects damaged Unicode and triple-braced placeholders, while preserving Cyrillic and emoji', () => {
+  const source = JSON.stringify({ title: 'Title' });
+  for (const title of ['\uFFFD', '\uD800', '{{{name}}}']) {
+    expect(checkCatalogue('ru', JSON.stringify({ title }), source).mistakes.length).toBeGreaterThan(
+      0,
+    );
+  }
+  expect(checkCatalogue('ru', JSON.stringify({ title: 'Проект 🧵' }), source).mistakes).toEqual([]);
+});
+
+it('rejects a spaced placeholder, which a component splitting on {{name}} would show raw', () => {
+  const source = JSON.stringify({ title: 'Sort: {{sort}}' });
+  expect(
+    checkCatalogue('de', JSON.stringify({ title: 'Sortierung: {{ sort }}' }), source).mistakes,
+  ).toEqual(['title: malformed placeholder']);
+});
+
+it('rejects a symbol list escaped differently from English, as a doubled backslash', () => {
+  const source = JSON.stringify({ invalid: 'a character such as / \\ :' });
+  expect(
+    checkCatalogue('pl', JSON.stringify({ invalid: 'znak, np. / \\\\ :' }), source).mistakes,
+  ).toEqual(['invalid: has 2 backslashes, and English has 1']);
+  expect(
+    checkCatalogue('pl', JSON.stringify({ invalid: 'znak, np. / \\ :' }), source).mistakes,
+  ).toEqual([]);
+});
+
+it('rejects unknown keys even when JavaScript gives the property special meaning', () => {
+  const source = JSON.stringify({ title: 'Title' });
+  expect(checkCatalogue('pl', '{"__proto__":"Tytuł"}', source).mistakes).toContain(
+    '__proto__: English has no such key',
+  );
 });

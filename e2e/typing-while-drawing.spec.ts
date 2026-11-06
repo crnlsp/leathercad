@@ -137,7 +137,7 @@ test('a typed corner the pointer has left no room for is refused, never made sma
     // Enter on the board: refused, saying why, with the corner chip open on it.
     await cornerThenShrink(window);
     await window.keyboard.press('Enter');
-    await expect(note).toContainText('Corner is larger than half the');
+    await expect(note).toContainText('Corner radius exceeds half the');
     await expect(parts).toHaveText('0');
     await expect(field(window, 'corner')).toBeFocused();
     await expect(field(window, 'corner')).toHaveValue('8');
@@ -154,7 +154,7 @@ test('a typed corner the pointer has left no room for is refused, never made sma
     // A click on the board: refused the same way, and never takes the smaller corner.
     const at = await cornerThenShrink(window);
     await window.mouse.click(at.x, at.y);
-    await expect(note).toContainText('Corner is larger than half the');
+    await expect(note).toContainText('Corner radius exceeds half the');
     await expect(parts).toHaveText('0');
     await expect(field(window, 'corner')).toBeFocused();
     await window.keyboard.press('Escape');
@@ -165,7 +165,7 @@ test('a typed corner the pointer has left no room for is refused, never made sma
     await cornerThenShrink(window);
     await chip(window, 'corner').click();
     await window.keyboard.press('Enter');
-    await expect(note).toContainText('Corner is larger than half the');
+    await expect(note).toContainText('Corner radius exceeds half the');
     await expect(parts).toHaveText('0');
     await window.keyboard.press('Enter');
     await expect(parts).toHaveText('1');

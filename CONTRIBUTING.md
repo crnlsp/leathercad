@@ -59,11 +59,18 @@ The scripts set the rest themselves: `LEATHERCAD_BENCH`, `LEATHERCAD_PACKAGE_FOR
 
 **Translating?** You need none of the rest of this page beyond setting up: the
 [README's Translations section](README.md#translations) is the whole path, and
-`pnpm test locales` checks your file. A translation is offered in the app only once a maintainer
+`pnpm test locales` checks your file’s structural integrity; `pnpm locales:report` reports coverage.
+A translation is offered in the app only once a maintainer
 has reviewed it and added it to `SUPPORTED_LANGUAGES`; until then `pnpm dev` shows it as a
 preview. **Adding words to the interface?** They go in
 `apps/desktop/src/locales/en.json` and reach the screen through `t()` — never in the component, and
 never in a package below the app ([ADR 0018](docs/adr/0018-interface-language.md)).
+English is the single source of truth: feature PRs only need to update English. Other catalogues
+may be incomplete and fall back to English; updating them in the same PR is optional. Translation
+PRs can arrive separately. Missing messages and coverage never block development or releases;
+invalid JSON, unknown keys, placeholder mismatches and partial plural families still fail checks.
+Native-speaker corrections are welcome. The [translation guide](docs/localization.md) gives the
+terminology and the side-by-side review command.
 
 ## Branches
 

@@ -63,7 +63,7 @@ export function ExportDialog({
           if (event.key === 'Escape') onCancel();
         }}
       >
-        <h3 id={`${ids}title`}>{t('exportDialog.title', { format: t(`file.${format}`) })}</h3>
+        <h2 id={`${ids}title`}>{t('exportDialog.title', { format: t(`file.${format}`) })}</h2>
         <p>{t('exportDialog.intro')}</p>
 
         <div ref={bodyRef} className="export-groups">
