@@ -55,7 +55,7 @@
   "rename": {
     "title": "Nie zmieniono nazwy",
     "exists": "W folderze projektu jest już plik „{{file}}”. Wybierz inną nazwę. Projekt i jego plik zachowają obecną nazwę.",
-    "invalid": "Plik nie może mieć nazwy „{{name}}”: zawiera ona niedozwolony znak, np. / \\\\ : * ? \" < > |, lub jest zarezerwowana przez system. Wybierz inną nazwę.",
+    "invalid": "Plik nie może mieć nazwy „{{name}}”: zawiera ona niedozwolony znak, np. / \\ : * ? \" < > |, lub jest zarezerwowana przez system. Wybierz inną nazwę.",
     "failed": "Nie udało się zmienić nazwy pliku projektu. Projekt zachowa obecną nazwę. {{reason}}",
     "followExists": "Przywrócono nazwę projektu „{{name}}”, ale jego plik zachowa obecną nazwę: w tym folderze jest już plik „{{file}}”."
   },

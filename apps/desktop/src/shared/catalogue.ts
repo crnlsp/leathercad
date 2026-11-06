@@ -126,8 +126,19 @@ export function checkCatalogue(
       }
       if (isPlural && !categories.includes(form))
         found.push(`${where}: ${tag} has no ${form} form`);
-      if (/\{\{|\}\}/.test(value.replaceAll(PLACEHOLDER, '')) || /\{\{\{|\}\}\}/.test(value))
+      // Components split some messages on the exact `{{name}}`, so spacing inside one shows raw.
+      if (
+        /\{\{|\}\}/.test(value.replaceAll(PLACEHOLDER, '')) ||
+        /\{\{\{|\}\}\}|\{\{\s|\s\}\}/.test(value)
+      )
         found.push(`${where}: malformed placeholder`);
+      // A backslash is only ever a character shown literally; one more than English is an escape gone wrong.
+      const reference = english.get(form) ?? english.get('other') ?? '';
+      const slashes = (text: string): number => text.split('\\').length - 1;
+      if (slashes(value) !== slashes(reference))
+        found.push(
+          `${where}: has ${String(slashes(value))} backslashes, and English has ${String(slashes(reference))}`,
+        );
       if (/[\uD800-\uDFFF\uFFFD]/u.test(value)) found.push(`${where}: invalid Unicode`);
       const used = placeholders(value);
       for (const name of used)

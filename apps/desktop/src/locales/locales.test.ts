@@ -214,6 +214,23 @@ it('rejects damaged Unicode and triple-braced placeholders, while preserving Cyr
   expect(checkCatalogue('ru', JSON.stringify({ title: 'Проект 🧵' }), source).mistakes).toEqual([]);
 });
 
+it('rejects a spaced placeholder, which a component splitting on {{name}} would show raw', () => {
+  const source = JSON.stringify({ title: 'Sort: {{sort}}' });
+  expect(
+    checkCatalogue('de', JSON.stringify({ title: 'Sortierung: {{ sort }}' }), source).mistakes,
+  ).toEqual(['title: malformed placeholder']);
+});
+
+it('rejects a symbol list escaped differently from English, as a doubled backslash', () => {
+  const source = JSON.stringify({ invalid: 'a character such as / \\ :' });
+  expect(
+    checkCatalogue('pl', JSON.stringify({ invalid: 'znak, np. / \\\\ :' }), source).mistakes,
+  ).toEqual(['invalid: has 2 backslashes, and English has 1']);
+  expect(
+    checkCatalogue('pl', JSON.stringify({ invalid: 'znak, np. / \\ :' }), source).mistakes,
+  ).toEqual([]);
+});
+
 it('rejects unknown keys even when JavaScript gives the property special meaning', () => {
   const source = JSON.stringify({ title: 'Title' });
   expect(checkCatalogue('pl', '{"__proto__":"Tytuł"}', source).mistakes).toContain(

@@ -55,7 +55,7 @@
   "rename": {
     "title": "Nicht umbenannt",
     "exists": "Im Projektordner gibt es bereits eine Datei namens „{{file}}“. Wählen Sie einen anderen Namen. Projekt und Datei behalten ihren bisherigen Namen.",
-    "invalid": "„{{name}}“ ist kein gültiger Dateiname: Er enthält ein Zeichen wie / \\\\ : * ? \" < > | oder ist vom System reserviert. Wählen Sie einen anderen Namen.",
+    "invalid": "„{{name}}“ ist kein gültiger Dateiname: Er enthält ein Zeichen wie / \\ : * ? \" < > | oder ist vom System reserviert. Wählen Sie einen anderen Namen.",
     "failed": "Die Projektdatei konnte nicht umbenannt werden. Das Projekt behält seinen Namen. {{reason}}",
     "followExists": "Das Projekt heißt wieder „{{name}}“, aber die Datei behält ihren Namen: Im Ordner gibt es bereits eine Datei namens „{{file}}“."
   },
