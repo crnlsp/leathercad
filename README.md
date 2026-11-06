@@ -140,9 +140,27 @@ A line drawn as 100 mm measures 100 mm on paper. Everything in LeatherCAD's desi
 
 ## Translations
 
-LeatherCAD offers **English, Polish, German, Russian, French and Spanish** in production builds. Choose a language
-in *Settings › Language*, or follow your system language. Changes apply immediately and are kept
-between launches.
+Choose a language in *Settings › Language*, or follow your system language. Changes apply
+immediately and are kept between launches.
+
+| | Language | How it was translated | Native-speaker review | Coverage |
+|---|---|---|---|---:|
+| 🇬🇧 | English | Source language (British spelling) | — | 100 % |
+| 🇵🇱 | Polski | AI-assisted, checked with Hunspell | Pending: the maintainer’s own | 96.2 % |
+| 🇩🇪 | Deutsch | AI-assisted, checked with Hunspell | **Wanted** | 95.2 % |
+| 🇷🇺 | Русский | Based on **F1ystar’s contribution in [PR #87](https://github.com/crnlsp/leathercad/pull/87)**, updated with AI assistance, checked with Hunspell | **Wanted** | 96.5 % |
+| 🇫🇷 | Français | AI-assisted, checked with Hunspell | **Wanted** | 95.2 % |
+| 🇪🇸 | Español | AI-assisted | **Wanted** | 96.8 % |
+
+Coverage counts translated messages. What remains is mostly words that are the same in English,
+such as *PDF*, key names and *Name*. A missing message shows in English. The flags mark the
+variant each catalogue is written in, not who it is for.
+
+> **Native speakers: your corrections are very welcome.** Every translation except English was
+> prepared without a native-speaker review. Leathercraft has its own vocabulary: a pricking iron,
+> skiving, the difference between pitch and spacing. A maker who uses these words every day will
+> spot what a dictionary misses. Even a single fixed string is worth a pull request. An issue
+> that says *“this reads wrong”* helps too.
 
 **English is the source of truth.** Feature pull requests only need to update English. Missing
 translations fall back to English; updating the other languages in the same pull request is optional.
@@ -159,11 +177,9 @@ Translation coverage is informational and does not block development or releases
 4. Try the file in `pnpm dev`, then open a pull request into `develop`. New unregistered languages
    appear as previews in development; registration is an explicit maintainer decision.
 
-Polish is prepared for the maintainer’s personal review; that review has not yet taken place.
-`pnpm locales:report --review pl` lists every string beside its English source.
-German, Russian, French and Spanish translations were prepared with AI assistance and would benefit from further
-native-speaker review. Russian incorporates and updates **F1ystar’s contribution in
-[PR #87](https://github.com/crnlsp/leathercad/pull/87)**.
+To review a language, `pnpm locales:report --review de` lists every string beside its English
+source, and the [terminology table](docs/localization.md#canonical-terminology) gives the agreed
+craft words.
 
 Printed pattern captions, generated data names and default filenames remain English. Unnamed tabs
 use a translated placeholder until named. UI localization does not localize PDF pattern content
