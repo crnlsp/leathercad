@@ -36,6 +36,10 @@ const CATALOGUES_UNDER_TEST = {
 // The test catalogues' keys are not the app's: typed through a cast, once.
 const key = (name: string): MessageKey => name as MessageKey;
 
+/** A count as a message shows it: whole numbers grouped as `tag` does, fractions with the house point. */
+const shown = (tag: string, count: number): string =>
+  Number.isInteger(count) ? new Intl.NumberFormat(tag).format(count) : String(count);
+
 describe('a translation', () => {
   const pl = createI18n('pl-PL', CATALOGUES_UNDER_TEST);
 
@@ -48,14 +52,21 @@ describe('a translation', () => {
     expect(pl.t(key('holes'), { count: 3 })).toBe('3 otwory');
     expect(pl.t(key('holes'), { count: 5 })).toBe('5 otworów');
     expect(pl.t(key('holes'), { count: 22 })).toBe('22 otwory');
-    expect(pl.t(key('holes'), { count: 1.5 })).toBe('1,5 otworu');
+    expect(pl.t(key('holes'), { count: 1.5 })).toBe('1.5 otworu');
   });
 
-  it('writes a number as the language writes it', () => {
+  it('groups a whole number as the language does', () => {
     expect(createI18n('en', CATALOGUES_UNDER_TEST).t(key('holes'), { count: 1234 })).toBe(
       '1,234 holes',
     );
     expect(pl.t(key('holes'), { count: 1234 })).toBe('1234 otwory');
+  });
+
+  it('writes a fraction in the house format, as the millimetre readouts beside it are (ADR 0018)', () => {
+    const de = createI18n('de', { en: flatten({ by: 'by {{percent}} %' }) });
+    expect(de.t(key('by'), { percent: 1.8 })).toBe('by 1.8 %');
+    expect(de.t(key('by'), { percent: -0.25 })).toBe('by −0.25 %');
+    expect(de.t(key('by'), { percent: 0.1 + 0.2 })).toBe('by 0.3 %');
   });
 
   it('falls back to English, key by key, for what the language lacks', () => {
@@ -70,7 +81,7 @@ describe('a translation', () => {
     for (const count of [0, 1, 2, 5, 11, 21, 22, 1.5]) {
       const expected = count === 1 ? 'hole' : 'holes';
       expect(createI18n(locale, partial).t(key('holes'), { count })).toBe(
-        `${new Intl.NumberFormat(locale).format(count)} ${expected}`,
+        `${shown(locale, count)} ${expected}`,
       );
     }
   });
@@ -208,7 +219,7 @@ describe('production languages', () => {
     'uses the Spanish hole form for %s',
     (count) => {
       expect(createI18n('es').t('parts.rowHoles', { count })).toBe(
-        `${new Intl.NumberFormat('es').format(count)} ${count === 1 ? 'agujero' : 'agujeros'}`,
+        `${shown('es', count)} ${count === 1 ? 'agujero' : 'agujeros'}`,
       );
     },
   );
@@ -219,7 +230,7 @@ describe('production languages', () => {
       for (const count of [0, 1, 0.5, 1.5, 2, 21, 1_000_000]) {
         const catalogues = { ...CATALOGUES_UNDER_TEST, es };
         expect(createI18n('es', catalogues).t(key('holes'), { count })).toBe(
-          `${new Intl.NumberFormat('es').format(count)} ${count === 1 ? 'hole' : 'holes'}`,
+          `${shown('es', count)} ${count === 1 ? 'hole' : 'holes'}`,
         );
       }
     },
@@ -241,7 +252,7 @@ describe('production languages', () => {
       ['pl', polish],
       ['ru', russian],
     ] as const) {
-      const number = new Intl.NumberFormat(tag).format(count);
+      const number = shown(tag, count);
       expect(createI18n(tag).t('parts.rowHoles', { count })).toBe(`${number} ${noun}`);
     }
   });
@@ -264,9 +275,7 @@ describe('production languages', () => {
     [1_000_001, 'trous'],
     [1_000_000.5, 'trous'],
   ])('uses the French singular, plural or million form for %s', (count, noun) => {
-    expect(createI18n('fr').t('parts.rowHoles', { count })).toBe(
-      `${new Intl.NumberFormat('fr').format(count)} ${noun}`,
-    );
+    expect(createI18n('fr').t('parts.rowHoles', { count })).toBe(`${shown('fr', count)} ${noun}`);
   });
 
   it.each([{}, { holes_one: '{{count}} trou', holes_other: '{{count}} trous' }])(
@@ -275,7 +284,7 @@ describe('production languages', () => {
       const catalogues = { ...CATALOGUES_UNDER_TEST, fr };
       for (const count of [0, 1, 0.5, 1.5, 2, 21, 1_000_000]) {
         expect(createI18n('fr', catalogues).t(key('holes'), { count })).toBe(
-          `${new Intl.NumberFormat('fr').format(count)} ${count === 1 ? 'hole' : 'holes'}`,
+          `${shown('fr', count)} ${count === 1 ? 'hole' : 'holes'}`,
         );
       }
     },

@@ -5,6 +5,8 @@ import fr from '../locales/fr.json';
 import pl from '../locales/pl.json';
 import ru from '../locales/ru.json';
 
+import { formatEditable } from '@leathercad/core';
+
 import { flatten, type Catalogue } from './catalogue.js';
 export { flatten, type Catalogue } from './catalogue.js';
 
@@ -222,6 +224,9 @@ function canonical(tag: string): string[] {
  * with that family’s plural rules. Incomplete families never mix languages.
  * A placeholder with nothing to fill it is left as written, so the mistake shows.
  */
+/** Callers round a fraction to what they show; this only clears binary noise, as 0.1 + 0.2's. */
+const FRACTION_DIGITS = 4;
+
 export function createI18n(
   locale: string,
   catalogues: Readonly<Record<string, Catalogue>> = CATALOGUES,
@@ -251,7 +256,12 @@ export function createI18n(
     return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (whole, name: string) => {
       const value = params[name];
       if (value === undefined) return whole;
-      return typeof value === 'number' ? numbers.format(value) : value;
+      if (typeof value !== 'number') return value;
+      // A count is grouped as the language groups it. A fraction keeps the
+      // house point and minus, like the readouts beside it (ADR 0018).
+      return Number.isInteger(value)
+        ? numbers.format(value)
+        : formatEditable(value, FRACTION_DIGITS);
     });
   };
 

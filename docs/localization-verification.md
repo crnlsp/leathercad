@@ -351,5 +351,6 @@ no behavior changed.
 | Polish, German and Russian showed `\\` in the invalid-filename message, where English, French and Spanish show `\` | Corrected; `checkCatalogue` now fails a message whose backslash count differs from English |
 | A placeholder written `{{ sort }}` passed the check, though the template picker and Settings split messages on the exact `{{sort}}`, `{{link}}` and `{{keys}}` | `checkCatalogue` now reports spacing inside braces as a malformed placeholder |
 | Stitching status lines and the spacing problem titles used a bare *rozstaw / Abstand / шаг*, which in Russian reads as the pitch being squeezed | Aligned with the canonical *rozstaw rzeczywisty / Istabstand / фактический шаг*; pitch hints in Russian now say *номинальный шаг* |
+| A fractional number in a message took the language's decimal comma, so German read *3.92 mm, Nennabstand 3.85 mm* beside *um 1,8 % vergrößert* | `t()` groups whole numbers as the language does and writes fractions in the house format, as ADR 0018 says |
 
 Coverage figures are unchanged: these were corrections, not new translations.

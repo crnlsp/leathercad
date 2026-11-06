@@ -41,7 +41,8 @@ platform's `Intl`:
 
 - **Plurals** by `Intl.PluralRules` for the language, so Polish gets `few` and `many` and English
   does not have to write them.
-- **Numbers** in placeholders by `Intl.NumberFormat`, **lists** by `Intl.ListFormat`, **dates** by
+- **Whole numbers** in placeholders grouped by `Intl.NumberFormat`; a fraction keeps the house
+  format, below. **Lists** by `Intl.ListFormat`, **dates** by
   `toLocaleString`, and **language names** by `Intl.DisplayNames` — each language listed in Settings
   by its own name, so a maker can find theirs whatever the window is in.
 - **Fallback, key by key, to English.** A key a language lacks shows in English, never as a key.
@@ -122,7 +123,8 @@ production bundles. Production explicitly imports all registered catalogues.
   uses English. Since 8.12, an unnamed project starts with an empty name: its tab displays a
   translated *Untitled* placeholder, and the first save takes its name from the chosen filename.
   That interface placeholder is not written into the document by changing language.
-- **Numbers keep the house format**: a decimal point, a true minus (`−3.85 mm`). Fields already accept
+- **Numbers keep the house format**: a decimal point, a true minus (`−3.85 mm`), in a message's
+  placeholders too, so `1.8 %` matches the `3.85 mm` beside it. Fields already accept
   a decimal comma. Writing a comma where the language does needs the fields, the readouts and the
   canvas to change together, and is not done here.
 - A string with markup inside it is split around a `{{placeholder}}` the component fills — the
