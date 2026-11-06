@@ -89,7 +89,7 @@ as any item that will not make it does.
 - ☐ **PERF-018 Packaged baselines** — startup, idle, memory and a soak on the packaged app, and 1.7's workloads.
 - ☐ **U.21 The UX baseline** — every screen inspected, keyboard-only and with a screen reader; the [register](superpowers/specs/2026-11-03-1.7-ux-audit.md) complete.
 - ☐ **R13 The Windows installer, installed in CI** — install, upgrade from 1.6.0 and uninstall, with the maker's data checked.
-- ☐ **Q41 An opened project starts with Select** — today a template opens in Rectangle and the first click draws.
+- ✅ **Q41 An opened project starts with Select** — every opening route, restored and recovered work included; new blank projects start in Rectangle and tab switches keep the chosen tool.
 
 ### Stage 2 — The core editor ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-2--the-core-editor))
 
