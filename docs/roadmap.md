@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.6.0 (2026-11-02) · **Next:** 1.7 — Design & Construct · **Last updated:** 2026-11-06
+**Released:** v1.6.0 (2026-11-02) · **Next:** 1.7 — Design & Construct · **Last updated:** 2026-11-07
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to

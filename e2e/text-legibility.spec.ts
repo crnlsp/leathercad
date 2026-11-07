@@ -42,6 +42,8 @@ test('small text warns in Properties and Problems, and changing Size clears it u
     );
     await row.click();
     await expect(window.getByTestId('label-text')).toHaveValue('Fold');
+    // Dim subject/message text must remain readable on the row's hover fill too.
+    await row.hover();
     await expectNoViolations(window, 'small-text warning in Problems and Properties');
 
     const png = await app.evaluate(async ({ BrowserWindow }) => {
