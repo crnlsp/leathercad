@@ -3473,7 +3473,8 @@ body {
 
 button.problem-row:hover {
   color: var(--text);
-  background: var(--shell-600);
+  /* Subject and message text use text-dim, which meets AA through shell-700. */
+  background: var(--shell-700);
   cursor: pointer;
 }
 

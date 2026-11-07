@@ -76,6 +76,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
     characters: '漢',
   },
   CONTOUR_SELF_INTERSECTS: { featureId: 'f-1', featureName: 'Outline', crossings: 1 },
+  TEXT_TOO_SMALL_TO_PRINT: { ...named, capHeightMm: 1.047, minimumMm: 1.5 },
   HOLES_OVERLAP: { ...named, spacingMm: 3.2, diameterMm: 4 },
   HOLE_SPACING_DEVIATION: { ...named, achievedMm: 5, pitchMm: 3.85 },
   HOLE_SPACING_UNEVEN: { ...named, narrowestMm: 3.7, widestMm: 4.1 },
@@ -91,6 +92,21 @@ const everyCode = Object.keys(PROBLEM_CODES) as ProblemCode[];
 const sample = (code: ProblemCode): Problem => problem(code, SAMPLES[code] as never);
 
 describe('the message catalogue, in English', () => {
+  it('keeps a small-text height below its stated limit instead of rounding it up (Q34)', () => {
+    const sentence = describeProblem(
+      problem('TEXT_TOO_SMALL_TO_PRINT', {
+        featureId: 'label',
+        featureName: 'Fold',
+        capHeightMm: 1.4999322,
+        minimumMm: 1.5,
+      }),
+      t,
+    );
+    expect(sentence).toContain('1.4999 mm');
+    expect(sentence).toContain('1.50 mm');
+    expect(sentence).toContain('Increase Size in Properties.');
+  });
+
   it.each(everyCode)('describes %s in a sentence', (code) => {
     const sentence = describeProblem(sample(code), t);
     expect(sentence.length).toBeGreaterThan(10);
