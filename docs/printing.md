@@ -142,6 +142,15 @@ sheet plan's, which the Sheets view and the Print Preview read too, and a paper 
 something other than the PDF's whole pattern would be two answers to "what will be printed". A
 paper stitch guide is a decision for when someone asks.
 
+**Overlapping cut outlines are an export advisory** (Q43). Before saving an SVG or DXF with the
+`cut` role, the dialog names pieces whose visible, resolved outer outlines intersect, touch, or
+contain each other at their board positions. This includes custom mixes and *Template print*,
+since those files can also be sent to a cutter. Hidden, failed and missing outlines are excluded;
+locking does not exclude an outline. The check uses outer contours rather than material regions,
+so intentional nesting inside a cut-out also warns. *Export anyway* saves the original geometry;
+the maker can instead cancel and move the pieces apart. It is not a design diagnostic: paper
+templates may overlap, and PDF and Sheets continue to use their own layout.
+
 **A dimension prints as drafting draws it** (4.10b): its extension lines, its line broken where the
 number sits — the number centred on the line, reading along it — and a filled arrowhead on each end,
 its tip on the extension line. The arrowhead is 2.5 × 0.85 mm, ISO 129-1's three to one, and the

@@ -91,6 +91,7 @@ export {
 } from './badges.js';
 export { diagnosticTarget, MIN_FRAME_MM, type DiagnosticTarget } from './diagnosticTarget.js';
 export { exportReadiness, type ExportReadiness, type OmittedFeature } from './exportReadiness.js';
+export { overlappingParts } from './overlappingParts.js';
 
 export type { CornerSite } from './anchors.js';
 export { anchorsOf, cornerDistances, cornerSites, cornersThroughEdit } from './anchors.js';

@@ -11,9 +11,9 @@ import {
 } from '@leathercad/export';
 import { useEffect, useId, useMemo, useRef } from 'react';
 
-import { withRole } from './exportChoice.js';
+import { overlappingExportParts, withRole } from './exportChoice.js';
 import { useI18n } from './i18n.js';
-import { drawingSceneFor } from './sheets.js';
+import { drawingSceneFor, resolvedFor } from './sheets.js';
 import type { DrawingFormat } from './useProjectFile.js';
 
 /**
@@ -40,7 +40,7 @@ export function ExportDialog({
   onExport: () => void;
   onCancel: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, list } = useI18n();
   const ids = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -48,6 +48,10 @@ export function ExportDialog({
   }, []);
 
   const page = useMemo(() => drawingBoundsOf(drawingSceneFor(project, roles)), [project, roles]);
+  const overlaps = useMemo(
+    () => overlappingExportParts(resolvedFor(project), roles),
+    [project, roles],
+  );
   const intent = intentOf(roles);
 
   return (
@@ -136,6 +140,17 @@ export function ExportDialog({
               })}
         </p>
 
+        {overlaps.length > 0 && (
+          <p
+            id={`${ids}overlap`}
+            className="export-overlap"
+            data-testid="export-overlap"
+            role="status"
+          >
+            {t('exportDialog.overlap', { parts: list(overlaps.map((part) => part.name)) })}
+          </p>
+        )}
+
         <div className="dialog-actions">
           <button type="button" className="tool" data-testid="export-cancel" onClick={onCancel}>
             {t('actions.cancel')}
@@ -144,10 +159,11 @@ export function ExportDialog({
             type="button"
             className="tool primary"
             data-testid="export-go"
+            aria-describedby={overlaps.length > 0 ? `${ids}overlap` : undefined}
             disabled={page === null}
             onClick={onExport}
           >
-            {t('exportDialog.export')}
+            {t(overlaps.length > 0 ? 'exportDialog.exportAnyway' : 'exportDialog.export')}
           </button>
         </div>
       </div>
