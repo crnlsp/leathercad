@@ -1,6 +1,7 @@
 import type { Ulid } from '@leathercad/core';
-import { evaluate, type Project } from '@leathercad/domain';
+import { diagnose, evaluate, type Project } from '@leathercad/domain';
 import { MatOps } from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -10,6 +11,7 @@ import {
   rectShape,
   rectanglePart,
   refusedTransforms,
+  scaleFeatures,
   setLabelSize,
   setLabelText,
   transformFeatures,
@@ -126,6 +128,52 @@ describe('editing a label', () => {
 });
 
 describe('transforming a label', () => {
+  it('scaling its whole piece preserves text size and TEXT_TOO_SMALL_TO_PRINT warnings (Q34)', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(
+          { size: 1, warning: true },
+          { size: 1.5, warning: true },
+          { size: 3, warning: false },
+        ),
+        fc.double({ min: 0.25, max: 4, noNaN: true }),
+        fc.double({ min: 0.25, max: 4, noNaN: true }),
+        ({ size, warning }, x, y) => {
+          const store = storeWithLabel('Hi');
+          store.dispatch(setLabelSize('label-1', size));
+          const before = store.getState().document;
+          const warnings = (project: Project) =>
+            diagnose(project)
+              .filter((d) => d.problem.code === 'TEXT_TOO_SMALL_TO_PRINT')
+              .map((d) => d.problem);
+          const expected = warnings(before.project);
+          expect(expected).toHaveLength(warning ? 1 : 0);
+
+          const after = scaleFeatures(['feat-0'], {
+            pivot: { x: 50, y: 30 },
+            factors: { x, y },
+          }).apply(before);
+
+          expect(warnings(after.project)).toEqual(expected);
+          expect(labelOf(after.project)?.source.sizeMm).toBe(size);
+        },
+      ),
+    );
+  });
+
+  it('keeps the warning on 1 mm text when its piece is quartered (Q34 counterexample)', () => {
+    const store = storeWithLabel('Hi');
+    store.dispatch(setLabelSize('label-1', 1));
+    const after = scaleFeatures(['feat-0'], {
+      pivot: { x: 50, y: 30 },
+      factors: { x: 0.25, y: 0.25 },
+    }).apply(store.getState().document);
+    expect(
+      diagnose(after.project).filter((d) => d.problem.code === 'TEXT_TOO_SMALL_TO_PRINT'),
+    ).toHaveLength(1);
+    expect(labelOf(after.project)?.source.sizeMm).toBe(1);
+  });
+
   it('moves through its position', () => {
     const store = storeWithLabel();
     store.dispatch(translateFeatures(['label-1' as Ulid], { x: 5, y: -3 }));

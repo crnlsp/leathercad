@@ -150,8 +150,8 @@ describe('the registry and §8.6 agree', () => {
 
   it('documents nothing as built that the registry does not have', () => {
     // The other direction: a row for a code that was renamed or never written.
-    // A row may describe something planned — DR5's text rule is the standing
-    // case — but then its last column says so rather than saying "built".
+    // A row may describe something planned, but then its last column says so
+    // rather than saying "built".
     const registered = new Set<string>(codes);
     const built = [...documented.keys()].filter((code) => {
       const line = MARKDOWN.split('\n').find((l) => l.startsWith(`| \`${code}\` |`))!;

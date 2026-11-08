@@ -334,6 +334,10 @@ bounds use. Transforms go through the parameters: moving sets `at`, turning accu
 `rotationRad`, an even scale sets `sizeMm`, and an uneven one is refused with `TEXT_WOULD_DISTORT`
 (X9) — letters do not stretch.
 
+`sizeMm` is the font's em size. Q34's legibility rule (§8.6) reads the printed capital height from
+the vendored font's metrics at that size, independently of the words, descenders or rotation.
+The warning never resizes or refuses the label.
+
 **Text that restates a model value is never a label.** Part captions ("Card holder — cut 2") and
 measurement values are generated from the model, so they cannot disagree with it. All document text
 is set in the vendored typeface and sized in millimetres
@@ -993,7 +997,7 @@ The diagnostics themselves:
 | `HOLE_SPACING_UNEVEN` | info (runs differing by above 5 % of the pitch) | rule | DR4 | built 4.12a |
 | `HOLE_SPACING_DEVIATION` | warning (above 25 % from the iron) | rule | DR4 | built 4.12a |
 | `HOLE_COUNT_TOO_LOW` | warning (under 2 in a set) | rule | DR4 | built 4.12a — counted per set, because with a hole at every corner a short run legitimately contributes one |
-| `TEXT_TOO_SMALL_TO_PRINT` | warning (under 1.5 mm) | rule | DR5 | planned: labels came in 4.11, the rule did not (Q34) |
+| `TEXT_TOO_SMALL_TO_PRINT` | warning (capital height under 1.5 mm, from the vendored font's metrics at the label's em size) | rule | DR5 | built Q34 |
 | `EMPTY_PART` | info | rule | DR6 | built 4.12a (parts are kept since 4.2b) |
 
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
@@ -1049,7 +1053,7 @@ reuse.
 | Evaluation with memoisation and per-feature failures | Built; typed 4.12a | |
 | Layer roles and export presets | Built | |
 | Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (*Also later*) |
-| Validation, the §8.6 catalogue | Built: 4.12a–4.12 | Seam rules (9.6); text size (Q34) |
+| Validation, the §8.6 catalogue | Built: 4.12a–4.12; text size (Q34) | Seam rules (9.6) |
 | Templates as copies | Later: 9.7 (was 8.1) | Parameterised: *Exploring* |
 | `Seam` and assembly | Design only | 9.6 |
 | Material thickness compensation | Fields stored | 9.1 |
