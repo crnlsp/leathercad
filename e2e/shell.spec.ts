@@ -1560,10 +1560,14 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
 async function mmPerPx(
   window: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
 ): Promise<number> {
-  const box = await window.getByTestId('editor-canvas').boundingBox();
+  // The host is the visible clipping area. Immediately after the drawer
+  // opens, the canvas can still have its pre-resize backing dimensions;
+  // sampling their centre can land on the legend instead of the board.
+  const box = await window.getByTestId('editor-canvas').locator('..').boundingBox();
+  if (box === null) throw new Error('The board is not visible');
 
   const readAt = async (offsetPx: number): Promise<number> => {
-    const text = await readoutAt(window, box!.x + offsetPx, box!.y + box!.height / 2);
+    const text = await readoutAt(window, box.x + offsetPx, box.y + box.height / 2);
     return num(text.split(',')[0]!);
   };
 

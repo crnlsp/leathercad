@@ -8,7 +8,12 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
-import { describeProblem, describeProblemWithSubject, problemTitle } from './problemText.js';
+import {
+  describeProblem,
+  describeProblemWithSubject,
+  problemExplanation,
+  problemTitle,
+} from './problemText.js';
 
 /**
  * The problem catalogue in English (ADR 0018): every code has words, and the
@@ -89,6 +94,21 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
 };
 
 const everyCode = Object.keys(PROBLEM_CODES) as ProblemCode[];
+const listedCodes = everyCode.filter((code) =>
+  ['outcome', 'rule'].includes(PROBLEM_CODES[code].category),
+);
+
+describe('every listed problem explains why and what to do (9.15)', () => {
+  it.each(listedCodes)('%s has a reason and an actionable fix in the shared message', (code) => {
+    const explanation = problemExplanation(sample(code), t);
+    expect(explanation.why.trim().length).toBeGreaterThan(10);
+    expect(explanation.fix?.trim().length).toBeGreaterThan(10);
+    expect(explanation.why).not.toMatch(/undefined|\{\{|problems\.[A-Z_]+/);
+    expect(explanation.fix).not.toMatch(/undefined|\{\{|problems\.[A-Z_]+/);
+    expect(describeProblem(sample(code), t)).toContain(explanation.why);
+    expect(describeProblem(sample(code), t)).toContain(explanation.fix);
+  });
+});
 const sample = (code: ProblemCode): Problem => problem(code, SAMPLES[code] as never);
 
 describe('the message catalogue, in English', () => {
@@ -120,8 +140,8 @@ describe('the message catalogue, in English', () => {
     expect(title.length).toBeLessThan(40);
   });
 
-  // The words the app already shows. Moving them into the catalogue must not
-  // change one: E2E reads some of them off the screen.
+  // Reviewed wording: refusals stay unchanged; listed problems gain their
+  // reason and correction through the same shared path (9.15).
   const unchanged: Array<[Problem, string]> = [
     [
       problem('WOULD_BECOME_ELLIPSE', { shape: 'circle' }),
@@ -166,28 +186,32 @@ describe('the message catalogue, in English', () => {
     [problem('SOURCE_MISSING', named), 'Stitch line follows a feature that does not exist.'],
     [
       problem('OFFSET_COLLAPSED', { ...named, distanceMm: 60, side: 'inward' }),
-      'A 60 mm edge margin is deeper than this edge can hold.',
+      'A 60 mm edge margin is deeper than this edge can hold, so no offset path can be built. ' +
+        'Reduce the inset or allowance in Properties, or give the source line more room.',
     ],
     [
       problem('SOURCE_FAILED', { ...named, sourceId: 'o', sourceName: 'Outline' }),
-      'Outline, which it follows, could not be built.',
+      'Outline, which it follows, could not be built, so this feature has no source geometry. ' +
+        'Fix the named source feature first; this feature will rebuild with it.',
     ],
     [
       problem('ANCHOR_MISSING', { ...named, anchor: 9, available: 4 }),
-      'That run named corner 9, and this outline has 4.',
+      'That run named corner 9, and this outline has 4, so the run cannot be located. ' +
+        'Choose available corners for the run in Properties, or follow the whole line.',
     ],
     [
       problem('ANCHOR_MISSING', { ...named, anchor: 1, available: 0 }),
-      'This outline has no corners to run between, so it can only be followed whole.',
+      'This outline has no corners to run between, so it can only be followed whole. ' +
+        'Choose available corners for the run in Properties, or follow the whole line.',
     ],
     [
       problem('HOLE_SPACING_DEVIATION', { ...named, achievedMm: 5, pitchMm: 3.85 }),
-      'The holes are 5.00 mm apart, but the iron’s pitch is 3.85 mm. Change the pitch or the ' +
+      'The holes are 5.00 mm apart, but the iron’s pitch is 3.85 mm. The pricking iron will not land on every hole. Change the pitch or the ' +
         'edge margin to bring them closer.',
     ],
   ];
 
-  it.each(unchanged)('keeps the existing words: %#', (p, words) => {
+  it.each(unchanged)('uses the reviewed wording: %#', (p, words) => {
     expect(describeProblem(p, t)).toBe(words);
   });
 
@@ -304,10 +328,10 @@ describe('the message catalogue, in English', () => {
   it('counts in the plural the language uses', () => {
     const holes = (count: number): string =>
       describeProblem(problem('HOLE_COUNT_TOO_LOW', { ...named, count }), t);
-    expect(holes(0)).toBe('Stitch line has no holes, and stitching needs at least two.');
-    expect(holes(1)).toBe('Stitch line has 1 hole, and stitching needs at least two.');
+    expect(holes(0)).toContain('Stitch line has no holes, and stitching needs at least two.');
+    expect(holes(1)).toContain('Stitch line has 1 hole, and stitching needs at least two.');
     const split = describeProblem(problem('OFFSET_SPLIT', { ...named, droppedPieces: 2 }), t);
-    expect(split).toBe(
+    expect(split).toContain(
       'The offset for Stitch line came apart into 3 pieces. Only the largest is drawn; 2 pieces left out.',
     );
   });

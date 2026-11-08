@@ -134,6 +134,13 @@ close to an edge, a stitch line that has lost its outline — and selecting a pr
 The narrow half of **Print** says it too: a check when there is nothing to fix, or the warning's
 △ or the error's ▲ and how many. Click it to open the drawer.
 
+Every listed problem explains why it matters and what to do. **F8** goes to the next problem;
+**Shift+F8** goes to the previous one, wrapping at either end. The drawer also has **Previous
+problem** and **Next problem** buttons. Going to a problem opens Design, selects what it is about,
+frames the evidence and focuses its row. Several problems on one feature are visited separately.
+These keys can be changed in *Settings → Keyboard shortcuts*; fields and dialogs keep their own
+keys, and navigation does not add an Undo step.
+
 ## 4. Save
 
 **Save** (**Ctrl+S**, **⌘S** on macOS) writes a `.lcp` file. Beside the project's name the bar says

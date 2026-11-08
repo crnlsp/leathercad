@@ -4,6 +4,7 @@ import { CountBadge } from './CountBadge.js';
 import { useI18n } from './i18n.js';
 import { ProblemRows } from './ProblemList.js';
 import { describeCounts } from './problemsIndicator.js';
+import { Tooltip } from './Tooltip.js';
 import { Icon } from './icons/Icon.js';
 
 /**
@@ -29,6 +30,8 @@ export function ProblemsPanel({
   onGoTo,
   open,
   onToggle,
+  current,
+  onNavigate,
 }: {
   project: Project;
   diagnostics: readonly Diagnostic[];
@@ -37,6 +40,8 @@ export function ProblemsPanel({
   onGoTo: (diagnostic: Diagnostic) => void;
   open: boolean;
   onToggle: () => void;
+  current: string | null;
+  onNavigate: (direction: -1 | 1) => void;
 }) {
   const i18n = useI18n();
   const { t } = i18n;
@@ -69,9 +74,38 @@ export function ProblemsPanel({
       </button>
 
       {open && count > 0 && (
-        <div className="drawer-body" id="problems-body">
-          <ProblemRows diagnostics={diagnostics} project={project} onGoTo={onGoTo} />
-        </div>
+        <>
+          <div className="problem-navigation">
+            <Tooltip text={t('problems.panel.previous')} keys="previousProblem">
+              <button
+                type="button"
+                className="tool"
+                data-testid="problem-previous"
+                onClick={() => onNavigate(-1)}
+              >
+                {t('problems.panel.previous')}
+              </button>
+            </Tooltip>
+            <Tooltip text={t('problems.panel.next')} keys="nextProblem">
+              <button
+                type="button"
+                className="tool"
+                data-testid="problem-next"
+                onClick={() => onNavigate(1)}
+              >
+                {t('problems.panel.next')}
+              </button>
+            </Tooltip>
+          </div>
+          <div className="drawer-body" id="problems-body">
+            <ProblemRows
+              diagnostics={diagnostics}
+              project={project}
+              onGoTo={onGoTo}
+              current={current}
+            />
+          </div>
+        </>
       )}
     </section>
   );

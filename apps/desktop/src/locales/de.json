@@ -1049,7 +1049,8 @@
     },
     "FOLD_NOT_STRAIGHT": {
       "title": "Der Falz ist nicht gerade",
-      "description": "Eine Spiegelung benötigt eine gerade Achse; dieser Falz ist geknickt. Einen geraden Falz zeichnen oder an einem anderen spiegeln."
+      "description": "Eine Spiegelung benötigt eine gerade Achse; dieser Falz ist geknickt.",
+      "fix": "Einen geraden Falz zeichnen oder an einem anderen spiegeln."
     },
     "MIRROR_WOULD_SCALE": {
       "title": "Gegenstück muss übereinstimmen",
@@ -1139,8 +1140,8 @@
     },
     "PARAMETER_INVALID": {
       "title": "Ungültige Zahl",
-      "at-least": "{{parameter}} von {{featureName}} liegt unter dem Mindestwert {{minimum}}. Mindestens {{minimum}} eingeben.",
-      "finite": "{{parameter}} von {{featureName}} ist keine gültige Zahl. Einen Wert in Millimetern eingeben.",
+      "at-least": "{{parameter}} von {{featureName}} liegt unter dem Mindestwert {{minimum}}.",
+      "finite": "{{parameter}} von {{featureName}} ist keine gültige Zahl.",
       "non-negative": "{{parameter}} von {{featureName}} ist {{value}} und darf nicht negativ sein.",
       "positive": "{{parameter}} von {{featureName}} ist {{value}} und muss größer als null sein.",
       "parameter": {
@@ -1192,21 +1193,24 @@
     },
     "TEXT_GLYPH_MISSING": {
       "title": "Kann nicht gedruckt werden",
-      "label": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen. Die Beschriftung mit lateinischen Zeichen neu eingeben.",
-      "part": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen. Das Teil mit lateinischen Zeichen umbenennen."
+      "label": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen.",
+      "part": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Umriss schneidet sich selbst",
-      "description_one": "{{featureName}} schneidet sich einmal selbst; die Schnittführung ist unklar. Ohne Überschneidungen neu zeichnen.",
-      "description_other": "{{featureName}} schneidet sich {{count}} Mal selbst; die Schnittführung ist unklar. Ohne Überschneidungen neu zeichnen."
+      "description_one": "{{featureName}} schneidet sich einmal selbst; die Schnittführung ist unklar.",
+      "description_other": "{{featureName}} schneidet sich {{count}} Mal selbst; die Schnittführung ist unklar.",
+      "fix": "Ohne Überschneidungen neu zeichnen."
     },
     "HOLES_OVERLAP": {
       "title": "Löcher überlappen sich",
-      "description": "Die Löcher von {{featureName}} liegen {{spacing}} auseinander und sind {{diameter}} breit. Dazwischen bleibt kein Leder; sie werden zu einem Schlitz. Nennabstand vergrößern oder ein kleineres Locheisen verwenden."
+      "description": "Die Löcher von {{featureName}} liegen {{spacing}} auseinander und sind {{diameter}} breit. Dazwischen bleibt kein Leder; sie werden zu einem Schlitz.",
+      "fix": "Nennabstand vergrößern oder ein kleineres Locheisen verwenden."
     },
     "HOLE_SPACING_DEVIATION": {
       "title": "Istabstand weicht vom Nennabstand ab",
-      "description": "Der Istabstand beträgt {{achieved}}, der Nennabstand des Prickeisens aber {{pitch}}. Nennabstand oder Randabstand ändern, um die Abweichung zu verringern."
+      "description": "Der Istabstand beträgt {{achieved}}, der Nennabstand des Prickeisens aber {{pitch}}.",
+      "fix": "Nennabstand oder Randabstand ändern, um die Abweichung zu verringern."
     },
     "HOLE_SPACING_UNEVEN": {
       "title": "Ungleichmäßiger Istabstand",
@@ -1220,11 +1224,13 @@
     },
     "PART_HAS_NO_OUTER_CONTOUR": {
       "title": "Nichts zum Ausschneiden",
-      "description": "{{partName}} enthält Nahtlinien und Markierungen, aber keinen Umriss für den Lederzuschnitt. Einen Umriss zeichnen oder diese Elemente auf ein anderes Teil verschieben."
+      "description": "{{partName}} enthält Nahtlinien und Markierungen, aber keinen Umriss für den Lederzuschnitt.",
+      "fix": "Einen Umriss zeichnen oder diese Elemente auf ein anderes Teil verschieben."
     },
     "CUT_OUT_OUTSIDE_PART": {
       "title": "Ausschnitt liegt außerhalb des Teils",
-      "description": "{{featureName}} liegt nicht innerhalb seines Umrisses und schneidet daher nichts aus. Auf das Teil verschieben."
+      "description": "{{featureName}} liegt nicht innerhalb seines Umrisses und schneidet daher nichts aus.",
+      "fix": "Auf das Teil verschieben."
     },
     "OUTSIDE_PART": {
       "title": "Außerhalb des Materials",
@@ -1237,7 +1243,8 @@
     },
     "EMPTY_PART": {
       "title": "Leeres Teil",
-      "description": "{{partName}} ist leer. Darin zeichnen oder es aus der Teileliste löschen."
+      "description": "{{partName}} ist leer.",
+      "fix": "Darin zeichnen oder es aus der Teileliste löschen."
     },
     "counts": {
       "error_one": "{{count}} Fehler",

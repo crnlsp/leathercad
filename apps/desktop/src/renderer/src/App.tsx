@@ -20,6 +20,7 @@ import {
   diagnose,
   diagnosticTarget,
   evaluate,
+  problemKey,
   type Diagnostic,
   type Project,
 } from '@leathercad/domain';
@@ -94,6 +95,7 @@ import { PointerValue, usePointerValue } from './pointerValue.js';
 import { historyText } from './historyText.js';
 import { describeProblem } from './problemText.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
+import { nextDiagnostic } from './problemNavigation.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { SheetsParts, SheetsProperties } from './SheetsPanels.js';
 import { selectedParts } from './sheetContents.js';
@@ -1031,6 +1033,56 @@ export function App({
   // The Print Preview (7.6), open or not.
   const [printing, setPrinting] = useState(false);
 
+  // A cursor in this tab's diagnostic list, not a selected feature: the same
+  // feature can have multiple problems, and another tab may reuse its ids.
+  // Only ids: remembering a closed tab's store would retain its undo history.
+  const [problemCursor, setProblemCursor] = useState<{
+    readonly tabId: string;
+    readonly key: string;
+  } | null>(null);
+  const problemTabId = tab.id;
+  const currentProblem = problemCursor?.tabId === problemTabId ? problemCursor.key : null;
+
+  /** Select the subject, frame the evidence, and show the shared explanation. */
+  const goToDiagnostic = useCallback(
+    (diagnostic: Diagnostic) => {
+      const project = store.getState().document.project;
+      const target = diagnosticTarget(evaluate(project), diagnostic);
+      setProblemCursor({ tabId: problemTabId, key: problemKey(diagnostic.problem) });
+      if (target.subject.kind === 'feature') store.select([target.subject.featureId]);
+      else store.selectParts([target.subject.partId]);
+      setFocus(false);
+      setProblemsOpen(true);
+      showView('design');
+      // The drawer and a switch from Sheets can resize the board. Frame and
+      // focus after that layout; rapid requests follow the latest current row.
+      requestAnimationFrame(() => {
+        if (tabs.active?.id !== problemTabId) return;
+        const row = document.querySelector<HTMLElement>(
+          '[data-testid="problems-panel"] [aria-current="true"]',
+        );
+        if (row === null) return;
+        if (target.bounds !== null) canvasRef.current?.frame(target.bounds);
+        row.focus({ preventScroll: true });
+        row.scrollIntoView({ block: 'nearest' });
+      });
+    },
+    [store, problemTabId, tabs, showView, setFocus],
+  );
+
+  const navigateProblems = useCallback(
+    (direction: -1 | 1) => {
+      if (document.querySelector('[aria-modal="true"]') !== null) return;
+      const next = nextDiagnostic(
+        diagnose(store.getState().document.project),
+        currentProblem,
+        direction,
+      );
+      if (next !== null) goToDiagnostic(next);
+    },
+    [store, currentProblem, goToDiagnostic],
+  );
+
   useEffect(() => {
     // Through the keymap (U.3): each key by where it is on the keyboard, a
     // letter by the letter it types.
@@ -1060,6 +1112,8 @@ export function App({
       fit: () => runZoom('fit'),
       fitSelection: () => runZoom('fitSelection'),
       trueSize: () => runZoom('trueSize'),
+      nextProblem: () => navigateProblems(1),
+      previousProblem: () => navigateProblems(-1),
       // The panels (U.5): `[`, `]`, and `\` for focus mode.
       toggleParts: () => togglePanel('parts', 'keyboard'),
       toggleProperties: () => togglePanel('properties', 'keyboard'),
@@ -1121,6 +1175,7 @@ export function App({
     setFocus,
     closeOverlay,
     selectionBarOn,
+    navigateProblems,
   ]);
 
   // macOS's native menu (8.7) sends what the platform keeps there; each runs
@@ -1137,29 +1192,6 @@ export function App({
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
-
-  /**
-   * Going to a problem: **select the subject, frame the evidence.**
-   *
-   * The two differ whenever a feature failed to build — its diagnostic points
-   * at what it was built *from*, because that is the geometry that exists and
-   * the thing to edit — and the selection still follows what the row says the
-   * problem is about, so clicking the same row twice selects the same feature.
-   */
-  const goToDiagnostic = useCallback(
-    (diagnostic: Diagnostic) => {
-      const project = store.getState().document.project;
-      const target = diagnosticTarget(evaluate(project), diagnostic);
-
-      if (target.subject.kind === 'feature') store.select([target.subject.featureId]);
-      else store.selectParts([target.subject.partId]);
-
-      // A problem is in the design: show it on the board.
-      showView('design');
-      if (target.bounds !== null) canvasRef.current?.frame(target.bounds);
-    },
-    [store, showView],
-  );
 
   // A delete waiting on a decision about what follows it (ADR 0009). Null when
   // no dialog is open.
@@ -1671,6 +1703,8 @@ export function App({
                   diagnostics={diagnostics}
                   counts={counts}
                   onGoTo={goToDiagnostic}
+                  current={currentProblem}
+                  onNavigate={navigateProblems}
                   open={problemsOpen}
                   onToggle={() => setProblemsOpen((open) => !open)}
                 />

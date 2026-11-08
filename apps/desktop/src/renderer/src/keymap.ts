@@ -73,6 +73,8 @@ export type CommandId =
   | 'toggleProperties'
   | 'focusMode'
   | 'selectionBar'
+  | 'nextProblem'
+  | 'previousProblem'
   | 'settings'
   | 'keyboardShortcuts'
   | 'help'
@@ -268,6 +270,20 @@ export const KEYMAP: readonly Command[] = [
     scope: 'window',
     keys: [key('Backslash')],
     aliases: [key('IntlBackslash')],
+  },
+  {
+    id: 'nextProblem',
+    does: 'shortcuts.nextProblem',
+    group: 'view',
+    scope: 'window',
+    keys: [key('F8')],
+  },
+  {
+    id: 'previousProblem',
+    does: 'shortcuts.previousProblem',
+    group: 'view',
+    scope: 'window',
+    keys: [shifted('F8')],
   },
   // F6 (U.17, R-14): into the bar under the selected piece and out again,
   // where F6 moves between a window's regions in most apps.

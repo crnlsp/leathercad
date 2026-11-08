@@ -620,6 +620,12 @@ is the single run these goldens record. Its own tests are in `packages/domain/sr
 
 ## 12. Interface localization (U.26)
 
+`pnpm test problemText problemNavigation keymap` also guards 9.15: every listed outcome or rule
+has a reason and correction, and walking the diagnostic list wraps without skipping several
+problems on one feature. `e2e/problem-navigation.spec.ts` checks the shared wording, F8 / Shift+F8,
+rebinding, repairs with Undo/Redo, tab isolation, modal/field key ownership, accessibility and the
+minimum window. Navigation leaves the document and its history untouched.
+
 `pnpm test locales i18n untranslated` validates every catalogue, the typed-key runtime and JSX text
 audit. Missing translations pass, including a newly added English message and an absent plural
 family. Unknown keys and groups, malformed JSON, non-string values, invalid placeholders and partial
