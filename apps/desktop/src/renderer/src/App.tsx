@@ -1046,6 +1046,7 @@ export function App({
   /** Select the subject, frame the evidence, and show the shared explanation. */
   const goToDiagnostic = useCallback(
     (diagnostic: Diagnostic) => {
+      const focusedAtRequest = document.activeElement;
       const project = store.getState().document.project;
       const target = diagnosticTarget(evaluate(project), diagnostic);
       setProblemCursor({ tabId: problemTabId, key: problemKey(diagnostic.problem) });
@@ -1063,6 +1064,10 @@ export function App({
         );
         if (row === null) return;
         if (target.bounds !== null) canvasRef.current?.frame(target.bounds);
+        // A field or another control may have received focus while layout
+        // settled. The pending navigation must not take its next key.
+        const focusedNow = document.activeElement;
+        if (focusedNow !== focusedAtRequest && focusedNow !== document.body) return;
         row.focus({ preventScroll: true });
         row.scrollIntoView({ block: 'nearest' });
       });

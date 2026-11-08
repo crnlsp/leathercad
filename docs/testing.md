@@ -625,6 +625,8 @@ has a reason and correction, and walking the diagnostic list wraps without skipp
 problems on one feature. `e2e/problem-navigation.spec.ts` checks the shared wording, F8 / Shift+F8,
 rebinding, repairs with Undo/Redo, tab isolation, modal/field key ownership, accessibility and the
 minimum window. Navigation leaves the document and its history untouched.
+A deterministic same-turn focus change also proves a pending navigation frame cannot steal
+focus from a field and take its next key.
 
 `pnpm test locales i18n untranslated` validates every catalogue, the typed-key runtime and JSX text
 audit. Missing translations pass, including a newly added English message and an absent plural

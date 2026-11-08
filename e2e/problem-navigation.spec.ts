@@ -253,6 +253,43 @@ test('problem shortcuts rebind, leave fields and dialogs alone, and do not carry
   }
 });
 
+test('pending problem navigation does not steal focus after it moves to a field (9.15)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'leathercad-9-15-'));
+  const { app, window } = await openApp({ args: [problemFile(dir)] });
+  try {
+    const current = window.getByTestId('problems-panel').locator('[aria-current="true"]');
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('F8');
+    await expect(current).toBeFocused();
+    // Move focus in the same input turn, after dispatch and before its frame.
+    // This makes the fast focus-change race deterministic, without a timer.
+    await window.evaluate(() => {
+      window.addEventListener(
+        'keydown',
+        () => {
+          document.querySelector<HTMLElement>('[data-testid="label-text"]')?.focus();
+        },
+        { once: true },
+      );
+    });
+    await window.keyboard.press('F8');
+    await expect(current).toHaveAttribute('data-code', 'TEXT_TOO_SMALL_TO_PRINT');
+    await window.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    await expect(window.getByTestId('label-text')).toBeFocused();
+    await window.keyboard.press('F8');
+    await expect(current).toHaveAttribute('data-code', 'TEXT_TOO_SMALL_TO_PRINT');
+    await expect(window.getByTestId('undo')).toBeDisabled();
+  } finally {
+    await closeApp(app);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('with no problems the navigation keys do not change the view or document (9.15)', async () => {
   const { app, window } = await openApp();
   try {
