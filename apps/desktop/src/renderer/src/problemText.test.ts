@@ -99,6 +99,19 @@ const listedCodes = everyCode.filter((code) =>
 );
 
 describe('every listed problem explains why and what to do (9.15)', () => {
+  it('gives the unsupported label and part name their own correction, preserving translations', () => {
+    const facts = { partId: 'part', partName: 'Panel', text: '漢', characters: '漢' };
+    const label = problem('TEXT_GLYPH_MISSING', { ...facts, ...named });
+    const part = problem('TEXT_GLYPH_MISSING', facts);
+    expect(problemExplanation(label, t).fix).toBe('Retype the label using Latin characters.');
+    expect(problemExplanation(part, t).fix).toBe('Rename the part using Latin characters.');
+    const polish = createI18n('pl');
+    expect(problemExplanation(label, polish.t).fix).toBe('Wpisz etykietę znakami łacińskimi.');
+    expect(problemExplanation(part, polish.t).fix).toBe(
+      'Zmień nazwę części, używając znaków łacińskich.',
+    );
+  });
+
   it.each(listedCodes)('%s has a reason and an actionable fix in the shared message', (code) => {
     const explanation = problemExplanation(sample(code), t);
     expect(explanation.why.trim().length).toBeGreaterThan(10);

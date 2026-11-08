@@ -1231,7 +1231,9 @@
     "TEXT_GLYPH_MISSING": {
       "title": "Impression impossible",
       "label": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés.",
-      "part": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés."
+      "part": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés.",
+      "fixLabel": "Ressaisissez l’étiquette en caractères latins.",
+      "fixPart": "Renommez la pièce en caractères latins."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Le contour se croise",

@@ -1206,7 +1206,8 @@
       "title": "Cannot be printed",
       "label": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box.",
       "part": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box.",
-      "fix": "Retype the label or rename the part using Latin characters."
+      "fixLabel": "Retype the label using Latin characters.",
+      "fixPart": "Rename the part using Latin characters."
     },
     "TEXT_TOO_SMALL_TO_PRINT": {
       "title": "Text too small to print",

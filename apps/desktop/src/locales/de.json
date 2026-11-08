@@ -1194,7 +1194,9 @@
     "TEXT_GLYPH_MISSING": {
       "title": "Kann nicht gedruckt werden",
       "label": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen.",
-      "part": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen."
+      "part": "„{{text}}“ enthält {{characters}}, die diese Schrift nicht drucken kann; sie erscheinen als Kästchen.",
+      "fixLabel": "Die Beschriftung mit lateinischen Zeichen neu eingeben.",
+      "fixPart": "Das Teil mit lateinischen Zeichen umbenennen."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Umriss schneidet sich selbst",

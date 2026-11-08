@@ -1231,7 +1231,9 @@
     "TEXT_GLYPH_MISSING": {
       "title": "No se puede imprimir",
       "label": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros.",
-      "part": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros."
+      "part": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros.",
+      "fixLabel": "Vuelve a escribir la etiqueta con caracteres latinos.",
+      "fixPart": "Cambia el nombre de la pieza usando caracteres latinos."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "El contorno se cruza consigo mismo",

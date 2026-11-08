@@ -153,7 +153,7 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
 // The catalogue above supplies the reason with the occurrence's facts and
 // variants. Refusals keep their existing message; every listed code needs a fix
 // too, held to the domain registry by the 9.15 audit.
-const FIXES: Readonly<Partial<Record<ProblemCode, MessageKey>>> = {
+const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
   PARAMETER_INVALID: 'problems.PARAMETER_INVALID.fix',
   OFFSET_COLLAPSED: 'problems.OFFSET_COLLAPSED.fix',
   OFFSET_UNSUPPORTED: 'problems.OFFSET_UNSUPPORTED.fix',
@@ -162,7 +162,8 @@ const FIXES: Readonly<Partial<Record<ProblemCode, MessageKey>>> = {
   SOURCE_FAILED: 'problems.SOURCE_FAILED.fix',
   GEOMETRY_FAILED: 'problems.GEOMETRY_FAILED.fix',
   FOLD_NOT_STRAIGHT: 'problems.FOLD_NOT_STRAIGHT.fix',
-  TEXT_GLYPH_MISSING: 'problems.TEXT_GLYPH_MISSING.fix',
+  TEXT_GLYPH_MISSING: (f, t) =>
+    t(`problems.TEXT_GLYPH_MISSING.${f.featureId === undefined ? 'fixPart' : 'fixLabel'}`),
   TEXT_TOO_SMALL_TO_PRINT: 'problems.TEXT_TOO_SMALL_TO_PRINT.fix',
   CONTOUR_SELF_INTERSECTS: 'problems.CONTOUR_SELF_INTERSECTS.fix',
   HOLES_OVERLAP: 'problems.HOLES_OVERLAP.fix',
@@ -187,8 +188,10 @@ export function problemExplanation(
   // The union of entries cannot be narrowed by `p.code` alone; the catalogue's
   // mapped type is what guarantees this entry takes these facts.
   const describe = CATALOGUE[p.code] as Describe<ProblemCode>;
+  const why = describe(p.facts as never, t);
   const fix = FIXES[p.code];
-  return { why: describe(p.facts as never, t), fix: fix === undefined ? null : t(fix) };
+  if (fix === undefined) return { why, fix: null };
+  return { why, fix: typeof fix === 'string' ? t(fix) : fix(p.facts as never, t) };
 }
 
 /** One complete message for every surface, including Properties and export notices. */

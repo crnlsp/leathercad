@@ -1268,7 +1268,9 @@
     "TEXT_GLYPH_MISSING": {
       "title": "Nie można wydrukować",
       "label": "Tekst „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem.",
-      "part": "Nazwa „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem."
+      "part": "Nazwa „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem.",
+      "fixLabel": "Wpisz etykietę znakami łacińskimi.",
+      "fixPart": "Zmień nazwę części, używając znaków łacińskich."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Obrys przecina sam siebie",
