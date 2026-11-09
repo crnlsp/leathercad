@@ -121,7 +121,7 @@ as any item that will not make it does.
 - ☐ **9.12 The production summary** (P1) — pieces, holes, hardware, thread and net leather, estimates labelled.
 - ☐ **9.13 Alignment marks on mating edges** (P1) — prints: format 13, measured on paper.
 - ☐ **Q21 Cut two, one turned over** (P1) — prints: a format version of its own, measured on paper.
-- ☐ **Q43 A laser export names pieces that overlap on the board** (P1).
+- ✅ **Q43 A laser export names pieces that overlap on the board** (P1).
 
 ### Stage 4 — Geometry and interoperability ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-4--geometry-and-interoperability))
 

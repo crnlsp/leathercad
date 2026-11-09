@@ -732,6 +732,7 @@
   "exportDialog": {
     "custom": "Your own mix of layers",
     "export": "Export…",
+    "exportAnyway": "Export anyway…",
     "intent": "Export for",
     "intents": {
       "laser-cut": {
@@ -750,6 +751,7 @@
     "intro": "The drawing as arranged on the board, in millimetres. Choose which layers go in the file.",
     "layers": "Layers",
     "nothing": "Nothing to export. None of the chosen layers has a line to draw.",
+    "overlap": "Cut outlines overlap or touch for {{parts}}. Move these pieces apart before laser cutting, or export anyway.",
     "page": "The page will measure {{width}} × {{height}}",
     "roles": {
       "annotation": "Dimensions, labels and part names",

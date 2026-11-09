@@ -3418,6 +3418,13 @@ body {
   font: var(--t-label);
 }
 
+.export-dialog .export-overlap {
+  padding: var(--space-3);
+  border-left: 3px solid var(--warning);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 .panel-note {
   max-width: 44ch;
   margin: 0;
