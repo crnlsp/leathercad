@@ -1121,7 +1121,8 @@
     },
     "FOLD_NOT_STRAIGHT": {
       "title": "Zgięcie nie jest proste",
-      "description": "Odbicie wymaga jednej prostej osi, a to zgięcie jest zakrzywione. Narysuj proste zgięcie lub odbij względem innego."
+      "description": "Odbicie wymaga jednej prostej osi, a to zgięcie jest zakrzywione.",
+      "fix": "Narysuj proste zgięcie lub odbij względem innego."
     },
     "MIRROR_WOULD_SCALE": {
       "title": "Odbicie musi zachować zgodność",
@@ -1211,8 +1212,8 @@
     },
     "PARAMETER_INVALID": {
       "title": "Nieprawidłowa liczba",
-      "at-least": "Parametr {{parameter}} elementu {{featureName}} jest mniejszy niż minimum {{minimum}}. Wpisz co najmniej {{minimum}}.",
-      "finite": "Parametr {{parameter}} elementu {{featureName}} nie jest poprawną liczbą. Wpisz wartość w milimetrach.",
+      "at-least": "Parametr {{parameter}} elementu {{featureName}} jest mniejszy niż minimum {{minimum}}.",
+      "finite": "Parametr {{parameter}} elementu {{featureName}} nie jest poprawną liczbą.",
       "non-negative": "Parametr {{parameter}} elementu {{featureName}} ma wartość {{value}} i nie może być ujemny.",
       "positive": "Parametr {{parameter}} elementu {{featureName}} ma wartość {{value}} i musi być większy od zera.",
       "parameter": {
@@ -1266,23 +1267,28 @@
     },
     "TEXT_GLYPH_MISSING": {
       "title": "Nie można wydrukować",
-      "label": "Tekst „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem. Wpisz etykietę znakami łacińskimi.",
-      "part": "Nazwa „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem. Zmień nazwę części, używając znaków łacińskich."
+      "label": "Tekst „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem.",
+      "part": "Nazwa „{{text}}” zawiera znaki {{characters}}, których ten krój pisma nie drukuje — zostaną zastąpione kwadratem.",
+      "fixLabel": "Wpisz etykietę znakami łacińskimi.",
+      "fixPart": "Zmień nazwę części, używając znaków łacińskich."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Obrys przecina sam siebie",
-      "description_one": "Obrys {{featureName}} przecina się raz, więc przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć.",
-      "description_few": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć.",
-      "description_many": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć.",
-      "description_other": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny. Narysuj go bez przecięć."
+      "description_one": "Obrys {{featureName}} przecina się raz, więc przebieg cięcia jest niejednoznaczny.",
+      "description_few": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny.",
+      "description_many": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny.",
+      "description_other": "Liczba przecięć obrysu {{featureName}}: {{count}}. Przebieg cięcia jest niejednoznaczny.",
+      "fix": "Narysuj go bez przecięć."
     },
     "HOLES_OVERLAP": {
       "title": "Otwory nachodzą na siebie",
-      "description": "Otwory {{featureName}} mają rzeczywisty rozstaw {{spacing}} i średnicę {{diameter}}. Nie pozostaje między nimi skóra — utworzą jedną szczelinę. Zwiększ rozstaw nominalny lub użyj mniejszego wybijaka."
+      "description": "Otwory {{featureName}} mają rzeczywisty rozstaw {{spacing}} i średnicę {{diameter}}. Nie pozostaje między nimi skóra — utworzą jedną szczelinę.",
+      "fix": "Zwiększ rozstaw nominalny lub użyj mniejszego wybijaka."
     },
     "HOLE_SPACING_DEVIATION": {
       "title": "Rozstaw rzeczywisty różni się od nominalnego",
-      "description": "Rzeczywisty rozstaw otworów wynosi {{achieved}}, a nominalny rozstaw wybijaka to {{pitch}}. Zmień rozstaw nominalny lub margines od krawędzi, aby zmniejszyć różnicę."
+      "description": "Rzeczywisty rozstaw otworów wynosi {{achieved}}, a nominalny rozstaw wybijaka to {{pitch}}.",
+      "fix": "Zmień rozstaw nominalny lub margines od krawędzi, aby zmniejszyć różnicę."
     },
     "HOLE_SPACING_UNEVEN": {
       "title": "Nierówny rozstaw rzeczywisty",
@@ -1298,11 +1304,13 @@
     },
     "PART_HAS_NO_OUTER_CONTOUR": {
       "title": "Brak obrysu do wycięcia",
-      "description": "Część {{partName}} ma linie szycia i oznaczenia, ale nie ma obrysu wyznaczającego skórę do wycięcia. Narysuj obrys lub przenieś elementy do innej części."
+      "description": "Część {{partName}} ma linie szycia i oznaczenia, ale nie ma obrysu wyznaczającego skórę do wycięcia.",
+      "fix": "Narysuj obrys lub przenieś elementy do innej części."
     },
     "CUT_OUT_OUTSIDE_PART": {
       "title": "Wycięcie jest poza częścią",
-      "description": "Element {{featureName}} nie znajduje się wewnątrz swojego obrysu, więc niczego nie wycina. Przesuń go na część."
+      "description": "Element {{featureName}} nie znajduje się wewnątrz swojego obrysu, więc niczego nie wycina.",
+      "fix": "Przesuń go na część."
     },
     "OUTSIDE_PART": {
       "title": "Poza materiałem",
@@ -1315,7 +1323,8 @@
     },
     "EMPTY_PART": {
       "title": "Pusta część",
-      "description": "Część {{partName}} jest pusta. Narysuj w niej elementy lub usuń ją z listy części."
+      "description": "Część {{partName}} jest pusta.",
+      "fix": "Narysuj w niej elementy lub usuń ją z listy części."
     },
     "counts": {
       "error_one": "{{count}} błąd",

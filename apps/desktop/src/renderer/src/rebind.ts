@@ -383,7 +383,9 @@ function readBinding(value: unknown): Binding | null {
  * The maker's keys as `preferences.json` holds them, kept only where usable
  * (docs/file-format.md §6): a command this version has and lets change, one
  * to four keys a binding can say, none reserved, and none another command in
- * the same place has — the later of two such changes is dropped. Never
+ * the same place has — the later of two such changes is dropped. It never
+ * lets an opted-in newly introduced default erase a saved custom binding:
+ * that new command instead gets an empty, unassigned override. Never
  * throws: a damaged file loses those keys, and the app starts. Both processes
  * read the maker's keys through this, so they always agree on them.
  */
@@ -392,7 +394,12 @@ export function readBindings(value: unknown, isMac = false): KeyBindings {
   let kept: Partial<Record<CommandId, readonly Binding[]>> = {};
   for (const [id, list] of Object.entries(value as Record<string, unknown>)) {
     if (!isChangeable(id as CommandId, isMac) || !Array.isArray(list)) continue;
-    if (list.length === 0 || list.length > MOST_KEYS) continue;
+    if (
+      list.length > MOST_KEYS ||
+      (list.length === 0 &&
+        !KEYMAP.some((command) => command.id === id && command.defaultYields === true))
+    )
+      continue;
     const keys = list.map(readBinding);
     if (!keys.every((key) => key !== null && allowed(id as CommandId, key))) continue;
     kept = withKeys(kept, id as CommandId, keys as Binding[]);
@@ -401,6 +408,19 @@ export function readBindings(value: unknown, isMac = false): KeyBindings {
   // dropping one brings its defaults back, which may share one in turn.
   for (;;) {
     const keymap = withBindings(kept);
+    // A newly introduced default must not erase a maker's existing key at
+    // upgrade. Only opted-in new commands can be left unassigned this way;
+    // older defaults and conflicts between custom bindings keep their rules.
+    const yielding = keymap.find(
+      (command) =>
+        command.defaultYields === true &&
+        kept[command.id] === undefined &&
+        duplicated(keymap, command.id).some((owner) => kept[owner] !== undefined),
+    );
+    if (yielding !== undefined) {
+      kept = withKeys(kept, yielding.id, []);
+      continue;
+    }
     const ids = Object.keys(kept) as CommandId[];
     const culprit = ids.findLast((id) =>
       keymap.some(

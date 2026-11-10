@@ -1085,7 +1085,8 @@
     },
     "FOLD_NOT_STRAIGHT": {
       "title": "El pliegue no es recto",
-      "description": "Un reflejo necesita una línea recta como eje y este pliegue se curva. Dibújalo recto o usa otro pliegue."
+      "description": "Un reflejo necesita una línea recta como eje y este pliegue se curva.",
+      "fix": "Dibújalo recto o usa otro pliegue."
     },
     "MIRROR_WOULD_SCALE": {
       "title": "La contraparte debe coincidir",
@@ -1175,8 +1176,8 @@
     },
     "PARAMETER_INVALID": {
       "title": "Número no válido",
-      "at-least": "El valor de {{parameter}} de {{featureName}} es menor que {{minimum}}, el mínimo permitido. Introduce al menos {{minimum}}.",
-      "finite": "El valor de {{parameter}} de {{featureName}} no es un número válido. Introduce un valor en milímetros.",
+      "at-least": "El valor de {{parameter}} de {{featureName}} es menor que {{minimum}}, el mínimo permitido.",
+      "finite": "El valor de {{parameter}} de {{featureName}} no es un número válido.",
       "non-negative": "El valor de {{parameter}} de {{featureName}} es {{value}} y no puede ser negativo.",
       "positive": "El valor de {{parameter}} de {{featureName}} es {{value}} y debe ser mayor que cero.",
       "parameter": {
@@ -1229,22 +1230,27 @@
     },
     "TEXT_GLYPH_MISSING": {
       "title": "No se puede imprimir",
-      "label": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros. Vuelve a escribir la etiqueta con caracteres latinos.",
-      "part": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros. Cambia el nombre de la pieza usando caracteres latinos."
+      "label": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros.",
+      "part": "«{{text}}» usa {{characters}}, que esta tipografía no puede imprimir: aparecen como recuadros.",
+      "fixLabel": "Vuelve a escribir la etiqueta con caracteres latinos.",
+      "fixPart": "Cambia el nombre de la pieza usando caracteres latinos."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "El contorno se cruza consigo mismo",
-      "description_one": "{{featureName}} se cruza una vez consigo mismo y no queda claro dónde cortar. Vuelve a dibujarlo sin cruces.",
-      "description_other": "{{featureName}} se cruza {{count}} veces consigo mismo y no queda claro dónde cortar. Vuelve a dibujarlo sin cruces.",
-      "description_many": "{{featureName}} se cruza {{count}} veces consigo mismo y no queda claro dónde cortar. Vuelve a dibujarlo sin cruces."
+      "description_one": "{{featureName}} se cruza una vez consigo mismo y no queda claro dónde cortar.",
+      "description_other": "{{featureName}} se cruza {{count}} veces consigo mismo y no queda claro dónde cortar.",
+      "description_many": "{{featureName}} se cruza {{count}} veces consigo mismo y no queda claro dónde cortar.",
+      "fix": "Vuelve a dibujarlo sin cruces."
     },
     "HOLES_OVERLAP": {
       "title": "Los agujeros se solapan",
-      "description": "{{featureName}} tiene agujeros separados {{spacing}} con un diámetro de {{diameter}}; no queda cuero entre ellos y forman una sola ranura. Aumenta el paso nominal o usa un sacabocados menor."
+      "description": "{{featureName}} tiene agujeros separados {{spacing}} con un diámetro de {{diameter}}; no queda cuero entre ellos y forman una sola ranura.",
+      "fix": "Aumenta el paso nominal o usa un sacabocados menor."
     },
     "HOLE_SPACING_DEVIATION": {
       "title": "La separación difiere del tenedor",
-      "description": "Los agujeros están separados {{achieved}}, pero el paso nominal del tenedor es {{pitch}}. Cambia el paso o el margen del borde para aproximarlos."
+      "description": "Los agujeros están separados {{achieved}}, pero el paso nominal del tenedor es {{pitch}}.",
+      "fix": "Cambia el paso o el margen del borde para aproximarlos."
     },
     "HOLE_SPACING_UNEVEN": {
       "title": "Separación desigual",
@@ -1259,11 +1265,13 @@
     },
     "PART_HAS_NO_OUTER_CONTOUR": {
       "title": "Nada que cortar",
-      "description": "{{partName}} tiene puntadas y marcas pero no contorno, por lo que no hay una pieza de cuero que cortar. Dibuja un contorno o mueve estos elementos a otra pieza."
+      "description": "{{partName}} tiene puntadas y marcas pero no contorno, por lo que no hay una pieza de cuero que cortar.",
+      "fix": "Dibuja un contorno o mueve estos elementos a otra pieza."
     },
     "CUT_OUT_OUTSIDE_PART": {
       "title": "Vaciado fuera de la pieza",
-      "description": "{{featureName}} no está dentro de su contorno y no corta nada. Muévelo dentro de la pieza."
+      "description": "{{featureName}} no está dentro de su contorno y no corta nada.",
+      "fix": "Muévelo dentro de la pieza."
     },
     "OUTSIDE_PART": {
       "title": "Fuera del material",
@@ -1276,7 +1284,8 @@
     },
     "EMPTY_PART": {
       "title": "Pieza vacía",
-      "description": "{{partName}} no contiene nada. Dibuja en ella o elimínala de la lista de piezas."
+      "description": "{{partName}} no contiene nada.",
+      "fix": "Dibuja en ella o elimínala de la lista de piezas."
     },
     "counts": {
       "error_one": "{{count}} error",

@@ -849,6 +849,8 @@ function Shortcuts({ preferences, onPreferences }: Props) {
                         <span className="shortcut-listening">
                           {t('settings.shortcuts.listening', sentences)}
                         </span>
+                      ) : shortcut.keys.length === 0 ? (
+                        t('settings.shortcuts.unassigned')
                       ) : (
                         shown(shortcut).map((binding, index) => (
                           <span key={JSON.stringify(binding)}>

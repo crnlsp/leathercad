@@ -1085,7 +1085,8 @@
     },
     "FOLD_NOT_STRAIGHT": {
       "title": "Le pli n’est pas droit",
-      "description": "Une symétrie nécessite un axe droit, mais ce pli est courbe. Dessinez un pli droit, ou choisissez-en un autre."
+      "description": "Une symétrie nécessite un axe droit, mais ce pli est courbe.",
+      "fix": "Dessinez un pli droit, ou choisissez-en un autre."
     },
     "MIRROR_WOULD_SCALE": {
       "title": "Le symétrique doit rester identique",
@@ -1175,8 +1176,8 @@
     },
     "PARAMETER_INVALID": {
       "title": "Nombre inutilisable",
-      "at-least": "{{featureName}} : {{parameter}} est inférieur à {{minimum}}, le minimum utilisable. Saisissez au moins {{minimum}}.",
-      "finite": "{{featureName}} : {{parameter}} n’est pas un nombre utilisable. Saisissez une valeur en millimètres.",
+      "at-least": "{{featureName}} : {{parameter}} est inférieur à {{minimum}}, le minimum utilisable.",
+      "finite": "{{featureName}} : {{parameter}} n’est pas un nombre utilisable.",
       "non-negative": "{{featureName}} : {{parameter}} vaut {{value}} et ne doit pas être négatif.",
       "positive": "{{featureName}} : {{parameter}} vaut {{value}} et doit être strictement positif.",
       "parameter": {
@@ -1229,22 +1230,27 @@
     },
     "TEXT_GLYPH_MISSING": {
       "title": "Impression impossible",
-      "label": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés. Ressaisissez l’étiquette en caractères latins.",
-      "part": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés. Renommez la pièce en caractères latins."
+      "label": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés.",
+      "part": "« {{text}} » utilise {{characters}}, que cette police ne peut pas imprimer : ils apparaissent sous forme de carrés.",
+      "fixLabel": "Ressaisissez l’étiquette en caractères latins.",
+      "fixPart": "Renommez la pièce en caractères latins."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Le contour se croise",
-      "description_one": "{{featureName}} se croise {{count}} fois, ce qui rend la découpe ambiguë. Redessinez-le sans croisement.",
-      "description_other": "{{featureName}} se croise {{count}} fois, ce qui rend la découpe ambiguë. Redessinez-le sans croisement.",
-      "description_many": "{{featureName}} se croise {{count}} de fois, ce qui rend la découpe ambiguë. Redessinez-le sans croisement."
+      "description_one": "{{featureName}} se croise {{count}} fois, ce qui rend la découpe ambiguë.",
+      "description_other": "{{featureName}} se croise {{count}} fois, ce qui rend la découpe ambiguë.",
+      "description_many": "{{featureName}} se croise {{count}} de fois, ce qui rend la découpe ambiguë.",
+      "fix": "Redessinez-le sans croisement."
     },
     "HOLES_OVERLAP": {
       "title": "Les trous se chevauchent",
-      "description": "{{featureName}} a des trous espacés de {{spacing}}, d’un diamètre de {{diameter}} : il ne reste plus de cuir entre eux et ils forment une fente. Augmentez le pas nominal ou utilisez un emporte-pièce plus petit."
+      "description": "{{featureName}} a des trous espacés de {{spacing}}, d’un diamètre de {{diameter}} : il ne reste plus de cuir entre eux et ils forment une fente.",
+      "fix": "Augmentez le pas nominal ou utilisez un emporte-pièce plus petit."
     },
     "HOLE_SPACING_DEVIATION": {
       "title": "Espacement différent de la griffe",
-      "description": "Les trous sont espacés de {{achieved}}, mais le pas nominal de la griffe est de {{pitch}}. Modifiez le pas ou le retrait de couture pour réduire cet écart."
+      "description": "Les trous sont espacés de {{achieved}}, mais le pas nominal de la griffe est de {{pitch}}.",
+      "fix": "Modifiez le pas ou le retrait de couture pour réduire cet écart."
     },
     "HOLE_SPACING_UNEVEN": {
       "title": "Espacement irrégulier",
@@ -1259,11 +1265,13 @@
     },
     "PART_HAS_NO_OUTER_CONTOUR": {
       "title": "Rien à découper",
-      "description": "{{partName}} contient couture et marquages, mais aucun contour extérieur : aucune pièce de cuir à découper n’est définie. Dessinez un contour extérieur, ou déplacez ces éléments sur une autre pièce."
+      "description": "{{partName}} contient couture et marquages, mais aucun contour extérieur : aucune pièce de cuir à découper n’est définie.",
+      "fix": "Dessinez un contour extérieur, ou déplacez ces éléments sur une autre pièce."
     },
     "CUT_OUT_OUTSIDE_PART": {
       "title": "Découpe hors de la pièce",
-      "description": "{{featureName}} n’est pas à l’intérieur de son contour extérieur et ne découpe donc rien. Déplacez-le sur la pièce."
+      "description": "{{featureName}} n’est pas à l’intérieur de son contour extérieur et ne découpe donc rien.",
+      "fix": "Déplacez-le sur la pièce."
     },
     "OUTSIDE_PART": {
       "title": "Hors de la matière",
@@ -1276,7 +1284,8 @@
     },
     "EMPTY_PART": {
       "title": "Pièce vide",
-      "description": "{{partName}} est vide. Dessinez-y des éléments, ou supprimez-la de la liste des pièces."
+      "description": "{{partName}} est vide.",
+      "fix": "Dessinez-y des éléments, ou supprimez-la de la liste des pièces."
     },
     "counts": {
       "error_one": "{{count}} erreur",

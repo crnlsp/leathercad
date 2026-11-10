@@ -1,7 +1,7 @@
 import { formatEditable, formatMm } from '@leathercad/core';
 import type { Problem, ProblemCode, ProblemFacts } from '@leathercad/domain';
 
-import type { Translate } from '../../shared/i18n.js';
+import type { MessageKey, Translate } from '../../shared/i18n.js';
 
 /**
  * The message catalogue: the one place a problem becomes words, in the
@@ -150,12 +150,54 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
   EMPTY_PART: (f, t) => t('problems.EMPTY_PART.description', f),
 };
 
-/** The sentence for a problem. */
-export function describeProblem(p: Problem, t: Translate): string {
+// The catalogue above supplies the reason with the occurrence's facts and
+// variants. Refusals keep their existing message; every listed code needs a fix
+// too, held to the domain registry by the 9.15 audit.
+const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
+  PARAMETER_INVALID: 'problems.PARAMETER_INVALID.fix',
+  OFFSET_COLLAPSED: 'problems.OFFSET_COLLAPSED.fix',
+  OFFSET_UNSUPPORTED: 'problems.OFFSET_UNSUPPORTED.fix',
+  OFFSET_SPLIT: 'problems.OFFSET_SPLIT.fix',
+  ANCHOR_MISSING: 'problems.ANCHOR_MISSING.fix',
+  SOURCE_FAILED: 'problems.SOURCE_FAILED.fix',
+  GEOMETRY_FAILED: 'problems.GEOMETRY_FAILED.fix',
+  FOLD_NOT_STRAIGHT: 'problems.FOLD_NOT_STRAIGHT.fix',
+  TEXT_GLYPH_MISSING: (f, t) =>
+    t(`problems.TEXT_GLYPH_MISSING.${f.featureId === undefined ? 'fixPart' : 'fixLabel'}`),
+  TEXT_TOO_SMALL_TO_PRINT: 'problems.TEXT_TOO_SMALL_TO_PRINT.fix',
+  CONTOUR_SELF_INTERSECTS: 'problems.CONTOUR_SELF_INTERSECTS.fix',
+  HOLES_OVERLAP: 'problems.HOLES_OVERLAP.fix',
+  HOLE_SPACING_DEVIATION: 'problems.HOLE_SPACING_DEVIATION.fix',
+  HOLE_SPACING_UNEVEN: 'problems.HOLE_SPACING_UNEVEN.fix',
+  HOLE_COUNT_TOO_LOW: 'problems.HOLE_COUNT_TOO_LOW.fix',
+  EMPTY_PART: 'problems.EMPTY_PART.fix',
+  PART_HAS_NO_OUTER_CONTOUR: 'problems.PART_HAS_NO_OUTER_CONTOUR.fix',
+  CUT_OUT_OUTSIDE_PART: 'problems.CUT_OUT_OUTSIDE_PART.fix',
+  OUTSIDE_PART: 'problems.OUTSIDE_PART.fix',
+  HOLE_TOO_CLOSE_TO_EDGE: 'problems.HOLE_TOO_CLOSE_TO_EDGE.fix',
+};
+
+/** The facts and reason, and an action for every listed problem (9.15). */
+export function problemExplanation(
+  p: Problem,
+  t: Translate,
+): {
+  readonly why: string;
+  readonly fix: string | null;
+} {
   // The union of entries cannot be narrowed by `p.code` alone; the catalogue's
   // mapped type is what guarantees this entry takes these facts.
   const describe = CATALOGUE[p.code] as Describe<ProblemCode>;
-  return describe(p.facts as never, t);
+  const why = describe(p.facts as never, t);
+  const fix = FIXES[p.code];
+  if (fix === undefined) return { why, fix: null };
+  return { why, fix: typeof fix === 'string' ? t(fix) : fix(p.facts as never, t) };
+}
+
+/** One complete message for every surface, including Properties and export notices. */
+export function describeProblem(p: Problem, t: Translate): string {
+  const { why, fix } = problemExplanation(p, t);
+  return fix === null ? why : `${why} ${fix}`;
 }
 
 /** A few words naming the kind of problem, for a list. */

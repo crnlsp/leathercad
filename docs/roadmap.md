@@ -110,7 +110,7 @@ as any item that will not make it does.
 ### Stage 3 — Leathercraft intelligence ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-3--leathercraft-intelligence))
 
 - ✅ **Q34 Printed text too small to read** — `TEXT_TOO_SMALL_TO_PRINT` warns below 1.5 mm capital height, measured from the vendored font; explained in Problems and Properties, with threshold and whole-piece scaling properties.
-- ☐ **9.15 Every problem explained** — why it matters and what to do, held by an audit test; next and previous problem by key.
+- ✅ **9.15 Every problem explained** — all listed codes have a reason and correction, held by an audit test; rebindable F8 / Shift+F8 and Previous / Next buttons select and frame each problem.
 - ☐ **9.6a Seams, modelled** — two runs, or part of one; holes compared by distance along the line.
 - ☐ **9.6b Seams, checked and made** — *Sew together*, count and drift, the selection bar's third line.
 - ☐ **8.14b The built-in templates, checked as leatherwork** — derived stitching, seams that match, a maker's answers.

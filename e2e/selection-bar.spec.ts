@@ -224,6 +224,27 @@ test('a rebound F6 follows: the new key goes to the bar, F6 does nothing (U.17)'
     await window.getByTestId('settings').click();
     await window.getByTestId('settings-tab-shortcuts').click();
     await expect(window.getByTestId('shortcut-keys-selectionBar').locator('kbd')).toHaveText('F8');
+    await expect(window.getByTestId('shortcut-keys-nextProblem')).toHaveText('Not assigned');
+    await window.getByTestId('shortcut-nextProblem').scrollIntoViewIfNeeded();
+    await window.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    const png = await app.evaluate(async ({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      if (window === undefined) throw new Error('The app window is missing');
+      return (await window.webContents.capturePage()).toPNG().toString('base64');
+    });
+    const screenshot = test.info().outputPath('saved-shortcut-upgrade.png');
+    writeFileSync(screenshot, Buffer.from(png, 'base64'));
+    await test
+      .info()
+      .attach('saved-shortcut-upgrade', { path: screenshot, contentType: 'image/png' });
+    await window.getByTestId('change-nextProblem').click();
+    await window.keyboard.press('F7');
+    await expect(window.getByTestId('shortcut-keys-nextProblem').locator('kbd')).toHaveText('F7');
   } finally {
     await closeApp(app);
   }

@@ -73,6 +73,8 @@ export type CommandId =
   | 'toggleProperties'
   | 'focusMode'
   | 'selectionBar'
+  | 'nextProblem'
+  | 'previousProblem'
   | 'settings'
   | 'keyboardShortcuts'
   | 'help'
@@ -114,6 +116,8 @@ export interface Command {
    * shortcut shared across platforms, or Esc and Enter, which keep their roles.
    */
   readonly fixed?: true;
+  /** A new default yields to an older saved binding, represented by an empty override. */
+  readonly defaultYields?: true;
 }
 
 const mod = (code: string, shift = false): Binding =>
@@ -268,6 +272,22 @@ export const KEYMAP: readonly Command[] = [
     scope: 'window',
     keys: [key('Backslash')],
     aliases: [key('IntlBackslash')],
+  },
+  {
+    id: 'nextProblem',
+    does: 'shortcuts.nextProblem',
+    group: 'view',
+    scope: 'window',
+    keys: [key('F8')],
+    defaultYields: true,
+  },
+  {
+    id: 'previousProblem',
+    does: 'shortcuts.previousProblem',
+    group: 'view',
+    scope: 'window',
+    keys: [shifted('F8')],
+    defaultYields: true,
   },
   // F6 (U.17, R-14): into the bar under the selected piece and out again,
   // where F6 moves between a window's regions in most apps.
@@ -468,7 +488,7 @@ export type KeyBindings = Readonly<Partial<Record<CommandId, readonly Binding[]>
 export function withBindings(bindings: KeyBindings): readonly Command[] {
   return KEYMAP.map((command) => {
     const keys = bindings[command.id];
-    if (keys === undefined || keys.length === 0) return command;
+    if (keys === undefined || (keys.length === 0 && command.defaultYields !== true)) return command;
     const { aliases: _aliases, ...rest } = command;
     return { ...rest, keys };
   });

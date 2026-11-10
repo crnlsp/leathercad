@@ -474,6 +474,13 @@ sizes with them) — and a change that gives a key another command in the same p
 are dropped, the later of two first; the rest is kept. A file written before U.12 has no
 `keyBindings` and every default. The version stays 2: a new field with a default is not a change of meaning.
 
+New problem-navigation defaults (9.15) yield to saved custom bindings. If F8 or Shift+F8 was
+already assigned, its existing owner is kept and the conflicting new command (`nextProblem` or
+`previousProblem`) is stored with `[]`, meaning unassigned. Only commands explicitly opting into
+this upgrade behavior accept an empty override; other empty arrays still fall back as before.
+Settings shows *Not assigned* and lets the maker choose a key or reset it with the usual clash
+check. Older versions ignore these unknown command IDs; the preferences version remains 2.
+
 **The interface's language never reaches a project.** A `.lcp` holds no words chosen by it — problem
 sentences, undo labels and panel text are the app's, worded as they are shown — so a project reads
 the same in every language. What the maker typed, names included, is theirs and is kept as typed.

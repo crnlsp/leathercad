@@ -924,6 +924,10 @@ function diagnose(project: Project): readonly Diagnostic[];   // the one list (X
 The words for a problem are not the domain's: the app puts a code and its facts into the interface's
 language, from one catalogue (`renderer/src/problemText.ts`, ADR 0018).
 
+For every listed `outcome` or `rule`, that catalogue returns a `why` (including the occurrence's
+facts) and a `fix`; the 9.15 audit requires both. The full message and the shared problem rows use
+those same strings. This is interface wording, not another validation rule.
+
 **A problem's identity is `problemKey(problem)`** (Q4): the code, the id of the feature or part it is
 about, and, for a code that can occur twice on one subject, an id or parameter name that tells them
 apart (`PARAMETER_INVALID` by parameter, `SOURCE_FAILED` by the source it follows, `OUTSIDE_PART` by

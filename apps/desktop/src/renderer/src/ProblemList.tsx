@@ -1,7 +1,7 @@
 import { problemKey, type Diagnostic, type Project } from '@leathercad/domain';
 
 import { useI18n } from './i18n.js';
-import { describeProblem, problemTitle } from './problemText.js';
+import { problemExplanation, problemTitle } from './problemText.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import { MarkOf } from './icons/marks.js';
 
@@ -10,13 +10,14 @@ import { MarkOf } from './icons/marks.js';
  *
  * One component, because the problems panel and the property panel must not be
  * able to describe the same problem differently (X7). The words come from the
- * domain's catalogue; this decides only the arrangement.
+ * app's catalogue; this decides only the arrangement.
  */
 export function ProblemRows({
   diagnostics,
   project,
   onGoTo,
   showWhere = true,
+  current = null,
 }: {
   diagnostics: readonly Diagnostic[];
   project: Project;
@@ -27,6 +28,8 @@ export function ProblemRows({
   onGoTo?: (diagnostic: Diagnostic) => void;
   /** Whether to name the part and feature. Off in the property panel, which already has. */
   showWhere?: boolean;
+  /** Stable identity of the problem being walked in the drawer (9.15). */
+  current?: string | null;
 }) {
   const { t } = useI18n();
   return (
@@ -40,6 +43,7 @@ export function ProblemRows({
                 .flatMap((part) => part.features)
                 .find((feature) => feature.id === diagnostic.featureId);
         const key = problemKey(diagnostic.problem);
+        const { why, fix } = problemExplanation(diagnostic.problem, t);
         const body = (
           <>
             <span className={`problem-mark severity-${diagnostic.severity}`} aria-hidden="true" />
@@ -53,7 +57,15 @@ export function ProblemRows({
                   {where}
                 </span>
               )}
-              <span className="problem-message">{describeProblem(diagnostic.problem, t)}</span>
+              <span className="problem-message">
+                <span className="problem-why">{why}</span>
+                {fix !== null && (
+                  <>
+                    {' '}
+                    <span className="problem-fix">{fix}</span>
+                  </>
+                )}
+              </span>
             </span>
           </>
         );
@@ -68,6 +80,7 @@ export function ProblemRows({
             data-testid="problem-row"
             data-code={diagnostic.problem.code}
             data-severity={diagnostic.severity}
+            aria-current={key === current ? true : undefined}
             onClick={() => onGoTo(diagnostic)}
           >
             {body}

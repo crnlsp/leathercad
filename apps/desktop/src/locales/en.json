@@ -404,7 +404,9 @@
     "zoom": "Zoom about the pointer",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "help": "Open the Help menu"
+    "help": "Open the Help menu",
+    "nextProblem": "Go to the next problem",
+    "previousProblem": "Go to the previous problem"
   },
   "settings": {
     "close": "Close settings",
@@ -499,7 +501,8 @@
       "swapped": "{{command}} and {{other}} swapped keys.",
       "allReset": "Every key is back to its default.",
       "typesOther": "Held that way, the key types “{{typed}}” rather than its letter, so it can't be a shortcut. Press other keys.",
-      "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys."
+      "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys.",
+      "unassigned": "Not assigned"
     },
     "updates": {
       "note": "LeatherCAD asks GitHub which version is the latest only when you ask it to, here or by pressing the version in the status bar. Nothing about you or your patterns is sent, and nothing is downloaded or installed.",
@@ -965,7 +968,9 @@
     },
     "panel": {
       "none": "Nothing to fix.",
-      "title": "Problems"
+      "title": "Problems",
+      "next": "Next problem",
+      "previous": "Previous problem"
     },
     "drawing": {
       "cut-out": "A cut-out",
@@ -1051,7 +1056,8 @@
     },
     "FOLD_NOT_STRAIGHT": {
       "title": "The fold is not straight",
-      "description": "A mirror needs one line to fold about, and this fold bends. Draw it as a straight crease, or mirror across a different one."
+      "description": "A mirror needs one line to fold about, and this fold bends.",
+      "fix": "Draw it as a straight crease, or mirror across a different one."
     },
     "MIRROR_WOULD_SCALE": {
       "title": "A counterpart must stay matched",
@@ -1141,8 +1147,8 @@
     },
     "PARAMETER_INVALID": {
       "title": "Unusable number",
-      "at-least": "{{featureName}}'s {{parameter}} is below {{minimum}}, the smallest that can be used. Type at least {{minimum}}.",
-      "finite": "{{featureName}}'s {{parameter}} is not a usable number. Type a value in millimetres.",
+      "at-least": "{{featureName}}'s {{parameter}} is below {{minimum}}, the smallest that can be used.",
+      "finite": "{{featureName}}'s {{parameter}} is not a usable number.",
       "non-negative": "{{featureName}}'s {{parameter}} is {{value}}, and it must not be negative.",
       "positive": "{{featureName}}'s {{parameter}} is {{value}}, and it must be more than zero.",
       "parameter": {
@@ -1163,87 +1169,107 @@
         "sweep": "sweep",
         "text size": "text size",
         "width": "width"
-      }
+      },
+      "fix": "In Properties, enter a finite number that meets the stated limit."
     },
     "OFFSET_COLLAPSED": {
       "title": "Offset collapsed",
-      "inward": "A {{distance}} mm edge margin is deeper than this edge can hold.",
-      "outward": "A {{distance}} mm allowance cannot be built outside this stitch line."
+      "inward": "A {{distance}} mm edge margin is deeper than this edge can hold, so no offset path can be built.",
+      "outward": "A {{distance}} mm allowance cannot be built outside this stitch line, so the outline is missing.",
+      "fix": "Reduce the inset or allowance in Properties, or give the source line more room."
     },
     "OFFSET_UNSUPPORTED": {
       "title": "Cannot offset curves",
-      "description": "{{featureName}} cannot be built: what it follows has free-form curves, and an offset cannot follow those yet."
+      "description": "{{featureName}} cannot be built: what it follows has free-form curves, and an offset cannot follow those yet.",
+      "fix": "Use a source made of straight lines and circular arcs, or draw the stitch line independently."
     },
     "OFFSET_SPLIT": {
       "title": "Offset came apart",
       "description_one": "The offset for {{featureName}} came apart into {{pieces}} pieces. Only the largest is drawn; {{count}} piece left out.",
-      "description_other": "The offset for {{featureName}} came apart into {{pieces}} pieces. Only the largest is drawn; {{count}} pieces left out."
+      "description_other": "The offset for {{featureName}} came apart into {{pieces}} pieces. Only the largest is drawn; {{count}} pieces left out.",
+      "fix": "Reduce the inset or allowance, or widen the narrow sections of the source outline."
     },
     "ANCHOR_MISSING": {
       "title": "Corner not found",
-      "description": "That run named corner {{anchor}}, and this outline has {{available}}.",
-      "noCorners": "This outline has no corners to run between, so it can only be followed whole."
+      "description": "That run named corner {{anchor}}, and this outline has {{available}}, so the run cannot be located.",
+      "noCorners": "This outline has no corners to run between, so it can only be followed whole.",
+      "fix": "Choose available corners for the run in Properties, or follow the whole line."
     },
     "SOURCE_FAILED": {
       "title": "What it follows failed",
-      "description": "{{sourceName}}, which it follows, could not be built."
+      "description": "{{sourceName}}, which it follows, could not be built, so this feature has no source geometry.",
+      "fix": "Fix the named source feature first; this feature will rebuild with it."
     },
     "GEOMETRY_FAILED": {
       "title": "Could not be built",
-      "description": "{{featureName}} could not be built ({{detail}})."
+      "description": "{{featureName}} could not be built ({{detail}}), so it is omitted from the export.",
+      "fix": "Check the source geometry and its values in Properties. Simplify or redraw the source if it still cannot be built."
     },
     "TEXT_GLYPH_MISSING": {
       "title": "Cannot be printed",
-      "label": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box. Retype the label using Latin characters.",
-      "part": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box. Rename the part using Latin characters."
+      "label": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box.",
+      "part": "“{{text}}” uses {{characters}}, which this typeface cannot print — it comes out as a box.",
+      "fixLabel": "Retype the label using Latin characters.",
+      "fixPart": "Rename the part using Latin characters."
     },
     "TEXT_TOO_SMALL_TO_PRINT": {
       "title": "Text too small to print",
-      "description": "{{featureName}}'s capital letters print {{height}} high, below the {{minimum}} recommended for reading on paper. Increase Size in Properties."
+      "description": "{{featureName}}'s capital letters print {{height}} high, below the {{minimum}} recommended for reading on paper.",
+      "fix": "Increase Size in Properties."
     },
     "CONTOUR_SELF_INTERSECTS": {
       "title": "Outline crosses itself",
-      "description_one": "{{featureName}} crosses itself once, so where to cut is ambiguous. Redraw it so the line never crosses.",
-      "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous. Redraw it so the line never crosses."
+      "description_one": "{{featureName}} crosses itself once, so where to cut is ambiguous.",
+      "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous.",
+      "fix": "Redraw it so the line never crosses."
     },
     "HOLES_OVERLAP": {
       "title": "Holes run into each other",
-      "description": "{{featureName}} has holes {{spacing}} apart that are {{diameter}} across, so no leather is left between them and they cut as one slot. Widen the pitch or use a smaller punch."
+      "description": "{{featureName}} has holes {{spacing}} apart that are {{diameter}} across, so no leather is left between them and they cut as one slot.",
+      "fix": "Widen the pitch or use a smaller punch."
     },
     "HOLE_SPACING_DEVIATION": {
       "title": "Spacing differs from the iron",
-      "description": "The holes are {{achieved}} apart, but the iron’s pitch is {{pitch}}. Change the pitch or the edge margin to bring them closer."
+      "description": "The holes are {{achieved}} apart, but the iron’s pitch is {{pitch}}. The pricking iron will not land on every hole.",
+      "fix": "Change the pitch or the edge margin to bring them closer."
     },
     "HOLE_SPACING_UNEVEN": {
       "title": "Uneven spacing",
-      "description": "The runs of {{featureName}} are spaced from {{narrowest}} to {{widest}}, so the difference will show at the corners."
+      "description": "The runs of {{featureName}} are spaced from {{narrowest}} to {{widest}}, so the difference will show at the corners.",
+      "fix": "Use continuous corners for one spacing around the line, or adjust the individual run lengths."
     },
     "HOLE_COUNT_TOO_LOW": {
       "title": "Too few holes",
       "description_one": "{{featureName}} has {{count}} hole, and stitching needs at least two.",
       "description_other": "{{featureName}} has {{count}} holes, and stitching needs at least two.",
-      "none": "{{featureName}} has no holes, and stitching needs at least two."
+      "none": "{{featureName}} has no holes, and stitching needs at least two.",
+      "fix": "Reduce Pitch or extend the followed run so it can hold at least two holes."
     },
     "PART_HAS_NO_OUTER_CONTOUR": {
       "title": "Nothing to cut",
-      "description": "{{partName}} has stitching and marks but no outline, so there is no piece of leather to cut them from. Draw an outline, or move these onto another part."
+      "description": "{{partName}} has stitching and marks but no outline, so there is no piece of leather to cut them from.",
+      "fix": "Draw an outline, or move these onto another part."
     },
     "CUT_OUT_OUTSIDE_PART": {
       "title": "Cut-out is off the part",
-      "description": "{{featureName}} is not inside the outline it belongs to, so it cuts nothing. Move it onto the part."
+      "description": "{{featureName}} is not inside the outline it belongs to, so it cuts nothing.",
+      "fix": "Move it onto the part."
     },
     "OUTSIDE_PART": {
       "title": "Off the material",
       "holes": "{{featureName}} has holes that leave the material — through the outline, or into a cut-out. They cannot be punched there.",
-      "line": "{{featureName}} runs off the material, so part of it cannot be marked."
+      "line": "{{featureName}} runs off the material, so part of it cannot be marked.",
+      "fix": "Move the feature back onto the material, or adjust its source line and inset in Properties."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {
       "title": "Too near the edge",
-      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a hole needs. Leather tears out between a hole and an edge."
+      "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a hole needs. Leather tears out between a hole and an edge.",
+      "fix": "Increase the inset or move the holes farther from the edge. A smaller hole diameter also leaves more leather."
     },
     "EMPTY_PART": {
       "title": "Empty part",
-      "description": "{{partName}} has nothing in it. Draw into it, or delete it from the parts list."
+      "description": "{{partName}} has nothing in it, so there is nothing to cut or print.",
+      "fix": "Draw into it, or delete it from the parts list."
     },
     "counts": {
       "error_one": "{{count}} error",
