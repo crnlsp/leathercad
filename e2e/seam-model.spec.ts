@@ -8,13 +8,13 @@ import {
   addFeature,
   addSeam,
   addStitchHoles,
-  addStitchLine,
+  addDrawnStitchLine,
   emptyDocument,
   rectShape,
   shapePart,
 } from '../packages/document/src/index.js';
 import { loadProject, saveProject } from '../packages/persist/src/index.js';
-import { Shapes } from '../packages/geometry/src/index.js';
+import { PathOps, Shapes } from '../packages/geometry/src/index.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
 
@@ -23,10 +23,17 @@ test('a loaded seam is listed before deleting its holes, removed on consent and 
   document = addPart(
     shapePart('panel', 'outline', 'Panel', rectShape({ x: 0, y: 0 }, 100, 60)),
   ).apply(document);
-  document = addStitchLine('panel', 'line', 'outline', 3, {
-    kind: 'between',
-    fromAnchor: 2,
-    toAnchor: 1,
+  document = addDrawnStitchLine('panel', 'line', {
+    kind: 'path',
+    path: PathOps.polyline(
+      [
+        { x: 3, y: 57 },
+        { x: 3, y: 3 },
+        { x: 97, y: 3 },
+        { x: 97, y: 57 },
+      ],
+      false,
+    ),
   }).apply(document);
   document = addStitchHoles('panel', 'holes', 'line').apply(document);
   document = addSeam({
