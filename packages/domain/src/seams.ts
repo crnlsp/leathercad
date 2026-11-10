@@ -3,7 +3,7 @@ import { PathOps } from '@leathercad/geometry';
 
 import { evaluate, type ResolvedFeature } from './evaluate.js';
 import type { FeatureId, Project, Seam, SeamAnchor, SeamSide } from './feature.js';
-import { problem, type Diagnostic, type Problem } from './problems/index.js';
+import { problem, problemKey, type Diagnostic, type Problem } from './problems/index.js';
 import type { StitchHole } from './stitch.js';
 
 type HoleLine = Extract<ResolvedFeature, { ok: true }>;
@@ -112,6 +112,13 @@ export function seamStructureProblems(project: Project): Problem[] {
     if (refusal !== null) problems.push(refusal);
   }
   return problems;
+}
+
+/** A source edit must not create seam metadata that the loader would refuse. */
+export function seamChangeRefusal(before: Project, after: Project): Problem | null {
+  if ((before.seams?.length ?? 0) === 0) return null;
+  const existing = new Set(seamStructureProblems(before).map(problemKey));
+  return seamStructureProblems(after).find((entry) => !existing.has(problemKey(entry))) ?? null;
 }
 
 function holeLine(project: Project, side: SeamSide): HoleLine | null {

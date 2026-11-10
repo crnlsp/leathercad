@@ -816,7 +816,9 @@ line boundary through edits, independently of the first and last distributed hol
 offsets. Endpoint references add no corner slots, and numeric corners keep their existing
 indices. Mirrored paths retain their source order, so start and end follow their images.
 Closed lines have no endpoint references: commands and the loader refuse them with
-`ANCHOR_MISSING`. Empty open lines resolve to zero-length stretches with no holes.
+`ANCHOR_MISSING`. Rebinding a hole set or changing a derived run cannot invalidate an existing
+seam reference; the shared refusal query guards the command and the source picker. Empty open
+lines resolve to zero-length stretches with no holes.
 
 **Next, 9.6b:** count and drift checks, *Sew together*, and the seam's selection and Properties
 surfaces. The manufacturing design, worked examples and those checks are in the

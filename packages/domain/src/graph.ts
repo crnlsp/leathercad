@@ -1,5 +1,6 @@
 import type { Feature, FeatureId, Part, PartId, Project, Seam } from './feature.js';
 import { problem, problemKey, type CompatibilityRule, type Problem } from './problems/index.js';
+import { seamChangeRefusal } from './seams.js';
 
 /**
  * The reference graph: which feature depends on which, and what may depend on
@@ -11,9 +12,9 @@ import { problem, problemKey, type CompatibilityRule, type Problem } from './pro
  * the same, and they are structural: commands refuse to break them, and the
  * loader refuses files that do (docs/domain-model.md §8.2, S1–S4).
  *
- * Everything here is pure and reads only parameters, never evaluated geometry.
- * A structural rule that depended on whether evaluation happened to succeed
- * would stop being structural.
+ * Derivation rules read parameters. Existing seam references are also checked
+ * through their shared validator before a source edit, so it cannot create
+ * metadata the loader would refuse. Failed seam sides remain outcomes.
  *
  * Refusals are **problems**, not sentences: the words are the message
  * catalogue's (`problems/messages.ts`), which this module cannot import.
@@ -116,7 +117,10 @@ export function derivationRefusal(project: Project, feature: Feature): Problem |
   }
 
   const rule = compatibilityRefusal(byId, feature, source);
-  return rule === null ? null : problem('DERIVATION_INCOMPATIBLE', { ...about, rule });
+  if (rule !== null) return problem('DERIVATION_INCOMPATIBLE', { ...about, rule });
+  return (project.seams?.length ?? 0) === 0
+    ? null
+    : seamChangeRefusal(project, replaceFeature(project, feature));
 }
 
 /**

@@ -1,10 +1,18 @@
-import { evaluate, resolveSeam, type Feature, type Seam } from '@leathercad/domain';
+import {
+  derivationRefusal,
+  evaluate,
+  followRefusal,
+  resolveSeam,
+  type Feature,
+  type Seam,
+} from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
 import {
   addPart,
+  addFeature,
   convertToPath,
   addStitchLine,
   addStitchHoles,
@@ -15,6 +23,8 @@ import {
   planDelete,
   rectShape,
   shapePart,
+  setDerivation,
+  setSource,
 } from './commands.js';
 import { addSeam } from './seams.js';
 import { addGuide } from './guides.js';
@@ -36,6 +46,69 @@ function storeWithSeam(): DocumentStore {
 }
 
 describe('seam commands and deletion (9.6a)', () => {
+  it.each(['close source run', 'follow closed line'] as const)(
+    'refuses to invalidate open endpoint references: %s',
+    (edit) => {
+      const store = new DocumentStore(emptyDocument('endpoint-project'));
+      store.dispatch(
+        addPart(shapePart('part', 'outline', 'Panel', rectShape({ x: 0, y: 0 }, 100, 60))),
+      );
+      store.dispatch(
+        addStitchLine('part', 'line', 'outline', 3, {
+          kind: 'between',
+          fromAnchor: 2,
+          toAnchor: 1,
+        }),
+      );
+      store.dispatch(addStitchHoles('part', 'holes', 'line'));
+      const value: Seam = {
+        ...seam,
+        a: { ...seam.a, stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 'end' } },
+        b: { ...seam.b, stretch: { kind: 'from', anchor: 'end', toward: 'previous' } },
+      };
+      store.dispatch(addSeam(value));
+      store.dispatch(
+        addFeature('part', {
+          id: 'closed-line',
+          name: 'Closed stitching',
+          kind: 'stitch-line',
+          visible: true,
+          locked: false,
+          source: {
+            kind: 'path',
+            path: PathOps.polyline(
+              [
+                { x: 10, y: 10 },
+                { x: 20, y: 10 },
+                { x: 20, y: 20 },
+              ],
+              true,
+            ),
+          },
+        }),
+      );
+      const before = store.getState().document;
+      if (edit === 'close source run') {
+        const op = {
+          type: 'offset',
+          side: 'inward',
+          distanceMm: 3,
+          run: { kind: 'whole' },
+        } as const;
+        const line = before.project.parts[0]?.features.find((feature) => feature.id === 'line');
+        if (line?.kind !== 'stitch-line' || line.source.kind !== 'derived')
+          throw new Error('fixture must have a derived line');
+        expect(
+          derivationRefusal(before.project, { ...line, source: { ...line.source, op } })?.code,
+        ).toBe('ANCHOR_MISSING');
+        store.dispatch(setDerivation('line', op));
+      } else {
+        expect(followRefusal(before.project, 'holes', 'closed-line')?.code).toBe('ANCHOR_MISSING');
+        store.dispatch(setSource('holes', 'closed-line'));
+      }
+      expect(store.getState().document).toBe(before);
+    },
+  );
   it('keeps endpoints attached to the current line boundaries through edits and undo', () => {
     const path = PathOps.polyline(
       [

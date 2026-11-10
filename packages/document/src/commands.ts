@@ -1203,15 +1203,19 @@ export function addHoleRow(partId: PartId, featureId: FeatureId, sourceId: Featu
 
 /** Changes what a derived feature does — the inset, the pitch, the run. */
 export function setDerivation(id: FeatureId, op: Derivation): Command {
-  return command({ action: 'edit-derivation' }, (document) => ({
-    project: mapFeature(document.project, id, (feature) =>
-      feature.kind !== 'text-label' &&
-      feature.kind !== 'measurement' &&
-      feature.source.kind === 'derived'
-        ? { ...feature, source: { ...feature.source, op } }
-        : feature,
-    ),
-  }));
+  return command({ action: 'edit-derivation' }, (document) => {
+    const feature = findFeature(document.project, id)?.feature;
+    if (
+      feature === undefined ||
+      feature.kind === 'text-label' ||
+      feature.kind === 'measurement' ||
+      feature.source.kind !== 'derived'
+    )
+      return document;
+    const candidate: Feature = { ...feature, source: { ...feature.source, op } };
+    if (derivationRefusal(document.project, candidate) !== null) return document;
+    return { project: mapFeature(document.project, id, () => candidate) };
+  });
 }
 
 /**
