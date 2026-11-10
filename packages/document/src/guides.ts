@@ -17,6 +17,7 @@ export function addGuide(guide: Guide): Command {
   const value = stored(guide);
   return command({ action: 'add-guide' }, (document) => {
     if (
+      document.project.seams?.some((entry) => entry.id === guide.id) ||
       document.project.guides?.some((entry) => entry.id === guide.id) ||
       document.project.parts.some((part) =>
         part.features.some((feature) => feature.id === guide.id),

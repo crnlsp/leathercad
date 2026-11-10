@@ -58,6 +58,24 @@ export function bag(parts: number): Project {
   };
 }
 
+/** One declared side seam per piece; used for 1.7's manufacturing work bound. */
+export function seamedBag(parts = 40): Project {
+  return {
+    ...bag(parts),
+    seams: Array.from({ length: parts }, (_, i) => ({
+      id: `seam-${i}`,
+      a: {
+        holeSetId: `holes-${i}`,
+        stretch: { kind: 'between' as const, fromAnchor: 0, toAnchor: 1 },
+      },
+      b: {
+        holeSetId: `holes-${(i + 1) % parts}`,
+        stretch: { kind: 'between' as const, fromAnchor: 0, toAnchor: 1 },
+      },
+    })),
+  };
+}
+
 /** A 40 mm wide strap's outline, its stitch line 3.5 mm in and the holes on it. */
 function strapFeatures(suffix: string, origin: Vec2, widthMm: number): Feature[] {
   return [

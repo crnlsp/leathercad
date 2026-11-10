@@ -1,8 +1,9 @@
 # Seams, pockets and the production summary — design for 1.7 (9.6, 9.12–9.14, 9.17, Q21, 8.14b)
 
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
-Nothing here is built. It replaces the sketch in [domain-model](../../domain-model.md) §7 once 9.6a
-lands, and that slice moves what is built into the domain model.
+9.6a implements the model, persistence and deletion in a draft; open-line endpoint references
+remain pending (plan D17). The implemented contract is in [domain-model](../../domain-model.md) §7.
+The authoring interface, checks and later manufacturing features below remain planned.
 
 **Evidence.** Every number below was computed with the real evaluator (`evaluate`, `diagnose`) on
 the built-in templates at develop 7a69dc9, in a throwaway test that is not part of the repository.

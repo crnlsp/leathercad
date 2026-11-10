@@ -27,6 +27,10 @@ const named = { featureId: 'f-1', featureName: 'Stitch line' };
 
 /** One sample per code, typed over every code: a code without one does not compile. */
 const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
+  SEAM_NOT_A_HOLE_SET: { seamId: 's-1', holeSetId: 'f-1' },
+  SEAM_HAS_NO_LENGTH: { seamId: 's-1' },
+  SEAM_SIDE_MISSING: { seamId: 's-1', holeSetId: 'f-1' },
+  SEAM_RUNS_OFF_THE_LINE: { seamId: 's-1', holeSetId: 'f-1', lengthMm: 40, availableMm: 20 },
   DUPLICATE_ID: { featureId: 'f-1' },
   SOURCE_MISSING: named,
   FOLLOWS_ITSELF: named,
@@ -194,7 +198,7 @@ describe('the message catalogue, in English', () => {
       'Stitch line does not follow anything, so there is no source to change.',
     ],
     [problem('FEATURE_MISSING', { featureId: 'x' }), 'That feature does not exist.'],
-    [problem('DUPLICATE_ID', { featureId: 'cut' }), 'Two features share the id cut.'],
+    [problem('DUPLICATE_ID', { featureId: 'cut' }), 'Two items share the id cut.'],
     [problem('CYCLE', named), 'Stitch line follows a chain that leads back to itself.'],
     [problem('SOURCE_MISSING', named), 'Stitch line follows a feature that does not exist.'],
     [

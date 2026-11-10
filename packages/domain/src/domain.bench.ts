@@ -2,7 +2,8 @@ import { test, type Bench } from 'vitest';
 
 import { diagnose } from './diagnose.js';
 import { evaluate } from './evaluate.js';
-import { strap, tracedOutline } from './workloads.js';
+import { seamedBag, strap, tracedOutline } from './workloads.js';
+import { resolveSeam } from './seams.js';
 
 /**
  * What one edit costs: evaluation alone, and `diagnose` — evaluation plus
@@ -36,3 +37,11 @@ test('diagnose the same strap with 20 slots', ({ bench }) =>
 
 test('diagnose a 500-point traced outline', ({ bench }) =>
   measure(bench, 'diagnose-traced', () => diagnose(tracedOutline(500))));
+
+test('resolve forty seams after an unrelated edit (9.6a)', ({ bench }) => {
+  const project = seamedBag();
+  return measure(bench, 'resolve-seams-unrelated', () => {
+    const edited = { ...project };
+    for (const seam of edited.seams ?? []) resolveSeam(edited, seam);
+  });
+});

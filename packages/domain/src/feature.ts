@@ -6,6 +6,22 @@ import type { Orientation, PaperName } from './paper.js';
 
 export type FeatureId = Ulid;
 export type PartId = Ulid;
+export type SeamId = Ulid;
+
+/** Which holes are sewn, independent of either piece's position on the board. */
+export interface SeamSide {
+  readonly holeSetId: FeatureId;
+  readonly stretch:
+    | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number }
+    | { readonly kind: 'from'; readonly anchor: number; readonly toward: 'next' | 'previous' };
+}
+
+/** Advisory manufacturing metadata; no geometry is stored here (9.6a). */
+export interface Seam {
+  readonly id: SeamId;
+  readonly a: SeamSide;
+  readonly b: SeamSide;
+}
 
 /**
  * A parametric primitive.
@@ -486,6 +502,7 @@ export interface Project {
   readonly parts: readonly Part[];
   /** Absent in projects made before guides existed. */
   readonly guides?: readonly Guide[];
+  readonly seams?: readonly Seam[];
 }
 
 /** The layer role a feature kind belongs to. One kind, one role, always. */

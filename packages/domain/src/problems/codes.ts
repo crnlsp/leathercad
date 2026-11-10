@@ -49,6 +49,10 @@ const rule = (protects: InvariantId, severity: Severity): CodeInfo => ({
 });
 
 export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
+  SEAM_NOT_A_HOLE_SET: structural('S11'),
+  SEAM_HAS_NO_LENGTH: structural('S11'),
+  SEAM_SIDE_MISSING: outcome('E3'),
+  SEAM_RUNS_OFF_THE_LINE: outcome('E4'),
   DUPLICATE_ID: structural('S1'),
   SOURCE_MISSING: structural('S2'),
   FOLLOWS_ITSELF: structural('S3'),

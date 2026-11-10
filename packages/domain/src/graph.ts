@@ -1,4 +1,4 @@
-import type { Feature, FeatureId, Part, PartId, Project } from './feature.js';
+import type { Feature, FeatureId, Part, PartId, Project, Seam } from './feature.js';
 import { problem, problemKey, type CompatibilityRule, type Problem } from './problems/index.js';
 
 /**
@@ -49,6 +49,14 @@ function edgesFrom(feature: Feature): FeatureId[] {
   return op.type === 'mirror' && op.axis.kind === 'fold'
     ? [feature.source.sourceId, op.axis.foldId]
     : [feature.source.sourceId];
+}
+
+/** Seams are terminal references, with no geometry to freeze (9.6a). */
+export function seamsDependingOn(project: Project, ids: Iterable<FeatureId>): readonly Seam[] {
+  const gone = new Set(ids);
+  return (project.seams ?? []).filter(
+    (seam) => gone.has(seam.a.holeSetId) || gone.has(seam.b.holeSetId),
+  );
 }
 
 /**

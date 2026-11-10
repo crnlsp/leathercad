@@ -932,9 +932,21 @@ describe('leather-specific treatment (F.7)', () => {
               ? {
                   holes: {
                     holes: [
-                      { point: at(4, 4), tangent: at(1, 0), runIndex: 0, ordinal: 0 },
-                      { point: at(7.85, 4), tangent: at(1, 0), runIndex: 0, ordinal: 1 },
-                      { point: at(96, 30), tangent: at(0, 1), runIndex: 1, ordinal: 0 },
+                      { point: at(4, 4), tangent: at(1, 0), runIndex: 0, ordinal: 0, alongMm: 0 },
+                      {
+                        point: at(7.85, 4),
+                        tangent: at(1, 0),
+                        runIndex: 0,
+                        ordinal: 1,
+                        alongMm: 3.85,
+                      },
+                      {
+                        point: at(96, 30),
+                        tangent: at(0, 1),
+                        runIndex: 1,
+                        ordinal: 0,
+                        alongMm: 118,
+                      },
                     ],
                     count: 88,
                     achievedPitchMm: 3.84,

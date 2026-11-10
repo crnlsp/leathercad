@@ -166,6 +166,20 @@ of its ~120 hole positions. Three parameter blocks regenerate all of it.
   arbitrarily-ordered object. Stable ordering is what makes git diffs and round-trip tests useful.
 - **No `undefined`.** Optional fields are either present or absent, never `null` as a placeholder.
 
+### 3.2a Seams — optional manufacturing metadata (9.6a)
+
+`seams?: Seam[]` is project-level, beside `guides` and `parts`. Each seam stores its id and two
+sides: a hole-set id and a stretch between anchors, or from an anchor for the other side's length
+([domain model §7](domain-model.md#7-assembly-and-seams--model-implemented-96a-draft)). No hole distances,
+resolved stretches, counts or geometry are stored. Unknown fields on seams, sides and stretches
+are preserved like every other object (§4.3).
+
+Format 12 is retained by the approved decision D2 (§4.5 rule 3): seams change no drawing or print
+output. A regression test uses the exact released 1.6.0 schema to prove preservation through open,
+edit and save. A seam whose hole set was removed in 1.6 loads unchanged and reports
+`SEAM_SIDE_MISSING`; wrong feature kinds, two length-following sides, duplicate ids and
+out-of-range anchors are refused. Seam ids share the feature/guide namespace.
+
 ### 3.3 What is never stored
 
 | Never stored | Because |

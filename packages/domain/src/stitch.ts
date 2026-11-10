@@ -5,6 +5,7 @@ import {
   planDistribution,
   subPath,
   type Path,
+  type DistributedPoint,
   type Vec2,
 } from '@leathercad/geometry';
 
@@ -46,6 +47,8 @@ export const MIN_PITCH_MM: Mm = 0.5;
  * because a parameter survives regeneration by definition.
  */
 export interface StitchHole {
+  /** Arc length from the original stitch line's start, never persisted. */
+  readonly alongMm: Mm;
   readonly point: Vec2;
   /** Along the run, for orienting a diamond chisel later. */
   readonly tangent: Vec2;
@@ -121,7 +124,9 @@ export function distributeHoles(line: Path, op: Distribution, usedHoles = 0): St
     );
   }
   checkResourceLimit('segments', line.segments.length);
-  const runs = op.corners === 'hole-at-corner' ? splitAtCorners(line) : [line];
+  const sections =
+    op.corners === 'hole-at-corner' ? cornerRuns(line) : [{ path: line, startMm: 0 }];
+  const runs = sections.map((section) => section.path);
 
   // Count every candidate across every run before allocating the first one.
   // Shared corner candidates count too: this bounds work, not just final holes.
@@ -159,7 +164,9 @@ export function distributeHoles(line: Path, op: Distribution, usedHoles = 0): St
 
     for (let ordinal = 0; ordinal < points.length; ordinal++) {
       const p = points[ordinal]!;
-      holes.push({ point: p.point, tangent: p.tangent, runIndex, ordinal });
+      const distance = sections[runIndex]!.startMm + p.distance;
+      const alongMm = line.closed ? distance % totalLength : distance;
+      holes.push({ point: p.point, tangent: p.tangent, runIndex, ordinal, alongMm });
     }
 
     // Every hole on the run, the corner holes at both its ends included: what
@@ -228,10 +235,15 @@ export function rowOfHoles(
  * caller does not have to special-case it.
  */
 export function splitAtCorners(line: Path): readonly Path[] {
-  const corners = cornerDistances(line);
-  if (corners.length === 0) return [line];
+  return cornerRuns(line).map((run) => run.path);
+}
 
-  const runs: Path[] = [];
+/** Keep the source distance with each run, including when empty runs disappear. */
+function cornerRuns(line: Path): readonly { readonly path: Path; readonly startMm: Mm }[] {
+  const corners = cornerDistances(line);
+  if (corners.length === 0) return [{ path: line, startMm: 0 }];
+
+  const runs: { path: Path; startMm: Mm }[] = [];
   for (let i = 0; i < corners.length; i++) {
     const from = corners[i]!;
     const to = corners[(i + 1) % corners.length]!;
@@ -240,22 +252,23 @@ export function splitAtCorners(line: Path): readonly Path[] {
     // the last, which no corner pair covers.
     if (!line.closed && i === corners.length - 1) continue;
 
-    runs.push(subPath(line, from, to));
+    runs.push({ path: subPath(line, from, to), startMm: from });
   }
 
   if (!line.closed) {
     const total = PathOps.length(line);
-    runs.unshift(subPath(line, 0, corners[0]!));
-    runs.push(subPath(line, corners[corners.length - 1]!, total));
+    runs.unshift({ path: subPath(line, 0, corners[0]!), startMm: 0 });
+    const lastCorner = corners[corners.length - 1]!;
+    runs.push({ path: subPath(line, lastCorner, total), startMm: lastCorner });
   }
 
-  return runs.filter((r) => r.segments.length > 0);
+  return runs.filter((r) => r.path.segments.length > 0);
 }
 
 function dropSharedStart(
-  points: readonly { point: Vec2; tangent: Vec2 }[],
+  points: readonly DistributedPoint[],
   placed: readonly StitchHole[],
-): readonly { point: Vec2; tangent: Vec2 }[] {
+): readonly DistributedPoint[] {
   const last = placed[placed.length - 1];
   const first = points[0];
   if (last === undefined || first === undefined) return points;

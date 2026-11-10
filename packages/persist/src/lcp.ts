@@ -6,6 +6,7 @@ import {
   checkProjectSize,
   graphProblems,
   partStructureProblems,
+  seamStructureProblems,
   type Problem,
 } from '@leathercad/domain';
 
@@ -140,6 +141,7 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
     ...graphProblems(result.data as Project),
     // S5 and S6: one outline per part, and outlines that enclose something.
     ...partStructureProblems(result.data as Project),
+    ...seamStructureProblems(result.data as Project),
   ];
   if (problems.length > 0) {
     throw new InvalidProjectFileError(

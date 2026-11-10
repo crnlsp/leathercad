@@ -17,6 +17,14 @@ import type { MessageKey, Translate } from '../../shared/i18n.js';
 type Describe<K extends ProblemCode> = (facts: ProblemFacts[K], t: Translate) => string;
 
 const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
+  SEAM_NOT_A_HOLE_SET: (_, t) => t('problems.SEAM_NOT_A_HOLE_SET.description'),
+  SEAM_HAS_NO_LENGTH: (_, t) => t('problems.SEAM_HAS_NO_LENGTH.description'),
+  SEAM_SIDE_MISSING: (_, t) => t('problems.SEAM_SIDE_MISSING.description'),
+  SEAM_RUNS_OFF_THE_LINE: (f, t) =>
+    t('problems.SEAM_RUNS_OFF_THE_LINE.description', {
+      length: formatMm(f.lengthMm),
+      available: formatMm(f.availableMm),
+    }),
   DUPLICATE_ID: (f, t) => t('problems.DUPLICATE_ID.description', f),
   SOURCE_MISSING: (f, t) => t('problems.SOURCE_MISSING.description', f),
   FOLLOWS_ITSELF: (f, t) => t('problems.FOLLOWS_ITSELF.description', f),
@@ -154,6 +162,8 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
 // variants. Refusals keep their existing message; every listed code needs a fix
 // too, held to the domain registry by the 9.15 audit.
 const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
+  SEAM_SIDE_MISSING: 'problems.SEAM_SIDE_MISSING.fix',
+  SEAM_RUNS_OFF_THE_LINE: 'problems.SEAM_RUNS_OFF_THE_LINE.fix',
   PARAMETER_INVALID: 'problems.PARAMETER_INVALID.fix',
   OFFSET_COLLAPSED: 'problems.OFFSET_COLLAPSED.fix',
   OFFSET_UNSUPPORTED: 'problems.OFFSET_UNSUPPORTED.fix',

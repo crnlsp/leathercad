@@ -1220,7 +1220,7 @@ export function App({
       // no question. The command refuses it too — this is what keeps the user
       // from being asked (S7).
       if (deleteRefusal(project, ids) !== null) return;
-      if (plan.dependents.length === 0) {
+      if (plan.dependents.length === 0 && plan.seams.length === 0) {
         store.dispatch(deleteFeatures(ids));
         store.clearSelection();
         return;
@@ -1238,7 +1238,7 @@ export function App({
       const project = store.getState().document.project;
       if (deleteRefusal(project, ids) !== null) return;
       const plan = planDelete(project, ids);
-      if (plan.dependents.length === 0) {
+      if (plan.dependents.length === 0 && plan.seams.length === 0) {
         store.dispatch(deletePart(partId));
         store.clearSelection();
         return;

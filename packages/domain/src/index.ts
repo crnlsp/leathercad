@@ -24,6 +24,9 @@ export type {
   Feature,
   FeatureBase,
   FeatureId,
+  Seam,
+  SeamId,
+  SeamSide,
   FeatureKind,
   FoldLine,
   GeometrySource,
@@ -81,6 +84,7 @@ export {
   validate,
 } from './validate.js';
 export { diagnose } from './diagnose.js';
+export { resolveSeam, seamRefusal, seamStructureProblems } from './seams.js';
 export {
   badgesOf,
   countBySeverity,
@@ -101,6 +105,7 @@ export { distanceToEdge, isOnMaterial, materialOf } from './material.js';
 
 export {
   dependentsOf,
+  seamsDependingOn,
   crossPartRefusal,
   derivationRefusal,
   enclosesArea,

@@ -266,12 +266,30 @@ const settings = z.looseObject({
   orientation: z.enum(ORIENTATIONS as [Orientation, ...Orientation[]]),
 });
 
+const seamSide = z.looseObject({
+  holeSetId: z.string().min(1),
+  stretch: z.discriminatedUnion('kind', [
+    z.looseObject({
+      kind: z.literal('between'),
+      fromAnchor: z.number().int().nonnegative(),
+      toAnchor: z.number().int().nonnegative(),
+    }),
+    z.looseObject({
+      kind: z.literal('from'),
+      anchor: z.number().int().nonnegative(),
+      toward: z.enum(['next', 'previous']),
+    }),
+  ]),
+});
+
 export const ProjectSchema = z
   .looseObject({
     id: z.string().min(1),
     name: z.string(),
     settings,
     parts: z.array(part),
+    // Advisory metadata, backward-compatible through 1.6's loose root object.
+    seams: z.array(z.looseObject({ id: z.string().min(1), a: seamSide, b: seamSide })).optional(),
     guides: z
       .array(
         z.looseObject({
