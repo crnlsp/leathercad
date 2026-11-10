@@ -35,10 +35,12 @@ describe('seams in format 12 (9.6a)', () => {
     { id: 'left', pocketCorner: 0, pocketEnd: 'start', outerCorner: 3, toward: 'previous' },
     { id: 'right', pocketCorner: 1, pocketEnd: 'end', outerCorner: 0, toward: 'next' },
   ] as const)(
-    'walks the shipped card holder $id seam from its bottom corner to its endpoint',
+    'walks the released 1.6 card holder $id seam from its bottom corner to its endpoint',
     ({ id, pocketCorner, pocketEnd, outerCorner, toward }) => {
       const p = loadProject(
-        readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+        readFileSync(
+          resolve(import.meta.dirname, '../../../fixtures/regressions/card-holder-1.6.lcp'),
+        ),
       ).project;
       const value: Seam = {
         id,
@@ -71,7 +73,9 @@ describe('seams in format 12 (9.6a)', () => {
 
   it('preserves endpoint references and unknown fields through the released 1.6 schema', () => {
     const p = loadProject(
-      readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+      readFileSync(
+        resolve(import.meta.dirname, '../../../fixtures/regressions/card-holder-1.6.lcp'),
+      ),
     ).project;
     const value = {
       id: 'endpoint',
@@ -103,7 +107,9 @@ describe('seams in format 12 (9.6a)', () => {
 
   it('keeps every mix of endpoints and corners byte-identical through save and reopen', () => {
     const p = loadProject(
-      readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+      readFileSync(
+        resolve(import.meta.dirname, '../../../fixtures/regressions/card-holder-1.6.lcp'),
+      ),
     ).project;
     fc.assert(
       fc.property(
@@ -133,9 +139,11 @@ describe('seams in format 12 (9.6a)', () => {
       loadProject(saveProject({ ...fixtureProjectV12(), seams: [value] }, options)),
     ).toThrow(InvalidProjectFileError);
   });
-  it('walks the shipped card holder bottom seam with 27 holes and its exact drift', () => {
+  it('walks the released 1.6 card holder bottom seam with 27 holes and its exact drift', () => {
     const p = loadProject(
-      readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+      readFileSync(
+        resolve(import.meta.dirname, '../../../fixtures/regressions/card-holder-1.6.lcp'),
+      ),
     ).project;
     const result = resolveSeam(p, {
       id: 'bottom',
@@ -271,9 +279,9 @@ it('preserves whole closed stretches through 1.6 and save/load without changing 
   expect(seamVerdict(loaded, loaded.seams![0]!)).toEqual(seamVerdict(original, whole));
 });
 
-it('checks the shipped card holder bottom as 27 pairs within the drift limit', () => {
+it('checks the released 1.6 card holder bottom as 27 pairs within the drift limit', () => {
   const p = loadProject(
-    readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+    readFileSync(resolve(import.meta.dirname, '../../../fixtures/regressions/card-holder-1.6.lcp')),
   ).project;
   const value: Seam = {
     id: 'bottom',

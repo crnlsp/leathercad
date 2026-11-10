@@ -1380,6 +1380,14 @@
       "logo": "Logo",
       "other": "Other",
       "skive": "Skive"
+    },
+    "run": {
+      "label": "Stitched sides",
+      "whole": "All round",
+      "between": "Between corners",
+      "from": "From corner",
+      "to": "To corner",
+      "corner": "Corner {{number}}"
     }
   },
   "history": {
@@ -1524,15 +1532,15 @@
     "remove": "Remove {{name}}",
     "bifoldWallet": {
       "name": "Bifold wallet",
-      "description": "An outer and a lining, each folded, and two card pockets"
+      "description": "An outer and an inset lining, each folded, with two card pockets. Pocket fit and lining edge construction are unverified; make a sample in your chosen leather."
     },
     "cardHolder": {
       "name": "Card holder",
-      "description": "An outer stitched all round, and a pocket for each face"
+      "description": "An outer and a pocket for each face, with three matching seams. Check construction with a sewn sample before cutting a full set."
     },
     "keyFob": {
       "name": "Key fob",
-      "description": "A strap with round ends, folded through a ring and riveted"
+      "description": "A strap with round ends, folded through a ring and closed with one rivet. Its two rivet holes stay paired across the fold."
     },
     "coaster": {
       "name": "Coaster",

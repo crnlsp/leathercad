@@ -22,6 +22,7 @@ import type {
 import type { Iron } from '@leathercad/platform';
 import type { JSX } from 'react';
 
+import { offsetRunAnchors, offsetRunRefusal } from '../offsetRun.js';
 import { useI18n } from '../i18n.js';
 import { useKeysInSentences } from '../keyCaps.js';
 import { ReasonedButton } from '../ReasonedButton.js';
@@ -110,7 +111,16 @@ export function FeatureEditor({
 
     switch (source.op.type) {
       case 'offset':
-        return <StitchLineEditor op={source.op} onChange={change} />;
+        return (
+          <StitchLineEditor
+            key={feature.id}
+            op={source.op}
+            onChange={change}
+            canChooseRun={feature.kind === 'stitch-line'}
+            anchors={offsetRunAnchors(store.getState().document.project, feature)}
+            refusal={(op) => offsetRunRefusal(store.getState().document.project, feature, op)}
+          />
+        );
       case 'stitch-holes':
         return (
           <StitchHoleSetEditor

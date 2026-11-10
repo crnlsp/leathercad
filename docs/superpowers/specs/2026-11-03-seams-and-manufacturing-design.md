@@ -3,7 +3,8 @@
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
 9.6a implements the model, persistence and deletion, including approved open-line endpoint
 references (plan D17). The implemented contract is in [domain-model](../../domain-model.md) §7.
-The authoring interface, checks and later manufacturing features below remain planned.
+9.6b implements authoring and paired-hole checks. The template audit is in progress; later
+manufacturing features below remain planned.
 
 **Evidence.** Every number below was computed with the real evaluator (`evaluate`, `diagnose`) on
 the built-in templates at develop 7a69dc9, in a throwaway test that is not part of the repository.
@@ -130,6 +131,11 @@ bottom corner) to *Outer, left side* (`from` its bottom-left corner toward the t
 outer's stretch takes the pocket's 38.00 mm and holds 11 holes (at 0, 3.739 … 37.39 mm). 11 = 11;
 the 11th pair is 0.61 mm apart → `SEAM_HOLES_DRIFT`, warning. The bottom seam: 27 = 27, drift
 0.43 mm → within the limit, shown as information.
+
+**8.14b audit update.** The fixed geometry described next was a design estimate, not an evaluated
+recipe. The actual partial-offset endpoints require a different pocket height and top corner
+construction; D19 is the numerically checked proposal. See the [template audit](../../template-audit.md)
+for measured results and the pending maker/physical checks.
 
 **Card holder, fixed (8.14b, and what 9.17 would propose).** For the side holes to coincide, the
 pocket's side stitching must be a whole number of the outer's 3.739 mm gaps: 10 gaps = 37.39 mm.

@@ -99,3 +99,9 @@ not 250: a row recorded before it read A as the square, across × up, B as the r
 landscape sheet measured true on a Brother laser, and the same printer scaled a viewer's print of
 the same PDF to 96 % before 7.6. **Windows and macOS are not verified** (R8): until a row above
 carries real readings for each, the project must not claim verified 1:1 output on it.
+
+## Built-in template construction — 8.14b
+
+**Pending; no physical pass claimed.** The proposed corrected card holder needs a sewn sample
+after maker approval of its construction. The [template audit](template-audit.md#physical-check-to-record)
+gives the procedure and the data to record. Software export tests do not complete this check.
