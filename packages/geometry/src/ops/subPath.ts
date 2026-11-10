@@ -1,7 +1,7 @@
 import { approxZero, EPS_LENGTH, type Mm } from '@leathercad/core';
 
 import { measure, open, type Path } from '../path/index.js';
-import { split, type Segment } from '../segment/index.js';
+import { length as segmentLength, split, type Segment } from '../segment/index.js';
 
 /**
  * The run of a path between two arc-length positions.
@@ -52,17 +52,22 @@ function forward(p: Path, m: ReturnType<typeof measure>, from: Mm, to: Mm): Path
     if (segment === undefined) return open([]);
 
     const tail = split(segment, startAt.t)[1];
+    if (approxZero(segmentLength(tail), EPS_LENGTH)) return open([]);
     const remaining = 1 - startAt.t;
-    if (approxZero(remaining, EPS_LENGTH)) return open([]);
-
     const cut = (endAt.t - startAt.t) / remaining;
-    return open([split(tail, Math.min(1, Math.max(0, cut)))[0]]);
+    const piece = split(tail, Math.min(1, Math.max(0, cut)))[0];
+    return open(approxZero(segmentLength(piece), EPS_LENGTH) ? [] : [piece]);
   }
 
   const segments: Segment[] = [];
 
   const first = p.segments[startAt.segmentIndex];
-  if (first !== undefined) segments.push(split(first, startAt.t)[1]);
+  if (first !== undefined) {
+    const tail = split(first, startAt.t)[1];
+    // An anchor reconstructed by arc length can sit a few ulps before a join.
+    // Its microscopic tail has no tangent; keeping it makes a valid offset collapse.
+    if (!approxZero(segmentLength(tail), EPS_LENGTH)) segments.push(tail);
+  }
 
   for (let i = startAt.segmentIndex + 1; i < endAt.segmentIndex; i++) {
     const whole = p.segments[i];
@@ -70,8 +75,9 @@ function forward(p: Path, m: ReturnType<typeof measure>, from: Mm, to: Mm): Path
   }
 
   const last = p.segments[endAt.segmentIndex];
-  if (last !== undefined && !approxZero(endAt.t, EPS_LENGTH)) {
-    segments.push(split(last, endAt.t)[0]);
+  if (last !== undefined) {
+    const head = split(last, endAt.t)[0];
+    if (!approxZero(segmentLength(head), EPS_LENGTH)) segments.push(head);
   }
 
   return open(segments);

@@ -469,6 +469,11 @@ one. That second case used to abandon the whole path, which meant roughly half o
 panels could not be given a stitch line at all. Only a segment cut past its own end means the ring
 has closed over itself.
 
+A partial run is extracted by arc length before offsetting. Boundary fragments shorter than
+`EPS_LENGTH` are omitted by `subPath`, so reconstructing an exact corner does not leave a
+floating-point remnant with no tangent. Real fragments are compared in millimetres, not in their
+segment parameter; this preserves small pieces of long segments.
+
 ### 6.3 If robust offsetting is ever built here
 
 Rules kept from the rejected integration work, because they will apply to our own implementation

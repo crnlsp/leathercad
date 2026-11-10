@@ -7,7 +7,7 @@ import { loadProject, saveProject } from '../packages/persist/src/index.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
 
-const cardHolder = resolve(import.meta.dirname, '../fixtures/projects/card-holder.lcp');
+const cardHolder = resolve(import.meta.dirname, '../fixtures/regressions/card-holder-1.6.lcp');
 
 test('sew two hole sets inline, cancel, commit, edit and unsew in single undo steps (9.6b)', async () => {
   const saved = join(mkdtempSync(join(tmpdir(), 'leathercad-sewing-')), 'Sewn.lcp');

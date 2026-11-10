@@ -2,20 +2,25 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
-  addDrawnStitchLine,
   addFoldLine,
   addHardwareHole,
   addPart,
+  addSeam,
   addStitchHoles,
   addStitchLine,
   emptyDocument,
+  mirrorAcrossFold,
   rectShape,
   setPartQuantity,
   setProjectName,
   shapePart,
+  setShape,
+  translateFeatures,
   type Command,
 } from '@leathercad/document';
-import { diagnose, evaluate, exportReadiness, type Project } from '@leathercad/domain';
+import { diagnose, evaluate, exportReadiness, seamVerdict, type Project } from '@leathercad/domain';
+import { EPS_LENGTH } from '@leathercad/core';
+import fc from 'fast-check';
 import { PathOps, type Path, type Vec2 } from '@leathercad/geometry';
 import { loadProject, saveProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
@@ -42,6 +47,7 @@ function build(id: string, commands: Command[]): Project {
 /**
  * A card holder: a 105 × 70 outer stitched all round, and a pocket for each
  * face, cut twice, stitched on its three sewn sides and open at the top.
+ * The proposed construction and rounded top corners are audited in docs/template-audit.md.
  */
 export function cardHolder(): Project {
   return build('template-card-holder', [
@@ -51,16 +57,39 @@ export function cardHolder(): Project {
     addStitchHoles('outer', 'outer-holes', 'outer-stitch'),
     addPart(
       shapePart('pocket', 'pocket-outline', 'Pocket', {
-        ...rectShape(at(0, -60), 105, 45),
-        radii: { bottomLeft: 4, bottomRight: 4, topRight: 0, topLeft: 0 },
+        // Eleven outer-side gaps; round upward so the last outer hole is inside the seam.
+        ...rectShape(at(0, -60), 105, 47.3487),
+        radii: { bottomLeft: 4, bottomRight: 4, topRight: 3, topLeft: 3 },
       }),
     ),
-    addDrawnStitchLine('pocket', 'pocket-stitch', {
-      kind: 'path',
-      path: line([at(3, -19), at(3, -57), at(102, -57), at(102, -19)]),
+    addStitchLine('pocket', 'pocket-stitch', 'pocket-outline', 3, {
+      kind: 'between',
+      fromAnchor: 2,
+      toAnchor: 1,
     }),
     addStitchHoles('pocket', 'pocket-holes', 'pocket-stitch'),
     setPartQuantity('pocket', 2),
+    addSeam({
+      id: 'pocket-left-seam',
+      a: {
+        holeSetId: 'pocket-holes',
+        stretch: { kind: 'between', fromAnchor: 3, toAnchor: 'start' },
+      },
+      b: { holeSetId: 'outer-holes', stretch: { kind: 'from', anchor: 3, toward: 'previous' } },
+    }),
+    addSeam({
+      id: 'pocket-bottom-seam',
+      a: { holeSetId: 'pocket-holes', stretch: { kind: 'between', fromAnchor: 3, toAnchor: 0 } },
+      b: { holeSetId: 'outer-holes', stretch: { kind: 'between', fromAnchor: 3, toAnchor: 0 } },
+    }),
+    addSeam({
+      id: 'pocket-right-seam',
+      a: {
+        holeSetId: 'pocket-holes',
+        stretch: { kind: 'between', fromAnchor: 0, toAnchor: 'end' },
+      },
+      b: { holeSetId: 'outer-holes', stretch: { kind: 'from', anchor: 0, toward: 'next' } },
+    }),
   ]);
 }
 
@@ -72,7 +101,7 @@ export function keyFob(): Project {
     addFoldLine('strap', 'strap-fold', { kind: 'path', path: line([at(70, 0), at(70, 26)]) }),
     // One rivet through both layers: a hole in each half, the fold between them.
     addHardwareHole('strap', 'strap-rivet-a', at(14, 13), 2),
-    addHardwareHole('strap', 'strap-rivet-b', at(126, 13), 2),
+    mirrorAcrossFold(['strap-rivet-a'], ['strap-rivet-b'], 'strap-fold'),
   ]);
 }
 
@@ -123,5 +152,124 @@ describe('the built-in templates (8.12)', () => {
       'bifold-wallet',
       ...Object.keys(RECIPES),
     ]);
+  });
+});
+
+describe('templates checked as leatherwork (8.14b)', () => {
+  it('declares all three card-holder seams and pairs their holes within 0.01 mm', () => {
+    const project = cardHolder();
+    expect(project.seams?.map((seam) => seam.id)).toEqual([
+      'pocket-left-seam',
+      'pocket-bottom-seam',
+      'pocket-right-seam',
+    ]);
+    const verdicts = (project.seams ?? []).map((seam) => seamVerdict(project, seam));
+    expect(verdicts).toHaveLength(3);
+    for (const verdict of verdicts) {
+      if (!verdict.ok) throw new Error(verdict.problem.code);
+      expect(verdict.countA).toBe(verdict.countB);
+      expect(verdict.driftMm).toBeLessThan(0.01);
+      expect(verdict.severity).toBe('info');
+    }
+    expect(verdicts.map((verdict) => (verdict.ok ? verdict.countA : 0))).toEqual([12, 27, 12]);
+  });
+  it('covers about 82% of a payment card while leaving a usable grip above the opening', () => {
+    const pocket = evaluate(cardHolder()).parts.find((part) => part.part.id === 'pocket');
+    const outline = pocket?.features.find((entry) => entry.feature.id === 'pocket-outline');
+    const stitching = pocket?.features.find((entry) => entry.feature.id === 'pocket-stitch');
+    if (outline?.ok !== true || stitching?.ok !== true) throw new Error('pocket must resolve');
+    const opening = PathOps.bbox(outline.path)?.maxY ?? -Infinity;
+    const floor = PathOps.bbox(stitching.path)?.minY ?? Infinity;
+    const depth = opening - floor;
+    // Flat geometry measured from the bottom stitch line, not the cut edge.
+    // This is a design target, not proof of retention in a particular leather.
+    expect(depth / 53.98).toBeGreaterThanOrEqual(0.8);
+    expect(depth / 53.98).toBeLessThanOrEqual(0.84);
+    for (const cardHeight of [50, 50.8, 53.98, 54, 55]) {
+      expect(cardHeight - depth).toBeGreaterThanOrEqual(5);
+      expect(cardHeight - depth).toBeLessThanOrEqual(11);
+    }
+  });
+  it('keeps the card-holder stitching attached when its pocket outline is resized', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 90, max: 140 }), (width) => {
+        const project = cardHolder();
+        const outline = project.parts
+          .flatMap((p) => p.features)
+          .find((f) => f.id === 'pocket-outline');
+        const stitch = project.parts
+          .flatMap((p) => p.features)
+          .find((f) => f.id === 'pocket-stitch');
+        expect(stitch?.source).toMatchObject({
+          kind: 'derived',
+          sourceId: 'pocket-outline',
+          op: { type: 'offset', distanceMm: 3 },
+        });
+        if (outline?.source.kind !== 'shape' || outline.source.shape.type !== 'rect')
+          throw new Error('pocket is rectangular');
+        const changed = setShape(outline.id, { ...outline.source.shape, width }).apply({ project });
+        const entry = evaluate(changed.project)
+          .parts.flatMap((p) => p.features)
+          .find((f) => f.feature.id === 'pocket-stitch');
+        if (entry?.ok !== true) throw new Error('resized stitching must resolve');
+        const bounds = PathOps.bbox(entry.path);
+        expect(Math.abs((bounds?.maxX ?? Infinity) - (width - 3))).toBeLessThanOrEqual(EPS_LENGTH);
+        expect(Math.abs((bounds?.minX ?? Infinity) - 3)).toBeLessThanOrEqual(EPS_LENGTH);
+      }),
+    );
+  });
+  it('keeps the key-fob rivet holes paired when the original hole or fold moves', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -5, max: 5 }),
+        fc.integer({ min: -5, max: 5 }),
+        (holeDelta, foldDelta) => {
+          const project = keyFob();
+          const mirror = project.parts
+            .flatMap((p) => p.features)
+            .find((f) => f.id === 'strap-rivet-b');
+          expect(mirror?.source).toMatchObject({
+            kind: 'derived',
+            sourceId: 'strap-rivet-a',
+            op: { type: 'mirror', axis: { kind: 'fold', foldId: 'strap-fold' } },
+          });
+          const moved = translateFeatures(['strap-rivet-a'], { x: holeDelta, y: 0 }).apply({
+            project,
+          });
+          const changed = translateFeatures(['strap-fold'], { x: foldDelta, y: 0 }).apply(moved);
+          const entry = evaluate(changed.project)
+            .parts.flatMap((p) => p.features)
+            .find((f) => f.feature.id === 'strap-rivet-b');
+          if (entry?.ok !== true) throw new Error('mirrored rivet must resolve');
+          const bounds = PathOps.bbox(entry.path);
+          const centre = ((bounds?.minX ?? Infinity) + (bounds?.maxX ?? Infinity)) / 2;
+          expect(Math.abs(centre - (126 - holeDelta + 2 * foldDelta))).toBeLessThanOrEqual(
+            EPS_LENGTH,
+          );
+        },
+      ),
+    );
+  });
+  it('loads every built-in template cleanly and preserves its checks after saving again', () => {
+    for (const template of BUILT_IN_TEMPLATES) {
+      const project = loadProject(readFileSync(resolve(FIXTURES, template.id + '.lcp'))).project;
+      const loaded = loadProject(saveProject(project, SAVE)).project;
+      for (const part of loaded.parts) {
+        const outline = part.features.find(
+          (feature) => feature.kind === 'cut-contour' && feature.role === 'outer',
+        );
+        if (outline?.source.kind !== 'shape') continue;
+        for (const feature of part.features.filter((feature) => feature.kind === 'stitch-line'))
+          expect(feature.source, template.id).toMatchObject({
+            kind: 'derived',
+            sourceId: outline.id,
+            op: { type: 'offset' },
+          });
+      }
+      expect(diagnose(loaded), template.id).toEqual([]);
+      expect(loaded).toEqual(project);
+      for (const seam of loaded.seams ?? [])
+        expect(seamVerdict(loaded, seam)).toMatchObject({ ok: true, severity: 'info' });
+    }
   });
 });

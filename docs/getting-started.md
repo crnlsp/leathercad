@@ -124,8 +124,11 @@ makes it with your margin and default iron (*Settings → My tools*), and **Ctrl
 With nothing selected, **Properties** sums up the job: the pieces to cut, the holes to punch and the
 sheets to print.
 
-To stitch only some sides, as a pocket is, draw the stitch line yourself: *Draw as: Stitch* with
-the Polyline tool, along the sides to be sewn.
+To stitch only some sides, as a pocket is, select its derived stitch line and choose
+*Stitched sides → Between corners* in Properties. Choose the outline corners the run follows;
+changing the outline keeps the stitching attached. Check the endpoint holes in Problems.
+For endpoints that do not lie at those corners, draw the stitch line yourself with
+*Draw as: Stitch* and the Polyline tool, along the sides to be sewn.
 
 **Measure** (**M**) puts a dimension on the drawing: click two corners. It prints.
 

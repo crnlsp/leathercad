@@ -3,7 +3,8 @@
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
 9.6a implements the model, persistence and deletion, including approved open-line endpoint
 references (plan D17). The implemented contract is in [domain-model](../../domain-model.md) §7.
-The authoring interface, checks and later manufacturing features below remain planned.
+9.6b implements authoring and paired-hole checks; 8.14b corrected the templates. Later
+manufacturing features below remain planned.
 
 **Evidence.** Every number below was computed with the real evaluator (`evaluate`, `diagnose`) on
 the built-in templates at develop 7a69dc9, in a throwaway test that is not part of the repository.
@@ -131,6 +132,11 @@ outer's stretch takes the pocket's 38.00 mm and holds 11 holes (at 0, 3.739 … 
 the 11th pair is 0.61 mm apart → `SEAM_HOLES_DRIFT`, warning. The bottom seam: 27 = 27, drift
 0.43 mm → within the limit, shown as information.
 
+**8.14b audit update.** The fixed geometry described next was a design estimate, not an evaluated
+recipe. The actual partial-offset endpoints require a different pocket height and top corner
+construction; D19 is the numerically checked design approved on 2026-11-10. See the [template audit](../../template-audit.md)
+for measured results and the pending maker/physical checks.
+
 **Card holder, fixed (8.14b, and what 9.17 would propose).** For the side holes to coincide, the
 pocket's side stitching must be a whole number of the outer's 3.739 mm gaps: 10 gaps = 37.39 mm.
 A pocket 0.61 mm lower (44.39 mm) distributes its 3.85 mm iron over 37.39 mm as 10 gaps of
@@ -196,12 +202,16 @@ Settled by someone who makes the item, recorded in the template audit, never gue
 3. **Key fob rivets.** Make the second hole a fold mirror of the first (4.8b) so they stay paired
    when either moves — the template then teaches the feature, and the summary counts one rivet.
 
+**Answered** (plan D19, D20; [template audit](../../template-audit.md)): 1 — the pockets are
+stitched 3 mm in, as the outer is, leaving 89.0 mm; 2 — the lining is cut to the outer's outline,
+glued folded and trimmed flush; 3 — done as proposed.
+
 ## 9. Decided, and still open
 
 - **S4, the drift limit** — 0.5 mm, approved by the maintainer on 2026-11-03.
 - **S6, the format version for seams** — kept at 12, with the dangling-seam rule, approved on
   2026-11-03.
-- **Open:** the questions of §8, for a maker, answered in 8.14b.
+- **The questions of §8** — answered in 8.14b as plan D19 and D20, 2026-11-10 and 2026-11-11.
 
 ## 10. The production summary (9.12)
 
