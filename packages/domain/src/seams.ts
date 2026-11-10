@@ -2,7 +2,7 @@ import { EPS_LENGTH, approxEq, approxGte, approxLte, type Mm } from '@leathercad
 import { PathOps } from '@leathercad/geometry';
 
 import { evaluate, type ResolvedFeature } from './evaluate.js';
-import type { FeatureId, Project, Seam, SeamAnchor, SeamSide } from './feature.js';
+import type { FeatureId, Part, Project, Seam, SeamAnchor, SeamSide } from './feature.js';
 import { problem, problemKey, type Diagnostic, type Problem } from './problems/index.js';
 import type { StitchHole } from './stitch.js';
 
@@ -75,6 +75,11 @@ export function seamRefusal(project: Project, seam: Seam): Problem | null {
     }
     const entry = holeLine(project, side);
     if (entry === null) continue;
+    if (side.stretch.kind === 'whole') {
+      if (!entry.path.closed)
+        return problem('SEAM_REQUIRES_CLOSED_LINE', { seamId: seam.id, holeSetId: side.holeSetId });
+      continue;
+    }
     const indices =
       side.stretch.kind === 'from'
         ? [side.stretch.anchor]
@@ -157,14 +162,14 @@ function resolve(project: Project, seam: Seam): Resolution {
         holeSetId: a === null ? seam.a.holeSetId : seam.b.holeSetId,
       }),
     };
-  const fixed = seam.a.stretch.kind === 'between' ? walk(seam, seam.a, a) : walk(seam, seam.b, b);
+  const fixed = seam.a.stretch.kind !== 'from' ? walk(seam, seam.a, a) : walk(seam, seam.b, b);
   if ('code' in fixed) return { ok: false, problem: fixed };
   const other =
     seam.a.stretch.kind === 'from'
       ? walk(seam, seam.a, a, fixed.lengthMm)
       : walk(seam, seam.b, b, fixed.lengthMm);
   if ('code' in other) return { ok: false, problem: other };
-  return seam.a.stretch.kind === 'between'
+  return seam.a.stretch.kind !== 'from'
     ? { ok: true, a: fixed, b: other }
     : { ok: true, a: other, b: fixed };
 }
@@ -172,10 +177,11 @@ function resolve(project: Project, seam: Seam): Resolution {
 function walk(seam: Seam, side: SeamSide, entry: HoleLine, otherLength?: Mm): Stretch | Problem {
   const stretch = side.stretch;
   const total = PathOps.length(entry.path);
-  const anchor = stretch.kind === 'between' ? stretch.fromAnchor : stretch.anchor;
-  const start = anchorDistance(entry, anchor, total);
+  const anchor =
+    stretch.kind === 'whole' ? 0 : stretch.kind === 'between' ? stretch.fromAnchor : stretch.anchor;
+  const start = stretch.kind === 'whole' ? 0 : anchorDistance(entry, anchor, total);
   const endAnchor = stretch.kind === 'between' ? stretch.toAnchor : anchor;
-  const end = anchorDistance(entry, endAnchor, total);
+  const end = stretch.kind === 'whole' ? total : anchorDistance(entry, endAnchor, total);
   if (start === null || end === null) {
     return problem('ANCHOR_MISSING', {
       seamId: seam.id,
@@ -193,11 +199,13 @@ function walk(seam: Seam, side: SeamSide, entry: HoleLine, otherLength?: Mm): St
   const lengthMm =
     stretch.kind === 'from'
       ? (otherLength ?? 0)
-      : entry.path.closed
-        ? approxEq(start, end, EPS_LENGTH)
-          ? total
-          : wrap(end - start, total)
-        : Math.abs(end - start);
+      : stretch.kind === 'whole'
+        ? total
+        : entry.path.closed
+          ? approxEq(start, end, EPS_LENGTH)
+            ? total
+            : wrap(end - start, total)
+          : Math.abs(end - start);
   const availableMm = entry.path.closed ? total : backward ? start : total - start;
   if (!approxGte(lengthMm, 0, EPS_LENGTH) || !approxLte(lengthMm, availableMm, EPS_LENGTH))
     return problem('SEAM_RUNS_OFF_THE_LINE', {
@@ -241,19 +249,62 @@ function wrap(distance: Mm, total: Mm): Mm {
   return ((distance % total) + total) % total;
 }
 
+const diagnosticResults = new WeakMap<
+  Seam,
+  {
+    readonly verdict: Verdict;
+    readonly a: Part | undefined;
+    readonly b: Part | undefined;
+    readonly result: readonly Diagnostic[];
+  }
+>();
+
 /** Seam outcomes join the single Problems list, including orphaned seams. */
 export function seamDiagnostics(project: Project): Diagnostic[] {
   return (project.seams ?? []).flatMap((seam) => {
-    const result = resolveSeam(project, seam);
-    if (result.ok) return [];
-    const part =
-      project.parts.find((piece) => piece.features.some((f) => f.id === seam.a.holeSetId)) ??
-      project.parts.find((piece) => piece.features.some((f) => f.id === seam.b.holeSetId));
+    const verdict = seamVerdict(project, seam);
+    if (verdict.ok && verdict.severity === 'info') return [];
+    const a = project.parts.find((p) => p.features.some((f) => f.id === seam.a.holeSetId));
+    const b = project.parts.find((p) => p.features.some((f) => f.id === seam.b.holeSetId));
+    const cached = diagnosticResults.get(seam);
+    if (
+      cached !== undefined &&
+      cached.verdict === verdict &&
+      cached.a?.id === a?.id &&
+      cached.a?.name === a?.name &&
+      cached.b?.id === b?.id &&
+      cached.b?.name === b?.name
+    )
+      return cached.result;
+
+    const facts = (side: SeamSide, count: number, lengthMm: Mm) => {
+      const owner = project.parts.find((p) => p.features.some((f) => f.id === side.holeSetId));
+      return {
+        ...side,
+        partId: owner?.id ?? project.id,
+        partName: owner?.name ?? '',
+        count,
+        lengthMm,
+      };
+    };
+    const issue = !verdict.ok
+      ? verdict.problem
+      : problem(
+          verdict.countA === verdict.countB ? 'SEAM_HOLES_DRIFT' : 'SEAM_HOLE_COUNT_MISMATCH',
+          {
+            seamId: seam.id,
+            a: facts(seam.a, verdict.countA, verdict.lengthA),
+            b: facts(seam.b, verdict.countB, verdict.lengthB),
+            driftMm: verdict.driftMm,
+            worstPair: verdict.worstPair,
+          },
+        );
+    const part = a ?? b;
     const firstSideSurvives = part?.features.some((f) => f.id === seam.a.holeSetId) === true;
-    return [
+    const result: Diagnostic[] = [
       {
-        problem: result.problem,
-        severity: 'error',
+        problem: issue,
+        severity: verdict.ok ? verdict.severity : 'error',
         partId: part?.id ?? project.id,
         ...(part === undefined
           ? {}
@@ -263,5 +314,62 @@ export function seamDiagnostics(project: Project): Diagnostic[] {
         related: [firstSideSurvives ? seam.b.holeSetId : seam.a.holeSetId],
       },
     ];
+    diagnosticResults.set(seam, { verdict, a, b, result });
+    return result;
   });
+}
+
+/** D4: maximum paired travel difference, in millimetres. */
+export const SEAM_DRIFT_LIMIT_MM = 0.5;
+type Verdict =
+  | Extract<Resolution, { ok: false }>
+  | {
+      readonly ok: true;
+      readonly countA: number;
+      readonly countB: number;
+      readonly lengthA: Mm;
+      readonly lengthB: Mm;
+      /** One-based paired hole, or null when there are no pairs. */
+      readonly worstPair: number | null;
+      readonly driftMm: Mm;
+      readonly severity: 'info' | 'warning' | 'error';
+    };
+const verdicts = new WeakMap<Resolution, Verdict>();
+
+/** Pair by sewing order, measuring from the first hole on each stretch. */
+export function seamVerdict(project: Project, seam: Seam): Verdict {
+  const resolved = resolveSeam(project, seam);
+  const cached = verdicts.get(resolved);
+  if (cached !== undefined) return cached;
+  if (!resolved.ok) return resolved;
+  const { a, b } = resolved;
+  let driftMm = 0;
+  let worstPair: number | null = a.holes.length > 0 && b.holes.length > 0 ? 1 : null;
+  for (let i = 0; i < Math.min(a.holes.length, b.holes.length); i++) {
+    const first = a.holes[i];
+    const second = b.holes[i];
+    if (first === undefined || second === undefined) continue;
+    const drift = Math.abs(first.distanceMm - second.distanceMm);
+    if (!approxLte(drift, driftMm, EPS_LENGTH)) {
+      worstPair = i + 1;
+    }
+    driftMm = Math.max(driftMm, drift);
+  }
+  const verdict: Verdict = {
+    ok: true,
+    countA: a.holes.length,
+    countB: b.holes.length,
+    lengthA: a.lengthMm,
+    lengthB: b.lengthMm,
+    driftMm,
+    worstPair,
+    severity:
+      a.holes.length !== b.holes.length
+        ? 'error'
+        : approxLte(driftMm, SEAM_DRIFT_LIMIT_MM, EPS_LENGTH)
+          ? 'info'
+          : 'warning',
+  };
+  verdicts.set(resolved, verdict);
+  return verdict;
 }

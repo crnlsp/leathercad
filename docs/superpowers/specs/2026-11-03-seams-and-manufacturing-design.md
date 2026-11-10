@@ -86,6 +86,12 @@ hole offsets do not move them. Existing corner indices stay unchanged. Endpoint 
 closed line are refused as `ANCHOR_MISSING`. The shipped pocket's left seam walks from corner 0
 to `start`; its right seam walks from corner 1 to `end`.
 
+**Closed whole lines (D18, approved 2026-11-10).** A seam-only `{ kind: 'whole' }` stretch walks
+a closed stitch line once from its existing path start. This makes All round available on circles
+without inventing corner anchors or changing `Run` or format 12. On an open line it is refused as
+`SEAM_REQUIRES_CLOSED_LINE`; choose corners or endpoints instead. A whole side supplies a fixed
+length to a `from` partner.
+
 **Structural rules (refused, never listed):** a side names a feature that is not a stitch hole set
 (`SEAM_NOT_A_HOLE_SET`); both sides `from` (`SEAM_HAS_NO_LENGTH`); an anchor out of range
 (`ANCHOR_MISSING`, existing). **Outcome (listed):** a side's hole set is gone or failed

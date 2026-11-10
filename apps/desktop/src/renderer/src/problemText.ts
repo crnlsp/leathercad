@@ -1,5 +1,10 @@
 import { formatEditable, formatMm } from '@leathercad/core';
-import type { Problem, ProblemCode, ProblemFacts } from '@leathercad/domain';
+import {
+  SEAM_DRIFT_LIMIT_MM,
+  type Problem,
+  type ProblemCode,
+  type ProblemFacts,
+} from '@leathercad/domain';
 
 import type { MessageKey, Translate } from '../../shared/i18n.js';
 
@@ -17,6 +22,21 @@ import type { MessageKey, Translate } from '../../shared/i18n.js';
 type Describe<K extends ProblemCode> = (facts: ProblemFacts[K], t: Translate) => string;
 
 const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
+  SEAM_REQUIRES_CLOSED_LINE: (_, t) => t('problems.SEAM_REQUIRES_CLOSED_LINE.description'),
+  SEAM_HOLE_COUNT_MISMATCH: (f, t) =>
+    t('problems.SEAM_HOLE_COUNT_MISMATCH.description', {
+      a: f.a.partName,
+      b: f.b.partName,
+      countA: f.a.count,
+      countB: f.b.count,
+    }),
+  SEAM_HOLES_DRIFT: (f, t) =>
+    t('problems.SEAM_HOLES_DRIFT.description', {
+      a: f.a.partName,
+      b: f.b.partName,
+      pair: f.worstPair ?? 0,
+      drift: formatMm(f.driftMm),
+    }),
   SEAM_NOT_A_HOLE_SET: (_, t) => t('problems.SEAM_NOT_A_HOLE_SET.description'),
   SEAM_HAS_NO_LENGTH: (_, t) => t('problems.SEAM_HAS_NO_LENGTH.description'),
   SEAM_SIDE_MISSING: (_, t) => t('problems.SEAM_SIDE_MISSING.description'),
@@ -164,6 +184,9 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
 // variants. Refusals keep their existing message; every listed code needs a fix
 // too, held to the domain registry by the 9.15 audit.
 const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
+  SEAM_HOLE_COUNT_MISMATCH: 'problems.SEAM_HOLE_COUNT_MISMATCH.fix',
+  SEAM_HOLES_DRIFT: (_, t) =>
+    t('problems.SEAM_HOLES_DRIFT.fix', { limit: formatMm(SEAM_DRIFT_LIMIT_MM) }),
   SEAM_SIDE_MISSING: 'problems.SEAM_SIDE_MISSING.fix',
   SEAM_RUNS_OFF_THE_LINE: 'problems.SEAM_RUNS_OFF_THE_LINE.fix',
   PARAMETER_INVALID: 'problems.PARAMETER_INVALID.fix',

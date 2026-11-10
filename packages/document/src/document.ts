@@ -100,6 +100,8 @@ export function command(label: HistoryLabel, apply: (document: Document) => Docu
 /** Every kind of step in the undo history. An id: the app has the words for each (ADR 0018). */
 export type HistoryAction =
   | 'add-seam'
+  | 'edit-seam'
+  | 'remove-seam'
   | 'add-guide'
   | 'edit-guide'
   | 'delete-guide'
@@ -162,6 +164,7 @@ export type HistoryAction =
  * interface's language (ADR 0018), and a document is the same in every one.
  */
 export interface HistoryLabel {
+  readonly otherName?: string;
   readonly action: HistoryAction;
   /** What it acted on, by name: *Add Outline*, *Duplicate Strap*. */
   readonly name?: string;

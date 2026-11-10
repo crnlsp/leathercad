@@ -13,6 +13,7 @@ import {
 import type { FeatureId, PartId, Problem, Project } from '@leathercad/domain';
 
 import type { I18n, Translate } from '../../shared/i18n.js';
+import { sewableIds } from './seams.js';
 import { FLIP_ICON } from './icons/arrange.js';
 import type { MenuEntry } from './menus.js';
 import { describeProblem } from './problemText.js';
@@ -36,6 +37,7 @@ export function selectionForRightClick(selection: Selection, clicked: RightClick
 
 /** The handlers the menu's items run: the ones every other way to do them runs. */
 export interface SelectionActions {
+  sewTogether?: () => void;
   dispatch(command: Command): void;
   duplicatePart(partId: PartId): void;
   /** Asks first when something depends on them (ADR 0009). */
@@ -84,7 +86,22 @@ export function selectionMenu(
     onChoose: () => actions.dispatch(flipFeatures(ids, axis)),
   });
 
+  const sewing: MenuEntry[] =
+    !wholeParts &&
+    sewableIds(project, selection.features).length > 0 &&
+    actions.sewTogether !== undefined
+      ? [
+          {
+            kind: 'item',
+            id: 'context-sew',
+            label: t('seams.make'),
+            onChoose: actions.sewTogether,
+          },
+          { kind: 'separator' },
+        ]
+      : [];
   return [
+    ...sewing,
     {
       kind: 'item',
       id: 'context-duplicate-part',

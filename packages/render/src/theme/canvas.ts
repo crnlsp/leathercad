@@ -96,6 +96,8 @@ export const CANVAS = {
    */
   slit: { minLengthPx: 3 },
 
+  seam: { holeRadiusPx: 4, labelGapMm: 2 },
+
   /**
    * The seam allowance: the material between the stitching and the edge grown
    * from it, filled faintly beneath both lines (F.7).

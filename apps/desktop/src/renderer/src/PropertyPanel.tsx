@@ -63,7 +63,9 @@ export function PropertyPanel({
   guidesMode = false,
   sizing = null,
   toggle,
+  seamPanel,
 }: {
+  seamPanel?: ReactNode;
   store: DocumentStore;
   project: Project;
   selected: ReadonlySet<string>;
@@ -98,6 +100,7 @@ export function PropertyPanel({
       <PartProperties
         store={store}
         project={project}
+        seamPanel={seamPanel}
         part={parts[0]!}
         diagnostics={diagnostics}
         requestDeletePart={requestDeletePart}
@@ -118,6 +121,7 @@ export function PropertyPanel({
           <h2 className="header-name">{t('properties.title')}</h2>
           {toggle}
         </header>
+        {seamPanel}
         <p className="panel-empty">
           {store.getState().selection.guide !== undefined
             ? t('guides.selected')
@@ -220,6 +224,7 @@ export function PropertyPanel({
         </p>
       </header>
 
+      {seamPanel}
       <div className="panel-group">
         {/*
           A `fieldset` rather than a `disabled` on each control: every field in
@@ -492,7 +497,9 @@ function PartProperties({
   diagnostics,
   requestDeletePart,
   toggle,
+  seamPanel,
 }: {
+  seamPanel?: ReactNode;
   store: DocumentStore;
   project: Project;
   part: Part;
@@ -530,6 +537,7 @@ function PartProperties({
         {toggle}
       </header>
 
+      {seamPanel}
       {(measured || problems.length > 0) && (
         <div className="panel-group">
           {measured && <Measured project={project} feature={outline} resolved={resolved} />}

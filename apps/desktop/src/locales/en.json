@@ -1303,6 +1303,20 @@
       "title": "Seam runs past its line",
       "description": "The seam needs {{length}} mm, but this side has only {{available}} mm in the chosen direction.",
       "fix": "Choose another starting anchor or direction, or shorten the other side."
+    },
+    "SEAM_REQUIRES_CLOSED_LINE": {
+      "description": "All round needs a closed stitch line. Choose a stretch between corners or endpoints for an open line.",
+      "title": "All round needs a closed line"
+    },
+    "SEAM_HOLE_COUNT_MISMATCH": {
+      "title": "Sewn hole counts differ",
+      "description": "{{a}} has {{countA}} holes on this stretch; {{b}} has {{countB}}. They cannot pair all the way.",
+      "fix": "Edit the seam stretches or their stitching so both sides have the same number of holes."
+    },
+    "SEAM_HOLES_DRIFT": {
+      "title": "Sewn holes drift apart",
+      "description": "{{a}} and {{b}} drift {{drift}} mm at pair {{pair}}, measured along the stitching from the first hole.",
+      "fix": "Adjust the stretch length or stitching spacing so paired holes stay within {{limit}} mm."
     }
   },
   "contextMenu": {
@@ -1437,7 +1451,9 @@
     "delete-guide": "Delete guide",
     "align": "Align selection",
     "distribute": "Distribute selection",
-    "add-seam": "Add seam"
+    "add-seam": "Sew {{name}} to {{other}}",
+    "edit-seam": "Edit seam between {{name}} and {{other}}",
+    "remove-seam": "Unsew"
   },
   "fieldMenu": {
     "label": "Edit",
@@ -1641,5 +1657,38 @@
       "linked": "These items follow one another. Arrange independent pieces, or move their source instead.",
       "order": "These sizes cannot have equal gaps without reordering. Move the outer items farther apart."
     }
+  },
+  "seams": {
+    "title": "Seams",
+    "make": "Sew together…",
+    "allRound": "All round",
+    "corner": "Corner {{number}}",
+    "start": "Start",
+    "end": "End",
+    "between": "{{from}} → {{to}}",
+    "from": "From {{anchor}} · {{direction}}",
+    "next": "Forward along the line",
+    "previous": "Back along the line",
+    "verdict": "{{a}} {{relation}} {{b}} holes · drift {{drift}} mm",
+    "lengths": "Stretches: {{a}} mm · {{b}} mm. Largest drift at pair {{pair}}.",
+    "missing": "Missing hole set",
+    "sideA": "First side",
+    "sideB": "Second side",
+    "holes": "Piece and hole set",
+    "where": "Where",
+    "run": "{{name}} · {{length}} mm · {{count}} holes",
+    "customBetween": "Between corners or ends…",
+    "customFrom": "Part of a run, from a corner or end…",
+    "fromAnchor": "From",
+    "toAnchor": "To",
+    "direction": "Direction",
+    "sew": "Sew",
+    "save": "Save seam",
+    "cancel": "Cancel",
+    "partners": "{{a}} · {{b}}",
+    "show": "Show seam",
+    "edit": "Edit",
+    "unsew": "Unsew",
+    "sewnTo": "Sewn to {{piece}} · {{stretch}}"
   }
 }

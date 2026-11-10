@@ -240,6 +240,7 @@ export function renumberCorners(
     const renumberAnchor = (anchor: SeamAnchor): SeamAnchor =>
       typeof anchor === 'number' ? renumber(anchor, owner) : anchor;
     const stretch = side.stretch;
+    if (stretch.kind === 'whole') return side;
     if (stretch.kind === 'from') {
       const anchor = renumberAnchor(stretch.anchor);
       return anchor === stretch.anchor ? side : { ...side, stretch: { ...stretch, anchor } };

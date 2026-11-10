@@ -4,6 +4,7 @@ import { EPS_LENGTH } from '@leathercad/core';
 import {
   diagnose,
   resolveSeam,
+  seamVerdict,
   type Project,
   type Seam,
   type SeamAnchor,
@@ -51,6 +52,14 @@ describe('seams in format 12 (9.6a)', () => {
       if (!result.ok) throw new Error('the complete side seam must resolve');
       expect(result.a.holes).toHaveLength(11);
       expect(result.b.holes).toHaveLength(11);
+      expect(seamVerdict(p, value)).toMatchObject({
+        ok: true,
+        countA: 11,
+        countB: 11,
+        worstPair: 11,
+        severity: 'warning',
+        driftMm: expect.closeTo(0.605414, 4),
+      });
       expect(result.a.lengthMm).toBeCloseTo(38, 9);
       const drift =
         (result.a.holes.at(-1)?.distanceMm ?? 0) - (result.b.holes.at(-1)?.distanceMm ?? 0);
@@ -244,5 +253,39 @@ describe('seams in format 12 (9.6a)', () => {
       { ...seam.a, stretch: { kind: 'between', fromAnchor: 'middle', toAnchor: 'end' } },
     ])
       expect(ProjectSchema.safeParse({ ...p, seams: [{ ...seam, a }] }).success).toBe(false);
+  });
+});
+
+it('preserves whole closed stretches through 1.6 and save/load without changing verdicts (D18)', () => {
+  const p = fixtureProjectV12();
+  const whole: Seam = {
+    ...seam,
+    a: { ...seam.a, stretch: { kind: 'whole' } },
+    b: { ...seam.b, stretch: { kind: 'whole' } },
+  };
+  const original = { ...p, seams: [whole] };
+  const saved = saveProject(original, options);
+  const loaded = loadProject(saved).project;
+  const legacy = ReleasedSchema.parse(JSON.parse(strFromU8(unzipSync(saved)['document.json']!)));
+  expect(legacy).toMatchObject({ seams: [whole] });
+  expect(seamVerdict(loaded, loaded.seams![0]!)).toEqual(seamVerdict(original, whole));
+});
+
+it('checks the shipped card holder bottom as 27 pairs within the drift limit', () => {
+  const p = loadProject(
+    readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+  ).project;
+  const value: Seam = {
+    id: 'bottom',
+    a: { holeSetId: 'pocket-holes', stretch: { kind: 'between', fromAnchor: 0, toAnchor: 1 } },
+    b: { holeSetId: 'outer-holes', stretch: { kind: 'between', fromAnchor: 3, toAnchor: 0 } },
+  };
+  expect(seamVerdict(p, value)).toMatchObject({
+    ok: true,
+    countA: 27,
+    countB: 27,
+    severity: 'info',
+    worstPair: 27,
+    driftMm: expect.closeTo(99 - (97 + Math.PI / 2), 9),
   });
 });

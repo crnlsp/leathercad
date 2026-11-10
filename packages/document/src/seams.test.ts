@@ -26,7 +26,7 @@ import {
   setDerivation,
   setSource,
 } from './commands.js';
-import { addSeam } from './seams.js';
+import { addSeam, setSeam, removeSeam } from './seams.js';
 import { addGuide } from './guides.js';
 import { DocumentStore } from './store.js';
 import { editPathPoint } from './pathPoints.js';
@@ -282,5 +282,63 @@ describe('seam commands and deletion (9.6a)', () => {
         );
       }),
     );
+  });
+});
+
+describe('seam editing (9.6b)', () => {
+  it('previews against the base, cancels cleanly, then commits one edit and unsews with undo', () => {
+    const store = storeWithSeam();
+    const before = store.getState().document;
+    const edited: Seam = { ...seam, a: { ...seam.a, stretch: { kind: 'whole' } } };
+    store.begin({ action: 'edit-seam' });
+    store.preview(setSeam(edited));
+    expect(store.getState().document.project.seams).toEqual([edited]);
+    store.rollback();
+    expect(store.getState().document).toBe(before);
+    store.begin({ action: 'edit-seam' });
+    store.preview(setSeam(edited));
+    store.commit();
+    store.undo();
+    expect(store.getState().document).toBe(before);
+    store.redo();
+    const after = store.getState().document;
+    store.dispatch(removeSeam(seam.id));
+    expect(store.getState().document.project.seams).toEqual([]);
+    store.undo();
+    expect(store.getState().document).toBe(after);
+  });
+  it('preserves unknown metadata when editing and refuses invalid edits without history', () => {
+    const store = storeWithSeam();
+    const future = {
+      ...seam,
+      id: 'future',
+      extra: true,
+      a: { ...seam.a, extra: 1, stretch: { ...seam.a.stretch, extra: 2 } },
+    };
+    store.dispatch(addSeam(future));
+    const extra = store.getState().document.project.seams?.find((s) => s.id === 'future');
+    if (extra === undefined) throw new Error('future seam exists');
+    store.dispatch(
+      setSeam({
+        ...seam,
+        id: 'future',
+        a: { ...seam.a, stretch: { kind: 'between', fromAnchor: 1, toAnchor: 2 } },
+      }),
+    );
+    expect(store.getState().document.project.seams?.find((s) => s.id === 'future')).toMatchObject({
+      extra: true,
+      a: { extra: 1, stretch: { extra: 2, fromAnchor: 1, toAnchor: 2 } },
+    });
+    store.dispatch(
+      setSeam({ ...seam, id: 'future', a: { ...seam.a, stretch: { kind: 'whole' } } }),
+    );
+    expect(store.getState().document.project.seams?.find((s) => s.id === 'future')).toMatchObject({
+      a: { stretch: { kind: 'whole', extra: 2 } },
+    });
+    const before = store.getState().document;
+    store.dispatch(setSeam({ ...seam, a: seam.b }));
+    store.dispatch(setSeam({ ...seam, id: 'gone' }));
+    store.dispatch(removeSeam('gone'));
+    expect(store.getState().document).toBe(before);
   });
 });
