@@ -53,11 +53,26 @@ for (const [id, name] of [
       await fromProjectMenu(window, 'save-as');
       await expect(window.getByTestId('save-state')).toHaveText('Saved');
       expect(diagnose(loadProject(readFileSync(project)).project)).toEqual([]);
-      await app.evaluate(({ dialog }, path) => {
+      await app.evaluate(({ dialog, shell }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+        // PDF writing is real; the operating system's viewer is outside this test.
+        const state = globalThis as typeof globalThis & { __templateViewed?: string };
+        delete state.__templateViewed;
+        shell.openPath = async (opened) => {
+          state.__templateViewed = opened;
+          return '';
+        };
       }, pdf);
       await window.getByTestId('export-pdf').click();
       await expect.poll(() => existsSync(pdf)).toBe(true);
+      await expect
+        .poll(() =>
+          app.evaluate(
+            () =>
+              (globalThis as typeof globalThis & { __templateViewed?: string }).__templateViewed,
+          ),
+        )
+        .toBe(pdf);
       expect(readFileSync(pdf).subarray(0, 5).toString()).toBe('%PDF-');
     } finally {
       await closeApp(app);
