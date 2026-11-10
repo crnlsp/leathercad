@@ -1,4 +1,4 @@
-import { RESOURCE_LIMITS, ResourceLimitError } from '@leathercad/core';
+import { EPS_POINT, RESOURCE_LIMITS, ResourceLimitError } from '@leathercad/core';
 import { PathOps, Shapes, offsetPath, uniformRadii } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -32,6 +32,53 @@ const CONTINUOUS: HoleOp = { pitchMm: 3.85, mode: 'fit-whole', corners: 'continu
 const AT_CORNERS: HoleOp = { pitchMm: 3.85, mode: 'fit-whole', corners: 'hole-at-corner' };
 
 describe('stitch holes', () => {
+  it('keeps original arc lengths when an empty corner run is omitted (9.6a)', () => {
+    const path = PathOps.open([
+      { kind: 'line', a: { x: 0, y: 0 }, b: { x: 0, y: 0 } },
+      { kind: 'arc', centre: { x: 0, y: 0 }, radius: 0, startAngle: 0, sweepAngle: Math.PI / 2 },
+      { kind: 'line', a: { x: 0, y: 0 }, b: { x: 20, y: 0 } },
+      { kind: 'line', a: { x: 20, y: 0 }, b: { x: 20, y: 20 } },
+    ]);
+    const holes = distributeHoles(path, { ...AT_CORNERS, pitchMm: 4 }).holes;
+    expect(holes.map((hole) => hole.alongMm)).toEqual(Array.from({ length: 11 }, (_, i) => i * 4));
+  });
+  it('records each hole at its arc length on the original line, including corners and phase wrap (9.6a)', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 20, max: 300, noNaN: true }),
+        fc.double({ min: 20, max: 300, noNaN: true }),
+        fc.double({ min: 0, max: 8, noNaN: true }),
+        fc.constantFrom('continuous', 'hole-at-corner'),
+        fc.double({ min: 0, max: 20, noNaN: true }),
+        (width, height, radius, corners, startOffsetMm) => {
+          const path = rectStitchLine(width, height, radius, 2);
+          const measure = PathOps.measure(path);
+          const result = distributeHoles(path, { ...CONTINUOUS, corners, startOffsetMm });
+          for (const hole of result.holes) {
+            const at = measure.pointAtDistance(hole.alongMm);
+            expect(Math.hypot(at.x - hole.point.x, at.y - hole.point.y)).toBeLessThanOrEqual(
+              EPS_POINT,
+            );
+          }
+        },
+      ),
+    );
+  });
+
+  it('records increasing distances along an open line across its corners (9.6a)', () => {
+    const path = PathOps.polyline(
+      [
+        { x: 0, y: 20 },
+        { x: 0, y: 0 },
+        { x: 40, y: 0 },
+        { x: 40, y: 20 },
+      ],
+      false,
+    );
+    const holes = distributeHoles(path, { ...AT_CORNERS, pitchMm: 4 }).holes;
+    expect(holes.map((hole) => hole.alongMm)).toEqual(Array.from({ length: 21 }, (_, i) => i * 4));
+  });
+
   it('distributes a whole number of holes round a closed line', () => {
     const line = rectStitchLine(105, 75, 8, 3.5);
     const holes = holesOn(line, CONTINUOUS);

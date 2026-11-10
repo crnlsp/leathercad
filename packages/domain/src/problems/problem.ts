@@ -1,7 +1,7 @@
 import type { Mm } from '@leathercad/core';
 import type { Path, Vec2 } from '@leathercad/geometry';
 
-import type { FeatureId, PartId } from '../feature.js';
+import type { FeatureId, PartId, SeamId, SeamAnchor } from '../feature.js';
 
 /**
  * What the domain knows about something being wrong — as facts, never as a
@@ -84,6 +84,15 @@ export type CompatibilityRule =
  * registration or a message does not compile.
  */
 export interface ProblemFacts {
+  readonly SEAM_NOT_A_HOLE_SET: { readonly seamId: SeamId; readonly holeSetId: FeatureId };
+  readonly SEAM_HAS_NO_LENGTH: { readonly seamId: SeamId };
+  readonly SEAM_SIDE_MISSING: { readonly seamId: SeamId; readonly holeSetId: FeatureId };
+  readonly SEAM_RUNS_OFF_THE_LINE: {
+    readonly seamId: SeamId;
+    readonly holeSetId: FeatureId;
+    readonly lengthMm: Mm;
+    readonly availableMm: Mm;
+  };
   // ——— Structural (S): refused by commands and the loader ———
   readonly DUPLICATE_ID: { readonly featureId: FeatureId };
   readonly SOURCE_MISSING: About;
@@ -237,7 +246,11 @@ export interface ProblemFacts {
   };
   readonly OFFSET_UNSUPPORTED: About;
   readonly OFFSET_SPLIT: About & { readonly droppedPieces: number };
-  readonly ANCHOR_MISSING: About & { readonly anchor: number; readonly available: number };
+  readonly ANCHOR_MISSING: About & {
+    readonly anchor: SeamAnchor;
+    readonly available: number;
+    readonly seamId?: SeamId;
+  };
   readonly SOURCE_FAILED: About & { readonly sourceId: FeatureId; readonly sourceName: string };
   readonly GEOMETRY_FAILED: About & { readonly detail: string };
   /** E1: a bent or curved fold has no single line to mirror about. */
@@ -346,6 +359,8 @@ export function subjectOf(p: Problem): {
  * then reads as new, which is the safe way to be wrong.
  */
 function qualifierOf(p: Problem): string | number | undefined {
+  if ('seamId' in p.facts)
+    return `${p.facts.seamId}:${'holeSetId' in p.facts ? p.facts.holeSetId : ''}`;
   switch (p.code) {
     case 'DERIVATION_INCOMPATIBLE':
       return p.facts.rule;

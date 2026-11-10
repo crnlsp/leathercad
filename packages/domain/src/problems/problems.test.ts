@@ -20,6 +20,10 @@ const named = { featureId: 'f-1', featureName: 'Stitch line' };
  * (apps/desktop/src/renderer/src/problemText.test.ts).
  */
 const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
+  SEAM_NOT_A_HOLE_SET: { seamId: 's-1', holeSetId: 'f-1' },
+  SEAM_HAS_NO_LENGTH: { seamId: 's-1' },
+  SEAM_SIDE_MISSING: { seamId: 's-1', holeSetId: 'f-1' },
+  SEAM_RUNS_OFF_THE_LINE: { seamId: 's-1', holeSetId: 'f-1', lengthMm: 40, availableMm: 20 },
   DUPLICATE_ID: { featureId: 'f-1' },
   SOURCE_MISSING: named,
   FOLLOWS_ITSELF: named,

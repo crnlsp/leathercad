@@ -132,7 +132,7 @@ The parameters live in the op (§4):
   ironLabel?: string }                // cosmetic, never read as geometry
 ```
 
-Evaluates to holes `{ point, tangent, runIndex, ordinal }` and a report: the count, the achieved
+Evaluates to holes `{ point, tangent, runIndex, ordinal, alongMm }` and a report: the count, the achieved
 spacing, and per-run length, count and spacing. **Holes have no ids.** They are addressed by
 position, because there is no correct answer to which of the old 84 holes is this one of the new 86.
 
@@ -763,36 +763,66 @@ hint; the model never stores inches.
 - Total stitch line length, for estimating thread (roughly 4–5 × the seam length; roadmap 9.12
   settles the formula, which printing.md §12 gives as 4×).
 
-## 7. Assembly and seams — designed for; roadmap 9.6
+## 7. Assembly and seams — model built, 9.6a
 
-Two parts stitched together must have **the same number of holes** along their mating edges. Getting
-it wrong is discovered once the leather is cut.
+A seam is an explicit relationship between two stitch hole sets, including mirrored sets and two
+stretches of the same piece. It lives in the optional project-level `seams` array. Nothing is
+inferred from where pieces sit on the board.
 
 ```ts
 interface Seam {
-  id: string;
-  name: string;
-  a: { partId: PartId; holeSetId: FeatureId; run?: Run };
-  b: { partId: PartId; holeSetId: FeatureId; run?: Run };
-  alignment: 'same-direction' | 'reversed';
+  readonly id: SeamId;
+  readonly a: SeamSide;
+  readonly b: SeamSide;
+}
+type SeamAnchor = number | 'start' | 'end';
+interface SeamSide {
+  readonly holeSetId: FeatureId;
+  readonly stretch:
+    | { readonly kind: 'between'; readonly fromAnchor: SeamAnchor; readonly toAnchor: SeamAnchor }
+    | { readonly kind: 'from'; readonly anchor: SeamAnchor; readonly toward: 'next' | 'previous' };
 }
 ```
 
-Phase 4 keeps this possible without a migration: hole sets are addressable by id, runs by anchors,
-holes by position, and a mirrored part's hole count equals its original's by construction.
+A `between` stretch walks from its first anchor to its second along the line; the same anchor
+twice names a whole closed loop, counted once. A `from` stretch takes its partner's length in the
+chosen direction. At least one side must be `between`. The stretch belongs to the seam, not `Run`.
+`resolveSeam` returns the length and holes of each stretch, ordered from its first hole with each
+hole's travelled distance. It reads the distributor's `StitchHole.alongMm`, never a projection of
+the hole onto geometry. Shared corner holes belong to both adjoining stretches and are punched
+once. Distances and resolved stretches are derived, never stored.
 
-A seam is the first relationship between pieces rather than inside one, so what will read it is
-named here before it is built (roadmap *Pieces that fit*): the thread a seam takes (9.12), alignment
-marks at matching holes on both sides (9.13), and a gusset's length along the panel it wraps (9.1).
-`a` and `b` may name the same part: a pouch folded over and sewn up its sides is one piece with a
-seam. **Open:** whether a seam alone keeps the format version — it changes nothing drawn, cut or
-printed (file-format.md §4.5, rule 3) — while the marks, which print, bump it (rule 2).
+A side naming a different feature kind and a pair with no fixed length are refused by commands
+and the loader. An out-of-range anchor refuses rather than re-targeting a neighbouring corner;
+an anchor evaluation has swallowed is still missing. A missing or failed hole set is an outcome,
+`SEAM_SIDE_MISSING`, and a following stretch longer than its available line is
+`SEAM_RUNS_OFF_THE_LINE`. Missing sides deliberately load: 1.6 preserves the unknown seam metadata
+but may delete its source. Seams keep format 12 (file-format §4.5 rule 3, approved D2).
 
-**1.7's design** replaces the sketch above when 9.6a lands: a seam side owns its *stretch* — a run
-between two anchors, or part of one from an anchor for its partner's length — so `Run` is not
-changed; there is no `alignment` field, since each stretch has a start and a direction; and holes
-are compared by their distance along the line, walked from the first hole of each side, not by
-count alone. [The seams spec](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md).
+`addSeam` adds a relationship in one undo step. `planDelete` lists seams through their hole-set
+references; deleting a source requires the same explicit resolution as feature dependents.
+Deleting either hole set removes the seam, and undo restores both. Freezing an outline's stitch
+line keeps the seam when both hole sets survive. Duplicating or mirroring a piece keeps existing
+seams and creates none: a copy has no sewn partner until the maker declares one.
+
+Point edits and conversion to drawn paths renumber seam anchors through the existing corner
+mapping, including anchors on derived hole sets. Taking an attached corner away refuses the edit.
+Unchanged seams reuse their resolution while both hole sets, paths, holes and anchors are
+identical; changes to either side re-evaluate it. Problem identity includes the seam id.
+
+**Open-line endpoints (D17, approved).** A seam reference is an existing corner index, or
+`'start'` / `'end'` for the geometric boundaries of an open stitch line. It follows the current
+line boundary through edits, independently of the first and last distributed holes and their
+offsets. Endpoint references add no corner slots, and numeric corners keep their existing
+indices. Mirrored paths retain their source order, so start and end follow their images.
+Closed lines have no endpoint references: commands and the loader refuse them with
+`ANCHOR_MISSING`. Rebinding a hole set or changing a derived run cannot invalidate an existing
+seam reference; the shared refusal query guards the command and the source picker. Empty open
+lines resolve to zero-length stretches with no holes.
+
+**Next, 9.6b:** count and drift checks, *Sew together*, and the seam's selection and Properties
+surfaces. The manufacturing design, worked examples and those checks are in the
+[seams spec](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md).
 
 ## 8. Invariants and diagnostics
 
@@ -822,6 +852,7 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | S8 | Derived geometry is never persisted | File format | built |
 | S9 | Nothing addresses geometry by segment index | Model types | built for runs; 4.10 |
 | S10 | Quantities, distances, pitches and text sizes are positive | Schema; commands | built; extended per slice |
+| S11 | A seam names stitching and at least one side defines its length | Seam commands; loader | built 9.6a |
 
 ### 8.3 Evaluation outcomes
 
@@ -942,7 +973,9 @@ table and no longer a sentence — the sentence had gone four slices out of date
 
 | Code | Category | Protects | Refused by |
 |---|---|---|---|
-| `DUPLICATE_ID` | structural | S1 | Loader |
+| `DUPLICATE_ID` | structural | S1 | Loader; seam commands |
+| `SEAM_NOT_A_HOLE_SET` | structural | S11 | Seam commands; loader |
+| `SEAM_HAS_NO_LENGTH` | structural | S11 | Seam commands; loader |
 | `SOURCE_MISSING` | structural | S2 | Commands; loader |
 | `MIRROR_FOLD_MISSING` | structural | S2 | Commands; loader; evaluation |
 | `MEASURE_REF_MISSING` | structural | S2 | Commands; loader; evaluation |
@@ -989,6 +1022,8 @@ The diagnostics themselves:
 | `GEOMETRY_FAILED` | error | outcome | E1 | built 4.12a — the fallback for a geometry throw the domain has no specific check for yet |
 | `OFFSET_SPLIT` | warning | outcome | E2 | built 4.12a; unreachable until Tier 2 offsetting |
 | `SOURCE_FAILED` | error | outcome | E3 | built 4.12a |
+| `SEAM_SIDE_MISSING` | error | outcome | E3 | built 9.6a |
+| `SEAM_RUNS_OFF_THE_LINE` | error | outcome | E4 | built 9.6a |
 | `FOLD_NOT_STRAIGHT` | error | outcome | E1 | built 4.8b — a mirror can only be folded about a straight line |
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
@@ -1059,7 +1094,7 @@ reuse.
 | Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (*Also later*) |
 | Validation, the §8.6 catalogue | Built: 4.12a–4.12; text size (Q34) | Seam rules (9.6) |
 | Templates as copies | Later: 9.7 (was 8.1) | Parameterised: *Exploring* |
-| `Seam` and assembly | Design only | 9.6 |
+| `Seam` and assembly | Model, stretches, persistence, deletion (9.6a) | Checks and making seams (9.6b) |
 | Material thickness compensation | Fields stored | 9.1 |
 | Hardware library | `hardwareType` only | 9.3 |
 
@@ -1068,8 +1103,8 @@ reuse.
 The model's share of [product-roadmap.md](product-roadmap.md): what its next layers need, and the
 decisions still open. No schema is fixed here before its slice.
 
-- **Between pieces (9.6).** §7's `Seam` is the first relationship that is not inside a part. Open:
-  whether a seam alone keeps the format version (§7).
+- **Between pieces (9.6).** §7's `Seam` is the first relationship that is not inside a part. Format
+  12 is retained (approved D2); seams on open lines can name their endpoints (approved D17).
 - **What the maker wants (9.14).** A requirement — "this pocket holds an ID-1 card" — is the maker's
   statement, stored as metadata on what it is about and checked by a design rule on every
   evaluation; nothing the rule computes is stored. Open: whether it attaches to the open stitch line

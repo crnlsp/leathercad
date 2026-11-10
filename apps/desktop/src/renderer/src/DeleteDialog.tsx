@@ -67,6 +67,25 @@ export function DeleteDialog({
           </section>
         ))}
 
+        {plan.seams.length > 0 && (
+          <section className="dialog-group">
+            <div className="dialog-part">{t('deleteDialog.seams')}</div>
+            <ul>
+              {plan.seams.map((seam) => (
+                <li key={seam.seamId}>
+                  <b>
+                    {t('deleteDialog.seam', {
+                      a: seam.aPartName ?? t('deleteDialog.missingSide'),
+                      b: seam.bPartName ?? t('deleteDialog.missingSide'),
+                    })}
+                  </b>{' '}
+                  <span className="dialog-note">{t('deleteDialog.note.seam')}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <div className="dialog-actions">
           <button
             ref={cancelRef}

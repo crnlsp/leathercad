@@ -27,6 +27,7 @@ import {
   anchorsOf,
   cornerDistances,
   dependentsOf,
+  seamsDependingOn,
   derivationRefusal,
   evaluate,
   findFeature,
@@ -1202,15 +1203,19 @@ export function addHoleRow(partId: PartId, featureId: FeatureId, sourceId: Featu
 
 /** Changes what a derived feature does — the inset, the pitch, the run. */
 export function setDerivation(id: FeatureId, op: Derivation): Command {
-  return command({ action: 'edit-derivation' }, (document) => ({
-    project: mapFeature(document.project, id, (feature) =>
-      feature.kind !== 'text-label' &&
-      feature.kind !== 'measurement' &&
-      feature.source.kind === 'derived'
-        ? { ...feature, source: { ...feature.source, op } }
-        : feature,
-    ),
-  }));
+  return command({ action: 'edit-derivation' }, (document) => {
+    const feature = findFeature(document.project, id)?.feature;
+    if (
+      feature === undefined ||
+      feature.kind === 'text-label' ||
+      feature.kind === 'measurement' ||
+      feature.source.kind !== 'derived'
+    )
+      return document;
+    const candidate: Feature = { ...feature, source: { ...feature.source, op } };
+    if (derivationRefusal(document.project, candidate) !== null) return document;
+    return { project: mapFeature(document.project, id, () => candidate) };
+  });
 }
 
 /**
@@ -1809,6 +1814,11 @@ export interface DeletePlan {
   /** The requested features that exist, in document order. */
   readonly requested: readonly FeatureId[];
   readonly dependents: readonly PlannedDependent[];
+  readonly seams: readonly {
+    readonly seamId: string;
+    readonly aPartName?: string;
+    readonly bPartName?: string;
+  }[];
 }
 
 /**
@@ -1824,7 +1834,16 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
   const requestedSet = new Set(requested);
 
   const dependentIds = dependentsOf(project, requested);
-  if (dependentIds.length === 0) return { requested, dependents: [] };
+  const seams = seamsDependingOn(project, [...requested, ...dependentIds]).map((seam) => {
+    const a = entries.find((e) => e.feature.id === seam.a.holeSetId)?.part.name;
+    const b = entries.find((e) => e.feature.id === seam.b.holeSetId)?.part.name;
+    return {
+      seamId: seam.id,
+      ...(a === undefined ? {} : { aPartName: a }),
+      ...(b === undefined ? {} : { bPartName: b }),
+    };
+  });
+  if (dependentIds.length === 0) return { requested, dependents: [], seams };
 
   const resolved = new Map(
     evaluate(project)
@@ -1856,7 +1875,7 @@ export function planDelete(project: Project, ids: Iterable<FeatureId>): DeletePl
     };
   });
 
-  return { requested, dependents };
+  return { requested, dependents, seams };
 }
 
 /**
@@ -2514,7 +2533,8 @@ function resolveDelete(
   const gone = new Set(plan.requested);
   const frozen = new Map<FeatureId, Feature>();
 
-  if (plan.dependents.length === 0) return { gone, frozen, requestedCount: plan.requested.length };
+  if (plan.dependents.length === 0 && plan.seams.length === 0)
+    return { gone, frozen, requestedCount: plan.requested.length };
   if (resolution === undefined) return null;
 
   if (resolution === 'delete-dependents') {
@@ -2584,8 +2604,12 @@ function resolveDelete(
 
 /** Removes and freezes features, leaving untouched parts identical by reference. */
 function applyOutcome(project: Project, outcome: DeleteOutcome): Project {
+  const removed = new Set(seamsDependingOn(project, outcome.gone));
   return {
     ...project,
+    ...(removed.size === 0
+      ? {}
+      : { seams: (project.seams ?? []).filter((seam) => !removed.has(seam)) }),
     parts: project.parts.map((part) =>
       part.features.some((f) => outcome.gone.has(f.id) || outcome.frozen.has(f.id))
         ? {
@@ -2615,7 +2639,8 @@ function deleteLabel(
   return {
     action: 'delete',
     ...what,
-    dependents: outcome.gone.size - outcome.requestedCount,
+    dependents:
+      outcome.gone.size - outcome.requestedCount + seamsDependingOn(project, outcome.gone).length,
     frozen: outcome.frozen.size,
   };
 }

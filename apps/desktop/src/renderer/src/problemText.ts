@@ -17,6 +17,14 @@ import type { MessageKey, Translate } from '../../shared/i18n.js';
 type Describe<K extends ProblemCode> = (facts: ProblemFacts[K], t: Translate) => string;
 
 const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
+  SEAM_NOT_A_HOLE_SET: (_, t) => t('problems.SEAM_NOT_A_HOLE_SET.description'),
+  SEAM_HAS_NO_LENGTH: (_, t) => t('problems.SEAM_HAS_NO_LENGTH.description'),
+  SEAM_SIDE_MISSING: (_, t) => t('problems.SEAM_SIDE_MISSING.description'),
+  SEAM_RUNS_OFF_THE_LINE: (f, t) =>
+    t('problems.SEAM_RUNS_OFF_THE_LINE.description', {
+      length: formatMm(f.lengthMm),
+      available: formatMm(f.availableMm),
+    }),
   DUPLICATE_ID: (f, t) => t('problems.DUPLICATE_ID.description', f),
   SOURCE_MISSING: (f, t) => t('problems.SOURCE_MISSING.description', f),
   FOLLOWS_ITSELF: (f, t) => t('problems.FOLLOWS_ITSELF.description', f),
@@ -88,9 +96,11 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
       count: f.droppedPieces,
     }),
   ANCHOR_MISSING: (f, t) =>
-    f.available < 1
-      ? t('problems.ANCHOR_MISSING.noCorners')
-      : t('problems.ANCHOR_MISSING.description', { anchor: f.anchor, available: f.available }),
+    typeof f.anchor === 'string'
+      ? t(`problems.ANCHOR_MISSING.${f.anchor}`)
+      : f.available < 1
+        ? t('problems.ANCHOR_MISSING.noCorners')
+        : t('problems.ANCHOR_MISSING.description', { anchor: f.anchor, available: f.available }),
   SOURCE_FAILED: (f, t) => t('problems.SOURCE_FAILED.description', f),
   GEOMETRY_FAILED: (f, t) => t('problems.GEOMETRY_FAILED.description', f),
 
@@ -154,11 +164,18 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
 // variants. Refusals keep their existing message; every listed code needs a fix
 // too, held to the domain registry by the 9.15 audit.
 const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
+  SEAM_SIDE_MISSING: 'problems.SEAM_SIDE_MISSING.fix',
+  SEAM_RUNS_OFF_THE_LINE: 'problems.SEAM_RUNS_OFF_THE_LINE.fix',
   PARAMETER_INVALID: 'problems.PARAMETER_INVALID.fix',
   OFFSET_COLLAPSED: 'problems.OFFSET_COLLAPSED.fix',
   OFFSET_UNSUPPORTED: 'problems.OFFSET_UNSUPPORTED.fix',
   OFFSET_SPLIT: 'problems.OFFSET_SPLIT.fix',
-  ANCHOR_MISSING: 'problems.ANCHOR_MISSING.fix',
+  ANCHOR_MISSING: (f, t) =>
+    t(
+      typeof f.anchor === 'string'
+        ? 'problems.ANCHOR_MISSING.endpointFix'
+        : 'problems.ANCHOR_MISSING.fix',
+    ),
   SOURCE_FAILED: 'problems.SOURCE_FAILED.fix',
   GEOMETRY_FAILED: 'problems.GEOMETRY_FAILED.fix',
   FOLD_NOT_STRAIGHT: 'problems.FOLD_NOT_STRAIGHT.fix',

@@ -1,8 +1,9 @@
 # Seams, pockets and the production summary — design for 1.7 (9.6, 9.12–9.14, 9.17, Q21, 8.14b)
 
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
-Nothing here is built. It replaces the sketch in [domain-model](../../domain-model.md) §7 once 9.6a
-lands, and that slice moves what is built into the domain model.
+9.6a implements the model, persistence and deletion, including approved open-line endpoint
+references (plan D17). The implemented contract is in [domain-model](../../domain-model.md) §7.
+The authoring interface, checks and later manufacturing features below remain planned.
 
 **Evidence.** Every number below was computed with the real evaluator (`evaluate`, `diagnose`) on
 the built-in templates at develop 7a69dc9, in a throwaway test that is not part of the repository.
@@ -64,11 +65,13 @@ interface Seam {
   readonly b: SeamSide;
 }
 
+type SeamAnchor = number | 'start' | 'end';
+
 interface SeamSide {
   readonly holeSetId: FeatureId;        // a stitch hole set, or its mirror
   readonly stretch:
-    | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number }
-    | { readonly kind: 'from'; readonly anchor: number; readonly toward: 'next' | 'previous' };
+    | { readonly kind: 'between'; readonly fromAnchor: SeamAnchor; readonly toAnchor: SeamAnchor }
+    | { readonly kind: 'from'; readonly anchor: SeamAnchor; readonly toward: 'next' | 'previous' };
 }
 ```
 
@@ -76,6 +79,12 @@ Project level, `seams?: readonly Seam[]`, as `guides` is. A seam has no name: it
 two pieces and stretches it joins ("Pocket ×2, left side · Outer, left side from its bottom
 corner"). `a` and `b` may be the same part, or the same hole set with two stretches — a pouch
 folded and sewn up its sides.
+
+**Open-line endpoints (D17, approved 2026-11-10).** A seam reference can also name `start` or
+`end` of an open stitch line. These mean its geometric boundaries and follow them through edits;
+hole offsets do not move them. Existing corner indices stay unchanged. Endpoint references on a
+closed line are refused as `ANCHOR_MISSING`. The shipped pocket's left seam walks from corner 0
+to `start`; its right seam walks from corner 1 to `end`.
 
 **Structural rules (refused, never listed):** a side names a feature that is not a stitch hole set
 (`SEAM_NOT_A_HOLE_SET`); both sides `from` (`SEAM_HAS_NO_LENGTH`); an anchor out of range

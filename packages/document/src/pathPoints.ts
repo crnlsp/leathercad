@@ -9,6 +9,8 @@ import {
   type MeasureRef,
   type Problem,
   type Project,
+  type SeamAnchor,
+  type SeamSide,
 } from '@leathercad/domain';
 import {
   insertPathVertex,
@@ -173,8 +175,8 @@ export function renumberCorners(
   // corner, which refuses the whole edit.
   // A holder rather than a `let`: it is set inside the callbacks below, which
   // the compiler's narrowing does not follow.
-  const lost: { owner: Feature | null } = { owner: null };
-  const renumber = (k: number, owner: Feature): number => {
+  const lost: { owner: { readonly name: string } | null } = { owner: null };
+  const renumber = (k: number, owner: { readonly name: string }): number => {
     // An index already past the corners is already missing (E4), and stays
     // exactly as missing: giving it a number would attach it to whatever
     // corner the edit happened to create there.
@@ -232,10 +234,40 @@ export function renumberCorners(
     return features.every((f, i) => f === part.features[i]) ? part : { ...part, features };
   });
 
+  const renumberSide = (side: SeamSide): SeamSide => {
+    if (!family.has(side.holeSetId)) return side;
+    const owner = findFeature(project, side.holeSetId)?.feature ?? feature;
+    const renumberAnchor = (anchor: SeamAnchor): SeamAnchor =>
+      typeof anchor === 'number' ? renumber(anchor, owner) : anchor;
+    const stretch = side.stretch;
+    if (stretch.kind === 'from') {
+      const anchor = renumberAnchor(stretch.anchor);
+      return anchor === stretch.anchor ? side : { ...side, stretch: { ...stretch, anchor } };
+    }
+    const fromAnchor = renumberAnchor(stretch.fromAnchor);
+    const toAnchor = renumberAnchor(stretch.toAnchor);
+    return fromAnchor === stretch.fromAnchor && toAnchor === stretch.toAnchor
+      ? side
+      : { ...side, stretch: { ...stretch, fromAnchor, toAnchor } };
+  };
+  const seams = project.seams?.map((seam) => {
+    const a = renumberSide(seam.a);
+    const b = renumberSide(seam.b);
+    return a === seam.a && b === seam.b ? seam : { ...seam, a, b };
+  });
+
   if (lost.owner !== null) {
     return { problem: problem('CORNER_IN_USE', { ...about, usedByName: lost.owner.name }) };
   }
-  return { project: { ...project, parts } };
+  return {
+    project: {
+      ...project,
+      parts,
+      ...(seams === undefined || seams.every((seam, i) => seam === project.seams?.[i])
+        ? {}
+        : { seams }),
+    },
+  };
 }
 
 function applyEdit(path: Path, edit: PathPointEdit): PathEdit | null {

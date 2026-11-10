@@ -1,6 +1,7 @@
 import type { FeatureId, Project } from './feature.js';
 import { evaluate, type ResolvedProject } from './evaluate.js';
 import { validate } from './validate.js';
+import { seamDiagnostics } from './seams.js';
 import { PROBLEM_CODES, type Diagnostic } from './problems/index.js';
 
 /**
@@ -22,7 +23,7 @@ export function diagnose(project: Project): readonly Diagnostic[] {
   if (cached !== undefined) return cached;
 
   const resolved = evaluate(project);
-  const unordered = [...outcomesOf(resolved), ...validate(resolved)];
+  const unordered = [...outcomesOf(resolved), ...seamDiagnostics(project), ...validate(resolved)];
 
   const position = new Map<string, number>();
   let next = 0;

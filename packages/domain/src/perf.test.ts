@@ -4,7 +4,8 @@ import { diagnose } from './diagnose.js';
 import { evaluate, resolvedFeatures } from './evaluate.js';
 import { validate } from './validate.js';
 import type { Project } from './feature.js';
-import { bag, strap, tracedOutline } from './workloads.js';
+import { bag, seamedBag, strap, tracedOutline } from './workloads.js';
+import { resolveSeam } from './seams.js';
 
 /** Milliseconds for one cold `diagnose` — the memo is per project object. */
 function timeDiagnose(project: Project): number {
@@ -14,6 +15,13 @@ function timeDiagnose(project: Project): number {
 }
 
 describe('regeneration budget', () => {
+  it('reuses every unchanged seam after an unrelated edit (9.6a)', () => {
+    const project = seamedBag();
+    const seams = project.seams ?? [];
+    const before = seams.map((seam) => resolveSeam(project, seam));
+    const edited = { ...project, name: 'Renamed' };
+    seams.forEach((seam, i) => expect(resolveSeam(edited, seam)).toBe(before[i]));
+  });
   it('rebuilds a chain of three thousand holes well inside 50 ms', () => {
     // ~11.6 m of stitch line at 3.85 mm — a long strap stitched both sides.
     // Warmed once, then the best of three: an edit in the app runs warm, and a

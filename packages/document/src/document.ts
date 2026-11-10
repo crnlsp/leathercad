@@ -99,6 +99,7 @@ export function command(label: HistoryLabel, apply: (document: Document) => Docu
 
 /** Every kind of step in the undo history. An id: the app has the words for each (ADR 0018). */
 export type HistoryAction =
+  | 'add-seam'
   | 'add-guide'
   | 'edit-guide'
   | 'delete-guide'
