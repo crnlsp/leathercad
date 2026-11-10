@@ -3,7 +3,7 @@
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
 9.6a implements the model, persistence and deletion, including approved open-line endpoint
 references (plan D17). The implemented contract is in [domain-model](../../domain-model.md) §7.
-9.6b implements authoring and paired-hole checks. The template audit is in progress; later
+9.6b implements authoring and paired-hole checks; 8.14b corrected the templates. Later
 manufacturing features below remain planned.
 
 **Evidence.** Every number below was computed with the real evaluator (`evaluate`, `diagnose`) on
@@ -211,7 +211,7 @@ glued folded and trimmed flush; 3 — done as proposed.
 - **S4, the drift limit** — 0.5 mm, approved by the maintainer on 2026-11-03.
 - **S6, the format version for seams** — kept at 12, with the dangling-seam rule, approved on
   2026-11-03.
-- **Open:** the questions of §8, for a maker, answered in 8.14b.
+- **The questions of §8** — answered in 8.14b as plan D19 and D20, 2026-11-10 and 2026-11-11.
 
 ## 10. The production summary (9.12)
 

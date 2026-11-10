@@ -6,12 +6,13 @@ commands. File format 12, existing migrations and the print/export pipeline are 
 
 ## Construction status
 
-The software checks below do **not** establish that a pattern has been sewn successfully.
+The software checks below do **not** by themselves establish that a pattern goes together; the leather check below does, for the card holder only.
 The maintainer approved the revised card-holder design (D19) on 2026-11-10 and settled the bifold's
 maker questions from
 [the manufacturing spec §8](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md#8-questions-for-a-maker-814b)
-as D20 on 2026-11-11. The sewn card-holder check remains pending, so the roadmap keeps 8.14b in
-progress.
+as D20 on 2026-11-11. On 2026-11-11 the maintainer cut the card holder in leather and its holes
+lined up on all three seams; that is [logged](print-verification-log.md#built-in-template-construction--814b),
+and 8.14b is done. The bifold, key fob and coaster were not made in leather.
 
 ## Card holder — matching derived stitching approved
 
@@ -137,7 +138,8 @@ and dimensions are unchanged; it participates in the same clean-load, save and P
 
 ## Physical check to record
 
-No physical result is recorded yet. To finish 8.14b:
+Recorded on 2026-11-11 for the card holder: holes line up on all three seams. The procedure, for
+a fuller record or another template:
 
 1. Export the approved card-holder template through the
    app and print at actual size. Check scale using the established
@@ -146,5 +148,5 @@ No physical result is recorded yet. To finish 8.14b:
    trimming or skiving. Align the pockets' bottom and side edges on opposite faces of the outer.
 3. Confirm 12 pairs on each side and 27 along the bottom align before sewing; sew the piece and
    record the outcome, including whether a card fits as intended.
-4. Add the dated construction result to the verification log and tick 8.14b only after the required
-   maker checks are complete. A software PDF export is not a physical pass.
+4. Add the dated construction result to the verification log. A software PDF export is not a
+   physical pass.

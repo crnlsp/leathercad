@@ -102,6 +102,11 @@ carries real readings for each, the project must not claim verified 1:1 output o
 
 ## Built-in template construction — 8.14b
 
-**Pending; no physical pass claimed.** The revised card-holder design was approved as D19 on
-2026-11-10; its sewn sample remains pending. The [template audit](template-audit.md#physical-check-to-record)
-gives the procedure and the data to record. Software export tests do not complete this check.
+| Date | Build | Template | What was done | Result |
+|---|---|---|---|---|
+| 2026-11-11 | `fix/8-14b-templates` at `d16ad2c` (D19 card holder) | Card holder: one outer, two pockets | Cut and punched in leather by the maintainer | **Pass.** The pockets' holes line up with the outer's on all three seams (12 / 27 / 12). Leather, thickness, iron and card fit were not recorded |
+
+This is the construction check 8.14b asks for: cut from leather once, holes lining up. It is not
+a 1:1 print-scale reading; the rows above remain the record for that. The
+[template audit](template-audit.md#physical-check-to-record) gives the procedure and what a fuller
+record would add.
