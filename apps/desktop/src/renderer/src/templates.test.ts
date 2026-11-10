@@ -57,7 +57,8 @@ export function cardHolder(): Project {
     addStitchHoles('outer', 'outer-holes', 'outer-stitch'),
     addPart(
       shapePart('pocket', 'pocket-outline', 'Pocket', {
-        ...rectShape(at(0, -60), 105, 43.6092),
+        // Eleven outer-side gaps; round upward so the last outer hole is inside the seam.
+        ...rectShape(at(0, -60), 105, 47.3487),
         radii: { bottomLeft: 4, bottomRight: 4, topRight: 3, topLeft: 3 },
       }),
     ),
@@ -170,7 +171,24 @@ describe('templates checked as leatherwork (8.14b)', () => {
       expect(verdict.driftMm).toBeLessThan(0.01);
       expect(verdict.severity).toBe('info');
     }
-    expect(verdicts.map((verdict) => (verdict.ok ? verdict.countA : 0))).toEqual([11, 27, 11]);
+    expect(verdicts.map((verdict) => (verdict.ok ? verdict.countA : 0))).toEqual([12, 27, 12]);
+  });
+  it('covers about 82% of a payment card while leaving a usable grip above the opening', () => {
+    const pocket = evaluate(cardHolder()).parts.find((part) => part.part.id === 'pocket');
+    const outline = pocket?.features.find((entry) => entry.feature.id === 'pocket-outline');
+    const stitching = pocket?.features.find((entry) => entry.feature.id === 'pocket-stitch');
+    if (outline?.ok !== true || stitching?.ok !== true) throw new Error('pocket must resolve');
+    const opening = PathOps.bbox(outline.path)?.maxY ?? -Infinity;
+    const floor = PathOps.bbox(stitching.path)?.minY ?? Infinity;
+    const depth = opening - floor;
+    // Flat geometry measured from the bottom stitch line, not the cut edge.
+    // This is a design target, not proof of retention in a particular leather.
+    expect(depth / 53.98).toBeGreaterThanOrEqual(0.8);
+    expect(depth / 53.98).toBeLessThanOrEqual(0.84);
+    for (const cardHeight of [50, 50.8, 53.98, 54, 55]) {
+      expect(cardHeight - depth).toBeGreaterThanOrEqual(5);
+      expect(cardHeight - depth).toBeLessThanOrEqual(11);
+    }
   });
   it('keeps the card-holder stitching attached when its pocket outline is resized', () => {
     fc.assert(
