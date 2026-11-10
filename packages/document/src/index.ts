@@ -28,7 +28,7 @@ export {
 
 export type { StoreState } from './store.js';
 export { DocumentStore } from './store.js';
-export { addSeam } from './seams.js';
+export { addSeam, setSeam, removeSeam } from './seams.js';
 
 export {
   DEFAULT_DIMENSION_OFFSET_MM,

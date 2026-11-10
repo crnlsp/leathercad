@@ -6,7 +6,7 @@ import {
   selectedFeatureIds,
   type DocumentStore,
 } from '@leathercad/document';
-import { evaluate, sameProblem, type Problem } from '@leathercad/domain';
+import { evaluate, sameProblem, type Seam, type Problem } from '@leathercad/domain';
 import { layoutSheets, pieceAt, sheetsLayers, tapeJoins } from '@leathercad/export';
 import { RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 import { FONT_FAMILY } from '@leathercad/typography';
@@ -43,6 +43,7 @@ import {
   SHEET,
   clearCanvas,
   renderDisplayList,
+  seamOverlay,
   renderGrid,
   guideDisplayList,
   renderRulers,
@@ -182,6 +183,8 @@ export interface CanvasStatus {
 export function CanvasHost({
   store,
   view,
+  seam = null,
+  onEditSeam,
   hoveredPart = null,
   onHoverPart,
   toolId,
@@ -203,6 +206,8 @@ export function CanvasHost({
   children,
 }: {
   store: DocumentStore;
+  seam?: Seam | null;
+  onEditSeam?: (seam: Seam) => void;
   view: CanvasView;
   /** A part hovered in Parts, haloed on its sheets (7.4d). */
   hoveredPart?: string | null;
@@ -316,6 +321,27 @@ export function CanvasHost({
    * measuring the old canvas (Q3).
    */
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const seamLocale = i18n.locale;
+  const seamRef = useRef(seam);
+  const seamOverlayRef = useRef<ReturnType<typeof seamOverlay>>({ items: [] });
+  useEffect(() => {
+    seamRef.current = seam;
+    const number = new Intl.NumberFormat(seamLocale);
+    let previousProject: ReturnType<DocumentStore['getState']>['document']['project'] | null = null;
+    const update = () => {
+      const project = store.getState().document.project;
+      if (project === previousProject) return;
+      previousProject = project;
+      const current = seamRef.current;
+      seamOverlayRef.current =
+        current === null
+          ? { items: [] }
+          : seamOverlay(project, current, (value) => number.format(value));
+      invalidate();
+    };
+    update();
+    return store.subscribe(update);
+  }, [store, seam, seamLocale, invalidate]);
   const hoveredPartPropRef = useRef<string | null>(hoveredPart);
   const onHoverPartRef = useRef(onHoverPart);
   useEffect(() => {
@@ -686,6 +712,7 @@ export function CanvasHost({
     // the sheet plan the PDF writes, over the pattern and under the tool.
     renderDisplayList(context, tapeJoins(sheetPlanFor(document.project)), view);
     // The tool overlay is ephemeral feedback and never touches the document.
+    renderDisplayList(context, seamOverlayRef.current, view);
     renderDisplayList(context, managerRef.current?.overlay() ?? { items: [] }, view);
     // A tool builds a fresh problem on every pointer move. Keeping the old one
     // when it says the same thing stops the chrome re-rendering every frame.
@@ -1180,6 +1207,7 @@ export function CanvasHost({
       {view === 'design' && selectionBar !== null && (
         <SelectionBar
           ref={barRef}
+          onEditSeam={onEditSeam}
           store={store}
           tools={selectionBar}
           nextId={nextId}

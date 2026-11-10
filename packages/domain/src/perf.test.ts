@@ -5,7 +5,7 @@ import { evaluate, resolvedFeatures } from './evaluate.js';
 import { validate } from './validate.js';
 import type { Project } from './feature.js';
 import { bag, seamedBag, strap, tracedOutline } from './workloads.js';
-import { resolveSeam } from './seams.js';
+import { resolveSeam, seamVerdict } from './seams.js';
 
 /** Milliseconds for one cold `diagnose` — the memo is per project object. */
 function timeDiagnose(project: Project): number {
@@ -21,6 +21,17 @@ describe('regeneration budget', () => {
     const before = seams.map((seam) => resolveSeam(project, seam));
     const edited = { ...project, name: 'Renamed' };
     seams.forEach((seam, i) => expect(resolveSeam(edited, seam)).toBe(before[i]));
+  });
+  it('reuses all forty seam verdicts and diagnostics after an unrelated edit (9.6b)', () => {
+    const project = seamedBag();
+    const seams = project.seams ?? [];
+    const before = seams.map((seam) => seamVerdict(project, seam));
+    const diagnostics = diagnose(project).filter((d) => 'seamId' in d.problem.facts);
+    const edited = { ...project, name: 'Unrelated' };
+    seams.forEach((seam, i) => expect(seamVerdict(edited, seam)).toBe(before[i]));
+    diagnose(edited)
+      .filter((d) => 'seamId' in d.problem.facts)
+      .forEach((d, i) => expect(d).toBe(diagnostics[i]));
   });
   it('rebuilds a chain of three thousand holes well inside 50 ms', () => {
     // ~11.6 m of stitch line at 3.85 mm — a long strap stitched both sides.

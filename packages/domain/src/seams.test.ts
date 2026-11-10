@@ -7,7 +7,7 @@ import { DEFAULT_SETTINGS, type Feature, type Project, type Seam } from './featu
 import { evaluate } from './evaluate.js';
 import { diagnose } from './diagnose.js';
 import { problemKey } from './problems/index.js';
-import { resolveSeam, seamRefusal } from './seams.js';
+import { resolveSeam, seamRefusal, seamVerdict } from './seams.js';
 
 const holeOp = {
   type: 'stitch-holes',
@@ -179,6 +179,14 @@ describe('seam stretches (9.6a)', () => {
               ),
             })),
           };
+          const originalVerdict = seamVerdict(p, seam);
+          const changedVerdict = seamVerdict(changed, seam);
+          if (!originalVerdict.ok || !changedVerdict.ok)
+            throw new Error('isometric seam must resolve');
+          expect(Math.abs(originalVerdict.driftMm - changedVerdict.driftMm)).toBeLessThanOrEqual(
+            EPS_LENGTH,
+          );
+          expect(changedVerdict.severity).toBe(originalVerdict.severity);
           const a = resolveSeam(p, seam);
           const b = resolveSeam(changed, seam);
           if (!a.ok || !b.ok) throw new Error('an isometry cannot break a seam');

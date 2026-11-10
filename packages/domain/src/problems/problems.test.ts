@@ -20,6 +20,49 @@ const named = { featureId: 'f-1', featureName: 'Stitch line' };
  * (apps/desktop/src/renderer/src/problemText.test.ts).
  */
 const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
+  SEAM_REQUIRES_CLOSED_LINE: { seamId: 's-1', holeSetId: 'f-1' },
+  SEAM_HOLE_COUNT_MISMATCH: {
+    seamId: 's-1',
+    a: {
+      holeSetId: 'f-1',
+      stretch: { kind: 'whole' },
+      partId: 'p-1',
+      partName: 'Pocket',
+      count: 11,
+      lengthMm: 40,
+    },
+    b: {
+      holeSetId: 'f-2',
+      stretch: { kind: 'whole' },
+      partId: 'p-2',
+      partName: 'Outer',
+      count: 10,
+      lengthMm: 41,
+    },
+    driftMm: 1,
+    worstPair: 10,
+  },
+  SEAM_HOLES_DRIFT: {
+    seamId: 's-1',
+    a: {
+      holeSetId: 'f-1',
+      stretch: { kind: 'whole' },
+      partId: 'p-1',
+      partName: 'Pocket',
+      count: 11,
+      lengthMm: 40,
+    },
+    b: {
+      holeSetId: 'f-2',
+      stretch: { kind: 'whole' },
+      partId: 'p-2',
+      partName: 'Outer',
+      count: 10,
+      lengthMm: 41,
+    },
+    driftMm: 1,
+    worstPair: 10,
+  },
   SEAM_NOT_A_HOLE_SET: { seamId: 's-1', holeSetId: 'f-1' },
   SEAM_HAS_NO_LENGTH: { seamId: 's-1' },
   SEAM_SIDE_MISSING: { seamId: 's-1', holeSetId: 'f-1' },

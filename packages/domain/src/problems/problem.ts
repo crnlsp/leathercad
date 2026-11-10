@@ -1,7 +1,7 @@
 import type { Mm } from '@leathercad/core';
 import type { Path, Vec2 } from '@leathercad/geometry';
 
-import type { FeatureId, PartId, SeamId, SeamAnchor } from '../feature.js';
+import type { FeatureId, PartId, SeamId, SeamAnchor, SeamSide } from '../feature.js';
 
 /**
  * What the domain knows about something being wrong — as facts, never as a
@@ -83,7 +83,28 @@ export type CompatibilityRule =
  * catalogue are both typed over it, so a code added here without a
  * registration or a message does not compile.
  */
+interface SeamPairFacts {
+  readonly seamId: SeamId;
+  readonly a: SeamSide & {
+    readonly partId: PartId;
+    readonly partName: string;
+    readonly count: number;
+    readonly lengthMm: Mm;
+  };
+  readonly b: SeamSide & {
+    readonly partId: PartId;
+    readonly partName: string;
+    readonly count: number;
+    readonly lengthMm: Mm;
+  };
+  readonly worstPair: number | null;
+  readonly driftMm: Mm;
+}
+
 export interface ProblemFacts {
+  readonly SEAM_REQUIRES_CLOSED_LINE: { readonly seamId: SeamId; readonly holeSetId: FeatureId };
+  readonly SEAM_HOLE_COUNT_MISMATCH: SeamPairFacts;
+  readonly SEAM_HOLES_DRIFT: SeamPairFacts;
   readonly SEAM_NOT_A_HOLE_SET: { readonly seamId: SeamId; readonly holeSetId: FeatureId };
   readonly SEAM_HAS_NO_LENGTH: { readonly seamId: SeamId };
   readonly SEAM_SIDE_MISSING: { readonly seamId: SeamId; readonly holeSetId: FeatureId };

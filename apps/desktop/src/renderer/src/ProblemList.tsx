@@ -108,5 +108,13 @@ function locate(project: Project, diagnostic: Diagnostic): string | null {
   if (diagnostic.featureId === undefined) return part.name;
 
   const feature = part.features.find((f) => f.id === diagnostic.featureId);
-  return feature === undefined ? part.name : `${part.name} › ${feature.name}`;
+  const names = [feature === undefined ? part.name : `${part.name} › ${feature.name}`];
+  if ('seamId' in diagnostic.problem.facts) {
+    for (const id of diagnostic.related ?? []) {
+      const owner = project.parts.find((p) => p.features.some((f) => f.id === id));
+      const other = owner?.features.find((f) => f.id === id);
+      if (owner !== undefined && other !== undefined) names.push(`${owner.name} › ${other.name}`);
+    }
+  }
+  return names.join(' · ');
 }

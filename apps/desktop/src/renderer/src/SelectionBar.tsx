@@ -1,5 +1,5 @@
 import { drawnBounds, type DocumentStore } from '@leathercad/document';
-import { MIN_HOLES_IN_A_SET, diagnose, evaluate } from '@leathercad/domain';
+import { MIN_HOLES_IN_A_SET, diagnose, evaluate, type Seam } from '@leathercad/domain';
 import { placeSelectionBar, type CssBox, type ViewportView } from '@leathercad/render';
 import {
   Fragment,
@@ -14,6 +14,8 @@ import {
   type ReactNode,
 } from 'react';
 
+import { seamStretchName } from './seams.js';
+import { SeamReading } from './SeamPanel.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { FeatureMark } from './icons/marks.js';
@@ -79,6 +81,7 @@ function emphasise(text: string, value: string): ReactNode {
  */
 export const SelectionBar = memo(function SelectionBar({
   store,
+  onEditSeam,
   tools,
   nextId,
   invalidate,
@@ -86,6 +89,7 @@ export const SelectionBar = memo(function SelectionBar({
   ref,
 }: {
   store: DocumentStore;
+  onEditSeam?: ((seam: Seam) => void) | undefined;
   tools: MakerTools;
   nextId: () => string;
   /** Asks the canvas for a frame, which places the bar again. */
@@ -325,6 +329,31 @@ export const SelectionBar = memo(function SelectionBar({
           </Fragment>
         ))}
       </p>
+      {(project.seams ?? [])
+        .filter(
+          (s) => selection.features.has(s.a.holeSetId) || selection.features.has(s.b.holeSetId),
+        )
+        .map((seam) => {
+          const partner = selection.features.has(seam.a.holeSetId) ? seam.b : seam.a;
+          const piece = project.parts.find((p) =>
+            p.features.some((f) => f.id === partner.holeSetId),
+          );
+          return (
+            <p className="selection-bar-line" data-testid="selection-bar-seam" key={seam.id}>
+              <button
+                type="button"
+                className="selection-bar-button"
+                onClick={() => onEditSeam?.(seam)}
+              >
+                {t('seams.sewnTo', {
+                  piece: piece?.name ?? t('seams.missing'),
+                  stretch: seamStretchName(partner.stretch, t),
+                })}{' '}
+                · <SeamReading project={project} seam={seam} />
+              </button>
+            </p>
+          );
+        })}
       {note !== null && (
         <p id={reasonId} className="selection-bar-reason" data-testid="selection-bar-reason">
           {/* A step that failed is an error in Problems: its glyph as well as its words. */}

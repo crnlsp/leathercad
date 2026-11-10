@@ -85,7 +85,14 @@ export {
   validate,
 } from './validate.js';
 export { diagnose } from './diagnose.js';
-export { resolveSeam, seamRefusal, seamStructureProblems } from './seams.js';
+export {
+  seamVerdict,
+  SEAM_DRIFT_LIMIT_MM,
+  seamChangeRefusal,
+  resolveSeam,
+  seamRefusal,
+  seamStructureProblems,
+} from './seams.js';
 export {
   badgesOf,
   countBySeverity,

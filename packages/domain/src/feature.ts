@@ -15,6 +15,7 @@ export type SeamAnchor = number | 'start' | 'end';
 export interface SeamSide {
   readonly holeSetId: FeatureId;
   readonly stretch:
+    | { readonly kind: 'whole' }
     | { readonly kind: 'between'; readonly fromAnchor: SeamAnchor; readonly toAnchor: SeamAnchor }
     | { readonly kind: 'from'; readonly anchor: SeamAnchor; readonly toward: 'next' | 'previous' };
 }

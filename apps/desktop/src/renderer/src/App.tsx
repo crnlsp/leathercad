@@ -49,6 +49,8 @@ import {
 import { createI18n, resolveLocale, type Translate } from '../../shared/i18n.js';
 import { encodeProject } from './lcpEncoder.js';
 import { AboutDialog } from './AboutDialog.js';
+import { defaultSide, SeamWorkflow, sewableIds } from './seams.js';
+import { SeamPanel } from './SeamPanel.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
 import { selectionForRightClick, selectionMenu, type RightClicked } from './contextMenu.js';
@@ -392,6 +394,39 @@ export function App({
   if (mirror.store !== store) setMirror({ store, state: store.getState() });
   const storeState = mirror.store === store ? mirror.state : store.getState();
   useEffect(() => store.subscribe(() => setMirror({ store, state: store.getState() })), [store]);
+
+  const seamWorkflow = useMemo(() => new SeamWorkflow(store), [store]);
+  useEffect(() => () => seamWorkflow.dispose(), [seamWorkflow]);
+  const seamDraft = useSyncExternalStore(seamWorkflow.subscribe, seamWorkflow.snapshot);
+  const [highlightedSeam, setHighlightedSeam] = useState<string | null>(null);
+  const sewingIds =
+    storeState.selection.parts.size === 0
+      ? sewableIds(storeState.document.project, storeState.selection.features)
+      : [];
+  const showSeamProperties = () => {
+    if (layout.properties !== 'docked' && open !== 'properties')
+      togglePanel('properties', 'keyboard');
+  };
+  const startSewing = () => {
+    const a = sewingIds[0];
+    if (a === undefined) return;
+    const project = store.getState().document.project;
+    seamWorkflow.open(
+      { id: nextId(), a: defaultSide(project, a), b: defaultSide(project, sewingIds[1] ?? a) },
+      false,
+    );
+    showSeamProperties();
+  };
+  const selectedSeams = (storeState.document.project.seams ?? []).filter(
+    (s) =>
+      storeState.selection.features.has(s.a.holeSetId) ||
+      storeState.selection.features.has(s.b.holeSetId),
+  );
+  const shownSeam =
+    seamDraft?.seam ??
+    selectedSeams.find((s) => s.id === highlightedSeam) ??
+    selectedSeams[0] ??
+    null;
 
   // What went wrong opening a project from the start screen, where no tab is
   // there to say it (8.12).
@@ -1049,6 +1084,8 @@ export function App({
       const focusedAtRequest = document.activeElement;
       const project = store.getState().document.project;
       const target = diagnosticTarget(evaluate(project), diagnostic);
+      if ('seamId' in diagnostic.problem.facts && diagnostic.problem.facts.seamId !== undefined)
+        setHighlightedSeam(diagnostic.problem.facts.seamId);
       setProblemCursor({ tabId: problemTabId, key: problemKey(diagnostic.problem) });
       if (target.subject.kind === 'feature') store.select([target.subject.featureId]);
       else store.selectParts([target.subject.partId]);
@@ -1650,6 +1687,11 @@ export function App({
                   // Made again for each tab: its tools and gestures are that
                   // project's, and its cameras the tab's (8.12).
                   key={tab.id}
+                  seam={shownSeam}
+                  onEditSeam={(seam) => {
+                    seamWorkflow.open(seam, true);
+                    showSeamProperties();
+                  }}
                   cameras={tab.cameras}
                   ref={canvasRef}
                   store={store}
@@ -1733,6 +1775,17 @@ export function App({
                   />
                 ) : (
                   <PropertyPanel
+                    seamPanel={
+                      <SeamPanel
+                        store={store}
+                        project={storeState.document.project}
+                        selected={storeState.selection.features}
+                        workflow={seamWorkflow}
+                        draft={seamDraft}
+                        onSew={sewingIds.length > 0 ? startSewing : null}
+                        onHighlight={setHighlightedSeam}
+                      />
+                    }
                     store={store}
                     project={storeState.document.project}
                     selected={storeState.selection.features}
@@ -1901,6 +1954,7 @@ export function App({
             testId="context-menu"
             entries={selectionMenu(i18n, storeState.document.project, storeState.selection, {
               dispatch: (command) => store.dispatch(command),
+              sewTogether: startSewing,
               duplicatePart: requestDuplicatePart,
               deleteFeatures: requestDelete,
               deletePart: requestDeletePart,

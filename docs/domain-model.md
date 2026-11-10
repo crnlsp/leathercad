@@ -763,7 +763,7 @@ hint; the model never stores inches.
 - Total stitch line length, for estimating thread (roughly 4–5 × the seam length; roadmap 9.12
   settles the formula, which printing.md §12 gives as 4×).
 
-## 7. Assembly and seams — model built, 9.6a
+## 7. Assembly and seams — built, 9.6a–b
 
 A seam is an explicit relationship between two stitch hole sets, including mirrored sets and two
 stretches of the same piece. It lives in the optional project-level `seams` array. Nothing is
@@ -779,6 +779,7 @@ type SeamAnchor = number | 'start' | 'end';
 interface SeamSide {
   readonly holeSetId: FeatureId;
   readonly stretch:
+    | { readonly kind: 'whole' }
     | { readonly kind: 'between'; readonly fromAnchor: SeamAnchor; readonly toAnchor: SeamAnchor }
     | { readonly kind: 'from'; readonly anchor: SeamAnchor; readonly toward: 'next' | 'previous' };
 }
@@ -786,7 +787,8 @@ interface SeamSide {
 
 A `between` stretch walks from its first anchor to its second along the line; the same anchor
 twice names a whole closed loop, counted once. A `from` stretch takes its partner's length in the
-chosen direction. At least one side must be `between`. The stretch belongs to the seam, not `Run`.
+chosen direction. At least one side must define a length (`between` or `whole`). The stretch
+belongs to the seam, not `Run`.
 `resolveSeam` returns the length and holes of each stretch, ordered from its first hole with each
 hole's travelled distance. It reads the distributor's `StitchHole.alongMm`, never a projection of
 the hole onto geometry. Shared corner holes belong to both adjoining stretches and are punched
@@ -799,7 +801,8 @@ an anchor evaluation has swallowed is still missing. A missing or failed hole se
 `SEAM_RUNS_OFF_THE_LINE`. Missing sides deliberately load: 1.6 preserves the unknown seam metadata
 but may delete its source. Seams keep format 12 (file-format §4.5 rule 3, approved D2).
 
-`addSeam` adds a relationship in one undo step. `planDelete` lists seams through their hole-set
+`addSeam` adds, `setSeam` edits and `removeSeam` unsews a relationship in one undo step. Editing
+preserves unknown metadata at every level. `planDelete` lists seams through their hole-set
 references; deleting a source requires the same explicit resolution as feature dependents.
 Deleting either hole set removes the seam, and undo restores both. Freezing an outline's stitch
 line keeps the seam when both hole sets survive. Duplicating or mirroring a piece keeps existing
@@ -820,8 +823,23 @@ Closed lines have no endpoint references: commands and the loader refuse them wi
 seam reference; the shared refusal query guards the command and the source picker. Empty open
 lines resolve to zero-length stretches with no holes.
 
-**Next, 9.6b:** count and drift checks, *Sew together*, and the seam's selection and Properties
-surfaces. The manufacturing design, worked examples and those checks are in the
+**Closed whole stretches (D18, approved).** `whole` walks a closed stitch line once from its
+existing path start, including circles with no corner anchors. It adds no corner slots and does
+not change `Run`. Whole stretches on open lines are refused as `SEAM_REQUIRES_CLOSED_LINE`.
+
+**Pairing (DR7).** `seamVerdict` pairs holes in walked order and compares their travelled distances
+from the first hole. Different counts are an error; otherwise a maximum drift above
+`SEAM_DRIFT_LIMIT_MM` (0.5 mm, D4) is a warning. The limit uses the shared length epsilon. Smaller
+drift is information shown in Properties and the selection bar, without a Problems row. The
+one-based worst pair is null when there are no pairs. Diagnostics carry both pieces, stretches,
+counts and lengths, drift and worst pair; navigation frames both pieces. Verdicts and diagnostics
+reuse unchanged seam inputs. Renaming a piece refreshes its diagnostic names.
+
+*Sew together…* opens an inline preview transaction in Properties for one or two selected hole
+sets. A chooser permits same-piece folds or replacing a missing partner. Cancel, undo, reset or
+an outside command abandons the preview; Sew or Save seam commits one step. Edit and Unsew are
+available for existing seams, including orphaned seams. Board highlights and paired-hole numbers
+are screen feedback only. The manufacturing design, worked examples and checks are in the
 [seams spec](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md).
 
 ## 8. Invariants and diagnostics
@@ -873,6 +891,7 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | DR4 | Stitching is regular enough to sew |
 | DR5 | Printed text is legible |
 | DR6 | A part disappears only when someone deletes it |
+| DR7 | Sewn stretches have paired holes whose travelled distances stay within 0.5 mm |
 
 **Design rules are sampled, not proved** (4.3a). DR2's containment questions — is this line on the
 leather, is this cut-out inside the part — are asked at a finite number of points along a path, not
@@ -945,7 +964,7 @@ interface Diagnostic {                // a problem found in the design, placed
   severity: 'error' | 'warning' | 'info';
   partId: PartId;
   featureId?: FeatureId;              // absent for a problem with the part itself
-  related: readonly FeatureId[];      // what a SOURCE_FAILED follows
+  related: readonly FeatureId[];      // a failed source or the other sewn side
   location?: ProblemLocation;         // points, or the geometry the problem is about
 }
 
@@ -976,6 +995,7 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `DUPLICATE_ID` | structural | S1 | Loader; seam commands |
 | `SEAM_NOT_A_HOLE_SET` | structural | S11 | Seam commands; loader |
 | `SEAM_HAS_NO_LENGTH` | structural | S11 | Seam commands; loader |
+| `SEAM_REQUIRES_CLOSED_LINE` | structural | S11 | Seam commands; loader |
 | `SOURCE_MISSING` | structural | S2 | Commands; loader |
 | `MIRROR_FOLD_MISSING` | structural | S2 | Commands; loader; evaluation |
 | `MEASURE_REF_MISSING` | structural | S2 | Commands; loader; evaluation |
@@ -1024,6 +1044,8 @@ The diagnostics themselves:
 | `SOURCE_FAILED` | error | outcome | E3 | built 4.12a |
 | `SEAM_SIDE_MISSING` | error | outcome | E3 | built 9.6a |
 | `SEAM_RUNS_OFF_THE_LINE` | error | outcome | E4 | built 9.6a |
+| `SEAM_HOLE_COUNT_MISMATCH` | error | rule | DR7 | built 9.6b |
+| `SEAM_HOLES_DRIFT` | warning (above 0.5 mm) | rule | DR7 | built 9.6b |
 | `FOLD_NOT_STRAIGHT` | error | outcome | E1 | built 4.8b — a mirror can only be folded about a straight line |
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
@@ -1047,9 +1069,8 @@ Since 4.3a the first two exist as **refusal** codes rather than diagnostics — 
 and `CONTOUR_NOT_CLOSED` — raised by the command and the loader that refuse them, never listed in the
 panel.
 
-**With seams (roadmap 9.6):** `SEAM_HOLE_COUNT_MISMATCH`. `PARTS_OVERLAP_ON_SHEET`, planned beside
-it once, is not: since 7.4a the sheet plan places every piece itself, so two cannot overlap on a
-sheet.
+`PARTS_OVERLAP_ON_SHEET`, once planned beside seams, is not a diagnostic: since 7.4a the sheet
+plan places every piece itself, so two cannot overlap on a sheet.
 
 **An audit test holds the catalogue to this section** (`problems/audit.test.ts`, 4.12a). It reads
 the registry and the repository, so nothing in it depends on another test having run first:
@@ -1092,9 +1113,9 @@ reuse.
 | Evaluation with memoisation and per-feature failures | Built; typed 4.12a | |
 | Layer roles and export presets | Built | |
 | Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (*Also later*) |
-| Validation, the §8.6 catalogue | Built: 4.12a–4.12; text size (Q34) | Seam rules (9.6) |
+| Validation, the §8.6 catalogue | Built: 4.12a–4.12; text size (Q34), seam pairing (9.6b) | Pocket requirements (9.14b) |
 | Templates as copies | Later: 9.7 (was 8.1) | Parameterised: *Exploring* |
-| `Seam` and assembly | Model, stretches, persistence, deletion (9.6a) | Checks and making seams (9.6b) |
+| `Seam` and assembly | Model, checks, creation, editing and deletion (9.6a–b) | Alignment marks (9.13) |
 | Material thickness compensation | Fields stored | 9.1 |
 | Hardware library | `hardwareType` only | 9.3 |
 

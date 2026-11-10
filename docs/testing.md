@@ -482,6 +482,7 @@ commit that re-records one changes its row here:
 | `export/svg`, `export/dxf` | `80afa43`, 2026-10-26 | 24.22.0 | 5.0.5 | The writers that ship, not the render backend (Q40) |
 | `editor/snap-drag-traced-250`, `editor/snap-drag-traced-500`, `editor/snap-drag-traced-1000`, `editor/snap-drag-beside-traced` | PERF-004's fix, `e845ffa`, 2026-10-28 | 24.22.0 | 5.0.5 | New with PERF-004 |
 | `geometry/self-traced-1000`, `geometry/self-star-1002` | PERF-006's fix, 2026-11-01 | 24.22.1 | 5.0.5 | New with PERF-006 |
+| `domain/check-seams-unrelated` | 9.6b, 2026-11-10 | 24.22.2 | 5.0.5 | Forty paired-hole verdicts after an unrelated edit; new baseline, existing baselines untouched |
 | `domain/resolve-seams-unrelated` | 9.6a, 2026-11-10 | 24.22.2 | 5.0.5 | Forty declared seams after an unrelated edit; new baseline, existing baselines untouched |
 
 `apps/desktop/src/bench-discovery.test.ts` fails if a baseline has no row here, or a row names

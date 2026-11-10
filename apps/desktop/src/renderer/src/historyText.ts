@@ -9,7 +9,11 @@ import type { Translate } from '../../shared/i18n.js';
  */
 export function historyText(label: HistoryLabel, t: Translate): string {
   if (label.action !== 'delete') {
-    return t(`history.${label.action}`, { name: label.name ?? '', count: label.count ?? 1 });
+    return t(`history.${label.action}`, {
+      name: label.name ?? '',
+      other: label.otherName ?? '',
+      count: label.count ?? 1,
+    });
   }
   const what = label.name ?? t('history.features', { count: label.count ?? 0 });
   const dependents = label.dependents ?? 0;

@@ -58,7 +58,17 @@ export function diagnosticTarget(
       ? { kind: 'part', partId: diagnostic.partId }
       : { kind: 'feature', featureId: diagnostic.featureId };
 
-  return { bounds: framed(evidence(part, diagnostic)), subject };
+  const boxes = [evidence(part, diagnostic)];
+  if ('seamId' in diagnostic.problem.facts) {
+    for (const id of diagnostic.related ?? []) {
+      const owner = resolved.parts.find((p) => p.features.some((f) => f.feature.id === id));
+      boxes.push(evidence(owner, { ...diagnostic, featureId: id }));
+    }
+  }
+  return {
+    bounds: framed(RectOps.unionAll(boxes.filter((box): box is Rect => box !== null))),
+    subject,
+  };
 }
 
 /**

@@ -92,3 +92,5 @@ export type {
 export { VALUE_CHIPS, placeValueChips } from './valueChips.js';
 export type { PlacedSelectionBar, SelectionBarInput } from './selectionBar.js';
 export { placeSelectionBar } from './selectionBar.js';
+
+export { seamOverlay } from './seamOverlay.js';

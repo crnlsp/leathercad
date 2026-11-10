@@ -271,6 +271,7 @@ const seamAnchor = z.union([z.number().int().nonnegative(), z.enum(['start', 'en
 const seamSide = z.looseObject({
   holeSetId: z.string().min(1),
   stretch: z.discriminatedUnion('kind', [
+    z.looseObject({ kind: z.literal('whole') }),
     z.looseObject({
       kind: z.literal('between'),
       fromAnchor: seamAnchor,
