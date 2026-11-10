@@ -21,12 +21,16 @@ test('a loaded seam is listed before deleting its holes, removed on consent and 
   document = addPart(
     shapePart('panel', 'outline', 'Panel', rectShape({ x: 0, y: 0 }, 100, 60)),
   ).apply(document);
-  document = addStitchLine('panel', 'line', 'outline', 3).apply(document);
+  document = addStitchLine('panel', 'line', 'outline', 3, {
+    kind: 'between',
+    fromAnchor: 2,
+    toAnchor: 1,
+  }).apply(document);
   document = addStitchHoles('panel', 'holes', 'line').apply(document);
   document = addSeam({
     id: 'seam',
-    a: { holeSetId: 'holes', stretch: { kind: 'between', fromAnchor: 0, toAnchor: 1 } },
-    b: { holeSetId: 'holes', stretch: { kind: 'from', anchor: 3, toward: 'previous' } },
+    a: { holeSetId: 'holes', stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 'end' } },
+    b: { holeSetId: 'holes', stretch: { kind: 'from', anchor: 'end', toward: 'previous' } },
   }).apply(document);
   const path = join(mkdtempSync(join(tmpdir(), 'leathercad-seam-')), 'Sewn panel.lcp');
   writeFileSync(

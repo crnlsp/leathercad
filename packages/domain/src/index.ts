@@ -25,6 +25,7 @@ export type {
   FeatureBase,
   FeatureId,
   Seam,
+  SeamAnchor,
   SeamId,
   SeamSide,
   FeatureKind,

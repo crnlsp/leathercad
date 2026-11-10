@@ -266,17 +266,19 @@ const settings = z.looseObject({
   orientation: z.enum(ORIENTATIONS as [Orientation, ...Orientation[]]),
 });
 
+const seamAnchor = z.union([z.number().int().nonnegative(), z.enum(['start', 'end'])]);
+
 const seamSide = z.looseObject({
   holeSetId: z.string().min(1),
   stretch: z.discriminatedUnion('kind', [
     z.looseObject({
       kind: z.literal('between'),
-      fromAnchor: z.number().int().nonnegative(),
-      toAnchor: z.number().int().nonnegative(),
+      fromAnchor: seamAnchor,
+      toAnchor: seamAnchor,
     }),
     z.looseObject({
       kind: z.literal('from'),
-      anchor: z.number().int().nonnegative(),
+      anchor: seamAnchor,
       toward: z.enum(['next', 'previous']),
     }),
   ]),

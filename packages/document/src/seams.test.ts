@@ -1,4 +1,5 @@
-import { evaluate, type Seam } from '@leathercad/domain';
+import { evaluate, resolveSeam, type Feature, type Seam } from '@leathercad/domain';
+import { PathOps } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
@@ -35,6 +36,55 @@ function storeWithSeam(): DocumentStore {
 }
 
 describe('seam commands and deletion (9.6a)', () => {
+  it('keeps endpoints attached to the current line boundaries through edits and undo', () => {
+    const path = PathOps.polyline(
+      [
+        { x: 0, y: 20 },
+        { x: 0, y: 0 },
+        { x: 40, y: 0 },
+        { x: 40, y: 20 },
+      ],
+      false,
+    );
+    const line: Feature = {
+      id: 'line',
+      name: 'Stitch line',
+      kind: 'stitch-line',
+      visible: true,
+      locked: false,
+      source: { kind: 'path', path },
+    };
+    const store = new DocumentStore(emptyDocument('open-project'));
+    store.dispatch(addPart({ id: 'part', name: 'Pocket', quantity: 1, features: [line] }));
+    store.dispatch(addStitchHoles('part', 'holes', 'line'));
+    const value: Seam = {
+      ...seam,
+      a: { ...seam.a, stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 'end' } },
+      b: { ...seam.b, stretch: { kind: 'between', fromAnchor: 'end', toAnchor: 'start' } },
+    };
+    store.dispatch(addSeam(value));
+    const before = store.getState().document;
+    expect(before.project.seams).toEqual([value]);
+    store.dispatch(
+      editPathPoint({ kind: 'move', featureId: 'line', vertex: 0, to: { x: 0, y: 30 } }),
+    );
+    const moved = store.getState().document.project;
+    expect(moved.seams?.[0]).toBe(value);
+    const result = resolveSeam(moved, value);
+    if (!result.ok) throw new Error('moved endpoints must resolve');
+    expect(result.a.lengthMm).toBeCloseTo(90, 9);
+    expect(result.a.holes[0]?.hole.point).toEqual({ x: 0, y: 30 });
+    store.undo();
+    expect(store.getState().document).toBe(before);
+    store.dispatch(editPathPoint({ kind: 'remove', featureId: 'line', vertex: 0 }));
+    const shortened = resolveSeam(store.getState().document.project, value);
+    if (!shortened.ok) throw new Error('end references follow the remaining line');
+    expect(shortened.a.lengthMm).toBeCloseTo(60, 9);
+    expect(shortened.a.holes[0]?.hole.point).toEqual({ x: 0, y: 0 });
+    expect(store.getState().document.project.seams?.[0]).toBe(value);
+    store.undo();
+    expect(store.getState().document).toBe(before);
+  });
   it('adds a valid relationship in one undo step without storing evaluated geometry', () => {
     const store = storeWithSeam();
     expect(store.getState().document.project.seams).toEqual([seam]);

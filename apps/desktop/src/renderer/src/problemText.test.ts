@@ -222,6 +222,14 @@ describe('the message catalogue, in English', () => {
         'Choose available corners for the run in Properties, or follow the whole line.',
     ],
     [
+      problem('ANCHOR_MISSING', { ...named, seamId: 'seam', anchor: 'start', available: 4 }),
+      'This stitch line is closed, so it has no start endpoint for a seam. Choose an available corner on the closed line.',
+    ],
+    [
+      problem('ANCHOR_MISSING', { ...named, seamId: 'seam', anchor: 'end', available: 0 }),
+      'This stitch line is closed, so it has no end endpoint for a seam. Choose an available corner on the closed line.',
+    ],
+    [
       problem('HOLE_SPACING_DEVIATION', { ...named, achievedMm: 5, pitchMm: 3.85 }),
       'The holes are 5.00 mm apart, but the iron’s pitch is 3.85 mm. The pricking iron will not land on every hole. Change the pitch or the ' +
         'edge margin to bring them closer.',

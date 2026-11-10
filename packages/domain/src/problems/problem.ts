@@ -1,7 +1,7 @@
 import type { Mm } from '@leathercad/core';
 import type { Path, Vec2 } from '@leathercad/geometry';
 
-import type { FeatureId, PartId, SeamId } from '../feature.js';
+import type { FeatureId, PartId, SeamId, SeamAnchor } from '../feature.js';
 
 /**
  * What the domain knows about something being wrong — as facts, never as a
@@ -247,7 +247,7 @@ export interface ProblemFacts {
   readonly OFFSET_UNSUPPORTED: About;
   readonly OFFSET_SPLIT: About & { readonly droppedPieces: number };
   readonly ANCHOR_MISSING: About & {
-    readonly anchor: number;
+    readonly anchor: SeamAnchor;
     readonly available: number;
     readonly seamId?: SeamId;
   };

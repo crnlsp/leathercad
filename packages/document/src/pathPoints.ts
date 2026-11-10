@@ -9,6 +9,7 @@ import {
   type MeasureRef,
   type Problem,
   type Project,
+  type SeamAnchor,
   type SeamSide,
 } from '@leathercad/domain';
 import {
@@ -236,13 +237,15 @@ export function renumberCorners(
   const renumberSide = (side: SeamSide): SeamSide => {
     if (!family.has(side.holeSetId)) return side;
     const owner = findFeature(project, side.holeSetId)?.feature ?? feature;
+    const renumberAnchor = (anchor: SeamAnchor): SeamAnchor =>
+      typeof anchor === 'number' ? renumber(anchor, owner) : anchor;
     const stretch = side.stretch;
     if (stretch.kind === 'from') {
-      const anchor = renumber(stretch.anchor, owner);
+      const anchor = renumberAnchor(stretch.anchor);
       return anchor === stretch.anchor ? side : { ...side, stretch: { ...stretch, anchor } };
     }
-    const fromAnchor = renumber(stretch.fromAnchor, owner);
-    const toAnchor = renumber(stretch.toAnchor, owner);
+    const fromAnchor = renumberAnchor(stretch.fromAnchor);
+    const toAnchor = renumberAnchor(stretch.toAnchor);
     return fromAnchor === stretch.fromAnchor && toAnchor === stretch.toAnchor
       ? side
       : { ...side, stretch: { ...stretch, fromAnchor, toAnchor } };

@@ -8,12 +8,15 @@ export type FeatureId = Ulid;
 export type PartId = Ulid;
 export type SeamId = Ulid;
 
+/** Existing corner index, or a geometric endpoint of an open line (D17). */
+export type SeamAnchor = number | 'start' | 'end';
+
 /** Which holes are sewn, independent of either piece's position on the board. */
 export interface SeamSide {
   readonly holeSetId: FeatureId;
   readonly stretch:
-    | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number }
-    | { readonly kind: 'from'; readonly anchor: number; readonly toward: 'next' | 'previous' };
+    | { readonly kind: 'between'; readonly fromAnchor: SeamAnchor; readonly toAnchor: SeamAnchor }
+    | { readonly kind: 'from'; readonly anchor: SeamAnchor; readonly toward: 'next' | 'previous' };
 }
 
 /** Advisory manufacturing metadata; no geometry is stored here (9.6a). */

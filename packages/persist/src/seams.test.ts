@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { EPS_LENGTH } from '@leathercad/core';
-import { diagnose, resolveSeam, type Project, type Seam } from '@leathercad/domain';
+import {
+  diagnose,
+  resolveSeam,
+  type Project,
+  type Seam,
+  type SeamAnchor,
+} from '@leathercad/domain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
@@ -24,6 +30,100 @@ const seam: Seam = {
 };
 
 describe('seams in format 12 (9.6a)', () => {
+  it.each([
+    { id: 'left', pocketCorner: 0, pocketEnd: 'start', outerCorner: 3, toward: 'previous' },
+    { id: 'right', pocketCorner: 1, pocketEnd: 'end', outerCorner: 0, toward: 'next' },
+  ] as const)(
+    'walks the shipped card holder $id seam from its bottom corner to its endpoint',
+    ({ id, pocketCorner, pocketEnd, outerCorner, toward }) => {
+      const p = loadProject(
+        readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+      ).project;
+      const value: Seam = {
+        id,
+        a: {
+          holeSetId: 'pocket-holes',
+          stretch: { kind: 'between', fromAnchor: pocketCorner, toAnchor: pocketEnd },
+        },
+        b: { holeSetId: 'outer-holes', stretch: { kind: 'from', anchor: outerCorner, toward } },
+      };
+      const result = resolveSeam(p, value);
+      if (!result.ok) throw new Error('the complete side seam must resolve');
+      expect(result.a.holes).toHaveLength(11);
+      expect(result.b.holes).toHaveLength(11);
+      expect(result.a.lengthMm).toBeCloseTo(38, 9);
+      const drift =
+        (result.a.holes.at(-1)?.distanceMm ?? 0) - (result.b.holes.at(-1)?.distanceMm ?? 0);
+      expect(Math.abs(drift - (38 - (10 * (62 + Math.PI / 2)) / 17))).toBeLessThanOrEqual(
+        EPS_LENGTH,
+      );
+    },
+  );
+
+  it('preserves endpoint references and unknown fields through the released 1.6 schema', () => {
+    const p = loadProject(
+      readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+    ).project;
+    const value = {
+      id: 'endpoint',
+      future: 'kept',
+      a: {
+        holeSetId: 'pocket-holes',
+        stretch: {
+          kind: 'between' as const,
+          fromAnchor: 'start' as const,
+          toAnchor: 'end' as const,
+          future: true,
+        },
+      },
+      b: {
+        holeSetId: 'pocket-holes',
+        stretch: { kind: 'from' as const, anchor: 'end' as const, toward: 'previous' as const },
+      },
+    };
+    const bytes = saveProject({ ...p, seams: [value] }, options);
+    const loaded = loadProject(bytes).project;
+    expect(loaded.seams).toEqual([value]);
+    expect(saveProject(loaded, options)).toEqual(bytes);
+    const old = ReleasedSchema.parse(JSON.parse(strFromU8(unzipSync(bytes)['document.json']!)));
+    const edited = { ...old, name: 'Edited in 1.6' } as Project;
+    const reopened = loadProject(saveProject(edited, options)).project;
+    expect(reopened.seams).toEqual([value]);
+    expect(resolveSeam(reopened, reopened.seams?.[0] ?? value)).toEqual(resolveSeam(p, value));
+  });
+
+  it('keeps every mix of endpoints and corners byte-identical through save and reopen', () => {
+    const p = loadProject(
+      readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
+    ).project;
+    fc.assert(
+      fc.property(
+        fc.constantFrom<SeamAnchor>(0, 1, 'start', 'end'),
+        fc.constantFrom<SeamAnchor>(0, 1, 'start', 'end'),
+        (fromAnchor, toAnchor) => {
+          const side = {
+            holeSetId: 'pocket-holes',
+            stretch: { kind: 'between' as const, fromAnchor, toAnchor },
+          };
+          const value: Seam = { ...seam, a: side, b: side };
+          const bytes = saveProject({ ...p, seams: [value] }, options);
+          const loaded = loadProject(bytes).project;
+          expect(resolveSeam(loaded, loaded.seams?.[0] ?? value)).toEqual(resolveSeam(p, value));
+          expect(saveProject(loaded, options)).toEqual(bytes);
+        },
+      ),
+    );
+  });
+
+  it('refuses endpoint references on a closed line at the loading boundary', () => {
+    const value: Seam = {
+      ...seam,
+      a: { ...seam.a, stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 1 } },
+    };
+    expect(() =>
+      loadProject(saveProject({ ...fixtureProjectV12(), seams: [value] }, options)),
+    ).toThrow(InvalidProjectFileError);
+  });
   it('walks the shipped card holder bottom seam with 27 holes and its exact drift', () => {
     const p = loadProject(
       readFileSync(resolve(import.meta.dirname, '../../../fixtures/projects/card-holder.lcp')),
@@ -141,6 +241,7 @@ describe('seams in format 12 (9.6a)', () => {
       { ...seam.a, stretch: { kind: 'from', anchor: -1, toward: 'next' } },
       { ...seam.a, stretch: { kind: 'between', fromAnchor: 0, toAnchor: 1.5 } },
       { ...seam.a, stretch: { kind: 'from', anchor: 0, toward: 'sideways' } },
+      { ...seam.a, stretch: { kind: 'between', fromAnchor: 'middle', toAnchor: 'end' } },
     ])
       expect(ProjectSchema.safeParse({ ...p, seams: [{ ...seam, a }] }).success).toBe(false);
   });

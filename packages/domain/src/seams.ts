@@ -2,7 +2,7 @@ import { EPS_LENGTH, approxEq, approxGte, approxLte, type Mm } from '@leathercad
 import { PathOps } from '@leathercad/geometry';
 
 import { evaluate, type ResolvedFeature } from './evaluate.js';
-import type { FeatureId, Project, Seam, SeamSide } from './feature.js';
+import type { FeatureId, Project, Seam, SeamAnchor, SeamSide } from './feature.js';
 import { problem, type Diagnostic, type Problem } from './problems/index.js';
 import type { StitchHole } from './stitch.js';
 
@@ -80,7 +80,11 @@ export function seamRefusal(project: Project, seam: Seam): Problem | null {
         ? [side.stretch.anchor]
         : [side.stretch.fromAnchor, side.stretch.toAnchor];
     for (const anchor of indices) {
-      if (!Number.isSafeInteger(anchor) || anchor < 0 || anchor >= entry.anchors.length) {
+      const missing =
+        typeof anchor === 'number'
+          ? !Number.isSafeInteger(anchor) || anchor < 0 || anchor >= entry.anchors.length
+          : entry.path.closed;
+      if (missing) {
         return problem('ANCHOR_MISSING', {
           seamId: seam.id,
           featureId: feature?.id ?? side.holeSetId,
@@ -160,20 +164,20 @@ function resolve(project: Project, seam: Seam): Resolution {
 
 function walk(seam: Seam, side: SeamSide, entry: HoleLine, otherLength?: Mm): Stretch | Problem {
   const stretch = side.stretch;
+  const total = PathOps.length(entry.path);
   const anchor = stretch.kind === 'between' ? stretch.fromAnchor : stretch.anchor;
-  const start = entry.anchors[anchor];
+  const start = anchorDistance(entry, anchor, total);
   const endAnchor = stretch.kind === 'between' ? stretch.toAnchor : anchor;
-  const end = entry.anchors[endAnchor];
-  if (start === null || start === undefined || end === null || end === undefined) {
+  const end = anchorDistance(entry, endAnchor, total);
+  if (start === null || end === null) {
     return problem('ANCHOR_MISSING', {
       seamId: seam.id,
       featureId: entry.feature.id,
       featureName: entry.feature.name,
-      anchor: start === null || start === undefined ? anchor : endAnchor,
+      anchor: start === null ? anchor : endAnchor,
       available: entry.anchors.length,
     });
   }
-  const total = PathOps.length(entry.path);
   const backward =
     stretch.kind === 'from'
       ? stretch.toward === 'previous'
@@ -216,6 +220,13 @@ function walk(seam: Seam, side: SeamSide, entry: HoleLine, otherLength?: Mm): St
     lengthMm,
     holes: holes.map((hole) => ({ ...hole, distanceMm: hole.distanceMm - first })),
   };
+}
+
+/** Endpoints follow the current line boundaries; they never add or renumber corners. */
+function anchorDistance(entry: HoleLine, anchor: SeamAnchor, total: Mm): Mm | null {
+  if (typeof anchor === 'number') return entry.anchors[anchor] ?? null;
+  if (entry.path.closed) return null;
+  return anchor === 'start' ? 0 : total;
 }
 
 function wrap(distance: Mm, total: Mm): Mm {

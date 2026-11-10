@@ -132,7 +132,7 @@ The parameters live in the op (§4):
   ironLabel?: string }                // cosmetic, never read as geometry
 ```
 
-Evaluates to holes `{ point, tangent, runIndex, ordinal }` and a report: the count, the achieved
+Evaluates to holes `{ point, tangent, runIndex, ordinal, alongMm }` and a report: the count, the achieved
 spacing, and per-run length, count and spacing. **Holes have no ids.** They are addressed by
 position, because there is no correct answer to which of the old 84 holes is this one of the new 86.
 
@@ -763,7 +763,7 @@ hint; the model never stores inches.
 - Total stitch line length, for estimating thread (roughly 4–5 × the seam length; roadmap 9.12
   settles the formula, which printing.md §12 gives as 4×).
 
-## 7. Assembly and seams — model implemented, 9.6a draft
+## 7. Assembly and seams — model built, 9.6a
 
 A seam is an explicit relationship between two stitch hole sets, including mirrored sets and two
 stretches of the same piece. It lives in the optional project-level `seams` array. Nothing is
@@ -775,11 +775,12 @@ interface Seam {
   readonly a: SeamSide;
   readonly b: SeamSide;
 }
+type SeamAnchor = number | 'start' | 'end';
 interface SeamSide {
   readonly holeSetId: FeatureId;
   readonly stretch:
-    | { readonly kind: 'between'; readonly fromAnchor: number; readonly toAnchor: number }
-    | { readonly kind: 'from'; readonly anchor: number; readonly toward: 'next' | 'previous' };
+    | { readonly kind: 'between'; readonly fromAnchor: SeamAnchor; readonly toAnchor: SeamAnchor }
+    | { readonly kind: 'from'; readonly anchor: SeamAnchor; readonly toward: 'next' | 'previous' };
 }
 ```
 
@@ -809,10 +810,13 @@ mapping, including anchors on derived hole sets. Taking an attached corner away 
 Unchanged seams reuse their resolution while both hole sets, paths, holes and anchors are
 identical; changes to either side re-evaluate it. Problem identity includes the seam id.
 
-**Pending before completion (D17).** Open drawn paths expose only interior corners, so the
-numeric stretch schema cannot name their endpoints; a straight drawn path has no anchors. The
-proposed extension is explicit start/end references on seam stretches, keeping all existing corner
-indices. The maintainer's decision is pending in the 1.7 plan; no extension is assumed here.
+**Open-line endpoints (D17, approved).** A seam reference is an existing corner index, or
+`'start'` / `'end'` for the geometric boundaries of an open stitch line. It follows the current
+line boundary through edits, independently of the first and last distributed holes and their
+offsets. Endpoint references add no corner slots, and numeric corners keep their existing
+indices. Mirrored paths retain their source order, so start and end follow their images.
+Closed lines have no endpoint references: commands and the loader refuse them with
+`ANCHOR_MISSING`. Empty open lines resolve to zero-length stretches with no holes.
 
 **Next, 9.6b:** count and drift checks, *Sew together*, and the seam's selection and Properties
 surfaces. The manufacturing design, worked examples and those checks are in the
@@ -1098,7 +1102,7 @@ The model's share of [product-roadmap.md](product-roadmap.md): what its next lay
 decisions still open. No schema is fixed here before its slice.
 
 - **Between pieces (9.6).** §7's `Seam` is the first relationship that is not inside a part. Format
-  12 is retained (approved D2). Explicit endpoints for open drawn lines remain open (D17).
+  12 is retained (approved D2); seams on open lines can name their endpoints (approved D17).
 - **What the maker wants (9.14).** A requirement — "this pocket holds an ID-1 card" — is the maker's
   statement, stored as metadata on what it is about and checked by a design rule on every
   evaluation; nothing the rule computes is stored. Open: whether it attaches to the open stitch line

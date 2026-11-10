@@ -1194,10 +1194,13 @@
       "fix": "Reduce the inset or allowance, or widen the narrow sections of the source outline."
     },
     "ANCHOR_MISSING": {
-      "title": "Corner not found",
+      "title": "Corner or endpoint not found",
       "description": "That run named corner {{anchor}}, and this outline has {{available}}, so the run cannot be located.",
       "noCorners": "This outline has no corners to run between, so it can only be followed whole.",
-      "fix": "Choose available corners for the run in Properties, or follow the whole line."
+      "fix": "Choose available corners for the run in Properties, or follow the whole line.",
+      "start": "This stitch line is closed, so it has no start endpoint for a seam.",
+      "end": "This stitch line is closed, so it has no end endpoint for a seam.",
+      "endpointFix": "Choose an available corner on the closed line."
     },
     "SOURCE_FAILED": {
       "title": "What it follows failed",

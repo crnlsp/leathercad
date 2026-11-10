@@ -96,9 +96,11 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
       count: f.droppedPieces,
     }),
   ANCHOR_MISSING: (f, t) =>
-    f.available < 1
-      ? t('problems.ANCHOR_MISSING.noCorners')
-      : t('problems.ANCHOR_MISSING.description', { anchor: f.anchor, available: f.available }),
+    typeof f.anchor === 'string'
+      ? t(`problems.ANCHOR_MISSING.${f.anchor}`)
+      : f.available < 1
+        ? t('problems.ANCHOR_MISSING.noCorners')
+        : t('problems.ANCHOR_MISSING.description', { anchor: f.anchor, available: f.available }),
   SOURCE_FAILED: (f, t) => t('problems.SOURCE_FAILED.description', f),
   GEOMETRY_FAILED: (f, t) => t('problems.GEOMETRY_FAILED.description', f),
 
@@ -168,7 +170,12 @@ const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
   OFFSET_COLLAPSED: 'problems.OFFSET_COLLAPSED.fix',
   OFFSET_UNSUPPORTED: 'problems.OFFSET_UNSUPPORTED.fix',
   OFFSET_SPLIT: 'problems.OFFSET_SPLIT.fix',
-  ANCHOR_MISSING: 'problems.ANCHOR_MISSING.fix',
+  ANCHOR_MISSING: (f, t) =>
+    t(
+      typeof f.anchor === 'string'
+        ? 'problems.ANCHOR_MISSING.endpointFix'
+        : 'problems.ANCHOR_MISSING.fix',
+    ),
   SOURCE_FAILED: 'problems.SOURCE_FAILED.fix',
   GEOMETRY_FAILED: 'problems.GEOMETRY_FAILED.fix',
   FOLD_NOT_STRAIGHT: 'problems.FOLD_NOT_STRAIGHT.fix',
