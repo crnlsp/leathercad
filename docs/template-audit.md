@@ -7,9 +7,11 @@ commands. File format 12, existing migrations and the print/export pipeline are 
 ## Construction status
 
 The software checks below do **not** establish that a pattern has been sewn successfully.
-The maintainer approved the revised card-holder design (D19) on 2026-11-10. The bifold's maker choices from
+The maintainer approved the revised card-holder design (D19) on 2026-11-10 and settled the bifold's
+maker questions from
 [the manufacturing spec §8](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md#8-questions-for-a-maker-814b)
-and the sewn card-holder check remain pending. The roadmap therefore keeps 8.14b in progress.
+as D20 on 2026-11-11. The sewn card-holder check remains pending, so the roadmap keeps 8.14b in
+progress.
 
 ## Card holder — matching derived stitching approved
 
@@ -90,22 +92,26 @@ The open pocket has no positive closure: extra depth alone cannot guarantee agai
   and tape outside the stitch lines. Compare visible card height and pinch access. Paper cannot
   reproduce leather thickness, friction, stiffness or break-in; use real cards in the sewn sample.
 
-## Bifold wallet — geometry retained, maker answers pending
+## Bifold wallet — pocket widened, lining cut to match (D20)
 
-The existing 95 mm pocket has **87 mm between stitch lines**, giving 1.4 mm geometric clearance
-for an 85.60 mm card. Leather thickness and stitching pull are not accounted for. This is a
-measurement, not approval of the fit.
+The maintainer settled both §8 questions on 2026-11-11, choosing the common construction over a
+new one:
 
-The lining is 2 mm inside the outer on each edge. When stacked, the outer's 3 mm inset stitching
-is 1 mm from the lining edge. Whether that lining should be cut larger or trimmed after stitching
-is unresolved. No trimming method is asserted by the template.
+- **Card pockets: stitched 3 mm in, as the outer is.** The 4 mm inset left 87.0 mm between stitch
+  lines, 1.4 mm of room for an 85.60 mm card before the leather's thickness and the stitching's
+  pull. The pocket stays 95 × 60 mm; its stitching now leaves **89.0 mm**, 3.4 mm of room. Sides
+  53.00 mm · 15 holes · 3.786 mm; bottom 89.00 mm · 24 holes · 3.870 mm. A geometric allowance,
+  not a promise of fit in a given leather.
+- **Lining: cut to the outer's outline** (200 × 95 mm, 5 mm corners), glued while folded, trimmed
+  flush, then punched with the outer. Cut 2 mm smaller, the outer's 3 mm stitching fell 1 mm from
+  the lining's edge, under the 1.5 mm the edge rule asks; now it is 3 mm from both. Folding makes
+  the inner layer overhang slightly at the edges; trimming flush removes it. The template's
+  description says so.
 
-The thumb-scoop pocket's U stitching remains drawn: preserving its existing square opening,
-4 mm top clearance and pocket dimensions does not fit the current corner-to-corner partial
-offset's untrimmed ends. Deriving it requires a construction change or an explicit run-end trim
-feature, not a hidden alteration of the shape. Its description names the unresolved fit and lining
-construction. No seams are invented for a lining with no hole set: this template is punched as a
-stack. The existing lining slot's fold mirror and measurement remain unchanged.
+The thumb-scoop pocket's U stitching remains drawn: it stops 4 mm under the square opening, which
+the current corner-to-corner partial offset cannot. Deriving it needs an explicit run-end trim
+feature, not a hidden change of shape. No seams are declared: the lining has no hole set of its
+own and the template is punched as a stack. The lining slot's fold mirror is unchanged.
 
 ## Key fob — fold-linked rivet holes
 
@@ -133,7 +139,7 @@ and dimensions are unchanged; it participates in the same clean-load, save and P
 
 No physical result is recorded yet. To finish 8.14b:
 
-1. Settle the bifold questions above. Export the approved card-holder template through the
+1. Export the approved card-holder template through the
    app and print at actual size. Check scale using the established
    [print-verification procedure](print-verification-log.md).
 2. Cut one outer and two pockets in the chosen leather. Record thickness, iron pitch and any

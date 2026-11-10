@@ -1532,7 +1532,7 @@
     "remove": "Remove {{name}}",
     "bifoldWallet": {
       "name": "Bifold wallet",
-      "description": "An outer and an inset lining, each folded, with two card pockets. Pocket fit and lining edge construction are unverified; make a sample in your chosen leather."
+      "description": "An outer and a matching lining, each folded, with two card pockets. Glue the lining while folded and trim it flush before punching."
     },
     "cardHolder": {
       "name": "Card holder",

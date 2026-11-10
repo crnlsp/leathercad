@@ -202,6 +202,10 @@ Settled by someone who makes the item, recorded in the template audit, never gue
 3. **Key fob rivets.** Make the second hole a fold mirror of the first (4.8b) so they stay paired
    when either moves — the template then teaches the feature, and the summary counts one rivet.
 
+**Answered** (plan D19, D20; [template audit](../../template-audit.md)): 1 — the pockets are
+stitched 3 mm in, as the outer is, leaving 89.0 mm; 2 — the lining is cut to the outer's outline,
+glued folded and trimmed flush; 3 — done as proposed.
+
 ## 9. Decided, and still open
 
 - **S4, the drift limit** — 0.5 mm, approved by the maintainer on 2026-11-03.

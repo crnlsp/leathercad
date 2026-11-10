@@ -113,7 +113,7 @@ as any item that will not make it does.
 - ✅ **9.15 Every problem explained** — all listed codes have a reason and correction, held by an audit test; rebindable F8 / Shift+F8 and Previous / Next buttons select and frame each problem.
 - ✅ **9.6a Seams, modelled** — fixed and partial hole runs, corner and open-line endpoint references, arc-length distances, persistence, deletion and undo; missing sides remain reportable.
 - ✅ **9.6b Seams, checked and made** — *Sew together*, count and drift, the selection bar's third line.
-- ◐ **8.14b The built-in templates, checked as leatherwork** — approved matching card-holder design, fold-linked rivets and software regressions; [bifold decisions and construction check pending](template-audit.md).
+- ◐ **8.14b The built-in templates, checked as leatherwork** — matching card-holder seams, fold-linked rivets, a bifold whose pockets fit and whose lining is cut to match; [the sewn card-holder check pending](template-audit.md#physical-check-to-record).
 - ☐ **9.17 Fixes offered with a problem** (P1) — the length that makes a seam match first.
 - ☐ **9.16 Accepting a warning** (P1).
 - ☐ **9.14a A pocket's clear size** (P1).

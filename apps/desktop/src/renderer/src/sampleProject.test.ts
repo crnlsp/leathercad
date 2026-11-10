@@ -78,18 +78,20 @@ export function sampleProject(): Project {
     addStitchHoles('outer', 'outer-holes', 'outer-stitch'),
     addFoldLine('outer', 'outer-fold', { kind: 'path', path: line([at(100, 0), at(100, 95)]) }),
 
-    // The lining, 2 mm smaller all round, with its own fold and a card slot on
-    // each side of it: one drawn, the other folded across, so moving the fold
-    // keeps them a pair.
+    // The lining, cut to the outer's outline: glued to it while folded, trimmed
+    // flush, then punched with it, so the outer's holes sit 3 mm in from both
+    // edges (8.14b — cut 2 mm smaller, they fell 1 mm from the lining's edge).
+    // Its own fold and a card slot each side of it: one drawn, the other
+    // folded across, so moving the fold keeps them a pair.
     addPart(
       shapePart('lining', 'lining-outline', 'Lining', {
-        ...rectShape(at(2, -110), 196, 91),
-        radii: r(4),
+        ...rectShape(at(0, -110), 200, 95),
+        radii: r(5),
       }),
     ),
     addFoldLine('lining', 'lining-fold', {
       kind: 'path',
-      path: line([at(100, -110), at(100, -19)]),
+      path: line([at(100, -110), at(100, -15)]),
     }),
     addCutOut('lining', 'lining-slot', {
       kind: 'shape',
@@ -97,11 +99,14 @@ export function sampleProject(): Project {
     }),
     mirrorAcrossFold(['lining-slot'], ['lining-slot-mirrored'], 'lining-fold'),
 
-    // The card pocket, cut twice, stitched on its three sewn sides.
+    // The card pocket, cut twice, stitched 3 mm in on its three sewn sides, as
+    // the outer is: 89 mm between the side lines, 3.4 mm of room for a card.
+    // Drawn, not derived: the line stops 4 mm under the square opening, which
+    // a corner-to-corner offset cannot (docs/template-audit.md).
     addPart(pathPart('pocket', 'pocket-outline', 'Card pocket', pocketOutline(52, -200))),
     addDrawnStitchLine('pocket', 'pocket-stitch', {
       kind: 'path',
-      path: line([at(56, -144), at(56, -196), at(143, -196), at(143, -144)]),
+      path: line([at(55, -144), at(55, -197), at(144, -197), at(144, -144)]),
     }),
     addStitchHoles('pocket', 'pocket-holes', 'pocket-stitch'),
     setPartQuantity('pocket', 2),
@@ -158,6 +163,29 @@ describe('the sample project (8.3)', () => {
     }
     expect(diagnose(project)).toEqual([]);
     expect(exportReadiness(project)).toMatchObject({ errors: 0, warnings: 0 });
+  });
+
+  it('leaves a payment card at least 3 mm of room between the pocket’s side stitch lines (8.14b)', () => {
+    const stitch = evaluate(sampleProject())
+      .parts.flatMap((part) => part.features)
+      .find((entry) => entry.feature.id === 'pocket-stitch');
+    if (stitch?.ok !== true) throw new Error('pocket stitching must resolve');
+    const bounds = PathOps.bbox(stitch.path);
+    if (bounds === null) throw new Error('pocket stitching has extent');
+    // 3 mm, not the 1.4 mm the 4 mm inset left: stitched leather draws in.
+    expect(bounds.maxX - bounds.minX - 85.6).toBeGreaterThanOrEqual(3);
+  });
+
+  it('cuts the lining to the outer’s outline, so the outer’s stitching is as far from both edges (8.14b)', () => {
+    const outline = (id: string) => {
+      const part = sampleProject().parts.find((p) => p.id === id);
+      const feature = part?.features.find((f) => f.id === id + '-outline');
+      if (feature?.source.kind !== 'shape' || feature.source.shape.type !== 'rect')
+        throw new Error(id + ' outline is a rectangle');
+      const { width, height, radii, rotation } = feature.source.shape;
+      return { width, height, radii, rotation };
+    };
+    expect(outline('lining')).toEqual(outline('outer'));
   });
 
   it('reads 95.0 across the pocket, and prints on A4 as the getting-started page says', () => {
