@@ -134,7 +134,7 @@ the 11th pair is 0.61 mm apart → `SEAM_HOLES_DRIFT`, warning. The bottom seam:
 
 **8.14b audit update.** The fixed geometry described next was a design estimate, not an evaluated
 recipe. The actual partial-offset endpoints require a different pocket height and top corner
-construction; D19 is the numerically checked proposal. See the [template audit](../../template-audit.md)
+construction; D19 is the numerically checked design approved on 2026-11-10. See the [template audit](../../template-audit.md)
 for measured results and the pending maker/physical checks.
 
 **Card holder, fixed (8.14b, and what 9.17 would propose).** For the side holes to coincide, the

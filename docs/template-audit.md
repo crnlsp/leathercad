@@ -7,14 +7,14 @@ commands. File format 12, existing migrations and the print/export pipeline are 
 ## Construction status
 
 The software checks below do **not** establish that a pattern has been sewn successfully.
-The card-holder construction is a reviewable proposal (D19). The bifold's maker choices from
+The maintainer approved the revised card-holder design (D19) on 2026-11-10. The bifold's maker choices from
 [the manufacturing spec §8](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md#8-questions-for-a-maker-814b)
 and the sewn card-holder check remain pending. The roadmap therefore keeps 8.14b in progress.
 
-## Card holder — matching derived stitching proposed
+## Card holder — matching derived stitching approved
 
 The outer remains 105 × 70 mm with 4 mm corners, stitching inset 3 mm and 86 holes. The pocket
-remains 105 mm wide and cut twice. The proposal changes its height from 45 to **47.3487 mm** and
+remains 105 mm wide and cut twice. The approved design changes its height from 45 to **47.3487 mm** and
 its top corner radii from square to **3 mm**; the bottom radii remain 4 mm. Its stitching is a
 3 mm inward offset between outline corners 2 and 1, following the left, bottom and right sides.
 
@@ -23,8 +23,8 @@ ends at its selected contour corners: a square top corner puts its endpoint on t
 Rounding the top corners to the inset radius puts the endpoint 3 mm below the opening, without
 changing existing derivation semantics. The revised height gives eleven gaps of the outer's achieved side spacing (3.7394586 mm).
 The exact height is 47.3486465 mm; rounding **up** to the storage quantum keeps the last outer
-hole inside the declared stretch. Nearest rounding would exclude that hole. This remains a
-construction proposal requiring maker review.
+hole inside the declared stretch. Nearest rounding would exclude that hole. D19's design approval
+does not establish the result of sewing it in a particular leather.
 
 | Declared seam | Pocket and outer counts | Maximum paired drift |
 |---|---|---|
@@ -133,7 +133,7 @@ and dimensions are unchanged; it participates in the same clean-load, save and P
 
 No physical result is recorded yet. To finish 8.14b:
 
-1. Settle D19 and the bifold questions above. Export the agreed card-holder template through the
+1. Settle the bifold questions above. Export the approved card-holder template through the
    app and print at actual size. Check scale using the established
    [print-verification procedure](print-verification-log.md).
 2. Cut one outer and two pockets in the chosen leather. Record thickness, iron pitch and any
